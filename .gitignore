@@ -1,0 +1,43 @@
+## Build
+bin/
+obj/
+[Bb]uild/
+[Ll]og/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## IDE
+.vs/
+.idea/
+.vscode/
+*.swp
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Secrets / env
+.appsettings.*.local.json
+*.pfx
+.env
+.env.*
+!.env.example
+
+## EF / tooling
+*.db
+*.db-shm
+*.db-wal
+
+## Frontend
+src/Web/node_modules/
+src/Web/dist/
+
+## Tests / coverage
+TestResults/
+coverage/
+*.opencover.xml
+
+## Docker
+get-docker.sh

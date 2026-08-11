@@ -1,0 +1,146 @@
+using LealControl.Modules.Crm.Domain.Customers;
+using LealControl.Modules.Crm.Domain.Shared;
+
+namespace LealControl.Modules.Crm.Application.Customers.Models;
+
+public sealed record CustomerWriteModel(
+    string LegalName,
+    string? TradeName,
+    DocumentType DocumentType,
+    string DocumentNumber,
+    TaxCondition TaxCondition,
+    IibbRegime IibbRegime,
+    bool IsCustomer,
+    bool IsSupplier,
+    string? Email,
+    string? Phone,
+    string? WhatsApp,
+    string? FiscalStreet,
+    string? FiscalCity,
+    ArgentineProvince? FiscalProvince,
+    string? FiscalPostalCode,
+    decimal? CreditLimit,
+    int? PaymentTermsDays,
+    Guid? SellerId,
+    string? Notes);
+
+public sealed record CustomerDetailDto(
+    Guid Id,
+    string LegalName,
+    string? TradeName,
+    string DocumentType,
+    string DocumentNumber,
+    string TaxCondition,
+    string IibbRegime,
+    string Status,
+    bool IsCustomer,
+    bool IsSupplier,
+    string? Email,
+    string? Phone,
+    string? WhatsApp,
+    AddressDto? FiscalAddress,
+    decimal? CreditLimit,
+    int? PaymentTermsDays,
+    Guid? SellerId,
+    string? Notes,
+    bool IsLargeCompany,
+    decimal? FceThreshold,
+    DateTime? FceCheckedAtUtc,
+    IReadOnlyList<LocationDto> Locations,
+    IReadOnlyList<ContactDto> Contacts,
+    IReadOnlyList<FiscalRateDto> FiscalRates,
+    DateTime CreatedAtUtc,
+    DateTime UpdatedAtUtc);
+
+public sealed record AddressDto(
+    string Street,
+    string City,
+    string Province,
+    string PostalCode);
+
+public sealed record LocationDto(
+    Guid Id,
+    string Name,
+    AddressDto Address,
+    string? Phone,
+    string? Notes);
+
+public sealed record ContactDto(
+    Guid Id,
+    string Name,
+    string Role,
+    Guid? LocationId,
+    string? Email,
+    string? Phone,
+    string? WhatsApp,
+    bool IsPrimary,
+    string? Notes);
+
+public sealed record FiscalRateDto(
+    string Jurisdiction,
+    decimal PerceptionRate,
+    decimal RetentionRate,
+    bool HasPerceptionExclusion,
+    DateOnly? PerceptionExclusionExpiresOn,
+    bool HasRetentionExclusion,
+    DateOnly? RetentionExclusionExpiresOn,
+    string? ExclusionCertificateNumber);
+
+public static class CustomerMappings
+{
+    public static CustomerDetailDto ToDetail(Customer customer) => new(
+        customer.Id.Value,
+        customer.LegalName,
+        customer.TradeName,
+        customer.Document.Type.ToString(),
+        customer.Document.Number,
+        customer.TaxCondition.ToString(),
+        customer.IibbRegime.ToString(),
+        customer.Status.ToString(),
+        customer.IsCustomer,
+        customer.IsSupplier,
+        customer.Email?.Value,
+        customer.Phone?.Value,
+        customer.WhatsApp?.Value,
+        customer.FiscalAddress is null
+            ? null
+            : new AddressDto(
+                customer.FiscalAddress.Street,
+                customer.FiscalAddress.City,
+                customer.FiscalAddress.Province.ToString(),
+                customer.FiscalAddress.PostalCode),
+        customer.CreditLimit,
+        customer.PaymentTermsDays,
+        customer.SellerId,
+        customer.Notes,
+        customer.IsLargeCompany,
+        customer.FceThreshold,
+        customer.FceCheckedAtUtc,
+        customer.Locations.Select(l => new LocationDto(
+            l.Id.Value,
+            l.Name,
+            new AddressDto(l.Address.Street, l.Address.City, l.Address.Province.ToString(), l.Address.PostalCode),
+            l.Phone?.Value,
+            l.Notes)).ToList(),
+        customer.Contacts.Select(c => new ContactDto(
+            c.Id.Value,
+            c.Name,
+            c.Role.ToString(),
+            c.LocationId?.Value,
+            c.Email?.Value,
+            c.Phone?.Value,
+            c.WhatsApp?.Value,
+            c.IsPrimary,
+            c.Notes)).ToList(),
+        customer.FiscalRates.Select(r => new FiscalRateDto(
+            r.Jurisdiction.ToString(),
+            r.PerceptionRate,
+            r.RetentionRate,
+            r.HasPerceptionExclusion,
+            r.PerceptionExclusionExpiresOn,
+            r.HasRetentionExclusion,
+            r.RetentionExclusionExpiresOn,
+            r.ExclusionCertificateNumber)).ToList(),
+        customer.CreatedAtUtc,
+        customer.UpdatedAtUtc);
+}
