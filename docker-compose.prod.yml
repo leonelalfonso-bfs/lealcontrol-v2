@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lealcontrol_v2}
+      POSTGRES_USER: ${POSTGRES_USER:-lealv2}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - lealcontrol_v2_pg:/var/lib/postgresql/data
+    networks: [v2]
+  api:
+    build: { context: ., dockerfile: deploy/Dockerfile.api }
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Database: Host=postgres;Port=5432;Database=${POSTGRES_DB:-lealcontrol_v2};Username=${POSTGRES_USER:-lealv2};Password=${POSTGRES_PASSWORD}
+    depends_on: [postgres]
+    ports: ["127.0.0.1:5209:8080"]
+    networks: [v2]
+  web:
+    build: { context: ., dockerfile: deploy/Dockerfile.web }
+    restart: unless-stopped
+    depends_on: [api]
+    ports: ["127.0.0.1:5174:80"]
+    networks: [v2]
+networks:
+  v2: { name: lealcontrol-v2 }
+volumes:
+  lealcontrol_v2_pg: { name: lealcontrol-v2-pg }

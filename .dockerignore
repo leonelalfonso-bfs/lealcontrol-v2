@@ -1,0 +1,8 @@
+.git
+frontend/node_modules
+frontend/dist
+**/bin
+**/obj
+*.log
+test_*
+*.sql
