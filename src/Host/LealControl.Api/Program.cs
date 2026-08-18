@@ -68,8 +68,12 @@ try
     {
         app.UseSwagger();
         app.UseSwaggerUI();
+    }
 
-        await using var scope = app.Services.CreateAsyncScope();
+    // Cada instancia, incluida la de pruebas/producción, debe crear y actualizar
+    // su esquema antes de atender solicitudes. EF registra las migraciones aplicadas.
+    await using (var scope = app.Services.CreateAsyncScope())
+    {
         var crm = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
         await crm.Database.MigrateAsync();
         var sales = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
@@ -79,12 +83,6 @@ try
         await communications.Database.MigrateAsync();
         await communications.EnsureTablesCreatedAsync();
         var finance = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
-        await finance.EnsureFinanceTablesAsync();
-    }
-
-    await using (var financeScope = app.Services.CreateAsyncScope())
-    {
-        var finance = financeScope.ServiceProvider.GetRequiredService<FinanceDbContext>();
         await finance.EnsureFinanceTablesAsync();
     }
 
