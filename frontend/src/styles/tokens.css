@@ -1,0 +1,35 @@
+:root {
+  --bg-dark: #1c2128;
+  --bg-darker: #161b22;
+  --primary: #0c5c50;
+  --accent: #0c5c50;
+  --text-main: #1a1f26;
+  --glass-bg: rgba(28, 33, 40, 0.04);
+
+  --ink: var(--text-main);
+  --ink-soft: #5c6570;
+  --paper: #f4f5f7;
+  --panel: #ffffff;
+  --line: #e4e7ec;
+  --accent-2: #0c5c50;
+  --danger: #9b2c2c;
+  --ok: #0c5c50;
+  --shadow: none;
+  --sidebar: var(--bg-dark);
+  --sidebar-text: #c5cbd3;
+  --sidebar-muted: #8b939e;
+  --sidebar-hover: #262c35;
+  --brand: #f3f5f7;
+  --row-hover: #eef1f4;
+  --badge-ok-bg: #e6f2ef;
+  --badge-warn-bg: #f4eee2;
+  --badge-warn: #8a6a2b;
+  --badge-off-bg: #eef0f3;
+  --badge-off: #5c6570;
+  --alert-bg: #f8ecec;
+  --surface: #ffffff;
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-serif: "IBM Plex Sans", sans-serif;
+  --radius: 10px;
+  --row-h: 46px;
+}

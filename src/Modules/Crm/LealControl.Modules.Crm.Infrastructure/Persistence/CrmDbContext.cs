@@ -18,11 +18,19 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
 
     public DbSet<Customer> Customers => Set<Customer>();
 
+    public DbSet<CustomerEquipment> CustomerEquipments => Set<CustomerEquipment>();
+
     public DbSet<Lead> Leads => Set<Lead>();
 
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
 
     public DbSet<Activity> Activities => Set<Activity>();
+
+    public DbSet<LealControl.Modules.Crm.Domain.Settings.CompanySettings> CompanySettings => Set<LealControl.Modules.Crm.Domain.Settings.CompanySettings>();
+
+    public DbSet<LealControl.Modules.Crm.Domain.Settings.TenantUser> TenantUsers => Set<LealControl.Modules.Crm.Domain.Settings.TenantUser>();
+
+    public DbSet<LealControl.Modules.Crm.Domain.Suppliers.Supplier> Suppliers => Set<LealControl.Modules.Crm.Domain.Suppliers.Supplier>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

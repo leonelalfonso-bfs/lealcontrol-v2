@@ -2,7 +2,8 @@ using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Crm.Application;
 using LealControl.Modules.Crm.Application.Abstractions;
-using LealControl.Modules.Crm.Contracts.Customers;
+using LealControl.Modules.Directory.Contracts.Customers;
+using LealControl.Modules.Crm.Contracts.Opportunities;
 using LealControl.Modules.Crm.Infrastructure.Directory;
 using LealControl.Modules.Crm.Infrastructure.Persistence;
 using LealControl.Modules.Crm.Infrastructure.Persistence.Repositories;
@@ -18,6 +19,7 @@ public static class DependencyInjection
     public static IServiceCollection AddCrmModule(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddCrmApplication();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
         services.Configure<TenancyOptions>(configuration.GetSection(TenancyOptions.SectionName));
         services.AddHttpContextAccessor();
         services.AddScoped<ITenantContext, HttpTenantContext>();
@@ -35,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IOpportunityRepository, OpportunityRepository>();
         services.AddScoped<IActivityRepository, ActivityRepository>();
         services.AddScoped<ICustomerDirectory, CustomerDirectory>();
+        services.AddScoped<IOpportunityLookup, OpportunityLookup>();
         return services;
     }
 }

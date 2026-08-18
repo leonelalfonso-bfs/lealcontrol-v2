@@ -11,6 +11,7 @@ public sealed class Customer : AggregateRoot<CustomerId>
     private readonly List<CustomerLocation> _locations = [];
     private readonly List<CustomerContact> _contacts = [];
     private readonly List<CustomerFiscalRate> _fiscalRates = [];
+    private readonly List<CustomerEquipment> _equipments = [];
 
     private Customer()
     {
@@ -95,6 +96,8 @@ public sealed class Customer : AggregateRoot<CustomerId>
     public IReadOnlyCollection<CustomerContact> Contacts => _contacts.AsReadOnly();
 
     public IReadOnlyCollection<CustomerFiscalRate> FiscalRates => _fiscalRates.AsReadOnly();
+
+    public IReadOnlyCollection<CustomerEquipment> Equipments => _equipments.AsReadOnly();
 
     public static Result<Customer> Register(CustomerRegistration registration)
     {
@@ -397,6 +400,117 @@ public sealed class Customer : AggregateRoot<CustomerId>
         IsLargeCompany = isLargeCompany;
         FceThreshold = threshold;
         FceCheckedAtUtc = utcNow;
+        Touch(utcNow);
+        return Result.Success();
+    }
+
+    public Result<EquipmentId> AddEquipment(
+        string internalCode,
+        string equipmentType,
+        string brand,
+        string model,
+        string serialNumber,
+        string? maxCapacity,
+        string? divisionScale,
+        LocationId? locationId,
+        string status,
+        DateTime? lastCalibrationDate,
+        int? calibrationIntervalMonths,
+        string? notes,
+        DateTime utcNow,
+        Dictionary<string, string>? customAttributes = null)
+    {
+        if (locationId.HasValue && !_locations.Any(l => l.Id == locationId.Value))
+        {
+            return Result<EquipmentId>.Failure(CrmErrors.LocationNotFound);
+        }
+
+        var equipmentResult = CustomerEquipment.Create(
+            internalCode,
+            equipmentType,
+            brand,
+            model,
+            serialNumber,
+            maxCapacity,
+            divisionScale,
+            locationId,
+            status,
+            lastCalibrationDate,
+            calibrationIntervalMonths,
+            notes,
+            customAttributes);
+
+        if (equipmentResult.IsFailure)
+        {
+            return Result<EquipmentId>.Failure(equipmentResult.Error);
+        }
+
+        _equipments.Add(equipmentResult.Value);
+        Touch(utcNow);
+        return Result<EquipmentId>.Success(equipmentResult.Value.Id);
+    }
+
+    public Result UpdateEquipment(
+        EquipmentId equipmentId,
+        string internalCode,
+        string equipmentType,
+        string brand,
+        string model,
+        string serialNumber,
+        string? maxCapacity,
+        string? divisionScale,
+        LocationId? locationId,
+        string status,
+        DateTime? lastCalibrationDate,
+        int? calibrationIntervalMonths,
+        string? notes,
+        DateTime utcNow,
+        Dictionary<string, string>? customAttributes = null)
+    {
+        var equipment = _equipments.FirstOrDefault(e => e.Id == equipmentId);
+        if (equipment is null)
+        {
+            return Result.Failure(CrmErrors.EquipmentNotFound);
+        }
+
+        if (locationId.HasValue && !_locations.Any(l => l.Id == locationId.Value))
+        {
+            return Result.Failure(CrmErrors.LocationNotFound);
+        }
+
+        var updateResult = equipment.Update(
+            internalCode,
+            equipmentType,
+            brand,
+            model,
+            serialNumber,
+            maxCapacity,
+            divisionScale,
+            locationId,
+            status,
+            lastCalibrationDate,
+            calibrationIntervalMonths,
+            notes,
+            customAttributes);
+
+        if (updateResult.IsFailure)
+        {
+            return updateResult;
+        }
+
+        Touch(utcNow);
+        return Result.Success();
+    }
+
+    public Result RemoveEquipment(EquipmentId equipmentId, DateTime utcNow)
+    {
+        var equipment = _equipments.FirstOrDefault(e => e.Id == equipmentId);
+        if (equipment is null)
+        {
+            return Result.Failure(CrmErrors.EquipmentNotFound);
+        }
+
+        _equipments.Remove(equipment);
         Touch(utcNow);
         return Result.Success();
     }

@@ -8,11 +8,13 @@ Reescritura profesional del ERP. Leal Control 1.0 (Laravel) queda como sistema e
 cd ~/Desarrollo
 docker compose up -d
 dotnet run --project src/Host/LealControl.Api
-cd src/Web && npm install && npm run dev
+cd frontend && npm install && npm run dev
 ```
 
 Sistema: http://localhost:5173  
 API / Swagger: http://localhost:5208/swagger
+
+Frontend: React 19 + TypeScript + Vite (`frontend/`). Tokens en `frontend/src/styles/tokens.css`.
 
 Tenant de desarrollo (se usa si no mandás header):
 

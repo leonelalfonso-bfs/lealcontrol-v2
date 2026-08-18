@@ -72,6 +72,42 @@ public sealed record UpsertCustomerFiscalRateCommand(
     DateOnly? RetentionExclusionExpiresOn,
     string? ExclusionCertificateNumber) : IRequest<Result<CustomerDetailDto>>;
 
+public sealed record AddCustomerEquipmentCommand(
+    Guid CustomerId,
+    string InternalCode,
+    string EquipmentType,
+    string? Brand,
+    string? Model,
+    string? SerialNumber,
+    string? MaxCapacity,
+    string? DivisionScale,
+    Guid? LocationId,
+    string? Status,
+    DateTime? LastCalibrationDate,
+    int? CalibrationIntervalMonths,
+    string? Notes,
+    Dictionary<string, string>? CustomAttributes) : IRequest<Result<CustomerDetailDto>>;
+
+public sealed record UpdateCustomerEquipmentCommand(
+    Guid CustomerId,
+    Guid EquipmentId,
+    string InternalCode,
+    string EquipmentType,
+    string? Brand,
+    string? Model,
+    string? SerialNumber,
+    string? MaxCapacity,
+    string? DivisionScale,
+    Guid? LocationId,
+    string? Status,
+    DateTime? LastCalibrationDate,
+    int? CalibrationIntervalMonths,
+    string? Notes,
+    Dictionary<string, string>? CustomAttributes) : IRequest<Result<CustomerDetailDto>>;
+
+public sealed record RemoveCustomerEquipmentCommand(Guid CustomerId, Guid EquipmentId)
+    : IRequest<Result<CustomerDetailDto>>;
+
 internal sealed class CustomerChildCommandHandler :
     IRequestHandler<AddCustomerLocationCommand, Result<CustomerDetailDto>>,
     IRequestHandler<UpdateCustomerLocationCommand, Result<CustomerDetailDto>>,
@@ -79,6 +115,9 @@ internal sealed class CustomerChildCommandHandler :
     IRequestHandler<AddCustomerContactCommand, Result<CustomerDetailDto>>,
     IRequestHandler<UpdateCustomerContactCommand, Result<CustomerDetailDto>>,
     IRequestHandler<RemoveCustomerContactCommand, Result<CustomerDetailDto>>,
+    IRequestHandler<AddCustomerEquipmentCommand, Result<CustomerDetailDto>>,
+    IRequestHandler<UpdateCustomerEquipmentCommand, Result<CustomerDetailDto>>,
+    IRequestHandler<RemoveCustomerEquipmentCommand, Result<CustomerDetailDto>>,
     IRequestHandler<UpsertCustomerFiscalRateCommand, Result<CustomerDetailDto>>
 {
     private readonly ICustomerRepository _customers;
@@ -175,6 +214,47 @@ internal sealed class CustomerChildCommandHandler :
     public Task<Result<CustomerDetailDto>> Handle(RemoveCustomerContactCommand request, CancellationToken cancellationToken)
         => Mutate(request.CustomerId, cancellationToken, customer =>
             customer.RemoveContact(new ContactId(request.ContactId), _clock.UtcNow));
+
+    public Task<Result<CustomerDetailDto>> Handle(AddCustomerEquipmentCommand request, CancellationToken cancellationToken)
+        => Mutate(request.CustomerId, cancellationToken, customer =>
+            customer.AddEquipment(
+                request.InternalCode,
+                request.EquipmentType,
+                request.Brand ?? string.Empty,
+                request.Model ?? string.Empty,
+                request.SerialNumber ?? string.Empty,
+                request.MaxCapacity,
+                request.DivisionScale,
+                request.LocationId.HasValue ? new LocationId(request.LocationId.Value) : null,
+                request.Status ?? "Active",
+                request.LastCalibrationDate,
+                request.CalibrationIntervalMonths,
+                request.Notes,
+                _clock.UtcNow,
+                request.CustomAttributes));
+
+    public Task<Result<CustomerDetailDto>> Handle(UpdateCustomerEquipmentCommand request, CancellationToken cancellationToken)
+        => Mutate(request.CustomerId, cancellationToken, customer =>
+            customer.UpdateEquipment(
+                new EquipmentId(request.EquipmentId),
+                request.InternalCode,
+                request.EquipmentType,
+                request.Brand ?? string.Empty,
+                request.Model ?? string.Empty,
+                request.SerialNumber ?? string.Empty,
+                request.MaxCapacity,
+                request.DivisionScale,
+                request.LocationId.HasValue ? new LocationId(request.LocationId.Value) : null,
+                request.Status ?? "Active",
+                request.LastCalibrationDate,
+                request.CalibrationIntervalMonths,
+                request.Notes,
+                _clock.UtcNow,
+                request.CustomAttributes));
+
+    public Task<Result<CustomerDetailDto>> Handle(RemoveCustomerEquipmentCommand request, CancellationToken cancellationToken)
+        => Mutate(request.CustomerId, cancellationToken, customer =>
+            customer.RemoveEquipment(new EquipmentId(request.EquipmentId), _clock.UtcNow));
 
     public Task<Result<CustomerDetailDto>> Handle(UpsertCustomerFiscalRateCommand request, CancellationToken cancellationToken)
         => Mutate(request.CustomerId, cancellationToken, customer =>

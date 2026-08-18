@@ -31,8 +31,8 @@ Thumbs.db
 *.db-wal
 
 ## Frontend
-src/Web/node_modules/
-src/Web/dist/
+frontend/node_modules/
+frontend/dist/
 
 ## Tests / coverage
 TestResults/

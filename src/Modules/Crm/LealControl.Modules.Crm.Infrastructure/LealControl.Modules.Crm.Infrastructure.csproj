@@ -13,5 +13,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LealControl.Modules.Crm.Application\LealControl.Modules.Crm.Application.csproj" />
+    <ProjectReference Include="..\..\Directory\LealControl.Modules.Directory.Contracts\LealControl.Modules.Directory.Contracts.csproj" />
   </ItemGroup>
 </Project>

@@ -1,3 +1,4 @@
+using LealControl.Modules.Crm.Application.Customers;
 using LealControl.Modules.Crm.Application.Customers.GetCustomer;
 using LealControl.Modules.Crm.Application.Customers.ManageLocations;
 using LealControl.Modules.Crm.Application.Customers.Models;
@@ -23,6 +24,8 @@ public static class CrmEndpoints
         MapCustomers(crm);
         MapLeads(crm);
         MapPipeline(crm);
+        endpoints.MapCompanySettingsModule();
+        endpoints.MapSupplierEndpoints();
         return endpoints;
     }
 
@@ -33,13 +36,15 @@ public static class CrmEndpoints
         customers.MapGet("/", async (
             string? search,
             bool? onlyActive,
-            int page,
-            int pageSize,
+            int? page,
+            int? pageSize,
             ISender sender,
             CancellationToken cancellationToken) =>
         {
+            var p = page.GetValueOrDefault(1);
+            var ps = pageSize.GetValueOrDefault(25);
             var result = await sender.Send(
-                new ListCustomersQuery(search, onlyActive, page == 0 ? 1 : page, pageSize == 0 ? 25 : pageSize),
+                new ListCustomersQuery(search, onlyActive, p <= 0 ? 1 : p, ps <= 0 ? 25 : ps),
                 cancellationToken);
             return result.ToHttp();
         });
@@ -142,6 +147,46 @@ public static class CrmEndpoints
             return result.ToHttp();
         });
 
+        customers.MapGet("/consult-cuit/{cuit}", async (
+            string cuit,
+            ISender sender,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(new ConsultArcaCuitQuery(cuit), cancellationToken);
+            return result.ToHttp();
+        });
+
+        customers.MapPost("/{id:guid}/equipments", async (
+            Guid id,
+            AddCustomerEquipmentCommand body,
+            ISender sender,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(body with { CustomerId = id }, cancellationToken);
+            return result.ToHttp(StatusCodes.Status201Created);
+        });
+
+        customers.MapPut("/{id:guid}/equipments/{equipmentId:guid}", async (
+            Guid id,
+            Guid equipmentId,
+            UpdateCustomerEquipmentCommand body,
+            ISender sender,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(body with { CustomerId = id, EquipmentId = equipmentId }, cancellationToken);
+            return result.ToHttp();
+        });
+
+        customers.MapDelete("/{id:guid}/equipments/{equipmentId:guid}", async (
+            Guid id,
+            Guid equipmentId,
+            ISender sender,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(new RemoveCustomerEquipmentCommand(id, equipmentId), cancellationToken);
+            return result.ToHttp();
+        });
+
         customers.MapPut("/{id:guid}/fiscal-rates", async (
             Guid id,
             UpsertCustomerFiscalRateCommand body,
@@ -160,11 +205,11 @@ public static class CrmEndpoints
 
         customers.MapGet("/{id:guid}/timeline", async (
             Guid id,
-            int take,
             ISender sender,
-            CancellationToken cancellationToken) =>
+            CancellationToken cancellationToken,
+            int take = 50) =>
         {
-            var result = await sender.Send(new ListCustomerTimelineQuery(id, take == 0 ? 50 : take), cancellationToken);
+            var result = await sender.Send(new ListCustomerTimelineQuery(id, take <= 0 ? 50 : take), cancellationToken);
             return result.ToHttp();
         });
     }
@@ -208,6 +253,12 @@ public static class CrmEndpoints
 
     private static void MapPipeline(RouteGroupBuilder crm)
     {
+        crm.MapGet("/opportunities/kanban", async (string? ownerName, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(new GetKanbanBoardQuery(ownerName), cancellationToken);
+            return result.ToHttp();
+        });
+
         crm.MapGet("/opportunities", async (ISender sender, CancellationToken cancellationToken) =>
         {
             var result = await sender.Send(new ListOpportunitiesQuery(), cancellationToken);
@@ -235,6 +286,45 @@ public static class CrmEndpoints
             return result.ToHttp();
         });
 
+        crm.MapPost("/opportunities/{id:guid}/classify", async (
+            Guid id,
+            ClassifyOpportunityRequest body,
+            ISender sender,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(
+                new ClassifyOpportunityCommand(id, body.Priority, body.OwnerName, body.OwnerId, body.Tags, body.ExpectedCloseDate),
+                cancellationToken);
+            return result.ToHttp();
+        });
+
+        crm.MapGet("/reports/pipeline", async (
+            string? ownerName,
+            DateTime? fromUtc,
+            DateTime? toUtc,
+            ISender sender,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(new GetPipelineReportQuery(ownerName, fromUtc, toUtc), cancellationToken);
+            return result.ToHttp();
+        });
+
+        crm.MapGet("/activities/follow-ups", async (ISender sender, CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(new ListFollowUpsQuery(), cancellationToken);
+            return result.ToHttp();
+        });
+
+        crm.MapGet("/opportunities/{id:guid}/timeline", async (
+            Guid id,
+            ISender sender,
+            CancellationToken cancellationToken,
+            int take = 100) =>
+        {
+            var result = await sender.Send(new ListOpportunityTimelineQuery(id, take <= 0 ? 100 : take), cancellationToken);
+            return result.ToHttp();
+        });
+
         crm.MapPost("/activities", async (LogActivityCommand body, ISender sender, CancellationToken cancellationToken) =>
         {
             var result = await sender.Send(body, cancellationToken);
@@ -246,3 +336,10 @@ public static class CrmEndpoints
 }
 
 public sealed record MoveOpportunityRequest(OpportunityStage Stage, string? LostReason);
+
+public sealed record ClassifyOpportunityRequest(
+    OpportunityPriority Priority,
+    string? OwnerName,
+    Guid? OwnerId,
+    IReadOnlyList<string>? Tags,
+    DateTime? ExpectedCloseDate);

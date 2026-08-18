@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LealControl.Modules.Sales.Contracts\LealControl.Modules.Sales.Contracts.csproj" />
+    <ProjectReference Include="..\..\Directory\LealControl.Modules.Directory.Contracts\LealControl.Modules.Directory.Contracts.csproj" />
+    <ProjectReference Include="..\LealControl.Modules.Sales.Domain\LealControl.Modules.Sales.Domain.csproj" />
+    <ProjectReference Include="..\..\Crm\LealControl.Modules.Crm.Contracts\LealControl.Modules.Crm.Contracts.csproj" />
+  </ItemGroup>
+</Project>

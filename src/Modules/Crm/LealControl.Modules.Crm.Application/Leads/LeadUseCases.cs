@@ -7,7 +7,9 @@ using LealControl.Modules.Crm.Application.Customers;
 using LealControl.Modules.Crm.Application.Customers.Models;
 using LealControl.Modules.Crm.Domain;
 using LealControl.Modules.Crm.Domain.Customers;
+using LealControl.Modules.Crm.Domain.Activities;
 using LealControl.Modules.Crm.Domain.Leads;
+using LealControl.Modules.Crm.Domain.Opportunities;
 using LealControl.Modules.Crm.Domain.ValueObjects;
 using MediatR;
 
@@ -117,6 +119,8 @@ internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCom
 {
     private readonly ILeadRepository _leads;
     private readonly ICustomerRepository _customers;
+    private readonly IOpportunityRepository _opportunities;
+    private readonly IActivityRepository _activities;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITenantContext _tenant;
     private readonly IClock _clock;
@@ -124,12 +128,16 @@ internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCom
     public ConvertLeadCommandHandler(
         ILeadRepository leads,
         ICustomerRepository customers,
+        IOpportunityRepository opportunities,
+        IActivityRepository activities,
         IUnitOfWork unitOfWork,
         ITenantContext tenant,
         IClock clock)
     {
         _leads = leads;
         _customers = customers;
+        _opportunities = opportunities;
+        _activities = activities;
         _unitOfWork = unitOfWork;
         _tenant = tenant;
         _clock = clock;
@@ -185,6 +193,49 @@ internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCom
         }
 
         _customers.Add(registered.Value);
+
+        var opportunity = Opportunity.Open(
+            _tenant.TenantId,
+            lead.Description ?? lead.Name,
+            registered.Value.Id,
+            lead.Id,
+            null,
+            "ARS",
+            lead.AssignedTo,
+            null,
+            OpportunityPriority.Normal,
+            new[] { "prospecto-calificado" },
+            _clock.UtcNow,
+            customFields: new Dictionary<string, string>
+            {
+                ["necesidad"] = lead.Description ?? "Pendiente de relevamiento",
+                ["origen"] = lead.Source.ToString(),
+                ["contacto"] = lead.ContactName ?? "Pendiente"
+            });
+
+        if (opportunity.IsFailure)
+        {
+            return Result<CustomerDetailDto>.Failure(opportunity.Error);
+        }
+
+        _opportunities.Add(opportunity.Value);
+
+        var conversionActivity = Activity.Log(
+            _tenant.TenantId,
+            ActivityType.Note,
+            $"Prospecto calificado y convertido. Se abrió la oportunidad '{opportunity.Value.Title}' en Relevamiento.",
+            registered.Value.Id,
+            lead.Id,
+            opportunity.Value.Id,
+            lead.AssignedTo,
+            null,
+            _clock.UtcNow);
+
+        if (conversionActivity.IsSuccess)
+        {
+            _activities.Add(conversionActivity.Value);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<CustomerDetailDto>.Success(CustomerMappings.ToDetail(registered.Value));
     }

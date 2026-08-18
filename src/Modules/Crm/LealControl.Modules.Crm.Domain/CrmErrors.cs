@@ -108,7 +108,31 @@ public static class CrmErrors
         "Crm.Opportunity.Closed",
         "La oportunidad ya está cerrada.");
 
+    public static readonly Error OpportunityLostReasonRequired = Error.Validation(
+        "Crm.Opportunity.LostReasonRequired",
+        "Indicá el motivo de pérdida.");
+
+    public static readonly Error OpportunityInvalidTransition = Error.Validation(
+        "Crm.Opportunity.InvalidTransition",
+        "La oportunidad debe avanzar respetando el flujo comercial y la evidencia de cada etapa.");
+
+    public static readonly Error OpportunityCustomerRequired = Error.Validation(
+        "Crm.Opportunity.CustomerRequired",
+        "Vinculá una empresa antes de preparar la propuesta.");
+
     public static readonly Error ActivityDescriptionRequired = Error.Validation(
         "Crm.Activity.DescriptionRequired",
         "La actividad necesita una descripción o un tipo de canal.");
+
+    public static readonly Error EquipmentCodeRequired = Error.Validation(
+        "Crm.Equipment.CodeRequired",
+        "El código interno del equipo es obligatorio.");
+
+    public static readonly Error EquipmentTypeRequired = Error.Validation(
+        "Crm.Equipment.TypeRequired",
+        "El tipo de equipo es obligatorio.");
+
+    public static readonly Error EquipmentNotFound = Error.NotFound(
+        "Crm.Equipment.NotFound",
+        "El equipo no existe en este cliente.");
 }

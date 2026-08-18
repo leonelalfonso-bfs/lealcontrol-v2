@@ -1,5 +1,5 @@
 using LealControl.Modules.Crm.Application.Abstractions;
-using LealControl.Modules.Crm.Contracts.Customers;
+using LealControl.Modules.Directory.Contracts.Customers;
 using LealControl.Modules.Crm.Domain.Customers;
 
 namespace LealControl.Modules.Crm.Infrastructure.Directory;

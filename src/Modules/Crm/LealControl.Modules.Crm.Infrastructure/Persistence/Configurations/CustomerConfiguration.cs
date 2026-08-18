@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Crm.Domain.Customers;
 using Microsoft.EntityFrameworkCore;
@@ -68,6 +69,12 @@ internal sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
             .OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.Contacts).HasField("_contacts").UsePropertyAccessMode(PropertyAccessMode.Field);
 
+        builder.HasMany(x => x.Equipments)
+            .WithOne()
+            .HasForeignKey("customer_id")
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Equipments).HasField("_equipments").UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.OwnsMany(x => x.FiscalRates, rates =>
         {
             rates.ToTable("customer_fiscal_rates");
@@ -98,14 +105,13 @@ internal sealed class CustomerLocationConfiguration : IEntityTypeConfiguration<C
         builder.Property(x => x.Id).HasConversion(id => id.Value, value => new LocationId(value));
         builder.Property(x => x.Name).HasMaxLength(160).IsRequired();
         builder.Property(x => x.Notes).HasMaxLength(2000);
-        builder.Ignore(x => x.JurisdictionProvince);
 
         builder.OwnsOne(x => x.Address, address =>
         {
-            address.Property(a => a.Street).HasColumnName("street").HasMaxLength(200);
-            address.Property(a => a.City).HasColumnName("city").HasMaxLength(120);
-            address.Property(a => a.Province).HasColumnName("province").HasConversion<string>().HasMaxLength(40);
-            address.Property(a => a.PostalCode).HasColumnName("postal_code").HasMaxLength(12);
+            address.Property(a => a.Street).HasColumnName("street").HasMaxLength(200).IsRequired();
+            address.Property(a => a.City).HasColumnName("city").HasMaxLength(120).IsRequired();
+            address.Property(a => a.Province).HasColumnName("province").HasConversion<string>().HasMaxLength(40).IsRequired();
+            address.Property(a => a.PostalCode).HasColumnName("postal_code").HasMaxLength(12).IsRequired();
         });
 
         builder.OwnsOne(x => x.Phone, phone =>
@@ -124,11 +130,11 @@ internal sealed class CustomerContactConfiguration : IEntityTypeConfiguration<Cu
         builder.Property(x => x.Id).HasConversion(id => id.Value, value => new ContactId(value));
         builder.Property(x => x.Name).HasMaxLength(160).IsRequired();
         builder.Property(x => x.Role).HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.Notes).HasMaxLength(2000);
         builder.Property(x => x.LocationId)
             .HasConversion(
                 id => id.HasValue ? id.Value.Value : (Guid?)null,
                 value => value.HasValue ? new LocationId(value.Value) : null);
-        builder.Property(x => x.Notes).HasMaxLength(2000);
 
         builder.OwnsOne(x => x.Email, email =>
         {
@@ -144,5 +150,33 @@ internal sealed class CustomerContactConfiguration : IEntityTypeConfiguration<Cu
         {
             phone.Property(p => p.Value).HasColumnName("whatsapp").HasMaxLength(20);
         });
+    }
+}
+
+internal sealed class CustomerEquipmentConfiguration : IEntityTypeConfiguration<CustomerEquipment>
+{
+    public void Configure(EntityTypeBuilder<CustomerEquipment> builder)
+    {
+        builder.ToTable("customer_equipments");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasConversion(id => id.Value, value => new EquipmentId(value));
+        builder.Property(x => x.InternalCode).HasMaxLength(80).IsRequired();
+        builder.Property(x => x.EquipmentType).HasMaxLength(120).IsRequired();
+        builder.Property(x => x.Brand).HasMaxLength(120);
+        builder.Property(x => x.Model).HasMaxLength(120);
+        builder.Property(x => x.SerialNumber).HasMaxLength(120);
+        builder.Property(x => x.MaxCapacity).HasMaxLength(80);
+        builder.Property(x => x.DivisionScale).HasMaxLength(80);
+        builder.Property(x => x.Status).HasMaxLength(40);
+        builder.Property(x => x.Notes).HasMaxLength(2000);
+        builder.Property(x => x.LocationId)
+            .HasConversion(
+                id => id.HasValue ? id.Value.Value : (Guid?)null,
+                value => value.HasValue ? new LocationId(value.Value) : null);
+        builder.Property(x => x.CustomAttributes)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v ?? new Dictionary<string, string>(), (JsonSerializerOptions?)null),
+                v => string.IsNullOrWhiteSpace(v) ? new Dictionary<string, string>() : JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, string>());
     }
 }

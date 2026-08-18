@@ -3,6 +3,13 @@ using LealControl.BuildingBlocks.Time;
 using LealControl.Modules.Crm.Infrastructure;
 using LealControl.Modules.Crm.Infrastructure.Http;
 using LealControl.Modules.Crm.Infrastructure.Persistence;
+using LealControl.Modules.Sales.Infrastructure;
+using LealControl.Modules.Sales.Infrastructure.Http;
+using LealControl.Modules.Sales.Infrastructure.Persistence;
+using LealControl.Modules.Communications.Infrastructure;
+using LealControl.Modules.Communications.Infrastructure.Http;
+using LealControl.Modules.Communications.Infrastructure.Persistence;
+using LealControl.Modules.Finance.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
@@ -21,6 +28,9 @@ try
 
     builder.Services.AddSingleton<IClock, SystemClock>();
     builder.Services.AddCrmModule(builder.Configuration);
+    builder.Services.AddSalesModule(builder.Configuration);
+    builder.Services.AddCommunicationsModule(builder.Configuration);
+    builder.Services.AddFinanceModule(builder.Configuration);
     builder.Services.ConfigureHttpJsonOptions(options =>
         options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
     builder.Services.AddEndpointsApiExplorer();
@@ -30,14 +40,21 @@ try
         {
             Title = "Leal Control ERP 2.0",
             Version = "v1",
-            Description = "API modular. Primer módulo: CRM."
+            Description = "API modular. Módulos: CRM + Sales (presupuestos)."
         });
     });
-    builder.Services.AddHealthChecks().AddDbContextCheck<CrmDbContext>("crm-db");
+    builder.Services.AddHealthChecks()
+        .AddDbContextCheck<CrmDbContext>("crm-db")
+        .AddDbContextCheck<SalesDbContext>("sales-db")
+        .AddDbContextCheck<CommunicationsDbContext>("communications-db");
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("web", policy =>
-            policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+            policy.WithOrigins(
+                    "http://localhost:5173",
+                    "http://127.0.0.1:5173",
+                    "http://localhost:5273",
+                    "http://127.0.0.1:5273")
                 .AllowAnyHeader()
                 .AllowAnyMethod());
     });
@@ -53,13 +70,30 @@ try
         app.UseSwaggerUI();
 
         await using var scope = app.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
-        await db.Database.MigrateAsync();
+        var crm = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
+        await crm.Database.MigrateAsync();
+        var sales = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
+        await sales.Database.MigrateAsync();
+        await sales.EnsureTablesCreatedAsync();
+        var communications = scope.ServiceProvider.GetRequiredService<CommunicationsDbContext>();
+        await communications.Database.MigrateAsync();
+        await communications.EnsureTablesCreatedAsync();
+        var finance = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
+        await finance.EnsureFinanceTablesAsync();
+    }
+
+    await using (var financeScope = app.Services.CreateAsyncScope())
+    {
+        var finance = financeScope.ServiceProvider.GetRequiredService<FinanceDbContext>();
+        await finance.EnsureFinanceTablesAsync();
     }
 
     app.MapGet("/", () => Results.Redirect("/swagger"));
     app.MapHealthChecks("/health");
     app.MapCrmModule();
+    app.MapSalesModule();
+    app.MapCommunicationsModule();
+    app.MapFinanceModule();
 
     await app.RunAsync();
 }

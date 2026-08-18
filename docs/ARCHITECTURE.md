@@ -11,6 +11,7 @@ Host (LealControl.Api)
               ├── Modules.X.Domain
               └── Modules.X.Contracts   ← lo único que pueden ver los demás módulos
 BuildingBlocks                         ← primitivos (Result, TenantId, AggregateRoot)
+frontend/                              ← React 19 + Vite (solo habla con la API)
 ```
 
 ## Reglas que no se negocian

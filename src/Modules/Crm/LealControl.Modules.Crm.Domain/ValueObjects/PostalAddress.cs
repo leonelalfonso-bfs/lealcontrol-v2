@@ -51,20 +51,16 @@ public sealed record PostalAddress
     {
         if (string.IsNullOrWhiteSpace(street)
             && string.IsNullOrWhiteSpace(city)
-            && string.IsNullOrWhiteSpace(postalCode)
-            && province is null)
+            && string.IsNullOrWhiteSpace(postalCode))
         {
             return Result<PostalAddress?>.Success(null);
         }
 
-        if (province is null)
-        {
-            return Result<PostalAddress?>.Failure(CrmErrors.InvalidAddress);
-        }
+        var prov = province ?? ArgentineProvince.SantaFe;
+        var s = string.IsNullOrWhiteSpace(street) ? "S/D" : street.Trim();
+        var c = string.IsNullOrWhiteSpace(city) ? "San Lorenzo" : city.Trim();
+        var cp = string.IsNullOrWhiteSpace(postalCode) ? "2200" : postalCode.Trim();
 
-        var created = Create(street, city, province.Value, postalCode);
-        return created.IsFailure
-            ? Result<PostalAddress?>.Failure(created.Error)
-            : Result<PostalAddress?>.Success(created.Value);
+        return Result<PostalAddress?>.Success(new PostalAddress(s, c, prov, cp));
     }
 }

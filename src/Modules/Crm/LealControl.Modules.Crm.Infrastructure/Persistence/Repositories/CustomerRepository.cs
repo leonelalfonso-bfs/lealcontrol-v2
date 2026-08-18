@@ -157,5 +157,26 @@ internal sealed class ActivityRepository : IActivityRepository
             .Take(take)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Activity>> ListWithFollowUpAsync(
+        TenantId tenantId,
+        int take,
+        CancellationToken cancellationToken = default) =>
+        await _db.Activities.AsNoTracking()
+            .Where(x => x.TenantId == tenantId && x.NextFollowUpOn != null)
+            .OrderBy(x => x.NextFollowUpOn)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<Activity>> ListByOpportunityAsync(
+        TenantId tenantId,
+        OpportunityId opportunityId,
+        int take,
+        CancellationToken cancellationToken = default) =>
+        await _db.Activities.AsNoTracking()
+            .Where(x => x.TenantId == tenantId && x.OpportunityId == opportunityId)
+            .OrderByDescending(x => x.OccurredAtUtc)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
     public void Add(Activity activity) => _db.Activities.Add(activity);
 }

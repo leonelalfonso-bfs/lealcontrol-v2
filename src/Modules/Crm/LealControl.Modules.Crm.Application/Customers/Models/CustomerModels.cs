@@ -48,6 +48,7 @@ public sealed record CustomerDetailDto(
     DateTime? FceCheckedAtUtc,
     IReadOnlyList<LocationDto> Locations,
     IReadOnlyList<ContactDto> Contacts,
+    IReadOnlyList<EquipmentDto> Equipments,
     IReadOnlyList<FiscalRateDto> FiscalRates,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc);
@@ -75,6 +76,38 @@ public sealed record ContactDto(
     string? WhatsApp,
     bool IsPrimary,
     string? Notes);
+
+public sealed record EquipmentDto(
+    Guid Id,
+    string InternalCode,
+    string EquipmentType,
+    string Brand,
+    string Model,
+    string SerialNumber,
+    string? MaxCapacity,
+    string? DivisionScale,
+    Guid? LocationId,
+    string Status,
+    DateTime? LastCalibrationDate,
+    int? CalibrationIntervalMonths,
+    DateTime? NextCalibrationDueDate,
+    string? Notes,
+    IReadOnlyDictionary<string, string> CustomAttributes);
+
+public sealed record EquipmentWriteModel(
+    string InternalCode,
+    string EquipmentType,
+    string? Brand,
+    string? Model,
+    string? SerialNumber,
+    string? MaxCapacity,
+    string? DivisionScale,
+    Guid? LocationId,
+    string? Status,
+    DateTime? LastCalibrationDate,
+    int? CalibrationIntervalMonths,
+    string? Notes,
+    Dictionary<string, string>? CustomAttributes);
 
 public sealed record FiscalRateDto(
     string Jurisdiction,
@@ -132,6 +165,22 @@ public static class CustomerMappings
             c.WhatsApp?.Value,
             c.IsPrimary,
             c.Notes)).ToList(),
+        customer.Equipments.Select(e => new EquipmentDto(
+            e.Id.Value,
+            e.InternalCode,
+            e.EquipmentType,
+            e.Brand,
+            e.Model,
+            e.SerialNumber,
+            e.MaxCapacity,
+            e.DivisionScale,
+            e.LocationId?.Value,
+            e.Status,
+            e.LastCalibrationDate,
+            e.CalibrationIntervalMonths,
+            e.NextCalibrationDueDate,
+            e.Notes,
+            e.CustomAttributes)).ToList(),
         customer.FiscalRates.Select(r => new FiscalRateDto(
             r.Jurisdiction.ToString(),
             r.PerceptionRate,

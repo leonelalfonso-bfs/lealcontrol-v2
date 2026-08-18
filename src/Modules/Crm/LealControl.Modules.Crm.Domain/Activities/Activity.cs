@@ -7,6 +7,14 @@ using LealControl.Modules.Crm.Domain.Opportunities;
 
 namespace LealControl.Modules.Crm.Domain.Activities;
 
+public enum ActivityStatusBadge
+{
+    Green = 1,  // Programada a futuro (DueDate > hoy)
+    Yellow = 2, // Vence hoy (DueDate.Date == hoy)
+    Red = 3,    // Vencida (DueDate < hoy y no realizada)
+    Gray = 4    // Sin actividad asignada
+}
+
 public sealed class Activity : AggregateRoot<ActivityId>
 {
     private Activity()
@@ -26,6 +34,7 @@ public sealed class Activity : AggregateRoot<ActivityId>
         Description = description;
         OccurredAtUtc = occurredAtUtc;
         CreatedAtUtc = occurredAtUtc;
+        IsDone = false;
     }
 
     public TenantId TenantId { get; private set; }
@@ -44,6 +53,12 @@ public sealed class Activity : AggregateRoot<ActivityId>
 
     public DateTime? NextFollowUpOn { get; private set; }
 
+    public DateTime? DueDate { get; private set; }
+
+    public bool IsDone { get; private set; }
+
+    public DateTime? CompletedAtUtc { get; private set; }
+
     public DateTime OccurredAtUtc { get; private set; }
 
     public DateTime CreatedAtUtc { get; private set; }
@@ -57,7 +72,8 @@ public sealed class Activity : AggregateRoot<ActivityId>
         OpportunityId? opportunityId,
         Guid? authorId,
         DateTime? nextFollowUpOn,
-        DateTime utcNow)
+        DateTime utcNow,
+        DateTime? dueDate = null)
     {
         var text = string.IsNullOrWhiteSpace(description) ? type.ToString() : description.Trim();
         if (string.IsNullOrWhiteSpace(text))
@@ -71,9 +87,48 @@ public sealed class Activity : AggregateRoot<ActivityId>
             LeadId = leadId,
             OpportunityId = opportunityId,
             AuthorId = authorId,
-            NextFollowUpOn = nextFollowUpOn
+            NextFollowUpOn = nextFollowUpOn,
+            DueDate = dueDate ?? nextFollowUpOn
         };
 
         return Result<Activity>.Success(activity);
+    }
+
+    public Result MarkAsDone(DateTime utcNow)
+    {
+        if (IsDone)
+        {
+            return Result.Success();
+        }
+
+        IsDone = true;
+        CompletedAtUtc = utcNow;
+        return Result.Success();
+    }
+
+    public ActivityStatusBadge EvaluateBadge(DateTime todayDate)
+    {
+        if (IsDone)
+        {
+            return ActivityStatusBadge.Gray;
+        }
+
+        var targetDate = DueDate ?? NextFollowUpOn;
+        if (targetDate is null)
+        {
+            return ActivityStatusBadge.Gray;
+        }
+
+        if (targetDate.Value.Date > todayDate.Date)
+        {
+            return ActivityStatusBadge.Green;
+        }
+
+        if (targetDate.Value.Date == todayDate.Date)
+        {
+            return ActivityStatusBadge.Yellow;
+        }
+
+        return ActivityStatusBadge.Red;
     }
 }
