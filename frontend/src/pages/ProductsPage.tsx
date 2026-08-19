@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import {
   currencyMeta,
   productTypeLabels,
+  productTypeMeta,
   type ExchangeRates,
   type Product,
   type ProductCategory
@@ -172,13 +173,15 @@ export const ProductsPage: React.FC = () => {
         <select
           value={selectedType}
           onChange={(e) => setSelectedType(e.target.value)}
-          style={{ maxWidth: "180px" }}
+          style={{ maxWidth: "230px" }}
         >
           <option value="">Todos los Tipos</option>
-          <option value="1">Productos</option>
-          <option value="2">Servicios</option>
-          <option value="3">Kits / Combos</option>
-          <option value="4">Consumibles</option>
+          <option value="DirectSale">🛍️ Venta Directa</option>
+          <option value="Service">🛠️ Servicios Intangibles</option>
+          <option value="Kit">🧩 Productos Ensamblados</option>
+          <option value="Manufactured">🏭 Productos Fabricados</option>
+          <option value="SparePart">🔧 Repuestos Técnicos</option>
+          <option value="RawMaterial">🧱 Materias Primas</option>
         </select>
 
         <select
@@ -244,8 +247,8 @@ export const ProductsPage: React.FC = () => {
                         )}
                       </td>
                       <td>
-                        <span className="badge">
-                          {typeLabel}
+                        <span className={`badge ${productTypeMeta[item.type]?.badgeClass ?? "off"}`}>
+                          {productTypeMeta[item.type]?.icon ?? "📦"} {productTypeLabels[item.type] ?? item.type}
                         </span>
                       </td>
                       <td className="muted">
@@ -259,17 +262,19 @@ export const ProductsPage: React.FC = () => {
                       <td style={{ textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
                         {curr.symbol} {item.basePrice.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                       </td>
-                      <td style={{ textAlign: "right", fontFamily: "monospace", color: "#0b6b5f", fontWeight: "600" }}>
+                      <td style={{ textAlign: "right", fontFamily: "monospace", color: "var(--primary)", fontWeight: "700" }}>
                         $ {priceInArs.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td style={{ textAlign: "center" }}>
-                        <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
-                          {item.trackStock ? (
-                            <span className="tag">
-                              Stock: {item.stock} {item.baseUnit}
+                        <div style={{ display: "flex", gap: "6px", justifyContent: "center", alignItems: "center" }}>
+                          {item.type === "Service" || !item.trackStock ? (
+                            <span className="badge off" style={{ fontSize: "0.72rem" }}>
+                              🛠️ Sin stock
                             </span>
                           ) : (
-                            <span className="muted">—</span>
+                            <span className="badge ok" style={{ fontSize: "0.76rem" }}>
+                              {item.stock} {item.baseUnit}
+                            </span>
                           )}
                           {item.hasSerialNumber && <span className="tag">Serie</span>}
                           {item.trackLot && <span className="tag">Lote</span>}

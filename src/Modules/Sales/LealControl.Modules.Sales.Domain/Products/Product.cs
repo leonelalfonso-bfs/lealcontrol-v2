@@ -153,9 +153,13 @@ public sealed class Product : AggregateRoot<ProductId>
             return Result<Product>.Failure(SalesErrors.ProductNameRequired);
         }
 
-        if (basePrice < 0 || costPrice < 0)
+        if (type == ProductType.Service)
         {
-            return Result<Product>.Failure(SalesErrors.InvalidProductPrice);
+            trackStock = false;
+            stock = 0m;
+            minStock = 0m;
+            hasSerialNumber = false;
+            trackLot = false;
         }
 
         return Result<Product>.Success(new Product(
@@ -216,9 +220,13 @@ public sealed class Product : AggregateRoot<ProductId>
             return Result.Failure(SalesErrors.ProductNameRequired);
         }
 
-        if (basePrice < 0 || costPrice < 0)
+        if (type == ProductType.Service)
         {
-            return Result.Failure(SalesErrors.InvalidProductPrice);
+            trackStock = false;
+            minStock = 0m;
+            hasSerialNumber = false;
+            trackLot = false;
+            Stock = 0m;
         }
 
         Code = code.Trim().ToUpperInvariant();

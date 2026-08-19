@@ -350,7 +350,7 @@ export type Product = {
   name: string;
   description?: string | null;
   detailedDescription?: string | null;
-  type: "Product" | "Service" | "Kit";
+  type: "DirectSale" | "Product" | "Service" | "Kit" | "Manufactured" | "Consumable" | "SparePart" | "RawMaterial" | string;
   categoryId?: string | null;
   categoryName?: string | null;
   imagePath?: string | null;
@@ -386,7 +386,7 @@ export type ProductWrite = {
   name: string;
   description?: string | null;
   detailedDescription?: string | null;
-  type: "Product" | "Service" | "Kit";
+  type: "DirectSale" | "Product" | "Service" | "Kit" | "Manufactured" | "SparePart" | "RawMaterial";
   categoryId?: string | null;
   imagePath?: string | null;
   saleCurrency: "ARS" | "USD_BILLETE" | "USD_DIVISA";
@@ -480,9 +480,25 @@ export const currencyMeta: Record<string, { label: string; detail: string; symbo
 };
 
 export const productTypeLabels: Record<string, string> = {
-  Product: "Producto / Repuesto",
-  Service: "Servicio Técnico",
-  Kit: "Kit / Combo"
+  DirectSale: "Venta Directa",
+  Product: "Venta Directa",
+  Service: "Servicio Intangible",
+  Kit: "Producto Ensamblado",
+  Manufactured: "Producto Fabricado",
+  Consumable: "Producto Fabricado",
+  SparePart: "Repuesto Técnico",
+  RawMaterial: "Materia Prima"
+};
+
+export const productTypeMeta: Record<string, { label: string; icon: string; badgeClass: string; movesStock: boolean; description: string }> = {
+  DirectSale: { label: "Venta Directa", icon: "🛍️", badgeClass: "ok", movesStock: true, description: "Mercadería de reventa que se compra y vende sin transformación" },
+  Product: { label: "Venta Directa", icon: "🛍️", badgeClass: "ok", movesStock: true, description: "Mercadería de reventa que se compra y vende sin transformación" },
+  Service: { label: "Servicio Intangible", icon: "🛠️", badgeClass: "off", movesStock: false, description: "Horas de mano de obra, calibraciones y fletes sin control de stock" },
+  Kit: { label: "Producto Ensamblado", icon: "🧩", badgeClass: "warn", movesStock: true, description: "Producto armado a partir de componentes o kits comerciales" },
+  Manufactured: { label: "Producto Fabricado", icon: "🏭", badgeClass: "ok", movesStock: true, description: "Elaborado mediante orden de producción y lista de materiales" },
+  Consumable: { label: "Producto Fabricado", icon: "🏭", badgeClass: "ok", movesStock: true, description: "Elaborado mediante orden de producción y lista de materiales" },
+  SparePart: { label: "Repuesto Técnico", icon: "🔧", badgeClass: "warn", movesStock: true, description: "Piezas e insumos utilizados en reparaciones y órdenes de trabajo" },
+  RawMaterial: { label: "Materia Prima", icon: "🧱", badgeClass: "off", movesStock: true, description: "Insumos base consumidos en el proceso de fabricación" }
 };
 
 export const labels: Record<string, string> = {

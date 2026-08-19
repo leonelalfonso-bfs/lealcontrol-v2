@@ -22,7 +22,18 @@ export const ProductFormPage: React.FC = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [detailedDescription, setDetailedDescription] = useState("");
-  const [type, setType] = useState<ProductWrite["type"]>("Product");
+  const [type, setType] = useState<ProductWrite["type"]>("DirectSale");
+  const handleTypeChange = (newType: ProductWrite["type"]) => {
+    setType(newType);
+    if (newType === "Service") {
+      setTrackStock(false);
+      setMinStock(0);
+      setHasSerialNumber(false);
+      setTrackLot(false);
+    } else if (!trackStock) {
+      setTrackStock(true);
+    }
+  };
   const [categoryId, setCategoryId] = useState<string>("");
 
   // Prices & 3 Currencies
@@ -68,7 +79,7 @@ export const ProductFormPage: React.FC = () => {
           setDescription(p.description ?? "");
           setDetailedDescription(p.detailedDescription ?? "");
 
-          setType(p.type);
+          setType(p.type as ProductWrite["type"]);
           setCategoryId(p.categoryId ?? "");
 
           setSaleCurrency(p.saleCurrency);
@@ -276,12 +287,15 @@ export const ProductFormPage: React.FC = () => {
                 </label>
                 <select
                   value={type}
-                  onChange={(e) => setType(e.target.value as ProductWrite["type"])}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  onChange={(e) => handleTypeChange(e.target.value as ProductWrite["type"])}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontWeight: 600 }}
                 >
-                  <option value="Product">Producto Físico / Bien de Cambio</option>
-                  <option value="Service">Servicio Técnico / Mano de Obra</option>
-                  <option value="Kit">Kit / Combo Ensamblado</option>
+                  <option value="DirectSale">🛍️ Venta Directa (Reventa)</option>
+                  <option value="Service">🛠️ Servicio Intangible (Sin Stock)</option>
+                  <option value="Kit">🧩 Producto Ensamblado (Kit)</option>
+                  <option value="Manufactured">🏭 Producto Fabricado (BOM)</option>
+                  <option value="SparePart">🔧 Repuesto Técnico (Servicio / OT)</option>
+                  <option value="RawMaterial">🧱 Materia Prima (Insumo)</option>
                 </select>
               </div>
 
@@ -440,6 +454,30 @@ export const ProductFormPage: React.FC = () => {
               Reglas de Control de Inventario & Trazabilidad
             </h3>
 
+            {type === "Service" ? (
+              <div
+                style={{
+                  padding: "16px 20px",
+                  borderRadius: 14,
+                  background: "var(--surface-muted)",
+                  border: "1px solid var(--surface-border)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16
+                }}
+              >
+                <span style={{ fontSize: "2rem" }}>🛠️</span>
+                <div>
+                  <strong style={{ display: "block", color: "var(--ink)", fontSize: "1rem" }}>
+                    Artículo configurado como Servicio Intangible
+                  </strong>
+                  <p style={{ margin: "4px 0 0", color: "var(--ink-soft)", fontSize: "0.88rem", lineHeight: 1.45 }}>
+                    Los servicios, calibraciones y horas técnicas no controlan existencias físicas en depósitos ni generan movimientos en Kardex. Su disponibilidad para ventas y órdenes de trabajo es ilimitada.
+                  </p>
+                </div>
+              </div>
+            ) : (
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div
                 style={{
@@ -524,6 +562,7 @@ export const ProductFormPage: React.FC = () => {
                 />
               </div>
             </div>
+            )}
           </div>
         )}
 

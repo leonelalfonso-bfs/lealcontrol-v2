@@ -6,7 +6,9 @@ import { CustomerFormPage } from "./pages/CustomerFormPage";
 import { DirectoryPage } from "./pages/DirectoryPage";
 import { CustomersPage } from "./pages/CustomersPage";
 import { HoyPage } from "./pages/HoyPage";
+import { ExecutiveDashboardPage } from "./pages/ExecutiveDashboardPage";
 import { InventoryPage } from "./pages/InventoryPage";
+import { InventoryHelpPage } from "./pages/InventoryHelpPage";
 import { InvoiceFormPage } from "./pages/InvoiceFormPage";
 import { InvoicePrintPage } from "./pages/InvoicePrintPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
@@ -58,10 +60,13 @@ import { FinancePage } from "./pages/FinancePage";
 import { FinanceAccountsPage } from "./pages/FinanceAccountsPage";
 import { ChequePortfolioPage } from "./pages/ChequePortfolioPage";
 import { CollectionReceiptsWorkspacePage } from "./pages/CollectionReceiptsWorkspacePage";
-import "./v1-theme.css";
-import "./brand-layout.css";
 import { CurrentAccountsPage } from "./pages/CurrentAccountsPage";
 import { CashFlowPage } from "./pages/CashFlowPage";
+import { StyleShowcasePage } from "./pages/StyleShowcasePage";
+import { ThemeToggle } from "./components/ThemeToggle";
+import { LealLogo } from "./components/LealLogo";
+import "./v1-theme.css";
+import "./brand-layout.css";
 import "./excel-tools.css";
 import { DEVELOPMENT_ACCESS, resolveActiveModule, visibleModules } from "./app/moduleRegistry";
 
@@ -70,26 +75,54 @@ export function App() {
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("Empresa");
   const [appsOpen, setAppsOpen] = useState(false);
-  useEffect(() => { void api.getCompanySettings().then(settings => { setCompanyLogo(settings.logoUrl || null); setCompanyName(settings.tradeName || settings.legalName || "Empresa"); }).catch(() => undefined); }, []);
+
+  useEffect(() => {
+    void api
+      .getCompanySettings()
+      .then((settings) => {
+        setCompanyLogo(settings.logoUrl || null);
+        setCompanyName(settings.tradeName || settings.legalName || "Empresa");
+      })
+      .catch(() => undefined);
+  }, []);
+
   const modules = visibleModules(DEVELOPMENT_ACCESS);
   const activeModule = resolveActiveModule(location.pathname, DEVELOPMENT_ACCESS);
   const activeModuleId = activeModule.id;
 
   return (
     <div className="app-shell">
-      {/* Top App Header with Module Switcher Rail */}
-      {/* Main Body with Contextual Sidebar */}
+      {/* Main Body with Clean Sidebar */}
       <div className="app">
         <aside className="sidebar">
           <div className="company-brand">
-            {companyLogo ? <img src={companyLogo} alt={companyName} className="company-logo" /> : <div className="company-logo-placeholder">{companyName.slice(0, 2).toUpperCase()}</div>}
+            {companyLogo ? (
+              <img src={companyLogo} alt={companyName} className="company-logo" />
+            ) : (
+              <div className="company-logo-placeholder">{companyName.slice(0, 2).toUpperCase()}</div>
+            )}
             <strong>{companyName}</strong>
           </div>
-          <button type="button" className="applications-launcher" onClick={() => setAppsOpen(true)}><span>▦</span><span>Aplicaciones</span><span>›</span></button>
+
+          <button type="button" className="applications-launcher" onClick={() => setAppsOpen(true)}>
+            <span>▦</span>
+            <span>Aplicaciones</span>
+            <span>›</span>
+          </button>
+
           <div className="sidebar-module-header">
-            <h4 className="sidebar-module-title">
-              <span>{activeModule.icon}</span> {activeModule.title}
-            </h4>
+            <div className="sidebar-module-badge">
+              <span
+                className="sidebar-module-icon"
+                style={{
+                  background: activeModule.gradient,
+                  boxShadow: `0 3px 10px ${activeModule.glow}`
+                }}
+              >
+                {activeModule.icon}
+              </span>
+              <span className="sidebar-module-label">{activeModule.label}</span>
+            </div>
           </div>
 
           <nav className="nav">
@@ -100,25 +133,92 @@ export function App() {
                 end={item.end}
                 className={({ isActive }) => (isActive ? "active" : "")}
               >
-                <span>{item.icon}</span>
+                <span className="nav-icon-badge">{item.icon}</span>
                 <span>{item.label}</span>
               </NavLink>
             ))}
           </nav>
-          <div className="system-brand"><img src="/logo.png?v=2" alt="Leal Control" /><span>Leal Control ERP</span></div>
+
+          <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid var(--surface-border)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <ThemeToggle />
+              <NavLink
+                to="/estilos"
+                title="Personalizar tema"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 12px",
+                  borderRadius: 10,
+                  fontSize: "0.8rem",
+                  color: "var(--ink-soft)",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  background: "var(--surface-muted)",
+                  border: "1px solid var(--surface-border)"
+                }}
+              >
+                <span>🎨</span>
+                <span>Temas</span>
+              </NavLink>
+            </div>
+
+            <div className="system-brand" style={{ padding: "6px 2px 2px", justifyContent: "flex-start" }}>
+              <LealLogo size={38} showText animated />
+            </div>
+          </div>
         </aside>
 
-        {appsOpen && <div className="apps-overlay" onClick={() => setAppsOpen(false)}>
-          <section className="apps-modal" onClick={event => event.stopPropagation()}>
-            <div className="apps-modal-head"><h2><span>▦</span> Mis aplicaciones</h2><button type="button" onClick={() => setAppsOpen(false)}>×</button></div>
-            <div className="apps-grid">{modules.map(mod => <Link key={mod.id} to={mod.defaultPath} className={`app-card ${activeModuleId === mod.id ? "selected" : ""}`} onClick={() => setAppsOpen(false)}><span className="app-card-icon">{mod.icon}</span><span><strong>{mod.label}</strong><small>{mod.title.toLowerCase()}</small></span></Link>)}</div>
-          </section>
-        </div>}
+        {appsOpen && (
+          <div className="apps-overlay" onClick={() => setAppsOpen(false)}>
+            <section className="apps-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="apps-modal-head">
+                <h2>
+                  <span>▦</span> Centro de Aplicaciones
+                </h2>
+                <button type="button" onClick={() => setAppsOpen(false)} title="Cerrar">
+                  ×
+                </button>
+              </div>
+              <div className="apps-grid">
+                {modules.map((mod) => (
+                  <Link
+                    key={mod.id}
+                    to={mod.defaultPath}
+                    className={`app-card ${activeModuleId === mod.id ? "selected" : ""}`}
+                    onClick={() => setAppsOpen(false)}
+                  >
+                    <div
+                      className="app-card-icon"
+                      style={{
+                        background: mod.gradient,
+                        boxShadow: `0 8px 24px ${mod.glow}`
+                      }}
+                    >
+                      {mod.icon}
+                    </div>
+                    <div>
+                      <strong>{mod.label}</strong>
+                      <small>{mod.title.toLowerCase()}</small>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
 
         <main className="main">
           <Routes>
+            {/* Style Showcase & Theme Preview */}
+            <Route path="/estilos" element={<StyleShowcasePage />} />
+
+            {/* Main Executive ERP Dashboard */}
+            <Route path="/" element={<ExecutiveDashboardPage />} />
+
             {/* CRM Routes */}
-            <Route path="/" element={<HoyPage />} />
+            <Route path="/crm" element={<HoyPage />} />
             <Route path="/directorio" element={<DirectoryPage />} />
             <Route path="/clientes" element={<CustomersPage />} />
             <Route path="/clientes/nuevo" element={<CustomerFormPage />} />
@@ -168,6 +268,7 @@ export function App() {
             <Route path="/proveedores" element={<SuppliersPage />} />
             <Route path="/proveedores/nuevo" element={<CustomerFormPage />} />
             <Route path="/inventario" element={<InventoryPage />} />
+            <Route path="/inventario/ayuda" element={<InventoryHelpPage />} />
             <Route path="/produccion" element={<ProductionPage />} />
             <Route path="/produccion/ayuda" element={<ProductionHelpPage />} />
             <Route path="/produccion/flujo" element={<ProductionFlowPage />} />
