@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
+import { LealDiagnosticWidget } from "../components/LealDiagnosticWidget";
 import type {
   ExchangeRates,
   Product
@@ -262,6 +263,9 @@ export const ExecutiveDashboardPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* LEAL Diagnostico Proactivo Widget */}
+      <LealDiagnosticWidget />
 
       {/* Live Financial Rates Ticker */}
       {rates && (

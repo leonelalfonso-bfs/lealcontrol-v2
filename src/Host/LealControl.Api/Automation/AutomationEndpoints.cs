@@ -67,6 +67,12 @@ public static class AutomationEndpoints
             }
         });
 
+        group.MapGet("/diagnostic", async (LealDiagnosticService service, CancellationToken ct) =>
+        {
+            var report = await service.GenerateDiagnosticAsync(ct);
+            return Results.Ok(report);
+        });
+
         return app;
     }
 }

@@ -32,6 +32,7 @@ try
     builder.Services.AddSingleton<IClock, SystemClock>();
     builder.Services.AddHttpClient<GeminiApiClient>();
     builder.Services.AddHttpClient<BcraApiClient>();
+    builder.Services.AddScoped<LealDiagnosticService>();
     builder.Services.AddCrmModule(builder.Configuration);
     builder.Services.AddSalesModule(builder.Configuration);
     builder.Services.AddCommunicationsModule(builder.Configuration);

@@ -116,5 +116,29 @@ export const automationApi = {
         mimeType
       })
     });
+  },
+
+  async getDiagnostic(): Promise<LealDiagnosticReport> {
+    return request<LealDiagnosticReport>("/api/v1/automation/diagnostic");
   }
 };
+
+export interface DiagnosticItem {
+  id: string;
+  level: "critical" | "warning" | "info" | "success";
+  category: string;
+  title: string;
+  description: string;
+  impact: string;
+  actionLabel: string;
+  actionUrl: string;
+}
+
+export interface LealDiagnosticReport {
+  generatedAtUtc: string;
+  greeting: string;
+  summary: string;
+  healthScore: string;
+  totalIssuesCount: number;
+  items: DiagnosticItem[];
+}
