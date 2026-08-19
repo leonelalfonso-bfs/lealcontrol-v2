@@ -102,7 +102,12 @@ export const QuotePrintPage: React.FC = () => {
           scale: 2,
           useCORS: true,
           logging: false,
-          backgroundColor: "#ffffff"
+          backgroundColor: "#ffffff",
+          onclone: (clonedDoc: Document) => {
+            // Remove external stylesheet and style tags from the clone to prevent parsing errors on modern CSS features
+            const styles = clonedDoc.querySelectorAll("style, link[rel='stylesheet']");
+            styles.forEach((s) => s.remove());
+          }
         },
         jsPDF: { unit: "mm" as const, format: "a4", orientation: "portrait" as const },
         pagebreak: { mode: ["avoid-all", "css"] }
@@ -417,7 +422,7 @@ export const QuotePrintPage: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <span className="badge ok" style={{ fontSize: "0.68rem" }}>Ítem {idx + 1}</span>
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: "6px", background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0" }}>Ítem {idx + 1}</span>
                       </div>
 
                       {prod?.description && (

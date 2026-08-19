@@ -186,7 +186,7 @@ aside.sidebar {
 }
 
 .card:hover {
-  border-color: color-mix(in srgb, var(--primary) 32%, var(--surface-border)) !important;
+  border-color: rgba(13, 148, 136, 0.3) !important;
 }
 
 /* Universal Inputs & Selects */
@@ -305,19 +305,19 @@ tr:hover td {
 .badge.ok, .badge.success {
   background: var(--badge-ok-bg) !important;
   color: var(--badge-ok-text, var(--ok)) !important;
-  border-color: color-mix(in srgb, var(--ok) 30%, transparent) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
 }
 
 .badge.warn {
   background: var(--badge-warn-bg) !important;
   color: var(--badge-warn-text, var(--badge-warn)) !important;
-  border-color: color-mix(in srgb, var(--badge-warn) 30%, transparent) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
 }
 
 .badge.danger, .badge.prio-high {
   background: var(--badge-danger-bg) !important;
   color: var(--badge-danger-text, var(--danger)) !important;
-  border-color: color-mix(in srgb, var(--danger) 30%, transparent) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
 }
 
 .badge.off {

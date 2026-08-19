@@ -243,7 +243,7 @@
 .nav a.active {
   background: var(--active-bg) !important;
   color: var(--active-text) !important;
-  border-color: color-mix(in srgb, var(--primary) 35%, transparent) !important;
+  border-color: rgba(13, 148, 136, 0.35) !important;
   font-weight: 700;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
@@ -417,7 +417,7 @@
 .app-card:hover {
   transform: translateY(-4px) scale(1.015);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
-  border-color: color-mix(in srgb, var(--primary) 40%, var(--surface-border));
+  border-color: rgba(13, 148, 136, 0.4);
 }
 
 .app-card.selected {
