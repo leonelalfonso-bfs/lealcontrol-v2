@@ -1,6 +1,7 @@
 import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "./api/client";
+import { AskLealAssistantModal } from "./components/AskLealAssistantModal";
 import { CustomerDetailPage } from "./pages/CustomerDetailPage";
 import { CustomerFormPage } from "./pages/CustomerFormPage";
 import { DirectoryPage } from "./pages/DirectoryPage";
@@ -88,6 +89,7 @@ export function App() {
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("Empresa");
   const [appsOpen, setAppsOpen] = useState(false);
+  const [showAskLeal, setShowAskLeal] = useState(false);
 
   useEffect(() => {
     void api
@@ -153,6 +155,34 @@ export function App() {
           </nav>
 
           <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid var(--surface-border)" }}>
+            <button
+              type="button"
+              onClick={() => setShowAskLeal(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "8px 12px",
+                borderRadius: "10px",
+                background: "linear-gradient(135deg, #0f172a, #1e293b)",
+                color: "#ffffff",
+                border: "1px solid rgba(255,255,255,0.15)",
+                fontWeight: 800,
+                fontSize: "0.8rem",
+                cursor: "pointer",
+                width: "100%",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
+              }}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span>🤖</span>
+                <span>Preguntale a LEAL</span>
+              </span>
+              <span style={{ fontSize: "0.65rem", background: "#0d9488", padding: "2px 6px", borderRadius: "8px", color: "#fff" }}>
+                IA
+              </span>
+            </button>
+
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <ThemeToggle />
               <NavLink
@@ -329,6 +359,40 @@ export function App() {
           </Routes>
         </main>
       </div>
+
+      {/* Floating Launcher for Preguntale a LEAL */}
+      <button
+        type="button"
+        onClick={() => setShowAskLeal(true)}
+        title="Preguntale a LEAL (Asistente IA)"
+        style={{
+          position: "fixed",
+          bottom: "24px",
+          right: "24px",
+          zIndex: 9000,
+          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+          color: "#ffffff",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+          boxShadow: "0 8px 24px rgba(15, 23, 42, 0.35)",
+          borderRadius: "50px",
+          padding: "10px 18px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          fontWeight: 800,
+          fontSize: "0.85rem",
+          cursor: "pointer"
+        }}
+      >
+        <span style={{ fontSize: "1.2rem" }}>🤖</span>
+        <span>Preguntale a LEAL</span>
+        <span style={{ fontSize: "0.68rem", background: "#0d9488", color: "#fff", padding: "2px 7px", borderRadius: "10px", fontWeight: 800 }}>
+          IA
+        </span>
+      </button>
+
+      {/* Asistente Copiloto Modal */}
+      <AskLealAssistantModal isOpen={showAskLeal} onClose={() => setShowAskLeal(false)} />
     </div>
   );
 }

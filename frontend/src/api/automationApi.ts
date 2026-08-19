@@ -120,8 +120,31 @@ export const automationApi = {
 
   async getDiagnostic(): Promise<LealDiagnosticReport> {
     return request<LealDiagnosticReport>("/api/v1/automation/diagnostic");
+  },
+
+  async askLeal(message: string, history?: ChatMessage[]): Promise<AskLealResponse> {
+    return request<AskLealResponse>("/api/v1/automation/ask-leal", {
+      method: "POST",
+      body: JSON.stringify({ message, history })
+    });
   }
 };
+
+export interface ChatMessage {
+  role: "user" | "model" | "assistant";
+  content: string;
+}
+
+export interface ActionLink {
+  label: string;
+  url: string;
+  icon?: string;
+}
+
+export interface AskLealResponse {
+  answer: string;
+  suggestedActions?: ActionLink[];
+}
 
 export interface DiagnosticItem {
   id: string;

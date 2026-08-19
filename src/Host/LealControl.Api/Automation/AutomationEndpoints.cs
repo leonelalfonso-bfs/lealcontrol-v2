@@ -73,6 +73,17 @@ public static class AutomationEndpoints
             return Results.Ok(report);
         });
 
+        group.MapPost("/ask-leal", async (AskLealRequest request, AskLealService service, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Message))
+            {
+                return Results.BadRequest(new { error = "Debe enviar una consulta." });
+            }
+
+            var response = await service.AskAsync(request, ct);
+            return Results.Ok(response);
+        });
+
         return app;
     }
 }
