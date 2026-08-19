@@ -395,5 +395,78 @@ export const api = {
   selectPurchaseQuotation: (requestId: string, quotationId: string) =>
     request<import("./types").PurchaseRequest>(`/api/v1/purchases/requests/${requestId}/quotations/${quotationId}/select`, { method: "POST" }),
   deletePurchaseQuotation: (requestId: string, quotationId: string) =>
-    request<import("./types").PurchaseRequest>(`/api/v1/purchases/requests/${requestId}/quotations/${quotationId}`, { method: "DELETE" })
+    request<import("./types").PurchaseRequest>(`/api/v1/purchases/requests/${requestId}/quotations/${quotationId}`, { method: "DELETE" }),
+
+  // ==========================================
+  // HUMAN RESOURCES (RRHH & LIQUIDACIÓN)
+  // ==========================================
+  listEmployees: (search?: string) => {
+    const q = search ? `?search=${encodeURIComponent(search)}` : "";
+    return request<import("./types").Employee[]>(`/api/v1/hr/employees${q}`);
+  },
+  getEmployee: (id: string) => request<import("./types").Employee>(`/api/v1/hr/employees/${id}`),
+  createEmployee: (body: Partial<import("./types").Employee>) =>
+    request<import("./types").Employee>("/api/v1/hr/employees", { method: "POST", body: JSON.stringify(body) }),
+  updateEmployee: (id: string, body: Partial<import("./types").Employee>) =>
+    request<import("./types").Employee>(`/api/v1/hr/employees/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteEmployee: (id: string) =>
+    request<void>(`/api/v1/hr/employees/${id}`, { method: "DELETE" }),
+
+  // EPP
+  listEmployeeEpps: (employeeId: string) =>
+    request<import("./types").EppDelivery[]>(`/api/v1/hr/employees/${employeeId}/epps`),
+  createEppDelivery: (body: Partial<import("./types").EppDelivery>) =>
+    request<import("./types").EppDelivery>("/api/v1/hr/epps", { method: "POST", body: JSON.stringify(body) }),
+
+  // Payroll
+  listPayrollPeriods: () =>
+    request<import("./types").PayrollPeriod[]>("/api/v1/hr/payroll/periods"),
+  createPayrollPeriod: (body: Partial<import("./types").PayrollPeriod>) =>
+    request<import("./types").PayrollPeriod>("/api/v1/hr/payroll/periods", { method: "POST", body: JSON.stringify(body) }),
+  calculatePayroll: (periodId: string) =>
+    request<{ periodId: string; employeesCalculated: number; totalNetToPay: number }>(`/api/v1/hr/payroll/calculate/${periodId}`, { method: "POST" }),
+  listPayrollSlips: (periodId: string) =>
+    request<import("./types").PayrollSlip[]>(`/api/v1/hr/payroll/slips/${periodId}`),
+  getPayrollSlipDetail: (slipId: string) =>
+    request<{ slip: import("./types").PayrollSlip; employee: import("./types").Employee; period: import("./types").PayrollPeriod }>(`/api/v1/hr/payroll/slips/detail/${slipId}`),
+  signPayrollSlipByEmployee: (slipId: string) =>
+    request<{ message: string; signedAt: string }>(`/api/v1/hr/payroll/slips/${slipId}/sign-employee`, { method: "POST" }),
+
+  // ==========================================
+  // FLEET (GESTIÓN DE FLOTA)
+  // ==========================================
+  listVehicles: (search?: string) => {
+    const q = search ? `?search=${encodeURIComponent(search)}` : "";
+    return request<import("./types").Vehicle[]>(`/api/v1/fleet/vehicles${q}`);
+  },
+  getVehicle: (id: string) => request<import("./types").Vehicle>(`/api/v1/fleet/vehicles/${id}`),
+  createVehicle: (body: Partial<import("./types").Vehicle>) =>
+    request<import("./types").Vehicle>("/api/v1/fleet/vehicles", { method: "POST", body: JSON.stringify(body) }),
+  updateVehicle: (id: string, body: Partial<import("./types").Vehicle>) =>
+    request<import("./types").Vehicle>(`/api/v1/fleet/vehicles/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+
+  listVehicleDocuments: (vehicleId: string) =>
+    request<import("./types").VehicleDocument[]>(`/api/v1/fleet/vehicles/${vehicleId}/documents`),
+  createVehicleDocument: (body: Partial<import("./types").VehicleDocument>) =>
+    request<import("./types").VehicleDocument>("/api/v1/fleet/documents", { method: "POST", body: JSON.stringify(body) }),
+  listExpiringDocuments: () =>
+    request<import("./types").VehicleDocument[]>("/api/v1/fleet/documents/expiring"),
+
+  listDrivers: () => request<import("./types").VehicleDriver[]>("/api/v1/fleet/drivers"),
+  createDriver: (body: Partial<import("./types").VehicleDriver>) =>
+    request<import("./types").VehicleDriver>("/api/v1/fleet/drivers", { method: "POST", body: JSON.stringify(body) }),
+
+  listMaintenances: (vehicleId?: string) => {
+    const q = vehicleId ? `?vehicleId=${vehicleId}` : "";
+    return request<import("./types").VehicleMaintenance[]>(`/api/v1/fleet/maintenances${q}`);
+  },
+  createMaintenance: (body: Partial<import("./types").VehicleMaintenance>) =>
+    request<import("./types").VehicleMaintenance>("/api/v1/fleet/maintenances", { method: "POST", body: JSON.stringify(body) }),
+
+  listFuelLogs: (vehicleId?: string) => {
+    const q = vehicleId ? `?vehicleId=${vehicleId}` : "";
+    return request<import("./types").VehicleFuelLog[]>(`/api/v1/fleet/fuel-logs${q}`);
+  },
+  createFuelLog: (body: Partial<import("./types").VehicleFuelLog>) =>
+    request<import("./types").VehicleFuelLog>("/api/v1/fleet/fuel-logs", { method: "POST", body: JSON.stringify(body) })
 };

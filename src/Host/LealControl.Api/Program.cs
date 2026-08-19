@@ -10,6 +10,8 @@ using LealControl.Modules.Communications.Infrastructure;
 using LealControl.Modules.Communications.Infrastructure.Http;
 using LealControl.Modules.Communications.Infrastructure.Persistence;
 using LealControl.Modules.Finance.Infrastructure;
+using LealControl.Modules.HumanResources.Infrastructure;
+using LealControl.Modules.Fleet.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
@@ -31,6 +33,8 @@ try
     builder.Services.AddSalesModule(builder.Configuration);
     builder.Services.AddCommunicationsModule(builder.Configuration);
     builder.Services.AddFinanceModule(builder.Configuration);
+    builder.Services.AddHumanResourcesModule(builder.Configuration);
+    builder.Services.AddFleetModule(builder.Configuration);
     builder.Services.ConfigureHttpJsonOptions(options =>
         options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
     builder.Services.AddEndpointsApiExplorer();
@@ -40,7 +44,7 @@ try
         {
             Title = "Leal Control ERP 2.0",
             Version = "v1",
-            Description = "API modular. Módulos: CRM + Sales (presupuestos)."
+            Description = "API modular. Módulos: CRM + Sales + Finance + RRHH + Flota."
         });
     });
     builder.Services.AddHealthChecks()
@@ -84,6 +88,10 @@ try
         await communications.EnsureTablesCreatedAsync();
         var finance = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
         await finance.EnsureFinanceTablesAsync();
+        var hr = scope.ServiceProvider.GetRequiredService<HumanResourcesDbContext>();
+        await hr.EnsureHrTablesAsync();
+        var fleet = scope.ServiceProvider.GetRequiredService<FleetDbContext>();
+        await fleet.EnsureFleetTablesAsync();
     }
 
     app.MapGet("/", () => Results.Redirect("/swagger"));
@@ -92,6 +100,8 @@ try
     app.MapSalesModule();
     app.MapCommunicationsModule();
     app.MapFinanceModule();
+    app.MapHumanResourcesModule();
+    app.MapFleetModule();
 
     await app.RunAsync();
 }

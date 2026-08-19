@@ -218,6 +218,40 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     ]
   },
   {
+    id: "rrhh",
+    label: "RRHH",
+    icon: "👥",
+    gradient: "linear-gradient(135deg, #0d9488, #10b981)",
+    glow: "rgba(13, 148, 136, 0.35)",
+    title: "RECURSOS HUMANOS & SUELDOS",
+    defaultPath: "/rrhh/empleados",
+    pathPrefixes: ["/rrhh"],
+    minimumPlan: "operaciones",
+    requiredPermission: "administration.read",
+    dependencies: [],
+    items: [
+      { path: "/rrhh/empleados", label: "Colaboradores (Legajos)", icon: "👤", end: true },
+      { path: "/rrhh/liquidaciones", label: "Liquidación de sueldos", icon: "💰" }
+    ]
+  },
+  {
+    id: "flota",
+    label: "Flota",
+    icon: "🚛",
+    gradient: "linear-gradient(135deg, #3b82f6, #0284c7)",
+    glow: "rgba(59, 130, 246, 0.35)",
+    title: "GESTIÓN DE FLOTA VEHICULAR",
+    defaultPath: "/flota",
+    pathPrefixes: ["/flota"],
+    minimumPlan: "operaciones",
+    requiredPermission: "inventory.read",
+    dependencies: [],
+    items: [
+      { path: "/flota", label: "Unidades y vehículos", icon: "🚗", end: true },
+      { path: "/flota/combustible", label: "Control de combustible", icon: "⛽" }
+    ]
+  },
+  {
     id: "administracion",
     label: "Configuración",
     icon: "🛠️",

@@ -63,6 +63,12 @@ import { ChequePortfolioPage } from "./pages/ChequePortfolioPage";
 import { CollectionReceiptsWorkspacePage } from "./pages/CollectionReceiptsWorkspacePage";
 import { CurrentAccountsPage } from "./pages/CurrentAccountsPage";
 import { CashFlowPage } from "./pages/CashFlowPage";
+import { EmployeesListPage } from "./pages/EmployeesListPage";
+import { EmployeeFormPage } from "./pages/EmployeeFormPage";
+import { PayrollListPage } from "./pages/PayrollListPage";
+import { FleetVehiclesListPage } from "./pages/FleetVehiclesListPage";
+import { FleetVehicleFormPage } from "./pages/FleetVehicleFormPage";
+import { FleetFuelLogsPage } from "./pages/FleetFuelLogsPage";
 import { StyleShowcasePage } from "./pages/StyleShowcasePage";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
@@ -286,8 +292,22 @@ export function App() {
             <Route path="/finanzas/cobranzas" element={<CollectionReceiptsWorkspacePage />} />
 
             <Route path="/finanzas/cuenta-corriente" element={<CurrentAccountsPage />} />
-            {/* Reports & Settings Routes */}
             <Route path="/finanzas/cashflow" element={<CashFlowPage />} />
+
+            {/* Human Resources & Payroll Routes */}
+            <Route path="/rrhh" element={<EmployeesListPage />} />
+            <Route path="/rrhh/empleados" element={<EmployeesListPage />} />
+            <Route path="/rrhh/empleados/nuevo" element={<EmployeeFormPage />} />
+            <Route path="/rrhh/empleados/:id" element={<EmployeeFormPage />} />
+            <Route path="/rrhh/liquidaciones" element={<PayrollListPage />} />
+
+            {/* Fleet Management Routes */}
+            <Route path="/flota" element={<FleetVehiclesListPage />} />
+            <Route path="/flota/vehiculos/nuevo" element={<FleetVehicleFormPage />} />
+            <Route path="/flota/vehiculos/:id" element={<FleetVehicleFormPage />} />
+            <Route path="/flota/combustible" element={<FleetFuelLogsPage />} />
+
+            {/* Reports & Settings Routes */}
             <Route path="/reportes" element={<ReportsPage />} />
             <Route path="/configuracion" element={<SettingsPage />} />
             <Route path="/configuracion/plantillas" element={<DocumentTemplatesPage />} />

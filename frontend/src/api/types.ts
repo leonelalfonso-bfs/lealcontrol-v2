@@ -1142,3 +1142,199 @@ export type MailAccount = {
   username: string; isActive: boolean; isDefaultSender: boolean; lastSyncAtUtc?: string | null; lastError?: string | null; hasSecret: boolean;
 };
 export type EmailMessage = { id:string; mailAccountId:string; internetMessageId:string; inReplyTo?:string|null; threadKey:string; direction:"Incoming"|"Outgoing"; subject:string; fromAddress:string; toAddresses:string; bodyPreview:string; bodyHtml?:string|null; occurredAtUtc:string; relatedEntityType?:string|null; relatedEntityId?:string|null };
+
+// ==========================================
+// HUMAN RESOURCES (RRHH & LIQUIDACIÓN)
+// ==========================================
+export type Employee = {
+  id: string;
+  fileNumber: string;
+  firstName: string;
+  lastName: string;
+  documentNumber: string;
+  cuil: string;
+  birthDate?: string | null;
+  gender: string;
+  nationality: string;
+  civilStatus: string;
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  phone: string;
+  email: string;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  hireDate: string;
+  seniorityRecognitionDate?: string | null;
+  terminationDate?: string | null;
+  contractType: number; // 0=Indefinite, 1=FixedTerm, 2=Eventual, 3=TrialPeriod, 4=Internship
+  jobTitle: string;
+  department: string;
+  costCenter: string;
+  workplaceLocation: string;
+  unionCct: string;
+  unionCategory: string;
+  healthInsurance: string;
+  baseSalary: number;
+  hourlyRate: number;
+  bankName: string;
+  cbu: string;
+  bankAlias: string;
+  status: number; // 0=Active, 1=Leave, 2=Terminated
+  photoPath?: string | null;
+  notes?: string | null;
+  createdAtUtc: string;
+};
+
+export type PayrollPeriod = {
+  id: string;
+  periodMonth: number;
+  periodYear: number;
+  periodType: number; // 0=Monthly, 1=FirstFortnight, 2=SecondFortnight, 3=SacFirstHalf, 4=SacSecondHalf, 5=FinalSettlement
+  paymentDateUtc: string;
+  bankDepositDateUtc?: string | null;
+  status: number; // 0=Draft, 1=Calculating, 2=Closed, 3=Exported
+  notes: string;
+  createdAtUtc: string;
+};
+
+export type PayrollSlipLine = {
+  id: string;
+  payrollSlipId: string;
+  conceptCode: string;
+  conceptName: string;
+  type: number; // 0=Remunerative, 1=NonRemunerative, 2=Deduction, 3=CompanyContribution
+  quantity: number;
+  unit: string;
+  baseAmount: number;
+  percentage: number;
+  remunerativeAmount: number;
+  nonRemunerativeAmount: number;
+  deductionAmount: number;
+};
+
+export type PayrollSlip = {
+  id: string;
+  payrollPeriodId: string;
+  employeeId: string;
+  employeeName?: string;
+  fileNumber?: string;
+  cuil?: string;
+  jobTitle?: string;
+  unionCct?: string;
+  bankName?: string;
+  cbu?: string;
+  receiptNumber: string;
+  totalGrossRemunerative: number;
+  totalNonRemunerative: number;
+  totalDeductions: number;
+  netPay: number;
+  netPayWords: string;
+  signedByCompanyUtc?: string | null;
+  signedByEmployeeUtc?: string | null;
+  signatureHashSha256?: string | null;
+  status: string;
+  createdAtUtc: string;
+  lines?: PayrollSlipLine[];
+};
+
+export type EppDelivery = {
+  id: string;
+  employeeId: string;
+  deliveryDateUtc: string;
+  itemName: string;
+  brandModel?: string | null;
+  certificateNumber?: string | null;
+  quantity: number;
+  signedReceiptProofUrl?: string | null;
+  notes?: string | null;
+};
+
+// ==========================================
+// FLEET (GESTIÓN DE FLOTA VEHICULAR)
+// ==========================================
+export type Vehicle = {
+  id: string;
+  plate: string;
+  brand: string;
+  model: string;
+  year: number;
+  type: number; // 0=Pickup, 1=Van, 2=Truck, 3=Car, 4=Forklift, 5=SemiTrailer
+  vinChassis: string;
+  engineNumber: string;
+  currentKilometers: number;
+  currentEngineHours: number;
+  fuelType: string;
+  status: number; // 0=Active, 1=InMaintenance, 2=OutOfService, 3=Sold
+  assignedDriverId?: string | null;
+  assignedDriverName?: string | null;
+  photoPath?: string | null;
+  notes?: string | null;
+  createdAtUtc: string;
+};
+
+export type VehicleDocument = {
+  id: string;
+  vehicleId: string;
+  plate?: string;
+  vehicleName?: string;
+  documentType: number; // 0=VtvRto, 1=InsurancePolicy, 2=GreenCard, 3=GncCard, 4=Senasa, 5=Ruta, 6=Other
+  title: string;
+  policyOrDocNumber: string;
+  issuerCompany?: string | null;
+  issueDateUtc: string;
+  expirationDateUtc: string;
+  cost: number;
+  alertDaysBefore: number;
+  fileAttachmentUrl?: string | null;
+  isActive: boolean;
+  daysRemaining?: number;
+};
+
+export type VehicleDriver = {
+  id: string;
+  employeeId?: string | null;
+  fullName: string;
+  documentNumber: string;
+  phone: string;
+  email: string;
+  licenseNumber: string;
+  licenseCategory: string;
+  licenseExpirationUtc: string;
+  lintiExpirationUtc?: string | null;
+  isActive: boolean;
+  notes?: string | null;
+};
+
+export type VehicleMaintenance = {
+  id: string;
+  vehicleId: string;
+  type: number; // 0=Preventive, 1=Corrective, 2=Urgent, 3=Inspection
+  title: string;
+  description: string;
+  kmAtService: number;
+  serviceDateUtc: string;
+  workshopName: string;
+  invoiceReference?: string | null;
+  totalCost: number;
+  nextServiceKm?: number | null;
+  nextServiceDateUtc?: string | null;
+  status: number; // 0=Scheduled, 1=InProgress, 2=Completed, 3=Cancelled
+};
+
+export type VehicleFuelLog = {
+  id: string;
+  vehicleId: string;
+  driverId?: string | null;
+  logDateUtc: string;
+  kilometersAtFueling: number;
+  liters: number;
+  pricePerLiter: number;
+  totalCost: number;
+  gasStation: string;
+  paymentMethod: string;
+  calculatedKmPerLiter?: number | null;
+  notes?: string | null;
+};
+

@@ -15,5 +15,7 @@
     <ProjectReference Include="..\..\Modules\Sales\LealControl.Modules.Sales.Infrastructure\LealControl.Modules.Sales.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Communications\LealControl.Modules.Communications.Infrastructure\LealControl.Modules.Communications.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Finance\LealControl.Modules.Finance.Infrastructure\LealControl.Modules.Finance.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\HumanResources\LealControl.Modules.HumanResources.Infrastructure\LealControl.Modules.HumanResources.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Fleet\LealControl.Modules.Fleet.Infrastructure\LealControl.Modules.Fleet.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
