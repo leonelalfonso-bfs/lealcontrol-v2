@@ -43,6 +43,7 @@ import { RemitoPrintPage } from "./pages/RemitoPrintPage";
 import { RemitosPage } from "./pages/RemitosPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { DocumentTemplatesPage } from "./pages/DocumentTemplatesPage";
 import { SuppliersPage } from "./pages/SuppliersPage";
 import { MailSettingsPage } from "./pages/MailSettingsPage";
 import { InboxPage } from "./pages/InboxPage";
@@ -289,6 +290,7 @@ export function App() {
             <Route path="/finanzas/cashflow" element={<CashFlowPage />} />
             <Route path="/reportes" element={<ReportsPage />} />
             <Route path="/configuracion" element={<SettingsPage />} />
+            <Route path="/configuracion/plantillas" element={<DocumentTemplatesPage />} />
             <Route path="/configuracion/correo" element={<MailSettingsPage />} />
             <Route path="/comunicaciones" element={<InboxPage />} />
             <Route path="/comunicaciones/canales" element={<ChannelsPage />} />

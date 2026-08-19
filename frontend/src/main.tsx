@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { ThemeProvider } from "./context/ThemeContext";
+import { DocumentTemplateProvider } from "./context/DocumentTemplateContext";
 import "./glass-tokens.css";
 import "./styles.css";
 import "./design-tokens.css";
@@ -15,7 +16,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ThemeProvider>
-        <App />
+        <DocumentTemplateProvider>
+          <App />
+        </DocumentTemplateProvider>
       </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>

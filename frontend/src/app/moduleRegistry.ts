@@ -231,6 +231,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     dependencies: [],
     items: [
       { path: "/configuracion", label: "Empresa e integraciones", icon: "🏢", end: true },
+      { path: "/configuracion/plantillas", label: "Plantillas de impresión", icon: "📄" },
       { path: "/configuracion/correo", label: "Cuentas de correo", icon: "✉️" }
     ]
   }
