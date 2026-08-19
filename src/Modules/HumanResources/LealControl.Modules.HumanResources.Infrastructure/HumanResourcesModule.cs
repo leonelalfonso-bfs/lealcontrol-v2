@@ -727,6 +727,70 @@ public static class HumanResourcesModule
             return Results.Ok(new { message = "Recibo firmado conforme por el empleado.", signedAt = slip.SignedByEmployeeUtc });
         });
 
+        // Export AFIP Libro de Sueldos Digital (LSD TXT)
+        group.MapGet("/payroll/export-lsd/{periodId:guid}", async (Guid periodId, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var period = await db.PayrollPeriods.AsNoTracking().FirstOrDefaultAsync(x => x.Id == periodId && x.TenantId == tenantId, ct);
+            if (period is null) return Results.NotFound("Período inexistente");
+
+            var slips = await db.PayrollSlips.Include(x => x.Lines).Where(x => x.PayrollPeriodId == periodId && x.TenantId == tenantId).ToListAsync(ct);
+            var employees = await db.Employees.Where(x => x.TenantId == tenantId).ToDictionaryAsync(x => x.Id, ct);
+
+            var sb = new StringBuilder();
+            // Registro 01: Caratula
+            sb.AppendLine($"0130718293849{period.PeriodYear}{period.PeriodMonth:D2}M0000130");
+
+            foreach (var slip in slips)
+            {
+                if (!employees.TryGetValue(slip.EmployeeId, out var emp)) continue;
+                var cuil = emp.Cuil.Replace("-", "").PadLeft(11, '0');
+                var legajo = (emp.FileNumber ?? "").PadRight(10, ' ').Substring(0, 10);
+
+                // Registro 02: Trabajador
+                sb.AppendLine($"02{cuil}{legajo}0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+
+                // Registro 03: Conceptos
+                foreach (var line in slip.Lines)
+                {
+                    var code = (line.ConceptCode ?? "100").PadRight(10, ' ').Substring(0, 10);
+                    var cant = ((int)(line.Quantity * 100)).ToString().PadLeft(5, '0');
+                    var tipo = line.Type == ConceptType.Remunerative ? "R" : line.Type == ConceptType.NonRemunerative ? "N" : "D";
+                    var impVal = line.Type == ConceptType.Deduction ? line.DeductionAmount : line.Type == ConceptType.NonRemunerative ? line.NonRemunerativeAmount : line.RemunerativeAmount;
+                    var imp = ((long)(impVal * 100)).ToString().PadLeft(15, '0');
+                    sb.AppendLine($"03{cuil}{code}{cant}{tipo}{imp}");
+                }
+
+                // Registro 04: Bases de Seguridad Social
+                var remImp = ((long)(slip.TotalGrossRemunerative * 100)).ToString().PadLeft(15, '0');
+                sb.AppendLine($"04{cuil}000{remImp}{remImp}{remImp}{remImp}{remImp}");
+            }
+
+            return Results.Text(sb.ToString(), "text/plain", Encoding.UTF8);
+        });
+
+        // Export Bank Transfer TXT (Acreditación Masiva de Haberes)
+        group.MapGet("/payroll/export-bank/{periodId:guid}", async (Guid periodId, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var slips = await db.PayrollSlips.Where(x => x.PayrollPeriodId == periodId && x.TenantId == tenantId).ToListAsync(ct);
+            var employees = await db.Employees.Where(x => x.TenantId == tenantId).ToDictionaryAsync(x => x.Id, ct);
+
+            var sb = new StringBuilder();
+            sb.AppendLine("CBU;CUIL;APELLIDO_Y_NOMBRE;IMPORTE_NETO;CONCEPTO");
+            foreach (var slip in slips)
+            {
+                if (!employees.TryGetValue(slip.EmployeeId, out var emp)) continue;
+                var cbu = !string.IsNullOrWhiteSpace(emp.Cbu) ? emp.Cbu : "0000000000000000000000";
+                var cuil = emp.Cuil.Replace("-", "");
+                var name = $"{emp.LastName} {emp.FirstName}".Trim();
+                var net = slip.NetPay.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+                sb.AppendLine($"{cbu};{cuil};{name};{net};HABERES");
+            }
+
+            return Results.Text(sb.ToString(), "text/plain", Encoding.UTF8);
+        });
+
         return endpoints;
     }
 }

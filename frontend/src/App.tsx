@@ -66,9 +66,11 @@ import { CashFlowPage } from "./pages/CashFlowPage";
 import { EmployeesListPage } from "./pages/EmployeesListPage";
 import { EmployeeFormPage } from "./pages/EmployeeFormPage";
 import { PayrollListPage } from "./pages/PayrollListPage";
+import { HumanResourcesHelpPage } from "./pages/HumanResourcesHelpPage";
 import { FleetVehiclesListPage } from "./pages/FleetVehiclesListPage";
 import { FleetVehicleFormPage } from "./pages/FleetVehicleFormPage";
 import { FleetFuelLogsPage } from "./pages/FleetFuelLogsPage";
+import { FleetHelpPage } from "./pages/FleetHelpPage";
 import { StyleShowcasePage } from "./pages/StyleShowcasePage";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
@@ -300,12 +302,14 @@ export function App() {
             <Route path="/rrhh/empleados/nuevo" element={<EmployeeFormPage />} />
             <Route path="/rrhh/empleados/:id" element={<EmployeeFormPage />} />
             <Route path="/rrhh/liquidaciones" element={<PayrollListPage />} />
+            <Route path="/rrhh/ayuda" element={<HumanResourcesHelpPage />} />
 
             {/* Fleet Management Routes */}
             <Route path="/flota" element={<FleetVehiclesListPage />} />
             <Route path="/flota/vehiculos/nuevo" element={<FleetVehicleFormPage />} />
             <Route path="/flota/vehiculos/:id" element={<FleetVehicleFormPage />} />
             <Route path="/flota/combustible" element={<FleetFuelLogsPage />} />
+            <Route path="/flota/ayuda" element={<FleetHelpPage />} />
 
             {/* Reports & Settings Routes */}
             <Route path="/reportes" element={<ReportsPage />} />

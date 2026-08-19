@@ -104,6 +104,48 @@ export function PayrollListPage() {
     }
   };
 
+  const handleDownloadLsd = async () => {
+    if (!selectedPeriodId) return;
+    try {
+      const res = await fetch(`/api/v1/hr/payroll/export-lsd/${selectedPeriodId}`);
+      if (!res.ok) throw new Error("Error al exportar LSD");
+      const text = await res.text();
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `LSD_AFIP_${selectedPeriod?.periodYear}_${selectedPeriod?.periodMonth}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      alert("Error al descargar Libro de Sueldos Digital AFIP");
+    }
+  };
+
+  const handleDownloadBank = async () => {
+    if (!selectedPeriodId) return;
+    try {
+      const res = await fetch(`/api/v1/hr/payroll/export-bank/${selectedPeriodId}`);
+      if (!res.ok) throw new Error("Error al exportar TXT Bancario");
+      const text = await res.text();
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ACREDITACION_HABERES_${selectedPeriod?.periodYear}_${selectedPeriod?.periodMonth}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      alert("Error al descargar archivo de acreditación bancaria");
+    }
+  };
+
+  const handlePrintSlip = () => {
+    window.print();
+  };
+
   const selectedPeriod = periods.find((p) => p.id === selectedPeriodId);
   const totalGross = slips.reduce((acc, s) => acc + s.totalGrossRemunerative, 0);
   const totalDeductions = slips.reduce((acc, s) => acc + s.totalDeductions, 0);
@@ -149,7 +191,30 @@ export function PayrollListPage() {
             </select>
           </div>
 
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            {slips.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleDownloadLsd}
+                  className="btn btn-outline"
+                  style={{ background: "#ffffff", color: "#1e40af", borderColor: "#3b82f6", fontWeight: 700, fontSize: "0.82rem" }}
+                  title="Exportar archivo TXT formato Libro de Sueldos Digital para importar en AFIP"
+                >
+                  📥 TXT AFIP (LSD F.931)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadBank}
+                  className="btn btn-outline"
+                  style={{ background: "#ffffff", color: "#047857", borderColor: "#10b981", fontWeight: 700, fontSize: "0.82rem" }}
+                  title="Exportar archivo TXT para acreditación bancaria masiva de haberes"
+                >
+                  🏦 TXT Bancario (Haberes)
+                </button>
+              </>
+            )}
+
             <button
               type="button"
               disabled={calculating || !selectedPeriodId}
@@ -412,14 +477,24 @@ export function PayrollListPage() {
                 <div>Emisión oficial autorizada por Empleador • Depósito último aporte SUSS: 10/{selectedSlipDetail.period.periodMonth.toString().padStart(2, "0")}/{selectedSlipDetail.period.periodYear}</div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setSelectedSlipDetail(null)}
-                className="btn btn-primary"
-                style={{ padding: "8px 20px" }}
-              >
-                Cerrar
-              </button>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={handlePrintSlip}
+                  className="btn btn-outline"
+                  style={{ background: "#ffffff", color: "#0f172a", fontWeight: 700 }}
+                >
+                  🖨️ Imprimir / Guardar PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSlipDetail(null)}
+                  className="btn btn-primary"
+                  style={{ padding: "8px 20px" }}
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
         </div>

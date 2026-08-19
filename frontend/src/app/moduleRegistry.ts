@@ -231,7 +231,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     dependencies: [],
     items: [
       { path: "/rrhh/empleados", label: "Colaboradores (Legajos)", icon: "👤", end: true },
-      { path: "/rrhh/liquidaciones", label: "Liquidación de sueldos", icon: "💰" }
+      { path: "/rrhh/liquidaciones", label: "Liquidación de sueldos", icon: "💰" },
+      { path: "/rrhh/ayuda", label: "Ayuda RRHH", icon: "💡" }
     ]
   },
   {
@@ -248,7 +249,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     dependencies: [],
     items: [
       { path: "/flota", label: "Unidades y vehículos", icon: "🚗", end: true },
-      { path: "/flota/combustible", label: "Control de combustible", icon: "⛽" }
+      { path: "/flota/combustible", label: "Control de combustible", icon: "⛽" },
+      { path: "/flota/ayuda", label: "Ayuda Flota", icon: "💡" }
     ]
   },
   {
