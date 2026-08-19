@@ -80,6 +80,7 @@ try
     {
         var crm = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
         await crm.Database.MigrateAsync();
+        await crm.EnsureCrmTablesAsync();
         var sales = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
         await sales.Database.MigrateAsync();
         await sales.EnsureTablesCreatedAsync();

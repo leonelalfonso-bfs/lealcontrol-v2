@@ -37,4 +37,18 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CrmDbContext).Assembly);
     }
+
+    public async Task EnsureCrmTablesAsync()
+    {
+        try
+        {
+            await Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""ActivityStartDate"" character varying(32);
+            ");
+        }
+        catch
+        {
+            // Ignore if handled by migrations
+        }
+    }
 }
