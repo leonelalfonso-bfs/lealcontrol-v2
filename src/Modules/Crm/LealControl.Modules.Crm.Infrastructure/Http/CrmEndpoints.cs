@@ -73,6 +73,18 @@ public static class CrmEndpoints
             return result.ToHttp();
         });
 
+        customers.MapPost("/{id:guid}/bcra-sync", async (
+            Guid id,
+            UpdateBcraReportRequest body,
+            ISender sender,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(
+                new UpdateCustomerBcraCommand(id, body.CreditRating, body.WorstSituation, body.TotalDebt, body.RejectedChequesCount, body.Recommendation),
+                cancellationToken);
+            return result.ToHttp();
+        });
+
         customers.MapPost("/{id:guid}/activate", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
         {
             var result = await sender.Send(new ChangeCustomerStatusCommand(id, CustomerStatus.Active), cancellationToken);

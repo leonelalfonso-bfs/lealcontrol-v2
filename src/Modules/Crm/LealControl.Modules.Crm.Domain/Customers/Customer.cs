@@ -83,6 +83,18 @@ public sealed class Customer : AggregateRoot<CustomerId>
 
     public DateTime? FceCheckedAtUtc { get; private set; }
 
+    public string? CreditRating { get; private set; }
+
+    public int? BcraWorstSituation { get; private set; }
+
+    public decimal? BcraTotalDebt { get; private set; }
+
+    public int? BcraRejectedChequesCount { get; private set; }
+
+    public DateTime? BcraLastCheckedAtUtc { get; private set; }
+
+    public string? CreditRecommendation { get; private set; }
+
     public DateTime CreatedAtUtc { get; private set; }
 
     public DateTime UpdatedAtUtc { get; private set; }
@@ -90,6 +102,23 @@ public sealed class Customer : AggregateRoot<CustomerId>
     public DateTime? DeletedAtUtc { get; private set; }
 
     public bool IsDeleted => DeletedAtUtc is not null;
+
+    public void UpdateBcraCreditReport(
+        string? creditRating,
+        int? worstSituation,
+        decimal? totalDebt,
+        int? rejectedChequesCount,
+        string? recommendation,
+        DateTime checkedAtUtc)
+    {
+        CreditRating = creditRating;
+        BcraWorstSituation = worstSituation;
+        BcraTotalDebt = totalDebt;
+        BcraRejectedChequesCount = rejectedChequesCount;
+        CreditRecommendation = recommendation;
+        BcraLastCheckedAtUtc = checkedAtUtc;
+        UpdatedAtUtc = checkedAtUtc;
+    }
 
     public IReadOnlyCollection<CustomerLocation> Locations => _locations.AsReadOnly();
 

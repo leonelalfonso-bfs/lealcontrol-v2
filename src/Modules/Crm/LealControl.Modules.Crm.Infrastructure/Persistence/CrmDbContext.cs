@@ -44,6 +44,12 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
         {
             await Database.ExecuteSqlRawAsync(@"
                 ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""ActivityStartDate"" character varying(32);
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRating"" character varying(10);
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraWorstSituation"" integer;
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraTotalDebt"" numeric(18,2);
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraRejectedChequesCount"" integer;
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraLastCheckedAtUtc"" timestamp with time zone;
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRecommendation"" character varying(2000);
             ");
         }
         catch

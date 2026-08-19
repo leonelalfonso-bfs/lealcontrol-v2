@@ -104,6 +104,12 @@ export type CustomerDetail = {
   notes?: string | null;
   creditLimit?: number | null;
   paymentTermsDays?: number | null;
+  creditRating?: "A" | "B" | "C" | "D" | null;
+  bcraWorstSituation?: number | null;
+  bcraTotalDebt?: number | null;
+  bcraRejectedChequesCount?: number | null;
+  bcraLastCheckedAtUtc?: string | null;
+  creditRecommendation?: string | null;
   fiscalAddress?: Address | null;
   locations: Location[];
   contacts: Contact[];

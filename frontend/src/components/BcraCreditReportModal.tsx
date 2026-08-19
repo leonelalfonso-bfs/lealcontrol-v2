@@ -1,26 +1,53 @@
 import React, { useEffect, useState } from "react";
 import { bcraApi, type BcraCreditReport } from "../api/bcraApi";
+import { api } from "../api/client";
 
 interface Props {
   isOpen: boolean;
   cuit: string;
+  customerId?: string;
   customerName?: string;
   onClose: () => void;
+  onSavedToCustomer?: () => void;
 }
 
-export function BcraCreditReportModal({ isOpen, cuit, customerName, onClose }: Props) {
+export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, onClose, onSavedToCustomer }: Props) {
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<BcraCreditReport | null>(null);
 
   useEffect(() => {
     if (isOpen && cuit) {
+      setSaveSuccess(false);
       loadReport(cuit);
     } else {
       setReport(null);
       setError(null);
+      setSaveSuccess(false);
     }
   }, [isOpen, cuit]);
+
+  const handleSaveToCustomer = async () => {
+    if (!customerId || !report) return;
+    try {
+      setSaving(true);
+      await api.updateCustomerBcra(customerId, {
+        creditRating: report.creditRating,
+        worstSituation: report.worstSituation,
+        totalDebt: report.totalDebtPesos,
+        rejectedChequesCount: report.rejectedChequesCount,
+        recommendation: report.commercialRecommendation
+      });
+      setSaveSuccess(true);
+      if (onSavedToCustomer) onSavedToCustomer();
+    } catch (err: any) {
+      alert("Error al guardar calificación: " + (err?.message || "Error desconocido"));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const loadReport = async (targetCuit: string) => {
     try {
@@ -247,16 +274,35 @@ export function BcraCreditReportModal({ isOpen, cuit, customerName, onClose }: P
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "12px 20px", background: "#f8fafc", borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ padding: "12px 20px", background: "#f8fafc", borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
           <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
             Fuente: Central de Deudores BCRA (Normativa Ley 25.326 de Protección de Datos Personales)
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: "#0f172a", color: "#ffffff", border: "none", padding: "8px 18px", borderRadius: "6px", fontWeight: 700, cursor: "pointer", fontSize: "0.85rem" }}
-          >
-            Entendido
-          </button>
+          <div style={{ display: "flex", gap: "10px" }}>
+            {customerId && report && (
+              <button
+                type="button"
+                onClick={handleSaveToCustomer}
+                disabled={saving || saveSuccess}
+                className="btn"
+                style={{
+                  background: saveSuccess ? "#059669" : "linear-gradient(135deg, #0d9488, #0f766e)",
+                  color: "#ffffff",
+                  fontWeight: 700,
+                  fontSize: "0.85rem",
+                  padding: "8px 16px"
+                }}
+              >
+                {saving ? "Guardando..." : saveSuccess ? "✓ Calificación Guardada" : "💾 Guardar en Ficha del Cliente"}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              style={{ background: "#0f172a", color: "#ffffff", border: "none", padding: "8px 18px", borderRadius: "6px", fontWeight: 700, cursor: "pointer", fontSize: "0.85rem" }}
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
       </div>
     </div>

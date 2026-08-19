@@ -24,6 +24,9 @@ internal sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(x => x.Notes).HasMaxLength(4000);
         builder.Property(x => x.CreditLimit).HasPrecision(18, 2);
         builder.Property(x => x.FceThreshold).HasPrecision(18, 2);
+        builder.Property(x => x.CreditRating).HasMaxLength(10);
+        builder.Property(x => x.BcraTotalDebt).HasPrecision(18, 2);
+        builder.Property(x => x.CreditRecommendation).HasMaxLength(2000);
         builder.Property(x => x.TaxCondition).HasConversion<string>().HasMaxLength(40);
         builder.Property(x => x.IibbRegime).HasConversion<string>().HasMaxLength(40);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);

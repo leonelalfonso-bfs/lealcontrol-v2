@@ -604,6 +604,80 @@ export const QuoteFormPage: React.FC = () => {
               </select>
             </label>
           </div>
+
+          {/* Credit Scoring & Terms Suggestion Banner */}
+          {selectedCustomerDetail && (
+            <div style={{
+              marginTop: "10px",
+              padding: "10px 14px",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "10px",
+              background: selectedCustomerDetail.creditRating === "A" ? "#ecfdf5" : selectedCustomerDetail.creditRating === "B" ? "#fefce8" : selectedCustomerDetail.creditRating === "C" ? "#fff7ed" : selectedCustomerDetail.creditRating === "D" ? "#fef2f2" : "#f8fafc",
+              border: `1px solid ${selectedCustomerDetail.creditRating === "A" ? "#10b981" : selectedCustomerDetail.creditRating === "B" ? "#eab308" : selectedCustomerDetail.creditRating === "C" ? "#f97316" : selectedCustomerDetail.creditRating === "D" ? "#ef4444" : "#e2e8f0"}`
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "1.3rem" }}>
+                  {selectedCustomerDetail.creditRating === "A" ? "🟢" : selectedCustomerDetail.creditRating === "B" ? "🟡" : selectedCustomerDetail.creditRating === "C" ? "🟠" : selectedCustomerDetail.creditRating === "D" ? "🔴" : "🏛️"}
+                </span>
+                <div>
+                  <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#0f172a" }}>
+                    {selectedCustomerDetail.creditRating
+                      ? `Evaluación Crediticia BCRA: Calificación ${selectedCustomerDetail.creditRating} (Sit. ${selectedCustomerDetail.bcraWorstSituation || 1})`
+                      : "Sin informe BCRA registrado en ficha"}
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: "#475569", marginTop: "2px" }}>
+                    {selectedCustomerDetail.creditRecommendation || "Podés consultar su calificación crediticia en la ficha del cliente."}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                {selectedCustomerDetail.creditRating === "A" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentTerms("30 días fecha factura");
+                      setPaymentMethod("Transferencia Bancaria / eCheq");
+                    }}
+                    className="btn"
+                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "#059669", color: "white", fontWeight: 700 }}
+                  >
+                    ✓ Aplicar Cta. Cte. (30d)
+                  </button>
+                )}
+                {selectedCustomerDetail.creditRating === "B" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentTerms("50% anticipo, saldo contra entrega");
+                      setPaymentMethod("Transferencia Bancaria");
+                    }}
+                    className="btn"
+                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "#d97706", color: "white", fontWeight: 700 }}
+                  >
+                    ✓ Aplicar Anticipo 50%
+                  </button>
+                )}
+                {(selectedCustomerDetail.creditRating === "C" || selectedCustomerDetail.creditRating === "D") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentTerms("100% Contado Anticipado");
+                      setPaymentMethod("Transferencia Anticipada");
+                    }}
+                    className="btn"
+                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "#dc2626", color: "white", fontWeight: 700 }}
+                  >
+                    ⚠️ Exigir Pago Contado
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Card 2: Moneda & Cotización DolarApi Live */}

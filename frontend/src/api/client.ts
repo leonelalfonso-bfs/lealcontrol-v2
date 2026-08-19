@@ -69,6 +69,8 @@ export const api = {
     request<CustomerDetail>("/api/v1/crm/customers", { method: "POST", body: JSON.stringify(body) }),
   updateCustomer: (id: string, body: CustomerWrite) =>
     request<CustomerDetail>(`/api/v1/crm/customers/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  updateCustomerBcra: (id: string, body: { creditRating?: string; worstSituation?: number; totalDebt?: number; rejectedChequesCount?: number; recommendation?: string }) =>
+    request<CustomerDetail>(`/api/v1/crm/customers/${id}/bcra-sync`, { method: "POST", body: JSON.stringify(body) }),
   addLocation: (id: string, body: object) =>
     request<CustomerDetail>(`/api/v1/crm/customers/${id}/locations`, { method: "POST", body: JSON.stringify(body) }),
   updateLocation: (id: string, locationId: string, body: object) =>

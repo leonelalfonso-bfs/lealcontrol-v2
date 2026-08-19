@@ -111,6 +111,19 @@ export function CustomerDetailPage() {
             <span>CUIT: {formatCuitDisplay(customer.documentNumber)}</span>
             <span>{label(customer.taxCondition)}</span>
             <span>{label(customer.iibbRegime)}</span>
+            {customer.creditRating && (
+              <span style={{
+                padding: "2px 8px",
+                borderRadius: "12px",
+                background: customer.creditRating === "A" ? "#ecfdf5" : customer.creditRating === "B" ? "#fefce8" : customer.creditRating === "C" ? "#fff7ed" : "#fef2f2",
+                color: customer.creditRating === "A" ? "#047857" : customer.creditRating === "B" ? "#854d0e" : customer.creditRating === "C" ? "#9a3412" : "#991b1b",
+                fontSize: "0.8rem",
+                fontWeight: "bold",
+                border: `1px solid ${customer.creditRating === "A" ? "#a7f3d0" : customer.creditRating === "B" ? "#fde68a" : customer.creditRating === "C" ? "#fdba74" : "#fecaca"}`
+              }}>
+                {customer.creditRating === "A" ? "🟢" : customer.creditRating === "B" ? "🟡" : customer.creditRating === "C" ? "🟠" : "🔴"} Calificación BCRA: {customer.creditRating} (Sit. {customer.bcraWorstSituation || 1})
+              </span>
+            )}
           </div>
         </div>
 
@@ -594,7 +607,9 @@ export function CustomerDetailPage() {
       <BcraCreditReportModal
         isOpen={showBcraModal}
         cuit={customer.documentNumber}
+        customerId={customer.id}
         customerName={customer.legalName}
+        onSavedToCustomer={refresh}
         onClose={() => setShowBcraModal(false)}
       />
     </div>
