@@ -35,6 +35,22 @@ export const ProductFormPage: React.FC = () => {
     }
   };
   const [categoryId, setCategoryId] = useState<string>("");
+  const [imagePath, setImagePath] = useState<string | null>(null);
+  const [showInCatalog, setShowInCatalog] = useState<boolean>(true);
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("La imagen no debe superar los 5MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImagePath(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Prices & 3 Currencies
   const [saleCurrency, setSaleCurrency] = useState<ProductWrite["saleCurrency"]>("ARS");
@@ -81,6 +97,7 @@ export const ProductFormPage: React.FC = () => {
 
           setType(p.type as ProductWrite["type"]);
           setCategoryId(p.categoryId ?? "");
+          setImagePath(p.imagePath ?? null);
 
           setSaleCurrency(p.saleCurrency);
           setBasePrice(p.basePrice);
@@ -98,8 +115,11 @@ export const ProductFormPage: React.FC = () => {
           setPurchaseAccountingCode(p.purchaseAccountingCode ?? "");
 
           if (p.customAttributes) {
+            setShowInCatalog(p.customAttributes.showInCatalog !== "false");
             setCustomAttributesList(
-              Object.entries(p.customAttributes).map(([k, v]) => ({ key: k, value: v }))
+              Object.entries(p.customAttributes)
+                .filter(([k]) => k !== "showInCatalog")
+                .map(([k, v]) => ({ key: k, value: v }))
             );
           }
         } catch (err: unknown) {
@@ -141,9 +161,11 @@ export const ProductFormPage: React.FC = () => {
       setError(null);
 
       // Convert custom attributes array to record dictionary
-      const customAttributesRecord: Record<string, string> = {};
+      const customAttributesRecord: Record<string, string> = {
+        showInCatalog: showInCatalog ? "true" : "false"
+      };
       customAttributesList.forEach((attr) => {
-        if (attr.key.trim()) {
+        if (attr.key.trim() && attr.key.trim() !== "showInCatalog") {
           customAttributesRecord[attr.key.trim()] = attr.value.trim();
         }
       });
@@ -155,7 +177,7 @@ export const ProductFormPage: React.FC = () => {
         detailedDescription: detailedDescription.trim() || null,
         type,
         categoryId: categoryId || null,
-        imagePath: null,
+        imagePath: imagePath ? imagePath.trim() : null,
         saleCurrency,
         basePrice: Number(basePrice),
         purchaseCurrency,
@@ -351,15 +373,120 @@ export const ProductFormPage: React.FC = () => {
 
             <div>
               <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "6px" }}>
-                Descripción Técnica Detallada (ficha técnica interna)
+                Descripción Técnica Detallada (Ficha técnica para Presupuestos y Ofertas Técnicas)
               </label>
               <textarea
                 rows={3}
                 value={detailedDescription}
                 onChange={(e) => setDetailedDescription(e.target.value)}
-                placeholder="Especificaciones técnicas completas, tolerancias, certificaciones, manuales..."
+                placeholder="Especificaciones técnicas completas, capacidad, dimensiones, tolerancias, certificaciones INTI..."
                 style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
               />
+            </div>
+
+            {/* Imagen del Producto & Visibilidad en Catálogo */}
+            <div style={{ background: "var(--surface-muted)", padding: "18px", borderRadius: "14px", border: "1px solid var(--surface-border)" }}>
+              <h3 style={{ marginTop: 0, marginBottom: "14px", fontSize: "1rem", color: "var(--ink)", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span>🖼️ Imagen del Producto & Oferta Técnica</span>
+              </h3>
+
+              <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "20px", alignItems: "flex-start" }}>
+                {/* Thumbnail Preview */}
+                <div style={{ textAlign: "center" }}>
+                  <div
+                    style={{
+                      width: 130,
+                      height: 130,
+                      borderRadius: 14,
+                      border: "2px dashed var(--surface-border)",
+                      background: "var(--surface)",
+                      display: "grid",
+                      placeItems: "center",
+                      overflow: "hidden",
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
+                    }}
+                  >
+                    {imagePath ? (
+                      <img
+                        src={imagePath}
+                        alt="Vista previa"
+                        style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                      />
+                    ) : (
+                      <div style={{ color: "var(--ink-soft)", fontSize: "0.75rem", padding: "8px" }}>
+                        <span style={{ fontSize: "2rem", display: "block", marginBottom: 4 }}>📷</span>
+                        Sin imagen
+                      </div>
+                    )}
+                  </div>
+                  {imagePath && (
+                    <button
+                      type="button"
+                      onClick={() => setImagePath(null)}
+                      className="btn btn-outline"
+                      style={{ marginTop: 8, padding: "4px 8px", fontSize: "0.74rem", color: "#dc2626", borderColor: "#fca5a5" }}
+                    >
+                      🗑️ Quitar Foto
+                    </button>
+                  )}
+                </div>
+
+                {/* Upload Controls & Catalog Toggle */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 6, color: "var(--ink)" }}>
+                      Subir archivo de imagen (JPG, PNG, WebP)
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      style={{ fontSize: "0.85rem", padding: "6px 0" }}
+                    />
+                    <span className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 2 }}>
+                      Se imprimirá en presupuestos (oferta técnica) y en el catálogo. Máximo 5MB.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4, color: "var(--ink)" }}>
+                      O ingresar URL directa de la imagen
+                    </label>
+                    <input
+                      type="text"
+                      value={imagePath && !imagePath.startsWith("data:") ? imagePath : ""}
+                      onChange={(e) => setImagePath(e.target.value || null)}
+                      placeholder="https://ejemplo.com/fotos/balanza-500kg.png"
+                      style={{ width: "100%", padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
+                    />
+                  </div>
+
+                  {/* Public Catalog Toggle */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      background: showInCatalog ? "rgba(16, 185, 129, 0.08)" : "var(--surface)",
+                      border: `1px solid ${showInCatalog ? "rgba(16, 185, 129, 0.3)" : "var(--surface-border)"}`,
+                      marginTop: 4
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      id="showInCatalogCheck"
+                      checked={showInCatalog}
+                      onChange={(e) => setShowInCatalog(e.target.checked)}
+                      style={{ width: 18, height: 18, cursor: "pointer" }}
+                    />
+                    <label htmlFor="showInCatalogCheck" style={{ cursor: "pointer", fontSize: "0.86rem", fontWeight: 700, color: showInCatalog ? "#047857" : "var(--ink)" }}>
+                      🌐 Mostrar en Catálogo Público / Carrito de Clientes (Portal B2B)
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Precios 3-Monedas */}

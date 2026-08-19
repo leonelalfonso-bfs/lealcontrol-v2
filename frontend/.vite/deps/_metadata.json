@@ -1,8 +1,61 @@
 {
-  "hash": "804d4c2d",
+  "hash": "f605767c",
   "configHash": "c4cc0733",
-  "lockfileHash": "e3b0c442",
-  "browserHash": "2e7320af",
-  "optimized": {},
-  "chunks": {}
+  "lockfileHash": "ec9a4d81",
+  "browserHash": "aa76d280",
+  "optimized": {
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "1ea03c70",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "0b6d9ac6",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "80edb290",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.js",
+      "file": "react-router-dom.js",
+      "fileHash": "d9104510",
+      "needsInterop": false
+    },
+    "html2pdf.js": {
+      "src": "../../node_modules/html2pdf.js/dist/html2pdf.js",
+      "file": "html2pdf__js.js",
+      "fileHash": "947f5ae4",
+      "needsInterop": true
+    },
+    "qrcode": {
+      "src": "../../node_modules/qrcode/lib/browser.js",
+      "file": "qrcode.js",
+      "fileHash": "2294f5b0",
+      "needsInterop": true
+    },
+    "xlsx": {
+      "src": "../../node_modules/xlsx/xlsx.mjs",
+      "file": "xlsx.js",
+      "fileHash": "b93da926",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-2BK46S35": {
+      "file": "chunk-2BK46S35.js"
+    },
+    "chunk-ILN6NDMJ": {
+      "file": "chunk-ILN6NDMJ.js"
+    },
+    "chunk-EQCVQC35": {
+      "file": "chunk-EQCVQC35.js"
+    }
+  }
 }

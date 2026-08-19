@@ -23,6 +23,13 @@ export const ProductsPage: React.FC = () => {
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [catalogFilter, setCatalogFilter] = useState<"all" | "inCatalog" | "internal">("all");
+
+  const filteredProducts = products.filter((item) => {
+    if (catalogFilter === "inCatalog") return item.customAttributes?.showInCatalog !== "false";
+    if (catalogFilter === "internal") return item.customAttributes?.showInCatalog === "false";
+    return true;
+  });
 
   // Category Modal
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -196,6 +203,16 @@ export const ProductsPage: React.FC = () => {
             </option>
           ))}
         </select>
+
+        <select
+          value={catalogFilter}
+          onChange={(e) => setCatalogFilter(e.target.value as "all" | "inCatalog" | "internal")}
+          style={{ maxWidth: "200px" }}
+        >
+          <option value="all">🌐 Todos los Productos</option>
+          <option value="inCatalog">✅ Publicados en Catálogo</option>
+          <option value="internal">🔒 Solo Uso Interno</option>
+        </select>
       </div>
 
       {error && <div className="alert">{error}</div>}
@@ -211,21 +228,24 @@ export const ProductsPage: React.FC = () => {
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: 50, textAlign: "center" }}>Foto</th>
                   <th>Código / SKU</th>
                   <th>Descripción del Artículo</th>
                   <th>Tipo</th>
+                  <th>Portal B2B</th>
                   <th>Categoría</th>
-                  <th>Moneda Venta</th>
+                  <th>Moneda</th>
                   <th style={{ textAlign: "right" }}>Precio Base</th>
-                  <th style={{ textAlign: "right" }}>Equiv. ARS (Live)</th>
-                  <th style={{ textAlign: "center" }}>Trazabilidad</th>
+                  <th style={{ textAlign: "right" }}>Equiv. ARS</th>
+                  <th style={{ textAlign: "center" }}>Stock / Trazabilidad</th>
                   <th style={{ textAlign: "right" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {products.map((item) => {
+                {filteredProducts.map((item) => {
                   const curr = currencyMeta[item.saleCurrency] ?? { label: item.saleCurrency, detail: "", symbol: "$" };
                   const typeLabel = productTypeLabels[item.type] ?? item.type;
+                  const isPublic = item.customAttributes?.showInCatalog !== "false";
 
                   // Live exchange rate conversion to ARS
                   let priceInArs = item.basePrice;
@@ -237,6 +257,37 @@ export const ProductsPage: React.FC = () => {
 
                   return (
                     <tr key={item.id} onClick={() => navigate(`/productos/${item.id}/editar`)}>
+                      <td style={{ textAlign: "center" }}>
+                        {item.imagePath ? (
+                          <img
+                            src={item.imagePath}
+                            alt={item.name}
+                            style={{
+                              width: 40,
+                              height: 40,
+                              objectFit: "contain",
+                              borderRadius: 8,
+                              border: "1px solid var(--surface-border)",
+                              background: "var(--surface)"
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 8,
+                              background: "var(--surface-muted)",
+                              display: "grid",
+                              placeItems: "center",
+                              fontSize: "1.1rem",
+                              border: "1px solid var(--surface-border)"
+                            }}
+                          >
+                            {productTypeMeta[item.type]?.icon ?? "📦"}
+                          </div>
+                        )}
+                      </td>
                       <td>
                         <strong>{item.code}</strong>
                       </td>
@@ -250,6 +301,13 @@ export const ProductsPage: React.FC = () => {
                         <span className={`badge ${productTypeMeta[item.type]?.badgeClass ?? "off"}`}>
                           {productTypeMeta[item.type]?.icon ?? "📦"} {productTypeLabels[item.type] ?? item.type}
                         </span>
+                      </td>
+                      <td>
+                        {isPublic ? (
+                          <span className="badge ok" style={{ fontSize: "0.74rem" }}>🌐 Catálogo</span>
+                        ) : (
+                          <span className="badge off" style={{ fontSize: "0.74rem" }}>🔒 Interno</span>
+                        )}
                       </td>
                       <td className="muted">
                         {item.categoryName || "—"}

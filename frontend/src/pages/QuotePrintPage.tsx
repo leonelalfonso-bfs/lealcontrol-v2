@@ -3,22 +3,28 @@ import { useNavigate, useParams } from "react-router-dom";
 import html2pdf from "html2pdf.js";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
+import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import {
   currencyMeta,
   type Contact,
   type CustomerDetail,
   type Location,
+  type Product,
   type Quote
 } from "../api/types";
 
 export const QuotePrintPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { settings } = useDocumentTemplate();
 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [deliveryLocation, setDeliveryLocation] = useState<Location | null>(null);
   const [assignedContact, setAssignedContact] = useState<Contact | null>(null);
+  const [productsMap, setProductsMap] = useState<Record<string, Product>>({});
+  const [includeTechnicalOffer, setIncludeTechnicalOffer] = useState(true);
+
   const [loading, setLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
@@ -29,8 +35,20 @@ export const QuotePrintPage: React.FC = () => {
     const loadQuoteData = async () => {
       try {
         setLoading(true);
-        const q = await api.getQuote(id);
+        const [q, prods] = await Promise.all([
+          api.getQuote(id),
+          api.listProducts().catch(() => [] as Product[])
+        ]);
+
         setQuote(q);
+
+        // Build products lookup dictionary
+        const pMap: Record<string, Product> = {};
+        prods.forEach((p) => {
+          pMap[p.id] = p;
+          if (p.code) pMap[p.code.toUpperCase()] = p;
+        });
+        setProductsMap(pMap);
 
         if (q.customerId) {
           const cust = await api.getCustomer(q.customerId);
@@ -65,7 +83,7 @@ export const QuotePrintPage: React.FC = () => {
       const filename = `Presupuesto_${quote.quoteNumber}_rev${quote.revision}.pdf`;
 
       const opt = {
-        margin: [5, 5, 5, 5] as [number, number, number, number],
+        margin: [6, 6, 6, 6] as [number, number, number, number],
         filename,
         image: { type: "jpeg" as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
@@ -111,179 +129,197 @@ export const QuotePrintPage: React.FC = () => {
   const estimatedVat = netSubtotal * 0.21;
   const grandTotal = quote.total > 0 ? quote.total : netSubtotal + estimatedVat;
 
+  const primaryCol = settings.primaryColor || "#0d9488";
+
+  // Identify lines that have technical info or images
+  const technicalItems = quote.lines.map((line) => {
+    const prod = (line.productId ? productsMap[line.productId] : null) || (line.description ? productsMap[line.description.toUpperCase()] : null);
+    return { line, prod };
+  }).filter((item) => item.prod && (item.prod.imagePath || item.prod.detailedDescription));
+
   return (
-    <div style={{ background: "#f1f5f9", minHeight: "100vh", padding: "20px" }}>
+    <div style={{ background: "#525659", minHeight: "100vh", padding: "20px" }}>
       {/* Top Action Bar */}
-      <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 16px auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 16px auto", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#ffffff", padding: "10px 18px", borderRadius: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}>
         <button
           type="button"
           onClick={() => navigate(`/presupuestos/${id}/editar`)}
-          style={{ padding: "8px 16px", borderRadius: "6px", background: "white", border: "1px solid #cbd5e1", cursor: "pointer", fontWeight: 600 }}
+          style={{ padding: "8px 16px", borderRadius: "8px", background: "white", border: "1px solid #cbd5e1", cursor: "pointer", fontWeight: 600 }}
         >
           ← Volver a Editar
         </button>
 
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button type="button" className="btn" onClick={() => setShowEmail(true)}>✉ Enviar por email</button>
-          {showEmail && <EmailComposer context={{ entityType: "Quote", entityId: quote.id, to: assignedContact?.email || customer?.email || undefined, subject: `Presupuesto ${quote.quoteNumber} rev.${quote.revision}`, body: `Hola,\n\nAdjuntamos los datos del presupuesto ${quote.quoteNumber}, revisión ${quote.revision}, por un total de ${curr.symbol} ${grandTotal.toLocaleString("es-AR")}.\n\nQuedamos atentos a su confirmación.\n` }} onClose={() => setShowEmail(false)} />}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {/* Toggle Technical Offer with Images */}
+          <button
+            type="button"
+            onClick={() => setIncludeTechnicalOffer(!includeTechnicalOffer)}
+            style={{
+              padding: "8px 14px",
+              borderRadius: "8px",
+              background: includeTechnicalOffer ? "rgba(16, 185, 129, 0.12)" : "#f1f5f9",
+              border: `1px solid ${includeTechnicalOffer ? "#10b981" : "#cbd5e1"}`,
+              color: includeTechnicalOffer ? "#047857" : "#475569",
+              fontWeight: 700,
+              fontSize: "0.84rem",
+              cursor: "pointer"
+            }}
+          >
+            {includeTechnicalOffer ? "🖼️ Oferta Técnica con Fotos: ACTIVADA" : "📄 Solo Tabla Comercial"}
+          </button>
+
+          <button type="button" className="btn btn-outline" onClick={() => setShowEmail(true)} style={{ padding: "8px 14px" }}>
+            ✉ Enviar Email
+          </button>
+
+          {showEmail && (
+            <EmailComposer
+              context={{
+                entityType: "Quote",
+                entityId: quote.id,
+                to: assignedContact?.email || customer?.email || undefined,
+                subject: `Presupuesto ${quote.quoteNumber} rev.${quote.revision}`,
+                body: `Estimado/a,\n\nAdjuntamos la propuesta comercial y oferta técnica ${quote.quoteNumber} (rev. ${quote.revision}) por un total de ${curr.symbol} ${grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}.\n\nQuedamos a su entera disposición ante cualquier consulta técnica o comercial.\n\nSaludos cordiales.`
+              }}
+              onClose={() => setShowEmail(false)}
+            />
+          )}
+
           <button
             type="button"
             disabled={downloadingPdf}
             onClick={handleDownloadPdf}
             style={{
               padding: "8px 20px",
-              borderRadius: "6px",
-              background: "linear-gradient(180deg, #1aaa97, #128c7e)",
+              borderRadius: "8px",
+              background: primaryCol,
               color: "white",
               border: "none",
               cursor: "pointer",
               fontWeight: "bold",
-              boxShadow: "0 4px 12px rgba(18, 140, 126, 0.3)"
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
             }}
           >
-            {downloadingPdf ? "Generando..." : "📥 Descargar PDF"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => window.print()}
-            style={{ padding: "8px 16px", borderRadius: "6px", background: "#3b82f6", color: "white", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            🖨️ Imprimir
+            {downloadingPdf ? "Generando PDF..." : "📥 Descargar PDF"}
           </button>
         </div>
       </div>
 
-      {/* Main A4 Document Sheet - Targeted by html2pdf.js */}
+      {/* The Printable A4 Container */}
       <div
         id="quote-pdf-sheet"
-        className="print-container"
         style={{
-          width: "200mm",
-          height: "auto",
-          background: "white",
+          width: "210mm",
+          minHeight: "297mm",
           margin: "0 auto",
-          padding: "12mm 12mm",
-          boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
-          fontFamily: "Helvetica, Arial, sans-serif",
-          color: "#333333",
-          fontSize: "11.5px",
-          lineHeight: "1.45",
-          boxSizing: "border-box"
+          background: "white",
+          padding: "16mm 18mm",
+          boxSizing: "border-box",
+          fontFamily: "Inter, sans-serif",
+          fontSize: "11px",
+          color: "#1e293b",
+          boxShadow: "0 8px 30px rgba(0, 0, 0, 0.25)",
+          borderRadius: "4px",
+          display: "flex",
+          flexDirection: "column"
         }}
       >
-        {/* Header Section */}
-        <div style={{ borderBottom: "2px solid #3b82f6", paddingBottom: "10px", marginBottom: "12px" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <tbody>
-              <tr>
-                <td style={{ width: "25%", verticalAlign: "top" }}>
-                  <img src="/logo.png?v=2" alt="Leal Control ERP" style={{ maxHeight: "60px", width: "auto" }} />
-                </td>
-                <td style={{ width: "45%", verticalAlign: "top", paddingLeft: "15px" }}>
-                  <h1 style={{ margin: 0, fontSize: "17px", color: "#3b82f6" }}>LEAL CONTROL ERP S.A.</h1>
-                  <p style={{ margin: "2px 0", fontSize: "10.5px", color: "#64748b" }}>Sistemas Comerciales, Industriales & Metrología</p>
-                  <p style={{ margin: "1px 0", fontSize: "10.5px", color: "#64748b" }}>CUIT: 30-71548962-9 | contacto@lealcontrol.com</p>
-                  <p style={{ margin: "1px 0", fontSize: "10.5px", color: "#64748b" }}>www.lealcontrol.com</p>
-                </td>
-                <td style={{ width: "30%", verticalAlign: "top", textAlign: "right" }}>
-                  <h2 style={{ margin: 0, fontSize: "19px", color: "#1e293b", letterSpacing: "0.5px" }}>PRESUPUESTO</h2>
-                  <div style={{ fontSize: "14px", fontWeight: "bold", color: "#3b82f6", marginTop: "2px" }}>
-                    N° {quote.quoteNumber} <span style={{ fontSize: "10.5px", color: "#64748b", fontWeight: "normal" }}>rev.{quote.revision}</span>
-                  </div>
-                  <div style={{ fontSize: "10.5px", color: "#64748b", marginTop: "3px" }}>
-                    Fecha: <strong>{new Date(quote.createdAtUtc).toLocaleDateString("es-AR")}</strong>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        {/* =========================================================================
+            HEADER BLOCK: Adaptable to configured template style
+            ========================================================================= */}
+        {settings.templateStyle === "classic" ? (
+          <div style={{ background: primaryCol, color: "#ffffff", padding: "14px 18px", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: "1.3rem", fontWeight: 900, color: "#ffffff" }}>LEAL CONTROL ERP</h2>
+              <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>Soluciones Industriales & Pesaje Comercial</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "1.1rem", fontWeight: 900 }}>PRESUPUESTO COMERCIAL</div>
+              <div style={{ fontSize: "0.85rem", opacity: 0.95 }}>N° {quote.quoteNumber} (Rev. {quote.revision})</div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: `2px solid ${primaryCol}`, marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ width: 50, height: 50, borderRadius: 12, background: primaryCol, color: "#fff", display: "grid", placeItems: "center", fontSize: "1.4rem", fontWeight: 900 }}>
+                LC
+              </div>
+              <div>
+                <h1 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 900, color: "#0f172a" }}>LEAL CONTROL ERP</h1>
+                <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Soluciones Industriales & Automatización</div>
+                <div style={{ fontSize: "0.72rem", color: "#64748b" }}>CUIT: 30-71234567-9 | IVA Responsable Inscripto</div>
+              </div>
+            </div>
+
+            <div style={{ textAlign: "right" }}>
+              <div style={{ display: "inline-block", padding: "3px 12px", borderRadius: 6, background: `${primaryCol}18`, color: primaryCol, fontWeight: 800, fontSize: "0.9rem" }}>
+                PRESUPUESTO COMERCIAL
+              </div>
+              <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#0f172a", marginTop: 4 }}>
+                N° {quote.quoteNumber} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>(Rev. {quote.revision})</span>
+              </div>
+              <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
+                Fecha: {new Date(quote.createdAtUtc).toLocaleDateString("es-AR")}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Customer & Commercial Details */}
+        <div style={{ background: "#f8fafc", padding: "12px 16px", borderRadius: 8, border: `1px solid ${primaryCol}33`, marginBottom: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={{ color: "#64748b", fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 700 }}>Cliente / Razón Social:</div>
+            <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>{customer?.legalName || "Cliente Genérico"}</strong>
+            <div style={{ color: "#475569", fontSize: "0.8rem" }}>CUIT: {customer?.documentNumber || "—"} ({customer?.taxCondition || "IVA Resp. Inscripto"})</div>
+            {assignedContact && (
+              <div style={{ color: "#475569", fontSize: "0.78rem", marginTop: 2 }}>
+                <strong>Atención:</strong> {assignedContact.name} {assignedContact.role ? `(${assignedContact.role})` : ""}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div style={{ color: "#64748b", fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 700 }}>Destino / Entrega:</div>
+            <div style={{ fontSize: "0.82rem", color: "#0f172a" }}>{deliveryLocation?.name || "Entrega en Planta Central"}</div>
+            <div style={{ color: "#475569", fontSize: "0.78rem" }}>
+              {deliveryLocation?.address?.street ? `${deliveryLocation.address.street}, ${deliveryLocation.address.city}` : "Según orden de compra"}
+            </div>
+            <div style={{ color: "#475569", fontSize: "0.78rem", marginTop: 2 }}>
+              <strong>Validez:</strong> {quote.validDays} días corridos
+            </div>
+          </div>
         </div>
 
-        {/* Client & Location Data */}
-        <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "6px", marginBottom: "12px", border: "1px solid #e2e8f0" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <tbody>
-              <tr>
-                <td style={{ width: "55%", verticalAlign: "top" }}>
-                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#94a3b8", textTransform: "uppercase", marginBottom: "3px" }}>
-                    CLIENTE / DESTINATARIO (DATOS FISCALES)
-                  </div>
-                  <div style={{ fontSize: "13px", fontWeight: "bold", color: "#0f172a" }}>
-                    {customer?.legalName || "Cliente Generico"}
-                  </div>
-                  {customer?.tradeName && (
-                    <div style={{ fontSize: "10.5px", color: "#475569" }}>Nombre Fantasía: {customer.tradeName}</div>
-                  )}
-                  <div style={{ fontSize: "10.5px", color: "#64748b", marginTop: "2px" }}>
-                    CUIT: <strong>{customer?.documentNumber || "—"}</strong> | IVA: {customer?.taxCondition || "Responsable Inscripto"}
-                  </div>
-                  {customer?.fiscalAddress && (
-                    <div style={{ fontSize: "10.5px", color: "#64748b" }}>
-                      {customer.fiscalAddress.street}, {customer.fiscalAddress.city}, {customer.fiscalAddress.province}
-                    </div>
-                  )}
-                </td>
-                <td style={{ width: "45%", verticalAlign: "top", textAlign: "right", borderLeft: "1px dashed #cbd5e1", paddingLeft: "12px" }}>
-                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#94a3b8", textTransform: "uppercase", marginBottom: "3px" }}>
-                    LUGAR DE ENTREGA / ATENCIÓN
-                  </div>
-                  {deliveryLocation ? (
-                    <>
-                      <div style={{ fontSize: "11.5px", fontWeight: "bold", color: "#0f172a" }}>{deliveryLocation.name}</div>
-                      <div style={{ fontSize: "10.5px", color: "#64748b" }}>
-                        {deliveryLocation.address.street}, {deliveryLocation.address.city}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: "10.5px", color: "#64748b" }}>Casa Central / Domicilio Fiscal del Cliente</div>
-                  )}
-                  {assignedContact && (
-                    <div style={{ fontSize: "10.5px", color: "#334155", marginTop: "3px" }}>
-                      <strong>Atención a:</strong> {assignedContact.name} ({assignedContact.role})
-                    </div>
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Section Title: Oferta Comercial */}
-        <div style={{ background: "#3b82f6", color: "white", padding: "5px 10px", fontWeight: "bold", fontSize: "11px", borderRadius: "4px 4px 0 0", letterSpacing: "0.5px", textTransform: "uppercase" }}>
-          OFERTA COMERCIAL
-        </div>
-
-        {/* Lines Table */}
+        {/* Commercial Items Table */}
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px" }}>
           <thead>
-            <tr style={{ background: "#f1f5f9", borderBottom: "2px solid #cbd5e1", fontSize: "9.5px", textTransform: "uppercase", color: "#475569" }}>
-              <th style={{ padding: "6px 5px", textAlign: "center", width: "5%" }}>#</th>
-              <th style={{ padding: "6px 5px", textAlign: "left", width: "45%" }}>Descripción del Artículo / Servicio</th>
-              <th style={{ padding: "6px 5px", textAlign: "center", width: "8%" }}>Cant.</th>
-              <th style={{ padding: "6px 5px", textAlign: "right", width: "14%" }}>Precio U. ({curr.symbol})</th>
-              <th style={{ padding: "6px 5px", textAlign: "center", width: "8%" }}>Desc.</th>
-              <th style={{ padding: "6px 5px", textAlign: "center", width: "6%" }}>IVA</th>
-              <th style={{ padding: "6px 5px", textAlign: "right", width: "14%" }}>Total ({curr.symbol})</th>
+            <tr style={{ background: `${primaryCol}15`, borderBottom: `2px solid ${primaryCol}`, color: primaryCol, fontSize: "9.5px", textTransform: "uppercase" }}>
+              <th style={{ padding: "8px 6px", textAlign: "center", width: "5%" }}>#</th>
+              <th style={{ padding: "8px 6px", textAlign: "left", width: "45%" }}>Descripción del Artículo / Servicio</th>
+              <th style={{ padding: "8px 6px", textAlign: "center", width: "8%" }}>Cant.</th>
+              <th style={{ padding: "8px 6px", textAlign: "right", width: "14%" }}>Precio Unit. ({curr.symbol})</th>
+              <th style={{ padding: "8px 6px", textAlign: "center", width: "8%" }}>Desc.</th>
+              <th style={{ padding: "8px 6px", textAlign: "center", width: "6%" }}>IVA</th>
+              <th style={{ padding: "8px 6px", textAlign: "right", width: "14%" }}>Total ({curr.symbol})</th>
             </tr>
           </thead>
           <tbody>
             {quote.lines.map((line, idx) => (
               <tr key={line.id} style={{ borderBottom: "1px solid #e2e8f0", opacity: line.isOptional ? 0.65 : 1 }}>
-                <td style={{ padding: "6px 5px", textAlign: "center", color: "#64748b" }}>{idx + 1}</td>
-                <td style={{ padding: "6px 5px" }}>
+                <td style={{ padding: "7px 6px", textAlign: "center", color: "#64748b" }}>{idx + 1}</td>
+                <td style={{ padding: "7px 6px" }}>
                   <strong>{line.description}</strong>
                   {line.isOptional && <span style={{ color: "#d97706", fontWeight: "bold", marginLeft: "6px" }}>(OPCIONAL)</span>}
                 </td>
-                <td style={{ padding: "6px 5px", textAlign: "center" }}>{line.quantity}</td>
-                <td style={{ padding: "6px 5px", textAlign: "right", fontFamily: "monospace" }}>
+                <td style={{ padding: "7px 6px", textAlign: "center" }}>{line.quantity}</td>
+                <td style={{ padding: "7px 6px", textAlign: "right", fontFamily: "monospace" }}>
                   {line.unitPrice.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </td>
-                <td style={{ padding: "6px 5px", textAlign: "center", color: line.discountPercent > 0 ? "#16a34a" : "#94a3b8" }}>
+                <td style={{ padding: "7px 6px", textAlign: "center", color: line.discountPercent > 0 ? "#16a34a" : "#94a3b8" }}>
                   {line.discountPercent > 0 ? `${line.discountPercent}%` : "—"}
                 </td>
-                <td style={{ padding: "6px 5px", textAlign: "center" }}>{line.taxRate}%</td>
-                <td style={{ padding: "6px 5px", textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
+                <td style={{ padding: "7px 6px", textAlign: "center" }}>{line.taxRate}%</td>
+                <td style={{ padding: "7px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
                   {line.isOptional ? "—" : line.lineSubtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </td>
               </tr>
@@ -292,100 +328,140 @@ export const QuotePrintPage: React.FC = () => {
         </table>
 
         {/* Totals Table */}
-        <div style={{ marginLeft: "auto", width: "45%", marginBottom: "12px" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <tbody>
-              <tr>
-                <td style={{ padding: "3px 0", textAlign: "right", color: "#64748b" }}>SUBTOTAL {curr.label}:</td>
-                <td style={{ padding: "3px 0", textAlign: "right", width: "45%", fontFamily: "monospace" }}>
-                  {curr.symbol} {subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                </td>
-              </tr>
-              {quote.discountPercent > 0 && (
-                <tr>
-                  <td style={{ padding: "3px 0", textAlign: "right", color: "#16a34a" }}>
-                    DESCUENTO GLOBAL ({quote.discountPercent}%):
-                  </td>
-                  <td style={{ padding: "3px 0", textAlign: "right", fontFamily: "monospace", color: "#16a34a" }}>
-                    - {curr.symbol} {globalDiscountAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                  </td>
-                </tr>
-              )}
-              <tr>
-                <td style={{ padding: "3px 0", textAlign: "right", color: "#64748b" }}>IVA ESTIMADO (21%):</td>
-                <td style={{ padding: "3px 0", textAlign: "right", fontFamily: "monospace" }}>
-                  {curr.symbol} {estimatedVat.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                </td>
-              </tr>
-              <tr style={{ borderTop: "3px solid #3b82f6" }}>
-                <td style={{ padding: "6px 0 0 0", textAlign: "right", fontWeight: "bold", fontSize: "13px", color: "#3b82f6" }}>
-                  TOTAL PROPUESTA:
-                </td>
-                <td style={{ padding: "6px 0 0 0", textAlign: "right", fontWeight: "bold", fontSize: "13px", color: "#3b82f6", fontFamily: "monospace" }}>
-                  {curr.symbol} {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div style={{ marginLeft: "auto", width: "42%", marginBottom: "14px" }}>
+          <div style={{ border: `1px solid ${primaryCol}33`, borderRadius: 8, padding: 10, background: "#f8fafc" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: 3 }}>
+              <span style={{ color: "#64748b" }}>Subtotal Neto:</span>
+              <span style={{ fontFamily: "monospace" }}>{curr.symbol} {subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
+            </div>
+            {quote.discountPercent > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: 3, color: "#16a34a" }}>
+                <span>Descuento ({quote.discountPercent}%):</span>
+                <span style={{ fontFamily: "monospace" }}>- {curr.symbol} {globalDiscountAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: 4 }}>
+              <span style={{ color: "#64748b" }}>IVA Estimado:</span>
+              <span style={{ fontFamily: "monospace" }}>{curr.symbol} {estimatedVat.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1rem", fontWeight: 900, paddingTop: 5, borderTop: `2px solid ${primaryCol}`, color: primaryCol }}>
+              <span>TOTAL:</span>
+              <span style={{ fontFamily: "monospace" }}>{curr.symbol} {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
+            </div>
+          </div>
         </div>
 
-        {/* Currency Exchange Rate Legend Box */}
-        {quote.currency !== "ARS" && (
-          <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "6px", padding: "8px 10px", marginBottom: "12px", fontSize: "10.5px", color: "#1e3a8a" }}>
-            <div>
-              <strong>
-                Tipo de cambio de referencia: $ {quote.currency === "USD_BILLETE" ? quote.exchangeRateUsdBillete : quote.exchangeRateUsdDivisa} ARS —{" "}
-                {quote.currency === "USD_BILLETE" ? "USD Billete BNA (cotización vendedor)" : "USD Divisa BNA Mayorista (cotización vendedor)"}.
-              </strong>
+        {/* =========================================================================
+            SECTION: ANEXO DE OFERTA TÉCNICA CON IMÁGENES
+            ========================================================================= */}
+        {includeTechnicalOffer && technicalItems.length > 0 && (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: `2px dashed ${primaryCol}` }}>
+            <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: 6, background: primaryCol, color: "#ffffff", fontWeight: 800, fontSize: "0.85rem", textTransform: "uppercase", marginBottom: 12 }}>
+              📑 ANEXO: OFERTA TÉCNICA & ESPECIFICACIONES DE EQUIPAMIENTO
             </div>
-            <div style={{ marginTop: "3px", color: "#475569" }}>
-              Los importes en dólares se cotizan según la tasa de referencia BNA indicada. El valor final en pesos se definirá al momento de la facturación/cobro.
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {technicalItems.map(({ line, prod }, idx) => (
+                <div
+                  key={line.id || idx}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: prod?.imagePath ? "130px 1fr" : "1fr",
+                    gap: 14,
+                    padding: "12px",
+                    borderRadius: 8,
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0"
+                  }}
+                >
+                  {prod?.imagePath && (
+                    <div style={{ width: 120, height: 120, borderRadius: 8, overflow: "hidden", background: "#ffffff", border: "1px solid #e2e8f0", display: "grid", placeItems: "center" }}>
+                      <img
+                        src={prod.imagePath}
+                        alt={prod.name}
+                        style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>{prod?.name || line.description}</strong>
+                        {prod?.code && (
+                          <span style={{ marginLeft: 8, fontSize: "0.75rem", color: "#64748b", fontFamily: "monospace" }}>
+                            SKU: {prod.code}
+                          </span>
+                        )}
+                      </div>
+                      <span className="badge ok" style={{ fontSize: "0.68rem" }}>Ítem {idx + 1}</span>
+                    </div>
+
+                    {prod?.description && (
+                      <p style={{ margin: "4px 0", fontSize: "0.8rem", color: "#475569" }}>
+                        {prod.description}
+                      </p>
+                    )}
+
+                    {prod?.detailedDescription && (
+                      <div style={{ marginTop: 6, padding: "8px 10px", background: "#ffffff", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: "0.76rem", color: "#334155", lineHeight: 1.4 }}>
+                        <strong style={{ color: primaryCol, display: "block", marginBottom: 2 }}>Especificaciones Técnicas & Alcance:</strong>
+                        <div style={{ whiteSpace: "pre-line" }}>{prod.detailedDescription}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Commercial Conditions Box */}
-        <div style={{ borderTop: "2px solid #3b82f6", paddingTop: "8px" }}>
-          <div style={{ fontWeight: "bold", color: "#3b82f6", textTransform: "uppercase", fontSize: "11px", marginBottom: "5px" }}>
-            Condiciones Comerciales:
+        {/* Banking Info Box */}
+        {settings.showBankingInfo && (
+          <div style={{ marginTop: 14, padding: "8px 12px", borderRadius: 6, background: "#f1f5f9", borderLeft: `3px solid ${primaryCol}`, fontSize: "0.76rem" }}>
+            <strong style={{ color: "#0f172a" }}>Datos para Transferencias Bancarias:</strong>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 3, color: "#475569" }}>
+              <div><strong>Banco:</strong> {settings.bankDetails.bankName}</div>
+              <div><strong>Tipo:</strong> {settings.bankDetails.accountType}</div>
+              <div><strong>CBU:</strong> <span style={{ fontFamily: "monospace" }}>{settings.bankDetails.cbu}</span></div>
+              <div><strong>Alias:</strong> <span style={{ fontFamily: "monospace", color: primaryCol, fontWeight: 700 }}>{settings.bankDetails.alias}</span></div>
+            </div>
           </div>
+        )}
 
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10.5px" }}>
-            <tbody>
-              <tr>
-                <td style={{ width: "50%", padding: "2px 0", verticalAlign: "top" }}>
-                  <strong style={{ color: "#64748b" }}>Plazo de entrega:</strong> {quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : "—"}
-                </td>
-                <td style={{ width: "50%", padding: "2px 0", verticalAlign: "top" }}>
-                  <strong style={{ color: "#64748b" }}>Medio de Pago:</strong> {quote.paymentMethod || "Transferencia Bancaria"}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ padding: "2px 0", verticalAlign: "top" }}>
-                  <strong style={{ color: "#64748b" }}>Condiciones de pago:</strong> {quote.paymentTerms || "50% anticipo, saldo contra entrega"}
-                </td>
-                <td style={{ padding: "2px 0", verticalAlign: "top" }}>
-                  <strong style={{ color: "#64748b" }}>Transporte:</strong> {quote.transportation || "Flete a cargo del comprador"}
-                </td>
-              </tr>
-              <tr>
-                <td colSpan={2} style={{ padding: "2px 0", verticalAlign: "top" }}>
-                  <strong style={{ color: "#64748b" }}>Garantía:</strong> {quote.warranty || "12 meses de garantía oficial por defectos de fabricación"}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        {/* Commercial Conditions Table */}
+        <div style={{ marginTop: 14, borderTop: `1px solid ${primaryCol}33`, paddingTop: 8, fontSize: "0.76rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, color: "#475569" }}>
+            <div><strong>Plazo de Entrega:</strong> {quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : "Inmediato / A convenir"}</div>
+            <div><strong>Medio de Pago:</strong> {quote.paymentMethod || "Transferencia Bancaria"}</div>
+            <div><strong>Condiciones:</strong> {quote.paymentTerms || "50% anticipo, saldo contra entrega"}</div>
+            <div><strong>Transporte / Flete:</strong> {quote.transportation || "Flete por cuenta y orden del comprador"}</div>
+          </div>
 
           {quote.notes && (
-            <div style={{ background: "#fef9c3", borderLeft: "3px solid #eab308", padding: "6px 8px", marginTop: "6px", fontSize: "10.5px", color: "#713f12" }}>
-              <strong>Notas:</strong> {quote.notes}
+            <div style={{ background: "#fef9c3", borderLeft: "3px solid #eab308", padding: "6px 8px", marginTop: 6, fontSize: "0.76rem", color: "#713f12" }}>
+              <strong>Observaciones:</strong> {quote.notes}
             </div>
           )}
+        </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #e2e8f0", marginTop: "10px", paddingTop: "6px", fontSize: "9.5px", color: "#94a3b8" }}>
-            <div>Este presupuesto tiene una validez de {quote.validDays} días desde su fecha de emisión.</div>
-            <div>Desarrollado por Leal Control ERP Cloud</div>
+        {/* Signatures Space */}
+        {settings.showSignatures && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 30, marginTop: 24 }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ borderTop: "1px dashed #94a3b8", width: "75%", margin: "0 auto 3px" }} />
+              <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Firma Responsable / Asesor Técnico</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ borderTop: "1px dashed #94a3b8", width: "75%", margin: "0 auto 3px" }} />
+              <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Aceptación de Propuesta / Firma Cliente</div>
+            </div>
           </div>
+        )}
+
+        {/* Custom Footer Terms */}
+        <div style={{ marginTop: "auto", paddingTop: 14, borderTop: "1px solid #e2e8f0", fontSize: "0.7rem", color: "#64748b", textAlign: "center", lineHeight: 1.3 }}>
+          {settings.customFooterText}
         </div>
       </div>
     </div>
