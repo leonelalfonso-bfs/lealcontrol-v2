@@ -4,6 +4,7 @@ import html2pdf from "html2pdf.js";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
+import { numberToWords } from "../utils/numberToWords";
 import {
   currencyMeta,
   type Contact,
@@ -376,6 +377,14 @@ export const QuotePrintPage: React.FC = () => {
                 <span style={{ fontFamily: "monospace" }}>{curr.symbol} {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
+          </div>
+
+          {/* Amount in Words */}
+          <div style={{ background: "#f8fafc", border: `1px solid ${primaryBorderLight}`, padding: "6px 10px", borderRadius: "6px", marginBottom: "12px", fontSize: "0.75rem", color: "#1e293b", display: "flex", alignItems: "baseline", gap: "6px" }}>
+            <strong style={{ color: primaryCol, textTransform: "uppercase", fontSize: "0.72rem" }}>Importe en Letras:</strong>
+            <span style={{ fontWeight: 700, letterSpacing: "0.3px", textTransform: "uppercase" }}>
+              {numberToWords(grandTotal, quote.currency)}
+            </span>
           </div>
 
           {/* =========================================================================

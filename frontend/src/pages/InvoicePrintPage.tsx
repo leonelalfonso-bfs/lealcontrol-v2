@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
+import { numberToWords } from "../utils/numberToWords";
 import { type CompanySettings, type CustomerDetail, type Invoice } from "../api/types";
 
 export function InvoicePrintPage() {
@@ -489,6 +490,14 @@ export function InvoicePrintPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Amount in Words (Monto en Letras) - Standard Argentine Legal Requirement */}
+        <div style={{ background: "#f8fafc", border: `1px solid ${primaryCol}33`, padding: "6px 10px", borderRadius: "4px", marginBottom: "8px", fontSize: "10px", color: "#1e293b", display: "flex", alignItems: "baseline", gap: "6px" }}>
+          <strong style={{ color: primaryCol, textTransform: "uppercase", fontSize: "9.5px" }}>Importe en Letras:</strong>
+          <span style={{ fontWeight: "bold", letterSpacing: "0.3px", textTransform: "uppercase", fontSize: "10px" }}>
+            {numberToWords(invoice.total, invoice.currency)}
+          </span>
         </div>
 
         {/* Banking Info Box for Invoice Collection */}
