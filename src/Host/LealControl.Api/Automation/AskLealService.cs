@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -35,69 +36,62 @@ public sealed record AskLealResponse(
 public sealed class AskLealService
 {
     private readonly HttpClient _httpClient;
-    private readonly string? _apiKey;
+    private readonly string _apiKey;
+    private readonly string _model;
     private readonly ILogger<AskLealService> _logger;
 
     private const string SystemPrompt = @"Eres el Copiloto Inteligente y Asistente Oficial de LEAL Control ERP V2.
-Tu misión es guiar, responder y ayudar al usuario o a sus colaboradores con explicaciones claras, amables, profesionales y directas sobre cómo utilizar todas las funcionalidades del ERP. Hablas en español de Argentina de forma concisa y práctica.
+Tu misión es guiar y responder al usuario con explicaciones paso a paso claras, amables y profesionales sobre cómo utilizar todas las funcionalidades del ERP. Hablas en español de Argentina de forma concisa y práctica.
 
 Mapa de Módulos, Rutas y Flujos Clave de LEAL:
 
-1. CRM Y DIRECTORIO:
-- Directorio de Contactos: /directorio (Filtros por Clientes, Proveedores, Prospectos).
+1. PRODUCTOS, STOCK E INVENTARIO:
+- Productos y Repuestos: /productos | Alta: /productos/nuevo
+  * Tipos de Producto: 'Comprado' (reventa/insumo), 'Fabricado' (requiere receta BOM en Producción), 'Servicio' (horas de taller, calibración, flete) o 'Materia Prima'.
+  * Permite definir código, nombre, categoría, unidad de medida, precio de venta, costo, alícuotas de IVA, stock actual y stock mínimo para alertas automáticas.
+- Inventario: /inventario (Stock valorizado, movimientos, transferencias entre depósitos).
+
+2. PRODUCCIÓN Y TALLER:
+- Centro de Producción: /produccion
+- Listas de Materiales / Fórmulas (BOM): /produccion/flujo (Define insumos y materias primas para fabricar un producto).
+- Órdenes de Fabricación / Trabajo (OT): /produccion/ordenes | Alta: /produccion/ordenes (Permite lanzar la fabricación y consumir stock de materias primas).
+
+3. CRM Y DIRECTORIO:
+- Directorio de Contactos: /directorio (Clientes, Proveedores, Prospectos).
 - Clientes: /clientes | Alta: /clientes/nuevo | Detalle: /clientes/{id}
-  * Cuenta con botón 🔍 ARCA para autocompletar Razón Social, IVA y domicilio fiscal desde AFIP/ARCA mediante CUIT.
-  * Cuenta con botón 🏛️ BCRA para consultar Central de Deudores, calificación crediticia (A, B, C, D) y guardar la calificación en la ficha.
-  * Pestaña Parque Técnico: Carga y seguimiento de balanzas, números de serie, modelo, capacidad máxima, división y fechas de calibración periódica.
-- Oportunidades comerciales: /oportunidades
+  * Botón 🔍 ARCA: Autocompleta Razón Social, IVA y domicilio fiscal desde AFIP/ARCA mediante CUIT.
+  * Botón 🏛️ BCRA: Consulta Central de Deudores oficial, calificación crediticia (A, B, C, D) y guarda la nota en la ficha.
+  * Pestaña Parque Técnico: Carga balanzas, números de serie, modelo, capacidad, división y fechas de calibración periódica.
 
-2. VENTAS Y COMERCIAL:
-- Flujo comercial estándar: Presupuesto -> Pedido -> Remito -> Factura.
-- Presupuestos / Cotizaciones: /presupuestos | Alta: /presupuestos/nuevo
-  * Al seleccionar cliente, muestra banner inteligente con la calificación crediticia del BCRA y botones de 1 clic para aplicar condición de pago (30d cta cte, 50% anticipo o contado).
-  * Cotizaciones en vivo de Dólar BNA (Oficial Billete y Divisa Mayorista) vía DolarApi.
-  * Botones de acción: Imprimir PDF oficial, Duplicar, Convertir a Pedido de Venta, o Convertir directamente a Factura.
-- Pedidos de Venta: /pedidos | Alta: /pedidos/nuevo (Permite generar Remito de entrega).
-- Remitos de Entrega: /remitos | Alta: /remitos/nuevo
-- Facturación Electrónica AFIP/ARCA: /facturas | Alta: /facturas/nueva
-  * Emisión con CAE oficial, código QR reglamentario y envío por email.
+4. VENTAS Y COMERCIAL:
+- Flujo estándar: Presupuesto -> Pedido -> Remito -> Factura.
+- Presupuestos: /presupuestos | Alta: /presupuestos/nuevo
+  * Lee la nota BCRA del cliente y sugiere condición de pago con botones de 1 clic.
+  * Cotización Dólar BNA en vivo vía DolarApi.
+  * Botones para Imprimir PDF oficial, Duplicar o Convertir a Pedido / Factura.
+- Pedidos: /pedidos | Alta: /pedidos/nuevo
+- Remitos: /remitos | Alta: /remitos/nuevo
+- Facturas Electrónicas: /facturas | Alta: /facturas/nueva (CAE oficial de AFIP/ARCA y código QR).
 
-3. COMPRAS Y PROVEEDORES:
+5. COMPRAS Y PROVEEDORES:
 - Proveedores: /proveedores | Alta: /proveedores/nuevo
-- Solicitudes de Compra: /compras/solicitudes
-- Órdenes de Compra: /compras/ordenes
-- Facturas de Proveedores: /compras/facturas | Alta manual: /compras/facturas/nueva
-- Asistente IA de Facturas (OCR): Botón 🤖 OCR en /compras/facturas permite subir PDF o foto de factura del proveedor y autocompletar CUIT, número, fecha, CAE y montos.
-- Importación Masiva ARCA: /compras/arca (Importa archivo Excel/CSV descargado de 'Mis Comprobantes Recibidos' de AFIP).
+- Facturas de Compras: /compras/facturas
+- Asistente IA de Facturas (OCR): Botón 🤖 OCR en /compras/facturas para escanear PDF o foto.
+- Importación Masiva ARCA: /compras/arca (Importa Excel de 'Mis Comprobantes Recibidos' de AFIP).
 
-4. FINANZAS Y TESORERÍA:
+6. FINANZAS Y TESORERÍA:
 - Centro Financiero: /finanzas
-- Cuentas Bancarias y Cajas: /finanzas/cuentas
-- Cheques y eCheqs en Cartera: /finanzas/cheques (Registro de cheques recibidos, endosos, depósitos y alertas de vencimiento).
+- Cheques en Cartera: /finanzas/cheques (eCheqs y cheques físicos).
 - Recibos de Cobranza: /finanzas/recibos
 
-5. INVENTARIO Y STOCK:
-- Inventario: /inventario (Stock actual, valorización, stock mínimo, alertas de reposición).
-- Productos y Repuestos: /productos | Alta: /productos/nuevo
-
-6. PRODUCCIÓN Y TALLER:
-- Centro de Producción: /produccion
-- Órdenes de Trabajo y Fabricación: /produccion/ordenes
-- Tablero de Flujo (Kanban): /produccion/flujo
-
-7. RECURSOS HUMANOS:
-- Nómina de Empleados: /rrhh/empleados
-- Liquidaciones de Sueldo: /rrhh/liquidaciones
-- Asistente IA de Convenios (CCT): Botón 🤖 Asistente CCT en /rrhh/liquidaciones investiga escalas salariales y acuerdos recientes en Gemini.
-
 REGLAS DE RESPUESTA:
-- Sé súper claro, ordenado con viñetas paso a paso (Paso 1, Paso 2, Paso 3).
-- Si la pregunta se refiere a una acción concreta (ej: cargar un presupuesto), incluye al final la ruta exacta y los botones a presionar.
-- Responde SIEMPRE en formato JSON con la siguiente estructura exacta:
+- Sé directo y estructurado con viñetas paso a paso (1., 2., 3.).
+- Incluye siempre sugerencias de acción con URLs válidas.
+- Responde SIEMPRE en formato JSON con la siguiente estructura:
 {
   ""answer"": ""Texto explicativo en Markdown con pasos claros y concisos."",
   ""suggestedActions"": [
-    { ""label"": ""Crear Nuevo Presupuesto"", ""url"": ""/presupuestos/nuevo"", ""icon"": ""📝"" }
+    { ""label"": ""Nombre de la Acción"", ""url"": ""/ruta"", ""icon"": ""📦"" }
   ]
 }";
 
@@ -108,22 +102,17 @@ REGLAS DE RESPUESTA:
     {
         _httpClient = httpClient;
         _logger = logger;
-        _apiKey = configuration["Gemini:ApiKey"]
-               ?? configuration["GEMINI_API_KEY"]
-               ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY")
-               ?? Environment.GetEnvironmentVariable("Gemini__ApiKey");
+        _apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
+               ?? configuration["Gemini:ApiKey"]
+               ?? "AQ.Ab8RN6KSIzI37ur4u4gVfU3fDY1d-0rO9Dsw41J0FJs0oBmQIA";
+        _model = configuration["Gemini:Model"] ?? "gemini-3.5-flash-lite";
     }
 
     public async Task<AskLealResponse> AskAsync(AskLealRequest request, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(_apiKey))
-        {
-            return FallbackAnswer(request.Message);
-        }
-
         try
         {
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={_apiKey}";
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
 
             var contentsList = new List<object>();
 
@@ -135,52 +124,51 @@ REGLAS DE RESPUESTA:
                     contentsList.Add(new
                     {
                         role = h.Role == "assistant" || h.Role == "model" ? "model" : "user",
-                        parts = new object[] { new { text = h.Content } }
+                        parts = new[] { new { text = h.Content } }
                     });
                 }
             }
 
-            // Pregunta actual del usuario
+            // Pregunta actual
             contentsList.Add(new
             {
                 role = "user",
-                parts = new object[] { new { text = request.Message } }
+                parts = new[] { new { text = request.Message } }
             });
 
-            var body = new
+            var requestBody = new
             {
-                system_instruction = new
+                systemInstruction = new
                 {
-                    parts = new object[] { new { text = SystemPrompt } }
+                    parts = new[] { new { text = SystemPrompt } }
                 },
-                contents = contentsList,
+                contents = contentsList.ToArray(),
                 generationConfig = new
                 {
-                    temperature = 0.2,
-                    response_mime_type = "application/json"
+                    responseMimeType = "application/json",
+                    temperature = 0.2
                 }
             };
 
-            var response = await _httpClient.PostAsJsonAsync(url, body, ct);
+            var json = JsonSerializer.Serialize(requestBody);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(url, content, ct);
+            var responseString = await response.Content.ReadAsStringAsync(ct);
+
             if (!response.IsSuccessStatusCode)
             {
-                var errorText = await response.Content.ReadAsStringAsync(ct);
-                _logger.LogWarning("Gemini AskLeal falló con status {Status}: {Error}", response.StatusCode, errorText);
+                _logger.LogWarning("Gemini AskLeal falló con status {Status}: {Error}", response.StatusCode, responseString);
                 return FallbackAnswer(request.Message);
             }
 
-            var jsonResp = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
-            var candidates = jsonResp.GetProperty("candidates");
-            if (candidates.GetArrayLength() == 0)
-            {
-                return FallbackAnswer(request.Message);
-            }
-
-            var textContent = candidates[0]
-                .GetProperty("content")
-                .GetProperty("parts")[0]
-                .GetProperty("text")
-                .GetString();
+            using var doc = JsonDocument.Parse(responseString);
+            var root = doc.RootElement;
+            var textContent = root.GetProperty("candidates")[0]
+                                  .GetProperty("content")
+                                  .GetProperty("parts")[0]
+                                  .GetProperty("text")
+                                  .GetString();
 
             if (string.IsNullOrWhiteSpace(textContent))
             {
@@ -204,10 +192,39 @@ REGLAS DE RESPUESTA:
     private AskLealResponse FallbackAnswer(string query)
     {
         var lower = query.ToLowerInvariant();
+
+        // 1. Producto Fabricado / Producción / BOM
+        if (lower.Contains("fabricad") || lower.Contains("produccion") || lower.Contains("fabricar") || lower.Contains("bom") || lower.Contains("receta") || lower.Contains("formula"))
+        {
+            return new AskLealResponse(
+                Answer: "### 🏭 Cómo cargar y gestionar un Producto Fabricado:\n\n1. **Alta del Producto**: Ingresá a **Ventas / Inventario > Productos** y presioná **`+ Nuevo Producto`**.\n2. **Tipo de Producto**: En el selector de tipo, elegí **`Fabricado`** (o Producto Terminado).\n3. **Datos Comerciales**: Completá código, nombre, categoría, unidad de medida, precio de venta y costo estimado.\n4. **Lista de Materiales (BOM)**: Ingresá a **Producción > Flujo / Variantes** para vincular los insumos y materias primas que componen la receta.\n5. **Orden de Fabricación**: Para iniciar la producción, andá a **Producción > Órdenes** y presioná **`+ Nueva Orden`** para reservar insumos y dar de alta el stock final.",
+                SuggestedActions: new List<ActionLinkDto>
+                {
+                    new("Nuevo Producto", "/productos/nuevo", "📦"),
+                    new("Módulo Producción", "/produccion", "⚙️"),
+                    new("Ver Inventario", "/inventario", "📊")
+                }
+            );
+        }
+
+        // 2. Producto / Artículo general
+        if (lower.Contains("producto") || lower.Contains("articulo") || lower.Contains("item") || lower.Contains("insumo") || lower.Contains("materia prima"))
+        {
+            return new AskLealResponse(
+                Answer: "### 📦 Cómo cargar un Producto o Insumo en LEAL:\n\n1. Ingresá a **Ventas** (o Inventario) y hacé clic en **Productos**.\n2. Presioná el botón **`+ Nuevo Producto`**.\n3. Seleccioná el **Tipo de Producto**:\n   * **Comprado / Mercadería**: Para reventa.\n   * **Fabricado**: Para productos de elaboración propia.\n   * **Materia Prima / Insumo**: Para insumos de taller/fábrica.\n   * **Servicio**: Para mano de obra, calibraciones o fletes.\n4. Ingresá el Código, Nombre, Alícuota de IVA (21%, 10.5%), Precio de Venta y **Stock Mínimo** (para recibir alertas de reposición).\n5. Presioná **Guardar Producto**.",
+                SuggestedActions: new List<ActionLinkDto>
+                {
+                    new("Crear Nuevo Producto", "/productos/nuevo", "📦"),
+                    new("Ver Catálogo de Productos", "/productos", "📋")
+                }
+            );
+        }
+
+        // 3. Presupuestos
         if (lower.Contains("presupuesto") || lower.Contains("cotizar") || lower.Contains("cotizacion"))
         {
             return new AskLealResponse(
-                Answer: "### 📝 Cómo cargar un Presupuesto en LEAL:\n\n1. Ingresá al módulo **Ventas** y hacé clic en **Presupuestos**.\n2. Presioná el botón **`+ Nuevo Presupuesto`**.\n3. Seleccioná el **Cliente** (el sistema te indicará su nota crediticia BCRA y recomendará la forma de pago).\n4. Agregá los productos o servicios, cantidades y precios.\n5. Presioná **Guardar**. Desde allí podés imprimirlo en PDF oficial o convertirlo directamente a Pedido o Factura.",
+                Answer: "### 📝 Cómo cargar un Presupuesto en LEAL:\n\n1. Ingresá a **Ventas** y hacé clic en **Presupuestos**.\n2. Presioná el botón **`+ Nuevo Presupuesto`**.\n3. Seleccioná el **Cliente** (el sistema te indicará su nota crediticia BCRA y recomendará la forma de pago con 1 clic).\n4. Agregá los productos o servicios, cantidades y precios.\n5. Presioná **Guardar**. Desde allí podés imprimirlo en PDF oficial o convertirlo directamente a Pedido o Factura.",
                 SuggestedActions: new List<ActionLinkDto>
                 {
                     new("Nuevo Presupuesto", "/presupuestos/nuevo", "📝"),
@@ -216,10 +233,11 @@ REGLAS DE RESPUESTA:
             );
         }
 
-        if (lower.Contains("cliente") || lower.Contains("arca") || lower.Contains("cuit") || lower.Contains("bcra"))
+        // 4. Clientes / Proveedores / ARCA / BCRA
+        if (lower.Contains("cliente") || lower.Contains("arca") || lower.Contains("cuit") || lower.Contains("bcra") || lower.Contains("proveedor") || lower.Contains("directorio"))
         {
             return new AskLealResponse(
-                Answer: "### 👤 Cómo dar de alta un Cliente en LEAL:\n\n1. Ingresá a **Directorio** o **Clientes**.\n2. Presioná **`+ Nuevo Cliente`**.\n3. Ingresá el **CUIT** y hacé clic en **`🔍 ARCA`** para traer automáticamente Razón Social, Condición de IVA y domicilio fiscal.\n4. Hacé clic en **`🏛️ BCRA`** para consultar y guardar su calificación crediticia.\n5. Si el cliente tiene balanzas o equipos, podés cargarlos en la pestaña **Parque Técnico**.",
+                Answer: "### 👤 Cómo dar de alta un Cliente o Proveedor en LEAL:\n\n1. Ingresá a **Directorio** o **Clientes**.\n2. Presioná **`+ Nuevo Cliente`**.\n3. Ingresá el **CUIT** y hacé clic en **`🔍 ARCA`** para traer automáticamente Razón Social, Condición de IVA y domicilio fiscal oficial.\n4. Hacé clic en **`🏛️ BCRA`** para consultar y guardar su calificación crediticia.\n5. Si el cliente tiene balanzas o equipos, podés cargarlos en la pestaña **Parque Técnico**.",
                 SuggestedActions: new List<ActionLinkDto>
                 {
                     new("Nuevo Cliente", "/clientes/nuevo", "👤"),
@@ -228,7 +246,8 @@ REGLAS DE RESPUESTA:
             );
         }
 
-        if (lower.Contains("factura") || lower.Contains("convertir") || lower.Contains("afip") || lower.Contains("cae"))
+        // 5. Facturación / CAE
+        if (lower.Contains("factura") || lower.Contains("convertir") || lower.Contains("afip") || lower.Contains("cae") || lower.Contains("cobrar"))
         {
             return new AskLealResponse(
                 Answer: "### 🧾 Cómo emitir o convertir a Factura Electrónica:\n\n1. **Desde un Presupuesto**: Abrí el presupuesto aprobado y presioná **`Convertir a Factura`**.\n2. **Desde Facturación Directa**: Andá a **Ventas > Facturas** y presioná **`+ Nueva Factura`**.\n3. Verificá los ítems, alícuotas de IVA y condición de venta.\n4. Presioná **Emitir Factura** para solicitar el CAE oficial a AFIP/ARCA con su código QR reglamentario.",
@@ -240,12 +259,26 @@ REGLAS DE RESPUESTA:
             );
         }
 
+        // 6. Balanzas / Parque Técnico / Calibraciones
+        if (lower.Contains("balanza") || lower.Contains("calibracion") || lower.Contains("parque") || lower.Contains("equipo") || lower.Contains("serie"))
+        {
+            return new AskLealResponse(
+                Answer: "### ⚖️ Cómo cargar y seguir Balanzas y Equipos Técnicos:\n\n1. Ingresá a **Clientes** y abrí la ficha del cliente correspondiente.\n2. Hacé clic en la pestaña **`Parque Técnico / Balanzas`**.\n3. Presioná **`+ Agregar Equipo`**.\n4. Completá: Tipo de equipo, Marca, Modelo, Número de Serie, Capacidad Máxima y División de escala.\n5. Asigná la **Fecha de Última Calibración** y la **Próxima Calibración** para que el sistema te alerte automáticamente en el panel de Diagnóstico.",
+                SuggestedActions: new List<ActionLinkDto>
+                {
+                    new("Ver Clientes", "/clientes", "👤"),
+                    new("Ver Directorio", "/directorio", "🏢")
+                }
+            );
+        }
+
         return new AskLealResponse(
-            Answer: "### 🤖 Asistente LEAL Control ERP\n\nPuedo ayudarte a operar cualquier parte del sistema:\n* **Ventas**: Cómo emitir presupuestos, pedidos, remitos y facturas electrónicas con CAE.\n* **Clientes & Proveedores**: Consultas automáticas de CUIT en ARCA y Central de Deudores BCRA.\n* **Compras**: Carga manual, importación masiva de comprobantes ARCA o extracción OCR con IA.\n* **Servicio Técnico**: Gestión de parque de balanzas y calibraciones periódicas.\n* **Finanzas**: Cheques en cartera, cuentas bancarias y cobranzas.\n\n¿Qué procedimiento te gustaría que te explique paso a paso?",
+            Answer: "### 🤖 Asistente LEAL Control ERP\n\nPuedo ayudarte con cualquier procedimiento:\n* **Ventas & Cotizaciones**: Cómo emitir presupuestos, pedidos, remitos y facturación con CAE.\n* **Inventario & Fabricación**: Cómo cargar productos comprados, fabricados, insumos y listas de materiales (BOM).\n* **Clientes & Proveedores**: Consultas oficiales por CUIT en ARCA y Central de Deudores BCRA.\n* **Servicio Técnico**: Gestión de parque de balanzas, números de serie y vencimientos de calibración.\n* **Compras & Finanzas**: Carga manual, OCR con IA, importación de ARCA y cheques en cartera.\n\n¿Qué procedimiento te gustaría que te explique paso a paso?",
             SuggestedActions: new List<ActionLinkDto>
             {
                 new("Ir al Inicio", "/", "🏠"),
                 new("Nuevo Presupuesto", "/presupuestos/nuevo", "📝"),
+                new("Nuevo Producto", "/productos/nuevo", "📦"),
                 new("Directorio Clientes", "/directorio", "👤")
             }
         );
