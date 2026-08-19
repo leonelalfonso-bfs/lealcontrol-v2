@@ -47,7 +47,7 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasConversion(
                 id => id.HasValue ? id.Value.Value : (Guid?)null,
                 value => value.HasValue ? new CategoryId(value.Value) : null);
-        builder.Property(x => x.ImagePath).HasMaxLength(400);
+        builder.Property(x => x.ImagePath).HasColumnType("text");
 
         builder.Property(x => x.SaleCurrency).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.BasePrice).HasPrecision(18, 2);

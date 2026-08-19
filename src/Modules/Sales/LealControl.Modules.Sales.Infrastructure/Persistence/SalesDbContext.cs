@@ -229,6 +229,33 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL, ""UpdatedAtUtc"" timestamp with time zone NOT NULL,
                 CONSTRAINT ""UX_ProductionVariants_Tenant_Product_Code"" UNIQUE (""TenantId"", ""ProductId"", ""Code"")
             );
+            DO $$ 
+            BEGIN 
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema = 'sales' AND table_name = 'products' AND column_name = 'image_path'
+                ) THEN 
+                    ALTER TABLE sales.products ALTER COLUMN image_path TYPE text;
+                END IF;
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema = 'sales' AND table_name = 'products' AND column_name = 'ImagePath'
+                ) THEN 
+                    ALTER TABLE sales.products ALTER COLUMN ""ImagePath"" TYPE text;
+                END IF;
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'image_path'
+                ) THEN 
+                    ALTER TABLE public.products ALTER COLUMN image_path TYPE text;
+                END IF;
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'ImagePath'
+                ) THEN 
+                    ALTER TABLE public.products ALTER COLUMN ""ImagePath"" TYPE text;
+                END IF;
+            END $$;
         ";
 
         await Database.ExecuteSqlRawAsync(sql, cancellationToken);
