@@ -3,11 +3,13 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import html2pdf from "html2pdf.js";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
+import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { type CompanySettings, type CustomerDetail, type Remito } from "../api/types";
 
 export function RemitoPrintPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { settings } = useDocumentTemplate();
 
   const [remito, setRemito] = useState<Remito | null>(null);
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
@@ -91,6 +93,8 @@ export function RemitoPrintPage() {
     );
   }
 
+  const primaryCol = settings.global.primaryColor;
+
   return (
     <div style={{ background: "#f1f5f9", minHeight: "100vh", padding: "20px" }}>
       {/* Top Action Bar */}
@@ -100,55 +104,53 @@ export function RemitoPrintPage() {
           onClick={() => navigate("/remitos")}
           style={{ padding: "8px 16px", borderRadius: "6px", background: "white", border: "1px solid #cbd5e1", cursor: "pointer", fontWeight: 600 }}
         >
-          ← Volver al Listado
+          ← Volver a Remitos
         </button>
 
         <div style={{ display: "flex", gap: "10px" }}>
-          <button type="button" className="btn" onClick={() => setShowEmail(true)}>✉ Enviar por email</button>
-          {showEmail && <EmailComposer context={{ entityType: "Remito", entityId: remito.id, to: customer?.email ?? undefined, subject: `Remito ${remito.remitoNumber}`, body: `Hola,\n\nCompartimos el remito ${remito.remitoNumber} correspondiente a la entrega realizada.\n\nSaludos.\n` }} onClose={() => setShowEmail(false)} />}
-          {remito.orderId && (
-            <Link
-              to={`/pedidos/${remito.orderId}`}
-              style={{ padding: "8px 16px", borderRadius: "6px", background: "white", border: "1px solid #cbd5e1", textDecoration: "none", color: "#334155", fontWeight: 600 }}
-            >
-              📦 Ver Pedido
-            </Link>
-          )}
-
-          <Link
-            to={`/facturas/nueva?remito_id=${remito.id}`}
-            style={{ padding: "8px 16px", borderRadius: "6px", background: "#10b981", color: "white", textDecoration: "none", fontWeight: "bold" }}
-          >
-            📄 Facturar Remito
-          </Link>
-
           <button
             type="button"
-            disabled={downloadingPdf}
+            onClick={() => setShowEmail(!showEmail)}
+            style={{ padding: "8px 16px", borderRadius: "6px", background: "white", border: "1px solid #cbd5e1", cursor: "pointer", fontWeight: 600 }}
+          >
+            ✉️ Enviar por Email
+          </button>
+          <button
+            type="button"
             onClick={handleDownloadPdf}
+            disabled={downloadingPdf}
             style={{
-              padding: "8px 20px",
+              padding: "8px 18px",
               borderRadius: "6px",
-              background: "linear-gradient(180deg, #1aaa97, #128c7e)",
+              background: primaryCol,
               color: "white",
               border: "none",
               cursor: "pointer",
-              fontWeight: "bold",
-              boxShadow: "0 4px 12px rgba(18, 140, 126, 0.3)"
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
             }}
           >
-            {downloadingPdf ? "Generando..." : "📥 Descargar PDF"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => window.print()}
-            style={{ padding: "8px 16px", borderRadius: "6px", background: "#3b82f6", color: "white", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            🖨️ Imprimir
+            {downloadingPdf ? "Generando PDF..." : "📥 Descargar PDF"}
           </button>
         </div>
       </div>
+
+      {showEmail && (
+        <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 16px auto" }}>
+          <EmailComposer
+            context={{
+              entityType: "Remito",
+              entityId: remito.id,
+              to: customer?.email ?? undefined,
+              subject: `Remito de Entrega N° ${remito.remitoNumber} - ${company?.tradeName || company?.legalName || "LEAL CONTROL"}`,
+              body: `Estimado cliente,\n\nAdjuntamos el remito de entrega oficial N° ${remito.remitoNumber} correspondiente a la mercadería despachada.\n\nSaludos cordiales,\n${company?.tradeName || "LEAL CONTROL ERP"}`
+            }}
+            onClose={() => setShowEmail(false)}
+          />
+        </div>
+      )}
 
       {/* Main A4 Document Sheet - Targeted by html2pdf.js */}
       <div
@@ -170,7 +172,7 @@ export function RemitoPrintPage() {
         }}
       >
         {/* Header Section */}
-        <div style={{ borderBottom: "2px solid #3b82f6", paddingBottom: "10px", marginBottom: "12px" }}>
+        <div style={{ borderBottom: `2px solid ${primaryCol}`, paddingBottom: "10px", marginBottom: "12px" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <tbody>
               <tr>
@@ -178,7 +180,7 @@ export function RemitoPrintPage() {
                   <img src="/logo.png?v=2" alt="Leal Control ERP" style={{ maxHeight: "65px", width: "auto" }} />
                 </td>
                 <td style={{ width: "40%", verticalAlign: "top", paddingLeft: "10px" }}>
-                  <h1 style={{ margin: 0, fontSize: "17px", color: "#3b82f6" }}>
+                  <h1 style={{ margin: 0, fontSize: "17px", color: primaryCol }}>
                     {company?.legalName || "LEAL CONTROL ERP S.A."}
                   </h1>
                   <p style={{ margin: "2px 0", fontSize: "10.5px", color: "#64748b" }}>
@@ -188,12 +190,12 @@ export function RemitoPrintPage() {
                     CUIT: {company?.documentNumber || "30-71548962-9"} | IIBB: {company?.iibbNumber || "Convenio Multilateral"}
                   </p>
                   <p style={{ margin: "1px 0", fontSize: "10.5px", color: "#64748b" }}>
-                    {company?.fiscalStreet || "Ruta 11 Km 325"}, {company?.fiscalCity || "San Lorenzo"}, {company?.fiscalProvince || "Santa Fe"}
+                    {company?.fiscalStreet || "Luis Braile 705"}, {company?.fiscalCity || "San Lorenzo"}, {company?.fiscalProvince || "Santa Fe"}
                   </p>
                 </td>
                 <td style={{ width: "10%", verticalAlign: "top", textAlign: "center" }}>
                   <div style={{
-                    border: "3px solid #3b82f6",
+                    border: `3px solid ${primaryCol}`,
                     fontSize: "24px",
                     fontWeight: "bold",
                     width: "46px",
@@ -202,16 +204,18 @@ export function RemitoPrintPage() {
                     lineHeight: "44px",
                     margin: "0 auto",
                     background: "#fff",
-                    color: "#3b82f6"
+                    color: primaryCol
                   }}>
                     R
                   </div>
-                  <div style={{ fontSize: "9px", marginTop: "3px", fontWeight: "bold", color: "#3b82f6" }}>
+                  <div style={{ fontSize: "9px", marginTop: "3px", fontWeight: "bold", color: primaryCol }}>
                     COD. 91
                   </div>
                 </td>
                 <td style={{ width: "28%", verticalAlign: "top", textAlign: "right" }}>
-                  <h2 style={{ margin: 0, fontSize: "18px", color: "#3b82f6", letterSpacing: "0.5px" }}>REMITO DE ENTREGA</h2>
+                  <h2 style={{ margin: 0, fontSize: "16px", color: primaryCol, letterSpacing: "0.5px" }}>
+                    {settings.remito.headerTitle}
+                  </h2>
                   <div style={{ fontSize: "14px", fontWeight: "bold", color: "#1e293b", marginTop: "2px" }}>
                     N° {remito.remitoNumber}
                   </div>
@@ -247,26 +251,30 @@ export function RemitoPrintPage() {
                   </div>
                   {customer?.fiscalAddress && (
                     <div style={{ fontSize: "10.5px", color: "#64748b" }}>
-                      Sede: {customer.fiscalAddress.street}, {customer.fiscalAddress.city}, {customer.fiscalAddress.province}
+                      Sede Fiscal: {customer.fiscalAddress.street}, {customer.fiscalAddress.city}, {customer.fiscalAddress.province}
                     </div>
                   )}
                 </td>
                 <td style={{ width: "45%", verticalAlign: "top", textAlign: "right", borderLeft: "1px dashed #cbd5e1", paddingLeft: "12px" }}>
-                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#94a3b8", textTransform: "uppercase", marginBottom: "3px" }}>
+                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: primaryCol, textTransform: "uppercase", marginBottom: "3px" }}>
                     LUGAR DE ENTREGA & LOGÍSTICA
                   </div>
                   <div style={{ fontSize: "11px", fontWeight: "bold", color: "#0f172a" }}>
                     {remito.deliveryAddress || "Dirección Fiscal del Cliente"}
                   </div>
-                  {remito.carrierName && (
-                    <div style={{ fontSize: "10.5px", color: "#64748b", marginTop: "2px" }}>
-                      Transporte / Chofer: <strong>{remito.carrierName}</strong>
-                    </div>
-                  )}
-                  {remito.driverLicense && (
-                    <div style={{ fontSize: "10.5px", color: "#64748b" }}>
-                      Patente / Licencia: <strong>{remito.driverLicense}</strong>
-                    </div>
+                  {settings.remito.showCarrierInfo && (
+                    <>
+                      {remito.carrierName && (
+                        <div style={{ fontSize: "10.5px", color: "#64748b", marginTop: "2px" }}>
+                          Transporte / Chofer: <strong>{remito.carrierName}</strong>
+                        </div>
+                      )}
+                      {remito.driverLicense && (
+                        <div style={{ fontSize: "10.5px", color: "#64748b" }}>
+                          Patente / Dominio: <strong>{remito.driverLicense}</strong>
+                        </div>
+                      )}
+                    </>
                   )}
                 </td>
               </tr>
@@ -275,7 +283,7 @@ export function RemitoPrintPage() {
         </div>
 
         {/* Section Title */}
-        <div style={{ background: "#3b82f6", color: "white", padding: "5px 10px", fontWeight: "bold", fontSize: "11px", borderRadius: "4px 4px 0 0", letterSpacing: "0.5px", textTransform: "uppercase" }}>
+        <div style={{ background: primaryCol, color: "white", padding: "5px 10px", fontWeight: "bold", fontSize: "11px", borderRadius: "4px 4px 0 0", letterSpacing: "0.5px", textTransform: "uppercase" }}>
           MERCADERÍA Y DETALLE DE DESPACHO
         </div>
 
@@ -300,7 +308,7 @@ export function RemitoPrintPage() {
                 <td style={{ padding: "8px 8px" }}>
                   <div style={{ fontWeight: "bold", color: "#0f172a" }}>{item.description}</div>
                 </td>
-                <td style={{ padding: "8px 8px", textAlign: "center", fontWeight: "bold", fontSize: "12px", color: "#047857" }}>
+                <td style={{ padding: "8px 8px", textAlign: "center", fontWeight: "bold", fontSize: "12px", color: primaryCol }}>
                   {item.quantity.toLocaleString("es-AR", { minimumFractionDigits: item.quantity % 1 === 0 ? 0 : 2 })}
                 </td>
                 <td style={{ padding: "8px 8px", textAlign: "center", color: "#64748b" }}>
@@ -313,41 +321,51 @@ export function RemitoPrintPage() {
 
         {/* Notes Section */}
         {remito.notes && (
-          <div style={{ background: "#fffbeb", border: "1px solid #fef3c7", padding: "8px 12px", borderRadius: "6px", marginBottom: "20px", fontSize: "10.5px" }}>
+          <div style={{ background: "#fffbeb", border: "1px solid #fef3c7", padding: "8px 12px", borderRadius: "6px", marginBottom: "16px", fontSize: "10.5px" }}>
             <strong>Observaciones de Entrega:</strong> {remito.notes}
           </div>
         )}
 
-        {/* Conformity & Signature Footer Box */}
-        <div style={{ marginTop: "30px", borderTop: "2px solid #cbd5e1", paddingTop: "15px" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <tbody>
-              <tr>
-                <td style={{ width: "48%", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "12px", verticalAlign: "top", height: "90px" }}>
-                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#64748b", textTransform: "uppercase", marginBottom: "30px" }}>
-                    ENTREGÓ CONFORME (TRANSPORTE / CHOFER)
-                  </div>
-                  <div style={{ borderTop: "1px dashed #94a3b8", paddingTop: "4px", fontSize: "10px", color: "#64748b", textAlign: "center" }}>
-                    Firma, Aclaración y DNI del Transportista
-                  </div>
-                </td>
-                <td style={{ width: "4%" }}></td>
-                <td style={{ width: "48%", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "12px", verticalAlign: "top", height: "90px" }}>
-                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#64748b", textTransform: "uppercase", marginBottom: "30px" }}>
-                    RECIBIÓ CONFORME EN DESTINO (PLANTA / CLIENTE)
-                  </div>
-                  <div style={{ borderTop: "1px dashed #94a3b8", paddingTop: "4px", fontSize: "10px", color: "#64748b", textAlign: "center" }}>
-                    Firma, Aclaración, DNI y Fecha de Recepción
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        {/* Carrier & Reception Clauses */}
+        <div style={{ fontSize: "10px", color: "#475569", marginBottom: "6px" }}>
+          {settings.remito.carrierLegalText}
         </div>
+        <div style={{ fontSize: "10px", color: "#475569", fontStyle: "italic", marginBottom: "16px" }}>
+          "{settings.remito.receptionClause}"
+        </div>
+
+        {/* Conformity & Signature Footer Box */}
+        {settings.remito.showSignaturesBox && (
+          <div style={{ marginTop: "20px", borderTop: "2px solid #cbd5e1", paddingTop: "15px" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: "48%", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "12px", verticalAlign: "top", height: "85px" }}>
+                    <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#64748b", textTransform: "uppercase", marginBottom: "26px" }}>
+                      ENTREGÓ CONFORME (TRANSPORTE / CHOFER)
+                    </div>
+                    <div style={{ borderTop: "1px dashed #94a3b8", paddingTop: "4px", fontSize: "10px", color: "#64748b", textAlign: "center" }}>
+                      Firma, Aclaración y DNI del Transportista
+                    </div>
+                  </td>
+                  <td style={{ width: "4%" }}></td>
+                  <td style={{ width: "48%", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "12px", verticalAlign: "top", height: "85px" }}>
+                    <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#64748b", textTransform: "uppercase", marginBottom: "26px" }}>
+                      RECIBIÓ CONFORME EN DESTINO (PLANTA / CLIENTE)
+                    </div>
+                    <div style={{ borderTop: "1px dashed #94a3b8", paddingTop: "4px", fontSize: "10px", color: "#64748b", textAlign: "center" }}>
+                      Firma, Aclaración, DNI y Fecha de Recepción
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Bottom Legal Notice */}
         <div style={{ marginTop: "15px", textAlign: "center", fontSize: "9.5px", color: "#94a3b8" }}>
-          Documento no válido como factura. Comprobante de traslado y custodia de mercadería oficial R (AFIP).
+          {settings.remito.customFooterText}
         </div>
       </div>
     </div>

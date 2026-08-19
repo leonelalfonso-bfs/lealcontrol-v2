@@ -444,25 +444,12 @@ export const QuotePrintPage: React.FC = () => {
             </div>
           )}
 
-          {/* Banking Info Box */}
-          {settings.showBankingInfo && (
-            <div style={{ marginTop: "14px", padding: "8px 12px", borderRadius: "6px", background: "#f1f5f9", borderLeft: `3px solid ${primaryCol}`, fontSize: "0.76rem" }}>
-              <strong style={{ color: "#0f172a" }}>Datos para Transferencias Bancarias:</strong>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px", marginTop: "3px", color: "#475569" }}>
-                <div><strong>Banco:</strong> {settings.bankDetails.bankName}</div>
-                <div><strong>Tipo:</strong> {settings.bankDetails.accountType}</div>
-                <div><strong>CBU:</strong> <span style={{ fontFamily: "monospace" }}>{settings.bankDetails.cbu}</span></div>
-                <div><strong>Alias:</strong> <span style={{ fontFamily: "monospace", color: primaryCol, fontWeight: 700 }}>{settings.bankDetails.alias}</span></div>
-              </div>
-            </div>
-          )}
-
           {/* Commercial Conditions Table */}
           <div style={{ marginTop: "14px", borderTop: `1px solid ${primaryBorderLight}`, paddingTop: "8px", fontSize: "0.76rem" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", color: "#475569" }}>
-              <div><strong>Plazo de Entrega:</strong> {quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : "Inmediato / A convenir"}</div>
-              <div><strong>Medio de Pago:</strong> {quote.paymentMethod || "Transferencia Bancaria"}</div>
-              <div><strong>Condiciones:</strong> {quote.paymentTerms || "50% anticipo, saldo contra entrega"}</div>
+              <div><strong>Plazo de Entrega:</strong> {quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : settings.quote.deliveryTerms}</div>
+              <div><strong>Condiciones de Pago:</strong> {quote.paymentTerms || settings.quote.paymentTerms}</div>
+              <div><strong>Garantía:</strong> {settings.quote.warrantyTerms}</div>
               <div><strong>Transporte / Flete:</strong> {quote.transportation || "Flete por cuenta y orden del comprador"}</div>
             </div>
 
@@ -474,7 +461,7 @@ export const QuotePrintPage: React.FC = () => {
           </div>
 
           {/* Signatures Space */}
-          {settings.showSignatures && (
+          {settings.quote.showSignatures && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "30px", marginTop: "24px" }}>
               <div style={{ textAlign: "center" }}>
                 <div style={{ borderTop: "1px dashed #94a3b8", width: "75%", margin: "0 auto 3px" }} />
@@ -489,7 +476,7 @@ export const QuotePrintPage: React.FC = () => {
 
           {/* Custom Footer Terms */}
           <div style={{ marginTop: "auto", paddingTop: "14px", borderTop: "1px solid #e2e8f0", fontSize: "0.7rem", color: "#64748b", textAlign: "center", lineHeight: 1.3 }}>
-            {settings.customFooterText}
+            {settings.quote.customFooterText}
           </div>
         </div>
       </div>

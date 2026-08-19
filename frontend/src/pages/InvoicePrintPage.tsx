@@ -4,11 +4,13 @@ import html2pdf from "html2pdf.js";
 import QRCode from "qrcode";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
+import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { type CompanySettings, type CustomerDetail, type Invoice } from "../api/types";
 
 export function InvoicePrintPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { settings } = useDocumentTemplate();
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
@@ -112,9 +114,10 @@ export function InvoicePrintPage() {
     );
   }
 
+  const primaryCol = settings.global.primaryColor;
   const isUsd = invoice.currency === "USD";
   const currSymbol = isUsd ? "USD " : "$ ";
-  const letter = invoice.invoiceType.replace("NC_", "").replace("ND_", "");
+  const invoiceLetter = invoice.invoiceType.replace("NC_", "").replace("ND_", "");
   const isNc = invoice.invoiceType.startsWith("NC");
   const isNd = invoice.invoiceType.startsWith("ND");
   const docTitle = isNc ? "NOTA DE CRÉDITO" : isNd ? "NOTA DE DÉBITO" : invoice.invoiceType === "Proforma" ? "FACTURA PROFORMA" : "FACTURA";
@@ -134,7 +137,7 @@ export function InvoicePrintPage() {
     ND_M: "53",
     Proforma: "00"
   };
-  const afipCod = afipCodes[invoice.invoiceType] ?? "00";
+  const invoiceCode = afipCodes[invoice.invoiceType] ?? "01";
 
   return (
     <div style={{ background: "#f1f5f9", minHeight: "100vh", padding: "20px" }}>
@@ -145,31 +148,37 @@ export function InvoicePrintPage() {
           onClick={() => navigate("/facturas")}
           style={{ padding: "8px 16px", borderRadius: "6px", background: "white", border: "1px solid #cbd5e1", cursor: "pointer", fontWeight: 600 }}
         >
-          ← Volver al Listado
+          ← Volver a Facturas
         </button>
 
         <div style={{ display: "flex", gap: "10px" }}>
-          <button type="button" className="btn" onClick={() => setShowEmail(true)}>✉ Enviar por email</button>
-          {showEmail && <EmailComposer context={{ entityType: "Invoice", entityId: invoice.id, to: customer?.email ?? undefined, subject: `${invoice.invoiceType} ${invoice.invoiceNumber}`, body: `Hola,\n\nCompartimos el comprobante ${invoice.invoiceType} ${invoice.invoiceNumber}, por un total de ${invoice.currency} ${invoice.total.toLocaleString("es-AR")}.\n\nSaludos.\n` }} onClose={() => setShowEmail(false)} />}
-          {invoice.status === "Draft" && (
+          {invoice.status !== "Authorized" && (
             <button
               type="button"
-              className="btn"
-              style={{
-                background: "linear-gradient(180deg, #059669, #047857)",
-                color: "white",
-                padding: "8px 18px",
-                borderRadius: "6px",
-                fontWeight: "bold",
-                cursor: "pointer",
-                border: "none"
-              }}
               onClick={handleAuthorizeArca}
               disabled={authorizing}
+              style={{
+                padding: "8px 20px",
+                borderRadius: "6px",
+                background: "#047857",
+                color: "white",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: "bold",
+                boxShadow: "0 4px 12px rgba(4, 120, 87, 0.3)"
+              }}
             >
-              {authorizing ? "⌛ Autorizando con ARCA…" : "⚡ Obtener CAE ARCA"}
+              {authorizing ? "Autorizando con ARCA..." : "⚡ Autorizar con ARCA"}
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => setShowEmail(!showEmail)}
+            style={{ padding: "8px 16px", borderRadius: "6px", background: "white", border: "1px solid #cbd5e1", cursor: "pointer", fontWeight: 600 }}
+          >
+            ✉️ Enviar por Email
+          </button>
 
           <button
             type="button"
@@ -178,28 +187,35 @@ export function InvoicePrintPage() {
             style={{
               padding: "8px 20px",
               borderRadius: "6px",
-              background: "linear-gradient(180deg, #1aaa97, #128c7e)",
+              background: primaryCol,
               color: "white",
               border: "none",
               cursor: "pointer",
               fontWeight: "bold",
-              boxShadow: "0 4px 12px rgba(18, 140, 126, 0.3)"
+              boxShadow: `0 4px 12px ${primaryCol}44`
             }}
           >
             {downloadingPdf ? "Generando..." : "📥 Descargar PDF"}
           </button>
-
-          <button
-            type="button"
-            onClick={() => window.print()}
-            style={{ padding: "8px 16px", borderRadius: "6px", background: "#3b82f6", color: "white", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            🖨️ Imprimir
-          </button>
         </div>
       </div>
 
-      {/* Main A4 Document Sheet - Targeted by html2pdf.js */}
+      {showEmail && (
+        <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 16px auto" }}>
+          <EmailComposer
+            context={{
+              entityType: "Invoice",
+              entityId: invoice.id,
+              to: customer?.email ?? undefined,
+              subject: `Factura Electrónica N° ${invoice.formattedNumber} - ${company?.tradeName || company?.legalName || "LEAL CONTROL"}`,
+              body: `Estimado cliente,\n\nAdjuntamos la factura electrónica correspondiente a los servicios/productos provistos.\n\nDatos para el pago:\nBanco: ${settings.invoice.bankDetails.bankName}\nCBU: ${settings.invoice.bankDetails.cbu}\nAlias: ${settings.invoice.bankDetails.alias}\n\nSaludos cordiales,\n${company?.tradeName || "LEAL CONTROL ERP"}`
+            }}
+            onClose={() => setShowEmail(false)}
+          />
+        </div>
+      )}
+
+      {/* Main A4 Document Sheet */}
       <div
         id="invoice-pdf-sheet"
         className="print-container"
@@ -219,7 +235,7 @@ export function InvoicePrintPage() {
         }}
       >
         {/* Header Section */}
-        <div style={{ borderBottom: "2px solid #3b82f6", paddingBottom: "10px", marginBottom: "12px" }}>
+        <div style={{ borderBottom: `2px solid ${primaryCol}`, paddingBottom: "10px", marginBottom: "12px" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <tbody>
               <tr>
@@ -227,7 +243,7 @@ export function InvoicePrintPage() {
                   <img src="/logo.png?v=2" alt="Leal Control ERP" style={{ maxHeight: "65px", width: "auto" }} />
                 </td>
                 <td style={{ width: "40%", verticalAlign: "top", paddingLeft: "10px" }}>
-                  <h1 style={{ margin: 0, fontSize: "17px", color: "#3b82f6" }}>
+                  <h1 style={{ margin: 0, fontSize: "17px", color: primaryCol }}>
                     {company?.legalName || "LEAL CONTROL ERP S.A."}
                   </h1>
                   <p style={{ margin: "2px 0", fontSize: "10.5px", color: "#64748b" }}>
@@ -237,15 +253,15 @@ export function InvoicePrintPage() {
                     CUIT: {company?.documentNumber || "30-71548962-9"} | IIBB: {company?.iibbNumber || "Convenio Multilateral"}
                   </p>
                   <p style={{ margin: "1px 0", fontSize: "10.5px", color: "#64748b" }}>
-                    {company?.fiscalStreet || "Ruta 11 Km 325"}, {company?.fiscalCity || "San Lorenzo"}, {company?.fiscalProvince || "Santa Fe"}
+                    {company?.fiscalStreet || "Luis Braile 705"}, {company?.fiscalCity || "San Lorenzo"}, {company?.fiscalProvince || "Santa Fe"}
                   </p>
-                  <p style={{ margin: "1px 0", fontSize: "10.5px", color: "#047857", fontWeight: "bold" }}>
-                    Condición IVA: {company?.taxCondition || "IVA Responsable Inscripto"}
+                  <p style={{ margin: "1px 0", fontSize: "10.5px", color: "#64748b" }}>
+                    Condición IVA: <strong>{company?.taxCondition || "IVA Responsable Inscripto"}</strong>
                   </p>
                 </td>
                 <td style={{ width: "10%", verticalAlign: "top", textAlign: "center" }}>
                   <div style={{
-                    border: "3px solid #3b82f6",
+                    border: `3px solid ${primaryCol}`,
                     fontSize: "24px",
                     fontWeight: "bold",
                     width: "46px",
@@ -254,17 +270,17 @@ export function InvoicePrintPage() {
                     lineHeight: "44px",
                     margin: "0 auto",
                     background: "#fff",
-                    color: "#3b82f6"
+                    color: primaryCol
                   }}>
-                    {letter}
+                    {invoiceLetter}
                   </div>
-                  <div style={{ fontSize: "9px", marginTop: "3px", fontWeight: "bold", color: "#3b82f6" }}>
-                    COD. {afipCod}
+                  <div style={{ fontSize: "9px", marginTop: "3px", fontWeight: "bold", color: primaryCol }}>
+                    COD. {invoiceCode}
                   </div>
                 </td>
                 <td style={{ width: "28%", verticalAlign: "top", textAlign: "right" }}>
-                  <h2 style={{ margin: 0, fontSize: "18px", color: "#3b82f6", letterSpacing: "0.5px" }}>
-                    {docTitle}
+                  <h2 style={{ margin: 0, fontSize: "16px", color: primaryCol, letterSpacing: "0.5px" }}>
+                    {settings.invoice.headerTitle} {invoiceLetter}
                   </h2>
                   <div style={{ fontSize: "14px", fontWeight: "bold", color: "#1e293b", marginTop: "2px" }}>
                     N° {invoice.formattedNumber}
@@ -273,27 +289,22 @@ export function InvoicePrintPage() {
                     Fecha de Emisión: <strong>{new Date(invoice.issueDate).toLocaleDateString("es-AR")}</strong>
                   </div>
                   <div style={{ fontSize: "10.5px", color: "#64748b" }}>
-                    Moneda: <strong>{isUsd ? "USD Dólar Estadounidense" : "ARS Pesos Argentinos"}</strong>
+                    Fecha de Vto. Pago: <strong>{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("es-AR") : new Date(invoice.issueDate).toLocaleDateString("es-AR")}</strong>
                   </div>
-                  {isUsd && (
-                    <div style={{ fontSize: "10px", color: "#1e3a8a", fontWeight: "bold" }}>
-                      Tipo de Cambio: $ {invoice.exchangeRate}
-                    </div>
-                  )}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* Client & Fiscal Data Section */}
+        {/* Client Data Section */}
         <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "6px", marginBottom: "12px", border: "1px solid #e2e8f0" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <tbody>
               <tr>
-                <td style={{ width: "55%", verticalAlign: "top" }}>
+                <td style={{ width: "60%", verticalAlign: "top" }}>
                   <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#94a3b8", textTransform: "uppercase", marginBottom: "3px" }}>
-                    CLIENTE / RECEPTOR (DATOS FISCALES)
+                    RECEPTOR DEL COMPROBANTE
                   </div>
                   <div style={{ fontSize: "13px", fontWeight: "bold", color: "#0f172a" }}>
                     {invoice.customerName || customer?.legalName || "Cliente"}
@@ -302,30 +313,30 @@ export function InvoicePrintPage() {
                     <div style={{ fontSize: "10.5px", color: "#475569" }}>Nombre Fantasía: {customer.tradeName}</div>
                   )}
                   <div style={{ fontSize: "10.5px", color: "#64748b", marginTop: "2px" }}>
-                    CUIT: <strong>{invoice.customerDocument || customer?.documentNumber || "—"}</strong> | Condición IVA: <strong>{invoice.customerTaxCondition || customer?.taxCondition || "Responsable Inscripto"}</strong>
+                    CUIT / Documento: <strong>{invoice.customerDocument || customer?.documentNumber || "—"}</strong>
                   </div>
                   <div style={{ fontSize: "10.5px", color: "#64748b" }}>
-                    Domicilio: {invoice.customerAddress || (customer?.fiscalAddress ? `${customer.fiscalAddress.street}, ${customer.fiscalAddress.city}` : "Sede Fiscal")}
+                    Condición Frente al IVA: <strong>{customer?.taxCondition || "IVA Responsable Inscripto"}</strong>
                   </div>
-                </td>
-                <td style={{ width: "45%", verticalAlign: "top", textAlign: "right", borderLeft: "1px dashed #cbd5e1", paddingLeft: "12px" }}>
-                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#94a3b8", textTransform: "uppercase", marginBottom: "3px" }}>
-                    CONDICIÓN COMERCIAL & VENCIMIENTO
-                  </div>
-                  <div style={{ fontSize: "11px", fontWeight: "bold", color: "#0f172a" }}>
-                    Condición de Venta: Cuenta Corriente Comercial
-                  </div>
-                  <div style={{ fontSize: "11px", color: "#b91c1c", marginTop: "3px" }}>
-                    Fecha de Vencimiento de Pago: <strong>{new Date(invoice.dueDate).toLocaleDateString("es-AR")}</strong>
-                  </div>
-                  {invoice.orderId && (
-                    <div style={{ fontSize: "10px", color: "#64748b", marginTop: "3px" }}>
-                      Ref. Pedido de Venta Asociado
+                  {customer?.fiscalAddress && (
+                    <div style={{ fontSize: "10.5px", color: "#64748b" }}>
+                      Domicilio Comercial: {customer.fiscalAddress.street}, {customer.fiscalAddress.city}, {customer.fiscalAddress.province}
                     </div>
                   )}
-                  {invoice.remitoId && (
-                    <div style={{ fontSize: "10px", color: "#64748b" }}>
-                      Ref. Remito de Entrega Asociado
+                </td>
+                <td style={{ width: "40%", verticalAlign: "top", textAlign: "right", borderLeft: "1px dashed #cbd5e1", paddingLeft: "12px" }}>
+                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#94a3b8", textTransform: "uppercase", marginBottom: "3px" }}>
+                    CONDICIONES COMERCIALES
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#334155" }}>
+                    Condición de Venta: <strong>Cuenta Corriente Comercial / Transferencia</strong>
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#334155", marginTop: "2px" }}>
+                    Moneda del Comprobante: <strong>{invoice.currency}</strong>
+                  </div>
+                  {isUsd && (
+                    <div style={{ fontSize: "11px", color: "#0d9488", marginTop: "2px" }}>
+                      Tipo de Cambio Oficial: <strong>$ {invoice.exchangeRate.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
                     </div>
                   )}
                 </td>
@@ -335,8 +346,8 @@ export function InvoicePrintPage() {
         </div>
 
         {/* Section Title */}
-        <div style={{ background: "#3b82f6", color: "white", padding: "5px 10px", fontWeight: "bold", fontSize: "11px", borderRadius: "4px 4px 0 0", letterSpacing: "0.5px", textTransform: "uppercase" }}>
-          DETALLE / CONCEPTOS FACTURADOS
+        <div style={{ background: primaryCol, color: "white", padding: "5px 10px", fontWeight: "bold", fontSize: "11px", borderRadius: "4px 4px 0 0", letterSpacing: "0.5px", textTransform: "uppercase" }}>
+          DETALLE DE PRODUCTOS / SERVICIOS
         </div>
 
         {/* Items Table */}
@@ -344,37 +355,37 @@ export function InvoicePrintPage() {
           <thead>
             <tr style={{ background: "#f1f5f9", borderBottom: "2px solid #cbd5e1", fontSize: "9.5px", textTransform: "uppercase", color: "#475569" }}>
               <th style={{ padding: "6px 5px", textAlign: "center", width: "5%" }}>#</th>
-              <th style={{ padding: "6px 6px", textAlign: "left", width: "14%" }}>Código</th>
-              <th style={{ padding: "6px 6px", textAlign: "left", width: "41%" }}>Descripción del Producto o Servicio</th>
-              <th style={{ padding: "6px 6px", textAlign: "center", width: "8%" }}>Cant.</th>
-              <th style={{ padding: "6px 6px", textAlign: "right", width: "12%" }}>Precio U.</th>
-              <th style={{ padding: "6px 6px", textAlign: "center", width: "6%" }}>IVA</th>
-              <th style={{ padding: "6px 6px", textAlign: "right", width: "14%" }}>Subtotal Neto</th>
+              <th style={{ padding: "6px 8px", textAlign: "left", width: "15%" }}>Código</th>
+              <th style={{ padding: "6px 8px", textAlign: "left", width: "42%" }}>Descripción</th>
+              <th style={{ padding: "6px 8px", textAlign: "center", width: "8%" }}>Cant.</th>
+              <th style={{ padding: "6px 8px", textAlign: "right", width: "15%" }}>P. Unitario ({currSymbol.trim()})</th>
+              <th style={{ padding: "6px 8px", textAlign: "center", width: "7%" }}>% IVA</th>
+              <th style={{ padding: "6px 8px", textAlign: "right", width: "18%" }}>Subtotal ({currSymbol.trim()})</th>
             </tr>
           </thead>
           <tbody>
             {invoice.items.map((item, idx) => (
               <tr key={item.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                <td style={{ padding: "6px 5px", textAlign: "center", color: "#64748b" }}>{idx + 1}</td>
-                <td style={{ padding: "6px 6px", fontFamily: "monospace", color: "#334155" }}>{item.code}</td>
-                <td style={{ padding: "6px 6px" }}>
-                  <strong>{item.description}</strong>
+                <td style={{ padding: "7px 5px", textAlign: "center", color: "#64748b" }}>{idx + 1}</td>
+                <td style={{ padding: "7px 8px", fontFamily: "monospace", color: "#475569" }}>{item.code}</td>
+                <td style={{ padding: "7px 8px" }}>
+                  <div style={{ fontWeight: "bold", color: "#0f172a" }}>{item.description}</div>
                 </td>
-                <td style={{ padding: "6px 6px", textAlign: "center" }}>{item.quantity}</td>
-                <td style={{ padding: "6px 6px", textAlign: "right", fontFamily: "monospace" }}>
-                  {currSymbol}{item.unitPrice.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                <td style={{ padding: "7px 8px", textAlign: "center" }}>{item.quantity}</td>
+                <td style={{ padding: "7px 8px", textAlign: "right", fontFamily: "monospace" }}>
+                  {item.unitPrice.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </td>
-                <td style={{ padding: "6px 6px", textAlign: "center", color: "#64748b" }}>{item.vatRate}%</td>
-                <td style={{ padding: "6px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
-                  {currSymbol}{item.netSubtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                <td style={{ padding: "7px 8px", textAlign: "center", color: "#64748b" }}>{item.vatRate}%</td>
+                <td style={{ padding: "7px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
+                  {item.netSubtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        {/* Totals Breakdown */}
-        <div style={{ marginLeft: "auto", width: "48%", marginBottom: "16px" }}>
+        {/* Totals Table */}
+        <div style={{ marginLeft: "auto", width: "45%", marginBottom: "14px" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
             <tbody>
               <tr>
@@ -407,11 +418,11 @@ export function InvoicePrintPage() {
                   </td>
                 </tr>
               )}
-              <tr style={{ borderTop: "2px solid #3b82f6" }}>
+              <tr style={{ borderTop: `2px solid ${primaryCol}` }}>
                 <td style={{ padding: "6px 0 3px 0", textAlign: "right", fontWeight: "bold", fontSize: "13px", color: "#0f172a" }}>
                   TOTAL FACTURA:
                 </td>
-                <td style={{ padding: "6px 0 3px 0", textAlign: "right", fontWeight: "bold", fontSize: "14px", color: "#047857", fontFamily: "monospace" }}>
+                <td style={{ padding: "6px 0 3px 0", textAlign: "right", fontWeight: "bold", fontSize: "14px", color: primaryCol, fontFamily: "monospace" }}>
                   {currSymbol}{invoice.total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </td>
               </tr>
@@ -429,22 +440,49 @@ export function InvoicePrintPage() {
           </table>
         </div>
 
-        {/* Notes & Bank Details */}
+        {/* Banking Info Box */}
+        {settings.invoice.showBankingInfo && (
+          <div style={{ background: "rgba(13, 148, 136, 0.08)", border: `1px solid ${primaryCol}44`, padding: "8px 12px", borderRadius: "6px", marginBottom: "12px", fontSize: "10px" }}>
+            <strong style={{ color: primaryCol, display: "block", marginBottom: "2px" }}>
+              🏦 DATOS PARA ACREDITACIÓN / TRANSFERENCIA BANCARIA:
+            </strong>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
+              <div><strong>Banco:</strong> {settings.invoice.bankDetails.bankName} ({settings.invoice.bankDetails.accountType})</div>
+              <div><strong>CBU:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>{settings.invoice.bankDetails.cbu}</span></div>
+              <div><strong>Alias:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold", color: primaryCol }}>{settings.invoice.bankDetails.alias}</span></div>
+              <div><strong>Titular / CUIT:</strong> {settings.invoice.bankDetails.accountHolder} ({settings.invoice.bankDetails.cuit})</div>
+            </div>
+            {settings.invoice.paymentInstructions && (
+              <div style={{ fontSize: "9.5px", color: "#475569", marginTop: "3px", fontStyle: "italic" }}>
+                {settings.invoice.paymentInstructions}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Notes Section */}
         {invoice.notes && (
-          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px 12px", borderRadius: "6px", marginBottom: "16px", fontSize: "10px" }}>
-            <strong>Condiciones de Pago & Leyendas:</strong> {invoice.notes}
+          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "6px 10px", borderRadius: "6px", marginBottom: "12px", fontSize: "10px" }}>
+            <strong>Observaciones:</strong> {invoice.notes}
+          </div>
+        )}
+
+        {/* Interest Clause */}
+        {settings.invoice.interestLegalText && (
+          <div style={{ fontSize: "9.5px", color: "#64748b", marginBottom: "10px", textAlign: "center" }}>
+            {settings.invoice.interestLegalText}
           </div>
         )}
 
         {/* Official ARCA CAE Box */}
         {invoice.status === "Authorized" && invoice.cae ? (
-          <div style={{ border: "2px solid #3b82f6", borderRadius: "6px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "16px", background: "#f8fafc" }}>
+          <div style={{ border: `2px solid ${primaryCol}`, borderRadius: "6px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "16px", background: "#f8fafc" }}>
             {qrDataUrl && (
               <img src={qrDataUrl} alt="QR ARCA Oficial" style={{ width: "85px", height: "85px", display: "block" }} />
             )}
             <div style={{ flex: 1, fontSize: "10.5px", lineHeight: "1.5" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontWeight: "bold", fontSize: "13px", color: "#3b82f6" }}>ARCA</span>
+                <span style={{ fontWeight: "bold", fontSize: "13px", color: primaryCol }}>ARCA</span>
                 <span style={{ fontSize: "10px", color: "#64748b" }}>Agencia de Recaudación y Control Aduanero</span>
               </div>
               <div style={{ marginTop: "4px" }}>
@@ -454,7 +492,7 @@ export function InvoicePrintPage() {
                 <strong>Fecha de Vto. de CAE:</strong> {invoice.caeDueDate ? new Date(invoice.caeDueDate).toLocaleDateString("es-AR") : "—"}
               </div>
               <div style={{ fontSize: "9.5px", color: "#64748b", marginTop: "3px" }}>
-                Comprobante Autorizado. La autenticidad de este documento puede verificarse en www.afip.gob.ar/fe/qr/ escaneando el código QR.
+                {settings.invoice.customFooterText || "Comprobante Autorizado. La autenticidad de este documento puede verificarse en www.afip.gob.ar/fe/qr/ escaneando el código QR."}
               </div>
             </div>
           </div>

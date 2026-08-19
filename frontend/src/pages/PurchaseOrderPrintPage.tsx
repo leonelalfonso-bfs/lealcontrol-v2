@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import html2pdf from "html2pdf.js";
 import { api } from "../api/client";
+import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { type CompanySettings, type PurchaseOrder, type Supplier } from "../api/types";
 
 export function PurchaseOrderPrintPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { settings } = useDocumentTemplate();
 
   const [order, setOrder] = useState<PurchaseOrder | null>(null);
   const [supplier, setSupplier] = useState<Supplier | null>(null);
@@ -324,6 +326,13 @@ export function PurchaseOrderPrintPage() {
           </table>
         </div>
 
+        {/* Reception Schedule & Billing Instructions */}
+        <div style={{ background: "#f8fafc", border: `1px solid ${settings.global.primaryColor}33`, padding: "8px 12px", borderRadius: "6px", marginBottom: "14px", fontSize: "10px" }}>
+          <div><strong>Horario de Recepción en Planta:</strong> {settings.purchaseOrder.receptionSchedule}</div>
+          <div style={{ marginTop: "3px" }}><strong>Instrucciones de Facturación:</strong> {settings.purchaseOrder.billingInstructions}</div>
+          <div style={{ marginTop: "3px", color: "#64748b" }}>{settings.purchaseOrder.supplierTerms}</div>
+        </div>
+
         {/* Notes & Clauses */}
         {order.notes && (
           <div style={{ background: "#fffbeb", border: "1px solid #fef3c7", padding: "8px 12px", borderRadius: "6px", marginBottom: "16px", fontSize: "10px" }}>
@@ -332,12 +341,12 @@ export function PurchaseOrderPrintPage() {
         )}
 
         {/* Authorization Signatures */}
-        <div style={{ marginTop: "30px", borderTop: "2px solid #cbd5e1", paddingTop: "15px" }}>
+        <div style={{ marginTop: "20px", borderTop: "2px solid #cbd5e1", paddingTop: "12px" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <tbody>
               <tr>
-                <td style={{ width: "48%", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "12px", verticalAlign: "top", height: "85px" }}>
-                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#64748b", textTransform: "uppercase", marginBottom: "30px" }}>
+                <td style={{ width: "48%", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "12px", verticalAlign: "top", height: "80px" }}>
+                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#64748b", textTransform: "uppercase", marginBottom: "26px" }}>
                     AUTORIZADO POR (DEPTO. DE COMPRAS / GERENCIA)
                   </div>
                   <div style={{ borderTop: "1px dashed #94a3b8", paddingTop: "4px", fontSize: "10px", color: "#64748b", textAlign: "center" }}>
@@ -345,8 +354,8 @@ export function PurchaseOrderPrintPage() {
                   </div>
                 </td>
                 <td style={{ width: "4%" }}></td>
-                <td style={{ width: "48%", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "12px", verticalAlign: "top", height: "85px" }}>
-                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#64748b", textTransform: "uppercase", marginBottom: "30px" }}>
+                <td style={{ width: "48%", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "12px", verticalAlign: "top", height: "80px" }}>
+                  <div style={{ fontSize: "9.5px", fontWeight: "bold", color: "#64748b", textTransform: "uppercase", marginBottom: "26px" }}>
                     ACEPTACIÓN DE PROVEEDOR
                   </div>
                   <div style={{ borderTop: "1px dashed #94a3b8", paddingTop: "4px", fontSize: "10px", color: "#64748b", textAlign: "center" }}>
@@ -356,6 +365,11 @@ export function PurchaseOrderPrintPage() {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        {/* Bottom Legal Notice */}
+        <div style={{ marginTop: "12px", textAlign: "center", fontSize: "9.5px", color: "#94a3b8" }}>
+          {settings.purchaseOrder.customFooterText}
         </div>
       </div>
     </div>

@@ -13,14 +13,26 @@ const COLOR_PRESETS = [
 ];
 
 export const DocumentTemplatesPage: React.FC = () => {
-  const { settings, updateSettings, resetSettings } = useDocumentTemplate();
-  const [docTypePreview, setDocTypePreview] = useState<"quote" | "remito" | "invoice">("quote");
+  const {
+    settings,
+    updateGlobal,
+    updateQuote,
+    updateRemito,
+    updateInvoice,
+    updatePurchaseOrder,
+    resetSettings
+  } = useDocumentTemplate();
+
+  const [activeTab, setActiveTab] = useState<"global" | "quote" | "remito" | "invoice" | "purchase">("quote");
+  const [docTypePreview, setDocTypePreview] = useState<"quote" | "remito" | "invoice" | "purchase">("quote");
   const [savedAlert, setSavedAlert] = useState(false);
 
   const handleSave = () => {
     setSavedAlert(true);
     setTimeout(() => setSavedAlert(false), 3000);
   };
+
+  const currentPrimary = settings.global.primaryColor;
 
   return (
     <div className="workspace-page page-wide" style={{ maxWidth: 1440, margin: "0 auto" }}>
@@ -30,7 +42,7 @@ export const DocumentTemplatesPage: React.FC = () => {
           <span className="eyebrow">CONFIGURACIÓN VISUAL ERP</span>
           <h1>Plantillas y Diseño de Documentos</h1>
           <p className="muted">
-            Personalizá los modelos, colores de línea y textos de presupuestos, remitos y facturas.
+            Personalizá los modelos, colores y leyendas específicas de Presupuestos, Remitos, Facturas y Órdenes de Compra.
           </p>
         </div>
 
@@ -38,414 +50,674 @@ export const DocumentTemplatesPage: React.FC = () => {
           <Link to="/configuracion" className="btn btn-outline">
             ← Volver a Configuración
           </Link>
-          <button type="button" onClick={handleSave} className="btn">
+          <button
+            type="button"
+            onClick={resetSettings}
+            className="btn btn-outline"
+            style={{ color: "#b91c1c", borderColor: "#fca5a5" }}
+          >
+            ↺ Restaurar Predeterminados
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="btn btn-primary"
+            style={{ background: currentPrimary }}
+          >
             ✓ Guardar Preferencias
           </button>
         </div>
       </div>
 
       {savedAlert && (
-        <div className="alert ok" style={{ marginBottom: 20 }}>
-          ✓ Configuración de plantillas guardada correctamente. Se aplicará a todas las impresiones y PDFs.
+        <div className="alert ok" style={{ marginBottom: 20, background: "rgba(16, 185, 129, 0.15)", color: "#065f46", border: "1px solid #10b981", padding: "12px 16px", borderRadius: "8px" }}>
+          ✓ Configuración guardada correctamente. Se aplicará a todas las impresiones y descargas en PDF.
         </div>
       )}
 
+      {/* Tabs Selector */}
+      <div style={{ display: "flex", gap: "8px", borderBottom: "2px solid #e2e8f0", marginBottom: "20px" }}>
+        {[
+          { id: "quote", label: "📑 Presupuesto Comercial", previewTarget: "quote" as const },
+          { id: "remito", label: "🚚 Remito de Entrega", previewTarget: "remito" as const },
+          { id: "invoice", label: "🧾 Factura Fiscal (ARCA)", previewTarget: "invoice" as const },
+          { id: "purchase", label: "🛒 Orden de Compra", previewTarget: "purchase" as const },
+          { id: "global", label: "🎨 Estilo & Color de Marca", previewTarget: null }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => {
+              setActiveTab(tab.id as any);
+              if (tab.previewTarget) setDocTypePreview(tab.previewTarget);
+            }}
+            style={{
+              padding: "10px 18px",
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              fontWeight: activeTab === tab.id ? 800 : 500,
+              color: activeTab === tab.id ? currentPrimary : "#64748b",
+              borderBottom: activeTab === tab.id ? `3px solid ${currentPrimary}` : "none",
+              fontSize: "0.92rem"
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Main Split Editor */}
-      <div style={{ display: "grid", gridTemplateColumns: "420px 1fr", gap: 24, alignItems: "flex-start" }}>
-        {/* Left Column: Controls */}
+      <div style={{ display: "grid", gridTemplateColumns: "460px 1fr", gap: 24, alignItems: "flex-start" }}>
+        {/* Left Column: Form Controls */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* 1. Model Selector */}
-          <div className="card pad">
-            <h3 style={{ margin: "0 0 14px", fontSize: "1.05rem", color: "var(--ink)" }}>
-              1. Elegir Modelo de Plantilla
-            </h3>
+          {/* TAB 1: GLOBAL BRAND & STYLES */}
+          {activeTab === "global" && (
+            <div className="card pad stack">
+              <h3 style={{ margin: 0, color: "#0f172a" }}>🎨 Estilo Visual & Paleta de Colores</h3>
+              <p className="muted" style={{ fontSize: "0.82rem" }}>
+                Define la apariencia estética aplicada a todos los encabezados y tablas del ERP.
+              </p>
 
-            <div style={{ display: "grid", gap: 10 }}>
-              {[
-                {
-                  id: "modern" as TemplateStyle,
-                  name: "Moderno Ejecutivo",
-                  badge: "Recomendado",
-                  desc: "Diseño asimétrico con logo superior, líneas finas elegantes y tabla espaciosa."
-                },
-                {
-                  id: "classic" as TemplateStyle,
-                  name: "Clásico Corporativo",
-                  badge: "Formal",
-                  desc: "Banda superior en color institucional, datos en recuadros cerrados y estilo tradicional."
-                },
-                {
-                  id: "compact" as TemplateStyle,
-                  name: "Técnico / Remito",
-                  badge: "Logística",
-                  desc: "Aprovechamiento máximo de hoja para muchos ítems, con espacio para firmas de recepción."
-                }
-              ].map((tpl) => (
-                <div
-                  key={tpl.id}
-                  onClick={() => updateSettings({ templateStyle: tpl.id })}
-                  style={{
-                    padding: "14px 16px",
-                    borderRadius: 14,
-                    border: `2px solid ${settings.templateStyle === tpl.id ? settings.primaryColor : "var(--surface-border)"}`,
-                    background: settings.templateStyle === tpl.id ? "var(--surface)" : "var(--surface-muted)",
-                    cursor: "pointer",
-                    transition: "all 0.18s ease",
-                    boxShadow: settings.templateStyle === tpl.id ? `0 4px 14px ${settings.primaryColor}22` : "none"
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <strong style={{ fontSize: "0.95rem", color: "var(--ink)" }}>{tpl.name}</strong>
-                    <span className="badge ok" style={{ fontSize: "0.68rem" }}>{tpl.badge}</span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--ink-soft)", lineHeight: 1.4 }}>
-                    {tpl.desc}
-                  </p>
+              <div>
+                <label style={{ fontWeight: 700, display: "block", marginBottom: 8 }}>Modelo de Diseño:</label>
+                <div style={{ display: "grid", gap: 10 }}>
+                  {[
+                    {
+                      id: "modern" as TemplateStyle,
+                      name: "Moderno Ejecutivo",
+                      badge: "Recomendado",
+                      desc: "Diseño asimétrico con logo superior, líneas finas elegantes y tabla espaciosa."
+                    },
+                    {
+                      id: "classic" as TemplateStyle,
+                      name: "Clásico Corporativo",
+                      badge: "Formal",
+                      desc: "Banda superior en color institucional, datos en recuadros cerrados y estilo tradicional."
+                    },
+                    {
+                      id: "compact" as TemplateStyle,
+                      name: "Técnico / Compacto",
+                      badge: "Logística",
+                      desc: "Aprovechamiento máximo de hoja para muchos ítems, con espacio para firmas de recepción."
+                    }
+                  ].map((tpl) => (
+                    <div
+                      key={tpl.id}
+                      onClick={() => updateGlobal({ templateStyle: tpl.id })}
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: 10,
+                        border: `2px solid ${settings.global.templateStyle === tpl.id ? currentPrimary : "#e2e8f0"}`,
+                        background: settings.global.templateStyle === tpl.id ? "rgba(13, 148, 136, 0.05)" : "#ffffff",
+                        cursor: "pointer"
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <strong>{tpl.name}</strong>
+                        <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: "10px", background: "#f1f5f9", fontWeight: 700 }}>
+                          {tpl.badge}
+                        </span>
+                      </div>
+                      <p style={{ margin: "4px 0 0", fontSize: "0.78rem", color: "#64748b" }}>{tpl.desc}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 2. Color Palette */}
-          <div className="card pad">
-            <h3 style={{ margin: "0 0 14px", fontSize: "1.05rem", color: "var(--ink)" }}>
-              2. Color de Líneas y Acentos
-            </h3>
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
-              {COLOR_PRESETS.map((preset) => (
-                <button
-                  key={preset.hex}
-                  type="button"
-                  onClick={() => updateSettings({ primaryColor: preset.hex })}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 12px",
-                    borderRadius: 10,
-                    border: `2px solid ${settings.primaryColor === preset.hex ? "var(--ink)" : "transparent"}`,
-                    background: "var(--surface-muted)",
-                    cursor: "pointer",
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                    color: "var(--ink)"
-                  }}
-                >
-                  <span style={{ width: 16, height: 16, borderRadius: "50%", background: preset.hex }} />
-                  <span>{preset.name}</span>
-                </button>
-              ))}
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 6, color: "var(--ink-soft)" }}>
-                Color Personalizado (Código HEX)
-              </label>
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <input
-                  type="color"
-                  value={settings.primaryColor}
-                  onChange={(e) => updateSettings({ primaryColor: e.target.value })}
-                  style={{ width: 44, height: 38, padding: 2, borderRadius: 8, cursor: "pointer", border: "1px solid var(--surface-border)" }}
-                />
-                <input
-                  type="text"
-                  value={settings.primaryColor}
-                  onChange={(e) => updateSettings({ primaryColor: e.target.value })}
-                  style={{ fontFamily: "monospace", fontWeight: 700, textTransform: "uppercase" }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Footer Texts & Bank Options */}
-          <div className="card pad">
-            <h3 style={{ margin: "0 0 14px", fontSize: "1.05rem", color: "var(--ink)" }}>
-              3. Textos Fijos y Secciones
-            </h3>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <strong style={{ fontSize: "0.88rem", display: "block", color: "var(--ink)" }}>Mostrar Datos Bancarios (CBU/Alias)</strong>
-                  <span className="muted" style={{ fontSize: "0.78rem" }}>Para que el cliente transfiera el pago</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.showBankingInfo}
-                  onChange={(e) => updateSettings({ showBankingInfo: e.target.checked })}
-                  style={{ width: 20, height: 20, cursor: "pointer" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <strong style={{ fontSize: "0.88rem", display: "block", color: "var(--ink)" }}>Espacio de Firma de Conformidad</strong>
-                  <span className="muted" style={{ fontSize: "0.78rem" }}>Para entrega y recepción de mercadería</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.showSignatures}
-                  onChange={(e) => updateSettings({ showSignatures: e.target.checked })}
-                  style={{ width: 20, height: 20, cursor: "pointer" }}
-                />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 6, color: "var(--ink-soft)" }}>
-                  Leyenda / Condiciones de Validez (Pie de página)
+                <label style={{ fontWeight: 700, display: "block", marginBottom: 8 }}>Color Primario de Acento:</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {COLOR_PRESETS.map((preset) => (
+                    <button
+                      key={preset.hex}
+                      type="button"
+                      onClick={() => updateGlobal({ primaryColor: preset.hex })}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        border: `2px solid ${settings.global.primaryColor === preset.hex ? preset.hex : "#e2e8f0"}`,
+                        background: settings.global.primaryColor === preset.hex ? `${preset.hex}15` : "#ffffff",
+                        cursor: "pointer",
+                        fontSize: "0.8rem",
+                        fontWeight: settings.global.primaryColor === preset.hex ? 700 : 500
+                      }}
+                    >
+                      <span style={{ width: 12, height: 12, borderRadius: "50%", background: preset.hex }} />
+                      {preset.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: QUOTE / PRESUPUESTO */}
+          {activeTab === "quote" && (
+            <div className="card pad stack">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0 }}>📑 Plantilla de Presupuesto</h3>
+                <span style={{ fontSize: "0.72rem", background: "rgba(13, 148, 136, 0.1)", color: currentPrimary, padding: "3px 8px", borderRadius: "8px", fontWeight: 700 }}>Comercial</span>
+              </div>
+              <p className="muted" style={{ fontSize: "0.82rem" }}>
+                Condiciones de cotización, garantías, validez y anexos técnicos con fotos.
+              </p>
+
+              <label>
+                Título del Encabezado
+                <input
+                  type="text"
+                  value={settings.quote.headerTitle}
+                  onChange={(e) => updateQuote({ headerTitle: e.target.value })}
+                />
+              </label>
+
+              <div className="grid-2">
+                <label>
+                  Validez Predeterminada (Días)
+                  <input
+                    type="number"
+                    value={settings.quote.defaultValidDays}
+                    onChange={(e) => updateQuote({ defaultValidDays: Number(e.target.value) || 15 })}
+                  />
                 </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", paddingTop: "24px" }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.quote.showTechnicalOffer}
+                    onChange={(e) => updateQuote({ showTechnicalOffer: e.target.checked })}
+                  />
+                  <strong>Anexo Técnico con Fotos</strong>
+                </label>
+              </div>
+
+              <label>
+                Condiciones de Pago
+                <input
+                  type="text"
+                  value={settings.quote.paymentTerms}
+                  onChange={(e) => updateQuote({ paymentTerms: e.target.value })}
+                  placeholder="Ej: Contado contra entrega / eCheq a 30 días"
+                />
+              </label>
+
+              <label>
+                Plazos de Entrega
+                <input
+                  type="text"
+                  value={settings.quote.deliveryTerms}
+                  onChange={(e) => updateQuote({ deliveryTerms: e.target.value })}
+                  placeholder="Ej: Inmediata / 7 a 10 días hábiles"
+                />
+              </label>
+
+              <label>
+                Garantía Ofrecida
+                <input
+                  type="text"
+                  value={settings.quote.warrantyTerms}
+                  onChange={(e) => updateQuote({ warrantyTerms: e.target.value })}
+                  placeholder="Ej: 12 meses contra defectos de fabricación"
+                />
+              </label>
+
+              <label>
+                Leyenda Comercial al Pie (Footer)
                 <textarea
                   rows={3}
-                  value={settings.customFooterText}
-                  onChange={(e) => updateSettings({ customFooterText: e.target.value })}
-                  style={{ width: "100%", fontSize: "0.84rem", resize: "vertical" }}
+                  value={settings.quote.customFooterText}
+                  onChange={(e) => updateQuote({ customFooterText: e.target.value })}
                 />
+              </label>
+            </div>
+          )}
+
+          {/* TAB 3: REMITO OFICIAL */}
+          {activeTab === "remito" && (
+            <div className="card pad stack">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0 }}>🚚 Plantilla de Remito de Entrega</h3>
+                <span style={{ fontSize: "0.72rem", background: "rgba(59, 130, 246, 0.1)", color: "#1e40af", padding: "3px 8px", borderRadius: "8px", fontWeight: 700 }}>Logística</span>
+              </div>
+              <p className="muted" style={{ fontSize: "0.82rem" }}>
+                Datos de transporte, destino en planta, leyendas de traslado y firma de recepción.
+              </p>
+
+              <label>
+                Título del Encabezado
+                <input
+                  type="text"
+                  value={settings.remito.headerTitle}
+                  onChange={(e) => updateRemito({ headerTitle: e.target.value })}
+                />
+              </label>
+
+              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.remito.showCarrierInfo}
+                    onChange={(e) => updateRemito({ showCarrierInfo: e.target.checked })}
+                  />
+                  <span>Mostrar Transporte y Chofer</span>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={settings.remito.showSignaturesBox}
+                    onChange={(e) => updateRemito({ showSignaturesBox: e.target.checked })}
+                  />
+                  <span>Recuadro de Firma y DNI</span>
+                </label>
               </div>
 
-              <button type="button" onClick={resetSettings} className="btn btn-outline" style={{ fontSize: "0.82rem" }}>
-                Restablecer Valores Predeterminados
-              </button>
+              <label>
+                Cláusula Legal de Transporte
+                <textarea
+                  rows={2}
+                  value={settings.remito.carrierLegalText}
+                  onChange={(e) => updateRemito({ carrierLegalText: e.target.value })}
+                  placeholder="La mercadería viaja por cuenta y orden del comprador..."
+                />
+              </label>
+
+              <label>
+                Leyenda de Recepción Conforme
+                <textarea
+                  rows={2}
+                  value={settings.remito.receptionClause}
+                  onChange={(e) => updateRemito({ receptionClause: e.target.value })}
+                  placeholder="Recibí conforme la cantidad de bultos..."
+                />
+              </label>
+
+              <label>
+                Texto al Pie
+                <input
+                  type="text"
+                  value={settings.remito.customFooterText}
+                  onChange={(e) => updateRemito({ customFooterText: e.target.value })}
+                />
+              </label>
             </div>
-          </div>
+          )}
+
+          {/* TAB 4: FACTURA FISCAL */}
+          {activeTab === "invoice" && (
+            <div className="card pad stack">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0 }}>🧾 Plantilla de Factura Fiscal (ARCA)</h3>
+                <span style={{ fontSize: "0.72rem", background: "rgba(16, 185, 129, 0.1)", color: "#047857", padding: "3px 8px", borderRadius: "8px", fontWeight: 700 }}>Fiscal & Cobranzas</span>
+              </div>
+              <p className="muted" style={{ fontSize: "0.82rem" }}>
+                Datos bancarios para acreditación de transferencias, instrucciones de pago y CAE.
+              </p>
+
+              <label>
+                Título del Comprobante
+                <input
+                  type="text"
+                  value={settings.invoice.headerTitle}
+                  onChange={(e) => updateInvoice({ headerTitle: e.target.value })}
+                />
+              </label>
+
+              <div style={{ border: "1px solid #e2e8f0", padding: "14px", borderRadius: "8px", background: "#f8fafc" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <strong style={{ fontSize: "0.88rem", color: "#0f172a" }}>🏦 Datos Bancarios para Transferencias</strong>
+                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={settings.invoice.showBankingInfo}
+                      onChange={(e) => updateInvoice({ showBankingInfo: e.target.checked })}
+                    />
+                    <span>Mostrar en Factura</span>
+                  </label>
+                </div>
+
+                <div className="grid-2">
+                  <label>
+                    Entidad Bancaria
+                    <input
+                      type="text"
+                      value={settings.invoice.bankDetails.bankName}
+                      onChange={(e) =>
+                        updateInvoice({
+                          bankDetails: { ...settings.invoice.bankDetails, bankName: e.target.value }
+                        })
+                      }
+                      placeholder="Ej: Banco Galicia"
+                    />
+                  </label>
+                  <label>
+                    Tipo de Cuenta
+                    <input
+                      type="text"
+                      value={settings.invoice.bankDetails.accountType}
+                      onChange={(e) =>
+                        updateInvoice({
+                          bankDetails: { ...settings.invoice.bankDetails, accountType: e.target.value }
+                        })
+                      }
+                      placeholder="Ej: CC Especial en Pesos"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid-2" style={{ marginTop: "8px" }}>
+                  <label>
+                    CBU (22 Dígitos)
+                    <input
+                      type="text"
+                      value={settings.invoice.bankDetails.cbu}
+                      onChange={(e) =>
+                        updateInvoice({
+                          bankDetails: { ...settings.invoice.bankDetails, cbu: e.target.value }
+                        })
+                      }
+                      style={{ fontFamily: "monospace" }}
+                    />
+                  </label>
+                  <label>
+                    Alias Bancario
+                    <input
+                      type="text"
+                      value={settings.invoice.bankDetails.alias}
+                      onChange={(e) =>
+                        updateInvoice({
+                          bankDetails: { ...settings.invoice.bankDetails, alias: e.target.value }
+                        })
+                      }
+                      style={{ fontFamily: "monospace", fontWeight: 700 }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <label>
+                Instrucciones de Pago / Envío de Comprobante
+                <textarea
+                  rows={2}
+                  value={settings.invoice.paymentInstructions}
+                  onChange={(e) => updateInvoice({ paymentInstructions: e.target.value })}
+                  placeholder="Enviar comprobante de pago indicando N° de factura a..."
+                />
+              </label>
+
+              <label>
+                Cláusula de Intereses por Mora
+                <input
+                  type="text"
+                  value={settings.invoice.interestLegalText}
+                  onChange={(e) => updateInvoice({ interestLegalText: e.target.value })}
+                />
+              </label>
+            </div>
+          )}
+
+          {/* TAB 5: ORDEN DE COMPRA */}
+          {activeTab === "purchase" && (
+            <div className="card pad stack">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0 }}>🛒 Plantilla de Orden de Compra</h3>
+                <span style={{ fontSize: "0.72rem", background: "rgba(249, 115, 22, 0.1)", color: "#c2410c", padding: "3px 8px", borderRadius: "8px", fontWeight: 700 }}>Abastecimiento</span>
+              </div>
+              <p className="muted" style={{ fontSize: "0.82rem" }}>
+                Horarios de descarga en planta e instrucciones de facturación a proveedores.
+              </p>
+
+              <label>
+                Título del Encabezado
+                <input
+                  type="text"
+                  value={settings.purchaseOrder.headerTitle}
+                  onChange={(e) => updatePurchaseOrder({ headerTitle: e.target.value })}
+                />
+              </label>
+
+              <label>
+                Horarios de Recepción en Planta
+                <input
+                  type="text"
+                  value={settings.purchaseOrder.receptionSchedule}
+                  onChange={(e) => updatePurchaseOrder({ receptionSchedule: e.target.value })}
+                  placeholder="Ej: Lunes a Viernes de 07:00 a 16:00 hs en Planta Central."
+                />
+              </label>
+
+              <label>
+                Instrucciones de Facturación a Proveedores
+                <textarea
+                  rows={3}
+                  value={settings.purchaseOrder.billingInstructions}
+                  onChange={(e) => updatePurchaseOrder({ billingInstructions: e.target.value })}
+                  placeholder="Facturar a nombre de... y enviar archivo PDF y XML a..."
+                />
+              </label>
+
+              <label>
+                Términos y Condiciones para Proveedores
+                <textarea
+                  rows={2}
+                  value={settings.purchaseOrder.supplierTerms}
+                  onChange={(e) => updatePurchaseOrder({ supplierTerms: e.target.value })}
+                  placeholder="La aceptación de esta orden implica conformidad..."
+                />
+              </label>
+            </div>
+          )}
         </div>
 
-        {/* Right Column: Live Sheet Preview */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Preview Controls Bar */}
-          <div className="card pad" style={{ padding: "10px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: "1.2rem" }}>👁️</span>
-              <strong style={{ fontSize: "0.9rem", color: "var(--ink)" }}>Previsualización en Tiempo Real (Hoja A4)</strong>
-            </div>
+        {/* Right Column: Live Mockup Preview */}
+        <div style={{ position: "sticky", top: 20 }}>
+          <div className="card pad" style={{ background: "#f8fafc", borderColor: "#cbd5e1" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <strong style={{ fontSize: "0.95rem", color: "#334155" }}>
+                👁️ Vista Previa en Vivo ({docTypePreview.toUpperCase()})
+              </strong>
 
-            <div style={{ display: "flex", gap: 8 }}>
-              {(
-                [
+              <div style={{ display: "flex", gap: 6 }}>
+                {[
                   { id: "quote", label: "Presupuesto" },
                   { id: "remito", label: "Remito" },
-                  { id: "invoice", label: "Factura" }
-                ] as const
-              ).map((type) => (
-                <button
-                  key={type.id}
-                  type="button"
-                  onClick={() => setDocTypePreview(type.id)}
-                  className={`btn ${docTypePreview === type.id ? "" : "btn-outline"}`}
-                  style={{ padding: "5px 12px", fontSize: "0.78rem" }}
-                >
-                  {type.label}
-                </button>
-              ))}
+                  { id: "invoice", label: "Factura" },
+                  { id: "purchase", label: "Orden Compra" }
+                ].map((btn) => (
+                  <button
+                    key={btn.id}
+                    type="button"
+                    onClick={() => setDocTypePreview(btn.id as any)}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: 6,
+                      border: `1px solid ${docTypePreview === btn.id ? currentPrimary : "#cbd5e1"}`,
+                      background: docTypePreview === btn.id ? currentPrimary : "#ffffff",
+                      color: docTypePreview === btn.id ? "#ffffff" : "#475569",
+                      fontSize: "0.74rem",
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Sheet Canvas Container */}
-          <div
-            style={{
-              background: "#525659",
-              padding: "24px 16px",
-              borderRadius: 18,
-              display: "flex",
-              justifyContent: "center",
-              overflowX: "auto",
-              boxShadow: "inset 0 2px 10px rgba(0,0,0,0.3)"
-            }}
-          >
-            {/* The Simulated Sheet A4 */}
+            {/* Simulated Document Sheet */}
             <div
               style={{
-                width: 780,
-                minHeight: 960,
                 background: "#ffffff",
+                padding: "24px",
+                borderRadius: "8px",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+                fontSize: "0.78rem",
                 color: "#1e293b",
-                fontFamily: "Inter, sans-serif",
-                padding: "36px 42px",
-                borderRadius: 4,
-                boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+                minHeight: "480px",
                 display: "flex",
                 flexDirection: "column",
-                position: "relative"
+                justifyContent: "space-between",
+                borderTop: `4px solid ${currentPrimary}`
               }}
             >
-              {/* STYLE 1: MODERN EXECUTIVE */}
-              {settings.templateStyle === "modern" && (
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 20, borderBottom: `2px solid ${settings.primaryColor}` }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                      <div style={{ width: 54, height: 54, borderRadius: 14, background: settings.primaryColor, color: "#fff", display: "grid", placeItems: "center", fontSize: "1.6rem", fontWeight: 900 }}>
-                        LC
-                      </div>
-                      <div>
-                        <h2 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 900, color: "#0f172a" }}>LEAL CONTROL ERP</h2>
-                        <div style={{ fontSize: "0.8rem", color: "#64748b" }}>Soluciones Industriales & Pesaje</div>
-                        <div style={{ fontSize: "0.75rem", color: "#64748b" }}>CUIT: 30-71234567-9 | IVA Responsable Inscripto</div>
-                      </div>
+              {/* Header Mockup */}
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: `2px solid ${currentPrimary}33`, paddingBottom: "12px", marginBottom: "14px" }}>
+                  <div>
+                    <div style={{ fontSize: "1.1rem", fontWeight: 900, color: currentPrimary }}>
+                      LEAL CONTROL ERP S.A.
                     </div>
+                    <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                      CUIT: 30-71548962-9 • IVA Responsable Inscripto
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                      Luis Braile 705, San Lorenzo, Santa Fe
+                    </div>
+                  </div>
 
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ display: "inline-block", padding: "4px 14px", borderRadius: 8, background: `${settings.primaryColor}15`, color: settings.primaryColor, fontWeight: 800, fontSize: "0.95rem", textTransform: "uppercase" }}>
-                        {docTypePreview === "quote" ? "PRESUPUESTO COMERCIAL" : docTypePreview === "remito" ? "REMITO DE ENTREGA" : "FACTURA OFICIAL"}
-                      </div>
-                      <div style={{ fontSize: "1.2rem", fontWeight: 900, marginTop: 4, color: "#0f172a" }}>
-                        N° 0001-00004829
-                      </div>
-                      <div style={{ fontSize: "0.8rem", color: "#64748b" }}>Fecha: 18/08/2026</div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "0.95rem", fontWeight: 900, color: currentPrimary, textTransform: "uppercase" }}>
+                      {docTypePreview === "quote" && settings.quote.headerTitle}
+                      {docTypePreview === "remito" && settings.remito.headerTitle}
+                      {docTypePreview === "invoice" && settings.invoice.headerTitle}
+                      {docTypePreview === "purchase" && settings.purchaseOrder.headerTitle}
+                    </div>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 700, fontFamily: "monospace" }}>
+                      {docTypePreview === "quote" && "PRE-0001-00000421"}
+                      {docTypePreview === "remito" && "R-0001-00000155"}
+                      {docTypePreview === "invoice" && "FACTURA A N° 0001-00000892"}
+                      {docTypePreview === "purchase" && "OC-0001-00000098"}
+                    </div>
+                    <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                      Fecha: {new Date().toLocaleDateString("es-AR")}
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* STYLE 2: CLASSIC CORPORATE */}
-              {settings.templateStyle === "classic" && (
-                <div>
-                  <div style={{ background: settings.primaryColor, color: "#ffffff", padding: "16px 20px", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                {/* Recipient Box */}
+                <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "6px", marginBottom: "14px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <div>
-                      <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 900, color: "#ffffff" }}>LEAL CONTROL ERP S.A.</h2>
-                      <div style={{ fontSize: "0.78rem", opacity: 0.9 }}>CUIT: 30-71234567-9 - Ingresos Brutos: 901-123456-7</div>
+                      <strong>Cliente / Razón Social:</strong> ACINDAR S.A.
+                      <div style={{ fontSize: "0.72rem", color: "#64748b" }}>CUIT: 30-50001091-2 • Villa Constitución</div>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "1.1rem", fontWeight: 900 }}>
-                        {docTypePreview === "quote" ? "PRESUPUESTO" : docTypePreview === "remito" ? "REMITO OFICIAL" : "FACTURA 'A'"}
+                    {docTypePreview === "remito" && (
+                      <div style={{ textAlign: "right" }}>
+                        <strong>Destino / Planta de Entrega:</strong>
+                        <div style={{ fontSize: "0.72rem", color: "#0f172a", fontWeight: 700 }}>Planta 2 - Depósito Laminación</div>
                       </div>
-                      <div style={{ fontSize: "0.85rem", opacity: 0.95 }}>N° 0001-00004829</div>
-                    </div>
+                    )}
                   </div>
                 </div>
-              )}
 
-              {/* STYLE 3: COMPACT TECHNICAL */}
-              {settings.templateStyle === "compact" && (
-                <div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 1fr", border: `1px solid ${settings.primaryColor}`, borderRadius: 6, padding: "10px 14px", marginBottom: 16 }}>
-                    <div>
-                      <strong style={{ fontSize: "1.1rem", color: settings.primaryColor }}>LEAL CONTROL ERP</strong>
-                      <div style={{ fontSize: "0.74rem", color: "#64748b" }}>Planta Industrial - Córdoba, Argentina</div>
-                    </div>
-                    <div style={{ textAlign: "center", borderLeft: "1px solid #e2e8f0", borderRight: "1px solid #e2e8f0", display: "grid", placeItems: "center" }}>
-                      <div style={{ fontSize: "1.6rem", fontWeight: 900, color: settings.primaryColor }}>R</div>
-                      <div style={{ fontSize: "0.65rem", color: "#64748b" }}>COD. 091</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "0.82rem", fontWeight: 700, color: settings.primaryColor }}>
-                        {docTypePreview === "quote" ? "COTIZACIÓN TÉCNICA" : docTypePreview === "remito" ? "REMITO TÉCNICO" : "COMPROBANTE"}
-                      </div>
-                      <div style={{ fontSize: "1.05rem", fontWeight: 900 }}>N° 0001-00004829</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Customer Box */}
-              <div
-                style={{
-                  margin: "16px 0",
-                  padding: "14px 18px",
-                  borderRadius: 8,
-                  background: "#f8fafc",
-                  border: `1px solid ${settings.primaryColor}33`,
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 12,
-                  fontSize: "0.84rem"
-                }}
-              >
-                <div>
-                  <div style={{ color: "#64748b", fontSize: "0.74rem", textTransform: "uppercase", fontWeight: 700 }}>Cliente / Razón Social:</div>
-                  <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>ACINDAR GRUPO ARCELORMITTAL</strong>
-                  <div style={{ color: "#475569" }}>CUIT: 30-50001091-2 (IVA Resp. Inscripto)</div>
-                </div>
-                <div>
-                  <div style={{ color: "#64748b", fontSize: "0.74rem", textTransform: "uppercase", fontWeight: 700 }}>Entrega / Planta:</div>
-                  <div>Planta Villa Constitución - Ruta 21 Km 2</div>
-                  <div style={{ color: "#475569" }}>Condición de Pago: Cuenta Corriente 30 días</div>
-                </div>
+                {/* Sample Items Table */}
+                <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "14px" }}>
+                  <thead>
+                    <tr style={{ background: `${currentPrimary}15`, color: currentPrimary, fontSize: "0.72rem" }}>
+                      <th style={{ padding: "6px 8px", textAlign: "left" }}>Cant.</th>
+                      <th style={{ padding: "6px 8px", textAlign: "left" }}>Descripción</th>
+                      {docTypePreview !== "remito" && <th style={{ padding: "6px 8px", textAlign: "right" }}>P. Unitario</th>}
+                      {docTypePreview !== "remito" && <th style={{ padding: "6px 8px", textAlign: "right" }}>Total</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "6px 8px" }}>2 un</td>
+                      <td style={{ padding: "6px 8px" }}>Sensor de Presión Digital 4-20mA WIKA</td>
+                      {docTypePreview !== "remito" && <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace" }}>$ 145.000,00</td>}
+                      {docTypePreview !== "remito" && <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: 700 }}>$ 290.000,00</td>}
+                    </tr>
+                    <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "6px 8px" }}>1 serv</td>
+                      <td style={{ padding: "6px 8px" }}>Calibración y Certificado de Patrón</td>
+                      {docTypePreview !== "remito" && <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace" }}>$ 85.000,00</td>}
+                      {docTypePreview !== "remito" && <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: 700 }}>$ 85.000,00</td>}
+                    </tr>
+                  </tbody>
+                </table>
               </div>
 
-              {/* Item Table */}
-              <table style={{ width: "100%", borderCollapse: "collapse", margin: "16px 0", fontSize: "0.85rem" }}>
-                <thead>
-                  <tr style={{ background: `${settings.primaryColor}14`, borderBottom: `2px solid ${settings.primaryColor}` }}>
-                    <th style={{ padding: "10px 12px", textAlign: "left", color: settings.primaryColor, fontWeight: 800 }}>CÓDIGO</th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", color: settings.primaryColor, fontWeight: 800 }}>DESCRIPCIÓN DEL ARTÍCULO</th>
-                    <th style={{ padding: "10px 12px", textAlign: "center", color: settings.primaryColor, fontWeight: 800 }}>CANT.</th>
-                    <th style={{ padding: "10px 12px", textAlign: "right", color: settings.primaryColor, fontWeight: 800 }}>PRECIO UNIT.</th>
-                    <th style={{ padding: "10px 12px", textAlign: "right", color: settings.primaryColor, fontWeight: 800 }}>TOTAL</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
-                    <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700 }}>BAL-500-IND</td>
-                    <td style={{ padding: "10px 12px" }}>
-                      <strong>Balanza Industrial de Plataforma 500kg</strong>
-                      <div style={{ fontSize: "0.76rem", color: "#64748b" }}>Cabezal en acero inoxidable con salida RS232</div>
-                    </td>
-                    <td style={{ padding: "10px 12px", textAlign: "center" }}>2 UN</td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "monospace" }}>$ 450.000,00</td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "monospace", fontWeight: 700 }}>$ 900.000,00</td>
-                  </tr>
-                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
-                    <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 700 }}>SERV-CAL-SAC</td>
-                    <td style={{ padding: "10px 12px" }}>
-                      <strong>Servicio de Calibración con Patrones Certificados INTI</strong>
-                      <div style={{ fontSize: "0.76rem", color: "#64748b" }}>Emisión de certificado de trazabilidad técnica</div>
-                    </td>
-                    <td style={{ padding: "10px 12px", textAlign: "center" }}>1 GLOBAL</td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "monospace" }}>$ 120.000,00</td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "monospace", fontWeight: 700 }}>$ 120.000,00</td>
-                  </tr>
-                </tbody>
-              </table>
+              {/* Document-Specific Bottom Sections */}
+              <div>
+                {/* 1. Quote Specifics */}
+                {docTypePreview === "quote" && (
+                  <div style={{ background: "#f8fafc", padding: "10px", borderRadius: "6px", borderLeft: `3px solid ${currentPrimary}`, fontSize: "0.74rem", marginBottom: "10px" }}>
+                    <div><strong>Condición de Pago:</strong> {settings.quote.paymentTerms}</div>
+                    <div><strong>Plazo de Entrega:</strong> {settings.quote.deliveryTerms}</div>
+                    <div><strong>Garantía:</strong> {settings.quote.warrantyTerms}</div>
+                    <div style={{ marginTop: "4px", color: "#64748b", fontSize: "0.7rem" }}>{settings.quote.customFooterText}</div>
+                  </div>
+                )}
 
-              {/* Totals Box */}
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                <div style={{ width: 280, border: `1px solid ${settings.primaryColor}33`, borderRadius: 8, padding: 12, background: "#f8fafc" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", marginBottom: 4 }}>
-                    <span style={{ color: "#64748b" }}>Subtotal Neto:</span>
-                    <span style={{ fontFamily: "monospace" }}>$ 1.020.000,00</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", marginBottom: 6 }}>
-                    <span style={{ color: "#64748b" }}>IVA (21%):</span>
-                    <span style={{ fontFamily: "monospace" }}>$ 214.200,00</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1.05rem", fontWeight: 900, paddingTop: 6, borderTop: `2px solid ${settings.primaryColor}`, color: settings.primaryColor }}>
-                    <span>TOTAL:</span>
-                    <span style={{ fontFamily: "monospace" }}>$ 1.234.200,00</span>
-                  </div>
-                </div>
-              </div>
+                {/* 2. Remito Specifics */}
+                {docTypePreview === "remito" && (
+                  <div>
+                    {settings.remito.showCarrierInfo && (
+                      <div style={{ background: "#f1f5f9", padding: "8px 10px", borderRadius: "6px", fontSize: "0.74rem", marginBottom: "8px" }}>
+                        <strong>Transporte:</strong> Expreso San Lorenzo • <strong>Chofer:</strong> Carlos Gómez (DNI 28.491.029) • <strong>Patente:</strong> AF192ZZ
+                      </div>
+                    )}
 
-              {/* Banking Info Box */}
-              {settings.showBankingInfo && (
-                <div style={{ marginTop: 20, padding: "10px 14px", borderRadius: 8, background: "#f1f5f9", borderLeft: `3px solid ${settings.primaryColor}`, fontSize: "0.78rem" }}>
-                  <strong style={{ color: "#0f172a" }}>Datos para Transferencias Bancarias:</strong>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 4, color: "#475569" }}>
-                    <div><strong>Banco:</strong> {settings.bankDetails.bankName}</div>
-                    <div><strong>Tipo:</strong> {settings.bankDetails.accountType}</div>
-                    <div><strong>CBU:</strong> <span style={{ fontFamily: "monospace" }}>{settings.bankDetails.cbu}</span></div>
-                    <div><strong>Alias:</strong> <span style={{ fontFamily: "monospace", color: settings.primaryColor, fontWeight: 700 }}>{settings.bankDetails.alias}</span></div>
-                  </div>
-                </div>
-              )}
+                    <div style={{ fontSize: "0.7rem", color: "#475569", marginBottom: "6px" }}>
+                      {settings.remito.carrierLegalText}
+                    </div>
+                    <div style={{ fontSize: "0.7rem", color: "#475569", fontStyle: "italic", marginBottom: "10px" }}>
+                      "{settings.remito.receptionClause}"
+                    </div>
 
-              {/* Signatures Box */}
-              {settings.showSignatures && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 30, marginTop: 36, paddingTop: 10 }}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ borderTop: "1px dashed #94a3b8", width: "80%", margin: "0 auto 4px" }} />
-                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Firma Responsable / Comercial</div>
+                    {settings.remito.showSignaturesBox && (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", borderTop: "1px dashed #cbd5e1", paddingTop: "10px", marginTop: "10px", fontSize: "0.7rem" }}>
+                        <div>
+                          <div style={{ borderBottom: "1px solid #94a3b8", height: "24px" }} />
+                          <div style={{ textAlign: "center", color: "#64748b", marginTop: "2px" }}>Firma Receptor</div>
+                        </div>
+                        <div>
+                          <div style={{ borderBottom: "1px solid #94a3b8", height: "24px" }} />
+                          <div style={{ textAlign: "center", color: "#64748b", marginTop: "2px" }}>Aclaración & DNI</div>
+                        </div>
+                        <div>
+                          <div style={{ borderBottom: "1px solid #94a3b8", height: "24px" }} />
+                          <div style={{ textAlign: "center", color: "#64748b", marginTop: "2px" }}>Fecha / Hora</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ borderTop: "1px dashed #94a3b8", width: "80%", margin: "0 auto 4px" }} />
-                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Recibí Conforme / Aclaración & DNI</div>
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* Custom Footer Terms */}
-              <div style={{ marginTop: "auto", paddingTop: 20, borderTop: "1px solid #e2e8f0", fontSize: "0.72rem", color: "#64748b", textAlign: "center", lineHeight: 1.4 }}>
-                {settings.customFooterText}
+                {/* 3. Invoice Specifics (Banking Data) */}
+                {docTypePreview === "invoice" && (
+                  <div>
+                    {settings.invoice.showBankingInfo && (
+                      <div style={{ background: "rgba(13, 148, 136, 0.08)", padding: "10px", borderRadius: "6px", border: `1px solid ${currentPrimary}44`, fontSize: "0.74rem", marginBottom: "8px" }}>
+                        <strong style={{ color: currentPrimary, display: "block", marginBottom: "3px" }}>
+                          🏦 Datos para Transferencia Bancaria (Cobranzas):
+                        </strong>
+                        <div><strong>Banco:</strong> {settings.invoice.bankDetails.bankName} ({settings.invoice.bankDetails.accountType})</div>
+                        <div><strong>CBU:</strong> <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{settings.invoice.bankDetails.cbu}</span> • <strong>Alias:</strong> <span style={{ fontFamily: "monospace", fontWeight: 800 }}>{settings.invoice.bankDetails.alias}</span></div>
+                        <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "4px" }}>
+                          {settings.invoice.paymentInstructions}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px dashed #cbd5e1", paddingTop: "8px", fontSize: "0.7rem", color: "#64748b" }}>
+                      <div>CAE N°: <strong>74928192847291</strong> • Vto. CAE: <strong>29/08/2026</strong></div>
+                      <div style={{ color: "#047857", fontWeight: 700 }}>[ Código QR Oficial ARCA / AFIP ]</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Purchase Order Specifics */}
+                {docTypePreview === "purchase" && (
+                  <div style={{ background: "#f8fafc", padding: "10px", borderRadius: "6px", borderLeft: `3px solid ${currentPrimary}`, fontSize: "0.74rem" }}>
+                    <div><strong>Horario de Recepción:</strong> {settings.purchaseOrder.receptionSchedule}</div>
+                    <div style={{ marginTop: "4px" }}><strong>Instrucciones Facturación:</strong> {settings.purchaseOrder.billingInstructions}</div>
+                    <div style={{ marginTop: "4px", color: "#64748b", fontSize: "0.7rem" }}>{settings.purchaseOrder.supplierTerms}</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
