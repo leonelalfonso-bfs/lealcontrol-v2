@@ -54,6 +54,19 @@ public static class AutomationEndpoints
             return Results.Ok(result);
         });
 
+        group.MapGet("/bcra/{cuit}", async (string cuit, BcraApiClient client, CancellationToken ct) =>
+        {
+            try
+            {
+                var report = await client.GetCreditReportAsync(cuit, ct);
+                return Results.Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        });
+
         return app;
     }
 }

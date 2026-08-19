@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
+import { BcraCreditReportModal } from "../components/BcraCreditReportModal";
 import { provinces, type CustomerWrite, type EquipmentWrite } from "../api/types";
 import { digitsOnly, formatCuitDisplay, isValidCuitChecksum } from "../lib/arContact";
 
@@ -73,6 +74,7 @@ export function CustomerFormPage() {
   const initialName = queryParams.get("name") || "";
   const returnUrl = queryParams.get("returnUrl") || "";
 
+  const [showBcraModal, setShowBcraModal] = useState(false);
   const [model, setModel] = useState<CustomerWrite>(() => ({
     ...emptyCustomer,
     isSupplier: isSupplierMode,
@@ -646,16 +648,27 @@ export function CustomerFormPage() {
                     placeholder="30-00000000-0"
                   />
                   {model.documentType === "Cuit" && (
-                    <button
-                      type="button"
-                      className="btn"
-                      disabled={consultingArca}
-                      onClick={handleConsultArca}
-                      title="Consultar padrón impositivo oficial en ARCA / AFIP"
-                      style={{ whiteSpace: "nowrap", padding: "0 14px", background: "linear-gradient(180deg, #2563eb, #1d4ed8)", color: "#fff" }}
-                    >
-                      {consultingArca ? "🔍 ARCA…" : "🔍 ARCA"}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="btn"
+                        disabled={consultingArca}
+                        onClick={handleConsultArca}
+                        title="Consultar padrón impositivo oficial en ARCA / AFIP"
+                        style={{ whiteSpace: "nowrap", padding: "0 12px", background: "linear-gradient(180deg, #2563eb, #1d4ed8)", color: "#fff" }}
+                      >
+                        {consultingArca ? "🔍 ARCA…" : "🔍 ARCA"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => setShowBcraModal(true)}
+                        title="Consultar Central de Deudores y Calificación Crediticia en BCRA"
+                        style={{ whiteSpace: "nowrap", padding: "0 12px", background: "linear-gradient(180deg, #0f172a, #334155)", color: "#fff" }}
+                      >
+                        🏛️ BCRA
+                      </button>
+                    </>
                   )}
                 </div>
                 {cuitHint && <span className="muted" style={{ fontSize: "0.78rem" }}>{cuitHint}</span>}
@@ -973,6 +986,14 @@ export function CustomerFormPage() {
           </button>
         </div>
       </form>
+
+      {/* BCRA Credit Report Modal */}
+      <BcraCreditReportModal
+        isOpen={showBcraModal}
+        cuit={model.documentNumber}
+        customerName={model.legalName}
+        onClose={() => setShowBcraModal(false)}
+      />
     </>
   );
 }

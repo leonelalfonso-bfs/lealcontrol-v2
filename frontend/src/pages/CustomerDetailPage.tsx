@@ -4,9 +4,11 @@ import { api } from "../api/client";
 import { label, provinces, type Activity, type Contact, type CustomerDetail, type Location, type Opportunity, type Quote } from "../api/types";
 import { buildWhatsAppUrl, formatCuitDisplay } from "../lib/arContact";
 import { EmailComposer } from "../components/EmailComposer";
+import { BcraCreditReportModal } from "../components/BcraCreditReportModal";
 
 export function CustomerDetailPage() {
   const [showEmail, setShowEmail] = useState(false);
+  const [showBcraModal, setShowBcraModal] = useState(false);
   const { id } = useParams();
   const location = useLocation();
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
@@ -112,7 +114,15 @@ export function CustomerDetailPage() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setShowBcraModal(true)}
+            style={{ background: "linear-gradient(135deg, #0f172a, #334155)", color: "#ffffff", fontWeight: 700 }}
+          >
+            🏛️ Informe BCRA
+          </button>
           <button type="button" className="btn" onClick={() => setShowEmail(true)}>✉ Email</button>
           {showEmail && <EmailComposer context={{ entityType: "Customer", entityId: customer.id, to: customer.email ?? undefined, subject: `Contacto comercial con ${customer.legalName}`, body: `Hola,\n\n` }} onClose={() => setShowEmail(false)} />}
           <Link to={backUrl} className="btn btn-outline">
@@ -579,6 +589,14 @@ export function CustomerDetailPage() {
           <ActivityForm customerId={customer.id} onCreated={refresh} />
         </section>
       )}
+
+      {/* BCRA Credit Report Modal */}
+      <BcraCreditReportModal
+        isOpen={showBcraModal}
+        cuit={customer.documentNumber}
+        customerName={customer.legalName}
+        onClose={() => setShowBcraModal(false)}
+      />
     </div>
   );
 }
