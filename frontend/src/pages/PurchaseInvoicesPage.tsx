@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { type PurchaseInvoice } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
+import { InvoiceOcrUploadModal } from "../components/InvoiceOcrUploadModal";
 
 export function PurchaseInvoicesPage() {
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [showOcrModal, setShowOcrModal] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -40,13 +43,24 @@ export function PurchaseInvoicesPage() {
           <h1>Facturas de Proveedores (Libro IVA Compras)</h1>
           <p className="muted">Registro fiscal de comprobantes recibidos, IVA Crédito Fiscal y Cuentas por Pagar</p>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => setShowOcrModal(true)}
+            className="btn"
+            style={{ background: "linear-gradient(135deg, #1e40af, #3b82f6)", color: "white", fontWeight: 700 }}
+          >
+            📷 Cargar con IA (Foto / PDF)
+          </button>
           <Link to="/compras/arca" className="btn" style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "white" }}>
             📥 Importador ARCA
           </Link>
-        <div className="toolbar"><ExcelToolbar fileName="facturas-proveedor" rows={invoices} columns={[{ key: "formattedNumber", header: "Número" }, { key: "supplierName", header: "Proveedor" }, { key: "issueDate", header: "Fecha" }, { key: "currency", header: "Moneda" }, { key: "total", header: "Total" }, { key: "status", header: "Estado" }]} /><Link to="/compras/facturas/nueva" className="btn btn-primary">
-            + Cargar Factura Manual
-        </Link></div>
+          <div className="toolbar">
+            <ExcelToolbar fileName="facturas-proveedor" rows={invoices} columns={[{ key: "formattedNumber", header: "Número" }, { key: "supplierName", header: "Proveedor" }, { key: "issueDate", header: "Fecha" }, { key: "currency", header: "Moneda" }, { key: "total", header: "Total" }, { key: "status", header: "Estado" }]} />
+            <Link to="/compras/facturas/nueva" className="btn btn-primary">
+              + Cargar Factura Manual
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -176,6 +190,15 @@ export function PurchaseInvoicesPage() {
           </table>
         )}
       </div>
+
+      {/* Invoice OCR Modal */}
+      <InvoiceOcrUploadModal
+        isOpen={showOcrModal}
+        onClose={() => setShowOcrModal(false)}
+        onApplyInvoice={(res) => {
+          navigate("/compras/facturas/nueva");
+        }}
+      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ using LealControl.Modules.Communications.Infrastructure.Persistence;
 using LealControl.Modules.Finance.Infrastructure;
 using LealControl.Modules.HumanResources.Infrastructure;
 using LealControl.Modules.Fleet.Infrastructure;
+using LealControl.Api.Automation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
@@ -29,6 +30,7 @@ try
         configuration.ReadFrom.Configuration(context.Configuration).WriteTo.Console());
 
     builder.Services.AddSingleton<IClock, SystemClock>();
+    builder.Services.AddHttpClient<GeminiApiClient>();
     builder.Services.AddCrmModule(builder.Configuration);
     builder.Services.AddSalesModule(builder.Configuration);
     builder.Services.AddCommunicationsModule(builder.Configuration);
@@ -103,6 +105,7 @@ try
     app.MapFinanceModule();
     app.MapHumanResourcesModule();
     app.MapFleetModule();
+    app.MapAutomationEndpoints();
 
     await app.RunAsync();
 }

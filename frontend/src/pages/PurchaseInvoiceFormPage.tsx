@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import { InvoiceOcrUploadModal } from "../components/InvoiceOcrUploadModal";
+import { type InvoiceOcrResult } from "../api/automationApi";
 import { type Product, type PurchaseArcaVoucher, type PurchaseOrder, type Supplier } from "../api/types";
 
 interface InvoiceRow {
@@ -18,6 +20,7 @@ export function PurchaseInvoiceFormPage() {
   const arcaIdParam = searchParams.get("arca_id");
   const orderIdParam = searchParams.get("order_id");
 
+  const [showOcrModal, setShowOcrModal] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,6 +226,41 @@ export function PurchaseInvoiceFormPage() {
     }
   };
 
+  const handleApplyOcr = (res: InvoiceOcrResult) => {
+    if (res.invoiceType) setInvoiceType(res.invoiceType);
+    if (res.pointOfSale) setPointOfSale(res.pointOfSale);
+    if (res.invoiceNumber) setInvoiceNumber(res.invoiceNumber);
+    if (res.supplierName) setSupplierName(res.supplierName);
+    if (res.supplierCuit) setSupplierDocument(res.supplierCuit);
+    if (res.issueDate) setIssueDate(res.issueDate);
+    if (res.dueDate) setDueDate(res.dueDate);
+    if (res.cae) setCae(res.cae);
+    if (res.caeDueDate) setCaeDueDate(res.caeDueDate);
+    if (res.currency) setCurrency(res.currency);
+    if (res.exchangeRate) setExchangeRate(res.exchangeRate);
+    if (res.iibbPerception) setIibbPerception(res.iibbPerception);
+
+    // Match supplier by CUIT
+    const cleanCuit = (res.supplierCuit || "").replace(/\D/g, "");
+    if (cleanCuit) {
+      const matched = suppliers.find((s) => s.documentNumber.replace(/\D/g, "") === cleanCuit);
+      if (matched) {
+        setSelectedSupplierId(matched.id);
+      }
+    }
+
+    // Items
+    if (res.items && res.items.length > 0) {
+      setItems(res.items.map((it) => ({
+        code: it.code || "ITEM",
+        description: it.description,
+        quantity: Number(it.quantity) || 1,
+        unitPrice: Number(it.unitPrice) || 0,
+        vatRate: Number(it.vatRate) || 21
+      })));
+    }
+  };
+
   if (loading) {
     return <div style={{ padding: "40px", textAlign: "center" }}>Cargando formulario de factura...</div>;
   }
@@ -234,9 +272,19 @@ export function PurchaseInvoiceFormPage() {
           <h1>Registrar Factura de Proveedor</h1>
           <p className="muted">Carga de comprobante fiscal, cómputo de IVA Crédito y Cuenta por Pagar</p>
         </div>
-        <Link to="/compras/facturas" className="btn btn-outline">
-          ← Volver
-        </Link>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            type="button"
+            onClick={() => setShowOcrModal(true)}
+            className="btn btn-outline"
+            style={{ background: "#eff6ff", color: "#1e40af", borderColor: "#3b82f6", fontWeight: 700 }}
+          >
+            📷 Extraer con IA (Foto / PDF)
+          </button>
+          <Link to="/compras/facturas" className="btn btn-outline">
+            ← Volver
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -570,6 +618,13 @@ export function PurchaseInvoiceFormPage() {
           </div>
         </div>
       </form>
+
+      {/* Invoice OCR Modal */}
+      <InvoiceOcrUploadModal
+        isOpen={showOcrModal}
+        onClose={() => setShowOcrModal(false)}
+        onApplyInvoice={handleApplyOcr}
+      />
     </div>
   );
 }

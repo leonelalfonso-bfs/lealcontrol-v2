@@ -1,6 +1,7 @@
 import React, { useEffect, useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { CctAiAssistantModal } from "../components/CctAiAssistantModal";
 import { type PayrollPeriod, type PayrollSlip, type Employee } from "../api/types";
 
 export function PayrollListPage() {
@@ -13,6 +14,7 @@ export function PayrollListPage() {
 
   // New Period Modal
   const [showNewPeriodModal, setShowNewPeriodModal] = useState(false);
+  const [showCctModal, setShowCctModal] = useState(false);
   const [newMonth, setNewMonth] = useState(new Date().getMonth() + 1);
   const [newYear, setNewYear] = useState(new Date().getFullYear());
   const [newPeriodType, setNewPeriodType] = useState(0);
@@ -158,7 +160,15 @@ export function PayrollListPage() {
           <h1>Liquidación de Sueldos & Jornales</h1>
           <p className="muted">Motor multi-convenio (LCT 20.744, Comercio, UOM, UOCRA), Libro Sueldos Digital AFIP</p>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => setShowCctModal(true)}
+            className="btn btn-outline"
+            style={{ background: "#f0fdfa", color: "#0f766e", borderColor: "#0d9488", fontWeight: 700 }}
+          >
+            🤖 Asistente CCT (IA)
+          </button>
           <Link to="/rrhh/empleados" className="btn btn-outline" style={{ background: "#ffffff" }}>
             👥 Ver Colaboradores
           </Link>
@@ -499,6 +509,15 @@ export function PayrollListPage() {
           </div>
         </div>
       )}
+
+      {/* CCT AI Assistant Modal */}
+      <CctAiAssistantModal
+        isOpen={showCctModal}
+        onClose={() => setShowCctModal(false)}
+        onApplyScales={(res) => {
+          alert(`✅ Escala salarial de ${res.unionName} (CCT ${res.cctNumber}) analizada con éxito.`);
+        }}
+      />
     </div>
   );
 }
