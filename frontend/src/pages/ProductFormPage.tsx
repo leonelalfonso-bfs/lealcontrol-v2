@@ -272,89 +272,176 @@ export const ProductFormPage: React.FC = () => {
         {/* Tab 1: General & Precios */}
         {activeTab === "general" && (
           <div className="card pad" style={{ display: "grid", gap: "20px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "16px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "6px" }}>
-                  Código / SKU *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="Ej: BAL-IND-500, SERV-001"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold" }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "6px" }}>
-                  Nombre del Artículo / Servicio *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ej: Balanza Industrial de Plataforma 500kg"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontWeight: 600 }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "6px" }}>
-                  Tipo de Artículo
-                </label>
-                <select
-                  value={type}
-                  onChange={(e) => handleTypeChange(e.target.value as ProductWrite["type"])}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontWeight: 600 }}
+            {/* Top Product Header Card with Photo & Main SKU */}
+            <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: "20px", alignItems: "flex-start", paddingBottom: "16px", borderBottom: "1px solid var(--surface-border)" }}>
+              {/* Photo Box */}
+              <div style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    width: 140,
+                    height: 140,
+                    borderRadius: 14,
+                    border: "2px dashed var(--surface-border)",
+                    background: "var(--surface-muted)",
+                    display: "grid",
+                    placeItems: "center",
+                    overflow: "hidden",
+                    position: "relative",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+                  }}
                 >
-                  <option value="DirectSale">🛍️ Venta Directa (Reventa)</option>
-                  <option value="Service">🛠️ Servicio Intangible (Sin Stock)</option>
-                  <option value="Kit">🧩 Producto Ensamblado (Kit)</option>
-                  <option value="Manufactured">🏭 Producto Fabricado (BOM)</option>
-                  <option value="SparePart">🔧 Repuesto Técnico (Servicio / OT)</option>
-                  <option value="RawMaterial">🧱 Materia Prima (Insumo)</option>
-                </select>
+                  {imagePath ? (
+                    <img
+                      src={imagePath}
+                      alt={name || "Foto"}
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                    />
+                  ) : (
+                    <div style={{ color: "var(--ink-soft)", fontSize: "0.78rem", padding: "8px", textAlign: "center" }}>
+                      <span style={{ fontSize: "2.2rem", display: "block", marginBottom: 2 }}>📷</span>
+                      Subir Foto
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                  <label
+                    htmlFor="productImageUpload"
+                    className="btn btn-outline"
+                    style={{ padding: "4px 8px", fontSize: "0.74rem", cursor: "pointer", display: "inline-block" }}
+                  >
+                    📁 {imagePath ? "Cambiar Foto" : "Cargar Foto"}
+                  </label>
+                  <input
+                    id="productImageUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    style={{ display: "none" }}
+                  />
+                  {imagePath && (
+                    <button
+                      type="button"
+                      onClick={() => setImagePath(null)}
+                      style={{ background: "none", border: "none", color: "#dc2626", fontSize: "0.72rem", cursor: "pointer", textDecoration: "underline" }}
+                    >
+                      Quitar Foto
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "6px" }}>
-                  Categoría
-                </label>
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
-                >
-                  <option value="">(Sin Categoría Especial)</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* SKU, Name, Type, Category & Catalog Toggle */}
+              <div style={{ display: "grid", gap: "14px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "4px" }}>
+                      Código / SKU *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={code}
+                      onChange={(e) => setCode(e.target.value)}
+                      placeholder="Ej: BAL-IND-500"
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "4px" }}>
+                      Nombre del Artículo / Servicio *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ej: Balanza Industrial de Plataforma 500kg"
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontWeight: 600 }}
+                    />
+                  </div>
+                </div>
 
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "6px" }}>
-                  Unidad Base de Medida
-                </label>
-                <select
-                  value={baseUnit}
-                  onChange={(e) => setBaseUnit(e.target.value)}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "4px" }}>
+                      Tipo de Artículo
+                    </label>
+                    <select
+                      value={type}
+                      onChange={(e) => handleTypeChange(e.target.value as ProductWrite["type"])}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                    >
+                      <option value="DirectSale">📦 Venta Directa (Reventa)</option>
+                      <option value="Service">🛠️ Servicio Intangible</option>
+                      <option value="Kit">🧩 Producto Ensamblado</option>
+                      <option value="Manufactured">🏭 Producto Fabricado</option>
+                      <option value="SparePart">🔧 Repuesto Técnico</option>
+                      <option value="RawMaterial">🧱 Materia Prima</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "4px" }}>
+                      Categoría
+                    </label>
+                    <select
+                      value={categoryId}
+                      onChange={(e) => setCategoryId(e.target.value)}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                    >
+                      <option value="">(Sin Categoría Especial)</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "4px" }}>
+                      Unidad de Medida
+                    </label>
+                    <select
+                      value={baseUnit}
+                      onChange={(e) => setBaseUnit(e.target.value)}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                    >
+                      <option value="UN">Unidad (UN)</option>
+                      <option value="KG">Kilogramo (KG)</option>
+                      <option value="MTS">Metros (MTS)</option>
+                      <option value="LITRO">Litros (LITRO)</option>
+                      <option value="HORA">Horas Técnico (HORA)</option>
+                      <option value="GLOBAL">Global / Trabajo (GLOBAL)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* B2B Catalog Checkbox Pill */}
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "8px 14px",
+                    borderRadius: 10,
+                    background: showInCatalog ? "rgba(16, 185, 129, 0.1)" : "var(--surface-muted)",
+                    border: `1px solid ${showInCatalog ? "rgba(16, 185, 129, 0.4)" : "var(--surface-border)"}`,
+                    width: "fit-content"
+                  }}
                 >
-                  <option value="UN">Unidad (UN)</option>
-                  <option value="KG">Kilogramo (KG)</option>
-                  <option value="MTS">Metros (MTS)</option>
-                  <option value="LITRO">Litros (LITRO)</option>
-                  <option value="HORA">Horas Técnico (HORA)</option>
-                  <option value="GLOBAL">Global / Trabajo (GLOBAL)</option>
-                </select>
+                  <input
+                    type="checkbox"
+                    id="showInCatalogPill"
+                    checked={showInCatalog}
+                    onChange={(e) => setShowInCatalog(e.target.checked)}
+                    style={{ width: 16, height: 16, cursor: "pointer" }}
+                  />
+                  <label htmlFor="showInCatalogPill" style={{ cursor: "pointer", fontSize: "0.82rem", fontWeight: 700, color: showInCatalog ? "#047857" : "var(--ink)" }}>
+                    🌐 Publicar en Catálogo Web / Carrito de Clientes (Portal B2B)
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -382,111 +469,6 @@ export const ProductFormPage: React.FC = () => {
                 placeholder="Especificaciones técnicas completas, capacidad, dimensiones, tolerancias, certificaciones INTI..."
                 style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
               />
-            </div>
-
-            {/* Imagen del Producto & Visibilidad en Catálogo */}
-            <div style={{ background: "var(--surface-muted)", padding: "18px", borderRadius: "14px", border: "1px solid var(--surface-border)" }}>
-              <h3 style={{ marginTop: 0, marginBottom: "14px", fontSize: "1rem", color: "var(--ink)", display: "flex", alignItems: "center", gap: "8px" }}>
-                <span>🖼️ Imagen del Producto & Oferta Técnica</span>
-              </h3>
-
-              <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "20px", alignItems: "flex-start" }}>
-                {/* Thumbnail Preview */}
-                <div style={{ textAlign: "center" }}>
-                  <div
-                    style={{
-                      width: 130,
-                      height: 130,
-                      borderRadius: 14,
-                      border: "2px dashed var(--surface-border)",
-                      background: "var(--surface)",
-                      display: "grid",
-                      placeItems: "center",
-                      overflow: "hidden",
-                      boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
-                    }}
-                  >
-                    {imagePath ? (
-                      <img
-                        src={imagePath}
-                        alt="Vista previa"
-                        style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                      />
-                    ) : (
-                      <div style={{ color: "var(--ink-soft)", fontSize: "0.75rem", padding: "8px" }}>
-                        <span style={{ fontSize: "2rem", display: "block", marginBottom: 4 }}>📷</span>
-                        Sin imagen
-                      </div>
-                    )}
-                  </div>
-                  {imagePath && (
-                    <button
-                      type="button"
-                      onClick={() => setImagePath(null)}
-                      className="btn btn-outline"
-                      style={{ marginTop: 8, padding: "4px 8px", fontSize: "0.74rem", color: "#dc2626", borderColor: "#fca5a5" }}
-                    >
-                      🗑️ Quitar Foto
-                    </button>
-                  )}
-                </div>
-
-                {/* Upload Controls & Catalog Toggle */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 6, color: "var(--ink)" }}>
-                      Subir archivo de imagen (JPG, PNG, WebP)
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageFileChange}
-                      style={{ fontSize: "0.85rem", padding: "6px 0" }}
-                    />
-                    <span className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 2 }}>
-                      Se imprimirá en presupuestos (oferta técnica) y en el catálogo. Máximo 5MB.
-                    </span>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 4, color: "var(--ink)" }}>
-                      O ingresar URL directa de la imagen
-                    </label>
-                    <input
-                      type="text"
-                      value={imagePath && !imagePath.startsWith("data:") ? imagePath : ""}
-                      onChange={(e) => setImagePath(e.target.value || null)}
-                      placeholder="https://ejemplo.com/fotos/balanza-500kg.png"
-                      style={{ width: "100%", padding: "7px 10px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                    />
-                  </div>
-
-                  {/* Public Catalog Toggle */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "10px 14px",
-                      borderRadius: 10,
-                      background: showInCatalog ? "rgba(16, 185, 129, 0.08)" : "var(--surface)",
-                      border: `1px solid ${showInCatalog ? "rgba(16, 185, 129, 0.3)" : "var(--surface-border)"}`,
-                      marginTop: 4
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      id="showInCatalogCheck"
-                      checked={showInCatalog}
-                      onChange={(e) => setShowInCatalog(e.target.checked)}
-                      style={{ width: 18, height: 18, cursor: "pointer" }}
-                    />
-                    <label htmlFor="showInCatalogCheck" style={{ cursor: "pointer", fontSize: "0.86rem", fontWeight: 700, color: showInCatalog ? "#047857" : "var(--ink)" }}>
-                      🌐 Mostrar en Catálogo Público / Carrito de Clientes (Portal B2B)
-                    </label>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Precios 3-Monedas */}
