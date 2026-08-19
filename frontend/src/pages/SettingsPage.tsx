@@ -281,9 +281,22 @@ export function SettingsPage() {
                 <input
                   value={settings.iibbNumber ?? ""}
                   onChange={(e) => setSetting("iibbNumber", e.target.value)}
+                  placeholder="30-71548962-9"
                 />
               </label>
 
+              <label>
+                Fecha de Inicio de Actividades *
+                <input
+                  type="date"
+                  value={settings.activityStartDate ?? "2018-03-01"}
+                  onChange={(e) => setSetting("activityStartDate", e.target.value)}
+                  title="Obligatorio según RG 1415 Anexo II de AFIP/ARCA"
+                />
+              </label>
+            </div>
+
+            <div className="grid-4">
               <label>
                 Email Corporativo
                 <input
@@ -292,9 +305,7 @@ export function SettingsPage() {
                   onChange={(e) => setSetting("email", e.target.value)}
                 />
               </label>
-            </div>
 
-            <div className="grid-3">
               <label>
                 Teléfono Fijo
                 <input value={settings.phone ?? ""} onChange={(e) => setSetting("phone", e.target.value)} />

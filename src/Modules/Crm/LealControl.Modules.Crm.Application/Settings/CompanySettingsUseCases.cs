@@ -13,6 +13,7 @@ public sealed record CompanySettingsDto(
     string TaxCondition,
     string IibbRegime,
     string? IibbNumber,
+    string? ActivityStartDate,
     string? Email,
     string? Phone,
     string? WhatsApp,

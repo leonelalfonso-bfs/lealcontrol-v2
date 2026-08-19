@@ -23,6 +23,7 @@ internal sealed class CompanySettingsConfiguration : IEntityTypeConfiguration<Co
         builder.Property(s => s.TaxCondition).HasMaxLength(64).IsRequired();
         builder.Property(s => s.IibbRegime).HasMaxLength(64).IsRequired();
         builder.Property(s => s.IibbNumber).HasMaxLength(64);
+        builder.Property(s => s.ActivityStartDate).HasMaxLength(32);
         builder.Property(s => s.Email).HasMaxLength(128);
         builder.Property(s => s.Phone).HasMaxLength(64);
         builder.Property(s => s.WhatsApp).HasMaxLength(64);

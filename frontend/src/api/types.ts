@@ -566,6 +566,7 @@ export type CompanySettings = {
   taxCondition: string;
   iibbRegime: string;
   iibbNumber?: string | null;
+  activityStartDate?: string | null;
   email?: string | null;
   phone?: string | null;
   whatsApp?: string | null;

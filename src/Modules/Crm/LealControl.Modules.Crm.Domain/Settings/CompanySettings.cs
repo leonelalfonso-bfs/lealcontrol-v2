@@ -22,6 +22,8 @@ public sealed class CompanySettings
 
     public string? IibbNumber { get; set; } = "30-71548962-9";
 
+    public string? ActivityStartDate { get; set; } = "2018-03-01";
+
     public string? Email { get; set; } = "contacto@lealcontrol.com";
 
     public string? Phone { get; set; } = "341-555-0000";

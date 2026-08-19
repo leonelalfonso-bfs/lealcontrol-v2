@@ -48,6 +48,7 @@ internal sealed class CompanySettingsQueryHandler
         settings.TaxCondition = string.IsNullOrWhiteSpace(m.TaxCondition) ? settings.TaxCondition : m.TaxCondition.Trim();
         settings.IibbRegime = string.IsNullOrWhiteSpace(m.IibbRegime) ? settings.IibbRegime : m.IibbRegime.Trim();
         settings.IibbNumber = m.IibbNumber?.Trim();
+        settings.ActivityStartDate = m.ActivityStartDate?.Trim();
         settings.Email = m.Email?.Trim();
         settings.Phone = m.Phone?.Trim();
         settings.WhatsApp = m.WhatsApp?.Trim();
@@ -158,6 +159,7 @@ internal sealed class CompanySettingsQueryHandler
             s.TaxCondition,
             s.IibbRegime,
             s.IibbNumber,
+            s.ActivityStartDate,
             s.Email,
             s.Phone,
             s.WhatsApp,
