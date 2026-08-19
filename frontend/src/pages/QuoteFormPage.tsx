@@ -5,13 +5,14 @@ import {
   provinces,
   type CustomerDetail,
   type CustomerSummary,
-  type CustomerWrite,
   type ExchangeRates,
   type Product,
+  type ProductCategory,
   type QuoteLineWrite,
   type QuoteWrite
 } from "../api/types";
-import { digitsOnly, formatCuitDisplay, isValidCuitChecksum } from "../lib/arContact";
+import { QuickCustomerModal } from "../components/QuickCustomerModal";
+import { QuickProductModal } from "../components/QuickProductModal";
 
 interface FormQuoteLine extends QuoteLineWrite {
   nativeCurrency: string;
@@ -26,6 +27,7 @@ export const QuoteFormPage: React.FC = () => {
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [selectedCustomerDetail, setSelectedCustomerDetail] = useState<CustomerDetail | null>(null);
   const [productsCatalog, setProductsCatalog] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [rates, setRates] = useState<ExchangeRates | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -63,31 +65,14 @@ export const QuoteFormPage: React.FC = () => {
     }
   ]);
 
-  // Modals visibility
-  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  // Quick Modals Visibility
+  const [showQuickCustomerModal, setShowQuickCustomerModal] = useState(false);
+  const [showQuickProductModal, setShowQuickProductModal] = useState(false);
+  const [quickProductLineIndex, setQuickProductLineIndex] = useState<number | null>(null);
+
+  // Secondary Mini Modals for existing customer (Plant/Contact)
   const [showNewLocationModal, setShowNewLocationModal] = useState(false);
   const [showNewContactModal, setShowNewContactModal] = useState(false);
-
-  // Full Customer Form State
-  const [newCustLegalName, setNewCustLegalName] = useState("");
-  const [newCustTradeName, setNewCustTradeName] = useState("");
-  const [newCustDocType, setNewCustDocType] = useState("Cuit");
-  const [newCustDocNumber, setNewCustDocNumber] = useState("");
-  const [newCustTaxCond, setNewCustTaxCond] = useState("ResponsableInscripto");
-  const [newCustIibb, setNewCustIibb] = useState("ConvenioMultilateral");
-  const [newCustEmail, setNewCustEmail] = useState("");
-  const [newCustPhone, setNewCustPhone] = useState("");
-  const [newCustWhatsApp, setNewCustWhatsApp] = useState("");
-  const [newCustStreet, setNewCustStreet] = useState("");
-  const [newCustCity, setNewCustCity] = useState("");
-  const [newCustProvince, setNewCustProvince] = useState("SantaFe");
-  const [newCustPostalCode, setNewCustPostalCode] = useState("");
-  const [newCustIsCustomer, setNewCustIsCustomer] = useState(true);
-  const [newCustIsSupplier, setNewCustIsSupplier] = useState(false);
-  const [newCustNotes, setNewCustNotes] = useState("");
-  const [consultingArca, setConsultingArca] = useState(false);
-
-  // Full Location Form State
   const [newLocName, setNewLocName] = useState("");
   const [newLocStreet, setNewLocStreet] = useState("");
   const [newLocCity, setNewLocCity] = useState("");
@@ -96,7 +81,6 @@ export const QuoteFormPage: React.FC = () => {
   const [newLocPhone, setNewLocPhone] = useState("");
   const [newLocNotes, setNewLocNotes] = useState("");
 
-  // Full Contact Form State
   const [newConName, setNewConName] = useState("");
   const [newConRole, setNewConRole] = useState("Commercial");
   const [newConLocationId, setNewConLocationId] = useState("");
@@ -138,14 +122,16 @@ export const QuoteFormPage: React.FC = () => {
     const initData = async () => {
       try {
         setLoading(true);
-        const [custData, prodsData, ratesData] = await Promise.all([
+        const [custData, prodsData, catsData, ratesData] = await Promise.all([
           api.listCustomers(""),
           api.listProducts(),
+          api.listCategories().catch(() => [] as ProductCategory[]),
           api.getExchangeRates().catch(() => null)
         ]);
 
         setCustomers(custData.items);
         setProductsCatalog(prodsData);
+        setCategories(catsData);
         if (ratesData) setRates(ratesData);
 
         if (isEditing && id) {
@@ -210,117 +196,79 @@ export const QuoteFormPage: React.FC = () => {
       .catch((err) => console.error("Error al cargar detalle del cliente", err));
   }, [customerId, isEditing]);
 
-  // Consult ARCA API
-  const handleConsultArcaModal = async () => {
-    const cleanCuit = digitsOnly(newCustDocNumber);
-    if (cleanCuit.length !== 11) {
-      alert("Ingresá un CUIT válido de 11 dígitos para consultar en ARCA.");
-      return;
-    }
-
-    setConsultingArca(true);
-    try {
-      const res = await api.consultArcaCuit(cleanCuit);
-      setNewCustLegalName(res.legalName || newCustLegalName);
-      if (res.tradeName) setNewCustTradeName(res.tradeName);
-      if (res.taxCondition) setNewCustTaxCond(res.taxCondition);
-      if (res.fiscalStreet) setNewCustStreet(res.fiscalStreet);
-      if (res.fiscalCity) setNewCustCity(res.fiscalCity);
-      if (res.fiscalProvince) setNewCustProvince(res.fiscalProvince);
-      if (res.fiscalPostalCode) setNewCustPostalCode(res.fiscalPostalCode);
-    } catch (e) {
-      alert("Error al consultar ARCA: " + (e as Error).message);
-    } finally {
-      setConsultingArca(false);
-    }
+  // Customer created from QuickCustomerModal
+  const handleCustomerCreated = (
+    newCust: CustomerDetail,
+    defaultLocationId?: string,
+    defaultContactId?: string
+  ) => {
+    setCustomers((prev) => [
+      {
+        id: newCust.id,
+        legalName: newCust.legalName,
+        tradeName: newCust.tradeName,
+        documentType: newCust.documentType,
+        documentNumber: newCust.documentNumber,
+        taxCondition: newCust.taxCondition,
+        status: newCust.status,
+        isCustomer: newCust.isCustomer,
+        isSupplier: newCust.isSupplier
+      },
+      ...prev
+    ]);
+    setCustomerId(newCust.id);
+    setSelectedCustomerDetail(newCust);
+    if (defaultLocationId) setLocationId(defaultLocationId);
+    if (defaultContactId) setContactId(defaultContactId);
   };
 
-  // Full Customer Creation
-  const handleCreateCustomerFull = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCustLegalName.trim() || !newCustDocNumber.trim()) {
-      alert("Por favor completá Razón Social y CUIT/Documento.");
-      return;
-    }
+  // Product created from QuickProductModal
+  const handleProductCreated = (newProd: Product) => {
+    setProductsCatalog((prev) => [newProd, ...prev]);
 
-    if (newCustDocType === "Cuit" && !isValidCuitChecksum(digitsOnly(newCustDocNumber))) {
-      alert("El CUIT ingresado no es válido.");
-      return;
-    }
-
-    try {
-      const body: CustomerWrite = {
-        legalName: newCustLegalName.trim(),
-        tradeName: newCustTradeName.trim() || undefined,
-        documentType: newCustDocType,
-        documentNumber: digitsOnly(newCustDocNumber),
-        taxCondition: newCustTaxCond,
-        iibbRegime: newCustIibb,
-        isCustomer: newCustIsCustomer,
-        isSupplier: newCustIsSupplier,
-        email: newCustEmail.trim() || undefined,
-        phone: newCustPhone.trim() ? digitsOnly(newCustPhone) : undefined,
-        whatsApp: newCustWhatsApp.trim() ? digitsOnly(newCustWhatsApp) : undefined,
-        fiscalStreet: newCustStreet.trim() || undefined,
-        fiscalCity: newCustCity.trim() || undefined,
-        fiscalProvince: newCustProvince || undefined,
-        fiscalPostalCode: newCustPostalCode.trim() || undefined,
-        notes: newCustNotes.trim() || undefined
-      };
-
-      const newCust = await api.createCustomer(body);
-      setCustomers((prev) => [
+    const targetIdx = quickProductLineIndex;
+    if (targetIdx !== null && targetIdx >= 0 && targetIdx < lines.length) {
+      handleSelectProductForLine(targetIdx, newProd.id);
+    } else {
+      // Append as a new line
+      const convertedPrice = convertCurrency(
+        newProd.basePrice,
+        newProd.saleCurrency,
+        currency
+      );
+      setLines((prev) => [
+        ...prev,
         {
-          id: newCust.id,
-          legalName: newCust.legalName,
-          tradeName: newCust.tradeName,
-          documentType: newCust.documentType,
-          documentNumber: newCust.documentNumber,
-          taxCondition: newCust.taxCondition,
-          status: newCust.status,
-          isCustomer: newCust.isCustomer,
-          isSupplier: newCust.isSupplier
-        },
-        ...prev
+          productId: newProd.id,
+          description: `[${newProd.code}] ${newProd.name}`,
+          quantity: 1,
+          unitPrice: convertedPrice,
+          discountPercent: 0,
+          taxRate: newProd.taxRate,
+          isOptional: false,
+          nativeCurrency: newProd.saleCurrency,
+          nativeUnitPrice: newProd.basePrice
+        }
       ]);
-      setCustomerId(newCust.id);
-      setSelectedCustomerDetail(newCust);
-      setShowNewCustomerModal(false);
-      
-      // Reset form
-      setNewCustLegalName("");
-      setNewCustTradeName("");
-      setNewCustDocNumber("");
-      setNewCustEmail("");
-      setNewCustPhone("");
-      setNewCustWhatsApp("");
-      setNewCustStreet("");
-      setNewCustCity("");
-      setNewCustNotes("");
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Error al crear cliente completo");
     }
   };
 
-  // Full Location Creation
-  const handleCreateLocationFull = async (e: React.FormEvent) => {
+  // Plant / Location Creation for existing customer
+  const handleCreateLocation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerId) {
-      alert("Seleccioná un cliente primero.");
-      return;
-    }
-    if (!newLocName.trim() || !newLocStreet.trim()) {
-      alert("Por favor completá Nombre de Planta y Calle.");
-      return;
-    }
+    if (!customerId) return;
+    if (!newLocName.trim()) return;
 
     try {
       const body = {
         name: newLocName.trim(),
-        street: newLocStreet.trim(),
-        city: newLocCity.trim() || "San Lorenzo",
-        province: newLocProvince,
-        postalCode: newLocPostalCode.trim() || "2200",
+        address: {
+          street: newLocStreet.trim() || selectedCustomerDetail?.fiscalAddress?.street || "Calle Principal",
+          city: newLocCity.trim() || selectedCustomerDetail?.fiscalAddress?.city || "San Lorenzo",
+          province: newLocProvince || "SantaFe",
+          postalCode: newLocPostalCode.trim() || "2200",
+          country: "Argentina"
+        },
         phone: newLocPhone.trim() || undefined,
         notes: newLocNotes.trim() || undefined
       };
@@ -337,28 +285,16 @@ export const QuoteFormPage: React.FC = () => {
       setNewLocName("");
       setNewLocStreet("");
       setNewLocCity("");
-      setNewLocPhone("");
-      setNewLocNotes("");
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Error al crear planta");
     }
   };
 
-  // Full Contact Creation (with Location Association)
-  const handleCreateContactFull = async (e: React.FormEvent) => {
+  // Contact Creation for existing customer
+  const handleCreateContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerId) {
-      alert("Seleccioná un cliente primero.");
-      return;
-    }
-    if (!newConName.trim()) {
-      alert("Por favor completá el Nombre del Contacto.");
-      return;
-    }
-    if (!newConEmail.trim() && !newConPhone.trim() && !newConWhatsApp.trim()) {
-      alert("Cargá al menos una vía de contacto (Email, Teléfono o WhatsApp).");
-      return;
-    }
+    if (!customerId) return;
+    if (!newConName.trim()) return;
 
     try {
       const body = {
@@ -366,8 +302,8 @@ export const QuoteFormPage: React.FC = () => {
         role: newConRole,
         locationId: newConLocationId || null,
         email: newConEmail.trim() || undefined,
-        phone: newConPhone.trim() ? digitsOnly(newConPhone) : undefined,
-        whatsApp: newConWhatsApp.trim() ? digitsOnly(newConWhatsApp) : undefined,
+        phone: newConPhone.trim() || undefined,
+        whatsApp: newConWhatsApp.trim() || undefined,
         isPrimary: newConIsPrimary || selectedCustomerDetail?.contacts.length === 0,
         notes: newConNotes.trim() || undefined
       };
@@ -385,8 +321,6 @@ export const QuoteFormPage: React.FC = () => {
       setNewConEmail("");
       setNewConPhone("");
       setNewConWhatsApp("");
-      setNewConLocationId("");
-      setNewConNotes("");
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Error al crear contacto");
     }
@@ -500,82 +434,69 @@ export const QuoteFormPage: React.FC = () => {
       setSaving(true);
       setError(null);
 
-      const body: QuoteWrite = {
+      const payload: QuoteWrite = {
         customerId,
         locationId: locationId || null,
         contactId: contactId || null,
         opportunityId,
         currency,
-        exchangeRateUsdBillete: rates?.usdBillete.venta ?? 1510.00,
-        exchangeRateUsdDivisa: rates?.usdDivisa.venta ?? 1487.50,
-        discountPercent: Number(discountPercent) || 0,
-        validDays: Number(validDays) || 15,
-        paymentTerms: paymentTerms.trim() || null,
-        paymentMethod: paymentMethod.trim() || null,
-        deliveryTimeDays: Number(deliveryTimeDays) || null,
-        transportation: transportation.trim() || null,
-        warranty: warranty.trim() || null,
-        notes: notes.trim() || null,
-        ownerName: ownerName.trim() || null,
+        exchangeRateUsdBillete: rates?.usdBillete.venta ?? 1510,
+        exchangeRateUsdDivisa: rates?.usdDivisa.venta ?? 1487.5,
+        discountPercent,
+        validDays,
+        paymentTerms,
+        paymentMethod,
+        deliveryTimeDays,
+        transportation,
+        warranty,
+        notes,
+        ownerName,
         lines: lines.map((l) => ({
-          productId: l.productId || null,
-          description: l.description.trim(),
-          quantity: Number(l.quantity) || 1,
-          unitPrice: Number(l.unitPrice) || 0,
-          discountPercent: Number(l.discountPercent) || 0,
-          taxRate: Number(l.taxRate) || 21,
-          isOptional: Boolean(l.isOptional)
+          productId: l.productId,
+          description: l.description,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          discountPercent: l.discountPercent,
+          taxRate: l.taxRate,
+          isOptional: l.isOptional
         }))
       };
 
-      let savedQuote;
       if (isEditing && id) {
-        savedQuote = await api.updateQuote(id, body);
+        await api.updateQuote(id, payload);
+        if (acceptImmediately) {
+          await api.acceptQuote(id);
+        }
+        navigate(`/presupuestos/${id}`);
       } else {
-        savedQuote = await api.createQuote(body);
+        const created = await api.createQuote(payload);
+        if (acceptImmediately) {
+          await api.acceptQuote(created.id);
+        }
+        navigate(`/presupuestos/${created.id}`);
       }
-
-      if (acceptImmediately && savedQuote?.id) {
-        await api.acceptQuote(savedQuote.id);
-      }
-
-      navigate("/presupuestos");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al guardar el presupuesto");
+      setError(err instanceof Error ? err.message : "Error al guardar presupuesto");
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="card pad" style={{ textAlign: "center", padding: "48px" }}>
-        <div className="muted">Cargando presupuesto comercial...</div>
-      </div>
-    );
+    return <div className="card pad" style={{ textAlign: "center" }}>Cargando presupuesto...</div>;
   }
 
   return (
-    <>
-      {/* Header clean */}
-      <div className="page-head">
+    <div className="stack">
+      {/* Page Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h1>{isEditing ? "Editar Presupuesto Comercial" : "Nuevo Presupuesto Comercial"}</h1>
+          <h2>{isEditing ? "Editar Presupuesto Comercial" : "Nuevo Presupuesto Comercial & Oferta Técnica"}</h2>
           <div className="muted">
-            Cotización técnica, selección de plantas, precios en 3 monedas y pase a Pedido de Venta
+            Cotización oficial con cálculo multimoneda BNA y anexos técnicos configurables
           </div>
         </div>
-        <div className="toolbar">
-          {isEditing && id && (
-            <button
-              type="button"
-              onClick={() => navigate(`/presupuestos/${id}/imprimir`)}
-              className="btn ghost"
-              style={{ background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6" }}
-            >
-              📄 Vista Impresión / PDF
-            </button>
-          )}
+        <div style={{ display: "flex", gap: "8px" }}>
           <button
             type="button"
             onClick={() => navigate("/presupuestos")}
@@ -591,18 +512,28 @@ export const QuoteFormPage: React.FC = () => {
       <form onSubmit={(e) => handleSubmit(e, false)} className="stack">
         {/* Card 1: Cliente, Plantas & Contactos */}
         <section className="card pad stack">
-          <h3>Información del Cliente & Punto de Entrega</h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h3>Información del Cliente & Punto de Entrega</h3>
+            <button
+              type="button"
+              onClick={() => setShowQuickCustomerModal(true)}
+              className="btn btn-primary"
+              style={{ padding: "6px 14px", fontSize: "0.82rem", background: "#0d9488" }}
+            >
+              + Nuevo Cliente Completo
+            </button>
+          </div>
 
           <div className="grid-3">
             <label>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                 <span>Cliente *</span>
                 <button
                   type="button"
-                  onClick={() => setShowNewCustomerModal(true)}
-                  style={{ fontSize: "0.75rem", color: "var(--primary)", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                  onClick={() => setShowQuickCustomerModal(true)}
+                  style={{ fontSize: "0.76rem", color: "#0d9488", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
                 >
-                  + Nuevo Cliente
+                  + Alta Rápida
                 </button>
               </div>
               <select
@@ -620,13 +551,13 @@ export const QuoteFormPage: React.FC = () => {
             </label>
 
             <label>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span>Planta / Sucursal de Entrega</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                <span>Planta / Destino de Entrega</span>
                 {customerId && (
                   <button
                     type="button"
                     onClick={() => setShowNewLocationModal(true)}
-                    style={{ fontSize: "0.75rem", color: "var(--primary)", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                    style={{ fontSize: "0.76rem", color: "#0d9488", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
                   >
                     + Nueva Planta
                   </button>
@@ -647,13 +578,13 @@ export const QuoteFormPage: React.FC = () => {
             </label>
 
             <label>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                 <span>Contacto Asignado</span>
                 {customerId && (
                   <button
                     type="button"
                     onClick={() => setShowNewContactModal(true)}
-                    style={{ fontSize: "0.75rem", color: "var(--primary)", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                    style={{ fontSize: "0.76rem", color: "#0d9488", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
                   >
                     + Nuevo Contacto
                   </button>
@@ -731,23 +662,36 @@ export const QuoteFormPage: React.FC = () => {
                 Seleccioná productos del catálogo (se convierten automáticamente a la moneda del presupuesto) o agregá ítems libres
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleAddLine}
-              className="btn ghost"
-            >
-              + Agregar Renglón
-            </button>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuickProductLineIndex(null);
+                  setShowQuickProductModal(true);
+                }}
+                className="btn btn-outline"
+                style={{ fontSize: "0.82rem", padding: "6px 12px", background: "rgba(13, 148, 136, 0.08)", color: "#0d9488", borderColor: "#0d9488", fontWeight: 700 }}
+              >
+                + Crear Producto Nuevo
+              </button>
+              <button
+                type="button"
+                onClick={handleAddLine}
+                className="btn ghost"
+              >
+                + Agregar Renglón
+              </button>
+            </div>
           </div>
 
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th style={{ width: "26%" }}>Catálogo / Descripción</th>
+                  <th style={{ width: "28%" }}>Catálogo / Descripción</th>
                   <th style={{ width: "16%" }}>Moneda Nativa / Precio Origen</th>
                   <th style={{ width: "10%", textAlign: "center" }}>Cant.</th>
-                  <th style={{ width: "15%", textAlign: "right" }}>Precio U. ({currency})</th>
+                  <th style={{ width: "14%", textAlign: "right" }}>Precio U. ({currency})</th>
                   <th style={{ width: "8%", textAlign: "center" }}>Desc. %</th>
                   <th style={{ width: "8%", textAlign: "center" }}>IVA %</th>
                   <th style={{ width: "6%", textAlign: "center" }}>Opcional</th>
@@ -760,18 +704,40 @@ export const QuoteFormPage: React.FC = () => {
                   <tr key={idx} style={{ opacity: line.isOptional ? 0.6 : 1 }}>
                     <td>
                       <div className="stack" style={{ gap: "4px" }}>
-                        <select
-                          value={line.productId ?? ""}
-                          onChange={(e) => handleSelectProductForLine(idx, e.target.value)}
-                          style={{ fontSize: "0.82rem" }}
-                        >
-                          <option value="">-- Cargar desde Catálogo (Opcional) --</option>
-                          {productsCatalog.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              [{p.code}] {p.name} ({p.saleCurrency} ${p.basePrice})
-                            </option>
-                          ))}
-                        </select>
+                        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                          <select
+                            value={line.productId ?? ""}
+                            onChange={(e) => handleSelectProductForLine(idx, e.target.value)}
+                            style={{ fontSize: "0.82rem", flex: 1 }}
+                          >
+                            <option value="">-- Cargar desde Catálogo (Opcional) --</option>
+                            {productsCatalog.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                [{p.code}] {p.name} ({p.saleCurrency} ${p.basePrice})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickProductLineIndex(idx);
+                              setShowQuickProductModal(true);
+                            }}
+                            title="Crear un producto nuevo con foto y asignarlo a este renglón"
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              background: "#0d9488",
+                              color: "#ffffff",
+                              border: "none",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              fontSize: "0.85rem"
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
 
                         <input
                           type="text"
@@ -858,15 +824,14 @@ export const QuoteFormPage: React.FC = () => {
                       />
                     </td>
                     <td style={{ textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
-                      {currency} ${line.lineSubtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                      {line.isOptional ? <span className="muted">(Opcional)</span> : `${currency} $${line.lineSubtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`}
                     </td>
-                    <td style={{ textAlign: "center" }}>
+                    <td>
                       <button
                         type="button"
                         onClick={() => handleRemoveLine(idx)}
                         disabled={lines.length === 1}
-                        className="btn danger"
-                        style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+                        style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "1.1rem" }}
                       >
                         ✕
                       </button>
@@ -877,41 +842,52 @@ export const QuoteFormPage: React.FC = () => {
             </table>
           </div>
 
-          {/* Totals Box */}
-          <div className="card pad stack" style={{ background: "rgba(0,0,0,0.03)", maxWidth: "380px", marginLeft: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span className="muted">Subtotal Renglones:</span>
-              <strong style={{ fontFamily: "monospace" }}>{currency} ${subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
-            </div>
+          {/* Totals Summary */}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }}>
+            <div className="card pad stack" style={{ width: "340px", background: "var(--surface-muted)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>Subtotal Renglones:</span>
+                <strong style={{ fontFamily: "monospace" }}>{currency} ${subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
+              </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span className="muted">Descuento Global %:</span>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={discountPercent}
-                onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                style={{ width: "80px", textAlign: "right" }}
-              />
-            </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Descuento General %:</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                  style={{ width: "80px", textAlign: "right" }}
+                />
+              </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--line)", paddingTop: "8px", fontSize: "1.1rem" }}>
-              <strong>Total Propuesta:</strong>
-              <strong style={{ color: "var(--primary)", fontFamily: "monospace" }}>
-                {currency} ${total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-              </strong>
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--surface-border)", paddingTop: "8px", fontSize: "1.1rem", color: "var(--primary)" }}>
+                <strong>TOTAL PRESUPUESTO:</strong>
+                <strong style={{ fontFamily: "monospace" }}>{currency} ${total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Card 4: Condiciones Comerciales */}
         <section className="card pad stack">
-          <h3>Condiciones Comerciales de Leal Control</h3>
+          <h3>Condiciones Comerciales, Entrega & Garantía</h3>
 
-          <div className="grid-2">
+          <div className="grid-3">
             <label>
-              Forma de Pago
+              Plazo de Entrega (Días Hábiles)
+              <input
+                type="number"
+                min="0"
+                value={deliveryTimeDays}
+                onChange={(e) => setDeliveryTimeDays(Number(e.target.value))}
+              />
+            </label>
+
+            <label>
+              Condición de Pago
               <input
                 type="text"
                 placeholder="Ej: 50% anticipo, 50% contra entrega"
@@ -924,27 +900,19 @@ export const QuoteFormPage: React.FC = () => {
               Medio de Pago
               <input
                 type="text"
-                placeholder="Ej: Transferencia Bancaria, E-Cheq"
+                placeholder="Ej: Transferencia Bancaria"
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
               />
             </label>
+          </div>
 
-            <label>
-              Plazo de Entrega (Días Hábiles)
-              <input
-                type="number"
-                min="1"
-                value={deliveryTimeDays}
-                onChange={(e) => setDeliveryTimeDays(Number(e.target.value))}
-              />
-            </label>
-
+          <div className="grid-3">
             <label>
               Transporte / Flete
               <input
                 type="text"
-                placeholder="Ej: Flete a cargo del comprador"
+                placeholder="Ej: Flete por cuenta del cliente"
                 value={transportation}
                 onChange={(e) => setTransportation(e.target.value)}
               />
@@ -1002,236 +970,81 @@ export const QuoteFormPage: React.FC = () => {
         </div>
       </form>
 
-      {/* FULL Modal: Complete Customer Creation */}
-      {showNewCustomerModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div className="card pad stack" style={{ width: "720px", maxHeight: "90vh", overflowY: "auto", background: "white" }}>
-            <div style={{ borderBottom: "1px solid var(--line)", paddingBottom: "12px" }}>
-              <h2 style={{ margin: 0 }}>Alta Completa de Nuevo Cliente</h2>
-              <div className="muted">Ficha completa de cliente con datos fiscales, ARCA y domicilio</div>
-            </div>
+      {/* QUICK CUSTOMER MODAL */}
+      <QuickCustomerModal
+        isOpen={showQuickCustomerModal}
+        onClose={() => setShowQuickCustomerModal(false)}
+        onSuccess={handleCustomerCreated}
+        mode="customer"
+      />
 
-            <form onSubmit={handleCreateCustomerFull} className="stack">
-              <div className="grid-2">
-                <label>
-                  Razón Social *
-                  <input type="text" required placeholder="Ej. Acme Industrias S.A." value={newCustLegalName} onChange={(e) => setNewCustLegalName(e.target.value)} />
-                </label>
-                <label>
-                  Nombre Fantasía
-                  <input type="text" placeholder="Opcional" value={newCustTradeName} onChange={(e) => setNewCustTradeName(e.target.value)} />
-                </label>
-              </div>
+      {/* QUICK PRODUCT MODAL */}
+      <QuickProductModal
+        isOpen={showQuickProductModal}
+        onClose={() => {
+          setShowQuickProductModal(false);
+          setQuickProductLineIndex(null);
+        }}
+        onSuccess={handleProductCreated}
+        categories={categories}
+      />
 
-              <div className="grid-3">
-                <label>
-                  Tipo Doc.
-                  <select value={newCustDocType} onChange={(e) => setNewCustDocType(e.target.value)}>
-                    <option value="Cuit">Cuit</option>
-                    <option value="Dni">Dni</option>
-                    <option value="Pasaporte">Pasaporte</option>
-                    <option value="Cdi">Cdi</option>
-                  </select>
-                </label>
-                <label>
-                  Número Doc. / CUIT *
-                  <div style={{ display: "flex", gap: "6px" }}>
-                    <input
-                      type="text"
-                      required
-                      placeholder="30-71234567-8"
-                      value={newCustDocType === "Cuit" ? formatCuitDisplay(newCustDocNumber) : newCustDocNumber}
-                      onChange={(e) => setNewCustDocNumber(e.target.value)}
-                    />
-                    {newCustDocType === "Cuit" && (
-                      <button
-                        type="button"
-                        className="btn ghost"
-                        disabled={consultingArca}
-                        onClick={handleConsultArcaModal}
-                        style={{ whiteSpace: "nowrap", padding: "0 10px", fontSize: "0.8rem" }}
-                      >
-                        {consultingArca ? "..." : "🔍 ARCA"}
-                      </button>
-                    )}
-                  </div>
-                </label>
-                <label>
-                  Condición IVA
-                  <select value={newCustTaxCond} onChange={(e) => setNewCustTaxCond(e.target.value)}>
-                    <option value="ResponsableInscripto">Responsable Inscripto</option>
-                    <option value="Monotributo">Monotributo</option>
-                    <option value="Exento">Exento</option>
-                    <option value="ConsumidorFinal">Consumidor Final</option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="grid-3">
-                <label>
-                  Régimen IIBB
-                  <select value={newCustIibb} onChange={(e) => setNewCustIibb(e.target.value)}>
-                    <option value="ConvenioMultilateral">Convenio Multilateral</option>
-                    <option value="Local">Local</option>
-                    <option value="Exento">Exento</option>
-                  </select>
-                </label>
-                <label>Email Fiscal <input type="email" placeholder="compras@empresa.com" value={newCustEmail} onChange={(e) => setNewCustEmail(e.target.value)} /></label>
-                <label>Teléfono Principal <input type="text" placeholder="3415551234" value={newCustPhone} onChange={(e) => setNewCustPhone(e.target.value)} /></label>
-              </div>
-
-              <div className="grid-2">
-                <label>WhatsApp Directo <input type="text" placeholder="5493415551234" value={newCustWhatsApp} onChange={(e) => setNewCustWhatsApp(e.target.value)} /></label>
-                <label>Calle Fiscal <input type="text" placeholder="San Martin 1234" value={newCustStreet} onChange={(e) => setNewCustStreet(e.target.value)} /></label>
-              </div>
-
-              <div className="grid-3">
-                <label>Ciudad <input type="text" placeholder="San Lorenzo" value={newCustCity} onChange={(e) => setNewCustCity(e.target.value)} /></label>
-                <label>
-                  Provincia
-                  <select value={newCustProvince} onChange={(e) => setNewCustProvince(e.target.value)}>
-                    {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </label>
-                <label>CP <input type="text" placeholder="2200" value={newCustPostalCode} onChange={(e) => setNewCustPostalCode(e.target.value)} /></label>
-              </div>
-
-              <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-                <label style={{ flexDirection: "row", gap: "8px", cursor: "pointer" }}>
-                  <input type="checkbox" checked={newCustIsCustomer} onChange={(e) => setNewCustIsCustomer(e.target.checked)} />
-                  <span>Es Cliente</span>
-                </label>
-                <label style={{ flexDirection: "row", gap: "8px", cursor: "pointer" }}>
-                  <input type="checkbox" checked={newCustIsSupplier} onChange={(e) => setNewCustIsSupplier(e.target.checked)} />
-                  <span>Es Proveedor</span>
-                </label>
-              </div>
-
-              <label>
-                Notas / Observaciones
-                <textarea rows={2} placeholder="Notas internas sobre el cliente..." value={newCustNotes} onChange={(e) => setNewCustNotes(e.target.value)} />
-              </label>
-
-              <div className="toolbar" style={{ justifyContent: "flex-end", borderTop: "1px solid var(--line)", paddingTop: "12px" }}>
-                <button type="button" className="btn ghost" onClick={() => setShowNewCustomerModal(false)}>Cancelar</button>
-                <button type="submit" className="btn">Crear Cliente Completo & Seleccionar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* FULL Modal: Complete Location/Plant Creation */}
+      {/* Mini Modal: Nueva Planta para Cliente Seleccionado */}
       {showNewLocationModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div className="card pad stack" style={{ width: "620px", maxHeight: "90vh", overflowY: "auto", background: "white" }}>
-            <div style={{ borderBottom: "1px solid var(--line)", paddingBottom: "12px" }}>
-              <h2 style={{ margin: 0 }}>Alta Completa de Planta / Sucursal</h2>
-              <div className="muted">Registrar nuevo domicilio de entrega para {selectedCustomerDetail?.legalName}</div>
-            </div>
-
-            <form onSubmit={handleCreateLocationFull} className="stack">
-              <label>
-                Nombre de Planta / Sucursal *
-                <input type="text" required placeholder="Ej: Planta Industrial San Lorenzo / Depósito N° 2" value={newLocName} onChange={(e) => setNewLocName(e.target.value)} />
-              </label>
-              <label>
-                Dirección / Calle y Número *
-                <input type="text" required placeholder="Ej: Av. Interurbana 4500" value={newLocStreet} onChange={(e) => setNewLocStreet(e.target.value)} />
-              </label>
-
-              <div className="grid-3">
-                <label>Ciudad * <input type="text" required placeholder="San Lorenzo" value={newLocCity} onChange={(e) => setNewLocCity(e.target.value)} /></label>
+          <div className="card pad stack" style={{ width: "520px", background: "white" }}>
+            <h3 style={{ margin: 0 }}>Nueva Planta / Destino para {selectedCustomerDetail?.tradeName || selectedCustomerDetail?.legalName}</h3>
+            <form onSubmit={handleCreateLocation} className="stack">
+              <label>Nombre de la Planta * <input type="text" required placeholder="Ej: Planta Sur, Silo 4" value={newLocName} onChange={(e) => setNewLocName(e.target.value)} /></label>
+              <label>Calle / Ruta <input type="text" placeholder="Ruta 11 km 320" value={newLocStreet} onChange={(e) => setNewLocStreet(e.target.value)} /></label>
+              <div className="grid-2">
+                <label>Ciudad <input type="text" placeholder="Rosario" value={newLocCity} onChange={(e) => setNewLocCity(e.target.value)} /></label>
                 <label>
-                  Provincia *
-                  <select value={newLocProvince} onChange={(e) => setNewLocProvince(e.target.value)}>
-                    {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
+                  Provincia
+                    <select value={newLocProvince} onChange={(e) => setNewLocProvince(e.target.value)}>
+                      {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
                 </label>
-                <label>CP * <input type="text" required placeholder="2200" value={newLocPostalCode} onChange={(e) => setNewLocPostalCode(e.target.value)} /></label>
               </div>
-
-              <label>
-                Teléfono Directo de Planta
-                <input type="text" placeholder="Ej: 3414123456" value={newLocPhone} onChange={(e) => setNewLocPhone(e.target.value)} />
-              </label>
-
-              <label>
-                Notas / Recepción de Cargas
-                <textarea rows={2} placeholder="Horarios de descarga, portón de ingreso..." value={newLocNotes} onChange={(e) => setNewLocNotes(e.target.value)} />
-              </label>
-
-              <div className="toolbar" style={{ justifyContent: "flex-end", borderTop: "1px solid var(--line)", paddingTop: "12px" }}>
-                <button type="button" className="btn ghost" onClick={() => setShowNewLocationModal(false)}>Cancelar</button>
-                <button type="submit" className="btn">Crear Planta Completa & Seleccionar</button>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+                <button type="button" onClick={() => setShowNewLocationModal(false)} className="btn ghost">Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ background: "#0d9488" }}>Guardar Planta</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* FULL Modal: Complete Contact Creation with Plant Binding */}
+      {/* Mini Modal: Nuevo Contacto para Cliente Seleccionado */}
       {showNewContactModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div className="card pad stack" style={{ width: "620px", maxHeight: "90vh", overflowY: "auto", background: "white" }}>
-            <div style={{ borderBottom: "1px solid var(--line)", paddingBottom: "12px" }}>
-              <h2 style={{ margin: 0 }}>Alta Completa de Contacto</h2>
-              <div className="muted">Asignación de responsable comercial, técnico o de pagos para {selectedCustomerDetail?.legalName}</div>
-            </div>
-
-            <form onSubmit={handleCreateContactFull} className="stack">
+          <div className="card pad stack" style={{ width: "520px", background: "white" }}>
+            <h3 style={{ margin: 0 }}>Nuevo Contacto para {selectedCustomerDetail?.tradeName || selectedCustomerDetail?.legalName}</h3>
+            <form onSubmit={handleCreateContact} className="stack">
               <div className="grid-2">
+                <label>Nombre Completo * <input type="text" required placeholder="Ing. Juan Pérez" value={newConName} onChange={(e) => setNewConName(e.target.value)} /></label>
                 <label>
-                  Nombre y Apellido *
-                  <input type="text" required placeholder="Ej: Ing. Carlos Gómez" value={newConName} onChange={(e) => setNewConName(e.target.value)} />
-                </label>
-                <label>
-                  Rol / Función
+                  Cargo
                   <select value={newConRole} onChange={(e) => setNewConRole(e.target.value)}>
-                    <option value="Commercial">Comercial / Compras</option>
+                    <option value="Commercial">Compras / Comercial</option>
                     <option value="Technical">Técnico / Mantenimiento</option>
                     <option value="Administrative">Administración / Pagos</option>
-                    <option value="Other">Otro</option>
+                    <option value="Executive">Dirección / Gerencia</option>
                   </select>
                 </label>
               </div>
-
-              <label>
-                Vincular a Planta / Sucursal del Cliente
-                <select value={newConLocationId} onChange={(e) => setNewConLocationId(e.target.value)}>
-                  <option value="">(General / Casa Central - Todas las plantas)</option>
-                  {selectedCustomerDetail?.locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      📌 {loc.name} ({loc.address.city})
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="grid-3">
-                <label>Email Directo <input type="email" placeholder="carlos@cliente.com" value={newConEmail} onChange={(e) => setNewConEmail(e.target.value)} /></label>
-                <label>Teléfono <input type="text" placeholder="3415551234" value={newConPhone} onChange={(e) => setNewConPhone(e.target.value)} /></label>
-                <label>WhatsApp Directo <input type="text" placeholder="5493415551234" value={newConWhatsApp} onChange={(e) => setNewConWhatsApp(e.target.value)} /></label>
+              <div className="grid-2">
+                <label>Email <input type="email" placeholder="jperez@empresa.com" value={newConEmail} onChange={(e) => setNewConEmail(e.target.value)} /></label>
+                <label>WhatsApp / Teléfono <input type="text" placeholder="341-5551234" value={newConWhatsApp} onChange={(e) => setNewConWhatsApp(e.target.value)} /></label>
               </div>
-
-              <label style={{ flexDirection: "row", gap: "8px", cursor: "pointer", height: "30px", alignItems: "center" }}>
-                <input type="checkbox" checked={newConIsPrimary} onChange={(e) => setNewConIsPrimary(e.target.checked)} />
-                <span>Marcar como Contacto Principal del Cliente</span>
-              </label>
-
-              <label>
-                Observaciones / Notas del Contacto
-                <textarea rows={2} placeholder="Comentarios sobre disponibilidades, horario de atención..." value={newConNotes} onChange={(e) => setNewConNotes(e.target.value)} />
-              </label>
-
-              <div className="toolbar" style={{ justifyContent: "flex-end", borderTop: "1px solid var(--line)", paddingTop: "12px" }}>
-                <button type="button" className="btn ghost" onClick={() => setShowNewContactModal(false)}>Cancelar</button>
-                <button type="submit" className="btn">Crear Contacto Completo & Seleccionar</button>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+                <button type="button" onClick={() => setShowNewContactModal(false)} className="btn ghost">Cancelar</button>
+                <button type="submit" className="btn btn-primary" style={{ background: "#0d9488" }}>Guardar Contacto</button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };

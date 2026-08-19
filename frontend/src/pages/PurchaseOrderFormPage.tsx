@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
-import { type Product, type Supplier } from "../api/types";
+import { type CustomerDetail, type Product, type Supplier } from "../api/types";
+import { QuickCustomerModal } from "../components/QuickCustomerModal";
+import { QuickProductModal } from "../components/QuickProductModal";
 
 interface ItemRow {
   productId?: string;
@@ -41,6 +43,11 @@ export function PurchaseOrderFormPage() {
   const [items, setItems] = useState<ItemRow[]>([
     { code: "", description: "", quantity: 1, unitPrice: 0, discountPercent: 0, taxRate: 21 }
   ]);
+
+  // Quick Modals
+  const [showQuickSupplierModal, setShowQuickSupplierModal] = useState(false);
+  const [showQuickProductModal, setShowQuickProductModal] = useState(false);
+  const [quickProductLineIndex, setQuickProductLineIndex] = useState<number | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -128,6 +135,49 @@ export function PurchaseOrderFormPage() {
     }
   };
 
+  const handleSupplierCreated = (newSup: CustomerDetail) => {
+    const formatted: Supplier = {
+      id: newSup.id,
+      legalName: newSup.legalName,
+      tradeName: newSup.tradeName,
+      documentType: newSup.documentType || "Cuit",
+      documentNumber: newSup.documentNumber,
+      taxCondition: newSup.taxCondition,
+      email: newSup.email,
+      phone: newSup.phone,
+      paymentTerms: "30 días fecha factura",
+      createdAtUtc: new Date().toISOString()
+    };
+
+    setSuppliers((prev) => [formatted, ...prev]);
+    setSelectedSupplierId(newSup.id);
+    setSupplierName(newSup.legalName || newSup.tradeName || "");
+    setSupplierDocument(newSup.documentNumber || "");
+  };
+
+  const handleProductCreated = (newProd: Product) => {
+    setProducts((prev) => [newProd, ...prev]);
+
+    const targetIdx = quickProductLineIndex;
+    if (targetIdx !== null && targetIdx >= 0 && targetIdx < items.length) {
+      handleProductSelect(targetIdx, newProd.id);
+    } else {
+      // Append new row
+      setItems((prev) => [
+        ...prev,
+        {
+          productId: newProd.id,
+          code: newProd.code,
+          description: newProd.name,
+          quantity: 1,
+          unitPrice: newProd.costPrice || newProd.basePrice,
+          discountPercent: 0,
+          taxRate: newProd.taxRate || 21
+        }
+      ]);
+    }
+  };
+
   const handleProductSelect = (index: number, prodId: string) => {
     const prod = products.find((p) => p.id === prodId);
     const updated = [...items];
@@ -135,7 +185,7 @@ export function PurchaseOrderFormPage() {
       updated[index].productId = prod.id;
       updated[index].code = prod.code;
       updated[index].description = prod.name;
-      updated[index].unitPrice = prod.basePrice;
+      updated[index].unitPrice = prod.costPrice || prod.basePrice;
       updated[index].taxRate = prod.taxRate || 21;
     } else {
       updated[index].productId = undefined;
@@ -239,15 +289,34 @@ export function PurchaseOrderFormPage() {
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "20px", alignItems: "start" }}>
           {/* Main Info Card */}
           <div className="card pad">
-            <h3 style={{ marginTop: 0, marginBottom: "16px", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
-              1. Datos del Proveedor & Condiciones Comerciales
-            </h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+                1. Datos del Proveedor & Condiciones Comerciales
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowQuickSupplierModal(true)}
+                className="btn btn-primary"
+                style={{ padding: "6px 14px", fontSize: "0.82rem", background: "#0d9488" }}
+              >
+                + Nuevo Proveedor Completo
+              </button>
+            </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
-                  Seleccionar Proveedor *
-                </label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.85rem", fontWeight: "bold" }}>
+                    Seleccionar Proveedor *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickSupplierModal(true)}
+                    style={{ fontSize: "0.76rem", color: "#0d9488", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
+                  >
+                    + Alta Rápida
+                  </button>
+                </div>
                 <select
                   value={selectedSupplierId}
                   onChange={(e) => handleSupplierChange(e.target.value)}
@@ -345,18 +414,31 @@ export function PurchaseOrderFormPage() {
             </div>
 
             {/* Items Table */}
-            <h3 style={{ marginTop: "24px", marginBottom: "12px", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
-              2. Artículos / Repuestos / Servicios a Adquirir
-            </h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "24px", marginBottom: "12px" }}>
+              <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+                2. Artículos / Repuestos / Insumos a Adquirir
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuickProductLineIndex(null);
+                  setShowQuickProductModal(true);
+                }}
+                className="btn btn-outline"
+                style={{ fontSize: "0.82rem", padding: "4px 10px", color: "#0d9488", borderColor: "#0d9488", fontWeight: 700 }}
+              >
+                + Crear Insumo / Producto
+              </button>
+            </div>
 
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px" }}>
                 <thead>
                   <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", fontSize: "0.82rem", color: "var(--ink-soft)", textAlign: "left" }}>
-                    <th style={{ width: "25%", padding: "8px 4px" }}>Catálogo / Código</th>
-                    <th style={{ width: "35%", padding: "8px 4px" }}>Descripción</th>
+                    <th style={{ width: "30%", padding: "8px 4px" }}>Catálogo / Código</th>
+                    <th style={{ width: "32%", padding: "8px 4px" }}>Descripción</th>
                     <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>Cant.</th>
-                    <th style={{ width: "15%", padding: "8px 4px", textAlign: "right" }}>Precio U.</th>
+                    <th style={{ width: "13%", padding: "8px 4px", textAlign: "right" }}>Precio U.</th>
                     <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>IVA</th>
                     <th style={{ width: "5%", padding: "8px 4px" }}></th>
                   </tr>
@@ -365,18 +447,40 @@ export function PurchaseOrderFormPage() {
                   {items.map((it, idx) => (
                     <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                       <td style={{ padding: "8px 4px" }}>
-                        <select
-                          value={it.productId || ""}
-                          onChange={(e) => handleProductSelect(idx, e.target.value)}
-                          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                        >
-                          <option value="">(Ítem libre)</option>
-                          {products.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.code} - {p.name}
-                            </option>
-                          ))}
-                        </select>
+                        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                          <select
+                            value={it.productId || ""}
+                            onChange={(e) => handleProductSelect(idx, e.target.value)}
+                            style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
+                          >
+                            <option value="">(Ítem libre)</option>
+                            {products.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.code} - {p.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickProductLineIndex(idx);
+                              setShowQuickProductModal(true);
+                            }}
+                            title="Crear un producto nuevo y asignarlo aquí"
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              background: "#0d9488",
+                              color: "#ffffff",
+                              border: "none",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              fontSize: "0.85rem"
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
                       </td>
                       <td style={{ padding: "8px 4px" }}>
                         <input
@@ -448,66 +552,71 @@ export function PurchaseOrderFormPage() {
             </button>
           </div>
 
-          {/* Totals & Submit Sidebar */}
-          <div>
-            <div className="card pad" style={{ position: "sticky", top: "80px" }}>
-              <h3 style={{ marginTop: 0, marginBottom: "16px", fontSize: "1.05rem" }}>Resumen de la Orden</h3>
+          {/* Right Sidebar: Totals & Final Notes */}
+          <div className="card pad" style={{ position: "sticky", top: "20px" }}>
+            <h3 style={{ marginTop: 0, marginBottom: "16px", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+              Resumen de Orden
+            </h3>
 
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.9rem" }}>
-                <span className="muted">Subtotal Neto:</span>
-                <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>
-                  {currency === "USD" ? "USD " : "$ "}
-                  {subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.9rem" }}>
-                <span className="muted">IVA Estimado:</span>
-                <span style={{ fontFamily: "monospace" }}>
-                  {currency === "USD" ? "USD " : "$ "}
-                  {taxAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              <div style={{ borderTop: "2px solid var(--surface-border)", paddingTop: "12px", display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
-                <span style={{ fontWeight: "bold", fontSize: "1.1rem" }}>Total OC:</span>
-                <span style={{ fontWeight: "bold", fontSize: "1.2rem", color: "#047857", fontFamily: "monospace" }}>
-                  {currency === "USD" ? "USD " : "$ "}
-                  {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              {currency === "USD" && (
-                <div style={{ padding: "8px 12px", background: "#f8fafc", borderRadius: "6px", marginBottom: "16px", fontSize: "0.82rem", color: "#1e3a8a" }}>
-                  Equivalente ARS (TC ${exchangeRate}): <strong>$ {(grandTotal * exchangeRate).toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
-                </div>
-              )}
-
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "4px" }}>
-                  Observaciones / Leyendas
-                </label>
-                <textarea
-                  rows={3}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Instrucciones de entrega, embalaje, condiciones de pago..."
-                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="btn btn-primary"
-                style={{ width: "100%", padding: "12px", fontSize: "1rem", fontWeight: "bold" }}
-              >
-                {submitting ? "Emitiendo Orden..." : "📝 Emitir Orden de Compra"}
-              </button>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "0.9rem" }}>
+              <span className="muted">Subtotal Neto:</span>
+              <strong>{currency} {subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
             </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "14px", fontSize: "0.9rem" }}>
+              <span className="muted">IVA Estimado:</span>
+              <strong>{currency} {taxAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
+            </div>
+
+            <div style={{ borderTop: "2px solid rgba(0,0,0,0.08)", paddingTop: "12px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <span style={{ fontSize: "1rem", fontWeight: "bold" }}>Total OC:</span>
+              <span style={{ fontSize: "1.3rem", fontWeight: "900", color: "#047857" }}>
+                {currency} {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                Instrucciones / Observaciones
+              </label>
+              <textarea
+                rows={4}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Observaciones de entrega, referencias de presupuesto..."
+                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="btn btn-primary"
+              style={{ width: "100%", padding: "12px", fontWeight: "bold", fontSize: "0.95rem" }}
+            >
+              {submitting ? "Generando Orden..." : "📋 Confirmar & Emitir Orden"}
+            </button>
           </div>
         </div>
       </form>
+
+      {/* QUICK SUPPLIER MODAL */}
+      <QuickCustomerModal
+        isOpen={showQuickSupplierModal}
+        onClose={() => setShowQuickSupplierModal(false)}
+        onSuccess={handleSupplierCreated}
+        mode="supplier"
+      />
+
+      {/* QUICK PRODUCT MODAL */}
+      <QuickProductModal
+        isOpen={showQuickProductModal}
+        onClose={() => {
+          setShowQuickProductModal(false);
+          setQuickProductLineIndex(null);
+        }}
+        onSuccess={handleProductCreated}
+      />
     </div>
   );
 }
