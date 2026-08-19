@@ -13,6 +13,18 @@ import {
   type Quote
 } from "../api/types";
 
+function hexToRgba(hex: string, alpha: number): string {
+  if (!hex || !hex.startsWith("#")) return hex || "#0d9488";
+  const cleanHex = hex.replace("#", "");
+  if (cleanHex.length === 6) {
+    const r = parseInt(cleanHex.substring(0, 2), 16);
+    const g = parseInt(cleanHex.substring(2, 4), 16);
+    const b = parseInt(cleanHex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return hex;
+}
+
 export const QuotePrintPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -86,7 +98,7 @@ export const QuotePrintPage: React.FC = () => {
         margin: [6, 6, 6, 6] as [number, number, number, number],
         filename,
         image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true },
         jsPDF: { unit: "mm" as const, format: "a4", orientation: "portrait" as const },
         pagebreak: { mode: ["avoid-all", "css"] }
       };
@@ -99,10 +111,13 @@ export const QuotePrintPage: React.FC = () => {
         .catch((err: unknown) => {
           console.error(err);
           setDownloadingPdf(false);
+          // Fallback to window.print if library fails
+          window.print();
         });
     } catch (err: unknown) {
       console.error(err);
       setDownloadingPdf(false);
+      window.print();
     }
   };
 
@@ -130,6 +145,8 @@ export const QuotePrintPage: React.FC = () => {
   const grandTotal = quote.total > 0 ? quote.total : netSubtotal + estimatedVat;
 
   const primaryCol = settings.primaryColor || "#0d9488";
+  const primaryLightBg = hexToRgba(primaryCol, 0.1);
+  const primaryBorderLight = hexToRgba(primaryCol, 0.25);
 
   // Identify lines that have technical info or images
   const technicalItems = quote.lines.map((line) => {
@@ -168,8 +185,18 @@ export const QuotePrintPage: React.FC = () => {
             {includeTechnicalOffer ? "🖼️ Oferta Técnica con Fotos: ACTIVADA" : "📄 Solo Tabla Comercial"}
           </button>
 
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => window.print()}
+            title="Imprimir usando el diálogo nativo del navegador"
+            style={{ padding: "8px 14px" }}
+          >
+            🖨️ Imprimir
+          </button>
+
           <button type="button" className="btn btn-outline" onClick={() => setShowEmail(true)} style={{ padding: "8px 14px" }}>
-            ✉ Enviar Email
+            ✉ Email
           </button>
 
           {showEmail && (
@@ -200,7 +227,7 @@ export const QuotePrintPage: React.FC = () => {
               boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
             }}
           >
-            {downloadingPdf ? "Generando PDF..." : "📥 Descargar PDF"}
+            {downloadingPdf ? "Generando..." : "📥 Guardar PDF"}
           </button>
         </div>
       </div>
@@ -212,10 +239,10 @@ export const QuotePrintPage: React.FC = () => {
           width: "210mm",
           minHeight: "297mm",
           margin: "0 auto",
-          background: "white",
+          background: "#ffffff",
           padding: "16mm 18mm",
           boxSizing: "border-box",
-          fontFamily: "Inter, sans-serif",
+          fontFamily: "Arial, Helvetica, sans-serif",
           fontSize: "11px",
           color: "#1e293b",
           boxShadow: "0 8px 30px rgba(0, 0, 0, 0.25)",
@@ -228,7 +255,7 @@ export const QuotePrintPage: React.FC = () => {
             HEADER BLOCK: Adaptable to configured template style
             ========================================================================= */}
         {settings.templateStyle === "classic" ? (
-          <div style={{ background: primaryCol, color: "#ffffff", padding: "14px 18px", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ background: primaryCol, color: "#ffffff", padding: "14px 18px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <div>
               <h2 style={{ margin: 0, fontSize: "1.3rem", fontWeight: 900, color: "#ffffff" }}>LEAL CONTROL ERP</h2>
               <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>Soluciones Industriales & Pesaje Comercial</div>
@@ -241,7 +268,7 @@ export const QuotePrintPage: React.FC = () => {
         ) : (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: `2px solid ${primaryCol}`, marginBottom: "16px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{ width: 50, height: 50, borderRadius: 12, background: primaryCol, color: "#fff", display: "grid", placeItems: "center", fontSize: "1.4rem", fontWeight: 900 }}>
+              <div style={{ width: "50px", height: "50px", borderRadius: "12px", background: primaryCol, color: "#ffffff", display: "grid", placeItems: "center", fontSize: "1.4rem", fontWeight: 900 }}>
                 LC
               </div>
               <div>
@@ -252,10 +279,10 @@ export const QuotePrintPage: React.FC = () => {
             </div>
 
             <div style={{ textAlign: "right" }}>
-              <div style={{ display: "inline-block", padding: "3px 12px", borderRadius: 6, background: `${primaryCol}18`, color: primaryCol, fontWeight: 800, fontSize: "0.9rem" }}>
+              <div style={{ display: "inline-block", padding: "3px 12px", borderRadius: "6px", background: primaryLightBg, color: primaryCol, fontWeight: 800, fontSize: "0.9rem" }}>
                 PRESUPUESTO COMERCIAL
               </div>
-              <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#0f172a", marginTop: 4 }}>
+              <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#0f172a", marginTop: "4px" }}>
                 N° {quote.quoteNumber} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>(Rev. {quote.revision})</span>
               </div>
               <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
@@ -266,13 +293,13 @@ export const QuotePrintPage: React.FC = () => {
         )}
 
         {/* Customer & Commercial Details */}
-        <div style={{ background: "#f8fafc", padding: "12px 16px", borderRadius: 8, border: `1px solid ${primaryCol}33`, marginBottom: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div style={{ background: "#f8fafc", padding: "12px 16px", borderRadius: "8px", border: `1px solid ${primaryBorderLight}`, marginBottom: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
           <div>
             <div style={{ color: "#64748b", fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 700 }}>Cliente / Razón Social:</div>
             <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>{customer?.legalName || "Cliente Genérico"}</strong>
             <div style={{ color: "#475569", fontSize: "0.8rem" }}>CUIT: {customer?.documentNumber || "—"} ({customer?.taxCondition || "IVA Resp. Inscripto"})</div>
             {assignedContact && (
-              <div style={{ color: "#475569", fontSize: "0.78rem", marginTop: 2 }}>
+              <div style={{ color: "#475569", fontSize: "0.78rem", marginTop: "2px" }}>
                 <strong>Atención:</strong> {assignedContact.name} {assignedContact.role ? `(${assignedContact.role})` : ""}
               </div>
             )}
@@ -284,7 +311,7 @@ export const QuotePrintPage: React.FC = () => {
             <div style={{ color: "#475569", fontSize: "0.78rem" }}>
               {deliveryLocation?.address?.street ? `${deliveryLocation.address.street}, ${deliveryLocation.address.city}` : "Según orden de compra"}
             </div>
-            <div style={{ color: "#475569", fontSize: "0.78rem", marginTop: 2 }}>
+            <div style={{ color: "#475569", fontSize: "0.78rem", marginTop: "2px" }}>
               <strong>Validez:</strong> {quote.validDays} días corridos
             </div>
           </div>
@@ -293,7 +320,7 @@ export const QuotePrintPage: React.FC = () => {
         {/* Commercial Items Table */}
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px" }}>
           <thead>
-            <tr style={{ background: `${primaryCol}15`, borderBottom: `2px solid ${primaryCol}`, color: primaryCol, fontSize: "9.5px", textTransform: "uppercase" }}>
+            <tr style={{ background: primaryLightBg, borderBottom: `2px solid ${primaryCol}`, color: primaryCol, fontSize: "9.5px", textTransform: "uppercase" }}>
               <th style={{ padding: "8px 6px", textAlign: "center", width: "5%" }}>#</th>
               <th style={{ padding: "8px 6px", textAlign: "left", width: "45%" }}>Descripción del Artículo / Servicio</th>
               <th style={{ padding: "8px 6px", textAlign: "center", width: "8%" }}>Cant.</th>
@@ -329,22 +356,22 @@ export const QuotePrintPage: React.FC = () => {
 
         {/* Totals Table */}
         <div style={{ marginLeft: "auto", width: "42%", marginBottom: "14px" }}>
-          <div style={{ border: `1px solid ${primaryCol}33`, borderRadius: 8, padding: 10, background: "#f8fafc" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: 3 }}>
+          <div style={{ border: `1px solid ${primaryBorderLight}`, borderRadius: "8px", padding: "10px", background: "#f8fafc" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "3px" }}>
               <span style={{ color: "#64748b" }}>Subtotal Neto:</span>
               <span style={{ fontFamily: "monospace" }}>{curr.symbol} {subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
             </div>
             {quote.discountPercent > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: 3, color: "#16a34a" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "3px", color: "#16a34a" }}>
                 <span>Descuento ({quote.discountPercent}%):</span>
                 <span style={{ fontFamily: "monospace" }}>- {curr.symbol} {globalDiscountAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
               </div>
             )}
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "4px" }}>
               <span style={{ color: "#64748b" }}>IVA Estimado:</span>
               <span style={{ fontFamily: "monospace" }}>{curr.symbol} {estimatedVat.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1rem", fontWeight: 900, paddingTop: 5, borderTop: `2px solid ${primaryCol}`, color: primaryCol }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1rem", fontWeight: 900, paddingTop: "5px", borderTop: `2px solid ${primaryCol}`, color: primaryCol }}>
               <span>TOTAL:</span>
               <span style={{ fontFamily: "monospace" }}>{curr.symbol} {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
             </div>
@@ -355,27 +382,27 @@ export const QuotePrintPage: React.FC = () => {
             SECTION: ANEXO DE OFERTA TÉCNICA CON IMÁGENES
             ========================================================================= */}
         {includeTechnicalOffer && technicalItems.length > 0 && (
-          <div style={{ marginTop: 14, paddingTop: 14, borderTop: `2px dashed ${primaryCol}` }}>
-            <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: 6, background: primaryCol, color: "#ffffff", fontWeight: 800, fontSize: "0.85rem", textTransform: "uppercase", marginBottom: 12 }}>
+          <div style={{ marginTop: "14px", paddingTop: "14px", borderTop: `2px dashed ${primaryCol}` }}>
+            <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: "6px", background: primaryCol, color: "#ffffff", fontWeight: 800, fontSize: "0.85rem", textTransform: "uppercase", marginBottom: "12px" }}>
               📑 ANEXO: OFERTA TÉCNICA & ESPECIFICACIONES DE EQUIPAMIENTO
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {technicalItems.map(({ line, prod }, idx) => (
                 <div
                   key={line.id || idx}
                   style={{
                     display: "grid",
                     gridTemplateColumns: prod?.imagePath ? "130px 1fr" : "1fr",
-                    gap: 14,
+                    gap: "14px",
                     padding: "12px",
-                    borderRadius: 8,
+                    borderRadius: "8px",
                     background: "#f8fafc",
                     border: "1px solid #e2e8f0"
                   }}
                 >
                   {prod?.imagePath && (
-                    <div style={{ width: 120, height: 120, borderRadius: 8, overflow: "hidden", background: "#ffffff", border: "1px solid #e2e8f0", display: "grid", placeItems: "center" }}>
+                    <div style={{ width: "120px", height: "120px", borderRadius: "8px", overflow: "hidden", background: "#ffffff", border: "1px solid #e2e8f0", display: "grid", placeItems: "center" }}>
                       <img
                         src={prod.imagePath}
                         alt={prod.name}
@@ -389,7 +416,7 @@ export const QuotePrintPage: React.FC = () => {
                       <div>
                         <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>{prod?.name || line.description}</strong>
                         {prod?.code && (
-                          <span style={{ marginLeft: 8, fontSize: "0.75rem", color: "#64748b", fontFamily: "monospace" }}>
+                          <span style={{ marginLeft: "8px", fontSize: "0.75rem", color: "#64748b", fontFamily: "monospace" }}>
                             SKU: {prod.code}
                           </span>
                         )}
@@ -404,8 +431,8 @@ export const QuotePrintPage: React.FC = () => {
                     )}
 
                     {prod?.detailedDescription && (
-                      <div style={{ marginTop: 6, padding: "8px 10px", background: "#ffffff", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: "0.76rem", color: "#334155", lineHeight: 1.4 }}>
-                        <strong style={{ color: primaryCol, display: "block", marginBottom: 2 }}>Especificaciones Técnicas & Alcance:</strong>
+                      <div style={{ marginTop: "6px", padding: "8px 10px", background: "#ffffff", borderRadius: "6px", border: "1px solid #e2e8f0", fontSize: "0.76rem", color: "#334155", lineHeight: 1.4 }}>
+                        <strong style={{ color: primaryCol, display: "block", marginBottom: "2px" }}>Especificaciones Técnicas & Alcance:</strong>
                         <div style={{ whiteSpace: "pre-line" }}>{prod.detailedDescription}</div>
                       </div>
                     )}
@@ -418,9 +445,9 @@ export const QuotePrintPage: React.FC = () => {
 
         {/* Banking Info Box */}
         {settings.showBankingInfo && (
-          <div style={{ marginTop: 14, padding: "8px 12px", borderRadius: 6, background: "#f1f5f9", borderLeft: `3px solid ${primaryCol}`, fontSize: "0.76rem" }}>
+          <div style={{ marginTop: "14px", padding: "8px 12px", borderRadius: "6px", background: "#f1f5f9", borderLeft: `3px solid ${primaryCol}`, fontSize: "0.76rem" }}>
             <strong style={{ color: "#0f172a" }}>Datos para Transferencias Bancarias:</strong>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 3, color: "#475569" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px", marginTop: "3px", color: "#475569" }}>
               <div><strong>Banco:</strong> {settings.bankDetails.bankName}</div>
               <div><strong>Tipo:</strong> {settings.bankDetails.accountType}</div>
               <div><strong>CBU:</strong> <span style={{ fontFamily: "monospace" }}>{settings.bankDetails.cbu}</span></div>
@@ -430,8 +457,8 @@ export const QuotePrintPage: React.FC = () => {
         )}
 
         {/* Commercial Conditions Table */}
-        <div style={{ marginTop: 14, borderTop: `1px solid ${primaryCol}33`, paddingTop: 8, fontSize: "0.76rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, color: "#475569" }}>
+        <div style={{ marginTop: "14px", borderTop: `1px solid ${primaryBorderLight}`, paddingTop: "8px", fontSize: "0.76rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", color: "#475569" }}>
             <div><strong>Plazo de Entrega:</strong> {quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : "Inmediato / A convenir"}</div>
             <div><strong>Medio de Pago:</strong> {quote.paymentMethod || "Transferencia Bancaria"}</div>
             <div><strong>Condiciones:</strong> {quote.paymentTerms || "50% anticipo, saldo contra entrega"}</div>
@@ -439,7 +466,7 @@ export const QuotePrintPage: React.FC = () => {
           </div>
 
           {quote.notes && (
-            <div style={{ background: "#fef9c3", borderLeft: "3px solid #eab308", padding: "6px 8px", marginTop: 6, fontSize: "0.76rem", color: "#713f12" }}>
+            <div style={{ background: "#fef9c3", borderLeft: "3px solid #eab308", padding: "6px 8px", marginTop: "6px", fontSize: "0.76rem", color: "#713f12" }}>
               <strong>Observaciones:</strong> {quote.notes}
             </div>
           )}
@@ -447,7 +474,7 @@ export const QuotePrintPage: React.FC = () => {
 
         {/* Signatures Space */}
         {settings.showSignatures && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 30, marginTop: 24 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "30px", marginTop: "24px" }}>
             <div style={{ textAlign: "center" }}>
               <div style={{ borderTop: "1px dashed #94a3b8", width: "75%", margin: "0 auto 3px" }} />
               <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Firma Responsable / Asesor Técnico</div>
@@ -460,7 +487,7 @@ export const QuotePrintPage: React.FC = () => {
         )}
 
         {/* Custom Footer Terms */}
-        <div style={{ marginTop: "auto", paddingTop: 14, borderTop: "1px solid #e2e8f0", fontSize: "0.7rem", color: "#64748b", textAlign: "center", lineHeight: 1.3 }}>
+        <div style={{ marginTop: "auto", paddingTop: "14px", borderTop: "1px solid #e2e8f0", fontSize: "0.7rem", color: "#64748b", textAlign: "center", lineHeight: 1.3 }}>
           {settings.customFooterText}
         </div>
       </div>
