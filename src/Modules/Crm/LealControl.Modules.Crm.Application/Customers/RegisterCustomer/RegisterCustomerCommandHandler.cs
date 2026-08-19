@@ -69,6 +69,17 @@ internal sealed class RegisterCustomerCommandHandler
             return Result<CustomerDetailDto>.Failure(registered.Error);
         }
 
+        if (!string.IsNullOrWhiteSpace(request.Model.CreditRating))
+        {
+            registered.Value.UpdateBcraCreditReport(
+                request.Model.CreditRating,
+                request.Model.BcraWorstSituation,
+                request.Model.BcraTotalDebt,
+                request.Model.BcraRejectedChequesCount,
+                request.Model.CreditRecommendation,
+                _clock.UtcNow);
+        }
+
         _customers.Add(registered.Value);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<CustomerDetailDto>.Success(CustomerMappings.ToDetail(registered.Value));

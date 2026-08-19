@@ -135,6 +135,11 @@ export type CustomerWrite = {
   notes?: string | null;
   creditLimit?: number | null;
   paymentTermsDays?: number | null;
+  creditRating?: "A" | "B" | "C" | "D" | null;
+  bcraWorstSituation?: number | null;
+  bcraTotalDebt?: number | null;
+  bcraRejectedChequesCount?: number | null;
+  creditRecommendation?: string | null;
   fiscalAddress?: Address | null;
   fiscalStreet?: string | null;
   fiscalCity?: string | null;

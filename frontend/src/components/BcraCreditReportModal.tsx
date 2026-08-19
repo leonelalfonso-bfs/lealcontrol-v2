@@ -9,9 +9,10 @@ interface Props {
   customerName?: string;
   onClose: () => void;
   onSavedToCustomer?: () => void;
+  onApplyReport?: (report: BcraCreditReport) => void;
 }
 
-export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, onClose, onSavedToCustomer }: Props) {
+export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, onClose, onSavedToCustomer, onApplyReport }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -30,16 +31,21 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
   }, [isOpen, cuit]);
 
   const handleSaveToCustomer = async () => {
-    if (!customerId || !report) return;
+    if (!report) return;
     try {
       setSaving(true);
-      await api.updateCustomerBcra(customerId, {
-        creditRating: report.creditRating,
-        worstSituation: report.worstSituation,
-        totalDebt: report.totalDebtPesos,
-        rejectedChequesCount: report.rejectedChequesCount,
-        recommendation: report.commercialRecommendation
-      });
+      if (customerId) {
+        await api.updateCustomerBcra(customerId, {
+          creditRating: report.creditRating,
+          worstSituation: report.worstSituation,
+          totalDebt: report.totalDebtPesos,
+          rejectedChequesCount: report.rejectedChequesCount,
+          recommendation: report.commercialRecommendation
+        });
+      }
+      if (onApplyReport) {
+        onApplyReport(report);
+      }
       setSaveSuccess(true);
       if (onSavedToCustomer) onSavedToCustomer();
     } catch (err: any) {
@@ -279,7 +285,7 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
             Fuente: Central de Deudores BCRA (Normativa Ley 25.326 de Protección de Datos Personales)
           </div>
           <div style={{ display: "flex", gap: "10px" }}>
-            {customerId && report && (
+            {report && (
               <button
                 type="button"
                 onClick={handleSaveToCustomer}
@@ -293,7 +299,13 @@ export function BcraCreditReportModal({ isOpen, cuit, customerId, customerName, 
                   padding: "8px 16px"
                 }}
               >
-                {saving ? "Guardando..." : saveSuccess ? "✓ Calificación Guardada" : "💾 Guardar en Ficha del Cliente"}
+                {saving
+                  ? "Guardando..."
+                  : saveSuccess
+                  ? "✓ Calificación Guardada / Aplicada"
+                  : customerId
+                  ? "💾 Guardar en Ficha del Cliente"
+                  : "✓ Aplicar Calificación al Formulario"}
               </button>
             )}
             <button

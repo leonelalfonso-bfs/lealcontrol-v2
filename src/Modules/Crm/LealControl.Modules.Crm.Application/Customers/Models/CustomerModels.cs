@@ -22,7 +22,12 @@ public sealed record CustomerWriteModel(
     decimal? CreditLimit,
     int? PaymentTermsDays,
     Guid? SellerId,
-    string? Notes);
+    string? Notes,
+    string? CreditRating = null,
+    int? BcraWorstSituation = null,
+    decimal? BcraTotalDebt = null,
+    int? BcraRejectedChequesCount = null,
+    string? CreditRecommendation = null);
 
 public sealed record CustomerDetailDto(
     Guid Id,

@@ -21,7 +21,12 @@ const emptyCustomer: CustomerWrite = {
   fiscalCity: "",
   fiscalProvince: "SantaFe",
   fiscalPostalCode: "",
-  notes: ""
+  notes: "",
+  creditRating: null,
+  bcraWorstSituation: null,
+  bcraTotalDebt: null,
+  bcraRejectedChequesCount: null,
+  creditRecommendation: null
 };
 
 interface DraftLocation {
@@ -169,7 +174,12 @@ export function CustomerFormPage() {
         fiscalPostalCode: c.fiscalAddress?.postalCode ?? "",
         creditLimit: c.creditLimit ?? undefined,
         paymentTermsDays: c.paymentTermsDays ?? undefined,
-        notes: c.notes ?? ""
+        notes: c.notes ?? "",
+        creditRating: c.creditRating,
+        bcraWorstSituation: c.bcraWorstSituation,
+        bcraTotalDebt: c.bcraTotalDebt,
+        bcraRejectedChequesCount: c.bcraRejectedChequesCount,
+        creditRecommendation: c.creditRecommendation
       });
 
       setLocations((c.locations || []).map((l) => ({
@@ -682,6 +692,43 @@ export function CustomerFormPage() {
                 </select>
               </label>
             </div>
+
+            {/* BCRA Status Box in Form */}
+            {model.creditRating && (
+              <div style={{
+                padding: "10px 14px",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "10px",
+                background: model.creditRating === "A" ? "#ecfdf5" : model.creditRating === "B" ? "#fefce8" : model.creditRating === "C" ? "#fff7ed" : "#fef2f2",
+                border: `1px solid ${model.creditRating === "A" ? "#10b981" : model.creditRating === "B" ? "#eab308" : model.creditRating === "C" ? "#f97316" : "#ef4444"}`
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.2rem" }}>
+                    {model.creditRating === "A" ? "🟢" : model.creditRating === "B" ? "🟡" : model.creditRating === "C" ? "🟠" : "🔴"}
+                  </span>
+                  <div>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#0f172a" }}>
+                      Calificación Crediticia BCRA: {model.creditRating} (Situación {model.bcraWorstSituation || 1})
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "#475569", marginTop: "2px" }}>
+                      {model.creditRecommendation || "Sin observaciones adicionales."}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowBcraModal(true)}
+                  className="btn btn-outline"
+                  style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#ffffff" }}
+                >
+                  Ver Detalle BCRA
+                </button>
+              </div>
+            )}
             <div className="grid-3">
               <label>IIBB
                 <select value={model.iibbRegime} onChange={(e) => set("iibbRegime", e.target.value)}>
@@ -991,7 +1038,32 @@ export function CustomerFormPage() {
       <BcraCreditReportModal
         isOpen={showBcraModal}
         cuit={model.documentNumber}
+        customerId={id}
         customerName={model.legalName}
+        onSavedToCustomer={() => {
+          if (id) {
+            api.getCustomer(id).then((c) => {
+              setModel((m) => ({
+                ...m,
+                creditRating: c.creditRating,
+                bcraWorstSituation: c.bcraWorstSituation,
+                bcraTotalDebt: c.bcraTotalDebt,
+                bcraRejectedChequesCount: c.bcraRejectedChequesCount,
+                creditRecommendation: c.creditRecommendation
+              }));
+            });
+          }
+        }}
+        onApplyReport={(r) => {
+          setModel((m) => ({
+            ...m,
+            creditRating: r.creditRating,
+            bcraWorstSituation: r.worstSituation,
+            bcraTotalDebt: r.totalDebtPesos,
+            bcraRejectedChequesCount: r.rejectedChequesCount,
+            creditRecommendation: r.commercialRecommendation
+          }));
+        }}
         onClose={() => setShowBcraModal(false)}
       />
     </>
