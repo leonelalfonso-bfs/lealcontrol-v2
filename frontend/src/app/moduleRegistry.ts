@@ -75,7 +75,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     items: [
       { path: "/directorio", label: "Todas las empresas", icon: "🏢" },
       { path: "/clientes", label: "Clientes", icon: "👥" },
-      { path: "/proveedores", label: "Proveedores", icon: "🏭" }
+      { path: "/proveedores", label: "Proveedores", icon: "🏭" },
+      { path: "/directorio/ayuda", label: "Ayuda Directorio", icon: "💡" }
     ]
   },
   {
@@ -123,7 +124,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     glow: "rgba(5, 150, 105, 0.35)",
     title: "VENTAS Y FACTURACIÓN",
     defaultPath: "/presupuestos",
-    pathPrefixes: ["/presupuestos", "/pedidos", "/remitos", "/facturas"],
+    pathPrefixes: ["/presupuestos", "/pedidos", "/remitos", "/facturas", "/ventas"],
     minimumPlan: "comercial",
     requiredPermission: "sales.read",
     dependencies: ["directorio"],
@@ -131,7 +132,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/presupuestos", label: "Presupuestos", icon: "📑" },
       { path: "/pedidos", label: "Pedidos de venta", icon: "📋" },
       { path: "/remitos", label: "Remitos oficiales", icon: "🚚" },
-      { path: "/facturas", label: "Facturación ARCA", icon: "🧾" }
+      { path: "/facturas", label: "Facturación ARCA", icon: "🧾" },
+      { path: "/ventas/ayuda", label: "Ayuda Ventas", icon: "💡" }
     ]
   },
   {
@@ -214,7 +216,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/finanzas/echeqs", label: "eCheqs", icon: "🎫" },
       { path: "/finanzas/cuenta-corriente", label: "Cuenta corriente", icon: "⚖️" },
       { path: "/finanzas/cobranzas", label: "Recibos de cobro", icon: "🧾" },
-      { path: "/finanzas/cashflow", label: "Cash flow", icon: "📈" }
+      { path: "/finanzas/cashflow", label: "Cash flow", icon: "📈" },
+      { path: "/finanzas/ayuda", label: "Ayuda Finanzas", icon: "💡" }
     ]
   },
   {
@@ -268,7 +271,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     items: [
       { path: "/configuracion", label: "Empresa e integraciones", icon: "🏢", end: true },
       { path: "/configuracion/plantillas", label: "Plantillas de impresión", icon: "📄" },
-      { path: "/configuracion/correo", label: "Cuentas de correo", icon: "✉️" }
+      { path: "/configuracion/correo", label: "Cuentas de correo", icon: "✉️" },
+      { path: "/configuracion/ayuda", label: "Ayuda Configuración", icon: "💡" }
     ]
   }
 ];

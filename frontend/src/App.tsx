@@ -71,6 +71,10 @@ import { FleetVehiclesListPage } from "./pages/FleetVehiclesListPage";
 import { FleetVehicleFormPage } from "./pages/FleetVehicleFormPage";
 import { FleetFuelLogsPage } from "./pages/FleetFuelLogsPage";
 import { FleetHelpPage } from "./pages/FleetHelpPage";
+import { DirectoryHelpPage } from "./pages/DirectoryHelpPage";
+import { SalesHelpPage } from "./pages/SalesHelpPage";
+import { FinanceHelpPage } from "./pages/FinanceHelpPage";
+import { SettingsHelpPage } from "./pages/SettingsHelpPage";
 import { StyleShowcasePage } from "./pages/StyleShowcasePage";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
@@ -226,9 +230,10 @@ export function App() {
             {/* Main Executive ERP Dashboard */}
             <Route path="/" element={<ExecutiveDashboardPage />} />
 
-            {/* CRM Routes */}
+            {/* CRM & Directory Routes */}
             <Route path="/crm" element={<HoyPage />} />
             <Route path="/directorio" element={<DirectoryPage />} />
+            <Route path="/directorio/ayuda" element={<DirectoryHelpPage />} />
             <Route path="/clientes" element={<CustomersPage />} />
             <Route path="/clientes/nuevo" element={<CustomerFormPage />} />
             <Route path="/clientes/:id" element={<CustomerDetailPage />} />
@@ -256,6 +261,7 @@ export function App() {
             <Route path="/facturas" element={<InvoicesPage />} />
             <Route path="/facturas/nueva" element={<InvoiceFormPage />} />
             <Route path="/facturas/:id/imprimir" element={<InvoicePrintPage />} />
+            <Route path="/ventas/ayuda" element={<SalesHelpPage />} />
 
             {/* Purchases Module Routes */}
             <Route path="/compras" element={<PurchasesDashboardPage />} />
@@ -295,6 +301,7 @@ export function App() {
 
             <Route path="/finanzas/cuenta-corriente" element={<CurrentAccountsPage />} />
             <Route path="/finanzas/cashflow" element={<CashFlowPage />} />
+            <Route path="/finanzas/ayuda" element={<FinanceHelpPage />} />
 
             {/* Human Resources & Payroll Routes */}
             <Route path="/rrhh" element={<EmployeesListPage />} />
@@ -316,6 +323,7 @@ export function App() {
             <Route path="/configuracion" element={<SettingsPage />} />
             <Route path="/configuracion/plantillas" element={<DocumentTemplatesPage />} />
             <Route path="/configuracion/correo" element={<MailSettingsPage />} />
+            <Route path="/configuracion/ayuda" element={<SettingsHelpPage />} />
             <Route path="/comunicaciones" element={<InboxPage />} />
             <Route path="/comunicaciones/canales" element={<ChannelsPage />} />
           </Routes>
