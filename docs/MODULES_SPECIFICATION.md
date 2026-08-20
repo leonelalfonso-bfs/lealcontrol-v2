@@ -117,3 +117,30 @@ Detalle integral de todos los módulos que componen **Leal Control ERP 2.0**.
   - Logo institucional en alta resolución para encabezados de documentos y barra lateral.
   - Certificados digitales ARCA (.crt y .key) para facturación electrónica.
   - Plantillas de impresión con términos y garantías configurables.
+
+---
+
+## 11. Módulo de Automatización e Inteligencia Artificial (`Automation & AI`)
+- **Propósito:** Capacidades cognitivas, diagnósticos preventivos en tiempo real y asistencia interactiva al usuario.
+- **Servicios:** `LealDiagnosticService`, `AskLealService`, `GeminiApiClient`, `BcraApiClient`.
+- **Características:**
+  - **🏛️ Calificación Crediticia BCRA en Tiempo Real**:
+    * Consulta en vivo a la Central de Deudores del Banco Central (BCRA) por CUIT.
+    * Calificación crediticia (A, B, C, D) con peor situación (1 a 6), deuda total bancaria y conteo de cheques rechazados.
+    * Persistencia automática en la ficha del cliente y recomendación de condición de pago en presupuestos con 1 clic.
+  - **✨ LEAL Diagnóstico (Briefing Ejecutivo Proactivo)**:
+    * Widget de bienvenida en la pantalla inicial que audita en vivo:
+      - Cobranzas vencidas y clientes en mora.
+      - Alertas de stock crítico y reposición.
+      - Presupuestos calientes en seguimiento.
+      - Balanzas del Parque Técnico con calibración vencida o a vencer en los próximos 30 días.
+      - Facturas de compra de proveedores a pagar en los próximos 7 días.
+  - **🤖 Preguntale a LEAL (Copiloto Experto del Sistema)**:
+    * Asistente interactivo en lenguaje natural disponible en la barra lateral.
+    * Conoce todos los circuitos del ERP (ventas, compras, producción/BOM, stock, finanzas, taller de balanzas y RRHH).
+    * Ofrece explicaciones estructuradas paso a paso con botones de navegación directa a las pantallas del sistema.
+  - **📄 OCR de Facturas de Compra con IA**:
+    * Extracción automática de datos fiscales (CAE, fecha, CUIT proveedor, tipo de factura, ítems, IVA 21%/10.5%/27%, percepciones IIBB y total) desde fotos o PDFs.
+  - **⚖️ Asistente IA de Convenios Colectivos (CCT)**:
+    * Extracción de escalas salariales y sumas no remunerativas (SNR) a partir de acuerdos homologados y resoluciones en PDF o por consulta directa a Gemini.
+

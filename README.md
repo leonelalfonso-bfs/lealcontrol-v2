@@ -26,11 +26,20 @@ src/
 │   ├── Fleet/                                     # Flota: Unidades, Pólizas, VTV, Mantenimientos preventivos y Consumo KM/L
 │   └── Communications/                            # Bandeja de correo unificada (IMAP/SMTP) y canales
 └── Host/
-    └── LealControl.Api/                           # Entry point web, inyección de dependencias y middlewares
+    └── LealControl.Api/                           # Entry point web, inyección de dependencias, automatizaciones e IA (BCRA, Gemini, Diagnóstico)
 ```
 
 Cada módulo posee su propio **Schema aislado en PostgreSQL**:
 - `directory` • `crm` • `sales` • `purchases` • `inventory` • `production` • `finance` • `hr` • `fleet` • `communications` • `settings`
+
+---
+
+## 🤖 Capacidades de Automatización e Inteligencia Artificial
+- **🏛️ Calificación Crediticia BCRA**: Consulta en vivo a la Central de Deudores del Banco Central por CUIT, persistencia de perfil de riesgo y sugerencia de formas de pago en presupuestos.
+- **✨ LEAL Diagnóstico**: Monitor proactivo diario de cobranzas en mora, stock crítico, cotizaciones calientes, calibraciones de balanzas y vencimientos de compras.
+- **🤖 Preguntale a LEAL**: Asistente interactivo en lenguaje natural y copiloto del ERP con navegación guiada a todas las pantallas.
+- **📄 OCR de Facturas**: Extracción inteligente de comprobantes de compra (PDF / fotos) con desglose de ítems, alícuotas de IVA y CAE.
+- **⚖️ Asistente IA de Convenios (CCT)**: Análisis automático de resoluciones paritarias homologadas y escalas salariales vigentes.
 
 ---
 
