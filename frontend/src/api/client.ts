@@ -549,5 +549,51 @@ export const api = {
   createSuperAdminPlan: (body: { code: string; name: string; priceArs: number; priceUsd: number; maxUsers: number; description?: string; featuresJson?: string; enabledModulesJson?: string }) =>
     request<any>("/api/v1/superadmin/plans", { method: "POST", body: JSON.stringify(body) }),
   updateSuperAdminPlan: (id: string, body: any) =>
-    request<any>(`/api/v1/superadmin/plans/${id}`, { method: "PUT", body: JSON.stringify(body) })
+    request<any>(`/api/v1/superadmin/plans/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+
+  // Accounting Module
+  listAccounts: () =>
+    request<any[]>("/api/v1/accounting/accounts"),
+  createAccount: (body: { code: string; name: string; accountType?: string; level: number; parentCode?: string; isDirectPosting: boolean; currency?: string; adjustsForInflation?: boolean }) =>
+    request<any>("/api/v1/accounting/accounts", { method: "POST", body: JSON.stringify(body) }),
+  updateAccount: (id: string, body: { name: string; isDirectPosting: boolean; adjustsForInflation: boolean; isActive: boolean }) =>
+    request<any>(`/api/v1/accounting/accounts/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  listJournalEntries: (params?: { startDate?: string; endDate?: string; sourceModule?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.startDate) q.set("startDate", params.startDate);
+    if (params?.endDate) q.set("endDate", params.endDate);
+    if (params?.sourceModule) q.set("sourceModule", params.sourceModule);
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return request<any[]>(`/api/v1/accounting/journal-entries${query}`);
+  },
+  createJournalEntry: (body: { date: string; concept: string; entryType?: string; sourceModule?: string; sourceDocumentId?: string; createdBy?: string; lines: any[] }) =>
+    request<any>("/api/v1/accounting/journal-entries", { method: "POST", body: JSON.stringify(body) }),
+  getLedger: (accountCode: string, params?: { startDate?: string; endDate?: string }) => {
+    const q = new URLSearchParams({ accountCode });
+    if (params?.startDate) q.set("startDate", params.startDate);
+    if (params?.endDate) q.set("endDate", params.endDate);
+    return request<any>(`/api/v1/accounting/ledger?${q.toString()}`);
+  },
+  getTrialBalance: (params?: { startDate?: string; endDate?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.startDate) q.set("startDate", params.startDate);
+    if (params?.endDate) q.set("endDate", params.endDate);
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return request<any>(`/api/v1/accounting/trial-balance${query}`);
+  },
+  getIncomeStatement: (params?: { startDate?: string; endDate?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.startDate) q.set("startDate", params.startDate);
+    if (params?.endDate) q.set("endDate", params.endDate);
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return request<any>(`/api/v1/accounting/income-statement${query}`);
+  },
+  listCostCenters: () =>
+    request<any[]>("/api/v1/accounting/cost-centers"),
+  createCostCenter: (body: { code: string; name: string; category?: string }) =>
+    request<any>("/api/v1/accounting/cost-centers", { method: "POST", body: JSON.stringify(body) }),
+  listFiscalPeriods: () =>
+    request<any[]>("/api/v1/accounting/periods"),
+  lockFiscalPeriod: (body: { year: number; month: number; lock: boolean; user?: string }) =>
+    request<any>("/api/v1/accounting/periods/lock", { method: "POST", body: JSON.stringify(body) })
 };

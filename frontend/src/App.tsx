@@ -91,6 +91,12 @@ import { SuperAdminLoginPage } from "./pages/superadmin/SuperAdminLoginPage";
 import { SuperAdminDashboardPage } from "./pages/superadmin/SuperAdminDashboardPage";
 import { SuperAdminTenantsPage } from "./pages/superadmin/SuperAdminTenantsPage";
 import { SuperAdminPlansPage } from "./pages/superadmin/SuperAdminPlansPage";
+import { AccountingDashboardPage } from "./pages/accounting/AccountingDashboardPage";
+import { ChartOfAccountsPage } from "./pages/accounting/ChartOfAccountsPage";
+import { JournalEntriesPage } from "./pages/accounting/JournalEntriesPage";
+import { GeneralLedgerPage } from "./pages/accounting/GeneralLedgerPage";
+import { TrialBalancePage } from "./pages/accounting/TrialBalancePage";
+import { AccountingStudyPortalPage } from "./pages/accounting/AccountingStudyPortalPage";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
 import "./v1-theme.css";
@@ -122,7 +128,7 @@ export function App() {
   const userRole = user?.role || "Comercial";
   let allowedModuleIds: string[] = [];
   if (userRole === "Admin") {
-    allowedModuleIds = ["inicio", "directorio", "crm", "ventas", "compras", "inventario", "produccion", "finanzas", "rrhh", "flota", "cereales", "administracion"];
+    allowedModuleIds = ["inicio", "directorio", "crm", "ventas", "compras", "inventario", "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "administracion"];
   } else {
     try {
       const raw = typeof user?.allowedModulesJson === "string" ? JSON.parse(user.allowedModulesJson) : user?.allowedModulesJson || [];
@@ -135,7 +141,7 @@ export function App() {
         fleet: ["flota"],
         hr: ["rrhh"],
         grains: ["cereales"],
-        accounting: ["finanzas"]
+        accounting: ["contabilidad"]
       };
       allowedModuleIds = ["inicio"];
       (Array.isArray(raw) ? raw : []).forEach((r: string) => {
@@ -495,6 +501,14 @@ export function App() {
               <Route path="/cereales/fijaciones" element={<GrainFixationsPage />} />
               <Route path="/cereales/entregas" element={<GrainDeliveriesPage />} />
               <Route path="/cereales/posicion" element={<GrainPositionPage />} />
+
+              {/* Accounting & Fiscal Routes */}
+              <Route path="/contabilidad" element={<AccountingDashboardPage />} />
+              <Route path="/contabilidad/plan-cuentas" element={<ChartOfAccountsPage />} />
+              <Route path="/contabilidad/asientos" element={<JournalEntriesPage />} />
+              <Route path="/contabilidad/mayor" element={<GeneralLedgerPage />} />
+              <Route path="/contabilidad/sumas-saldos" element={<TrialBalancePage />} />
+              <Route path="/contabilidad/portal-estudio" element={<AccountingStudyPortalPage />} />
 
               {/* Reports & Settings Routes */}
               <Route path="/reportes" element={<ReportsPage />} />

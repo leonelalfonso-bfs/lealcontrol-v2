@@ -277,6 +277,27 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     ]
   },
   {
+    id: "contabilidad",
+    label: "Contabilidad",
+    icon: "🏛️",
+    gradient: "linear-gradient(135deg, #6366f1, #4338ca)",
+    glow: "rgba(99, 102, 241, 0.35)",
+    title: "SISTEMA CONTABLE PROFESIONAL & P&L",
+    defaultPath: "/contabilidad",
+    pathPrefixes: ["/contabilidad"],
+    minimumPlan: "base",
+    requiredPermission: "administration.read",
+    dependencies: [],
+    items: [
+      { path: "/contabilidad", label: "Tablero P&L", icon: "📊", end: true },
+      { path: "/contabilidad/plan-cuentas", label: "Plan de Cuentas", icon: "🌳" },
+      { path: "/contabilidad/asientos", label: "Libro Diario", icon: "📖" },
+      { path: "/contabilidad/mayor", label: "Libro Mayor", icon: "🔍" },
+      { path: "/contabilidad/sumas-saldos", label: "Sumas y Saldos", icon: "⚖️" },
+      { path: "/contabilidad/portal-estudio", label: "Cierres & IVA Digital", icon: "🏢" }
+    ]
+  },
+  {
     id: "administracion",
     label: "Configuración",
     icon: "🛠️",
