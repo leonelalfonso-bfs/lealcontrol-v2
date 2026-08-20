@@ -12,6 +12,8 @@ using LealControl.Modules.Communications.Infrastructure.Persistence;
 using LealControl.Modules.Finance.Infrastructure;
 using LealControl.Modules.HumanResources.Infrastructure;
 using LealControl.Modules.Fleet.Infrastructure;
+using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Api.SuperAdmin;
 using LealControl.Api.Automation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -33,6 +35,14 @@ try
     {
         options.Limits.MaxRequestBodySize = 52428800; // 50MB
     });
+
+    var dbConnectionString = builder.Configuration.GetConnectionString("Database")
+        ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
+
+    builder.Services.AddDbContext<MasterDbContext>(options =>
+        options.UseNpgsql(dbConnectionString));
+    builder.Services.AddSingleton<ITenantConnectionProvider, TenantConnectionProvider>();
+    builder.Services.AddScoped<ITenantProvisionerService, TenantProvisionerService>();
 
     builder.Services.AddSingleton<IClock, SystemClock>();
     builder.Services.AddHttpClient<GeminiApiClient>();
@@ -88,6 +98,9 @@ try
     // su esquema antes de atender solicitudes. EF registra las migraciones aplicadas.
     await using (var scope = app.Services.CreateAsyncScope())
     {
+        var masterDb = scope.ServiceProvider.GetRequiredService<MasterDbContext>();
+        await masterDb.EnsureMasterTablesCreatedAsync();
+
         var crm = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
         try { await crm.Database.MigrateAsync(); } catch (Exception ex) { Log.Warning(ex, "CRM Migration skipped or already applied."); }
         await crm.EnsureCrmTablesAsync();
@@ -119,6 +132,8 @@ try
     app.MapHumanResourcesModule();
     app.MapFleetModule();
     app.MapAutomationEndpoints();
+    app.MapSuperAdminModule();
+    app.MapTenantBackupSelfService();
 
     await app.RunAsync();
 }

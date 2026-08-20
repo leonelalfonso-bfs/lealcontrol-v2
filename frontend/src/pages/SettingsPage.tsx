@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import { provinces, type CompanySettings, type TenantUser } from "../api/types";
 
 export function SettingsPage() {
-  const [tab, setTab] = useState<"general" | "arca" | "banks" | "users">("general");
+  const [tab, setTab] = useState<"general" | "arca" | "banks" | "users" | "backup">("general");
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [users, setUsers] = useState<TenantUser[]>([]);
 
@@ -178,6 +178,13 @@ export function SettingsPage() {
           onClick={() => setTab("users")}
         >
           👥 Usuarios ({users.length})
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${tab === "backup" ? "active" : ""}`}
+          onClick={() => setTab("backup")}
+        >
+          💾 Base de Datos & Backup (.SQL)
         </button>
       </div>
 
@@ -557,6 +564,63 @@ export function SettingsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {tab === "backup" && (
+        <div className="card pad" style={{ maxWidth: "800px", marginTop: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "16px" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px" }}>
+              💾
+            </div>
+            <div>
+              <h2 style={{ fontSize: "20px", fontWeight: "800", margin: "0 0 4px" }}>Respaldo & Portabilidad de Base de Datos</h2>
+              <p className="muted" style={{ margin: 0, fontSize: "14px" }}>Descarga completa y autocontenida de todos los datos y registros de tu empresa.</p>
+            </div>
+          </div>
+
+          <div style={{ background: "rgba(59, 130, 246, 0.08)", border: "1px solid rgba(59, 130, 246, 0.2)", borderRadius: "10px", padding: "16px", marginBottom: "20px" }}>
+            <h4 style={{ margin: "0 0 8px", color: "#60a5fa" }}>🛡️ Garantía de Soberanía y Propiedad de Datos</h4>
+            <p style={{ margin: 0, fontSize: "13.5px", lineHeight: "1.6", color: "#cbd5e1" }}>
+              En <strong>LEAL Control ERP</strong>, tus datos te pertenecen. Podés generar y descargar en cualquier momento una copia de seguridad física completa de tu base de datos en formato estándar <code>.sql.gz</code> compatible con PostgreSQL 16+.
+            </p>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
+            <div style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", padding: "14px" }}>
+              <div style={{ fontWeight: "700", marginBottom: "6px" }}>📦 Qué incluye este archivo:</div>
+              <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", color: "#94a3b8", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <li>Clientes, Contactos y CRM</li>
+                <li>Ventas, Presupuestos y Facturas</li>
+                <li>Compras, Gastos y Proveedores</li>
+                <li>Finanzas, Cuentas y Cheques Echeq</li>
+                <li>Flota, Choferes y Mantenimientos</li>
+                <li>Cereales, Contratos y Balanza</li>
+              </ul>
+            </div>
+
+            <div style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "10px", padding: "14px" }}>
+              <div style={{ fontWeight: "700", marginBottom: "6px" }}>🔒 Seguridad y Cifrado:</div>
+              <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", color: "#94a3b8", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <li>Aislamiento físico por cliente</li>
+                <li>Compresión GZip de alta densidad</li>
+                <li>Generación en caliente sin corte de servicio</li>
+                <li>Respaldos nocturnos automáticos a la nube</li>
+              </ul>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "20px" }}>
+            <span style={{ fontSize: "13px", color: "#94a3b8" }}>Formato: <code>backup_leal_[empresa].sql.gz</code></span>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => window.open("/api/v1/company/backup/export-sql", "_blank")}
+              style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)", color: "#fff", fontWeight: "700", padding: "12px 24px", fontSize: "14px", display: "flex", alignItems: "center", gap: "8px" }}
+            >
+              📥 Descargar Backup Completo (.SQL)
+            </button>
           </div>
         </div>
       )}

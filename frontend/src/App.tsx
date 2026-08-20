@@ -87,6 +87,10 @@ import { GrainContractDetailPage } from "./pages/GrainContractDetailPage";
 import { GrainFixationsPage } from "./pages/GrainFixationsPage";
 import { GrainDeliveriesPage } from "./pages/GrainDeliveriesPage";
 import { GrainPositionPage } from "./pages/GrainPositionPage";
+import { SuperAdminLoginPage } from "./pages/superadmin/SuperAdminLoginPage";
+import { SuperAdminDashboardPage } from "./pages/superadmin/SuperAdminDashboardPage";
+import { SuperAdminTenantsPage } from "./pages/superadmin/SuperAdminTenantsPage";
+import { SuperAdminPlansPage } from "./pages/superadmin/SuperAdminPlansPage";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
 import "./v1-theme.css";
@@ -121,6 +125,22 @@ export function App() {
 
   if (location.pathname === "/login") {
     return <LoginPage />;
+  }
+
+  if (location.pathname === "/superadmin/login") {
+    return <SuperAdminLoginPage />;
+  }
+
+  if (location.pathname === "/superadmin") {
+    return <SuperAdminDashboardPage />;
+  }
+
+  if (location.pathname === "/superadmin/tenants") {
+    return <SuperAdminTenantsPage />;
+  }
+
+  if (location.pathname === "/superadmin/planes") {
+    return <SuperAdminPlansPage />;
   }
 
   return (

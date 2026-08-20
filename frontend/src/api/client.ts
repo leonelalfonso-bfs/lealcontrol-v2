@@ -523,5 +523,21 @@ export const api = {
   listGrainDeliveries: () =>
     request<import("./types").GrainDelivery[]>("/api/v1/grains/deliveries"),
   listGrainMarketPrices: () =>
-    request<import("./types").GrainMarketPrice[]>("/api/v1/grains/market-prices")
+    request<import("./types").GrainMarketPrice[]>("/api/v1/grains/market-prices"),
+
+  // SuperAdmin SaaS Management
+  superAdminLogin: (body: { email: string; password: string }) =>
+    request<{ token: string; user: { id: string; fullName: string; email: string; role: string } }>("/api/v1/superadmin/auth/login", { method: "POST", body: JSON.stringify(body) }),
+  getSuperAdminDashboard: () =>
+    request<{ totalTenants: number; activeTenants: number; suspendedTenants: number; mrrArs: number; mrrUsd: number; totalStorageMb: number; planBreakdown: any[]; recentTenants: any[] }>("/api/v1/superadmin/dashboard"),
+  listSuperAdminTenants: () =>
+    request<any[]>("/api/v1/superadmin/tenants"),
+  createSuperAdminTenant: (body: { name: string; slug?: string; planCode?: string; adminFullName?: string; adminEmail: string; adminPassword: string; adminPhone?: string; monthlyPriceArs: number; monthlyPriceUsd: number }) =>
+    request<{ success: boolean; dbName: string; message: string }>("/api/v1/superadmin/tenants", { method: "POST", body: JSON.stringify(body) }),
+  updateSuperAdminTenantStatus: (id: string, body: { status: string; expiresAtUtc?: string; monthlyPriceArs?: number; planCode?: string }) =>
+    request<any>(`/api/v1/superadmin/tenants/${id}/status`, { method: "PUT", body: JSON.stringify(body) }),
+  listSuperAdminPlans: () =>
+    request<any[]>("/api/v1/superadmin/plans"),
+  updateSuperAdminPlan: (id: string, body: any) =>
+    request<any>(`/api/v1/superadmin/plans/${id}`, { method: "PUT", body: JSON.stringify(body) })
 };
