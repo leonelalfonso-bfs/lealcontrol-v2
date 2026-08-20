@@ -64,5 +64,7 @@ public sealed class CompanySettings
 
     public string? DefaultPaymentTerms { get; set; } = "Contado / 30 días con e-Cheq";
 
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 }

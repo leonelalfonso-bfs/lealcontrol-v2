@@ -1350,3 +1350,24 @@ export type VehicleFuelLog = {
   notes?: string | null;
 };
 
+export type UserInfo = {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+};
+
+export type TenantInfo = {
+  id: string;
+  legalName: string;
+  tradeName?: string | null;
+  documentNumber: string;
+};
+
+export type AuthResponse = {
+  token: string;
+  user: UserInfo;
+  tenant: TenantInfo;
+  availableTenants: TenantInfo[];
+};
+

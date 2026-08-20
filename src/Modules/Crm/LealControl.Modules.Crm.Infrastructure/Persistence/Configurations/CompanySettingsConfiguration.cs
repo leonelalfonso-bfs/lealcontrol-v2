@@ -56,5 +56,7 @@ internal sealed class TenantUserConfiguration : IEntityTypeConfiguration<TenantU
         builder.Property(u => u.FullName).HasMaxLength(128).IsRequired();
         builder.Property(u => u.Email).HasMaxLength(128).IsRequired();
         builder.Property(u => u.Role).HasMaxLength(64).IsRequired();
+        builder.Property(u => u.PasswordHash).HasMaxLength(256);
+        builder.Property(u => u.LastLoginUtc);
     }
 }

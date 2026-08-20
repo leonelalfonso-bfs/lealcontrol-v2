@@ -20,11 +20,23 @@ import type {
 const API_BASE = "";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
+  const tenantId = typeof window !== "undefined" ? localStorage.getItem("leal_tenant_id") : null;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers ? (options.headers as Record<string, string>) : {})
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  if (tenantId) {
+    headers["X-Tenant-Id"] = tenantId;
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers || {})
-    },
+    headers,
     ...options
   });
 
@@ -470,5 +482,17 @@ export const api = {
     return request<import("./types").VehicleFuelLog[]>(`/api/v1/fleet/fuel-logs${q}`);
   },
   createFuelLog: (body: Partial<import("./types").VehicleFuelLog>) =>
-    request<import("./types").VehicleFuelLog>("/api/v1/fleet/fuel-logs", { method: "POST", body: JSON.stringify(body) })
+    request<import("./types").VehicleFuelLog>("/api/v1/fleet/fuel-logs", { method: "POST", body: JSON.stringify(body) }),
+
+  // Authentication & Multi-Tenancy
+  login: (body: { email: string; password: string; tenantId?: string }) =>
+    request<import("./types").AuthResponse>("/api/v1/auth/login", { method: "POST", body: JSON.stringify(body) }),
+  registerTenant: (body: { companyName: string; cuit?: string; phone?: string; adminFullName?: string; email: string; password: string }) =>
+    request<import("./types").AuthResponse>("/api/v1/auth/register-tenant", { method: "POST", body: JSON.stringify(body) }),
+  getMe: () =>
+    request<{ user: import("./types").UserInfo; tenant: import("./types").TenantInfo; availableTenants: import("./types").TenantInfo[] }>("/api/v1/auth/me"),
+  switchTenant: (tenantId: string) =>
+    request<import("./types").AuthResponse>("/api/v1/auth/switch-tenant", { method: "POST", body: JSON.stringify({ tenantId }) }),
+  listTenants: () =>
+    request<import("./types").TenantInfo[]>("/api/v1/auth/tenants")
 };

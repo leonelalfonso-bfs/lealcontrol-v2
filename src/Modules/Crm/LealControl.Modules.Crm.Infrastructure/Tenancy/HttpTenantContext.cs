@@ -28,6 +28,13 @@ public sealed class HttpTenantContext : ITenantContext
     {
         get
         {
+            var user = _http.HttpContext?.User;
+            var claim = user?.FindFirst("tenant_id")?.Value;
+            if (!string.IsNullOrWhiteSpace(claim) && Guid.TryParse(claim, out var fromClaim))
+            {
+                return new TenantId(fromClaim);
+            }
+
             var header = _http.HttpContext?.Request.Headers[HeaderName].ToString();
             if (Guid.TryParse(header, out var parsed))
             {

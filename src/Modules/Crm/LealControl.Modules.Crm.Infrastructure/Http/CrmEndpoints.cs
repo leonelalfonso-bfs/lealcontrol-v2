@@ -26,6 +26,7 @@ public static class CrmEndpoints
         MapPipeline(crm);
         endpoints.MapCompanySettingsModule();
         endpoints.MapSupplierEndpoints();
+        endpoints.MapAuthEndpoints();
         return endpoints;
     }
 
