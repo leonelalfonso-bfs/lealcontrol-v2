@@ -39,6 +39,10 @@ internal sealed class CompanySettingsConfiguration : IEntityTypeConfiguration<Co
         builder.Property(s => s.BankAlias).HasMaxLength(64);
         builder.Property(s => s.DefaultWarranty).HasMaxLength(256);
         builder.Property(s => s.DefaultPaymentTerms).HasMaxLength(256);
+        builder.Property(s => s.DefaultQuoteValidDays).IsRequired();
+        builder.Property(s => s.DefaultDeliveryDays).IsRequired();
+        builder.Property(s => s.CreatedAtUtc);
+        builder.Property(s => s.UpdatedAtUtc);
     }
 }
 
@@ -56,7 +60,7 @@ internal sealed class TenantUserConfiguration : IEntityTypeConfiguration<TenantU
         builder.Property(u => u.FullName).HasMaxLength(128).IsRequired();
         builder.Property(u => u.Email).HasMaxLength(128).IsRequired();
         builder.Property(u => u.Role).HasMaxLength(64).IsRequired();
-        builder.Property(u => u.PasswordHash).HasMaxLength(256);
-        builder.Property(u => u.LastLoginUtc);
+        builder.Property(u => u.PasswordHash).HasMaxLength(256).IsRequired(false);
+        builder.Property(u => u.LastLoginUtc).IsRequired(false);
     }
 }

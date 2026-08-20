@@ -38,7 +38,7 @@ public sealed class TenantUser : Entity<Guid>
 
     public string Role { get; private set; } = "Comercial";
 
-    public string PasswordHash { get; private set; } = string.Empty;
+    public string? PasswordHash { get; private set; }
 
     public bool IsActive { get; private set; } = true;
 

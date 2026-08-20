@@ -11,6 +11,7 @@ using LealControl.Modules.Crm.Domain.Settings;
 using LealControl.Modules.Crm.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,9 +24,9 @@ public static class AuthEndpoints
         var auth = endpoints.MapGroup("/api/v1/auth").WithTags("Authentication & Tenancy");
 
         // 1. Login
-        auth.MapPost("/login", async (LoginRequest req, CrmDbContext db, CancellationToken ct) =>
+        auth.MapPost("/login", async ([FromBody] LoginRequest req, CrmDbContext db, CancellationToken ct) =>
         {
-            if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
+            if (req == null || string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
             {
                 return Results.BadRequest(new { message = "Email y contraseña son obligatorios." });
             }
@@ -33,10 +34,11 @@ public static class AuthEndpoints
             var email = req.Email.Trim().ToLowerInvariant();
             var users = await db.TenantUsers.Where(u => u.Email.ToLower() == email && u.IsActive).ToListAsync(ct);
 
+            var devTenantId = new TenantId(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+
             if (users.Count == 0)
             {
                 // Fallback for default development admin
-                var devTenantId = new TenantId(Guid.Parse("11111111-1111-1111-1111-111111111111"));
                 if (email == "admin@lealcontrol.com" || email == "admin@leal.com" || email == "admin")
                 {
                     var newAdmin = TenantUser.Create(devTenantId, "Administrador Leal", email, "Admin", "admin123");
@@ -48,6 +50,27 @@ public static class AuthEndpoints
                 {
                     return Results.BadRequest(new { message = "Usuario no encontrado o inactivo." });
                 }
+            }
+
+            // Ensure default company settings exist for dev tenant
+            var devSettings = await db.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == devTenantId, ct);
+            if (devSettings == null)
+            {
+                devSettings = new CompanySettings
+                {
+                    TenantId = devTenantId,
+                    LegalName = "LEAL CONTROL ERP S.A.",
+                    TradeName = "Leal Control Metrología",
+                    DocumentType = "Cuit",
+                    DocumentNumber = "30715489629",
+                    TaxCondition = "ResponsableInscripto",
+                    IibbRegime = "ConvenioMultilateral",
+                    Email = "contacto@lealcontrol.com",
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
+                };
+                db.CompanySettings.Add(devSettings);
+                await db.SaveChangesAsync(ct);
             }
 
             // Find matching user (if TenantId requested, filter by it)
@@ -71,7 +94,7 @@ public static class AuthEndpoints
             // Fetch Tenant Info
             var tenantSettings = await db.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == user.TenantId, ct);
             var tenantName = tenantSettings?.LegalName ?? tenantSettings?.TradeName ?? "LEAL CONTROL ERP S.A.";
-            var documentNumber = tenantSettings?.DocumentNumber ?? "30712345678";
+            var documentNumber = tenantSettings?.DocumentNumber ?? "30715489629";
 
             // Generate standard JWT
             var token = SimpleJwt.CreateToken(user.Id, user.Email, user.FullName, user.Role, user.TenantId.Value, tenantName);
@@ -90,9 +113,9 @@ public static class AuthEndpoints
         });
 
         // 2. Register new Tenant from scratch
-        auth.MapPost("/register-tenant", async (RegisterTenantRequest req, CrmDbContext db, CancellationToken ct) =>
+        auth.MapPost("/register-tenant", async ([FromBody] RegisterTenantRequest req, CrmDbContext db, CancellationToken ct) =>
         {
-            if (string.IsNullOrWhiteSpace(req.CompanyName))
+            if (req == null || string.IsNullOrWhiteSpace(req.CompanyName))
             {
                 return Results.BadRequest(new { message = "El nombre de la empresa es obligatorio." });
             }
@@ -171,8 +194,10 @@ public static class AuthEndpoints
         });
 
         // 4. Switch Tenant
-        auth.MapPost("/switch-tenant", async (SwitchTenantRequest req, CrmDbContext db, CancellationToken ct) =>
+        auth.MapPost("/switch-tenant", async ([FromBody] SwitchTenantRequest req, CrmDbContext db, CancellationToken ct) =>
         {
+            if (req == null) return Results.BadRequest(new { message = "Petición inválida." });
+
             var targetTenantId = new TenantId(req.TenantId);
             var tenantSettings = await db.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == targetTenantId, ct);
             if (tenantSettings == null)

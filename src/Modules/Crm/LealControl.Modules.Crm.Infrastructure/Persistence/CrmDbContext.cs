@@ -43,9 +43,58 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
         try
         {
             await Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS public.tenant_settings (
+                    ""TenantId"" uuid NOT NULL PRIMARY KEY,
+                    ""LegalName"" character varying(256) NOT NULL,
+                    ""TradeName"" character varying(256),
+                    ""DocumentType"" character varying(20) NOT NULL DEFAULT 'Cuit',
+                    ""DocumentNumber"" character varying(20) NOT NULL DEFAULT '30715489629',
+                    ""TaxCondition"" character varying(64) NOT NULL DEFAULT 'ResponsableInscripto',
+                    ""IibbRegime"" character varying(64) NOT NULL DEFAULT 'ConvenioMultilateral',
+                    ""IibbNumber"" character varying(64),
+                    ""ActivityStartDate"" character varying(32),
+                    ""Email"" character varying(128),
+                    ""Phone"" character varying(64),
+                    ""WhatsApp"" character varying(64),
+                    ""Website"" character varying(256),
+                    ""FiscalStreet"" character varying(256),
+                    ""FiscalCity"" character varying(128),
+                    ""FiscalProvince"" character varying(64),
+                    ""FiscalPostalCode"" character varying(20),
+                    ""LogoUrl"" text,
+                    ""ArcaCertificateCrt"" text,
+                    ""ArcaCertificateKey"" text,
+                    ""ArcaEnvironment"" character varying(32) NOT NULL DEFAULT 'Homologacion',
+                    ""ArcaSignerCuit"" character varying(20),
+                    ""BankName"" character varying(128),
+                    ""BankCbu"" character varying(64),
+                    ""BankAlias"" character varying(64),
+                    ""DefaultQuoteValidDays"" integer NOT NULL DEFAULT 15,
+                    ""DefaultDeliveryDays"" integer NOT NULL DEFAULT 7,
+                    ""DefaultWarranty"" character varying(256),
+                    ""DefaultPaymentTerms"" character varying(256),
+                    ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                    ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+                );
+
+                CREATE TABLE IF NOT EXISTS public.tenant_users (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""TenantId"" uuid NOT NULL,
+                    ""FullName"" character varying(128) NOT NULL,
+                    ""Email"" character varying(128) NOT NULL,
+                    ""Role"" character varying(64) NOT NULL DEFAULT 'Comercial',
+                    ""PasswordHash"" character varying(256),
+                    ""IsActive"" boolean NOT NULL DEFAULT true,
+                    ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                    ""LastLoginUtc"" timestamp with time zone
+                );
+
                 ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""ActivityStartDate"" character varying(32);
+                ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""CreatedAtUtc"" timestamp with time zone DEFAULT now();
+                ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""UpdatedAtUtc"" timestamp with time zone DEFAULT now();
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""PasswordHash"" character varying(256);
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""LastLoginUtc"" timestamp with time zone;
+                ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""IsActive"" boolean DEFAULT true;
                 ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRating"" character varying(10);
                 ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraWorstSituation"" integer;
                 ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraTotalDebt"" numeric(18,2);
@@ -54,9 +103,9 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRecommendation"" character varying(2000);
             ");
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore if handled by migrations
+            Console.WriteLine($"[CrmDbContext] Error en EnsureCrmTablesAsync: {ex.Message}");
         }
     }
 }
