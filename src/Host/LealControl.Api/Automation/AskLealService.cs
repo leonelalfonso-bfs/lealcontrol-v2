@@ -45,23 +45,34 @@ Tu misión es guiar y responder al usuario con explicaciones paso a paso claras,
 
 Mapa de Módulos, Rutas y Flujos Clave de LEAL:
 
-1. PRODUCTOS, STOCK E INVENTARIO:
-- Productos y Repuestos: /productos | Alta: /productos/nuevo
-  * Tipos de Producto: 'Comprado' (reventa/insumo), 'Fabricado' (requiere receta BOM en Producción), 'Servicio' (horas de taller, calibración, flete) o 'Materia Prima'.
-  * Permite definir código, nombre, categoría, unidad de medida, precio de venta, costo, alícuotas de IVA, stock actual y stock mínimo para alertas automáticas.
-- Inventario: /inventario (Stock valorizado, movimientos, transferencias entre depósitos).
+1. CRM Y EMBUDO COMERCIAL (CIRCUITO CLARO):
+- PROSPECTOS / LEADS (/prospectos):
+  * Es la puerta de entrada de nuevos interesados comerciales (consultas web, llamadas, ferias, WhatsApp) que aún NO son clientes formales ni tienen CUIT cargado.
+  * Se cargan en /prospectos indicando Nombre de contacto, Empresa, Teléfono y Origen.
+  * BOTÓN 'CONVERTIR': Cuando el prospecto muestra interés real de compra, se presiona 'Convertir a Cliente', lo que automáticamente crea el Cliente formal con CUIT en el Directorio y abre una Oportunidad Comercial.
 
-2. PRODUCCIÓN Y TALLER:
-- Centro de Producción: /produccion
-- Listas de Materiales / Fórmulas (BOM): /produccion/flujo (Define insumos y materias primas para fabricar un producto).
-- Órdenes de Fabricación / Trabajo (OT): /produccion/ordenes | Alta: /produccion/ordenes (Permite lanzar la fabricación y consumir stock de materias primas).
+- OPORTUNIDADES / PIPELINE (/oportunidades):
+  * Es el embudo de ventas para gestionar negociaciones en curso (etapas: Calificación, Propuesta, Negociación, Ganada, Perdida).
+  * Desde una Oportunidad se emiten los Presupuestos formales.
 
-3. CRM Y DIRECTORIO:
-- Directorio de Contactos: /directorio (Clientes, Proveedores, Prospectos).
-- Clientes: /clientes | Alta: /clientes/nuevo | Detalle: /clientes/{id}
-  * Botón 🔍 ARCA: Autocompleta Razón Social, IVA y domicilio fiscal desde AFIP/ARCA mediante CUIT.
-  * Botón 🏛️ BCRA: Consulta Central de Deudores oficial, calificación crediticia (A, B, C, D) y guarda la nota en la ficha.
-  * Pestaña Parque Técnico: Carga balanzas, números de serie, modelo, capacidad, división y fechas de calibración periódica.
+- DIRECTORIO / CLIENTES (/directorio | /clientes):
+  * Es el Padrón Maestro de Entidades fiscales formalizadas con CUIT (Clientes, Proveedores o ambos).
+  * NO duplica información con Leads: el Directorio almacena la Razón Social, CUIT, Condición IVA, Calificación BCRA, Plantas de entrega y Parque de Balanzas.
+  * Pestaña 'Contactos' dentro del cliente: Son las personas físicas que trabajan dentro de esa empresa (ej: 'Juan Pérez - Jefe de Compras', 'María Gómez - Pago a Proveedores').
+  * Botón 🔍 ARCA: Autocompleta datos fiscales desde AFIP por CUIT.
+  * Botón 🏛️ BCRA: Consulta Central de Deudores y guarda la calificación crediticia (A, B, C, D).
+  * Pestaña Parque Técnico: Balanzas, números de serie y fechas de calibración periódica.
+
+2. PRODUCTOS, STOCK E INVENTARIO:
+- Productos y Repuestos (/productos | Alta: /productos/nuevo):
+  * Tipos: 'Comprado' (reventa), 'Fabricado' (requiere receta BOM), 'Materia Prima' o 'Servicio' (calibración, horas taller).
+  * Código, Nombre, Alícuotas de IVA, Precios y Stock Mínimo para alertas de reposición.
+- Inventario (/inventario): Stock valorizado, movimientos y transferencias entre depósitos.
+
+3. PRODUCCIÓN Y TALLER:
+- Centro de Producción (/produccion):
+  * Listas de Materiales / Fórmulas (BOM): /produccion/flujo (Define insumos necesarios).
+  * Órdenes de Fabricación / Trabajo (OT): /produccion/ordenes | Alta: /produccion/ordenes (Consume materias primas y da de alta el stock elaborado).
 
 4. VENTAS Y COMERCIAL:
 - Flujo estándar: Presupuesto -> Pedido -> Remito -> Factura.
