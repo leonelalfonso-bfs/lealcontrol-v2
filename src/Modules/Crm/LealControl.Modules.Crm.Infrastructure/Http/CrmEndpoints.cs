@@ -132,22 +132,43 @@ public static class CrmEndpoints
 
         customers.MapPost("/{id:guid}/contacts", async (
             Guid id,
-            AddCustomerContactCommand body,
+            AddCustomerContactRequest body,
             ISender sender,
             CancellationToken cancellationToken) =>
         {
-            var result = await sender.Send(body with { CustomerId = id }, cancellationToken);
+            var command = new AddCustomerContactCommand(
+                id,
+                body.Name,
+                body.ParseRole(),
+                body.LocationId,
+                body.Email,
+                body.Phone,
+                body.WhatsApp,
+                body.IsPrimary,
+                body.Notes);
+            var result = await sender.Send(command, cancellationToken);
             return result.ToHttp(StatusCodes.Status201Created);
         });
 
         customers.MapPut("/{id:guid}/contacts/{contactId:guid}", async (
             Guid id,
             Guid contactId,
-            UpdateCustomerContactCommand body,
+            AddCustomerContactRequest body,
             ISender sender,
             CancellationToken cancellationToken) =>
         {
-            var result = await sender.Send(body with { CustomerId = id, ContactId = contactId }, cancellationToken);
+            var command = new UpdateCustomerContactCommand(
+                id,
+                contactId,
+                body.Name,
+                body.ParseRole(),
+                body.LocationId,
+                body.Email,
+                body.Phone,
+                body.WhatsApp,
+                body.IsPrimary,
+                body.Notes);
+            var result = await sender.Send(command, cancellationToken);
             return result.ToHttp();
         });
 
@@ -203,11 +224,21 @@ public static class CrmEndpoints
 
         customers.MapPut("/{id:guid}/fiscal-rates", async (
             Guid id,
-            UpsertCustomerFiscalRateCommand body,
+            UpsertCustomerFiscalRateRequest body,
             ISender sender,
             CancellationToken cancellationToken) =>
         {
-            var result = await sender.Send(body with { CustomerId = id }, cancellationToken);
+            var command = new UpsertCustomerFiscalRateCommand(
+                id,
+                body.ParseJurisdiction(),
+                body.PerceptionRate,
+                body.RetentionRate,
+                body.HasPerceptionExclusion,
+                body.PerceptionExclusionExpiresOn,
+                body.HasRetentionExclusion,
+                body.RetentionExclusionExpiresOn,
+                body.ExclusionCertificateNumber);
+            var result = await sender.Send(command, cancellationToken);
             return result.ToHttp();
         });
 
@@ -357,3 +388,52 @@ public sealed record ClassifyOpportunityRequest(
     Guid? OwnerId,
     IReadOnlyList<string>? Tags,
     DateTime? ExpectedCloseDate);
+
+public sealed record AddCustomerContactRequest(
+    string Name,
+    string? Role,
+    Guid? LocationId,
+    string? Email,
+    string? Phone,
+    string? WhatsApp,
+    bool IsPrimary,
+    string? Notes)
+{
+    public ContactRole ParseRole()
+    {
+        if (string.IsNullOrWhiteSpace(Role)) return ContactRole.Commercial;
+        var r = Role.Trim().ToLowerInvariant();
+        if (r.Contains("compr") || r.Contains("vent") || r.Contains("comercial") || r.Contains("commercial")) return ContactRole.Commercial;
+        if (r.Contains("tecn") || r.Contains("técn") || r.Contains("technical") || r.Contains("serv")) return ContactRole.Technical;
+        if (r.Contains("admin") || r.Contains("contab") || r.Contains("pago")) return ContactRole.Administrative;
+        if (Enum.TryParse<ContactRole>(Role, true, out var parsed)) return parsed;
+        return ContactRole.Other;
+    }
+}
+
+public sealed record UpsertCustomerFiscalRateRequest(
+    string? Jurisdiction,
+    decimal PerceptionRate,
+    decimal RetentionRate,
+    bool HasPerceptionExclusion,
+    DateOnly? PerceptionExclusionExpiresOn,
+    bool HasRetentionExclusion,
+    DateOnly? RetentionExclusionExpiresOn,
+    string? ExclusionCertificateNumber)
+{
+    public FiscalJurisdiction ParseJurisdiction()
+    {
+        if (string.IsNullOrWhiteSpace(Jurisdiction)) return FiscalJurisdiction.Arba;
+        var j = Jurisdiction.Trim().ToLowerInvariant();
+        if (j.Contains("caba") || j.Contains("agip")) return FiscalJurisdiction.Agip;
+        if (j.Contains("arba") || j.Contains("buenos") || j.Contains("pba")) return FiscalJurisdiction.Arba;
+        if (j.Contains("santa") || j.Contains("api")) return FiscalJurisdiction.ApiSantaFe;
+        if (j.Contains("cordob") || j.Contains("córdob")) return FiscalJurisdiction.DgrCordoba;
+        if (j.Contains("mendoz")) return FiscalJurisdiction.DgrMendoza;
+        if (j.Contains("tucum")) return FiscalJurisdiction.DgrTucuman;
+        if (j.Contains("entre") || j.Contains("rios") || j.Contains("ríos")) return FiscalJurisdiction.DgrEntreRios;
+        if (j.Contains("gananc")) return FiscalJurisdiction.Ganancias;
+        if (Enum.TryParse<FiscalJurisdiction>(Jurisdiction, true, out var parsed)) return parsed;
+        return FiscalJurisdiction.Arba;
+    }
+}

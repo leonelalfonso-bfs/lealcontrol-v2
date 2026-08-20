@@ -13,11 +13,9 @@ export function SuppliersPage() {
 
   const load = (term = search) => {
     setLoading(true);
-    api.listCustomers(term)
+    api.listCustomers(term, "supplier")
       .then((page) => {
-        // Filter entities that have isSupplier = true
-        const suppliers = page.items.filter((c) => c.isSupplier);
-        setItems(suppliers);
+        setItems(page.items);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));

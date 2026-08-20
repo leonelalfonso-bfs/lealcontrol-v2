@@ -124,7 +124,7 @@ export const api = {
   openOpportunity: (body: object) =>
     request<Opportunity>("/api/v1/crm/opportunities", { method: "POST", body: JSON.stringify(body) }),
   moveStage: (id: string, stage: string) =>
-    request<Opportunity>(`/api/v1/crm/opportunities/${id}/stage`, {
+    request<Opportunity>(`/api/v1/crm/opportunities/${id}/move`, {
       method: "POST",
       body: JSON.stringify({ stage })
     }),
@@ -141,11 +141,14 @@ export const api = {
   createQuoteFromOpportunity: (id: string) =>
     request<Quote>(`/api/v1/sales/quotes/from-opportunity/${id}`, { method: "POST" }),
   markWon: (id: string) =>
-    request<Opportunity>(`/api/v1/crm/opportunities/${id}/win`, { method: "POST" }),
-  markLost: (id: string, reason?: string) =>
-    request<Opportunity>(`/api/v1/crm/opportunities/${id}/loss-reason`, {
+    request<Opportunity>(`/api/v1/crm/opportunities/${id}/move`, {
       method: "POST",
-      body: JSON.stringify({ reason })
+      body: JSON.stringify({ stage: "Won" })
+    }),
+  markLost: (id: string, reason?: string) =>
+    request<Opportunity>(`/api/v1/crm/opportunities/${id}/move`, {
+      method: "POST",
+      body: JSON.stringify({ stage: "Lost", lostReason: reason })
     }),
   listProducts: (search = "", productType = "", categoryId = "", onlyActive = true) => {
     const params = new URLSearchParams();

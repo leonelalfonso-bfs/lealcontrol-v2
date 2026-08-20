@@ -205,9 +205,9 @@ public static class SalesEndpoints
             return result.ToHttp();
         });
 
-        sales.MapPost("/categories", async (CreateCategoryCommand command, ISender sender, CancellationToken cancellationToken) =>
+        sales.MapPost("/categories", async (ProductCategoryWriteModel model, ISender sender, CancellationToken cancellationToken) =>
         {
-            var result = await sender.Send(command, cancellationToken);
+            var result = await sender.Send(new CreateCategoryCommand(model), cancellationToken);
             return result.IsSuccess
                 ? result.ToCreated($"/api/v1/sales/categories/{result.Value.Id}")
                 : result.ToHttp();

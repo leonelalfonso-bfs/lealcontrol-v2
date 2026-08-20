@@ -62,12 +62,18 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.MinStock).HasPrecision(18, 2);
         builder.Property(x => x.BaseUnit).HasMaxLength(20);
 
+        var dictComparer = new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<Dictionary<string, string>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.OrderBy(e => e.Key).SequenceEqual(c2.OrderBy(e => e.Key))),
+            c => c == null ? 0 : c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), (v.Value ?? "").GetHashCode())),
+            c => c == null ? new Dictionary<string, string>() : new Dictionary<string, string>(c));
+
         builder.Property(x => x.CustomAttributes)
             .HasColumnName("CustomAttributes")
             .HasColumnType("jsonb")
             .HasConversion(
                 v => JsonSerializer.Serialize(v ?? new Dictionary<string, string>(), (JsonSerializerOptions?)null),
-                v => string.IsNullOrWhiteSpace(v) ? new Dictionary<string, string>() : JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, string>());
+                v => string.IsNullOrWhiteSpace(v) ? new Dictionary<string, string>() : JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, string>())
+            .Metadata.SetValueComparer(dictComparer);
 
         builder.Ignore(x => x.Suppliers);
 
