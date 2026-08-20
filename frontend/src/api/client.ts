@@ -20,7 +20,9 @@ import type {
 const API_BASE = "";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
+  const normalToken = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
+  const superToken = typeof window !== "undefined" ? localStorage.getItem("leal_superadmin_token") : null;
+  const token = normalToken || superToken;
   const tenantId = typeof window !== "undefined" ? localStorage.getItem("leal_tenant_id") : null;
 
   const headers: Record<string, string> = {

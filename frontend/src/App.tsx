@@ -127,20 +127,17 @@ export function App() {
     return <LoginPage />;
   }
 
-  if (location.pathname === "/superadmin/login") {
-    return <SuperAdminLoginPage />;
-  }
-
-  if (location.pathname === "/superadmin") {
+  if (location.pathname.startsWith("/superadmin")) {
+    if (location.pathname === "/superadmin/login") {
+      return <SuperAdminLoginPage />;
+    }
+    if (location.pathname === "/superadmin/tenants") {
+      return <SuperAdminTenantsPage />;
+    }
+    if (location.pathname === "/superadmin/planes") {
+      return <SuperAdminPlansPage />;
+    }
     return <SuperAdminDashboardPage />;
-  }
-
-  if (location.pathname === "/superadmin/tenants") {
-    return <SuperAdminTenantsPage />;
-  }
-
-  if (location.pathname === "/superadmin/planes") {
-    return <SuperAdminPlansPage />;
   }
 
   return (
