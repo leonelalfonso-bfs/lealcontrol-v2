@@ -132,22 +132,29 @@ public sealed class GeminiApiClient
             var prompt = $@"
 Actúa como un experto liquidador de sueldos y asesor laboral en Argentina.
 Analiza la información provista para el Convenio Colectivo de Trabajo (CCT): '{cctNumber}'.
-Si se adjunta el documento o acuerdo en PDF, extrae los datos exactamente de dicho documento.
-Si no se adjunta PDF, investiga y aplica OBLIGATORIAMENTE la escala salarial y paritaria homologada más reciente vigente (priorizando año 2026 o la última escala acordada en Argentina, evitando escalas antiguas de 2023/2024).
+Si se adjunta un documento PDF o imagen de acuerdo/resolución paritaria:
+- Extrae el número de CCT real si se menciona en el documento (ej: CCT 660/13, CCT 130/75, etc.).
+- Extrae el sindicato o federación firmante (ej: UECARA, UOCRA, FAECYS).
+- Extrae el período de vigencia o mes de aplicación (ej: Junio 2026, Julio 2026, Agosto 2026).
+- Extrae el porcentaje de aumento paritario acordado.
+- Extrae todas las categorías salariales representativas con sus sueldos básicos y sumas no remunerativas (SNR). Si el documento tiene varias zonas geográficas (ej: Zona I vs Patagonia), extrae prioritariamente la Zona I (General / Centro).
+- Asegúrate de devolver los campos numéricos estrictamente como números decimales sin signos '$', sin comas ni puntos de miles (ej: 1673438.00). Si el valor horario no figura, calcula basicSalary / 200.
+
+Si no se adjunta PDF, investiga y aplica OBLIGATORIAMENTE la escala salarial y paritaria homologada más reciente vigente en Argentina (año 2026).
 
 Devuelve OBLIGATORIAMENTE un único objeto JSON con esta estructura exacta:
 {{
-  ""cctNumber"": ""{cctNumber}"",
-  ""unionName"": ""Nombre oficial del sindicato o federación (ej: FAECYS, UOM, UOCRA, SMATA, Gastronómicos)"",
-  ""effectivePeriod"": ""Mes y Año de vigencia (ej: Agosto 2026)"",
-  ""percentageIncrease"": 4.5,
-  ""summary"": ""Resumen ejecutivo del acuerdo salarial, tramos de aumento y cláusulas no remunerativas"",
+  ""cctNumber"": ""660/13"",
+  ""unionName"": ""Nombre oficial del sindicato"",
+  ""effectivePeriod"": ""Mes y Año de vigencia"",
+  ""percentageIncrease"": 2.1,
+  ""summary"": ""Resumen ejecutivo del acuerdo"",
   ""salaryScales"": [
     {{
-      ""category"": ""Nombre de la categoría (ej: Administrativo A, Maestranza A, Oficial Especializado)"",
-      ""basicSalary"": 580000.00,
-      ""nonRemunerativeAmount"": 45000.00,
-      ""hourlyRate"": 2900.00
+      ""category"": ""Capataz de Obra 1ra"",
+      ""basicSalary"": 1673438.00,
+      ""nonRemunerativeAmount"": 63300.00,
+      ""hourlyRate"": 8367.19
     }}
   ]
 }}";
@@ -204,7 +211,29 @@ Devuelve OBLIGATORIAMENTE un único objeto JSON con esta estructura exacta:
 
             if (string.IsNullOrWhiteSpace(text)) return null;
 
-            return JsonSerializer.Deserialize<CctAnalysisResultDto>(text, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            // Clean code fences if present
+            var cleanText = text.Trim();
+            if (cleanText.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+            {
+                cleanText = cleanText.Substring(7);
+            }
+            else if (cleanText.StartsWith("```"))
+            {
+                cleanText = cleanText.Substring(3);
+            }
+            if (cleanText.EndsWith("```"))
+            {
+                cleanText = cleanText.Substring(0, cleanText.Length - 3);
+            }
+            cleanText = cleanText.Trim();
+
+            var serializerOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                NumberHandling = JsonNumberHandling.AllowReadingFromString
+            };
+
+            return JsonSerializer.Deserialize<CctAnalysisResultDto>(cleanText, serializerOptions);
         }
         catch (Exception ex)
         {
