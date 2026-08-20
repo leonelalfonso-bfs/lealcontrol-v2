@@ -42,7 +42,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setName(initialName);
-      setCode(initialName ? initialName.substring(0, 8).toUpperCase().replace(/\s+/g, "-") : `ART-${Math.floor(1000 + Math.random() * 9000)}`);
+      setCode(initialName ? initialName.substring(0, 8).toUpperCase().replace(/\s+/g, "-") : "");
       setError(null);
 
       if (!initialCategories || initialCategories.length === 0) {

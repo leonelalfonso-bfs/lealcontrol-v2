@@ -507,8 +507,9 @@ export const ProductFormPage: React.FC = () => {
                         type="number"
                         step="0.01"
                         min="0"
-                        value={basePrice}
-                        onChange={(e) => setBasePrice(Number(e.target.value))}
+                        placeholder="0.00"
+                        value={basePrice === 0 && !isEditing ? "" : basePrice}
+                        onChange={(e) => setBasePrice(e.target.value === "" ? 0 : Number(e.target.value))}
                         style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold", fontSize: "1rem", color: "#047857" }}
                       />
                     </div>
@@ -544,8 +545,9 @@ export const ProductFormPage: React.FC = () => {
                         type="number"
                         step="0.01"
                         min="0"
-                        value={costPrice}
-                        onChange={(e) => setCostPrice(Number(e.target.value))}
+                        placeholder="0.00"
+                        value={costPrice === 0 && !isEditing ? "" : costPrice}
+                        onChange={(e) => setCostPrice(e.target.value === "" ? 0 : Number(e.target.value))}
                         style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold", fontSize: "1rem", color: "#b45309" }}
                       />
                     </div>
@@ -619,8 +621,9 @@ export const ProductFormPage: React.FC = () => {
                   type="number"
                   step="0.01"
                   min="0"
-                  value={minStock}
-                  onChange={(e) => setMinStock(Number(e.target.value))}
+                  placeholder="0"
+                  value={minStock === 0 && !isEditing ? "" : minStock}
+                  onChange={(e) => setMinStock(e.target.value === "" ? 0 : Number(e.target.value))}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontWeight: "bold" }}
                 />
               </div>

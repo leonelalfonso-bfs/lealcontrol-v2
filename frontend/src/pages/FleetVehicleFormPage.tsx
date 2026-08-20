@@ -15,14 +15,14 @@ export function FleetVehicleFormPage() {
 
   // Form Fields
   const [plate, setPlate] = useState("");
-  const [brand, setBrand] = useState("Toyota");
-  const [model, setModel] = useState("Hilux 4x4");
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [brand, setBrand] = useState("");
+  const [model, setModel] = useState("");
+  const [year, setYear] = useState<number | "">(new Date().getFullYear());
   const [type, setType] = useState<number>(0);
   const [vinChassis, setVinChassis] = useState("");
   const [engineNumber, setEngineNumber] = useState("");
-  const [currentKilometers, setCurrentKilometers] = useState<number>(0);
-  const [currentEngineHours, setCurrentEngineHours] = useState<number>(0);
+  const [currentKilometers, setCurrentKilometers] = useState<number | "">("");
+  const [currentEngineHours, setCurrentEngineHours] = useState<number | "">("");
   const [fuelType, setFuelType] = useState("Diesel");
   const [status, setStatus] = useState<number>(0);
   const [assignedDriverId, setAssignedDriverId] = useState<string>("");
@@ -37,21 +37,21 @@ export function FleetVehicleFormPage() {
   // Add Document Modal
   const [showAddDocModal, setShowAddDocModal] = useState(false);
   const [newDocType, setNewDocType] = useState(0);
-  const [newDocTitle, setNewDocTitle] = useState("VTV / RTO Nacional");
+  const [newDocTitle, setNewDocTitle] = useState("");
   const [newDocNumber, setNewDocNumber] = useState("");
-  const [newDocIssuer, setNewDocIssuer] = useState("Taller VTV Oficial");
+  const [newDocIssuer, setNewDocIssuer] = useState("");
   const [newDocExpDate, setNewDocExpDate] = useState("");
-  const [newDocCost, setNewDocCost] = useState<number>(0);
+  const [newDocCost, setNewDocCost] = useState<number | "">("");
 
   // Add Maintenance Modal
   const [showAddMaintModal, setShowAddMaintModal] = useState(false);
   const [newMaintType, setNewMaintType] = useState(0);
-  const [newMaintTitle, setNewMaintTitle] = useState("Service 10.000 KM (Aceite & Filtros)");
+  const [newMaintTitle, setNewMaintTitle] = useState("");
   const [newMaintDesc, setNewMaintDesc] = useState("");
-  const [newMaintKm, setNewMaintKm] = useState<number>(0);
-  const [newMaintWorkshop, setNewMaintWorkshop] = useState("Taller Propio");
-  const [newMaintCost, setNewMaintCost] = useState<number>(0);
-  const [newMaintNextKm, setNewMaintNextKm] = useState<number>(0);
+  const [newMaintKm, setNewMaintKm] = useState<number | "">("");
+  const [newMaintWorkshop, setNewMaintWorkshop] = useState("");
+  const [newMaintCost, setNewMaintCost] = useState<number | "">("");
+  const [newMaintNextKm, setNewMaintNextKm] = useState<number | "">("");
 
   useEffect(() => {
     loadDrivers();
@@ -183,7 +183,7 @@ export function FleetVehicleFormPage() {
         type: newMaintType,
         title: newMaintTitle.trim(),
         description: newMaintDesc.trim(),
-        kmAtService: Number(newMaintKm) || currentKilometers,
+        kmAtService: Number(newMaintKm) || Number(currentKilometers) || 0,
         serviceDateUtc: new Date().toISOString(),
         workshopName: newMaintWorkshop.trim(),
         totalCost: Number(newMaintCost) || 0,
@@ -191,7 +191,7 @@ export function FleetVehicleFormPage() {
         status: 2 // Completed
       });
       setMaintenances((prev) => [created, ...prev]);
-      if (Number(newMaintKm) > currentKilometers) {
+      if (Number(newMaintKm) > (Number(currentKilometers) || 0)) {
         setCurrentKilometers(Number(newMaintKm));
       }
       setShowAddMaintModal(false);
