@@ -256,6 +256,114 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
                     ALTER TABLE public.products ALTER COLUMN ""ImagePath"" TYPE text;
                 END IF;
             END $$;
+
+            CREATE TABLE IF NOT EXISTS sales.""GrainContracts"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ContractNumber"" character varying(50) NOT NULL,
+                ""ContractType"" character varying(30) NOT NULL DEFAULT 'Compra',
+                ""GrainType"" character varying(50) NOT NULL,
+                ""Harvest"" character varying(20) NOT NULL DEFAULT '2025/2026',
+                ""PricingMode"" character varying(30) NOT NULL DEFAULT 'PrecioHecho',
+                ""PricePerTon"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""Currency"" character varying(10) NOT NULL DEFAULT 'USD',
+                ""PricingReference"" character varying(100),
+                ""TotalTons"" numeric(18,2) NOT NULL,
+                ""DeliveredTons"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""FixedTons"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""LiquidatedTons"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""SellerCustomerId"" uuid,
+                ""SellerName"" character varying(200) NOT NULL,
+                ""BuyerCustomerId"" uuid,
+                ""BuyerName"" character varying(200) NOT NULL,
+                ""BrokerCommissionPercentage"" numeric(8,4) NOT NULL DEFAULT 1.0,
+                ""BrokerCommissionAmount"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""DeliveryPort"" character varying(150),
+                ""DeliveryStartDate"" timestamp with time zone,
+                ""DeliveryEndDate"" timestamp with time zone,
+                ""Status"" character varying(30) NOT NULL DEFAULT 'Activo',
+                ""Notes"" character varying(1000),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );
+
+            CREATE TABLE IF NOT EXISTS sales.""GrainPriceFixations"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ContractId"" uuid NOT NULL,
+                ""FixationNumber"" character varying(50) NOT NULL,
+                ""FixationDateUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""FixedTons"" numeric(18,2) NOT NULL,
+                ""PricePerTon"" numeric(18,2) NOT NULL,
+                ""Currency"" character varying(10) NOT NULL DEFAULT 'USD',
+                ""MarketReference"" character varying(100),
+                ""BrokerageAmount"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""Notes"" character varying(500),
+                ""Status"" character varying(30) NOT NULL DEFAULT 'Confirmada',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );
+
+            CREATE TABLE IF NOT EXISTS sales.""GrainDeliveries"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ContractId"" uuid NOT NULL,
+                ""DeliveryNumber"" character varying(50) NOT NULL,
+                ""CpeNumber"" character varying(50),
+                ""CtgNumber"" character varying(50),
+                ""TruckPlate"" character varying(20),
+                ""TrailerPlate"" character varying(20),
+                ""DriverName"" character varying(150),
+                ""GrossWeightKg"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""TareWeightKg"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""NetWeightKg"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""HumidityPercentage"" numeric(8,2) NOT NULL DEFAULT 14.0,
+                ""ForeignMatterPercentage"" numeric(8,2) NOT NULL DEFAULT 0,
+                ""DamagedPercentage"" numeric(8,2) NOT NULL DEFAULT 0,
+                ""CommercialNetWeightTons"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""QualityGrade"" character varying(30) NOT NULL DEFAULT 'Grado 2 (Cámara)',
+                ""DestinationSiloOrPort"" character varying(150),
+                ""ReceivedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""Status"" character varying(30) NOT NULL DEFAULT 'Descargado'
+            );
+
+            CREATE TABLE IF NOT EXISTS sales.""GrainSettlements"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ContractId"" uuid,
+                ""SettlementNumber"" character varying(50) NOT NULL,
+                ""SettlementType"" character varying(40) NOT NULL DEFAULT 'LPG_Primaria',
+                ""GrainType"" character varying(50) NOT NULL,
+                ""SellerName"" character varying(200) NOT NULL,
+                ""BuyerName"" character varying(200) NOT NULL,
+                ""Tons"" numeric(18,2) NOT NULL,
+                ""PricePerTon"" numeric(18,2) NOT NULL,
+                ""GrossAmount"" numeric(18,2) NOT NULL,
+                ""DryingAndConditioningAmount"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""StorageAmount"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""BrokerageAmount"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""VatRate"" numeric(8,2) NOT NULL DEFAULT 10.5,
+                ""VatAmount"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""SisaRetentionPercentage"" numeric(8,2) NOT NULL DEFAULT 5.0,
+                ""SisaRetentionAmount"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""NetAmount"" numeric(18,2) NOT NULL,
+                ""Currency"" character varying(10) NOT NULL DEFAULT 'USD',
+                ""Status"" character varying(30) NOT NULL DEFAULT 'Emitida',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );
+
+            CREATE TABLE IF NOT EXISTS sales.""GrainMarketPrices"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""PriceDate"" timestamp with time zone NOT NULL,
+                ""GrainType"" character varying(50) NOT NULL,
+                ""Market"" character varying(100) NOT NULL DEFAULT 'Pizarra Rosario',
+                ""Currency"" character varying(10) NOT NULL DEFAULT 'USD',
+                ""SettlementPrice"" numeric(18,2) NOT NULL,
+                ""MinPrice"" numeric(18,2),
+                ""MaxPrice"" numeric(18,2),
+                ""DailyVariationPercentage"" numeric(8,2) NOT NULL DEFAULT 0,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );
         ";
 
         await Database.ExecuteSqlRawAsync(sql, cancellationToken);

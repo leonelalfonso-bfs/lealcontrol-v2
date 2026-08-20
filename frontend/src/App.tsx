@@ -80,6 +80,13 @@ import { SalesHelpPage } from "./pages/SalesHelpPage";
 import { FinanceHelpPage } from "./pages/FinanceHelpPage";
 import { SettingsHelpPage } from "./pages/SettingsHelpPage";
 import { StyleShowcasePage } from "./pages/StyleShowcasePage";
+import { GrainsDashboardPage } from "./pages/GrainsDashboardPage";
+import { GrainContractsPage } from "./pages/GrainContractsPage";
+import { GrainContractFormPage } from "./pages/GrainContractFormPage";
+import { GrainContractDetailPage } from "./pages/GrainContractDetailPage";
+import { GrainFixationsPage } from "./pages/GrainFixationsPage";
+import { GrainDeliveriesPage } from "./pages/GrainDeliveriesPage";
+import { GrainPositionPage } from "./pages/GrainPositionPage";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
 import "./v1-theme.css";
@@ -433,6 +440,15 @@ export function App() {
               <Route path="/flota/vehiculos/:id" element={<FleetVehicleFormPage />} />
               <Route path="/flota/combustible" element={<FleetFuelLogsPage />} />
               <Route path="/flota/ayuda" element={<FleetHelpPage />} />
+
+              {/* Grains & Agriculture Brokerage Routes */}
+              <Route path="/cereales" element={<GrainsDashboardPage />} />
+              <Route path="/cereales/contratos" element={<GrainContractsPage />} />
+              <Route path="/cereales/contratos/nuevo" element={<GrainContractFormPage />} />
+              <Route path="/cereales/contratos/:id" element={<GrainContractDetailPage />} />
+              <Route path="/cereales/fijaciones" element={<GrainFixationsPage />} />
+              <Route path="/cereales/entregas" element={<GrainDeliveriesPage />} />
+              <Route path="/cereales/posicion" element={<GrainPositionPage />} />
 
               {/* Reports & Settings Routes */}
               <Route path="/reportes" element={<ReportsPage />} />

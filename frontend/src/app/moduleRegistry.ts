@@ -257,6 +257,26 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     ]
   },
   {
+    id: "cereales",
+    label: "Cereales & Granos",
+    icon: "🌾",
+    gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
+    glow: "rgba(217, 119, 6, 0.35)",
+    title: "CORRETAJE & ACOPIO GRANARIO",
+    defaultPath: "/cereales",
+    pathPrefixes: ["/cereales"],
+    minimumPlan: "base",
+    requiredPermission: "sales.read",
+    dependencies: [],
+    items: [
+      { path: "/cereales", label: "Tablero Granario", icon: "📊", end: true },
+      { path: "/cereales/contratos", label: "Contratos de Granos", icon: "📋" },
+      { path: "/cereales/fijaciones", label: "Pizarra & Fijaciones", icon: "⚖️" },
+      { path: "/cereales/entregas", label: "Logística CPE & Balanza", icon: "🚚" },
+      { path: "/cereales/posicion", label: "Posición & Stock", icon: "🌾" }
+    ]
+  },
+  {
     id: "administracion",
     label: "Configuración",
     icon: "🛠️",

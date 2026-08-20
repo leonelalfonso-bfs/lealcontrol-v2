@@ -494,5 +494,31 @@ export const api = {
   switchTenant: (tenantId: string) =>
     request<import("./types").AuthResponse>("/api/v1/auth/switch-tenant", { method: "POST", body: JSON.stringify({ tenantId }) }),
   listTenants: () =>
-    request<import("./types").TenantInfo[]>("/api/v1/auth/tenants")
+    request<import("./types").TenantInfo[]>("/api/v1/auth/tenants"),
+
+  // Grains & Agriculture Brokerage Module
+  getGrainDashboard: () =>
+    request<import("./types").GrainDashboardData>("/api/v1/grains/dashboard"),
+  listGrainContracts: (params?: { search?: string; grainType?: string; harvest?: string; status?: string; pricingMode?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set("search", params.search);
+    if (params?.grainType) q.set("grainType", params.grainType);
+    if (params?.harvest) q.set("harvest", params.harvest);
+    if (params?.status) q.set("status", params.status);
+    if (params?.pricingMode) q.set("pricingMode", params.pricingMode);
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return request<import("./types").GrainContract[]>(`/api/v1/grains/contracts${query}`);
+  },
+  getGrainContract: (id: string) =>
+    request<{ contract: import("./types").GrainContract; fixations: import("./types").GrainPriceFixation[]; deliveries: import("./types").GrainDelivery[] }>(`/api/v1/grains/contracts/${id}`),
+  createGrainContract: (body: Partial<import("./types").GrainContract>) =>
+    request<{ id: string; contractNumber: string }>("/api/v1/grains/contracts", { method: "POST", body: JSON.stringify(body) }),
+  createGrainFixation: (body: { contractId: string; fixedTons: number; pricePerTon: number; currency?: string; marketReference?: string; fixationDateUtc?: string; notes?: string }) =>
+    request<{ id: string; fixationNumber: string }>("/api/v1/grains/fixations", { method: "POST", body: JSON.stringify(body) }),
+  createGrainDelivery: (body: { contractId: string; cpeNumber?: string; ctgNumber?: string; truckPlate?: string; trailerPlate?: string; driverName?: string; grossWeightKg: number; tareWeightKg: number; humidityPercentage: number; foreignMatterPercentage: number; damagedPercentage: number; qualityGrade?: string; destinationSiloOrPort?: string }) =>
+    request<{ id: string; deliveryNumber: string; commercialNetTons: number }>("/api/v1/grains/deliveries", { method: "POST", body: JSON.stringify(body) }),
+  listGrainDeliveries: () =>
+    request<import("./types").GrainDelivery[]>("/api/v1/grains/deliveries"),
+  listGrainMarketPrices: () =>
+    request<import("./types").GrainMarketPrice[]>("/api/v1/grains/market-prices")
 };

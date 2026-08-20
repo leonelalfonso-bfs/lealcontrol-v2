@@ -1,0 +1,1024 @@
+{
+  "total": 28,
+  "passed": 19,
+  "failed": 9,
+  "state": {
+    "customerId": null,
+    "supplierId": "708ac331-e1f7-4dc7-8b67-11bfc6520f4e",
+    "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+    "leadId": null,
+    "opportunityId": "997b2069-f152-4dfa-aaa9-286d6076e351",
+    "quoteId": null,
+    "purchaseRequestId": "72ef27c4-4fc0-4cc4-be4a-13d19c8dc3c5",
+    "purchaseOrderId": "23c7ac2f-303e-456b-8bed-ae45ff784101",
+    "purchaseReceptionId": null,
+    "purchaseInvoiceId": "14f7069f-174e-462c-9fc5-99d5b3fc057e"
+  },
+  "results": [
+    {
+      "name": "Healthcheck API",
+      "method": "GET",
+      "path": "/health",
+      "request": null,
+      "ok": false,
+      "error": "JSONDecodeError('Expecting value: line 1 column 1 (char 0)')",
+      "status": null,
+      "response": null
+    },
+    {
+      "name": "CRM: alta manual de cliente",
+      "method": "POST",
+      "path": "/api/v1/crm/customers",
+      "request": {
+        "legalName": "Cliente E2E Hermes 1787240765",
+        "tradeName": "Cliente Hermes",
+        "documentType": "CUIT",
+        "documentNumber": "30700000765",
+        "taxCondition": "ResponsableInscripto",
+        "iibbRegime": "NoInscripto",
+        "isCustomer": true,
+        "isSupplier": false,
+        "email": "cliente1787240765@example.com",
+        "phone": "5491122334455",
+        "whatsApp": "5491122334455",
+        "fiscalStreet": "Av. Siempre Viva 742",
+        "fiscalCity": "Buenos Aires",
+        "fiscalProvince": "CABA",
+        "fiscalPostalCode": "1000",
+        "creditLimit": 1500000,
+        "paymentTermsDays": 30,
+        "sellerId": null,
+        "notes": "Alta manual generada por prueba E2E Hermes"
+      },
+      "ok": false,
+      "status": 400,
+      "response": {
+        "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+        "title": "Crm.Document.InvalidCuitChecksum",
+        "status": 400,
+        "detail": "El CUIT no es válido (dígito verificador incorrecto)."
+      }
+    },
+    {
+      "name": "CRM: alta manual de proveedor",
+      "method": "POST",
+      "path": "/api/v1/crm/suppliers",
+      "request": {
+        "legalName": "Proveedor E2E Hermes 1787240765",
+        "tradeName": "Proveedor Hermes",
+        "documentType": "CUIT",
+        "documentNumber": "30719990765",
+        "taxCondition": "ResponsableInscripto",
+        "email": "proveedor@example.com",
+        "phone": "5491133334444",
+        "contactName": "Pablo Ventas",
+        "fiscalStreet": "Calle Industrial 123",
+        "fiscalCity": "Rosario",
+        "fiscalProvince": "SantaFe",
+        "fiscalPostalCode": "2000",
+        "paymentTermsDays": 15,
+        "notes": "Alta manual proveedor E2E"
+      },
+      "ok": true,
+      "status": 201,
+      "response": {
+        "id": "708ac331-e1f7-4dc7-8b67-11bfc6520f4e",
+        "legalName": "Proveedor E2E Hermes 1787240765",
+        "tradeName": "Proveedor Hermes",
+        "documentType": "CUIT",
+        "documentNumber": "30719990765",
+        "taxCondition": "ResponsableInscripto",
+        "email": "proveedor@example.com",
+        "phone": "5491133334444",
+        "contactName": "Pablo Ventas",
+        "fiscalStreet": "Calle Industrial 123",
+        "fiscalCity": "Rosario",
+        "fiscalProvince": "SantaFe",
+        "fiscalPostalCode": "2000",
+        "paymentTermsDays": 15,
+        "notes": "Alta manual proveedor E2E",
+        "createdAtUtc": "2026-08-20T15:46:05.152898Z"
+      }
+    },
+    {
+      "name": "CRM: listar proveedores",
+      "method": "GET",
+      "path": "/api/v1/crm/suppliers",
+      "request": null,
+      "ok": true,
+      "status": 200,
+      "response": [
+        {
+          "id": "708ac331-e1f7-4dc7-8b67-11bfc6520f4e",
+          "legalName": "Proveedor E2E Hermes 1787240765",
+          "tradeName": "Proveedor Hermes",
+          "documentType": "CUIT",
+          "documentNumber": "30719990765",
+          "taxCondition": "ResponsableInscripto",
+          "email": "proveedor@example.com",
+          "phone": "5491133334444",
+          "contactName": "Pablo Ventas",
+          "fiscalStreet": "Calle Industrial 123",
+          "fiscalCity": "Rosario",
+          "fiscalProvince": "SantaFe",
+          "fiscalPostalCode": "2000",
+          "paymentTermsDays": 15,
+          "notes": "Alta manual proveedor E2E",
+          "createdAtUtc": "2026-08-20T15:46:05.152898Z"
+        }
+      ]
+    },
+    {
+      "name": "CRM: simular importación Excel cliente (mapeo frontend)",
+      "method": "POST",
+      "path": "/api/v1/crm/customers",
+      "request": {
+        "legalName": "Cliente Importado Excel 1787240765",
+        "tradeName": "Cliente Hermes",
+        "documentType": "CUIT",
+        "documentNumber": "30788880765",
+        "taxCondition": "ResponsableInscripto",
+        "iibbRegime": "NoInscripto",
+        "isCustomer": true,
+        "isSupplier": false,
+        "email": "excel.cliente@example.com",
+        "phone": "5491122334455"
+      },
+      "ok": false,
+      "status": 400,
+      "response": {
+        "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+        "title": "Crm.Document.InvalidCuitChecksum",
+        "status": 400,
+        "detail": "El CUIT no es válido (dígito verificador incorrecto)."
+      }
+    },
+    {
+      "name": "CRM: simular importación Excel proveedor (mapeo frontend a customers)",
+      "method": "POST",
+      "path": "/api/v1/crm/customers",
+      "request": {
+        "legalName": "Proveedor Importado Excel 1787240765",
+        "tradeName": "Cliente Hermes",
+        "documentType": "CUIT",
+        "documentNumber": "30777770765",
+        "taxCondition": "ResponsableInscripto",
+        "iibbRegime": "NoInscripto",
+        "isCustomer": false,
+        "isSupplier": true,
+        "email": "excel.proveedor@example.com",
+        "phone": "5491122334455"
+      },
+      "ok": false,
+      "status": 400,
+      "response": {
+        "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+        "title": "Crm.Document.InvalidCuitChecksum",
+        "status": 400,
+        "detail": "El CUIT no es válido (dígito verificador incorrecto)."
+      }
+    },
+    {
+      "name": "Ventas: crear categoría",
+      "method": "POST",
+      "path": "/api/v1/sales/categories",
+      "request": {
+        "name": "Cat E2E 1787240765",
+        "description": "Categoría prueba",
+        "parentCategoryId": null,
+        "defaultSalesAccountingCode": "4.1.1",
+        "defaultPurchaseAccountingCode": "5.1.1",
+        "defaultTaxRate": 21
+      },
+      "ok": false,
+      "status": 500,
+      "response": "System.NullReferenceException: Object reference not set to an instance of an object.\n   at LealControl.Modules.Sales.Application.Products.CreateCategoryCommandHandler.Handle(CreateCategoryCommand request, CancellationToken cancellationToken) in /home/leonel/Desarrollo/src/Modules/Sales/LealControl.Modules.Sales.Application/Products/ProductUseCases.cs:line 296\n   at LealControl.Modules.Crm.Application.Behaviors.ValidationBehavior`2.Handle(TRequest request, RequestHandlerDelegate`1 next, CancellationToken cancellationToken) in /home/leonel/Desarrollo/src/Modules/Crm/LealControl.Modules.Crm.Application/Behaviors/ValidationBehavior.cs:line 24\n   at LealControl.Modules.Sales.Infrastructure.Http.SalesEndpoints.<>c.<<MapSalesModule>b__1_17>d.MoveNext() in /home/leonel/Desarrollo/src/Modules/Sales/LealControl.Modules.Sales.Infrastructure/Http/SalesEndpoints.cs:line 210\n--- End of stack trace from previous location ---\n   at Microsoft.AspNetCore.Http.RequestDelegateFactory.ExecuteTaskResult[T](Task`1 task, HttpContext httpContext)\n   at Microsoft.AspNetCore.Http.RequestDelegateFactory.<>c__DisplayClass102_2.<<HandleRequestBodyAndCompileRequestDelegateForJson>b__2>d.MoveNext()\n--- End of stack trace from previous location ---\n   at Microsoft.AspNetCore.Routing.EndpointMiddleware.<Invoke>g__AwaitRequestTask|7_0(Endpoint endpoint, Task requestTask, ILogger logger)\n   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)\n   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)\n   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)\n   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)\n\nHEADERS\n=======\nConnection: close\nHost: 127.0.0.1:5208\nUser-Agent: Python-urllib/3.12\nAccept-Encoding: identity\nContent-Type: application/json\nContent-Length: 199\nX-Tenant-Id: 11111111-1111-1111-1111-111111111111\n"
+    },
+    {
+      "name": "Ventas: crear producto/servicio",
+      "method": "POST",
+      "path": "/api/v1/sales/products",
+      "request": {
+        "code": "P-HERMES-40765",
+        "name": "Servicio calibración E2E",
+        "description": "Servicio de calibración",
+        "detailedDescription": "Servicio con certificado",
+        "type": "Service",
+        "categoryId": null,
+        "imagePath": null,
+        "saleCurrency": "ARS",
+        "basePrice": 25000,
+        "purchaseCurrency": "ARS",
+        "costPrice": 12000,
+        "taxRate": 21,
+        "salesAccountingCode": "4.1.1",
+        "purchaseAccountingCode": "5.1.1",
+        "trackStock": false,
+        "minStock": 0,
+        "baseUnit": "u",
+        "hasSerialNumber": false,
+        "trackLot": false,
+        "customAttributes": {
+          "origen": "E2E"
+        }
+      },
+      "ok": true,
+      "status": 201,
+      "response": {
+        "id": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+        "code": "P-HERMES-40765",
+        "name": "Servicio calibración E2E",
+        "description": "Servicio de calibración",
+        "detailedDescription": "Servicio con certificado",
+        "type": "Service",
+        "categoryId": null,
+        "categoryName": null,
+        "imagePath": null,
+        "saleCurrency": "ARS",
+        "basePrice": 25000,
+        "purchaseCurrency": "ARS",
+        "costPrice": 12000,
+        "taxRate": 21,
+        "salesAccountingCode": "4.1.1",
+        "purchaseAccountingCode": "5.1.1",
+        "trackStock": false,
+        "stock": 0,
+        "minStock": 0,
+        "baseUnit": "U",
+        "hasSerialNumber": false,
+        "trackLot": false,
+        "isActive": true,
+        "customAttributes": {
+          "origen": "E2E"
+        },
+        "createdAtUtc": "2026-08-20T15:46:05.4237162Z",
+        "updatedAtUtc": "2026-08-20T15:46:05.4237575Z"
+      }
+    },
+    {
+      "name": "CRM: capturar lead",
+      "method": "POST",
+      "path": "/api/v1/crm/leads",
+      "request": {
+        "name": "Lead Feria Industrial",
+        "contactName": "Lucía Lead",
+        "email": "lead@example.com",
+        "phone": "5491199999999",
+        "description": "Interesado en calibración",
+        "source": "Website",
+        "assignedTo": null
+      },
+      "ok": false,
+      "status": 400,
+      "response": "Microsoft.AspNetCore.Http.BadHttpRequestException: Failed to read parameter \"CaptureLeadCommand body\" from the request body as JSON.\n ---> System.Text.Json.JsonException: The JSON value could not be converted to LealControl.Modules.Crm.Application.Leads.CaptureLeadCommand. Path: $.source | LineNumber: 0 | BytePositionInLine: 191.\n   at System.Text.Json.ThrowHelper.ThrowJsonException(String message)\n   at System.Text.Json.Serialization.Converters.EnumConverter`1.ReadEnumUsingNamingPolicy(String enumString)\n   at System.Text.Json.Serialization.Converters.EnumConverter`1.Read(Utf8JsonReader& reader, Type typeToConvert, JsonSerializerOptions options)\n   at System.Text.Json.Serialization.JsonConverter`1.TryRead(Utf8JsonReader& reader, Type typeToConvert, JsonSerializerOptions options, ReadStack& state, T& value, Boolean& isPopulatedValue)\n   at System.Text.Json.Serialization.JsonConverter`1.TryReadAsObject(Utf8JsonReader& reader, Type typeToConvert, JsonSerializerOptions options, ReadStack& state, Object& value)\n   at System.Text.Json.Serialization.Converters.LargeObjectWithParameterizedConstructorConverter`1.ReadAndCacheConstructorArgument(ReadStack& state, Utf8JsonReader& reader, JsonParameterInfo jsonParameterInfo)\n   at System.Text.Json.Serialization.Converters.ObjectWithParameterizedConstructorConverter`1.ReadConstructorArgumentsWithContinuation(ReadStack& state, Utf8JsonReader& reader, JsonSerializerOptions options)\n   at System.Text.Json.Serialization.Converters.ObjectWithParameterizedConstructorConverter`1.OnTryRead(Utf8JsonReader& reader, Type typeToConvert, JsonSerializerOptions options, ReadStack& state, T& value)\n   at System.Text.Json.Serialization.JsonConverter`1.TryRead(Utf8JsonReader& reader, Type typeToConvert, JsonSerializerOptions options, ReadStack& state, T& value, Boolean& isPopulatedValue)\n   at System.Text.Json.Serialization.JsonConverter`1.ReadCore(Utf8JsonReader& reader, JsonSerializerOptions options, ReadStack& state)\n   at System.Text.Json.Serialization.Metadata.JsonTypeInfo`1.ContinueDeserialize(ReadBufferState& bufferState, JsonReaderState& jsonReaderState, ReadStack& readStack)\n   at System.Text.Json.Serialization.Metadata.JsonTypeInfo`1.DeserializeAsync(Stream utf8Json, CancellationToken cancellationToken)\n   at System.Text.Json.Serialization.Metadata.JsonTypeInfo`1.DeserializeAsObjectAsync(Stream utf8Json, CancellationToken cancellationToken)\n   at Microsoft.AspNetCore.Http.HttpRequestJsonExtensions.ReadFromJsonAsync(HttpRequest request, JsonTypeInfo jsonTypeInfo, CancellationToken cancellationToken)\n   at Microsoft.AspNetCore.Http.HttpRequestJsonExtensions.ReadFromJsonAsync(HttpRequest request, JsonTypeInfo jsonTypeInfo, CancellationToken cancellationToken)\n   at Microsoft.AspNetCore.Http.RequestDelegateFactory.<HandleRequestBodyAndCompileRequestDelegateForJson>g__TryReadBodyAsync|102_0(HttpContext httpContext, Type bodyType, String parameterTypeName, String parameterName, Boolean allowEmptyRequestBody, Boolean throwOnBadRequest, JsonTypeInfo jsonTypeInfo)\n   --- End of inner exception stack trace ---\n   at Microsoft.AspNetCore.Http.RequestDelegateFactory.Log.InvalidJsonRequestBody(HttpContext httpContext, String parameterTypeName, String parameterName, Exception exception, Boolean shouldThrow)\n   at Microsoft.AspNetCore.Http.RequestDelegateFactory.<HandleRequestBodyAndCompileRequestDelegateForJson>g__TryReadBodyAsync|102_0(HttpContext httpContext, Type bodyType, String parameterTypeName, String parameterName, Boolean allowEmptyRequestBody, Boolean throwOnBadRequest, JsonTypeInfo jsonTypeInfo)\n   at Microsoft.AspNetCore.Http.RequestDelegateFactory.<>c__DisplayClass102_2.<<HandleRequestBodyAndCompileRequestDelegateForJson>b__2>d.MoveNext()\n--- End of stack trace from previous location ---\n   at Microsoft.AspNetCore.Routing.EndpointMiddleware.<Invoke>g__AwaitRequestTask|7_0(Endpoint endpoint, Task requestTask, ILogger logger)\n   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)\n   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)\n   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)\n   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)\n\nHEADERS\n=======\nConnection: close\nHost: 127.0.0.1:5208\nUser-Agent: Python-urllib/3.12\nAccept-Encoding: identity\nContent-Type: application/json\nContent-Length: 212\nX-Tenant-Id: 11111111-1111-1111-1111-111111111111\n"
+    },
+    {
+      "name": "CRM: crear oportunidad",
+      "method": "POST",
+      "path": "/api/v1/crm/opportunities",
+      "request": {
+        "title": "Oportunidad calibración anual",
+        "customerId": null,
+        "leadId": null,
+        "amount": 90000,
+        "currency": "ARS",
+        "ownerId": null,
+        "ownerName": "Hermes QA",
+        "priority": "High",
+        "tags": [
+          "e2e",
+          "crm"
+        ],
+        "expectedCloseDate": "2026-08-30T15:46:05.496645Z",
+        "customFields": {
+          "origen": "QA"
+        }
+      },
+      "ok": true,
+      "status": 201,
+      "response": {
+        "id": "997b2069-f152-4dfa-aaa9-286d6076e351",
+        "title": "Oportunidad calibración anual",
+        "customerId": null,
+        "leadId": null,
+        "stage": "Lead",
+        "amount": 90000,
+        "currency": "ARS",
+        "ownerId": null,
+        "ownerName": "Hermes QA",
+        "priority": "High",
+        "probability": 10,
+        "isRotting": false,
+        "activityBadgeStatus": "Gray",
+        "expectedCloseDate": "2026-08-30T15:46:05.496645Z",
+        "tags": [
+          "e2e",
+          "crm"
+        ],
+        "lostReason": null,
+        "customFields": {
+          "origen": "QA"
+        },
+        "createdAtUtc": "2026-08-20T15:46:05.5021067Z"
+      }
+    },
+    {
+      "name": "CRM: clasificar oportunidad",
+      "method": "POST",
+      "path": "/api/v1/crm/opportunities/997b2069-f152-4dfa-aaa9-286d6076e351/classify",
+      "request": {
+        "priority": "High",
+        "ownerName": "Hermes QA",
+        "ownerId": null,
+        "tags": [
+          "e2e",
+          "urgente"
+        ],
+        "expectedCloseDate": "2026-08-27T15:46:05.623604Z"
+      },
+      "ok": true,
+      "status": 200,
+      "response": {
+        "id": "997b2069-f152-4dfa-aaa9-286d6076e351",
+        "title": "Oportunidad calibración anual",
+        "customerId": null,
+        "leadId": null,
+        "stage": "Lead",
+        "amount": 90000.0,
+        "currency": "ARS",
+        "ownerId": null,
+        "ownerName": "Hermes QA",
+        "priority": "High",
+        "probability": 10,
+        "isRotting": false,
+        "activityBadgeStatus": "Gray",
+        "expectedCloseDate": "2026-08-27T15:46:05.623604Z",
+        "tags": [
+          "e2e",
+          "urgente"
+        ],
+        "lostReason": null,
+        "customFields": {
+          "origen": "QA"
+        },
+        "createdAtUtc": "2026-08-20T15:46:05.502106Z"
+      }
+    },
+    {
+      "name": "CRM: registrar actividad/follow-up",
+      "method": "POST",
+      "path": "/api/v1/crm/activities",
+      "request": {
+        "type": "Call",
+        "description": "Llamada de seguimiento E2E",
+        "customerId": null,
+        "leadId": null,
+        "opportunityId": "997b2069-f152-4dfa-aaa9-286d6076e351",
+        "authorId": null,
+        "nextFollowUpOn": "2026-08-22T15:46:05.647348Z",
+        "dueDate": "2026-08-22T15:46:05.647364Z"
+      },
+      "ok": true,
+      "status": 201,
+      "response": {
+        "id": "5f6a1f5f-f3a7-4736-b53c-ee9d8e2c1411",
+        "type": "Call",
+        "description": "Llamada de seguimiento E2E",
+        "customerId": null,
+        "leadId": null,
+        "opportunityId": "997b2069-f152-4dfa-aaa9-286d6076e351",
+        "nextFollowUpOn": "2026-08-22T15:46:05.647348Z",
+        "dueDate": "2026-08-22T15:46:05.647364Z",
+        "isDone": false,
+        "completedAtUtc": null,
+        "occurredAtUtc": "2026-08-20T15:46:05.6513834Z"
+      }
+    },
+    {
+      "name": "CRM: mover oportunidad a propuesta",
+      "method": "POST",
+      "path": "/api/v1/crm/opportunities/997b2069-f152-4dfa-aaa9-286d6076e351/move",
+      "request": {
+        "stage": "Proposal",
+        "lostReason": null
+      },
+      "ok": false,
+      "status": 400,
+      "response": {
+        "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+        "title": "Crm.Opportunity.CustomerRequired",
+        "status": 400,
+        "detail": "Vinculá una empresa antes de preparar la propuesta."
+      }
+    },
+    {
+      "name": "CRM: kanban",
+      "method": "GET",
+      "path": "/api/v1/crm/opportunities/kanban",
+      "request": null,
+      "ok": true,
+      "status": 200,
+      "response": {
+        "columns": [
+          {
+            "stage": "Lead",
+            "stageName": "📥 Lead / Contacto",
+            "orderIndex": 1,
+            "probability": 10,
+            "totalDeals": 1,
+            "totalAmount": 90000.0,
+            "weightedAmount": 9000.0,
+            "deals": [
+              {
+                "id": "997b2069-f152-4dfa-aaa9-286d6076e351",
+                "title": "Oportunidad calibración anual",
+                "customerId": null,
+                "leadId": null,
+                "stage": "Lead",
+                "amount": 90000.0,
+                "currency": "ARS",
+                "ownerId": null,
+                "ownerName": "Hermes QA",
+                "priority": "High",
+                "probability": 10,
+                "isRotting": false,
+                "activityBadgeStatus": "Gray",
+                "expectedCloseDate": "2026-08-27T15:46:05.623604Z",
+                "tags": [
+                  "e2e",
+                  "urgente"
+                ],
+                "lostReason": null,
+                "customFields": {
+                  "origen": "QA"
+                },
+                "createdAtUtc": "2026-08-20T15:46:05.502106Z"
+              }
+            ]
+          },
+          {
+            "stage": "Qualified",
+            "stageName": "🔍 Relevamiento / Calificado",
+            "orderIndex": 2,
+            "probability": 10,
+            "totalDeals": 0,
+            "totalAmount": 0,
+            "weightedAmount": 0.0,
+            "deals": []
+          },
+          {
+            "stage": "Proposal",
+            "stageName": "📄 Presupuesto Enviado",
+            "orderIndex": 3,
+            "probability": 10,
+            "totalDeals": 0,
+            "totalAmount": 0,
+            "weightedAmount": 0.0,
+            "deals": []
+          },
+          {
+            "stage": "Negotiation",
+            "stageName": "🤝 Negociación",
+            "orderIndex": 4,
+            "probability": 10,
+            "totalDeals": 0,
+            "totalAmount": 0,
+            "weightedAmount": 0.0,
+            "deals": []
+          },
+          {
+            "stage": "Won",
+            "stageName": "🏆 Ganada",
+            "orderIndex": 5,
+            "probability": 10,
+            "totalDeals": 0,
+            "totalAmount": 0,
+            "weightedAmount": 0.0,
+            "deals": []
+          },
+          {
+            "stage": "Lost",
+            "stageName": "❌ Perdida",
+            "orderIndex": 6,
+            "probability": 10,
+            "totalDeals": 0,
+            "totalAmount": 0,
+            "weightedAmount": 0.0,
+            "deals": []
+          }
+        ],
+        "totalOpenDeals": 1,
+        "totalOpenAmount": 90000.0
+      }
+    },
+    {
+      "name": "CRM: próximos follow-ups",
+      "method": "GET",
+      "path": "/api/v1/crm/activities/follow-ups",
+      "request": null,
+      "ok": true,
+      "status": 200,
+      "response": [
+        {
+          "id": "5f6a1f5f-f3a7-4736-b53c-ee9d8e2c1411",
+          "type": "Call",
+          "description": "Llamada de seguimiento E2E",
+          "customerId": null,
+          "leadId": null,
+          "opportunityId": "997b2069-f152-4dfa-aaa9-286d6076e351",
+          "nextFollowUpOn": "2026-08-22T15:46:05.647348Z",
+          "dueDate": "2026-08-22T15:46:05.647364Z",
+          "isDone": false,
+          "completedAtUtc": null,
+          "occurredAtUtc": "2026-08-20T15:46:05.651383Z"
+        }
+      ]
+    },
+    {
+      "name": "Compras: crear solicitud interna",
+      "method": "POST",
+      "path": "/api/v1/purchases/requests",
+      "request": {
+        "requestedBy": "Hermes QA",
+        "department": "Compras",
+        "priority": "High",
+        "requiredDate": "2026-08-25T15:46:05.728833Z",
+        "reason": "Reposición prueba E2E",
+        "items": [
+          {
+            "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+            "code": "P-HERMES-40765",
+            "description": "Servicio tercero",
+            "quantity": 1,
+            "unitMeasure": "u",
+            "estimatedUnitPrice": 12000,
+            "notes": "E2E"
+          }
+        ]
+      },
+      "ok": true,
+      "status": 201,
+      "response": {
+        "id": "72ef27c4-4fc0-4cc4-be4a-13d19c8dc3c5",
+        "requestNumber": "SOL-0001",
+        "requestedBy": "Hermes QA",
+        "department": "Compras",
+        "priority": "High",
+        "requiredDate": "2026-08-25T15:46:05.728833Z",
+        "reason": "Reposición prueba E2E",
+        "status": "Pending",
+        "rejectionReason": null,
+        "purchaseOrderId": null,
+        "createdAtUtc": "2026-08-20T15:46:05.7531025Z",
+        "updatedAtUtc": "2026-08-20T15:46:05.7531025Z",
+        "items": [
+          {
+            "id": "72828b47-e784-4a92-985d-5adb9d60546e",
+            "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+            "code": "P-HERMES-40765",
+            "description": "Servicio tercero",
+            "quantity": 1,
+            "unitMeasure": "u",
+            "estimatedUnitPrice": 12000,
+            "notes": "E2E"
+          }
+        ],
+        "quotations": []
+      }
+    },
+    {
+      "name": "Compras: aprobar solicitud",
+      "method": "POST",
+      "path": "/api/v1/purchases/requests/72ef27c4-4fc0-4cc4-be4a-13d19c8dc3c5/approve",
+      "request": null,
+      "ok": true,
+      "status": 200,
+      "response": {
+        "id": "72ef27c4-4fc0-4cc4-be4a-13d19c8dc3c5",
+        "requestNumber": "SOL-0001",
+        "requestedBy": "Hermes QA",
+        "department": "Compras",
+        "priority": "High",
+        "requiredDate": "2026-08-25T15:46:05.728833Z",
+        "reason": "Reposición prueba E2E",
+        "status": "Approved",
+        "rejectionReason": null,
+        "purchaseOrderId": null,
+        "createdAtUtc": "2026-08-20T15:46:05.753102Z",
+        "updatedAtUtc": "2026-08-20T15:46:05.8603787Z",
+        "items": [
+          {
+            "id": "72828b47-e784-4a92-985d-5adb9d60546e",
+            "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+            "code": "P-HERMES-40765",
+            "description": "Servicio tercero",
+            "quantity": 1,
+            "unitMeasure": "u",
+            "estimatedUnitPrice": 12000,
+            "notes": "E2E"
+          }
+        ],
+        "quotations": []
+      }
+    },
+    {
+      "name": "Compras: cargar cotización proveedor",
+      "method": "POST",
+      "path": "/api/v1/purchases/requests/72ef27c4-4fc0-4cc4-be4a-13d19c8dc3c5/quotations",
+      "request": {
+        "purchaseRequestId": "72ef27c4-4fc0-4cc4-be4a-13d19c8dc3c5",
+        "supplierId": "708ac331-e1f7-4dc7-8b67-11bfc6520f4e",
+        "supplierName": "Proveedor E2E Hermes 1787240765",
+        "supplierQuoteRef": "COT-E2E",
+        "issueDate": "2026-08-20T15:46:05.863244Z",
+        "currency": "ARS",
+        "exchangeRate": 1,
+        "netAmount": 12000,
+        "taxPercent": 21,
+        "taxAmount": 2520,
+        "totalAmount": 14520,
+        "deliveryTime": "48 hs",
+        "paymentTerms": "15 días",
+        "notes": "Presupuesto proveedor E2E",
+        "attachmentBase64": null,
+        "attachmentFileName": null
+      },
+      "ok": true,
+      "status": 200,
+      "response": {
+        "id": "72ef27c4-4fc0-4cc4-be4a-13d19c8dc3c5",
+        "requestNumber": "SOL-0001",
+        "requestedBy": "Hermes QA",
+        "department": "Compras",
+        "priority": "High",
+        "requiredDate": "2026-08-25T15:46:05.728833Z",
+        "reason": "Reposición prueba E2E",
+        "status": "Approved",
+        "rejectionReason": null,
+        "purchaseOrderId": null,
+        "createdAtUtc": "2026-08-20T15:46:05.753102Z",
+        "updatedAtUtc": "2026-08-20T15:46:05.860378Z",
+        "items": [
+          {
+            "id": "72828b47-e784-4a92-985d-5adb9d60546e",
+            "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+            "code": "P-HERMES-40765",
+            "description": "Servicio tercero",
+            "quantity": 1,
+            "unitMeasure": "u",
+            "estimatedUnitPrice": 12000,
+            "notes": "E2E"
+          }
+        ],
+        "quotations": [
+          {
+            "id": "fec38c46-d455-4947-a315-4127b6044f24",
+            "purchaseRequestId": "72ef27c4-4fc0-4cc4-be4a-13d19c8dc3c5",
+            "supplierId": "708ac331-e1f7-4dc7-8b67-11bfc6520f4e",
+            "supplierName": "Proveedor E2E Hermes 1787240765",
+            "supplierQuoteRef": "COT-E2E",
+            "issueDate": "2026-08-20T15:46:05.863244Z",
+            "currency": "ARS",
+            "exchangeRate": 1,
+            "netAmount": 12000,
+            "taxPercent": 21,
+            "taxAmount": 2520,
+            "totalAmount": 14520,
+            "deliveryTime": "48 hs",
+            "paymentTerms": "15 días",
+            "notes": "Presupuesto proveedor E2E",
+            "attachmentBase64": null,
+            "attachmentFileName": null,
+            "isSelected": false,
+            "createdAtUtc": "2026-08-20T15:46:05.8713844Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Compras: seleccionar cotización",
+      "method": "POST",
+      "path": "/api/v1/purchases/requests/72ef27c4-4fc0-4cc4-be4a-13d19c8dc3c5/quotations/fec38c46-d455-4947-a315-4127b6044f24/select",
+      "request": null,
+      "ok": true,
+      "status": 200,
+      "response": {
+        "id": "72ef27c4-4fc0-4cc4-be4a-13d19c8dc3c5",
+        "requestNumber": "SOL-0001",
+        "requestedBy": "Hermes QA",
+        "department": "Compras",
+        "priority": "High",
+        "requiredDate": "2026-08-25T15:46:05.728833Z",
+        "reason": "Reposición prueba E2E",
+        "status": "Approved",
+        "rejectionReason": null,
+        "purchaseOrderId": null,
+        "createdAtUtc": "2026-08-20T15:46:05.753102Z",
+        "updatedAtUtc": "2026-08-20T15:46:05.860378Z",
+        "items": [
+          {
+            "id": "72828b47-e784-4a92-985d-5adb9d60546e",
+            "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+            "code": "P-HERMES-40765",
+            "description": "Servicio tercero",
+            "quantity": 1,
+            "unitMeasure": "u",
+            "estimatedUnitPrice": 12000,
+            "notes": "E2E"
+          }
+        ],
+        "quotations": [
+          {
+            "id": "fec38c46-d455-4947-a315-4127b6044f24",
+            "purchaseRequestId": "72ef27c4-4fc0-4cc4-be4a-13d19c8dc3c5",
+            "supplierId": "708ac331-e1f7-4dc7-8b67-11bfc6520f4e",
+            "supplierName": "Proveedor E2E Hermes 1787240765",
+            "supplierQuoteRef": "COT-E2E",
+            "issueDate": "2026-08-20T15:46:05.863244Z",
+            "currency": "ARS",
+            "exchangeRate": 1,
+            "netAmount": 12000,
+            "taxPercent": 21,
+            "taxAmount": 2520,
+            "totalAmount": 14520,
+            "deliveryTime": "48 hs",
+            "paymentTerms": "15 días",
+            "notes": "Presupuesto proveedor E2E",
+            "attachmentBase64": null,
+            "attachmentFileName": null,
+            "isSelected": true,
+            "createdAtUtc": "2026-08-20T15:46:05.871384Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Compras: crear orden de compra",
+      "method": "POST",
+      "path": "/api/v1/purchases/orders",
+      "request": {
+        "supplierId": "708ac331-e1f7-4dc7-8b67-11bfc6520f4e",
+        "supplierName": "Proveedor E2E Hermes 1787240765",
+        "supplierDocument": "30719990765",
+        "expectedDeliveryDate": "2026-08-23T15:46:05.918409Z",
+        "currency": "ARS",
+        "exchangeRate": 1,
+        "paymentTerms": "15 días",
+        "paymentMethod": "Transferencia",
+        "deliveryAddress": "Depósito central",
+        "notes": "OC E2E",
+        "items": [
+          {
+            "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+            "code": "P-HERMES-40765",
+            "description": "Servicio tercero",
+            "quantity": 1,
+            "unitPrice": 12000,
+            "discountPercent": 0,
+            "taxRate": 21
+          }
+        ]
+      },
+      "ok": true,
+      "status": 201,
+      "response": {
+        "id": "23c7ac2f-303e-456b-8bed-ae45ff784101",
+        "orderNumber": "OC-0001",
+        "supplierId": "708ac331-e1f7-4dc7-8b67-11bfc6520f4e",
+        "supplierName": "Proveedor E2E Hermes 1787240765",
+        "supplierDocument": "30719990765",
+        "issueDate": "2026-08-20T15:46:05.9257806Z",
+        "expectedDeliveryDate": "2026-08-23T15:46:05.918409Z",
+        "currency": "ARS",
+        "exchangeRate": 1,
+        "paymentTerms": "15 días",
+        "paymentMethod": "Transferencia",
+        "deliveryAddress": "Depósito central",
+        "subtotal": 12000,
+        "taxAmount": 2520.0,
+        "total": 14520.0,
+        "status": "Draft",
+        "notes": "OC E2E",
+        "createdAtUtc": "2026-08-20T15:46:05.9257806Z",
+        "items": [
+          {
+            "id": "3f75b84d-cbbf-4aa2-92b0-8ad31964b20c",
+            "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+            "code": "P-HERMES-40765",
+            "description": "Servicio tercero",
+            "quantity": 1,
+            "receivedQuantity": 0,
+            "unitPrice": 12000,
+            "discountPercent": 0,
+            "taxRate": 21,
+            "netSubtotal": 12000,
+            "total": 14520.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Compras: aprobar OC",
+      "method": "PUT",
+      "path": "/api/v1/purchases/orders/23c7ac2f-303e-456b-8bed-ae45ff784101/status",
+      "request": {
+        "status": "Approved"
+      },
+      "ok": false,
+      "status": 400,
+      "response": {
+        "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+        "title": "Purchases.Order.InvalidTransition",
+        "status": 400,
+        "detail": "No se puede pasar una orden de Draft a Approved."
+      }
+    },
+    {
+      "name": "Compras: registrar recepción/remito proveedor",
+      "method": "POST",
+      "path": "/api/v1/purchases/receptions",
+      "request": {
+        "purchaseOrderId": "23c7ac2f-303e-456b-8bed-ae45ff784101",
+        "supplierId": "708ac331-e1f7-4dc7-8b67-11bfc6520f4e",
+        "supplierName": "Proveedor E2E Hermes 1787240765",
+        "supplierRemitoNumber": "R-E2E-0001",
+        "receptionDate": "2026-08-20T15:46:05.997058Z",
+        "warehouseLocation": "Depósito central",
+        "receivedBy": "Hermes QA",
+        "notes": "Recepción E2E",
+        "items": [
+          {
+            "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+            "code": "P-HERMES-40765",
+            "description": "Servicio tercero",
+            "quantity": 1,
+            "unitMeasure": "u",
+            "serialNumber": null
+          }
+        ]
+      },
+      "ok": false,
+      "status": 400,
+      "response": {
+        "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+        "title": "Purchases.Reception.OrderNotReceivable",
+        "status": 400,
+        "detail": "La orden debe estar enviada para recibir mercadería."
+      }
+    },
+    {
+      "name": "Compras: registrar factura proveedor",
+      "method": "POST",
+      "path": "/api/v1/purchases/invoices",
+      "request": {
+        "invoiceType": "Factura A",
+        "pointOfSale": 3,
+        "invoiceNumber": 240765,
+        "purchaseOrderId": "23c7ac2f-303e-456b-8bed-ae45ff784101",
+        "purchaseReceptionId": null,
+        "supplierId": "708ac331-e1f7-4dc7-8b67-11bfc6520f4e",
+        "supplierName": "Proveedor E2E Hermes 1787240765",
+        "supplierDocument": "30719990765",
+        "supplierTaxCondition": "ResponsableInscripto",
+        "issueDate": "2026-08-20T15:46:06.006379Z",
+        "dueDate": "2026-09-04T15:46:06.006392Z",
+        "currency": "ARS",
+        "exchangeRate": 1,
+        "iibbPerception": 0,
+        "ivaPerception": 0,
+        "otherTaxes": 0,
+        "cae": "12345678901234",
+        "caeDueDate": "2026-08-30T15:46:06.006401Z",
+        "notes": "Factura compra E2E",
+        "arcaVoucherId": null,
+        "items": [
+          {
+            "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+            "code": "P-HERMES-40765",
+            "description": "Servicio tercero",
+            "quantity": 1,
+            "unitPrice": 12000,
+            "vatRate": 21
+          }
+        ]
+      },
+      "ok": true,
+      "status": 201,
+      "response": {
+        "id": "14f7069f-174e-462c-9fc5-99d5b3fc057e",
+        "invoiceType": "Factura A",
+        "pointOfSale": 3,
+        "invoiceNumber": 240765,
+        "formattedNumber": "0003-00240765",
+        "purchaseOrderId": "23c7ac2f-303e-456b-8bed-ae45ff784101",
+        "purchaseReceptionId": null,
+        "supplierId": "708ac331-e1f7-4dc7-8b67-11bfc6520f4e",
+        "supplierName": "Proveedor E2E Hermes 1787240765",
+        "supplierDocument": "30719990765",
+        "supplierTaxCondition": "ResponsableInscripto",
+        "issueDate": "2026-08-20T15:46:06.006379Z",
+        "dueDate": "2026-09-04T15:46:06.006392Z",
+        "currency": "ARS",
+        "exchangeRate": 1,
+        "subtotal": 12000,
+        "iva21": 2520.0,
+        "iva105": 0,
+        "iva27": 0,
+        "exemptAmount": 0,
+        "iibbPerception": 0,
+        "ivaPerception": 0,
+        "otherTaxes": 0,
+        "total": 14520.0,
+        "cae": "12345678901234",
+        "caeDueDate": "2026-08-30T15:46:06.006401Z",
+        "status": "Recorded",
+        "notes": "Factura compra E2E",
+        "createdAtUtc": "2026-08-20T15:46:06.0237347Z",
+        "items": [
+          {
+            "id": "b585d249-9e10-4bd6-82fc-fde5376c5199",
+            "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+            "code": "P-HERMES-40765",
+            "description": "Servicio tercero",
+            "quantity": 1,
+            "unitPrice": 12000,
+            "vatRate": 21,
+            "netSubtotal": 12000,
+            "vatAmount": 2520.0,
+            "total": 14520.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Compras: conciliación OC vs recepción/factura",
+      "method": "GET",
+      "path": "/api/v1/purchases/orders/23c7ac2f-303e-456b-8bed-ae45ff784101/reconciliation",
+      "request": null,
+      "ok": true,
+      "status": 200,
+      "response": {
+        "orderId": "23c7ac2f-303e-456b-8bed-ae45ff784101",
+        "status": "Matched",
+        "rows": [
+          {
+            "productId": "f65ca892-2739-4a57-8303-37d3e18b5ac4",
+            "code": "P-HERMES-40765",
+            "ordered": 1,
+            "received": 0,
+            "invoiced": 1,
+            "orderedAmount": 14520.0,
+            "invoicedAmount": 14520.0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Compras: importar CSV ARCA Mis Comprobantes",
+      "method": "POST",
+      "path": "/api/v1/purchases/arca/import",
+      "request": {
+        "csvContent": "Fecha de emisión;Tipo de comprobante;Punto de Venta;Número desde;Cód. Autorización;Nro. Doc. Emisor;Denominación Emisor;Imp. Neto Gravado Total;Imp. Op. Exentas;Total IVA;Otros Tributos;Imp. Total;Moneda;Tipo Cambio\n20/08/2026;01;0003;240765;12345678901234;30719990765;Proveedor E2E Hermes 1787240765;12000;0;2520;0;14520;PES;1\n"
+      },
+      "ok": true,
+      "status": 200,
+      "response": {
+        "batchId": "ARCA-20260820154606",
+        "totalProcessed": 1,
+        "imported": 0,
+        "skipped": 0,
+        "linked": 1,
+        "message": "Importación ARCA procesada con éxito: 0 comprobantes nuevos, 0 actualizados con datos oficiales, 1 conciliados con facturas existentes, 0 omitidos/duplicados."
+      }
+    },
+    {
+      "name": "Compras: listar comprobantes ARCA pendientes",
+      "method": "GET",
+      "path": "/api/v1/purchases/arca/vouchers?status=Pending",
+      "request": null,
+      "ok": true,
+      "status": 200,
+      "response": []
+    },
+    {
+      "name": "BUG probe frontend api.moveStage apunta a endpoint inexistente",
+      "method": "POST",
+      "path": "/api/v1/crm/opportunities/997b2069-f152-4dfa-aaa9-286d6076e351/stage",
+      "request": {
+        "stage": "Won"
+      },
+      "ok": true,
+      "status": 404,
+      "response": ""
+    },
+    {
+      "name": "BUG probe frontend api.markWon apunta a endpoint inexistente",
+      "method": "POST",
+      "path": "/api/v1/crm/opportunities/997b2069-f152-4dfa-aaa9-286d6076e351/win",
+      "request": null,
+      "ok": true,
+      "status": 404,
+      "response": ""
+    }
+  ]
+}

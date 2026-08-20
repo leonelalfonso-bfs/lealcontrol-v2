@@ -357,6 +357,8 @@ public static class SalesEndpoints
             var entry = ProductionExecutionEntry.Create(tenant.TenantId.Value, id, body.ProductId, body.Quantity, body.Unit, body.Type, body.LotNumber, body.SerialNumbers, body.Notes, DateTime.UtcNow); db.Add(entry); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); return Results.Created($"/api/v1/sales/production/orders/{id}/executions/{entry.Id}", entry);
         });
 
+        endpoints.MapGrainsModule();
+
         return endpoints;
     }
 }

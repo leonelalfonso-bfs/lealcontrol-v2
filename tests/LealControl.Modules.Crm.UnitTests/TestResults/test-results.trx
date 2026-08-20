@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="731bcf66-58ca-479c-893f-ac33adb76da2" name="@Leonel 2026-08-20 15:31:26" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-20T15:31:26.2873596+00:00" queuing="2026-08-20T15:31:26.2873597+00:00" start="2026-08-20T15:31:25.9182452+00:00" finish="2026-08-20T15:31:26.3119565+00:00" />
+  <TestSettings name="default" id="137988d7-16a3-47cf-8a4b-98827ac7f25e">
+    <Deployment runDeploymentRoot="_Leonel_2026-08-20_15_31_26" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="75f66e77-3cec-4aeb-b0f5-39e3e368c12a" testId="aed9fea5-a473-384c-da30-18e4a4584143" testName="LealControl.Modules.Crm.UnitTests.CuitTests.Rejects_wrong_checksum" computerName="Leonel" duration="00:00:00.0000904" startTime="2026-08-20T15:31:26.2704993+00:00" endTime="2026-08-20T15:31:26.2704993+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="75f66e77-3cec-4aeb-b0f5-39e3e368c12a" />
+    <UnitTestResult executionId="637e3cc3-9c04-4faf-b5cd-93f46da1c103" testId="a88b362c-487f-21d2-aba0-352e30e38d46" testName="LealControl.Modules.Crm.UnitTests.CuitTests.Rejects_short_number" computerName="Leonel" duration="00:00:00.0089192" startTime="2026-08-20T15:31:26.2517845+00:00" endTime="2026-08-20T15:31:26.2517927+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="637e3cc3-9c04-4faf-b5cd-93f46da1c103" />
+    <UnitTestResult executionId="b74d26be-0dfa-4e0d-befb-470734aba53d" testId="32632147-a275-de8d-04dc-c95b9aef3a02" testName="LealControl.Modules.Crm.UnitTests.CustomerTests.Add_contact_requires_a_channel" computerName="Leonel" duration="00:00:00.0000997" startTime="2026-08-20T15:31:26.2706520+00:00" endTime="2026-08-20T15:31:26.2706520+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b74d26be-0dfa-4e0d-befb-470734aba53d" />
+    <UnitTestResult executionId="63b4b4af-6a2e-47bb-973e-6a2b37ac0719" testId="86ee87fb-feb2-de97-f522-dbf06e65ed68" testName="LealControl.Modules.Crm.UnitTests.CustomerTests.Consumidor_final_can_use_dni" computerName="Leonel" duration="00:00:00.0005157" startTime="2026-08-20T15:31:26.2706357+00:00" endTime="2026-08-20T15:31:26.2706357+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="63b4b4af-6a2e-47bb-973e-6a2b37ac0719" />
+    <UnitTestResult executionId="9c066b8d-4035-4040-a330-2d008acaffaa" testId="3f271b19-56d3-5363-c048-fbce0059aec2" testName="LealControl.Modules.Crm.UnitTests.CustomerTests.Only_one_primary_contact" computerName="Leonel" duration="00:00:00.0088815" startTime="2026-08-20T15:31:26.2533351+00:00" endTime="2026-08-20T15:31:26.2533351+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9c066b8d-4035-4040-a330-2d008acaffaa" />
+    <UnitTestResult executionId="eb4cb7a1-85b1-4188-b0d9-34885923de77" testId="1bc362f8-2f7d-22de-3a00-1961d00c549d" testName="LealControl.Modules.Crm.UnitTests.LeadConversionTests.Cannot_convert_twice" computerName="Leonel" duration="00:00:00.0003720" startTime="2026-08-20T15:31:26.2543748+00:00" endTime="2026-08-20T15:31:26.2543748+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="eb4cb7a1-85b1-4188-b0d9-34885923de77" />
+    <UnitTestResult executionId="04f409b9-4fc3-48e5-a0b0-500a96af3362" testId="50d1c901-e2d6-9719-003b-8d8dcf5376e7" testName="LealControl.Modules.Crm.UnitTests.CuitTests.Accepts_valid_cuit(raw: &quot;20-12345678-6&quot;)" computerName="Leonel" duration="00:00:00.0001051" startTime="2026-08-20T15:31:26.2543902+00:00" endTime="2026-08-20T15:31:26.2543902+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="04f409b9-4fc3-48e5-a0b0-500a96af3362" />
+    <UnitTestResult executionId="3d6410a5-dbd8-4931-af84-cc49a9b5186c" testId="ce0da45b-9204-0da7-03e3-c3f1b894134f" testName="LealControl.Modules.Crm.UnitTests.CustomerTests.Deactivate_raises_event" computerName="Leonel" duration="00:00:00.0022722" startTime="2026-08-20T15:31:26.2706047+00:00" endTime="2026-08-20T15:31:26.2706047+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3d6410a5-dbd8-4931-af84-cc49a9b5186c" />
+    <UnitTestResult executionId="34546ec1-983f-4a1a-9e03-7501151920ea" testId="291ba147-bf81-576c-f5c6-58a01d8c582c" testName="LealControl.Modules.Crm.UnitTests.LeadConversionTests.Cannot_convert_archived_lead" computerName="Leonel" duration="00:00:00.0088868" startTime="2026-08-20T15:31:26.2536122+00:00" endTime="2026-08-20T15:31:26.2536123+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="34546ec1-983f-4a1a-9e03-7501151920ea" />
+    <UnitTestResult executionId="2fbfad9b-8671-461a-bf3b-f7ab6e47e698" testId="4750450b-9b01-4471-2f09-1776cc238bf5" testName="LealControl.Modules.Crm.UnitTests.CustomerTests.Register_requires_legal_name" computerName="Leonel" duration="00:00:00.0002887" startTime="2026-08-20T15:31:26.2542026+00:00" endTime="2026-08-20T15:31:26.2542026+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2fbfad9b-8671-461a-bf3b-f7ab6e47e698" />
+    <UnitTestResult executionId="e8bb7772-2389-4a83-88c3-27d66bf8432f" testId="7ea2d678-96cf-6241-fd44-a88efe570457" testName="LealControl.Modules.Crm.UnitTests.CustomerTests.Add_location_and_contact_linked_to_plant" computerName="Leonel" duration="00:00:00.0013477" startTime="2026-08-20T15:31:26.2706648+00:00" endTime="2026-08-20T15:31:26.2706648+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e8bb7772-2389-4a83-88c3-27d66bf8432f" />
+    <UnitTestResult executionId="50832093-db56-42a0-ad28-c1040c5b5dbb" testId="cfe614ab-b2d6-ddf7-681f-b77d899be473" testName="LealControl.Modules.Crm.UnitTests.CustomerTests.Responsable_inscripto_cannot_use_dni" computerName="Leonel" duration="00:00:00.0000941" startTime="2026-08-20T15:31:26.2707320+00:00" endTime="2026-08-20T15:31:26.2707321+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="50832093-db56-42a0-ad28-c1040c5b5dbb" />
+    <UnitTestResult executionId="52b7e688-9ed2-4788-b6db-fa8bf2a20ff1" testId="4fbd4657-ba18-731e-15b2-27cec5c6009c" testName="LealControl.Modules.Crm.UnitTests.CustomerTests.Fiscal_rate_exclusion_respects_expiry" computerName="Leonel" duration="00:00:00.0009433" startTime="2026-08-20T15:31:26.2706824+00:00" endTime="2026-08-20T15:31:26.2706824+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="52b7e688-9ed2-4788-b6db-fa8bf2a20ff1" />
+    <UnitTestResult executionId="74c277ed-12a5-413d-a534-68d02d026e86" testId="ca86d173-612a-a1b5-12fc-263882cb3075" testName="LealControl.Modules.Crm.UnitTests.CustomerTests.Register_creates_active_customer_and_domain_event" computerName="Leonel" duration="00:00:00.0003265" startTime="2026-08-20T15:31:26.2707023+00:00" endTime="2026-08-20T15:31:26.2707023+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="74c277ed-12a5-413d-a534-68d02d026e86" />
+    <UnitTestResult executionId="05302f34-c11a-4b04-b847-ca007a8ac004" testId="22b2ba3e-80cd-1cb9-72a7-c630bae06a38" testName="LealControl.Modules.Crm.UnitTests.CuitTests.Accepts_valid_cuit(raw: &quot;20123456786&quot;)" computerName="Leonel" duration="00:00:00.0002923" startTime="2026-08-20T15:31:26.2541950+00:00" endTime="2026-08-20T15:31:26.2541950+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="05302f34-c11a-4b04-b847-ca007a8ac004" />
+    <UnitTestResult executionId="a22fc307-3966-4e90-b6fc-842c7c909a92" testId="dd3fd24e-2acb-07d1-d8de-fd8eb89abe9f" testName="LealControl.Modules.Crm.UnitTests.LeadConversionTests.Convert_open_lead_links_new_customer" computerName="Leonel" duration="00:00:00.0022081" startTime="2026-08-20T15:31:26.2706150+00:00" endTime="2026-08-20T15:31:26.2706150+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a22fc307-3966-4e90-b6fc-842c7c909a92" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CustomerTests.Deactivate_raises_event" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="ce0da45b-9204-0da7-03e3-c3f1b894134f">
+      <Execution id="3d6410a5-dbd8-4931-af84-cc49a9b5186c" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CustomerTests" name="Deactivate_raises_event" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CustomerTests.Add_location_and_contact_linked_to_plant" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="7ea2d678-96cf-6241-fd44-a88efe570457">
+      <Execution id="e8bb7772-2389-4a83-88c3-27d66bf8432f" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CustomerTests" name="Add_location_and_contact_linked_to_plant" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CuitTests.Accepts_valid_cuit(raw: &quot;20-12345678-6&quot;)" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="50d1c901-e2d6-9719-003b-8d8dcf5376e7">
+      <Execution id="04f409b9-4fc3-48e5-a0b0-500a96af3362" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CuitTests" name="Accepts_valid_cuit" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CustomerTests.Only_one_primary_contact" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="3f271b19-56d3-5363-c048-fbce0059aec2">
+      <Execution id="9c066b8d-4035-4040-a330-2d008acaffaa" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CustomerTests" name="Only_one_primary_contact" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CustomerTests.Register_requires_legal_name" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="4750450b-9b01-4471-2f09-1776cc238bf5">
+      <Execution id="2fbfad9b-8671-461a-bf3b-f7ab6e47e698" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CustomerTests" name="Register_requires_legal_name" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CuitTests.Rejects_wrong_checksum" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="aed9fea5-a473-384c-da30-18e4a4584143">
+      <Execution id="75f66e77-3cec-4aeb-b0f5-39e3e368c12a" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CuitTests" name="Rejects_wrong_checksum" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CustomerTests.Fiscal_rate_exclusion_respects_expiry" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="4fbd4657-ba18-731e-15b2-27cec5c6009c">
+      <Execution id="52b7e688-9ed2-4788-b6db-fa8bf2a20ff1" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CustomerTests" name="Fiscal_rate_exclusion_respects_expiry" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CustomerTests.Responsable_inscripto_cannot_use_dni" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="cfe614ab-b2d6-ddf7-681f-b77d899be473">
+      <Execution id="50832093-db56-42a0-ad28-c1040c5b5dbb" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CustomerTests" name="Responsable_inscripto_cannot_use_dni" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CustomerTests.Register_creates_active_customer_and_domain_event" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="ca86d173-612a-a1b5-12fc-263882cb3075">
+      <Execution id="74c277ed-12a5-413d-a534-68d02d026e86" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CustomerTests" name="Register_creates_active_customer_and_domain_event" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.LeadConversionTests.Convert_open_lead_links_new_customer" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="dd3fd24e-2acb-07d1-d8de-fd8eb89abe9f">
+      <Execution id="a22fc307-3966-4e90-b6fc-842c7c909a92" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.LeadConversionTests" name="Convert_open_lead_links_new_customer" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CuitTests.Accepts_valid_cuit(raw: &quot;20123456786&quot;)" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="22b2ba3e-80cd-1cb9-72a7-c630bae06a38">
+      <Execution id="05302f34-c11a-4b04-b847-ca007a8ac004" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CuitTests" name="Accepts_valid_cuit" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CuitTests.Rejects_short_number" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="a88b362c-487f-21d2-aba0-352e30e38d46">
+      <Execution id="637e3cc3-9c04-4faf-b5cd-93f46da1c103" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CuitTests" name="Rejects_short_number" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CustomerTests.Consumidor_final_can_use_dni" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="86ee87fb-feb2-de97-f522-dbf06e65ed68">
+      <Execution id="63b4b4af-6a2e-47bb-973e-6a2b37ac0719" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CustomerTests" name="Consumidor_final_can_use_dni" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.CustomerTests.Add_contact_requires_a_channel" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="32632147-a275-de8d-04dc-c95b9aef3a02">
+      <Execution id="b74d26be-0dfa-4e0d-befb-470734aba53d" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.CustomerTests" name="Add_contact_requires_a_channel" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.LeadConversionTests.Cannot_convert_archived_lead" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="291ba147-bf81-576c-f5c6-58a01d8c582c">
+      <Execution id="34546ec1-983f-4a1a-9e03-7501151920ea" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.LeadConversionTests" name="Cannot_convert_archived_lead" />
+    </UnitTest>
+    <UnitTest name="LealControl.Modules.Crm.UnitTests.LeadConversionTests.Cannot_convert_twice" storage="/home/leonel/desarrollo/tests/lealcontrol.modules.crm.unittests/bin/debug/net8.0/lealcontrol.modules.crm.unittests.dll" id="1bc362f8-2f7d-22de-3a00-1961d00c549d">
+      <Execution id="eb4cb7a1-85b1-4188-b0d9-34885923de77" />
+      <TestMethod codeBase="/home/leonel/Desarrollo/tests/LealControl.Modules.Crm.UnitTests/bin/Debug/net8.0/LealControl.Modules.Crm.UnitTests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="LealControl.Modules.Crm.UnitTests.LeadConversionTests" name="Cannot_convert_twice" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="aed9fea5-a473-384c-da30-18e4a4584143" executionId="75f66e77-3cec-4aeb-b0f5-39e3e368c12a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a88b362c-487f-21d2-aba0-352e30e38d46" executionId="637e3cc3-9c04-4faf-b5cd-93f46da1c103" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="32632147-a275-de8d-04dc-c95b9aef3a02" executionId="b74d26be-0dfa-4e0d-befb-470734aba53d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="86ee87fb-feb2-de97-f522-dbf06e65ed68" executionId="63b4b4af-6a2e-47bb-973e-6a2b37ac0719" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3f271b19-56d3-5363-c048-fbce0059aec2" executionId="9c066b8d-4035-4040-a330-2d008acaffaa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1bc362f8-2f7d-22de-3a00-1961d00c549d" executionId="eb4cb7a1-85b1-4188-b0d9-34885923de77" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="50d1c901-e2d6-9719-003b-8d8dcf5376e7" executionId="04f409b9-4fc3-48e5-a0b0-500a96af3362" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ce0da45b-9204-0da7-03e3-c3f1b894134f" executionId="3d6410a5-dbd8-4931-af84-cc49a9b5186c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="291ba147-bf81-576c-f5c6-58a01d8c582c" executionId="34546ec1-983f-4a1a-9e03-7501151920ea" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4750450b-9b01-4471-2f09-1776cc238bf5" executionId="2fbfad9b-8671-461a-bf3b-f7ab6e47e698" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7ea2d678-96cf-6241-fd44-a88efe570457" executionId="e8bb7772-2389-4a83-88c3-27d66bf8432f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="cfe614ab-b2d6-ddf7-681f-b77d899be473" executionId="50832093-db56-42a0-ad28-c1040c5b5dbb" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4fbd4657-ba18-731e-15b2-27cec5c6009c" executionId="52b7e688-9ed2-4788-b6db-fa8bf2a20ff1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ca86d173-612a-a1b5-12fc-263882cb3075" executionId="74c277ed-12a5-413d-a534-68d02d026e86" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="22b2ba3e-80cd-1cb9-72a7-c630bae06a38" executionId="05302f34-c11a-4b04-b847-ca007a8ac004" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="dd3fd24e-2acb-07d1-d8de-fd8eb89abe9f" executionId="a22fc307-3966-4e90-b6fc-842c7c909a92" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="16" executed="16" passed="16" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.8.2+699d445a1a (64-bit .NET 8.0.30)
+[xUnit.net 00:00:00.04]   Discovering: LealControl.Modules.Crm.UnitTests
+[xUnit.net 00:00:00.07]   Discovered:  LealControl.Modules.Crm.UnitTests
+[xUnit.net 00:00:00.07]   Starting:    LealControl.Modules.Crm.UnitTests
+[xUnit.net 00:00:00.12]   Finished:    LealControl.Modules.Crm.UnitTests
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

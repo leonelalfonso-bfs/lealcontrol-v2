@@ -1,0 +1,34 @@
+{
+  "YAML": {
+    "files": 2,
+    "lines": 51
+  },
+  "SQL": {
+    "files": 18,
+    "lines": 552
+  },
+  "JSON": {
+    "files": 22,
+    "lines": 13914
+  },
+  "Markdown": {
+    "files": 12,
+    "lines": 935
+  },
+  "C#": {
+    "files": 202,
+    "lines": 32304
+  },
+  "TypeScript": {
+    "files": 9,
+    "lines": 2613
+  },
+  "CSS": {
+    "files": 11,
+    "lines": 1885
+  },
+  "TSX": {
+    "files": 96,
+    "lines": 27416
+  }
+}

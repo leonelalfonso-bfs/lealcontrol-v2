@@ -1371,3 +1371,107 @@ export type AuthResponse = {
   availableTenants: TenantInfo[];
 };
 
+export type GrainContract = {
+  id: string;
+  tenantId: string;
+  contractNumber: string;
+  contractType: string;
+  grainType: string;
+  harvest: string;
+  pricingMode: string;
+  pricePerTon: number;
+  currency: string;
+  pricingReference?: string | null;
+  totalTons: number;
+  deliveredTons: number;
+  fixedTons: number;
+  liquidatedTons: number;
+  sellerCustomerId?: string | null;
+  sellerName: string;
+  buyerCustomerId?: string | null;
+  buyerName: string;
+  brokerCommissionPercentage: number;
+  brokerCommissionAmount: number;
+  deliveryPort?: string | null;
+  deliveryStartDate?: string | null;
+  deliveryEndDate?: string | null;
+  status: string;
+  notes?: string | null;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+};
+
+export type GrainPriceFixation = {
+  id: string;
+  tenantId: string;
+  contractId: string;
+  fixationNumber: string;
+  fixationDateUtc: string;
+  fixedTons: number;
+  pricePerTon: number;
+  currency: string;
+  marketReference?: string | null;
+  brokerageAmount: number;
+  notes?: string | null;
+  status: string;
+  createdAtUtc: string;
+};
+
+export type GrainDelivery = {
+  id: string;
+  tenantId: string;
+  contractId: string;
+  deliveryNumber: string;
+  cpeNumber?: string | null;
+  ctgNumber?: string | null;
+  truckPlate?: string | null;
+  trailerPlate?: string | null;
+  driverName?: string | null;
+  grossWeightKg: number;
+  tareWeightKg: number;
+  netWeightKg: number;
+  humidityPercentage: number;
+  foreignMatterPercentage: number;
+  damagedPercentage: number;
+  commercialNetWeightTons: number;
+  qualityGrade: string;
+  destinationSiloOrPort?: string | null;
+  receivedAtUtc: string;
+  status: string;
+};
+
+export type GrainMarketPrice = {
+  id: string;
+  tenantId: string;
+  priceDate: string;
+  grainType: string;
+  market: string;
+  currency: string;
+  settlementPrice: number;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  dailyVariationPercentage: number;
+  createdAtUtc: string;
+};
+
+export type GrainDashboardData = {
+  totalContractedTons: number;
+  totalDeliveredTons: number;
+  totalFixedTons: number;
+  totalPendingTons: number;
+  totalBrokerageEarnedUsd: number;
+  activeContractsCount: number;
+  positionSummary: Array<{
+    grainType: string;
+    totalTons: number;
+    buyTons: number;
+    sellTons: number;
+    deliveredTons: number;
+    openFixationTons: number;
+    netPositionTons: number;
+  }>;
+  recentContracts: GrainContract[];
+  recentDeliveries: GrainDelivery[];
+  marketPrices: GrainMarketPrice[];
+};
+
