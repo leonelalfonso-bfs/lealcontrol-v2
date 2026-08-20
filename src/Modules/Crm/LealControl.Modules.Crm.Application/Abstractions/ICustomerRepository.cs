@@ -18,6 +18,7 @@ public interface ICustomerRepository
         TenantId tenantId,
         string? search,
         bool? onlyActive,
+        string? role,
         int skip,
         int take,
         CancellationToken cancellationToken = default);
@@ -26,6 +27,7 @@ public interface ICustomerRepository
         TenantId tenantId,
         string? search,
         bool? onlyActive,
+        string? role,
         CancellationToken cancellationToken = default);
 
     void Add(Customer customer);

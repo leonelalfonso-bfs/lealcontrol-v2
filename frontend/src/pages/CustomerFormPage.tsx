@@ -1029,7 +1029,7 @@ export function CustomerFormPage() {
             Cancelar
           </button>
           <button className="btn" disabled={saving}>
-            {id ? "Guardar Cambios" : "Crear Cliente"}
+            {id ? "Guardar Cambios" : "Crear"}
           </button>
         </div>
       </form>

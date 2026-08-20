@@ -36,6 +36,7 @@ public static class CrmEndpoints
         customers.MapGet("/", async (
             string? search,
             bool? onlyActive,
+            string? role,
             int? page,
             int? pageSize,
             ISender sender,
@@ -44,7 +45,7 @@ public static class CrmEndpoints
             var p = page.GetValueOrDefault(1);
             var ps = pageSize.GetValueOrDefault(25);
             var result = await sender.Send(
-                new ListCustomersQuery(search, onlyActive, p <= 0 ? 1 : p, ps <= 0 ? 25 : ps),
+                new ListCustomersQuery(search, onlyActive, role, p <= 0 ? 1 : p, ps <= 0 ? 25 : ps),
                 cancellationToken);
             return result.ToHttp();
         });

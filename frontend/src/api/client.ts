@@ -62,8 +62,8 @@ export const api = {
   useChequeForPayment: (id: string, reference: string) => request(`/api/v1/finance/echeqs/${id}/use-for-payment`, { method: "POST", body: JSON.stringify({ reference }) }),
   listCollectionReceipts: () => request<{ id: string; receiptNumber: string; amount: number; currency: string; receiptDateUtc: string; description: string; status: string }[]>("/api/v1/finance/collections"),
   createCollectionReceipt: (body: { accountId: string; customerId?: string; invoiceId?: string; movementId?: string; chequeId?: string; amount: number; currency: string; invoiceAmount?: number; invoiceCurrency?: string; invoiceExchangeRate?: number; paymentExchangeRate?: number; suggestedAdjustmentArs?: number; suggestedAdjustmentType?: string; receiptDateUtc: string; description: string }) => request("/api/v1/finance/collections", { method: "POST", body: JSON.stringify(body) }),
-  listCustomers: (search = "") =>
-    request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=50&search=${encodeURIComponent(search)}`),
+  listCustomers: (search = "", role = "customer") =>
+    request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=50&search=${encodeURIComponent(search)}${role ? `&role=${encodeURIComponent(role)}` : ""}`),
   getCustomer: (id: string) => request<CustomerDetail>(`/api/v1/crm/customers/${id}`),
   createCustomer: (body: CustomerWrite) =>
     request<CustomerDetail>("/api/v1/crm/customers", { method: "POST", body: JSON.stringify(body) }),

@@ -12,7 +12,7 @@ export function CustomersPage() {
   const [error, setError] = useState<string | null>(null);
 
   const load = (term = search) => {
-    api.listCustomers(term)
+    api.listCustomers(term, "customer")
       .then((page) => {
         setItems(page.items);
         setTotal(page.total ?? 0);

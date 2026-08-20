@@ -29,7 +29,7 @@ internal sealed class GetCustomerQueryHandler : IRequestHandler<GetCustomerQuery
     }
 }
 
-public sealed record ListCustomersQuery(string? Search, bool? OnlyActive, int Page, int PageSize)
+public sealed record ListCustomersQuery(string? Search, bool? OnlyActive, string? Role, int Page, int PageSize)
     : IRequest<Result<PagedResult<CustomerSummary>>>;
 
 internal sealed class ListCustomersQueryHandler
@@ -55,6 +55,7 @@ internal sealed class ListCustomersQueryHandler
             _tenant.TenantId,
             request.Search,
             request.OnlyActive,
+            request.Role,
             page.Skip,
             page.Take,
             cancellationToken);
@@ -63,6 +64,7 @@ internal sealed class ListCustomersQueryHandler
             _tenant.TenantId,
             request.Search,
             request.OnlyActive,
+            request.Role,
             cancellationToken);
 
         var summaries = items.Select(c => new CustomerSummary(

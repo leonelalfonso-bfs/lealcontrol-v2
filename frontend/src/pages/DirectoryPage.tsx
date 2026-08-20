@@ -15,7 +15,7 @@ export function DirectoryPage() {
 
   const load = (term = search) => {
     setLoading(true);
-    api.listCustomers(term)
+    api.listCustomers(term, "all")
       .then((page) => setItems(page.items))
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
@@ -42,8 +42,7 @@ export function DirectoryPage() {
           <p className="muted">Empresas, clientes, proveedores y contactos comerciales en un solo registro.</p>
         </div>
         <div className="toolbar">
-          <Link className="btn ghost" to="/clientes/nuevo?type=supplier&returnUrl=/directorio">Nuevo proveedor</Link>
-          <Link className="btn" to="/clientes/nuevo?returnUrl=/directorio">Nueva empresa</Link>
+          <Link className="btn" to="/clientes/nuevo?returnUrl=/directorio">+ Nueva empresa</Link>
         </div>
       </div>
 

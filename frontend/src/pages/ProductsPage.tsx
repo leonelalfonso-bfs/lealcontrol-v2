@@ -88,6 +88,159 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
+  // Import Status Feedback Modal
+  const [importStatus, setImportStatus] = useState<{ success: number; failed: number; errors: string[] } | null>(null);
+  const [importing, setImporting] = useState(false);
+
+  const handleImportProducts = async (rawRows: Record<string, unknown>[]) => {
+    setError(null);
+    setImporting(true);
+    let successCount = 0;
+    const errors: string[] = [];
+    const currentCategories = [...categories];
+
+    for (let i = 0; i < rawRows.length; i++) {
+      const row = rawRows[i];
+      const rowNum = i + 2;
+
+      // Extract Code
+      const code = String(
+        row.code ?? row.Code ?? row["Código"] ?? row["Codigo"] ?? row["CÓDIGO"] ?? row.SKU ?? row.sku ?? ""
+      ).trim();
+
+      // Extract Name
+      const name = String(
+        row.name ?? row.Name ?? row["Nombre"] ?? row["NOMBRE"] ?? row["Descripción"] ?? row["Descripcion"] ?? row["DESCRIPCION"] ?? row.description ?? ""
+      ).trim();
+
+      if (!code || !name) {
+        errors.push(`Fila ${rowNum}: El Código y Nombre son obligatorios.`);
+        continue;
+      }
+
+      // Extract Category / Rubro
+      const rawCategory = String(
+        row.category ?? row.Category ?? row["Categoría"] ?? row["Categoria"] ?? row["CATEGORÍA"] ?? row["Rubro"] ?? row["RUBRO"] ?? row["Familia"] ?? ""
+      ).trim();
+
+      // Extract Raw Type
+      const rawType = String(
+        row.type ?? row.Type ?? row["Tipo"] ?? row["TIPO"] ?? row["Tipo de Producto"] ?? ""
+      ).trim();
+
+      let finalType = "Product";
+      let finalCategoryName = rawCategory;
+
+      const lowerType = rawType.toLowerCase();
+      if (lowerType === "service" || lowerType === "servicio" || lowerType === "servicios") {
+        finalType = "Service";
+      } else if (lowerType === "manufactured" || lowerType === "fabricado" || lowerType === "elaborado") {
+        finalType = "Manufactured";
+      } else if (lowerType === "rawmaterial" || lowerType === "materia prima" || lowerType === "insumo" || lowerType === "insumos") {
+        finalType = "RawMaterial";
+      } else if (lowerType === "sparepart" || lowerType === "repuesto" || lowerType === "repuestos") {
+        finalType = "SparePart";
+      } else if (lowerType === "kit" || lowerType === "combo") {
+        finalType = "Kit";
+      } else if (lowerType === "product" || lowerType === "producto" || lowerType === "directsale" || lowerType === "venta directa") {
+        finalType = "Product";
+      } else if (rawType) {
+        // If type contains a category name (e.g. "DORMITORIO", "BAÑO", "COCINA"), use as category
+        if (!finalCategoryName) {
+          finalCategoryName = rawType;
+        }
+        finalType = "Product";
+      }
+
+      // Resolve or auto-create Category
+      let categoryId: string | undefined = undefined;
+      if (finalCategoryName) {
+        const found = currentCategories.find(
+          (c) => c.name.toLowerCase() === finalCategoryName.toLowerCase()
+        );
+        if (found) {
+          categoryId = found.id;
+        } else {
+          try {
+            const newCat = await api.createCategory({ name: finalCategoryName, description: `Categoría ${finalCategoryName}` });
+            currentCategories.push(newCat);
+            setCategories([...currentCategories]);
+            categoryId = newCat.id;
+          } catch {
+            // Category creation optional
+          }
+        }
+      }
+
+      // Unit
+      const baseUnit = String(
+        row.baseUnit ?? row.BaseUnit ?? row["Unidad"] ?? row["UNIDAD"] ?? row["Unidad de Medida"] ?? row.unit ?? "UN"
+      ).trim() || "UN";
+
+      // Currency
+      const saleCurrency = String(
+        row.saleCurrency ?? row.SaleCurrency ?? row["Moneda Venta"] ?? row["Moneda"] ?? row.currency ?? "ARS"
+      ).trim().toUpperCase() === "USD" ? "USD" : "ARS";
+
+      const purchaseCurrency = String(
+        row.purchaseCurrency ?? row.PurchaseCurrency ?? row["Moneda Compra"] ?? "ARS"
+      ).trim().toUpperCase() === "USD" ? "USD" : "ARS";
+
+      // Number parsing
+      const parseNumber = (val: unknown): number => {
+        if (typeof val === "number") return isNaN(val) ? 0 : val;
+        if (!val) return 0;
+        const cleaned = String(val).replace(/[$]/g, "").replace(/\s/g, "").replace(",", ".");
+        const n = parseFloat(cleaned);
+        return isNaN(n) ? 0 : n;
+      };
+
+      const basePrice = parseNumber(
+        row.basePrice ?? row.BasePrice ?? row["Precio venta"] ?? row["Precio Venta"] ?? row["Precio"] ?? row.price
+      );
+
+      const costPrice = parseNumber(
+        row.costPrice ?? row.CostPrice ?? row["Costo"] ?? row["Precio Costo"] ?? row.cost
+      );
+
+      const taxRate = parseNumber(
+        row.taxRate ?? row.TaxRate ?? row["IVA"] ?? row["Alícuota"] ?? row["Alicuota"] ?? 21
+      ) || 21;
+
+      const minStock = parseNumber(
+        row.minStock ?? row.MinStock ?? row["Stock Mínimo"] ?? row["Stock Minimo"] ?? 0
+      );
+
+      try {
+        await api.createProduct({
+          code,
+          name,
+          description: String(row.description ?? row["Descripción"] ?? row["Descripcion"] ?? "") || undefined,
+          type: finalType,
+          categoryId,
+          saleCurrency,
+          basePrice,
+          purchaseCurrency,
+          costPrice,
+          taxRate,
+          trackStock: finalType !== "Service",
+          minStock,
+          baseUnit,
+          hasSerialNumber: false,
+          trackLot: false
+        });
+        successCount++;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Error al registrar producto";
+        errors.push(`Fila ${rowNum} (${code} - ${name}): ${msg}`);
+      }
+    }
+
+    setImporting(false);
+    setImportStatus({ success: successCount, failed: errors.length, errors });
+    fetchProducts();
+  };
+
   // KPIs
   const totalCount = products.length;
   const productCount = products.filter((p) => p.type === "Product").length;
@@ -111,7 +264,21 @@ export const ProductsPage: React.FC = () => {
           >
             + Nueva Categoría
           </button>
-          <ExcelToolbar fileName="productos" rows={products} columns={[{ key: "code", header: "Código" }, { key: "name", header: "Nombre" }, { key: "type", header: "Tipo" }, { key: "baseUnit", header: "Unidad" }, { key: "basePrice", header: "Precio venta" }, { key: "costPrice", header: "Costo" }]} templateColumns={["code", "name", "type", "baseUnit", "basePrice", "costPrice"]} onImport={rows => { void Promise.all(rows.map(row => api.createProduct({ code: String(row.code || ""), name: String(row.name || ""), type: String(row.type || "Product"), baseUnit: String(row.baseUnit || "UN"), saleCurrency: String(row.saleCurrency || "ARS"), basePrice: Number(row.basePrice || 0), purchaseCurrency: String(row.purchaseCurrency || "ARS"), costPrice: Number(row.costPrice || 0), taxRate: Number(row.taxRate || 21), trackStock: true, minStock: Number(row.minStock || 0), hasSerialNumber: false, trackLot: false }))).then(() => fetchProducts()).catch(e => setError(e instanceof Error ? e.message : "Error al importar productos.")); }} /><Link to="/productos/nuevo" className="btn">
+          <ExcelToolbar
+            fileName="productos"
+            rows={products}
+            columns={[
+              { key: "code", header: "Código" },
+              { key: "name", header: "Nombre" },
+              { key: "type", header: "Tipo" },
+              { key: "baseUnit", header: "Unidad" },
+              { key: "basePrice", header: "Precio venta" },
+              { key: "costPrice", header: "Costo" }
+            ]}
+            templateColumns={["Código", "Nombre", "Rubro", "Tipo", "Unidad", "Precio Venta", "Costo", "IVA", "Stock Mínimo"]}
+            onImport={handleImportProducts}
+          />
+          <Link to="/productos/nuevo" className="btn">
             + Nuevo Producto / Servicio
           </Link>
         </div>
@@ -431,6 +598,69 @@ export const ProductsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Resumen de Importación de Productos */}
+      {importStatus && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(15, 23, 42, 0.65)",
+          backdropFilter: "blur(4px)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "16px"
+        }}>
+          <div className="card pad" style={{ maxWidth: "560px", width: "100%", background: "#fff", borderRadius: "16px", boxShadow: "0 20px 40px rgba(0,0,0,0.25)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+              <span style={{ fontSize: "1.6rem" }}>{importStatus.failed === 0 ? "🎉" : "📋"}</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800 }}>
+                  Resultado de la Importación
+                </h3>
+                <div className="muted" style={{ fontSize: "0.85rem" }}>
+                  Procesamiento de catálogo desde archivo Excel
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
+              <div style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", textAlign: "center" }}>
+                <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "#059669" }}>{importStatus.success}</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#065f46" }}>Productos Importados</div>
+              </div>
+              {importStatus.failed > 0 && (
+                <div style={{ flex: 1, padding: "12px", borderRadius: "10px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", textAlign: "center" }}>
+                  <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "#dc2626" }}>{importStatus.failed}</div>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#991b1b" }}>Filas con Observación</div>
+                </div>
+              )}
+            </div>
+
+            {importStatus.errors.length > 0 && (
+              <div style={{ maxHeight: "180px", overflowY: "auto", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "10px 14px", marginBottom: "16px" }}>
+                <div style={{ fontWeight: 800, fontSize: "0.8rem", color: "#64748b", marginBottom: "6px" }}>DETALLE DE OBSERVACIONES:</div>
+                <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "0.82rem", color: "#dc2626" }}>
+                  {importStatus.errors.map((err, idx) => (
+                    <li key={idx} style={{ marginBottom: "4px" }}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="toolbar" style={{ justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setImportStatus(null)}
+              >
+                Entendido
+              </button>
+            </div>
           </div>
         </div>
       )}

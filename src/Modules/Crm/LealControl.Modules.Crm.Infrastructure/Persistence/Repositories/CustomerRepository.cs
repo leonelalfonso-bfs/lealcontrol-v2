@@ -45,11 +45,12 @@ internal sealed class CustomerRepository : ICustomerRepository
         TenantId tenantId,
         string? search,
         bool? onlyActive,
+        string? role,
         int skip,
         int take,
         CancellationToken cancellationToken = default)
     {
-        return await ApplyFilters(_db.Customers.AsNoTracking(), tenantId, search, onlyActive)
+        return await ApplyFilters(_db.Customers.AsNoTracking(), tenantId, search, onlyActive, role)
             .OrderBy(x => x.LegalName)
             .Skip(skip)
             .Take(take)
@@ -60,8 +61,9 @@ internal sealed class CustomerRepository : ICustomerRepository
         TenantId tenantId,
         string? search,
         bool? onlyActive,
+        string? role,
         CancellationToken cancellationToken = default) =>
-        ApplyFilters(_db.Customers.AsNoTracking(), tenantId, search, onlyActive).CountAsync(cancellationToken);
+        ApplyFilters(_db.Customers.AsNoTracking(), tenantId, search, onlyActive, role).CountAsync(cancellationToken);
 
     public void Add(Customer customer) => _db.Customers.Add(customer);
 
@@ -69,9 +71,27 @@ internal sealed class CustomerRepository : ICustomerRepository
         IQueryable<Customer> query,
         TenantId tenantId,
         string? search,
-        bool? onlyActive)
+        bool? onlyActive,
+        string? role)
     {
         query = query.Where(x => x.TenantId == tenantId);
+
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            var r = role.Trim().ToLowerInvariant();
+            if (r == "customer" || r == "clientes")
+            {
+                query = query.Where(x => x.IsCustomer);
+            }
+            else if (r == "supplier" || r == "proveedores")
+            {
+                query = query.Where(x => x.IsSupplier);
+            }
+            else if (r == "both")
+            {
+                query = query.Where(x => x.IsCustomer && x.IsSupplier);
+            }
+        }
 
         if (onlyActive == true)
         {
