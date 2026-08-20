@@ -29,6 +29,11 @@ try
     builder.Host.UseSerilog((context, services, configuration) =>
         configuration.ReadFrom.Configuration(context.Configuration).WriteTo.Console());
 
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        options.Limits.MaxRequestBodySize = 52428800; // 50MB
+    });
+
     builder.Services.AddSingleton<IClock, SystemClock>();
     builder.Services.AddHttpClient<GeminiApiClient>();
     builder.Services.AddHttpClient<BcraApiClient>();

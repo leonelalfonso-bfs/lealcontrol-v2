@@ -132,12 +132,13 @@ public sealed class GeminiApiClient
             var prompt = $@"
 Actúa como un experto liquidador de sueldos y asesor laboral en Argentina.
 Analiza la información provista para el Convenio Colectivo de Trabajo (CCT): '{cctNumber}'.
-Extrae o estima con la mayor precisión posible la escala salarial vigente y las categorías salariales representativas.
+Si se adjunta el documento o acuerdo en PDF, extrae los datos exactamente de dicho documento.
+Si no se adjunta PDF, investiga y aplica OBLIGATORIAMENTE la escala salarial y paritaria homologada más reciente vigente (priorizando año 2026 o la última escala acordada en Argentina, evitando escalas antiguas de 2023/2024).
 
 Devuelve OBLIGATORIAMENTE un único objeto JSON con esta estructura exacta:
 {{
   ""cctNumber"": ""{cctNumber}"",
-  ""unionName"": ""Nombre oficial del sindicato o federación (ej: FAECYS, UOM, UOCRA)"",
+  ""unionName"": ""Nombre oficial del sindicato o federación (ej: FAECYS, UOM, UOCRA, SMATA, Gastronómicos)"",
   ""effectivePeriod"": ""Mes y Año de vigencia (ej: Agosto 2026)"",
   ""percentageIncrease"": 4.5,
   ""summary"": ""Resumen ejecutivo del acuerdo salarial, tramos de aumento y cláusulas no remunerativas"",
