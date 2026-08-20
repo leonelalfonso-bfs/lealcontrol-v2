@@ -360,37 +360,6 @@ export function App() {
         </main>
       </div>
 
-      {/* Floating Launcher for Preguntale a LEAL */}
-      <button
-        type="button"
-        onClick={() => setShowAskLeal(true)}
-        title="Preguntale a LEAL (Asistente IA)"
-        style={{
-          position: "fixed",
-          bottom: "24px",
-          right: "24px",
-          zIndex: 9000,
-          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-          color: "#ffffff",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-          boxShadow: "0 8px 24px rgba(15, 23, 42, 0.35)",
-          borderRadius: "50px",
-          padding: "10px 18px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          fontWeight: 800,
-          fontSize: "0.85rem",
-          cursor: "pointer"
-        }}
-      >
-        <span style={{ fontSize: "1.2rem" }}>🤖</span>
-        <span>Preguntale a LEAL</span>
-        <span style={{ fontSize: "0.68rem", background: "#0d9488", color: "#fff", padding: "2px 7px", borderRadius: "10px", fontWeight: 800 }}>
-          IA
-        </span>
-      </button>
-
       {/* Asistente Copiloto Modal */}
       <AskLealAssistantModal isOpen={showAskLeal} onClose={() => setShowAskLeal(false)} />
     </div>
