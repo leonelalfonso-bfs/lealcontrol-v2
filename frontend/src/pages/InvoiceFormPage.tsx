@@ -668,12 +668,12 @@ export function InvoiceFormPage() {
                           <td>
                             <input
                               type="number"
-                              step="0.01"
-                              min="0.01"
+                              step="1"
+                              min="1"
                               value={item.quantity}
                               onChange={(e) => {
                                 const next = [...items];
-                                next[idx].quantity = Number(e.target.value);
+                                next[idx].quantity = Math.max(1, parseInt(e.target.value, 10) || 1);
                                 setItems(next);
                               }}
                               style={{ textAlign: "center" }}

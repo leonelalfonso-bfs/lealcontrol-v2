@@ -846,11 +846,11 @@ export const QuoteFormPage: React.FC = () => {
                     <td style={{ textAlign: "center" }}>
                       <input
                         type="number"
-                        step="0.01"
-                        min="0.01"
+                        step="1"
+                        min="1"
                         required
                         value={line.quantity}
-                        onChange={(e) => handleLineChange(idx, "quantity", Number(e.target.value))}
+                        onChange={(e) => handleLineChange(idx, "quantity", Math.max(1, parseInt(e.target.value, 10) || 1))}
                         style={{ textAlign: "center" }}
                       />
                     </td>
