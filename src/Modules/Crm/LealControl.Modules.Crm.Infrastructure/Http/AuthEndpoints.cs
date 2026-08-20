@@ -72,7 +72,7 @@ public static class AuthEndpoints
 
                 return Results.Ok(new AuthResponse(
                     token,
-                    new UserDto(matchingUser.Id, matchingUser.FullName, matchingUser.Email, matchingUser.Role),
+                    new UserDto(matchingUser.Id, matchingUser.FullName, matchingUser.Email, matchingUser.Role, matchingUser.AllowedModulesJson),
                     new TenantSummaryDto(matchingUser.TenantId.Value, tenantName, tenantSettings?.TradeName, docNumber),
                     availableTenants
                 ));
@@ -154,7 +154,7 @@ public static class AuthEndpoints
 
                 return Results.Ok(new AuthResponse(
                     token,
-                    new UserDto(newAdmin.Id, newAdmin.FullName, newAdmin.Email, newAdmin.Role),
+                    new UserDto(newAdmin.Id, newAdmin.FullName, newAdmin.Email, newAdmin.Role, newAdmin.AllowedModulesJson),
                     new TenantSummaryDto(devTenantId.Value, devSettings?.LegalName ?? "LEAL CONTROL ERP S.A.", devSettings?.TradeName, devSettings?.DocumentNumber ?? "30715489629"),
                     new List<TenantSummaryDto> { new(devTenantId.Value, devSettings?.LegalName ?? "LEAL CONTROL ERP S.A.", devSettings?.TradeName, devSettings?.DocumentNumber ?? "30715489629") }
                 ));
@@ -212,7 +212,7 @@ public static class AuthEndpoints
 
             return Results.Ok(new AuthResponse(
                 token,
-                new UserDto(adminUser.Id, adminUser.FullName, adminUser.Email, adminUser.Role),
+                new UserDto(adminUser.Id, adminUser.FullName, adminUser.Email, adminUser.Role, adminUser.AllowedModulesJson),
                 new TenantSummaryDto(newTenantId.Value, companyName, companyName, docNumber),
                 availableTenants
             ));
@@ -236,7 +236,7 @@ public static class AuthEndpoints
 
             return Results.Ok(new
             {
-                User = user != null ? new UserDto(user.Id, user.FullName, user.Email, user.Role) : null,
+                User = user != null ? new UserDto(user.Id, user.FullName, user.Email, user.Role, user.AllowedModulesJson) : null,
                 Tenant = new TenantSummaryDto(tenantId.Value, tenantName, tenantSettings?.TradeName, tenantSettings?.DocumentNumber ?? ""),
                 AvailableTenants = availableTenants
             });
@@ -271,7 +271,7 @@ public static class AuthEndpoints
 
             return Results.Ok(new AuthResponse(
                 token,
-                new UserDto(user.Id, user.FullName, user.Email, user.Role),
+                new UserDto(user.Id, user.FullName, user.Email, user.Role, user.AllowedModulesJson),
                 new TenantSummaryDto(targetTenantId.Value, tenantSettings.LegalName, tenantSettings.TradeName, tenantSettings.DocumentNumber),
                 availableTenants
             ));
@@ -338,6 +338,6 @@ public static class SimpleJwt
 public sealed record LoginRequest(string Email, string Password, Guid? TenantId);
 public sealed record RegisterTenantRequest(string CompanyName, string? Cuit, string? Phone, string? AdminFullName, string Email, string Password);
 public sealed record SwitchTenantRequest(Guid TenantId);
-public sealed record UserDto(Guid Id, string FullName, string Email, string Role);
+public sealed record UserDto(Guid Id, string FullName, string Email, string Role, string? AllowedModulesJson = null);
 public sealed record TenantSummaryDto(Guid Id, string LegalName, string? TradeName, string DocumentNumber);
 public sealed record AuthResponse(string Token, UserDto User, TenantSummaryDto Tenant, IReadOnlyList<TenantSummaryDto> AvailableTenants);

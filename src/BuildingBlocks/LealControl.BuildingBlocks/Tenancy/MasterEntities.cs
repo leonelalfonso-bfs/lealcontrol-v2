@@ -21,6 +21,7 @@ public sealed class MasterTenant
     public int UserCount { get; set; } = 1;
     public bool IsActive { get; set; } = true;
     public string? Notes { get; set; }
+    public string EnabledModulesJson { get; set; } = @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]";
 }
 
 public sealed class SuperAdminUser
@@ -45,5 +46,21 @@ public sealed class SubscriptionPlan
     public int MaxUsers { get; set; } = 10;
     public string Description { get; set; } = string.Empty;
     public string FeaturesJson { get; set; } = "[]";
+    public string EnabledModulesJson { get; set; } = @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]";
     public bool IsActive { get; set; } = true;
+}
+
+public sealed class TenantPaymentRecord
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid TenantId { get; set; }
+    public string ExternalPaymentId { get; set; } = string.Empty; // MercadoPago Payment ID or Preference ID
+    public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Refunded
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = "ARS";
+    public string PaymentMethod { get; set; } = "MercadoPago";
+    public string? PayerEmail { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? ApprovedAtUtc { get; set; }
+    public string? RawPayloadJson { get; set; }
 }

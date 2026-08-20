@@ -119,7 +119,36 @@ export function App() {
 
   const activeCompanyName = tenant?.tradeName || tenant?.legalName || companyName;
 
-  const modules = visibleModules(DEVELOPMENT_ACCESS);
+  const userRole = user?.role || "Comercial";
+  let allowedModuleIds: string[] = [];
+  if (userRole === "Admin") {
+    allowedModuleIds = ["inicio", "directorio", "crm", "ventas", "compras", "inventario", "produccion", "finanzas", "rrhh", "flota", "cereales", "administracion"];
+  } else {
+    try {
+      const raw = typeof user?.allowedModulesJson === "string" ? JSON.parse(user.allowedModulesJson) : user?.allowedModulesJson || [];
+      const map: Record<string, string[]> = {
+        sales: ["ventas"],
+        crm: ["crm", "directorio"],
+        purchases: ["compras"],
+        inventory: ["inventario", "produccion"],
+        finance: ["finanzas"],
+        fleet: ["flota"],
+        hr: ["rrhh"],
+        grains: ["cereales"],
+        accounting: ["finanzas"]
+      };
+      allowedModuleIds = ["inicio"];
+      (Array.isArray(raw) ? raw : []).forEach((r: string) => {
+        if (map[r]) allowedModuleIds.push(...map[r]);
+        else allowedModuleIds.push(r);
+      });
+    } catch {
+      allowedModuleIds = ["inicio", "ventas", "crm"];
+    }
+  }
+
+  const allMods = visibleModules(DEVELOPMENT_ACCESS);
+  const modules = allMods.filter((m) => m.id === "inicio" || allowedModuleIds.includes(m.id));
   const activeModule = resolveActiveModule(location.pathname, DEVELOPMENT_ACCESS);
   const activeModuleId = activeModule.id;
 

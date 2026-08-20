@@ -18,7 +18,8 @@ public sealed class TenantUser : Entity<Guid>
         string role,
         bool isActive,
         DateTime createdAtUtc,
-        string? passwordHash = null)
+        string? passwordHash = null,
+        string? allowedModulesJson = null)
         : base(id)
     {
         TenantId = tenantId;
@@ -28,6 +29,7 @@ public sealed class TenantUser : Entity<Guid>
         IsActive = isActive;
         CreatedAtUtc = createdAtUtc;
         PasswordHash = passwordHash ?? string.Empty;
+        AllowedModulesJson = allowedModulesJson ?? @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]";
     }
 
     public TenantId TenantId { get; private set; }
@@ -46,6 +48,8 @@ public sealed class TenantUser : Entity<Guid>
 
     public DateTime? LastLoginUtc { get; private set; }
 
+    public string AllowedModulesJson { get; private set; } = @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]";
+
     public void SetPassword(string password)
     {
         if (!string.IsNullOrWhiteSpace(password))
@@ -54,11 +58,26 @@ public sealed class TenantUser : Entity<Guid>
         }
     }
 
+    public void SetAllowedModules(string json)
+    {
+        AllowedModulesJson = string.IsNullOrWhiteSpace(json) ? "[]" : json;
+    }
+
+    public void Update(string fullName, string role, bool isActive, string? allowedModulesJson = null)
+    {
+        FullName = fullName.Trim();
+        Role = role;
+        IsActive = isActive;
+        if (allowedModulesJson != null)
+        {
+            SetAllowedModules(allowedModulesJson);
+        }
+    }
+
     public bool VerifyPassword(string password)
     {
         if (string.IsNullOrEmpty(PasswordHash))
         {
-            // Default initial password fallback
             return password == "admin123" || password == "leal123";
         }
 
@@ -75,7 +94,8 @@ public sealed class TenantUser : Entity<Guid>
         string fullName,
         string email,
         string role,
-        string? initialPassword = null)
+        string? initialPassword = null,
+        string? allowedModulesJson = null)
     {
         var user = new TenantUser(
             Guid.NewGuid(),
@@ -84,7 +104,8 @@ public sealed class TenantUser : Entity<Guid>
             email.Trim().ToLowerInvariant(),
             string.IsNullOrWhiteSpace(role) ? "Comercial" : role.Trim(),
             true,
-            DateTime.UtcNow);
+            DateTime.UtcNow,
+            allowedModulesJson: allowedModulesJson);
 
         if (!string.IsNullOrWhiteSpace(initialPassword))
         {

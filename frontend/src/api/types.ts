@@ -606,6 +606,7 @@ export type TenantUser = {
   role: string;
   isActive: boolean;
   createdAtUtc: string;
+  allowedModulesJson?: string | null;
 };
 
 export type ProductSummary = Product;
@@ -1355,6 +1356,7 @@ export type UserInfo = {
   fullName: string;
   email: string;
   role: string;
+  allowedModulesJson?: string | null;
 };
 
 export type TenantInfo = {

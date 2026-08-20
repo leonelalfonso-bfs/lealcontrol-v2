@@ -1,6 +1,7 @@
 import { FormEvent, ChangeEvent, useEffect, useState } from "react";
 import { api } from "../api/client";
 import { provinces, type CompanySettings, type TenantUser } from "../api/types";
+import { ALL_SYSTEM_MODULES } from "./superadmin/SuperAdminPlansPage";
 
 export function SettingsPage() {
   const [tab, setTab] = useState<"general" | "arca" | "banks" | "users" | "backup">("general");
@@ -19,12 +20,17 @@ export function SettingsPage() {
   const [certCuit, setCertCuit] = useState("");
   const [uploadingCert, setUploadingCert] = useState(false);
 
-  // New User Modal State
+  // User Modal State (Create & Edit)
   const [showUserModal, setShowUserModal] = useState(false);
-  const [newUserName, setNewUserName] = useState("");
-  const [newUserEmail, setNewUserEmail] = useState("");
-  const [newUserRole, setNewUserRole] = useState("Comercial");
-  const [creatingUser, setCreatingUser] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userRole, setUserRole] = useState("Comercial");
+  const [userIsActive, setUserIsActive] = useState(true);
+  const [userModules, setUserModules] = useState<string[]>([
+    "sales", "crm", "purchases", "inventory", "finance", "fleet", "hr", "grains"
+  ]);
+  const [savingUser, setSavingUser] = useState(false);
 
   useEffect(() => {
     Promise.all([api.getCompanySettings(), api.listTenantUsers()])
@@ -112,26 +118,85 @@ export function SettingsPage() {
     }
   };
 
-  const handleCreateUser = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!newUserName || !newUserEmail) return;
+  const openNewUserModal = () => {
+    setEditingUserId(null);
+    setUserName("");
+    setUserEmail("");
+    setUserRole("Comercial");
+    setUserIsActive(true);
+    setUserModules(["sales", "crm"]);
+    setShowUserModal(true);
+  };
+
+  const openEditUserModal = (u: TenantUser) => {
+    setEditingUserId(u.id);
+    setUserName(u.fullName);
+    setUserEmail(u.email);
+    setUserRole(u.role);
+    setUserIsActive(u.isActive);
     try {
-      setCreatingUser(true);
-      const created = await api.createTenantUser({
-        fullName: newUserName,
-        email: newUserEmail,
-        role: newUserRole
-      });
-      setUsers((prev) => [...prev, created]);
+      const mods = typeof u.allowedModulesJson === "string" ? JSON.parse(u.allowedModulesJson) : u.allowedModulesJson || [];
+      setUserModules(Array.isArray(mods) && mods.length > 0 ? mods : ["sales", "crm"]);
+    } catch {
+      setUserModules(["sales", "crm"]);
+    }
+    setShowUserModal(true);
+  };
+
+  const handleRoleChange = (newRole: string) => {
+    setUserRole(newRole);
+    if (newRole === "Admin") {
+      setUserModules(ALL_SYSTEM_MODULES.map((m) => m.id));
+    } else if (newRole === "Comercial") {
+      setUserModules(["sales", "crm", "inventory"]);
+    } else if (newRole === "Técnico") {
+      setUserModules(["fleet", "inventory"]);
+    } else if (newRole === "Facturación") {
+      setUserModules(["sales", "purchases", "finance"]);
+    }
+  };
+
+  const toggleUserModule = (id: string) => {
+    if (userModules.includes(id)) {
+      if (userModules.length === 1) return;
+      setUserModules(userModules.filter((m) => m !== id));
+    } else {
+      setUserModules([...userModules, id]);
+    }
+  };
+
+  const handleSaveUser = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!userName.trim() || !userEmail.trim()) return;
+    try {
+      setSavingUser(true);
+      setError(null);
+      const modulesJson = JSON.stringify(userModules);
+
+      if (editingUserId) {
+        const updated = await api.updateTenantUser(editingUserId, {
+          fullName: userName.trim(),
+          role: userRole,
+          isActive: userIsActive,
+          allowedModulesJson: modulesJson
+        });
+        setUsers((prev) => prev.map((u) => (u.id === editingUserId ? updated : u)));
+        setSuccessMsg(`✓ Usuario ${updated.fullName} actualizado con éxito.`);
+      } else {
+        const created = await api.createTenantUser({
+          fullName: userName.trim(),
+          email: userEmail.trim(),
+          role: userRole,
+          allowedModulesJson: modulesJson
+        });
+        setUsers((prev) => [...prev, created]);
+        setSuccessMsg(`✓ Usuario ${created.fullName} creado con éxito.`);
+      }
       setShowUserModal(false);
-      setNewUserName("");
-      setNewUserEmail("");
-      setNewUserRole("Comercial");
-      setSuccessMsg(`✓ Usuario ${created.fullName} agregado con éxito.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al agregar usuario");
+    } catch (err: any) {
+      setError(err?.message || "Error al guardar el usuario.");
     } finally {
-      setCreatingUser(false);
+      setSavingUser(false);
     }
   };
 
@@ -143,7 +208,7 @@ export function SettingsPage() {
       <div className="page-head">
         <div>
           <h1>⚙️ Configuración de Empresa & ERP</h1>
-          <p className="muted">Parámetros impositivos, certificado ARCA, marca e identidad visual, cuentas y usuarios</p>
+          <p className="muted">Parámetros impositivos, certificado ARCA, marca, cuentas y permisos de usuarios</p>
         </div>
       </div>
 
@@ -177,7 +242,7 @@ export function SettingsPage() {
           className={`tab-btn ${tab === "users" ? "active" : ""}`}
           onClick={() => setTab("users")}
         >
-          👥 Usuarios ({users.length})
+          👥 Usuarios & Permisos ({users.length})
         </button>
         <button
           type="button"
@@ -219,136 +284,107 @@ export function SettingsPage() {
                   <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: "none" }} />
                 </label>
                 <span className="muted" style={{ fontSize: "0.78rem" }}>
-                  Se utilizará en el encabezado de presupuestos en PDF, remitos y documentos impresos.
+                  Recomendado: Formato PNG o JPG transparente de 400x200px. Se utilizará en presupuestos y encabezados.
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="card pad" style={{ display: "grid", gap: 16 }}>
-            <h3>Datos Impositivos y Comerciales</h3>
-            <div className="grid-2">
+          <div className="card pad">
+            <h3>Datos Fiscales de la Empresa</h3>
+            <div className="grid-form" style={{ marginTop: 16 }}>
               <label>
                 Razón Social *
                 <input
+                  required
                   value={settings.legalName}
                   onChange={(e) => setSetting("legalName", e.target.value)}
-                  required
                 />
               </label>
+
               <label>
-                Nombre de Fantasía
+                Nombre Fantasía / Comercial
                 <input
-                  value={settings.tradeName ?? ""}
+                  value={settings.tradeName || ""}
                   onChange={(e) => setSetting("tradeName", e.target.value)}
                 />
               </label>
-            </div>
-
-            <div className="grid-3">
-              <label>
-                Tipo Documento
-                <select value={settings.documentType} onChange={(e) => setSetting("documentType", e.target.value)}>
-                  <option value="Cuit">Cuit</option>
-                  <option value="Dni">Dni</option>
-                </select>
-              </label>
 
               <label>
-                Número CUIT *
+                CUIT *
                 <input
+                  required
                   value={settings.documentNumber}
                   onChange={(e) => setSetting("documentNumber", e.target.value)}
-                  required
                 />
               </label>
 
               <label>
-                Condición IVA
-                <select value={settings.taxCondition} onChange={(e) => setSetting("taxCondition", e.target.value)}>
+                Condición Fiscal *
+                <select
+                  value={settings.taxCondition}
+                  onChange={(e) => setSetting("taxCondition", e.target.value)}
+                >
                   <option value="ResponsableInscripto">Responsable Inscripto</option>
                   <option value="Monotributo">Monotributo</option>
                   <option value="Exento">Exento</option>
                 </select>
               </label>
-            </div>
 
-            <div className="grid-3">
               <label>
-                Régimen IIBB
-                <select value={settings.iibbRegime} onChange={(e) => setSetting("iibbRegime", e.target.value)}>
+                Régimen IIBB *
+                <select
+                  value={settings.iibbRegime}
+                  onChange={(e) => setSetting("iibbRegime", e.target.value)}
+                >
                   <option value="ConvenioMultilateral">Convenio Multilateral</option>
-                  <option value="Local">Local</option>
+                  <option value="Local">Local / Jurisdicción Única</option>
                   <option value="Exento">Exento</option>
                 </select>
               </label>
 
               <label>
-                Nro. Inscripción IIBB
+                Nº de Inscripción IIBB
                 <input
-                  value={settings.iibbNumber ?? ""}
+                  value={settings.iibbNumber || ""}
                   onChange={(e) => setSetting("iibbNumber", e.target.value)}
-                  placeholder="30-71548962-9"
                 />
               </label>
 
               <label>
-                Fecha de Inicio de Actividades *
+                Fecha Inicio de Actividades
                 <input
                   type="date"
-                  value={settings.activityStartDate ?? "2018-03-01"}
+                  value={settings.activityStartDate || ""}
                   onChange={(e) => setSetting("activityStartDate", e.target.value)}
-                  title="Obligatorio según RG 1415 Anexo II de AFIP/ARCA"
                 />
-              </label>
-            </div>
-
-            <div className="grid-4">
-              <label>
-                Email Corporativo
-                <input
-                  type="email"
-                  value={settings.email ?? ""}
-                  onChange={(e) => setSetting("email", e.target.value)}
-                />
-              </label>
-
-              <label>
-                Teléfono Fijo
-                <input value={settings.phone ?? ""} onChange={(e) => setSetting("phone", e.target.value)} />
-              </label>
-
-              <label>
-                WhatsApp Oficial
-                <input value={settings.whatsApp ?? ""} onChange={(e) => setSetting("whatsApp", e.target.value)} />
-              </label>
-
-              <label>
-                Sitio Web
-                <input value={settings.website ?? ""} onChange={(e) => setSetting("website", e.target.value)} />
               </label>
             </div>
           </div>
 
-          <div className="card pad" style={{ display: "grid", gap: 16 }}>
-            <h3>Domicilio Fiscal Principal</h3>
-            <div className="grid-2">
+          <div className="card pad">
+            <h3>Domicilio Fiscal y Contacto</h3>
+            <div className="grid-form" style={{ marginTop: 16 }}>
               <label>
-                Calle y Altura
-                <input value={settings.fiscalStreet ?? ""} onChange={(e) => setSetting("fiscalStreet", e.target.value)} />
+                Calle y Número
+                <input
+                  value={settings.fiscalStreet || ""}
+                  onChange={(e) => setSetting("fiscalStreet", e.target.value)}
+                />
               </label>
 
               <label>
                 Ciudad / Localidad
-                <input value={settings.fiscalCity ?? ""} onChange={(e) => setSetting("fiscalCity", e.target.value)} />
+                <input
+                  value={settings.fiscalCity || ""}
+                  onChange={(e) => setSetting("fiscalCity", e.target.value)}
+                />
               </label>
-            </div>
 
-            <div className="grid-2">
               <label>
                 Provincia
                 <select
-                  value={settings.fiscalProvince ?? "SantaFe"}
+                  value={settings.fiscalProvince || "Santa Fe"}
                   onChange={(e) => setSetting("fiscalProvince", e.target.value)}
                 >
                   {provinces.map((p) => (
@@ -361,14 +397,50 @@ export function SettingsPage() {
 
               <label>
                 Código Postal
-                <input value={settings.fiscalPostalCode ?? ""} onChange={(e) => setSetting("fiscalPostalCode", e.target.value)} />
+                <input
+                  value={settings.fiscalPostalCode || ""}
+                  onChange={(e) => setSetting("fiscalPostalCode", e.target.value)}
+                />
+              </label>
+
+              <label>
+                Email Corporativo
+                <input
+                  type="email"
+                  value={settings.email || ""}
+                  onChange={(e) => setSetting("email", e.target.value)}
+                />
+              </label>
+
+              <label>
+                Teléfono de Contacto
+                <input
+                  value={settings.phone || ""}
+                  onChange={(e) => setSetting("phone", e.target.value)}
+                />
+              </label>
+
+              <label>
+                WhatsApp Oficial
+                <input
+                  value={settings.whatsApp || ""}
+                  onChange={(e) => setSetting("whatsApp", e.target.value)}
+                />
+              </label>
+
+              <label>
+                Sitio Web
+                <input
+                  value={settings.website || ""}
+                  onChange={(e) => setSetting("website", e.target.value)}
+                />
               </label>
             </div>
           </div>
 
           <div className="row" style={{ justifyContent: "flex-end" }}>
             <button className="btn" disabled={saving}>
-              {saving ? "Guardando…" : "Guardar Cambios Empresa"}
+              {saving ? "Guardando…" : "💾 Guardar Configuración General"}
             </button>
           </div>
         </form>
@@ -377,61 +449,75 @@ export function SettingsPage() {
       {tab === "arca" && (
         <form onSubmit={handleUploadCertificate} className="stack" style={{ gap: 20 }}>
           <div className="card pad">
-            <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <h3>Estado del Certificado Digital ARCA / AFIP</h3>
-                <p className="muted">Se utiliza para consultas de CUIT en tiempo real y Facturación Electrónica WSE</p>
-              </div>
+            <h3>Certificado Digital ARCA / AFIP (WebServices)</h3>
+            <p className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
+              Cargá el certificado X.509 (.crt) y la clave privada (.key) para emitir Facturación Electrónica oficial (WSFE).
+            </p>
 
-              <div>
-                {settings.hasArcaCertificate ? (
-                  <span className="badge ok" style={{ fontSize: "0.9rem", padding: "6px 14px" }}>
-                    ✓ Certificado Vinculado & Activo
-                  </span>
-                ) : (
-                  <span className="badge warn" style={{ fontSize: "0.9rem", padding: "6px 14px" }}>
-                    ⚠️ Sin Certificado Configurado
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="card pad" style={{ display: "grid", gap: 16 }}>
-            <h3>Configuración del WebService ARCA</h3>
-            <div className="grid-2">
+            <div className="grid-form" style={{ marginTop: 16 }}>
               <label>
-                Ambiente de Conexión
+                Ambiente ARCA *
                 <select value={certEnv} onChange={(e) => setCertEnv(e.target.value)}>
-                  <option value="Homologacion">Homologación (Pruebas / Sandbox)</option>
-                  <option value="Produccion">Producción (Real AFIP / ARCA)</option>
+                  <option value="Homologacion">🧪 Homologación / Testing</option>
+                  <option value="Produccion">🚀 Producción Real</option>
                 </select>
               </label>
 
               <label>
-                CUIT Firmante del Certificado
-                <input value={certCuit} onChange={(e) => setCertCuit(e.target.value)} placeholder="30715489629" />
+                CUIT del Firmante / Autorizado
+                <input
+                  value={certCuit}
+                  onChange={(e) => setCertCuit(e.target.value)}
+                  placeholder="CUIT asociado al certificado"
+                />
               </label>
             </div>
 
-            <div className="grid-2">
-              <label>
-                Archivo Certificado (.crt / .pem)
-                <input type="file" accept=".crt,.pem,.cer" onChange={handleCrtFileUpload} />
-                {crtText && <span className="muted" style={{ fontSize: "0.75rem", color: "#065f46" }}>✓ Archivo .crt leído ({crtText.length} bytes)</span>}
-              </label>
+            <div className="grid-2" style={{ gap: 16, marginTop: 20 }}>
+              <div className="card pad" style={{ border: "1px dashed var(--line)", background: "rgba(0,0,0,0.02)" }}>
+                <h4>1. Certificado Digital (.CRT)</h4>
+                <p className="muted" style={{ fontSize: "0.8rem", marginBottom: 12 }}>
+                  Archivo emitido por AFIP/ARCA tras delegar el servicio WebService.
+                </p>
+                <label className="btn ghost" style={{ cursor: "pointer", width: "fit-content" }}>
+                  📄 Seleccionar archivo .CRT
+                  <input type="file" accept=".crt,.pem,.txt" onChange={handleCrtFileUpload} style={{ display: "none" }} />
+                </label>
+                {crtText && (
+                  <span className="badge ok" style={{ marginTop: 10, display: "inline-block" }}>
+                    ✓ Certificado cargado ({crtText.length} bytes)
+                  </span>
+                )}
+              </div>
 
-              <label>
-                Archivo Clave Privada (.key)
-                <input type="file" accept=".key,.pem" onChange={handleKeyFileUpload} />
-                {keyText && <span className="muted" style={{ fontSize: "0.75rem", color: "#065f46" }}>✓ Archivo .key leído ({keyText.length} bytes)</span>}
-              </label>
+              <div className="card pad" style={{ border: "1px dashed var(--line)", background: "rgba(0,0,0,0.02)" }}>
+                <h4>2. Clave Privada (.KEY)</h4>
+                <p className="muted" style={{ fontSize: "0.8rem", marginBottom: 12 }}>
+                  Clave privada generada con OpenSSL utilizada para firmar el CSR.
+                </p>
+                <label className="btn ghost" style={{ cursor: "pointer", width: "fit-content" }}>
+                  🔑 Seleccionar archivo .KEY
+                  <input type="file" accept=".key,.pem,.txt" onChange={handleKeyFileUpload} style={{ display: "none" }} />
+                </label>
+                {keyText && (
+                  <span className="badge ok" style={{ marginTop: 10, display: "inline-block" }}>
+                    ✓ Clave privada cargada ({keyText.length} bytes)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, padding: "12px 16px", background: "rgba(245, 158, 11, 0.1)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
+              <div style={{ fontWeight: 600, color: "#d97706", fontSize: "0.88rem" }}>🔒 Almacenamiento Seguro</div>
+              <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)", marginTop: 4 }}>
+                Los certificados y claves privadas se resguardan de forma segura e independiente en la base de datos de tu empresa.
+              </div>
             </div>
           </div>
 
           <div className="row" style={{ justifyContent: "flex-end" }}>
             <button className="btn" disabled={uploadingCert}>
-              {uploadingCert ? "Cargando…" : "Actualizar Certificado ARCA"}
+              {uploadingCert ? "Actualizando Certificado…" : "🔐 Guardar Certificado ARCA"}
             </button>
           </div>
         </form>
@@ -439,94 +525,106 @@ export function SettingsPage() {
 
       {tab === "banks" && (
         <form onSubmit={handleSaveSettings} className="stack" style={{ gap: 20 }}>
-          <div className="card pad" style={{ display: "grid", gap: 16 }}>
-            <h3>Cuentas Bancarias para Cobranza</h3>
-            <div className="grid-3">
+          <div className="card pad">
+            <h3>Datos Bancarios para Cobranzas</h3>
+            <p className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
+              Estos datos se imprimirán automáticamente al pie de los presupuestos y facturas para facilitar transferencias.
+            </p>
+
+            <div className="grid-form" style={{ marginTop: 16 }}>
               <label>
-                Banco
+                Banco / Entidad
                 <input
-                  value={settings.bankName ?? ""}
+                  value={settings.bankName || ""}
                   onChange={(e) => setSetting("bankName", e.target.value)}
-                  placeholder="Banco Macro"
+                  placeholder="Ej. Banco Galicia / Banco Macro"
                 />
               </label>
 
               <label>
-                CBU (22 Dígitos)
+                CBU / CVU (22 dígitos)
                 <input
-                  value={settings.bankCbu ?? ""}
+                  value={settings.bankCbu || ""}
                   onChange={(e) => setSetting("bankCbu", e.target.value)}
-                  placeholder="2850001240000012345678"
+                  placeholder="0070000000000000000000"
                 />
               </label>
 
               <label>
                 Alias CBU
                 <input
-                  value={settings.bankAlias ?? ""}
+                  value={settings.bankAlias || ""}
                   onChange={(e) => setSetting("bankAlias", e.target.value)}
-                  placeholder="LEAL.CONTROL.ERP"
+                  placeholder="EMPRESA.PAGOS.GALICIA"
                 />
               </label>
             </div>
           </div>
 
-          <div className="card pad" style={{ display: "grid", gap: 16 }}>
-            <h3>Condiciones y Leyendas Predeterminadas</h3>
-            <div className="grid-2">
+          <div className="card pad">
+            <h3>Términos y Condiciones Predeterminados de Presupuesto</h3>
+            <div className="grid-form" style={{ marginTop: 16 }}>
               <label>
-                Validez de Presupuesto (Días)
+                Validez de Oferta (Días)
                 <input
                   type="number"
+                  step="1"
+                  min="1"
                   value={settings.defaultQuoteValidDays}
-                  onChange={(e) => setSetting("defaultQuoteValidDays", Number(e.target.value))}
+                  onChange={(e) => setSetting("defaultQuoteValidDays", parseInt(e.target.value, 10) || 15)}
                 />
               </label>
 
               <label>
-                Plazo de Entrega Predeterminado (Días)
+                Plazo de Entrega Estimado (Días)
                 <input
                   type="number"
+                  step="1"
+                  min="1"
                   value={settings.defaultDeliveryDays}
-                  onChange={(e) => setSetting("defaultDeliveryDays", Number(e.target.value))}
+                  onChange={(e) => setSetting("defaultDeliveryDays", parseInt(e.target.value, 10) || 7)}
+                />
+              </label>
+
+              <label style={{ gridColumn: "1 / -1" }}>
+                Condiciones de Pago por Defecto
+                <input
+                  value={settings.defaultPaymentTerms || ""}
+                  onChange={(e) => setSetting("defaultPaymentTerms", e.target.value)}
+                  placeholder="Ej. 50% anticipo y saldo contra entrega a 30 días echeq"
+                />
+              </label>
+
+              <label style={{ gridColumn: "1 / -1" }}>
+                Garantía y Condiciones del Servicio
+                <textarea
+                  rows={3}
+                  value={settings.defaultWarranty || ""}
+                  onChange={(e) => setSetting("defaultWarranty", e.target.value)}
+                  placeholder="Ej. 12 meses de garantía oficial sobre componentes instalados y mano de obra."
                 />
               </label>
             </div>
-
-            <label>
-              Garantía por Defecto
-              <input
-                value={settings.defaultWarranty ?? ""}
-                onChange={(e) => setSetting("defaultWarranty", e.target.value)}
-              />
-            </label>
-
-            <label>
-              Forma de Pago por Defecto
-              <input
-                value={settings.defaultPaymentTerms ?? ""}
-                onChange={(e) => setSetting("defaultPaymentTerms", e.target.value)}
-              />
-            </label>
           </div>
 
           <div className="row" style={{ justifyContent: "flex-end" }}>
             <button className="btn" disabled={saving}>
-              {saving ? "Guardando…" : "Guardar Parámetros"}
+              {saving ? "Guardando…" : "💾 Guardar Parámetros Comerciales"}
             </button>
           </div>
         </form>
       )}
 
       {tab === "users" && (
-        <div className="card pad" style={{ display: "grid", gap: 16 }}>
-          <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <div className="card pad">
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
-              <h3>Usuarios del Sistema y Roles</h3>
-              <p className="muted">Control de acceso y permisos de los operadores del ERP</p>
+              <h3>👥 Gestión de Usuarios & Control de Accesos</h3>
+              <p className="muted" style={{ fontSize: "0.85rem", marginTop: 2 }}>
+                Asigná qué módulos y secciones específicas puede ver y operar cada empleado de tu empresa.
+              </p>
             </div>
-
-            <button type="button" className="btn ghost" onClick={() => setShowUserModal(true)}>
+            <button type="button" className="btn" onClick={openNewUserModal}>
               + Nuevo Usuario
             </button>
           </div>
@@ -535,33 +633,74 @@ export function SettingsPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Nombre Completo</th>
+                  <th>Usuario</th>
                   <th>Email de Acceso</th>
-                  <th>Rol Asignado</th>
+                  <th>Rol</th>
+                  <th>Módulos Autorizados</th>
                   <th>Estado</th>
+                  <th style={{ textAlign: "right" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
-                  <tr key={u.id}>
-                    <td>
-                      <strong>👤 {u.fullName}</strong>
-                    </td>
-                    <td>{u.email}</td>
-                    <td>
-                      <span
-                        className={`badge ${
-                          u.role === "Admin" ? "prio-high" : u.role === "Comercial" ? "ok" : "warn"
-                        }`}
-                      >
-                        {u.role}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge ok">✓ Activo</span>
-                    </td>
-                  </tr>
-                ))}
+                {users.map((u) => {
+                  let uMods: string[] = [];
+                  try {
+                    uMods = typeof u.allowedModulesJson === "string" ? JSON.parse(u.allowedModulesJson) : u.allowedModulesJson || [];
+                  } catch {
+                    uMods = [];
+                  }
+
+                  return (
+                    <tr key={u.id}>
+                      <td>
+                        <strong>👤 {u.fullName}</strong>
+                      </td>
+                      <td>{u.email}</td>
+                      <td>
+                        <span
+                          className={`badge ${
+                            u.role === "Admin" ? "prio-high" : u.role === "Comercial" ? "ok" : "warn"
+                          }`}
+                        >
+                          {u.role}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", maxWidth: "320px" }}>
+                          {u.role === "Admin" ? (
+                            <span className="badge prio-high">⭐ Acceso Total (Admin)</span>
+                          ) : uMods.length > 0 ? (
+                            uMods.map((mId) => {
+                              const mod = ALL_SYSTEM_MODULES.find((s) => s.id === mId);
+                              return (
+                                <span key={mId} className="badge ok" style={{ fontSize: "0.72rem", padding: "2px 6px" }}>
+                                  {mod?.icon} {mod?.name.split(" ")[0]}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span className="badge off">Sin módulos asignados</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`badge ${u.isActive ? "ok" : "off"}`}>
+                          {u.isActive ? "✓ Activo" : "Inactivo"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <button
+                          type="button"
+                          className="btn ghost"
+                          style={{ fontSize: "0.78rem", padding: "4px 8px" }}
+                          onClick={() => openEditUserModal(u)}
+                        >
+                          ✏️ Editar Permisos
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -625,49 +764,108 @@ export function SettingsPage() {
         </div>
       )}
 
-      {/* Modal Alta Usuario */}
+      {/* Modal Alta / Edición de Usuario con Matriz Modular */}
       {showUserModal && (
         <div className="modal-backdrop">
-          <div className="modal-card card pad">
-            <h3>+ Alta de Nuevo Usuario</h3>
-            <form onSubmit={handleCreateUser} className="stack" style={{ marginTop: 12 }}>
-              <label>
-                Nombre y Apellido *
-                <input
-                  value={newUserName}
-                  onChange={(e) => setNewUserName(e.target.value)}
-                  required
-                  placeholder="Ej. Martín González"
-                />
-              </label>
+          <div className="modal-card card pad" style={{ maxWidth: "600px", width: "100%" }}>
+            <h3>{editingUserId ? `✏️ Editar Permisos: ${userName}` : "+ Alta de Nuevo Usuario"}</h3>
+            <form onSubmit={handleSaveUser} className="stack" style={{ marginTop: 12, gap: 14 }}>
+              <div className="grid-2" style={{ gap: 12 }}>
+                <label>
+                  Nombre y Apellido *
+                  <input
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    required
+                    placeholder="Ej. Martín González"
+                  />
+                </label>
 
-              <label>
-                Email *
-                <input
-                  type="email"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                  required
-                  placeholder="mgonzalez@lealcontrol.com"
-                />
-              </label>
+                <label>
+                  Email de Acceso *
+                  <input
+                    type="email"
+                    value={userEmail}
+                    disabled={!!editingUserId}
+                    onChange={(e) => setUserEmail(e.target.value)}
+                    required
+                    placeholder="mgonzalez@empresa.com"
+                  />
+                </label>
+              </div>
 
-              <label>
-                Rol
-                <select value={newUserRole} onChange={(e) => setNewUserRole(e.target.value)}>
-                  <option value="Comercial">Comercial / Ventas</option>
-                  <option value="Técnico">Técnico / Servicio</option>
-                  <option value="Facturación">Facturación / Administración</option>
-                  <option value="Admin">Administrador General</option>
-                </select>
-              </label>
+              <div className="grid-2" style={{ gap: 12 }}>
+                <label>
+                  Rol Principal
+                  <select value={userRole} onChange={(e) => handleRoleChange(e.target.value)}>
+                    <option value="Comercial">Comercial / Ventas</option>
+                    <option value="Técnico">Técnico / Servicio / Flota</option>
+                    <option value="Facturación">Facturación / Administración</option>
+                    <option value="Admin">Administrador Total</option>
+                  </select>
+                </label>
 
-              <div className="row" style={{ justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+                <label>
+                  Estado
+                  <select
+                    value={userIsActive ? "true" : "false"}
+                    onChange={(e) => setUserIsActive(e.target.value === "true")}
+                  >
+                    <option value="true">Activo (Puede ingresar)</option>
+                    <option value="false">Inactivo (Acceso bloqueado)</option>
+                  </select>
+                </label>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 8 }}>
+                  Módulos y Lugares de Acceso Permitidos:
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  {ALL_SYSTEM_MODULES.map((m) => {
+                    const isChecked = userRole === "Admin" || userModules.includes(m.id);
+                    return (
+                      <div
+                        key={m.id}
+                        onClick={() => userRole !== "Admin" && toggleUserModule(m.id)}
+                        style={{
+                          padding: "8px 10px",
+                          borderRadius: "var(--radius-sm)",
+                          border: isChecked ? "1px solid var(--accent)" : "1px solid var(--line)",
+                          background: isChecked ? "rgba(37, 99, 235, 0.08)" : "transparent",
+                          cursor: userRole === "Admin" ? "default" : "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          opacity: userRole === "Admin" ? 0.85 : 1
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          disabled={userRole === "Admin"}
+                          onChange={() => {}}
+                        />
+                        <span style={{ fontSize: "0.82rem", fontWeight: 500 }}>
+                          {m.icon} {m.name}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {userRole === "Admin" && (
+                  <span className="muted" style={{ fontSize: "0.75rem", marginTop: 4, display: "block" }}>
+                    ⭐ Los administradores tienen acceso irrestricto a todos los módulos.
+                  </span>
+                )}
+              </div>
+
+              <div className="row" style={{ justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
                 <button type="button" className="btn ghost" onClick={() => setShowUserModal(false)}>
                   Cancelar
                 </button>
-                <button className="btn" disabled={creatingUser}>
-                  Crear Usuario
+                <button className="btn" disabled={savingUser}>
+                  {savingUser ? "Guardando…" : "💾 Guardar Usuario"}
                 </button>
               </div>
             </form>

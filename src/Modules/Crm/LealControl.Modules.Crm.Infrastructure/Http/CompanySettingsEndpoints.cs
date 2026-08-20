@@ -1,3 +1,4 @@
+using System;
 using LealControl.Modules.Crm.Application.Settings;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -38,6 +39,13 @@ public static class CompanySettingsEndpoints
 
         group.MapPost("/users", async (CreateTenantUserCommand cmd, ISender sender, CancellationToken cancellationToken) =>
         {
+            var res = await sender.Send(cmd, cancellationToken);
+            return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
+        });
+
+        group.MapPut("/users/{id:guid}", async (Guid id, UpdateTenantUserCommand cmd, ISender sender, CancellationToken cancellationToken) =>
+        {
+            if (id != cmd.Id) cmd = cmd with { Id = id };
             var res = await sender.Send(cmd, cancellationToken);
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
         });

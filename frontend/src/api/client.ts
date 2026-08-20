@@ -243,8 +243,10 @@ export const api = {
   uploadArcaCertificate: (body: { certificateCrt: string; certificateKey: string; environment: string; signerCuit: string }) =>
     request<import("./types").CompanySettings>("/api/v1/company/settings/arca-certificate", { method: "POST", body: JSON.stringify(body) }),
   listTenantUsers: () => request<import("./types").TenantUser[]>("/api/v1/company/users"),
-  createTenantUser: (body: { fullName: string; email: string; role: string }) =>
+  createTenantUser: (body: { fullName: string; email: string; role: string; allowedModulesJson?: string }) =>
     request<import("./types").TenantUser>("/api/v1/company/users", { method: "POST", body: JSON.stringify(body) }),
+  updateTenantUser: (id: string, body: { fullName: string; role: string; isActive: boolean; allowedModulesJson?: string }) =>
+    request<import("./types").TenantUser>(`/api/v1/company/users/${id}`, { method: "PUT", body: JSON.stringify(body) }),
 
   // Suppliers Methods
   listSuppliers: (search = "") => request<import("./types").Supplier[]>(`/api/v1/crm/suppliers${search ? `?search=${encodeURIComponent(search)}` : ""}`),
@@ -534,12 +536,18 @@ export const api = {
     request<{ totalTenants: number; activeTenants: number; suspendedTenants: number; mrrArs: number; mrrUsd: number; totalStorageMb: number; planBreakdown: any[]; recentTenants: any[] }>("/api/v1/superadmin/dashboard"),
   listSuperAdminTenants: () =>
     request<any[]>("/api/v1/superadmin/tenants"),
-  createSuperAdminTenant: (body: { name: string; slug?: string; planCode?: string; adminFullName?: string; adminEmail: string; adminPassword: string; adminPhone?: string; monthlyPriceArs: number; monthlyPriceUsd: number }) =>
+  createSuperAdminTenant: (body: { name: string; slug?: string; planCode?: string; adminFullName?: string; adminEmail: string; adminPassword: string; adminPhone?: string; monthlyPriceArs: number; monthlyPriceUsd: number; enabledModulesJson?: string }) =>
     request<{ success: boolean; dbName: string; message: string }>("/api/v1/superadmin/tenants", { method: "POST", body: JSON.stringify(body) }),
   updateSuperAdminTenantStatus: (id: string, body: { status: string; expiresAtUtc?: string; monthlyPriceArs?: number; planCode?: string }) =>
     request<any>(`/api/v1/superadmin/tenants/${id}/status`, { method: "PUT", body: JSON.stringify(body) }),
+  updateSuperAdminTenantModules: (id: string, body: { enabledModulesJson?: string; planCode?: string; monthlyPriceArs?: number }) =>
+    request<any>(`/api/v1/superadmin/tenants/${id}/modules`, { method: "PUT", body: JSON.stringify(body) }),
+  generateSuperAdminPaymentLink: (id: string) =>
+    request<{ success: boolean; paymentUrl: string; amount: number; preferenceId?: string; message?: string }>(`/api/v1/superadmin/tenants/${id}/payment-link`, { method: "POST" }),
   listSuperAdminPlans: () =>
     request<any[]>("/api/v1/superadmin/plans"),
+  createSuperAdminPlan: (body: { code: string; name: string; priceArs: number; priceUsd: number; maxUsers: number; description?: string; featuresJson?: string; enabledModulesJson?: string }) =>
+    request<any>("/api/v1/superadmin/plans", { method: "POST", body: JSON.stringify(body) }),
   updateSuperAdminPlan: (id: string, body: any) =>
     request<any>(`/api/v1/superadmin/plans/${id}`, { method: "PUT", body: JSON.stringify(body) })
 };

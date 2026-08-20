@@ -17,6 +17,7 @@ public sealed class MasterDbContext : DbContext
     public DbSet<MasterTenant> Tenants => Set<MasterTenant>();
     public DbSet<SuperAdminUser> SuperAdmins => Set<SuperAdminUser>();
     public DbSet<SubscriptionPlan> Plans => Set<SubscriptionPlan>();
+    public DbSet<TenantPaymentRecord> Payments => Set<TenantPaymentRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +62,18 @@ public sealed class MasterDbContext : DbContext
             b.Property(x => x.PriceArs).HasPrecision(18, 2);
             b.Property(x => x.PriceUsd).HasPrecision(18, 2);
         });
+
+        modelBuilder.Entity<TenantPaymentRecord>(b =>
+        {
+            b.ToTable("tenant_payments", "public");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.ExternalPaymentId).HasMaxLength(128);
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Pending");
+            b.Property(x => x.Amount).HasPrecision(18, 2);
+            b.Property(x => x.Currency).HasMaxLength(10).HasDefaultValue("ARS");
+            b.Property(x => x.PaymentMethod).HasMaxLength(64).HasDefaultValue("MercadoPago");
+            b.Property(x => x.PayerEmail).HasMaxLength(160);
+        });
     }
 
     public async Task EnsureMasterTablesCreatedAsync(CancellationToken cancellationToken = default)
@@ -83,9 +96,12 @@ public sealed class MasterDbContext : DbContext
                 ""StorageMb"" numeric(18,2) NOT NULL DEFAULT 0,
                 ""UserCount"" integer NOT NULL DEFAULT 1,
                 ""IsActive"" boolean NOT NULL DEFAULT true,
-                ""Notes"" text
+                ""Notes"" text,
+                ""EnabledModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]'
             );
             CREATE UNIQUE INDEX IF NOT EXISTS ""IX_master_tenants_Slug"" ON public.master_tenants (""Slug"");
+
+            ALTER TABLE public.master_tenants ADD COLUMN IF NOT EXISTS ""EnabledModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]';
 
             CREATE TABLE IF NOT EXISTS public.superadmin_users (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
@@ -108,9 +124,26 @@ public sealed class MasterDbContext : DbContext
                 ""MaxUsers"" integer NOT NULL DEFAULT 10,
                 ""Description"" text,
                 ""FeaturesJson"" text,
+                ""EnabledModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]',
                 ""IsActive"" boolean NOT NULL DEFAULT true
             );
             CREATE UNIQUE INDEX IF NOT EXISTS ""IX_subscription_plans_Code"" ON public.subscription_plans (""Code"");
+
+            ALTER TABLE public.subscription_plans ADD COLUMN IF NOT EXISTS ""EnabledModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]';
+
+            CREATE TABLE IF NOT EXISTS public.tenant_payments (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ExternalPaymentId"" character varying(128),
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Pending',
+                ""Amount"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""Currency"" character varying(10) NOT NULL DEFAULT 'ARS',
+                ""PaymentMethod"" character varying(64) NOT NULL DEFAULT 'MercadoPago',
+                ""PayerEmail"" character varying(160),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""ApprovedAtUtc"" timestamp with time zone,
+                ""RawPayloadJson"" text
+            );
         ";
 
         await Database.ExecuteSqlRawAsync(sql, cancellationToken);
@@ -136,10 +169,50 @@ public sealed class MasterDbContext : DbContext
         if (!await Plans.AnyAsync(cancellationToken))
         {
             Plans.AddRange(
-                new SubscriptionPlan { Code = "starter", Name = "Starter Pyme", PriceArs = 45000, PriceUsd = 45, MaxUsers = 3, Description = "Ideal para profesionales y microempresas", FeaturesJson = @"[""Facturación ARCA"", ""Presupuestos"", ""Clientes y Proveedores"", ""Gestión de Cobranzas""]" },
-                new SubscriptionPlan { Code = "pyme", Name = "Pyme Profesional", PriceArs = 95000, PriceUsd = 95, MaxUsers = 10, Description = "Gestión integral para pymes comerciales y de servicios", FeaturesJson = @"[""Todo lo de Starter"", ""CRM Kanban & Oportunidades"", ""Gestión de Flota y Vehículos"", ""Finanzas & Conciliación Echeqs"", ""RRHH & Sueldos CCT""]" },
-                new SubscriptionPlan { Code = "agro", Name = "LEAL Agro Granario", PriceArs = 165000, PriceUsd = 165, MaxUsers = 25, Description = "Especial para acopios, cooperativas y corredores de cereal", FeaturesJson = @"[""Todo lo de Pyme"", ""Módulo de Cereales & Contratos"", ""Balanza & Camiones CPE / CTG"", ""Fijaciones de Precio Rosario/BB"", ""Liquidación Primaria Granos""]" },
-                new SubscriptionPlan { Code = "enterprise", Name = "Enterprise Corporativo", PriceArs = 280000, PriceUsd = 280, MaxUsers = 100, Description = "Capacidad ilimitada, base dedicada y soporte prioritario 24/7", FeaturesJson = @"[""Todo lo de Agro"", ""Usuarios Ilimitados"", ""Base de Datos Físicamente Aislada"", ""Backups Horarios"", ""Auditoría Forense"", ""SLA 99.9%""]" }
+                new SubscriptionPlan
+                {
+                    Code = "starter",
+                    Name = "Starter Pyme",
+                    PriceArs = 45000,
+                    PriceUsd = 45,
+                    MaxUsers = 3,
+                    Description = "Ideal para profesionales y microempresas",
+                    FeaturesJson = @"[""Facturación ARCA"", ""Presupuestos"", ""Clientes y Proveedores"", ""Gestión de Cobranzas""]",
+                    EnabledModulesJson = @"[""sales"", ""crm""]"
+                },
+                new SubscriptionPlan
+                {
+                    Code = "pyme",
+                    Name = "Pyme Profesional",
+                    PriceArs = 95000,
+                    PriceUsd = 95,
+                    MaxUsers = 10,
+                    Description = "Gestión integral para pymes comerciales y de servicios",
+                    FeaturesJson = @"[""Todo lo de Starter"", ""CRM Kanban & Oportunidades"", ""Gestión de Flota y Vehículos"", ""Finanzas & Conciliación Echeqs"", ""RRHH & Sueldos CCT""]",
+                    EnabledModulesJson = @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr""]"
+                },
+                new SubscriptionPlan
+                {
+                    Code = "agro",
+                    Name = "LEAL Agro Granario",
+                    PriceArs = 165000,
+                    PriceUsd = 165,
+                    MaxUsers = 25,
+                    Description = "Especial para acopios, cooperativas y corredores de cereal",
+                    FeaturesJson = @"[""Todo lo de Pyme"", ""Módulo de Cereales & Contratos"", ""Balanza & Camiones CPE / CTG"", ""Fijaciones de Precio Rosario/BB"", ""Liquidación Primaria Granos""]",
+                    EnabledModulesJson = @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]"
+                },
+                new SubscriptionPlan
+                {
+                    Code = "enterprise",
+                    Name = "Enterprise Corporativo",
+                    PriceArs = 280000,
+                    PriceUsd = 280,
+                    MaxUsers = 100,
+                    Description = "Capacidad ilimitada, base dedicada y soporte prioritario 24/7",
+                    FeaturesJson = @"[""Todo lo de Agro"", ""Usuarios Ilimitados"", ""Base de Datos Físicamente Aislada"", ""Backups Horarios"", ""Auditoría Forense"", ""SLA 99.9%""]",
+                    EnabledModulesJson = @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains"", ""accounting""]"
+                }
             );
         }
 
@@ -162,7 +235,8 @@ public sealed class MasterDbContext : DbContext
                 AdminFullName = "Admin Demostración",
                 AdminPhone = "341-555-0100",
                 CreatedAtUtc = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                EnabledModulesJson = @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]"
             });
         }
 

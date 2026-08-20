@@ -12,12 +12,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Modules.Crm.Infrastructure.Persistence;
 
-internal sealed class CompanySettingsQueryHandler
-    : IRequestHandler<GetCompanySettingsQuery, Result<CompanySettingsDto>>,
+public sealed class CompanySettingsQueryHandler :
+      IRequestHandler<GetCompanySettingsQuery, Result<CompanySettingsDto>>,
       IRequestHandler<UpdateCompanySettingsCommand, Result<CompanySettingsDto>>,
       IRequestHandler<UploadArcaCertificateCommand, Result<CompanySettingsDto>>,
       IRequestHandler<ListTenantUsersQuery, Result<IReadOnlyList<TenantUserDto>>>,
-      IRequestHandler<CreateTenantUserCommand, Result<TenantUserDto>>
+      IRequestHandler<CreateTenantUserCommand, Result<TenantUserDto>>,
+      IRequestHandler<UpdateTenantUserCommand, Result<TenantUserDto>>
 {
     private readonly CrmDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
@@ -39,34 +40,34 @@ internal sealed class CompanySettingsQueryHandler
     {
         var tenantId = _tenantContext.TenantId;
         var settings = await GetOrInitSettingsAsync(tenantId, cancellationToken);
-        var m = request.Model;
+        var model = request.Model;
 
-        settings.LegalName = string.IsNullOrWhiteSpace(m.LegalName) ? settings.LegalName : m.LegalName.Trim();
-        settings.TradeName = m.TradeName?.Trim();
-        settings.DocumentType = string.IsNullOrWhiteSpace(m.DocumentType) ? "Cuit" : m.DocumentType.Trim();
-        settings.DocumentNumber = string.IsNullOrWhiteSpace(m.DocumentNumber) ? settings.DocumentNumber : m.DocumentNumber.Trim();
-        settings.TaxCondition = string.IsNullOrWhiteSpace(m.TaxCondition) ? settings.TaxCondition : m.TaxCondition.Trim();
-        settings.IibbRegime = string.IsNullOrWhiteSpace(m.IibbRegime) ? settings.IibbRegime : m.IibbRegime.Trim();
-        settings.IibbNumber = m.IibbNumber?.Trim();
-        settings.ActivityStartDate = m.ActivityStartDate?.Trim();
-        settings.Email = m.Email?.Trim();
-        settings.Phone = m.Phone?.Trim();
-        settings.WhatsApp = m.WhatsApp?.Trim();
-        settings.Website = m.Website?.Trim();
-        settings.FiscalStreet = m.FiscalStreet?.Trim();
-        settings.FiscalCity = m.FiscalCity?.Trim();
-        settings.FiscalProvince = m.FiscalProvince?.Trim();
-        settings.FiscalPostalCode = m.FiscalPostalCode?.Trim();
-        settings.LogoUrl = m.LogoUrl;
-        settings.ArcaEnvironment = string.IsNullOrWhiteSpace(m.ArcaEnvironment) ? "Homologacion" : m.ArcaEnvironment.Trim();
-        settings.ArcaSignerCuit = m.ArcaSignerCuit?.Trim();
-        settings.BankName = m.BankName?.Trim();
-        settings.BankCbu = m.BankCbu?.Trim();
-        settings.BankAlias = m.BankAlias?.Trim();
-        settings.DefaultQuoteValidDays = m.DefaultQuoteValidDays > 0 ? m.DefaultQuoteValidDays : 15;
-        settings.DefaultDeliveryDays = m.DefaultDeliveryDays > 0 ? m.DefaultDeliveryDays : 7;
-        settings.DefaultWarranty = m.DefaultWarranty?.Trim();
-        settings.DefaultPaymentTerms = m.DefaultPaymentTerms?.Trim();
+        settings.LegalName = model.LegalName;
+        settings.TradeName = model.TradeName;
+        settings.DocumentType = model.DocumentType;
+        settings.DocumentNumber = model.DocumentNumber;
+        settings.TaxCondition = model.TaxCondition;
+        settings.IibbRegime = model.IibbRegime;
+        settings.IibbNumber = model.IibbNumber;
+        settings.ActivityStartDate = model.ActivityStartDate;
+        settings.Email = model.Email;
+        settings.Phone = model.Phone;
+        settings.WhatsApp = model.WhatsApp;
+        settings.Website = model.Website;
+        settings.FiscalStreet = model.FiscalStreet;
+        settings.FiscalCity = model.FiscalCity;
+        settings.FiscalProvince = model.FiscalProvince;
+        settings.FiscalPostalCode = model.FiscalPostalCode;
+        settings.LogoUrl = model.LogoUrl;
+        settings.ArcaEnvironment = model.ArcaEnvironment;
+        settings.ArcaSignerCuit = model.ArcaSignerCuit;
+        settings.BankName = model.BankName;
+        settings.BankCbu = model.BankCbu;
+        settings.BankAlias = model.BankAlias;
+        settings.DefaultQuoteValidDays = model.DefaultQuoteValidDays;
+        settings.DefaultDeliveryDays = model.DefaultDeliveryDays;
+        settings.DefaultWarranty = model.DefaultWarranty;
+        settings.DefaultPaymentTerms = model.DefaultPaymentTerms;
         settings.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -80,7 +81,7 @@ internal sealed class CompanySettingsQueryHandler
 
         settings.ArcaCertificateCrt = request.CertificateCrt;
         settings.ArcaCertificateKey = request.CertificateKey;
-        settings.ArcaEnvironment = string.IsNullOrWhiteSpace(request.Environment) ? "Homologacion" : request.Environment;
+        settings.ArcaEnvironment = request.Environment;
         settings.ArcaSignerCuit = request.SignerCuit;
         settings.UpdatedAtUtc = DateTime.UtcNow;
 
@@ -99,7 +100,6 @@ internal sealed class CompanySettingsQueryHandler
 
         if (users.Count == 0)
         {
-            // Seed default admin user for tenant
             var adminUser = TenantUser.Create(tenantId, "Administrador Leal", "admin@lealcontrol.com", "Admin");
             var comUser = TenantUser.Create(tenantId, "Ventas Comercial", "ventas@lealcontrol.com", "Comercial");
             var tecUser = TenantUser.Create(tenantId, "Técnico Servicio", "servicio@lealcontrol.com", "Técnico");
@@ -116,7 +116,8 @@ internal sealed class CompanySettingsQueryHandler
             u.Email,
             u.Role,
             u.IsActive,
-            u.CreatedAtUtc)).ToList();
+            u.CreatedAtUtc,
+            u.AllowedModulesJson)).ToList();
 
         return Result<IReadOnlyList<TenantUserDto>>.Success(dtos);
     }
@@ -124,7 +125,7 @@ internal sealed class CompanySettingsQueryHandler
     public async Task<Result<TenantUserDto>> Handle(CreateTenantUserCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantContext.TenantId;
-        var user = TenantUser.Create(tenantId, request.FullName, request.Email, request.Role);
+        var user = TenantUser.Create(tenantId, request.FullName, request.Email, request.Role, allowedModulesJson: request.AllowedModulesJson);
         _dbContext.TenantUsers.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -134,7 +135,30 @@ internal sealed class CompanySettingsQueryHandler
             user.Email,
             user.Role,
             user.IsActive,
-            user.CreatedAtUtc));
+            user.CreatedAtUtc,
+            user.AllowedModulesJson));
+    }
+
+    public async Task<Result<TenantUserDto>> Handle(UpdateTenantUserCommand request, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantContext.TenantId;
+        var user = await _dbContext.TenantUsers.FirstOrDefaultAsync(u => u.Id == request.Id && u.TenantId == tenantId, cancellationToken);
+        if (user == null)
+        {
+            return Result<TenantUserDto>.Failure(new Error("UserNotFound", "Usuario no encontrado."));
+        }
+
+        user.Update(request.FullName, request.Role, request.IsActive, request.AllowedModulesJson);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Result<TenantUserDto>.Success(new TenantUserDto(
+            user.Id,
+            user.FullName,
+            user.Email,
+            user.Role,
+            user.IsActive,
+            user.CreatedAtUtc,
+            user.AllowedModulesJson));
     }
 
     private async Task<CompanySettings> GetOrInitSettingsAsync(TenantId tenantId, CancellationToken cancellationToken)
@@ -142,42 +166,53 @@ internal sealed class CompanySettingsQueryHandler
         var settings = await _dbContext.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == tenantId, cancellationToken);
         if (settings == null)
         {
-            settings = new CompanySettings { TenantId = tenantId };
+            settings = new CompanySettings
+            {
+                TenantId = tenantId,
+                LegalName = "LEAL CONTROL ERP S.A.",
+                TradeName = "Leal Control Metrología",
+                DocumentType = "Cuit",
+                DocumentNumber = "30715489629",
+                TaxCondition = "ResponsableInscripto",
+                IibbRegime = "ConvenioMultilateral",
+                Email = "contacto@lealcontrol.com",
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
             _dbContext.CompanySettings.Add(settings);
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
         return settings;
     }
 
-    private static CompanySettingsDto MapToDto(CompanySettings s)
-    {
-        return new CompanySettingsDto(
-            s.LegalName,
-            s.TradeName,
-            s.DocumentType,
-            s.DocumentNumber,
-            s.TaxCondition,
-            s.IibbRegime,
-            s.IibbNumber,
-            s.ActivityStartDate,
-            s.Email,
-            s.Phone,
-            s.WhatsApp,
-            s.Website,
-            s.FiscalStreet,
-            s.FiscalCity,
-            s.FiscalProvince,
-            s.FiscalPostalCode,
-            s.LogoUrl,
-            !string.IsNullOrWhiteSpace(s.ArcaCertificateCrt),
-            s.ArcaEnvironment,
-            s.ArcaSignerCuit,
-            s.BankName,
-            s.BankCbu,
-            s.BankAlias,
-            s.DefaultQuoteValidDays,
-            s.DefaultDeliveryDays,
-            s.DefaultWarranty,
-            s.DefaultPaymentTerms);
-    }
+    private static CompanySettingsDto MapToDto(CompanySettings s) => new(
+        s.TenantId.Value,
+        s.LegalName,
+        s.TradeName,
+        s.DocumentType,
+        s.DocumentNumber,
+        s.TaxCondition,
+        s.IibbRegime,
+        s.IibbNumber,
+        s.ActivityStartDate,
+        s.Email,
+        s.Phone,
+        s.WhatsApp,
+        s.Website,
+        s.FiscalStreet,
+        s.FiscalCity,
+        s.FiscalProvince,
+        s.FiscalPostalCode,
+        s.LogoUrl,
+        s.ArcaCertificateCrt,
+        s.ArcaCertificateKey,
+        s.ArcaEnvironment,
+        s.ArcaSignerCuit,
+        s.BankName,
+        s.BankCbu,
+        s.BankAlias,
+        s.DefaultQuoteValidDays,
+        s.DefaultDeliveryDays,
+        s.DefaultWarranty,
+        s.DefaultPaymentTerms);
 }

@@ -6,6 +6,7 @@ using MediatR;
 namespace LealControl.Modules.Crm.Application.Settings;
 
 public sealed record CompanySettingsDto(
+    Guid TenantId,
     string LegalName,
     string? TradeName,
     string DocumentType,
@@ -23,7 +24,8 @@ public sealed record CompanySettingsDto(
     string? FiscalProvince,
     string? FiscalPostalCode,
     string? LogoUrl,
-    bool HasArcaCertificate,
+    string? ArcaCertificateCrt,
+    string? ArcaCertificateKey,
     string ArcaEnvironment,
     string? ArcaSignerCuit,
     string? BankName,
@@ -46,9 +48,13 @@ public sealed record TenantUserDto(
     string Email,
     string Role,
     bool IsActive,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    string? AllowedModulesJson = null);
 
-public sealed record CreateTenantUserCommand(string FullName, string Email, string Role)
+public sealed record CreateTenantUserCommand(string FullName, string Email, string Role, string? AllowedModulesJson = null)
+    : IRequest<Result<TenantUserDto>>;
+
+public sealed record UpdateTenantUserCommand(Guid Id, string FullName, string Role, bool IsActive, string? AllowedModulesJson = null)
     : IRequest<Result<TenantUserDto>>;
 
 public sealed record GetCompanySettingsQuery : IRequest<Result<CompanySettingsDto>>;
