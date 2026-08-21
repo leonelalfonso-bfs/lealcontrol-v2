@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lealcontrol-staging-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lealcontrol_staging}
+      POSTGRES_USER: ${POSTGRES_USER:-leal_staging}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-leal_staging_secret}
+    volumes:
+      - lealcontrol_staging_pg:/var/lib/postgresql/data
+    networks: [staging]
+
+  api:
+    build: { context: ., dockerfile: deploy/Dockerfile.api }
+    container_name: lealcontrol-staging-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Database: Host=postgres;Port=5432;Database=${POSTGRES_DB:-lealcontrol_staging};Username=${POSTGRES_USER:-leal_staging};Password=${POSTGRES_PASSWORD:-leal_staging_secret}
+    depends_on: [postgres]
+    ports: ["127.0.0.1:5210:8080"]
+    networks: [staging]
+
+  web:
+    build: { context: ., dockerfile: deploy/Dockerfile.web }
+    container_name: lealcontrol-staging-web
+    restart: unless-stopped
+    depends_on: [api]
+    ports: ["127.0.0.1:5175:80"]
+    networks: [staging]
+
+networks:
+  staging: { name: lealcontrol-staging }
+
+volumes:
+  lealcontrol_staging_pg: { name: lealcontrol-staging-pg }
