@@ -1,15 +1,18 @@
 import { useEffect, useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
-import type { MetrologyEquipment } from "../../api/types";
+import type { MetrologyEquipment, CustomerSummary, CustomerDetail, CustomerWrite } from "../../api/types";
+import { provinces } from "../../api/types";
 
 export function MetrologyEquipmentPage() {
   const [equipments, setEquipments] = useState<MetrologyEquipment[]>([]);
+  const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [customerFilter, setCustomerFilter] = useState("");
   
-  // Modal State
+  // Equipment Modal State
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -21,7 +24,11 @@ export function MetrologyEquipmentPage() {
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
+  const [customerId, setCustomerId] = useState<string>("");
   const [customerName, setCustomerName] = useState("");
+  const [selectedCustomerDetail, setSelectedCustomerDetail] = useState<CustomerDetail | null>(null);
+  const [locationType, setLocationType] = useState<"select" | "custom">("select");
+  const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const [location, setLocation] = useState("");
   const [maxCapacity, setMaxCapacity] = useState("80000");
   const [minCapacity, setMinCapacity] = useState("400");
@@ -34,21 +41,82 @@ export function MetrologyEquipmentPage() {
   const [hasTare, setHasTare] = useState(true);
   const [notes, setNotes] = useState("");
 
-  const loadEquipments = () => {
+  // Quick New Customer Modal
+  const [showQuickCustomerModal, setShowQuickCustomerModal] = useState(false);
+  const [quickLegalName, setQuickLegalName] = useState("");
+  const [quickTradeName, setQuickTradeName] = useState("");
+  const [quickCuit, setQuickCuit] = useState("");
+  const [quickTaxCondition, setQuickTaxCondition] = useState("ResponsableInscripto");
+  const [quickStreet, setQuickStreet] = useState("");
+  const [quickCity, setQuickCity] = useState("");
+  const [quickProvince, setQuickProvince] = useState<string>("SantaFe");
+  const [quickEmail, setQuickEmail] = useState("");
+  const [quickPhone, setQuickPhone] = useState("");
+  const [quickSaving, setQuickSaving] = useState(false);
+  const [quickError, setQuickError] = useState<string | null>(null);
+  const [consultingArca, setConsultingArca] = useState(false);
+
+  // Quick New Location (Planta) Modal
+  const [showQuickLocationModal, setShowQuickLocationModal] = useState(false);
+  const [quickLocName, setQuickLocName] = useState("");
+  const [quickLocStreet, setQuickLocStreet] = useState("");
+  const [quickLocCity, setQuickLocCity] = useState("");
+  const [quickLocProvince, setQuickLocProvince] = useState<string>("SantaFe");
+  const [quickLocPostalCode, setQuickLocPostalCode] = useState("");
+  const [quickLocSaving, setQuickLocSaving] = useState(false);
+
+  const loadData = () => {
     setLoading(true);
-    api.listMetrologyEquipment({ search, status: statusFilter })
-      .then(setEquipments)
-      .catch((err) => console.error("Error al cargar equipos:", err))
+    Promise.all([
+      api.listMetrologyEquipment({ search, status: statusFilter, customerId: customerFilter || undefined }),
+      api.listCustomers("", "")
+    ])
+      .then(([eqs, custPaged]) => {
+        setEquipments(eqs);
+        setCustomers(custPaged.items || []);
+      })
+      .catch((err) => console.error("Error al cargar datos:", err))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    loadEquipments();
-  }, [statusFilter]);
+    loadData();
+  }, [statusFilter, customerFilter]);
 
   const handleSearchSubmit = (e: FormEvent) => {
     e.preventDefault();
-    loadEquipments();
+    loadData();
+  };
+
+  const handleSelectCustomer = async (cId: string) => {
+    setCustomerId(cId);
+    if (!cId) {
+      setCustomerName("");
+      setSelectedCustomerDetail(null);
+      setLocationType("custom");
+      return;
+    }
+
+    const cSummary = customers.find((c) => c.id === cId);
+    if (cSummary) {
+      setCustomerName(cSummary.tradeName || cSummary.legalName);
+    }
+
+    try {
+      const detail = await api.getCustomer(cId);
+      setSelectedCustomerDetail(detail);
+      if (detail.locations && detail.locations.length > 0) {
+        setLocationType("select");
+        setSelectedLocationId(detail.locations[0].id);
+        setLocation(`${detail.locations[0].name} (${detail.locations[0].address.city || ""})`);
+      } else {
+        setLocationType("custom");
+        setLocation(detail.fiscalAddress?.city ? `Planta ${detail.fiscalAddress.city}` : "Planta Principal");
+      }
+    } catch {
+      setSelectedCustomerDetail(null);
+      setLocationType("custom");
+    }
   };
 
   const handleOpenCreate = () => {
@@ -58,7 +126,11 @@ export function MetrologyEquipmentPage() {
     setBrand("");
     setModel("");
     setSerialNumber("");
+    setCustomerId("");
     setCustomerName("");
+    setSelectedCustomerDetail(null);
+    setLocationType("custom");
+    setSelectedLocationId("");
     setLocation("");
     setMaxCapacity("80000");
     setMinCapacity("400");
@@ -74,13 +146,14 @@ export function MetrologyEquipmentPage() {
     setShowModal(true);
   };
 
-  const handleOpenEdit = (eq: MetrologyEquipment) => {
+  const handleOpenEdit = async (eq: MetrologyEquipment) => {
     setEditingId(eq.id);
     setCode(eq.code);
     setDescription(eq.description);
     setBrand(eq.brand || "");
     setModel(eq.model || "");
     setSerialNumber(eq.serialNumber || "");
+    setCustomerId(eq.customerId || "");
     setCustomerName(eq.customerName || "");
     setLocation(eq.location || "");
     setMaxCapacity(eq.maxCapacity.toString());
@@ -94,6 +167,27 @@ export function MetrologyEquipmentPage() {
     setHasTare(eq.hasTare);
     setNotes(eq.notes || "");
     setError(null);
+
+    if (eq.customerId) {
+      try {
+        const detail = await api.getCustomer(eq.customerId);
+        setSelectedCustomerDetail(detail);
+        const matchLoc = detail.locations?.find((l) => eq.location && eq.location.includes(l.name));
+        if (matchLoc) {
+          setLocationType("select");
+          setSelectedLocationId(matchLoc.id);
+        } else {
+          setLocationType("custom");
+        }
+      } catch {
+        setSelectedCustomerDetail(null);
+        setLocationType("custom");
+      }
+    } else {
+      setSelectedCustomerDetail(null);
+      setLocationType("custom");
+    }
+
     setShowModal(true);
   };
 
@@ -114,6 +208,7 @@ export function MetrologyEquipmentPage() {
         brand: brand.trim(),
         model: model.trim(),
         serialNumber: serialNumber.trim(),
+        customerId: customerId || undefined,
         customerName: customerName.trim(),
         location: location.trim(),
         maxCapacity: parseFloat(maxCapacity) || 0,
@@ -135,7 +230,7 @@ export function MetrologyEquipmentPage() {
       }
 
       setShowModal(false);
-      loadEquipments();
+      loadData();
     } catch (err: any) {
       setError(err?.message || "Error al guardar instrumento.");
     } finally {
@@ -147,9 +242,128 @@ export function MetrologyEquipmentPage() {
     if (!confirm(`¿Está seguro de eliminar el instrumento '${codeName}'?`)) return;
     try {
       await api.deleteMetrologyEquipment(id);
-      loadEquipments();
+      loadData();
     } catch (err: any) {
       alert(err?.message || "Error al eliminar instrumento.");
+    }
+  };
+
+  // ARCA CUIT Lookup
+  const handleConsultArca = async () => {
+    const clean = quickCuit.replace(/\D/g, "");
+    if (clean.length !== 11) {
+      setQuickError("El CUIT debe contener 11 dígitos numéricos.");
+      return;
+    }
+
+    try {
+      setConsultingArca(true);
+      setQuickError(null);
+      const res = await api.consultArcaCuit(clean);
+      if (res && res.legalName) {
+        setQuickLegalName(res.legalName);
+        setQuickTradeName(res.tradeName || res.legalName);
+        if (res.taxCondition) setQuickTaxCondition(res.taxCondition);
+        if (res.fiscalAddress?.street) setQuickStreet(res.fiscalAddress.street);
+        if (res.fiscalAddress?.city) setQuickCity(res.fiscalAddress.city);
+        if (res.fiscalAddress?.province) setQuickProvince(res.fiscalAddress.province);
+      }
+    } catch (err: any) {
+      setQuickError(err?.message || "No se pudo consultar el CUIT en ARCA.");
+    } finally {
+      setConsultingArca(false);
+    }
+  };
+
+  // Save Quick Customer
+  const handleSaveQuickCustomer = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!quickLegalName.trim()) {
+      setQuickError("La Razón Social es obligatoria.");
+      return;
+    }
+
+    try {
+      setQuickSaving(true);
+      setQuickError(null);
+
+      const customerPayload: CustomerWrite = {
+        legalName: quickLegalName.trim(),
+        tradeName: quickTradeName.trim() || quickLegalName.trim(),
+        documentType: "Cuit",
+        documentNumber: quickCuit.replace(/\D/g, ""),
+        taxCondition: quickTaxCondition,
+        iibbRegime: "ConvenioMultilateral",
+        fiscalAddress: {
+          street: quickStreet.trim(),
+          city: quickCity.trim(),
+          province: quickProvince,
+          postalCode: ""
+        },
+        email: quickEmail.trim() || undefined,
+        phone: quickPhone.trim() || undefined,
+        isCustomer: true,
+        isSupplier: false
+      };
+
+      const created = await api.createCustomer(customerPayload);
+      
+      const newSummary: CustomerSummary = {
+        id: created.id,
+        legalName: created.legalName,
+        tradeName: created.tradeName,
+        documentType: created.documentType,
+        documentNumber: created.documentNumber,
+        taxCondition: created.taxCondition,
+        status: "Active",
+        isCustomer: true,
+        isSupplier: false,
+        email: created.email,
+        phone: created.phone
+      };
+
+      setCustomers((prev) => [newSummary, ...prev]);
+      setShowQuickCustomerModal(false);
+      
+      // Auto-select in equipment form
+      handleSelectCustomer(created.id);
+    } catch (err: any) {
+      setQuickError(err?.message || "Error al crear cliente rápido.");
+    } finally {
+      setQuickSaving(false);
+    }
+  };
+
+  // Save Quick Location (Planta)
+  const handleSaveQuickLocation = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!customerId || !quickLocName.trim()) return;
+
+    try {
+      setQuickLocSaving(true);
+      const locPayload = {
+        name: quickLocName.trim(),
+        address: {
+          street: quickLocStreet.trim(),
+          city: quickLocCity.trim(),
+          province: quickLocProvince,
+          postalCode: quickLocPostalCode.trim()
+        }
+      };
+
+      const updatedCust = await api.addLocation(customerId, locPayload);
+      setSelectedCustomerDetail(updatedCust);
+      const createdLoc = updatedCust.locations?.find((l) => l.name === quickLocName.trim());
+      if (createdLoc) {
+        setSelectedLocationId(createdLoc.id);
+        setLocation(`${createdLoc.name} (${createdLoc.address.city || ""})`);
+        setLocationType("select");
+      }
+      setShowQuickLocationModal(false);
+    } catch (err: any) {
+      alert(err?.message || "Error al agregar planta.");
+    } finally {
+      setQuickLocSaving(false);
     }
   };
 
@@ -164,7 +378,7 @@ export function MetrologyEquipmentPage() {
             🏢 Parque de Balanzas e Instrumentos
           </h1>
           <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-            Ficha técnica metrológica, capacidades nominales, escalones e historial de calibraciones
+            Ficha técnica metrológica, vinculación con clientes y plantas, capacidades nominales e historial
           </p>
         </div>
 
@@ -185,7 +399,18 @@ export function MetrologyEquipmentPage() {
             />
           </div>
 
-          <div style={{ width: 180 }}>
+          <div style={{ width: 220 }}>
+            <select value={customerFilter} onChange={(e) => setCustomerFilter(e.target.value)}>
+              <option value="">Todos los clientes</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.tradeName || c.legalName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ width: 170 }}>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">Todos los estados</option>
               <option value="Active">Operativas (Activas)</option>
@@ -215,7 +440,7 @@ export function MetrologyEquipmentPage() {
                 <tr>
                   <th>Código</th>
                   <th>Descripción / Marca</th>
-                  <th>Cliente & Ubicación</th>
+                  <th>Cliente & Planta</th>
                   <th>Capacidad (Max / Min)</th>
                   <th>Escalón (e / d)</th>
                   <th>Clase</th>
@@ -242,8 +467,14 @@ export function MetrologyEquipmentPage() {
                         </div>
                       </td>
                       <td>
-                        <div>{eq.customerName || "—"}</div>
-                        <div className="muted" style={{ fontSize: "0.74rem" }}>{eq.location || "—"}</div>
+                        {eq.customerId ? (
+                          <Link to={`/clientes/${eq.customerId}`} style={{ fontWeight: 600, color: "var(--primary)" }}>
+                            🏢 {eq.customerName || "Cliente"}
+                          </Link>
+                        ) : (
+                          <span className="muted">{eq.customerName || "Uso Interno / Propia"}</span>
+                        )}
+                        <div className="muted" style={{ fontSize: "0.74rem" }}>📍 {eq.location || "Sin planta asignada"}</div>
                       </td>
                       <td>
                         <strong>{eq.maxCapacity.toLocaleString("es-AR")} {eq.unit}</strong>
@@ -293,10 +524,10 @@ export function MetrologyEquipmentPage() {
         )}
       </div>
 
-      {/* Modal Alta / Edición */}
+      {/* Modal Principal Alta / Edición de Balanza */}
       {showModal && (
         <div className="modal-backdrop">
-          <div className="modal-card" style={{ maxWidth: 680 }}>
+          <div className="modal-card" style={{ maxWidth: 720 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h2 style={{ margin: 0, fontSize: "1.2rem" }}>
                 {editingId ? "✏️ Modificar Ficha de Balanza" : "➕ Registrar Nueva Balanza / Instrumento"}
@@ -307,6 +538,113 @@ export function MetrologyEquipmentPage() {
             {error && <div className="alert" style={{ marginBottom: 16 }}>{error}</div>}
 
             <form onSubmit={handleSave} style={{ display: "grid", gap: 14 }}>
+              {/* Sección 1: Cliente y Planta */}
+              <div style={{ background: "rgba(15, 23, 42, 0.03)", padding: 14, borderRadius: 12, border: "1px solid var(--surface-border)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <h4 style={{ margin: 0, fontSize: "0.88rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ink)" }}>
+                    🏢 Asignación de Cliente & Planta
+                  </h4>
+                  <button
+                    type="button"
+                    className="btn ghost compact"
+                    style={{ fontSize: "0.76rem", color: "var(--primary)" }}
+                    onClick={() => {
+                      setQuickLegalName("");
+                      setQuickTradeName("");
+                      setQuickCuit("");
+                      setQuickStreet("");
+                      setQuickCity("");
+                      setQuickProvince("SantaFe");
+                      setQuickEmail("");
+                      setQuickPhone("");
+                      setQuickError(null);
+                      setShowQuickCustomerModal(true);
+                    }}
+                  >
+                    ➕ Nuevo Cliente
+                  </button>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
+                  <label>
+                    Cliente / Empresa Propietaria
+                    <select
+                      value={customerId}
+                      onChange={(e) => handleSelectCustomer(e.target.value)}
+                    >
+                      <option value="">— Sin cliente asignado (Instrumento Propio / Uso Interno) —</option>
+                      {customers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.tradeName || c.legalName} {c.documentNumber ? `(CUIT ${c.documentNumber})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  {/* Planta / Ubicación */}
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <label style={{ margin: 0, fontSize: "0.85rem", fontWeight: 700 }}>
+                        Planta / Sucursal
+                      </label>
+                      {customerId && (
+                        <button
+                          type="button"
+                          className="btn ghost compact"
+                          style={{ padding: "1px 6px", fontSize: "0.72rem" }}
+                          onClick={() => {
+                            setQuickLocName("");
+                            setQuickLocStreet("");
+                            setQuickLocCity("");
+                            setQuickLocProvince("SantaFe");
+                            setQuickLocPostalCode("");
+                            setShowQuickLocationModal(true);
+                          }}
+                        >
+                          ➕ Nueva Planta
+                        </button>
+                      )}
+                    </div>
+
+                    {customerId && selectedCustomerDetail?.locations && selectedCustomerDetail.locations.length > 0 && locationType === "select" ? (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <select
+                          value={selectedLocationId}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "custom") {
+                              setLocationType("custom");
+                              setSelectedLocationId("");
+                            } else {
+                              setSelectedLocationId(val);
+                              const locObj = selectedCustomerDetail.locations.find((l) => l.id === val);
+                              if (locObj) {
+                                setLocation(`${locObj.name} (${locObj.address.city || ""})`);
+                              }
+                            }
+                          }}
+                        >
+                          {selectedCustomerDetail.locations.map((l) => (
+                            <option key={l.id} value={l.id}>
+                              📍 {l.name} — {l.address.city || "S/C"}
+                            </option>
+                          ))}
+                          <option value="custom">✍️ Escribir otra ubicación manual...</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="ej. Planta Acopio Silos - Ingreso Principal"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Identificación del Instrumento */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
                 <label>
                   Código / Identificador *
@@ -345,18 +683,6 @@ export function MetrologyEquipmentPage() {
                 <label>
                   Número de Serie
                   <input type="text" placeholder="ej. SN-2024-88912" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
-                </label>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
-                <label>
-                  Cliente / Razón Social Propietaria
-                  <input type="text" placeholder="ej. Acopio Cereales Los Molinos S.A." value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-                </label>
-
-                <label>
-                  Ubicación Física en Planta
-                  <input type="text" placeholder="ej. Ingreso Principal Balanza Nº 1" value={location} onChange={(e) => setLocation(e.target.value)} />
                 </label>
               </div>
 
@@ -434,6 +760,178 @@ export function MetrologyEquipmentPage() {
                 <button type="button" className="btn ghost" onClick={() => setShowModal(false)}>Cancelar</button>
                 <button type="submit" className="btn" disabled={saving} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
                   {saving ? "Guardando..." : "💾 Guardar Balanza"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Submodal 1: Crear Cliente Rápido */}
+      {showQuickCustomerModal && (
+        <div className="modal-backdrop" style={{ zIndex: 1050 }}>
+          <div className="modal-card" style={{ maxWidth: 540 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: "1.1rem" }}>🏢 Alta Rápida de Cliente en Directorio</h3>
+              <button type="button" className="alert-close" onClick={() => setShowQuickCustomerModal(false)}>✕</button>
+            </div>
+
+            {quickError && <div className="alert" style={{ marginBottom: 12 }}>{quickError}</div>}
+
+            <form onSubmit={handleSaveQuickCustomer} style={{ display: "grid", gap: 12 }}>
+              {/* CUIT + Consulta ARCA */}
+              <label>
+                CUIT / Identificación Fiscal
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="text"
+                    placeholder="ej. 30715489629"
+                    value={quickCuit}
+                    onChange={(e) => setQuickCuit(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    disabled={consultingArca}
+                    onClick={handleConsultArca}
+                    title="Autocompletar datos con ARCA (Padrón AFIP)"
+                  >
+                    {consultingArca ? "Consultando..." : "🏛️ ARCA"}
+                  </button>
+                </div>
+              </label>
+
+              <label>
+                Razón Social *
+                <input
+                  type="text"
+                  required
+                  placeholder="ej. Acopio Cereales Los Molinos S.A."
+                  value={quickLegalName}
+                  onChange={(e) => setQuickLegalName(e.target.value)}
+                />
+              </label>
+
+              <label>
+                Nombre Fantasía
+                <input
+                  type="text"
+                  placeholder="ej. Los Molinos Acopio"
+                  value={quickTradeName}
+                  onChange={(e) => setQuickTradeName(e.target.value)}
+                />
+              </label>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 10 }}>
+                <label>
+                  Ciudad / Localidad
+                  <input
+                    type="text"
+                    placeholder="ej. Rosario"
+                    value={quickCity}
+                    onChange={(e) => setQuickCity(e.target.value)}
+                  />
+                </label>
+
+                <label>
+                  Provincia
+                  <select value={quickProvince} onChange={(e) => setQuickProvince(e.target.value)}>
+                    {provinces.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <label>
+                  Email de Contacto
+                  <input
+                    type="email"
+                    placeholder="contacto@empresa.com"
+                    value={quickEmail}
+                    onChange={(e) => setQuickEmail(e.target.value)}
+                  />
+                </label>
+
+                <label>
+                  Teléfono
+                  <input
+                    type="text"
+                    placeholder="341-4455667"
+                    value={quickPhone}
+                    onChange={(e) => setQuickPhone(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
+                <button type="button" className="btn ghost" onClick={() => setShowQuickCustomerModal(false)}>Cancelar</button>
+                <button type="submit" className="btn" disabled={quickSaving} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+                  {quickSaving ? "Creando..." : "✓ Crear y Seleccionar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Submodal 2: Crear Nueva Planta para el Cliente */}
+      {showQuickLocationModal && (
+        <div className="modal-backdrop" style={{ zIndex: 1050 }}>
+          <div className="modal-card" style={{ maxWidth: 500 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: "1.1rem" }}>📍 Agregar Planta / Sucursal al Cliente</h3>
+              <button type="button" className="alert-close" onClick={() => setShowQuickLocationModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveQuickLocation} style={{ display: "grid", gap: 12 }}>
+              <label>
+                Nombre de la Planta / Sucursal *
+                <input
+                  type="text"
+                  required
+                  placeholder="ej. Planta Acopio Silos 2 o Depósito Central"
+                  value={quickLocName}
+                  onChange={(e) => setQuickLocName(e.target.value)}
+                />
+              </label>
+
+              <label>
+                Dirección / Calle
+                <input
+                  type="text"
+                  placeholder="ej. Ruta Nacional 9 Km 280"
+                  value={quickLocStreet}
+                  onChange={(e) => setQuickLocStreet(e.target.value)}
+                />
+              </label>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 10 }}>
+                <label>
+                  Ciudad / Localidad
+                  <input
+                    type="text"
+                    placeholder="ej. Villa María"
+                    value={quickLocCity}
+                    onChange={(e) => setQuickLocCity(e.target.value)}
+                  />
+                </label>
+
+                <label>
+                  Provincia
+                  <select value={quickLocProvince} onChange={(e) => setQuickLocProvince(e.target.value)}>
+                    {provinces.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
+                <button type="button" className="btn ghost" onClick={() => setShowQuickLocationModal(false)}>Cancelar</button>
+                <button type="submit" className="btn" disabled={quickLocSaving} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+                  {quickLocSaving ? "Guardando..." : "✓ Agregar Planta"}
                 </button>
               </div>
             </form>
