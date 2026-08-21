@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Tenancy;
@@ -10,13 +10,13 @@ namespace LealControl.Modules.Metrology.Infrastructure;
 
 public sealed class MetrologyDbContext : DbContext
 {
-    public MetrologyDbContext(DbContextOptions<MetrologyDbContext> options) : base(options)
-    {
-    }
-
     public DbSet<MetrologyEquipment> Equipments => Set<MetrologyEquipment>();
     public DbSet<StandardWeight> StandardWeights => Set<StandardWeight>();
     public DbSet<CalibrationReport> CalibrationReports => Set<CalibrationReport>();
+
+    public MetrologyDbContext(DbContextOptions<MetrologyDbContext> options) : base(options)
+    {
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +33,9 @@ public sealed class MetrologyDbContext : DbContext
             b.Property(x => x.SerialNumber).HasMaxLength(100);
             b.Property(x => x.CustomerName).HasMaxLength(160);
             b.Property(x => x.Location).HasMaxLength(200);
+            b.Property(x => x.ApplicableStandard).HasMaxLength(60).HasDefaultValue("Res25_2025");
+            b.Property(x => x.ApprovalCode).HasMaxLength(120).HasDefaultValue(string.Empty);
+            b.Property(x => x.PlatformType).HasMaxLength(60).HasDefaultValue("TruckScale");
             b.Property(x => x.Unit).HasMaxLength(10).HasDefaultValue("kg");
             b.Property(x => x.AccuracyClass).HasMaxLength(10).HasDefaultValue("III");
             b.Property(x => x.IndicationType).HasMaxLength(32).HasDefaultValue("Digital");
@@ -62,20 +65,17 @@ public sealed class MetrologyDbContext : DbContext
         {
             b.ToTable("calibration_reports", "metrology");
             b.HasKey(x => x.Id);
-            b.Property(x => x.ReportNumber).HasMaxLength(32).IsRequired();
-            b.Property(x => x.CertificateType).HasMaxLength(64).HasDefaultValue("Ensayo y Calibración");
-            b.Property(x => x.NormativeApplied).HasMaxLength(128).HasDefaultValue("Resolución 67/2025 (OIML R 76-1)");
-            b.Property(x => x.EquipmentCode).HasMaxLength(32).IsRequired();
-            b.Property(x => x.EquipmentDescription).HasMaxLength(200);
+            b.Property(x => x.CertificateNumber).HasMaxLength(64).IsRequired();
+            b.Property(x => x.EquipmentCode).HasMaxLength(32);
             b.Property(x => x.CustomerName).HasMaxLength(160);
-            b.Property(x => x.CustomerAddress).HasMaxLength(255);
-            b.Property(x => x.CustomerCuit).HasMaxLength(32);
             b.Property(x => x.Location).HasMaxLength(200);
-            b.Property(x => x.PerformedBy).HasMaxLength(128);
-            b.Property(x => x.Result).HasMaxLength(32).HasDefaultValue("Apto");
-            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Issued");
+            b.Property(x => x.StandardApplied).HasMaxLength(64).HasDefaultValue("Res25_2025");
+            b.Property(x => x.CalibrationType).HasMaxLength(32).HasDefaultValue("InService");
+            b.Property(x => x.PerformedBy).HasMaxLength(120);
+            b.Property(x => x.ApprovedBy).HasMaxLength(120);
+            b.Property(x => x.Verdict).HasMaxLength(32).HasDefaultValue("Approved");
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
-            b.HasIndex(x => new { x.TenantId, x.ReportNumber }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.CertificateNumber }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.EquipmentId });
             b.HasIndex(x => new { x.TenantId, x.CalibrationDate });
         });
@@ -99,6 +99,9 @@ public sealed class MetrologyDbContext : DbContext
                     ""CustomerId"" uuid,
                     ""CustomerName"" character varying(160),
                     ""Location"" character varying(200),
+                    ""ApplicableStandard"" character varying(60) NOT NULL DEFAULT 'Res25_2025',
+                    ""ApprovalCode"" character varying(120) NOT NULL DEFAULT '',
+                    ""PlatformType"" character varying(60) NOT NULL DEFAULT 'TruckScale',
                     ""MaxCapacity"" numeric(18,4) NOT NULL DEFAULT 0,
                     ""MinCapacity"" numeric(18,4) NOT NULL DEFAULT 0,
                     ""DivisionD"" numeric(18,4) NOT NULL DEFAULT 0,
@@ -116,6 +119,10 @@ public sealed class MetrologyDbContext : DbContext
                 );
                 CREATE UNIQUE INDEX IF NOT EXISTS ""IX_equipments_Tenant_Code"" ON metrology.equipments (""TenantId"", ""Code"");
                 CREATE INDEX IF NOT EXISTS ""IX_equipments_Tenant_Customer"" ON metrology.equipments (""TenantId"", ""CustomerId"");
+
+                ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""ApplicableStandard"" character varying(60) NOT NULL DEFAULT 'Res25_2025';
+                ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""ApprovalCode"" character varying(120) NOT NULL DEFAULT '';
+                ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""PlatformType"" character varying(60) NOT NULL DEFAULT 'TruckScale';
 
                 CREATE TABLE IF NOT EXISTS metrology.standard_weights (
                     ""Id"" uuid NOT NULL PRIMARY KEY,
@@ -140,77 +147,43 @@ public sealed class MetrologyDbContext : DbContext
                 CREATE TABLE IF NOT EXISTS metrology.calibration_reports (
                     ""Id"" uuid NOT NULL PRIMARY KEY,
                     ""TenantId"" uuid NOT NULL,
-                    ""ReportNumber"" character varying(32) NOT NULL,
-                    ""CertificateType"" character varying(64) NOT NULL DEFAULT 'Ensayo y Calibración',
-                    ""NormativeApplied"" character varying(128) NOT NULL DEFAULT 'Resolución 67/2025 (OIML R 76-1)',
+                    ""CertificateNumber"" character varying(64) NOT NULL,
                     ""EquipmentId"" uuid NOT NULL,
                     ""EquipmentCode"" character varying(32) NOT NULL,
-                    ""EquipmentDescription"" character varying(200),
+                    ""EquipmentDescription"" character varying(200) NOT NULL,
                     ""CustomerId"" uuid,
                     ""CustomerName"" character varying(160),
-                    ""CustomerAddress"" character varying(255),
-                    ""CustomerCuit"" character varying(32),
                     ""Location"" character varying(200),
+                    ""StandardApplied"" character varying(64) NOT NULL DEFAULT 'Res25_2025',
+                    ""CalibrationType"" character varying(32) NOT NULL DEFAULT 'InService',
                     ""CalibrationDate"" timestamp with time zone NOT NULL,
-                    ""NextCalibrationDate"" timestamp with time zone,
-                    ""PerformedBy"" character varying(128),
-                    ""AmbientTemperature"" numeric(18,2) NOT NULL DEFAULT 20,
-                    ""AmbientHumidity"" numeric(18,2) NOT NULL DEFAULT 50,
-                    ""AtmosphericPressure"" numeric(18,2) NOT NULL DEFAULT 1013,
-                    ""InitialInspectionPassed"" boolean NOT NULL DEFAULT true,
-                    ""InspectionNotes"" text,
-                    ""RepeatabilityDataJson"" text NOT NULL DEFAULT '[]',
-                    ""EccentricityDataJson"" text NOT NULL DEFAULT '[]',
-                    ""LinearityDataJson"" text NOT NULL DEFAULT '[]',
-                    ""UncertaintyDataJson"" text NOT NULL DEFAULT '{}',
+                    ""ExpirationDate"" timestamp with time zone,
+                    ""TemperatureCelsius"" numeric(18,2) NOT NULL DEFAULT 20.0,
+                    ""RelativeHumidityPercent"" numeric(18,2) NOT NULL DEFAULT 50.0,
+                    ""AtmosphericPressureHpa"" numeric(18,2) NOT NULL DEFAULT 1013.25,
+                    ""PerformedBy"" character varying(120) NOT NULL,
+                    ""ApprovedBy"" character varying(120),
+                    ""Verdict"" character varying(32) NOT NULL DEFAULT 'Approved',
+                    ""MaxObservedError"" numeric(18,4) NOT NULL DEFAULT 0,
+                    ""MaxAllowedError"" numeric(18,4) NOT NULL DEFAULT 0,
+                    ""ExpandedUncertaintyK2"" numeric(18,4) NOT NULL DEFAULT 0,
+                    ""VisualInspectionJson"" text NOT NULL DEFAULT '{}',
+                    ""RepeatabilityTestJson"" text NOT NULL DEFAULT '[]',
+                    ""EccentricityTestJson"" text NOT NULL DEFAULT '[]',
+                    ""LinearityTestJson"" text NOT NULL DEFAULT '[]',
                     ""WeightsUsedJson"" text NOT NULL DEFAULT '[]',
-                    ""ExpandedUncertainty"" numeric(18,6) NOT NULL DEFAULT 0,
-                    ""Result"" character varying(32) NOT NULL DEFAULT 'Apto',
                     ""Observations"" text,
-                    ""Status"" character varying(32) NOT NULL DEFAULT 'Issued',
+                    ""SealsPlaced"" character varying(250),
                     ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
                 );
-                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_reports_Tenant_Number"" ON metrology.calibration_reports (""TenantId"", ""ReportNumber"");
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_reports_Tenant_CertNumber"" ON metrology.calibration_reports (""TenantId"", ""CertificateNumber"");
+                CREATE INDEX IF NOT EXISTS ""IX_reports_Tenant_Equipment"" ON metrology.calibration_reports (""TenantId"", ""EquipmentId"");
                 CREATE INDEX IF NOT EXISTS ""IX_reports_Tenant_Date"" ON metrology.calibration_reports (""TenantId"", ""CalibrationDate"");
             ", ct);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetrologyDbContext] Error en EnsureMetrologyTablesAsync: {ex.Message}");
+            Console.WriteLine($"[MetrologyDbContext] Notice on schema migration: {ex.Message}");
         }
-    }
-
-    public async Task SeedDefaultMetrologyDataAsync(TenantId tenantId, CancellationToken ct = default)
-    {
-        var hasWeights = await StandardWeights.AnyAsync(w => w.TenantId == tenantId, ct);
-        if (!hasWeights)
-        {
-            var defaultWeights = new List<StandardWeight>
-            {
-                new(Guid.NewGuid(), tenantId, "P-1000-01", "INTI-2024-001", 1000, "kg", "M1", "Hierro Fundido", 0.000m, 0.020m, "INTI-SAC-2024-9981", "INTI Centro de Metrología", DateTime.UtcNow.AddMonths(-3), DateTime.UtcNow.AddMonths(9)),
-                new(Guid.NewGuid(), tenantId, "P-1000-02", "INTI-2024-002", 1000, "kg", "M1", "Hierro Fundido", 0.005m, 0.020m, "INTI-SAC-2024-9982", "INTI Centro de Metrología", DateTime.UtcNow.AddMonths(-3), DateTime.UtcNow.AddMonths(9)),
-                new(Guid.NewGuid(), tenantId, "P-500-01", "INTI-2024-003", 500, "kg", "M1", "Hierro Fundido", -0.002m, 0.010m, "INTI-SAC-2024-9983", "INTI Centro de Metrología", DateTime.UtcNow.AddMonths(-3), DateTime.UtcNow.AddMonths(9)),
-                new(Guid.NewGuid(), tenantId, "P-500-02", "INTI-2024-004", 500, "kg", "M1", "Hierro Fundido", 0.001m, 0.010m, "INTI-SAC-2024-9984", "INTI Centro de Metrología", DateTime.UtcNow.AddMonths(-3), DateTime.UtcNow.AddMonths(9)),
-                new(Guid.NewGuid(), tenantId, "JGO-F1-01", "SAC-2024-110", 1, "kg", "F1", "Acero Inoxidable", 0.00002m, 0.0001m, "SAC-LAB-2024-4412", "Laboratorio Acreditado SAC", DateTime.UtcNow.AddMonths(-5), DateTime.UtcNow.AddMonths(7)),
-                new(Guid.NewGuid(), tenantId, "JGO-M1-FRAC", "INTI-2024-880", 20, "kg", "M1", "Hierro / Latón", 0.0001m, 0.001m, "INTI-SAC-2024-1102", "INTI Centro de Metrología", DateTime.UtcNow.AddMonths(-2), DateTime.UtcNow.AddMonths(10))
-            };
-
-            StandardWeights.AddRange(defaultWeights);
-        }
-
-        var hasEquipments = await Equipments.AnyAsync(e => e.TenantId == tenantId, ct);
-        if (!hasEquipments)
-        {
-            var defaultEquipments = new List<MetrologyEquipment>
-            {
-                new(Guid.NewGuid(), tenantId, "BAL-CAM-01", "Balanza Camionera Electrónica de 80t", "Systel / Toledo", "TruckMaster 80T", "SN-2024-88912", null, "Acopio Cereales Los Molinos S.A.", "Planta 1 - Entrada Principal", 80000, 400, 20, 20, "kg", "III", "Digital", 6, true),
-                new(Guid.NewGuid(), tenantId, "BAL-IND-02", "Balanza de Plataforma Industrial 3000 kg", "Kretz", "Plat 3000", "KRZ-99124", null, "Frigorífico Regional S.R.L.", "Sector Desposte y Empaque", 3000, 20, 1, 1, "kg", "III", "Digital", 4, true),
-                new(Guid.NewGuid(), tenantId, "BAL-LAB-03", "Balanza de Precisión Analítica 220g", "Ohaus", "Explorer Pro", "OH-882194", null, "Laboratorio Agropecuario Central", "Sector Ensayos Físico-Químicos", 0.220m, 0.001m, 0.0001m, 0.001m, "g", "I", "Digital", 1, true)
-            };
-
-            Equipments.AddRange(defaultEquipments);
-        }
-
-        await SaveChangesAsync(ct);
     }
 }

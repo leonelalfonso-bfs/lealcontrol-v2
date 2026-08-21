@@ -19,6 +19,11 @@ public sealed class MetrologyEquipment : Entity<Guid>
     public string CustomerName { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty; // e.g. Planta Acopio Silos - Ingreso
     
+    // Marco Normativo & Aprobaciones Legales
+    public string ApplicableStandard { get; set; } = "Res25_2025"; // Res25_2025, Res2307_80
+    public string ApprovalCode { get; set; } = string.Empty; // e.g. RESOL-2025-25-APN-SIYC#MEC o DNH-1450/84
+    public string PlatformType { get; set; } = "TruckScale"; // TruckScale, Platform, Hopper, Suspended, Counter
+
     // Parámetros Metrológicos
     public decimal MaxCapacity { get; set; } // e.g. 80000 kg
     public decimal MinCapacity { get; set; } // e.g. 400 kg
@@ -50,6 +55,9 @@ public sealed class MetrologyEquipment : Entity<Guid>
         Guid? customerId,
         string customerName,
         string location,
+        string applicableStandard,
+        string approvalCode,
+        string platformType,
         decimal maxCapacity,
         decimal minCapacity,
         decimal divisionD,
@@ -69,6 +77,9 @@ public sealed class MetrologyEquipment : Entity<Guid>
         CustomerId = customerId;
         CustomerName = customerName;
         Location = location;
+        ApplicableStandard = string.IsNullOrWhiteSpace(applicableStandard) ? "Res25_2025" : applicableStandard;
+        ApprovalCode = approvalCode ?? string.Empty;
+        PlatformType = string.IsNullOrWhiteSpace(platformType) ? "TruckScale" : platformType;
         MaxCapacity = maxCapacity;
         MinCapacity = minCapacity;
         DivisionD = divisionD;
@@ -86,107 +97,74 @@ public sealed class MetrologyEquipment : Entity<Guid>
 public sealed class StandardWeight : Entity<Guid>
 {
     public TenantId TenantId { get; set; }
-    public string Code { get; set; } = string.Empty; // e.g. PAT-1000-01
+    public string Code { get; set; } = string.Empty; // e.g. PAT-500-01
     public string SerialNumber { get; set; } = string.Empty;
-    public decimal NominalValue { get; set; } // e.g. 1000
-    public string Unit { get; set; } = "kg"; // kg, g, mg
+    public decimal NominalValue { get; set; } // e.g. 500 kg
+    public string Unit { get; set; } = "kg";
     public string AccuracyClass { get; set; } = "M1"; // E2, F1, F2, M1, M2
-    public string Material { get; set; } = "Hierro Fundido"; // Acero Inoxidable, Hierro Fundido, Latón
-    public decimal ConventionalMassCorrection { get; set; } // Corrección o error convencional (+0.02 kg)
-    public decimal Uncertainty { get; set; } // Incertidumbre de calibración (±0.005 kg)
-    
-    // Trazabilidad INTI / SAC
-    public string CertificateNumber { get; set; } = string.Empty;
+    public string Material { get; set; } = "Hierro Fundido"; // Hierro Fundido, Acero Inoxidable, Latón
+    public decimal ConventionalMassCorrection { get; set; } = 0; // en gramos o kg
+    public decimal Uncertainty { get; set; } = 0; // Incertidumbre U (k=2) en mg o g
+    public string CertificateNumber { get; set; } = string.Empty; // Certificado INTI / SAC
     public string TraceabilityLab { get; set; } = "INTI - Metrología Legal";
     public DateTime? CalibrationDate { get; set; }
     public DateTime? ExpirationDate { get; set; }
-    public string Status { get; set; } = "Valid"; // Valid, Expired, InCalibration, OutOfService
+    public string Status { get; set; } = "Valid"; // Valid, Expired, Inactive
+    public string? Notes { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public StandardWeight() : base(Guid.NewGuid()) { }
-
-    public StandardWeight(
-        Guid id,
-        TenantId tenantId,
-        string code,
-        string serialNumber,
-        decimal nominalValue,
-        string unit,
-        string accuracyClass,
-        string material,
-        decimal conventionalMassCorrection,
-        decimal uncertainty,
-        string certificateNumber,
-        string traceabilityLab,
-        DateTime? calibrationDate,
-        DateTime? expirationDate) : base(id)
-    {
-        TenantId = tenantId;
-        Code = code;
-        SerialNumber = serialNumber;
-        NominalValue = nominalValue;
-        Unit = unit;
-        AccuracyClass = accuracyClass;
-        Material = material;
-        ConventionalMassCorrection = conventionalMassCorrection;
-        Uncertainty = uncertainty;
-        CertificateNumber = certificateNumber;
-        TraceabilityLab = traceabilityLab;
-        CalibrationDate = calibrationDate;
-        ExpirationDate = expirationDate;
-        Status = (expirationDate.HasValue && expirationDate.Value < DateTime.UtcNow) ? "Expired" : "Valid";
-        CreatedAtUtc = DateTime.UtcNow;
-    }
 }
 
 public sealed class CalibrationReport : Entity<Guid>
 {
     public TenantId TenantId { get; set; }
-    public string ReportNumber { get; set; } = string.Empty; // e.g. INF-2026-0001
-    public string CertificateType { get; set; } = "Ensayo y Calibración"; // Ensayo Oficial Res 67/2025, Calibración Periódica, Mantenimiento Preventivo
-    public string NormativeApplied { get; set; } = "Resolución 67/2025 (OIML R 76-1)";
-    
-    // Instrumento & Cliente
+    public string CertificateNumber { get; set; } = string.Empty; // e.g. CERT-2025-001
     public Guid EquipmentId { get; set; }
     public string EquipmentCode { get; set; } = string.Empty;
     public string EquipmentDescription { get; set; } = string.Empty;
     public Guid? CustomerId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
-    public string CustomerAddress { get; set; } = string.Empty;
-    public string CustomerCuit { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty;
     
-    // Fechas y Metrólogo
+    // Normativa & Tipo de Ensayo
+    public string StandardApplied { get; set; } = "Res25_2025"; // Res25_2025, Res2307_80
+    public string CalibrationType { get; set; } = "InService"; // InitialVerification, InService, PostRepair
     public DateTime CalibrationDate { get; set; } = DateTime.UtcNow;
-    public DateTime? NextCalibrationDate { get; set; }
-    public string PerformedBy { get; set; } = string.Empty; // Técnico / Metrólogo
+    public DateTime? ExpirationDate { get; set; } // 24 meses según Res. 25/2025 o 12 meses según 2307/80
     
     // Condiciones Ambientales
-    public decimal AmbientTemperature { get; set; } = 20.0m; // ºC
-    public decimal AmbientHumidity { get; set; } = 50.0m; // %
-    public decimal AtmosphericPressure { get; set; } = 1013.0m; // hPa
+    public decimal TemperatureCelsius { get; set; } = 20.0m;
+    public decimal RelativeHumidityPercent { get; set; } = 50.0m;
+    public decimal AtmosphericPressureHpa { get; set; } = 1013.25m;
     
-    // Ensayos Metrológicos (JSON estructurado)
-    public bool InitialInspectionPassed { get; set; } = true;
-    public string? InspectionNotes { get; set; }
-    public string RepeatabilityDataJson { get; set; } = "[]"; // Ensayos de repetibilidad
-    public string EccentricityDataJson { get; set; } = "[]"; // Ensayos de excentricidad
-    public string LinearityDataJson { get; set; } = "[]"; // Ensayos de exactitud / pesaje
-    public string UncertaintyDataJson { get; set; } = "{}"; // Presupuesto de incertidumbre
-    public string WeightsUsedJson { get; set; } = "[]"; // Patrones utilizados
+    // Metrólogo / Operador
+    public string PerformedBy { get; set; } = string.Empty;
+    public string ApprovedBy { get; set; } = string.Empty;
     
     // Dictamen Final
-    public decimal ExpandedUncertainty { get; set; } // U (k=2)
-    public string Result { get; set; } = "Apto"; // Apto, Apto con Observaciones, No Apto
+    public string Verdict { get; set; } = "Approved"; // Approved, Rejected, ConditionallyApproved
+    public decimal MaxObservedError { get; set; }
+    public decimal MaxAllowedError { get; set; }
+    public decimal ExpandedUncertaintyK2 { get; set; }
+    
+    // Ensayos JSON estructurados
+    public string VisualInspectionJson { get; set; } = "{}";
+    public string RepeatabilityTestJson { get; set; } = "[]";
+    public string EccentricityTestJson { get; set; } = "[]";
+    public string LinearityTestJson { get; set; } = "[]";
+    public string WeightsUsedJson { get; set; } = "[]";
+    
     public string? Observations { get; set; }
-    public string Status { get; set; } = "Issued"; // Draft, Issued, Cancelled
+    public string? SealsPlaced { get; set; } // Precintos colocados
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public CalibrationReport() : base(Guid.NewGuid()) { }
 }
 
-// Request & DTO Records
-public sealed record CreateEquipmentRequest(
+// DTOs
+public record MetrologyEquipmentDto(
+    Guid Id,
     string Code,
     string Description,
     string Brand,
@@ -195,85 +173,174 @@ public sealed record CreateEquipmentRequest(
     Guid? CustomerId,
     string CustomerName,
     string Location,
+    string ApplicableStandard,
+    string ApprovalCode,
+    string PlatformType,
     decimal MaxCapacity,
     decimal MinCapacity,
     decimal DivisionD,
     decimal VerificationIntervalE,
-    string? Unit,
-    string? AccuracyClass,
-    string? IndicationType,
-    int LoadCellsCount,
-    bool HasTare,
-    string? Notes);
-
-public sealed record UpdateEquipmentRequest(
-    string Code,
-    string Description,
-    string Brand,
-    string Model,
-    string SerialNumber,
-    Guid? CustomerId,
-    string CustomerName,
-    string Location,
-    decimal MaxCapacity,
-    decimal MinCapacity,
-    decimal DivisionD,
-    decimal VerificationIntervalE,
-    string? Unit,
-    string? AccuracyClass,
-    string? IndicationType,
+    string Unit,
+    string AccuracyClass,
+    string IndicationType,
     int LoadCellsCount,
     bool HasTare,
     string Status,
-    string? Notes);
+    DateTime? LastCalibrationDate,
+    DateTime? NextCalibrationDate,
+    string? Notes,
+    DateTime CreatedAtUtc
+);
 
-public sealed record CreateStandardWeightRequest(
+public record MetrologyEquipmentWriteDto(
+    string Code,
+    string Description,
+    string? Brand,
+    string? Model,
+    string? SerialNumber,
+    Guid? CustomerId,
+    string? CustomerName,
+    string? Location,
+    string? ApplicableStandard,
+    string? ApprovalCode,
+    string? PlatformType,
+    decimal MaxCapacity,
+    decimal MinCapacity,
+    decimal DivisionD,
+    decimal VerificationIntervalE,
+    string? Unit,
+    string? AccuracyClass,
+    string? IndicationType,
+    int LoadCellsCount,
+    bool HasTare,
+    string? Notes
+);
+
+public record StandardWeightDto(
+    Guid Id,
     string Code,
     string SerialNumber,
+    decimal NominalValue,
+    string Unit,
+    string AccuracyClass,
+    string Material,
+    decimal ConventionalMassCorrection,
+    decimal Uncertainty,
+    string CertificateNumber,
+    string TraceabilityLab,
+    DateTime? CalibrationDate,
+    DateTime? ExpirationDate,
+    string Status,
+    string? Notes,
+    DateTime CreatedAtUtc
+);
+
+public record StandardWeightWriteDto(
+    string Code,
+    string? SerialNumber,
     decimal NominalValue,
     string? Unit,
     string? AccuracyClass,
     string? Material,
     decimal ConventionalMassCorrection,
     decimal Uncertainty,
-    string CertificateNumber,
+    string? CertificateNumber,
     string? TraceabilityLab,
     DateTime? CalibrationDate,
-    DateTime? ExpirationDate);
+    DateTime? ExpirationDate,
+    string? Notes
+);
 
-public sealed record SaveCalibrationReportRequest(
-    string? ReportNumber,
-    string? CertificateType,
-    string? NormativeApplied,
+public record CalibrationReportDto(
+    Guid Id,
+    string CertificateNumber,
     Guid EquipmentId,
+    string EquipmentCode,
+    string EquipmentDescription,
     Guid? CustomerId,
-    string? CustomerName,
-    string? CustomerAddress,
-    string? CustomerCuit,
-    string? Location,
+    string CustomerName,
+    string Location,
+    string StandardApplied,
+    string CalibrationType,
     DateTime CalibrationDate,
-    DateTime? NextCalibrationDate,
+    DateTime? ExpirationDate,
+    decimal TemperatureCelsius,
+    decimal RelativeHumidityPercent,
+    decimal AtmosphericPressureHpa,
     string PerformedBy,
-    decimal AmbientTemperature,
-    decimal AmbientHumidity,
-    decimal AtmosphericPressure,
-    bool InitialInspectionPassed,
-    string? InspectionNotes,
-    string RepeatabilityDataJson,
-    string EccentricityDataJson,
-    string LinearityDataJson,
-    string UncertaintyDataJson,
+    string ApprovedBy,
+    string Verdict,
+    decimal MaxObservedError,
+    decimal MaxAllowedError,
+    decimal ExpandedUncertaintyK2,
+    string VisualInspectionJson,
+    string RepeatabilityTestJson,
+    string EccentricityTestJson,
+    string LinearityTestJson,
     string WeightsUsedJson,
-    decimal ExpandedUncertainty,
-    string Result,
     string? Observations,
-    string? Status);
+    string? SealsPlaced,
+    DateTime CreatedAtUtc
+);
 
-public sealed record CalculateMetrologyRulesRequest(
-    decimal MaxCapacity,
+public record CalibrationReportWriteDto(
+    string? CertificateNumber,
+    Guid EquipmentId,
+    string StandardApplied,
+    string CalibrationType,
+    DateTime CalibrationDate,
+    DateTime? ExpirationDate,
+    decimal TemperatureCelsius,
+    decimal RelativeHumidityPercent,
+    decimal AtmosphericPressureHpa,
+    string PerformedBy,
+    string? ApprovedBy,
+    string Verdict,
+    decimal MaxObservedError,
+    decimal MaxAllowedError,
+    decimal ExpandedUncertaintyK2,
+    string VisualInspectionJson,
+    string RepeatabilityTestJson,
+    string EccentricityTestJson,
+    string LinearityTestJson,
+    string WeightsUsedJson,
+    string? Observations,
+    string? SealsPlaced
+);
+
+public record MetrologyTestPointDto(
+    decimal NominalLoad,
+    decimal ToleranceEmt,
+    string RuleDescription
+);
+
+public record EccentricityConfigDto(
+    decimal TestLoad,
+    int PointsCount,
+    List<string> Positions,
+    string RuleApplied
+);
+
+public record MetrologyRulesCalculationRequest(
     decimal MinCapacity,
-    decimal DivisionD,
+    decimal MaxCapacity,
     decimal VerificationIntervalE,
     string AccuracyClass,
     int LoadCellsCount,
-    string? Normative);
+    decimal Tare,
+    string StandardApplied,
+    string PlatformType,
+    bool IsInService
+);
+
+public record MetrologyRulesCalculationResponse(
+    string StandardApplied,
+    string ErrorLimitTerm, // "emp" o "EMT"
+    string RepeatabilityTerm, // "Repetibilidad" o "Fidelidad"
+    List<MetrologyTestPointDto> RecommendedLinearityPoints,
+    EccentricityConfigDto EccentricityConfig,
+    decimal MinCapacity,
+    decimal MaxCapacity,
+    decimal VerificationIntervalE,
+    int TotalVerificationDivisionsN
+);

@@ -12,6 +12,7 @@ export function MetrologyEquipmentPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [customerFilter, setCustomerFilter] = useState("");
+  const [standardFilter, setStandardFilter] = useState("");
   
   // Equipment Modal State
   const [showModal, setShowModal] = useState(false);
@@ -19,7 +20,7 @@ export function MetrologyEquipmentPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form Fields
+  // Form Fields - Metrology
   const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
   const [brand, setBrand] = useState("");
@@ -31,6 +32,13 @@ export function MetrologyEquipmentPage() {
   const [locationType, setLocationType] = useState<"select" | "custom">("select");
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const [location, setLocation] = useState("");
+  
+  // Marco Normativo Dinámico
+  const [applicableStandard, setApplicableStandard] = useState<"Res25_2025" | "Res2307_80">("Res25_2025");
+  const [approvalCode, setApprovalCode] = useState("");
+  const [platformType, setPlatformType] = useState<"TruckScale" | "Platform" | "Hopper" | "Suspended" | "Counter">("TruckScale");
+
+  // Parámetros Metrológicos
   const [maxCapacity, setMaxCapacity] = useState("80000");
   const [minCapacity, setMinCapacity] = useState("400");
   const [divisionD, setDivisionD] = useState("20");
@@ -156,6 +164,9 @@ export function MetrologyEquipmentPage() {
     setLocationType("custom");
     setSelectedLocationId("");
     setLocation("");
+    setApplicableStandard("Res25_2025");
+    setApprovalCode("");
+    setPlatformType("TruckScale");
     setMaxCapacity("80000");
     setMinCapacity("400");
     setDivisionD("20");
@@ -183,6 +194,9 @@ export function MetrologyEquipmentPage() {
     setCustomerId(eq.customerId || "");
     setCustomerName(eq.customerName || "");
     setLocation(eq.location || "");
+    setApplicableStandard((eq.applicableStandard as any) || "Res25_2025");
+    setApprovalCode(eq.approvalCode || "");
+    setPlatformType((eq.platformType as any) || "TruckScale");
     setMaxCapacity(eq.maxCapacity.toString());
     setMinCapacity(eq.minCapacity.toString());
     setDivisionD(eq.divisionD.toString());
@@ -238,6 +252,9 @@ export function MetrologyEquipmentPage() {
         customerId: customerId || undefined,
         customerName: customerName.trim(),
         location: location.trim(),
+        applicableStandard,
+        approvalCode: approvalCode.trim(),
+        platformType,
         maxCapacity: parseFloat(maxCapacity) || 0,
         minCapacity: parseFloat(minCapacity) || 0,
         divisionD: parseFloat(divisionD) || 0,
@@ -322,10 +339,10 @@ export function MetrologyEquipmentPage() {
         taxCondition: quickTaxCondition,
         iibbRegime: "ConvenioMultilateral",
         fiscalAddress: {
-          street: quickStreet.trim(),
-          city: quickCity.trim(),
+          street: quickStreet.trim() || "S/D",
+          city: quickCity.trim() || "S/C",
           province: quickProvince,
-          postalCode: ""
+          postalCode: "S/C"
         },
         email: quickEmail.trim() || undefined,
         phone: quickPhone.trim() || undefined,
@@ -394,6 +411,18 @@ export function MetrologyEquipmentPage() {
     }
   };
 
+  // Calculations for live preview of Eccentricity
+  const calcMax = parseFloat(maxCapacity) || 0;
+  const calcCells = parseInt(loadCellsCount, 10) || 6;
+  const calcEccLoad = applicableStandard === "Res2307_80"
+    ? (platformType === "Hopper" ? calcMax / 10 : (platformType === "TruckScale" ? calcMax / calcCells : (calcCells <= 4 ? calcMax / 3 : calcMax / calcCells)))
+    : (platformType === "Hopper" ? calcMax / 10 : (calcCells > 4 ? calcMax / (calcCells - 1) : calcMax / 3));
+
+  const filteredEquipments = equipments.filter((eq) => {
+    if (standardFilter && eq.applicableStandard !== standardFilter) return false;
+    return true;
+  });
+
   return (
     <div className="page-wide" style={{ maxWidth: 1400, margin: "0 auto", padding: "0 16px" }}>
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -405,7 +434,7 @@ export function MetrologyEquipmentPage() {
             🏢 Parque de Balanzas e Instrumentos
           </h1>
           <p className="muted" style={{ margin: "4px 0 0", fontSize: "0.92rem" }}>
-            Ficha técnica metrológica, vinculación con clientes y plantas, capacidades nominales e historial de calibraciones
+            Ficha técnica metrológica conforme a <strong>Res. 25/2025 (OIML R 76-1)</strong> y <strong>Res. 2307/80 (SIMELA)</strong>
           </p>
         </div>
 
@@ -417,7 +446,7 @@ export function MetrologyEquipmentPage() {
       {/* Filters */}
       <div className="card pad" style={{ marginBottom: 20 }}>
         <form onSubmit={handleSearchSubmit} style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ flex: 1, minWidth: 280 }}>
+          <div style={{ flex: 1, minWidth: 260 }}>
             <input
               type="text"
               placeholder="Buscar por código, descripción, cliente, marca o Nº serie..."
@@ -426,7 +455,7 @@ export function MetrologyEquipmentPage() {
             />
           </div>
 
-          <div style={{ width: 250 }}>
+          <div style={{ width: 220 }}>
             <select value={customerFilter} onChange={(e) => setCustomerFilter(e.target.value)}>
               <option value="">Todos los clientes ({customers.length})</option>
               {customers.map((c) => (
@@ -437,7 +466,15 @@ export function MetrologyEquipmentPage() {
             </select>
           </div>
 
-          <div style={{ width: 190 }}>
+          <div style={{ width: 200 }}>
+            <select value={standardFilter} onChange={(e) => setStandardFilter(e.target.value)}>
+              <option value="">Todas las normativas</option>
+              <option value="Res25_2025">Res. 25/2025 (OIML R 76-1)</option>
+              <option value="Res2307_80">Res. 2307/80 (SIMELA)</option>
+            </select>
+          </div>
+
+          <div style={{ width: 170 }}>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">Todos los estados</option>
               <option value="Active">Operativas (Activas)</option>
@@ -456,7 +493,7 @@ export function MetrologyEquipmentPage() {
       <div className="card pad">
         {loading ? (
           <div className="muted" style={{ padding: 30, textAlign: "center" }}>Cargando parque de instrumentos...</div>
-        ) : equipments.length === 0 ? (
+        ) : filteredEquipments.length === 0 ? (
           <div className="muted" style={{ padding: 36, textAlign: "center" }}>
             No se encontraron balanzas o instrumentos registrados.
           </div>
@@ -465,8 +502,9 @@ export function MetrologyEquipmentPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Código</th>
-                  <th>Descripción / Marca</th>
+                  <th>Código / S/N</th>
+                  <th>Descripción / Tipo</th>
+                  <th>Resolución & Aprobación</th>
                   <th>Cliente & Planta</th>
                   <th>Capacidad (Max / Min)</th>
                   <th>Escalón (e / d)</th>
@@ -477,8 +515,9 @@ export function MetrologyEquipmentPage() {
                 </tr>
               </thead>
               <tbody>
-                {equipments.map((eq) => {
+                {filteredEquipments.map((eq) => {
                   const isExpired = eq.nextCalibrationDate && new Date(eq.nextCalibrationDate) < new Date();
+                  const isRes25 = eq.applicableStandard !== "Res2307_80";
                   return (
                     <tr key={eq.id}>
                       <td>
@@ -490,8 +529,27 @@ export function MetrologyEquipmentPage() {
                       <td>
                         <strong style={{ fontSize: "0.92rem" }}>{eq.description}</strong>
                         <div className="muted" style={{ fontSize: "0.8rem" }}>
-                          {eq.brand} {eq.model} • {eq.loadCellsCount} apoyos/celdas
+                          {eq.brand} {eq.model} • {eq.loadCellsCount} apoyos ({eq.platformType === "TruckScale" ? "Camionera" : eq.platformType === "Platform" ? "Plataforma" : eq.platformType === "Hopper" ? "Tolva" : "Comercial"})
                         </div>
+                      </td>
+                      <td>
+                        <span style={{
+                          display: "inline-block",
+                          padding: "2px 8px",
+                          borderRadius: 6,
+                          fontSize: "0.78rem",
+                          fontWeight: 800,
+                          background: isRes25 ? "rgba(13, 148, 136, 0.12)" : "rgba(71, 85, 105, 0.12)",
+                          color: isRes25 ? "#0f766e" : "#334155",
+                          border: `1px solid ${isRes25 ? "rgba(13, 148, 136, 0.3)" : "rgba(71, 85, 105, 0.3)"}`
+                        }}>
+                          {isRes25 ? "Res. 25/2025 (OIML)" : "Res. 2307/80 (SIMELA)"}
+                        </span>
+                        {eq.approvalCode && (
+                          <div className="muted" style={{ fontSize: "0.75rem", marginTop: 2 }}>
+                            Aprob: {eq.approvalCode}
+                          </div>
+                        )}
                       </td>
                       <td>
                         {eq.customerId ? (
@@ -551,16 +609,16 @@ export function MetrologyEquipmentPage() {
         )}
       </div>
 
-      {/* Modal Principal Alta / Edición de Balanza - Amplio y Cómodo */}
+      {/* Modal Principal Alta / Edición de Balanza - Amplio, Dinámico e Inteligente */}
       {showModal && (
         <div className="modal-backdrop" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div className="modal-card" style={{ maxWidth: 980, width: "100%", maxHeight: "92vh", overflowY: "auto", padding: "24px 28px", borderRadius: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, borderBottom: "1px solid var(--surface-border)", paddingBottom: 12 }}>
+          <div className="modal-card" style={{ maxWidth: 1020, width: "100%", maxHeight: "94vh", overflowY: "auto", padding: "26px 32px", borderRadius: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, borderBottom: "1px solid var(--surface-border)", paddingBottom: 14 }}>
               <div>
-                <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.72rem" }}>
-                  Ficha Técnica Metrológica
+                <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.74rem" }}>
+                  Ficha Técnica Metrológica Legal
                 </span>
-                <h2 style={{ margin: "2px 0 0", fontSize: "1.4rem", fontWeight: 800 }}>
+                <h2 style={{ margin: "2px 0 0", fontSize: "1.45rem", fontWeight: 800 }}>
                   {editingId ? "✏️ Modificar Ficha de Balanza" : "➕ Registrar Nueva Balanza / Instrumento"}
                 </h2>
               </div>
@@ -569,12 +627,12 @@ export function MetrologyEquipmentPage() {
 
             {error && <div className="alert" style={{ marginBottom: 18 }}>{error}</div>}
 
-            <form onSubmit={handleSave} style={{ display: "grid", gap: 18 }}>
+            <form onSubmit={handleSave} style={{ display: "grid", gap: 20 }}>
               {/* Sección 1: Cliente y Planta */}
-              <div style={{ background: "rgba(15, 23, 42, 0.02)", padding: "18px 20px", borderRadius: 12, border: "1px solid var(--surface-border)" }}>
+              <div style={{ background: "rgba(15, 23, 42, 0.02)", padding: "18px 22px", borderRadius: 12, border: "1px solid var(--surface-border)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                   <h4 style={{ margin: 0, fontSize: "0.92rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ink)", fontWeight: 800 }}>
-                    🏢 Asignación de Cliente & Planta
+                    1️⃣ Cliente & Planta Propietaria
                   </h4>
                   <button
                     type="button"
@@ -599,7 +657,7 @@ export function MetrologyEquipmentPage() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 16 }}>
                   <label>
-                    <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Cliente / Empresa Propietaria</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Cliente / Empresa</span>
                     <select
                       value={customerId}
                       onChange={(e) => handleSelectCustomer(e.target.value)}
@@ -656,6 +714,7 @@ export function MetrologyEquipmentPage() {
                             }
                           }
                         }}
+                        style={{ marginTop: 6 }}
                       >
                         {selectedCustomerDetail.locations.map((l) => (
                           <option key={l.id} value={l.id}>
@@ -670,13 +729,117 @@ export function MetrologyEquipmentPage() {
                         placeholder="ej. Planta Acopio Silos 1 - Ingreso de Camiones"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
+                        style={{ marginTop: 6 }}
                       />
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Sección 2: Identificación del Instrumento */}
+              {/* Sección 2: MARCO NORMATIVO APLICABLE (SELECTOR DINÁMICO) */}
+              <div style={{ background: "rgba(13, 148, 136, 0.05)", padding: "18px 22px", borderRadius: 12, border: "1.5px solid rgba(13, 148, 136, 0.25)" }}>
+                <div style={{ marginBottom: 12 }}>
+                  <h4 style={{ margin: 0, fontSize: "0.92rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "#0f766e", fontWeight: 800 }}>
+                    2️⃣ Marco Normativo Aplicable
+                  </h4>
+                  <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.82rem" }}>
+                    Seleccione la resolución metrológica que rige la aprobación de modelo y los ensayos de este instrumento
+                  </p>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
+                  {/* Tarjeta Res 25/2025 */}
+                  <div
+                    onClick={() => setApplicableStandard("Res25_2025")}
+                    style={{
+                      border: `2px solid ${applicableStandard === "Res25_2025" ? "#0d9488" : "var(--surface-border)"}`,
+                      background: applicableStandard === "Res25_2025" ? "#ffffff" : "rgba(255, 255, 255, 0.6)",
+                      boxShadow: applicableStandard === "Res25_2025" ? "0 4px 14px rgba(13, 148, 136, 0.15)" : "none",
+                      padding: 16,
+                      borderRadius: 10,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <strong style={{ fontSize: "1rem", color: applicableStandard === "Res25_2025" ? "#0f766e" : "inherit" }}>
+                        ⚖️ Resolución SIyC Nº 25/2025
+                      </strong>
+                      <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 12, background: "#ccfbf1", color: "#0f766e", fontWeight: 800 }}>
+                        Armonizada OIML R 76-1
+                      </span>
+                    </div>
+                    <div className="muted" style={{ fontSize: "0.8rem", lineHeight: 1.4 }}>
+                      • Tolerancia: <strong>Error Máximo Permitido (emp)</strong><br />
+                      • Periodicidad: <strong>24 meses</strong> (Art. 5º)<br />
+                      • Excentricidad: Carga <strong>1/(N-1)</strong> de Capacidad Máxima<br />
+                      • Ensayos: Repetibilidad, Excentricidad, Linealidad e Incertidumbre U (k=2)
+                    </div>
+                  </div>
+
+                  {/* Tarjeta Res 2307/80 */}
+                  <div
+                    onClick={() => setApplicableStandard("Res2307_80")}
+                    style={{
+                      border: `2px solid ${applicableStandard === "Res2307_80" ? "#475569" : "var(--surface-border)"}`,
+                      background: applicableStandard === "Res2307_80" ? "#ffffff" : "rgba(255, 255, 255, 0.6)",
+                      boxShadow: applicableStandard === "Res2307_80" ? "0 4px 14px rgba(71, 85, 105, 0.15)" : "none",
+                      padding: 16,
+                      borderRadius: 10,
+                      cursor: "pointer",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <strong style={{ fontSize: "1rem", color: applicableStandard === "Res2307_80" ? "#334155" : "inherit" }}>
+                        🏛️ Resolución SCyNEI Nº 2307/1980
+                      </strong>
+                      <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 12, background: "#f1f5f9", color: "#475569", fontWeight: 800 }}>
+                        Régimen Histórico SIMELA
+                      </span>
+                    </div>
+                    <div className="muted" style={{ fontSize: "0.8rem", lineHeight: 1.4 }}>
+                      • Tolerancia: <strong>Error Máximo Tolerado (EMT)</strong><br />
+                      • Vigencia de uso para usuarios: <strong>10 años</strong> (Art. 6º Res 25/25)<br />
+                      • Excentricidad: Carga <strong>1/N</strong> sobre puntos de apoyo<br />
+                      • Ensayos: Fidelidad, Sensibilidad, Movilidad y Excentricidad
+                    </div>
+                  </div>
+                </div>
+
+                {/* Campos Dinámicos de Aprobación y Tipo de Receptor */}
+                <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 16 }}>
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>
+                      {applicableStandard === "Res25_2025" ? "Nº Certificado Aprobación OIML / Res. 25" : "Código Aprobación de Modelo Nacional (ex SCT/SCI)"}
+                    </span>
+                    <input
+                      type="text"
+                      placeholder={applicableStandard === "Res25_2025" ? "ej. RESOL-2025-25-APN-SIYC#MEC o Cert. OIML R76/2006-A-AR1" : "ej. DNH-1450/84 o SCT-204/05"}
+                      value={approvalCode}
+                      onChange={(e) => setApprovalCode(e.target.value)}
+                      style={{ marginTop: 6 }}
+                    />
+                  </label>
+
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Tipo de Receptor / Plataforma</span>
+                    <select
+                      value={platformType}
+                      onChange={(e) => setPlatformType(e.target.value as any)}
+                      style={{ marginTop: 6 }}
+                    >
+                      <option value="TruckScale">🚚 Balanza Camionera (Carga rodante)</option>
+                      <option value="Platform">📦 Plataforma Fija Industrial (≤ 4 apoyos)</option>
+                      <option value="Hopper">🌾 Tolva / Tanque Suspendido de Acopio</option>
+                      <option value="Suspended">🏗️ Balanza Colgante / Grúa</option>
+                      <option value="Counter">🏪 Balanza de Mostrador / Comercial (≤ 30 kg)</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              {/* Sección 3: Identificación del Instrumento */}
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 2fr", gap: 14 }}>
                 <label>
                   <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Código / Identificador Interno *</span>
@@ -706,7 +869,7 @@ export function MetrologyEquipmentPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
                 <label>
                   <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Marca</span>
-                  <input type="text" placeholder="ej. Systel / Toledo" value={brand} onChange={(e) => setBrand(e.target.value)} style={{ marginTop: 4 }} />
+                  <input type="text" placeholder="ej. Systel / Toledo / Brapenta" value={brand} onChange={(e) => setBrand(e.target.value)} style={{ marginTop: 4 }} />
                 </label>
 
                 <label>
@@ -720,11 +883,16 @@ export function MetrologyEquipmentPage() {
                 </label>
               </div>
 
-              {/* Sección 3: Parámetros Metrológicos OIML R 76-1 */}
-              <div style={{ background: "rgba(13, 148, 136, 0.04)", padding: "18px 20px", borderRadius: 12, border: "1px solid rgba(13, 148, 136, 0.2)" }}>
-                <h4 style={{ margin: "0 0 14px", color: "#0d9488", fontSize: "0.92rem", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 800 }}>
-                  📐 Parámetros Metrológicos OIML R 76-1 & Res. 67/2025
-                </h4>
+              {/* Sección 4: Parámetros Metrológicos Dinámicos */}
+              <div style={{ background: "rgba(15, 23, 42, 0.02)", padding: "18px 22px", borderRadius: 12, border: "1px solid var(--surface-border)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <h4 style={{ margin: 0, color: "var(--ink)", fontSize: "0.92rem", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 800 }}>
+                    3️⃣ Parámetros Técnicos & Metrológicos ({applicableStandard === "Res25_2025" ? "OIML R 76-1" : "SIMELA"})
+                  </h4>
+                  <span style={{ fontSize: "0.82rem", color: "#0d9488", fontWeight: 700 }}>
+                    Excentricidad: Carga ensayo = <strong>{calcEccLoad.toLocaleString("es-AR")} {unit}</strong>
+                  </span>
+                </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 14 }}>
                   <label>
@@ -743,7 +911,9 @@ export function MetrologyEquipmentPage() {
                   </label>
 
                   <label>
-                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>División (d) *</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>
+                      {applicableStandard === "Res25_2025" ? "División real (d) *" : "División (d / dd) *"}
+                    </span>
                     <input type="number" step="0.0001" min="0.0001" required value={divisionD} onChange={(e) => setDivisionD(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
                 </div>
@@ -760,32 +930,34 @@ export function MetrologyEquipmentPage() {
                   </label>
 
                   <label>
-                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Clase de Exactitud</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>
+                      {applicableStandard === "Res25_2025" ? "Clase de Exactitud" : "Clase de Precisión"}
+                    </span>
                     <select value={accuracyClass} onChange={(e) => setAccuracyClass(e.target.value)} style={{ marginTop: 4 }}>
-                      <option value="I">Clase I (Especial)</option>
-                      <option value="II">Clase II (Fina)</option>
-                      <option value="III">Clase III (Media - Estándar)</option>
-                      <option value="IIII">Clase IIII (Ordinaria)</option>
+                      <option value="I">{applicableStandard === "Res25_2025" ? "Clase I (Especial)" : "Clase I (Precisión Especial)"}</option>
+                      <option value="II">{applicableStandard === "Res25_2025" ? "Clase II (Alta / Fina)" : "Clase II (Precisión Fina)"}</option>
+                      <option value="III">{applicableStandard === "Res25_2025" ? "Clase III (Media - Estándar)" : "Clase III (Precisión Media)"}</option>
+                      <option value="IIII">{applicableStandard === "Res25_2025" ? "Clase IIII (Ordinaria)" : "Clase IIII (Precisión Ordinaria)"}</option>
                     </select>
                   </label>
 
                   <label>
-                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Apoyos / Celdas</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Apoyos / Celdas (N)</span>
                     <input type="number" step="1" min="1" max="16" value={loadCellsCount} onChange={(e) => setLoadCellsCount(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
 
                   <label>
                     <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Tipo de Indicación</span>
                     <select value={indicationType} onChange={(e) => setIndicationType(e.target.value)} style={{ marginTop: 4 }}>
-                      <option value="Digital">Digital</option>
-                      <option value="Analógica">Analógica / Mecánica</option>
+                      <option value="Digital">Digital (Discontinua)</option>
+                      <option value="Analógica">Analógica (Continua / Cuadrante)</option>
                       <option value="Impresora">Con Dispositivo Impresor</option>
                     </select>
                   </label>
                 </div>
               </div>
 
-              {/* Sección 4: Observaciones */}
+              {/* Sección 5: Observaciones */}
               <label>
                 <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Observaciones / Notas Técnicas & Precintos</span>
                 <textarea rows={3} placeholder="Detalles de instalación, cabezal indicador, precintos de seguridad colocados, etc." value={notes} onChange={(e) => setNotes(e.target.value)} style={{ marginTop: 4 }} />

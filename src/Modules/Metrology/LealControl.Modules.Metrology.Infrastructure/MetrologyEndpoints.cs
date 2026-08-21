@@ -38,7 +38,6 @@ public static class MetrologyEndpoints
         group.MapGet("/dashboard", async (ITenantContext tenantContext, MetrologyDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
-            await db.SeedDefaultMetrologyDataAsync(tenantId, ct);
 
             var totalEquipments = await db.Equipments.CountAsync(e => e.TenantId == tenantId, ct);
             var activeEquipments = await db.Equipments.CountAsync(e => e.TenantId == tenantId && e.Status == "Active", ct);
@@ -58,38 +57,51 @@ public static class MetrologyEndpoints
 
             return Results.Ok(new
             {
-                Equipments = new { Total = totalEquipments, Active = activeEquipments, Expired = expiredCalibrations },
-                Weights = new { Total = totalWeights, Valid = validWeights, Expired = expiredWeights },
-                Reports = new { Total = totalReports, Recent = recentReports }
+                Stats = new
+                {
+                    TotalEquipments = totalEquipments,
+                    ActiveEquipments = activeEquipments,
+                    ExpiredCalibrations = expiredCalibrations,
+                    TotalWeights = totalWeights,
+                    ValidWeights = validWeights,
+                    ExpiredWeights = expiredWeights,
+                    TotalReports = totalReports
+                },
+                RecentReports = recentReports
             });
         });
 
         // ====================================================================
-        // 2. Parque de Instrumentos / Balanzas (Equipment)
+        // 2. Equipos e Instrumentos de Pesar (CRUD)
         // ====================================================================
         group.MapGet("/equipment", async (
             [FromQuery] string? search,
-            [FromQuery] Guid? customerId,
             [FromQuery] string? status,
+            [FromQuery] Guid? customerId,
             ITenantContext tenantContext,
             MetrologyDbContext db,
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
-            await db.SeedDefaultMetrologyDataAsync(tenantId, ct);
-
             var query = db.Equipments.AsNoTracking().Where(e => e.TenantId == tenantId);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                var s = search.Trim().ToLowerInvariant();
+                var term = search.Trim().ToLower();
                 query = query.Where(e =>
-                    e.Code.ToLower().Contains(s) ||
-                    e.Description.ToLower().Contains(s) ||
-                    e.Brand.ToLower().Contains(s) ||
-                    e.Model.ToLower().Contains(s) ||
-                    e.SerialNumber.ToLower().Contains(s) ||
-                    e.CustomerName.ToLower().Contains(s));
+                    e.Code.ToLower().Contains(term) ||
+                    e.Description.ToLower().Contains(term) ||
+                    e.Brand.ToLower().Contains(term) ||
+                    e.Model.ToLower().Contains(term) ||
+                    e.SerialNumber.ToLower().Contains(term) ||
+                    e.CustomerName.ToLower().Contains(term) ||
+                    e.Location.ToLower().Contains(term) ||
+                    e.ApprovalCode.ToLower().Contains(term));
+            }
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(e => e.Status == status.Trim());
             }
 
             if (customerId.HasValue && customerId.Value != Guid.Empty)
@@ -97,13 +109,8 @@ public static class MetrologyEndpoints
                 query = query.Where(e => e.CustomerId == customerId.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(status))
-            {
-                query = query.Where(e => e.Status.ToLower() == status.Trim().ToLower());
-            }
-
-            var list = await query.OrderBy(e => e.Code).ToListAsync(ct);
-            return Results.Ok(list);
+            var items = await query.OrderBy(e => e.Code).ToListAsync(ct);
+            return Results.Ok(items);
         });
 
         group.MapGet("/equipment/{id:guid}", async (Guid id, ITenantContext tenantContext, MetrologyDbContext db, CancellationToken ct) =>
@@ -114,7 +121,7 @@ public static class MetrologyEndpoints
 
             var reportsHistory = await db.CalibrationReports
                 .AsNoTracking()
-                .Where(r => r.TenantId == tenantId && r.EquipmentId == id)
+                .Where(r => r.EquipmentId == id && r.TenantId == tenantId)
                 .OrderByDescending(r => r.CalibrationDate)
                 .ToListAsync(ct);
 
@@ -126,7 +133,7 @@ public static class MetrologyEndpoints
         });
 
         group.MapPost("/equipment", async (
-            CreateEquipmentRequest req,
+            MetrologyEquipmentWriteDto req,
             ITenantContext tenantContext,
             MetrologyDbContext db,
             CancellationToken ct) =>
@@ -154,6 +161,9 @@ public static class MetrologyEndpoints
                 req.CustomerId,
                 req.CustomerName?.Trim() ?? "",
                 req.Location?.Trim() ?? "",
+                req.ApplicableStandard ?? "Res25_2025",
+                req.ApprovalCode?.Trim() ?? "",
+                req.PlatformType ?? "TruckScale",
                 req.MaxCapacity,
                 req.MinCapacity,
                 req.DivisionD,
@@ -176,7 +186,7 @@ public static class MetrologyEndpoints
 
         group.MapPut("/equipment/{id:guid}", async (
             Guid id,
-            UpdateEquipmentRequest req,
+            MetrologyEquipmentWriteDto req,
             ITenantContext tenantContext,
             MetrologyDbContext db,
             CancellationToken ct) =>
@@ -202,6 +212,9 @@ public static class MetrologyEndpoints
             equipment.CustomerId = req.CustomerId;
             equipment.CustomerName = req.CustomerName?.Trim() ?? "";
             equipment.Location = req.Location?.Trim() ?? "";
+            equipment.ApplicableStandard = string.IsNullOrWhiteSpace(req.ApplicableStandard) ? "Res25_2025" : req.ApplicableStandard;
+            equipment.ApprovalCode = req.ApprovalCode?.Trim() ?? "";
+            equipment.PlatformType = string.IsNullOrWhiteSpace(req.PlatformType) ? "TruckScale" : req.PlatformType;
             equipment.MaxCapacity = req.MaxCapacity;
             equipment.MinCapacity = req.MinCapacity;
             equipment.DivisionD = req.DivisionD;
@@ -211,7 +224,6 @@ public static class MetrologyEndpoints
             if (!string.IsNullOrWhiteSpace(req.IndicationType)) equipment.IndicationType = req.IndicationType.Trim();
             if (req.LoadCellsCount > 0) equipment.LoadCellsCount = req.LoadCellsCount;
             equipment.HasTare = req.HasTare;
-            if (!string.IsNullOrWhiteSpace(req.Status)) equipment.Status = req.Status.Trim();
             equipment.Notes = req.Notes;
 
             await db.SaveChangesAsync(ct);
@@ -224,46 +236,45 @@ public static class MetrologyEndpoints
             var equipment = await db.Equipments.FirstOrDefaultAsync(e => e.Id == id && e.TenantId == tenantId, ct);
             if (equipment == null) return Results.NotFound(new { message = "Instrumento no encontrado." });
 
-            var hasReports = await db.CalibrationReports.AnyAsync(r => r.TenantId == tenantId && r.EquipmentId == id, ct);
-            if (hasReports)
-            {
-                return Results.BadRequest(new { message = $"No se puede eliminar el instrumento '{equipment.Code}' porque tiene certificados de calibración asociados. Puede cambiar su estado a 'Fuera de Servicio'." });
-            }
-
             db.Equipments.Remove(equipment);
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { message = "Instrumento eliminado correctamente." });
         });
 
         // ====================================================================
-        // 3. Padrón de Pesas Patrón (Standard Weights)
+        // 3. Pesas Patrón & Trazabilidad INTI (CRUD)
         // ====================================================================
-        group.MapGet("/weights", async (ITenantContext tenantContext, MetrologyDbContext db, CancellationToken ct) =>
+        group.MapGet("/weights", async (
+            [FromQuery] string? search,
+            [FromQuery] string? status,
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
-            await db.SeedDefaultMetrologyDataAsync(tenantId, ct);
+            var query = db.StandardWeights.AsNoTracking().Where(w => w.TenantId == tenantId);
 
-            var weights = await db.StandardWeights
-                .AsNoTracking()
-                .Where(w => w.TenantId == tenantId)
-                .OrderBy(w => w.NominalValue)
-                .ThenBy(w => w.Code)
-                .ToListAsync(ct);
-
-            // Auto-update status if expired
-            foreach (var w in weights)
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                if (w.ExpirationDate.HasValue && w.ExpirationDate.Value < DateTime.UtcNow)
-                {
-                    w.Status = "Expired";
-                }
+                var term = search.Trim().ToLower();
+                query = query.Where(w =>
+                    w.Code.ToLower().Contains(term) ||
+                    w.SerialNumber.ToLower().Contains(term) ||
+                    w.CertificateNumber.ToLower().Contains(term) ||
+                    w.TraceabilityLab.ToLower().Contains(term));
             }
 
-            return Results.Ok(weights);
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(w => w.Status == status.Trim());
+            }
+
+            var items = await query.OrderBy(w => w.NominalValue).ToListAsync(ct);
+            return Results.Ok(items);
         });
 
         group.MapPost("/weights", async (
-            CreateStandardWeightRequest req,
+            StandardWeightWriteDto req,
             ITenantContext tenantContext,
             MetrologyDbContext db,
             CancellationToken ct) =>
@@ -274,28 +285,23 @@ public static class MetrologyEndpoints
             }
 
             var tenantId = tenantContext.TenantId;
-            var exists = await db.StandardWeights.AnyAsync(w => w.TenantId == tenantId && w.Code == req.Code.Trim(), ct);
-            if (exists)
+            var weight = new StandardWeight
             {
-                return Results.BadRequest(new { message = $"Ya existe una pesa con el código '{req.Code}'." });
-            }
-
-            var weight = new StandardWeight(
-                Guid.NewGuid(),
-                tenantId,
-                req.Code.Trim(),
-                req.SerialNumber?.Trim() ?? "",
-                req.NominalValue,
-                req.Unit ?? "kg",
-                req.AccuracyClass ?? "M1",
-                req.Material ?? "Hierro Fundido",
-                req.ConventionalMassCorrection,
-                req.Uncertainty,
-                req.CertificateNumber?.Trim() ?? "",
-                req.TraceabilityLab ?? "INTI - Metrología Legal",
-                req.CalibrationDate,
-                req.ExpirationDate
-            );
+                TenantId = tenantId,
+                Code = req.Code.Trim(),
+                SerialNumber = req.SerialNumber?.Trim() ?? "",
+                NominalValue = req.NominalValue,
+                Unit = req.Unit ?? "kg",
+                AccuracyClass = req.AccuracyClass ?? "M1",
+                Material = req.Material ?? "Hierro Fundido",
+                ConventionalMassCorrection = req.ConventionalMassCorrection,
+                Uncertainty = req.Uncertainty,
+                CertificateNumber = req.CertificateNumber?.Trim() ?? "",
+                TraceabilityLab = req.TraceabilityLab ?? "INTI - Metrología Legal",
+                CalibrationDate = req.CalibrationDate,
+                ExpirationDate = req.ExpirationDate,
+                Notes = req.Notes
+            };
 
             db.StandardWeights.Add(weight);
             await db.SaveChangesAsync(ct);
@@ -317,45 +323,49 @@ public static class MetrologyEndpoints
         // ====================================================================
         // 4. Motor de Reglas & Cálculo Metrológico
         // ====================================================================
-        group.MapPost("/calculate-rules", (CalculateMetrologyRulesRequest req) =>
+        group.MapPost("/calculate-rules", (MetrologyRulesCalculationRequest req) =>
         {
+            var standard = string.IsNullOrWhiteSpace(req.StandardApplied) ? "Res25_2025" : req.StandardApplied;
+            var platformType = string.IsNullOrWhiteSpace(req.PlatformType) ? "TruckScale" : req.PlatformType;
+
             var points = MetrologyRuleEngine.GenerateLinearityTestPoints(
                 req.MinCapacity,
                 req.MaxCapacity,
                 req.VerificationIntervalE,
-                req.AccuracyClass
+                req.AccuracyClass,
+                req.IsInService,
+                standard
             );
 
             var eccentricity = MetrologyRuleEngine.GenerateEccentricityConfig(
                 req.MaxCapacity,
-                req.VerificationIntervalE,
                 req.LoadCellsCount,
-                req.AccuracyClass
+                req.Tare,
+                standard,
+                platformType
             );
 
-            var repeatabilityEmt = MetrologyRuleEngine.CalculateEMT(
-                req.MaxCapacity * 0.5m,
+            var errorTerm = standard == "Res2307_80" ? "EMT (Error Máximo Tolerado)" : "emp (Error Máximo Permitido)";
+            var repTerm = standard == "Res2307_80" ? "Ensayo de Fidelidad" : "Ensayo de Repetibilidad";
+            var totalDivisions = req.VerificationIntervalE > 0 ? (int)(req.MaxCapacity / req.VerificationIntervalE) : 0;
+
+            var response = new MetrologyRulesCalculationResponse(
+                standard,
+                errorTerm,
+                repTerm,
+                points,
+                eccentricity,
+                req.MinCapacity,
+                req.MaxCapacity,
                 req.VerificationIntervalE,
-                req.AccuracyClass,
-                isInService: true
+                totalDivisions
             );
 
-            return Results.Ok(new
-            {
-                LinearityPoints = points,
-                EccentricityConfig = eccentricity,
-                RepeatabilityConfig = new
-                {
-                    HalfMaxLoad = req.MaxCapacity * 0.5m,
-                    FullMaxLoad = req.MaxCapacity,
-                    Emt = repeatabilityEmt,
-                    RecommendedRepetitions = 3
-                }
-            });
+            return Results.Ok(response);
         });
 
         // ====================================================================
-        // 5. Informes & Certificados de Calibración
+        // 5. Certificados de Calibración & Ensayos Oficiales
         // ====================================================================
         group.MapGet("/reports", async (
             [FromQuery] Guid? equipmentId,
@@ -377,8 +387,8 @@ public static class MetrologyEndpoints
                 query = query.Where(r => r.CustomerId == customerId.Value);
             }
 
-            var list = await query.OrderByDescending(r => r.CalibrationDate).ToListAsync(ct);
-            return Results.Ok(list);
+            var items = await query.OrderByDescending(r => r.CalibrationDate).ToListAsync(ct);
+            return Results.Ok(items);
         });
 
         group.MapGet("/reports/{id:guid}", async (Guid id, ITenantContext tenantContext, MetrologyDbContext db, CancellationToken ct) =>
@@ -397,7 +407,7 @@ public static class MetrologyEndpoints
         });
 
         group.MapPost("/reports", async (
-            SaveCalibrationReportRequest req,
+            CalibrationReportWriteDto req,
             ITenantContext tenantContext,
             MetrologyDbContext db,
             CancellationToken ct) =>
@@ -411,41 +421,43 @@ public static class MetrologyEndpoints
                 .Where(r => r.TenantId == tenantId && r.CalibrationDate.Year == req.CalibrationDate.Year)
                 .CountAsync(ct) + 1;
 
-            var reportNumber = !string.IsNullOrWhiteSpace(req.ReportNumber)
-                ? req.ReportNumber.Trim()
-                : $"CAL-{req.CalibrationDate.Year}-{maxReportNum:D4}";
+            var standard = !string.IsNullOrWhiteSpace(req.StandardApplied) ? req.StandardApplied : equipment.ApplicableStandard;
+            var certNumber = !string.IsNullOrWhiteSpace(req.CertificateNumber)
+                ? req.CertificateNumber.Trim()
+                : $"CERT-{req.CalibrationDate.Year}-{maxReportNum:D4}";
+
+            var defaultValidityMonths = standard == "Res25_2025" ? 24 : 12;
 
             var report = new CalibrationReport
             {
                 TenantId = tenantId,
-                ReportNumber = reportNumber,
-                CertificateType = req.CertificateType ?? "Ensayo Oficial Res. 67/2025",
-                NormativeApplied = req.NormativeApplied ?? "Resolución 67/2025 (OIML R 76-1)",
+                CertificateNumber = certNumber,
                 EquipmentId = equipment.Id,
                 EquipmentCode = equipment.Code,
                 EquipmentDescription = equipment.Description,
-                CustomerId = req.CustomerId ?? equipment.CustomerId,
-                CustomerName = !string.IsNullOrWhiteSpace(req.CustomerName) ? req.CustomerName : equipment.CustomerName,
-                CustomerAddress = req.CustomerAddress ?? "",
-                CustomerCuit = req.CustomerCuit ?? "",
-                Location = !string.IsNullOrWhiteSpace(req.Location) ? req.Location : equipment.Location,
+                CustomerId = equipment.CustomerId,
+                CustomerName = equipment.CustomerName,
+                Location = equipment.Location,
+                StandardApplied = standard,
+                CalibrationType = req.CalibrationType ?? "InService",
                 CalibrationDate = req.CalibrationDate,
-                NextCalibrationDate = req.NextCalibrationDate ?? req.CalibrationDate.AddYears(1),
+                ExpirationDate = req.ExpirationDate ?? req.CalibrationDate.AddMonths(defaultValidityMonths),
+                TemperatureCelsius = req.TemperatureCelsius,
+                RelativeHumidityPercent = req.RelativeHumidityPercent,
+                AtmosphericPressureHpa = req.AtmosphericPressureHpa,
                 PerformedBy = req.PerformedBy?.Trim() ?? "Metrólogo Autorizado",
-                AmbientTemperature = req.AmbientTemperature,
-                AmbientHumidity = req.AmbientHumidity,
-                AtmosphericPressure = req.AtmosphericPressure,
-                InitialInspectionPassed = req.InitialInspectionPassed,
-                InspectionNotes = req.InspectionNotes,
-                RepeatabilityDataJson = req.RepeatabilityDataJson ?? "[]",
-                EccentricityDataJson = req.EccentricityDataJson ?? "[]",
-                LinearityDataJson = req.LinearityDataJson ?? "[]",
-                UncertaintyDataJson = req.UncertaintyDataJson ?? "{}",
+                ApprovedBy = req.ApprovedBy?.Trim() ?? "",
+                Verdict = req.Verdict ?? "Approved",
+                MaxObservedError = req.MaxObservedError,
+                MaxAllowedError = req.MaxAllowedError,
+                ExpandedUncertaintyK2 = req.ExpandedUncertaintyK2,
+                VisualInspectionJson = req.VisualInspectionJson ?? "{}",
+                RepeatabilityTestJson = req.RepeatabilityTestJson ?? "[]",
+                EccentricityTestJson = req.EccentricityTestJson ?? "[]",
+                LinearityTestJson = req.LinearityTestJson ?? "[]",
                 WeightsUsedJson = req.WeightsUsedJson ?? "[]",
-                ExpandedUncertainty = req.ExpandedUncertainty,
-                Result = req.Result ?? "Apto",
                 Observations = req.Observations,
-                Status = req.Status ?? "Issued",
+                SealsPlaced = req.SealsPlaced,
                 CreatedAtUtc = DateTime.UtcNow
             };
 
@@ -453,8 +465,8 @@ public static class MetrologyEndpoints
 
             // Update equipment calibration dates
             equipment.LastCalibrationDate = report.CalibrationDate;
-            equipment.NextCalibrationDate = report.NextCalibrationDate;
-            equipment.Status = report.Result == "Apto" ? "Active" : "Maintenance";
+            equipment.NextCalibrationDate = report.ExpirationDate;
+            equipment.Status = report.Verdict == "Approved" ? "Active" : "Maintenance";
 
             await db.SaveChangesAsync(ct);
 

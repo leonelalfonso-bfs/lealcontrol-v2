@@ -7,14 +7,14 @@ namespace LealControl.Modules.Metrology.Infrastructure;
 public static class MetrologyRuleEngine
 {
     /// <summary>
-    /// Calcula el Error Máximo Tolerado (EMT) para una carga dada según la clase y el escalón de verificación e.
-    /// Basado en OIML R 76-1 y Resolución 67/2025 (Ensayos de Verificación Inicial y Periódica).
+    /// Calcula el Error Máximo Tolerado (EMT / emp) para una carga dada según la clase, el escalón e, y la resolución aplicable.
+    /// Res. 2307/80 (EMT) vs Res. 25/2025 (emp OIML R 76-1).
     /// </summary>
-    public static decimal CalculateEMT(decimal load, decimal e, string accuracyClass = "III", bool isInService = true)
+    public static decimal CalculateEMT(decimal load, decimal e, string accuracyClass = "III", bool isInService = true, string standard = "Res25_2025")
     {
         if (e <= 0) return 0;
         var n = load / e; // Número de escalones de verificación
-        var factor = isInService ? 2.0m : 1.0m; // En servicio el EMT es el doble que en verificación inicial
+        var factor = isInService ? 2.0m : 1.0m; // En servicio el EMT/emp es el doble que en verificación inicial/primitiva
 
         decimal baseEmt;
         var accClass = accuracyClass.ToUpperInvariant();
@@ -53,149 +53,147 @@ public static class MetrologyRuleEngine
     /// <summary>
     /// Genera la matriz de puntos de ensayo de Linealidad/Pesaje recomendados.
     /// </summary>
-    public static List<MetrologyTestPointDto> GenerateLinearityTestPoints(decimal minCapacity, decimal maxCapacity, decimal e, string accuracyClass = "III")
+    public static List<MetrologyTestPointDto> GenerateLinearityTestPoints(
+        decimal minCapacity, 
+        decimal maxCapacity, 
+        decimal e, 
+        string accuracyClass = "III",
+        bool isInService = true,
+        string standard = "Res25_2025")
     {
         var points = new List<MetrologyTestPointDto>();
         if (maxCapacity <= 0 || e <= 0) return points;
 
-        var accClass = accuracyClass.ToUpperInvariant();
-        var candidateLoads = new SortedSet<decimal>();
+        var term = standard == "Res2307_80" ? "EMT" : "emp";
+        var norm = standard == "Res2307_80" ? "Res. 2307/80" : "Res. 25/2025";
 
-        // 1. Capacidad Mínima
-        candidateLoads.Add(minCapacity > 0 ? minCapacity : e * 20);
-
-        // 2. Puntos de cambio de escalón EMT
-        if (accClass == "III")
+        // Punto 1: Carga Mínima (Min)
+        if (minCapacity > 0)
         {
-            if (500 * e < maxCapacity) candidateLoads.Add(500 * e);
-            if (1000 * e < maxCapacity) candidateLoads.Add(1000 * e);
-            if (2000 * e < maxCapacity) candidateLoads.Add(2000 * e);
-        }
-        else if (accClass == "II")
-        {
-            if (5000 * e < maxCapacity) candidateLoads.Add(5000 * e);
-            if (20000 * e < maxCapacity) candidateLoads.Add(20000 * e);
-        }
-
-        // 3. Cargas intermedias (25%, 50%, 75%) y Capacidad Máxima (100%)
-        candidateLoads.Add(Math.Round(maxCapacity * 0.25m / e) * e);
-        candidateLoads.Add(Math.Round(maxCapacity * 0.50m / e) * e);
-        candidateLoads.Add(Math.Round(maxCapacity * 0.75m / e) * e);
-        candidateLoads.Add(maxCapacity);
-
-        int step = 1;
-        foreach (var load in candidateLoads.Where(l => l > 0 && l <= maxCapacity))
-        {
-            var emt = CalculateEMT(load, e, accuracyClass, isInService: true);
             points.Add(new MetrologyTestPointDto(
-                Step: step++,
-                TargetLoad: load,
-                Emt: emt,
-                MinAllowed: load - emt,
-                MaxAllowed: load + emt
+                minCapacity,
+                CalculateEMT(minCapacity, e, accuracyClass, isInService, standard),
+                $"{norm} - Capacidad Mínima ({term} = ±{CalculateEMT(minCapacity, e, accuracyClass, isInService, standard)} kg)"
             ));
         }
 
-        return points;
+        // Punto 2: Primer cambio de escalón (500e para Clase III)
+        var p500e = 500m * e;
+        if (p500e < maxCapacity && p500e > minCapacity)
+        {
+            points.Add(new MetrologyTestPointDto(
+                p500e,
+                CalculateEMT(p500e, e, accuracyClass, isInService, standard),
+                $"{norm} - Límite 500e ({term} = ±{CalculateEMT(p500e, e, accuracyClass, isInService, standard)} kg)"
+            ));
+        }
+
+        // Punto 3: Segundo cambio de escalón (2000e para Clase III)
+        var p2000e = 2000m * e;
+        if (p2000e < maxCapacity && p2000e > p500e)
+        {
+            points.Add(new MetrologyTestPointDto(
+                p2000e,
+                CalculateEMT(p2000e, e, accuracyClass, isInService, standard),
+                $"{norm} - Límite 2000e ({term} = ±{CalculateEMT(p2000e, e, accuracyClass, isInService, standard)} kg)"
+            ));
+        }
+
+        // Punto 4: 50% de Capacidad Máxima
+        var p50Max = Math.Round(maxCapacity * 0.5m, 2);
+        if (!points.Any(p => Math.Abs(p.NominalLoad - p50Max) < e))
+        {
+            points.Add(new MetrologyTestPointDto(
+                p50Max,
+                CalculateEMT(p50Max, e, accuracyClass, isInService, standard),
+                $"{norm} - 50% Capacidad Máxima ({term} = ±{CalculateEMT(p50Max, e, accuracyClass, isInService, standard)} kg)"
+            ));
+        }
+
+        // Punto 5: Capacidad Máxima (100% Max)
+        points.Add(new MetrologyTestPointDto(
+            maxCapacity,
+            CalculateEMT(maxCapacity, e, accuracyClass, isInService, standard),
+            $"{norm} - Capacidad Máxima ({term} = ±{CalculateEMT(maxCapacity, e, accuracyClass, isInService, standard)} kg)"
+        ));
+
+        return points.OrderBy(p => p.NominalLoad).ToList();
     }
 
     /// <summary>
-    /// Genera la configuración del ensayo de Excentricidad (Esquinas / Secciones de Celdas).
+    /// Configura el ensayo de Excentricidad según número de apoyos/celdas, tipo de plataforma y normativa aplicable.
+    /// Res. 2307/80 vs Res. 25/2025 (OIML R 76-1).
     /// </summary>
-    public static EccentricityConfigDto GenerateEccentricityConfig(decimal maxCapacity, decimal e, int loadCellsCount = 6, string accuracyClass = "III")
+    public static EccentricityConfigDto GenerateEccentricityConfig(
+        decimal maxCapacity, 
+        int loadCellsCount = 6, 
+        decimal tare = 0,
+        string standard = "Res25_2025",
+        string platformType = "TruckScale")
     {
-        // En instrumentos con N puntos de apoyo (celdas), la carga de excentricidad es Max / (N - 1).
-        // En receptores con 4 apoyos o menos, es Max / 3.
         decimal testLoad;
-        int positionsCount;
+        string ruleApplied;
+        var n = loadCellsCount > 0 ? loadCellsCount : 6;
+        var totalCap = maxCapacity + tare;
 
-        if (loadCellsCount <= 4)
+        if (standard == "Res2307_80")
         {
-            testLoad = Math.Round((maxCapacity / 3m) / e) * e;
-            positionsCount = 4; // 4 esquinas
+            if (platformType == "Hopper")
+            {
+                testLoad = Math.Round(totalCap / 10m, 2);
+                ruleApplied = "Res. 2307/80 Art. 13.4.1 (Tolva/Tanque: 1/10 de (Max + T))";
+            }
+            else if (platformType == "TruckScale" || platformType == "RollingLoad")
+            {
+                testLoad = Math.Round(totalCap / (decimal)n, 2);
+                ruleApplied = $"Res. 2307/80 Art. 13.4.2.1 (Carga rodante sobre apoyos: 1/{n} de (Max + T))";
+            }
+            else if (n <= 4)
+            {
+                testLoad = Math.Round(totalCap / 3m, 2);
+                ruleApplied = "Res. 2307/80 Art. 13.3 / 13.4.3 (Plataforma fija: 1/3 de (Max + T))";
+            }
+            else
+            {
+                testLoad = Math.Round(totalCap / (decimal)n, 2);
+                ruleApplied = $"Res. 2307/80 Art. 13.4.2.1 (1/{n} de (Max + T))";
+            }
+        }
+        else // Res. 25/2025 & OIML R 76-1
+        {
+            if (platformType == "Hopper")
+            {
+                testLoad = Math.Round(totalCap / 10m, 2);
+                ruleApplied = "Res. 25/2025 OIML R 76-1 3.6.2.3 (Tolva/Tanque: 1/10 de (Max + T+))";
+            }
+            else if (n > 4)
+            {
+                testLoad = Math.Round(totalCap / (decimal)(n - 1), 2);
+                ruleApplied = $"Res. 25/2025 OIML R 76-1 3.6.2.2 (n > 4 apoyos: 1/({n}-1) = 1/{n-1} de (Max + T+))";
+            }
+            else
+            {
+                testLoad = Math.Round(totalCap / 3m, 2);
+                ruleApplied = "Res. 25/2025 OIML R 76-1 3.6.2.1 (n ≤ 4 apoyos: 1/3 de (Max + T+))";
+            }
+        }
+
+        var positions = new List<string>();
+        if (platformType == "TruckScale" || n > 4)
+        {
+            for (int i = 1; i <= n; i++)
+            {
+                positions.Add($"Apoyo / Celda {i} (Punto {i})");
+            }
         }
         else
         {
-            testLoad = Math.Round((maxCapacity / (loadCellsCount - 1m)) / e) * e;
-            positionsCount = loadCellsCount; // 1 por cada celda/sección de balanza
+            positions.Add("Posición 1 (Centro / Cuadrante Frontal Izq)");
+            positions.Add("Posición 2 (Cuadrante Frontal Der)");
+            positions.Add("Posición 3 (Cuadrante Posterior Der)");
+            positions.Add("Posición 4 (Cuadrante Posterior Izq)");
         }
 
-        if (testLoad <= 0) testLoad = maxCapacity * 0.3m;
-        var emt = CalculateEMT(testLoad, e, accuracyClass, isInService: true);
-
-        return new EccentricityConfigDto(
-            TestLoad: testLoad,
-            PositionsCount: positionsCount,
-            Emt: emt,
-            Description: loadCellsCount > 4
-                ? $"Carga sobre cada uno de los {loadCellsCount} puntos de apoyo (secciones de celdas de carga)"
-                : "Carga en las 4 esquinas del receptor de carga"
-        );
-    }
-
-    /// <summary>
-    /// Calcula el resumen de Repetibilidad (desviación estándar y error máximo de fidelidad).
-    /// </summary>
-    public static RepeatabilitySummaryDto CalculateRepeatability(List<decimal> indications, decimal testLoad, decimal e, string accuracyClass = "III")
-    {
-        if (indications == null || indications.Count < 2)
-        {
-            return new RepeatabilitySummaryDto(0, 0, 0, 0, true);
-        }
-
-        var avg = indications.Average();
-        var max = indications.Max();
-        var min = indications.Min();
-        var range = max - min;
-
-        // Desviación estándar muestral
-        var sumSquares = indications.Sum(x => (x - avg) * (x - avg));
-        var stdDev = (decimal)Math.Sqrt((double)(sumSquares / (indications.Count - 1)));
-
-        var emt = CalculateEMT(testLoad, e, accuracyClass, isInService: true);
-        var isConform = range <= emt;
-
-        return new RepeatabilitySummaryDto(
-            Average: Math.Round(avg, 4),
-            RangeError: range,
-            StandardDeviation: Math.Round(stdDev, 4),
-            Emt: emt,
-            IsConform: isConform
-        );
-    }
-
-    /// <summary>
-    /// Calcula la Incertidumbre Expandida de Calibración U (k=2, nivel de confianza 95.45%).
-    /// </summary>
-    public static decimal CalculateExpandedUncertainty(
-        decimal standardWeightsUncertainty, // u(pesa)
-        decimal scaleDivisionD,             // d
-        decimal repeatabilityStdDev,        // s
-        decimal eccentricityMaxError        // e_exc
-    )
-    {
-        // 1. Incertidumbre de las pesas patrón u_pat = U_pat / 2
-        var uPat = (double)(standardWeightsUncertainty / 2m);
-
-        // 2. Incertidumbre por resolución del display u_res = d / (2 * sqrt(3))
-        var uRes = (double)scaleDivisionD / (2.0 * Math.Sqrt(3.0));
-
-        // 3. Incertidumbre por repetibilidad u_rep = s / sqrt(n) (suponiendo n=3)
-        var uRep = (double)repeatabilityStdDev / Math.Sqrt(3.0);
-
-        // 4. Incertidumbre por excentricidad u_exc = e_exc / (2 * sqrt(3))
-        var uExc = (double)eccentricityMaxError / (2.0 * Math.Sqrt(3.0));
-
-        // Incertidumbre combinada uc = sqrt(u_pat^2 + 2*u_res^2 + u_rep^2 + u_exc^2)
-        var uc = Math.Sqrt((uPat * uPat) + (2.0 * uRes * uRes) + (uRep * uRep) + (uExc * uExc));
-
-        // Incertidumbre expandida U = k * uc (con k = 2.0)
-        var expandedU = (decimal)(2.0 * uc);
-
-        return Math.Round(expandedU, 4);
+        return new EccentricityConfigDto(testLoad, n, positions, ruleApplied);
     }
 }
-
-public sealed record MetrologyTestPointDto(int Step, decimal TargetLoad, decimal Emt, decimal MinAllowed, decimal MaxAllowed);
-public sealed record EccentricityConfigDto(decimal TestLoad, int PositionsCount, decimal Emt, string Description);
-public sealed record RepeatabilitySummaryDto(decimal Average, decimal RangeError, decimal StandardDeviation, decimal Emt, bool IsConform);

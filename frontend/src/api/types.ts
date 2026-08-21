@@ -1491,6 +1491,9 @@ export type MetrologyEquipment = {
   customerId?: string | null;
   customerName?: string | null;
   location?: string | null;
+  applicableStandard: "Res25_2025" | "Res2307_80";
+  approvalCode?: string | null;
+  platformType: "TruckScale" | "Platform" | "Hopper" | "Suspended" | "Counter";
   maxCapacity: number;
   minCapacity: number;
   divisionD: number;
