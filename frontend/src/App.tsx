@@ -187,23 +187,21 @@ export function App() {
         {/* Main Body with Clean Sidebar */}
         <div className="app">
           <aside className="sidebar">
-            <div className="company-brand" style={{ flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
-                {companyLogo ? (
-                  <img src={companyLogo} alt={activeCompanyName} className="company-logo" />
-                ) : (
-                  <div className="company-logo-placeholder">{activeCompanyName.slice(0, 2).toUpperCase()}</div>
+            <div className="company-brand" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 6, padding: "8px 6px 12px", borderBottom: "1px solid var(--surface-border)" }}>
+              {companyLogo ? (
+                <img src={companyLogo} alt={activeCompanyName} style={{ maxHeight: "42px", maxWidth: "160px", objectFit: "contain", filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.15))" }} />
+              ) : (
+                <div className="company-logo-placeholder" style={{ margin: "0 auto" }}>{activeCompanyName.slice(0, 2).toUpperCase()}</div>
+              )}
+              <div style={{ width: "100%", marginTop: 2 }}>
+                <strong style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {activeCompanyName}
+                </strong>
+                {tenant?.documentNumber && (
+                  <span style={{ fontSize: "0.72rem", color: "var(--ink-soft)", letterSpacing: "0.02em" }}>
+                    CUIT {tenant.documentNumber}
+                  </span>
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <strong style={{ display: "block", fontSize: "0.9rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {activeCompanyName}
-                  </strong>
-                  {tenant?.documentNumber && (
-                    <span style={{ fontSize: "0.72rem", color: "var(--ink-soft)" }}>
-                      CUIT {tenant.documentNumber}
-                    </span>
-                  )}
-                </div>
               </div>
 
               {availableTenants.length > 1 && (
