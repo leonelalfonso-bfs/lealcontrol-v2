@@ -4,20 +4,26 @@ import { api } from "../../api/client";
 
 export function GeneralLedgerPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialAccount = searchParams.get("accountCode") || "1.1.01.002"; // Banco Galicia default
+  const initialAccount = searchParams.get("accountCode") || "1.1.01.002";
 
   const [accounts, setAccounts] = useState<any[]>([]);
   const [selectedAccountCode, setSelectedAccountCode] = useState(initialAccount);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const [ledgerData, setLedgerData] = useState<any>(null);
+  const [ledgerItem, setLedgerItem] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api.listAccounts()
-      .then((data) => setAccounts(data.filter((a) => a.isDirectPosting)))
+      .then((data) => {
+        const imputables = (data || []).filter((a: any) => a.isDirectPosting !== false);
+        setAccounts(imputables);
+        if (imputables.length > 0 && !selectedAccountCode) {
+          setSelectedAccountCode(imputables[0].code);
+        }
+      })
       .catch((err) => console.error(err));
   }, []);
 
@@ -29,8 +35,16 @@ export function GeneralLedgerPage() {
       startDate: startDate || undefined,
       endDate: endDate || undefined
     })
-      .then((data) => setLedgerData(data))
-      .catch((err) => setError(err.message))
+      .then((data: any) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setLedgerItem(data[0]);
+        } else if (data && !Array.isArray(data)) {
+          setLedgerItem(data);
+        } else {
+          setLedgerItem(null);
+        }
+      })
+      .catch((err) => setError(err?.message || "Error al cargar el Libro Mayor."))
       .finally(() => setLoading(false));
   };
 
@@ -45,42 +59,52 @@ export function GeneralLedgerPage() {
     setSearchParams({ accountCode: code });
   };
 
-  let runningBalance = 0;
-
   const handleExportCsv = () => {
-    if (!ledgerData || !ledgerData.entries || ledgerData.entries.length === 0) return;
-    const headers = "Cuenta_Codigo;Cuenta_Nombre;Fecha;Asiento;Concepto;Debe;Haber;Saldo_Acumulado;Centro_Costo";
-    let curBal = 0;
-    const rows = ledgerData.entries.map((e: any) => {
-      curBal += (Number(e.debit) || 0) - (Number(e.credit) || 0);
-      return `"${ledgerData.accountCode}";"${ledgerData.accountName.replace(/"/g, '""')}";${new Date(e.date).toLocaleDateString("es-AR")};${e.entryNumber};"${e.concept.replace(/"/g, '""')}";${e.debit || 0};${e.credit || 0};${curBal};"${e.costCenterCode || ""}"`;
+    if (!ledgerItem || !ledgerItem.movements || ledgerItem.movements.length === 0) return;
+    const acc = ledgerItem.account || {};
+    const headers = "Fecha;Asiento;Concepto;Origen;Centro_Costo;Debe;Haber;Saldo_Acumulado;Detalle";
+    const rows = (ledgerItem.movements || []).map((m: any) => {
+      const fecha = m.date ? new Date(m.date).toLocaleDateString("es-AR") : "-";
+      const conc = (m.concept || "").replace(/"/g, '""');
+      const memo = (m.memo || "").replace(/"/g, '""');
+      return `"${fecha}";${m.entryNumber || ""};"${conc}";"${m.sourceModule || ""}";"${m.costCenterName || ""}";${m.debit || 0};${m.credit || 0};${m.runningBalance || 0};"${memo}"`;
     });
     const csvContent = "\uFEFF" + [headers, ...rows].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `LIBRO_MAYOR_${ledgerData.accountCode}_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `LIBRO_MAYOR_${acc.code || selectedAccountCode}_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  const accountInfo = ledgerItem?.account || accounts.find((a) => a.code === selectedAccountCode) || {};
+  const movements = ledgerItem?.movements || [];
+
   return (
-    <div className="stack" style={{ gap: 20 }}>
-      <div className="page-head">
+    <div className="pad stack" style={{ gap: 20 }}>
+      {/* Header */}
+      <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
         <div>
-          <h1>🔍 Libro Mayor por Cuenta Contable</h1>
-          <p className="muted">Detalle cronológico de débitos, créditos y saldo acumulado progresivo</p>
+          <div className="row" style={{ gap: 8, alignItems: "center" }}>
+            <Link to="/contabilidad" className="btn ghost" style={{ padding: "4px 8px" }}>← Tablero</Link>
+            <h2>🔍 Libro Mayor por Cuenta Contable</h2>
+          </div>
+          <span className="muted" style={{ fontSize: "0.85rem" }}>
+            Detalle cronológico de movimientos, saldos iniciales, débitos, créditos y saldo acumulado.
+          </span>
         </div>
+
         <div className="row" style={{ gap: 10 }}>
-          <button type="button" className="btn ghost" onClick={handleExportCsv} disabled={!ledgerData?.entries?.length}>
+          <button type="button" className="btn ghost" onClick={handleExportCsv} disabled={movements.length === 0}>
             📥 Exportar Excel (CSV)
           </button>
           <button type="button" className="btn ghost" onClick={() => window.print()}>
             🖨️ Imprimir / PDF
           </button>
-          <Link to="/contabilidad/asientos" className="btn">
+          <Link to="/contabilidad/asientos" className="btn primary">
             ➕ Nuevo Asiento
           </Link>
         </div>
@@ -111,7 +135,7 @@ export function GeneralLedgerPage() {
         </Link>
       </div>
 
-      {/* Account Selector & Filters Bar */}
+      {/* Filter Card */}
       <div className="card pad">
         <div className="grid-3" style={{ gap: 14, alignItems: "flex-end" }}>
           <div>
@@ -163,85 +187,120 @@ export function GeneralLedgerPage() {
         </div>
       </div>
 
-      {error && <div className="alert">{error}</div>}
+      {error && <div className="alert error">⚠️ {error}</div>}
 
-      {/* Account Summary Stats */}
-      {ledgerData && (
+      {/* Stats Summary */}
+      {ledgerItem && (
         <div className="stats-grid">
+          <div className="stat-card">
+            <span className="stat-label">Saldo Inicial Anterior</span>
+            <span className="stat-val" style={{ color: "#64748b" }}>
+              $ {(ledgerItem.initialBalance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+
           <div className="stat-card">
             <span className="stat-label">Total Débitos (Debe)</span>
             <span className="stat-val" style={{ color: "#22c55e" }}>
-              $ {(ledgerData.totalDebit || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+              $ {(ledgerItem.totalDebit || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="stat-card">
             <span className="stat-label">Total Créditos (Haber)</span>
             <span className="stat-val" style={{ color: "#38bdf8" }}>
-              $ {(ledgerData.totalCredit || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+              $ {(ledgerItem.totalCredit || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="stat-card">
-            <span className="stat-label">Saldo Actual ({ledgerData.nature})</span>
-            <span className="stat-val" style={{ color: "#facc15" }}>
-              $ {(ledgerData.balance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+            <span className="stat-label">Saldo Final Acumulado</span>
+            <span className="stat-val" style={{ color: "#f59e0b", fontWeight: 700 }}>
+              $ {(ledgerItem.finalBalance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </span>
-          </div>
-
-          <div className="stat-card">
-            <span className="stat-label">Movimientos Registrados</span>
-            <span className="stat-val">{ledgerData.movementsCount || 0}</span>
           </div>
         </div>
       )}
 
       {/* Movements Table */}
       <div className="card pad">
-        <h3>Movimientos de la Cuenta: <code>{selectedAccountCode}</code></h3>
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h3>
+            Movimientos de la Cuenta: <code>{accountInfo.code || selectedAccountCode}</code> - {accountInfo.name || ""}
+          </h3>
+          <span className="badge primary" style={{ fontSize: "0.75rem" }}>
+            {accountInfo.accountType || "Asset"}
+          </span>
+        </div>
+
         {loading ? (
-          <p style={{ textAlign: "center", padding: 30 }}>Cargando movimientos del mayor...</p>
-        ) : !ledgerData || ledgerData.lines?.length === 0 ? (
-          <p className="muted" style={{ textAlign: "center", padding: 30 }}>
-            No hay movimientos registrados para esta cuenta en el rango seleccionado.
-          </p>
+          <p style={{ textAlign: "center", padding: 30 }} className="muted">Cargando movimientos del mayor...</p>
+        ) : movements.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 40 }} className="muted">
+            <p style={{ fontSize: "1.1rem", marginBottom: 6 }}>No hay movimientos registrados para esta cuenta.</p>
+            <span style={{ fontSize: "0.85rem" }}>Probá seleccionando otra cuenta o ampliando el rango de fechas.</span>
+          </div>
         ) : (
           <div className="table-wrap">
-            <table>
+            <table className="table" style={{ width: "100%", fontSize: "0.85rem" }}>
               <thead>
                 <tr>
-                  <th>Centro de Costos</th>
-                  <th>Leyenda / Detalle</th>
-                  <th style={{ textAlign: "right" }}>Debe ($)</th>
-                  <th style={{ textAlign: "right" }}>Haber ($)</th>
-                  <th style={{ textAlign: "right" }}>Saldo Progresivo ($)</th>
+                  <th style={{ width: 100 }}>Fecha</th>
+                  <th style={{ width: 90, textAlign: "center" }}>Asiento Nº</th>
+                  <th>Concepto Principal</th>
+                  <th style={{ width: 110 }}>Origen</th>
+                  <th style={{ width: 140 }}>Centro de Costos</th>
+                  <th style={{ width: 120, textAlign: "right" }}>Debe ($)</th>
+                  <th style={{ width: 120, textAlign: "right" }}>Haber ($)</th>
+                  <th style={{ width: 130, textAlign: "right" }}>Saldo ($)</th>
                 </tr>
               </thead>
               <tbody>
-                {ledgerData.lines.map((l: any, idx: number) => {
-                  const isDebtor = ledgerData.nature === "Deudor";
-                  if (isDebtor) {
-                    runningBalance += (l.debit - l.credit);
-                  } else {
-                    runningBalance += (l.credit - l.debit);
-                  }
+                {/* Initial balance row */}
+                <tr style={{ background: "rgba(241, 245, 249, 0.6)", fontWeight: 600 }}>
+                  <td colSpan={5}>
+                    <em>Saldo Inicial Anterior al Rango</em>
+                  </td>
+                  <td style={{ textAlign: "right" }}>-</td>
+                  <td style={{ textAlign: "right" }}>-</td>
+                  <td style={{ textAlign: "right", color: "#64748b" }}>
+                    $ {(ledgerItem.initialBalance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
 
-                  return (
-                    <tr key={l.id || idx}>
-                      <td>{l.costCenterName || l.costCenterCode || "General"}</td>
-                      <td>{l.memo || "Movimiento diario"}</td>
-                      <td style={{ textAlign: "right", color: l.debit > 0 ? "#22c55e" : "inherit" }}>
-                        {l.debit > 0 ? `$ ${l.debit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}
-                      </td>
-                      <td style={{ textAlign: "right", color: l.credit > 0 ? "#38bdf8" : "inherit" }}>
-                        {l.credit > 0 ? `$ ${l.credit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}
-                      </td>
-                      <td style={{ textAlign: "right", fontWeight: 700 }}>
-                        $ {runningBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {movements.map((m: any, idx: number) => (
+                  <tr key={idx}>
+                    <td>{m.date ? new Date(m.date).toLocaleDateString("es-AR") : "-"}</td>
+                    <td style={{ textAlign: "center", fontWeight: 600 }}>
+                      <Link to={`/contabilidad/asientos`} style={{ color: "var(--accent)" }}>
+                        #{m.entryNumber}
+                      </Link>
+                    </td>
+                    <td>
+                      <div>
+                        <strong>{m.concept}</strong>
+                        {m.memo && m.memo !== m.concept && (
+                          <div className="muted" style={{ fontSize: "0.75rem" }}>{m.memo}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="badge ghost" style={{ fontSize: "0.7rem" }}>
+                        {m.sourceModule || "Manual"}
+                      </span>
+                    </td>
+                    <td>{m.costCenterName || "-"}</td>
+                    <td style={{ textAlign: "right", color: m.debit > 0 ? "#16a34a" : "inherit", fontWeight: m.debit > 0 ? 600 : 400 }}>
+                      {m.debit > 0 ? `$ ${m.debit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}
+                    </td>
+                    <td style={{ textAlign: "right", color: m.credit > 0 ? "#0284c7" : "inherit", fontWeight: m.credit > 0 ? 600 : 400 }}>
+                      {m.credit > 0 ? `$ ${m.credit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}
+                    </td>
+                    <td style={{ textAlign: "right", fontWeight: 700 }}>
+                      $ {(m.runningBalance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
