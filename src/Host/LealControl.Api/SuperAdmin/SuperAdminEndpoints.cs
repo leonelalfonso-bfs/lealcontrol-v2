@@ -465,6 +465,8 @@ public static class SuperAdminEndpoints
                 logger.LogError(ex, "Error processing MercadoPago webhook");
                 return Results.Ok(new { received = true, error = ex.Message });
             }
+        });
+
         // 12. Public Demo Request Intake
         endpoints.MapPost("/api/v1/public/demo-requests", async (
             CreateDemoRequestDto req,
