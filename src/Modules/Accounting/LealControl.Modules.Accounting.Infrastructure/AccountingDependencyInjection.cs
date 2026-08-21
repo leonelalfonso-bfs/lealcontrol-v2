@@ -1,3 +1,4 @@
+using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,14 +9,14 @@ public static class AccountingDependencyInjection
 {
     public static IServiceCollection AddAccountingModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
+        var connectionString = configuration.GetConnectionString("Database")
+            ?? throw new InvalidOperationException("Falta ConnectionStrings:Database.");
 
         services.AddDbContext<AccountingDbContext>(options =>
         {
             options.UseNpgsql(connectionString, npgsql =>
             {
-                npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "accounting");
+                npgsql.MigrationsHistoryTable("__ef_migrations_history", "accounting");
             });
         });
 
