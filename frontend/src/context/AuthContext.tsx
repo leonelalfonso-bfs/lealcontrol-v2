@@ -17,18 +17,80 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos de inactividad
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isSessionExpiredOnLoad = () => {
+    if (typeof window === "undefined") return false;
+    const lastActiveStr = localStorage.getItem("leal_last_activity");
+    if (!lastActiveStr) return false;
+    const lastActive = Number(lastActiveStr);
+    return lastActive > 0 && Date.now() - lastActive > INACTIVITY_TIMEOUT_MS;
+  };
+
+  const [token, setToken] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    if (isSessionExpiredOnLoad()) {
+      localStorage.removeItem("leal_token");
+      localStorage.removeItem("leal_user");
+      localStorage.removeItem("leal_tenant");
+      localStorage.removeItem("leal_tenant_id");
+      localStorage.removeItem("leal_last_activity");
+      return null;
+    }
+    return localStorage.getItem("leal_token");
+  });
+
   const [user, setUser] = useState<UserInfo | null>(() => {
-    const saved = typeof window !== "undefined" ? localStorage.getItem("leal_user") : null;
+    if (typeof window === "undefined" || isSessionExpiredOnLoad()) return null;
+    const saved = localStorage.getItem("leal_user");
     return saved ? JSON.parse(saved) : null;
   });
+
   const [tenant, setTenant] = useState<TenantInfo | null>(() => {
-    const saved = typeof window !== "undefined" ? localStorage.getItem("leal_tenant") : null;
+    if (typeof window === "undefined" || isSessionExpiredOnLoad()) return null;
+    const saved = localStorage.getItem("leal_tenant");
     return saved ? JSON.parse(saved) : null;
   });
+
   const [availableTenants, setAvailableTenants] = useState<TenantInfo[]>([]);
-  const [token, setToken] = useState<string | null>(() => (typeof window !== "undefined" ? localStorage.getItem("leal_token") : null));
   const [loading, setLoading] = useState(true);
+
+  // Inactivity tracking
+  useEffect(() => {
+    if (!token) return;
+
+    // Set initial activity timestamp
+    localStorage.setItem("leal_last_activity", Date.now().toString());
+
+    let lastRecorded = Date.now();
+    const handleUserActivity = () => {
+      const now = Date.now();
+      // Throttle recording to once every 10 seconds
+      if (now - lastRecorded > 10000) {
+        lastRecorded = now;
+        localStorage.setItem("leal_last_activity", now.toString());
+      }
+    };
+
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
+    events.forEach((ev) => window.addEventListener(ev, handleUserActivity, { passive: true }));
+
+    // Check inactivity every 20 seconds
+    const interval = setInterval(() => {
+      const lastActiveStr = localStorage.getItem("leal_last_activity");
+      const lastActive = lastActiveStr ? Number(lastActiveStr) : Date.now();
+      if (Date.now() - lastActive > INACTIVITY_TIMEOUT_MS) {
+        logout();
+        window.location.href = "/login?inactivity=1";
+      }
+    }, 20000);
+
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, handleUserActivity));
+      clearInterval(interval);
+    };
+  }, [token]);
 
   useEffect(() => {
     if (token) {
@@ -47,8 +109,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setAvailableTenants(res.availableTenants);
           }
         })
-        .catch(() => {
-          // Keep local storage session if offline
+        .catch((err) => {
+          if (err?.message?.includes("401") || err?.message?.includes("Unauthorized")) {
+            logout();
+          }
         })
         .finally(() => setLoading(false));
     } else {
@@ -66,6 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("leal_user", JSON.stringify(res.user));
     localStorage.setItem("leal_tenant", JSON.stringify(res.tenant));
     localStorage.setItem("leal_tenant_id", res.tenant.id);
+    localStorage.setItem("leal_last_activity", Date.now().toString());
   };
 
   const login = async (email: string, password: string, tenantId?: string) => {
@@ -90,10 +155,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setUser(null);
     setTenant(null);
+    setAvailableTenants([]);
     localStorage.removeItem("leal_token");
     localStorage.removeItem("leal_user");
     localStorage.removeItem("leal_tenant");
     localStorage.removeItem("leal_tenant_id");
+    localStorage.removeItem("leal_last_activity");
   };
 
   return (

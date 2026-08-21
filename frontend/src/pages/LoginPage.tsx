@@ -143,6 +143,20 @@ export function LoginPage() {
           </button>
         </div>
 
+        {location.search.includes("inactivity=1") && (
+          <div style={{
+            padding: "12px 16px",
+            background: "rgba(59, 130, 246, 0.15)",
+            border: "1px solid rgba(59, 130, 246, 0.4)",
+            borderRadius: "10px",
+            color: "#93c5fd",
+            fontSize: "0.85rem",
+            marginBottom: "20px"
+          }}>
+            ℹ️ Tu sesión se cerró automáticamente por inactividad (30 min). Por favor, ingresá tus credenciales nuevamente.
+          </div>
+        )}
+
         {error && (
           <div style={{
             padding: "12px 16px",
