@@ -797,9 +797,11 @@ export function LandingPage() {
               Sistema de Gestión Integral Cloud ERP 2.0 • Argentina
             </p>
           </div>
-          <div style={{ display: "flex", gap: 20, fontSize: "0.85rem" }}>
+          <div style={{ display: "flex", gap: 20, fontSize: "0.85rem", alignItems: "center" }}>
             <Link to="/login" style={{ color: "#94a3b8" }}>Ingreso al Sistema</Link>
-            <a href="mailto:contacto@lealcontrol.com" style={{ color: "#94a3b8" }}>Contacto Comercial</a>
+            <button onClick={() => setShowDemoModal(true)} style={{ background: "transparent", border: "none", color: "#38bdf8", cursor: "pointer", fontWeight: 700, fontSize: "0.85rem" }}>
+              🚀 Solicitá tu Demo Online
+            </button>
           </div>
         </div>
       </footer>
