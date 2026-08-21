@@ -1,34 +1,28 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { LealLogo } from "../components/LealLogo";
 
 export function LoginPage() {
-  const { login, registerTenant } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/";
 
-  const [tab, setTab] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Login Form State
-  const [email, setEmail] = useState("admin@lealcontrol.com");
-  const [password, setPassword] = useState("admin123");
-
-  // Register Tenant Form State
-  const [companyName, setCompanyName] = useState("");
-  const [cuit, setCuit] = useState("");
-  const [phone, setPhone] = useState("");
-  const [adminFullName, setAdminFullName] = useState("");
-  const [registerEmail, setRegisterEmail] = useState("");
-  const [registerPassword, setRegisterPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password) return;
+    if (!email.trim() || !password) {
+      setError("Por favor ingresá tu correo electrónico y contraseña.");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -36,30 +30,7 @@ export function LoginPage() {
       await login(email.trim(), password);
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al iniciar sesión.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegisterTenant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!companyName.trim() || !registerEmail.trim() || !registerPassword) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      await registerTenant({
-        companyName: companyName.trim(),
-        cuit: cuit.trim() || undefined,
-        phone: phone.trim() || undefined,
-        adminFullName: adminFullName.trim() || undefined,
-        email: registerEmail.trim(),
-        password: registerPassword
-      });
-      navigate("/", { replace: true });
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al registrar la nueva empresa.");
+      setError(err instanceof Error ? err.message : "Credenciales inválidas. Verificá tu usuario y contraseña.");
     } finally {
       setLoading(false);
     }
@@ -68,130 +39,198 @@ export function LoginPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "radial-gradient(circle at 50% 10%, #0f172a 0%, #020617 100%)",
-      padding: "24px",
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+      background: "#090d16",
+      color: "#f8fafc",
       fontFamily: "var(--font-sans, system-ui, sans-serif)"
     }}>
+      {/* ================= LEFT SIDE: SYSTEM HIGHLIGHTS & BRANDING ================= */}
       <div style={{
-        maxWidth: "480px",
-        width: "100%",
-        background: "rgba(15, 23, 42, 0.85)",
-        backdropFilter: "blur(16px)",
-        border: "1px solid rgba(255, 255, 255, 0.12)",
-        borderRadius: "24px",
-        padding: "36px 32px",
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-        color: "#f8fafc"
+        background: "radial-gradient(circle at 20% 20%, #1e293b 0%, #0b1120 70%, #020617 100%)",
+        padding: "48px 40px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        borderRight: "1px solid rgba(255, 255, 255, 0.08)",
+        position: "relative",
+        overflow: "hidden"
       }}>
-        {/* Brand Header */}
-        <div style={{ textAlign: "center", marginBottom: "28px" }}>
-          <div style={{ display: "inline-block", marginBottom: "12px" }}>
-            <LealLogo size={54} showText animated />
-          </div>
-          <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "0.88rem" }}>
-            Sistema de Gestión Integral Cloud ERP 2.0
-          </p>
-        </div>
-
-        {/* Tab Toggle */}
+        {/* Subtle Ambient Glow */}
         <div style={{
-          display: "flex",
-          background: "rgba(30, 41, 59, 0.6)",
-          padding: "4px",
-          borderRadius: "12px",
-          marginBottom: "24px",
-          border: "1px solid rgba(255, 255, 255, 0.08)"
-        }}>
-          <button
-            type="button"
-            onClick={() => { setTab("login"); setError(null); }}
-            style={{
-              flex: 1,
-              padding: "10px",
-              border: "none",
-              borderRadius: "8px",
-              background: tab === "login" ? "#0d9488" : "transparent",
-              color: tab === "login" ? "#ffffff" : "#94a3b8",
-              fontWeight: 700,
-              fontSize: "0.88rem",
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            🔑 Iniciar Sesión
-          </button>
-          <button
-            type="button"
-            onClick={() => { setTab("register"); setError(null); }}
-            style={{
-              flex: 1,
-              padding: "10px",
-              border: "none",
-              borderRadius: "8px",
-              background: tab === "register" ? "#0d9488" : "transparent",
-              color: tab === "register" ? "#ffffff" : "#94a3b8",
-              fontWeight: 700,
-              fontSize: "0.88rem",
-              cursor: "pointer",
-              transition: "all 0.2s"
-            }}
-          >
-            🏢 Nueva Empresa
-          </button>
+          position: "absolute",
+          top: "-10%",
+          left: "-10%",
+          width: "400px",
+          height: "400px",
+          background: "radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, transparent 70%)",
+          filter: "blur(60px)",
+          pointerEvents: "none"
+        }} />
+
+        <div>
+          {/* Brand Logo Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 36 }}>
+            <img
+              src="/logo.png"
+              alt="LEAL Control ERP"
+              style={{ height: 58, width: "auto", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(16, 185, 129, 0.2))" }}
+            />
+            <span style={{
+              fontSize: "0.75rem",
+              fontWeight: 800,
+              padding: "4px 10px",
+              borderRadius: 999,
+              background: "rgba(37, 99, 235, 0.2)",
+              color: "#60a5fa",
+              border: "1px solid rgba(96, 165, 250, 0.3)",
+              letterSpacing: "0.05em"
+            }}>
+              v2.0 CLOUD ERP
+            </span>
+          </div>
+
+          {/* Marketing & Value Title */}
+          <h1 style={{
+            fontSize: "2.4rem",
+            fontWeight: 900,
+            lineHeight: 1.2,
+            marginBottom: 16,
+            letterSpacing: "-0.02em",
+            color: "#ffffff"
+          }}>
+            La Plataforma Integral que Potencia la Gestión de tu <span style={{ color: "#38bdf8" }}>Empresa</span>
+          </h1>
+
+          <p style={{ color: "#94a3b8", fontSize: "1rem", lineHeight: 1.6, marginBottom: 32, maxWidth: "560px" }}>
+            Unificá en tiempo real todas las áreas estratégicas de tu negocio bajo una arquitectura Cloud ágil, segura y 100% homologada.
+          </p>
+
+          {/* 4 Key Feature Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14, marginBottom: 30 }}>
+            <div style={{ background: "rgba(255, 255, 255, 0.04)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ fontSize: "1.2rem", marginBottom: 6 }}>🏛️</div>
+              <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#f1f5f9" }}>Contabilidad & P&L en Vivo</div>
+              <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: 4 }}>Asientos automáticos, libro diario y Balance 8 Columnas oficial.</div>
+            </div>
+
+            <div style={{ background: "rgba(255, 255, 255, 0.04)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ fontSize: "1.2rem", marginBottom: 6 }}>📊</div>
+              <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#f1f5f9" }}>Ventas & ARCA (AFIP)</div>
+              <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: 4 }}>Facturas A, B, C, MiPyME con CAE directo y presupuestos por WhatsApp.</div>
+            </div>
+
+            <div style={{ background: "rgba(255, 255, 255, 0.04)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ fontSize: "1.2rem", marginBottom: 6 }}>🌾</div>
+              <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#f1f5f9" }}>Cereales & Granos</div>
+              <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: 4 }}>Contratos, fijaciones a pizarra Rosario/MATba, balanza y CPE.</div>
+            </div>
+
+            <div style={{ background: "rgba(255, 255, 255, 0.04)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: 12, padding: "14px 16px" }}>
+              <div style={{ fontSize: "1.2rem", marginBottom: 6 }}>💳</div>
+              <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#f1f5f9" }}>Finanzas, eCheqs & Flota</div>
+              <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: 4 }}>Cartera unificada de cheques, cuentas corrientes y control de camiones.</div>
+            </div>
+          </div>
         </div>
 
-        {location.search.includes("inactivity=1") && (
-          <div style={{
-            padding: "12px 16px",
-            background: "rgba(59, 130, 246, 0.15)",
-            border: "1px solid rgba(59, 130, 246, 0.4)",
-            borderRadius: "10px",
-            color: "#93c5fd",
-            fontSize: "0.85rem",
-            marginBottom: "20px"
-          }}>
-            ℹ️ Tu sesión se cerró automáticamente por inactividad (30 min). Por favor, ingresá tus credenciales nuevamente.
-          </div>
-        )}
+        {/* Trust Badges */}
+        <div style={{
+          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+          paddingTop: 20,
+          display: "flex",
+          gap: 20,
+          flexWrap: "wrap",
+          fontSize: "0.78rem",
+          color: "#64748b"
+        }}>
+          <span>🛡️ Homologado ARCA (AFIP)</span>
+          <span>☁️ Multi-Empresa Cloud</span>
+          <span>🔒 Encriptación SSL 256-bit</span>
+          <span>🇦🇷 Soporte Nacional</span>
+        </div>
+      </div>
 
-        {error && (
-          <div style={{
-            padding: "12px 16px",
-            background: "rgba(239, 68, 68, 0.15)",
-            border: "1px solid rgba(239, 68, 68, 0.4)",
-            borderRadius: "10px",
-            color: "#fca5a5",
-            fontSize: "0.85rem",
-            marginBottom: "20px"
-          }}>
-            ⚠️ {error}
+      {/* ================= RIGHT SIDE: LOGIN FORM ================= */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "48px 32px",
+        background: "#080c14"
+      }}>
+        <div style={{
+          width: "100%",
+          maxWidth: "420px",
+          background: "rgba(15, 23, 42, 0.9)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          borderRadius: "20px",
+          padding: "36px 32px",
+          boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.6)"
+        }}>
+          <div style={{ marginBottom: 28 }}>
+            <h2 style={{ fontSize: "1.6rem", fontWeight: 800, color: "#ffffff", marginBottom: 6 }}>
+              Ingreso al Sistema
+            </h2>
+            <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: 0 }}>
+              Ingresá tus credenciales autorizadas para acceder al panel de tu empresa.
+            </p>
           </div>
-        )}
 
-        {/* Tab 1: Login */}
-        {tab === "login" && (
-          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {/* Inactivity Notice Banner */}
+          {location.search.includes("inactivity=1") && (
+            <div style={{
+              padding: "12px 14px",
+              background: "rgba(59, 130, 246, 0.15)",
+              border: "1px solid rgba(59, 130, 246, 0.3)",
+              borderRadius: "10px",
+              color: "#93c5fd",
+              fontSize: "0.82rem",
+              marginBottom: "20px",
+              lineHeight: 1.4
+            }}>
+              ℹ️ Tu sesión se cerró por inactividad (30 min). Por seguridad, ingresá tus datos nuevamente.
+            </div>
+          )}
+
+          {/* Error Banner */}
+          {error && (
+            <div style={{
+              padding: "12px 14px",
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              borderRadius: "10px",
+              color: "#fca5a5",
+              fontSize: "0.82rem",
+              marginBottom: "20px",
+              lineHeight: 1.4
+            }}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
             <div>
               <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", marginBottom: "6px" }}>
                 Correo Electrónico
               </label>
               <input
                 type="email"
-                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@empresa.com"
+                required
+                autoFocus
+                placeholder="tu.usuario@empresa.com"
                 style={{
                   width: "100%",
                   padding: "12px 14px",
-                  borderRadius: "10px",
+                  background: "rgba(30, 41, 59, 0.8)",
                   border: "1px solid rgba(255, 255, 255, 0.15)",
-                  background: "rgba(15, 23, 42, 0.6)",
+                  borderRadius: "10px",
                   color: "#ffffff",
-                  fontSize: "0.95rem",
+                  fontSize: "0.92rem",
+                  outline: "none",
                   boxSizing: "border-box"
                 }}
               />
@@ -201,225 +240,76 @@ export function LoginPage() {
               <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", marginBottom: "6px" }}>
                 Contraseña
               </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                style={{
-                  width: "100%",
-                  padding: "12px 14px",
-                  borderRadius: "10px",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  background: "rgba(15, 23, 42, 0.6)",
-                  color: "#ffffff",
-                  fontSize: "0.95rem",
-                  boxSizing: "border-box"
-                }}
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••••••"
+                  style={{
+                    width: "100%",
+                    padding: "12px 42px 12px 14px",
+                    background: "rgba(30, 41, 59, 0.8)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    borderRadius: "10px",
+                    color: "#ffffff",
+                    fontSize: "0.92rem",
+                    outline: "none",
+                    boxSizing: "border-box"
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    color: "#94a3b8",
+                    cursor: "pointer",
+                    fontSize: "0.85rem",
+                    padding: 0
+                  }}
+                  title={showPassword ? "Ocultar" : "Mostrar"}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
               style={{
-                marginTop: "8px",
+                width: "100%",
                 padding: "14px",
-                borderRadius: "12px",
+                background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
                 border: "none",
-                background: "linear-gradient(135deg, #0d9488 0%, #059669 100%)",
+                borderRadius: "10px",
                 color: "#ffffff",
-                fontWeight: 800,
-                fontSize: "1rem",
-                cursor: "pointer",
-                boxShadow: "0 4px 15px rgba(13, 148, 136, 0.4)",
-                transition: "transform 0.15s"
+                fontWeight: 700,
+                fontSize: "0.95rem",
+                cursor: loading ? "not-allowed" : "pointer",
+                boxShadow: "0 4px 14px rgba(37, 99, 235, 0.35)",
+                marginTop: "6px",
+                transition: "opacity 0.2s"
               }}
             >
-              {loading ? "Ingresando..." : "🚀 Ingresar a LEAL Control"}
-            </button>
-
-            <div style={{
-              marginTop: "16px",
-              padding: "12px",
-              borderRadius: "10px",
-              background: "rgba(255, 255, 255, 0.04)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              fontSize: "0.78rem",
-              color: "#94a3b8",
-              textAlign: "center"
-            }}>
-              💡 <strong>Credencial de prueba:</strong> <code>admin@lealcontrol.com</code> / <code>admin123</code>
-            </div>
-          </form>
-        )}
-
-        {/* Tab 2: Register Tenant */}
-        {tab === "register" && (
-          <form onSubmit={handleRegisterTenant} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div>
-              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", marginBottom: "4px" }}>
-                Razón Social / Nombre de la Empresa *
-              </label>
-              <input
-                type="text"
-                required
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="Ej: Metrología Andina S.R.L."
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  background: "rgba(15, 23, 42, 0.6)",
-                  color: "#ffffff",
-                  fontSize: "0.9rem",
-                  boxSizing: "border-box"
-                }}
-              />
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", marginBottom: "4px" }}>
-                  CUIT (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={cuit}
-                  onChange={(e) => setCuit(e.target.value)}
-                  placeholder="30-12345678-9"
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
-                    background: "rgba(15, 23, 42, 0.6)",
-                    color: "#ffffff",
-                    fontSize: "0.9rem",
-                    boxSizing: "border-box"
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", marginBottom: "4px" }}>
-                  Teléfono
-                </label>
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Ej: 341-555-0100"
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid rgba(255, 255, 255, 0.15)",
-                    background: "rgba(15, 23, 42, 0.6)",
-                    color: "#ffffff",
-                    fontSize: "0.9rem",
-                    boxSizing: "border-box"
-                  }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", marginBottom: "4px" }}>
-                Nombre del Administrador
-              </label>
-              <input
-                type="text"
-                value={adminFullName}
-                onChange={(e) => setAdminFullName(e.target.value)}
-                placeholder="Ej: Ing. Carlos Gómez"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  background: "rgba(15, 23, 42, 0.6)",
-                  color: "#ffffff",
-                  fontSize: "0.9rem",
-                  boxSizing: "border-box"
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", marginBottom: "4px" }}>
-                Email de Acceso *
-              </label>
-              <input
-                type="email"
-                required
-                value={registerEmail}
-                onChange={(e) => setRegisterEmail(e.target.value)}
-                placeholder="admin@tuempresa.com"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  background: "rgba(15, 23, 42, 0.6)",
-                  color: "#ffffff",
-                  fontSize: "0.9rem",
-                  boxSizing: "border-box"
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", marginBottom: "4px" }}>
-                Contraseña *
-              </label>
-              <input
-                type="password"
-                required
-                value={registerPassword}
-                onChange={(e) => setRegisterPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  background: "rgba(15, 23, 42, 0.6)",
-                  color: "#ffffff",
-                  fontSize: "0.9rem",
-                  boxSizing: "border-box"
-                }}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                marginTop: "10px",
-                padding: "14px",
-                borderRadius: "12px",
-                border: "none",
-                background: "linear-gradient(135deg, #0d9488 0%, #059669 100%)",
-                color: "#ffffff",
-                fontWeight: 800,
-                fontSize: "1rem",
-                cursor: "pointer",
-                boxShadow: "0 4px 15px rgba(13, 148, 136, 0.4)"
-              }}
-            >
-              {loading ? "Creando empresa..." : "🏢 Crear Empresa y Entrar"}
+              {loading ? "Verificando credenciales..." : "🔐 Ingresar a LEAL Control ➔"}
             </button>
           </form>
-        )}
 
-        <div style={{ textAlign: "center", marginTop: "24px", paddingTop: "18px", borderTop: "1px solid rgba(255, 255, 255, 0.08)", fontSize: "0.82rem", color: "#94a3b8" }}>
-          <span>¿Querés conocer el sistema para tu empresa? </span>
-          <a href="/landing" style={{ color: "#38bdf8", fontWeight: 700, textDecoration: "underline" }}>
-            🚀 Solicitá tu Demo aquí
-          </a>
+          {/* Links Footer */}
+          <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid rgba(255, 255, 255, 0.08)", textAlign: "center", fontSize: "0.82rem", color: "#64748b" }}>
+            <span>¿Necesitás una cuenta o querés probar el sistema?</span><br/>
+            <Link to="/landing" style={{ color: "#38bdf8", fontWeight: 700, textDecoration: "none", display: "inline-block", marginTop: 6 }}>
+              ✨ Solicitá tu Demo Personalizada aquí ➔
+            </Link>
+          </div>
         </div>
       </div>
     </div>
