@@ -219,14 +219,30 @@ public static class AuthEndpoints
         });
 
         // 3. Me
-        auth.MapGet("/me", async (ITenantContext tenantContext, CrmDbContext db, CancellationToken ct) =>
+        auth.MapGet("/me", async (HttpContext http, ITenantContext tenantContext, CrmDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
             var tenantSettings = await db.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
             var tenantName = tenantSettings?.LegalName ?? tenantSettings?.TradeName ?? "LEAL CONTROL ERP S.A.";
 
-            var users = await db.TenantUsers.Where(u => u.TenantId == tenantId && u.IsActive).ToListAsync(ct);
-            var user = users.FirstOrDefault();
+            // Resolve exact user from JWT Bearer token
+            TenantUser? user = null;
+            var authHeader = http.Request.Headers["Authorization"].ToString();
+            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                var token = authHeader.Substring(7).Trim();
+                var tokenUser = SimpleJwt.DecodeToken(token);
+                if (tokenUser?.UserId != null)
+                {
+                    user = await db.TenantUsers.FirstOrDefaultAsync(u => u.Id == tokenUser.UserId.Value && u.TenantId == tenantId && u.IsActive, ct);
+                }
+                if (user == null && !string.IsNullOrWhiteSpace(tokenUser?.Email))
+                {
+                    user = await db.TenantUsers.FirstOrDefaultAsync(u => u.Email.ToLower() == tokenUser.Email.ToLower() && u.TenantId == tenantId && u.IsActive, ct);
+                }
+            }
+
+            user ??= await db.TenantUsers.FirstOrDefaultAsync(u => u.TenantId == tenantId && u.IsActive, ct);
 
             // ONLY return the caller's tenant
             var availableTenants = new List<TenantSummaryDto>
@@ -243,7 +259,7 @@ public static class AuthEndpoints
         });
 
         // 4. Switch Tenant
-        auth.MapPost("/switch-tenant", async ([FromBody] SwitchTenantRequest req, ITenantContext tenantContext, CrmDbContext db, CancellationToken ct) =>
+        auth.MapPost("/switch-tenant", async ([FromBody] SwitchTenantRequest req, HttpContext http, ITenantContext tenantContext, CrmDbContext db, CancellationToken ct) =>
         {
             if (req == null) return Results.BadRequest(new { message = "Petición inválida." });
 
@@ -254,15 +270,28 @@ public static class AuthEndpoints
                 return Results.BadRequest(new { message = "La empresa seleccionada no existe." });
             }
 
-            var users = await db.TenantUsers.Where(u => u.TenantId == targetTenantId && u.IsActive).ToListAsync(ct);
-            var user = users.FirstOrDefault() ?? TenantUser.Create(targetTenantId, "Administrador", "admin@lealcontrol.com", "Admin", "admin123");
-            if (!users.Any())
+            // Look for matching user by email from current token if available
+            TenantUser? user = null;
+            var authHeader = http.Request.Headers["Authorization"].ToString();
+            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
+                var token = authHeader.Substring(7).Trim();
+                var tokenUser = SimpleJwt.DecodeToken(token);
+                if (!string.IsNullOrWhiteSpace(tokenUser?.Email))
+                {
+                    user = await db.TenantUsers.FirstOrDefaultAsync(u => u.Email.ToLower() == tokenUser.Email.ToLower() && u.TenantId == targetTenantId && u.IsActive, ct);
+                }
+            }
+
+            user ??= await db.TenantUsers.FirstOrDefaultAsync(u => u.TenantId == targetTenantId && u.IsActive, ct);
+            if (user == null)
+            {
+                user = TenantUser.Create(targetTenantId, "Administrador", "admin@lealcontrol.com", "Admin", "admin123");
                 db.TenantUsers.Add(user);
                 await db.SaveChangesAsync(ct);
             }
 
-            var token = SimpleJwt.CreateToken(user.Id, user.Email, user.FullName, user.Role, targetTenantId.Value, tenantSettings.LegalName);
+            var tokenOut = SimpleJwt.CreateToken(user.Id, user.Email, user.FullName, user.Role, targetTenantId.Value, tenantSettings.LegalName);
 
             var availableTenants = new List<TenantSummaryDto>
             {
@@ -270,7 +299,7 @@ public static class AuthEndpoints
             };
 
             return Results.Ok(new AuthResponse(
-                token,
+                tokenOut,
                 new UserDto(user.Id, user.FullName, user.Email, user.Role, user.AllowedModulesJson),
                 new TenantSummaryDto(targetTenantId.Value, tenantSettings.LegalName, tenantSettings.TradeName, tenantSettings.DocumentNumber),
                 availableTenants
@@ -293,6 +322,8 @@ public static class AuthEndpoints
         return endpoints;
     }
 }
+
+public sealed record DecodedToken(Guid? UserId, string? Email, string? FullName, string? Role, Guid? TenantId);
 
 public static class SimpleJwt
 {
@@ -319,6 +350,30 @@ public static class SimpleJwt
         return $"{headerB64}.{payloadB64}.{signatureB64}";
     }
 
+    public static DecodedToken? DecodeToken(string token)
+    {
+        try
+        {
+            var parts = token.Split('.');
+            if (parts.Length < 2) return null;
+            var payloadJson = Encoding.UTF8.GetString(Base64UrlDecode(parts[1]));
+            using var doc = JsonDocument.Parse(payloadJson);
+            var root = doc.RootElement;
+
+            Guid? userId = root.TryGetProperty("sub", out var sub) && Guid.TryParse(sub.GetString(), out var uid) ? uid : null;
+            string? email = root.TryGetProperty("email", out var em) ? em.GetString() : null;
+            string? name = root.TryGetProperty("name", out var nm) ? nm.GetString() : null;
+            string? role = root.TryGetProperty("role", out var rl) ? rl.GetString() : null;
+            Guid? tenantId = root.TryGetProperty("tenant_id", out var tid) && Guid.TryParse(tid.GetString(), out var tGuid) ? tGuid : null;
+
+            return new DecodedToken(userId, email, name, role, tenantId);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private static string ComputeSignature(string data)
     {
         using var hmac = new HMACSHA256(SecretBytes);
@@ -332,6 +387,17 @@ public static class SimpleJwt
             .TrimEnd('=')
             .Replace('+', '-')
             .Replace('/', '_');
+    }
+
+    private static byte[] Base64UrlDecode(string input)
+    {
+        string output = input.Replace('-', '+').Replace('_', '/');
+        switch (output.Length % 4)
+        {
+            case 2: output += "=="; break;
+            case 3: output += "="; break;
+        }
+        return Convert.FromBase64String(output);
     }
 }
 
