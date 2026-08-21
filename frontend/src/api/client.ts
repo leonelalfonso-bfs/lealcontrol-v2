@@ -243,9 +243,9 @@ export const api = {
   uploadArcaCertificate: (body: { certificateCrt: string; certificateKey: string; environment: string; signerCuit: string }) =>
     request<import("./types").CompanySettings>("/api/v1/company/settings/arca-certificate", { method: "POST", body: JSON.stringify(body) }),
   listTenantUsers: () => request<import("./types").TenantUser[]>("/api/v1/company/users"),
-  createTenantUser: (body: { fullName: string; email: string; role: string; allowedModulesJson?: string }) =>
+  createTenantUser: (body: { fullName: string; email: string; role: string; password?: string; allowedModulesJson?: string }) =>
     request<import("./types").TenantUser>("/api/v1/company/users", { method: "POST", body: JSON.stringify(body) }),
-  updateTenantUser: (id: string, body: { fullName: string; role: string; isActive: boolean; allowedModulesJson?: string }) =>
+  updateTenantUser: (id: string, body: { fullName: string; role: string; isActive: boolean; password?: string; allowedModulesJson?: string }) =>
     request<import("./types").TenantUser>(`/api/v1/company/users/${id}`, { method: "PUT", body: JSON.stringify(body) }),
 
   // Suppliers Methods

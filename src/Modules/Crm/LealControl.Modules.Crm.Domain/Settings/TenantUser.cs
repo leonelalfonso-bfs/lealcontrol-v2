@@ -63,7 +63,7 @@ public sealed class TenantUser : Entity<Guid>
         AllowedModulesJson = string.IsNullOrWhiteSpace(json) ? "[]" : json;
     }
 
-    public void Update(string fullName, string role, bool isActive, string? allowedModulesJson = null)
+    public void Update(string fullName, string role, bool isActive, string? allowedModulesJson = null, string? password = null)
     {
         FullName = fullName.Trim();
         Role = role;
@@ -71,6 +71,10 @@ public sealed class TenantUser : Entity<Guid>
         if (allowedModulesJson != null)
         {
             SetAllowedModules(allowedModulesJson);
+        }
+        if (!string.IsNullOrWhiteSpace(password))
+        {
+            SetPassword(password);
         }
     }
 

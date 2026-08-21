@@ -25,6 +25,8 @@ export function SettingsPage() {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [userPassword, setUserPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [userRole, setUserRole] = useState("Comercial");
   const [userIsActive, setUserIsActive] = useState(true);
   const [userModules, setUserModules] = useState<string[]>([
@@ -122,6 +124,8 @@ export function SettingsPage() {
     setEditingUserId(null);
     setUserName("");
     setUserEmail("");
+    setUserPassword("Leal" + Math.floor(1000 + Math.random() * 9000));
+    setShowPassword(false);
     setUserRole("Comercial");
     setUserIsActive(true);
     setUserModules(["sales", "crm"]);
@@ -132,6 +136,8 @@ export function SettingsPage() {
     setEditingUserId(u.id);
     setUserName(u.fullName);
     setUserEmail(u.email);
+    setUserPassword("");
+    setShowPassword(false);
     setUserRole(u.role);
     setUserIsActive(u.isActive);
     try {
@@ -178,6 +184,7 @@ export function SettingsPage() {
           fullName: userName.trim(),
           role: userRole,
           isActive: userIsActive,
+          password: userPassword.trim() || undefined,
           allowedModulesJson: modulesJson
         });
         setUsers((prev) => prev.map((u) => (u.id === editingUserId ? updated : u)));
@@ -187,10 +194,11 @@ export function SettingsPage() {
           fullName: userName.trim(),
           email: userEmail.trim(),
           role: userRole,
+          password: userPassword.trim() || undefined,
           allowedModulesJson: modulesJson
         });
         setUsers((prev) => [...prev, created]);
-        setSuccessMsg(`✓ Usuario ${created.fullName} creado con éxito.`);
+        setSuccessMsg(`✓ Usuario ${created.fullName} creado con éxito con clave asignada.`);
       }
       setShowUserModal(false);
     } catch (err: any) {
@@ -815,6 +823,47 @@ export function SettingsPage() {
                     <option value="false">Inactivo (Acceso bloqueado)</option>
                   </select>
                 </label>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 6 }}>
+                  {editingUserId ? "🔑 Modificar Contraseña (dejar en blanco para no cambiarla)" : "🔑 Contraseña de Acceso *"}
+                </label>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={userPassword}
+                    onChange={(e) => setUserPassword(e.target.value)}
+                    required={!editingUserId}
+                    placeholder={editingUserId ? "•••••••• (Sin cambios)" : "Ingresá clave segura"}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    style={{ fontSize: "12px", padding: "8px 12px", whiteSpace: "nowrap" }}
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? "👁️ Ocultar" : "👁️ Ver"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost"
+                    style={{ fontSize: "12px", padding: "8px 12px", whiteSpace: "nowrap" }}
+                    onClick={() => {
+                      setUserPassword("Leal" + Math.floor(1000 + Math.random() * 9000));
+                      setShowPassword(true);
+                    }}
+                    title="Generar contraseña aleatoria"
+                  >
+                    🎲 Generar
+                  </button>
+                </div>
+                {!editingUserId && (
+                  <span className="muted" style={{ fontSize: "0.75rem", marginTop: 4, display: "block" }}>
+                    Podés usar la clave sugerida o escribir la que prefieras para el nuevo empleado.
+                  </span>
+                )}
               </div>
 
               <div>

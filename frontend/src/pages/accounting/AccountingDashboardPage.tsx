@@ -69,37 +69,37 @@ export function AccountingDashboardPage() {
       ) : (
         <>
           {/* Executive P&L Cards */}
-          <div className="stats-grid">
-            <div className="stat-card">
-              <span className="stat-label">Ingresos Operativos Totales</span>
-              <span className="stat-val" style={{ color: "#22c55e" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16 }}>
+            <div className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "18px 20px" }}>
+              <span className="muted" style={{ fontSize: "13px", fontWeight: 600 }}>Ingresos Operativos Totales</span>
+              <span style={{ fontSize: "24px", fontWeight: 800, color: "#22c55e", margin: "2px 0" }}>
                 $ {(pnl?.revenues || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
-              <span className="stat-sub">Ventas, servicios y corretaje</span>
+              <span className="muted" style={{ fontSize: "12px" }}>Ventas, servicios y corretaje</span>
             </div>
 
-            <div className="stat-card">
-              <span className="stat-label">Costo de Ventas (CMV)</span>
-              <span className="stat-val" style={{ color: "#f87171" }}>
+            <div className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "18px 20px" }}>
+              <span className="muted" style={{ fontSize: "13px", fontWeight: 600 }}>Costo de Ventas (CMV)</span>
+              <span style={{ fontSize: "24px", fontWeight: 800, color: "#f87171", margin: "2px 0" }}>
                 $ {(pnl?.cogs || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
-              <span className="stat-sub">Costo directo de mercaderías e insumos</span>
+              <span className="muted" style={{ fontSize: "12px" }}>Costo directo de mercaderías e insumos</span>
             </div>
 
-            <div className="stat-card">
-              <span className="stat-label">Margen Bruto Operativo</span>
-              <span className="stat-val" style={{ color: "#38bdf8" }}>
+            <div className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "18px 20px" }}>
+              <span className="muted" style={{ fontSize: "13px", fontWeight: 600 }}>Margen Bruto Operativo</span>
+              <span style={{ fontSize: "24px", fontWeight: 800, color: "#38bdf8", margin: "2px 0" }}>
                 $ {(pnl?.grossMargin || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
-              <span className="stat-sub">Margen: {pnl?.grossMarginPct || 0}% sobre ventas</span>
+              <span className="muted" style={{ fontSize: "12px" }}>Margen: <strong>{pnl?.grossMarginPct || 0}%</strong> sobre ventas</span>
             </div>
 
-            <div className="stat-card">
-              <span className="stat-label">EBITDA / Resultado Operativo</span>
-              <span className="stat-val" style={{ color: pnl?.ebitda >= 0 ? "#22c55e" : "#f87171" }}>
+            <div className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "18px 20px" }}>
+              <span className="muted" style={{ fontSize: "13px", fontWeight: 600 }}>EBITDA / Resultado Operativo</span>
+              <span style={{ fontSize: "24px", fontWeight: 800, color: pnl?.ebitda >= 0 ? "#22c55e" : "#f87171", margin: "2px 0" }}>
                 $ {(pnl?.ebitda || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
-              <span className="stat-sub">Rendimiento antes de intereses e impuestos</span>
+              <span className="muted" style={{ fontSize: "12px" }}>Rendimiento antes de intereses e impuestos</span>
             </div>
           </div>
 

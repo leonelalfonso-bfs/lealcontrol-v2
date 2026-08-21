@@ -51,10 +51,10 @@ public sealed record TenantUserDto(
     DateTime CreatedAtUtc,
     string? AllowedModulesJson = null);
 
-public sealed record CreateTenantUserCommand(string FullName, string Email, string Role, string? AllowedModulesJson = null)
+public sealed record CreateTenantUserCommand(string FullName, string Email, string Role, string? Password = null, string? AllowedModulesJson = null)
     : IRequest<Result<TenantUserDto>>;
 
-public sealed record UpdateTenantUserCommand(Guid Id, string FullName, string Role, bool IsActive, string? AllowedModulesJson = null)
+public sealed record UpdateTenantUserCommand(Guid Id, string FullName, string Role, bool IsActive, string? Password = null, string? AllowedModulesJson = null)
     : IRequest<Result<TenantUserDto>>;
 
 public sealed record GetCompanySettingsQuery : IRequest<Result<CompanySettingsDto>>;

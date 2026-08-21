@@ -125,7 +125,7 @@ public sealed class CompanySettingsQueryHandler :
     public async Task<Result<TenantUserDto>> Handle(CreateTenantUserCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantContext.TenantId;
-        var user = TenantUser.Create(tenantId, request.FullName, request.Email, request.Role, allowedModulesJson: request.AllowedModulesJson);
+        var user = TenantUser.Create(tenantId, request.FullName, request.Email, request.Role, initialPassword: request.Password, allowedModulesJson: request.AllowedModulesJson);
         _dbContext.TenantUsers.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -148,7 +148,7 @@ public sealed class CompanySettingsQueryHandler :
             return Result<TenantUserDto>.Failure(new Error("UserNotFound", "Usuario no encontrado."));
         }
 
-        user.Update(request.FullName, request.Role, request.IsActive, request.AllowedModulesJson);
+        user.Update(request.FullName, request.Role, request.IsActive, request.AllowedModulesJson, request.Password);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Result<TenantUserDto>.Success(new TenantUserDto(
