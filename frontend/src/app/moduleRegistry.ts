@@ -299,6 +299,26 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     ]
   },
   {
+    id: "metrologia",
+    label: "Metrología & Calidad",
+    icon: "⚖️",
+    gradient: "linear-gradient(135deg, #0d9488, #0f766e)",
+    glow: "rgba(13, 148, 136, 0.35)",
+    title: "METROLOGÍA LEGAL & CALIDAD",
+    defaultPath: "/metrologia",
+    pathPrefixes: ["/metrologia"],
+    minimumPlan: "base",
+    requiredPermission: "home.read",
+    dependencies: [],
+    items: [
+      { path: "/metrologia", label: "Tablero Metrológico", icon: "📊", end: true },
+      { path: "/metrologia/equipos", label: "Parque de Balanzas", icon: "🏢" },
+      { path: "/metrologia/patrones", label: "Pesas Patrón & INTI", icon: "⚖️" },
+      { path: "/metrologia/ensayos/nuevo", label: "Nuevo Ensayo en Campo", icon: "📝" },
+      { path: "/metrologia/informes", label: "Certificados de Calibración", icon: "📋" }
+    ]
+  },
+  {
     id: "administracion",
     label: "Configuración",
     icon: "🛠️",

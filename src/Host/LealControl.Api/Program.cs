@@ -13,6 +13,7 @@ using LealControl.Modules.Finance.Infrastructure;
 using LealControl.Modules.HumanResources.Infrastructure;
 using LealControl.Modules.Fleet.Infrastructure;
 using LealControl.Modules.Accounting.Infrastructure;
+using LealControl.Modules.Metrology.Infrastructure;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Api.SuperAdmin;
 using LealControl.Api.Automation;
@@ -57,6 +58,7 @@ try
     builder.Services.AddHumanResourcesModule(builder.Configuration);
     builder.Services.AddFleetModule(builder.Configuration);
     builder.Services.AddAccountingModule(builder.Configuration);
+    builder.Services.AddMetrologyModule(builder.Configuration);
     builder.Services.ConfigureHttpJsonOptions(options =>
         options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
     builder.Services.AddEndpointsApiExplorer();
@@ -126,6 +128,9 @@ try
 
         var accounting = scope.ServiceProvider.GetRequiredService<AccountingDbContext>();
         await accounting.EnsureAccountingTablesAsync();
+
+        var metrology = scope.ServiceProvider.GetRequiredService<MetrologyDbContext>();
+        await metrology.EnsureMetrologyTablesAsync();
     }
 
     app.MapGet("/", () => Results.Redirect("/swagger"));
@@ -137,6 +142,7 @@ try
     app.MapHumanResourcesModule();
     app.MapFleetModule();
     app.MapAccountingModule();
+    app.MapMetrologyModule();
     app.MapAutomationEndpoints();
     app.MapSuperAdminModule();
     app.MapTenantBackupSelfService();

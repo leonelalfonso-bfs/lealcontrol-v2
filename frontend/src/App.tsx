@@ -98,6 +98,12 @@ import { GeneralLedgerPage } from "./pages/accounting/GeneralLedgerPage";
 import { TrialBalancePage } from "./pages/accounting/TrialBalancePage";
 import { BankReconciliationPage } from "./pages/accounting/BankReconciliationPage";
 import { AccountingStudyPortalPage } from "./pages/accounting/AccountingStudyPortalPage";
+import { MetrologyDashboardPage } from "./pages/metrology/MetrologyDashboardPage";
+import { MetrologyEquipmentPage } from "./pages/metrology/MetrologyEquipmentPage";
+import { StandardWeightsPage } from "./pages/metrology/StandardWeightsPage";
+import { CalibrationReportsPage } from "./pages/metrology/CalibrationReportsPage";
+import { CalibrationReportFormPage } from "./pages/metrology/CalibrationReportFormPage";
+import { CalibrationReportPrintPage } from "./pages/metrology/CalibrationReportPrintPage";
 import { LandingPage } from "./pages/LandingPage";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
@@ -130,7 +136,7 @@ export function App() {
   const userRole = user?.role || "Comercial";
   let allowedModuleIds: string[] = [];
   if (userRole === "Admin") {
-    allowedModuleIds = ["inicio", "directorio", "crm", "ventas", "compras", "inventario", "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "administracion"];
+    allowedModuleIds = ["inicio", "directorio", "crm", "ventas", "compras", "inventario", "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "administracion"];
   } else {
     try {
       const raw = typeof user?.allowedModulesJson === "string" ? JSON.parse(user.allowedModulesJson) : user?.allowedModulesJson || [];
@@ -143,7 +149,8 @@ export function App() {
         fleet: ["flota"],
         hr: ["rrhh"],
         grains: ["cereales"],
-        accounting: ["contabilidad"]
+        accounting: ["contabilidad"],
+        metrology: ["metrologia"]
       };
       allowedModuleIds = ["inicio"];
       (Array.isArray(raw) ? raw : []).forEach((r: string) => {
@@ -514,6 +521,14 @@ export function App() {
               <Route path="/contabilidad/sumas-saldos" element={<TrialBalancePage />} />
               <Route path="/contabilidad/conciliacion" element={<BankReconciliationPage />} />
               <Route path="/contabilidad/portal-estudio" element={<AccountingStudyPortalPage />} />
+
+              {/* Metrology & Quality Professional Routes */}
+              <Route path="/metrologia" element={<MetrologyDashboardPage />} />
+              <Route path="/metrologia/equipos" element={<MetrologyEquipmentPage />} />
+              <Route path="/metrologia/patrones" element={<StandardWeightsPage />} />
+              <Route path="/metrologia/ensayos/nuevo" element={<CalibrationReportFormPage />} />
+              <Route path="/metrologia/informes" element={<CalibrationReportsPage />} />
+              <Route path="/metrologia/informes/:id/imprimir" element={<CalibrationReportPrintPage />} />
 
               {/* Reports & Settings Routes */}
               <Route path="/reportes" element={<ReportsPage />} />

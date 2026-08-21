@@ -18,5 +18,6 @@
     <ProjectReference Include="..\..\Modules\HumanResources\LealControl.Modules.HumanResources.Infrastructure\LealControl.Modules.HumanResources.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Fleet\LealControl.Modules.Fleet.Infrastructure\LealControl.Modules.Fleet.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Accounting\LealControl.Modules.Accounting.Infrastructure\LealControl.Modules.Accounting.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Metrology\LealControl.Modules.Metrology.Infrastructure\LealControl.Modules.Metrology.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

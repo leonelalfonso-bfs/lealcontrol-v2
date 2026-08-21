@@ -647,5 +647,72 @@ export const api = {
   autoMatchBankStatement: (id: string) =>
     request<{ message: string; totalReconciled: number; statementStatus: string }>(`/api/v1/accounting/bank-statements/${id}/auto-match`, { method: "POST" }),
   quickPostBankFee: (lineId: string, feeType: "BankFee" | "TaxLey25413") =>
-    request<any>(`/api/v1/accounting/bank-statements/lines/${lineId}/quick-post`, { method: "POST", body: JSON.stringify({ feeType }) })
+    request<any>(`/api/v1/accounting/bank-statements/lines/${lineId}/quick-post`, { method: "POST", body: JSON.stringify({ feeType }) }),
+
+  // ==========================================
+  // METROLOGY & QUALITY PROFESSIONAL
+  // ==========================================
+  getMetrologyDashboard: () =>
+    request<{
+      equipments: { total: number; active: number; expired: number };
+      weights: { total: number; valid: number; expired: number };
+      reports: { total: number; recent: import("./types").CalibrationReport[] };
+    }>("/api/v1/metrology/dashboard"),
+
+  listMetrologyEquipment: (params?: { search?: string; customerId?: string; status?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set("search", params.search);
+    if (params?.customerId) q.set("customerId", params.customerId);
+    if (params?.status) q.set("status", params.status);
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return request<import("./types").MetrologyEquipment[]>(`/api/v1/metrology/equipment${query}`);
+  },
+  getMetrologyEquipment: (id: string) =>
+    request<{
+      equipment: import("./types").MetrologyEquipment;
+      history: import("./types").CalibrationReport[];
+    }>(`/api/v1/metrology/equipment/${id}`),
+  createMetrologyEquipment: (body: Partial<import("./types").MetrologyEquipment>) =>
+    request<import("./types").MetrologyEquipment>("/api/v1/metrology/equipment", { method: "POST", body: JSON.stringify(body) }),
+  updateMetrologyEquipment: (id: string, body: Partial<import("./types").MetrologyEquipment>) =>
+    request<import("./types").MetrologyEquipment>(`/api/v1/metrology/equipment/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteMetrologyEquipment: (id: string) =>
+    request<{ message: string }>(`/api/v1/metrology/equipment/${id}`, { method: "DELETE" }),
+
+  listStandardWeights: () =>
+    request<import("./types").StandardWeight[]>("/api/v1/metrology/weights"),
+  createStandardWeight: (body: Partial<import("./types").StandardWeight>) =>
+    request<import("./types").StandardWeight>("/api/v1/metrology/weights", { method: "POST", body: JSON.stringify(body) }),
+  deleteStandardWeight: (id: string) =>
+    request<{ message: string }>(`/api/v1/metrology/weights/${id}`, { method: "DELETE" }),
+
+  calculateMetrologyRules: (body: {
+    maxCapacity: number;
+    minCapacity: number;
+    divisionD: number;
+    verificationIntervalE: number;
+    accuracyClass: string;
+    loadCellsCount: number;
+    normative?: string;
+  }) =>
+    request<{
+      linearityPoints: import("./types").MetrologyTestPoint[];
+      eccentricityConfig: import("./types").EccentricityConfig;
+      repeatabilityConfig: { halfMaxLoad: number; fullMaxLoad: number; emt: number; recommendedRepetitions: number };
+    }>("/api/v1/metrology/calculate-rules", { method: "POST", body: JSON.stringify(body) }),
+
+  listCalibrationReports: (params?: { equipmentId?: string; customerId?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.equipmentId) q.set("equipmentId", params.equipmentId);
+    if (params?.customerId) q.set("customerId", params.customerId);
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return request<import("./types").CalibrationReport[]>(`/api/v1/metrology/reports${query}`);
+  },
+  getCalibrationReport: (id: string) =>
+    request<{
+      report: import("./types").CalibrationReport;
+      equipment?: import("./types").MetrologyEquipment;
+    }>(`/api/v1/metrology/reports/${id}`),
+  saveCalibrationReport: (body: Partial<import("./types").CalibrationReport>) =>
+    request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) })
 };

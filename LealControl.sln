@@ -59,6 +59,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Accounting", "Accounting", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LealControl.Modules.Accounting.Infrastructure", "src\Modules\Accounting\LealControl.Modules.Accounting.Infrastructure\LealControl.Modules.Accounting.Infrastructure.csproj", "{923BBD34-943C-4270-9C61-075953B00B44}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Metrology", "Metrology", "{715FE001-22E0-4BDA-986F-18FA7763E4CA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LealControl.Modules.Metrology.Infrastructure", "src\Modules\Metrology\LealControl.Modules.Metrology.Infrastructure\LealControl.Modules.Metrology.Infrastructure.csproj", "{6AC0145E-9CD7-48BA-B31D-3001DF0E5218}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -133,6 +137,10 @@ Global
 		{923BBD34-943C-4270-9C61-075953B00B44}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{923BBD34-943C-4270-9C61-075953B00B44}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{923BBD34-943C-4270-9C61-075953B00B44}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AC0145E-9CD7-48BA-B31D-3001DF0E5218}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AC0145E-9CD7-48BA-B31D-3001DF0E5218}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AC0145E-9CD7-48BA-B31D-3001DF0E5218}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AC0145E-9CD7-48BA-B31D-3001DF0E5218}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -164,5 +172,7 @@ Global
 		{45176643-F3A5-412D-A301-E736BB015E9D} = {65EA896E-AB8F-41B8-AAD8-EA9C8C410A5A}
 		{6FB06DB8-5C6F-4271-B3AD-ED0E40C8FFFF} = {A3333333-3333-3333-3333-333333333333}
 		{923BBD34-943C-4270-9C61-075953B00B44} = {6FB06DB8-5C6F-4271-B3AD-ED0E40C8FFFF}
+		{715FE001-22E0-4BDA-986F-18FA7763E4CA} = {A3333333-3333-3333-3333-333333333333}
+		{6AC0145E-9CD7-48BA-B31D-3001DF0E5218} = {715FE001-22E0-4BDA-986F-18FA7763E4CA}
 	EndGlobalSection
 EndGlobal

@@ -1477,3 +1477,102 @@ export type GrainDashboardData = {
   marketPrices: GrainMarketPrice[];
 };
 
+// ==========================================
+// Metrology & Quality Professional Types
+// ==========================================
+export type MetrologyEquipment = {
+  id: string;
+  tenantId: string;
+  code: string;
+  description: string;
+  brand: string;
+  model: string;
+  serialNumber: string;
+  customerId?: string | null;
+  customerName?: string | null;
+  location?: string | null;
+  maxCapacity: number;
+  minCapacity: number;
+  divisionD: number;
+  verificationIntervalE: number;
+  unit: string;
+  accuracyClass: string;
+  indicationType: string;
+  loadCellsCount: number;
+  hasTare: boolean;
+  status: "Active" | "Inactive" | "Maintenance" | "OutOfService";
+  lastCalibrationDate?: string | null;
+  nextCalibrationDate?: string | null;
+  notes?: string | null;
+  createdAtUtc: string;
+};
+
+export type StandardWeight = {
+  id: string;
+  tenantId: string;
+  code: string;
+  serialNumber?: string | null;
+  nominalValue: number;
+  unit: string;
+  accuracyClass: string;
+  material: string;
+  conventionalMassCorrection: number;
+  uncertainty: number;
+  certificateNumber: string;
+  traceabilityLab: string;
+  calibrationDate?: string | null;
+  expirationDate?: string | null;
+  status: "Valid" | "Expired" | "InCalibration" | "OutOfService";
+  createdAtUtc: string;
+};
+
+export type CalibrationReport = {
+  id: string;
+  tenantId: string;
+  reportNumber: string;
+  certificateType: string;
+  normativeApplied: string;
+  equipmentId: string;
+  equipmentCode: string;
+  equipmentDescription: string;
+  customerId?: string | null;
+  customerName?: string | null;
+  customerAddress?: string | null;
+  customerCuit?: string | null;
+  location?: string | null;
+  calibrationDate: string;
+  nextCalibrationDate?: string | null;
+  performedBy: string;
+  ambientTemperature: number;
+  ambientHumidity: number;
+  atmosphericPressure: number;
+  initialInspectionPassed: boolean;
+  inspectionNotes?: string | null;
+  repeatabilityDataJson: string;
+  eccentricityDataJson: string;
+  linearityDataJson: string;
+  uncertaintyDataJson: string;
+  weightsUsedJson: string;
+  expandedUncertainty: number;
+  result: "Apto" | "Apto con Observaciones" | "No Apto";
+  observations?: string | null;
+  status: "Draft" | "Issued" | "Cancelled";
+  createdAtUtc: string;
+};
+
+export type MetrologyTestPoint = {
+  step: number;
+  targetLoad: number;
+  emt: number;
+  minAllowed: number;
+  maxAllowed: number;
+};
+
+export type EccentricityConfig = {
+  testLoad: number;
+  positionsCount: number;
+  emt: number;
+  description: string;
+};
+
+
