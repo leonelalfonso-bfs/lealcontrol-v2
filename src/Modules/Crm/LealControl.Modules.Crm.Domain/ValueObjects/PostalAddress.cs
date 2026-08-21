@@ -31,16 +31,15 @@ public sealed record PostalAddress
         ArgentineProvince province,
         string? postalCode)
     {
-        if (string.IsNullOrWhiteSpace(street) || string.IsNullOrWhiteSpace(city) || string.IsNullOrWhiteSpace(postalCode))
-        {
-            return Result<PostalAddress>.Failure(CrmErrors.InvalidAddress);
-        }
+        var s = string.IsNullOrWhiteSpace(street) ? "S/D" : street.Trim();
+        var c = string.IsNullOrWhiteSpace(city) ? "S/C" : city.Trim();
+        var cp = string.IsNullOrWhiteSpace(postalCode) ? "S/C" : postalCode.Trim();
 
         return Result<PostalAddress>.Success(new PostalAddress(
-            street.Trim(),
-            city.Trim(),
+            s,
+            c,
             province,
-            postalCode.Trim()));
+            cp));
     }
 
     public static Result<PostalAddress?> CreateOptional(

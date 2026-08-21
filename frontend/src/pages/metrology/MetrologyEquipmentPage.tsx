@@ -371,10 +371,10 @@ export function MetrologyEquipmentPage() {
       const locPayload = {
         name: quickLocName.trim(),
         address: {
-          street: quickLocStreet.trim(),
-          city: quickLocCity.trim(),
+          street: quickLocStreet.trim() || "S/D",
+          city: quickLocCity.trim() || "S/C",
           province: quickLocProvince,
-          postalCode: quickLocPostalCode.trim()
+          postalCode: quickLocPostalCode.trim() || "S/C"
         }
       };
 
@@ -950,12 +950,12 @@ export function MetrologyEquipmentPage() {
                 />
               </label>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 0.8fr", gap: 12 }}>
                 <label>
                   <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Ciudad / Localidad</span>
                   <input
                     type="text"
-                    placeholder="ej. Villa María"
+                    placeholder="ej. San Lorenzo"
                     value={quickLocCity}
                     onChange={(e) => setQuickLocCity(e.target.value)}
                     style={{ marginTop: 4 }}
@@ -969,6 +969,17 @@ export function MetrologyEquipmentPage() {
                       <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
+                </label>
+
+                <label>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Cód. Postal</span>
+                  <input
+                    type="text"
+                    placeholder="ej. 2200"
+                    value={quickLocPostalCode}
+                    onChange={(e) => setQuickLocPostalCode(e.target.value)}
+                    style={{ marginTop: 4 }}
+                  />
                 </label>
               </div>
 
