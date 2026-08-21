@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LEAL Control ERP 2.0 | Sistema de Gestión Integral Cloud para Empresas</title>
+  <meta name="description" content="Sistema de gestión empresarial Cloud en Argentina. Facturación electrónica ARCA, Contabilidad profesional con P&L, Finanzas, eCheqs, Cereales & Granos, Flota y Stock.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563eb'/><text x='50%' y='68%' font-size='60' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'>L</text></svg>">
+</head>
+<body>
+
+  <!-- ==================== TOP NAVIGATION ==================== -->
+  <header class="navbar">
+    <div class="container">
+      <a href="/" class="brand-logo">
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="36" height="36" rx="9" fill="url(#logo-grad)"/>
+          <path d="M12 9V27H24V22H17V9H12Z" fill="white"/>
+          <defs>
+            <linearGradient id="logo-grad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#2563EB"/>
+              <stop offset="1" stop-color="#1D4ED8"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span>LEAL Control <span style="color: var(--accent); font-weight: 900;">2.0</span></span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#modulos">Módulos</a></li>
+        <li><a href="#contabilidad">Contabilidad & P&L</a></li>
+        <li><a href="#granos">Cereales & Agro</a></li>
+        <li><a href="#flota">Flota & Logística</a></li>
+        <li><a href="#planes">Planes</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="https://erp.lealcontrol.com" class="btn ghost" style="font-size: 0.88rem;">
+          🔐 Ingresar al Sistema
+        </a>
+        <button class="btn primary btn-nav-demo">
+          🚀 Solicitá tu Demo
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== HERO SECTION ==================== -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge primary">
+            🚀 LEAL CONTROL ERP 2.0 • LA PLATAFORMA DE GESTIÓN MÁS COMPLETA DE ARGENTINA
+          </span>
+        </div>
+        <h1>
+          El ERP Integral que Transforma la Gestión de tu <span class="gradient">Empresa</span>
+        </h1>
+        <p class="subtitle">
+          Unificá Facturación Electrónica ARCA, Contabilidad Profesional con P&L en tiempo real, Finanzas, eCheqs, Cereales & Granos, Flota y Stock en una sola nube ágil, moderna y segura.
+        </p>
+
+        <div class="hero-ctas">
+          <button class="btn primary lg btn-hero-demo">
+            ✨ Solicitá tu Demo Personalizada
+          </button>
+          <a href="#modulos" class="btn secondary lg">
+            🔍 Ver Todos los Módulos
+          </a>
+        </div>
+
+        <div class="trust-bar">
+          <div class="trust-item">
+            <span>🛡️ 100% Homologado ARCA (AFIP)</span>
+          </div>
+          <div class="trust-item">
+            <span>☁️ Cloud Multi-Empresa con Backups Diarios</span>
+          </div>
+          <div class="trust-item">
+            <span>🇦🇷 Soporte Directo en Argentina</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real Live Mockup Preview Window -->
+      <div class="hero-mockup-wrapper">
+        <div class="window-header">
+          <div class="window-dots">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+          </div>
+          <div class="window-url">https://erp.lealcontrol.com/contabilidad</div>
+          <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">
+            🏢 LEAL CONTROL S.A. • CUIT 30-71548962-9
+          </div>
+        </div>
+
+        <div class="mockup-inner">
+          <!-- Sidebar -->
+          <div class="mockup-sidebar">
+            <div style="font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; padding: 0 8px;">
+              MÓDULOS PRINCIPALES
+            </div>
+            <div class="mockup-nav-item">📊 Hoy & Métricas</div>
+            <div class="mockup-nav-item active">🏛️ Contabilidad & P&L</div>
+            <div class="mockup-nav-item">🌾 Cereales & Granos</div>
+            <div class="mockup-nav-item">💳 Finanzas & eCheqs</div>
+            <div class="mockup-nav-item">🚛 Flota & Logística</div>
+            <div class="mockup-nav-item">📦 Stock & Depósitos</div>
+            <div class="mockup-nav-item">🛒 Compras & Proveedores</div>
+            <div class="mockup-nav-item">🎯 CRM & Clientes</div>
+            <div class="mockup-nav-item">👥 Recursos Humanos</div>
+          </div>
+
+          <!-- Main View Preview -->
+          <div class="mockup-main">
+            <!-- Header bar inside mockup -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px;">
+              <div>
+                <div style="font-weight: 800; font-size: 1.25rem; color: #0f172a;">📊 Tablero Ejecutivo P&L (Estado de Resultados)</div>
+                <div style="font-size: 0.8rem; color: #64748b;">Período Agosto 2026 • Asientos en tiempo real</div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <span class="badge success" style="font-size: 0.75rem;">🟢 Contabilidad al Día</span>
+                <span class="badge primary" style="font-size: 0.75rem;">⚖️ Partida Doble OK</span>
+              </div>
+            </div>
+
+            <!-- KPI Cards Grid -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+              <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px;">
+                <span style="font-size: 0.7rem; font-weight: 700; color: #1e40af; text-transform: uppercase;">VENTAS TOTALES</span>
+                <div style="font-weight: 900; font-size: 1.15rem; color: #1e3a8a; margin-top: 4px;">$ 28.450.000</div>
+                <span style="font-size: 0.7rem; color: #059669; font-weight: 600;">↑ +18.4% vs mes anterior</span>
+              </div>
+              <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px;">
+                <span style="font-size: 0.7rem; font-weight: 700; color: #991b1b; text-transform: uppercase;">COSTO MERCADERÍAS</span>
+                <div style="font-weight: 900; font-size: 1.15rem; color: #7f1d1d; margin-top: 4px;">$ 16.820.000</div>
+                <span style="font-size: 0.7rem; color: #64748b;">CMV 59.1% s/ventas</span>
+              </div>
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px;">
+                <span style="font-size: 0.7rem; font-weight: 700; color: #166534; text-transform: uppercase;">MARGEN BRUTO</span>
+                <div style="font-weight: 900; font-size: 1.15rem; color: #14532d; margin-top: 4px;">$ 11.630.000</div>
+                <span style="font-size: 0.7rem; color: #16a34a; font-weight: 700;">40.9% Rentabilidad</span>
+              </div>
+              <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 12px;">
+                <span style="font-size: 0.7rem; font-weight: 700; color: #6b21a8; text-transform: uppercase;">EBITDA OPERATIVO</span>
+                <div style="font-weight: 900; font-size: 1.15rem; color: #581c87; margin-top: 4px;">$ 8.940.000</div>
+                <span style="font-size: 0.7rem; color: #7c3aed; font-weight: 700;">31.4% Margen Neto</span>
+              </div>
+            </div>
+
+            <!-- Mini Live Journal Table -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 700; font-size: 0.82rem;">Últimos Movimientos del Libro Diario</span>
+                <span style="font-size: 0.75rem; color: #2563eb; font-weight: 600;">Ver Libro Completo ➔</span>
+              </div>
+              <table style="width: 100%; font-size: 0.78rem; border-collapse: collapse;">
+                <thead>
+                  <tr style="border-bottom: 1px solid #cbd5e1; color: #64748b; text-align: left;">
+                    <th style="padding: 4px 0;">Asiento</th>
+                    <th style="padding: 4px 0;">Concepto / Origen</th>
+                    <th style="padding: 4px 0; text-align: right;">Debe ($)</th>
+                    <th style="padding: 4px 0; text-align: right;">Haber ($)</th>
+                    <th style="padding: 4px 0; text-align: center;">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 6px 0;">#1043</td>
+                    <td style="padding: 6px 0;">Cobranza Recibo #RC-00912 • Transferencia Galicia</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 600;">$ 850.000,00</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 600;">$ 850.000,00</td>
+                    <td style="padding: 6px 0; text-align: center;"><span class="badge success" style="font-size: 0.65rem;">Automático</span></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0;">#1042</td>
+                    <td style="padding: 6px 0;">Factura de Venta A 0004-00018942 • San Lorenzo S.A.</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 600;">$ 1.815.000,00</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 600;">$ 1.815.000,00</td>
+                    <td style="padding: 6px 0; text-align: center;"><span class="badge success" style="font-size: 0.65rem;">Automático</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== MODULES SHOWCASE (REAL VIEWS) ==================== -->
+  <section class="section" id="modulos" style="background: #ffffff; border-top: 1px solid var(--line);">
+    <div class="container">
+      <div class="section-head">
+        <span class="badge primary" style="margin-bottom: 12px;">MÓDULOS DEL SISTEMA 2.0</span>
+        <h2>Todo lo que tu empresa necesita en una sola suite</h2>
+        <p class="muted">
+          Olvidate de planillas de cálculo dispersas o sistemas desconectados. LEAL Control ERP 2.0 integra cada área de tu negocio con máxima precisión.
+        </p>
+      </div>
+
+      <!-- Tab Switchers -->
+      <div class="modules-tabs">
+        <button class="tab-pill active" data-module="contabilidad">🏛️ Contabilidad & P&L</button>
+        <button class="tab-pill" data-module="granos">🌾 Cereales & Granos</button>
+        <button class="tab-pill" data-module="flota">🚛 Flota & Logística</button>
+        <button class="tab-pill" data-module="finanzas">💳 Finanzas & eCheqs</button>
+        <button class="tab-pill" data-module="ventas">📊 Ventas & ARCA</button>
+      </div>
+
+      <!-- Active Showcase Render Container -->
+      <div class="module-showcase" id="active-module-showcase">
+        <!-- Rendered by JavaScript via app.js -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ALL MODULES GRID ==================== -->
+  <section class="section" style="background: var(--bg-main);">
+    <div class="container">
+      <div class="section-head">
+        <span class="badge primary" style="margin-bottom: 12px;">ARQUITECTURA MODULAR</span>
+        <h2>Conocé todos los módulos integrados</h2>
+        <p class="muted">Activá los módulos que tu operación necesita y expandite sin límites.</p>
+      </div>
+
+      <div class="grid-3">
+        <!-- Card 1 -->
+        <div class="card">
+          <div class="card-icon" style="color: #2563eb; background: #dbeafe;">🏛️</div>
+          <h3>Contabilidad & P&L</h3>
+          <p>Plan de cuentas, libro diario y mayor automáticos, balance 8 columnas y cierres fiscales con candado.</p>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="card">
+          <div class="card-icon" style="color: #10b981; background: #d1fae5;">🌾</div>
+          <h3>Cereales & Granos</h3>
+          <p>Contratos disponibles/futuros, fijaciones a pizarra Rosario/MATba, liquidaciones CPE y control de mermas.</p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="card">
+          <div class="card-icon" style="color: #f59e0b; background: #fef3c7;">🚛</div>
+          <h3>Flota & Logística</h3>
+          <p>Odómetros, combustible $/km, mantenimiento de vehículos y alertas automáticas de VTV, RTO y seguros.</p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="card">
+          <div class="card-icon" style="color: #6366f1; background: #e0e7ff;">💳</div>
+          <h3>Finanzas & eCheqs</h3>
+          <p>Cuentas corrientes, cheques físicos y eCheqs, cobranzas con MercadoPago PSP y proyección de Cash Flow.</p>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="card">
+          <div class="card-icon" style="color: #06b6d4; background: #cffafe;">📊</div>
+          <h3>Ventas & Facturación ARCA</h3>
+          <p>Facturación electrónica A, B, C, MiPyME con CAE directo, presupuestos con WhatsApp y remitos.</p>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="card">
+          <div class="card-icon" style="color: #8b5cf6; background: #ede9fe;">📦</div>
+          <h3>Stock & Depósitos</h3>
+          <p>Inventario multi-depósito, números de serie, lotes, despachos con código de barras y valorización PPP/FIFO.</p>
+        </div>
+
+        <!-- Card 7 -->
+        <div class="card">
+          <div class="card-icon" style="color: #ec4899; background: #fce7f3;">🛒</div>
+          <h3>Compras & Proveedores</h3>
+          <p>Órdenes de compra, solicitudes de cotización comparativas, remitos de recepción y libro IVA compras.</p>
+        </div>
+
+        <!-- Card 8 -->
+        <div class="card">
+          <div class="card-icon" style="color: #14b8a6; background: #ccfbf1;">👥</div>
+          <h3>Recursos Humanos</h3>
+          <p>Legajos digitales del personal, control de licencias, liquidación de sueldos y libro sueldos digital F.931.</p>
+        </div>
+
+        <!-- Card 9 -->
+        <div class="card">
+          <div class="card-icon" style="color: #f43f5e; background: #ffe4e6;">🤖</div>
+          <h3>LEAL Copilot AI</h3>
+          <p>Asistente de inteligencia artificial para diagnóstico financiero, OCR de comprobantes y consultas en lenguaje natural.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PRICING & DEMO PLANS ==================== -->
+  <section class="section" id="planes" style="background: #ffffff; border-top: 1px solid var(--line);">
+    <div class="container">
+      <div class="section-head">
+        <span class="badge primary" style="margin-bottom: 12px;">PLANES Y PRECIOS TRANSPARENTES</span>
+        <h2>Elegí el plan a la medida de tu empresa</h2>
+        <p class="muted">Precios en pesos argentinos, sin sorpresas, con soporte y actualizaciones continuas.</p>
+      </div>
+
+      <div class="grid-3">
+        <!-- Plan PyME -->
+        <div class="pricing-card">
+          <div>
+            <h3>Plan PyME Comercial</h3>
+            <p style="font-size: 0.88rem; margin-top: 4px;">Ideal para comercios y distribuidores en crecimiento</p>
+            <div class="pricing-price">$ 45.000 <span class="period">/ mes</span></div>
+            <ul class="module-features-list" style="margin: 24px 0;">
+              <li><span class="check">✓</span> Facturación Electrónica ARCA ilimitada</li>
+              <li><span class="check">✓</span> Stock & Depósitos en tiempo real</li>
+              <li><span class="check">✓</span> Finanzas, Cajas & Cuentas Corrientes</li>
+              <li><span class="check">✓</span> Hasta 5 usuarios concurrentes</li>
+              <li><span class="check">✓</span> Backups automáticos en la nube</li>
+            </ul>
+          </div>
+          <button class="btn secondary btn-open-demo" data-module="pyme">Solicitá Demo PyME</button>
+        </div>
+
+        <!-- Plan Profesional (Featured) -->
+        <div class="pricing-card featured">
+          <div class="pricing-badge">MÁS ELEGIDO</div>
+          <div>
+            <h3>Plan Profesional & P&L</h3>
+            <p style="font-size: 0.88rem; margin-top: 4px;">Para empresas que buscan control contable y financiero total</p>
+            <div class="pricing-price">$ 75.000 <span class="period">/ mes</span></div>
+            <ul class="module-features-list" style="margin: 24px 0;">
+              <li><span class="check">✓</span> Todo lo incluido en Plan PyME</li>
+              <li><span class="check">✓</span> <strong>Contabilidad Profesional & P&L en vivo</strong></li>
+              <li><span class="check">✓</span> <strong>Cartera de eCheqs & Conciliación Bancaria</strong></li>
+              <li><span class="check">✓</span> Portal de Cierres para tu Contador</li>
+              <li><span class="check">✓</span> Hasta 15 usuarios concurrentes</li>
+              <li><span class="check">✓</span> Soporte prioritario por WhatsApp</li>
+            </ul>
+          </div>
+          <button class="btn primary btn-open-demo" data-module="profesional">Solicitá Demo Profesional</button>
+        </div>
+
+        <!-- Plan Agro / Granos & Flota -->
+        <div class="pricing-card">
+          <div>
+            <h3>Plan Agro & Logística</h3>
+            <p style="font-size: 0.88rem; margin-top: 4px;">Especializado en acopios, corretaje y transporte</p>
+            <div class="pricing-price">$ 110.000 <span class="period">/ mes</span></div>
+            <ul class="module-features-list" style="margin: 24px 0;">
+              <li><span class="check">✓</span> Todo lo incluido en Profesional</li>
+              <li><span class="check">✓</span> <strong>Módulo Cereales & Granos (Pizarra/CPE)</strong></li>
+              <li><span class="check">✓</span> <strong>Módulo Flota, Camiones & Combustible</strong></li>
+              <li><span class="check">✓</span> Recursos Humanos & Liquidaciones</li>
+              <li><span class="check">✓</span> Usuarios ilimitados</li>
+              <li><span class="check">✓</span> Onboarding guiado y migración de datos</li>
+            </ul>
+          </div>
+          <button class="btn secondary btn-open-demo" data-module="agro">Solicitá Demo Agro/Flota</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== MODAL: SOLICITÁ TU DEMO ==================== -->
+  <div class="modal-overlay" id="demo-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <span class="badge primary" style="font-size: 0.75rem; margin-bottom: 6px;">LEAL CONTROL ERP 2.0</span>
+          <h3 style="font-size: 1.4rem;">🚀 Solicitá tu Demo Personalizada</h3>
+          <p style="font-size: 0.85rem; margin-top: 4px;">
+            Completá los datos de tu empresa y te habilitaremos un entorno de prueba a tu medida.
+          </p>
+        </div>
+        <button class="modal-close" id="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Demo Request Form -->
+      <form id="demo-request-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="demo-company">Nombre de la Empresa / Razón Social *</label>
+            <input type="text" id="demo-company" placeholder="Ej. Agropecuaria San José S.A." required>
+          </div>
+          <div class="form-group">
+            <label for="demo-cuit">CUIT de la Empresa *</label>
+            <input type="text" id="demo-cuit" placeholder="30-71548962-9" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="demo-name">Nombre y Apellido del Responsable *</label>
+            <input type="text" id="demo-name" placeholder="Ej. Juan Manuel Rossi" required>
+          </div>
+          <div class="form-group">
+            <label for="demo-email">Email Corporativo de Contacto *</label>
+            <input type="email" id="demo-email" placeholder="juan@tuempresa.com.ar" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="demo-phone">Teléfono / WhatsApp de Contacto *</label>
+            <input type="tel" id="demo-phone" placeholder="341 6123456" required>
+          </div>
+          <div class="form-group">
+            <label for="demo-users">Cantidad Estimada de Usuarios</label>
+            <select id="demo-users">
+              <option value="1-5">1 a 5 usuarios</option>
+              <option value="6-15">6 a 15 usuarios</option>
+              <option value="16-50">16 a 50 usuarios</option>
+              <option value="50+">Más de 50 usuarios (Enterprise)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Módulos de Mayor Interés:</label>
+          <div class="checkbox-grid">
+            <label class="checkbox-label">
+              <input type="checkbox" name="modules" value="ventas" id="mod-ventas" checked> 📊 Ventas & ARCA
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="modules" value="contabilidad" id="mod-contabilidad" checked> 🏛️ Contabilidad & P&L
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="modules" value="finanzas" id="mod-finanzas" checked> 💳 Finanzas & eCheqs
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="modules" value="granos" id="mod-granos"> 🌾 Cereales & Granos
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="modules" value="flota" id="mod-flota"> 🚛 Flota & Logística
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="modules" value="stock" id="mod-stock"> 📦 Stock & Depósitos
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="modules" value="compras" id="mod-compras"> 🛒 Compras & Proveedores
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="modules" value="rrhh" id="mod-rrhh"> 👥 Recursos Humanos
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="demo-notes">Comentarios o Requerimientos Particulares:</label>
+          <textarea id="demo-notes" rows="2" placeholder="Contanos brevemente qué actividad realiza tu empresa o qué sistema utilizás actualmente..."></textarea>
+        </div>
+
+        <button type="submit" class="btn primary" style="width: 100%; padding: 14px; font-size: 1rem; margin-top: 10px;">
+          🚀 Enviar Solicitud y Crear Mi Demo
+        </button>
+      </form>
+
+      <!-- Success Box -->
+      <div id="demo-success-box" style="display: none; text-align: center; padding: 30px 10px;">
+        <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
+        <h3 style="color: #059669; font-size: 1.5rem; margin-bottom: 8px;">¡Solicitud Recibida con Éxito!</h3>
+        <p style="color: #475569; font-size: 0.95rem; max-width: 480px; margin: 0 auto 24px;">
+          Hemos recibido los datos de tu empresa. Nuestro equipo técnico y comercial está preparando tu entorno de prueba y te contactará en menos de 2 horas.
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+          <a href="#" id="btn-demo-whatsapp" target="_blank" class="btn primary" style="background: #25d366; border-color: #25d366; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);">
+            📲 Chatear por WhatsApp Ahora
+          </a>
+          <button class="btn secondary" onclick="document.getElementById('demo-modal').classList.remove('active')">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="footer">
+    <div class="container">
+      <div style="display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 40px; margin-bottom: 50px;">
+        <div>
+          <div class="brand-logo" style="color: #ffffff; margin-bottom: 14px;">
+            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="36" height="36" rx="9" fill="#2563EB"/>
+              <path d="M12 9V27H24V22H17V9H12Z" fill="white"/>
+            </svg>
+            <span>LEAL Control 2.0</span>
+          </div>
+          <p style="font-size: 0.88rem; color: #94a3b8; line-height: 1.6; max-width: 320px;">
+            La plataforma Cloud ERP más ágil y completa para empresas comerciales, industriales y agropecuarias de Argentina.
+          </p>
+        </div>
+
+        <div>
+          <h4>Módulos ERP</h4>
+          <ul class="footer-links">
+            <li><a href="#contabilidad">Contabilidad & P&L</a></li>
+            <li><a href="#granos">Cereales & Granos</a></li>
+            <li><a href="#flota">Flota & Vehículos</a></li>
+            <li><a href="#finanzas">Finanzas & eCheqs</a></li>
+            <li><a href="#ventas">Facturación ARCA</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Accesos</h4>
+          <ul class="footer-links">
+            <li><a href="https://erp.lealcontrol.com">Ingreso al Sistema</a></li>
+            <li><a href="https://v2.lealcontrol.com">Entorno Staging (v2)</a></li>
+            <li><a href="https://erp.lealcontrol.com/superadmin">Portal SuperAdmin</a></li>
+            <li><a href="#planes">Planes y Precios</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Contacto</h4>
+          <ul class="footer-links">
+            <li><span>📍 Rosario & Región Centro, Argentina</span></li>
+            <li><span>✉️ contacto@lealcontrol.com</span></li>
+            <li><span>📞 +54 9 341 600-0000</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; flex-wrap: wrap; gap: 12px;">
+        <div>© 2026 LEAL Control ERP. Todos los derechos reservados.</div>
+        <div style="color: #64748b;">Desarrollado con altos estándares de seguridad y confidencialidad.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -18,10 +18,24 @@ public sealed class MasterDbContext : DbContext
     public DbSet<SuperAdminUser> SuperAdmins => Set<SuperAdminUser>();
     public DbSet<SubscriptionPlan> Plans => Set<SubscriptionPlan>();
     public DbSet<TenantPaymentRecord> Payments => Set<TenantPaymentRecord>();
+    public DbSet<MasterDemoRequest> DemoRequests => Set<MasterDemoRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<MasterDemoRequest>(b =>
+        {
+            b.ToTable("master_demo_requests", "public");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.CompanyName).HasMaxLength(160).IsRequired();
+            b.Property(x => x.Cuit).HasMaxLength(40).IsRequired();
+            b.Property(x => x.ContactFullName).HasMaxLength(120).IsRequired();
+            b.Property(x => x.Email).HasMaxLength(160).IsRequired();
+            b.Property(x => x.Phone).HasMaxLength(60).IsRequired();
+            b.Property(x => x.EstimatedUsers).HasMaxLength(40).HasDefaultValue("1-5");
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Pending");
+        });
 
         modelBuilder.Entity<MasterTenant>(b =>
         {
@@ -143,6 +157,20 @@ public sealed class MasterDbContext : DbContext
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""ApprovedAtUtc"" timestamp with time zone,
                 ""RawPayloadJson"" text
+            );
+
+            CREATE TABLE IF NOT EXISTS public.master_demo_requests (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""CompanyName"" character varying(160) NOT NULL,
+                ""Cuit"" character varying(40) NOT NULL,
+                ""ContactFullName"" character varying(120) NOT NULL,
+                ""Email"" character varying(160) NOT NULL,
+                ""Phone"" character varying(60) NOT NULL,
+                ""EstimatedUsers"" character varying(40) NOT NULL DEFAULT '1-5',
+                ""InterestedModulesJson"" text DEFAULT '[]',
+                ""Message"" text,
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Pending',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );
         ";
 

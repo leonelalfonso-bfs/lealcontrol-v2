@@ -64,3 +64,19 @@ public sealed class TenantPaymentRecord
     public DateTime? ApprovedAtUtc { get; set; }
     public string? RawPayloadJson { get; set; }
 }
+
+public sealed class MasterDemoRequest
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string CompanyName { get; set; } = string.Empty;
+    public string Cuit { get; set; } = string.Empty;
+    public string ContactFullName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string EstimatedUsers { get; set; } = "1-5";
+    public string InterestedModulesJson { get; set; } = "[]";
+    public string? Message { get; set; }
+    public string Status { get; set; } = "Pending"; // Pending, Contacted, Provisioned, Dismissed
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+

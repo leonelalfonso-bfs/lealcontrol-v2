@@ -465,6 +465,61 @@ public static class SuperAdminEndpoints
                 logger.LogError(ex, "Error processing MercadoPago webhook");
                 return Results.Ok(new { received = true, error = ex.Message });
             }
+        // 12. Public Demo Request Intake
+        endpoints.MapPost("/api/v1/public/demo-requests", async (
+            CreateDemoRequestDto req,
+            MasterDbContext masterDb,
+            CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.CompanyName) || string.IsNullOrWhiteSpace(req.ContactFullName) || string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Phone))
+            {
+                return Results.BadRequest(new { message = "Nombre de empresa, contacto, email y teléfono son obligatorios." });
+            }
+
+            var demo = new MasterDemoRequest
+            {
+                CompanyName = req.CompanyName.Trim(),
+                Cuit = req.Cuit?.Trim() ?? "",
+                ContactFullName = req.ContactFullName.Trim(),
+                Email = req.Email.Trim().ToLowerInvariant(),
+                Phone = req.Phone.Trim(),
+                EstimatedUsers = req.EstimatedUsers?.Trim() ?? "1-5",
+                InterestedModulesJson = req.InterestedModulesJson ?? "[]",
+                Message = req.Message?.Trim(),
+                Status = "Pending",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            masterDb.DemoRequests.Add(demo);
+            await masterDb.SaveChangesAsync(ct);
+
+            return Results.Ok(new
+            {
+                success = true,
+                message = "Solicitud de Demo recibida con éxito. Nuestro equipo te contactará a la brevedad.",
+                requestId = demo.Id
+            });
+        }).WithTags("Public Landing");
+
+        // 13. List Demo Requests (SuperAdmin)
+        group.MapGet("/demo-requests", async (MasterDbContext masterDb, CancellationToken ct) =>
+        {
+            var list = await masterDb.DemoRequests
+                .AsNoTracking()
+                .OrderByDescending(d => d.CreatedAtUtc)
+                .ToListAsync(ct);
+            return Results.Ok(list);
+        });
+
+        // 14. Update Demo Request Status
+        group.MapPut("/demo-requests/{id:guid}/status", async (Guid id, UpdateDemoRequestStatusDto req, MasterDbContext masterDb, CancellationToken ct) =>
+        {
+            var demo = await masterDb.DemoRequests.FirstOrDefaultAsync(d => d.Id == id, ct);
+            if (demo == null) return Results.NotFound(new { message = "Solicitud no encontrada." });
+
+            demo.Status = req.Status;
+            await masterDb.SaveChangesAsync(ct);
+            return Results.Ok(demo);
         });
 
         return endpoints;
@@ -511,3 +566,5 @@ public sealed record UpdateTenantStatusRequest(string Status, DateTime? ExpiresA
 public sealed record UpdateTenantModulesRequest(string? EnabledModulesJson, string? PlanCode, decimal? MonthlyPriceArs);
 public sealed record CreatePlanRequest(string Code, string Name, decimal PriceArs, decimal PriceUsd, int MaxUsers, string? Description, string? FeaturesJson, string? EnabledModulesJson);
 public sealed record UpdatePlanRequest(string Name, decimal PriceArs, decimal PriceUsd, int MaxUsers, string Description, string FeaturesJson, string? EnabledModulesJson);
+public sealed record CreateDemoRequestDto(string CompanyName, string? Cuit, string ContactFullName, string Email, string Phone, string? EstimatedUsers, string? InterestedModulesJson, string? Message);
+public sealed record UpdateDemoRequestStatusDto(string Status);

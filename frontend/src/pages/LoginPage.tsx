@@ -396,10 +396,17 @@ export function LoginPage() {
                 boxShadow: "0 4px 15px rgba(13, 148, 136, 0.4)"
               }}
             >
-              {loading ? "Creando empresa..." : "🏢 Crear Empresa y Entrar Limpio"}
+              {loading ? "Creando empresa..." : "🏢 Crear Empresa y Entrar"}
             </button>
           </form>
         )}
+
+        <div style={{ textAlign: "center", marginTop: "24px", paddingTop: "18px", borderTop: "1px solid rgba(255, 255, 255, 0.08)", fontSize: "0.82rem", color: "#94a3b8" }}>
+          <span>¿Querés conocer el sistema para tu empresa? </span>
+          <a href="/landing" style={{ color: "#38bdf8", fontWeight: 700, textDecoration: "underline" }}>
+            🚀 Solicitá tu Demo aquí
+          </a>
+        </div>
       </div>
     </div>
   );

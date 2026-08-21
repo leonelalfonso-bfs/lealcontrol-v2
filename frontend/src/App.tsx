@@ -98,6 +98,7 @@ import { GeneralLedgerPage } from "./pages/accounting/GeneralLedgerPage";
 import { TrialBalancePage } from "./pages/accounting/TrialBalancePage";
 import { BankReconciliationPage } from "./pages/accounting/BankReconciliationPage";
 import { AccountingStudyPortalPage } from "./pages/accounting/AccountingStudyPortalPage";
+import { LandingPage } from "./pages/LandingPage";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
 import "./v1-theme.css";
@@ -161,6 +162,10 @@ export function App() {
 
   if (location.pathname === "/login") {
     return <LoginPage />;
+  }
+
+  if (location.pathname === "/landing" || location.pathname === "/demo") {
+    return <LandingPage />;
   }
 
   if (location.pathname.startsWith("/superadmin")) {
