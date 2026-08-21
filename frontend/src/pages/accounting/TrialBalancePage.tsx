@@ -15,12 +15,37 @@ export function TrialBalancePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleExportCsv = () => {
+    if (!balance || !balance.rows || balance.rows.length === 0) return;
+    const headers = "Codigo;Cuenta;Nivel;Sumas_Debe;Sumas_Haber;Saldos_Deudor;Saldos_Acreedor;Patrimonial_Activo;Patrimonial_PasivoPN;Resultados_Perdida;Resultados_Ganancia";
+    const rows = balance.rows.map((r: any) =>
+      `"${r.code}";"${r.name.replace(/"/g, '""')}";${r.level};${r.sumDebit || 0};${r.sumCredit || 0};${r.debitBalance || 0};${r.creditBalance || 0};${r.assetBalance || 0};${r.liabilityEquityBalance || 0};${r.lossBalance || 0};${r.gainBalance || 0}`
+    );
+    const csvContent = "\uFEFF" + [headers, ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `BALANCE_SUMAS_Y_SALDOS_8_COLUMNAS_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="stack" style={{ gap: 20 }}>
       <div className="page-head">
         <div>
           <h1>⚖️ Balance de Sumas y Saldos (8 Columnas)</h1>
-          <p className="muted">Comprobación de sumas, saldos patrimoniales y de resultados</p>
+          <p className="muted">Comprobación de sumas, saldos patrimoniales y de resultados oficial</p>
+        </div>
+        <div className="row" style={{ gap: 10 }}>
+          <button type="button" className="btn ghost" onClick={handleExportCsv} disabled={!balance?.rows?.length}>
+            📥 Exportar Excel (8 Columnas)
+          </button>
+          <button type="button" className="btn ghost" onClick={() => window.print()}>
+            🖨️ Imprimir / PDF Oficial
+          </button>
         </div>
       </div>
 
@@ -39,7 +64,10 @@ export function TrialBalancePage() {
           🔍 Libro Mayor
         </Link>
         <Link to="/contabilidad/sumas-saldos" className="tab-btn active">
-          ⚖️ Sumas y Saldos
+          ⚖️ Sumas y Saldos (8 Col.)
+        </Link>
+        <Link to="/contabilidad/conciliacion" className="tab-btn">
+          🏦 Conciliación Bancaria
         </Link>
         <Link to="/contabilidad/portal-estudio" className="tab-btn">
           🏢 Cierres & IVA Digital (ARCA)

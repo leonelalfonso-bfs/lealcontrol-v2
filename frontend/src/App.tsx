@@ -96,6 +96,7 @@ import { ChartOfAccountsPage } from "./pages/accounting/ChartOfAccountsPage";
 import { JournalEntriesPage } from "./pages/accounting/JournalEntriesPage";
 import { GeneralLedgerPage } from "./pages/accounting/GeneralLedgerPage";
 import { TrialBalancePage } from "./pages/accounting/TrialBalancePage";
+import { BankReconciliationPage } from "./pages/accounting/BankReconciliationPage";
 import { AccountingStudyPortalPage } from "./pages/accounting/AccountingStudyPortalPage";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
@@ -508,6 +509,7 @@ export function App() {
               <Route path="/contabilidad/asientos" element={<JournalEntriesPage />} />
               <Route path="/contabilidad/mayor" element={<GeneralLedgerPage />} />
               <Route path="/contabilidad/sumas-saldos" element={<TrialBalancePage />} />
+              <Route path="/contabilidad/conciliacion" element={<BankReconciliationPage />} />
               <Route path="/contabilidad/portal-estudio" element={<AccountingStudyPortalPage />} />
 
               {/* Reports & Settings Routes */}

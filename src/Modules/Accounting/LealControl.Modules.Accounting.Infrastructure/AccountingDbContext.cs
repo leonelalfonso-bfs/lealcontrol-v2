@@ -19,6 +19,8 @@ public sealed class AccountingDbContext : DbContext
     public DbSet<JournalEntryLine> JournalEntryLines => Set<JournalEntryLine>();
     public DbSet<CostCenter> CostCenters => Set<CostCenter>();
     public DbSet<FiscalYearPeriod> Periods => Set<FiscalYearPeriod>();
+    public DbSet<BankStatement> BankStatements => Set<BankStatement>();
+    public DbSet<BankStatementLine> BankStatementLines => Set<BankStatementLine>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,11 +48,11 @@ public sealed class AccountingDbContext : DbContext
             b.Property(x => x.SourceModule).HasMaxLength(32).HasDefaultValue("Manual");
             b.Property(x => x.SourceDocumentId).HasMaxLength(128);
             b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Posted");
-            b.Property(x => x.TotalDebit).HasPrecision(18, 2);
-            b.Property(x => x.TotalCredit).HasPrecision(18, 2);
             b.Property(x => x.CreatedBy).HasMaxLength(128);
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.JournalEntryId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.TenantId, x.EntryNumber }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.Date });
         });
 
         modelBuilder.Entity<JournalEntryLine>(b =>
@@ -59,14 +61,12 @@ public sealed class AccountingDbContext : DbContext
             b.HasKey(x => x.Id);
             b.Property(x => x.AccountCode).HasMaxLength(32).IsRequired();
             b.Property(x => x.AccountName).HasMaxLength(160).IsRequired();
-            b.Property(x => x.Debit).HasPrecision(18, 2);
-            b.Property(x => x.Credit).HasPrecision(18, 2);
             b.Property(x => x.Currency).HasMaxLength(10).HasDefaultValue("ARS");
-            b.Property(x => x.ExchangeRate).HasPrecision(18, 4).HasDefaultValue(1);
             b.Property(x => x.CostCenterCode).HasMaxLength(32);
             b.Property(x => x.CostCenterName).HasMaxLength(128);
             b.Property(x => x.Memo).HasMaxLength(500);
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.AccountId });
         });
 
         modelBuilder.Entity<CostCenter>(b =>
@@ -88,6 +88,32 @@ public sealed class AccountingDbContext : DbContext
             b.Property(x => x.LockedBy).HasMaxLength(128);
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.Year, x.Month }).IsUnique();
+        });
+
+        modelBuilder.Entity<BankStatement>(b =>
+        {
+            b.ToTable("bank_statements", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.BankName).HasMaxLength(120).IsRequired();
+            b.Property(x => x.AccountNumber).HasMaxLength(64);
+            b.Property(x => x.Currency).HasMaxLength(10).HasDefaultValue("ARS");
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Open");
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.BankStatementId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.TenantId, x.BankName });
+        });
+
+        modelBuilder.Entity<BankStatementLine>(b =>
+        {
+            b.ToTable("bank_statement_lines", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Description).HasMaxLength(255).IsRequired();
+            b.Property(x => x.ReferenceNumber).HasMaxLength(128);
+            b.Property(x => x.MatchType).HasMaxLength(64);
+            b.Property(x => x.MatchNotes).HasMaxLength(255);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.TransactionDate });
+            b.HasIndex(x => new { x.TenantId, x.IsReconciled });
         });
     }
 
@@ -168,6 +194,41 @@ public sealed class AccountingDbContext : DbContext
                     ""LockedBy"" character varying(128)
                 );
                 CREATE UNIQUE INDEX IF NOT EXISTS ""IX_periods_Tenant_Year_Month"" ON accounting.periods (""TenantId"", ""Year"", ""Month"");
+
+                CREATE TABLE IF NOT EXISTS accounting.bank_statements (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""TenantId"" uuid NOT NULL,
+                    ""BankName"" character varying(120) NOT NULL,
+                    ""AccountNumber"" character varying(64),
+                    ""Currency"" character varying(10) NOT NULL DEFAULT 'ARS',
+                    ""PeriodStartDate"" timestamp with time zone NOT NULL,
+                    ""PeriodEndDate"" timestamp with time zone NOT NULL,
+                    ""InitialBalance"" numeric(18,2) NOT NULL DEFAULT 0,
+                    ""FinalBalance"" numeric(18,2) NOT NULL DEFAULT 0,
+                    ""Status"" character varying(32) NOT NULL DEFAULT 'Open',
+                    ""TotalLines"" integer NOT NULL DEFAULT 0,
+                    ""ReconciledLines"" integer NOT NULL DEFAULT 0,
+                    ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+                );
+
+                CREATE TABLE IF NOT EXISTS accounting.bank_statement_lines (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""BankStatementId"" uuid NOT NULL REFERENCES accounting.bank_statements(""Id"") ON DELETE CASCADE,
+                    ""TenantId"" uuid NOT NULL,
+                    ""TransactionDate"" timestamp with time zone NOT NULL,
+                    ""Description"" character varying(255) NOT NULL,
+                    ""ReferenceNumber"" character varying(128),
+                    ""Debit"" numeric(18,2) NOT NULL DEFAULT 0,
+                    ""Credit"" numeric(18,2) NOT NULL DEFAULT 0,
+                    ""Balance"" numeric(18,2) NOT NULL DEFAULT 0,
+                    ""IsReconciled"" boolean NOT NULL DEFAULT false,
+                    ""MatchedJournalEntryId"" uuid,
+                    ""MatchedJournalEntryLineId"" uuid,
+                    ""MatchType"" character varying(64),
+                    ""MatchNotes"" character varying(255)
+                );
+                CREATE INDEX IF NOT EXISTS ""IX_bank_statement_lines_Tenant_Date"" ON accounting.bank_statement_lines (""TenantId"", ""TransactionDate"");
+                CREATE INDEX IF NOT EXISTS ""IX_bank_statement_lines_Tenant_Reconciled"" ON accounting.bank_statement_lines (""TenantId"", ""IsReconciled"");
             ", ct);
         }
         catch (Exception ex)

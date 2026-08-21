@@ -595,5 +595,25 @@ export const api = {
   listFiscalPeriods: () =>
     request<any[]>("/api/v1/accounting/periods"),
   lockFiscalPeriod: (body: { year: number; month: number; lock: boolean; user?: string }) =>
-    request<any>("/api/v1/accounting/periods/lock", { method: "POST", body: JSON.stringify(body) })
+    request<any>("/api/v1/accounting/periods/lock", { method: "POST", body: JSON.stringify(body) }),
+
+  // Auto-Posting Triggers
+  autoPostInvoice: (body: { invoiceId: string; invoiceNumber: string; customerName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number }) =>
+    request<any>("/api/v1/accounting/auto-post/invoice", { method: "POST", body: JSON.stringify(body) }),
+  autoPostPurchase: (body: { purchaseId: string; invoiceNumber: string; supplierName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number }) =>
+    request<any>("/api/v1/accounting/auto-post/purchase", { method: "POST", body: JSON.stringify(body) }),
+  autoPostReceipt: (body: { receiptId: string; receiptNumber: string; customerName: string; date: string; amount: number; paymentMethod?: string }) =>
+    request<any>("/api/v1/accounting/auto-post/receipt", { method: "POST", body: JSON.stringify(body) }),
+
+  // Bank Reconciliation
+  listBankStatements: () =>
+    request<any[]>("/api/v1/accounting/bank-statements"),
+  getBankStatement: (id: string) =>
+    request<any>(`/api/v1/accounting/bank-statements/${id}`),
+  uploadBankStatement: (body: { bankName?: string; accountNumber?: string; currency?: string; periodStartDate?: string; periodEndDate?: string; initialBalance?: number; finalBalance?: number; lines: any[] }) =>
+    request<any>("/api/v1/accounting/bank-statements/upload", { method: "POST", body: JSON.stringify(body) }),
+  autoMatchBankStatement: (id: string) =>
+    request<{ message: string; totalReconciled: number; statementStatus: string }>(`/api/v1/accounting/bank-statements/${id}/auto-match`, { method: "POST" }),
+  quickPostBankFee: (lineId: string, feeType: "BankFee" | "TaxLey25413") =>
+    request<any>(`/api/v1/accounting/bank-statements/lines/${lineId}/quick-post`, { method: "POST", body: JSON.stringify({ feeType }) })
 };

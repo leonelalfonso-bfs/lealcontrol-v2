@@ -294,6 +294,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/contabilidad/asientos", label: "Libro Diario", icon: "📖" },
       { path: "/contabilidad/mayor", label: "Libro Mayor", icon: "🔍" },
       { path: "/contabilidad/sumas-saldos", label: "Sumas y Saldos", icon: "⚖️" },
+      { path: "/contabilidad/conciliacion", label: "Conciliación Bancaria", icon: "🏦" },
       { path: "/contabilidad/portal-estudio", label: "Cierres & IVA Digital", icon: "🏢" }
     ]
   },

@@ -128,6 +128,9 @@ export function ChartOfAccountsPage() {
         <Link to="/contabilidad/sumas-saldos" className="tab-btn">
           ⚖️ Sumas y Saldos
         </Link>
+        <Link to="/contabilidad/conciliacion" className="tab-btn">
+          🏦 Conciliación Bancaria
+        </Link>
         <Link to="/contabilidad/portal-estudio" className="tab-btn">
           🏢 Cierres & IVA Digital (ARCA)
         </Link>

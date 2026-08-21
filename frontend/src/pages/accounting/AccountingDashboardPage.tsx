@@ -57,6 +57,9 @@ export function AccountingDashboardPage() {
         <Link to="/contabilidad/sumas-saldos" className="tab-btn">
           ⚖️ Sumas y Saldos (8 Col.)
         </Link>
+        <Link to="/contabilidad/conciliacion" className="tab-btn">
+          🏦 Conciliación Bancaria
+        </Link>
         <Link to="/contabilidad/portal-estudio" className="tab-btn">
           🏢 Cierres & IVA Digital (ARCA)
         </Link>

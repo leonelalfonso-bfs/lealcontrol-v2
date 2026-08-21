@@ -111,3 +111,42 @@ public sealed class FiscalYearPeriod : Entity<Guid>
 
     public FiscalYearPeriod() : base(Guid.NewGuid()) { }
 }
+
+public sealed class BankStatement : Entity<Guid>
+{
+    public TenantId TenantId { get; set; }
+    public string BankName { get; set; } = "Banco Galicia"; // Banco Galicia, Banco Macro, Santander, BBVA, Nación, MercadoPago
+    public string AccountNumber { get; set; } = string.Empty;
+    public string Currency { get; set; } = "ARS";
+    public DateTime PeriodStartDate { get; set; }
+    public DateTime PeriodEndDate { get; set; }
+    public decimal InitialBalance { get; set; }
+    public decimal FinalBalance { get; set; }
+    public string Status { get; set; } = "Open"; // Open, InProgress, Reconciled
+    public int TotalLines { get; set; }
+    public int ReconciledLines { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public List<BankStatementLine> Lines { get; set; } = new();
+
+    public BankStatement() : base(Guid.NewGuid()) { }
+}
+
+public sealed class BankStatementLine : Entity<Guid>
+{
+    public Guid BankStatementId { get; set; }
+    public TenantId TenantId { get; set; }
+    public DateTime TransactionDate { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public string? ReferenceNumber { get; set; }
+    public decimal Debit { get; set; } // Débitos / Salidas de dinero
+    public decimal Credit { get; set; } // Créditos / Entradas de dinero
+    public decimal Balance { get; set; }
+    public bool IsReconciled { get; set; } = false;
+    public Guid? MatchedJournalEntryId { get; set; }
+    public Guid? MatchedJournalEntryLineId { get; set; }
+    public string? MatchType { get; set; } // ExactAmount, ReferenceMatch, Manual, AutoPosted
+    public string? MatchNotes { get; set; }
+
+    public BankStatementLine() : base(Guid.NewGuid()) { }
+}

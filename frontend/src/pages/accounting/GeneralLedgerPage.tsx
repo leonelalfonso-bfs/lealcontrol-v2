@@ -47,6 +47,25 @@ export function GeneralLedgerPage() {
 
   let runningBalance = 0;
 
+  const handleExportCsv = () => {
+    if (!ledgerData || !ledgerData.entries || ledgerData.entries.length === 0) return;
+    const headers = "Cuenta_Codigo;Cuenta_Nombre;Fecha;Asiento;Concepto;Debe;Haber;Saldo_Acumulado;Centro_Costo";
+    let curBal = 0;
+    const rows = ledgerData.entries.map((e: any) => {
+      curBal += (Number(e.debit) || 0) - (Number(e.credit) || 0);
+      return `"${ledgerData.accountCode}";"${ledgerData.accountName.replace(/"/g, '""')}";${new Date(e.date).toLocaleDateString("es-AR")};${e.entryNumber};"${e.concept.replace(/"/g, '""')}";${e.debit || 0};${e.credit || 0};${curBal};"${e.costCenterCode || ""}"`;
+    });
+    const csvContent = "\uFEFF" + [headers, ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `LIBRO_MAYOR_${ledgerData.accountCode}_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="stack" style={{ gap: 20 }}>
       <div className="page-head">
@@ -55,6 +74,12 @@ export function GeneralLedgerPage() {
           <p className="muted">Detalle cronológico de débitos, créditos y saldo acumulado progresivo</p>
         </div>
         <div className="row" style={{ gap: 10 }}>
+          <button type="button" className="btn ghost" onClick={handleExportCsv} disabled={!ledgerData?.entries?.length}>
+            📥 Exportar Excel (CSV)
+          </button>
+          <button type="button" className="btn ghost" onClick={() => window.print()}>
+            🖨️ Imprimir / PDF
+          </button>
           <Link to="/contabilidad/asientos" className="btn">
             ➕ Nuevo Asiento
           </Link>
@@ -77,6 +102,9 @@ export function GeneralLedgerPage() {
         </Link>
         <Link to="/contabilidad/sumas-saldos" className="tab-btn">
           ⚖️ Sumas y Saldos
+        </Link>
+        <Link to="/contabilidad/conciliacion" className="tab-btn">
+          🏦 Conciliación Bancaria
         </Link>
         <Link to="/contabilidad/portal-estudio" className="tab-btn">
           🏢 Cierres & IVA Digital (ARCA)

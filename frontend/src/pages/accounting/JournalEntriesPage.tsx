@@ -134,6 +134,30 @@ export function JournalEntriesPage() {
     }
   };
 
+  const handleExportCsv = () => {
+    if (entries.length === 0) return;
+    const headers = "Asiento;Fecha;Concepto;Origen;Cuenta_Codigo;Cuenta_Nombre;Debe;Haber;Centro_Costo;Memo";
+    const rows: string[] = [];
+    entries.forEach((e) => {
+      if (e.lines && e.lines.length > 0) {
+        e.lines.forEach((l: any) => {
+          rows.push(`${e.entryNumber};${new Date(e.date).toLocaleDateString("es-AR")};"${e.concept.replace(/"/g, '""')}";${e.sourceModule || "Manual"};${l.accountCode};"${l.accountName.replace(/"/g, '""')}";${l.debit || 0};${l.credit || 0};"${l.costCenterCode || ""}";"${l.memo || ""}"`);
+        });
+      } else {
+        rows.push(`${e.entryNumber};${new Date(e.date).toLocaleDateString("es-AR")};"${e.concept.replace(/"/g, '""')}";${e.sourceModule || "Manual"};;;${e.totalDebit};${e.totalCredit};;`);
+      }
+    });
+    const csvContent = "\uFEFF" + [headers, ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `LIBRO_DIARIO_CONTABLE_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="stack" style={{ gap: 20 }}>
       <div className="page-head">
@@ -142,6 +166,12 @@ export function JournalEntriesPage() {
           <p className="muted">Registraciones de partida doble, asientos automáticos y manuales</p>
         </div>
         <div className="row" style={{ gap: 10 }}>
+          <button type="button" className="btn ghost" onClick={handleExportCsv} disabled={entries.length === 0}>
+            📥 Exportar Excel (CSV)
+          </button>
+          <button type="button" className="btn ghost" onClick={() => window.print()}>
+            🖨️ Imprimir / PDF
+          </button>
           <button type="button" className="btn" onClick={openNewEntryModal}>
             ➕ Nuevo Asiento Manual
           </button>
@@ -164,6 +194,9 @@ export function JournalEntriesPage() {
         </Link>
         <Link to="/contabilidad/sumas-saldos" className="tab-btn">
           ⚖️ Sumas y Saldos
+        </Link>
+        <Link to="/contabilidad/conciliacion" className="tab-btn">
+          🏦 Conciliación Bancaria
         </Link>
         <Link to="/contabilidad/portal-estudio" className="tab-btn">
           🏢 Cierres & IVA Digital (ARCA)
