@@ -21,6 +21,7 @@ public sealed class AccountingDbContext : DbContext
     public DbSet<FiscalYearPeriod> Periods => Set<FiscalYearPeriod>();
     public DbSet<BankStatement> BankStatements => Set<BankStatement>();
     public DbSet<BankStatementLine> BankStatementLines => Set<BankStatementLine>();
+    public DbSet<AccountingMapping> Mappings => Set<AccountingMapping>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -114,6 +115,14 @@ public sealed class AccountingDbContext : DbContext
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.TransactionDate });
             b.HasIndex(x => new { x.TenantId, x.IsReconciled });
+        });
+
+        modelBuilder.Entity<AccountingMapping>(b =>
+        {
+            b.ToTable("mappings", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => x.TenantId).IsUnique();
         });
     }
 
@@ -229,6 +238,32 @@ public sealed class AccountingDbContext : DbContext
                 );
                 CREATE INDEX IF NOT EXISTS ""IX_bank_statement_lines_Tenant_Date"" ON accounting.bank_statement_lines (""TenantId"", ""TransactionDate"");
                 CREATE INDEX IF NOT EXISTS ""IX_bank_statement_lines_Tenant_Reconciled"" ON accounting.bank_statement_lines (""TenantId"", ""IsReconciled"");
+
+                CREATE TABLE IF NOT EXISTS accounting.mappings (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""TenantId"" uuid NOT NULL,
+                    ""SalesRevenueAccountCode"" character varying(32) NOT NULL DEFAULT '4.1.01',
+                    ""SalesVatDebitAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.02.001',
+                    ""AccountsReceivableAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.02.001',
+                    ""PurchaseExpenseAccountCode"" character varying(32) NOT NULL DEFAULT '5.1.01',
+                    ""PurchaseVatCreditAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.03.001',
+                    ""AccountsPayableAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.01.001',
+                    ""CashAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.001',
+                    ""BankAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.002',
+                    ""ChecksInHandAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.004',
+                    ""PspDigitalAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.006',
+                    ""BankExpensesAccountCode"" character varying(32) NOT NULL DEFAULT '5.3.01',
+                    ""BankTaxAccountCode"" character varying(32) NOT NULL DEFAULT '5.3.02',
+                    ""RetainedEarningsAccountCode"" character varying(32) NOT NULL DEFAULT '3.2.02',
+                    ""ExchangeDifferenceGainAccountCode"" character varying(32) NOT NULL DEFAULT '4.2.03',
+                    ""ExchangeDifferenceLossAccountCode"" character varying(32) NOT NULL DEFAULT '5.3.04',
+                    ""SalariesExpenseAccountCode"" character varying(32) NOT NULL DEFAULT '5.2.01',
+                    ""SocialSecurityExpenseAccountCode"" character varying(32) NOT NULL DEFAULT '5.2.02',
+                    ""SalariesPayableAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.02.004',
+                    ""SocialSecurityPayableAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.02.003',
+                    ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_mappings_TenantId"" ON accounting.mappings (""TenantId"");
             ", ct);
         }
         catch (Exception ex)
@@ -355,5 +390,17 @@ public sealed class AccountingDbContext : DbContext
         CostCenters.AddRange(defaultCostCenters);
 
         await SaveChangesAsync(ct);
+    }
+
+    public async Task<AccountingMapping> GetOrCreateMappingAsync(TenantId tenantId, CancellationToken ct = default)
+    {
+        var mapping = await Mappings.FirstOrDefaultAsync(m => m.TenantId == tenantId, ct);
+        if (mapping == null)
+        {
+            mapping = new AccountingMapping(Guid.NewGuid(), tenantId);
+            Mappings.Add(mapping);
+            await SaveChangesAsync(ct);
+        }
+        return mapping;
     }
 }

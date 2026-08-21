@@ -150,3 +150,67 @@ public sealed class BankStatementLine : Entity<Guid>
 
     public BankStatementLine() : base(Guid.NewGuid()) { }
 }
+
+public sealed class AccountingMapping : Entity<Guid>
+{
+    public TenantId TenantId { get; set; }
+    
+    // Ventas
+    public string SalesRevenueAccountCode { get; set; } = "4.1.01";
+    public string SalesVatDebitAccountCode { get; set; } = "2.1.02.001";
+    public string AccountsReceivableAccountCode { get; set; } = "1.1.02.001";
+    
+    // Compras
+    public string PurchaseExpenseAccountCode { get; set; } = "5.1.01";
+    public string PurchaseVatCreditAccountCode { get; set; } = "1.1.03.001";
+    public string AccountsPayableAccountCode { get; set; } = "2.1.01.001";
+    
+    // Tesorería
+    public string CashAccountCode { get; set; } = "1.1.01.001";
+    public string BankAccountCode { get; set; } = "1.1.01.002";
+    public string ChecksInHandAccountCode { get; set; } = "1.1.01.004";
+    public string PspDigitalAccountCode { get; set; } = "1.1.01.006";
+    public string BankExpensesAccountCode { get; set; } = "5.3.01";
+    public string BankTaxAccountCode { get; set; } = "5.3.02";
+    
+    // Cierres y Resultados
+    public string RetainedEarningsAccountCode { get; set; } = "3.2.02";
+    public string ExchangeDifferenceGainAccountCode { get; set; } = "4.2.03";
+    public string ExchangeDifferenceLossAccountCode { get; set; } = "5.3.04";
+    
+    // Sueldos y Cargas Sociales
+    public string SalariesExpenseAccountCode { get; set; } = "5.2.01";
+    public string SocialSecurityExpenseAccountCode { get; set; } = "5.2.02";
+    public string SalariesPayableAccountCode { get; set; } = "2.1.02.004";
+    public string SocialSecurityPayableAccountCode { get; set; } = "2.1.02.003";
+
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public AccountingMapping() : base(Guid.NewGuid()) { }
+    public AccountingMapping(Guid id, TenantId tenantId) : base(id) { TenantId = tenantId; }
+}
+
+public sealed record UpdateMappingRequest(
+    string SalesRevenueAccountCode,
+    string SalesVatDebitAccountCode,
+    string AccountsReceivableAccountCode,
+    string PurchaseExpenseAccountCode,
+    string PurchaseVatCreditAccountCode,
+    string AccountsPayableAccountCode,
+    string CashAccountCode,
+    string BankAccountCode,
+    string ChecksInHandAccountCode,
+    string PspDigitalAccountCode,
+    string BankExpensesAccountCode,
+    string BankTaxAccountCode,
+    string RetainedEarningsAccountCode,
+    string ExchangeDifferenceGainAccountCode,
+    string ExchangeDifferenceLossAccountCode,
+    string SalariesExpenseAccountCode,
+    string SocialSecurityExpenseAccountCode,
+    string SalariesPayableAccountCode,
+    string SocialSecurityPayableAccountCode);
+
+public sealed record YearEndClosingRequest(int Year, DateTime ClosingDate);
+public sealed record AutoPostPayrollRequest(DateTime Date, string PeriodDescription, decimal TotalGrossSalaries, decimal TotalEmployerContributions, decimal TotalNetSalaries, decimal TotalSocialSecurityToPay, Guid? CostCenterId);
+public sealed record ExchangeDifferenceRequest(DateTime Date, decimal UsdExchangeRate, string AccountCode);

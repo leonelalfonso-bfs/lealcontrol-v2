@@ -19,7 +19,9 @@ public static class AccountingEndpoints
     {
         var group = endpoints.MapGroup("/api/v1/accounting").WithTags("Accounting & Finance Professional");
 
-        // 1. Chart of Accounts (Plan de Cuentas)
+        // ====================================================================
+        // 1. Chart of Accounts (Plan de Cuentas Editable)
+        // ====================================================================
         group.MapGet("/accounts", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
@@ -59,7 +61,7 @@ public static class AccountingEndpoints
                 req.Name.Trim(),
                 req.AccountType ?? "Asset",
                 req.Level > 0 ? req.Level : 4,
-                req.ParentCode,
+                req.ParentCode?.Trim(),
                 req.IsDirectPosting,
                 req.Currency ?? "ARS",
                 req.AdjustsForInflation);
@@ -80,8 +82,22 @@ public static class AccountingEndpoints
             var account = await db.Accounts.FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId, ct);
             if (account == null) return Results.NotFound(new { message = "Cuenta no encontrada." });
 
+            if (!string.IsNullOrWhiteSpace(req.Code) && req.Code.Trim() != account.Code)
+            {
+                var codeExists = await db.Accounts.AnyAsync(a => a.TenantId == tenantId && a.Code == req.Code.Trim() && a.Id != id, ct);
+                if (codeExists)
+                {
+                    return Results.BadRequest(new { message = $"Ya existe otra cuenta con el código {req.Code}." });
+                }
+                account.Code = req.Code.Trim();
+            }
+
             account.Name = req.Name.Trim();
+            if (!string.IsNullOrWhiteSpace(req.AccountType)) account.AccountType = req.AccountType.Trim();
+            if (req.Level > 0) account.Level = req.Level;
+            account.ParentCode = req.ParentCode?.Trim();
             account.IsDirectPosting = req.IsDirectPosting;
+            if (!string.IsNullOrWhiteSpace(req.Currency)) account.Currency = req.Currency.Trim();
             account.AdjustsForInflation = req.AdjustsForInflation;
             account.IsActive = req.IsActive;
 
@@ -89,7 +105,79 @@ public static class AccountingEndpoints
             return Results.Ok(account);
         });
 
-        // 2. Journal Entries (Libro Diario)
+        group.MapDelete("/accounts/{id:guid}", async (
+            Guid id,
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            var account = await db.Accounts.FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId, ct);
+            if (account == null) return Results.NotFound(new { message = "Cuenta no encontrada." });
+
+            // Validate if has recorded journal entry lines
+            var hasLines = await db.JournalEntryLines.AnyAsync(l => l.TenantId == tenantId && (l.AccountId == id || l.AccountCode == account.Code), ct);
+            if (hasLines)
+            {
+                return Results.BadRequest(new { message = $"No se puede eliminar la cuenta '{account.Code} - {account.Name}' porque ya posee movimientos en el Libro Diario. Puede desactivarla para que no se use en nuevos asientos." });
+            }
+
+            // Validate if has dependent sub-accounts
+            var hasChildren = await db.Accounts.AnyAsync(a => a.TenantId == tenantId && a.ParentCode == account.Code, ct);
+            if (hasChildren)
+            {
+                return Results.BadRequest(new { message = $"No se puede eliminar la cuenta '{account.Code}' porque contiene subcuentas dependientes. Elimine o reubique las subcuentas primero." });
+            }
+
+            db.Accounts.Remove(account);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { message = "Cuenta eliminada correctamente." });
+        });
+
+        // ====================================================================
+        // 2. Accounting Mapping (Matriz de Enlace Contable Dinámico)
+        // ====================================================================
+        group.MapGet("/mapping", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
+            var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
+            return Results.Ok(mapping);
+        });
+
+        group.MapPut("/mapping", async (UpdateMappingRequest req, ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
+
+            mapping.SalesRevenueAccountCode = req.SalesRevenueAccountCode.Trim();
+            mapping.SalesVatDebitAccountCode = req.SalesVatDebitAccountCode.Trim();
+            mapping.AccountsReceivableAccountCode = req.AccountsReceivableAccountCode.Trim();
+            mapping.PurchaseExpenseAccountCode = req.PurchaseExpenseAccountCode.Trim();
+            mapping.PurchaseVatCreditAccountCode = req.PurchaseVatCreditAccountCode.Trim();
+            mapping.AccountsPayableAccountCode = req.AccountsPayableAccountCode.Trim();
+            mapping.CashAccountCode = req.CashAccountCode.Trim();
+            mapping.BankAccountCode = req.BankAccountCode.Trim();
+            mapping.ChecksInHandAccountCode = req.ChecksInHandAccountCode.Trim();
+            mapping.PspDigitalAccountCode = req.PspDigitalAccountCode.Trim();
+            mapping.BankExpensesAccountCode = req.BankExpensesAccountCode.Trim();
+            mapping.BankTaxAccountCode = req.BankTaxAccountCode.Trim();
+            mapping.RetainedEarningsAccountCode = req.RetainedEarningsAccountCode.Trim();
+            mapping.ExchangeDifferenceGainAccountCode = req.ExchangeDifferenceGainAccountCode.Trim();
+            mapping.ExchangeDifferenceLossAccountCode = req.ExchangeDifferenceLossAccountCode.Trim();
+            mapping.SalariesExpenseAccountCode = req.SalariesExpenseAccountCode.Trim();
+            mapping.SocialSecurityExpenseAccountCode = req.SocialSecurityExpenseAccountCode.Trim();
+            mapping.SalariesPayableAccountCode = req.SalariesPayableAccountCode.Trim();
+            mapping.SocialSecurityPayableAccountCode = req.SocialSecurityPayableAccountCode.Trim();
+            mapping.UpdatedAtUtc = DateTime.UtcNow;
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(mapping);
+        });
+
+        // ====================================================================
+        // 3. Journal Entries (Libro Diario)
+        // ====================================================================
         group.MapGet("/journal-entries", async (
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate,
@@ -108,7 +196,7 @@ public static class AccountingEndpoints
             if (endDate.HasValue) query = query.Where(j => j.Date <= endDate.Value.ToUniversalTime());
             if (!string.IsNullOrWhiteSpace(sourceModule)) query = query.Where(j => j.SourceModule.ToLower() == sourceModule.ToLower());
 
-            var entries = await query.OrderByDescending(j => j.Date).ThenByDescending(j => j.EntryNumber).Take(100).ToListAsync(ct);
+            var entries = await query.OrderByDescending(j => j.Date).ThenByDescending(j => j.EntryNumber).Take(150).ToListAsync(ct);
             return Results.Ok(entries);
         });
 
@@ -118,9 +206,24 @@ public static class AccountingEndpoints
             AccountingDbContext db,
             CancellationToken ct) =>
         {
-            if (req == null || req.Lines == null || req.Lines.Count < 2)
+            var tenantId = tenantContext.TenantId;
+
+            // Check if period is locked
+            var date = req.Date != default ? req.Date : DateTime.UtcNow;
+            var isLocked = await db.Periods.AnyAsync(p =>
+                p.TenantId == tenantId &&
+                p.Year == date.Year &&
+                p.Month == date.Month &&
+                p.Status == "Locked", ct);
+
+            if (isLocked)
             {
-                return Results.BadRequest(new { message = "Un asiento contable debe tener al menos 2 renglones (partida doble)." });
+                return Results.BadRequest(new { message = $"El período fiscal {date.Month:D2}/{date.Year} se encuentra cerrado con candado contable." });
+            }
+
+            if (req.Lines == null || req.Lines.Count < 2)
+            {
+                return Results.BadRequest(new { message = "Un asiento contable requiere al menos 2 líneas (partida doble)." });
             }
 
             var totalDebit = req.Lines.Sum(l => l.Debit);
@@ -128,40 +231,24 @@ public static class AccountingEndpoints
 
             if (Math.Abs(totalDebit - totalCredit) > 0.01m)
             {
-                return Results.BadRequest(new
-                {
-                    message = $"El asiento está desbalanceado. Total Debe: ${totalDebit:N2} | Total Haber: ${totalCredit:N2} | Diferencia: ${Math.Abs(totalDebit - totalCredit):N2}"
-                });
+                return Results.BadRequest(new { message = $"El asiento está desbalanceado. Debe: {totalDebit:N2} | Haber: {totalCredit:N2} | Dif: {totalDebit - totalCredit:N2}" });
             }
 
-            var tenantId = tenantContext.TenantId;
-
-            // Check if period is locked
-            var date = req.Date != default ? req.Date.ToUniversalTime() : DateTime.UtcNow;
-            var isLocked = await db.Periods.AnyAsync(p => p.TenantId == tenantId && p.Year == date.Year && p.Month == date.Month && p.Status == "Locked", ct);
-            if (isLocked)
-            {
-                return Results.BadRequest(new { message = $"El período fiscal {date.Month:D2}/{date.Year} se encuentra bloqueado / cerrado." });
-            }
-
-            // Compute next entry number
-            var lastEntryNumber = await db.JournalEntries
-                .Where(j => j.TenantId == tenantId && j.Date.Year == date.Year)
-                .MaxAsync(j => (int?)j.EntryNumber, ct) ?? 0;
+            var maxNumber = await db.JournalEntries.Where(j => j.TenantId == tenantId).MaxAsync(j => (int?)j.EntryNumber, ct) ?? 0;
 
             var entry = new JournalEntry
             {
                 TenantId = tenantId,
-                EntryNumber = lastEntryNumber + 1,
+                EntryNumber = maxNumber + 1,
                 Date = date,
-                Concept = string.IsNullOrWhiteSpace(req.Concept) ? "Asiento Diario" : req.Concept.Trim(),
+                Concept = req.Concept.Trim(),
                 EntryType = req.EntryType ?? "Standard",
                 SourceModule = req.SourceModule ?? "Manual",
                 SourceDocumentId = req.SourceDocumentId,
                 Status = "Posted",
                 TotalDebit = totalDebit,
                 TotalCredit = totalCredit,
-                CreatedBy = req.CreatedBy ?? "Usuario ERP",
+                CreatedBy = req.CreatedBy ?? "Usuario",
                 CreatedAtUtc = DateTime.UtcNow
             };
 
@@ -172,8 +259,8 @@ public static class AccountingEndpoints
                     JournalEntryId = entry.Id,
                     TenantId = tenantId,
                     AccountId = lineReq.AccountId,
-                    AccountCode = lineReq.AccountCode,
-                    AccountName = lineReq.AccountName,
+                    AccountCode = lineReq.AccountCode.Trim(),
+                    AccountName = lineReq.AccountName.Trim(),
                     Debit = lineReq.Debit,
                     Credit = lineReq.Credit,
                     Currency = lineReq.Currency ?? "ARS",
@@ -191,51 +278,111 @@ public static class AccountingEndpoints
             return Results.Created($"/api/v1/accounting/journal-entries/{entry.Id}", entry);
         });
 
-        // 3. General Ledger (Libro Mayor por Cuenta)
-        group.MapGet("/ledger", async (
-            [FromQuery] string accountCode,
+        // ====================================================================
+        // 4. General Ledger (Libro Mayor)
+        // ====================================================================
+        group.MapGet("/general-ledger", async (
+            [FromQuery] string? accountCode,
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate,
             ITenantContext tenantContext,
             AccountingDbContext db,
             CancellationToken ct) =>
         {
-            if (string.IsNullOrWhiteSpace(accountCode))
+            var tenantId = tenantContext.TenantId;
+            var from = startDate ?? DateTime.UtcNow.AddMonths(-1);
+            var to = endDate ?? DateTime.UtcNow;
+
+            var accountsQuery = db.Accounts.AsNoTracking().Where(a => a.TenantId == tenantId && a.IsDirectPosting);
+            if (!string.IsNullOrWhiteSpace(accountCode))
             {
-                return Results.BadRequest(new { message = "El código de cuenta es obligatorio." });
+                accountsQuery = accountsQuery.Where(a => a.Code == accountCode.Trim());
+            }
+            var accounts = await accountsQuery.OrderBy(a => a.Code).ToListAsync(ct);
+
+            var ledgerReport = new List<object>();
+
+            foreach (var acc in accounts)
+            {
+                // Balance before 'from'
+                var prevLines = await db.JournalEntryLines
+                    .AsNoTracking()
+                    .Where(l => l.TenantId == tenantId && l.AccountCode == acc.Code)
+                    .Join(db.JournalEntries.Where(j => j.Date < from.ToUniversalTime()),
+                          line => line.JournalEntryId,
+                          entry => entry.Id,
+                          (line, entry) => new { line.Debit, line.Credit })
+                    .ToListAsync(ct);
+
+                var prevDebit = prevLines.Sum(x => x.Debit);
+                var prevCredit = prevLines.Sum(x => x.Credit);
+                var initialBalance = (acc.AccountType == "Asset" || acc.AccountType == "Expense")
+                    ? prevDebit - prevCredit
+                    : prevCredit - prevDebit;
+
+                // Movements in range
+                var periodMovements = await db.JournalEntryLines
+                    .AsNoTracking()
+                    .Where(l => l.TenantId == tenantId && l.AccountCode == acc.Code)
+                    .Join(db.JournalEntries.Where(j => j.Date >= from.ToUniversalTime() && j.Date <= to.ToUniversalTime()),
+                          line => line.JournalEntryId,
+                          entry => entry.Id,
+                          (line, entry) => new
+                          {
+                              entry.EntryNumber,
+                              entry.Date,
+                              entry.Concept,
+                              entry.SourceModule,
+                              line.Debit,
+                              line.Credit,
+                              line.Memo,
+                              line.CostCenterName
+                          })
+                    .OrderBy(x => x.Date)
+                    .ThenBy(x => x.EntryNumber)
+                    .ToListAsync(ct);
+
+                var runningBalance = initialBalance;
+                var movementRows = new List<object>();
+
+                foreach (var m in periodMovements)
+                {
+                    if (acc.AccountType == "Asset" || acc.AccountType == "Expense")
+                        runningBalance += (m.Debit - m.Credit);
+                    else
+                        runningBalance += (m.Credit - m.Debit);
+
+                    movementRows.Add(new
+                    {
+                        m.EntryNumber,
+                        m.Date,
+                        m.Concept,
+                        m.SourceModule,
+                        m.Debit,
+                        m.Credit,
+                        RunningBalance = runningBalance,
+                        m.Memo,
+                        m.CostCenterName
+                    });
+                }
+
+                ledgerReport.Add(new
+                {
+                    Account = acc,
+                    InitialBalance = initialBalance,
+                    TotalDebit = periodMovements.Sum(x => x.Debit),
+                    TotalCredit = periodMovements.Sum(x => x.Credit),
+                    FinalBalance = runningBalance,
+                    Movements = movementRows
+                });
             }
 
-            var tenantId = tenantContext.TenantId;
-            var account = await db.Accounts.FirstOrDefaultAsync(a => a.TenantId == tenantId && a.Code == accountCode.Trim(), ct);
-            if (account == null) return Results.NotFound(new { message = "Cuenta contable no encontrada." });
-
-            var query = db.JournalEntryLines
-                .AsNoTracking()
-                .Where(l => l.TenantId == tenantId && l.AccountCode == accountCode.Trim());
-
-            if (startDate.HasValue) query = query.Where(l => db.JournalEntries.Any(j => j.Id == l.JournalEntryId && j.Date >= startDate.Value.ToUniversalTime()));
-            if (endDate.HasValue) query = query.Where(l => db.JournalEntries.Any(j => j.Id == l.JournalEntryId && j.Date <= endDate.Value.ToUniversalTime()));
-
-            var lines = await query.ToListAsync(ct);
-
-            var totalDebit = lines.Sum(l => l.Debit);
-            var totalCredit = lines.Sum(l => l.Credit);
-            var isDebtorNature = account.AccountType == "Asset" || account.AccountType == "Expense";
-            var balance = isDebtorNature ? (totalDebit - totalCredit) : (totalCredit - totalDebit);
-
-            return Results.Ok(new
-            {
-                account,
-                totalDebit,
-                totalCredit,
-                balance,
-                nature = isDebtorNature ? "Deudor" : "Acreedor",
-                movementsCount = lines.Count,
-                lines
-            });
+            return Results.Ok(ledgerReport);
         });
 
-        // 4. Trial Balance (Balance de Sumas y Saldos a 8 Columnas)
+        // ====================================================================
+        // 5. Balance de Sumas y Saldos a 8 Columnas (Trial Balance)
+        // ====================================================================
         group.MapGet("/trial-balance", async (
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate,
@@ -246,207 +393,188 @@ public static class AccountingEndpoints
             var tenantId = tenantContext.TenantId;
             await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
 
-            var accounts = await db.Accounts
-                .AsNoTracking()
-                .Where(a => a.TenantId == tenantId)
-                .OrderBy(a => a.Code)
+            var accounts = await db.Accounts.AsNoTracking().Where(a => a.TenantId == tenantId).OrderBy(a => a.Code).ToListAsync(ct);
+
+            var linesQuery = db.JournalEntryLines.AsNoTracking().Where(l => l.TenantId == tenantId);
+            if (startDate.HasValue)
+            {
+                linesQuery = linesQuery.Join(db.JournalEntries.Where(j => j.Date >= startDate.Value.ToUniversalTime()),
+                    l => l.JournalEntryId, j => j.Id, (l, j) => l);
+            }
+            if (endDate.HasValue)
+            {
+                linesQuery = linesQuery.Join(db.JournalEntries.Where(j => j.Date <= endDate.Value.ToUniversalTime()),
+                    l => l.JournalEntryId, j => j.Id, (l, j) => l);
+            }
+
+            var movements = await linesQuery
+                .GroupBy(l => l.AccountCode)
+                .Select(g => new
+                {
+                    AccountCode = g.Key,
+                    TotalDebit = g.Sum(x => x.Debit),
+                    TotalCredit = g.Sum(x => x.Credit)
+                })
                 .ToListAsync(ct);
 
-            var query = db.JournalEntryLines
-                .AsNoTracking()
-                .Where(l => l.TenantId == tenantId);
+            var movDict = movements.ToDictionary(m => m.AccountCode);
 
-            var movements = await query.ToListAsync(ct);
+            var trialBalanceRows = new List<object>();
+            decimal totalDebitSum = 0, totalCreditSum = 0;
+            decimal totalDebtorBalance = 0, totalCreditorBalance = 0;
+            decimal totalAssetBalance = 0, totalLiabilityEquityBalance = 0;
+            decimal totalLossBalance = 0, totalGainBalance = 0;
 
-            var rows = accounts.Select(a =>
+            foreach (var acc in accounts.Where(a => a.IsDirectPosting))
             {
-                var acctLines = movements.Where(m => m.AccountCode.StartsWith(a.Code)).ToList();
-                var sumDebit = acctLines.Sum(l => l.Debit);
-                var sumCredit = acctLines.Sum(l => l.Credit);
+                movDict.TryGetValue(acc.Code, out var mov);
+                var debit = mov?.TotalDebit ?? 0;
+                var credit = mov?.TotalCredit ?? 0;
 
-                var isDebtor = a.AccountType == "Asset" || a.AccountType == "Expense";
-                var debitBalance = (sumDebit > sumCredit) ? sumDebit - sumCredit : 0;
-                var creditBalance = (sumCredit > sumDebit) ? sumCredit - sumDebit : 0;
+                totalDebitSum += debit;
+                totalCreditSum += credit;
 
-                // Patrimoniales
-                var assetBalance = a.AccountType == "Asset" ? debitBalance : 0;
-                var liabilityEquityBalance = (a.AccountType == "Liability" || a.AccountType == "Equity") ? creditBalance : 0;
+                decimal debtorBalance = 0;
+                decimal creditorBalance = 0;
 
-                // De Resultados
-                var lossBalance = a.AccountType == "Expense" ? debitBalance : 0;
-                var gainBalance = a.AccountType == "Income" ? creditBalance : 0;
-
-                return new
+                if (debit >= credit)
                 {
-                    a.Code,
-                    a.Name,
-                    a.AccountType,
-                    a.Level,
-                    a.IsDirectPosting,
-                    SumDebit = sumDebit,
-                    SumCredit = sumCredit,
-                    DebitBalance = debitBalance,
-                    CreditBalance = creditBalance,
+                    debtorBalance = debit - credit;
+                    totalDebtorBalance += debtorBalance;
+                }
+                else
+                {
+                    creditorBalance = credit - debit;
+                    totalCreditorBalance += creditorBalance;
+                }
+
+                decimal assetBalance = 0;
+                decimal liabilityEquityBalance = 0;
+                decimal lossBalance = 0;
+                decimal gainBalance = 0;
+
+                switch (acc.AccountType)
+                {
+                    case "Asset":
+                        assetBalance = debtorBalance - creditorBalance;
+                        totalAssetBalance += assetBalance;
+                        break;
+                    case "Liability":
+                    case "Equity":
+                        liabilityEquityBalance = creditorBalance - debtorBalance;
+                        totalLiabilityEquityBalance += liabilityEquityBalance;
+                        break;
+                    case "Expense":
+                        lossBalance = debtorBalance - creditorBalance;
+                        totalLossBalance += lossBalance;
+                        break;
+                    case "Income":
+                        gainBalance = creditorBalance - debtorBalance;
+                        totalGainBalance += gainBalance;
+                        break;
+                }
+
+                trialBalanceRows.Add(new
+                {
+                    Code = acc.Code,
+                    Name = acc.Name,
+                    AccountType = acc.AccountType,
+                    Debit = debit,
+                    Credit = credit,
+                    DebtorBalance = debtorBalance,
+                    CreditorBalance = creditorBalance,
                     AssetBalance = assetBalance,
                     LiabilityEquityBalance = liabilityEquityBalance,
                     LossBalance = lossBalance,
                     GainBalance = gainBalance
-                };
-            }).ToList();
+                });
+            }
 
-            var totalSumDebit = rows.Where(r => r.Level == 1).Sum(r => r.SumDebit);
-            var totalSumCredit = rows.Where(r => r.Level == 1).Sum(r => r.SumCredit);
+            var netProfitFromIncome = totalGainBalance - totalLossBalance;
+            var netProfitFromEquity = totalAssetBalance - totalLiabilityEquityBalance;
 
             return Results.Ok(new
             {
-                totalSumDebit,
-                totalSumCredit,
-                isBalanced = Math.Abs(totalSumDebit - totalSumCredit) < 0.01m,
-                rows
+                Rows = trialBalanceRows,
+                Totals = new
+                {
+                    TotalDebitSum = totalDebitSum,
+                    TotalCreditSum = totalCreditSum,
+                    TotalDebtorBalance = totalDebtorBalance,
+                    TotalCreditorBalance = totalCreditorBalance,
+                    TotalAssetBalance = totalAssetBalance,
+                    TotalLiabilityEquityBalance = totalLiabilityEquityBalance,
+                    TotalLossBalance = totalLossBalance,
+                    TotalGainBalance = totalGainBalance,
+                    NetProfitFromIncome = netProfitFromIncome,
+                    NetProfitFromEquity = netProfitFromEquity,
+                    IsBalanced = Math.Abs(totalDebitSum - totalCreditSum) < 0.01m &&
+                                 Math.Abs(totalDebtorBalance - totalCreditorBalance) < 0.01m &&
+                                 Math.Abs(netProfitFromIncome - netProfitFromEquity) < 0.05m
+                }
             });
         });
 
-        // 5. Income Statement (Estado de Resultados / P&L Dinámico)
-        group.MapGet("/income-statement", async (
-            [FromQuery] DateTime? startDate,
-            [FromQuery] DateTime? endDate,
+        // ====================================================================
+        // 6. Estado de Resultados (P&L) & Tablero
+        // ====================================================================
+        group.MapGet("/pnl-statement", async (
+            [FromQuery] int? year,
+            [FromQuery] int? month,
             ITenantContext tenantContext,
             AccountingDbContext db,
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
-            var lines = await db.JournalEntryLines
+            var selectedYear = year ?? DateTime.UtcNow.Year;
+
+            var entriesQuery = db.JournalEntries.AsNoTracking().Where(j => j.TenantId == tenantId && j.Date.Year == selectedYear);
+            if (month.HasValue && month > 0)
+            {
+                entriesQuery = entriesQuery.Where(j => j.Date.Month == month.Value);
+            }
+
+            var incomeExpenseLines = await db.JournalEntryLines
                 .AsNoTracking()
                 .Where(l => l.TenantId == tenantId)
+                .Join(entriesQuery, l => l.JournalEntryId, j => j.Id, (l, j) => l)
+                .Join(db.Accounts.Where(a => a.TenantId == tenantId),
+                      l => l.AccountCode,
+                      a => a.Code,
+                      (l, a) => new { l.AccountCode, l.AccountName, a.AccountType, l.Debit, l.Credit })
+                .Where(x => x.AccountType == "Income" || x.AccountType == "Expense")
                 .ToListAsync(ct);
 
-            var revenues = lines.Where(l => l.AccountCode.StartsWith("4.")).Sum(l => l.Credit - l.Debit);
-            var cogs = lines.Where(l => l.AccountCode.StartsWith("5.1")).Sum(l => l.Debit - l.Credit);
-            var grossMargin = revenues - cogs;
+            var totalSales = incomeExpenseLines.Where(x => x.AccountType == "Income" && x.AccountCode.StartsWith("4.1")).Sum(x => x.Credit - x.Debit);
+            var otherIncome = incomeExpenseLines.Where(x => x.AccountType == "Income" && !x.AccountCode.StartsWith("4.1")).Sum(x => x.Credit - x.Debit);
+            var cmv = incomeExpenseLines.Where(x => x.AccountType == "Expense" && x.AccountCode.StartsWith("5.1")).Sum(x => x.Debit - x.Credit);
+            var operationalExpenses = incomeExpenseLines.Where(x => x.AccountType == "Expense" && x.AccountCode.StartsWith("5.2")).Sum(x => x.Debit - x.Credit);
+            var financialExpenses = incomeExpenseLines.Where(x => x.AccountType == "Expense" && x.AccountCode.StartsWith("5.3")).Sum(x => x.Debit - x.Credit);
 
-            var opex = lines.Where(l => l.AccountCode.StartsWith("5.2")).Sum(l => l.Debit - l.Credit);
-            var ebitda = grossMargin - opex;
-
-            var financialExpenses = lines.Where(l => l.AccountCode.StartsWith("5.3")).Sum(l => l.Debit - l.Credit);
-            var netIncome = ebitda - financialExpenses;
+            var grossMargin = totalSales - cmv;
+            var ebitda = grossMargin - operationalExpenses;
+            var netProfit = ebitda + otherIncome - financialExpenses;
 
             return Results.Ok(new
             {
-                revenues,
-                cogs,
-                grossMargin,
-                grossMarginPct = revenues > 0 ? Math.Round((grossMargin / revenues) * 100, 1) : 0,
-                opex,
-                ebitda,
-                ebitdaPct = revenues > 0 ? Math.Round((ebitda / revenues) * 100, 1) : 0,
-                financialExpenses,
-                netIncome,
-                netIncomePct = revenues > 0 ? Math.Round((netIncome / revenues) * 100, 1) : 0
+                Period = new { Year = selectedYear, Month = month },
+                TotalSales = totalSales,
+                CostOfGoodsSold = cmv,
+                GrossMargin = grossMargin,
+                GrossMarginPercentage = totalSales > 0 ? (grossMargin / totalSales) * 100 : 0,
+                OperationalExpenses = operationalExpenses,
+                Ebitda = ebitda,
+                EbitdaPercentage = totalSales > 0 ? (ebitda / totalSales) * 100 : 0,
+                OtherIncome = otherIncome,
+                FinancialExpenses = financialExpenses,
+                NetProfit = netProfit,
+                NetProfitPercentage = totalSales > 0 ? (netProfit / totalSales) * 100 : 0
             });
         });
 
-        // 6. Cost Centers
-        group.MapGet("/cost-centers", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
-        {
-            var tenantId = tenantContext.TenantId;
-            var list = await db.CostCenters.AsNoTracking().Where(c => c.TenantId == tenantId).OrderBy(c => c.Code).ToListAsync(ct);
-            return Results.Ok(list);
-        });
-
-        group.MapPost("/cost-centers", async (
-            CreateCostCenterRequest req,
-            ITenantContext tenantContext,
-            AccountingDbContext db,
-            CancellationToken ct) =>
-        {
-            if (string.IsNullOrWhiteSpace(req.Code) || string.IsNullOrWhiteSpace(req.Name))
-            {
-                return Results.BadRequest(new { message = "Código y nombre del centro de costo son obligatorios." });
-            }
-
-            var tenantId = tenantContext.TenantId;
-            var cc = new CostCenter
-            {
-                TenantId = tenantId,
-                Code = req.Code.Trim().ToUpperInvariant(),
-                Name = req.Name.Trim(),
-                Category = req.Category ?? "Administration",
-                IsActive = true,
-                CreatedAtUtc = DateTime.UtcNow
-            };
-
-            db.CostCenters.Add(cc);
-            await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/accounting/cost-centers/{cc.Id}", cc);
-        });
-
-        // 7. Fiscal Periods & Period Lock (Candado Fiscal)
-        group.MapGet("/periods", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
-        {
-            var tenantId = tenantContext.TenantId;
-            var list = await db.Periods.AsNoTracking().Where(p => p.TenantId == tenantId).OrderByDescending(p => p.Year).ThenByDescending(p => p.Month).ToListAsync(ct);
-            return Results.Ok(list);
-        });
-
-        group.MapPost("/periods/lock", async (
-            LockPeriodRequest req,
-            ITenantContext tenantContext,
-            AccountingDbContext db,
-            CancellationToken ct) =>
-        {
-            var tenantId = tenantContext.TenantId;
-            var period = await db.Periods.FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Year == req.Year && p.Month == req.Month, ct);
-
-            if (period == null)
-            {
-                period = new FiscalYearPeriod
-                {
-                    TenantId = tenantId,
-                    Year = req.Year,
-                    Month = req.Month,
-                    Status = req.Lock ? "Locked" : "Open",
-                    LockedAtUtc = req.Lock ? DateTime.UtcNow : null,
-                    LockedBy = req.Lock ? req.User : null
-                };
-                db.Periods.Add(period);
-            }
-            else
-            {
-                period.Status = req.Lock ? "Locked" : "Open";
-                period.LockedAtUtc = req.Lock ? DateTime.UtcNow : null;
-                period.LockedBy = req.Lock ? req.User : null;
-            }
-
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(period);
-        });
-
-        // 8. Libro IVA Digital (Exportación Oficial ARCA TXT)
-        group.MapGet("/reports/iva-digital-sales", (
-            [FromQuery] int year,
-            [FromQuery] int month) =>
-        {
-            var filename = $"LIBRO_IVA_DIGITAL_VENTAS_CBTE_{year}{month:D2}.txt";
-            var content = new StringBuilder();
-            content.AppendLine($"{year}{month:D2}01|001|00004|00001234|30715489629|LEAL CONTROL ERP S.A.|12100.00|0.00|10000.00|2100.00|0.00|0.00|PES|1.000000|1");
-
-            var bytes = Encoding.UTF8.GetBytes(content.ToString());
-            return Results.File(bytes, "text/plain", filename);
-        });
-
-        group.MapGet("/reports/iva-digital-purchases", (
-            [FromQuery] int year,
-            [FromQuery] int month) =>
-        {
-            var filename = $"LIBRO_IVA_DIGITAL_COMPRAS_CBTE_{year}{month:D2}.txt";
-            var content = new StringBuilder();
-            content.AppendLine($"{year}{month:D2}01|001|00001|00054321|30689123458|YPF DIRECTO S.A.|24200.00|0.00|20000.00|4200.00|0.00|0.00|PES|1.000000|1");
-
-            var bytes = Encoding.UTF8.GetBytes(content.ToString());
-            return Results.File(bytes, "text/plain", filename);
-        });
-
-        // 9. Auto-Posting Engine (Motor de Asientos Automáticos)
+        // ====================================================================
+        // 7. Auto-Posting Automático Dinámico (Ventas, Compras, Cobranzas)
+        // ====================================================================
         group.MapPost("/auto-post/invoice", async (
             AutoPostInvoiceRequest req,
             ITenantContext tenantContext,
@@ -455,18 +583,19 @@ public static class AccountingEndpoints
         {
             var tenantId = tenantContext.TenantId;
             await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
+            var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
 
             var existing = await db.JournalEntries.FirstOrDefaultAsync(e =>
                 e.TenantId == tenantId && e.SourceModule == "Sales" && e.SourceDocumentId == req.InvoiceId.ToString(), ct);
             if (existing != null)
             {
-                return Results.Ok(new { message = "El comprobante ya fue contabilizado previamente.", entryId = existing.Id });
+                return Results.Ok(new { message = "La factura ya fue contabilizada.", entryId = existing.Id });
             }
 
             var accounts = await db.Accounts.Where(a => a.TenantId == tenantId).ToListAsync(ct);
-            var deudores = accounts.FirstOrDefault(a => a.Code == "1.1.02.001") ?? accounts.First(a => a.AccountType == "Asset");
-            var ventas = accounts.FirstOrDefault(a => a.Code == "4.1.01") ?? accounts.First(a => a.AccountType == "Income");
-            var ivaDebito = accounts.FirstOrDefault(a => a.Code == "2.1.02.001") ?? accounts.First(a => a.AccountType == "Liability");
+            var deudores = accounts.FirstOrDefault(a => a.Code == mapping.AccountsReceivableAccountCode) ?? accounts.First(a => a.AccountType == "Asset");
+            var ventas = accounts.FirstOrDefault(a => a.Code == mapping.SalesRevenueAccountCode) ?? accounts.First(a => a.AccountType == "Income");
+            var ivaDebito = accounts.FirstOrDefault(a => a.Code == mapping.SalesVatDebitAccountCode) ?? accounts.First(a => a.AccountType == "Liability");
 
             var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
 
@@ -475,7 +604,7 @@ public static class AccountingEndpoints
                 TenantId = tenantId,
                 EntryNumber = maxNumber + 1,
                 Date = req.Date,
-                Concept = $"Factura de Venta {req.InvoiceNumber} - {req.CustomerName}",
+                Concept = $"Venta Factura {req.InvoiceNumber} - {req.CustomerName}",
                 EntryType = "Automated",
                 SourceModule = "Sales",
                 SourceDocumentId = req.InvoiceId.ToString(),
@@ -495,7 +624,7 @@ public static class AccountingEndpoints
                 AccountName = deudores.Name,
                 Debit = req.TotalAmount,
                 Credit = 0,
-                Memo = $"Cobro/Crédito cta cte {req.CustomerName}"
+                Memo = $"Crédito cliente {req.CustomerName}"
             });
 
             entry.Lines.Add(new JournalEntryLine
@@ -507,7 +636,7 @@ public static class AccountingEndpoints
                 AccountName = ventas.Name,
                 Debit = 0,
                 Credit = req.NetAmount,
-                Memo = $"Ingreso por ventas netas {req.InvoiceNumber}"
+                Memo = $"Ingreso ventas netas {req.InvoiceNumber}"
             });
 
             if (req.VatAmount > 0)
@@ -539,6 +668,7 @@ public static class AccountingEndpoints
         {
             var tenantId = tenantContext.TenantId;
             await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
+            var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
 
             var existing = await db.JournalEntries.FirstOrDefaultAsync(e =>
                 e.TenantId == tenantId && e.SourceModule == "Purchases" && e.SourceDocumentId == req.PurchaseId.ToString(), ct);
@@ -548,9 +678,9 @@ public static class AccountingEndpoints
             }
 
             var accounts = await db.Accounts.Where(a => a.TenantId == tenantId).ToListAsync(ct);
-            var costoMercaderia = accounts.FirstOrDefault(a => a.Code == "5.1.01") ?? accounts.First(a => a.AccountType == "Expense");
-            var ivaCredito = accounts.FirstOrDefault(a => a.Code == "1.1.05.001") ?? accounts.First(a => a.AccountType == "Asset");
-            var proveedores = accounts.FirstOrDefault(a => a.Code == "2.1.01.001") ?? accounts.First(a => a.AccountType == "Liability");
+            var gasto = accounts.FirstOrDefault(a => a.Code == mapping.PurchaseExpenseAccountCode) ?? accounts.First(a => a.AccountType == "Expense");
+            var ivaCredito = accounts.FirstOrDefault(a => a.Code == mapping.PurchaseVatCreditAccountCode) ?? accounts.First(a => a.AccountType == "Asset");
+            var proveedores = accounts.FirstOrDefault(a => a.Code == mapping.AccountsPayableAccountCode) ?? accounts.First(a => a.AccountType == "Liability");
 
             var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
 
@@ -574,9 +704,9 @@ public static class AccountingEndpoints
             {
                 JournalEntryId = entry.Id,
                 TenantId = tenantId,
-                AccountId = costoMercaderia.Id,
-                AccountCode = costoMercaderia.Code,
-                AccountName = costoMercaderia.Name,
+                AccountId = gasto.Id,
+                AccountCode = gasto.Code,
+                AccountName = gasto.Name,
                 Debit = req.NetAmount,
                 Credit = 0,
                 Memo = $"Compra mercaderías {req.SupplierName}"
@@ -623,6 +753,7 @@ public static class AccountingEndpoints
         {
             var tenantId = tenantContext.TenantId;
             await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
+            var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
 
             var existing = await db.JournalEntries.FirstOrDefaultAsync(e =>
                 e.TenantId == tenantId && e.SourceModule == "Finance" && e.SourceDocumentId == req.ReceiptId.ToString(), ct);
@@ -632,16 +763,17 @@ public static class AccountingEndpoints
             }
 
             var accounts = await db.Accounts.Where(a => a.TenantId == tenantId).ToListAsync(ct);
-            var deudores = accounts.FirstOrDefault(a => a.Code == "1.1.02.001") ?? accounts.First(a => a.AccountType == "Asset");
+            var deudores = accounts.FirstOrDefault(a => a.Code == mapping.AccountsReceivableAccountCode) ?? accounts.First(a => a.AccountType == "Asset");
             
-            var destAccount = req.PaymentMethod?.ToLower() switch
+            var destCode = req.PaymentMethod?.ToLower() switch
             {
-                "transfer" or "banco" or "bank" => accounts.FirstOrDefault(a => a.Code == "1.1.01.002") ?? accounts.First(a => a.AccountType == "Asset"),
-                "check" or "cheque" or "echeq" => accounts.FirstOrDefault(a => a.Code == "1.1.01.004") ?? accounts.First(a => a.AccountType == "Asset"),
-                "mercadopago" or "mp" or "psp" => accounts.FirstOrDefault(a => a.Code == "1.1.01.006") ?? accounts.First(a => a.AccountType == "Asset"),
-                _ => accounts.FirstOrDefault(a => a.Code == "1.1.01.001") ?? accounts.First(a => a.AccountType == "Asset")
+                "transfer" or "banco" or "bank" => mapping.BankAccountCode,
+                "check" or "cheque" or "echeq" => mapping.ChecksInHandAccountCode,
+                "mercadopago" or "mp" or "psp" => mapping.PspDigitalAccountCode,
+                _ => mapping.CashAccountCode
             };
 
+            var destAccount = accounts.FirstOrDefault(a => a.Code == destCode) ?? accounts.First(a => a.AccountType == "Asset");
             var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
 
             var entry = new JournalEntry
@@ -690,7 +822,311 @@ public static class AccountingEndpoints
             return Results.Created($"/api/v1/accounting/journal-entries/{entry.Id}", new { message = "Asiento de cobranza generado.", entryId = entry.Id, entryNumber = entry.EntryNumber });
         });
 
-        // 10. Bank Reconciliation (Conciliación Bancaria Inteligente)
+        // ====================================================================
+        // 8. Fase 2: Asistente de Cierre Anual & Refundición de Resultados
+        // ====================================================================
+        group.MapPost("/year-end-closing", async (
+            YearEndClosingRequest req,
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
+            var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
+
+            var closingDate = req.ClosingDate != default ? req.ClosingDate : new DateTime(req.Year, 12, 31, 23, 59, 59, DateTimeKind.Utc);
+
+            // Fetch all entries for that year
+            var entriesQuery = db.JournalEntries.AsNoTracking().Where(j => j.TenantId == tenantId && j.Date.Year == req.Year && j.Date <= closingDate);
+
+            var lines = await db.JournalEntryLines
+                .AsNoTracking()
+                .Where(l => l.TenantId == tenantId)
+                .Join(entriesQuery, l => l.JournalEntryId, j => j.Id, (l, j) => l)
+                .Join(db.Accounts.Where(a => a.TenantId == tenantId),
+                      l => l.AccountCode,
+                      a => a.Code,
+                      (l, a) => new { l.AccountCode, l.AccountName, a.AccountType, a.Id, l.Debit, l.Credit })
+                .ToListAsync(ct);
+
+            var accounts = await db.Accounts.Where(a => a.TenantId == tenantId).ToListAsync(ct);
+            var retainedEarningsAcc = accounts.FirstOrDefault(a => a.Code == mapping.RetainedEarningsAccountCode) ?? accounts.First(a => a.AccountType == "Equity");
+
+            // 1. Asiento de Refundición de Cuentas de Resultado (Ingresos y Gastos)
+            var resultAccountsGrouped = lines
+                .Where(x => x.AccountType == "Income" || x.AccountType == "Expense")
+                .GroupBy(x => new { x.AccountCode, x.AccountName, x.AccountType, x.Id })
+                .Select(g => new
+                {
+                    g.Key.Id,
+                    g.Key.AccountCode,
+                    g.Key.AccountName,
+                    g.Key.AccountType,
+                    TotalDebit = g.Sum(x => x.Debit),
+                    TotalCredit = g.Sum(x => x.Credit)
+                })
+                .ToList();
+
+            var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
+
+            var refundicionEntry = new JournalEntry
+            {
+                TenantId = tenantId,
+                EntryNumber = maxNumber + 1,
+                Date = closingDate,
+                Concept = $"Asiento de Refundición de Cuentas de Resultado - Ejercicio {req.Year}",
+                EntryType = "Closing",
+                SourceModule = "Accounting",
+                Status = "Posted",
+                CreatedBy = "Sistema (Cierre Anual)",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            decimal netIncome = 0;
+
+            foreach (var item in resultAccountsGrouped)
+            {
+                if (item.AccountType == "Income")
+                {
+                    var netGain = item.TotalCredit - item.TotalDebit;
+                    if (netGain != 0)
+                    {
+                        refundicionEntry.Lines.Add(new JournalEntryLine
+                        {
+                            JournalEntryId = refundicionEntry.Id,
+                            TenantId = tenantId,
+                            AccountId = item.Id,
+                            AccountCode = item.AccountCode,
+                            AccountName = item.AccountName,
+                            Debit = netGain > 0 ? netGain : 0,
+                            Credit = netGain < 0 ? Math.Abs(netGain) : 0,
+                            Memo = $"Cancelación por cierre ejercicio {req.Year}"
+                        });
+                        netIncome += netGain;
+                    }
+                }
+                else if (item.AccountType == "Expense")
+                {
+                    var netLoss = item.TotalDebit - item.TotalCredit;
+                    if (netLoss != 0)
+                    {
+                        refundicionEntry.Lines.Add(new JournalEntryLine
+                        {
+                            JournalEntryId = refundicionEntry.Id,
+                            TenantId = tenantId,
+                            AccountId = item.Id,
+                            AccountCode = item.AccountCode,
+                            AccountName = item.AccountName,
+                            Debit = netLoss < 0 ? Math.Abs(netLoss) : 0,
+                            Credit = netLoss > 0 ? netLoss : 0,
+                            Memo = $"Cancelación por cierre ejercicio {req.Year}"
+                        });
+                        netIncome -= netLoss;
+                    }
+                }
+            }
+
+            // Balance entry to Retained Earnings
+            if (netIncome != 0)
+            {
+                refundicionEntry.Lines.Add(new JournalEntryLine
+                {
+                    JournalEntryId = refundicionEntry.Id,
+                    TenantId = tenantId,
+                    AccountId = retainedEarningsAcc.Id,
+                    AccountCode = retainedEarningsAcc.Code,
+                    AccountName = retainedEarningsAcc.Name,
+                    Debit = netIncome < 0 ? Math.Abs(netIncome) : 0,
+                    Credit = netIncome > 0 ? netIncome : 0,
+                    Memo = $"Resultado Neto del Ejercicio {req.Year}"
+                });
+            }
+
+            refundicionEntry.TotalDebit = refundicionEntry.Lines.Sum(l => l.Debit);
+            refundicionEntry.TotalCredit = refundicionEntry.Lines.Sum(l => l.Credit);
+
+            if (refundicionEntry.Lines.Count > 0)
+            {
+                db.JournalEntries.Add(refundicionEntry);
+                await db.SaveChangesAsync(ct);
+            }
+
+            return Results.Ok(new
+            {
+                message = $"Cierre de ejercicio {req.Year} ejecutado con éxito.",
+                refundicionEntryId = refundicionEntry.Id,
+                entryNumber = refundicionEntry.EntryNumber,
+                netIncome = netIncome,
+                linesCount = refundicionEntry.Lines.Count
+            });
+        });
+
+        // ====================================================================
+        // 9. Fase 2: Auto-Posting de Devengamiento de Sueldos y F.931
+        // ====================================================================
+        group.MapPost("/auto-post/payroll", async (
+            AutoPostPayrollRequest req,
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
+            var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
+
+            var accounts = await db.Accounts.Where(a => a.TenantId == tenantId).ToListAsync(ct);
+            var sueldosGasto = accounts.FirstOrDefault(a => a.Code == mapping.SalariesExpenseAccountCode) ?? accounts.First(a => a.AccountType == "Expense");
+            var cargasGasto = accounts.FirstOrDefault(a => a.Code == mapping.SocialSecurityExpenseAccountCode) ?? accounts.First(a => a.AccountType == "Expense");
+            var sueldosPagar = accounts.FirstOrDefault(a => a.Code == mapping.SalariesPayableAccountCode) ?? accounts.First(a => a.AccountType == "Liability");
+            var cargasPagar = accounts.FirstOrDefault(a => a.Code == mapping.SocialSecurityPayableAccountCode) ?? accounts.First(a => a.AccountType == "Liability");
+
+            var totalDebit = req.TotalGrossSalaries + req.TotalEmployerContributions;
+            var totalCredit = req.TotalNetSalaries + req.TotalSocialSecurityToPay;
+
+            var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
+
+            var entry = new JournalEntry
+            {
+                TenantId = tenantId,
+                EntryNumber = maxNumber + 1,
+                Date = req.Date != default ? req.Date : DateTime.UtcNow,
+                Concept = $"Devengamiento Sueldos y Cargas Sociales - {req.PeriodDescription}",
+                EntryType = "Automated",
+                SourceModule = "Payroll",
+                Status = "Posted",
+                TotalDebit = totalDebit,
+                TotalCredit = totalCredit,
+                CreatedBy = "Sistema (Liquidación Sueldos)",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            // Debe: Gastos de Personal
+            entry.Lines.Add(new JournalEntryLine
+            {
+                JournalEntryId = entry.Id,
+                TenantId = tenantId,
+                AccountId = sueldosGasto.Id,
+                AccountCode = sueldosGasto.Code,
+                AccountName = sueldosGasto.Name,
+                Debit = req.TotalGrossSalaries,
+                Credit = 0,
+                CostCenterId = req.CostCenterId,
+                Memo = $"Sueldos brutos {req.PeriodDescription}"
+            });
+
+            // Debe: Contribuciones Patronales
+            entry.Lines.Add(new JournalEntryLine
+            {
+                JournalEntryId = entry.Id,
+                TenantId = tenantId,
+                AccountId = cargasGasto.Id,
+                AccountCode = cargasGasto.Code,
+                AccountName = cargasGasto.Name,
+                Debit = req.TotalEmployerContributions,
+                Credit = 0,
+                CostCenterId = req.CostCenterId,
+                Memo = $"Cargas patronales {req.PeriodDescription}"
+            });
+
+            // Haber: Sueldos a Pagar (Netos)
+            entry.Lines.Add(new JournalEntryLine
+            {
+                JournalEntryId = entry.Id,
+                TenantId = tenantId,
+                AccountId = sueldosPagar.Id,
+                AccountCode = sueldosPagar.Code,
+                AccountName = sueldosPagar.Name,
+                Debit = 0,
+                Credit = req.TotalNetSalaries,
+                Memo = $"Haberes netos a pagar {req.PeriodDescription}"
+            });
+
+            // Haber: Cargas Sociales F.931 a Pagar
+            entry.Lines.Add(new JournalEntryLine
+            {
+                JournalEntryId = entry.Id,
+                TenantId = tenantId,
+                AccountId = cargasPagar.Id,
+                AccountCode = cargasPagar.Code,
+                AccountName = cargasPagar.Name,
+                Debit = 0,
+                Credit = req.TotalSocialSecurityToPay,
+                Memo = $"Aportes y contribuciones F.931 {req.PeriodDescription}"
+            });
+
+            db.JournalEntries.Add(entry);
+            await db.SaveChangesAsync(ct);
+
+            return Results.Created($"/api/v1/accounting/journal-entries/{entry.Id}", new { message = "Asiento de sueldos generado con éxito.", entryId = entry.Id, entryNumber = entry.EntryNumber });
+        });
+
+        // ====================================================================
+        // 10. Fase 3: Analítica por Centros de Costo (P&L Multidimensional)
+        // ====================================================================
+        group.MapGet("/reports/cost-center-pnl", async (
+            [FromQuery] int? year,
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            var selectedYear = year ?? DateTime.UtcNow.Year;
+
+            var entries = db.JournalEntries.AsNoTracking().Where(j => j.TenantId == tenantId && j.Date.Year == selectedYear);
+
+            var lines = await db.JournalEntryLines
+                .AsNoTracking()
+                .Where(l => l.TenantId == tenantId)
+                .Join(entries, l => l.JournalEntryId, j => j.Id, (l, j) => l)
+                .Join(db.Accounts.Where(a => a.TenantId == tenantId),
+                      l => l.AccountCode,
+                      a => a.Code,
+                      (l, a) => new { l.AccountCode, a.AccountType, l.CostCenterCode, l.CostCenterName, l.Debit, l.Credit })
+                .Where(x => x.AccountType == "Income" || x.AccountType == "Expense")
+                .ToListAsync(ct);
+
+            var costCenters = await db.CostCenters.AsNoTracking().Where(c => c.TenantId == tenantId).ToListAsync(ct);
+
+            var breakdown = costCenters.Select(cc =>
+            {
+                var ccLines = lines.Where(l => l.CostCenterCode == cc.Code).ToList();
+                var income = ccLines.Where(l => l.AccountType == "Income").Sum(l => l.Credit - l.Debit);
+                var expense = ccLines.Where(l => l.AccountType == "Expense").Sum(l => l.Debit - l.Credit);
+                var margin = income - expense;
+
+                return new
+                {
+                    CostCenterCode = cc.Code,
+                    CostCenterName = cc.Name,
+                    Category = cc.Category,
+                    Income = income,
+                    Expense = expense,
+                    NetMargin = margin,
+                    MarginPercentage = income > 0 ? (margin / income) * 100 : 0
+                };
+            }).ToList();
+
+            var unassignedLines = lines.Where(l => string.IsNullOrWhiteSpace(l.CostCenterCode)).ToList();
+            var unassignedIncome = unassignedLines.Where(l => l.AccountType == "Income").Sum(l => l.Credit - l.Debit);
+            var unassignedExpense = unassignedLines.Where(l => l.AccountType == "Expense").Sum(l => l.Debit - l.Credit);
+
+            return Results.Ok(new
+            {
+                Year = selectedYear,
+                CostCenters = breakdown,
+                Unassigned = new
+                {
+                    Income = unassignedIncome,
+                    Expense = unassignedExpense,
+                    NetMargin = unassignedIncome - unassignedExpense
+                }
+            });
+        });
+
+        // ====================================================================
+        // 11. Conciliación Bancaria Inteligente
+        // ====================================================================
         group.MapGet("/bank-statements", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
@@ -759,46 +1195,6 @@ public static class AccountingEndpoints
             return Results.Created($"/api/v1/accounting/bank-statements/{statement.Id}", statement);
         });
 
-        group.MapPost("/bank-statements/{id:guid}/auto-match", async (Guid id, ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
-        {
-            var tenantId = tenantContext.TenantId;
-            var statement = await db.BankStatements
-                .Include(s => s.Lines)
-                .FirstOrDefaultAsync(s => s.Id == id && s.TenantId == tenantId, ct);
-            if (statement == null) return Results.NotFound(new { message = "Extracto no encontrado." });
-
-            var bankAccountCodes = new[] { "1.1.01.002", "1.1.01.003", "1.1.01.004", "1.1.01.005", "1.1.01.006" };
-            var journalLines = await db.JournalEntryLines
-                .Where(j => j.TenantId == tenantId && bankAccountCodes.Contains(j.AccountCode))
-                .ToListAsync(ct);
-
-            int matchedCount = 0;
-            foreach (var line in statement.Lines.Where(l => !l.IsReconciled))
-            {
-                var targetDebitInERP = line.Credit;
-                var targetCreditInERP = line.Debit;
-
-                var candidate = journalLines.FirstOrDefault(j =>
-                    ((targetDebitInERP > 0 && j.Debit == targetDebitInERP) || (targetCreditInERP > 0 && j.Credit == targetCreditInERP)));
-
-                if (candidate != null)
-                {
-                    line.IsReconciled = true;
-                    line.MatchedJournalEntryId = candidate.JournalEntryId;
-                    line.MatchedJournalEntryLineId = candidate.Id;
-                    line.MatchType = "SmartMatch";
-                    line.MatchNotes = $"Conciliado con {candidate.AccountName} ({candidate.Memo})";
-                    matchedCount++;
-                }
-            }
-
-            statement.ReconciledLines = statement.Lines.Count(l => l.IsReconciled);
-            statement.Status = statement.ReconciledLines == statement.TotalLines && statement.TotalLines > 0 ? "Reconciled" : (statement.ReconciledLines > 0 ? "InProgress" : "Open");
-
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(new { message = $"Se conciliaron automáticamente {matchedCount} movimientos.", totalReconciled = statement.ReconciledLines, statementStatus = statement.Status });
-        });
-
         group.MapPost("/bank-statements/lines/{lineId:guid}/quick-post", async (
             Guid lineId,
             QuickPostBankFeeRequest req,
@@ -807,18 +1203,21 @@ public static class AccountingEndpoints
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
+
             var line = await db.BankStatementLines.FirstOrDefaultAsync(l => l.Id == lineId && l.TenantId == tenantId, ct);
             if (line == null) return Results.NotFound(new { message = "Línea no encontrada." });
 
             var accounts = await db.Accounts.Where(a => a.TenantId == tenantId).ToListAsync(ct);
-            var banco = accounts.FirstOrDefault(a => a.Code == "1.1.01.002") ?? accounts.First(a => a.AccountType == "Asset");
+            var banco = accounts.FirstOrDefault(a => a.Code == mapping.BankAccountCode) ?? accounts.First(a => a.AccountType == "Asset");
             
-            var gastoAccount = req.FeeType switch
+            var gastoAccountCode = req.FeeType switch
             {
-                "TaxLey25413" => accounts.FirstOrDefault(a => a.Code == "5.3.02") ?? accounts.First(a => a.AccountType == "Expense"),
-                _ => accounts.FirstOrDefault(a => a.Code == "5.3.01") ?? accounts.First(a => a.AccountType == "Expense")
+                "TaxLey25413" => mapping.BankTaxAccountCode,
+                _ => mapping.BankExpensesAccountCode
             };
 
+            var gastoAccount = accounts.FirstOrDefault(a => a.Code == gastoAccountCode) ?? accounts.First(a => a.AccountType == "Expense");
             var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
             var amount = line.Debit > 0 ? line.Debit : line.Credit;
 
@@ -878,12 +1277,50 @@ public static class AccountingEndpoints
             return Results.Ok(new { message = "Gasto registrado y conciliado con éxito.", entryId = entry.Id });
         });
 
+        // ====================================================================
+        // 12. Period Lock & ARCA Digital VAT
+        // ====================================================================
+        group.MapGet("/periods", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            var periods = await db.Periods.AsNoTracking().Where(p => p.TenantId == tenantId).OrderByDescending(p => p.Year).ThenByDescending(p => p.Month).ToListAsync(ct);
+            return Results.Ok(periods);
+        });
+
+        group.MapPost("/periods/lock", async (LockPeriodRequest req, ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            var period = await db.Periods.FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Year == req.Year && p.Month == req.Month, ct);
+            if (period == null)
+            {
+                period = new FiscalYearPeriod
+                {
+                    TenantId = tenantId,
+                    Year = req.Year,
+                    Month = req.Month,
+                    Status = req.Lock ? "Locked" : "Open",
+                    LockedAtUtc = req.Lock ? DateTime.UtcNow : null,
+                    LockedBy = req.Lock ? req.User ?? "Contador" : null
+                };
+                db.Periods.Add(period);
+            }
+            else
+            {
+                period.Status = req.Lock ? "Locked" : "Open";
+                period.LockedAtUtc = req.Lock ? DateTime.UtcNow : null;
+                period.LockedBy = req.Lock ? req.User ?? "Contador" : null;
+            }
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(period);
+        });
+
         return endpoints;
     }
 }
 
 public sealed record CreateAccountRequest(string Code, string Name, string? AccountType, int Level, string? ParentCode, bool IsDirectPosting, string? Currency, bool AdjustsForInflation);
-public sealed record UpdateAccountRequest(string Name, bool IsDirectPosting, bool AdjustsForInflation, bool IsActive);
+public sealed record UpdateAccountRequest(string? Code, string Name, string? AccountType, int Level, string? ParentCode, bool IsDirectPosting, string? Currency, bool AdjustsForInflation, bool IsActive);
 public sealed record CreateJournalEntryRequest(DateTime Date, string Concept, string? EntryType, string? SourceModule, string? SourceDocumentId, string? CreatedBy, List<JournalEntryLineRequest> Lines);
 public sealed record JournalEntryLineRequest(Guid AccountId, string AccountCode, string AccountName, decimal Debit, decimal Credit, string? Currency, decimal ExchangeRate, Guid? CostCenterId, string? CostCenterCode, string? CostCenterName, string? Memo);
 public sealed record CreateCostCenterRequest(string Code, string Name, string? Category);

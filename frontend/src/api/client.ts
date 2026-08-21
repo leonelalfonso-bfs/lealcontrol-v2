@@ -556,8 +556,17 @@ export const api = {
     request<any[]>("/api/v1/accounting/accounts"),
   createAccount: (body: { code: string; name: string; accountType?: string; level: number; parentCode?: string; isDirectPosting: boolean; currency?: string; adjustsForInflation?: boolean }) =>
     request<any>("/api/v1/accounting/accounts", { method: "POST", body: JSON.stringify(body) }),
-  updateAccount: (id: string, body: { name: string; isDirectPosting: boolean; adjustsForInflation: boolean; isActive: boolean }) =>
+  updateAccount: (id: string, body: { code?: string; name: string; accountType?: string; level?: number; parentCode?: string; isDirectPosting: boolean; currency?: string; adjustsForInflation: boolean; isActive: boolean }) =>
     request<any>(`/api/v1/accounting/accounts/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteAccount: (id: string) =>
+    request<any>(`/api/v1/accounting/accounts/${id}`, { method: "DELETE" }),
+
+  // Accounting Mapping (Matriz de Enlace Contable)
+  getAccountingMapping: () =>
+    request<any>("/api/v1/accounting/mapping"),
+  updateAccountingMapping: (body: any) =>
+    request<any>("/api/v1/accounting/mapping", { method: "PUT", body: JSON.stringify(body) }),
+
   listJournalEntries: (params?: { startDate?: string; endDate?: string; sourceModule?: string }) => {
     const q = new URLSearchParams();
     if (params?.startDate) q.set("startDate", params.startDate);
@@ -568,11 +577,19 @@ export const api = {
   },
   createJournalEntry: (body: { date: string; concept: string; entryType?: string; sourceModule?: string; sourceDocumentId?: string; createdBy?: string; lines: any[] }) =>
     request<any>("/api/v1/accounting/journal-entries", { method: "POST", body: JSON.stringify(body) }),
-  getLedger: (accountCode: string, params?: { startDate?: string; endDate?: string }) => {
-    const q = new URLSearchParams({ accountCode });
-    if (params?.startDate) q.set("startDate", params.startDate);
-    if (params?.endDate) q.set("endDate", params.endDate);
-    return request<any>(`/api/v1/accounting/ledger?${q.toString()}`);
+  getLedger: (accountCodeOrParams?: string | { accountCode?: string; startDate?: string; endDate?: string }, maybeParams?: { startDate?: string; endDate?: string }) => {
+    const q = new URLSearchParams();
+    if (typeof accountCodeOrParams === "string") {
+      if (accountCodeOrParams) q.set("accountCode", accountCodeOrParams);
+      if (maybeParams?.startDate) q.set("startDate", maybeParams.startDate);
+      if (maybeParams?.endDate) q.set("endDate", maybeParams.endDate);
+    } else if (accountCodeOrParams) {
+      if (accountCodeOrParams.accountCode) q.set("accountCode", accountCodeOrParams.accountCode);
+      if (accountCodeOrParams.startDate) q.set("startDate", accountCodeOrParams.startDate);
+      if (accountCodeOrParams.endDate) q.set("endDate", accountCodeOrParams.endDate);
+    }
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return request<any[]>(`/api/v1/accounting/general-ledger${query}`);
   },
   getTrialBalance: (params?: { startDate?: string; endDate?: string }) => {
     const q = new URLSearchParams();
@@ -581,13 +598,28 @@ export const api = {
     const query = q.toString() ? `?${q.toString()}` : "";
     return request<any>(`/api/v1/accounting/trial-balance${query}`);
   },
-  getIncomeStatement: (params?: { startDate?: string; endDate?: string }) => {
+  getPnlStatement: (params?: { year?: number; month?: number }) => {
     const q = new URLSearchParams();
-    if (params?.startDate) q.set("startDate", params.startDate);
-    if (params?.endDate) q.set("endDate", params.endDate);
+    if (params?.year) q.set("year", params.year.toString());
+    if (params?.month) q.set("month", params.month.toString());
     const query = q.toString() ? `?${q.toString()}` : "";
-    return request<any>(`/api/v1/accounting/income-statement${query}`);
+    return request<any>(`/api/v1/accounting/pnl-statement${query}`);
   },
+  getIncomeStatement: (params?: { startDate?: string; endDate?: string; year?: number; month?: number }) => {
+    const q = new URLSearchParams();
+    if (params?.year) q.set("year", params.year.toString());
+    if (params?.month) q.set("month", params.month.toString());
+    const query = q.toString() ? `?${q.toString()}` : "";
+    return request<any>(`/api/v1/accounting/pnl-statement${query}`);
+  },
+  getCostCenterPnl: (year?: number) => {
+    const q = year ? `?year=${year}` : "";
+    return request<any>(`/api/v1/accounting/reports/cost-center-pnl${q}`);
+  },
+  runYearEndClosing: (body: { year: number; closingDate?: string }) =>
+    request<any>("/api/v1/accounting/year-end-closing", { method: "POST", body: JSON.stringify(body) }),
+  autoPostPayroll: (body: { date: string; periodDescription: string; totalGrossSalaries: number; totalEmployerContributions: number; totalNetSalaries: number; totalSocialSecurityToPay: number; costCenterId?: string }) =>
+    request<any>("/api/v1/accounting/auto-post/payroll", { method: "POST", body: JSON.stringify(body) }),
   listCostCenters: () =>
     request<any[]>("/api/v1/accounting/cost-centers"),
   createCostCenter: (body: { code: string; name: string; category?: string }) =>
