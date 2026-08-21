@@ -62,13 +62,10 @@ export function LandingPage() {
     <div style={{ background: "#f8fafc", color: "#0f172a", minHeight: "100vh", fontFamily: "var(--font-sans, system-ui, sans-serif)" }}>
       {/* Top Navbar */}
       <header style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255, 255, 255, 0.94)", backdropFilter: "blur(16px)", borderBottom: "1px solid #e2e8f0" }}>
-        <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", height: 72, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <LealLogo size={36} showText animated />
-            <span style={{ fontSize: "0.75rem", fontWeight: 800, background: "#dbeafe", color: "#2563eb", padding: "2px 8px", borderRadius: 999 }}>
-              v2.0 CLOUD
-            </span>
-          </div>
+        <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 24px", height: 80, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Link to="/" style={{ display: "flex", alignItems: "center" }} title="LEAL Control ERP">
+            <img src="/logo.png" alt="LEAL Control ERP" style={{ height: 60, width: "auto", objectFit: "contain" }} />
+          </Link>
 
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <Link to="/login" className="btn ghost" style={{ fontSize: "0.88rem", fontWeight: 600 }}>
@@ -792,8 +789,8 @@ export function LandingPage() {
       <footer style={{ background: "#0f172a", color: "#94a3b8", padding: "60px 24px 30px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 24, alignItems: "center" }}>
           <div>
-            <LealLogo size={32} showText />
-            <p style={{ fontSize: "0.85rem", marginTop: 8, color: "#64748b" }}>
+            <img src="/logo.png" alt="LEAL Control ERP" style={{ height: 50, width: "auto", objectFit: "contain", marginBottom: 8 }} />
+            <p style={{ fontSize: "0.85rem", margin: 0, color: "#64748b" }}>
               Sistema de Gestión Integral Cloud ERP 2.0 • Argentina
             </p>
           </div>

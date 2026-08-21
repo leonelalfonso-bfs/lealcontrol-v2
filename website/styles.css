@@ -181,22 +181,25 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 74px;
+  height: 80px;
 }
 
 .brand-logo {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-weight: 900;
-  font-size: 1.25rem;
-  letter-spacing: -0.03em;
-  color: var(--ink-main);
+  text-decoration: none;
 }
 
-.brand-logo svg {
-  width: 36px;
-  height: 36px;
+.brand-logo img {
+  height: 58px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+}
+
+.brand-logo:hover img {
+  transform: scale(1.02);
 }
 
 .nav-links {
