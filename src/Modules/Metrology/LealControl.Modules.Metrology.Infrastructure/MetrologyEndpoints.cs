@@ -96,7 +96,10 @@ public static class MetrologyEndpoints
                     e.SerialNumber.ToLower().Contains(term) ||
                     e.CustomerName.ToLower().Contains(term) ||
                     e.Location.ToLower().Contains(term) ||
-                    e.ApprovalCode.ToLower().Contains(term));
+                    e.PlatformApprovalNumber.ToLower().Contains(term) ||
+                    e.Indicator1Brand.ToLower().Contains(term) ||
+                    e.Indicator1Model.ToLower().Contains(term) ||
+                    e.Indicator1ApprovalNumber.ToLower().Contains(term));
             }
 
             if (!string.IsNullOrWhiteSpace(status))
@@ -150,32 +153,48 @@ public static class MetrologyEndpoints
                 return Results.BadRequest(new { message = $"Ya existe un equipo con el código '{req.Code}'." });
             }
 
-            var equipment = new MetrologyEquipment(
-                Guid.NewGuid(),
-                tenantId,
-                req.Code.Trim(),
-                req.Description.Trim(),
-                req.Brand?.Trim() ?? "",
-                req.Model?.Trim() ?? "",
-                req.SerialNumber?.Trim() ?? "",
-                req.CustomerId,
-                req.CustomerName?.Trim() ?? "",
-                req.Location?.Trim() ?? "",
-                req.ApplicableStandard ?? "Res25_2025",
-                req.ApprovalCode?.Trim() ?? "",
-                req.PlatformType ?? "TruckScale",
-                req.MaxCapacity,
-                req.MinCapacity,
-                req.DivisionD,
-                req.VerificationIntervalE,
-                req.Unit ?? "kg",
-                req.AccuracyClass ?? "III",
-                req.IndicationType ?? "Digital",
-                req.LoadCellsCount > 0 ? req.LoadCellsCount : 6,
-                req.HasTare
-            )
+            var equipment = new MetrologyEquipment
             {
-                Notes = req.Notes
+                TenantId = tenantId,
+                Code = req.Code.Trim(),
+                Description = req.Description.Trim(),
+                Brand = req.Brand?.Trim() ?? "",
+                Model = req.Model?.Trim() ?? "",
+                SerialNumber = req.SerialNumber?.Trim() ?? "",
+                CustomerId = req.CustomerId,
+                CustomerName = req.CustomerName?.Trim() ?? "",
+                Location = req.Location?.Trim() ?? "",
+                ApplicableStandard = string.IsNullOrWhiteSpace(req.ApplicableStandard) ? "Res25_2025" : req.ApplicableStandard,
+                ApprovalCode = req.ApprovalCode?.Trim() ?? "",
+                PlatformType = string.IsNullOrWhiteSpace(req.PlatformType) ? "TruckScale" : req.PlatformType,
+                PlatformApprovalNumber = req.PlatformApprovalNumber?.Trim() ?? "",
+                PlatformApprovalDate = req.PlatformApprovalDate,
+                PlatformDimensions = req.PlatformDimensions?.Trim() ?? "",
+                Indicator1Brand = req.Indicator1Brand?.Trim() ?? "",
+                Indicator1Model = req.Indicator1Model?.Trim() ?? "",
+                Indicator1SerialNumber = req.Indicator1SerialNumber?.Trim() ?? "",
+                Indicator1ApprovalNumber = req.Indicator1ApprovalNumber?.Trim() ?? "",
+                Indicator1ApprovalDate = req.Indicator1ApprovalDate,
+                Indicator1Type = req.Indicator1Type?.Trim() ?? "Digital",
+                HasSecondaryIndicator = req.HasSecondaryIndicator,
+                Indicator2Brand = req.Indicator2Brand?.Trim() ?? "",
+                Indicator2Model = req.Indicator2Model?.Trim() ?? "",
+                Indicator2SerialNumber = req.Indicator2SerialNumber?.Trim() ?? "",
+                Indicator2ApprovalNumber = req.Indicator2ApprovalNumber?.Trim() ?? "",
+                Indicator2ApprovalDate = req.Indicator2ApprovalDate,
+                Indicator2Type = req.Indicator2Type?.Trim() ?? "",
+                MaxCapacity = req.MaxCapacity,
+                MinCapacity = req.MinCapacity,
+                DivisionD = req.DivisionD,
+                VerificationIntervalE = req.VerificationIntervalE,
+                Unit = req.Unit ?? "kg",
+                AccuracyClass = req.AccuracyClass ?? "III",
+                IndicationType = req.IndicationType ?? "Digital",
+                LoadCellsCount = req.LoadCellsCount > 0 ? req.LoadCellsCount : 6,
+                HasTare = req.HasTare,
+                Status = "Active",
+                Notes = req.Notes,
+                CreatedAtUtc = DateTime.UtcNow
             };
 
             db.Equipments.Add(equipment);
@@ -215,6 +234,22 @@ public static class MetrologyEndpoints
             equipment.ApplicableStandard = string.IsNullOrWhiteSpace(req.ApplicableStandard) ? "Res25_2025" : req.ApplicableStandard;
             equipment.ApprovalCode = req.ApprovalCode?.Trim() ?? "";
             equipment.PlatformType = string.IsNullOrWhiteSpace(req.PlatformType) ? "TruckScale" : req.PlatformType;
+            equipment.PlatformApprovalNumber = req.PlatformApprovalNumber?.Trim() ?? "";
+            equipment.PlatformApprovalDate = req.PlatformApprovalDate;
+            equipment.PlatformDimensions = req.PlatformDimensions?.Trim() ?? "";
+            equipment.Indicator1Brand = req.Indicator1Brand?.Trim() ?? "";
+            equipment.Indicator1Model = req.Indicator1Model?.Trim() ?? "";
+            equipment.Indicator1SerialNumber = req.Indicator1SerialNumber?.Trim() ?? "";
+            equipment.Indicator1ApprovalNumber = req.Indicator1ApprovalNumber?.Trim() ?? "";
+            equipment.Indicator1ApprovalDate = req.Indicator1ApprovalDate;
+            equipment.Indicator1Type = req.Indicator1Type?.Trim() ?? "Digital";
+            equipment.HasSecondaryIndicator = req.HasSecondaryIndicator;
+            equipment.Indicator2Brand = req.Indicator2Brand?.Trim() ?? "";
+            equipment.Indicator2Model = req.Indicator2Model?.Trim() ?? "";
+            equipment.Indicator2SerialNumber = req.Indicator2SerialNumber?.Trim() ?? "";
+            equipment.Indicator2ApprovalNumber = req.Indicator2ApprovalNumber?.Trim() ?? "";
+            equipment.Indicator2ApprovalDate = req.Indicator2ApprovalDate;
+            equipment.Indicator2Type = req.Indicator2Type?.Trim() ?? "";
             equipment.MaxCapacity = req.MaxCapacity;
             equipment.MinCapacity = req.MinCapacity;
             equipment.DivisionD = req.DivisionD;

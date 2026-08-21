@@ -118,16 +118,46 @@ export function CalibrationReportPrintPage() {
 
         <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, fontSize: "0.84rem" }}>
           <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 6, color: "#0d9488" }}>
-            ⚖️ ESPECIFICACIONES DEL INSTRUMENTO
+            ⚖️ ESPECIFICACIONES TÉCNICAS & METROLÓGICAS
           </div>
-          <div><strong>Código / Identificación:</strong> {report.equipmentCode}</div>
-          <div><strong>Descripción:</strong> {report.equipmentDescription}</div>
+          <div><strong>Código / Identificación:</strong> {report.equipmentCode} — {report.equipmentDescription}</div>
           {equipment && (
             <>
-              <div><strong>Marca / Modelo:</strong> {equipment.brand} {equipment.model} (S/N: {equipment.serialNumber || "—"})</div>
-              <div><strong>Capacidad Max / Min:</strong> {equipment.maxCapacity} {equipment.unit} / {equipment.minCapacity} {equipment.unit}</div>
-              <div><strong>Escalón (e) / División (d):</strong> e = {equipment.verificationIntervalE} {equipment.unit} / d = {equipment.divisionD} {equipment.unit}</div>
-              <div><strong>Clase de Exactitud:</strong> Clase {equipment.accuracyClass}</div>
+              <div>
+                <strong>Receptor / Plataforma:</strong> {equipment.brand} {equipment.model} (S/N: {equipment.serialNumber || "—"})
+                {(equipment as any).platformDimensions ? ` • ${(equipment as any).platformDimensions}` : ""}
+                {(equipment as any).platformApprovalNumber && (
+                  <div style={{ color: "#444", fontSize: "0.78rem" }}>
+                    ↳ Disp. Aprobación Plataforma: <strong>{(equipment as any).platformApprovalNumber}</strong>
+                    {(equipment as any).platformApprovalDate ? ` (Fecha: ${new Date((equipment as any).platformApprovalDate).toLocaleDateString("es-AR")})` : ""}
+                  </div>
+                )}
+              </div>
+              <div style={{ marginTop: 3 }}>
+                <strong>Indicador Principal:</strong> {(equipment as any).indicator1Brand || equipment.brand} {(equipment as any).indicator1Model || equipment.model} (S/N: {(equipment as any).indicator1SerialNumber || equipment.serialNumber || "—"}) [{(equipment as any).indicator1Type || "Digital"}]
+                {(equipment as any).indicator1ApprovalNumber && (
+                  <div style={{ color: "#444", fontSize: "0.78rem" }}>
+                    ↳ Disp. Aprobación Indicador: <strong>{(equipment as any).indicator1ApprovalNumber}</strong>
+                    {(equipment as any).indicator1ApprovalDate ? ` (Fecha: ${new Date((equipment as any).indicator1ApprovalDate).toLocaleDateString("es-AR")})` : ""}
+                  </div>
+                )}
+              </div>
+              {(equipment as any).hasSecondaryIndicator && (
+                <div style={{ marginTop: 3 }}>
+                  <strong>Indicador Secundario (Híbrida):</strong> {(equipment as any).indicator2Brand} {(equipment as any).indicator2Model} (S/N: {(equipment as any).indicator2SerialNumber || "—"}) [{(equipment as any).indicator2Type}]
+                  {(equipment as any).indicator2ApprovalNumber && (
+                    <div style={{ color: "#444", fontSize: "0.78rem" }}>
+                      ↳ Disp. Aprobación Ind. 2: <strong>{(equipment as any).indicator2ApprovalNumber}</strong>
+                      {(equipment as any).indicator2ApprovalDate ? ` (Fecha: ${new Date((equipment as any).indicator2ApprovalDate).toLocaleDateString("es-AR")})` : ""}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px dashed #eee" }}>
+                <strong>Capacidad Max / Min:</strong> {equipment.maxCapacity.toLocaleString("es-AR")} {equipment.unit} / {equipment.minCapacity} {equipment.unit} • 
+                <strong> Escalón:</strong> e = {equipment.verificationIntervalE} {equipment.unit} (d = {equipment.divisionD} {equipment.unit}) • 
+                <strong> Clase:</strong> {equipment.accuracyClass}
+              </div>
             </>
           )}
         </div>

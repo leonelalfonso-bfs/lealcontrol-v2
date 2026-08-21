@@ -8,8 +8,8 @@ namespace LealControl.Modules.Metrology.Infrastructure;
 public sealed class MetrologyEquipment : Entity<Guid>
 {
     public TenantId TenantId { get; set; }
-    public string Code { get; set; } = string.Empty; // e.g. BAL-001
-    public string Description { get; set; } = string.Empty; // e.g. Balanza Camionera Continua
+    public string Code { get; set; } = string.Empty; // e.g. BAL-CAM-01
+    public string Description { get; set; } = string.Empty; // e.g. Balanza Camionera Electromecánica 80t
     public string Brand { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;
     public string SerialNumber { get; set; } = string.Empty;
@@ -17,12 +17,35 @@ public sealed class MetrologyEquipment : Entity<Guid>
     // Cliente y Ubicación
     public Guid? CustomerId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
-    public string Location { get; set; } = string.Empty; // e.g. Planta Acopio Silos - Ingreso
+    public string Location { get; set; } = string.Empty; // e.g. Planta Acopio Silos 1 - Ingreso
     
-    // Marco Normativo & Aprobaciones Legales
+    // Marco Normativo
     public string ApplicableStandard { get; set; } = "Res25_2025"; // Res25_2025, Res2307_80
-    public string ApprovalCode { get; set; } = string.Empty; // e.g. RESOL-2025-25-APN-SIYC#MEC o DNH-1450/84
+    public string ApprovalCode { get; set; } = string.Empty; // General / Legacy approval code
     public string PlatformType { get; set; } = "TruckScale"; // TruckScale, Platform, Hopper, Suspended, Counter
+
+    // Componente 1: Plataforma / Receptor de Carga
+    public string PlatformApprovalNumber { get; set; } = string.Empty; // Nº Disposición / Aprobación Plataforma
+    public DateTime? PlatformApprovalDate { get; set; } // Fecha de Disposición / Aprobación Plataforma
+    public string PlatformDimensions { get; set; } = string.Empty; // ej. 21.00 x 3.00 m
+    public int LoadCellsCount { get; set; } = 6; // Apoyos / celdas
+
+    // Componente 2: Indicador Principal (Indicador 1)
+    public string Indicator1Brand { get; set; } = string.Empty;
+    public string Indicator1Model { get; set; } = string.Empty;
+    public string Indicator1SerialNumber { get; set; } = string.Empty;
+    public string Indicator1ApprovalNumber { get; set; } = string.Empty; // Nº Disposición / Aprobación Indicador 1
+    public DateTime? Indicator1ApprovalDate { get; set; } // Fecha de Disposición / Aprobación Indicador 1
+    public string Indicator1Type { get; set; } = "Digital"; // Digital, Analógico, Con Dispositivo Impresor
+
+    // Componente 3: Indicador Secundario (Indicador 2 - Opcional para Balanzas Híbridas / Romana / Repetidor)
+    public bool HasSecondaryIndicator { get; set; } = false;
+    public string Indicator2Brand { get; set; } = string.Empty;
+    public string Indicator2Model { get; set; } = string.Empty;
+    public string Indicator2SerialNumber { get; set; } = string.Empty;
+    public string Indicator2ApprovalNumber { get; set; } = string.Empty; // Nº Disposición / Aprobación Indicador 2
+    public DateTime? Indicator2ApprovalDate { get; set; } // Fecha de Disposición / Aprobación Indicador 2
+    public string Indicator2Type { get; set; } = "Mecánico (Romana/Cuadrante)"; // Mecánico, Digital, Repetidor
 
     // Parámetros Metrológicos
     public decimal MaxCapacity { get; set; } // e.g. 80000 kg
@@ -32,7 +55,6 @@ public sealed class MetrologyEquipment : Entity<Guid>
     public string Unit { get; set; } = "kg"; // kg, g, mg, t
     public string AccuracyClass { get; set; } = "III"; // I, II, III, IIII
     public string IndicationType { get; set; } = "Digital"; // Digital, Analógica, Con Dispositivo Impresor
-    public int LoadCellsCount { get; set; } = 6; // 4, 6, 8 apoyos
     public bool HasTare { get; set; } = true;
     
     // Estado y Vigencia
@@ -43,55 +65,6 @@ public sealed class MetrologyEquipment : Entity<Guid>
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public MetrologyEquipment() : base(Guid.NewGuid()) { }
-
-    public MetrologyEquipment(
-        Guid id,
-        TenantId tenantId,
-        string code,
-        string description,
-        string brand,
-        string model,
-        string serialNumber,
-        Guid? customerId,
-        string customerName,
-        string location,
-        string applicableStandard,
-        string approvalCode,
-        string platformType,
-        decimal maxCapacity,
-        decimal minCapacity,
-        decimal divisionD,
-        decimal verificationIntervalE,
-        string unit = "kg",
-        string accuracyClass = "III",
-        string indicationType = "Digital",
-        int loadCellsCount = 6,
-        bool hasTare = true) : base(id)
-    {
-        TenantId = tenantId;
-        Code = code;
-        Description = description;
-        Brand = brand;
-        Model = model;
-        SerialNumber = serialNumber;
-        CustomerId = customerId;
-        CustomerName = customerName;
-        Location = location;
-        ApplicableStandard = string.IsNullOrWhiteSpace(applicableStandard) ? "Res25_2025" : applicableStandard;
-        ApprovalCode = approvalCode ?? string.Empty;
-        PlatformType = string.IsNullOrWhiteSpace(platformType) ? "TruckScale" : platformType;
-        MaxCapacity = maxCapacity;
-        MinCapacity = minCapacity;
-        DivisionD = divisionD;
-        VerificationIntervalE = verificationIntervalE;
-        Unit = unit;
-        AccuracyClass = accuracyClass;
-        IndicationType = indicationType;
-        LoadCellsCount = loadCellsCount;
-        HasTare = hasTare;
-        Status = "Active";
-        CreatedAtUtc = DateTime.UtcNow;
-    }
 }
 
 public sealed class StandardWeight : Entity<Guid>
@@ -176,6 +149,22 @@ public record MetrologyEquipmentDto(
     string ApplicableStandard,
     string ApprovalCode,
     string PlatformType,
+    string PlatformApprovalNumber,
+    DateTime? PlatformApprovalDate,
+    string PlatformDimensions,
+    string Indicator1Brand,
+    string Indicator1Model,
+    string Indicator1SerialNumber,
+    string Indicator1ApprovalNumber,
+    DateTime? Indicator1ApprovalDate,
+    string Indicator1Type,
+    bool HasSecondaryIndicator,
+    string Indicator2Brand,
+    string Indicator2Model,
+    string Indicator2SerialNumber,
+    string Indicator2ApprovalNumber,
+    DateTime? Indicator2ApprovalDate,
+    string Indicator2Type,
     decimal MaxCapacity,
     decimal MinCapacity,
     decimal DivisionD,
@@ -204,6 +193,22 @@ public record MetrologyEquipmentWriteDto(
     string? ApplicableStandard,
     string? ApprovalCode,
     string? PlatformType,
+    string? PlatformApprovalNumber,
+    DateTime? PlatformApprovalDate,
+    string? PlatformDimensions,
+    string? Indicator1Brand,
+    string? Indicator1Model,
+    string? Indicator1SerialNumber,
+    string? Indicator1ApprovalNumber,
+    DateTime? Indicator1ApprovalDate,
+    string? Indicator1Type,
+    bool HasSecondaryIndicator,
+    string? Indicator2Brand,
+    string? Indicator2Model,
+    string? Indicator2SerialNumber,
+    string? Indicator2ApprovalNumber,
+    DateTime? Indicator2ApprovalDate,
+    string? Indicator2Type,
     decimal MaxCapacity,
     decimal MinCapacity,
     decimal DivisionD,
@@ -335,8 +340,8 @@ public record MetrologyRulesCalculationRequest(
 
 public record MetrologyRulesCalculationResponse(
     string StandardApplied,
-    string ErrorLimitTerm, // "emp" o "EMT"
-    string RepeatabilityTerm, // "Repetibilidad" o "Fidelidad"
+    string ErrorLimitTerm,
+    string RepeatabilityTerm,
     List<MetrologyTestPointDto> RecommendedLinearityPoints,
     EccentricityConfigDto EccentricityConfig,
     decimal MinCapacity,

@@ -20,7 +20,7 @@ export function MetrologyEquipmentPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form Fields - Metrology
+  // Form Fields - Identificación General
   const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
   const [brand, setBrand] = useState("");
@@ -33,10 +33,32 @@ export function MetrologyEquipmentPage() {
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const [location, setLocation] = useState("");
   
-  // Marco Normativo Dinámico
+  // Marco Normativo
   const [applicableStandard, setApplicableStandard] = useState<"Res25_2025" | "Res2307_80">("Res25_2025");
-  const [approvalCode, setApprovalCode] = useState("");
   const [platformType, setPlatformType] = useState<"TruckScale" | "Platform" | "Hopper" | "Suspended" | "Counter">("TruckScale");
+
+  // Componente 1: Plataforma / Receptor de Carga
+  const [platformApprovalNumber, setPlatformApprovalNumber] = useState("");
+  const [platformApprovalDate, setPlatformApprovalDate] = useState("");
+  const [platformDimensions, setPlatformDimensions] = useState("");
+  const [loadCellsCount, setLoadCellsCount] = useState("6");
+
+  // Componente 2: Indicador Principal (Indicador 1)
+  const [indicator1Brand, setIndicator1Brand] = useState("");
+  const [indicator1Model, setIndicator1Model] = useState("");
+  const [indicator1SerialNumber, setIndicator1SerialNumber] = useState("");
+  const [indicator1ApprovalNumber, setIndicator1ApprovalNumber] = useState("");
+  const [indicator1ApprovalDate, setIndicator1ApprovalDate] = useState("");
+  const [indicator1Type, setIndicator1Type] = useState("Digital");
+
+  // Componente 3: Indicador Secundario (Indicador 2 - Opcional)
+  const [hasSecondaryIndicator, setHasSecondaryIndicator] = useState(false);
+  const [indicator2Brand, setIndicator2Brand] = useState("");
+  const [indicator2Model, setIndicator2Model] = useState("");
+  const [indicator2SerialNumber, setIndicator2SerialNumber] = useState("");
+  const [indicator2ApprovalNumber, setIndicator2ApprovalNumber] = useState("");
+  const [indicator2ApprovalDate, setIndicator2ApprovalDate] = useState("");
+  const [indicator2Type, setIndicator2Type] = useState("Mecánico (Romana/Cuadrante)");
 
   // Parámetros Metrológicos
   const [maxCapacity, setMaxCapacity] = useState("80000");
@@ -45,8 +67,6 @@ export function MetrologyEquipmentPage() {
   const [verificationIntervalE, setVerificationIntervalE] = useState("20");
   const [unit, setUnit] = useState("kg");
   const [accuracyClass, setAccuracyClass] = useState("III");
-  const [indicationType, setIndicationType] = useState("Digital");
-  const [loadCellsCount, setLoadCellsCount] = useState("6");
   const [hasTare, setHasTare] = useState(true);
   const [notes, setNotes] = useState("");
 
@@ -165,16 +185,33 @@ export function MetrologyEquipmentPage() {
     setSelectedLocationId("");
     setLocation("");
     setApplicableStandard("Res25_2025");
-    setApprovalCode("");
     setPlatformType("TruckScale");
+    setPlatformApprovalNumber("");
+    setPlatformApprovalDate("");
+    setPlatformDimensions("21.00 x 3.00 m");
+    setLoadCellsCount("6");
+
+    setIndicator1Brand("");
+    setIndicator1Model("");
+    setIndicator1SerialNumber("");
+    setIndicator1ApprovalNumber("");
+    setIndicator1ApprovalDate("");
+    setIndicator1Type("Digital");
+
+    setHasSecondaryIndicator(false);
+    setIndicator2Brand("");
+    setIndicator2Model("");
+    setIndicator2SerialNumber("");
+    setIndicator2ApprovalNumber("");
+    setIndicator2ApprovalDate("");
+    setIndicator2Type("Mecánico (Romana/Cuadrante)");
+
     setMaxCapacity("80000");
     setMinCapacity("400");
     setDivisionD("20");
     setVerificationIntervalE("20");
     setUnit("kg");
     setAccuracyClass("III");
-    setIndicationType("Digital");
-    setLoadCellsCount("6");
     setHasTare(true);
     setNotes("");
     setError(null);
@@ -195,16 +232,34 @@ export function MetrologyEquipmentPage() {
     setCustomerName(eq.customerName || "");
     setLocation(eq.location || "");
     setApplicableStandard((eq.applicableStandard as any) || "Res25_2025");
-    setApprovalCode(eq.approvalCode || "");
     setPlatformType((eq.platformType as any) || "TruckScale");
+    
+    setPlatformApprovalNumber((eq as any).platformApprovalNumber || "");
+    setPlatformApprovalDate((eq as any).platformApprovalDate ? (eq as any).platformApprovalDate.substring(0, 10) : "");
+    setPlatformDimensions((eq as any).platformDimensions || "");
+    setLoadCellsCount((eq.loadCellsCount || 6).toString());
+
+    setIndicator1Brand((eq as any).indicator1Brand || eq.brand || "");
+    setIndicator1Model((eq as any).indicator1Model || eq.model || "");
+    setIndicator1SerialNumber((eq as any).indicator1SerialNumber || eq.serialNumber || "");
+    setIndicator1ApprovalNumber((eq as any).indicator1ApprovalNumber || eq.approvalCode || "");
+    setIndicator1ApprovalDate((eq as any).indicator1ApprovalDate ? (eq as any).indicator1ApprovalDate.substring(0, 10) : "");
+    setIndicator1Type((eq as any).indicator1Type || eq.indicationType || "Digital");
+
+    setHasSecondaryIndicator((eq as any).hasSecondaryIndicator || false);
+    setIndicator2Brand((eq as any).indicator2Brand || "");
+    setIndicator2Model((eq as any).indicator2Model || "");
+    setIndicator2SerialNumber((eq as any).indicator2SerialNumber || "");
+    setIndicator2ApprovalNumber((eq as any).indicator2ApprovalNumber || "");
+    setIndicator2ApprovalDate((eq as any).indicator2ApprovalDate ? (eq as any).indicator2ApprovalDate.substring(0, 10) : "");
+    setIndicator2Type((eq as any).indicator2Type || "Mecánico (Romana/Cuadrante)");
+
     setMaxCapacity(eq.maxCapacity.toString());
     setMinCapacity(eq.minCapacity.toString());
     setDivisionD(eq.divisionD.toString());
     setVerificationIntervalE(eq.verificationIntervalE.toString());
     setUnit(eq.unit || "kg");
     setAccuracyClass(eq.accuracyClass || "III");
-    setIndicationType(eq.indicationType || "Digital");
-    setLoadCellsCount((eq.loadCellsCount || 6).toString());
     setHasTare(eq.hasTare);
     setNotes(eq.notes || "");
     setError(null);
@@ -246,22 +301,38 @@ export function MetrologyEquipmentPage() {
       const payload = {
         code: code.trim(),
         description: description.trim(),
-        brand: brand.trim(),
-        model: model.trim(),
-        serialNumber: serialNumber.trim(),
+        brand: brand.trim() || indicator1Brand.trim(),
+        model: model.trim() || indicator1Model.trim(),
+        serialNumber: serialNumber.trim() || indicator1SerialNumber.trim(),
         customerId: customerId || undefined,
         customerName: customerName.trim(),
         location: location.trim(),
         applicableStandard,
-        approvalCode: approvalCode.trim(),
+        approvalCode: indicator1ApprovalNumber.trim() || platformApprovalNumber.trim(),
         platformType,
+        platformApprovalNumber: platformApprovalNumber.trim(),
+        platformApprovalDate: platformApprovalDate ? new Date(platformApprovalDate).toISOString() : undefined,
+        platformDimensions: platformDimensions.trim(),
+        indicator1Brand: indicator1Brand.trim(),
+        indicator1Model: indicator1Model.trim(),
+        indicator1SerialNumber: indicator1SerialNumber.trim(),
+        indicator1ApprovalNumber: indicator1ApprovalNumber.trim(),
+        indicator1ApprovalDate: indicator1ApprovalDate ? new Date(indicator1ApprovalDate).toISOString() : undefined,
+        indicator1Type,
+        hasSecondaryIndicator,
+        indicator2Brand: indicator2Brand.trim(),
+        indicator2Model: indicator2Model.trim(),
+        indicator2SerialNumber: indicator2SerialNumber.trim(),
+        indicator2ApprovalNumber: indicator2ApprovalNumber.trim(),
+        indicator2ApprovalDate: indicator2ApprovalDate ? new Date(indicator2ApprovalDate).toISOString() : undefined,
+        indicator2Type,
         maxCapacity: parseFloat(maxCapacity) || 0,
         minCapacity: parseFloat(minCapacity) || 0,
         divisionD: parseFloat(divisionD) || 0,
         verificationIntervalE: parseFloat(verificationIntervalE) || 0,
         unit,
         accuracyClass,
-        indicationType,
+        indicationType: indicator1Type,
         loadCellsCount: parseInt(loadCellsCount, 10) || 6,
         hasTare,
         notes: notes.trim()
@@ -449,7 +520,7 @@ export function MetrologyEquipmentPage() {
           <div style={{ flex: 1, minWidth: 260 }}>
             <input
               type="text"
-              placeholder="Buscar por código, descripción, cliente, marca o Nº serie..."
+              placeholder="Buscar por código, descripción, cliente, marca, modelo o disposición..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -502,9 +573,9 @@ export function MetrologyEquipmentPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Código / S/N</th>
-                  <th>Descripción / Tipo</th>
-                  <th>Resolución & Aprobación</th>
+                  <th>Código / Identif.</th>
+                  <th>Descripción & Configuración</th>
+                  <th>Resolución & Aprobaciones</th>
                   <th>Cliente & Planta</th>
                   <th>Capacidad (Max / Min)</th>
                   <th>Escalón (e / d)</th>
@@ -529,7 +600,11 @@ export function MetrologyEquipmentPage() {
                       <td>
                         <strong style={{ fontSize: "0.92rem" }}>{eq.description}</strong>
                         <div className="muted" style={{ fontSize: "0.8rem" }}>
-                          {eq.brand} {eq.model} • {eq.loadCellsCount} apoyos ({eq.platformType === "TruckScale" ? "Camionera" : eq.platformType === "Platform" ? "Plataforma" : eq.platformType === "Hopper" ? "Tolva" : "Comercial"})
+                          Plataforma: {eq.platformType === "TruckScale" ? "Camionera" : eq.platformType === "Platform" ? "Plataforma" : eq.platformType === "Hopper" ? "Tolva" : "Comercial"} • {eq.loadCellsCount} apoyos
+                        </div>
+                        <div className="muted" style={{ fontSize: "0.76rem" }}>
+                          Ind 1: {(eq as any).indicator1Brand} {(eq as any).indicator1Model} ({(eq as any).indicator1Type || "Digital"})
+                          {(eq as any).hasSecondaryIndicator && ` + Ind 2: ${(eq as any).indicator2Brand} ${(eq as any).indicator2Model}`}
                         </div>
                       </td>
                       <td>
@@ -545,9 +620,14 @@ export function MetrologyEquipmentPage() {
                         }}>
                           {isRes25 ? "Res. 25/2025 (OIML)" : "Res. 2307/80 (SIMELA)"}
                         </span>
-                        {eq.approvalCode && (
-                          <div className="muted" style={{ fontSize: "0.75rem", marginTop: 2 }}>
-                            Aprob: {eq.approvalCode}
+                        {(eq as any).platformApprovalNumber && (
+                          <div className="muted" style={{ fontSize: "0.74rem", marginTop: 2 }}>
+                            Plat: {(eq as any).platformApprovalNumber}
+                          </div>
+                        )}
+                        {(eq as any).indicator1ApprovalNumber && (
+                          <div className="muted" style={{ fontSize: "0.74rem" }}>
+                            Ind: {(eq as any).indicator1ApprovalNumber}
                           </div>
                         )}
                       </td>
@@ -609,17 +689,17 @@ export function MetrologyEquipmentPage() {
         )}
       </div>
 
-      {/* Modal Principal Alta / Edición de Balanza - Amplio, Dinámico e Inteligente */}
+      {/* Modal Principal Alta / Edición de Balanza - Amplio, Modular y Completo */}
       {showModal && (
         <div className="modal-backdrop" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div className="modal-card" style={{ maxWidth: 1020, width: "100%", maxHeight: "94vh", overflowY: "auto", padding: "26px 32px", borderRadius: 16 }}>
+          <div className="modal-card" style={{ maxWidth: 1040, width: "100%", maxHeight: "95vh", overflowY: "auto", padding: "26px 32px", borderRadius: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, borderBottom: "1px solid var(--surface-border)", paddingBottom: 14 }}>
               <div>
                 <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.74rem" }}>
                   Ficha Técnica Metrológica Legal
                 </span>
                 <h2 style={{ margin: "2px 0 0", fontSize: "1.45rem", fontWeight: 800 }}>
-                  {editingId ? "✏️ Modificar Ficha de Balanza" : "➕ Registrar Nueva Balanza / Instrumento"}
+                  {editingId ? "✏️ Modificar Ficha de Balanza" : "➕ Registrar Nueva Balanza / Sistema de Pesaje"}
                 </h2>
               </div>
               <button type="button" className="alert-close" onClick={() => setShowModal(false)} style={{ fontSize: "1.2rem" }}>✕</button>
@@ -736,18 +816,18 @@ export function MetrologyEquipmentPage() {
                 </div>
               </div>
 
-              {/* Sección 2: MARCO NORMATIVO APLICABLE (SELECTOR DINÁMICO) */}
+              {/* Sección 2: MARCO NORMATIVO APLICABLE */}
               <div style={{ background: "rgba(13, 148, 136, 0.05)", padding: "18px 22px", borderRadius: 12, border: "1.5px solid rgba(13, 148, 136, 0.25)" }}>
                 <div style={{ marginBottom: 12 }}>
                   <h4 style={{ margin: 0, fontSize: "0.92rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "#0f766e", fontWeight: 800 }}>
-                    2️⃣ Marco Normativo Aplicable
+                    2️⃣ Marco Normativo Metrológico
                   </h4>
                   <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.82rem" }}>
-                    Seleccione la resolución metrológica que rige la aprobación de modelo y los ensayos de este instrumento
+                    Seleccione la resolución que rige la aprobación de modelo y los ensayos técnicos de este instrumento
                   </p>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                   {/* Tarjeta Res 25/2025 */}
                   <div
                     onClick={() => setApplicableStandard("Res25_2025")}
@@ -771,9 +851,9 @@ export function MetrologyEquipmentPage() {
                     </div>
                     <div className="muted" style={{ fontSize: "0.8rem", lineHeight: 1.4 }}>
                       • Tolerancia: <strong>Error Máximo Permitido (emp)</strong><br />
-                      • Periodicidad: <strong>24 meses</strong> (Art. 5º)<br />
+                      • Periodicidad oficial: <strong>24 meses</strong> (Art. 5º)<br />
                       • Excentricidad: Carga <strong>1/(N-1)</strong> de Capacidad Máxima<br />
-                      • Ensayos: Repetibilidad, Excentricidad, Linealidad e Incertidumbre U (k=2)
+                      • Enfoque modular OIML (Plataforma + Indicadores independientes)
                     </div>
                   </div>
 
@@ -802,44 +882,13 @@ export function MetrologyEquipmentPage() {
                       • Tolerancia: <strong>Error Máximo Tolerado (EMT)</strong><br />
                       • Vigencia de uso para usuarios: <strong>10 años</strong> (Art. 6º Res 25/25)<br />
                       • Excentricidad: Carga <strong>1/N</strong> sobre puntos de apoyo<br />
-                      • Ensayos: Fidelidad, Sensibilidad, Movilidad y Excentricidad
+                      • Ensayos: Fidelidad, Sensibilidad y Movilidad
                     </div>
                   </div>
                 </div>
-
-                {/* Campos Dinámicos de Aprobación y Tipo de Receptor */}
-                <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 16 }}>
-                  <label>
-                    <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>
-                      {applicableStandard === "Res25_2025" ? "Nº Certificado Aprobación OIML / Res. 25" : "Código Aprobación de Modelo Nacional (ex SCT/SCI)"}
-                    </span>
-                    <input
-                      type="text"
-                      placeholder={applicableStandard === "Res25_2025" ? "ej. RESOL-2025-25-APN-SIYC#MEC o Cert. OIML R76/2006-A-AR1" : "ej. DNH-1450/84 o SCT-204/05"}
-                      value={approvalCode}
-                      onChange={(e) => setApprovalCode(e.target.value)}
-                      style={{ marginTop: 6 }}
-                    />
-                  </label>
-
-                  <label>
-                    <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Tipo de Receptor / Plataforma</span>
-                    <select
-                      value={platformType}
-                      onChange={(e) => setPlatformType(e.target.value as any)}
-                      style={{ marginTop: 6 }}
-                    >
-                      <option value="TruckScale">🚚 Balanza Camionera (Carga rodante)</option>
-                      <option value="Platform">📦 Plataforma Fija Industrial (≤ 4 apoyos)</option>
-                      <option value="Hopper">🌾 Tolva / Tanque Suspendido de Acopio</option>
-                      <option value="Suspended">🏗️ Balanza Colgante / Grúa</option>
-                      <option value="Counter">🏪 Balanza de Mostrador / Comercial (≤ 30 kg)</option>
-                    </select>
-                  </label>
-                </div>
               </div>
 
-              {/* Sección 3: Identificación del Instrumento */}
+              {/* Identificación General del Sistema de Pesaje */}
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 2fr", gap: 14 }}>
                 <label>
                   <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Código / Identificador Interno *</span>
@@ -866,28 +915,164 @@ export function MetrologyEquipmentPage() {
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
-                <label>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Marca</span>
-                  <input type="text" placeholder="ej. Systel / Toledo / Brapenta" value={brand} onChange={(e) => setBrand(e.target.value)} style={{ marginTop: 4 }} />
-                </label>
+              {/* COMPONENTES METROLÓGICOS INDEPENDIENTES (PLATAFORMA + INDICADOR 1 + INDICADOR 2) */}
+              
+              {/* COMPONENTE 1: RECEPTOR DE CARGA / PLATAFORMA */}
+              <div style={{ background: "rgba(15, 23, 42, 0.02)", padding: "18px 22px", borderRadius: 12, border: "1px solid var(--surface-border)" }}>
+                <h4 style={{ margin: "0 0 12px", fontSize: "0.92rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ink)", fontWeight: 800 }}>
+                  📦 Componente 1: Plataforma / Receptor de Carga
+                </h4>
 
-                <label>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Modelo</span>
-                  <input type="text" placeholder="ej. TruckMaster 80T" value={model} onChange={(e) => setModel(e.target.value)} style={{ marginTop: 4 }} />
-                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Tipo de Receptor</span>
+                    <select
+                      value={platformType}
+                      onChange={(e) => setPlatformType(e.target.value as any)}
+                      style={{ marginTop: 4 }}
+                    >
+                      <option value="TruckScale">🚚 Camionera (Carga rodante)</option>
+                      <option value="Platform">📦 Plataforma Fija (≤ 4 apoyos)</option>
+                      <option value="Hopper">🌾 Tolva / Tanque Suspendido</option>
+                      <option value="Suspended">🏗️ Colgante / Grúa</option>
+                      <option value="Counter">🏪 Mostrador / Comercial (≤ 30 kg)</option>
+                    </select>
+                  </label>
 
-                <label>
-                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Número de Serie</span>
-                  <input type="text" placeholder="ej. SN-2024-88912" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} style={{ marginTop: 4 }} />
-                </label>
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Dimensiones (m)</span>
+                    <input type="text" placeholder="ej. 21.00 x 3.00 m" value={platformDimensions} onChange={(e) => setPlatformDimensions(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Disposición / Aprobación</span>
+                    <input type="text" placeholder="ej. Disp. DNCI 124/2018" value={platformApprovalNumber} onChange={(e) => setPlatformApprovalNumber(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Fecha de Disposición</span>
+                    <input type="date" value={platformApprovalDate} onChange={(e) => setPlatformApprovalDate(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Marca de Plataforma</span>
+                    <input type="text" placeholder="ej. Latorre / Magris / Brapenta" value={brand} onChange={(e) => setBrand(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Modelo de Plataforma</span>
+                    <input type="text" placeholder="ej. P-2100 Heavy Duty" value={model} onChange={(e) => setModel(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Serie Plataforma</span>
+                    <input type="text" placeholder="ej. PL-2024-0091" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+                </div>
+              </div>
+
+              {/* COMPONENTE 2: INDICADOR PRINCIPAL (INDICADOR 1) */}
+              <div style={{ background: "rgba(13, 148, 136, 0.03)", padding: "18px 22px", borderRadius: 12, border: "1px solid rgba(13, 148, 136, 0.2)" }}>
+                <h4 style={{ margin: "0 0 12px", fontSize: "0.92rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "#0f766e", fontWeight: 800 }}>
+                  📟 Componente 2: Dispositivo Indicador Principal (Indicador 1)
+                </h4>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.2fr 1fr 1.2fr 1fr", gap: 12 }}>
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Marca Indicador 1</span>
+                    <input type="text" placeholder="ej. Systel / Toledo / PST" value={indicator1Brand} onChange={(e) => setIndicator1Brand(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Modelo Indicador 1</span>
+                    <input type="text" placeholder="ej. Croma / IND560" value={indicator1Model} onChange={(e) => setIndicator1Model(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Serie Ind 1</span>
+                    <input type="text" placeholder="ej. SN-88912" value={indicator1SerialNumber} onChange={(e) => setIndicator1SerialNumber(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Disposición / Aprobación</span>
+                    <input type="text" placeholder="ej. Disp. DNCI 45/2021" value={indicator1ApprovalNumber} onChange={(e) => setIndicator1ApprovalNumber(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Fecha Disposición</span>
+                    <input type="date" value={indicator1ApprovalDate} onChange={(e) => setIndicator1ApprovalDate(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+                </div>
+              </div>
+
+              {/* COMPONENTE 3: INDICADOR SECUNDARIO (INDICADOR 2 - OPCIONAL / BALANZA HÍBRIDA) */}
+              <div style={{ background: hasSecondaryIndicator ? "rgba(245, 158, 11, 0.04)" : "rgba(15, 23, 42, 0.01)", padding: "16px 22px", borderRadius: 12, border: `1px solid ${hasSecondaryIndicator ? "rgba(245, 158, 11, 0.3)" : "var(--surface-border)"}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: hasSecondaryIndicator ? 12 : 0 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", margin: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={hasSecondaryIndicator}
+                      onChange={(e) => setHasSecondaryIndicator(e.target.checked)}
+                      style={{ width: 18, height: 18 }}
+                    />
+                    <strong style={{ fontSize: "0.92rem", color: hasSecondaryIndicator ? "#b45309" : "inherit" }}>
+                      ⚖️ Balanza Híbrida / Posee Segundo Indicador (Indicador 2 Mecánico, Digital o Repetidor)
+                    </strong>
+                  </label>
+                  {hasSecondaryIndicator && (
+                    <span style={{ fontSize: "0.72rem", padding: "2px 8px", borderRadius: 12, background: "#fef3c7", color: "#b45309", fontWeight: 800 }}>
+                      Indicador Secundario Activo
+                    </span>
+                  )}
+                </div>
+
+                {hasSecondaryIndicator && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr 1fr 1.2fr 1fr", gap: 12, marginTop: 12 }}>
+                    <label>
+                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Tipo Indicador 2</span>
+                      <select value={indicator2Type} onChange={(e) => setIndicator2Type(e.target.value)} style={{ marginTop: 4 }}>
+                        <option value="Mecánico (Romana/Cuadrante)">Mecánico (Romana/Cuadrante)</option>
+                        <option value="Digital">Digital / Electrónico</option>
+                        <option value="Repetidor">Repetidor Remoto</option>
+                        <option value="Impresor">Dispositivo Impresor</option>
+                      </select>
+                    </label>
+
+                    <label>
+                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Marca Ind 2</span>
+                      <input type="text" placeholder="ej. Latorre / Fairbanks" value={indicator2Brand} onChange={(e) => setIndicator2Brand(e.target.value)} style={{ marginTop: 4 }} />
+                    </label>
+
+                    <label>
+                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Modelo Ind 2</span>
+                      <input type="text" placeholder="ej. Romana R-50" value={indicator2Model} onChange={(e) => setIndicator2Model(e.target.value)} style={{ marginTop: 4 }} />
+                    </label>
+
+                    <label>
+                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Serie Ind 2</span>
+                      <input type="text" placeholder="ej. SN-MEC-441" value={indicator2SerialNumber} onChange={(e) => setIndicator2SerialNumber(e.target.value)} style={{ marginTop: 4 }} />
+                    </label>
+
+                    <label>
+                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Disposición Ind 2</span>
+                      <input type="text" placeholder="ej. Disp. DNCI 12/2010" value={indicator2ApprovalNumber} onChange={(e) => setIndicator2ApprovalNumber(e.target.value)} style={{ marginTop: 4 }} />
+                    </label>
+
+                    <label>
+                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Fecha Disposición</span>
+                      <input type="date" value={indicator2ApprovalDate} onChange={(e) => setIndicator2ApprovalDate(e.target.value)} style={{ marginTop: 4 }} />
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Sección 4: Parámetros Metrológicos Dinámicos */}
               <div style={{ background: "rgba(15, 23, 42, 0.02)", padding: "18px 22px", borderRadius: 12, border: "1px solid var(--surface-border)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                   <h4 style={{ margin: 0, color: "var(--ink)", fontSize: "0.92rem", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 800 }}>
-                    3️⃣ Parámetros Técnicos & Metrológicos ({applicableStandard === "Res25_2025" ? "OIML R 76-1" : "SIMELA"})
+                    4️⃣ Capacidades y Escalones Metrológicos ({applicableStandard === "Res25_2025" ? "OIML R 76-1" : "SIMELA"})
                   </h4>
                   <span style={{ fontSize: "0.82rem", color: "#0d9488", fontWeight: 700 }}>
                     Excentricidad: Carga ensayo = <strong>{calcEccLoad.toLocaleString("es-AR")} {unit}</strong>
@@ -948,7 +1133,7 @@ export function MetrologyEquipmentPage() {
 
                   <label>
                     <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Tipo de Indicación</span>
-                    <select value={indicationType} onChange={(e) => setIndicationType(e.target.value)} style={{ marginTop: 4 }}>
+                    <select value={indicator1Type} onChange={(e) => setIndicator1Type(e.target.value)} style={{ marginTop: 4 }}>
                       <option value="Digital">Digital (Discontinua)</option>
                       <option value="Analógica">Analógica (Continua / Cuadrante)</option>
                       <option value="Impresora">Con Dispositivo Impresor</option>
@@ -960,7 +1145,7 @@ export function MetrologyEquipmentPage() {
               {/* Sección 5: Observaciones */}
               <label>
                 <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Observaciones / Notas Técnicas & Precintos</span>
-                <textarea rows={3} placeholder="Detalles de instalación, cabezal indicador, precintos de seguridad colocados, etc." value={notes} onChange={(e) => setNotes(e.target.value)} style={{ marginTop: 4 }} />
+                <textarea rows={3} placeholder="Detalles de instalación, precintos de seguridad colocados, puntos de apoyo, etc." value={notes} onChange={(e) => setNotes(e.target.value)} style={{ marginTop: 4 }} />
               </label>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 10, borderTop: "1px solid var(--surface-border)", paddingTop: 14 }}>
