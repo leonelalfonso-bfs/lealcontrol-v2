@@ -8,6 +8,7 @@ export function MetrologyEquipmentPage() {
   const [equipments, setEquipments] = useState<MetrologyEquipment[]>([]);
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [customerFilter, setCustomerFilter] = useState("");
@@ -65,15 +66,35 @@ export function MetrologyEquipmentPage() {
   const [quickLocPostalCode, setQuickLocPostalCode] = useState("");
   const [quickLocSaving, setQuickLocSaving] = useState(false);
 
+  const fetchCustomersList = async () => {
+    try {
+      setLoadingCustomers(true);
+      const res = await api.listCustomers("", "all");
+      if (res && Array.isArray(res.items)) {
+        setCustomers(res.items);
+      } else if (Array.isArray(res)) {
+        setCustomers(res);
+      }
+    } catch (err) {
+      console.error("Error al cargar clientes:", err);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
   const loadData = () => {
     setLoading(true);
     Promise.all([
       api.listMetrologyEquipment({ search, status: statusFilter, customerId: customerFilter || undefined }),
-      api.listCustomers("", "")
+      api.listCustomers("", "all")
     ])
       .then(([eqs, custPaged]) => {
-        setEquipments(eqs);
-        setCustomers(custPaged.items || []);
+        setEquipments(eqs || []);
+        if (custPaged && Array.isArray(custPaged.items)) {
+          setCustomers(custPaged.items);
+        } else if (Array.isArray(custPaged)) {
+          setCustomers(custPaged);
+        }
       })
       .catch((err) => console.error("Error al cargar datos:", err))
       .finally(() => setLoading(false));
@@ -120,6 +141,9 @@ export function MetrologyEquipmentPage() {
   };
 
   const handleOpenCreate = () => {
+    if (customers.length === 0) {
+      fetchCustomersList();
+    }
     setEditingId(null);
     setCode("");
     setDescription("");
@@ -147,6 +171,9 @@ export function MetrologyEquipmentPage() {
   };
 
   const handleOpenEdit = async (eq: MetrologyEquipment) => {
+    if (customers.length === 0) {
+      fetchCustomersList();
+    }
     setEditingId(eq.id);
     setCode(eq.code);
     setDescription(eq.description);
@@ -368,29 +395,29 @@ export function MetrologyEquipmentPage() {
   };
 
   return (
-    <div className="page-wide">
-      <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+    <div className="page-wide" style={{ maxWidth: 1400, margin: "0 auto", padding: "0 16px" }}>
+      <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+          <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.78rem", letterSpacing: "0.08em" }}>
             Metrología Legal & Calidad
           </span>
-          <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
+          <h1 style={{ margin: "4px 0 0", fontSize: "1.85rem", fontWeight: 800 }}>
             🏢 Parque de Balanzas e Instrumentos
           </h1>
-          <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-            Ficha técnica metrológica, vinculación con clientes y plantas, capacidades nominales e historial
+          <p className="muted" style={{ margin: "4px 0 0", fontSize: "0.92rem" }}>
+            Ficha técnica metrológica, vinculación con clientes y plantas, capacidades nominales e historial de calibraciones
           </p>
         </div>
 
-        <button type="button" className="btn" onClick={handleOpenCreate} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+        <button type="button" className="btn" onClick={handleOpenCreate} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", padding: "10px 20px", fontWeight: 700 }}>
           ➕ Registrar Nueva Balanza
         </button>
       </div>
 
       {/* Filters */}
       <div className="card pad" style={{ marginBottom: 20 }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ flex: 1, minWidth: 260 }}>
+        <form onSubmit={handleSearchSubmit} style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ flex: 1, minWidth: 280 }}>
             <input
               type="text"
               placeholder="Buscar por código, descripción, cliente, marca o Nº serie..."
@@ -399,9 +426,9 @@ export function MetrologyEquipmentPage() {
             />
           </div>
 
-          <div style={{ width: 220 }}>
+          <div style={{ width: 250 }}>
             <select value={customerFilter} onChange={(e) => setCustomerFilter(e.target.value)}>
-              <option value="">Todos los clientes</option>
+              <option value="">Todos los clientes ({customers.length})</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.tradeName || c.legalName}
@@ -410,7 +437,7 @@ export function MetrologyEquipmentPage() {
             </select>
           </div>
 
-          <div style={{ width: 170 }}>
+          <div style={{ width: 190 }}>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">Todos los estados</option>
               <option value="Active">Operativas (Activas)</option>
@@ -428,9 +455,9 @@ export function MetrologyEquipmentPage() {
       {/* Table */}
       <div className="card pad">
         {loading ? (
-          <div className="muted" style={{ padding: 20, textAlign: "center" }}>Cargando parque de instrumentos...</div>
+          <div className="muted" style={{ padding: 30, textAlign: "center" }}>Cargando parque de instrumentos...</div>
         ) : equipments.length === 0 ? (
-          <div className="muted" style={{ padding: 24, textAlign: "center" }}>
+          <div className="muted" style={{ padding: 36, textAlign: "center" }}>
             No se encontraron balanzas o instrumentos registrados.
           </div>
         ) : (
@@ -455,34 +482,34 @@ export function MetrologyEquipmentPage() {
                   return (
                     <tr key={eq.id}>
                       <td>
-                        <strong style={{ color: "#0d9488" }}>{eq.code}</strong>
+                        <strong style={{ color: "#0d9488", fontSize: "0.95rem" }}>{eq.code}</strong>
                         {eq.serialNumber && (
-                          <div className="muted" style={{ fontSize: "0.74rem" }}>S/N: {eq.serialNumber}</div>
+                          <div className="muted" style={{ fontSize: "0.78rem" }}>S/N: {eq.serialNumber}</div>
                         )}
                       </td>
                       <td>
-                        <strong>{eq.description}</strong>
-                        <div className="muted" style={{ fontSize: "0.76rem" }}>
+                        <strong style={{ fontSize: "0.92rem" }}>{eq.description}</strong>
+                        <div className="muted" style={{ fontSize: "0.8rem" }}>
                           {eq.brand} {eq.model} • {eq.loadCellsCount} apoyos/celdas
                         </div>
                       </td>
                       <td>
                         {eq.customerId ? (
-                          <Link to={`/clientes/${eq.customerId}`} style={{ fontWeight: 600, color: "var(--primary)" }}>
+                          <Link to={`/clientes/${eq.customerId}`} style={{ fontWeight: 700, color: "var(--primary)" }}>
                             🏢 {eq.customerName || "Cliente"}
                           </Link>
                         ) : (
-                          <span className="muted">{eq.customerName || "Uso Interno / Propia"}</span>
+                          <span className="muted" style={{ fontWeight: 600 }}>{eq.customerName || "Uso Interno / Propia"}</span>
                         )}
-                        <div className="muted" style={{ fontSize: "0.74rem" }}>📍 {eq.location || "Sin planta asignada"}</div>
+                        <div className="muted" style={{ fontSize: "0.78rem" }}>📍 {eq.location || "Sin planta asignada"}</div>
                       </td>
                       <td>
                         <strong>{eq.maxCapacity.toLocaleString("es-AR")} {eq.unit}</strong>
-                        <div className="muted" style={{ fontSize: "0.74rem" }}>Min: {eq.minCapacity} {eq.unit}</div>
+                        <div className="muted" style={{ fontSize: "0.78rem" }}>Min: {eq.minCapacity} {eq.unit}</div>
                       </td>
                       <td>
                         <div>e = {eq.verificationIntervalE} {eq.unit}</div>
-                        <div className="muted" style={{ fontSize: "0.74rem" }}>d = {eq.divisionD} {eq.unit}</div>
+                        <div className="muted" style={{ fontSize: "0.78rem" }}>d = {eq.divisionD} {eq.unit}</div>
                       </td>
                       <td>
                         <span className="tag" style={{ fontWeight: 700 }}>Clase {eq.accuracyClass}</span>
@@ -524,30 +551,35 @@ export function MetrologyEquipmentPage() {
         )}
       </div>
 
-      {/* Modal Principal Alta / Edición de Balanza */}
+      {/* Modal Principal Alta / Edición de Balanza - Amplio y Cómodo */}
       {showModal && (
-        <div className="modal-backdrop">
-          <div className="modal-card" style={{ maxWidth: 720 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h2 style={{ margin: 0, fontSize: "1.2rem" }}>
-                {editingId ? "✏️ Modificar Ficha de Balanza" : "➕ Registrar Nueva Balanza / Instrumento"}
-              </h2>
-              <button type="button" className="alert-close" onClick={() => setShowModal(false)}>✕</button>
+        <div className="modal-backdrop" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div className="modal-card" style={{ maxWidth: 980, width: "100%", maxHeight: "92vh", overflowY: "auto", padding: "24px 28px", borderRadius: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, borderBottom: "1px solid var(--surface-border)", paddingBottom: 12 }}>
+              <div>
+                <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.72rem" }}>
+                  Ficha Técnica Metrológica
+                </span>
+                <h2 style={{ margin: "2px 0 0", fontSize: "1.4rem", fontWeight: 800 }}>
+                  {editingId ? "✏️ Modificar Ficha de Balanza" : "➕ Registrar Nueva Balanza / Instrumento"}
+                </h2>
+              </div>
+              <button type="button" className="alert-close" onClick={() => setShowModal(false)} style={{ fontSize: "1.2rem" }}>✕</button>
             </div>
 
-            {error && <div className="alert" style={{ marginBottom: 16 }}>{error}</div>}
+            {error && <div className="alert" style={{ marginBottom: 18 }}>{error}</div>}
 
-            <form onSubmit={handleSave} style={{ display: "grid", gap: 14 }}>
+            <form onSubmit={handleSave} style={{ display: "grid", gap: 18 }}>
               {/* Sección 1: Cliente y Planta */}
-              <div style={{ background: "rgba(15, 23, 42, 0.03)", padding: 14, borderRadius: 12, border: "1px solid var(--surface-border)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <h4 style={{ margin: 0, fontSize: "0.88rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ink)" }}>
+              <div style={{ background: "rgba(15, 23, 42, 0.02)", padding: "18px 20px", borderRadius: 12, border: "1px solid var(--surface-border)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <h4 style={{ margin: 0, fontSize: "0.92rem", textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ink)", fontWeight: 800 }}>
                     🏢 Asignación de Cliente & Planta
                   </h4>
                   <button
                     type="button"
-                    className="btn ghost compact"
-                    style={{ fontSize: "0.76rem", color: "var(--primary)" }}
+                    className="btn"
+                    style={{ fontSize: "0.82rem", background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", padding: "4px 12px" }}
                     onClick={() => {
                       setQuickLegalName("");
                       setQuickTradeName("");
@@ -561,16 +593,17 @@ export function MetrologyEquipmentPage() {
                       setShowQuickCustomerModal(true);
                     }}
                   >
-                    ➕ Nuevo Cliente
+                    ➕ Nuevo Cliente en Directorio
                   </button>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 16 }}>
                   <label>
-                    Cliente / Empresa Propietaria
+                    <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Cliente / Empresa Propietaria</span>
                     <select
                       value={customerId}
                       onChange={(e) => handleSelectCustomer(e.target.value)}
+                      style={{ marginTop: 6 }}
                     >
                       <option value="">— Sin cliente asignado (Instrumento Propio / Uso Interno) —</option>
                       {customers.map((c) => (
@@ -579,19 +612,20 @@ export function MetrologyEquipmentPage() {
                         </option>
                       ))}
                     </select>
+                    {loadingCustomers && <span className="muted" style={{ fontSize: "0.75rem" }}>Cargando clientes...</span>}
                   </label>
 
                   {/* Planta / Ubicación */}
                   <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <label style={{ margin: 0, fontSize: "0.85rem", fontWeight: 700 }}>
-                        Planta / Sucursal
-                      </label>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: "0.88rem", fontWeight: 700 }}>
+                        Planta / Sucursal de Ubicación
+                      </span>
                       {customerId && (
                         <button
                           type="button"
                           className="btn ghost compact"
-                          style={{ padding: "1px 6px", fontSize: "0.72rem" }}
+                          style={{ padding: "2px 8px", fontSize: "0.75rem", color: "var(--primary)", fontWeight: 700 }}
                           onClick={() => {
                             setQuickLocName("");
                             setQuickLocStreet("");
@@ -607,35 +641,33 @@ export function MetrologyEquipmentPage() {
                     </div>
 
                     {customerId && selectedCustomerDetail?.locations && selectedCustomerDetail.locations.length > 0 && locationType === "select" ? (
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <select
-                          value={selectedLocationId}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === "custom") {
-                              setLocationType("custom");
-                              setSelectedLocationId("");
-                            } else {
-                              setSelectedLocationId(val);
-                              const locObj = selectedCustomerDetail.locations.find((l) => l.id === val);
-                              if (locObj) {
-                                setLocation(`${locObj.name} (${locObj.address.city || ""})`);
-                              }
+                      <select
+                        value={selectedLocationId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "custom") {
+                            setLocationType("custom");
+                            setSelectedLocationId("");
+                          } else {
+                            setSelectedLocationId(val);
+                            const locObj = selectedCustomerDetail.locations.find((l) => l.id === val);
+                            if (locObj) {
+                              setLocation(`${locObj.name} (${locObj.address.city || ""})`);
                             }
-                          }}
-                        >
-                          {selectedCustomerDetail.locations.map((l) => (
-                            <option key={l.id} value={l.id}>
-                              📍 {l.name} — {l.address.city || "S/C"}
-                            </option>
-                          ))}
-                          <option value="custom">✍️ Escribir otra ubicación manual...</option>
-                        </select>
-                      </div>
+                          }
+                        }}
+                      >
+                        {selectedCustomerDetail.locations.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            📍 {l.name} — {l.address.city || "S/C"} ({l.address.street || ""})
+                          </option>
+                        ))}
+                        <option value="custom">✍️ Escribir otra ubicación manual...</option>
+                      </select>
                     ) : (
                       <input
                         type="text"
-                        placeholder="ej. Planta Acopio Silos - Ingreso Principal"
+                        placeholder="ej. Planta Acopio Silos 1 - Ingreso de Camiones"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                       />
@@ -644,80 +676,82 @@ export function MetrologyEquipmentPage() {
                 </div>
               </div>
 
-              {/* Identificación del Instrumento */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
+              {/* Sección 2: Identificación del Instrumento */}
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 2fr", gap: 14 }}>
                 <label>
-                  Código / Identificador *
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Código / Identificador Interno *</span>
                   <input
                     type="text"
                     required
                     placeholder="ej. BAL-CAM-01"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
+                    style={{ marginTop: 4 }}
                   />
                 </label>
 
                 <label>
-                  Descripción del Instrumento *
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Descripción del Instrumento *</span>
                   <input
                     type="text"
                     required
-                    placeholder="ej. Balanza Camionera Electrónica de 80t"
+                    placeholder="ej. Balanza Camionera Electrónica de 80 toneladas"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    style={{ marginTop: 4 }}
                   />
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
                 <label>
-                  Marca
-                  <input type="text" placeholder="ej. Systel / Toledo" value={brand} onChange={(e) => setBrand(e.target.value)} />
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Marca</span>
+                  <input type="text" placeholder="ej. Systel / Toledo" value={brand} onChange={(e) => setBrand(e.target.value)} style={{ marginTop: 4 }} />
                 </label>
 
                 <label>
-                  Modelo
-                  <input type="text" placeholder="ej. TruckMaster 80T" value={model} onChange={(e) => setModel(e.target.value)} />
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Modelo</span>
+                  <input type="text" placeholder="ej. TruckMaster 80T" value={model} onChange={(e) => setModel(e.target.value)} style={{ marginTop: 4 }} />
                 </label>
 
                 <label>
-                  Número de Serie
-                  <input type="text" placeholder="ej. SN-2024-88912" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Número de Serie</span>
+                  <input type="text" placeholder="ej. SN-2024-88912" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} style={{ marginTop: 4 }} />
                 </label>
               </div>
 
-              {/* Parámetros Metrológicos OIML */}
-              <div style={{ background: "rgba(13, 148, 136, 0.05)", padding: 14, borderRadius: 12, border: "1px solid rgba(13, 148, 136, 0.2)" }}>
-                <h4 style={{ margin: "0 0 10px", color: "#0d9488", fontSize: "0.86rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                  📐 Parámetros Metrológicos OIML R 76-1
+              {/* Sección 3: Parámetros Metrológicos OIML R 76-1 */}
+              <div style={{ background: "rgba(13, 148, 136, 0.04)", padding: "18px 20px", borderRadius: 12, border: "1px solid rgba(13, 148, 136, 0.2)" }}>
+                <h4 style={{ margin: "0 0 14px", color: "#0d9488", fontSize: "0.92rem", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 800 }}>
+                  📐 Parámetros Metrológicos OIML R 76-1 & Res. 67/2025
                 </h4>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 14 }}>
                   <label>
-                    Capacidad Max *
-                    <input type="number" step="0.0001" min="0.0001" required value={maxCapacity} onChange={(e) => setMaxCapacity(e.target.value)} />
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Capacidad Max *</span>
+                    <input type="number" step="0.0001" min="0.0001" required value={maxCapacity} onChange={(e) => setMaxCapacity(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
 
                   <label>
-                    Capacidad Min *
-                    <input type="number" step="0.0001" min="0" required value={minCapacity} onChange={(e) => setMinCapacity(e.target.value)} />
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Capacidad Min *</span>
+                    <input type="number" step="0.0001" min="0" required value={minCapacity} onChange={(e) => setMinCapacity(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
 
                   <label>
-                    Escalón Verif. (e) *
-                    <input type="number" step="0.0001" min="0.0001" required value={verificationIntervalE} onChange={(e) => setVerificationIntervalE(e.target.value)} />
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Escalón Verif. (e) *</span>
+                    <input type="number" step="0.0001" min="0.0001" required value={verificationIntervalE} onChange={(e) => setVerificationIntervalE(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
 
                   <label>
-                    División (d) *
-                    <input type="number" step="0.0001" min="0.0001" required value={divisionD} onChange={(e) => setDivisionD(e.target.value)} />
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>División (d) *</span>
+                    <input type="number" step="0.0001" min="0.0001" required value={divisionD} onChange={(e) => setDivisionD(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr 1fr 1.3fr", gap: 14 }}>
                   <label>
-                    Unidad
-                    <select value={unit} onChange={(e) => setUnit(e.target.value)}>
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Unidad de Medida</span>
+                    <select value={unit} onChange={(e) => setUnit(e.target.value)} style={{ marginTop: 4 }}>
                       <option value="kg">kg (Kilogramos)</option>
                       <option value="g">g (Gramos)</option>
                       <option value="mg">mg (Miligramos)</option>
@@ -726,8 +760,8 @@ export function MetrologyEquipmentPage() {
                   </label>
 
                   <label>
-                    Clase Exactitud
-                    <select value={accuracyClass} onChange={(e) => setAccuracyClass(e.target.value)}>
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Clase de Exactitud</span>
+                    <select value={accuracyClass} onChange={(e) => setAccuracyClass(e.target.value)} style={{ marginTop: 4 }}>
                       <option value="I">Clase I (Especial)</option>
                       <option value="II">Clase II (Fina)</option>
                       <option value="III">Clase III (Media - Estándar)</option>
@@ -736,13 +770,13 @@ export function MetrologyEquipmentPage() {
                   </label>
 
                   <label>
-                    Puntos de Apoyo / Celdas
-                    <input type="number" step="1" min="1" max="16" value={loadCellsCount} onChange={(e) => setLoadCellsCount(e.target.value)} />
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Apoyos / Celdas</span>
+                    <input type="number" step="1" min="1" max="16" value={loadCellsCount} onChange={(e) => setLoadCellsCount(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
 
                   <label>
-                    Tipo de Indicación
-                    <select value={indicationType} onChange={(e) => setIndicationType(e.target.value)}>
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Tipo de Indicación</span>
+                    <select value={indicationType} onChange={(e) => setIndicationType(e.target.value)} style={{ marginTop: 4 }}>
                       <option value="Digital">Digital</option>
                       <option value="Analógica">Analógica / Mecánica</option>
                       <option value="Impresora">Con Dispositivo Impresor</option>
@@ -751,14 +785,15 @@ export function MetrologyEquipmentPage() {
                 </div>
               </div>
 
+              {/* Sección 4: Observaciones */}
               <label>
-                Observaciones / Notas Técnicas
-                <textarea rows={2} placeholder="Detalles de instalación, tipo de cabezal indicador, precintos, etc." value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Observaciones / Notas Técnicas & Precintos</span>
+                <textarea rows={3} placeholder="Detalles de instalación, cabezal indicador, precintos de seguridad colocados, etc." value={notes} onChange={(e) => setNotes(e.target.value)} style={{ marginTop: 4 }} />
               </label>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
-                <button type="button" className="btn ghost" onClick={() => setShowModal(false)}>Cancelar</button>
-                <button type="submit" className="btn" disabled={saving} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 10, borderTop: "1px solid var(--surface-border)", paddingTop: 14 }}>
+                <button type="button" className="btn ghost" onClick={() => setShowModal(false)} style={{ padding: "10px 18px" }}>Cancelar</button>
+                <button type="submit" className="btn" disabled={saving} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", padding: "10px 24px", fontWeight: 700 }}>
                   {saving ? "Guardando..." : "💾 Guardar Balanza"}
                 </button>
               </div>
@@ -769,20 +804,20 @@ export function MetrologyEquipmentPage() {
 
       {/* Submodal 1: Crear Cliente Rápido */}
       {showQuickCustomerModal && (
-        <div className="modal-backdrop" style={{ zIndex: 1050 }}>
-          <div className="modal-card" style={{ maxWidth: 540 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <h3 style={{ margin: 0, fontSize: "1.1rem" }}>🏢 Alta Rápida de Cliente en Directorio</h3>
+        <div className="modal-backdrop" style={{ zIndex: 1050, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div className="modal-card" style={{ maxWidth: 580, width: "100%", padding: "22px 26px", borderRadius: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--surface-border)", paddingBottom: 10 }}>
+              <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800 }}>🏢 Alta Rápida de Cliente en Directorio</h3>
               <button type="button" className="alert-close" onClick={() => setShowQuickCustomerModal(false)}>✕</button>
             </div>
 
-            {quickError && <div className="alert" style={{ marginBottom: 12 }}>{quickError}</div>}
+            {quickError && <div className="alert" style={{ marginBottom: 14 }}>{quickError}</div>}
 
-            <form onSubmit={handleSaveQuickCustomer} style={{ display: "grid", gap: 12 }}>
+            <form onSubmit={handleSaveQuickCustomer} style={{ display: "grid", gap: 14 }}>
               {/* CUIT + Consulta ARCA */}
               <label>
-                CUIT / Identificación Fiscal
-                <div style={{ display: "flex", gap: 8 }}>
+                <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>CUIT / Identificación Fiscal</span>
+                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
                   <input
                     type="text"
                     placeholder="ej. 30715489629"
@@ -791,51 +826,55 @@ export function MetrologyEquipmentPage() {
                   />
                   <button
                     type="button"
-                    className="btn ghost"
+                    className="btn"
                     disabled={consultingArca}
                     onClick={handleConsultArca}
+                    style={{ background: "#0f172a", color: "#fff", fontWeight: 700, whiteSpace: "nowrap" }}
                     title="Autocompletar datos con ARCA (Padrón AFIP)"
                   >
-                    {consultingArca ? "Consultando..." : "🏛️ ARCA"}
+                    {consultingArca ? "Consultando..." : "🏛️ Consultar ARCA"}
                   </button>
                 </div>
               </label>
 
               <label>
-                Razón Social *
+                <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Razón Social *</span>
                 <input
                   type="text"
                   required
                   placeholder="ej. Acopio Cereales Los Molinos S.A."
                   value={quickLegalName}
                   onChange={(e) => setQuickLegalName(e.target.value)}
+                  style={{ marginTop: 4 }}
                 />
               </label>
 
               <label>
-                Nombre Fantasía
+                <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Nombre Fantasía</span>
                 <input
                   type="text"
                   placeholder="ej. Los Molinos Acopio"
                   value={quickTradeName}
                   onChange={(e) => setQuickTradeName(e.target.value)}
+                  style={{ marginTop: 4 }}
                 />
               </label>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
                 <label>
-                  Ciudad / Localidad
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Ciudad / Localidad</span>
                   <input
                     type="text"
                     placeholder="ej. Rosario"
                     value={quickCity}
                     onChange={(e) => setQuickCity(e.target.value)}
+                    style={{ marginTop: 4 }}
                   />
                 </label>
 
                 <label>
-                  Provincia
-                  <select value={quickProvince} onChange={(e) => setQuickProvince(e.target.value)}>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Provincia</span>
+                  <select value={quickProvince} onChange={(e) => setQuickProvince(e.target.value)} style={{ marginTop: 4 }}>
                     {provinces.map((p) => (
                       <option key={p} value={p}>{p}</option>
                     ))}
@@ -843,31 +882,33 @@ export function MetrologyEquipmentPage() {
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <label>
-                  Email de Contacto
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Email de Contacto</span>
                   <input
                     type="email"
                     placeholder="contacto@empresa.com"
                     value={quickEmail}
                     onChange={(e) => setQuickEmail(e.target.value)}
+                    style={{ marginTop: 4 }}
                   />
                 </label>
 
                 <label>
-                  Teléfono
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Teléfono</span>
                   <input
                     type="text"
                     placeholder="341-4455667"
                     value={quickPhone}
                     onChange={(e) => setQuickPhone(e.target.value)}
+                    style={{ marginTop: 4 }}
                   />
                 </label>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
                 <button type="button" className="btn ghost" onClick={() => setShowQuickCustomerModal(false)}>Cancelar</button>
-                <button type="submit" className="btn" disabled={quickSaving} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+                <button type="submit" className="btn" disabled={quickSaving} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", fontWeight: 700 }}>
                   {quickSaving ? "Creando..." : "✓ Crear y Seleccionar"}
                 </button>
               </div>
@@ -878,49 +919,52 @@ export function MetrologyEquipmentPage() {
 
       {/* Submodal 2: Crear Nueva Planta para el Cliente */}
       {showQuickLocationModal && (
-        <div className="modal-backdrop" style={{ zIndex: 1050 }}>
-          <div className="modal-card" style={{ maxWidth: 500 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <h3 style={{ margin: 0, fontSize: "1.1rem" }}>📍 Agregar Planta / Sucursal al Cliente</h3>
+        <div className="modal-backdrop" style={{ zIndex: 1050, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div className="modal-card" style={{ maxWidth: 540, width: "100%", padding: "22px 26px", borderRadius: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid var(--surface-border)", paddingBottom: 10 }}>
+              <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800 }}>📍 Agregar Planta / Sucursal al Cliente</h3>
               <button type="button" className="alert-close" onClick={() => setShowQuickLocationModal(false)}>✕</button>
             </div>
 
-            <form onSubmit={handleSaveQuickLocation} style={{ display: "grid", gap: 12 }}>
+            <form onSubmit={handleSaveQuickLocation} style={{ display: "grid", gap: 14 }}>
               <label>
-                Nombre de la Planta / Sucursal *
+                <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Nombre de la Planta / Sucursal *</span>
                 <input
                   type="text"
                   required
                   placeholder="ej. Planta Acopio Silos 2 o Depósito Central"
                   value={quickLocName}
                   onChange={(e) => setQuickLocName(e.target.value)}
+                  style={{ marginTop: 4 }}
                 />
               </label>
 
               <label>
-                Dirección / Calle
+                <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Dirección / Calle</span>
                 <input
                   type="text"
                   placeholder="ej. Ruta Nacional 9 Km 280"
                   value={quickLocStreet}
                   onChange={(e) => setQuickLocStreet(e.target.value)}
+                  style={{ marginTop: 4 }}
                 />
               </label>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
                 <label>
-                  Ciudad / Localidad
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Ciudad / Localidad</span>
                   <input
                     type="text"
                     placeholder="ej. Villa María"
                     value={quickLocCity}
                     onChange={(e) => setQuickLocCity(e.target.value)}
+                    style={{ marginTop: 4 }}
                   />
                 </label>
 
                 <label>
-                  Provincia
-                  <select value={quickLocProvince} onChange={(e) => setQuickLocProvince(e.target.value)}>
+                  <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Provincia</span>
+                  <select value={quickLocProvince} onChange={(e) => setQuickLocProvince(e.target.value)} style={{ marginTop: 4 }}>
                     {provinces.map((p) => (
                       <option key={p} value={p}>{p}</option>
                     ))}
@@ -928,9 +972,9 @@ export function MetrologyEquipmentPage() {
                 </label>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
                 <button type="button" className="btn ghost" onClick={() => setShowQuickLocationModal(false)}>Cancelar</button>
-                <button type="submit" className="btn" disabled={quickLocSaving} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+                <button type="submit" className="btn" disabled={quickLocSaving} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", fontWeight: 700 }}>
                   {quickLocSaving ? "Guardando..." : "✓ Agregar Planta"}
                 </button>
               </div>
