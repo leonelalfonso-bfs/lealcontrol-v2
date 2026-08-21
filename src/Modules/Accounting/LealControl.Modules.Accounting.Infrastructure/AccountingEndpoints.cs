@@ -1315,6 +1315,104 @@ public static class AccountingEndpoints
             return Results.Ok(period);
         });
 
+        // ====================================================================
+        // 13. Centros de Costos (Cost Centers)
+        // ====================================================================
+        group.MapGet("/cost-centers", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
+            var costCenters = await db.CostCenters
+                .AsNoTracking()
+                .Where(c => c.TenantId == tenantId)
+                .OrderBy(c => c.Code)
+                .ToListAsync(ct);
+            return Results.Ok(costCenters);
+        });
+
+        group.MapPost("/cost-centers", async (
+            CreateCostCenterRequest req,
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            var exists = await db.CostCenters.AnyAsync(c => c.TenantId == tenantId && c.Code == req.Code.Trim(), ct);
+            if (exists)
+            {
+                return Results.BadRequest(new { message = $"Ya existe un centro de costos con el código {req.Code}." });
+            }
+
+            var costCenter = new CostCenter(
+                Guid.NewGuid(),
+                tenantId,
+                req.Code.Trim(),
+                req.Name.Trim(),
+                req.Category ?? "Administration");
+
+            db.CostCenters.Add(costCenter);
+            await db.SaveChangesAsync(ct);
+
+            return Results.Created($"/api/v1/accounting/cost-centers/{costCenter.Id}", costCenter);
+        });
+
+        // ====================================================================
+        // 14. Reportes Oficiales IVA Digital (ARCA RG 4597)
+        // ====================================================================
+        group.MapGet("/reports/iva-digital-sales", async (
+            [FromQuery] int year,
+            [FromQuery] int month,
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            var entries = await db.JournalEntries
+                .AsNoTracking()
+                .Include(j => j.Lines)
+                .Where(j => j.TenantId == tenantId && j.SourceModule == "Sales" && j.Date.Year == year && j.Date.Month == month)
+                .OrderBy(j => j.Date)
+                .ToListAsync(ct);
+
+            var sb = new StringBuilder();
+            foreach (var e in entries)
+            {
+                var net = e.Lines.Where(l => l.AccountCode.StartsWith("4.")).Sum(l => l.Credit);
+                var vat = e.Lines.Where(l => l.AccountCode.StartsWith("2.1.02")).Sum(l => l.Credit);
+                sb.AppendLine($"{e.Date:yyyyMMdd}|001|00001|{e.EntryNumber:D8}|{e.EntryNumber:D8}|80|30000000007|CLIENTE GENERAL|{e.TotalDebit:F2}|0.00|0.00|0.00|0.00|{net:F2}|{vat:F2}|0.00|0.00|0.00|PES|1.000000|1|0");
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            return Results.File(bytes, "text/plain", $"LIBRO_IVA_DIGITAL_VENTAS_{year}_{month:D2}.txt");
+        });
+
+        group.MapGet("/reports/iva-digital-purchases", async (
+            [FromQuery] int year,
+            [FromQuery] int month,
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            var entries = await db.JournalEntries
+                .AsNoTracking()
+                .Include(j => j.Lines)
+                .Where(j => j.TenantId == tenantId && j.SourceModule == "Purchases" && j.Date.Year == year && j.Date.Month == month)
+                .OrderBy(j => j.Date)
+                .ToListAsync(ct);
+
+            var sb = new StringBuilder();
+            foreach (var e in entries)
+            {
+                var net = e.Lines.Where(l => l.AccountCode.StartsWith("5.")).Sum(l => l.Debit);
+                var vat = e.Lines.Where(l => l.AccountCode.StartsWith("1.1.03")).Sum(l => l.Debit);
+                sb.AppendLine($"{e.Date:yyyyMMdd}|001|00001|{e.EntryNumber:D8}|{e.EntryNumber:D8}|80|30000000007|PROVEEDOR GENERAL|{e.TotalCredit:F2}|0.00|0.00|0.00|0.00|{net:F2}|{vat:F2}|0.00|0.00|0.00|PES|1.000000|1|0");
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            return Results.File(bytes, "text/plain", $"LIBRO_IVA_DIGITAL_COMPRAS_{year}_{month:D2}.txt");
+        });
+
         return endpoints;
     }
 }
