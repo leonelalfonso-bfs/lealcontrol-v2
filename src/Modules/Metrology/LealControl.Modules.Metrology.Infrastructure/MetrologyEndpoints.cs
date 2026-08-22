@@ -40,6 +40,7 @@ public static class MetrologyEndpoints
             try
             {
                 var tenantId = tenantContext.TenantId;
+                await db.EnsureMetrologyTablesAsync(ct);
 
                 var totalEquipments = await db.Equipments.CountAsync(e => e.TenantId == tenantId, ct);
                 var activeEquipments = await db.Equipments.CountAsync(e => e.TenantId == tenantId && e.Status == "Active", ct);
@@ -110,6 +111,7 @@ public static class MetrologyEndpoints
             try
             {
                 var tenantId = tenantContext.TenantId;
+                await db.EnsureMetrologyTablesAsync(ct);
                 var query = db.Equipments.AsNoTracking().Where(e => e.TenantId == tenantId);
 
                 if (!string.IsNullOrWhiteSpace(search))
