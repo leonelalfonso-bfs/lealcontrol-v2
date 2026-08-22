@@ -44,10 +44,26 @@ export function CalibrationReportPrintPage() {
   let linearityData: any[] = [];
   let weightsUsed: any[] = [];
 
-  try { repeatabilityData = JSON.parse(report.repeatabilityDataJson || "{}"); } catch {}
-  try { eccentricityData = JSON.parse(report.eccentricityDataJson || "{}"); } catch {}
-  try { linearityData = JSON.parse(report.linearityDataJson || "[]"); } catch {}
-  try { weightsUsed = JSON.parse(report.weightsUsedJson || "[]"); } catch {}
+  const rawRepJson = (report as any).repeatabilityTestJson || report.repeatabilityDataJson || "{}";
+  const rawEccJson = (report as any).eccentricityTestJson || report.eccentricityDataJson || "{}";
+  const rawLinJson = (report as any).linearityTestJson || report.linearityDataJson || "[]";
+  const rawWeightsJson = report.weightsUsedJson || "[]";
+
+  try { repeatabilityData = typeof rawRepJson === "string" ? JSON.parse(rawRepJson) : rawRepJson; } catch {}
+  try { eccentricityData = typeof rawEccJson === "string" ? JSON.parse(rawEccJson) : rawEccJson; } catch {}
+  try { linearityData = typeof rawLinJson === "string" ? JSON.parse(rawLinJson) : (Array.isArray(rawLinJson) ? rawLinJson : []); } catch {}
+  try { weightsUsed = typeof rawWeightsJson === "string" ? JSON.parse(rawWeightsJson) : (Array.isArray(rawWeightsJson) ? rawWeightsJson : []); } catch {}
+
+  const certNumber = (report as any).certificateNumber || report.reportNumber || "CERT-2026";
+  const stdApplied = (report as any).standardApplied || report.normativeApplied || "Resolución SIyC Nº 25/2025 (OIML R 76-1)";
+  const certType = report.certificateType || (stdApplied.includes("2307") ? "Ensayo Oficial Res. 2307/80" : "Ensayo Oficial Res. 25/2025");
+  const verdictRaw: any = report.result || (report as any).verdict || "Apto";
+  const verdictText = (verdictRaw === "Approved" || verdictRaw === "Apto") ? "APTO" : (verdictRaw === "Rejected" || verdictRaw === "No Apto") ? "NO APTO" : String(verdictRaw || "").toUpperCase();
+  const isApproved = verdictText === "APTO" || verdictText === "APPROVED";
+  const expUncertainty = (report as any).expandedUncertaintyK2 ?? report.expandedUncertainty ?? 0;
+  const tempVal = (report as any).temperatureCelsius ?? report.ambientTemperature ?? 20;
+  const humVal = (report as any).relativeHumidityPercent ?? report.ambientHumidity ?? 50;
+  const pressVal = (report as any).atmosphericPressureHpa ?? report.atmosphericPressure ?? 1013;
 
   const handlePrint = () => {
     window.print();
@@ -92,17 +108,17 @@ export function CalibrationReportPrintPage() {
             CERTIFICADO DE CALIBRACIÓN
           </div>
           <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0d9488" }}>
-            {report.reportNumber}
+            {certNumber}
           </div>
           <div style={{ fontSize: "0.8rem", color: "#444" }}>
-            Fecha de Ensayo: {new Date(report.calibrationDate).toLocaleDateString("es-AR")}
+            Fecha de Ensayo: {report.calibrationDate ? new Date(report.calibrationDate).toLocaleDateString("es-AR") : "—"}
           </div>
         </div>
       </div>
 
       {/* Normativa */}
       <div style={{ textAlign: "center", background: "#f4fbf9", padding: "6px 12px", borderRadius: 6, border: "1px solid #ccede5", marginBottom: 16, fontSize: "0.84rem", fontWeight: 600, color: "#06574c" }}>
-        {report.certificateType} • Conforme a {report.normativeApplied}
+        {certType} • Conforme a {stdApplied}
       </div>
 
       {/* Sección 1: Datos del Cliente y del Instrumento */}
@@ -113,14 +129,14 @@ export function CalibrationReportPrintPage() {
           </div>
           <div><strong>Razón Social:</strong> {report.customerName || "—"}</div>
           <div><strong>Ubicación en Planta:</strong> {report.location || "—"}</div>
-          <div><strong>Metrólogo / Técnico:</strong> {report.performedBy}</div>
+          <div><strong>Metrólogo / Técnico:</strong> {report.performedBy || "—"}</div>
         </div>
 
         <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, fontSize: "0.84rem" }}>
           <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 6, color: "#0d9488" }}>
             ⚖️ ESPECIFICACIONES TÉCNICAS & METROLÓGICAS
           </div>
-          <div><strong>Código / Identificación:</strong> {report.equipmentCode} — {report.equipmentDescription}</div>
+          <div><strong>Código / Identificación:</strong> {report.equipmentCode || (equipment?.code)} — {report.equipmentDescription || (equipment?.description)}</div>
           {equipment && (
             <>
               <div>
@@ -157,7 +173,7 @@ export function CalibrationReportPrintPage() {
                 </div>
               )}
               <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px dashed #eee" }}>
-                <strong>Capacidad Max / Min:</strong> {equipment.maxCapacity.toLocaleString("es-AR")} {equipment.unit} / {equipment.minCapacity} {equipment.unit} • 
+                <strong>Capacidad Max / Min:</strong> {equipment.maxCapacity?.toLocaleString("es-AR")} {equipment.unit} / {equipment.minCapacity} {equipment.unit} • 
                 <strong> Escalón:</strong> e = {equipment.verificationIntervalE} {equipment.unit} (d = {equipment.divisionD} {equipment.unit}) • 
                 <strong> Clase:</strong> {equipment.accuracyClass}
               </div>
@@ -171,103 +187,109 @@ export function CalibrationReportPrintPage() {
         <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 6, color: "#0d9488" }}>
           🛡️ CONDICIONES AMBIENTALES & TRAZABILIDAD A PATRONES NACIONALES (INTI / SAC)
         </div>
-        <div style={{ display: "flex", gap: 20, marginBottom: 6 }}>
-          <span><strong>Temperatura:</strong> {report.ambientTemperature} ºC</span>
-          <span><strong>Humedad Relativa:</strong> {report.ambientHumidity} %</span>
-          <span><strong>Presión:</strong> {report.atmosphericPressure} hPa</span>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 8 }}>
+          <div><strong>Temperatura:</strong> {tempVal} ºC</div>
+          <div><strong>Humedad Relativa:</strong> {humVal} %</div>
+          <div><strong>Presión Atmosférica:</strong> {pressVal} hPa</div>
         </div>
 
-        {weightsUsed && weightsUsed.length > 0 && (
-          <table style={{ width: "100%", fontSize: "0.78rem", borderCollapse: "collapse", marginTop: 4 }}>
-            <thead>
-              <tr style={{ background: "#f8f9fa", borderBottom: "1px solid #ddd", textAlign: "left" }}>
-                <th style={{ padding: "4px 6px" }}>Pesa / Juego</th>
-                <th style={{ padding: "4px 6px" }}>Valor Nominal</th>
-                <th style={{ padding: "4px 6px" }}>Clase</th>
-                <th style={{ padding: "4px 6px" }}>Nº Certificado INTI/SAC</th>
-              </tr>
-            </thead>
-            <tbody>
-              {weightsUsed.map((w: any, idx: number) => (
-                <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={{ padding: "4px 6px" }}>{w.code}</td>
-                  <td style={{ padding: "4px 6px" }}>{w.nominalValue} {w.unit}</td>
-                  <td style={{ padding: "4px 6px" }}>Clase {w.accuracyClass}</td>
-                  <td style={{ padding: "4px 6px" }}>{w.certificateNumber}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {weightsUsed.length > 0 && (
+          <div style={{ borderTop: "1px dashed #eee", paddingTop: 6 }}>
+            <strong>Patrones Empleados:</strong> {weightsUsed.map(w => `${w.code} (${w.nominalValue} ${w.unit || "kg"} Cl.${w.accuracyClass} Cert.${w.certificateNumber})`).join(" • ")}
+          </div>
         )}
       </div>
 
-      {/* Ensayo 1: Repetibilidad */}
-      <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 14, fontSize: "0.82rem" }}>
-        <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 6, color: "#0d9488" }}>
+      {/* Ensayo de Repetibilidad */}
+      <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
+        <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
           1. ENSAYO DE REPETIBILIDAD / FIDELIDAD
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div>
-            <strong>Carga ~50% Max ({repeatabilityData?.halfMax?.load || "—"} {equipment?.unit})</strong>
-            <div>Repeticiones: {(repeatabilityData?.halfMax?.repetitions || []).join(" - ")} {equipment?.unit}</div>
-            <div>Error de Rango: <strong>{repeatabilityData?.halfMax?.range || 0} {equipment?.unit}</strong> (EMT = ±{repeatabilityData?.halfMax?.emt || "—"})</div>
-            <div>Resultado: <strong style={{ color: repeatabilityData?.halfMax?.conform ? "#0d9488" : "#dc2626" }}>{repeatabilityData?.halfMax?.conform ? "✓ Conforme" : "✗ No Conforme"}</strong></div>
-          </div>
-          <div>
-            <strong>Carga ~100% Max ({repeatabilityData?.fullMax?.load || "—"} {equipment?.unit})</strong>
-            <div>Repeticiones: {(repeatabilityData?.fullMax?.repetitions || []).join(" - ")} {equipment?.unit}</div>
-            <div>Error de Rango: <strong>{repeatabilityData?.fullMax?.range || 0} {equipment?.unit}</strong> (EMT = ±{repeatabilityData?.fullMax?.emt || "—"})</div>
-            <div>Resultado: <strong style={{ color: repeatabilityData?.fullMax?.conform ? "#0d9488" : "#dc2626" }}>{repeatabilityData?.fullMax?.conform ? "✓ Conforme" : "✗ No Conforme"}</strong></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Ensayo 2: Excentricidad */}
-      <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 14, fontSize: "0.82rem" }}>
-        <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 6, color: "#0d9488" }}>
-          2. ENSAYO DE EXCENTRICIDAD DE CARGA (Carga de Ensayo: {eccentricityData?.testLoad || "—"} {equipment?.unit})
-        </div>
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 6 }}>
-          {(eccentricityData?.positions || []).map((p: any) => (
-            <div key={p.pos} style={{ background: "#f8f9fa", padding: "4px 8px", borderRadius: 4, border: "1px solid #eee" }}>
-              <span>{p.label}: <strong>{p.indication}</strong> (Error: {p.error >= 0 ? `+${p.error}` : p.error})</span>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          {repeatabilityData.halfMax && (
+            <div style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
+              <strong>Carga ~50% Max ({repeatabilityData.halfMax.load} {equipment?.unit || "kg"})</strong>
+              <div>Lecturas: {repeatabilityData.halfMax.repetitions?.join(", ")} {equipment?.unit || "kg"}</div>
+              <div>Diferencia máxima (Rango): <strong>{repeatabilityData.halfMax.range} {equipment?.unit || "kg"}</strong> (EMT: ±{repeatabilityData.halfMax.emt} {equipment?.unit || "kg"})</div>
+              <div style={{ color: repeatabilityData.halfMax.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 2 }}>
+                Resultado: {repeatabilityData.halfMax.conform ? "✓ Conforme" : "✗ No Conforme"}
+              </div>
             </div>
-          ))}
-        </div>
-        <div>
-          Error Máximo de Excentricidad: <strong>{eccentricityData?.maxError || 0} {equipment?.unit}</strong> (EMT = ±{eccentricityData?.emt || "—"}) • <strong style={{ color: eccentricityData?.conform ? "#0d9488" : "#dc2626" }}>{eccentricityData?.conform ? "✓ Conforme" : "✗ No Conforme"}</strong>
+          )}
+
+          {repeatabilityData.fullMax && (
+            <div style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
+              <strong>Carga ~100% Max ({repeatabilityData.fullMax.load} {equipment?.unit || "kg"})</strong>
+              <div>Lecturas: {repeatabilityData.fullMax.repetitions?.join(", ")} {equipment?.unit || "kg"}</div>
+              <div>Diferencia máxima (Rango): <strong>{repeatabilityData.fullMax.range} {equipment?.unit || "kg"}</strong> (EMT: ±{repeatabilityData.fullMax.emt} {equipment?.unit || "kg"})</div>
+              <div style={{ color: repeatabilityData.fullMax.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 2 }}>
+                Resultado: {repeatabilityData.fullMax.conform ? "✓ Conforme" : "✗ No Conforme"}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Ensayo 3: Exactitud / Linealidad */}
+      {/* Ensayo de Excentricidad */}
+      {eccentricityData.positions && (
+        <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
+          <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
+            2. ENSAYO DE EXCENTRICIDAD DE CARGA (Carga de ensayo: {eccentricityData.testLoad} {equipment?.unit || "kg"})
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginBottom: 6 }}>
+            {eccentricityData.positions.map((p: any) => (
+              <div key={p.pos} style={{ background: "#fafafa", padding: 6, borderRadius: 4, textAlign: "center" }}>
+                <div style={{ fontSize: "0.75rem", color: "#666" }}>{p.label}</div>
+                <strong style={{ fontSize: "0.85rem" }}>{p.indication} {equipment?.unit || "kg"}</strong>
+                <div style={{ fontSize: "0.72rem", color: Math.abs(p.error) <= (eccentricityData.emt || 20) ? "#0d9488" : "#dc2626" }}>
+                  Err: {p.error >= 0 ? `+${p.error}` : p.error}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", background: "#f5f5f5", padding: "4px 8px", borderRadius: 4, fontSize: "0.78rem" }}>
+            <span>Error Máximo: <strong>{eccentricityData.maxError} {equipment?.unit || "kg"}</strong></span>
+            <span>EMT Permitido: <strong>±{eccentricityData.emt} {equipment?.unit || "kg"}</strong></span>
+            <span style={{ color: eccentricityData.conform ? "#0d9488" : "#dc2626", fontWeight: 700 }}>
+              {eccentricityData.conform ? "✓ Conforme" : "✗ No Conforme"}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Ensayo de Linealidad */}
       <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
-        <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 6, color: "#0d9488" }}>
+        <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
           3. ENSAYO DE EXACTITUD Y LINEALIDAD (Cargas Crecientes y Decrecientes)
         </div>
-        <table style={{ width: "100%", fontSize: "0.78rem", borderCollapse: "collapse" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
           <thead>
-            <tr style={{ background: "#f8f9fa", borderBottom: "1px solid #ddd", textAlign: "left" }}>
-              <th style={{ padding: "4px 6px" }}>Paso</th>
-              <th style={{ padding: "4px 6px" }}>Carga Nominal</th>
-              <th style={{ padding: "4px 6px" }}>EMT</th>
-              <th style={{ padding: "4px 6px" }}>Ind. Creciente</th>
-              <th style={{ padding: "4px 6px" }}>Error Creciente</th>
-              <th style={{ padding: "4px 6px" }}>Ind. Decreciente</th>
-              <th style={{ padding: "4px 6px" }}>Error Decreciente</th>
-              <th style={{ padding: "4px 6px" }}>Dictamen</th>
+            <tr style={{ background: "#f0fdfa", borderBottom: "1px solid #ccc" }}>
+              <th style={{ padding: "4px 6px", textAlign: "left" }}>Paso</th>
+              <th style={{ padding: "4px 6px", textAlign: "right" }}>Carga Patrón</th>
+              <th style={{ padding: "4px 6px", textAlign: "right" }}>EMT</th>
+              <th style={{ padding: "4px 6px", textAlign: "right" }}>Lectura (↗)</th>
+              <th style={{ padding: "4px 6px", textAlign: "right" }}>Error (↗)</th>
+              <th style={{ padding: "4px 6px", textAlign: "right" }}>Lectura (↘)</th>
+              <th style={{ padding: "4px 6px", textAlign: "right" }}>Error (↘)</th>
+              <th style={{ padding: "4px 6px", textAlign: "center" }}>Estado</th>
             </tr>
           </thead>
           <tbody>
             {linearityData.map((r: any) => (
               <tr key={r.step} style={{ borderBottom: "1px solid #eee" }}>
                 <td style={{ padding: "4px 6px" }}>#{r.step}</td>
-                <td style={{ padding: "4px 6px" }}><strong>{r.targetLoad} {equipment?.unit}</strong></td>
-                <td style={{ padding: "4px 6px" }}>±{r.emt} {equipment?.unit}</td>
-                <td style={{ padding: "4px 6px" }}>{r.ascIndication}</td>
-                <td style={{ padding: "4px 6px" }}>{r.ascError >= 0 ? `+${r.ascError}` : r.ascError}</td>
-                <td style={{ padding: "4px 6px" }}>{r.descIndication}</td>
-                <td style={{ padding: "4px 6px" }}>{r.descError >= 0 ? `+${r.descError}` : r.descError}</td>
-                <td style={{ padding: "4px 6px", color: r.conform ? "#0d9488" : "#dc2626", fontWeight: 700 }}>
+                <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: 700 }}>{r.targetLoad?.toLocaleString("es-AR")} {equipment?.unit || "kg"}</td>
+                <td style={{ padding: "4px 6px", textAlign: "right" }}>±{r.emt}</td>
+                <td style={{ padding: "4px 6px", textAlign: "right" }}>{r.ascIndication}</td>
+                <td style={{ padding: "4px 6px", textAlign: "right", color: Math.abs(r.ascError) <= r.emt ? "inherit" : "#dc2626" }}>
+                  {r.ascError >= 0 ? `+${r.ascError}` : r.ascError}
+                </td>
+                <td style={{ padding: "4px 6px", textAlign: "right" }}>{r.descIndication}</td>
+                <td style={{ padding: "4px 6px", textAlign: "right", color: Math.abs(r.descError) <= r.emt ? "inherit" : "#dc2626" }}>
+                  {r.descError >= 0 ? `+${r.descError}` : r.descError}
+                </td>
+                <td style={{ padding: "4px 6px", textAlign: "center", color: r.conform ? "#0d9488" : "#dc2626", fontWeight: 700 }}>
                   {r.conform ? "✓ Apto" : "✗ Fuera"}
                 </td>
               </tr>
@@ -281,11 +303,11 @@ export function CalibrationReportPrintPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ fontSize: "0.85rem", color: "#555" }}>DICTAMEN METROLÓGICO FINAL:</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 800, color: report.result === "Apto" ? "#06574c" : "#dc2626" }}>
-              {report.result.toUpperCase()}
+            <div style={{ fontSize: "1.5rem", fontWeight: 800, color: isApproved ? "#06574c" : "#dc2626" }}>
+              {verdictText}
             </div>
             <div style={{ fontSize: "0.8rem", color: "#555", marginTop: 4 }}>
-              Incertidumbre Expandida de Medición: <strong>U = ±{report.expandedUncertainty} {equipment?.unit || "kg"}</strong> (k = 2, confianza 95.45%)
+              Incertidumbre Expandida de Medición: <strong>U = ±{expUncertainty} {equipment?.unit || "kg"}</strong> (k = 2, confianza 95.45%)
             </div>
             {report.observations && (
               <div style={{ fontSize: "0.8rem", marginTop: 6, color: "#333" }}>
@@ -295,7 +317,7 @@ export function CalibrationReportPrintPage() {
           </div>
 
           <div style={{ textAlign: "center", borderTop: "1px solid #444", paddingTop: 8, minWidth: 200 }}>
-            <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{report.performedBy}</div>
+            <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{report.performedBy || "Metrólogo Autorizado"}</div>
             <div style={{ fontSize: "0.74rem", color: "#666" }}>Metrólogo / Responsable Técnico</div>
             <div style={{ fontSize: "0.74rem", color: "#666" }}>Laboratorio de Calibración</div>
           </div>
@@ -303,7 +325,7 @@ export function CalibrationReportPrintPage() {
       </div>
 
       <div style={{ textAlign: "center", fontSize: "0.72rem", color: "#888" }}>
-        Este certificado documenta la trazabilidad a los patrones nacionales del INTI según el Sistema Internacional de Unidades (SI). Prohibida su reproducción parcial sin autorización.
+        Documento técnico emitido mediante el Sistema Modular de Metrología Legal & Calidad — Leal Control ERP
       </div>
     </div>
   );
