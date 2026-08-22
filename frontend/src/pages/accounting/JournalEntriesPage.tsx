@@ -183,6 +183,9 @@ export function JournalEntriesPage() {
         <Link to="/contabilidad" className="tab-btn">
           📊 Tablero Ejecutivo & P&L
         </Link>
+        <Link to="/contabilidad/modelos" className="tab-btn">
+          ⚙️ Asientos Modelos
+        </Link>
         <Link to="/contabilidad/plan-cuentas" className="tab-btn">
           🌳 Plan de Cuentas
         </Link>

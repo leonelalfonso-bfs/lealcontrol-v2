@@ -1597,4 +1597,140 @@ export type EccentricityConfig = {
   description: string;
 };
 
+// ====================================================================
+// TIPOS PARA CONTABILIDAD: ASIENTOS MODELOS & CONTABILIZACIÓN EN LOTE
+// ====================================================================
+
+export type Account = {
+  id: string;
+  code: string;
+  name: string;
+  accountType: string;
+  level: number;
+  parentCode?: string | null;
+  isDirectPosting: boolean;
+  currency: string;
+  adjustsForInflation: boolean;
+  isActive: boolean;
+};
+
+export type JournalTemplateLine = {
+  id?: string;
+  orderIndex: number;
+  accountId?: string | null;
+  accountCode: string;
+  accountName: string;
+  debitCredit: "Debit" | "Credit";
+  amountSource: string;
+  condition: string;
+  isInvertedSign: boolean;
+  memoTemplate?: string | null;
+};
+
+export type JournalTemplate = {
+  id: string;
+  code: string;
+  name: string;
+  sourceModule: "Sales" | "Purchases" | "Finance" | "Inventory" | "Payroll" | "Fleet" | string;
+  documentType: string;
+  description: string;
+  status: "Active" | "Inactive";
+  entrySeries: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+  lines: JournalTemplateLine[];
+};
+
+export type AmountSourceVariableInfo = {
+  key: string;
+  label: string;
+  description: string;
+  category: string;
+  applicableModules: string[];
+};
+
+export type UnpostedDocumentsSummary = {
+  totalPendingCount: number;
+  salesPendingCount: number;
+  purchasesPendingCount: number;
+  financePendingCount: number;
+  inventoryPendingCount: number;
+  oldestPendingDate?: string | null;
+  newestPendingDate?: string | null;
+};
+
+export type JournalEntryLinePreview = {
+  accountCode: string;
+  accountName: string;
+  debit: number;
+  credit: number;
+  memo: string;
+};
+
+export type BatchPostingPreviewItem = {
+  documentId: string;
+  documentNumber: string;
+  documentType: string;
+  sourceModule: string;
+  date: string;
+  counterpartyName: string;
+  documentAmount: number;
+  templateCode: string;
+  templateName: string;
+  lines: JournalEntryLinePreview[];
+};
+
+export type AccountBalanceSummary = {
+  accountCode: string;
+  accountName: string;
+  totalDebit: number;
+  totalCredit: number;
+};
+
+export type BatchPostingPreview = {
+  documentsCount: number;
+  estimatedEntriesCount: number;
+  totalLinesCount: number;
+  totalDebit: number;
+  totalCredit: number;
+  isBalanced: boolean;
+  accountsAffected: AccountBalanceSummary[];
+  previewItems: BatchPostingPreviewItem[];
+  warnings: string[];
+  unmappedDocuments: string[];
+};
+
+export type BatchPostingRun = {
+  id: string;
+  batchNumber: string;
+  executedAtUtc: string;
+  executedBy: string;
+  periodStart: string;
+  periodEnd: string;
+  modulesIncluded: string;
+  documentsProcessedCount: number;
+  entriesGeneratedCount: number;
+  errorsCount: number;
+  status: "Completed" | "CompletedWithWarnings" | "Failed" | "Reverted";
+  durationSeconds: number;
+  summaryJson: string;
+  logDetailsJson: string;
+  filtersAppliedJson: string;
+};
+
+export type BatchPostingExecuteResponse = {
+  batchRunId: string;
+  batchNumber: string;
+  documentsProcessed: number;
+  entriesGenerated: number;
+  errorsCount: number;
+  totalDebit: number;
+  totalCredit: number;
+  status: string;
+  durationSeconds: number;
+  entryNumbers: string[];
+  exceptions: string[];
+};
+
+
 

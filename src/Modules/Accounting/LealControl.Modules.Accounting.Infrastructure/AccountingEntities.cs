@@ -190,6 +190,206 @@ public sealed class AccountingMapping : Entity<Guid>
     public AccountingMapping(Guid id, TenantId tenantId) : base(id) { TenantId = tenantId; }
 }
 
+// =========================================================================
+// NUEVAS ENTIDADES: ASIENTOS MODELOS (PLANTILLAS CONFIGURABLES) & AUDITORÍA
+// =========================================================================
+
+public sealed class JournalTemplate : Entity<Guid>
+{
+    public TenantId TenantId { get; set; }
+    public string Code { get; set; } = string.Empty; // e.g. AM-001
+    public string Name { get; set; } = string.Empty; // e.g. "Factura A de Venta - Cuenta Corriente"
+    public string SourceModule { get; set; } = "Sales"; // Sales, Purchases, Finance, Inventory, Payroll, Fleet
+    public string DocumentType { get; set; } = "InvoiceA"; // InvoiceA, InvoiceB, InvoiceC, CreditNoteA, CreditNoteB, CreditNoteC, DebitNote, PaymentOrder, CollectionReceipt, BankTransfer, StockAdjustment, All
+    public string Description { get; set; } = string.Empty;
+    public string Status { get; set; } = "Active"; // Active, Inactive
+    public string EntrySeries { get; set; } = "Ventas"; // Ventas, Compras, Finanzas, etc.
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public List<JournalTemplateLine> Lines { get; set; } = new();
+
+    public JournalTemplate() : base(Guid.NewGuid()) { }
+}
+
+public sealed class JournalTemplateLine : Entity<Guid>
+{
+    public Guid TemplateId { get; set; }
+    public TenantId TenantId { get; set; }
+    public int OrderIndex { get; set; } = 1;
+    public Guid? AccountId { get; set; }
+    public string AccountCode { get; set; } = string.Empty; // e.g. 1.1.02.001
+    public string AccountName { get; set; } = string.Empty; // e.g. Deudores por Ventas
+    public string DebitCredit { get; set; } = "Debit"; // Debit, Credit
+    public string AmountSource { get; set; } = "Total"; // Total, Net21, Net105, Net27, NetExempt, Vat21, Vat105, Vat27, TotalVat, PerceptionIibb, PerceptionVat, PerceptionEarnings, Withholdings, PaymentAmount, CmvCost, StockValueAdjustment
+    public string Condition { get; set; } = "Always"; // Always, IfHasVat21, IfHasVat105, IfHasVat27, IfHasPerceptionIibb, IfHasPerceptionVat, IfHasWithholding, IfCash, IfBankTransfer
+    public bool IsInvertedSign { get; set; } = false; // Invertir Debe/Haber (útil para Notas de Crédito)
+    public string? MemoTemplate { get; set; } // e.g. "{DocumentType} {DocumentNumber} - {CustomerName}"
+
+    public JournalTemplateLine() : base(Guid.NewGuid()) { }
+}
+
+public sealed class AccountingBatchRun : Entity<Guid>
+{
+    public TenantId TenantId { get; set; }
+    public string BatchNumber { get; set; } = string.Empty; // e.g. BATCH-2026-0001
+    public DateTime ExecutedAtUtc { get; set; } = DateTime.UtcNow;
+    public string ExecutedBy { get; set; } = "contador@empresa.com";
+    public DateTime PeriodStart { get; set; }
+    public DateTime PeriodEnd { get; set; }
+    public string ModulesIncluded { get; set; } = "Sales,Purchases"; // Comma-separated
+    public int DocumentsProcessedCount { get; set; }
+    public int EntriesGeneratedCount { get; set; }
+    public int ErrorsCount { get; set; }
+    public string Status { get; set; } = "Completed"; // Completed, CompletedWithWarnings, Failed, Reverted
+    public decimal DurationSeconds { get; set; }
+    public string SummaryJson { get; set; } = "{}";
+    public string LogDetailsJson { get; set; } = "[]";
+    public string FiltersAppliedJson { get; set; } = "{}";
+
+    public AccountingBatchRun() : base(Guid.NewGuid()) { }
+}
+
+// DTOs para Asientos Modelos y Contabilización en Lote
+public sealed record JournalTemplateDto(
+    Guid Id,
+    string Code,
+    string Name,
+    string SourceModule,
+    string DocumentType,
+    string Description,
+    string Status,
+    string EntrySeries,
+    DateTime CreatedAtUtc,
+    DateTime UpdatedAtUtc,
+    List<JournalTemplateLineDto> Lines
+);
+
+public sealed record JournalTemplateLineDto(
+    Guid Id,
+    int OrderIndex,
+    Guid? AccountId,
+    string AccountCode,
+    string AccountName,
+    string DebitCredit,
+    string AmountSource,
+    string Condition,
+    bool IsInvertedSign,
+    string? MemoTemplate
+);
+
+public sealed record CreateJournalTemplateRequest(
+    string Code,
+    string Name,
+    string SourceModule,
+    string DocumentType,
+    string Description,
+    string Status,
+    string EntrySeries,
+    List<JournalTemplateLineDto> Lines
+);
+
+public sealed record UpdateJournalTemplateRequest(
+    string Code,
+    string Name,
+    string SourceModule,
+    string DocumentType,
+    string Description,
+    string Status,
+    string EntrySeries,
+    List<JournalTemplateLineDto> Lines
+);
+
+public sealed record AmountSourceVariableInfo(
+    string Key,
+    string Label,
+    string Description,
+    string Category, // Sales, Purchases, Finance, Inventory, Taxes
+    List<string> ApplicableModules
+);
+
+public sealed record UnpostedDocumentsSummaryResponse(
+    int TotalPendingCount,
+    int SalesPendingCount,
+    int PurchasesPendingCount,
+    int FinancePendingCount,
+    int InventoryPendingCount,
+    DateTime? OldestPendingDate,
+    DateTime? NewestPendingDate
+);
+
+public sealed record BatchPostingPreviewRequest(
+    DateTime PeriodStart,
+    DateTime PeriodEnd,
+    List<string> Modules,
+    string? BranchId,
+    string? Currency
+);
+
+public sealed record BatchPostingPreviewResponse(
+    int DocumentsCount,
+    int EstimatedEntriesCount,
+    int TotalLinesCount,
+    decimal TotalDebit,
+    decimal TotalCredit,
+    bool IsBalanced,
+    List<AccountBalanceSummaryDto> AccountsAffected,
+    List<BatchPostingPreviewItemDto> PreviewItems,
+    List<string> Warnings,
+    List<string> UnmappedDocuments
+);
+
+public sealed record AccountBalanceSummaryDto(
+    string AccountCode,
+    string AccountName,
+    decimal TotalDebit,
+    decimal TotalCredit
+);
+
+public sealed record BatchPostingPreviewItemDto(
+    string DocumentId,
+    string DocumentNumber,
+    string DocumentType,
+    string SourceModule,
+    DateTime Date,
+    string CounterpartyName,
+    decimal DocumentAmount,
+    string TemplateCode,
+    string TemplateName,
+    List<JournalEntryLinePreviewDto> Lines
+);
+
+public sealed record JournalEntryLinePreviewDto(
+    string AccountCode,
+    string AccountName,
+    decimal Debit,
+    decimal Credit,
+    string Memo
+);
+
+public sealed record BatchPostingExecuteRequest(
+    DateTime PeriodStart,
+    DateTime PeriodEnd,
+    List<string> Modules,
+    string? BranchId,
+    string? Currency,
+    string ExecutedBy
+);
+
+public sealed record BatchPostingExecuteResponse(
+    Guid BatchRunId,
+    string BatchNumber,
+    int DocumentsProcessed,
+    int EntriesGenerated,
+    int ErrorsCount,
+    decimal TotalDebit,
+    decimal TotalCredit,
+    string Status,
+    decimal DurationSeconds,
+    List<string> EntryNumbers,
+    List<string> Exceptions
+);
+
 public sealed record UpdateMappingRequest(
     string SalesRevenueAccountCode,
     string SalesVatDebitAccountCode,

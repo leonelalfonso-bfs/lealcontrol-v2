@@ -290,6 +290,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     dependencies: [],
     items: [
       { path: "/contabilidad", label: "Tablero P&L", icon: "📊", end: true },
+      { path: "/contabilidad/modelos", label: "Asientos Modelos", icon: "⚙️" },
       { path: "/contabilidad/plan-cuentas", label: "Plan de Cuentas", icon: "🌳" },
       { path: "/contabilidad/asientos", label: "Libro Diario", icon: "📖" },
       { path: "/contabilidad/mayor", label: "Libro Mayor", icon: "🔍" },

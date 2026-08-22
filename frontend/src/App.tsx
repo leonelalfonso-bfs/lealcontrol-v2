@@ -92,6 +92,7 @@ import { SuperAdminDashboardPage } from "./pages/superadmin/SuperAdminDashboardP
 import { SuperAdminTenantsPage } from "./pages/superadmin/SuperAdminTenantsPage";
 import { SuperAdminPlansPage } from "./pages/superadmin/SuperAdminPlansPage";
 import { AccountingDashboardPage } from "./pages/accounting/AccountingDashboardPage";
+import { JournalTemplatesPage } from "./pages/accounting/JournalTemplatesPage";
 import { ChartOfAccountsPage } from "./pages/accounting/ChartOfAccountsPage";
 import { JournalEntriesPage } from "./pages/accounting/JournalEntriesPage";
 import { GeneralLedgerPage } from "./pages/accounting/GeneralLedgerPage";
@@ -515,6 +516,7 @@ export function App() {
 
               {/* Accounting & Fiscal Routes */}
               <Route path="/contabilidad" element={<AccountingDashboardPage />} />
+              <Route path="/contabilidad/modelos" element={<JournalTemplatesPage />} />
               <Route path="/contabilidad/plan-cuentas" element={<ChartOfAccountsPage />} />
               <Route path="/contabilidad/asientos" element={<JournalEntriesPage />} />
               <Route path="/contabilidad/mayor" element={<GeneralLedgerPage />} />

@@ -22,6 +22,9 @@ public sealed class AccountingDbContext : DbContext
     public DbSet<BankStatement> BankStatements => Set<BankStatement>();
     public DbSet<BankStatementLine> BankStatementLines => Set<BankStatementLine>();
     public DbSet<AccountingMapping> Mappings => Set<AccountingMapping>();
+    public DbSet<JournalTemplate> JournalTemplates => Set<JournalTemplate>();
+    public DbSet<JournalTemplateLine> JournalTemplateLines => Set<JournalTemplateLine>();
+    public DbSet<AccountingBatchRun> BatchRuns => Set<AccountingBatchRun>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -124,151 +127,265 @@ public sealed class AccountingDbContext : DbContext
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => x.TenantId).IsUnique();
         });
+
+        modelBuilder.Entity<JournalTemplate>(b =>
+        {
+            b.ToTable("journal_templates", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            b.Property(x => x.SourceModule).HasMaxLength(32).IsRequired();
+            b.Property(x => x.DocumentType).HasMaxLength(64).IsRequired();
+            b.Property(x => x.EntrySeries).HasMaxLength(64).HasDefaultValue("General");
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Active");
+            b.Property(x => x.Description).HasMaxLength(500);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.SourceModule, x.DocumentType });
+        });
+
+        modelBuilder.Entity<JournalTemplateLine>(b =>
+        {
+            b.ToTable("journal_template_lines", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.AccountCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.AccountName).HasMaxLength(160).IsRequired();
+            b.Property(x => x.DebitCredit).HasMaxLength(10).IsRequired();
+            b.Property(x => x.AmountSource).HasMaxLength(64).IsRequired();
+            b.Property(x => x.Condition).HasMaxLength(64).HasDefaultValue("Always");
+            b.Property(x => x.MemoTemplate).HasMaxLength(255);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.TemplateId });
+        });
+
+        modelBuilder.Entity<AccountingBatchRun>(b =>
+        {
+            b.ToTable("batch_runs", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.BatchNumber).HasMaxLength(64).IsRequired();
+            b.Property(x => x.ExecutedBy).HasMaxLength(128).IsRequired();
+            b.Property(x => x.ModulesIncluded).HasMaxLength(128).IsRequired();
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Completed");
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.BatchNumber }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.ExecutedAtUtc });
+        });
     }
 
     public async Task EnsureAccountingTablesAsync(CancellationToken ct = default)
     {
-        try
+        var statements = new[]
         {
-            await Database.ExecuteSqlRawAsync(@"
-                CREATE SCHEMA IF NOT EXISTS accounting;
+            @"CREATE SCHEMA IF NOT EXISTS accounting;",
 
-                CREATE TABLE IF NOT EXISTS accounting.accounts (
-                    ""Id"" uuid NOT NULL PRIMARY KEY,
-                    ""TenantId"" uuid NOT NULL,
-                    ""Code"" character varying(32) NOT NULL,
-                    ""Name"" character varying(160) NOT NULL,
-                    ""AccountType"" character varying(32) NOT NULL,
-                    ""Level"" integer NOT NULL DEFAULT 1,
-                    ""ParentCode"" character varying(32),
-                    ""IsDirectPosting"" boolean NOT NULL DEFAULT true,
-                    ""Currency"" character varying(10) NOT NULL DEFAULT 'ARS',
-                    ""AdjustsForInflation"" boolean NOT NULL DEFAULT false,
-                    ""IsActive"" boolean NOT NULL DEFAULT true,
-                    ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
-                );
-                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_accounts_Tenant_Code"" ON accounting.accounts (""TenantId"", ""Code"");
+            @"CREATE TABLE IF NOT EXISTS accounting.accounts (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Code"" character varying(32) NOT NULL,
+                ""Name"" character varying(160) NOT NULL,
+                ""AccountType"" character varying(32) NOT NULL,
+                ""Level"" integer NOT NULL DEFAULT 1,
+                ""ParentCode"" character varying(32),
+                ""IsDirectPosting"" boolean NOT NULL DEFAULT true,
+                ""Currency"" character varying(10) NOT NULL DEFAULT 'ARS',
+                ""AdjustsForInflation"" boolean NOT NULL DEFAULT false,
+                ""IsActive"" boolean NOT NULL DEFAULT true,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
 
-                CREATE TABLE IF NOT EXISTS accounting.journal_entries (
-                    ""Id"" uuid NOT NULL PRIMARY KEY,
-                    ""TenantId"" uuid NOT NULL,
-                    ""EntryNumber"" integer NOT NULL,
-                    ""Date"" timestamp with time zone NOT NULL,
-                    ""Concept"" character varying(500) NOT NULL,
-                    ""EntryType"" character varying(32) NOT NULL DEFAULT 'Standard',
-                    ""SourceModule"" character varying(32) NOT NULL DEFAULT 'Manual',
-                    ""SourceDocumentId"" character varying(128),
-                    ""Status"" character varying(32) NOT NULL DEFAULT 'Posted',
-                    ""TotalDebit"" numeric(18,2) NOT NULL DEFAULT 0,
-                    ""TotalCredit"" numeric(18,2) NOT NULL DEFAULT 0,
-                    ""CreatedBy"" character varying(128),
-                    ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
-                );
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_accounts_Tenant_Code"" ON accounting.accounts (""TenantId"", ""Code"");",
 
-                CREATE TABLE IF NOT EXISTS accounting.journal_entry_lines (
-                    ""Id"" uuid NOT NULL PRIMARY KEY,
-                    ""JournalEntryId"" uuid NOT NULL,
-                    ""TenantId"" uuid NOT NULL,
-                    ""AccountId"" uuid NOT NULL,
-                    ""AccountCode"" character varying(32) NOT NULL,
-                    ""AccountName"" character varying(160) NOT NULL,
-                    ""Debit"" numeric(18,2) NOT NULL DEFAULT 0,
-                    ""Credit"" numeric(18,2) NOT NULL DEFAULT 0,
-                    ""Currency"" character varying(10) NOT NULL DEFAULT 'ARS',
-                    ""ExchangeRate"" numeric(18,4) NOT NULL DEFAULT 1,
-                    ""CostCenterId"" uuid,
-                    ""CostCenterCode"" character varying(32),
-                    ""CostCenterName"" character varying(128),
-                    ""Memo"" character varying(500)
-                );
+            @"CREATE TABLE IF NOT EXISTS accounting.journal_entries (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""EntryNumber"" integer NOT NULL,
+                ""Date"" timestamp with time zone NOT NULL,
+                ""Concept"" character varying(500) NOT NULL,
+                ""EntryType"" character varying(32) NOT NULL DEFAULT 'Standard',
+                ""SourceModule"" character varying(32) NOT NULL DEFAULT 'Manual',
+                ""SourceDocumentId"" character varying(128),
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Posted',
+                ""TotalDebit"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""TotalCredit"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""CreatedBy"" character varying(128),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
 
-                CREATE TABLE IF NOT EXISTS accounting.cost_centers (
-                    ""Id"" uuid NOT NULL PRIMARY KEY,
-                    ""TenantId"" uuid NOT NULL,
-                    ""Code"" character varying(32) NOT NULL,
-                    ""Name"" character varying(128) NOT NULL,
-                    ""Category"" character varying(64) NOT NULL DEFAULT 'Administration',
-                    ""IsActive"" boolean NOT NULL DEFAULT true,
-                    ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
-                );
-                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_cost_centers_Tenant_Code"" ON accounting.cost_centers (""TenantId"", ""Code"");
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_journal_entries_Tenant_Number"" ON accounting.journal_entries (""TenantId"", ""EntryNumber"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_journal_entries_Tenant_Date"" ON accounting.journal_entries (""TenantId"", ""Date"");",
 
-                CREATE TABLE IF NOT EXISTS accounting.periods (
-                    ""Id"" uuid NOT NULL PRIMARY KEY,
-                    ""TenantId"" uuid NOT NULL,
-                    ""Year"" integer NOT NULL,
-                    ""Month"" integer NOT NULL,
-                    ""Status"" character varying(32) NOT NULL DEFAULT 'Open',
-                    ""LockedAtUtc"" timestamp with time zone,
-                    ""LockedBy"" character varying(128)
-                );
-                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_periods_Tenant_Year_Month"" ON accounting.periods (""TenantId"", ""Year"", ""Month"");
+            @"CREATE TABLE IF NOT EXISTS accounting.journal_entry_lines (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""JournalEntryId"" uuid NOT NULL REFERENCES accounting.journal_entries(""Id"") ON DELETE CASCADE,
+                ""TenantId"" uuid NOT NULL,
+                ""AccountId"" uuid NOT NULL,
+                ""AccountCode"" character varying(32) NOT NULL,
+                ""AccountName"" character varying(160) NOT NULL,
+                ""Debit"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""Credit"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""Currency"" character varying(10) NOT NULL DEFAULT 'ARS',
+                ""ExchangeRate"" numeric(18,4) NOT NULL DEFAULT 1,
+                ""CostCenterId"" uuid,
+                ""CostCenterCode"" character varying(32),
+                ""CostCenterName"" character varying(128),
+                ""Memo"" character varying(500)
+            );",
 
-                CREATE TABLE IF NOT EXISTS accounting.bank_statements (
-                    ""Id"" uuid NOT NULL PRIMARY KEY,
-                    ""TenantId"" uuid NOT NULL,
-                    ""BankName"" character varying(120) NOT NULL,
-                    ""AccountNumber"" character varying(64),
-                    ""Currency"" character varying(10) NOT NULL DEFAULT 'ARS',
-                    ""PeriodStartDate"" timestamp with time zone NOT NULL,
-                    ""PeriodEndDate"" timestamp with time zone NOT NULL,
-                    ""InitialBalance"" numeric(18,2) NOT NULL DEFAULT 0,
-                    ""FinalBalance"" numeric(18,2) NOT NULL DEFAULT 0,
-                    ""Status"" character varying(32) NOT NULL DEFAULT 'Open',
-                    ""TotalLines"" integer NOT NULL DEFAULT 0,
-                    ""ReconciledLines"" integer NOT NULL DEFAULT 0,
-                    ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
-                );
+            @"CREATE INDEX IF NOT EXISTS ""IX_journal_entry_lines_Tenant_AccountId"" ON accounting.journal_entry_lines (""TenantId"", ""AccountId"");",
 
-                CREATE TABLE IF NOT EXISTS accounting.bank_statement_lines (
-                    ""Id"" uuid NOT NULL PRIMARY KEY,
-                    ""BankStatementId"" uuid NOT NULL REFERENCES accounting.bank_statements(""Id"") ON DELETE CASCADE,
-                    ""TenantId"" uuid NOT NULL,
-                    ""TransactionDate"" timestamp with time zone NOT NULL,
-                    ""Description"" character varying(255) NOT NULL,
-                    ""ReferenceNumber"" character varying(128),
-                    ""Debit"" numeric(18,2) NOT NULL DEFAULT 0,
-                    ""Credit"" numeric(18,2) NOT NULL DEFAULT 0,
-                    ""Balance"" numeric(18,2) NOT NULL DEFAULT 0,
-                    ""IsReconciled"" boolean NOT NULL DEFAULT false,
-                    ""MatchedJournalEntryId"" uuid,
-                    ""MatchedJournalEntryLineId"" uuid,
-                    ""MatchType"" character varying(64),
-                    ""MatchNotes"" character varying(255)
-                );
-                CREATE INDEX IF NOT EXISTS ""IX_bank_statement_lines_Tenant_Date"" ON accounting.bank_statement_lines (""TenantId"", ""TransactionDate"");
-                CREATE INDEX IF NOT EXISTS ""IX_bank_statement_lines_Tenant_Reconciled"" ON accounting.bank_statement_lines (""TenantId"", ""IsReconciled"");
+            @"CREATE TABLE IF NOT EXISTS accounting.cost_centers (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Code"" character varying(32) NOT NULL,
+                ""Name"" character varying(128) NOT NULL,
+                ""Category"" character varying(64) NOT NULL DEFAULT 'Administration',
+                ""IsActive"" boolean NOT NULL DEFAULT true,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
 
-                CREATE TABLE IF NOT EXISTS accounting.mappings (
-                    ""Id"" uuid NOT NULL PRIMARY KEY,
-                    ""TenantId"" uuid NOT NULL,
-                    ""SalesRevenueAccountCode"" character varying(32) NOT NULL DEFAULT '4.1.01',
-                    ""SalesVatDebitAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.02.001',
-                    ""AccountsReceivableAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.02.001',
-                    ""PurchaseExpenseAccountCode"" character varying(32) NOT NULL DEFAULT '5.1.01',
-                    ""PurchaseVatCreditAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.03.001',
-                    ""AccountsPayableAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.01.001',
-                    ""CashAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.001',
-                    ""BankAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.002',
-                    ""ChecksInHandAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.004',
-                    ""PspDigitalAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.006',
-                    ""BankExpensesAccountCode"" character varying(32) NOT NULL DEFAULT '5.3.01',
-                    ""BankTaxAccountCode"" character varying(32) NOT NULL DEFAULT '5.3.02',
-                    ""RetainedEarningsAccountCode"" character varying(32) NOT NULL DEFAULT '3.2.02',
-                    ""ExchangeDifferenceGainAccountCode"" character varying(32) NOT NULL DEFAULT '4.2.03',
-                    ""ExchangeDifferenceLossAccountCode"" character varying(32) NOT NULL DEFAULT '5.3.04',
-                    ""SalariesExpenseAccountCode"" character varying(32) NOT NULL DEFAULT '5.2.01',
-                    ""SocialSecurityExpenseAccountCode"" character varying(32) NOT NULL DEFAULT '5.2.02',
-                    ""SalariesPayableAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.02.004',
-                    ""SocialSecurityPayableAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.02.003',
-                    ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
-                );
-                CREATE UNIQUE INDEX IF NOT EXISTS ""IX_mappings_TenantId"" ON accounting.mappings (""TenantId"");
-            ", ct);
-        }
-        catch (Exception ex)
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_cost_centers_Tenant_Code"" ON accounting.cost_centers (""TenantId"", ""Code"");",
+
+            @"CREATE TABLE IF NOT EXISTS accounting.periods (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Year"" integer NOT NULL,
+                ""Month"" integer NOT NULL,
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Open',
+                ""LockedAtUtc"" timestamp with time zone,
+                ""LockedBy"" character varying(128)
+            );",
+
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_periods_Tenant_Year_Month"" ON accounting.periods (""TenantId"", ""Year"", ""Month"");",
+
+            @"CREATE TABLE IF NOT EXISTS accounting.bank_statements (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""BankName"" character varying(120) NOT NULL,
+                ""AccountNumber"" character varying(64),
+                ""Currency"" character varying(10) NOT NULL DEFAULT 'ARS',
+                ""PeriodStartDate"" timestamp with time zone NOT NULL,
+                ""PeriodEndDate"" timestamp with time zone NOT NULL,
+                ""InitialBalance"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""FinalBalance"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Open',
+                ""TotalLines"" integer NOT NULL DEFAULT 0,
+                ""ReconciledLines"" integer NOT NULL DEFAULT 0,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+
+            @"CREATE TABLE IF NOT EXISTS accounting.bank_statement_lines (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""BankStatementId"" uuid NOT NULL REFERENCES accounting.bank_statements(""Id"") ON DELETE CASCADE,
+                ""TenantId"" uuid NOT NULL,
+                ""TransactionDate"" timestamp with time zone NOT NULL,
+                ""Description"" character varying(255) NOT NULL,
+                ""ReferenceNumber"" character varying(128),
+                ""Debit"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""Credit"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""Balance"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""IsReconciled"" boolean NOT NULL DEFAULT false,
+                ""MatchedJournalEntryId"" uuid,
+                ""MatchedJournalEntryLineId"" uuid,
+                ""MatchType"" character varying(64),
+                ""MatchNotes"" character varying(255)
+            );",
+
+            @"CREATE TABLE IF NOT EXISTS accounting.mappings (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""SalesRevenueAccountCode"" character varying(32) NOT NULL DEFAULT '4.1.01',
+                ""SalesVatDebitAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.02.001',
+                ""AccountsReceivableAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.02.001',
+                ""PurchaseExpenseAccountCode"" character varying(32) NOT NULL DEFAULT '5.1.01',
+                ""PurchaseVatCreditAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.03.001',
+                ""AccountsPayableAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.01.001',
+                ""CashAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.001',
+                ""BankAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.002',
+                ""ChecksInHandAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.004',
+                ""PspDigitalAccountCode"" character varying(32) NOT NULL DEFAULT '1.1.01.006',
+                ""BankExpensesAccountCode"" character varying(32) NOT NULL DEFAULT '5.3.01',
+                ""BankTaxAccountCode"" character varying(32) NOT NULL DEFAULT '5.3.02',
+                ""RetainedEarningsAccountCode"" character varying(32) NOT NULL DEFAULT '3.2.02',
+                ""ExchangeDifferenceGainAccountCode"" character varying(32) NOT NULL DEFAULT '4.2.03',
+                ""ExchangeDifferenceLossAccountCode"" character varying(32) NOT NULL DEFAULT '5.3.04',
+                ""SalariesExpenseAccountCode"" character varying(32) NOT NULL DEFAULT '5.2.01',
+                ""SocialSecurityExpenseAccountCode"" character varying(32) NOT NULL DEFAULT '5.2.02',
+                ""SalariesPayableAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.02.004',
+                ""SocialSecurityPayableAccountCode"" character varying(32) NOT NULL DEFAULT '2.1.02.003',
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_mappings_Tenant"" ON accounting.mappings (""TenantId"");",
+
+            // TABLAS PARA ASIENTOS MODELOS (PLANTILLAS) Y AUDITORÍA DE LOTES
+            @"CREATE TABLE IF NOT EXISTS accounting.journal_templates (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Code"" character varying(32) NOT NULL,
+                ""Name"" character varying(160) NOT NULL,
+                ""SourceModule"" character varying(32) NOT NULL,
+                ""DocumentType"" character varying(64) NOT NULL,
+                ""Description"" character varying(500) NOT NULL DEFAULT '',
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Active',
+                ""EntrySeries"" character varying(64) NOT NULL DEFAULT 'General',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_journal_templates_Tenant_Code"" ON accounting.journal_templates (""TenantId"", ""Code"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_journal_templates_Tenant_Module_Doc"" ON accounting.journal_templates (""TenantId"", ""SourceModule"", ""DocumentType"");",
+
+            @"CREATE TABLE IF NOT EXISTS accounting.journal_template_lines (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TemplateId"" uuid NOT NULL REFERENCES accounting.journal_templates(""Id"") ON DELETE CASCADE,
+                ""TenantId"" uuid NOT NULL,
+                ""OrderIndex"" integer NOT NULL DEFAULT 1,
+                ""AccountId"" uuid,
+                ""AccountCode"" character varying(32) NOT NULL,
+                ""AccountName"" character varying(160) NOT NULL,
+                ""DebitCredit"" character varying(10) NOT NULL DEFAULT 'Debit',
+                ""AmountSource"" character varying(64) NOT NULL DEFAULT 'Total',
+                ""Condition"" character varying(64) NOT NULL DEFAULT 'Always',
+                ""IsInvertedSign"" boolean NOT NULL DEFAULT false,
+                ""MemoTemplate"" character varying(255)
+            );",
+
+            @"CREATE INDEX IF NOT EXISTS ""IX_journal_template_lines_Tenant_TemplateId"" ON accounting.journal_template_lines (""TenantId"", ""TemplateId"");",
+
+            @"CREATE TABLE IF NOT EXISTS accounting.batch_runs (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""BatchNumber"" character varying(64) NOT NULL,
+                ""ExecutedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""ExecutedBy"" character varying(128) NOT NULL DEFAULT 'contador@empresa.com',
+                ""PeriodStart"" timestamp with time zone NOT NULL,
+                ""PeriodEnd"" timestamp with time zone NOT NULL,
+                ""ModulesIncluded"" character varying(128) NOT NULL DEFAULT 'Sales,Purchases',
+                ""DocumentsProcessedCount"" integer NOT NULL DEFAULT 0,
+                ""EntriesGeneratedCount"" integer NOT NULL DEFAULT 0,
+                ""ErrorsCount"" integer NOT NULL DEFAULT 0,
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Completed',
+                ""DurationSeconds"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""SummaryJson"" text NOT NULL DEFAULT '{}',
+                ""LogDetailsJson"" text NOT NULL DEFAULT '[]',
+                ""FiltersAppliedJson"" text NOT NULL DEFAULT '{}'
+            );",
+
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_batch_runs_Tenant_BatchNumber"" ON accounting.batch_runs (""TenantId"", ""BatchNumber"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_batch_runs_Tenant_ExecutedAt"" ON accounting.batch_runs (""TenantId"", ""ExecutedAtUtc"");"
+        };
+
+        foreach (var sql in statements)
         {
-            Console.WriteLine($"[AccountingDbContext] Error en EnsureAccountingTablesAsync: {ex.Message}");
+            try
+            {
+                await Database.ExecuteSqlRawAsync(sql, ct);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AccountingDbContext.EnsureTables] Warning executing DDL: {ex.Message}");
+            }
         }
     }
 
@@ -402,5 +519,109 @@ public sealed class AccountingDbContext : DbContext
             await SaveChangesAsync(ct);
         }
         return mapping;
+    }
+
+    public async Task SeedDefaultJournalTemplatesAsync(TenantId tenantId, CancellationToken ct = default)
+    {
+        var hasTemplates = await JournalTemplates.AnyAsync(t => t.TenantId == tenantId, ct);
+        if (hasTemplates) return;
+
+        var t1 = new JournalTemplate
+        {
+            TenantId = tenantId,
+            Code = "AM-VTA-01",
+            Name = "Factura A de Venta en Cta Cte",
+            SourceModule = "Sales",
+            DocumentType = "InvoiceA",
+            EntrySeries = "Ventas",
+            Description = "Modelo estándar para Factura A de venta a clientes en cuenta corriente con discriminación de IVA y percepciones.",
+            Status = "Active"
+        };
+        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "1.1.02.001", AccountName = "Deudores por Ventas (Clientes)", DebitCredit = "Debit", AmountSource = "Total", Condition = "Always" });
+        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "4.1.01", AccountName = "Venta de Mercaderías & Bienes", DebitCredit = "Credit", AmountSource = "Net21", Condition = "IfHasVat21" });
+        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "4.1.01", AccountName = "Venta de Mercaderías (10.5%)", DebitCredit = "Credit", AmountSource = "Net105", Condition = "IfHasVat105" });
+        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 4, AccountCode = "4.1.01", AccountName = "Venta de Mercaderías Exentas", DebitCredit = "Credit", AmountSource = "NetExempt", Condition = "Always" });
+        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 5, AccountCode = "2.1.02.001", AccountName = "IVA Débito Fiscal (Ventas 21%)", DebitCredit = "Credit", AmountSource = "Vat21", Condition = "IfHasVat21" });
+        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 6, AccountCode = "2.1.02.001", AccountName = "IVA Débito Fiscal (Ventas 10.5%)", DebitCredit = "Credit", AmountSource = "Vat105", Condition = "IfHasVat105" });
+        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 7, AccountCode = "2.1.02.005", AccountName = "Impuesto a los Ingresos Brutos a Pagar", DebitCredit = "Credit", AmountSource = "PerceptionIibb", Condition = "IfHasPerceptionIibb" });
+
+        var t2 = new JournalTemplate
+        {
+            TenantId = tenantId,
+            Code = "AM-VTA-02",
+            Name = "Factura B/C de Venta a Consumidor Final",
+            SourceModule = "Sales",
+            DocumentType = "InvoiceB",
+            EntrySeries = "Ventas",
+            Description = "Modelo para Facturas B o C a consumidores finales y monotributistas.",
+            Status = "Active"
+        };
+        t2.Lines.Add(new JournalTemplateLine { TemplateId = t2.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "1.1.02.001", AccountName = "Deudores por Ventas (Clientes)", DebitCredit = "Debit", AmountSource = "Total", Condition = "Always" });
+        t2.Lines.Add(new JournalTemplateLine { TemplateId = t2.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "4.1.01", AccountName = "Venta de Mercaderías & Bienes", DebitCredit = "Credit", AmountSource = "Net21", Condition = "Always" });
+        t2.Lines.Add(new JournalTemplateLine { TemplateId = t2.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "2.1.02.001", AccountName = "IVA Débito Fiscal (Ventas)", DebitCredit = "Credit", AmountSource = "Vat21", Condition = "IfHasVat21" });
+
+        var t3 = new JournalTemplate
+        {
+            TenantId = tenantId,
+            Code = "AM-VTA-03",
+            Name = "Nota de Crédito de Venta",
+            SourceModule = "Sales",
+            DocumentType = "CreditNoteA",
+            EntrySeries = "Ventas",
+            Description = "Modelo para Notas de Crédito de ventas (anulación o bonificación).",
+            Status = "Active"
+        };
+        t3.Lines.Add(new JournalTemplateLine { TemplateId = t3.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "1.1.02.001", AccountName = "Deudores por Ventas (Clientes)", DebitCredit = "Credit", AmountSource = "Total", Condition = "Always" });
+        t3.Lines.Add(new JournalTemplateLine { TemplateId = t3.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "4.1.01", AccountName = "Venta de Mercaderías & Bienes", DebitCredit = "Debit", AmountSource = "Net21", Condition = "Always" });
+        t3.Lines.Add(new JournalTemplateLine { TemplateId = t3.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "2.1.02.001", AccountName = "IVA Débito Fiscal (Ventas)", DebitCredit = "Debit", AmountSource = "Vat21", Condition = "IfHasVat21" });
+
+        var t4 = new JournalTemplate
+        {
+            TenantId = tenantId,
+            Code = "AM-CMP-01",
+            Name = "Factura de Compra a Proveedores",
+            SourceModule = "Purchases",
+            DocumentType = "InvoiceA",
+            EntrySeries = "Compras",
+            Description = "Modelo para registro de Facturas A y B de compras de mercaderías e insumos.",
+            Status = "Active"
+        };
+        t4.Lines.Add(new JournalTemplateLine { TemplateId = t4.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "5.1.01", AccountName = "Costo de Mercaderías Vendidas (CMV)", DebitCredit = "Debit", AmountSource = "Net21", Condition = "Always" });
+        t4.Lines.Add(new JournalTemplateLine { TemplateId = t4.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.03.001", AccountName = "IVA Crédito Fiscal (Compras)", DebitCredit = "Debit", AmountSource = "Vat21", Condition = "IfHasVat21" });
+        t4.Lines.Add(new JournalTemplateLine { TemplateId = t4.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "1.1.03.002", AccountName = "Retenciones y Percepciones IIBB", DebitCredit = "Debit", AmountSource = "PerceptionIibb", Condition = "IfHasPerceptionIibb" });
+        t4.Lines.Add(new JournalTemplateLine { TemplateId = t4.Id, TenantId = tenantId, OrderIndex = 4, AccountCode = "2.1.01.001", AccountName = "Proveedores de Mercaderías & Servicios", DebitCredit = "Credit", AmountSource = "Total", Condition = "Always" });
+
+        var t5 = new JournalTemplate
+        {
+            TenantId = tenantId,
+            Code = "AM-FIN-01",
+            Name = "Recibo de Cobranza a Clientes",
+            SourceModule = "Finance",
+            DocumentType = "CollectionReceipt",
+            EntrySeries = "Finanzas",
+            Description = "Modelo para imputación contable de cobranzas con valores y retenciones sufridas.",
+            Status = "Active"
+        };
+        t5.Lines.Add(new JournalTemplateLine { TemplateId = t5.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "1.1.01.001", AccountName = "Caja Central Administración", DebitCredit = "Debit", AmountSource = "PaymentAmount", Condition = "Always" });
+        t5.Lines.Add(new JournalTemplateLine { TemplateId = t5.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.03.002", AccountName = "Retenciones y Percepciones IIBB", DebitCredit = "Debit", AmountSource = "Withholdings", Condition = "IfHasWithholding" });
+        t5.Lines.Add(new JournalTemplateLine { TemplateId = t5.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "1.1.02.001", AccountName = "Deudores por Ventas (Clientes)", DebitCredit = "Credit", AmountSource = "Total", Condition = "Always" });
+
+        var t6 = new JournalTemplate
+        {
+            TenantId = tenantId,
+            Code = "AM-FIN-02",
+            Name = "Orden de Pago a Proveedores",
+            SourceModule = "Finance",
+            DocumentType = "PaymentOrder",
+            EntrySeries = "Finanzas",
+            Description = "Modelo para pagos a proveedores desde banco o caja con retenciones emitidas.",
+            Status = "Active"
+        };
+        t6.Lines.Add(new JournalTemplateLine { TemplateId = t6.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "2.1.01.001", AccountName = "Proveedores de Mercaderías & Servicios", DebitCredit = "Debit", AmountSource = "Total", Condition = "Always" });
+        t6.Lines.Add(new JournalTemplateLine { TemplateId = t6.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.01.002", AccountName = "Banco Galicia C/C", DebitCredit = "Credit", AmountSource = "PaymentAmount", Condition = "Always" });
+        t6.Lines.Add(new JournalTemplateLine { TemplateId = t6.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "2.1.02.006", AccountName = "Retenciones Impositivas Practicadas a Pagar", DebitCredit = "Credit", AmountSource = "Withholdings", Condition = "IfHasWithholding" });
+
+        JournalTemplates.AddRange(t1, t2, t3, t4, t5, t6);
+        await SaveChangesAsync(ct);
     }
 }

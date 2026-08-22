@@ -650,6 +650,34 @@ export const api = {
     request<any>(`/api/v1/accounting/bank-statements/lines/${lineId}/quick-post`, { method: "POST", body: JSON.stringify({ feeType }) }),
 
   // ==========================================
+  // ASIENTOS MODELOS (PLANTILLAS CONFIGURABLES) & CONTABILIZACIÓN EN LOTE
+  // ==========================================
+  listJournalTemplates: (sourceModule?: string) => {
+    const q = sourceModule ? `?sourceModule=${sourceModule}` : "";
+    return request<import("./types").JournalTemplate[]>(`/api/v1/accounting/templates${q}`);
+  },
+  getJournalTemplate: (id: string) =>
+    request<import("./types").JournalTemplate>(`/api/v1/accounting/templates/${id}`),
+  createJournalTemplate: (body: Partial<import("./types").JournalTemplate>) =>
+    request<import("./types").JournalTemplate>("/api/v1/accounting/templates", { method: "POST", body: JSON.stringify(body) }),
+  updateJournalTemplate: (id: string, body: Partial<import("./types").JournalTemplate>) =>
+    request<import("./types").JournalTemplate>(`/api/v1/accounting/templates/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteJournalTemplate: (id: string) =>
+    request<{ message: string }>(`/api/v1/accounting/templates/${id}`, { method: "DELETE" }),
+  getAmountSourceVariables: () =>
+    request<import("./types").AmountSourceVariableInfo[]>("/api/v1/accounting/templates/variables"),
+  getUnpostedDocumentsSummary: () =>
+    request<import("./types").UnpostedDocumentsSummary>("/api/v1/accounting/batch-post/pending-summary"),
+  previewBatchPosting: (body: { periodStart?: string; periodEnd?: string; modules?: string[]; branchId?: string; currency?: string }) =>
+    request<import("./types").BatchPostingPreview>("/api/v1/accounting/batch-post/preview", { method: "POST", body: JSON.stringify(body) }),
+  executeBatchPosting: (body: { periodStart?: string; periodEnd?: string; modules?: string[]; branchId?: string; currency?: string; executedBy?: string }) =>
+    request<import("./types").BatchPostingExecuteResponse>("/api/v1/accounting/batch-post/execute", { method: "POST", body: JSON.stringify(body) }),
+  listBatchRuns: () =>
+    request<import("./types").BatchPostingRun[]>("/api/v1/accounting/batch-runs"),
+  revertBatchRun: (id: string) =>
+    request<{ message: string }>(`/api/v1/accounting/batch-runs/${id}/revert`, { method: "POST" }),
+
+  // ==========================================
   // METROLOGY & QUALITY PROFESSIONAL
   // ==========================================
   getMetrologyDashboard: () =>

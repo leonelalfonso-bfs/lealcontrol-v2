@@ -1,49 +1,105 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
+import type { UnpostedDocumentsSummary } from "../../api/types";
+import { BatchPostingModal } from "./BatchPostingModal";
 
 export function AccountingDashboardPage() {
   const [pnl, setPnl] = useState<any>(null);
   const [entries, setEntries] = useState<any[]>([]);
   const [accountsCount, setAccountsCount] = useState(0);
+  const [pendingSummary, setPendingSummary] = useState<UnpostedDocumentsSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showBatchModal, setShowBatchModal] = useState(false);
 
-  useEffect(() => {
+  const loadData = () => {
+    setLoading(true);
     Promise.all([
-      api.getIncomeStatement(),
-      api.listJournalEntries(),
-      api.listAccounts()
+      api.getIncomeStatement().catch(() => null),
+      api.listJournalEntries().catch(() => []),
+      api.listAccounts().catch(() => []),
+      api.getUnpostedDocumentsSummary().catch(() => null)
     ])
-      .then(([pnlData, entryList, accts]) => {
+      .then(([pnlData, entryList, accts, unposted]) => {
         setPnl(pnlData);
-        setEntries(entryList.slice(0, 8));
-        setAccountsCount(accts.length);
+        setEntries((entryList || []).slice(0, 8));
+        setAccountsCount((accts || []).length);
+        setPendingSummary(unposted);
       })
       .catch((err) => console.error("Error loading accounting data", err))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   return (
     <div className="stack" style={{ gap: 24 }}>
-      <div className="page-head">
+      {/* Page Header with Action Buttons */}
+      <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1>🏛️ Contabilidad Integral & Panel Ejecutivo (P&L)</h1>
-          <p className="muted">Estado de resultados en tiempo real, libro diario de partida doble y balances</p>
+          <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+            Sistema Contable & Panel de Control
+          </span>
+          <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
+            🏛️ Tablero Contable & Estado de Resultados
+          </h1>
+          <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
+            Estado de resultados en tiempo real, libro diario de partida doble y motor de asientos modelos.
+          </p>
         </div>
-        <div className="row" style={{ gap: 10 }}>
-          <Link to="/contabilidad/asientos" className="btn">
-            ➕ Nuevo Asiento Diario
+
+        <div className="row" style={{ gap: 10, alignItems: "center" }}>
+          {/* BOTÓN PRINCIPAL CONTABILIZAR */}
+          <button
+            type="button"
+            className="btn"
+            style={{
+              background: "#dc2626",
+              color: "#fff",
+              fontWeight: 800,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: "0 4px 6px -1px rgba(220, 38, 38, 0.3)"
+            }}
+            onClick={() => setShowBatchModal(true)}
+          >
+            <span>🔴 ► CONTABILIZAR</span>
+            {(pendingSummary?.totalPendingCount ?? 0) > 0 && (
+              <span
+                style={{
+                  background: "#fff",
+                  color: "#dc2626",
+                  padding: "2px 7px",
+                  borderRadius: 10,
+                  fontSize: "0.76rem",
+                  fontWeight: 900
+                }}
+              >
+                {pendingSummary?.totalPendingCount}
+              </span>
+            )}
+          </button>
+
+          <Link to="/contabilidad/modelos" className="btn ghost" style={{ fontWeight: 600 }}>
+            ⚙️ Asientos Modelos
           </Link>
-          <Link to="/contabilidad/portal-estudio" className="btn ghost">
-            🏢 Portal Estudio Contable
+
+          <Link to="/contabilidad/asientos" className="btn ghost">
+            ➕ Asiento Manual
           </Link>
         </div>
       </div>
 
       {/* Nav Tabs */}
-      <div className="tab-row">
+      <div className="tab-row" style={{ display: "flex", gap: 8, overflowX: "auto", borderBottom: "1px solid var(--surface-border)", paddingBottom: 6 }}>
         <Link to="/contabilidad" className="tab-btn active">
-          📊 Tablero Ejecutivo & P&L
+          📊 Tablero & P&L
+        </Link>
+        <Link to="/contabilidad/modelos" className="tab-btn">
+          ⚙️ Asientos Modelos
         </Link>
         <Link to="/contabilidad/plan-cuentas" className="tab-btn">
           🌳 Plan de Cuentas ({accountsCount})
@@ -61,7 +117,7 @@ export function AccountingDashboardPage() {
           🏦 Conciliación Bancaria
         </Link>
         <Link to="/contabilidad/portal-estudio" className="tab-btn">
-          🏢 Cierres & IVA Digital (ARCA)
+          🏢 Cierres & IVA Digital
         </Link>
       </div>
 
@@ -71,6 +127,43 @@ export function AccountingDashboardPage() {
         </div>
       ) : (
         <>
+          {/* Pending Documents Alert Banner */}
+          {(pendingSummary?.totalPendingCount ?? 0) > 0 && (
+            <div
+              className="card pad"
+              style={{
+                background: "linear-gradient(135deg, #fffbeb, #fef3c7)",
+                border: "1px solid #fde68a",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 12
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: "1.6rem" }}>⚡</span>
+                <div>
+                  <strong style={{ color: "#92400e", fontSize: "0.95rem" }}>
+                    Hay {pendingSummary?.totalPendingCount} documentos operativos pendientes de contabilizar
+                  </strong>
+                  <div style={{ fontSize: "0.82rem", color: "#b45309" }}>
+                    Ventas: {pendingSummary?.salesPendingCount || 0} | Compras: {pendingSummary?.purchasesPendingCount || 0} | Finanzas: {pendingSummary?.financePendingCount || 0}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn compact"
+                style={{ background: "#dc2626", color: "#fff", fontWeight: 700 }}
+                onClick={() => setShowBatchModal(true)}
+              >
+                🔴 Contabilizar Lote Ahora →
+              </button>
+            </div>
+          )}
+
           {/* Executive P&L Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16 }}>
             <div className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "18px 20px" }}>
@@ -99,7 +192,7 @@ export function AccountingDashboardPage() {
 
             <div className="card pad" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "18px 20px" }}>
               <span className="muted" style={{ fontSize: "13px", fontWeight: 600 }}>EBITDA / Resultado Operativo</span>
-              <span style={{ fontSize: "24px", fontWeight: 800, color: pnl?.ebitda >= 0 ? "#22c55e" : "#f87171", margin: "2px 0" }}>
+              <span style={{ fontSize: "24px", fontWeight: 800, color: (pnl?.ebitda || 0) >= 0 ? "#22c55e" : "#f87171", margin: "2px 0" }}>
                 $ {(pnl?.ebitda || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
               <span className="muted" style={{ fontSize: "12px" }}>Rendimiento antes de intereses e impuestos</span>
@@ -107,7 +200,19 @@ export function AccountingDashboardPage() {
           </div>
 
           {/* Quick Access Modules Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+            <Link
+              to="/contabilidad/modelos"
+              className="card pad"
+              style={{ textDecoration: "none", color: "inherit", transition: "transform 0.15s", border: "1px solid #0d9488" }}
+            >
+              <div style={{ fontSize: "28px", marginBottom: "8px" }}>⚙️</div>
+              <h3 style={{ margin: "0 0 6px", fontSize: "16px", color: "#0f766e" }}>Asientos Modelos</h3>
+              <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
+                Configuración de plantillas por comprobante con variables de IVA, retenciones, cuentas y condiciones.
+              </p>
+            </Link>
+
             <Link
               to="/contabilidad/plan-cuentas"
               className="card pad"
@@ -116,7 +221,7 @@ export function AccountingDashboardPage() {
               <div style={{ fontSize: "28px", marginBottom: "8px" }}>🌳</div>
               <h3 style={{ margin: "0 0 6px", fontSize: "16px" }}>Plan de Cuentas Arbóreo</h3>
               <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
-                Estructura de 5 niveles adaptada a la normativa argentina con {accountsCount} cuentas configuradas.
+                Estructura jerárquica con {accountsCount} cuentas contables listas para imputación.
               </p>
             </Link>
 
@@ -128,7 +233,7 @@ export function AccountingDashboardPage() {
               <div style={{ fontSize: "28px", marginBottom: "8px" }}>📖</div>
               <h3 style={{ margin: "0 0 6px", fontSize: "16px" }}>Libro Diario de Asientos</h3>
               <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
-                Carga ágil tipo Excel con validación estricta de partida doble y centros de costos.
+                Asientos generados por lote y registros manuales con validación de partida doble.
               </p>
             </Link>
 
@@ -143,18 +248,6 @@ export function AccountingDashboardPage() {
                 Consulta de movimientos y saldos acumulados progresivos de cualquier cuenta contable.
               </p>
             </Link>
-
-            <Link
-              to="/contabilidad/sumas-saldos"
-              className="card pad"
-              style={{ textDecoration: "none", color: "inherit", transition: "transform 0.15s", border: "1px solid var(--surface-border)" }}
-            >
-              <div style={{ fontSize: "28px", marginBottom: "8px" }}>⚖️</div>
-              <h3 style={{ margin: "0 0 6px", fontSize: "16px" }}>Balance de Sumas y Saldos</h3>
-              <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
-                Balance oficial a 8 columnas con segregación patrimonial y de resultados.
-              </p>
-            </Link>
           </div>
 
           {/* Recent Journal Entries */}
@@ -162,7 +255,7 @@ export function AccountingDashboardPage() {
             <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div>
                 <h3 style={{ margin: 0 }}>Últimos Asientos Registrados en el Libro Diario</h3>
-                <p className="muted" style={{ margin: 0, fontSize: "13px" }}>Registraciones automáticas y manuales del período</p>
+                <p className="muted" style={{ margin: 0, fontSize: "13px" }}>Registraciones automáticas del motor y manuales del período</p>
               </div>
               <Link to="/contabilidad/asientos" className="btn ghost" style={{ fontSize: "13px" }}>
                 Ver Libro Diario Completo →
@@ -171,7 +264,7 @@ export function AccountingDashboardPage() {
 
             {entries.length === 0 ? (
               <p className="muted" style={{ padding: "20px 0", textAlign: "center" }}>
-                No hay asientos registrados aún. Creá el primer asiento con el botón superior.
+                No hay asientos registrados aún. Usá el botón <strong>🔴 ► CONTABILIZAR</strong> para procesar comprobantes de gestión.
               </p>
             ) : (
               <div className="table-wrap">
@@ -223,6 +316,15 @@ export function AccountingDashboardPage() {
           </div>
         </>
       )}
+
+      {/* Batch Posting Wizard Modal */}
+      <BatchPostingModal
+        isOpen={showBatchModal}
+        onClose={() => {
+          setShowBatchModal(false);
+          loadData();
+        }}
+      />
     </div>
   );
 }
