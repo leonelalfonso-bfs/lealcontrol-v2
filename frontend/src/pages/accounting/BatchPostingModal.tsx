@@ -144,14 +144,14 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
         className="modal-content"
         style={{
           background: "#fff",
-          borderRadius: 12,
-          width: "100%",
-          maxWidth: 800,
-          maxHeight: "90vh",
+          borderRadius: 14,
+          width: "95vw",
+          maxWidth: "1150px",
+          maxHeight: "94vh",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)"
         }}
       >
         {/* Header */}

@@ -400,66 +400,69 @@ export function JournalTemplatesPage() {
 
       {/* MODAL CONFIGURADOR DE ASIENTO MODELO */}
       {showModal && (
-        <div className="modal-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
-          <div className="modal-content" style={{ background: "#fff", borderRadius: 10, width: "100%", maxWidth: 1000, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" }}>
+        <div className="modal-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
+          <div className="modal-content" style={{ background: "#fff", borderRadius: 14, width: "95vw", maxWidth: "1380px", maxHeight: "94vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)", border: "1px solid #e2e8f0" }}>
             
             {/* Modal Header */}
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc" }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 800 }}>
-                  {editingId ? `✏️ Editar Asiento Modelo [${code}]` : "➕ Crear Nuevo Asiento Modelo"}
-                </h2>
-                <span className="muted" style={{ fontSize: "0.8rem" }}>
-                  Definición de cuentas contables debitadas y acreditadas a partir de variables de comprobantes de gestión.
-                </span>
+            <div style={{ padding: "18px 28px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: "1.6rem" }}>⚙️</span>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 800, color: "#0f172a" }}>
+                    {editingId ? `Editar Asiento Modelo [${code}]` : "Crear Nuevo Asiento Modelo"}
+                  </h2>
+                  <span className="muted" style={{ fontSize: "0.84rem" }}>
+                    Definición de cuentas contables debitadas y acreditadas a partir de variables de comprobantes de gestión.
+                  </span>
+                </div>
               </div>
-              <button type="button" onClick={() => setShowModal(false)} className="btn ghost compact" style={{ fontSize: "1.2rem", lineHeight: 1 }}>
+              <button type="button" onClick={() => setShowModal(false)} className="btn ghost compact" style={{ fontSize: "1.3rem", lineHeight: 1, padding: "6px 12px" }}>
                 ✕
               </button>
             </div>
 
             {/* Modal Body */}
             <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", overflow: "hidden", flex: 1 }}>
-              <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1 }}>
+              <div style={{ padding: "24px 28px", overflowY: "auto", flex: 1 }}>
                 
                 {error && (
-                  <div className="alert" style={{ marginBottom: 16, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "10px 14px", borderRadius: 6, fontSize: "0.85rem" }}>
+                  <div className="alert" style={{ marginBottom: 18, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "12px 16px", borderRadius: 8, fontSize: "0.88rem" }}>
                     ⚠️ {error}
                   </div>
                 )}
 
                 {/* Cabecera del Modelo */}
-                <div style={{ background: "#f8fafc", padding: 16, borderRadius: 8, border: "1px solid #e2e8f0", marginBottom: 20 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: 12, color: "#0f766e" }}>
-                    1. DATOS DE CABECERA & DISPARADOR
+                <div style={{ background: "#f8fafc", padding: "18px 20px", borderRadius: 10, border: "1px solid #e2e8f0", marginBottom: 24 }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.92rem", marginBottom: 14, color: "#0f766e", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span>1. DATOS DE CABECERA & DISPARADOR</span>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: 4 }}>Código Modelo *</label>
+                      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Código Modelo *</label>
                       <input
                         type="text"
                         required
                         value={code}
                         onChange={(e) => setCode(e.target.value)}
                         placeholder="ej. AM-VTA-01"
-                        style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc", fontWeight: 700 }}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 700, fontSize: "0.9rem" }}
                       />
                     </div>
 
                     <div style={{ gridColumn: "span 2" }}>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: 4 }}>Nombre / Descripción Legible *</label>
+                      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Nombre / Descripción Legible *</label>
                       <input
                         type="text"
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="ej. Factura A de Venta - Cuenta Corriente"
-                        style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc" }}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
                       />
                     </div>
 
                     <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: 4 }}>Módulo de Origen *</label>
+                      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Módulo de Origen *</label>
                       <select
                         value={sourceModule}
                         onChange={(e) => {
@@ -468,7 +471,7 @@ export function JournalTemplatesPage() {
                           else if (e.target.value === "Purchases") setEntrySeries("Compras");
                           else if (e.target.value === "Finance") setEntrySeries("Finanzas");
                         }}
-                        style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc" }}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
                       >
                         <option value="Sales">🛒 Ventas</option>
                         <option value="Purchases">📦 Compras</option>
@@ -479,11 +482,11 @@ export function JournalTemplatesPage() {
                     </div>
 
                     <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: 4 }}>Tipo de Comprobante *</label>
+                      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Tipo de Comprobante *</label>
                       <select
                         value={documentType}
                         onChange={(e) => setDocumentType(e.target.value)}
-                        style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc" }}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
                       >
                         <option value="InvoiceA">Factura A</option>
                         <option value="InvoiceB">Factura B / C</option>
@@ -499,22 +502,22 @@ export function JournalTemplatesPage() {
                     </div>
 
                     <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: 4 }}>Serie de Asiento</label>
+                      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Serie de Asiento</label>
                       <input
                         type="text"
                         value={entrySeries}
                         onChange={(e) => setEntrySeries(e.target.value)}
                         placeholder="Ventas / Compras / General"
-                        style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc" }}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
                       />
                     </div>
 
                     <div>
-                      <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: 4 }}>Estado</label>
+                      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: 5 }}>Estado</label>
                       <select
                         value={status}
                         onChange={(e) => setStatus(e.target.value as any)}
-                        style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc" }}
+                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
                       >
                         <option value="Active">✓ Activo (Se usa al Contabilizar)</option>
                         <option value="Inactive">Inactivo (Pausado)</option>
@@ -525,42 +528,47 @@ export function JournalTemplatesPage() {
 
                 {/* Líneas Contables / Renglones */}
                 <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: "#0f766e" }}>
-                      2. LÍNEAS CONTABLES (DEBE / HABER & VARIABLES DE IMPORTE)
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: "0.92rem", color: "#0f766e" }}>
+                        2. LÍNEAS CONTABLES (DEBE / HABER & VARIABLES DE IMPORTE)
+                      </div>
+                      <span className="muted" style={{ fontSize: "0.8rem" }}>
+                        Cada renglón vincula una cuenta del Plan de Cuentas con un campo del comprobante y su condición.
+                      </span>
                     </div>
                     <button
                       type="button"
                       onClick={handleAddLine}
                       className="btn compact"
-                      style={{ background: "#0d9488", color: "#fff", fontSize: "0.8rem" }}
+                      style={{ background: "#0d9488", color: "#fff", fontSize: "0.85rem", fontWeight: 700, padding: "8px 16px" }}
                     >
                       ➕ Agregar Renglón
                     </button>
                   </div>
 
-                  <div className="table-wrap" style={{ border: "1px solid #e2e8f0", borderRadius: 8, overflow: "hidden" }}>
-                    <table style={{ margin: 0, fontSize: "0.82rem" }}>
+                  <div className="table-wrap" style={{ border: "1px solid #cbd5e1", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)" }}>
+                    <table style={{ margin: 0, width: "100%", borderCollapse: "collapse" }}>
                       <thead>
-                        <tr style={{ background: "#f1f5f9" }}>
-                          <th style={{ width: 40, textAlign: "center" }}>#</th>
-                          <th style={{ width: 280 }}>Cuenta Contable (Plan de Cuentas)</th>
-                          <th style={{ width: 110 }}>Columna</th>
-                          <th>Origen del Importe (Variable del Comprobante)</th>
-                          <th>Condición de Disparo</th>
-                          <th style={{ width: 90, textAlign: "center" }}>Signo</th>
-                          <th style={{ width: 40, textAlign: "center" }}></th>
+                        <tr style={{ background: "#f1f5f9", borderBottom: "2px solid #cbd5e1" }}>
+                          <th style={{ width: 45, textAlign: "center", padding: "10px 6px" }}>#</th>
+                          <th style={{ width: "30%", minWidth: 260, padding: "10px 12px" }}>Cuenta Contable (Plan de Cuentas)</th>
+                          <th style={{ width: 140, minWidth: 130, padding: "10px 10px" }}>Columna</th>
+                          <th style={{ width: "26%", minWidth: 220, padding: "10px 12px" }}>Origen del Importe (Variable)</th>
+                          <th style={{ width: "22%", minWidth: 180, padding: "10px 12px" }}>Condición de Disparo</th>
+                          <th style={{ width: 90, textAlign: "center", padding: "10px 6px" }}>Signo</th>
+                          <th style={{ width: 45, textAlign: "center", padding: "10px 6px" }}></th>
                         </tr>
                       </thead>
                       <tbody>
                         {lines.map((l, index) => (
-                          <tr key={index}>
-                            <td style={{ textAlign: "center", fontWeight: 700 }}>{index + 1}</td>
-                            <td>
+                          <tr key={index} style={{ borderBottom: "1px solid #e2e8f0", background: index % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
+                            <td style={{ textAlign: "center", fontWeight: 800, color: "#64748b", padding: "8px 6px" }}>{index + 1}</td>
+                            <td style={{ padding: "8px 10px" }}>
                               <select
                                 value={l.accountCode}
                                 onChange={(e) => handleLineChange(index, "accountCode", e.target.value)}
-                                style={{ width: "100%", padding: "4px 8px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.8rem" }}
+                                style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.85rem", background: "#fff" }}
                               >
                                 {accounts.map((acc) => (
                                   <option key={acc.id} value={acc.code}>
@@ -569,28 +577,30 @@ export function JournalTemplatesPage() {
                                 ))}
                               </select>
                             </td>
-                            <td>
+                            <td style={{ padding: "8px 8px" }}>
                               <select
                                 value={l.debitCredit}
                                 onChange={(e) => handleLineChange(index, "debitCredit", e.target.value)}
                                 style={{
                                   width: "100%",
-                                  padding: "4px 8px",
-                                  borderRadius: 4,
-                                  border: "1px solid #ccc",
-                                  fontWeight: 700,
-                                  color: l.debitCredit === "Debit" ? "#0369a1" : "#047857"
+                                  padding: "7px 10px",
+                                  borderRadius: 6,
+                                  border: "1px solid #cbd5e1",
+                                  fontWeight: 800,
+                                  fontSize: "0.85rem",
+                                  background: l.debitCredit === "Debit" ? "#eff6ff" : "#f0fdf4",
+                                  color: l.debitCredit === "Debit" ? "#1d4ed8" : "#15803d"
                                 }}
                               >
-                                <option value="Debit">DEBE (Débito)</option>
-                                <option value="Credit">HABER (Crédito)</option>
+                                <option value="Debit">DEBE</option>
+                                <option value="Credit">HABER</option>
                               </select>
                             </td>
-                            <td>
+                            <td style={{ padding: "8px 10px" }}>
                               <select
                                 value={l.amountSource}
                                 onChange={(e) => handleLineChange(index, "amountSource", e.target.value)}
-                                style={{ width: "100%", padding: "4px 8px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.8rem" }}
+                                style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.85rem", background: "#fff" }}
                               >
                                 {variables.map((v) => (
                                   <option key={v.key} value={v.key}>
@@ -599,11 +609,11 @@ export function JournalTemplatesPage() {
                                 ))}
                               </select>
                             </td>
-                            <td>
+                            <td style={{ padding: "8px 10px" }}>
                               <select
                                 value={l.condition}
                                 onChange={(e) => handleLineChange(index, "condition", e.target.value)}
-                                style={{ width: "100%", padding: "4px 8px", borderRadius: 4, border: "1px solid #ccc", fontSize: "0.8rem" }}
+                                style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.85rem", background: "#fff" }}
                               >
                                 <option value="Always">Siempre</option>
                                 <option value="IfHasVat21">Si tiene IVA 21% &gt; 0</option>
@@ -614,8 +624,8 @@ export function JournalTemplatesPage() {
                                 <option value="IfHasWithholding">Si tiene Retenciones &gt; 0</option>
                               </select>
                             </td>
-                            <td style={{ textAlign: "center" }}>
-                              <label style={{ fontSize: "0.75rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                            <td style={{ textAlign: "center", padding: "8px 6px" }}>
+                              <label style={{ fontSize: "0.78rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 600, color: "#475569" }}>
                                 <input
                                   type="checkbox"
                                   checked={l.isInvertedSign}
@@ -624,13 +634,13 @@ export function JournalTemplatesPage() {
                                 Invertir
                               </label>
                             </td>
-                            <td style={{ textAlign: "center" }}>
+                            <td style={{ textAlign: "center", padding: "8px 6px" }}>
                               <button
                                 type="button"
                                 onClick={() => handleRemoveLine(index)}
                                 className="btn ghost compact"
-                                style={{ color: "#dc2626", padding: "2px 6px" }}
-                                title="Quitar línea"
+                                style={{ color: "#dc2626", padding: "4px 8px", borderRadius: 6, fontSize: "0.9rem" }}
+                                title="Quitar renglón"
                               >
                                 ✕
                               </button>
@@ -645,15 +655,15 @@ export function JournalTemplatesPage() {
               </div>
 
               {/* Modal Footer */}
-              <div style={{ padding: "14px 24px", borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc" }}>
-                <button type="button" onClick={() => setShowModal(false)} className="btn ghost">
+              <div style={{ padding: "16px 28px", borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc" }}>
+                <button type="button" onClick={() => setShowModal(false)} className="btn ghost" style={{ padding: "8px 18px" }}>
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
                   className="btn"
-                  style={{ background: "#0d9488", color: "#fff", fontWeight: 700, minWidth: 140 }}
+                  style={{ background: "#0d9488", color: "#fff", fontWeight: 800, padding: "8px 22px", fontSize: "0.92rem", minWidth: 180 }}
                 >
                   {saving ? "Guardando..." : "💾 Guardar Asiento Modelo"}
                 </button>
