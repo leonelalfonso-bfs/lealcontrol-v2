@@ -25,6 +25,7 @@ public static class AccountingEndpoints
         group.MapGet("/accounts", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
             await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
 
             var accounts = await db.Accounts
@@ -140,6 +141,7 @@ public static class AccountingEndpoints
         group.MapGet("/mapping", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
             await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
             var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
             return Results.Ok(mapping);
@@ -148,6 +150,7 @@ public static class AccountingEndpoints
         group.MapPut("/mapping", async (UpdateMappingRequest req, ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
             var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
 
             mapping.SalesRevenueAccountCode = req.SalesRevenueAccountCode.Trim();
@@ -187,6 +190,7 @@ public static class AccountingEndpoints
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
             var query = db.JournalEntries
                 .AsNoTracking()
                 .Include(j => j.Lines)
@@ -290,6 +294,7 @@ public static class AccountingEndpoints
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
             var from = startDate ?? DateTime.UtcNow.AddMonths(-1);
             var to = endDate ?? DateTime.UtcNow;
 
@@ -391,6 +396,7 @@ public static class AccountingEndpoints
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
             await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
 
             var accounts = await db.Accounts.AsNoTracking().Where(a => a.TenantId == tenantId).OrderBy(a => a.Code).ToListAsync(ct);
@@ -526,6 +532,7 @@ public static class AccountingEndpoints
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
             var selectedYear = year ?? DateTime.UtcNow.Year;
 
             var entriesQuery = db.JournalEntries.AsNoTracking().Where(j => j.TenantId == tenantId && j.Date.Year == selectedYear);
@@ -1700,36 +1707,48 @@ public static class AccountingEndpoints
 
             try
             {
-                using var conn = db.Database.GetDbConnection();
+                var conn = db.Database.GetDbConnection();
+                bool closeWhenDone = false;
                 if (conn.State != System.Data.ConnectionState.Open)
                 {
                     await conn.OpenAsync(ct);
+                    closeWhenDone = true;
                 }
 
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = @"
-                    SELECT 'Sales' as Mod, COUNT(*)::int as Cnt FROM sales.""Invoices"" 
-                    WHERE ""TenantId"" = @tId AND ""Status"" != 'Cancelled' AND ""Status"" != 'Draft'
-                    UNION ALL
-                    SELECT 'Purchases' as Mod, COUNT(*)::int as Cnt FROM sales.""PurchaseInvoices"" 
-                    WHERE ""TenantId"" = @tId AND ""Status"" != 'Cancelled' AND ""Status"" != 'Draft'
-                    UNION ALL
-                    SELECT 'Finance' as Mod, COUNT(*)::int as Cnt FROM finance.""CollectionReceipts"" 
-                    WHERE ""TenantId"" = @tId;
-                ";
-                var p = cmd.CreateParameter();
-                p.ParameterName = "@tId";
-                p.Value = tenantId.Value;
-                cmd.Parameters.Add(p);
-
-                using var reader = await cmd.ExecuteReaderAsync(ct);
-                while (await reader.ReadAsync(ct))
+                try
                 {
-                    var mod = reader.GetString(0);
-                    var cnt = reader.GetInt32(1);
-                    if (mod == "Sales") salesPending = Math.Max(0, cnt - postedSet.Count(x => x.StartsWith("VTA-", StringComparison.OrdinalIgnoreCase)));
-                    else if (mod == "Purchases") purchasesPending = Math.Max(0, cnt - postedSet.Count(x => x.StartsWith("CMP-", StringComparison.OrdinalIgnoreCase)));
-                    else if (mod == "Finance") financePending = Math.Max(0, cnt - postedSet.Count(x => x.StartsWith("REC-", StringComparison.OrdinalIgnoreCase)));
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        SELECT 'Sales' as Mod, COUNT(*)::int as Cnt FROM sales.""Invoices"" 
+                        WHERE ""TenantId"" = @tId AND ""Status"" != 'Cancelled' AND ""Status"" != 'Draft'
+                        UNION ALL
+                        SELECT 'Purchases' as Mod, COUNT(*)::int as Cnt FROM sales.""PurchaseInvoices"" 
+                        WHERE ""TenantId"" = @tId AND ""Status"" != 'Cancelled' AND ""Status"" != 'Draft'
+                        UNION ALL
+                        SELECT 'Finance' as Mod, COUNT(*)::int as Cnt FROM finance.""CollectionReceipts"" 
+                        WHERE ""TenantId"" = @tId;
+                    ";
+                    var p = cmd.CreateParameter();
+                    p.ParameterName = "@tId";
+                    p.Value = tenantId.Value;
+                    cmd.Parameters.Add(p);
+
+                    using var reader = await cmd.ExecuteReaderAsync(ct);
+                    while (await reader.ReadAsync(ct))
+                    {
+                        var mod = reader.GetString(0);
+                        var cnt = reader.GetInt32(1);
+                        if (mod == "Sales") salesPending = Math.Max(0, cnt - postedSet.Count(x => x.StartsWith("VTA-", StringComparison.OrdinalIgnoreCase)));
+                        else if (mod == "Purchases") purchasesPending = Math.Max(0, cnt - postedSet.Count(x => x.StartsWith("CMP-", StringComparison.OrdinalIgnoreCase)));
+                        else if (mod == "Finance") financePending = Math.Max(0, cnt - postedSet.Count(x => x.StartsWith("REC-", StringComparison.OrdinalIgnoreCase)));
+                    }
+                }
+                finally
+                {
+                    if (closeWhenDone && conn.State == System.Data.ConnectionState.Open)
+                    {
+                        await conn.CloseAsync();
+                    }
                 }
             }
             catch
