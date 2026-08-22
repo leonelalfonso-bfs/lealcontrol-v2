@@ -126,18 +126,20 @@ export function CalibrationReportPrintPage() {
               <div>
                 <strong>Receptor / Plataforma:</strong> {equipment.brand} {equipment.model} (S/N: {equipment.serialNumber || "—"})
                 {(equipment as any).platformDimensions ? ` • ${(equipment as any).platformDimensions}` : ""}
-                {(equipment as any).platformApprovalNumber && (
+                {((equipment as any).platformApprovalCode || (equipment as any).platformApprovalNumber) && (
                   <div style={{ color: "#444", fontSize: "0.78rem" }}>
-                    ↳ Disp. Aprobación Plataforma: <strong>{(equipment as any).platformApprovalNumber}</strong>
+                    ↳ Aprob. Modelo: <strong>{(equipment as any).platformApprovalCode || "—"}</strong>
+                    {(equipment as any).platformApprovalNumber ? ` • Disposición: ${(equipment as any).platformApprovalNumber}` : ""}
                     {(equipment as any).platformApprovalDate ? ` (Fecha: ${new Date((equipment as any).platformApprovalDate).toLocaleDateString("es-AR")})` : ""}
                   </div>
                 )}
               </div>
               <div style={{ marginTop: 3 }}>
                 <strong>Indicador Principal:</strong> {(equipment as any).indicator1Brand || equipment.brand} {(equipment as any).indicator1Model || equipment.model} (S/N: {(equipment as any).indicator1SerialNumber || equipment.serialNumber || "—"}) [{(equipment as any).indicator1Type || "Digital"}]
-                {(equipment as any).indicator1ApprovalNumber && (
+                {((equipment as any).indicator1ApprovalCode || (equipment as any).indicator1ApprovalNumber) && (
                   <div style={{ color: "#444", fontSize: "0.78rem" }}>
-                    ↳ Disp. Aprobación Indicador: <strong>{(equipment as any).indicator1ApprovalNumber}</strong>
+                    ↳ Aprob. Modelo: <strong>{(equipment as any).indicator1ApprovalCode || "—"}</strong>
+                    {(equipment as any).indicator1ApprovalNumber ? ` • Disposición: ${(equipment as any).indicator1ApprovalNumber}` : ""}
                     {(equipment as any).indicator1ApprovalDate ? ` (Fecha: ${new Date((equipment as any).indicator1ApprovalDate).toLocaleDateString("es-AR")})` : ""}
                   </div>
                 )}
@@ -145,9 +147,10 @@ export function CalibrationReportPrintPage() {
               {(equipment as any).hasSecondaryIndicator && (
                 <div style={{ marginTop: 3 }}>
                   <strong>Indicador Secundario (Híbrida):</strong> {(equipment as any).indicator2Brand} {(equipment as any).indicator2Model} (S/N: {(equipment as any).indicator2SerialNumber || "—"}) [{(equipment as any).indicator2Type}]
-                  {(equipment as any).indicator2ApprovalNumber && (
+                  {((equipment as any).indicator2ApprovalCode || (equipment as any).indicator2ApprovalNumber) && (
                     <div style={{ color: "#444", fontSize: "0.78rem" }}>
-                      ↳ Disp. Aprobación Ind. 2: <strong>{(equipment as any).indicator2ApprovalNumber}</strong>
+                      ↳ Aprob. Modelo: <strong>{(equipment as any).indicator2ApprovalCode || "—"}</strong>
+                      {(equipment as any).indicator2ApprovalNumber ? ` • Disposición: ${(equipment as any).indicator2ApprovalNumber}` : ""}
                       {(equipment as any).indicator2ApprovalDate ? ` (Fecha: ${new Date((equipment as any).indicator2ApprovalDate).toLocaleDateString("es-AR")})` : ""}
                     </div>
                   )}

@@ -38,6 +38,7 @@ public sealed class MetrologyDbContext : DbContext
             b.Property(x => x.PlatformType).HasMaxLength(60).HasDefaultValue("TruckScale");
 
             // Plataforma
+            b.Property(x => x.PlatformApprovalCode).HasMaxLength(120).HasDefaultValue(string.Empty);
             b.Property(x => x.PlatformApprovalNumber).HasMaxLength(120).HasDefaultValue(string.Empty);
             b.Property(x => x.PlatformDimensions).HasMaxLength(80).HasDefaultValue(string.Empty);
 
@@ -45,6 +46,7 @@ public sealed class MetrologyDbContext : DbContext
             b.Property(x => x.Indicator1Brand).HasMaxLength(100).HasDefaultValue(string.Empty);
             b.Property(x => x.Indicator1Model).HasMaxLength(100).HasDefaultValue(string.Empty);
             b.Property(x => x.Indicator1SerialNumber).HasMaxLength(100).HasDefaultValue(string.Empty);
+            b.Property(x => x.Indicator1ApprovalCode).HasMaxLength(120).HasDefaultValue(string.Empty);
             b.Property(x => x.Indicator1ApprovalNumber).HasMaxLength(120).HasDefaultValue(string.Empty);
             b.Property(x => x.Indicator1Type).HasMaxLength(60).HasDefaultValue("Digital");
 
@@ -53,6 +55,7 @@ public sealed class MetrologyDbContext : DbContext
             b.Property(x => x.Indicator2Brand).HasMaxLength(100).HasDefaultValue(string.Empty);
             b.Property(x => x.Indicator2Model).HasMaxLength(100).HasDefaultValue(string.Empty);
             b.Property(x => x.Indicator2SerialNumber).HasMaxLength(100).HasDefaultValue(string.Empty);
+            b.Property(x => x.Indicator2ApprovalCode).HasMaxLength(120).HasDefaultValue(string.Empty);
             b.Property(x => x.Indicator2ApprovalNumber).HasMaxLength(120).HasDefaultValue(string.Empty);
             b.Property(x => x.Indicator2Type).HasMaxLength(60).HasDefaultValue(string.Empty);
 
@@ -122,12 +125,14 @@ public sealed class MetrologyDbContext : DbContext
                     ""ApplicableStandard"" character varying(60) NOT NULL DEFAULT 'Res25_2025',
                     ""ApprovalCode"" character varying(120) NOT NULL DEFAULT '',
                     ""PlatformType"" character varying(60) NOT NULL DEFAULT 'TruckScale',
+                    ""PlatformApprovalCode"" character varying(120) NOT NULL DEFAULT '',
                     ""PlatformApprovalNumber"" character varying(120) NOT NULL DEFAULT '',
                     ""PlatformApprovalDate"" timestamp with time zone,
                     ""PlatformDimensions"" character varying(80) NOT NULL DEFAULT '',
                     ""Indicator1Brand"" character varying(100) NOT NULL DEFAULT '',
                     ""Indicator1Model"" character varying(100) NOT NULL DEFAULT '',
                     ""Indicator1SerialNumber"" character varying(100) NOT NULL DEFAULT '',
+                    ""Indicator1ApprovalCode"" character varying(120) NOT NULL DEFAULT '',
                     ""Indicator1ApprovalNumber"" character varying(120) NOT NULL DEFAULT '',
                     ""Indicator1ApprovalDate"" timestamp with time zone,
                     ""Indicator1Type"" character varying(60) NOT NULL DEFAULT 'Digital',
@@ -135,6 +140,7 @@ public sealed class MetrologyDbContext : DbContext
                     ""Indicator2Brand"" character varying(100) NOT NULL DEFAULT '',
                     ""Indicator2Model"" character varying(100) NOT NULL DEFAULT '',
                     ""Indicator2SerialNumber"" character varying(100) NOT NULL DEFAULT '',
+                    ""Indicator2ApprovalCode"" character varying(120) NOT NULL DEFAULT '',
                     ""Indicator2ApprovalNumber"" character varying(120) NOT NULL DEFAULT '',
                     ""Indicator2ApprovalDate"" timestamp with time zone,
                     ""Indicator2Type"" character varying(60) NOT NULL DEFAULT '',
@@ -159,12 +165,14 @@ public sealed class MetrologyDbContext : DbContext
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""ApplicableStandard"" character varying(60) NOT NULL DEFAULT 'Res25_2025';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""ApprovalCode"" character varying(120) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""PlatformType"" character varying(60) NOT NULL DEFAULT 'TruckScale';
+                ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""PlatformApprovalCode"" character varying(120) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""PlatformApprovalNumber"" character varying(120) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""PlatformApprovalDate"" timestamp with time zone;
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""PlatformDimensions"" character varying(80) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator1Brand"" character varying(100) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator1Model"" character varying(100) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator1SerialNumber"" character varying(100) NOT NULL DEFAULT '';
+                ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator1ApprovalCode"" character varying(120) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator1ApprovalNumber"" character varying(120) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator1ApprovalDate"" timestamp with time zone;
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator1Type"" character varying(60) NOT NULL DEFAULT 'Digital';
@@ -172,6 +180,7 @@ public sealed class MetrologyDbContext : DbContext
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator2Brand"" character varying(100) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator2Model"" character varying(100) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator2SerialNumber"" character varying(100) NOT NULL DEFAULT '';
+                ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator2ApprovalCode"" character varying(120) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator2ApprovalNumber"" character varying(120) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator2ApprovalDate"" timestamp with time zone;
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator2Type"" character varying(60) NOT NULL DEFAULT '';

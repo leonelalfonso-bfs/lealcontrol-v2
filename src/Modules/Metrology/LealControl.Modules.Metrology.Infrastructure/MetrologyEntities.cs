@@ -25,7 +25,8 @@ public sealed class MetrologyEquipment : Entity<Guid>
     public string PlatformType { get; set; } = "TruckScale"; // TruckScale, Platform, Hopper, Suspended, Counter
 
     // Componente 1: Plataforma / Receptor de Carga
-    public string PlatformApprovalNumber { get; set; } = string.Empty; // Nº Disposición / Aprobación Plataforma
+    public string PlatformApprovalCode { get; set; } = string.Empty; // Código de Aprobación de Modelo de Plataforma (ej. DNH-1450/84)
+    public string PlatformApprovalNumber { get; set; } = string.Empty; // Nº Disposición / Aprobación Plataforma (ej. Disp. DNCI Nº 124/2018)
     public DateTime? PlatformApprovalDate { get; set; } // Fecha de Disposición / Aprobación Plataforma
     public string PlatformDimensions { get; set; } = string.Empty; // ej. 21.00 x 3.00 m
     public int LoadCellsCount { get; set; } = 6; // Apoyos / celdas
@@ -34,7 +35,8 @@ public sealed class MetrologyEquipment : Entity<Guid>
     public string Indicator1Brand { get; set; } = string.Empty;
     public string Indicator1Model { get; set; } = string.Empty;
     public string Indicator1SerialNumber { get; set; } = string.Empty;
-    public string Indicator1ApprovalNumber { get; set; } = string.Empty; // Nº Disposición / Aprobación Indicador 1
+    public string Indicator1ApprovalCode { get; set; } = string.Empty; // Código de Aprobación de Modelo Indicador 1 (ej. SCT-204/05)
+    public string Indicator1ApprovalNumber { get; set; } = string.Empty; // Nº Disposición / Aprobación Indicador 1 (ej. Disp. DNCI Nº 45/2021)
     public DateTime? Indicator1ApprovalDate { get; set; } // Fecha de Disposición / Aprobación Indicador 1
     public string Indicator1Type { get; set; } = "Digital"; // Digital, Analógico, Con Dispositivo Impresor
 
@@ -43,6 +45,7 @@ public sealed class MetrologyEquipment : Entity<Guid>
     public string Indicator2Brand { get; set; } = string.Empty;
     public string Indicator2Model { get; set; } = string.Empty;
     public string Indicator2SerialNumber { get; set; } = string.Empty;
+    public string Indicator2ApprovalCode { get; set; } = string.Empty; // Código de Aprobación de Modelo Indicador 2
     public string Indicator2ApprovalNumber { get; set; } = string.Empty; // Nº Disposición / Aprobación Indicador 2
     public DateTime? Indicator2ApprovalDate { get; set; } // Fecha de Disposición / Aprobación Indicador 2
     public string Indicator2Type { get; set; } = "Mecánico (Romana/Cuadrante)"; // Mecánico, Digital, Repetidor
@@ -149,12 +152,14 @@ public record MetrologyEquipmentDto(
     string ApplicableStandard,
     string ApprovalCode,
     string PlatformType,
+    string PlatformApprovalCode,
     string PlatformApprovalNumber,
     DateTime? PlatformApprovalDate,
     string PlatformDimensions,
     string Indicator1Brand,
     string Indicator1Model,
     string Indicator1SerialNumber,
+    string Indicator1ApprovalCode,
     string Indicator1ApprovalNumber,
     DateTime? Indicator1ApprovalDate,
     string Indicator1Type,
@@ -162,6 +167,7 @@ public record MetrologyEquipmentDto(
     string Indicator2Brand,
     string Indicator2Model,
     string Indicator2SerialNumber,
+    string Indicator2ApprovalCode,
     string Indicator2ApprovalNumber,
     DateTime? Indicator2ApprovalDate,
     string Indicator2Type,
@@ -193,12 +199,14 @@ public record MetrologyEquipmentWriteDto(
     string? ApplicableStandard,
     string? ApprovalCode,
     string? PlatformType,
+    string? PlatformApprovalCode,
     string? PlatformApprovalNumber,
     DateTime? PlatformApprovalDate,
     string? PlatformDimensions,
     string? Indicator1Brand,
     string? Indicator1Model,
     string? Indicator1SerialNumber,
+    string? Indicator1ApprovalCode,
     string? Indicator1ApprovalNumber,
     DateTime? Indicator1ApprovalDate,
     string? Indicator1Type,
@@ -206,6 +214,7 @@ public record MetrologyEquipmentWriteDto(
     string? Indicator2Brand,
     string? Indicator2Model,
     string? Indicator2SerialNumber,
+    string? Indicator2ApprovalCode,
     string? Indicator2ApprovalNumber,
     DateTime? Indicator2ApprovalDate,
     string? Indicator2Type,

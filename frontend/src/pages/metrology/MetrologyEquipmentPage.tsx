@@ -38,6 +38,7 @@ export function MetrologyEquipmentPage() {
   const [platformType, setPlatformType] = useState<"TruckScale" | "Platform" | "Hopper" | "Suspended" | "Counter">("TruckScale");
 
   // Componente 1: Plataforma / Receptor de Carga
+  const [platformApprovalCode, setPlatformApprovalCode] = useState("");
   const [platformApprovalNumber, setPlatformApprovalNumber] = useState("");
   const [platformApprovalDate, setPlatformApprovalDate] = useState("");
   const [platformDimensions, setPlatformDimensions] = useState("");
@@ -47,6 +48,7 @@ export function MetrologyEquipmentPage() {
   const [indicator1Brand, setIndicator1Brand] = useState("");
   const [indicator1Model, setIndicator1Model] = useState("");
   const [indicator1SerialNumber, setIndicator1SerialNumber] = useState("");
+  const [indicator1ApprovalCode, setIndicator1ApprovalCode] = useState("");
   const [indicator1ApprovalNumber, setIndicator1ApprovalNumber] = useState("");
   const [indicator1ApprovalDate, setIndicator1ApprovalDate] = useState("");
   const [indicator1Type, setIndicator1Type] = useState("Digital");
@@ -56,6 +58,7 @@ export function MetrologyEquipmentPage() {
   const [indicator2Brand, setIndicator2Brand] = useState("");
   const [indicator2Model, setIndicator2Model] = useState("");
   const [indicator2SerialNumber, setIndicator2SerialNumber] = useState("");
+  const [indicator2ApprovalCode, setIndicator2ApprovalCode] = useState("");
   const [indicator2ApprovalNumber, setIndicator2ApprovalNumber] = useState("");
   const [indicator2ApprovalDate, setIndicator2ApprovalDate] = useState("");
   const [indicator2Type, setIndicator2Type] = useState("Mecánico (Romana/Cuadrante)");
@@ -186,6 +189,8 @@ export function MetrologyEquipmentPage() {
     setLocation("");
     setApplicableStandard("Res25_2025");
     setPlatformType("TruckScale");
+
+    setPlatformApprovalCode("");
     setPlatformApprovalNumber("");
     setPlatformApprovalDate("");
     setPlatformDimensions("21.00 x 3.00 m");
@@ -194,6 +199,7 @@ export function MetrologyEquipmentPage() {
     setIndicator1Brand("");
     setIndicator1Model("");
     setIndicator1SerialNumber("");
+    setIndicator1ApprovalCode("");
     setIndicator1ApprovalNumber("");
     setIndicator1ApprovalDate("");
     setIndicator1Type("Digital");
@@ -202,6 +208,7 @@ export function MetrologyEquipmentPage() {
     setIndicator2Brand("");
     setIndicator2Model("");
     setIndicator2SerialNumber("");
+    setIndicator2ApprovalCode("");
     setIndicator2ApprovalNumber("");
     setIndicator2ApprovalDate("");
     setIndicator2Type("Mecánico (Romana/Cuadrante)");
@@ -234,6 +241,7 @@ export function MetrologyEquipmentPage() {
     setApplicableStandard((eq.applicableStandard as any) || "Res25_2025");
     setPlatformType((eq.platformType as any) || "TruckScale");
     
+    setPlatformApprovalCode((eq as any).platformApprovalCode || "");
     setPlatformApprovalNumber((eq as any).platformApprovalNumber || "");
     setPlatformApprovalDate((eq as any).platformApprovalDate ? (eq as any).platformApprovalDate.substring(0, 10) : "");
     setPlatformDimensions((eq as any).platformDimensions || "");
@@ -242,7 +250,8 @@ export function MetrologyEquipmentPage() {
     setIndicator1Brand((eq as any).indicator1Brand || eq.brand || "");
     setIndicator1Model((eq as any).indicator1Model || eq.model || "");
     setIndicator1SerialNumber((eq as any).indicator1SerialNumber || eq.serialNumber || "");
-    setIndicator1ApprovalNumber((eq as any).indicator1ApprovalNumber || eq.approvalCode || "");
+    setIndicator1ApprovalCode((eq as any).indicator1ApprovalCode || eq.approvalCode || "");
+    setIndicator1ApprovalNumber((eq as any).indicator1ApprovalNumber || "");
     setIndicator1ApprovalDate((eq as any).indicator1ApprovalDate ? (eq as any).indicator1ApprovalDate.substring(0, 10) : "");
     setIndicator1Type((eq as any).indicator1Type || eq.indicationType || "Digital");
 
@@ -250,6 +259,7 @@ export function MetrologyEquipmentPage() {
     setIndicator2Brand((eq as any).indicator2Brand || "");
     setIndicator2Model((eq as any).indicator2Model || "");
     setIndicator2SerialNumber((eq as any).indicator2SerialNumber || "");
+    setIndicator2ApprovalCode((eq as any).indicator2ApprovalCode || "");
     setIndicator2ApprovalNumber((eq as any).indicator2ApprovalNumber || "");
     setIndicator2ApprovalDate((eq as any).indicator2ApprovalDate ? (eq as any).indicator2ApprovalDate.substring(0, 10) : "");
     setIndicator2Type((eq as any).indicator2Type || "Mecánico (Romana/Cuadrante)");
@@ -308,14 +318,16 @@ export function MetrologyEquipmentPage() {
         customerName: customerName.trim(),
         location: location.trim(),
         applicableStandard,
-        approvalCode: indicator1ApprovalNumber.trim() || platformApprovalNumber.trim(),
+        approvalCode: indicator1ApprovalCode.trim() || platformApprovalCode.trim() || indicator1ApprovalNumber.trim(),
         platformType,
+        platformApprovalCode: platformApprovalCode.trim(),
         platformApprovalNumber: platformApprovalNumber.trim(),
         platformApprovalDate: platformApprovalDate ? new Date(platformApprovalDate).toISOString() : undefined,
         platformDimensions: platformDimensions.trim(),
         indicator1Brand: indicator1Brand.trim(),
         indicator1Model: indicator1Model.trim(),
         indicator1SerialNumber: indicator1SerialNumber.trim(),
+        indicator1ApprovalCode: indicator1ApprovalCode.trim(),
         indicator1ApprovalNumber: indicator1ApprovalNumber.trim(),
         indicator1ApprovalDate: indicator1ApprovalDate ? new Date(indicator1ApprovalDate).toISOString() : undefined,
         indicator1Type,
@@ -323,6 +335,7 @@ export function MetrologyEquipmentPage() {
         indicator2Brand: indicator2Brand.trim(),
         indicator2Model: indicator2Model.trim(),
         indicator2SerialNumber: indicator2SerialNumber.trim(),
+        indicator2ApprovalCode: indicator2ApprovalCode.trim(),
         indicator2ApprovalNumber: indicator2ApprovalNumber.trim(),
         indicator2ApprovalDate: indicator2ApprovalDate ? new Date(indicator2ApprovalDate).toISOString() : undefined,
         indicator2Type,
@@ -520,7 +533,7 @@ export function MetrologyEquipmentPage() {
           <div style={{ flex: 1, minWidth: 260 }}>
             <input
               type="text"
-              placeholder="Buscar por código, descripción, cliente, marca, modelo o disposición..."
+              placeholder="Buscar por código, descripción, cliente, marca, modelo, código de aprobación o disposición..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -575,7 +588,7 @@ export function MetrologyEquipmentPage() {
                 <tr>
                   <th>Código / Identif.</th>
                   <th>Descripción & Configuración</th>
-                  <th>Resolución & Aprobaciones</th>
+                  <th>Resolución & Aprobaciones de Modelo</th>
                   <th>Cliente & Planta</th>
                   <th>Capacidad (Max / Min)</th>
                   <th>Escalón (e / d)</th>
@@ -620,14 +633,19 @@ export function MetrologyEquipmentPage() {
                         }}>
                           {isRes25 ? "Res. 25/2025 (OIML)" : "Res. 2307/80 (SIMELA)"}
                         </span>
-                        {(eq as any).platformApprovalNumber && (
-                          <div className="muted" style={{ fontSize: "0.74rem", marginTop: 2 }}>
-                            Plat: {(eq as any).platformApprovalNumber}
+                        {((eq as any).platformApprovalCode || (eq as any).platformApprovalNumber) && (
+                          <div className="muted" style={{ fontSize: "0.74rem", marginTop: 3 }}>
+                            <strong>Plat:</strong> {(eq as any).platformApprovalCode || (eq as any).platformApprovalNumber}
                           </div>
                         )}
-                        {(eq as any).indicator1ApprovalNumber && (
+                        {((eq as any).indicator1ApprovalCode || (eq as any).indicator1ApprovalNumber) && (
                           <div className="muted" style={{ fontSize: "0.74rem" }}>
-                            Ind: {(eq as any).indicator1ApprovalNumber}
+                            <strong>Ind 1:</strong> {(eq as any).indicator1ApprovalCode || (eq as any).indicator1ApprovalNumber}
+                          </div>
+                        )}
+                        {(eq as any).hasSecondaryIndicator && ((eq as any).indicator2ApprovalCode || (eq as any).indicator2ApprovalNumber) && (
+                          <div className="muted" style={{ fontSize: "0.74rem" }}>
+                            <strong>Ind 2:</strong> {(eq as any).indicator2ApprovalCode || (eq as any).indicator2ApprovalNumber}
                           </div>
                         )}
                       </td>
@@ -689,10 +707,10 @@ export function MetrologyEquipmentPage() {
         )}
       </div>
 
-      {/* Modal Principal Alta / Edición de Balanza - Amplio, Modular y Completo */}
+      {/* Modal Principal Alta / Edición de Balanza - Modular, Completo y Específico */}
       {showModal && (
         <div className="modal-backdrop" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div className="modal-card" style={{ maxWidth: 1040, width: "100%", maxHeight: "95vh", overflowY: "auto", padding: "26px 32px", borderRadius: 16 }}>
+          <div className="modal-card" style={{ maxWidth: 1060, width: "100%", maxHeight: "95vh", overflowY: "auto", padding: "26px 32px", borderRadius: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, borderBottom: "1px solid var(--surface-border)", paddingBottom: 14 }}>
               <div>
                 <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.74rem" }}>
@@ -923,7 +941,7 @@ export function MetrologyEquipmentPage() {
                   📦 Componente 1: Plataforma / Receptor de Carga
                 </h4>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1.2fr 1.2fr 1fr", gap: 12, marginBottom: 12 }}>
                   <label>
                     <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Tipo de Receptor</span>
                     <select
@@ -945,12 +963,17 @@ export function MetrologyEquipmentPage() {
                   </label>
 
                   <label>
-                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Disposición / Aprobación</span>
-                    <input type="text" placeholder="ej. Disp. DNCI 124/2018" value={platformApprovalNumber} onChange={(e) => setPlatformApprovalNumber(e.target.value)} style={{ marginTop: 4 }} />
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Código Aprob. Modelo</span>
+                    <input type="text" placeholder="ej. DNH-1450/84 o OIML R76-P-01" value={platformApprovalCode} onChange={(e) => setPlatformApprovalCode(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
 
                   <label>
-                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Fecha de Disposición</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Disposición / Aprobación</span>
+                    <input type="text" placeholder="ej. Disp. DNCI Nº 124/2018" value={platformApprovalNumber} onChange={(e) => setPlatformApprovalNumber(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Fecha Disposición</span>
                     <input type="date" value={platformApprovalDate} onChange={(e) => setPlatformApprovalDate(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
                 </div>
@@ -979,7 +1002,7 @@ export function MetrologyEquipmentPage() {
                   📟 Componente 2: Dispositivo Indicador Principal (Indicador 1)
                 </h4>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.2fr 1fr 1.2fr 1fr", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.2fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
                   <label>
                     <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Marca Indicador 1</span>
                     <input type="text" placeholder="ej. Systel / Toledo / PST" value={indicator1Brand} onChange={(e) => setIndicator1Brand(e.target.value)} style={{ marginTop: 4 }} />
@@ -996,12 +1019,28 @@ export function MetrologyEquipmentPage() {
                   </label>
 
                   <label>
-                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Disposición / Aprobación</span>
-                    <input type="text" placeholder="ej. Disp. DNCI 45/2021" value={indicator1ApprovalNumber} onChange={(e) => setIndicator1ApprovalNumber(e.target.value)} style={{ marginTop: 4 }} />
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Tipo de Indicación</span>
+                    <select value={indicator1Type} onChange={(e) => setIndicator1Type(e.target.value)} style={{ marginTop: 4 }}>
+                      <option value="Digital">Digital (Discontinua)</option>
+                      <option value="Analógica">Analógica (Continua / Cuadrante)</option>
+                      <option value="Impresora">Con Dispositivo Impresor</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.2fr 1fr", gap: 12 }}>
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Código Aprob. Modelo Ind 1</span>
+                    <input type="text" placeholder="ej. SCT-204/05 o RESOL-2025-25-APN-SIYC#MEC" value={indicator1ApprovalCode} onChange={(e) => setIndicator1ApprovalCode(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
 
                   <label>
-                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Fecha Disposición</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Disposición / Aprobación Ind 1</span>
+                    <input type="text" placeholder="ej. Disp. DNCI Nº 45/2021" value={indicator1ApprovalNumber} onChange={(e) => setIndicator1ApprovalNumber(e.target.value)} style={{ marginTop: 4 }} />
+                  </label>
+
+                  <label>
+                    <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Fecha Disposición Ind 1</span>
                     <input type="date" value={indicator1ApprovalDate} onChange={(e) => setIndicator1ApprovalDate(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
                 </div>
@@ -1029,42 +1068,51 @@ export function MetrologyEquipmentPage() {
                 </div>
 
                 {hasSecondaryIndicator && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr 1fr 1.2fr 1fr", gap: 12, marginTop: 12 }}>
-                    <label>
-                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Tipo Indicador 2</span>
-                      <select value={indicator2Type} onChange={(e) => setIndicator2Type(e.target.value)} style={{ marginTop: 4 }}>
-                        <option value="Mecánico (Romana/Cuadrante)">Mecánico (Romana/Cuadrante)</option>
-                        <option value="Digital">Digital / Electrónico</option>
-                        <option value="Repetidor">Repetidor Remoto</option>
-                        <option value="Impresor">Dispositivo Impresor</option>
-                      </select>
-                    </label>
+                  <>
+                    <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr 1fr", gap: 12, marginTop: 12, marginBottom: 12 }}>
+                      <label>
+                        <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Tipo Indicador 2</span>
+                        <select value={indicator2Type} onChange={(e) => setIndicator2Type(e.target.value)} style={{ marginTop: 4 }}>
+                          <option value="Mecánico (Romana/Cuadrante)">Mecánico (Romana/Cuadrante)</option>
+                          <option value="Digital">Digital / Electrónico</option>
+                          <option value="Repetidor">Repetidor Remoto</option>
+                          <option value="Impresor">Dispositivo Impresor</option>
+                        </select>
+                      </label>
 
-                    <label>
-                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Marca Ind 2</span>
-                      <input type="text" placeholder="ej. Latorre / Fairbanks" value={indicator2Brand} onChange={(e) => setIndicator2Brand(e.target.value)} style={{ marginTop: 4 }} />
-                    </label>
+                      <label>
+                        <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Marca Ind 2</span>
+                        <input type="text" placeholder="ej. Latorre / Fairbanks" value={indicator2Brand} onChange={(e) => setIndicator2Brand(e.target.value)} style={{ marginTop: 4 }} />
+                      </label>
 
-                    <label>
-                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Modelo Ind 2</span>
-                      <input type="text" placeholder="ej. Romana R-50" value={indicator2Model} onChange={(e) => setIndicator2Model(e.target.value)} style={{ marginTop: 4 }} />
-                    </label>
+                      <label>
+                        <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Modelo Ind 2</span>
+                        <input type="text" placeholder="ej. Romana R-50" value={indicator2Model} onChange={(e) => setIndicator2Model(e.target.value)} style={{ marginTop: 4 }} />
+                      </label>
 
-                    <label>
-                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Serie Ind 2</span>
-                      <input type="text" placeholder="ej. SN-MEC-441" value={indicator2SerialNumber} onChange={(e) => setIndicator2SerialNumber(e.target.value)} style={{ marginTop: 4 }} />
-                    </label>
+                      <label>
+                        <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Serie Ind 2</span>
+                        <input type="text" placeholder="ej. SN-MEC-441" value={indicator2SerialNumber} onChange={(e) => setIndicator2SerialNumber(e.target.value)} style={{ marginTop: 4 }} />
+                      </label>
+                    </div>
 
-                    <label>
-                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Disposición Ind 2</span>
-                      <input type="text" placeholder="ej. Disp. DNCI 12/2010" value={indicator2ApprovalNumber} onChange={(e) => setIndicator2ApprovalNumber(e.target.value)} style={{ marginTop: 4 }} />
-                    </label>
+                    <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.2fr 1fr", gap: 12 }}>
+                      <label>
+                        <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Código Aprob. Modelo Ind 2</span>
+                        <input type="text" placeholder="ej. DNH-88/19" value={indicator2ApprovalCode} onChange={(e) => setIndicator2ApprovalCode(e.target.value)} style={{ marginTop: 4 }} />
+                      </label>
 
-                    <label>
-                      <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Fecha Disposición</span>
-                      <input type="date" value={indicator2ApprovalDate} onChange={(e) => setIndicator2ApprovalDate(e.target.value)} style={{ marginTop: 4 }} />
-                    </label>
-                  </div>
+                      <label>
+                        <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Nº Disposición Ind 2</span>
+                        <input type="text" placeholder="ej. Disp. DNCI Nº 12/2010" value={indicator2ApprovalNumber} onChange={(e) => setIndicator2ApprovalNumber(e.target.value)} style={{ marginTop: 4 }} />
+                      </label>
+
+                      <label>
+                        <span style={{ fontWeight: 700, fontSize: "0.84rem" }}>Fecha Disposición Ind 2</span>
+                        <input type="date" value={indicator2ApprovalDate} onChange={(e) => setIndicator2ApprovalDate(e.target.value)} style={{ marginTop: 4 }} />
+                      </label>
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -1103,7 +1151,7 @@ export function MetrologyEquipmentPage() {
                   </label>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr 1fr 1.3fr", gap: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr 1fr 1fr", gap: 14 }}>
                   <label>
                     <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Unidad de Medida</span>
                     <select value={unit} onChange={(e) => setUnit(e.target.value)} style={{ marginTop: 4 }}>
@@ -1131,13 +1179,9 @@ export function MetrologyEquipmentPage() {
                     <input type="number" step="1" min="1" max="16" value={loadCellsCount} onChange={(e) => setLoadCellsCount(e.target.value)} style={{ marginTop: 4 }} />
                   </label>
 
-                  <label>
-                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Tipo de Indicación</span>
-                    <select value={indicator1Type} onChange={(e) => setIndicator1Type(e.target.value)} style={{ marginTop: 4 }}>
-                      <option value="Digital">Digital (Discontinua)</option>
-                      <option value="Analógica">Analógica (Continua / Cuadrante)</option>
-                      <option value="Impresora">Con Dispositivo Impresor</option>
-                    </select>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 22, cursor: "pointer" }}>
+                    <input type="checkbox" checked={hasTare} onChange={(e) => setHasTare(e.target.checked)} style={{ width: 18, height: 18 }} />
+                    <span style={{ fontWeight: 700, fontSize: "0.86rem" }}>Posee Tara (T)</span>
                   </label>
                 </div>
               </div>

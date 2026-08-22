@@ -96,10 +96,14 @@ public static class MetrologyEndpoints
                     e.SerialNumber.ToLower().Contains(term) ||
                     e.CustomerName.ToLower().Contains(term) ||
                     e.Location.ToLower().Contains(term) ||
+                    e.PlatformApprovalCode.ToLower().Contains(term) ||
                     e.PlatformApprovalNumber.ToLower().Contains(term) ||
                     e.Indicator1Brand.ToLower().Contains(term) ||
                     e.Indicator1Model.ToLower().Contains(term) ||
-                    e.Indicator1ApprovalNumber.ToLower().Contains(term));
+                    e.Indicator1ApprovalCode.ToLower().Contains(term) ||
+                    e.Indicator1ApprovalNumber.ToLower().Contains(term) ||
+                    e.Indicator2ApprovalCode.ToLower().Contains(term) ||
+                    e.Indicator2ApprovalNumber.ToLower().Contains(term));
             }
 
             if (!string.IsNullOrWhiteSpace(status))
@@ -167,12 +171,14 @@ public static class MetrologyEndpoints
                 ApplicableStandard = string.IsNullOrWhiteSpace(req.ApplicableStandard) ? "Res25_2025" : req.ApplicableStandard,
                 ApprovalCode = req.ApprovalCode?.Trim() ?? "",
                 PlatformType = string.IsNullOrWhiteSpace(req.PlatformType) ? "TruckScale" : req.PlatformType,
+                PlatformApprovalCode = req.PlatformApprovalCode?.Trim() ?? "",
                 PlatformApprovalNumber = req.PlatformApprovalNumber?.Trim() ?? "",
                 PlatformApprovalDate = req.PlatformApprovalDate,
                 PlatformDimensions = req.PlatformDimensions?.Trim() ?? "",
                 Indicator1Brand = req.Indicator1Brand?.Trim() ?? "",
                 Indicator1Model = req.Indicator1Model?.Trim() ?? "",
                 Indicator1SerialNumber = req.Indicator1SerialNumber?.Trim() ?? "",
+                Indicator1ApprovalCode = req.Indicator1ApprovalCode?.Trim() ?? "",
                 Indicator1ApprovalNumber = req.Indicator1ApprovalNumber?.Trim() ?? "",
                 Indicator1ApprovalDate = req.Indicator1ApprovalDate,
                 Indicator1Type = req.Indicator1Type?.Trim() ?? "Digital",
@@ -180,6 +186,7 @@ public static class MetrologyEndpoints
                 Indicator2Brand = req.Indicator2Brand?.Trim() ?? "",
                 Indicator2Model = req.Indicator2Model?.Trim() ?? "",
                 Indicator2SerialNumber = req.Indicator2SerialNumber?.Trim() ?? "",
+                Indicator2ApprovalCode = req.Indicator2ApprovalCode?.Trim() ?? "",
                 Indicator2ApprovalNumber = req.Indicator2ApprovalNumber?.Trim() ?? "",
                 Indicator2ApprovalDate = req.Indicator2ApprovalDate,
                 Indicator2Type = req.Indicator2Type?.Trim() ?? "",
@@ -234,12 +241,14 @@ public static class MetrologyEndpoints
             equipment.ApplicableStandard = string.IsNullOrWhiteSpace(req.ApplicableStandard) ? "Res25_2025" : req.ApplicableStandard;
             equipment.ApprovalCode = req.ApprovalCode?.Trim() ?? "";
             equipment.PlatformType = string.IsNullOrWhiteSpace(req.PlatformType) ? "TruckScale" : req.PlatformType;
+            equipment.PlatformApprovalCode = req.PlatformApprovalCode?.Trim() ?? "";
             equipment.PlatformApprovalNumber = req.PlatformApprovalNumber?.Trim() ?? "";
             equipment.PlatformApprovalDate = req.PlatformApprovalDate;
             equipment.PlatformDimensions = req.PlatformDimensions?.Trim() ?? "";
             equipment.Indicator1Brand = req.Indicator1Brand?.Trim() ?? "";
             equipment.Indicator1Model = req.Indicator1Model?.Trim() ?? "";
             equipment.Indicator1SerialNumber = req.Indicator1SerialNumber?.Trim() ?? "";
+            equipment.Indicator1ApprovalCode = req.Indicator1ApprovalCode?.Trim() ?? "";
             equipment.Indicator1ApprovalNumber = req.Indicator1ApprovalNumber?.Trim() ?? "";
             equipment.Indicator1ApprovalDate = req.Indicator1ApprovalDate;
             equipment.Indicator1Type = req.Indicator1Type?.Trim() ?? "Digital";
@@ -247,6 +256,7 @@ public static class MetrologyEndpoints
             equipment.Indicator2Brand = req.Indicator2Brand?.Trim() ?? "";
             equipment.Indicator2Model = req.Indicator2Model?.Trim() ?? "";
             equipment.Indicator2SerialNumber = req.Indicator2SerialNumber?.Trim() ?? "";
+            equipment.Indicator2ApprovalCode = req.Indicator2ApprovalCode?.Trim() ?? "";
             equipment.Indicator2ApprovalNumber = req.Indicator2ApprovalNumber?.Trim() ?? "";
             equipment.Indicator2ApprovalDate = req.Indicator2ApprovalDate;
             equipment.Indicator2Type = req.Indicator2Type?.Trim() ?? "";
