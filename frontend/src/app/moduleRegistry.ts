@@ -101,19 +101,21 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "comunicaciones",
-    label: "Correo",
-    icon: "📬",
+    label: "Comunicaciones",
+    icon: "💬",
     gradient: "linear-gradient(135deg, #38bdf8, #0284c7)",
     glow: "rgba(2, 132, 199, 0.35)",
-    title: "COMUNICACIONES",
+    title: "COMUNICACIONES & MENSAJERÍA",
     defaultPath: "/comunicaciones",
-    pathPrefixes: ["/comunicaciones"],
+    pathPrefixes: ["/comunicaciones", "/configuracion/correo", "/configuracion/plantillas"],
     minimumPlan: "comercial",
     requiredPermission: "communications.read",
     dependencies: ["directorio"],
     items: [
-      { path: "/comunicaciones", label: "Bandeja de correo", icon: "✉️" },
-      { path: "/comunicaciones/canales", label: "Canales de contacto", icon: "💬" }
+      { path: "/comunicaciones", label: "Bandeja de Entrada", icon: "📬" },
+      { path: "/comunicaciones/canales", label: "WhatsApp & Redes", icon: "💬" },
+      { path: "/configuracion/correo", label: "Configurar Casillas de Mail", icon: "⚙️" },
+      { path: "/configuracion/plantillas", label: "Plantillas de Mensajes", icon: "📄" }
     ]
   },
   {
