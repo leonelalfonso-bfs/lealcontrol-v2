@@ -69,7 +69,10 @@ import { CurrentAccountsPage } from "./pages/CurrentAccountsPage";
 import { CashFlowPage } from "./pages/CashFlowPage";
 import { HumanResourcesDashboardPage } from "./pages/HumanResourcesDashboardPage";
 import { OrgChartPage } from "./pages/OrgChartPage";
+import { OrganizationPositionFormPage } from "./pages/OrganizationPositionFormPage";
+import { PositionJobDescriptionPage } from "./pages/PositionJobDescriptionPage";
 import { ProcedureManualsPage } from "./pages/ProcedureManualsPage";
+import { ProcedureManualFormPage } from "./pages/ProcedureManualFormPage";
 import { EmployeesListPage } from "./pages/EmployeesListPage";
 import { EmployeeFormPage } from "./pages/EmployeeFormPage";
 import { PayrollListPage } from "./pages/PayrollListPage";
@@ -501,7 +504,12 @@ export function App() {
               {/* Human Resources & Payroll Routes */}
               <Route path="/rrhh" element={<HumanResourcesDashboardPage />} />
               <Route path="/rrhh/organigrama" element={<OrgChartPage />} />
+              <Route path="/rrhh/organigrama/puestos/nuevo" element={<OrganizationPositionFormPage />} />
+              <Route path="/rrhh/organigrama/puestos/:id" element={<OrganizationPositionFormPage />} />
+              <Route path="/rrhh/organigrama/puestos/:id/descripcion" element={<PositionJobDescriptionPage />} />
               <Route path="/rrhh/manuales" element={<ProcedureManualsPage />} />
+              <Route path="/rrhh/manuales/nuevo" element={<ProcedureManualFormPage />} />
+              <Route path="/rrhh/manuales/:id" element={<ProcedureManualFormPage />} />
               <Route path="/rrhh/empleados" element={<EmployeesListPage />} />
               <Route path="/rrhh/empleados/nuevo" element={<EmployeeFormPage />} />
               <Route path="/rrhh/empleados/:id" element={<EmployeeFormPage />} />

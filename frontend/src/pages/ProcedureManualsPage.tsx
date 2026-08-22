@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { type ProcedureManual } from "../api/types";
@@ -21,19 +21,6 @@ export function ProcedureManualsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal State
-  const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [code, setCode] = useState("");
-  const [title, setTitle] = useState("");
-  const [area, setArea] = useState("Metrología");
-  const [version, setVersion] = useState("v1.0");
-  const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().slice(0, 10));
-  const [status, setStatus] = useState("Vigente");
-  const [description, setDescription] = useState("");
-  const [documentUrl, setDocumentUrl] = useState("");
-  const [saving, setSaving] = useState(false);
-
   const load = async () => {
     setLoading(true);
     try {
@@ -51,62 +38,6 @@ export function ProcedureManualsPage() {
     load();
   }, [selectedArea]);
 
-  const openNew = () => {
-    setEditingId(null);
-    setCode(`PO-${selectedArea !== "ALL" ? selectedArea.slice(0, 3).toUpperCase() : "MET"}-00${manuals.length + 1}`);
-    setTitle("");
-    setArea(selectedArea !== "ALL" ? selectedArea : "Metrología");
-    setVersion("v1.0");
-    setEffectiveDate(new Date().toISOString().slice(0, 10));
-    setStatus("Vigente");
-    setDescription("");
-    setDocumentUrl("");
-    setShowModal(true);
-  };
-
-  const openEdit = (m: ProcedureManual) => {
-    setEditingId(m.id);
-    setCode(m.code);
-    setTitle(m.title);
-    setArea(m.area);
-    setVersion(m.version);
-    setEffectiveDate(m.effectiveDate ? m.effectiveDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
-    setStatus(m.status);
-    setDescription(m.description || "");
-    setDocumentUrl(m.documentUrl || "");
-    setShowModal(true);
-  };
-
-  const handleSave = async (e: FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      const payload: Partial<ProcedureManual> = {
-        code: code.trim(),
-        title: title.trim(),
-        area: area.trim(),
-        version: version.trim(),
-        effectiveDate: new Date(effectiveDate).toISOString(),
-        status: status.trim(),
-        description: description.trim(),
-        documentUrl: documentUrl.trim() || null
-      };
-
-      if (editingId) {
-        await api.updateProcedureManual(editingId, payload);
-      } else {
-        await api.createProcedureManual(payload);
-      }
-      setShowModal(false);
-      await load();
-    } catch (err: any) {
-      setError(err?.message || "Error al guardar manual.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleDelete = async (m: ProcedureManual) => {
     if (!window.confirm(`¿Eliminar el manual "${m.code} - ${m.title}"?`)) return;
     try {
@@ -119,7 +50,11 @@ export function ProcedureManualsPage() {
 
   const filteredManuals = manuals.filter((m) => {
     const q = search.toLowerCase();
-    return m.code.toLowerCase().includes(q) || m.title.toLowerCase().includes(q) || (m.description && m.description.toLowerCase().includes(q));
+    return (
+      m.code.toLowerCase().includes(q) ||
+      m.title.toLowerCase().includes(q) ||
+      (m.description && m.description.toLowerCase().includes(q))
+    );
   });
 
   return (
@@ -132,9 +67,13 @@ export function ProcedureManualsPage() {
           <p className="muted">Repositorio documental de procesos estandarizados, instructivos de trabajo (IT) y normas operativas por área</p>
         </div>
         <div className="row" style={{ gap: 10 }}>
-          <button className="btn" onClick={openNew} style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", color: "#fff", fontWeight: 700 }}>
+          <Link
+            to="/rrhh/manuales/nuevo"
+            className="btn"
+            style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", color: "#fff", fontWeight: 700 }}
+          >
             ➕ Nuevo Procedimiento / Instructivo
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -259,15 +198,14 @@ export function ProcedureManualsPage() {
                             👁️ Ver
                           </a>
                         )}
-                        <button
-                          type="button"
+                        <Link
+                          to={`/rrhh/manuales/${m.id}`}
                           className="btn ghost compact"
                           title="Editar manual"
-                          onClick={() => openEdit(m)}
                           style={{ padding: "3px 8px", fontSize: "0.75rem" }}
                         >
                           ✏️
-                        </button>
+                        </Link>
                         <button
                           type="button"
                           className="btn ghost compact"
@@ -286,117 +224,6 @@ export function ProcedureManualsPage() {
           </div>
         )}
       </div>
-
-      {/* Modal: Crear / Editar Manual */}
-      {showModal && (
-        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
-          <div className="modal-card" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
-            <div className="section-head">
-              <div>
-                <span className="eyebrow">CONTROL DOCUMENTAL</span>
-                <h2>{editingId ? "✏️ Editar Procedimiento" : "➕ Nuevo Procedimiento / Instructivo"}</h2>
-              </div>
-              <button type="button" className="icon-button" onClick={() => setShowModal(false)}>
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="stack" style={{ gap: 14, marginTop: 14 }}>
-              <div className="grid-2">
-                <label>
-                  Código del Procedimiento *
-                  <input
-                    required
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="Ej: PO-MET-001"
-                  />
-                </label>
-
-                <label>
-                  Área Responsable *
-                  <select value={area} onChange={(e) => setArea(e.target.value)} required>
-                    {AREAS.filter((a) => a.id !== "ALL").map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <label>
-                Título del Procedimiento *
-                <input
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ej: Procedimiento de Calibración de Balanzas de Gran Capacidad"
-                />
-              </label>
-
-              <div className="grid-3">
-                <label>
-                  Versión *
-                  <input
-                    required
-                    value={version}
-                    onChange={(e) => setVersion(e.target.value)}
-                    placeholder="v1.0"
-                  />
-                </label>
-
-                <label>
-                  Fecha de Vigencia *
-                  <input
-                    type="date"
-                    required
-                    value={effectiveDate}
-                    onChange={(e) => setEffectiveDate(e.target.value)}
-                  />
-                </label>
-
-                <label>
-                  Estado *
-                  <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                    <option value="Vigente">✓ Vigente</option>
-                    <option value="EnRevisión">En Revisión</option>
-                    <option value="Obsoleto">Obsoleto</option>
-                  </select>
-                </label>
-              </div>
-
-              <label>
-                Alcance y Descripción del Procedimiento
-                <textarea
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe brevemente el alcance, destinatarios y pautas clave del instructivo..."
-                />
-              </label>
-
-              <label>
-                Enlace al Documento (URL / PDF en la nube / Red local)
-                <input
-                  value={documentUrl}
-                  onChange={(e) => setDocumentUrl(e.target.value)}
-                  placeholder="https://drive.google.com/... o enlace interno"
-                />
-              </label>
-
-              <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 10 }}>
-                <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>
-                  Cancelar
-                </button>
-                <button className="btn" disabled={saving}>
-                  {saving ? "Guardando..." : "Guardar Procedimiento"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
