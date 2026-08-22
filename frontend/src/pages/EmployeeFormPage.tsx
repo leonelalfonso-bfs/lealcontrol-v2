@@ -18,7 +18,7 @@ const INGRESO_DOC_TYPES = [
 ];
 
 const EGRESO_DOC_TYPES = [
-  { id: "ReciboLiquidacionFinal", label: "🧾 Recibo Liquidación Final Firmado", description: "Recibo de haberes finales firmado conforme por el empleado" },
+  { id: "ReciboLiquidacionFinal", label: "🧾 Recibo Liquidación Final Firmado", description: "Recibo de haberes finales firmado conforme por el colaborador" },
   { id: "CertificadoArt80", label: "📜 Certificado de Trabajo (Art. 80 LCT)", description: "Certificado de trabajo y constancia de aportes Art. 80" },
   { id: "CertificadoAfip57", label: "📊 Certificado Remuneraciones (AFIP PS 6.2)", description: "Formulario oficial AFIP de servicios y remuneraciones históricas" },
   { id: "TelegramaRenunciaDespido", label: "✉️ Telegrama de Renuncia / Copia CD", description: "Constancia fehaciente de desvinculación laboral" }
@@ -225,29 +225,97 @@ export function EmployeeFormPage() {
     }
   };
 
-  const handleUpdateDocumentStatus = async (docType: string, category: "Ingreso" | "Egreso", currentStatus: string) => {
-    if (!id) return;
-    const existing = documents.find((d) => d.documentType === docType);
-    const newStatus = currentStatus === "Presentado" ? "Pendiente" : "Presentado";
+  // Upload PDF / Document File
+  const handleFileUpload = async (docType: string, category: "Ingreso" | "Egreso", e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
 
     try {
-      if (existing) {
-        await api.updateEmployeeDocument(existing.id, {
-          ...existing,
-          status: newStatus
-        });
-      } else {
-        await api.createEmployeeDocument(id, {
-          documentType: docType,
-          category,
-          fileName: `${docType}_${fileNumber}.pdf`,
-          status: "Presentado"
-        });
-      }
-      const updatedDocs = await api.listEmployeeDocuments(id);
-      setDocuments(updatedDocs);
+      setUploadingDocType(docType);
+      setError(null);
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        const existing = documents.find((d) => d.documentType === docType);
+
+        if (existing) {
+          await api.updateEmployeeDocument(existing.id, {
+            ...existing,
+            fileName: file.name,
+            fileUrl: base64,
+            status: "Presentado",
+            uploadedAtUtc: new Date().toISOString()
+          });
+        } else {
+          await api.createEmployeeDocument(id, {
+            documentType: docType,
+            category,
+            fileName: file.name,
+            fileUrl: base64,
+            status: "Presentado",
+            uploadedAtUtc: new Date().toISOString()
+          });
+        }
+
+        const updatedDocs = await api.listEmployeeDocuments(id);
+        setDocuments(updatedDocs);
+        setUploadingDocType(null);
+      };
+
+      reader.readAsDataURL(file);
     } catch (err: any) {
-      setError(err?.message || "Error al actualizar estado del documento");
+      setError(err?.message || "Error al subir archivo");
+      setUploadingDocType(null);
+    }
+  };
+
+  const handleViewDoc = (doc: EmployeeDocument) => {
+    if (!doc.fileUrl) {
+      alert("No hay archivo cargado para este documento.");
+      return;
+    }
+    const win = window.open();
+    if (win) {
+      if (doc.fileUrl.startsWith("data:")) {
+        win.document.write(
+          `<iframe src="${doc.fileUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`
+        );
+        win.document.title = doc.fileName || doc.documentType;
+      } else {
+        win.location.href = doc.fileUrl;
+      }
+    }
+  };
+
+  const handleDownloadDoc = (doc: EmployeeDocument) => {
+    if (!doc.fileUrl) {
+      alert("No hay archivo para descargar.");
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = doc.fileUrl;
+    a.download = doc.fileName || `${doc.documentType}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleDeleteDoc = async (doc: EmployeeDocument) => {
+    if (!window.confirm(`¿Quitar el archivo adjunto de "${doc.fileName || doc.documentType}"?`)) return;
+    try {
+      if (id) {
+        await api.updateEmployeeDocument(doc.id, {
+          ...doc,
+          fileUrl: null,
+          fileName: "",
+          status: "Pendiente"
+        });
+        const updatedDocs = await api.listEmployeeDocuments(id);
+        setDocuments(updatedDocs);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Error al quitar archivo.");
     }
   };
 
@@ -285,8 +353,14 @@ export function EmployeeFormPage() {
   }
 
   const docMap = new Map(documents.map((d) => [d.documentType, d]));
-  const ingresoPresented = INGRESO_DOC_TYPES.filter((d) => docMap.get(d.id)?.status === "Presentado").length;
-  const egresoPresented = EGRESO_DOC_TYPES.filter((d) => docMap.get(d.id)?.status === "Presentado").length;
+  const ingresoPresented = INGRESO_DOC_TYPES.filter((d) => {
+    const doc = docMap.get(d.id);
+    return doc?.status === "Presentado" || Boolean(doc?.fileUrl);
+  }).length;
+  const egresoPresented = EGRESO_DOC_TYPES.filter((d) => {
+    const doc = docMap.get(d.id);
+    return doc?.status === "Presentado" || Boolean(doc?.fileUrl);
+  }).length;
 
   return (
     <div className="page-wide stack" style={{ gap: 20, paddingBottom: 60 }}>
@@ -306,7 +380,7 @@ export function EmployeeFormPage() {
           </div>
           <h1 style={{ margin: 0 }}>{isEditing ? `👤 ${lastName}, ${firstName} (${fileNumber})` : "👤 Nuevo Colaborador"}</h1>
           <p className="muted" style={{ margin: "4px 0 0 0" }}>
-            Ficha laboral completa, legajo digital, datos previsionales y asignación de EPP
+            Ficha laboral completa, legajo digital con adjuntos PDF, datos previsionales y asignación de EPP
           </p>
         </div>
 
@@ -314,7 +388,13 @@ export function EmployeeFormPage() {
           <button type="button" className="btn btn-outline" onClick={() => navigate("/rrhh/empleados")}>
             ← Volver a Colaboradores
           </button>
-          <button type="button" className="btn" onClick={handleSaveEmployee} disabled={saving} style={{ background: "linear-gradient(135deg, #ec4899, #db2777)", color: "#fff", fontWeight: 700 }}>
+          <button
+            type="button"
+            className="btn"
+            onClick={handleSaveEmployee}
+            disabled={saving}
+            style={{ background: "linear-gradient(135deg, #ec4899, #db2777)", color: "#fff", fontWeight: 700 }}
+          >
             {saving ? "Guardando..." : "💾 Guardar Colaborador"}
           </button>
         </div>
@@ -350,7 +430,7 @@ export function EmployeeFormPage() {
           className={`tab-btn ${activeTab === "documents" ? "active" : ""}`}
           onClick={() => setActiveTab("documents")}
         >
-          📂 4. Legajo Digital ({ingresoPresented}/{INGRESO_DOC_TYPES.length})
+          📂 4. Legajo Digital ({ingresoPresented}/{INGRESO_DOC_TYPES.length} PDF)
         </button>
         <button
           type="button"
@@ -602,16 +682,22 @@ export function EmployeeFormPage() {
         </div>
       )}
 
-      {/* TAB 4: LEGAJO DIGITAL & DOCUMENTACIÓN (SOLICITADO POR EL USUARIO) */}
+      {/* TAB 4: LEGAJO DIGITAL & DOCUMENTACIÓN (SUBIDA, VISTA Y DESCARGA DE PDF) */}
       {activeTab === "documents" && (
         <div className="stack" style={{ gap: 20 }}>
+          {!isEditing && (
+            <div className="alert" style={{ background: "rgba(236, 72, 153, 0.1)", borderColor: "#ec4899", color: "#9d174d" }}>
+              💡 Guardá primero los datos principales del colaborador para habilitar la subida directa de archivos PDF al legajo digital.
+            </div>
+          )}
+
           {/* Documentación Activa & Ingreso */}
           <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid #8b5cf6" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h2 style={{ fontSize: "1.15rem", margin: 0 }}>📂 Documentación Activa & de Ingreso</h2>
                 <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>
-                  Checklist obligatorio de legajo digital conforme normativas laborales y de ART
+                  Checklist obligatorio de legajo digital con adjuntos PDF conforme normativas laborales y de ART
                 </p>
               </div>
               <span className="badge ok" style={{ fontSize: "0.85rem", padding: "6px 12px" }}>
@@ -623,24 +709,43 @@ export function EmployeeFormPage() {
               <table className="table" style={{ width: "100%", fontSize: "0.88rem" }}>
                 <thead>
                   <tr style={{ background: "var(--surface-sunken)" }}>
-                    <th style={{ width: 280 }}>Documento Requerido</th>
-                    <th>Descripción & Requisitos</th>
-                    <th style={{ width: 120, textAlign: "center" }}>Estado</th>
-                    <th style={{ width: 140, textAlign: "right" }}>Acciones</th>
+                    <th style={{ width: 240 }}>Documento Requerido</th>
+                    <th>Detalle & Archivo Adjunto</th>
+                    <th style={{ width: 110, textAlign: "center" }}>Estado</th>
+                    <th style={{ width: 230, textAlign: "right" }}>Gestión Documental</th>
                   </tr>
                 </thead>
                 <tbody>
                   {INGRESO_DOC_TYPES.map((doc) => {
                     const existing = docMap.get(doc.id);
-                    const isPresented = existing?.status === "Presentado";
+                    const hasFile = Boolean(existing?.fileUrl);
+                    const isPresented = existing?.status === "Presentado" || hasFile;
+                    const isUploading = uploadingDocType === doc.id;
 
                     return (
                       <tr key={doc.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
                         <td>
                           <strong>{doc.label}</strong>
+                          <div className="muted" style={{ fontSize: "0.75rem", marginTop: 2 }}>{doc.description}</div>
                         </td>
-                        <td className="muted" style={{ fontSize: "0.82rem" }}>
-                          {doc.description}
+                        <td>
+                          {hasFile ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ fontSize: "1rem" }}>📑</span>
+                              <div>
+                                <strong style={{ color: "#0f172a", fontSize: "0.82rem", display: "block" }}>
+                                  {existing?.fileName || `${doc.id}.pdf`}
+                                </strong>
+                                <span className="muted" style={{ fontSize: "0.72rem" }}>
+                                  Subido: {existing?.uploadedAtUtc ? new Date(existing.uploadedAtUtc).toLocaleDateString("es-AR") : "Reciente"}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="muted" style={{ fontSize: "0.8rem", fontStyle: "italic" }}>
+                              Sin archivo PDF adjunto
+                            </span>
+                          )}
                         </td>
                         <td style={{ textAlign: "center" }}>
                           <span className={`badge ${isPresented ? "ok" : "error"}`} style={{ fontSize: "0.72rem" }}>
@@ -648,14 +753,64 @@ export function EmployeeFormPage() {
                           </span>
                         </td>
                         <td style={{ textAlign: "right" }}>
-                          <button
-                            type="button"
-                            className={`btn compact ${isPresented ? "ghost" : ""}`}
-                            style={{ fontSize: "0.75rem", padding: "4px 10px" }}
-                            onClick={() => handleUpdateDocumentStatus(doc.id, "Ingreso", isPresented ? "Presentado" : "Pendiente")}
-                          >
-                            {isPresented ? "Marcar Pendiente" : "✓ Marcar Presentado"}
-                          </button>
+                          <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
+                            {hasFile && existing && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn ghost compact"
+                                  title="Ver documento en nueva pestaña"
+                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "#8b5cf6" }}
+                                  onClick={() => handleViewDoc(existing)}
+                                >
+                                  👁️ Ver
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn ghost compact"
+                                  title="Descargar archivo PDF"
+                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "#0d9488" }}
+                                  onClick={() => handleDownloadDoc(existing)}
+                                >
+                                  ⬇️ Descargar
+                                </button>
+                              </>
+                            )}
+
+                            {isEditing ? (
+                              <label
+                                className={`btn compact ${hasFile ? "btn-outline" : ""}`}
+                                style={{
+                                  fontSize: "0.75rem",
+                                  padding: "4px 10px",
+                                  cursor: "pointer",
+                                  background: hasFile ? undefined : "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                                  color: hasFile ? undefined : "#fff"
+                                }}
+                              >
+                                {isUploading ? "Subiendo..." : hasFile ? "🔄 Reemplazar" : "📤 Subir PDF"}
+                                <input
+                                  type="file"
+                                  accept=".pdf,image/*,.doc,.docx"
+                                  style={{ display: "none" }}
+                                  disabled={isUploading}
+                                  onChange={(e) => handleFileUpload(doc.id, "Ingreso", e)}
+                                />
+                              </label>
+                            ) : null}
+
+                            {hasFile && existing && (
+                              <button
+                                type="button"
+                                className="btn ghost compact"
+                                title="Quitar archivo"
+                                style={{ padding: "4px 6px", fontSize: "0.75rem", color: "#ef4444" }}
+                                onClick={() => handleDeleteDoc(existing)}
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -671,11 +826,11 @@ export function EmployeeFormPage() {
               <div>
                 <h2 style={{ fontSize: "1.15rem", margin: 0, color: "#991b1b" }}>🧾 Subcategoría: Documentación de Egreso / Desvinculación</h2>
                 <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>
-                  Comprobantes finales, certificados de trabajo (Art. 80 LCT) y constancias de baja
+                  Comprobantes finales firmados, certificados de trabajo (Art. 80 LCT) y constancias de baja
                 </p>
               </div>
               <span className="badge primary" style={{ fontSize: "0.85rem", padding: "6px 12px" }}>
-                {egresoPresented} / {EGRESO_DOC_TYPES.length} Firmados
+                {egresoPresented} / {EGRESO_DOC_TYPES.length} PDF Adjuntos
               </span>
             </div>
 
@@ -683,24 +838,43 @@ export function EmployeeFormPage() {
               <table className="table" style={{ width: "100%", fontSize: "0.88rem" }}>
                 <thead>
                   <tr style={{ background: "var(--surface-sunken)" }}>
-                    <th style={{ width: 300 }}>Documento de Desvinculación</th>
-                    <th>Detalle Legal</th>
-                    <th style={{ width: 120, textAlign: "center" }}>Estado</th>
-                    <th style={{ width: 140, textAlign: "right" }}>Acciones</th>
+                    <th style={{ width: 260 }}>Documento de Desvinculación</th>
+                    <th>Detalle Legal & Archivo</th>
+                    <th style={{ width: 110, textAlign: "center" }}>Estado</th>
+                    <th style={{ width: 230, textAlign: "right" }}>Gestión Documental</th>
                   </tr>
                 </thead>
                 <tbody>
                   {EGRESO_DOC_TYPES.map((doc) => {
                     const existing = docMap.get(doc.id);
-                    const isPresented = existing?.status === "Presentado";
+                    const hasFile = Boolean(existing?.fileUrl);
+                    const isPresented = existing?.status === "Presentado" || hasFile;
+                    const isUploading = uploadingDocType === doc.id;
 
                     return (
                       <tr key={doc.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
                         <td>
                           <strong style={{ color: "#991b1b" }}>{doc.label}</strong>
+                          <div className="muted" style={{ fontSize: "0.75rem", marginTop: 2 }}>{doc.description}</div>
                         </td>
-                        <td className="muted" style={{ fontSize: "0.82rem" }}>
-                          {doc.description}
+                        <td>
+                          {hasFile ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ fontSize: "1rem" }}>📑</span>
+                              <div>
+                                <strong style={{ color: "#0f172a", fontSize: "0.82rem", display: "block" }}>
+                                  {existing?.fileName || `${doc.id}.pdf`}
+                                </strong>
+                                <span className="muted" style={{ fontSize: "0.72rem" }}>
+                                  Subido: {existing?.uploadedAtUtc ? new Date(existing.uploadedAtUtc).toLocaleDateString("es-AR") : "Reciente"}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="muted" style={{ fontSize: "0.8rem", fontStyle: "italic" }}>
+                              Sin archivo PDF adjunto
+                            </span>
+                          )}
                         </td>
                         <td style={{ textAlign: "center" }}>
                           <span className={`badge ${isPresented ? "ok" : "ghost"}`} style={{ fontSize: "0.72rem" }}>
@@ -708,14 +882,64 @@ export function EmployeeFormPage() {
                           </span>
                         </td>
                         <td style={{ textAlign: "right" }}>
-                          <button
-                            type="button"
-                            className={`btn compact ${isPresented ? "ghost" : ""}`}
-                            style={{ fontSize: "0.75rem", padding: "4px 10px" }}
-                            onClick={() => handleUpdateDocumentStatus(doc.id, "Egreso", isPresented ? "Presentado" : "Pendiente")}
-                          >
-                            {isPresented ? "Marcar Pendiente" : "✓ Marcar Entregado"}
-                          </button>
+                          <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
+                            {hasFile && existing && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn ghost compact"
+                                  title="Ver documento en nueva pestaña"
+                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "#8b5cf6" }}
+                                  onClick={() => handleViewDoc(existing)}
+                                >
+                                  👁️ Ver
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn ghost compact"
+                                  title="Descargar archivo PDF"
+                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "#0d9488" }}
+                                  onClick={() => handleDownloadDoc(existing)}
+                                >
+                                  ⬇️ Descargar
+                                </button>
+                              </>
+                            )}
+
+                            {isEditing ? (
+                              <label
+                                className={`btn compact ${hasFile ? "btn-outline" : ""}`}
+                                style={{
+                                  fontSize: "0.75rem",
+                                  padding: "4px 10px",
+                                  cursor: "pointer",
+                                  background: hasFile ? undefined : "linear-gradient(135deg, #ef4444, #dc2626)",
+                                  color: hasFile ? undefined : "#fff"
+                                }}
+                              >
+                                {isUploading ? "Subiendo..." : hasFile ? "🔄 Reemplazar" : "📤 Subir PDF"}
+                                <input
+                                  type="file"
+                                  accept=".pdf,image/*,.doc,.docx"
+                                  style={{ display: "none" }}
+                                  disabled={isUploading}
+                                  onChange={(e) => handleFileUpload(doc.id, "Egreso", e)}
+                                />
+                              </label>
+                            ) : null}
+
+                            {hasFile && existing && (
+                              <button
+                                type="button"
+                                className="btn ghost compact"
+                                title="Quitar archivo"
+                                style={{ padding: "4px 6px", fontSize: "0.75rem", color: "#ef4444" }}
+                                onClick={() => handleDeleteDoc(existing)}
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
