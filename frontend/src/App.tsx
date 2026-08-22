@@ -67,6 +67,9 @@ import { ChequePortfolioPage } from "./pages/ChequePortfolioPage";
 import { CollectionReceiptsWorkspacePage } from "./pages/CollectionReceiptsWorkspacePage";
 import { CurrentAccountsPage } from "./pages/CurrentAccountsPage";
 import { CashFlowPage } from "./pages/CashFlowPage";
+import { HumanResourcesDashboardPage } from "./pages/HumanResourcesDashboardPage";
+import { OrgChartPage } from "./pages/OrgChartPage";
+import { ProcedureManualsPage } from "./pages/ProcedureManualsPage";
 import { EmployeesListPage } from "./pages/EmployeesListPage";
 import { EmployeeFormPage } from "./pages/EmployeeFormPage";
 import { PayrollListPage } from "./pages/PayrollListPage";
@@ -496,7 +499,9 @@ export function App() {
               <Route path="/finanzas/ayuda" element={<FinanceHelpPage />} />
 
               {/* Human Resources & Payroll Routes */}
-              <Route path="/rrhh" element={<EmployeesListPage />} />
+              <Route path="/rrhh" element={<HumanResourcesDashboardPage />} />
+              <Route path="/rrhh/organigrama" element={<OrgChartPage />} />
+              <Route path="/rrhh/manuales" element={<ProcedureManualsPage />} />
               <Route path="/rrhh/empleados" element={<EmployeesListPage />} />
               <Route path="/rrhh/empleados/nuevo" element={<EmployeeFormPage />} />
               <Route path="/rrhh/empleados/:id" element={<EmployeeFormPage />} />

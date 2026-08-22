@@ -1264,6 +1264,60 @@ export type EppDelivery = {
   notes?: string | null;
 };
 
+export type OrganizationPosition = {
+  id: string;
+  title: string;
+  department: string;
+  reportsToPositionId?: string | null;
+  assignedEmployeeId?: string | null;
+  mission: string;
+  responsibilities: string;
+  requiredQualifications: string;
+  competencies: string;
+  kpis: string;
+  level: number; // 1: Dirección, 2: Gerencia, 3: Jefatura, 4: Operativo
+  createdAtUtc: string;
+};
+
+export type EmployeeDocument = {
+  id: string;
+  employeeId: string;
+  documentType: string;
+  category: "Ingreso" | "Egreso" | string;
+  fileName: string;
+  fileUrl?: string | null;
+  issueDate?: string | null;
+  expiryDate?: string | null;
+  status: "Presentado" | "Pendiente" | "Vencido" | string;
+  notes?: string | null;
+  uploadedAtUtc: string;
+};
+
+export type ProcedureManual = {
+  id: string;
+  code: string;
+  title: string;
+  area: string;
+  version: string;
+  effectiveDate: string;
+  status: "Vigente" | "EnRevisión" | "Obsoleto" | string;
+  description: string;
+  documentUrl?: string | null;
+  createdAtUtc: string;
+};
+
+export type HrDashboardSummary = {
+  totalEmployees: number;
+  activeEmployees: number;
+  leaveEmployees: number;
+  terminatedEmployees: number;
+  positionsCount: number;
+  coveredPositions: number;
+  manualsCount: number;
+  expiringDocsCount: number;
+  departmentDistribution: Array<{ department: string; count: number }>;
+};
+
 // ==========================================
 // FLEET (GESTIÓN DE FLOTA VEHICULAR)
 // ==========================================

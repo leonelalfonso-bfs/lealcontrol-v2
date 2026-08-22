@@ -421,6 +421,9 @@ export const api = {
   // ==========================================
   // HUMAN RESOURCES (RRHH & LIQUIDACIÓN)
   // ==========================================
+  getHrDashboardSummary: () =>
+    request<import("./types").HrDashboardSummary>("/api/v1/hr/dashboard-summary"),
+
   listEmployees: (search?: string) => {
     const q = search ? `?search=${encodeURIComponent(search)}` : "";
     return request<import("./types").Employee[]>(`/api/v1/hr/employees${q}`);
@@ -432,6 +435,38 @@ export const api = {
     request<import("./types").Employee>(`/api/v1/hr/employees/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteEmployee: (id: string) =>
     request<void>(`/api/v1/hr/employees/${id}`, { method: "DELETE" }),
+
+  // Organigrama y Puestos
+  listPositions: () =>
+    request<import("./types").OrganizationPosition[]>("/api/v1/hr/positions"),
+  createPosition: (body: Partial<import("./types").OrganizationPosition>) =>
+    request<import("./types").OrganizationPosition>("/api/v1/hr/positions", { method: "POST", body: JSON.stringify(body) }),
+  updatePosition: (id: string, body: Partial<import("./types").OrganizationPosition>) =>
+    request<import("./types").OrganizationPosition>(`/api/v1/hr/positions/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deletePosition: (id: string) =>
+    request<void>(`/api/v1/hr/positions/${id}`, { method: "DELETE" }),
+
+  // Legajo Digital y Documentos
+  listEmployeeDocuments: (employeeId: string) =>
+    request<import("./types").EmployeeDocument[]>(`/api/v1/hr/employees/${employeeId}/documents`),
+  createEmployeeDocument: (employeeId: string, body: Partial<import("./types").EmployeeDocument>) =>
+    request<import("./types").EmployeeDocument>(`/api/v1/hr/employees/${employeeId}/documents`, { method: "POST", body: JSON.stringify(body) }),
+  updateEmployeeDocument: (id: string, body: Partial<import("./types").EmployeeDocument>) =>
+    request<import("./types").EmployeeDocument>(`/api/v1/hr/documents/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteEmployeeDocument: (id: string) =>
+    request<void>(`/api/v1/hr/documents/${id}`, { method: "DELETE" }),
+
+  // Manuales de Procedimientos
+  listProcedureManuals: (area?: string) => {
+    const q = area && area !== "ALL" ? `?area=${encodeURIComponent(area)}` : "";
+    return request<import("./types").ProcedureManual[]>(`/api/v1/hr/manuals${q}`);
+  },
+  createProcedureManual: (body: Partial<import("./types").ProcedureManual>) =>
+    request<import("./types").ProcedureManual>("/api/v1/hr/manuals", { method: "POST", body: JSON.stringify(body) }),
+  updateProcedureManual: (id: string, body: Partial<import("./types").ProcedureManual>) =>
+    request<import("./types").ProcedureManual>(`/api/v1/hr/manuals/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteProcedureManual: (id: string) =>
+    request<void>(`/api/v1/hr/manuals/${id}`, { method: "DELETE" }),
 
   // EPP
   listEmployeeEpps: (employeeId: string) =>

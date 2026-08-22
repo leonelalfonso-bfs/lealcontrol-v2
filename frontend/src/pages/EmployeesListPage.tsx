@@ -50,6 +50,28 @@ export function EmployeesListPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="tab-row" style={{ marginBottom: 16 }}>
+        <Link to="/rrhh" className="tab-btn">
+          📊 Tablero RRHH
+        </Link>
+        <Link to="/rrhh/empleados" className="tab-btn active">
+          👤 Colaboradores & Legajos ({employees.length})
+        </Link>
+        <Link to="/rrhh/organigrama" className="tab-btn">
+          🏢 Organigrama & Puestos
+        </Link>
+        <Link to="/rrhh/manuales" className="tab-btn">
+          📖 Manuales de Procedimientos
+        </Link>
+        <Link to="/rrhh/liquidaciones" className="tab-btn">
+          💰 Liquidación de Sueldos
+        </Link>
+        <Link to="/rrhh/ayuda" className="tab-btn">
+          💡 Ayuda RRHH
+        </Link>
+      </div>
+
       {/* KPI Cards Header */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "20px" }}>
         <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(255,255,255,1))" }}>

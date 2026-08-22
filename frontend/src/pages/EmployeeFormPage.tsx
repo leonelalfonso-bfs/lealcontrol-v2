@@ -1,15 +1,35 @@
-import React, { useEffect, useState, FormEvent, ChangeEvent } from "react";
+import { useEffect, useState, FormEvent, ChangeEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { provinces, type Employee, type EppDelivery } from "../api/types";
-import { digitsOnly, formatCuitDisplay, isValidCuitChecksum } from "../lib/arContact";
+import { provinces, type Employee, type EppDelivery, type EmployeeDocument } from "../api/types";
+import { digitsOnly } from "../lib/arContact";
+
+const INGRESO_DOC_TYPES = [
+  { id: "CV", label: "📄 CV Actualizado", description: "Currículum Vitae con experiencia laboral y referencias" },
+  { id: "DNI", label: "🪪 DNI (Frente y Dorso)", description: "Copia legible del Documento Nacional de Identidad" },
+  { id: "CUIL", label: "📑 Constancia de CUIL", description: "Constancia oficial emitida por ANSES / AFIP" },
+  { id: "AltaTemprana", label: "🏛️ Alta Temprana AFIP", description: "Constancia de registro en Mi Simplificación AFIP" },
+  { id: "Preocupacional", label: "🩺 Examen Preocupacional & ART", description: "Apto médico de ingreso y exámenes periódicos de ley" },
+  { id: "CargasFamilia", label: "👨‍👩‍👧 Cargas de Familia (F. 572)", description: "Declaración Jurada deducciones y asignaciones familiares" },
+  { id: "DomicilioReal", label: "🏠 DDJJ Domicilio Real", description: "Declaración Jurada actualizada con factura de servicio" },
+  { id: "TituloEstudios", label: "🎓 Título o Certificado de Estudios", description: "Título secundario, técnico o universitario autenticado" },
+  { id: "DatosBancarios", label: "🏦 Constancia CBU / Cuenta Sueldo", description: "Comprobante de CBU / Alias para acreditación de haberes" },
+  { id: "LicenciaConducir", label: "🚗 Licencia de Conducir / Habilitaciones", description: "Registro de conducir y habilitaciones técnicas operativas" }
+];
+
+const EGRESO_DOC_TYPES = [
+  { id: "ReciboLiquidacionFinal", label: "🧾 Recibo Liquidación Final Firmado", description: "Recibo de haberes finales firmado conforme por el empleado" },
+  { id: "CertificadoArt80", label: "📜 Certificado de Trabajo (Art. 80 LCT)", description: "Certificado de trabajo y constancia de aportes Art. 80" },
+  { id: "CertificadoAfip57", label: "📊 Certificado Remuneraciones (AFIP PS 6.2)", description: "Formulario oficial AFIP de servicios y remuneraciones históricas" },
+  { id: "TelegramaRenunciaDespido", label: "✉️ Telegrama de Renuncia / Copia CD", description: "Constancia fehaciente de desvinculación laboral" }
+];
 
 export function EmployeeFormPage() {
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<"general" | "labor" | "banking" | "epp">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "labor" | "banking" | "documents" | "epp">("general");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +56,7 @@ export function EmployeeFormPage() {
 
   const [hireDate, setHireDate] = useState(new Date().toISOString().split("T")[0]);
   const [seniorityRecognitionDate, setSeniorityRecognitionDate] = useState("");
+  const [terminationDate, setTerminationDate] = useState("");
   const [contractType, setContractType] = useState<number>(0);
   const [jobTitle, setJobTitle] = useState("Técnico Especialista");
   const [department, setDepartment] = useState("Técnica");
@@ -44,7 +65,7 @@ export function EmployeeFormPage() {
   const [unionCct, setUnionCct] = useState("Comercio 130/75");
   const [unionCategory, setUnionCategory] = useState("Administrativo A");
   const [healthInsurance, setHealthInsurance] = useState("OSECAC");
-  const [baseSalary, setBaseSalary] = useState<number>(500000);
+  const [baseSalary, setBaseSalary] = useState<number>(750000);
   const [hourlyRate, setHourlyRate] = useState<number>(0);
   const [status, setStatus] = useState<number>(0);
   const [photoPath, setPhotoPath] = useState<string | null>(null);
@@ -53,6 +74,10 @@ export function EmployeeFormPage() {
   const [bankName, setBankName] = useState("Banco de la Nación Argentina");
   const [cbu, setCbu] = useState("");
   const [bankAlias, setBankAlias] = useState("");
+
+  // Documents State
+  const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
+  const [uploadingDocType, setUploadingDocType] = useState<string | null>(null);
 
   // EPP Sublist
   const [eppList, setEppList] = useState<EppDelivery[]>([]);
@@ -94,6 +119,7 @@ export function EmployeeFormPage() {
 
       if (emp.hireDate) setHireDate(new Date(emp.hireDate).toISOString().split("T")[0]);
       if (emp.seniorityRecognitionDate) setSeniorityRecognitionDate(new Date(emp.seniorityRecognitionDate).toISOString().split("T")[0]);
+      if (emp.terminationDate) setTerminationDate(new Date(emp.terminationDate).toISOString().split("T")[0]);
       setContractType(emp.contractType);
       setJobTitle(emp.jobTitle);
       setDepartment(emp.department);
@@ -112,8 +138,12 @@ export function EmployeeFormPage() {
       setCbu(emp.cbu);
       setBankAlias(emp.bankAlias);
 
-      const epps = await api.listEmployeeEpps(empId).catch(() => []);
+      const [epps, docs] = await Promise.all([
+        api.listEmployeeEpps(empId).catch(() => []),
+        api.listEmployeeDocuments(empId).catch(() => [])
+      ]);
       setEppList(epps);
+      setDocuments(docs);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al cargar colaborador");
     } finally {
@@ -162,6 +192,7 @@ export function EmployeeFormPage() {
         emergencyContactPhone: emergencyContactPhone.trim() || null,
         hireDate: new Date(hireDate).toISOString(),
         seniorityRecognitionDate: seniorityRecognitionDate ? new Date(seniorityRecognitionDate).toISOString() : null,
+        terminationDate: terminationDate ? new Date(terminationDate).toISOString() : null,
         contractType,
         jobTitle: jobTitle.trim(),
         department: department.trim(),
@@ -194,503 +225,603 @@ export function EmployeeFormPage() {
     }
   };
 
+  const handleUpdateDocumentStatus = async (docType: string, category: "Ingreso" | "Egreso", currentStatus: string) => {
+    if (!id) return;
+    const existing = documents.find((d) => d.documentType === docType);
+    const newStatus = currentStatus === "Presentado" ? "Pendiente" : "Presentado";
+
+    try {
+      if (existing) {
+        await api.updateEmployeeDocument(existing.id, {
+          ...existing,
+          status: newStatus
+        });
+      } else {
+        await api.createEmployeeDocument(id, {
+          documentType: docType,
+          category,
+          fileName: `${docType}_${fileNumber}.pdf`,
+          status: "Presentado"
+        });
+      }
+      const updatedDocs = await api.listEmployeeDocuments(id);
+      setDocuments(updatedDocs);
+    } catch (err: any) {
+      setError(err?.message || "Error al actualizar estado del documento");
+    }
+  };
+
   const handleAddEpp = async (e: FormEvent) => {
     e.preventDefault();
     if (!id || !newEppItem.trim()) return;
 
     try {
-      const created = await api.createEppDelivery({
+      await api.createEppDelivery({
         employeeId: id,
         itemName: newEppItem.trim(),
-        brandModel: newEppBrand.trim() || null,
-        certificateNumber: newEppCert.trim() || null,
+        brandModel: newEppBrand.trim() || undefined,
+        certificateNumber: newEppCert.trim() || undefined,
         quantity: Number(newEppQty) || 1,
         deliveryDateUtc: new Date().toISOString()
       });
-      setEppList((prev) => [created, ...prev]);
       setShowAddEppModal(false);
       setNewEppItem("");
       setNewEppBrand("");
       setNewEppCert("");
+      setNewEppQty(1);
+      const epps = await api.listEmployeeEpps(id);
+      setEppList(epps);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Error al registrar entrega de EPP");
+      setError(err instanceof Error ? err.message : "Error al entregar EPP");
     }
   };
 
   if (loading) {
-    return <div className="card pad" style={{ textAlign: "center" }}>Cargando legajo 360°...</div>;
+    return (
+      <div className="page-wide" style={{ padding: 40, textAlign: "center" }}>
+        <p className="muted">Cargando ficha del colaborador...</p>
+      </div>
+    );
   }
 
+  const docMap = new Map(documents.map((d) => [d.documentType, d]));
+  const ingresoPresented = INGRESO_DOC_TYPES.filter((d) => docMap.get(d.id)?.status === "Presentado").length;
+  const egresoPresented = EGRESO_DOC_TYPES.filter((d) => docMap.get(d.id)?.status === "Presentado").length;
+
   return (
-    <div className="workspace-page">
-      <div className="page-head">
+    <div className="page-wide stack" style={{ gap: 20, paddingBottom: 60 }}>
+      {/* Header */}
+      <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h1>{isEditing ? `Legajo #${fileNumber} - ${lastName}, ${firstName}` : "Alta de Nuevo Colaborador"}</h1>
-          <p className="muted">Ficha integral del trabajador conforme a LCT 20.744 y convenios paritarios</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b", marginBottom: 6 }}>
+            <Link to="/rrhh" style={{ color: "#64748b", textDecoration: "none" }}>
+              RRHH
+            </Link>
+            <span>›</span>
+            <Link to="/rrhh/empleados" style={{ color: "#64748b", textDecoration: "none" }}>
+              Colaboradores
+            </Link>
+            <span>›</span>
+            <span style={{ color: "#0f172a", fontWeight: 600 }}>{isEditing ? `${lastName}, ${firstName}` : "Nuevo Colaborador"}</span>
+          </div>
+          <h1 style={{ margin: 0 }}>{isEditing ? `👤 ${lastName}, ${firstName} (${fileNumber})` : "👤 Nuevo Colaborador"}</h1>
+          <p className="muted" style={{ margin: "4px 0 0 0" }}>
+            Ficha laboral completa, legajo digital, datos previsionales y asignación de EPP
+          </p>
         </div>
-        <Link to="/rrhh/empleados" className="btn btn-outline">
-          ← Volver a la Nómina
-        </Link>
+
+        <div className="row" style={{ gap: 10 }}>
+          <button type="button" className="btn btn-outline" onClick={() => navigate("/rrhh/empleados")}>
+            ← Volver a Colaboradores
+          </button>
+          <button type="button" className="btn" onClick={handleSaveEmployee} disabled={saving} style={{ background: "linear-gradient(135deg, #ec4899, #db2777)", color: "#fff", fontWeight: 700 }}>
+            {saving ? "Guardando..." : "💾 Guardar Colaborador"}
+          </button>
+        </div>
       </div>
 
-      {error && (
-        <div style={{ padding: "12px 16px", background: "#fef2f2", color: "#b91c1c", borderRadius: "8px", marginBottom: "16px", border: "1px solid #f87171" }}>
-          ⚠️ {error}
+      {error && <div className="alert">{error}</div>}
+
+      {/* Tabs */}
+      <div className="tab-row">
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === "general" ? "active" : ""}`}
+          onClick={() => setActiveTab("general")}
+        >
+          👤 1. Datos Personales
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === "labor" ? "active" : ""}`}
+          onClick={() => setActiveTab("labor")}
+        >
+          💼 2. Contrato & Convenio
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === "banking" ? "active" : ""}`}
+          onClick={() => setActiveTab("banking")}
+        >
+          🏦 3. Datos Bancarios
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === "documents" ? "active" : ""}`}
+          onClick={() => setActiveTab("documents")}
+        >
+          📂 4. Legajo Digital ({ingresoPresented}/{INGRESO_DOC_TYPES.length})
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${activeTab === "epp" ? "active" : ""}`}
+          onClick={() => setActiveTab("epp")}
+        >
+          🛡️ 5. Entrega de EPP ({eppList.length})
+        </button>
+      </div>
+
+      {/* TAB 1: DATOS PERSONALES */}
+      {activeTab === "general" && (
+        <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid #ec4899" }}>
+          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>👤 Identificación & Datos de Contacto</h2>
+
+          <div className="row" style={{ gap: 24, alignItems: "center" }}>
+            <div style={{ width: 100, height: 100, borderRadius: "50%", background: "var(--surface-sunken)", border: "2px dashed #cbd5e1", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
+              {photoPath ? (
+                <img src={photoPath} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <span style={{ fontSize: "2rem" }}>👤</span>
+              )}
+            </div>
+            <div>
+              <label className="btn btn-outline compact" style={{ cursor: "pointer" }}>
+                📷 Subir Foto de Perfil
+                <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: "none" }} />
+              </label>
+              <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>Formatos PNG, JPG hasta 2MB</div>
+            </div>
+          </div>
+
+          <div className="grid-3">
+            <label>
+              Legajo N° *
+              <input required value={fileNumber} onChange={(e) => setFileNumber(e.target.value)} />
+            </label>
+            <label>
+              Nombre(s) *
+              <input required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            </label>
+            <label>
+              Apellido(s) *
+              <input required value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            </label>
+          </div>
+
+          <div className="grid-3">
+            <label>
+              DNI / Documento *
+              <input required value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} />
+            </label>
+            <label>
+              CUIL * (11 dígitos)
+              <input required value={cuil} onChange={(e) => setCuil(e.target.value)} placeholder="20-12345678-9" />
+            </label>
+            <label>
+              Fecha de Nacimiento
+              <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+            </label>
+          </div>
+
+          <div className="grid-3">
+            <label>
+              Género
+              <select value={gender} onChange={(e) => setGender(e.target.value)}>
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+                <option value="X">No Binario / Otro</option>
+              </select>
+            </label>
+            <label>
+              Nacionalidad
+              <input value={nationality} onChange={(e) => setNationality(e.target.value)} />
+            </label>
+            <label>
+              Estado Civil
+              <select value={civilStatus} onChange={(e) => setCivilStatus(e.target.value)}>
+                <option value="Soltero/a">Soltero/a</option>
+                <option value="Casado/a">Casado/a</option>
+                <option value="Unión Convivencial">Unión Convivencial</option>
+                <option value="Divorciado/a">Divorciado/a</option>
+                <option value="Viudo/a">Viudo/a</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="grid-3">
+            <label>
+              Domicilio Real (Calle y N°)
+              <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Ej: San Martín 1234" />
+            </label>
+            <label>
+              Ciudad
+              <input value={city} onChange={(e) => setCity(e.target.value)} />
+            </label>
+            <label>
+              Provincia
+              <select value={province} onChange={(e) => setProvince(e.target.value)}>
+                {provinces.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="grid-2">
+            <label>
+              Teléfono / WhatsApp
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+54 9 341 555-1234" />
+            </label>
+            <label>
+              Email Personal / Corporativo
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="empleado@lealcontrol.com" />
+            </label>
+          </div>
+
+          <div className="grid-2">
+            <label>
+              Contacto de Emergencia (Nombre)
+              <input value={emergencyContactName} onChange={(e) => setEmergencyContactName(e.target.value)} placeholder="Ej: María Gómez (Cónyuge)" />
+            </label>
+            <label>
+              Teléfono de Emergencia
+              <input value={emergencyContactPhone} onChange={(e) => setEmergencyContactPhone(e.target.value)} placeholder="+54 9 341 555-9876" />
+            </label>
+          </div>
         </div>
       )}
 
-      {/* Tabs Navigation */}
-      <div style={{ display: "flex", gap: "8px", borderBottom: "2px solid #e2e8f0", marginBottom: "20px" }}>
-        <button
-          type="button"
-          onClick={() => setActiveTab("general")}
-          style={{
-            padding: "10px 18px",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            fontWeight: activeTab === "general" ? 800 : 500,
-            color: activeTab === "general" ? "#0d9488" : "#64748b",
-            borderBottom: activeTab === "general" ? "3px solid #0d9488" : "none"
-          }}
-        >
-          👤 1. Datos Personales & Domicilio
-        </button>
+      {/* TAB 2: CONTRATO & CONVENIO */}
+      {activeTab === "labor" && (
+        <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid #3b82f6" }}>
+          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>💼 Relación Laboral & Previsional</h2>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("labor")}
-          style={{
-            padding: "10px 18px",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            fontWeight: activeTab === "labor" ? 800 : 500,
-            color: activeTab === "labor" ? "#0d9488" : "#64748b",
-            borderBottom: activeTab === "labor" ? "3px solid #0d9488" : "none"
-          }}
-        >
-          💼 2. Datos Laborales, CCT & Sueldo
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("banking")}
-          style={{
-            padding: "10px 18px",
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            fontWeight: activeTab === "banking" ? 800 : 500,
-            color: activeTab === "banking" ? "#0d9488" : "#64748b",
-            borderBottom: activeTab === "banking" ? "3px solid #0d9488" : "none"
-          }}
-        >
-          🏦 3. Bancarización & Contacto Emergencia
-        </button>
-
-        {isEditing && (
-          <button
-            type="button"
-            onClick={() => setActiveTab("epp")}
-            style={{
-              padding: "10px 18px",
-              border: "none",
-              background: "none",
-              cursor: "pointer",
-              fontWeight: activeTab === "epp" ? 800 : 500,
-              color: activeTab === "epp" ? "#0d9488" : "#64748b",
-              borderBottom: activeTab === "epp" ? "3px solid #0d9488" : "none"
-            }}
-          >
-            🦺 4. EPP & Ropa de Trabajo (SRT 299/11)
-          </button>
-        )}
-      </div>
-
-      <form onSubmit={handleSaveEmployee}>
-        {/* TAB 1: GENERAL & PERSONAL */}
-        {activeTab === "general" && (
-          <div className="card pad stack">
-            <div style={{ display: "grid", gridTemplateColumns: "130px 1fr", gap: "20px", alignItems: "flex-start", borderBottom: "1px solid #e2e8f0", paddingBottom: "18px" }}>
-              {/* Photo Box */}
-              <div style={{ textAlign: "center" }}>
-                <div
-                  style={{
-                    width: 120,
-                    height: 120,
-                    borderRadius: "50%",
-                    border: "2px dashed #cbd5e1",
-                    background: "#f8fafc",
-                    display: "grid",
-                    placeItems: "center",
-                    overflow: "hidden"
-                  }}
-                >
-                  {photoPath ? (
-                    <img src={photoPath} alt="Foto" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : (
-                    <span style={{ fontSize: "2.2rem", color: "#94a3b8" }}>📷</span>
-                  )}
-                </div>
-                <label className="btn btn-outline" style={{ marginTop: 8, padding: "4px 8px", fontSize: "0.75rem", cursor: "pointer", display: "inline-block" }}>
-                  📁 {photoPath ? "Cambiar Foto" : "Subir Foto"}
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: "none" }} />
-                </label>
-              </div>
-
-              <div style={{ display: "grid", gap: "12px" }}>
-                <div className="grid-3">
-                  <label>
-                    N° de Legajo *
-                    <input type="text" required value={fileNumber} onChange={(e) => setFileNumber(e.target.value)} style={{ fontFamily: "monospace", fontWeight: 700 }} />
-                  </label>
-                  <label>
-                    Apellido(s) *
-                    <input type="text" required value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                  </label>
-                  <label>
-                    Nombre(s) *
-                    <input type="text" required value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                  </label>
-                </div>
-
-                <div className="grid-3">
-                  <label>
-                    CUIL / CUIT *
-                    <input type="text" required placeholder="20-xxxxxxxx-x" value={formatCuitDisplay(cuil)} onChange={(e) => setCuil(e.target.value)} style={{ fontFamily: "monospace", fontWeight: 700 }} />
-                  </label>
-                  <label>
-                    DNI / Pasaporte
-                    <input type="text" value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} />
-                  </label>
-                  <label>
-                    Fecha de Nacimiento
-                    <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
-                  </label>
-                </div>
-
-                <div className="grid-3">
-                  <label>
-                    Género
-                    <select value={gender} onChange={(e) => setGender(e.target.value)}>
-                      <option value="M">Masculino</option>
-                      <option value="F">Femenino</option>
-                      <option value="X">No Binario / Otro</option>
-                    </select>
-                  </label>
-                  <label>
-                    Estado Civil
-                    <select value={civilStatus} onChange={(e) => setCivilStatus(e.target.value)}>
-                      <option value="Soltero/a">Soltero/a</option>
-                      <option value="Casado/a">Casado/a</option>
-                      <option value="Unión Convivencial">Unión Convivencial</option>
-                      <option value="Divorciado/a">Divorciado/a</option>
-                      <option value="Viudo/a">Viudo/a</option>
-                    </select>
-                  </label>
-                  <label>
-                    Nacionalidad
-                    <input type="text" value={nationality} onChange={(e) => setNationality(e.target.value)} />
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <h3>Domicilio Real & Contacto</h3>
-            <div className="grid-3">
-              <label style={{ gridColumn: "span 2" }}>
-                Calle y Altura (Domicilio)
-                <input type="text" placeholder="Av. San Martín 1234 Piso 2" value={address} onChange={(e) => setAddress(e.target.value)} />
-              </label>
-              <label>
-                Código Postal
-                <input type="text" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
-              </label>
-            </div>
-
-            <div className="grid-3">
-              <label>
-                Ciudad
-                <input type="text" value={city} onChange={(e) => setCity(e.target.value)} />
-              </label>
-              <label>
-                Provincia
-                <select value={province} onChange={(e) => setProvince(e.target.value)}>
-                  {provinces.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Teléfono / WhatsApp
-                <input type="text" placeholder="341-5551234" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </label>
-            </div>
-
+          <div className="grid-3">
             <label>
-              Email Personal / Corporativo
-              <input type="email" placeholder="colaborador@empresa.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+              Fecha de Ingreso *
+              <input type="date" required value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
+            </label>
+            <label>
+              Reconocimiento de Antigüedad
+              <input type="date" value={seniorityRecognitionDate} onChange={(e) => setSeniorityRecognitionDate(e.target.value)} />
+            </label>
+            <label>
+              Fecha de Egreso / Baja
+              <input type="date" value={terminationDate} onChange={(e) => setTerminationDate(e.target.value)} />
             </label>
           </div>
-        )}
 
-        {/* TAB 2: LABORAL & SUELDO */}
-        {activeTab === "labor" && (
-          <div className="card pad stack">
-            <h3>Contratación, Puesto & Encuadre Gremial</h3>
-
-            <div className="grid-3">
-              <label>
-                Fecha de Ingreso *
-                <input type="date" required value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
-              </label>
-              <label>
-                Antigüedad Reconocida (si difiere del ingreso)
-                <input type="date" value={seniorityRecognitionDate} onChange={(e) => setSeniorityRecognitionDate(e.target.value)} />
-              </label>
-              <label>
-                Modalidad de Contratación
-                <select value={contractType} onChange={(e) => setContractType(Number(e.target.value))}>
-                  <option value={0}>Tiempo Indeterminado (LCT Art. 90)</option>
-                  <option value={1}>Plazo Fijo</option>
-                  <option value={2}>Eventual</option>
-                  <option value={3}>Periodo de Prueba</option>
-                  <option value={4}>Pasantía / Formativo</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="grid-3">
-              <label>
-                Puesto / Cargo *
-                <input type="text" required value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
-              </label>
-              <label>
-                Departamento
-                <select value={department} onChange={(e) => setDepartment(e.target.value)}>
-                  <option value="Técnica">Técnica</option>
-                  <option value="Operaciones">Operaciones / Taller</option>
-                  <option value="Ventas">Ventas & Comercial</option>
-                  <option value="Administración">Administración & Finanzas</option>
-                  <option value="Logística">Logística & Depósito</option>
-                </select>
-              </label>
-              <label>
-                Centro de Costos
-                <input type="text" value={costCenter} onChange={(e) => setCostCenter(e.target.value)} />
-              </label>
-            </div>
-
-            <div className="grid-3">
-              <label>
-                Convenio Colectivo de Trabajo (CCT)
-                <select value={unionCct} onChange={(e) => setUnionCct(e.target.value)}>
-                  <option value="Comercio 130/75">Comercio 130/75 (FAECYS)</option>
-                  <option value="UOM 260/75">UOM 260/75 (Metalúrgicos)</option>
-                  <option value="UOCRA 76/75">UOCRA 76/75 (Construcción)</option>
-                  <option value="Camioneros 40/89">Camioneros 40/89 (Logística)</option>
-                  <option value="Químicos">Sindicato del Personal Químico</option>
-                  <option value="Fuera de Convenio">Fuera de Convenio / Jerárquico</option>
-                </select>
-              </label>
-              <label>
-                Categoría Profesional de Convenio
-                <input type="text" value={unionCategory} onChange={(e) => setUnionCategory(e.target.value)} />
-              </label>
-              <label>
-                Obra Social Sindical / Prepaga
-                <input type="text" value={healthInsurance} onChange={(e) => setHealthInsurance(e.target.value)} />
-              </label>
-            </div>
-
-            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-              <h4 style={{ margin: "0 0 12px 0", color: "#047857" }}>💰 Parámetros Salariales para Liquidación</h4>
-              <div className="grid-3">
-                <label>
-                  Sueldo Básico Mensual (ARS) *
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={baseSalary}
-                    onChange={(e) => setBaseSalary(parseFloat(e.target.value) || 0)}
-                    style={{ fontFamily: "monospace", fontWeight: 700, fontSize: "1.1rem", color: "#047857" }}
-                  />
-                </label>
-                <label>
-                  Valor Hora (si es jornalizado)
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={hourlyRate}
-                    onChange={(e) => setHourlyRate(parseFloat(e.target.value) || 0)}
-                    style={{ fontFamily: "monospace" }}
-                  />
-                </label>
-                <label>
-                  Estado del Empleado
-                  <select value={status} onChange={(e) => setStatus(Number(e.target.value))}>
-                    <option value={0}>🟢 Activo</option>
-                    <option value={1}>🟡 Licencia Médica / Especial</option>
-                    <option value={2}>🔴 Baja Definitiva</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: BANCARIZACION & CONTACTO DE EMERGENCIA */}
-        {activeTab === "banking" && (
-          <div className="card pad stack">
-            <h3>Cuenta Bancaria Sueldo (Acreditación Automática)</h3>
-            <div className="grid-3">
-              <label>
-                Entidad Bancaria
-                <input type="text" value={bankName} onChange={(e) => setBankName(e.target.value)} />
-              </label>
-              <label style={{ gridColumn: "span 2" }}>
-                CBU (22 Dígitos) *
-                <input
-                  type="text"
-                  maxLength={22}
-                  placeholder="0110xxxxxxxxxxxxxxxxxxxx"
-                  value={cbu}
-                  onChange={(e) => setCbu(e.target.value)}
-                  style={{ fontFamily: "monospace", fontWeight: 700 }}
-                />
-              </label>
-            </div>
-
-            <div className="grid-2">
-              <label>
-                Alias CBU
-                <input type="text" placeholder="JUAN.PEREZ.SUELDO" value={bankAlias} onChange={(e) => setBankAlias(e.target.value)} />
-              </label>
-              <label>
-                Lugar de Trabajo Habitual
-                <input type="text" value={workplaceLocation} onChange={(e) => setWorkplaceLocation(e.target.value)} />
-              </label>
-            </div>
-
-            <h3>Contacto de Emergencia</h3>
-            <div className="grid-2">
-              <label>
-                Nombre del Contacto (Familiar / Allegado)
-                <input type="text" placeholder="María Pérez (Cónyuge)" value={emergencyContactName} onChange={(e) => setEmergencyContactName(e.target.value)} />
-              </label>
-              <label>
-                Teléfono de Emergencia
-                <input type="text" placeholder="341-5559999" value={emergencyContactPhone} onChange={(e) => setEmergencyContactPhone(e.target.value)} />
-              </label>
-            </div>
-
+          <div className="grid-3">
             <label>
-              Observaciones del Legajo
-              <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anotaciones internas de RRHH..." />
+              Tipo de Contrato *
+              <select value={contractType} onChange={(e) => setContractType(Number(e.target.value))}>
+                <option value={0}>Tiempo Indeterminado</option>
+                <option value={1}>Plazo Fijo</option>
+                <option value={2}>Eventual</option>
+                <option value={3}>Período de Prueba</option>
+                <option value={4}>Pasantía</option>
+              </select>
+            </label>
+            <label>
+              Puesto / Cargo *
+              <input required value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+            </label>
+            <label>
+              Departamento / Área *
+              <select value={department} onChange={(e) => setDepartment(e.target.value)}>
+                <option value="Dirección & Gerencia">Dirección & Gerencia</option>
+                <option value="Metrología & Calidad">Metrología & Calidad</option>
+                <option value="Taller & Laboratorio">Taller & Laboratorio</option>
+                <option value="Ventas & CRM">Ventas & CRM</option>
+                <option value="Logística & Flota">Logística & Flota</option>
+                <option value="Administración & Finanzas">Administración & Finanzas</option>
+              </select>
             </label>
           </div>
-        )}
 
-        {/* Actions Footer */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "20px" }}>
-          <button type="button" onClick={() => navigate("/rrhh/empleados")} className="btn btn-outline">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="btn btn-primary"
-            style={{ padding: "10px 24px", background: "#0d9488", fontWeight: 700 }}
-          >
-            {saving ? "Guardando..." : "💾 Guardar Legajo 360°"}
-          </button>
+          <div className="grid-3">
+            <label>
+              Convenio Colectivo (CCT)
+              <input value={unionCct} onChange={(e) => setUnionCct(e.target.value)} placeholder="Comercio 130/75, UOM, etc." />
+            </label>
+            <label>
+              Categoría Profesional
+              <input value={unionCategory} onChange={(e) => setUnionCategory(e.target.value)} placeholder="Administrativo A, Técnico Principal" />
+            </label>
+            <label>
+              Obra Social
+              <input value={healthInsurance} onChange={(e) => setHealthInsurance(e.target.value)} placeholder="OSECAC, OSDE, Swiss Medical" />
+            </label>
+          </div>
+
+          <div className="grid-3">
+            <label>
+              Sueldo Básico Mensual ($ ARS) *
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                value={baseSalary}
+                onChange={(e) => setBaseSalary(Number(e.target.value))}
+              />
+            </label>
+            <label>
+              Valor Hora ($ ARS)
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(Number(e.target.value))}
+              />
+            </label>
+            <label>
+              Estado Laboral *
+              <select value={status} onChange={(e) => setStatus(Number(e.target.value))}>
+                <option value={0}>✓ Activo</option>
+                <option value={1}>Licencia / Suspensión</option>
+                <option value={2}>Egresado / Baja</option>
+              </select>
+            </label>
+          </div>
         </div>
-      </form>
+      )}
 
-      {/* TAB 4: EPP LIST */}
-      {isEditing && activeTab === "epp" && (
-        <div className="card pad stack" style={{ marginTop: "20px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <h3 style={{ margin: 0 }}>Historial de Entrega de EPP & Ropa de Trabajo</h3>
-              <div className="muted">Cumplimiento Resolución SRT 299/2011</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowAddEppModal(true)}
-              className="btn btn-primary"
-              style={{ background: "#0d9488", fontSize: "0.82rem" }}
-            >
-              + Registrar Entrega de EPP
-            </button>
+      {/* TAB 3: DATOS BANCARIOS */}
+      {activeTab === "banking" && (
+        <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid #10b981" }}>
+          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>🏦 Acreditación de Haberes (CBU / Cuenta Sueldo)</h2>
+
+          <div className="grid-3">
+            <label>
+              Banco Emisor
+              <input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Banco Nación, Banco Galicia, etc." />
+            </label>
+            <label>
+              CBU (22 dígitos numéricos)
+              <input value={cbu} onChange={(e) => setCbu(e.target.value)} placeholder="0110000000000000000000" maxLength={22} />
+            </label>
+            <label>
+              Alias Bancario
+              <input value={bankAlias} onChange={(e) => setBankAlias(e.target.value)} placeholder="LEAL.EMPLEADO.SUELDO" />
+            </label>
           </div>
+        </div>
+      )}
 
-          {eppList.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "20px", color: "#64748b" }}>
-              No hay entregas registradas para este colaborador.
+      {/* TAB 4: LEGAJO DIGITAL & DOCUMENTACIÓN (SOLICITADO POR EL USUARIO) */}
+      {activeTab === "documents" && (
+        <div className="stack" style={{ gap: 20 }}>
+          {/* Documentación Activa & Ingreso */}
+          <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid #8b5cf6" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h2 style={{ fontSize: "1.15rem", margin: 0 }}>📂 Documentación Activa & de Ingreso</h2>
+                <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>
+                  Checklist obligatorio de legajo digital conforme normativas laborales y de ART
+                </p>
+              </div>
+              <span className="badge ok" style={{ fontSize: "0.85rem", padding: "6px 12px" }}>
+                Cumplimiento: {ingresoPresented} / {INGRESO_DOC_TYPES.length} ({Math.round((ingresoPresented / INGRESO_DOC_TYPES.length) * 100)}%)
+              </span>
             </div>
-          ) : (
+
             <div className="table-wrap">
-              <table>
+              <table className="table" style={{ width: "100%", fontSize: "0.88rem" }}>
                 <thead>
-                  <tr>
-                    <th>Fecha de Entrega</th>
-                    <th>Elemento / Ropa</th>
-                    <th>Marca & Modelo</th>
-                    <th>Certificado IRAM / Sello</th>
-                    <th style={{ textAlign: "center" }}>Cant.</th>
+                  <tr style={{ background: "var(--surface-sunken)" }}>
+                    <th style={{ width: 280 }}>Documento Requerido</th>
+                    <th>Descripción & Requisitos</th>
+                    <th style={{ width: 120, textAlign: "center" }}>Estado</th>
+                    <th style={{ width: 140, textAlign: "right" }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {eppList.map((epp) => (
-                    <tr key={epp.id}>
-                      <td>{new Date(epp.deliveryDateUtc).toLocaleDateString("es-AR")}</td>
-                      <td><strong>{epp.itemName}</strong></td>
-                      <td>{epp.brandModel || "-"}</td>
-                      <td><span style={{ fontFamily: "monospace" }}>{epp.certificateNumber || "-"}</span></td>
-                      <td style={{ textAlign: "center" }}>{epp.quantity}</td>
-                    </tr>
-                  ))}
+                  {INGRESO_DOC_TYPES.map((doc) => {
+                    const existing = docMap.get(doc.id);
+                    const isPresented = existing?.status === "Presentado";
+
+                    return (
+                      <tr key={doc.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <td>
+                          <strong>{doc.label}</strong>
+                        </td>
+                        <td className="muted" style={{ fontSize: "0.82rem" }}>
+                          {doc.description}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <span className={`badge ${isPresented ? "ok" : "error"}`} style={{ fontSize: "0.72rem" }}>
+                            {isPresented ? "✓ Presentado" : "Pendiente"}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            type="button"
+                            className={`btn compact ${isPresented ? "ghost" : ""}`}
+                            style={{ fontSize: "0.75rem", padding: "4px 10px" }}
+                            onClick={() => handleUpdateDocumentStatus(doc.id, "Ingreso", isPresented ? "Presentado" : "Pendiente")}
+                          >
+                            {isPresented ? "Marcar Pendiente" : "✓ Marcar Presentado"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          )}
+          </div>
+
+          {/* Subcategoría: Documentación de Egreso */}
+          <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid #ef4444", background: status === 2 ? "#fff" : "rgba(241, 245, 249, 0.4)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h2 style={{ fontSize: "1.15rem", margin: 0, color: "#991b1b" }}>🧾 Subcategoría: Documentación de Egreso / Desvinculación</h2>
+                <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>
+                  Comprobantes finales, certificados de trabajo (Art. 80 LCT) y constancias de baja
+                </p>
+              </div>
+              <span className="badge primary" style={{ fontSize: "0.85rem", padding: "6px 12px" }}>
+                {egresoPresented} / {EGRESO_DOC_TYPES.length} Firmados
+              </span>
+            </div>
+
+            <div className="table-wrap">
+              <table className="table" style={{ width: "100%", fontSize: "0.88rem" }}>
+                <thead>
+                  <tr style={{ background: "var(--surface-sunken)" }}>
+                    <th style={{ width: 300 }}>Documento de Desvinculación</th>
+                    <th>Detalle Legal</th>
+                    <th style={{ width: 120, textAlign: "center" }}>Estado</th>
+                    <th style={{ width: 140, textAlign: "right" }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {EGRESO_DOC_TYPES.map((doc) => {
+                    const existing = docMap.get(doc.id);
+                    const isPresented = existing?.status === "Presentado";
+
+                    return (
+                      <tr key={doc.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <td>
+                          <strong style={{ color: "#991b1b" }}>{doc.label}</strong>
+                        </td>
+                        <td className="muted" style={{ fontSize: "0.82rem" }}>
+                          {doc.description}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <span className={`badge ${isPresented ? "ok" : "ghost"}`} style={{ fontSize: "0.72rem" }}>
+                            {isPresented ? "✓ Completado" : "Pendiente"}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            type="button"
+                            className={`btn compact ${isPresented ? "ghost" : ""}`}
+                            style={{ fontSize: "0.75rem", padding: "4px 10px" }}
+                            onClick={() => handleUpdateDocumentStatus(doc.id, "Egreso", isPresented ? "Presentado" : "Pendiente")}
+                          >
+                            {isPresented ? "Marcar Pendiente" : "✓ Marcar Entregado"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Mini Modal: Add EPP */}
+      {/* TAB 5: EPP */}
+      {activeTab === "epp" && (
+        <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid #0d9488" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <h2 style={{ fontSize: "1.15rem", margin: 0 }}>🛡️ Elementos de Protección Personal (EPP)</h2>
+              <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>
+                Historial de indumentaria y elementos de seguridad entregados bajo firma
+              </p>
+            </div>
+            {isEditing && (
+              <button type="button" className="btn" onClick={() => setShowAddEppModal(true)} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+                + Registrar Entrega de EPP
+              </button>
+            )}
+          </div>
+
+          <div className="table-wrap">
+            <table className="table" style={{ width: "100%", fontSize: "0.88rem" }}>
+              <thead>
+                <tr style={{ background: "var(--surface-sunken)" }}>
+                  <th>Elemento / Indumentaria</th>
+                  <th>Marca / Modelo</th>
+                  <th>Certificado IRAM / Sello</th>
+                  <th style={{ width: 80, textAlign: "center" }}>Cantidad</th>
+                  <th style={{ width: 140, textAlign: "center" }}>Fecha Entrega</th>
+                </tr>
+              </thead>
+              <tbody>
+                {eppList.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: "center", padding: 24 }} className="muted">
+                      No hay registros de entrega de EPP para este colaborador.
+                    </td>
+                  </tr>
+                ) : (
+                  eppList.map((epp) => (
+                    <tr key={epp.id}>
+                      <td><strong>{epp.itemName}</strong></td>
+                      <td>{epp.brandModel || "—"}</td>
+                      <td>{epp.certificateNumber || "—"}</td>
+                      <td style={{ textAlign: "center", fontWeight: 700 }}>{epp.quantity}</td>
+                      <td style={{ textAlign: "center" }} className="muted">
+                        {new Date(epp.deliveryDateUtc).toLocaleDateString("es-AR")}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Agregar Entrega de EPP */}
       {showAddEppModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div className="card pad stack" style={{ width: "500px", background: "white" }}>
-            <h3 style={{ margin: 0 }}>Registrar Entrega de EPP</h3>
-            <form onSubmit={handleAddEpp} className="stack">
+        <div className="modal-backdrop" onClick={() => setShowAddEppModal(false)}>
+          <div className="modal-card" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+            <div className="section-head">
+              <div>
+                <span className="eyebrow">SEGURIDAD & HIGIENE</span>
+                <h2>🛡️ Registrar Entrega de EPP</h2>
+              </div>
+              <button type="button" className="icon-button" onClick={() => setShowAddEppModal(false)}>
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleAddEpp} className="stack" style={{ gap: 14, marginTop: 12 }}>
               <label>
-                Elemento / Ropa de Trabajo *
-                <input type="text" required placeholder="Ej: Calzado de Seguridad con puntera de acero" value={newEppItem} onChange={(e) => setNewEppItem(e.target.value)} />
+                Elemento / Equipo de Seguridad *
+                <input required value={newEppItem} onChange={(e) => setNewEppItem(e.target.value)} placeholder="Ej: Calzado de seguridad con puntera de acero" />
               </label>
+
               <div className="grid-2">
                 <label>
-                  Marca & Modelo
-                  <input type="text" placeholder="Ej: Ombú Krypton Talle 42" value={newEppBrand} onChange={(e) => setNewEppBrand(e.target.value)} />
+                  Marca / Modelo
+                  <input value={newEppBrand} onChange={(e) => setNewEppBrand(e.target.value)} placeholder="Ej: Funcional Trekking" />
                 </label>
                 <label>
                   N° Certificado IRAM / Sello
-                  <input type="text" placeholder="Ej: IRAM 3610" value={newEppCert} onChange={(e) => setNewEppCert(e.target.value)} />
+                  <input value={newEppCert} onChange={(e) => setNewEppCert(e.target.value)} placeholder="Ej: IRAM 3610 / Sello S" />
                 </label>
               </div>
+
               <label>
-                Cantidad
-                <input type="number" min="1" value={newEppQty} onChange={(e) => setNewEppQty(Number(e.target.value))} />
+                Cantidad *
+                <input type="number" min="1" step="1" required value={newEppQty} onChange={(e) => setNewEppQty(Number(e.target.value))} />
               </label>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
-                <button type="button" onClick={() => setShowAddEppModal(false)} className="btn btn-outline">Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ background: "#0d9488" }}>Guardar Registro</button>
+
+              <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 8 }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowAddEppModal(false)}>
+                  Cancelar
+                </button>
+                <button className="btn">Guardar Registro</button>
               </div>
             </form>
           </div>

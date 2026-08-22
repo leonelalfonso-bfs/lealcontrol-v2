@@ -68,6 +68,54 @@ public sealed class Employee
     public DateTime CreatedAtUtc { get; set; }
 }
 
+public sealed class OrganizationPosition
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public string Title { get; set; } = ""; // Nombre del Puesto
+    public string Department { get; set; } = "Operaciones";
+    public Guid? ReportsToPositionId { get; set; } // Puesto Superior
+    public Guid? AssignedEmployeeId { get; set; } // Empleado Ocupante
+    public string Mission { get; set; } = ""; // Misión / Propósito
+    public string Responsibilities { get; set; } = ""; // Tareas y responsabilidades clave
+    public string RequiredQualifications { get; set; } = ""; // Requisitos y formación
+    public string Competencies { get; set; } = ""; // Competencias técnicas y conductuales
+    public string Kpis { get; set; } = ""; // Indicadores de desempeño
+    public int Level { get; set; } = 3; // 1: Dirección, 2: Gerencia, 3: Jefatura, 4: Operativo
+    public DateTime CreatedAtUtc { get; set; }
+}
+
+public sealed class EmployeeDocument
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public Guid EmployeeId { get; set; }
+    public string DocumentType { get; set; } = "CV"; // CV, DNI, CUIL, AltaTemprana, Preocupacional, PeriodicoArt, CargasFamilia, DomicilioReal, TituloEstudios, DatosBancarios, LicenciaConducir, ReciboLiquidacionFinal, CertificadoArt80, CertificadoAfip57, TelegramaRenunciaDespido, Otro
+    public string Category { get; set; } = "Ingreso"; // "Ingreso", "Egreso"
+    public string FileName { get; set; } = "";
+    public string? FileUrl { get; set; }
+    public DateTime? IssueDate { get; set; }
+    public DateTime? ExpiryDate { get; set; }
+    public string Status { get; set; } = "Presentado"; // "Presentado", "Pendiente", "Vencido"
+    public string? Notes { get; set; }
+    public DateTime UploadedAtUtc { get; set; }
+}
+
+public sealed class ProcedureManual
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public string Code { get; set; } = ""; // Ej: PO-MET-001, IT-TAL-002
+    public string Title { get; set; } = "";
+    public string Area { get; set; } = "Metrología"; // Metrología, Calidad, Ventas, Logística, Taller, Administración, RRHH
+    public string Version { get; set; } = "v1.0";
+    public DateTime EffectiveDate { get; set; } = DateTime.UtcNow;
+    public string Status { get; set; } = "Vigente"; // Vigente, EnRevisión, Obsoleto
+    public string Description { get; set; } = "";
+    public string? DocumentUrl { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+}
+
 public sealed class PayrollConcept
 {
     public Guid Id { get; set; }
@@ -171,6 +219,9 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
 {
     public const string Schema = "hr";
     public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<OrganizationPosition> Positions => Set<OrganizationPosition>();
+    public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
+    public DbSet<ProcedureManual> ProcedureManuals => Set<ProcedureManual>();
     public DbSet<PayrollConcept> PayrollConcepts => Set<PayrollConcept>();
     public DbSet<PayrollPeriod> PayrollPeriods => Set<PayrollPeriod>();
     public DbSet<PayrollSlip> PayrollSlips => Set<PayrollSlip>();
@@ -196,6 +247,39 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.Property(x => x.PhotoPath).HasColumnType("text");
             b.HasIndex(x => new { x.TenantId, x.FileNumber }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.Cuil });
+        });
+
+        modelBuilder.Entity<OrganizationPosition>(b =>
+        {
+            b.ToTable("OrganizationPositions");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Title).HasMaxLength(160).IsRequired();
+            b.Property(x => x.Department).HasMaxLength(100).IsRequired();
+            b.HasIndex(x => new { x.TenantId, x.Department });
+        });
+
+        modelBuilder.Entity<EmployeeDocument>(b =>
+        {
+            b.ToTable("EmployeeDocuments");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.DocumentType).HasMaxLength(80).IsRequired();
+            b.Property(x => x.Category).HasMaxLength(40).IsRequired();
+            b.Property(x => x.FileName).HasMaxLength(250).IsRequired();
+            b.Property(x => x.FileUrl).HasColumnType("text");
+            b.HasIndex(x => new { x.TenantId, x.EmployeeId, x.DocumentType });
+        });
+
+        modelBuilder.Entity<ProcedureManual>(b =>
+        {
+            b.ToTable("ProcedureManuals");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Code).HasMaxLength(50).IsRequired();
+            b.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            b.Property(x => x.Area).HasMaxLength(80).IsRequired();
+            b.Property(x => x.Version).HasMaxLength(30).IsRequired();
+            b.Property(x => x.DocumentUrl).HasColumnType("text");
+            b.HasIndex(x => new { x.TenantId, x.Code });
+            b.HasIndex(x => new { x.TenantId, x.Area });
         });
 
         modelBuilder.Entity<PayrollConcept>(b =>
@@ -224,7 +308,6 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.Property(x => x.TotalNonRemunerative).HasPrecision(18, 2);
             b.Property(x => x.TotalDeductions).HasPrecision(18, 2);
             b.Property(x => x.NetPay).HasPrecision(18, 2);
-            b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.PayrollSlipId).OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(x => new { x.TenantId, x.PayrollPeriodId, x.EmployeeId });
         });
 
@@ -258,11 +341,14 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.ToTable("EppDeliveries");
             b.HasKey(x => x.Id);
             b.Property(x => x.ItemName).HasMaxLength(200).IsRequired();
+            b.Property(x => x.SignedReceiptProofUrl).HasColumnType("text");
             b.HasIndex(x => new { x.TenantId, x.EmployeeId });
         });
     }
 
-    public async Task EnsureHrTablesAsync(CancellationToken ct = default)
+    public Task EnsureHrTablesAsync(CancellationToken ct = default) => EnsureHumanResourcesTablesAsync(ct);
+
+    public async Task EnsureHumanResourcesTablesAsync(CancellationToken ct = default)
     {
         var sql = @"
             CREATE SCHEMA IF NOT EXISTS hr;
@@ -279,33 +365,78 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
                 ""Gender"" character varying(10) NOT NULL DEFAULT 'M',
                 ""Nationality"" character varying(60) NOT NULL DEFAULT 'Argentina',
                 ""CivilStatus"" character varying(40) NOT NULL DEFAULT 'Soltero',
-                ""Address"" character varying(250) NOT NULL DEFAULT '',
-                ""City"" character varying(120) NOT NULL DEFAULT 'San Lorenzo',
-                ""Province"" character varying(60) NOT NULL DEFAULT 'SantaFe',
+                ""Address"" character varying(200) NOT NULL DEFAULT '',
+                ""City"" character varying(100) NOT NULL DEFAULT 'San Lorenzo',
+                ""Province"" character varying(80) NOT NULL DEFAULT 'SantaFe',
                 ""PostalCode"" character varying(20) NOT NULL DEFAULT '2200',
-                ""Phone"" character varying(60) NOT NULL DEFAULT '',
-                ""Email"" character varying(160) NOT NULL DEFAULT '',
-                ""EmergencyContactName"" character varying(160),
-                ""EmergencyContactPhone"" character varying(60),
+                ""Phone"" character varying(50) NOT NULL DEFAULT '',
+                ""Email"" character varying(120) NOT NULL DEFAULT '',
+                ""EmergencyContactName"" character varying(120),
+                ""EmergencyContactPhone"" character varying(50),
                 ""HireDate"" timestamp with time zone NOT NULL,
                 ""SeniorityRecognitionDate"" timestamp with time zone,
                 ""TerminationDate"" timestamp with time zone,
                 ""ContractType"" integer NOT NULL DEFAULT 0,
-                ""JobTitle"" character varying(120) NOT NULL DEFAULT '',
-                ""Department"" character varying(120) NOT NULL DEFAULT 'Operaciones',
-                ""CostCenter"" character varying(120) NOT NULL DEFAULT 'Técnica',
-                ""WorkplaceLocation"" character varying(120) NOT NULL DEFAULT 'Planta Central',
+                ""JobTitle"" character varying(100) NOT NULL DEFAULT '',
+                ""Department"" character varying(100) NOT NULL DEFAULT 'Técnica',
+                ""CostCenter"" character varying(100) NOT NULL DEFAULT 'Operaciones',
+                ""WorkplaceLocation"" character varying(120) NOT NULL DEFAULT 'Planta Principal',
                 ""UnionCct"" character varying(120) NOT NULL DEFAULT 'Comercio 130/75',
-                ""UnionCategory"" character varying(120) NOT NULL DEFAULT 'Administrativo A',
+                ""UnionCategory"" character varying(100) NOT NULL DEFAULT 'Administrativo A',
                 ""HealthInsurance"" character varying(120) NOT NULL DEFAULT 'OSECAC',
                 ""BaseSalary"" numeric(18,2) NOT NULL DEFAULT 0,
                 ""HourlyRate"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""BankName"" character varying(120) NOT NULL DEFAULT 'Banco Nación',
-                ""Cbu"" character varying(40) NOT NULL DEFAULT '',
-                ""BankAlias"" character varying(40) NOT NULL DEFAULT '',
+                ""BankName"" character varying(100) NOT NULL DEFAULT 'Banco Nación',
+                ""Cbu"" character varying(30) NOT NULL DEFAULT '',
+                ""BankAlias"" character varying(50) NOT NULL DEFAULT '',
                 ""Status"" integer NOT NULL DEFAULT 0,
                 ""PhotoPath"" text,
                 ""Notes"" text,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS hr.""OrganizationPositions"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Title"" character varying(160) NOT NULL,
+                ""Department"" character varying(100) NOT NULL DEFAULT 'Operaciones',
+                ""ReportsToPositionId"" uuid,
+                ""AssignedEmployeeId"" uuid,
+                ""Mission"" text NOT NULL DEFAULT '',
+                ""Responsibilities"" text NOT NULL DEFAULT '',
+                ""RequiredQualifications"" text NOT NULL DEFAULT '',
+                ""Competencies"" text NOT NULL DEFAULT '',
+                ""Kpis"" text NOT NULL DEFAULT '',
+                ""Level"" integer NOT NULL DEFAULT 3,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS hr.""EmployeeDocuments"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""EmployeeId"" uuid NOT NULL,
+                ""DocumentType"" character varying(80) NOT NULL,
+                ""Category"" character varying(40) NOT NULL DEFAULT 'Ingreso',
+                ""FileName"" character varying(250) NOT NULL,
+                ""FileUrl"" text,
+                ""IssueDate"" timestamp with time zone,
+                ""ExpiryDate"" timestamp with time zone,
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Presentado',
+                ""Notes"" text,
+                ""UploadedAtUtc"" timestamp with time zone NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS hr.""ProcedureManuals"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Code"" character varying(50) NOT NULL,
+                ""Title"" character varying(200) NOT NULL,
+                ""Area"" character varying(80) NOT NULL DEFAULT 'Metrología',
+                ""Version"" character varying(30) NOT NULL DEFAULT 'v1.0',
+                ""EffectiveDate"" timestamp with time zone NOT NULL,
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Vigente',
+                ""Description"" text NOT NULL DEFAULT '',
+                ""DocumentUrl"" text,
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL
             );
 
@@ -421,6 +552,43 @@ public static class HumanResourcesModule
         var group = endpoints.MapGroup("/api/v1/hr").WithTags("HumanResources");
 
         // -------------------------------------------------------------
+        // DASHBOARD SUMMARY
+        // -------------------------------------------------------------
+        group.MapGet("/dashboard-summary", async (HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var employees = await db.Employees.AsNoTracking().Where(x => x.TenantId == tenantId).ToListAsync(ct);
+            var positions = await db.Positions.AsNoTracking().Where(x => x.TenantId == tenantId).ToListAsync(ct);
+            var documents = await db.EmployeeDocuments.AsNoTracking().Where(x => x.TenantId == tenantId).ToListAsync(ct);
+            var manuals = await db.ProcedureManuals.AsNoTracking().Where(x => x.TenantId == tenantId).ToListAsync(ct);
+
+            var activeCount = employees.Count(x => x.Status == EmployeeStatus.Active);
+            var leaveCount = employees.Count(x => x.Status == EmployeeStatus.Leave);
+            var terminatedCount = employees.Count(x => x.Status == EmployeeStatus.Terminated);
+
+            var depts = employees.Where(x => x.Status == EmployeeStatus.Active)
+                .GroupBy(x => x.Department ?? "Sin Área")
+                .Select(g => new { department = g.Key, count = g.Count() })
+                .ToList();
+
+            var now = DateTime.UtcNow;
+            var expiringDocs = documents.Where(d => d.ExpiryDate.HasValue && d.ExpiryDate.Value <= now.AddDays(30)).ToList();
+
+            return Results.Ok(new
+            {
+                totalEmployees = employees.Count,
+                activeEmployees = activeCount,
+                leaveEmployees = leaveCount,
+                terminatedEmployees = terminatedCount,
+                positionsCount = positions.Count,
+                coveredPositions = positions.Count(p => p.AssignedEmployeeId.HasValue),
+                manualsCount = manuals.Count,
+                expiringDocsCount = expiringDocs.Count,
+                departmentDistribution = depts
+            });
+        });
+
+        // -------------------------------------------------------------
         // EMPLOYEES CRUD
         // -------------------------------------------------------------
         group.MapGet("/employees", async (string? search, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
@@ -517,45 +685,218 @@ public static class HumanResourcesModule
         });
 
         // -------------------------------------------------------------
-        // EPP DELIVERIES
+        // ORGANIZATIONAL POSITIONS & JOB DESCRIPTIONS
         // -------------------------------------------------------------
-        group.MapGet("/employees/{employeeId:guid}/epps", async (Guid employeeId, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        group.MapGet("/positions", async (HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;
-            var epps = await db.EppDeliveries.AsNoTracking()
-                .Where(x => x.TenantId == tenantId && x.EmployeeId == employeeId)
-                .OrderByDescending(x => x.DeliveryDateUtc)
+            var positions = await db.Positions.AsNoTracking()
+                .Where(x => x.TenantId == tenantId)
+                .OrderBy(x => x.Level)
+                .ThenBy(x => x.Department)
+                .ThenBy(x => x.Title)
                 .ToListAsync(ct);
-            return Results.Ok(epps);
+            return Results.Ok(positions);
         });
 
-        group.MapPost("/epps", async (EppDelivery body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        group.MapPost("/positions", async (OrganizationPosition body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;
             body.Id = Guid.NewGuid();
             body.TenantId = tenantId;
             body.CreatedAtUtc = DateTime.UtcNow;
-            if (body.DeliveryDateUtc == default) body.DeliveryDateUtc = DateTime.UtcNow;
 
-            db.EppDeliveries.Add(body);
+            db.Positions.Add(body);
             await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/hr/epps/{body.Id}", body);
+            return Results.Created($"/api/v1/hr/positions/{body.Id}", body);
+        });
+
+        group.MapPut("/positions/{id:guid}", async (Guid id, OrganizationPosition body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var pos = await db.Positions.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+            if (pos is null) return Results.NotFound("Puesto no encontrado");
+
+            pos.Title = body.Title.Trim();
+            pos.Department = body.Department.Trim();
+            pos.ReportsToPositionId = body.ReportsToPositionId;
+            pos.AssignedEmployeeId = body.AssignedEmployeeId;
+            pos.Mission = body.Mission ?? "";
+            pos.Responsibilities = body.Responsibilities ?? "";
+            pos.RequiredQualifications = body.RequiredQualifications ?? "";
+            pos.Competencies = body.Competencies ?? "";
+            pos.Kpis = body.Kpis ?? "";
+            pos.Level = body.Level;
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(pos);
+        });
+
+        group.MapDelete("/positions/{id:guid}", async (Guid id, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var pos = await db.Positions.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+            if (pos is null) return Results.NotFound();
+
+            db.Positions.Remove(pos);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
         });
 
         // -------------------------------------------------------------
-        // TIME TRACKING
+        // EMPLOYEE DIGITAL DOSSIER (LEGAJO DIGITAL DOCUMENTS)
         // -------------------------------------------------------------
-        group.MapGet("/time-tracking", async (Guid? employeeId, DateTime? fromDate, DateTime? toDate, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        group.MapGet("/employees/{employeeId:guid}/documents", async (Guid employeeId, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var docs = await db.EmployeeDocuments.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.EmployeeId == employeeId)
+                .OrderBy(x => x.Category)
+                .ThenBy(x => x.DocumentType)
+                .ToListAsync(ct);
+            return Results.Ok(docs);
+        });
+
+        group.MapPost("/employees/{employeeId:guid}/documents", async (Guid employeeId, EmployeeDocument body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            body.Id = Guid.NewGuid();
+            body.TenantId = tenantId;
+            body.EmployeeId = employeeId;
+            body.UploadedAtUtc = DateTime.UtcNow;
+
+            db.EmployeeDocuments.Add(body);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/hr/documents/{body.Id}", body);
+        });
+
+        group.MapPut("/documents/{id:guid}", async (Guid id, EmployeeDocument body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var doc = await db.EmployeeDocuments.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+            if (doc is null) return Results.NotFound("Documento no encontrado");
+
+            doc.DocumentType = body.DocumentType;
+            doc.Category = body.Category;
+            doc.FileName = body.FileName;
+            doc.FileUrl = body.FileUrl;
+            doc.IssueDate = body.IssueDate;
+            doc.ExpiryDate = body.ExpiryDate;
+            doc.Status = body.Status;
+            doc.Notes = body.Notes;
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(doc);
+        });
+
+        group.MapDelete("/documents/{id:guid}", async (Guid id, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var doc = await db.EmployeeDocuments.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+            if (doc is null) return Results.NotFound();
+
+            db.EmployeeDocuments.Remove(doc);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        });
+
+        // -------------------------------------------------------------
+        // PROCEDURE MANUALS & STANDARD OPERATING PROCEDURES (SOP)
+        // -------------------------------------------------------------
+        group.MapGet("/manuals", async (string? area, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var q = db.ProcedureManuals.AsNoTracking().Where(x => x.TenantId == tenantId);
+            if (!string.IsNullOrWhiteSpace(area) && area != "ALL")
+            {
+                q = q.Where(x => x.Area == area);
+            }
+
+            var manuals = await q.OrderBy(x => x.Area).ThenBy(x => x.Code).ToListAsync(ct);
+            return Results.Ok(manuals);
+        });
+
+        group.MapPost("/manuals", async (ProcedureManual body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            body.Id = Guid.NewGuid();
+            body.TenantId = tenantId;
+            body.CreatedAtUtc = DateTime.UtcNow;
+
+            db.ProcedureManuals.Add(body);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/hr/manuals/{body.Id}", body);
+        });
+
+        group.MapPut("/manuals/{id:guid}", async (Guid id, ProcedureManual body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var manual = await db.ProcedureManuals.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+            if (manual is null) return Results.NotFound("Manual no encontrado");
+
+            manual.Code = body.Code.Trim();
+            manual.Title = body.Title.Trim();
+            manual.Area = body.Area.Trim();
+            manual.Version = body.Version.Trim();
+            manual.EffectiveDate = body.EffectiveDate;
+            manual.Status = body.Status.Trim();
+            manual.Description = body.Description ?? "";
+            manual.DocumentUrl = body.DocumentUrl;
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(manual);
+        });
+
+        group.MapDelete("/manuals/{id:guid}", async (Guid id, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var manual = await db.ProcedureManuals.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+            if (manual is null) return Results.NotFound();
+
+            db.ProcedureManuals.Remove(manual);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        });
+
+        // -------------------------------------------------------------
+        // EPP DELIVERIES
+        // -------------------------------------------------------------
+        group.MapGet("/employees/{employeeId:guid}/epp", async (Guid employeeId, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var items = await db.EppDeliveries.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.EmployeeId == employeeId)
+                .OrderByDescending(x => x.DeliveryDateUtc)
+                .ToListAsync(ct);
+            return Results.Ok(items);
+        });
+
+        group.MapPost("/employees/{employeeId:guid}/epp", async (Guid employeeId, EppDelivery body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            body.Id = Guid.NewGuid();
+            body.TenantId = tenantId;
+            body.EmployeeId = employeeId;
+            body.CreatedAtUtc = DateTime.UtcNow;
+
+            db.EppDeliveries.Add(body);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/hr/epp/{body.Id}", body);
+        });
+
+        // -------------------------------------------------------------
+        // TIME TRACKING & CLOCK-IN
+        // -------------------------------------------------------------
+        group.MapGet("/time-tracking", async (DateTime? dateFrom, DateTime? dateTo, Guid? employeeId, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;
             var q = db.TimeTrackings.AsNoTracking().Where(x => x.TenantId == tenantId);
-
+            if (dateFrom.HasValue) q = q.Where(x => x.Date >= dateFrom.Value);
+            if (dateTo.HasValue) q = q.Where(x => x.Date <= dateTo.Value);
             if (employeeId.HasValue) q = q.Where(x => x.EmployeeId == employeeId.Value);
-            if (fromDate.HasValue) q = q.Where(x => x.Date >= fromDate.Value);
-            if (toDate.HasValue) q = q.Where(x => x.Date <= toDate.Value);
 
-            var items = await q.OrderByDescending(x => x.Date).ToListAsync(ct);
-            return Results.Ok(items);
+            var list = await q.OrderByDescending(x => x.Date).ToListAsync(ct);
+            return Results.Ok(list);
         });
 
         group.MapPost("/time-tracking", async (EmployeeTimeTracking body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
@@ -571,17 +912,17 @@ public static class HumanResourcesModule
         });
 
         // -------------------------------------------------------------
-        // PAYROLL & LIQUIDACIONES (Multi-Convenio Engine)
+        // PAYROLL PERIODS & CONCEPTS
         // -------------------------------------------------------------
         group.MapGet("/payroll/periods", async (HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;
-            var periods = await db.PayrollPeriods.AsNoTracking()
+            var list = await db.PayrollPeriods.AsNoTracking()
                 .Where(x => x.TenantId == tenantId)
                 .OrderByDescending(x => x.PeriodYear)
                 .ThenByDescending(x => x.PeriodMonth)
                 .ToListAsync(ct);
-            return Results.Ok(periods);
+            return Results.Ok(list);
         });
 
         group.MapPost("/payroll/periods", async (PayrollPeriod body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
@@ -590,47 +931,47 @@ public static class HumanResourcesModule
             body.Id = Guid.NewGuid();
             body.TenantId = tenantId;
             body.CreatedAtUtc = DateTime.UtcNow;
-            if (body.PaymentDateUtc == default) body.PaymentDateUtc = DateTime.UtcNow;
 
             db.PayrollPeriods.Add(body);
             await db.SaveChangesAsync(ct);
             return Results.Created($"/api/v1/hr/payroll/periods/{body.Id}", body);
         });
 
-        // Universal Calculation Engine for Period
-        group.MapPost("/payroll/calculate/{periodId:guid}", async (Guid periodId, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        group.MapGet("/payroll/concepts", async (HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var list = await db.PayrollConcepts.AsNoTracking()
+                .Where(x => x.TenantId == tenantId || x.IsSystemDefault)
+                .OrderBy(x => x.Code)
+                .ToListAsync(ct);
+            return Results.Ok(list);
+        });
+
+        // Liquidación Automática de Período
+        group.MapPost("/payroll/periods/{periodId:guid}/calculate", async (Guid periodId, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;
             var period = await db.PayrollPeriods.FirstOrDefaultAsync(x => x.Id == periodId && x.TenantId == tenantId, ct);
-            if (period is null) return Results.NotFound("Período de liquidación inexistente.");
-
-            // Remove previous slips for this period if any
-            var existingSlips = await db.PayrollSlips.Where(x => x.PayrollPeriodId == periodId && x.TenantId == tenantId).ToListAsync(ct);
-            db.PayrollSlips.RemoveRange(existingSlips);
+            if (period is null) return Results.NotFound("Período no encontrado");
 
             var activeEmployees = await db.Employees.Where(x => x.TenantId == tenantId && x.Status == EmployeeStatus.Active).ToListAsync(ct);
 
-            int receiptCounter = 1;
-            var createdSlips = new List<PayrollSlip>();
+            // Eliminar recibos previos en borrador
+            var existingSlips = await db.PayrollSlips.Where(x => x.PayrollPeriodId == periodId && x.TenantId == tenantId).ToListAsync(ct);
+            db.PayrollSlips.RemoveRange(existingSlips);
 
             foreach (var emp in activeEmployees)
             {
-                var basic = emp.BaseSalary > 0 ? emp.BaseSalary : 500000m;
-                var yearsSeniority = Math.Max(0, (DateTime.UtcNow - (emp.SeniorityRecognitionDate ?? emp.HireDate)).Days / 365);
-                var seniorityAmount = Math.Round(basic * (yearsSeniority * 0.01m), 2); // 1% per year standard
-                var presenteeism = Math.Round((basic + seniorityAmount) * (1m / 12m), 2); // 8.33% CCT Comercio / General
+                var baseSalary = emp.BaseSalary > 0 ? emp.BaseSalary : 750000m;
+                var seniorityYears = (DateTime.UtcNow - emp.HireDate).TotalDays / 365.25;
+                var seniorityAmount = baseSalary * (decimal)(Math.Floor(seniorityYears) * 0.01); // 1% por año
 
-                var grossRem = basic + seniorityAmount + presenteeism;
-                var nonRem = 0m; // Can be configured with paritarias
-
-                // Deductions of law (SIPA 11%, INSSJyP 3%, Obra Social 3%, Gremio 2%)
-                var jubilacion = Math.Round(grossRem * 0.11m, 2);
-                var inssjyp = Math.Round(grossRem * 0.03m, 2);
-                var obraSocial = Math.Round(grossRem * 0.03m, 2);
-                var cuotaSindical = Math.Round((grossRem + nonRem) * 0.02m, 2);
-                var totalDeductions = jubilacion + inssjyp + obraSocial + cuotaSindical;
-
-                var netPay = grossRem + nonRem - totalDeductions;
+                var grossRemunerative = baseSalary + seniorityAmount;
+                var jub = grossRemunerative * 0.11m; // 11% Jubilación
+                var inssjp = grossRemunerative * 0.03m; // 3% Ley 19032
+                var os = grossRemunerative * 0.03m; // 3% Obra Social
+                var totalDeductions = jub + inssjp + os;
+                var net = grossRemunerative - totalDeductions;
 
                 var slip = new PayrollSlip
                 {
@@ -638,56 +979,52 @@ public static class HumanResourcesModule
                     TenantId = tenantId,
                     PayrollPeriodId = periodId,
                     EmployeeId = emp.Id,
-                    ReceiptNumber = $"{period.PeriodYear}-{period.PeriodMonth:D2}-{receiptCounter:D4}",
-                    TotalGrossRemunerative = grossRem,
-                    TotalNonRemunerative = nonRem,
+                    ReceiptNumber = $"REC-{period.PeriodYear}{period.PeriodMonth:D2}-{emp.FileNumber}",
+                    TotalGrossRemunerative = grossRemunerative,
+                    TotalNonRemunerative = 0,
                     TotalDeductions = totalDeductions,
-                    NetPay = netPay,
-                    NetPayWords = $"Son pesos {netPay:N2}",
+                    NetPay = net,
+                    NetPayWords = $"PESOS {net:N2}",
                     Status = "Issued",
-                    SignedByCompanyUtc = DateTime.UtcNow,
-                    SignatureHashSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{emp.Cuil}-{period.PeriodYear}{period.PeriodMonth}-{netPay}"))),
                     CreatedAtUtc = DateTime.UtcNow,
                     Lines =
                     [
-                        new() { Id = Guid.NewGuid(), ConceptCode = "100", ConceptName = "Sueldo Básico", Type = ConceptType.Remunerative, Quantity = 30, Unit = "Días", BaseAmount = basic, RemunerativeAmount = basic },
-                        new() { Id = Guid.NewGuid(), ConceptCode = "110", ConceptName = $"Antigüedad ({yearsSeniority} años)", Type = ConceptType.Remunerative, Quantity = yearsSeniority, Unit = "Años", BaseAmount = basic, Percentage = 1, RemunerativeAmount = seniorityAmount },
-                        new() { Id = Guid.NewGuid(), ConceptCode = "120", ConceptName = "Presentismo Asistencia Perfecta", Type = ConceptType.Remunerative, Quantity = 1, Unit = "Global", BaseAmount = basic + seniorityAmount, Percentage = 8.33m, RemunerativeAmount = presenteeism },
-                        new() { Id = Guid.NewGuid(), ConceptCode = "300", ConceptName = "Jubilación (SIPA Ley 24.241)", Type = ConceptType.Deduction, Percentage = 11, BaseAmount = grossRem, DeductionAmount = jubilacion },
-                        new() { Id = Guid.NewGuid(), ConceptCode = "301", ConceptName = "INSSJyP (PAMI Ley 19.032)", Type = ConceptType.Deduction, Percentage = 3, BaseAmount = grossRem, DeductionAmount = inssjyp },
-                        new() { Id = Guid.NewGuid(), ConceptCode = "302", ConceptName = $"Obra Social ({emp.HealthInsurance})", Type = ConceptType.Deduction, Percentage = 3, BaseAmount = grossRem, DeductionAmount = obraSocial },
-                        new() { Id = Guid.NewGuid(), ConceptCode = "303", ConceptName = "Aporte Sindical / Cuota Gremial", Type = ConceptType.Deduction, Percentage = 2, BaseAmount = grossRem, DeductionAmount = cuotaSindical }
+                        new() { Id = Guid.NewGuid(), ConceptCode = "100", ConceptName = "Sueldo Básico Mensual", Type = ConceptType.Remunerative, Quantity = 30, Unit = "Días", BaseAmount = baseSalary, RemunerativeAmount = baseSalary },
+                        new() { Id = Guid.NewGuid(), ConceptCode = "110", ConceptName = $"Antigüedad ({Math.Floor(seniorityYears)} años)", Type = ConceptType.Remunerative, Quantity = (decimal)Math.Floor(seniorityYears), Unit = "Años", BaseAmount = baseSalary, Percentage = 1, RemunerativeAmount = seniorityAmount },
+                        new() { Id = Guid.NewGuid(), ConceptCode = "300", ConceptName = "Jubilación (SIPA 11%)", Type = ConceptType.Deduction, Percentage = 11, BaseAmount = grossRemunerative, DeductionAmount = jub },
+                        new() { Id = Guid.NewGuid(), ConceptCode = "301", ConceptName = "Obra Social (3%)", Type = ConceptType.Deduction, Percentage = 3, BaseAmount = grossRemunerative, DeductionAmount = os },
+                        new() { Id = Guid.NewGuid(), ConceptCode = "302", ConceptName = "Ley 19.032 - INSSJyP (3%)", Type = ConceptType.Deduction, Percentage = 3, BaseAmount = grossRemunerative, DeductionAmount = inssjp }
                     ]
                 };
 
-                createdSlips.Add(slip);
-                receiptCounter++;
+                db.PayrollSlips.Add(slip);
             }
 
-            db.PayrollSlips.AddRange(createdSlips);
-            period.Status = PayrollPeriodStatus.Closed;
+            period.Status = PayrollPeriodStatus.Calculating;
             await db.SaveChangesAsync(ct);
 
-            return Results.Ok(new { periodId, employeesCalculated = createdSlips.Count, totalNetToPay = createdSlips.Sum(x => x.NetPay) });
+            return Results.Ok(new { message = $"Liquidación calculada para {activeEmployees.Count} colaboradores." });
         });
 
-        group.MapGet("/payroll/slips/{periodId:guid}", async (Guid periodId, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        // -------------------------------------------------------------
+        // PAYROLL SLIPS & DIGITAL SIGNATURE
+        // -------------------------------------------------------------
+        group.MapGet("/payroll/slips", async (Guid? periodId, Guid? employeeId, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;
-            var slips = await db.PayrollSlips.AsNoTracking()
-                .Where(x => x.TenantId == tenantId && x.PayrollPeriodId == periodId)
+            var q = db.PayrollSlips.AsNoTracking().Where(x => x.TenantId == tenantId);
+            if (periodId.HasValue) q = q.Where(x => x.PayrollPeriodId == periodId.Value);
+            if (employeeId.HasValue) q = q.Where(x => x.EmployeeId == employeeId.Value);
+
+            var slips = await q.OrderByDescending(x => x.CreatedAtUtc)
                 .Join(db.Employees, s => s.EmployeeId, e => e.Id, (s, e) => new
                 {
                     s.Id,
                     s.PayrollPeriodId,
                     s.EmployeeId,
                     EmployeeName = $"{e.LastName}, {e.FirstName}",
-                    e.FileNumber,
-                    e.Cuil,
-                    e.JobTitle,
-                    e.UnionCct,
-                    e.BankName,
-                    e.Cbu,
+                    EmployeeFileNumber = e.FileNumber,
+                    EmployeeCuil = e.Cuil,
                     s.ReceiptNumber,
                     s.TotalGrossRemunerative,
                     s.TotalNonRemunerative,
@@ -738,7 +1075,6 @@ public static class HumanResourcesModule
             var employees = await db.Employees.Where(x => x.TenantId == tenantId).ToDictionaryAsync(x => x.Id, ct);
 
             var sb = new StringBuilder();
-            // Registro 01: Caratula
             sb.AppendLine($"0130718293849{period.PeriodYear}{period.PeriodMonth:D2}M0000130");
 
             foreach (var slip in slips)
@@ -747,10 +1083,8 @@ public static class HumanResourcesModule
                 var cuil = emp.Cuil.Replace("-", "").PadLeft(11, '0');
                 var legajo = (emp.FileNumber ?? "").PadRight(10, ' ').Substring(0, 10);
 
-                // Registro 02: Trabajador
                 sb.AppendLine($"02{cuil}{legajo}0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
 
-                // Registro 03: Conceptos
                 foreach (var line in slip.Lines)
                 {
                     var code = (line.ConceptCode ?? "100").PadRight(10, ' ').Substring(0, 10);
@@ -761,7 +1095,6 @@ public static class HumanResourcesModule
                     sb.AppendLine($"03{cuil}{code}{cant}{tipo}{imp}");
                 }
 
-                // Registro 04: Bases de Seguridad Social
                 var remImp = ((long)(slip.TotalGrossRemunerative * 100)).ToString().PadLeft(15, '0');
                 sb.AppendLine($"04{cuil}000{remImp}{remImp}{remImp}{remImp}{remImp}");
             }
