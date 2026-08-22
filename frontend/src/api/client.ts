@@ -694,11 +694,19 @@ export const api = {
     accuracyClass: string;
     loadCellsCount: number;
     normative?: string;
+    standardApplied?: string;
+    platformType?: string;
+    tare?: number;
+    isInService?: boolean;
   }) =>
     request<{
       linearityPoints: import("./types").MetrologyTestPoint[];
       eccentricityConfig: import("./types").EccentricityConfig;
       repeatabilityConfig: { halfMaxLoad: number; fullMaxLoad: number; emt: number; recommendedRepetitions: number };
+      recommendedLinearityPoints?: any[];
+      standardApplied?: string;
+      errorLimitTerm?: string;
+      repeatabilityTerm?: string;
     }>("/api/v1/metrology/calculate-rules", { method: "POST", body: JSON.stringify(body) }),
 
   listCalibrationReports: (params?: { equipmentId?: string; customerId?: string }) => {

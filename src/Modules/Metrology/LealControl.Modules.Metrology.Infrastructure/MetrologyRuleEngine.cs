@@ -10,14 +10,14 @@ public static class MetrologyRuleEngine
     /// Calcula el Error Máximo Tolerado (EMT / emp) para una carga dada según la clase, el escalón e, y la resolución aplicable.
     /// Res. 2307/80 (EMT) vs Res. 25/2025 (emp OIML R 76-1).
     /// </summary>
-    public static decimal CalculateEMT(decimal load, decimal e, string accuracyClass = "III", bool isInService = true, string standard = "Res25_2025")
+    public static decimal CalculateEMT(decimal load, decimal e, string? accuracyClass = "III", bool isInService = true, string standard = "Res25_2025")
     {
         if (e <= 0) return 0;
         var n = load / e; // Número de escalones de verificación
         var factor = isInService ? 2.0m : 1.0m; // En servicio el EMT/emp es el doble que en verificación inicial/primitiva
 
         decimal baseEmt;
-        var accClass = accuracyClass.ToUpperInvariant();
+        var accClass = string.IsNullOrWhiteSpace(accuracyClass) ? "III" : accuracyClass.Trim().ToUpperInvariant();
 
         switch (accClass)
         {
@@ -57,7 +57,7 @@ public static class MetrologyRuleEngine
         decimal minCapacity, 
         decimal maxCapacity, 
         decimal e, 
-        string accuracyClass = "III",
+        string? accuracyClass = "III",
         bool isInService = true,
         string standard = "Res25_2025")
     {
@@ -66,14 +66,15 @@ public static class MetrologyRuleEngine
 
         var term = standard == "Res2307_80" ? "EMT" : "emp";
         var norm = standard == "Res2307_80" ? "Res. 2307/80" : "Res. 25/2025";
+        var acc = string.IsNullOrWhiteSpace(accuracyClass) ? "III" : accuracyClass.Trim();
 
         // Punto 1: Carga Mínima (Min)
         if (minCapacity > 0)
         {
             points.Add(new MetrologyTestPointDto(
                 minCapacity,
-                CalculateEMT(minCapacity, e, accuracyClass, isInService, standard),
-                $"{norm} - Capacidad Mínima ({term} = ±{CalculateEMT(minCapacity, e, accuracyClass, isInService, standard)} kg)"
+                CalculateEMT(minCapacity, e, acc, isInService, standard),
+                $"{norm} - Capacidad Mínima ({term} = ±{CalculateEMT(minCapacity, e, acc, isInService, standard)} kg)"
             ));
         }
 
@@ -83,8 +84,8 @@ public static class MetrologyRuleEngine
         {
             points.Add(new MetrologyTestPointDto(
                 p500e,
-                CalculateEMT(p500e, e, accuracyClass, isInService, standard),
-                $"{norm} - Límite 500e ({term} = ±{CalculateEMT(p500e, e, accuracyClass, isInService, standard)} kg)"
+                CalculateEMT(p500e, e, acc, isInService, standard),
+                $"{norm} - Límite 500e ({term} = ±{CalculateEMT(p500e, e, acc, isInService, standard)} kg)"
             ));
         }
 
@@ -94,8 +95,8 @@ public static class MetrologyRuleEngine
         {
             points.Add(new MetrologyTestPointDto(
                 p2000e,
-                CalculateEMT(p2000e, e, accuracyClass, isInService, standard),
-                $"{norm} - Límite 2000e ({term} = ±{CalculateEMT(p2000e, e, accuracyClass, isInService, standard)} kg)"
+                CalculateEMT(p2000e, e, acc, isInService, standard),
+                $"{norm} - Límite 2000e ({term} = ±{CalculateEMT(p2000e, e, acc, isInService, standard)} kg)"
             ));
         }
 
@@ -105,16 +106,16 @@ public static class MetrologyRuleEngine
         {
             points.Add(new MetrologyTestPointDto(
                 p50Max,
-                CalculateEMT(p50Max, e, accuracyClass, isInService, standard),
-                $"{norm} - 50% Capacidad Máxima ({term} = ±{CalculateEMT(p50Max, e, accuracyClass, isInService, standard)} kg)"
+                CalculateEMT(p50Max, e, acc, isInService, standard),
+                $"{norm} - 50% Capacidad Máxima ({term} = ±{CalculateEMT(p50Max, e, acc, isInService, standard)} kg)"
             ));
         }
 
         // Punto 5: Capacidad Máxima (100% Max)
         points.Add(new MetrologyTestPointDto(
             maxCapacity,
-            CalculateEMT(maxCapacity, e, accuracyClass, isInService, standard),
-            $"{norm} - Capacidad Máxima ({term} = ±{CalculateEMT(maxCapacity, e, accuracyClass, isInService, standard)} kg)"
+            CalculateEMT(maxCapacity, e, acc, isInService, standard),
+            $"{norm} - Capacidad Máxima ({term} = ±{CalculateEMT(maxCapacity, e, acc, isInService, standard)} kg)"
         ));
 
         return points.OrderBy(p => p.NominalLoad).ToList();
@@ -179,19 +180,9 @@ public static class MetrologyRuleEngine
         }
 
         var positions = new List<string>();
-        if (platformType == "TruckScale" || n > 4)
+        for (int i = 1; i <= n; i++)
         {
-            for (int i = 1; i <= n; i++)
-            {
-                positions.Add($"Apoyo / Celda {i} (Punto {i})");
-            }
-        }
-        else
-        {
-            positions.Add("Posición 1 (Centro / Cuadrante Frontal Izq)");
-            positions.Add("Posición 2 (Cuadrante Frontal Der)");
-            positions.Add("Posición 3 (Cuadrante Posterior Der)");
-            positions.Add("Posición 4 (Cuadrante Posterior Izq)");
+            positions.Add(n > 4 ? $"Apoyo {i} (Celda {i})" : $"Esquina {i}");
         }
 
         return new EccentricityConfigDto(testLoad, n, positions, ruleApplied);

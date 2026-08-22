@@ -27,10 +27,10 @@ export function CalibrationReportFormPage() {
 
   // General Report Info
   const [reportNumber, setReportNumber] = useState("");
-  const [certificateType, setCertificateType] = useState("Ensayo Oficial Res. 67/2025");
-  const [normativeApplied, setNormativeApplied] = useState("Resolución 67/2025 (OIML R 76-1)");
+  const [certificateType, setCertificateType] = useState("Ensayo Oficial Res. 25/2025");
+  const [normativeApplied, setNormativeApplied] = useState("Resolución SIyC Nº 25/2025 (OIML R 76-1)");
   const [calibrationDate, setCalibrationDate] = useState(new Date().toISOString().split("T")[0]);
-  const [nextCalibrationDate, setNextCalibrationDate] = useState(new Date(Date.now() + 365*24*60*60*1000).toISOString().split("T")[0]);
+  const [nextCalibrationDate, setNextCalibrationDate] = useState(new Date(Date.now() + 730*24*60*60*1000).toISOString().split("T")[0]);
   const [performedBy, setPerformedBy] = useState("Metrólogo Autorizado");
   const [ambientTemperature, setAmbientTemperature] = useState("20.0");
   const [ambientHumidity, setAmbientHumidity] = useState("50.0");
@@ -79,13 +79,14 @@ export function CalibrationReportFormPage() {
       api.listStandardWeights()
     ])
       .then(([eqs, wts]) => {
-        setEquipments(eqs);
-        setWeights(wts);
-        // Preselect standard weights
-        setSelectedWeightIds(wts.filter(w => w.status === "Valid").map(w => w.id));
+        setEquipments(eqs || []);
+        setWeights(wts || []);
+        if (wts && Array.isArray(wts)) {
+          setSelectedWeightIds(wts.filter(w => w.status === "Valid").map(w => w.id));
+        }
 
-        const targetId = preselectedEquipmentId || (eqs.length > 0 ? eqs[0].id : "");
-        if (targetId) {
+        const targetId = preselectedEquipmentId || (eqs && eqs.length > 0 ? eqs[0].id : "");
+        if (targetId && eqs) {
           handleSelectEquipment(targetId, eqs);
         }
       })
@@ -102,47 +103,84 @@ export function CalibrationReportFormPage() {
     setSelectedEquipment(eq);
 
     // Initial Repeatability loads
-    const half = eq.maxCapacity * 0.5;
+    const half = (eq.maxCapacity || 80000) * 0.5;
     setRepLoad50(half.toString());
     setRep50_1(half.toString());
     setRep50_2(half.toString());
     setRep50_3(half.toString());
 
-    setRepLoad100(eq.maxCapacity.toString());
-    setRep100_1(eq.maxCapacity.toString());
-    setRep100_2(eq.maxCapacity.toString());
-    setRep100_3(eq.maxCapacity.toString());
+    setRepLoad100((eq.maxCapacity || 80000).toString());
+    setRep100_1((eq.maxCapacity || 80000).toString());
+    setRep100_2((eq.maxCapacity || 80000).toString());
+    setRep100_3((eq.maxCapacity || 80000).toString());
+
+    const std = eq.applicableStandard === "Res2307_80" ? "Res2307_80" : "Res25_2025";
+    if (std === "Res2307_80") {
+      setNormativeApplied("Resolución SCyNEI Nº 2307/1980 (SIMELA)");
+      setCertificateType("Ensayo Oficial Res. 2307/80");
+    } else {
+      setNormativeApplied("Resolución SIyC Nº 25/2025 (OIML R 76-1)");
+      setCertificateType("Ensayo Oficial Res. 25/2025");
+    }
 
     // Generate Rules via backend engine
     try {
-      const rules = await api.calculateMetrologyRules({
+      const rules: any = await api.calculateMetrologyRules({
         maxCapacity: eq.maxCapacity,
         minCapacity: eq.minCapacity,
         divisionD: eq.divisionD,
         verificationIntervalE: eq.verificationIntervalE,
-        accuracyClass: eq.accuracyClass,
+        accuracyClass: eq.accuracyClass || "III",
         loadCellsCount: eq.loadCellsCount || 6,
-        normative: normativeApplied
+        normative: std,
+        standardApplied: std,
+        platformType: eq.platformType || "TruckScale",
+        isInService: true
       });
 
-      setLinearityPoints(rules.linearityPoints);
-      setEccentricityConfig(rules.eccentricityConfig);
-      setRepeatabilityEmt(rules.repeatabilityConfig.emt);
+      const lPoints = (rules?.linearityPoints && rules.linearityPoints.length > 0)
+        ? rules.linearityPoints
+        : (rules?.recommendedLinearityPoints?.map((p: any, idx: number) => ({
+            step: idx + 1,
+            targetLoad: p.nominalLoad || p.targetLoad,
+            emt: p.toleranceEmt || p.emt || eq.verificationIntervalE || 20,
+            minAllowed: (p.nominalLoad || p.targetLoad) - (p.toleranceEmt || p.emt || 20),
+            maxAllowed: (p.nominalLoad || p.targetLoad) + (p.toleranceEmt || p.emt || 20)
+          })) || [
+            { step: 1, targetLoad: eq.minCapacity || 400, emt: eq.verificationIntervalE || 20 },
+            { step: 2, targetLoad: (eq.maxCapacity || 80000) * 0.5, emt: (eq.verificationIntervalE || 20) * 2 },
+            { step: 3, targetLoad: eq.maxCapacity || 80000, emt: (eq.verificationIntervalE || 20) * 3 }
+          ]);
+
+      const eccConfig: EccentricityConfig = rules?.eccentricityConfig || {
+        testLoad: (eq.maxCapacity || 80000) / 3,
+        positionsCount: eq.loadCellsCount || 6,
+        emt: eq.verificationIntervalE || 20,
+        description: "Carga de ensayo sobre apoyos"
+      };
+
+      const repEmt = rules?.repeatabilityConfig?.emt || eq.verificationIntervalE || 20;
+
+      setLinearityPoints(lPoints);
+      setEccentricityConfig(eccConfig);
+      setRepeatabilityEmt(repEmt);
 
       // Setup Eccentricity positions
-      setEccTestLoad(rules.eccentricityConfig.testLoad.toString());
+      const loadVal = eccConfig.testLoad || Math.round((eq.maxCapacity || 80000) / 3);
+      setEccTestLoad(loadVal.toString());
       const posArr = [];
-      for (let i = 1; i <= rules.eccentricityConfig.positionsCount; i++) {
+      const count = eccConfig.positionsCount || eq.loadCellsCount || 6;
+      for (let i = 1; i <= count; i++) {
         posArr.push({
           pos: i,
-          label: rules.eccentricityConfig.positionsCount > 4 ? `Apoyo ${i} (Celda ${i})` : `Esquina ${i}`,
-          indication: rules.eccentricityConfig.testLoad.toString()
+          label: count > 4 ? `Apoyo ${i} (Celda ${i})` : `Esquina ${i}`,
+          indication: loadVal.toString()
         });
       }
       setEccPositions(posArr);
 
       // Setup Linearity rows
-      const lRows = rules.linearityPoints.map((p) => ({
+      const lRows = lPoints.map((p: any) => ({
         step: p.step,
         targetLoad: p.targetLoad,
         emt: p.emt,
@@ -168,7 +206,7 @@ export function CalibrationReportFormPage() {
   const eccLoadNum = parseFloat(eccTestLoad) || 0;
   const eccErrors = eccPositions.map(p => Math.abs((parseFloat(p.indication) || 0) - eccLoadNum));
   const eccMaxError = Math.max(0, ...eccErrors);
-  const eccOk = eccentricityConfig ? eccMaxError <= eccentricityConfig.emt : true;
+  const eccOk = eccentricityConfig ? eccMaxError <= (eccentricityConfig.emt || 20) : true;
 
   // Linearity Evaluation
   const linErrors = linRows.map(r => {
@@ -290,7 +328,7 @@ export function CalibrationReportFormPage() {
             📝 Asistente de Carga de Ensayo Metrológico
           </h1>
           <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-            Cumplimiento normativo estricto con Resolución 67/2025, Res. 25 y OIML R 76-1
+            Cumplimiento normativo estricto con <strong>Res. 25/2025 (OIML R 76-1)</strong> y <strong>Res. 2307/80 (SIMELA)</strong>
           </p>
         </div>
       </div>
@@ -324,7 +362,8 @@ export function CalibrationReportFormPage() {
             <label>
               Tipo de Certificado / Servicio
               <select value={certificateType} onChange={(e) => setCertificateType(e.target.value)}>
-                <option value="Ensayo Oficial Res. 67/2025">Ensayo Oficial Res. 67/2025</option>
+                <option value="Ensayo Oficial Res. 25/2025">Ensayo Oficial Res. 25/2025</option>
+                <option value="Ensayo Oficial Res. 2307/80">Ensayo Oficial Res. 2307/80</option>
                 <option value="Calibración Periódica Anual">Calibración Periódica Anual</option>
                 <option value="Verificación Post-Reparación">Verificación Post-Reparación</option>
                 <option value="Mantenimiento Preventivo">Mantenimiento Preventivo</option>
@@ -334,9 +373,8 @@ export function CalibrationReportFormPage() {
             <label>
               Normativa de Referencia
               <select value={normativeApplied} onChange={(e) => setNormativeApplied(e.target.value)}>
-                <option value="Resolución 67/2025 (OIML R 76-1)">Resolución 67/2025 (OIML R 76-1)</option>
-                <option value="Resolución 25/2025">Resolución 25/2025</option>
-                <option value="Resolución 2307/80">Resolución 2307/80</option>
+                <option value="Resolución SIyC Nº 25/2025 (OIML R 76-1)">Resolución SIyC Nº 25/2025 (OIML R 76-1)</option>
+                <option value="Resolución SCyNEI Nº 2307/1980 (SIMELA)">Resolución SCyNEI Nº 2307/1980 (SIMELA)</option>
                 <option value="ISO/IEC 17025">ISO/IEC 17025</option>
               </select>
             </label>
@@ -547,7 +585,7 @@ export function CalibrationReportFormPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 12 }}>
             {eccPositions.map((p, idx) => {
               const err = Math.abs((parseFloat(p.indication) || 0) - eccLoadNum);
-              const ok = eccentricityConfig ? err <= eccentricityConfig.emt : true;
+              const ok = eccentricityConfig ? err <= (eccentricityConfig.emt || 20) : true;
               return (
                 <div key={p.pos} style={{ background: "rgba(0,0,0,0.02)", padding: 10, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
                   <label style={{ fontSize: "0.8rem", fontWeight: 700 }}>
