@@ -1,49 +1,18 @@
-import React, { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 
-interface EntryLineDraft {
-  accountId: string;
-  accountCode: string;
-  accountName: string;
-  debit: number;
-  credit: number;
-  costCenterId?: string;
-  costCenterCode?: string;
-  memo?: string;
-}
-
 export function JournalEntriesPage() {
   const [entries, setEntries] = useState<any[]>([]);
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [costCenters, setCostCenters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  // New Entry Modal State
-  const [showModal, setShowModal] = useState(false);
-  const [entryDate, setEntryDate] = useState(new Date().toISOString().split("T")[0]);
-  const [concept, setConcept] = useState("");
-  const [entryType, setEntryType] = useState("Standard");
-  const [lines, setLines] = useState<EntryLineDraft[]>([
-    { accountId: "", accountCode: "", accountName: "", debit: 0, credit: 0, memo: "" },
-    { accountId: "", accountCode: "", accountName: "", debit: 0, credit: 0, memo: "" }
-  ]);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = () => {
     setLoading(true);
-    Promise.all([
-      api.listJournalEntries(),
-      api.listAccounts(),
-      api.listCostCenters()
-    ])
-      .then(([entryList, acctList, ccList]) => {
-        setEntries(entryList);
-        setAccounts(acctList.filter((a) => a.isDirectPosting));
-        setCostCenters(ccList);
+    api.listJournalEntries()
+      .then((entryList) => {
+        setEntries(entryList || []);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -52,87 +21,6 @@ export function JournalEntriesPage() {
   useEffect(() => {
     loadData();
   }, []);
-
-  const totalDebit = lines.reduce((acc, l) => acc + (Number(l.debit) || 0), 0);
-  const totalCredit = lines.reduce((acc, l) => acc + (Number(l.credit) || 0), 0);
-  const diff = Math.abs(totalDebit - totalCredit);
-  const isBalanced = totalDebit > 0 && diff < 0.01;
-
-  const handleAccountSelect = (index: number, acctId: string) => {
-    const selected = accounts.find((a) => a.id === acctId);
-    if (!selected) return;
-    const updated = [...lines];
-    updated[index].accountId = selected.id;
-    updated[index].accountCode = selected.code;
-    updated[index].accountName = selected.name;
-    setLines(updated);
-  };
-
-  const handleLineChange = (index: number, field: keyof EntryLineDraft, val: any) => {
-    const updated = [...lines];
-    updated[index] = { ...updated[index], [field]: val };
-    setLines(updated);
-  };
-
-  const addLine = () => {
-    setLines([
-      ...lines,
-      { accountId: "", accountCode: "", accountName: "", debit: 0, credit: 0, memo: "" }
-    ]);
-  };
-
-  const removeLine = (index: number) => {
-    if (lines.length <= 2) return;
-    setLines(lines.filter((_, i) => i !== index));
-  };
-
-  const openNewEntryModal = () => {
-    setConcept("");
-    setEntryDate(new Date().toISOString().split("T")[0]);
-    setEntryType("Standard");
-    setLines([
-      { accountId: "", accountCode: "", accountName: "", debit: 0, credit: 0, memo: "" },
-      { accountId: "", accountCode: "", accountName: "", debit: 0, credit: 0, memo: "" }
-    ]);
-    setShowModal(true);
-  };
-
-  const handleSaveEntry = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!isBalanced) {
-      setError("El asiento está desbalanceado. Total Debe debe ser igual a Total Haber.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-      await api.createJournalEntry({
-        date: entryDate,
-        concept: concept.trim(),
-        entryType,
-        sourceModule: "Manual",
-        lines: lines.map((l) => ({
-          accountId: l.accountId,
-          accountCode: l.accountCode,
-          accountName: l.accountName,
-          debit: Number(l.debit) || 0,
-          credit: Number(l.credit) || 0,
-          costCenterId: l.costCenterId || undefined,
-          costCenterCode: l.costCenterCode || undefined,
-          memo: l.memo?.trim() || undefined,
-          exchangeRate: 1
-        }))
-      });
-      setMsg("✓ Asiento contable registrado con éxito en el Libro Diario.");
-      setShowModal(false);
-      loadData();
-    } catch (err: any) {
-      setError(err?.message || "Error al registrar asiento.");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleExportCsv = () => {
     if (entries.length === 0) return;
@@ -172,9 +60,9 @@ export function JournalEntriesPage() {
           <button type="button" className="btn ghost" onClick={() => window.print()}>
             🖨️ Imprimir / PDF
           </button>
-          <button type="button" className="btn" onClick={openNewEntryModal}>
+          <Link to="/contabilidad/asientos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", fontWeight: 700 }}>
             ➕ Nuevo Asiento Manual
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -206,7 +94,6 @@ export function JournalEntriesPage() {
         </Link>
       </div>
 
-      {msg && <div className="alert ok">{msg}</div>}
       {error && <div className="alert">{error}</div>}
 
       <div className="card pad">
@@ -218,88 +105,100 @@ export function JournalEntriesPage() {
           </p>
         ) : (
           <div className="table-wrap">
-            <table>
+            <table className="table" style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr>
-                  <th style={{ width: "90px" }}>Nº Asiento</th>
-                  <th style={{ width: "110px" }}>Fecha</th>
+                <tr style={{ background: "var(--surface-sunken)" }}>
+                  <th style={{ width: 40 }}></th>
+                  <th style={{ width: 100 }}>Nº Asiento</th>
+                  <th style={{ width: 110 }}>Fecha</th>
                   <th>Concepto / Glosa</th>
-                  <th>Módulo Origen</th>
-                  <th style={{ textAlign: "right" }}>Total Debe ($)</th>
-                  <th style={{ textAlign: "right" }}>Total Haber ($)</th>
-                  <th style={{ textAlign: "center", width: "100px" }}>Detalle</th>
+                  <th style={{ width: 130 }}>Módulo Origen</th>
+                  <th style={{ width: 140, textAlign: "right" }}>Total Debe</th>
+                  <th style={{ width: 140, textAlign: "right" }}>Total Haber</th>
+                  <th style={{ width: 110, textAlign: "center" }}>Balance</th>
                 </tr>
               </thead>
               <tbody>
-                {entries.map((e) => {
-                  const isExpanded = expandedId === e.id;
+                {entries.map((entry) => {
+                  const isExp = expandedId === entry.id;
+                  const isBalanced = Math.abs(entry.totalDebit - entry.totalCredit) < 0.01;
+
                   return (
-                    <React.Fragment key={e.id}>
-                      <tr style={{ background: isExpanded ? "rgba(37, 99, 235, 0.04)" : "transparent" }}>
-                        <td>
-                          <strong>#{e.entryNumber}</strong>
+                    <React.Fragment key={entry.id}>
+                      <tr
+                        onClick={() => setExpandedId(isExp ? null : entry.id)}
+                        style={{
+                          cursor: "pointer",
+                          background: isExp ? "rgba(13, 148, 136, 0.05)" : "transparent",
+                          borderBottom: isExp ? "none" : "1px solid var(--surface-border)"
+                        }}
+                      >
+                        <td style={{ textAlign: "center" }}>
+                          <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                            {isExp ? "▼" : "▶"}
+                          </span>
                         </td>
-                        <td>{new Date(e.date).toLocaleDateString("es-AR")}</td>
                         <td>
-                          <strong>{e.concept}</strong>
-                          {e.sourceDocumentId && (
-                            <div className="muted" style={{ fontSize: "11px" }}>
-                              Comprobante: {e.sourceDocumentId}
+                          <span className="tag primary" style={{ fontWeight: 700 }}>
+                            #{String(entry.entryNumber).padStart(6, "0")}
+                          </span>
+                        </td>
+                        <td>{new Date(entry.date).toLocaleDateString("es-AR")}</td>
+                        <td>
+                          <strong>{entry.concept}</strong>
+                          {entry.sourceDocumentNumber && (
+                            <div className="muted" style={{ fontSize: "0.8rem" }}>
+                              Ref: {entry.sourceDocumentNumber}
                             </div>
                           )}
                         </td>
                         <td>
-                          <span className="badge ok">{e.sourceModule}</span>
+                          <span className="tag" style={{ fontSize: "0.78rem" }}>
+                            {entry.sourceModule === "Sales" ? "🛒 Ventas" : entry.sourceModule === "Purchases" ? "📦 Compras" : entry.sourceModule === "Finance" ? "💳 Finanzas" : entry.sourceModule || "Manual"}
+                          </span>
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 600 }}>
-                          $ {e.totalDebit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                        <td style={{ textAlign: "right", fontWeight: 700 }}>
+                          $ {entry.totalDebit?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 600 }}>
-                          $ {e.totalCredit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                        <td style={{ textAlign: "right", fontWeight: 700 }}>
+                          $ {entry.totalCredit?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td style={{ textAlign: "center" }}>
-                          <button
-                            type="button"
-                            className="btn ghost"
-                            style={{ fontSize: "12px", padding: "3px 8px" }}
-                            onClick={() => setExpandedId(isExpanded ? null : e.id)}
-                          >
-                            {isExpanded ? "▲ Ocultar" : "▼ Renglones"}
-                          </button>
+                          <span className={`badge ${isBalanced ? "ok" : "prio-high"}`}>
+                            {isBalanced ? "✓ Cuadrado" : "⚠️ Desbalanceado"}
+                          </span>
                         </td>
                       </tr>
 
-                      {isExpanded && (
-                        <tr>
-                          <td colSpan={7} style={{ background: "rgba(0,0,0,0.02)", padding: "12px 24px" }}>
-                            <div style={{ fontWeight: 600, fontSize: "12px", marginBottom: 6, color: "var(--ink-soft)" }}>
-                              RENGLONES DEL ASIENTO #{e.entryNumber} (PARTIDA DOBLE):
+                      {isExp && entry.lines && entry.lines.length > 0 && (
+                        <tr style={{ background: "rgba(13, 148, 136, 0.03)", borderBottom: "1px solid var(--surface-border)" }}>
+                          <td colSpan={8} style={{ padding: "12px 24px 18px 48px" }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: 8, color: "#0f766e" }}>
+                              Detalle de Renglones Imputados:
                             </div>
-                            <table style={{ background: "#fff", border: "1px solid var(--line)" }}>
+                            <table style={{ width: "100%", fontSize: "0.86rem", background: "#fff", borderRadius: 6, border: "1px solid #e2e8f0" }}>
                               <thead>
-                                <tr style={{ background: "rgba(0,0,0,0.03)" }}>
-                                  <th>Código</th>
-                                  <th>Cuenta Contable</th>
-                                  <th>Centro de Costo</th>
-                                  <th>Leyenda / Detalle</th>
-                                  <th style={{ textAlign: "right" }}>Debe ($)</th>
-                                  <th style={{ textAlign: "right" }}>Haber ($)</th>
+                                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                                  <th style={{ width: 120 }}>Cuenta</th>
+                                  <th>Denominación</th>
+                                  <th style={{ width: 160 }}>Centro Costo</th>
+                                  <th>Leyenda / Glosa</th>
+                                  <th style={{ width: 130, textAlign: "right" }}>Debe ($)</th>
+                                  <th style={{ width: 130, textAlign: "right" }}>Haber ($)</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {e.lines?.map((line: any) => (
-                                  <tr key={line.id}>
-                                    <td>
-                                      <code>{line.accountCode}</code>
+                                {entry.lines.map((l: any, idx: number) => (
+                                  <tr key={idx} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                    <td><span style={{ fontWeight: 700 }}>{l.accountCode}</span></td>
+                                    <td>{l.accountName}</td>
+                                    <td><span className="muted">{l.costCenterCode || "—"}</span></td>
+                                    <td><span className="muted">{l.memo || "—"}</span></td>
+                                    <td style={{ textAlign: "right", fontWeight: l.debit > 0 ? 700 : 400, color: l.debit > 0 ? "#0369a1" : "inherit" }}>
+                                      {l.debit > 0 ? `$ ${l.debit.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
                                     </td>
-                                    <td>{line.accountName}</td>
-                                    <td>{line.costCenterName || "-"}</td>
-                                    <td>{line.memo || "-"}</td>
-                                    <td style={{ textAlign: "right", fontWeight: line.debit > 0 ? 600 : 400 }}>
-                                      {line.debit > 0 ? `$ ${line.debit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}
-                                    </td>
-                                    <td style={{ textAlign: "right", fontWeight: line.credit > 0 ? 600 : 400 }}>
-                                      {line.credit > 0 ? `$ ${line.credit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}
+                                    <td style={{ textAlign: "right", fontWeight: l.credit > 0 ? 700 : 400, color: l.credit > 0 ? "#047857" : "inherit" }}>
+                                      {l.credit > 0 ? `$ ${l.credit.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
                                     </td>
                                   </tr>
                                 ))}
@@ -316,177 +215,7 @@ export function JournalEntriesPage() {
           </div>
         )}
       </div>
-
-      {/* Modal Cargar Nuevo Asiento */}
-      {showModal && (
-        <div className="modal-backdrop">
-          <div className="modal-card card pad" style={{ maxWidth: "850px", width: "100%" }}>
-            <h3>➕ Carga de Asiento Diario (Partida Doble)</h3>
-            <form onSubmit={handleSaveEntry} className="stack" style={{ marginTop: 14, gap: 14 }}>
-              <div className="grid-3" style={{ gap: 12 }}>
-                <label>
-                  Fecha del Asiento *
-                  <input
-                    type="date"
-                    value={entryDate}
-                    onChange={(e) => setEntryDate(e.target.value)}
-                    required
-                  />
-                </label>
-
-                <label style={{ gridColumn: "span 2" }}>
-                  Concepto / Glosa Principal *
-                  <input
-                    value={concept}
-                    onChange={(e) => setConcept(e.target.value)}
-                    required
-                    placeholder="Ej. Devengamiento de alquileres de oficina o ajuste bancario"
-                  />
-                </label>
-              </div>
-
-              {/* Renglones Grilla Contable */}
-              <div>
-                <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontWeight: 600, fontSize: "13px" }}>Renglones del Asiento:</span>
-                  <button type="button" className="btn ghost" style={{ fontSize: "12px", padding: "4px 8px" }} onClick={addLine}>
-                    ➕ Agregar Renglón
-                  </button>
-                </div>
-
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th style={{ width: "260px" }}>Cuenta Contable *</th>
-                        <th style={{ width: "140px", textAlign: "right" }}>Debe ($)</th>
-                        <th style={{ width: "140px", textAlign: "right" }}>Haber ($)</th>
-                        <th style={{ width: "180px" }}>Centro de Costos</th>
-                        <th style={{ width: "40px" }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lines.map((line, idx) => (
-                        <tr key={idx}>
-                          <td>
-                            <select
-                              value={line.accountId}
-                              onChange={(e) => handleAccountSelect(idx, e.target.value)}
-                              required
-                              style={{ width: "100%", fontSize: "12px" }}
-                            >
-                              <option value="">-- Seleccionar Cuenta --</option>
-                              {accounts.map((a) => (
-                                <option key={a.id} value={a.id}>
-                                  {a.code} - {a.name}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={line.debit || ""}
-                              onChange={(e) => handleLineChange(idx, "debit", parseFloat(e.target.value) || 0)}
-                              placeholder="0.00"
-                              style={{ textAlign: "right", width: "100%" }}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={line.credit || ""}
-                              onChange={(e) => handleLineChange(idx, "credit", parseFloat(e.target.value) || 0)}
-                              placeholder="0.00"
-                              style={{ textAlign: "right", width: "100%" }}
-                            />
-                          </td>
-                          <td>
-                            <select
-                              value={line.costCenterId || ""}
-                              onChange={(e) => {
-                                const cc = costCenters.find((c) => c.id === e.target.value);
-                                handleLineChange(idx, "costCenterId", e.target.value);
-                                handleLineChange(idx, "costCenterCode", cc?.code);
-                              }}
-                              style={{ width: "100%", fontSize: "12px" }}
-                            >
-                              <option value="">Sin Centro</option>
-                              {costCenters.map((cc) => (
-                                <option key={cc.id} value={cc.id}>
-                                  {cc.code} - {cc.name}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td style={{ textAlign: "center" }}>
-                            {lines.length > 2 && (
-                              <button
-                                type="button"
-                                className="btn ghost"
-                                style={{ color: "#ef4444", padding: "4px" }}
-                                onClick={() => removeLine(idx)}
-                              >
-                                🗑️
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Balance Summary Bar */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "12px 16px",
-                  borderRadius: "8px",
-                  background: isBalanced ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
-                  border: `1px solid ${isBalanced ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)"}`
-                }}
-              >
-                <div>
-                  <span style={{ fontWeight: 600, fontSize: "13px" }}>
-                    Total Debe: <span style={{ color: "#22c55e" }}>$ {totalDebit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
-                  </span>
-                  <span style={{ margin: "0 12px", color: "var(--ink-soft)" }}>|</span>
-                  <span style={{ fontWeight: 600, fontSize: "13px" }}>
-                    Total Haber: <span style={{ color: "#38bdf8" }}>$ {totalCredit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
-                  </span>
-                </div>
-
-                <div>
-                  {isBalanced ? (
-                    <span className="badge ok" style={{ fontSize: "12px" }}>✓ Asiento Balanceado (Diferencia $0.00)</span>
-                  ) : (
-                    <span className="badge prio-high" style={{ fontSize: "12px" }}>
-                      ⚠️ Desbalance: $ {diff.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="row" style={{ justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-                <button type="button" className="btn ghost" onClick={() => setShowModal(false)}>
-                  Cancelar
-                </button>
-                <button className="btn" disabled={saving || !isBalanced}>
-                  {saving ? "Guardando…" : "💾 Registrar Asiento Contable"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+import React from "react";

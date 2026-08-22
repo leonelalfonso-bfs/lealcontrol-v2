@@ -95,14 +95,18 @@ import { AccountingDashboardPage } from "./pages/accounting/AccountingDashboardP
 import { JournalTemplatesPage } from "./pages/accounting/JournalTemplatesPage";
 import { JournalTemplateFormPage } from "./pages/accounting/JournalTemplateFormPage";
 import { ChartOfAccountsPage } from "./pages/accounting/ChartOfAccountsPage";
+import { AccountFormPage } from "./pages/accounting/AccountFormPage";
 import { JournalEntriesPage } from "./pages/accounting/JournalEntriesPage";
+import { JournalEntryFormPage } from "./pages/accounting/JournalEntryFormPage";
 import { GeneralLedgerPage } from "./pages/accounting/GeneralLedgerPage";
 import { TrialBalancePage } from "./pages/accounting/TrialBalancePage";
 import { BankReconciliationPage } from "./pages/accounting/BankReconciliationPage";
 import { AccountingStudyPortalPage } from "./pages/accounting/AccountingStudyPortalPage";
 import { MetrologyDashboardPage } from "./pages/metrology/MetrologyDashboardPage";
 import { MetrologyEquipmentPage } from "./pages/metrology/MetrologyEquipmentPage";
+import { MetrologyEquipmentFormPage } from "./pages/metrology/MetrologyEquipmentFormPage";
 import { StandardWeightsPage } from "./pages/metrology/StandardWeightsPage";
+import { StandardWeightFormPage } from "./pages/metrology/StandardWeightFormPage";
 import { CalibrationReportsPage } from "./pages/metrology/CalibrationReportsPage";
 import { CalibrationReportFormPage } from "./pages/metrology/CalibrationReportFormPage";
 import { CalibrationReportPrintPage } from "./pages/metrology/CalibrationReportPrintPage";
@@ -521,7 +525,11 @@ export function App() {
               <Route path="/contabilidad/modelos/nuevo" element={<JournalTemplateFormPage />} />
               <Route path="/contabilidad/modelos/:id" element={<JournalTemplateFormPage />} />
               <Route path="/contabilidad/plan-cuentas" element={<ChartOfAccountsPage />} />
+              <Route path="/contabilidad/plan-cuentas/nuevo" element={<AccountFormPage />} />
+              <Route path="/contabilidad/plan-cuentas/:id" element={<AccountFormPage />} />
               <Route path="/contabilidad/asientos" element={<JournalEntriesPage />} />
+              <Route path="/contabilidad/asientos/nuevo" element={<JournalEntryFormPage />} />
+              <Route path="/contabilidad/asientos/:id" element={<JournalEntryFormPage />} />
               <Route path="/contabilidad/mayor" element={<GeneralLedgerPage />} />
               <Route path="/contabilidad/sumas-saldos" element={<TrialBalancePage />} />
               <Route path="/contabilidad/conciliacion" element={<BankReconciliationPage />} />
@@ -530,7 +538,11 @@ export function App() {
               {/* Metrology & Quality Professional Routes */}
               <Route path="/metrologia" element={<MetrologyDashboardPage />} />
               <Route path="/metrologia/equipos" element={<MetrologyEquipmentPage />} />
+              <Route path="/metrologia/equipos/nuevo" element={<MetrologyEquipmentFormPage />} />
+              <Route path="/metrologia/equipos/:id" element={<MetrologyEquipmentFormPage />} />
               <Route path="/metrologia/patrones" element={<StandardWeightsPage />} />
+              <Route path="/metrologia/patrones/nuevo" element={<StandardWeightFormPage />} />
+              <Route path="/metrologia/patrones/:id" element={<StandardWeightFormPage />} />
               <Route path="/metrologia/ensayos/nuevo" element={<CalibrationReportFormPage />} />
               <Route path="/metrologia/informes" element={<CalibrationReportsPage />} />
               <Route path="/metrologia/informes/:id/imprimir" element={<CalibrationReportPrintPage />} />
