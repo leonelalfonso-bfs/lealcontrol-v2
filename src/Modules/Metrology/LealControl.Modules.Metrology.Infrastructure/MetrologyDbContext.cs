@@ -162,6 +162,7 @@ public sealed class MetrologyDbContext : DbContext
                 CREATE UNIQUE INDEX IF NOT EXISTS ""IX_equipments_Tenant_Code"" ON metrology.equipments (""TenantId"", ""Code"");
                 CREATE INDEX IF NOT EXISTS ""IX_equipments_Tenant_Customer"" ON metrology.equipments (""TenantId"", ""CustomerId"");
 
+                -- Migraciones incrementales idempotentes de columnas de equipos
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""ApplicableStandard"" character varying(60) NOT NULL DEFAULT 'Res25_2025';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""ApprovalCode"" character varying(120) NOT NULL DEFAULT '';
                 ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""PlatformType"" character varying(60) NOT NULL DEFAULT 'TruckScale';
@@ -201,6 +202,7 @@ public sealed class MetrologyDbContext : DbContext
                     ""CalibrationDate"" timestamp with time zone,
                     ""ExpirationDate"" timestamp with time zone,
                     ""Status"" character varying(32) NOT NULL DEFAULT 'Valid',
+                    ""Notes"" text,
                     ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
                 );
                 CREATE UNIQUE INDEX IF NOT EXISTS ""IX_weights_Tenant_Code"" ON metrology.standard_weights (""TenantId"", ""Code"");
@@ -244,7 +246,7 @@ public sealed class MetrologyDbContext : DbContext
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MetrologyDbContext] Notice on schema migration: {ex.Message}");
+            Console.Error.WriteLine($"[MetrologyDbContext] Notice on schema migration: {ex.Message}");
         }
     }
 }
