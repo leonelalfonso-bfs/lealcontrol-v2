@@ -6,11 +6,7 @@ import type { CalibrationReport } from "../../api/types";
 export function MetrologyDashboardPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<{
-    equipments: { total: number; active: number; expired: number };
-    weights: { total: number; valid: number; expired: number };
-    reports: { total: number; recent: CalibrationReport[] };
-  } | null>(null);
+  const [data, setData] = useState<any>(null);
 
   const loadData = () => {
     setLoading(true);
@@ -24,6 +20,16 @@ export function MetrologyDashboardPage() {
     loadData();
   }, []);
 
+  const totalEquipments = data?.equipments?.total ?? data?.stats?.totalEquipments ?? data?.Stats?.TotalEquipments ?? 0;
+  const activeEquipments = data?.equipments?.active ?? data?.stats?.activeEquipments ?? data?.Stats?.ActiveEquipments ?? 0;
+  const expiredEquipments = data?.equipments?.expired ?? data?.stats?.expiredCalibrations ?? data?.Stats?.ExpiredCalibrations ?? 0;
+
+  const totalWeights = data?.weights?.total ?? data?.stats?.totalWeights ?? data?.Stats?.TotalWeights ?? 0;
+  const validWeights = data?.weights?.valid ?? data?.stats?.validWeights ?? data?.Stats?.ValidWeights ?? 0;
+
+  const totalReports = data?.reports?.total ?? data?.stats?.totalReports ?? data?.Stats?.TotalReports ?? 0;
+  const recentReports: CalibrationReport[] = data?.reports?.recent ?? data?.recentReports ?? data?.RecentReports ?? [];
+
   return (
     <div className="page-wide">
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -35,7 +41,7 @@ export function MetrologyDashboardPage() {
             ⚖️ Metrología Legal e Industrial
           </h1>
           <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-            Control de parque de balanzas, trazabilidad a patrones INTI/SAC y ensayos según Res. 67/2025 y OIML R 76-1
+            Control de parque de balanzas, trazabilidad a patrones INTI/SAC y ensayos según <strong>Res. 25/2025</strong> y <strong>Res. 2307/80</strong>
           </p>
         </div>
 
@@ -53,33 +59,33 @@ export function MetrologyDashboardPage() {
       <div className="kpi kpi-4" style={{ marginBottom: 24 }}>
         <div className="card pad" style={{ borderLeft: "4px solid #0d9488" }}>
           <div className="muted">Parque de Balanzas</div>
-          <strong style={{ fontSize: "1.8rem" }}>{data?.equipments.total ?? 0}</strong>
+          <strong style={{ fontSize: "1.8rem" }}>{totalEquipments}</strong>
           <div style={{ fontSize: "0.78rem", color: "var(--ok)", fontWeight: 700, marginTop: 4 }}>
-            ✓ {data?.equipments.active ?? 0} operativas en clientes
+            ✓ {activeEquipments} operativas en clientes
           </div>
         </div>
 
         <div className="card pad" style={{ borderLeft: "4px solid #f59e0b" }}>
           <div className="muted">Calibraciones Vencidas</div>
-          <strong style={{ fontSize: "1.8rem", color: (data?.equipments.expired ?? 0) > 0 ? "#dc2626" : "inherit" }}>
-            {data?.equipments.expired ?? 0}
+          <strong style={{ fontSize: "1.8rem", color: expiredEquipments > 0 ? "#dc2626" : "inherit" }}>
+            {expiredEquipments}
           </strong>
-          <div style={{ fontSize: "0.78rem", color: (data?.equipments.expired ?? 0) > 0 ? "#dc2626" : "var(--ink-soft)", fontWeight: 600, marginTop: 4 }}>
-            {(data?.equipments.expired ?? 0) > 0 ? "⚠️ Requieren reinspección técnica" : "✓ Al día con las normativas"}
+          <div style={{ fontSize: "0.78rem", color: expiredEquipments > 0 ? "#dc2626" : "var(--ink-soft)", fontWeight: 600, marginTop: 4 }}>
+            {expiredEquipments > 0 ? "⚠️ Requieren reinspección técnica" : "✓ Al día con las normativas"}
           </div>
         </div>
 
         <div className="card pad" style={{ borderLeft: "4px solid #3b82f6" }}>
           <div className="muted">Patrones de Masa (Pesas)</div>
-          <strong style={{ fontSize: "1.8rem" }}>{data?.weights.total ?? 0}</strong>
+          <strong style={{ fontSize: "1.8rem" }}>{totalWeights}</strong>
           <div style={{ fontSize: "0.78rem", color: "#2563eb", fontWeight: 700, marginTop: 4 }}>
-            🛡️ {data?.weights.valid ?? 0} con certificado INTI vigente
+            🛡️ {validWeights} con certificado INTI vigente
           </div>
         </div>
 
         <div className="card pad" style={{ borderLeft: "4px solid #8b5cf6" }}>
           <div className="muted">Certificados Emitidos</div>
-          <strong style={{ fontSize: "1.8rem" }}>{data?.reports.total ?? 0}</strong>
+          <strong style={{ fontSize: "1.8rem" }}>{totalReports}</strong>
           <div style={{ fontSize: "0.78rem", color: "#7c3aed", fontWeight: 700, marginTop: 4 }}>
             📋 Ensayos oficiales registrados
           </div>
@@ -120,29 +126,29 @@ export function MetrologyDashboardPage() {
 
         <div className="card pad" style={{ cursor: "pointer", transition: "transform 0.15s ease" }} onClick={() => navigate("/metrologia/informes")}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: "1.8rem" }}>📄</span>
+            <span style={{ fontSize: "1.8rem" }}>📋</span>
             <div>
-              <strong style={{ display: "block", fontSize: "0.95rem" }}>Certificados e Informes</strong>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>Historial e impresión de certificados</span>
+              <strong style={{ display: "block", fontSize: "0.95rem" }}>Certificados Emitidos</strong>
+              <span className="muted" style={{ fontSize: "0.78rem" }}>Impresión de protocolos oficiales</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Últimos Certificados Emitidos */}
+      {/* Tabla de Actividad Reciente */}
       <div className="card pad">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: "1.1rem" }}>📋 Últimos Ensayos & Certificados Metrológicos</h3>
-          <Link to="/metrologia/informes" style={{ fontSize: "0.82rem", color: "var(--primary)", fontWeight: 700 }}>
-            Ver todos los certificados →
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Últimos Informes & Certificados Emitidos</h3>
+          <Link to="/metrologia/informes" className="btn ghost compact">
+            Ver Todos →
           </Link>
         </div>
 
         {loading ? (
-          <div className="muted" style={{ padding: 20, textAlign: "center" }}>Cargando datos metrológicos...</div>
-        ) : !data?.reports.recent || data.reports.recent.length === 0 ? (
-          <div className="muted" style={{ padding: 24, textAlign: "center" }}>
-            No hay ensayos registrados aún. Haga clic en <strong>"➕ Cargar Nuevo Ensayo"</strong> para emitir el primero.
+          <div className="muted" style={{ padding: 20, textAlign: "center" }}>Cargando actividad reciente...</div>
+        ) : recentReports.length === 0 ? (
+          <div className="muted" style={{ padding: 20, textAlign: "center" }}>
+            No hay ensayos registrados recientemente.
           </div>
         ) : (
           <div className="table-wrap">
@@ -153,40 +159,36 @@ export function MetrologyDashboardPage() {
                   <th>Fecha</th>
                   <th>Instrumento</th>
                   <th>Cliente</th>
-                  <th>Normativa</th>
                   <th>Metrólogo</th>
                   <th>Dictamen</th>
                   <th style={{ textAlign: "right" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {data.reports.recent.map((rep) => (
-                  <tr key={rep.id}>
-                    <td>
-                      <strong style={{ color: "#0d9488" }}>{rep.reportNumber}</strong>
-                    </td>
-                    <td>{new Date(rep.calibrationDate).toLocaleDateString("es-AR")}</td>
-                    <td>
-                      <div>
-                        <strong>{rep.equipmentCode}</strong>
-                        <div className="muted" style={{ fontSize: "0.76rem" }}>{rep.equipmentDescription}</div>
-                      </div>
-                    </td>
-                    <td>{rep.customerName || "—"}</td>
-                    <td><span className="tag">{rep.normativeApplied}</span></td>
-                    <td>{rep.performedBy}</td>
-                    <td>
-                      <span className={`badge ${rep.result === "Apto" ? "ok" : rep.result === "No Apto" ? "prio-high" : "warn"}`}>
-                        {rep.result}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <Link to={`/metrologia/informes/${rep.id}/imprimir`} className="btn ghost compact" target="_blank">
-                        🖨️ Imprimir
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                {recentReports.map((r) => {
+                  const certNum = (r as any).certificateNumber || r.reportNumber || "CERT";
+                  const vRaw: any = r.result || (r as any).verdict || "Apto";
+                  const isOk = vRaw === "Apto" || vRaw === "Approved";
+                  return (
+                    <tr key={r.id}>
+                      <td><strong>{certNum}</strong></td>
+                      <td>{r.calibrationDate ? new Date(r.calibrationDate).toLocaleDateString("es-AR") : "—"}</td>
+                      <td>{r.equipmentCode}</td>
+                      <td>{r.customerName || "—"}</td>
+                      <td>{r.performedBy || "—"}</td>
+                      <td>
+                        <span className={`badge ${isOk ? "ok" : "prio-high"}`}>
+                          {isOk ? "✓ Apto" : "✗ No Apto"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <Link to={`/metrologia/informes/${r.id}/imprimir`} className="btn ghost compact">
+                          🖨️ Ver / Imprimir
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

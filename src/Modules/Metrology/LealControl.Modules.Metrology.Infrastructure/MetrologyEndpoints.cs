@@ -59,6 +59,23 @@ public static class MetrologyEndpoints
 
                 return Results.Ok(new
                 {
+                    equipments = new
+                    {
+                        total = totalEquipments,
+                        active = activeEquipments,
+                        expired = expiredCalibrations
+                    },
+                    weights = new
+                    {
+                        total = totalWeights,
+                        valid = validWeights,
+                        expired = expiredWeights
+                    },
+                    reports = new
+                    {
+                        total = totalReports,
+                        recent = recentReports
+                    },
                     Stats = new
                     {
                         TotalEquipments = totalEquipments,
