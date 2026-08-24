@@ -78,25 +78,33 @@ public static class MetrologyRuleEngine
             ));
         }
 
-        // Punto 2: Primer cambio de escalón (500e para Clase III)
-        var p500e = 500m * e;
-        if (p500e < maxCapacity && p500e > minCapacity)
+        var accClass = string.IsNullOrWhiteSpace(accuracyClass) ? "III" : accuracyClass.Trim().ToUpperInvariant();
+        var thresholds = accClass switch
+        {
+            "I" => (50000m, 200000m),
+            "II" => (5000m, 20000m),
+            "IIII" => (50m, 200m),
+            _ => (500m, 2000m)
+        };
+
+        // Cambios de escalón según la clase del instrumento, no sólo Clase III.
+        var firstThresholdLoad = thresholds.Item1 * e;
+        if (firstThresholdLoad < maxCapacity && firstThresholdLoad > minCapacity)
         {
             points.Add(new MetrologyTestPointDto(
-                p500e,
-                CalculateEMT(p500e, e, acc, isInService, standard),
-                $"{norm} - Límite 500e ({term} = ±{CalculateEMT(p500e, e, acc, isInService, standard)} kg)"
+                firstThresholdLoad,
+                CalculateEMT(firstThresholdLoad, e, acc, isInService, standard),
+                $"{norm} - Límite {thresholds.Item1:0}e ({term} = ±{CalculateEMT(firstThresholdLoad, e, acc, isInService, standard)} kg)"
             ));
         }
 
-        // Punto 3: Segundo cambio de escalón (2000e para Clase III)
-        var p2000e = 2000m * e;
-        if (p2000e < maxCapacity && p2000e > p500e)
+        var secondThresholdLoad = thresholds.Item2 * e;
+        if (secondThresholdLoad < maxCapacity && secondThresholdLoad > firstThresholdLoad)
         {
             points.Add(new MetrologyTestPointDto(
-                p2000e,
-                CalculateEMT(p2000e, e, acc, isInService, standard),
-                $"{norm} - Límite 2000e ({term} = ±{CalculateEMT(p2000e, e, acc, isInService, standard)} kg)"
+                secondThresholdLoad,
+                CalculateEMT(secondThresholdLoad, e, acc, isInService, standard),
+                $"{norm} - Límite {thresholds.Item2:0}e ({term} = ±{CalculateEMT(secondThresholdLoad, e, acc, isInService, standard)} kg)"
             ));
         }
 

@@ -112,6 +112,13 @@ public sealed class CalibrationReport : Entity<Guid>
     // Normativa & Tipo de Ensayo
     public string StandardApplied { get; set; } = "Res25_2025"; // Res25_2025, Res2307_80
     public string CalibrationType { get; set; } = "InService"; // InitialVerification, InService, PostRepair
+    public string RegulatoryProfile { get; set; } = MetrologyRegulatoryProfiles.Ipna25;
+    public string OperationType { get; set; } = "Calibration";
+    public string DocumentTitle { get; set; } = "Informe de ensayo metrológico";
+    public string RegulatoryStatus { get; set; } = "Vigente";
+    public string RegulatoryNotice { get; set; } = string.Empty;
+    public string TestPlanVersion { get; set; } = "MET-BASE-1";
+    public string ReportStatus { get; set; } = "Issued";
     public DateTime CalibrationDate { get; set; } = DateTime.UtcNow;
     public DateTime? ExpirationDate { get; set; } // 24 meses según Res. 25/2025 o 12 meses según 2307/80
     
@@ -367,7 +374,14 @@ public record CalibrationReportWriteDto(
     string LinearityTestJson,
     string WeightsUsedJson,
     string? Observations,
-    string? SealsPlaced
+    string? SealsPlaced,
+    string? RegulatoryProfile = null,
+    string? OperationType = null,
+    string? DocumentTitle = null,
+    string? RegulatoryStatus = null,
+    string? RegulatoryNotice = null,
+    string? TestPlanVersion = null,
+    string? ReportStatus = null
 );
 
 public record MetrologyTestPointDto(

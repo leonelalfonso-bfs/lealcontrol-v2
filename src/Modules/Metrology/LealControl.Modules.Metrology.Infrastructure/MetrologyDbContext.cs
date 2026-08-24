@@ -94,6 +94,13 @@ public sealed class MetrologyDbContext : DbContext
             b.Property(x => x.Location).HasMaxLength(200);
             b.Property(x => x.StandardApplied).HasMaxLength(64).HasDefaultValue("Res25_2025");
             b.Property(x => x.CalibrationType).HasMaxLength(32).HasDefaultValue("InService");
+            b.Property(x => x.RegulatoryProfile).HasMaxLength(80).HasDefaultValue(MetrologyRegulatoryProfiles.Ipna25);
+            b.Property(x => x.OperationType).HasMaxLength(48).HasDefaultValue("Calibration");
+            b.Property(x => x.DocumentTitle).HasMaxLength(160).HasDefaultValue("Informe de ensayo metrológico");
+            b.Property(x => x.RegulatoryStatus).HasMaxLength(80).HasDefaultValue("Vigente");
+            b.Property(x => x.RegulatoryNotice).HasMaxLength(1200).HasDefaultValue(string.Empty);
+            b.Property(x => x.TestPlanVersion).HasMaxLength(64).HasDefaultValue("MET-BASE-1");
+            b.Property(x => x.ReportStatus).HasMaxLength(32).HasDefaultValue("Issued");
             b.Property(x => x.PerformedBy).HasMaxLength(120);
             b.Property(x => x.ApprovedBy).HasMaxLength(120);
             b.Property(x => x.Verdict).HasMaxLength(32).HasDefaultValue("Approved");
@@ -233,6 +240,13 @@ public sealed class MetrologyDbContext : DbContext
                 ""Location"" character varying(200),
                 ""StandardApplied"" character varying(64) NOT NULL DEFAULT 'Res25_2025',
                 ""CalibrationType"" character varying(32) NOT NULL DEFAULT 'InService',
+                ""RegulatoryProfile"" character varying(80) NOT NULL DEFAULT 'IPNA_R25_2025',
+                ""OperationType"" character varying(48) NOT NULL DEFAULT 'Calibration',
+                ""DocumentTitle"" character varying(160) NOT NULL DEFAULT 'Informe de ensayo metrológico',
+                ""RegulatoryStatus"" character varying(80) NOT NULL DEFAULT 'Vigente',
+                ""RegulatoryNotice"" character varying(1200) NOT NULL DEFAULT '',
+                ""TestPlanVersion"" character varying(64) NOT NULL DEFAULT 'MET-BASE-1',
+                ""ReportStatus"" character varying(32) NOT NULL DEFAULT 'Issued',
                 ""CalibrationDate"" timestamp with time zone NOT NULL,
                 ""ExpirationDate"" timestamp with time zone,
                 ""TemperatureCelsius"" numeric(18,2) NOT NULL DEFAULT 20.0,
@@ -255,7 +269,14 @@ public sealed class MetrologyDbContext : DbContext
             );",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_reports_Tenant_CertNumber"" ON metrology.calibration_reports (""TenantId"", ""CertificateNumber"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_reports_Tenant_Equipment"" ON metrology.calibration_reports (""TenantId"", ""EquipmentId"");",
-            @"CREATE INDEX IF NOT EXISTS ""IX_reports_Tenant_Date"" ON metrology.calibration_reports (""TenantId"", ""CalibrationDate"");"
+            @"CREATE INDEX IF NOT EXISTS ""IX_reports_Tenant_Date"" ON metrology.calibration_reports (""TenantId"", ""CalibrationDate"");",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""RegulatoryProfile"" character varying(80) NOT NULL DEFAULT 'IPNA_R25_2025';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""OperationType"" character varying(48) NOT NULL DEFAULT 'Calibration';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""DocumentTitle"" character varying(160) NOT NULL DEFAULT 'Informe de ensayo metrológico';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""RegulatoryStatus"" character varying(80) NOT NULL DEFAULT 'Vigente';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""RegulatoryNotice"" character varying(1200) NOT NULL DEFAULT '';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""TestPlanVersion"" character varying(64) NOT NULL DEFAULT 'MET-BASE-1';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ReportStatus"" character varying(32) NOT NULL DEFAULT 'Issued';"
         };
 
         foreach (var sql in statements)

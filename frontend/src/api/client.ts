@@ -808,6 +808,6 @@ export const api = {
       report: import("./types").CalibrationReport;
       equipment?: import("./types").MetrologyEquipment;
     }>(`/api/v1/metrology/reports/${id}`),
-  saveCalibrationReport: (body: Partial<import("./types").CalibrationReport>) =>
+  saveCalibrationReport: (body: Record<string, unknown>) =>
     request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) })
 };

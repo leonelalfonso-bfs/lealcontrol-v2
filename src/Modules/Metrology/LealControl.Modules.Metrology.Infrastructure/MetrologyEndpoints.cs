@@ -721,6 +721,22 @@ public static class MetrologyEndpoints
         // ====================================================================
         // 4. Motor de Reglas & Cálculo Metrológico
         // ====================================================================
+        group.MapGet("/test-plan", ([FromQuery] string? profileCode, [FromQuery] string? operationType) =>
+        {
+            var profile = MetrologyRegulatoryProfiles.Resolve(profileCode);
+            var operation = string.IsNullOrWhiteSpace(operationType) ? "Calibration" : operationType.Trim();
+            return Results.Ok(new
+            {
+                profile.Code,
+                profile.DisplayName,
+                profile.RegulatoryStatus,
+                operationType = operation,
+                operationLabel = MetrologyRegulatoryProfiles.ResolveOperationLabel(profile, operation),
+                testPlanVersion = profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "MET-2307-1" : "MET-25-1",
+                items = MetrologyRegulatoryProfiles.GetTestPlan(profile, operation)
+            });
+        });
+
         group.MapPost("/calculate-rules", (MetrologyRulesCalculationRequest req) =>
         {
             var standard = string.IsNullOrWhiteSpace(req.StandardApplied) ? "Res25_2025" : req.StandardApplied;
@@ -835,12 +851,24 @@ public static class MetrologyEndpoints
                     .Where(r => r.TenantId == tenantId && r.CalibrationDate.Year == req.CalibrationDate.Year)
                     .CountAsync(ct) + 1;
 
-                var standard = !string.IsNullOrWhiteSpace(req.StandardApplied) ? req.StandardApplied : equipment.ApplicableStandard;
+                var profile = MetrologyRegulatoryProfiles.Resolve(req.RegulatoryProfile, equipment.ApplicableStandard);
+                var operationType = string.IsNullOrWhiteSpace(req.OperationType) ? "Calibration" : req.OperationType.Trim();
+                if (!profile.Operations.ContainsKey(operationType))
+                {
+                    return Results.BadRequest(new { message = "La operación seleccionada no corresponde al perfil reglamentario." });
+                }
+
+                var standard = profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "Res2307_80" : "Res25_2025";
                 var certNumber = !string.IsNullOrWhiteSpace(req.CertificateNumber)
                     ? req.CertificateNumber.Trim()
                     : $"CERT-{req.CalibrationDate.Year}-{maxReportNum:D4}";
 
-                var defaultValidityMonths = standard == "Res25_2025" ? 24 : 12;
+                var expirationDate = req.ExpirationDate ?? (profile.DefaultValidityMonths.HasValue
+                    ? req.CalibrationDate.AddMonths(profile.DefaultValidityMonths.Value)
+                    : null);
+                var documentTitle = string.IsNullOrWhiteSpace(req.DocumentTitle)
+                    ? "Informe de ensayo metrológico"
+                    : req.DocumentTitle.Trim();
 
                 var report = new CalibrationReport
                 {
@@ -854,8 +882,17 @@ public static class MetrologyEndpoints
                     Location = equipment.Location,
                     StandardApplied = standard,
                     CalibrationType = req.CalibrationType ?? "InService",
+                    RegulatoryProfile = profile.Code,
+                    OperationType = operationType,
+                    DocumentTitle = documentTitle,
+                    RegulatoryStatus = profile.RegulatoryStatus,
+                    RegulatoryNotice = profile.Notice,
+                    TestPlanVersion = string.IsNullOrWhiteSpace(req.TestPlanVersion)
+                        ? (profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "MET-2307-1" : "MET-25-1")
+                        : req.TestPlanVersion.Trim(),
+                    ReportStatus = string.IsNullOrWhiteSpace(req.ReportStatus) ? "Issued" : req.ReportStatus.Trim(),
                     CalibrationDate = req.CalibrationDate,
-                    ExpirationDate = req.ExpirationDate ?? req.CalibrationDate.AddMonths(defaultValidityMonths),
+                    ExpirationDate = expirationDate,
                     TemperatureCelsius = req.TemperatureCelsius,
                     RelativeHumidityPercent = req.RelativeHumidityPercent,
                     AtmosphericPressureHpa = req.AtmosphericPressureHpa,

@@ -27,15 +27,21 @@ export function CalibrationReportFormPage() {
 
   // General Report Info
   const [reportNumber, setReportNumber] = useState("");
-  const [certificateType, setCertificateType] = useState("Ensayo Oficial Res. 25/2025");
-  const [normativeApplied, setNormativeApplied] = useState("Resolución SIyC Nº 25/2025 (OIML R 76-1)");
+  const [regulatoryProfile, setRegulatoryProfile] = useState("REGIMEN_TRANSITORIO_R2307_80");
+  const [operationType, setOperationType] = useState("Calibration");
+  const [documentTitle, setDocumentTitle] = useState("Informe de ensayo metrológico");
   const [calibrationDate, setCalibrationDate] = useState(new Date().toISOString().split("T")[0]);
-  const [nextCalibrationDate, setNextCalibrationDate] = useState(new Date(Date.now() + 730*24*60*60*1000).toISOString().split("T")[0]);
+  const [nextCalibrationDate, setNextCalibrationDate] = useState("");
   const [performedBy, setPerformedBy] = useState("Metrólogo Autorizado");
   const [ambientTemperature, setAmbientTemperature] = useState("20.0");
   const [ambientHumidity, setAmbientHumidity] = useState("50.0");
   const [atmosphericPressure, setAtmosphericPressure] = useState("1013.0");
   const [observations, setObservations] = useState("");
+  const operationLabels: Record<string, string> = { Calibration: "Calibración / determinación de errores", PostRepair: "Ensayo posterior a reparación", PeriodicVerification: "Verificación periódica", InitialVerification: "Verificación primitiva" };
+  const is2307 = regulatoryProfile === "REGIMEN_TRANSITORIO_R2307_80";
+  const testPlanItems = ["Identificación e inscripciones del instrumento", "Inspección general, instalación y estado del indicador", "Puesta a cero y tara, cuando el dispositivo esté disponible", is2307 ? "Ensayo de fidelidad" : "Ensayo de repetibilidad", "Ensayo de excentricidad", "Errores de indicación: cargas crecientes y decrecientes", "Precintos, intervención y cierre del informe"];
+  if (operationType === "PostRepair") testPlanItems.splice(2, 0, "Descripción de la intervención posterior a reparación");
+  if (operationType === "PeriodicVerification" || operationType === "InitialVerification") testPlanItems.push("Control de habilitación aplicable a la operación");
 
   // Selected Standard Weights (IDs)
   const [selectedWeightIds, setSelectedWeightIds] = useState<string[]>([]);
@@ -116,11 +122,13 @@ export function CalibrationReportFormPage() {
 
     const std = eq.applicableStandard === "Res2307_80" ? "Res2307_80" : "Res25_2025";
     if (std === "Res2307_80") {
-      setNormativeApplied("Resolución SCyNEI Nº 2307/1980 (SIMELA)");
-      setCertificateType("Ensayo Oficial Res. 2307/80");
+      setRegulatoryProfile("REGIMEN_TRANSITORIO_R2307_80");
+      setDocumentTitle("Informe de ensayo metrológico");
+      setNextCalibrationDate("");
     } else {
-      setNormativeApplied("Resolución SIyC Nº 25/2025 (OIML R 76-1)");
-      setCertificateType("Ensayo Oficial Res. 25/2025");
+      setRegulatoryProfile("IPNA_R25_2025");
+      setDocumentTitle("Informe de ensayo metrológico");
+      setNextCalibrationDate(new Date(Date.now() + 730*24*60*60*1000).toISOString().split("T")[0]);
     }
 
     // Generate Rules via backend engine
@@ -280,29 +288,33 @@ export function CalibrationReportFormPage() {
       }));
 
       const created = await api.saveCalibrationReport({
-        reportNumber: reportNumber.trim() || undefined,
-        certificateType,
-        normativeApplied,
+        certificateNumber: reportNumber.trim() || undefined,
         equipmentId: selectedEquipment.id,
-        customerId: selectedEquipment.customerId,
-        customerName: selectedEquipment.customerName,
-        location: selectedEquipment.location,
+        standardApplied: regulatoryProfile === "REGIMEN_TRANSITORIO_R2307_80" ? "Res2307_80" : "Res25_2025",
+        calibrationType: operationType,
+        regulatoryProfile,
+        operationType,
+        documentTitle,
+        testPlanVersion: regulatoryProfile === "REGIMEN_TRANSITORIO_R2307_80" ? "MET-2307-1" : "MET-25-1",
+        reportStatus: "Issued",
         calibrationDate: new Date(calibrationDate).toISOString(),
-        nextCalibrationDate: nextCalibrationDate ? new Date(nextCalibrationDate).toISOString() : undefined,
+        expirationDate: nextCalibrationDate ? new Date(nextCalibrationDate).toISOString() : undefined,
         performedBy: performedBy.trim(),
-        ambientTemperature: parseFloat(ambientTemperature) || 20,
-        ambientHumidity: parseFloat(ambientHumidity) || 50,
-        atmosphericPressure: parseFloat(atmosphericPressure) || 1013,
-        initialInspectionPassed: inspLevel && inspZero && inspTare && inspSeals,
-        inspectionNotes: inspNotes.trim(),
-        repeatabilityDataJson: JSON.stringify(repeatabilityData),
-        eccentricityDataJson: JSON.stringify(eccentricityData),
-        linearityDataJson: JSON.stringify(linearityData),
+        temperatureCelsius: parseFloat(ambientTemperature) || 20,
+        relativeHumidityPercent: parseFloat(ambientHumidity) || 50,
+        atmosphericPressureHpa: parseFloat(atmosphericPressure) || 1013,
+        approvedBy: "",
+        verdict: finalResult === "Apto" ? "Approved" : "Rejected",
+        maxObservedError: Math.max(eccMaxError, ...linErrors.flatMap(x => [x.ascErr, x.descErr])),
+        maxAllowedError: Math.max(repeatabilityEmt, eccentricityConfig?.emt || 0, ...linRows.map(x => x.emt)),
+        expandedUncertaintyK2: expandedUncertainty,
+        visualInspectionJson: JSON.stringify({ level: inspLevel, zero: inspZero, tare: inspTare, seals: inspSeals, notes: inspNotes.trim(), checklist: { profile: regulatoryProfile, operationType, operationLabel: operationLabels[operationType], testPlanVersion: is2307 ? "MET-2307-1" : "MET-25-1", items: testPlanItems.map((title) => ({ title, registered: true })) } }),
+        repeatabilityTestJson: JSON.stringify(repeatabilityData),
+        eccentricityTestJson: JSON.stringify(eccentricityData),
+        linearityTestJson: JSON.stringify(linearityData),
         weightsUsedJson: JSON.stringify(weightsUsed),
-        expandedUncertainty,
-        result: finalResult,
         observations: observations.trim(),
-        status: "Issued"
+        sealsPlaced: inspSeals ? "Verificados durante la inspección" : "Requiere observación"
       });
 
       navigate(`/metrologia/informes/${created.id}/imprimir`);
@@ -328,7 +340,7 @@ export function CalibrationReportFormPage() {
             📝 Asistente de Carga de Ensayo Metrológico
           </h1>
           <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-            Cumplimiento normativo estricto con <strong>Res. 25/2025 (OIML R 76-1)</strong> y <strong>Res. 2307/80 (SIMELA)</strong>
+            Perfil reglamentario guiado, datos de ensayo y trazabilidad de patrones. El dictamen legal requiere la habilitación aplicable.
           </p>
         </div>
       </div>
@@ -360,24 +372,39 @@ export function CalibrationReportFormPage() {
             </label>
 
             <label>
-              Tipo de Certificado / Servicio
-              <select value={certificateType} onChange={(e) => setCertificateType(e.target.value)}>
-                <option value="Ensayo Oficial Res. 25/2025">Ensayo Oficial Res. 25/2025</option>
-                <option value="Ensayo Oficial Res. 2307/80">Ensayo Oficial Res. 2307/80</option>
-                <option value="Calibración Periódica Anual">Calibración Periódica Anual</option>
-                <option value="Verificación Post-Reparación">Verificación Post-Reparación</option>
-                <option value="Mantenimiento Preventivo">Mantenimiento Preventivo</option>
+              Perfil reglamentario
+              <select value={regulatoryProfile} disabled>
+                <option value="REGIMEN_TRANSITORIO_R2307_80">Régimen transitorio — Res. 2307/1980</option>
+                <option value="IPNA_R25_2025">Res. 25/2025 — instrumentos no automáticos</option>
               </select>
             </label>
 
             <label>
-              Normativa de Referencia
-              <select value={normativeApplied} onChange={(e) => setNormativeApplied(e.target.value)}>
-                <option value="Resolución SIyC Nº 25/2025 (OIML R 76-1)">Resolución SIyC Nº 25/2025 (OIML R 76-1)</option>
-                <option value="Resolución SCyNEI Nº 2307/1980 (SIMELA)">Resolución SCyNEI Nº 2307/1980 (SIMELA)</option>
-                <option value="ISO/IEC 17025">ISO/IEC 17025</option>
+              Operación metrológica
+              <select value={operationType} onChange={(e) => { setOperationType(e.target.value); setDocumentTitle("Informe de ensayo metrológico"); }}>
+                <option value="Calibration">Calibración / determinación de errores</option>
+                <option value="PostRepair">Ensayo posterior a reparación</option>
+                <option value="PeriodicVerification">Verificación periódica</option>
+                <option value="InitialVerification">Verificación primitiva</option>
               </select>
             </label>
+
+            <label>
+              Documento a emitir
+              <input value={documentTitle} onChange={(e) => setDocumentTitle(e.target.value)} />
+            </label>
+          </div>
+
+          {regulatoryProfile === "REGIMEN_TRANSITORIO_R2307_80" && (
+            <div className="alert" style={{ marginBottom: 14 }}>
+              <strong>Régimen transitorio.</strong> La Res. 2307/80 está derogada. Usar este perfil sólo cuando el equipo y la operación estén comprendidos en la transición aplicable; el sistema registrará esa condición en el informe.
+            </div>
+          )}
+
+          <div style={{ background: "rgba(13, 148, 136, 0.06)", border: "1px solid rgba(13, 148, 136, 0.2)", borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
+            <strong style={{ fontSize: "0.86rem" }}>Matriz de ensayo {is2307 ? "2307/80 — régimen transitorio" : "25/2025"}</strong>
+            <div className="muted" style={{ fontSize: "0.78rem", marginTop: 3 }}>Operación: {operationLabels[operationType]}. Esta matriz quedará guardada con el informe.</div>
+            <ol style={{ margin: "8px 0 0", paddingLeft: 20, fontSize: "0.78rem", display: "grid", gap: 3 }}>{testPlanItems.map((item) => <li key={item}>{item}</li>)}</ol>
           </div>
 
           {selectedEquipment && (
@@ -398,8 +425,8 @@ export function CalibrationReportFormPage() {
             </label>
 
             <label>
-              Próxima Calibración
-              <input type="date" value={nextCalibrationDate} onChange={(e) => setNextCalibrationDate(e.target.value)} />
+              Próxima intervención / vencimiento
+              <input type="date" value={nextCalibrationDate} onChange={(e) => setNextCalibrationDate(e.target.value)} placeholder="Definir según operación" />
             </label>
 
             <label>
@@ -512,7 +539,7 @@ export function CalibrationReportFormPage() {
         <div className="card pad">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h3 style={{ margin: 0, fontSize: "1.1rem" }}>
-              4. Ensayo de Repetibilidad / Fidelidad
+              4. {is2307 ? "Ensayo de Fidelidad" : "Ensayo de Repetibilidad"}
             </h3>
             <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
               EMT = ±{repeatabilityEmt} {selectedEquipment?.unit || "kg"}
@@ -705,18 +732,18 @@ export function CalibrationReportFormPage() {
 
         {/* Dictamen Final & Emisión */}
         <div className="card pad" style={{ borderLeft: allAssaysPass ? "4px solid var(--ok)" : "4px solid #dc2626" }}>
-          <h3 style={{ margin: "0 0 14px", fontSize: "1.1rem" }}>7. Dictamen Final & Emisión de Certificado</h3>
+          <h3 style={{ margin: "0 0 14px", fontSize: "1.1rem" }}>7. Resultado técnico & emisión del informe</h3>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 14 }}>
             <div style={{ background: "rgba(0,0,0,0.02)", padding: 14, borderRadius: 10 }}>
               <div className="muted" style={{ fontSize: "0.82rem", marginBottom: 4 }}>Incertidumbre Expandida Estimada (k=2):</div>
               <strong style={{ fontSize: "1.3rem", color: "#0d9488" }}>U = ±{expandedUncertainty} {selectedEquipment?.unit || "kg"}</strong>
-              <div className="muted" style={{ fontSize: "0.76rem", marginTop: 4 }}>Nivel de confianza ~95.45% según Guía GUM / ISO 17025</div>
+              <div className="muted" style={{ fontSize: "0.76rem", marginTop: 4 }}>Valor informativo. La declaración de incertidumbre requiere el método y la trazabilidad documentados.</div>
             </div>
 
             <div style={{ background: allAssaysPass ? "rgba(16, 185, 129, 0.08)" : "rgba(239, 68, 68, 0.08)", padding: 14, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div className="muted" style={{ fontSize: "0.82rem", marginBottom: 4 }}>Dictamen Metrológico Oficial:</div>
+                <div className="muted" style={{ fontSize: "0.82rem", marginBottom: 4 }}>Resultado técnico registrado:</div>
                 <strong style={{ fontSize: "1.5rem", color: allAssaysPass ? "var(--ok)" : "#dc2626" }}>{finalResult}</strong>
               </div>
               <span style={{ fontSize: "2rem" }}>{allAssaysPass ? "🏆" : "⚠️"}</span>
@@ -727,7 +754,7 @@ export function CalibrationReportFormPage() {
             Observaciones & Recomendaciones Técnicas
             <textarea
               rows={2}
-              placeholder="Instrumento apto para uso en transacciones comerciales bajo normativa legal vigente..."
+              placeholder="Observaciones técnicas, reparaciones, condiciones de instalación o acciones requeridas..."
               value={observations}
               onChange={(e) => setObservations(e.target.value)}
             />
@@ -743,7 +770,7 @@ export function CalibrationReportFormPage() {
               className="btn"
               style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", padding: "12px 28px", fontSize: "1rem" }}
             >
-              {saving ? "Emitiendo Certificado..." : "💾 Emitir e Imprimir Certificado"}
+              {saving ? "Emitiendo informe..." : "💾 Emitir e imprimir informe"}
             </button>
           </div>
         </div>

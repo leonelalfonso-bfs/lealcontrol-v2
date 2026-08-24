@@ -43,20 +43,26 @@ export function CalibrationReportPrintPage() {
   let eccentricityData: any = {};
   let linearityData: any[] = [];
   let weightsUsed: any[] = [];
+  let visualInspectionData: any = {};
 
   const rawRepJson = (report as any).repeatabilityTestJson || report.repeatabilityDataJson || "{}";
   const rawEccJson = (report as any).eccentricityTestJson || report.eccentricityDataJson || "{}";
   const rawLinJson = (report as any).linearityTestJson || report.linearityDataJson || "[]";
   const rawWeightsJson = report.weightsUsedJson || "[]";
+  const rawVisualJson = (report as any).visualInspectionJson || "{}";
 
   try { repeatabilityData = typeof rawRepJson === "string" ? JSON.parse(rawRepJson) : rawRepJson; } catch {}
   try { eccentricityData = typeof rawEccJson === "string" ? JSON.parse(rawEccJson) : rawEccJson; } catch {}
   try { linearityData = typeof rawLinJson === "string" ? JSON.parse(rawLinJson) : (Array.isArray(rawLinJson) ? rawLinJson : []); } catch {}
   try { weightsUsed = typeof rawWeightsJson === "string" ? JSON.parse(rawWeightsJson) : (Array.isArray(rawWeightsJson) ? rawWeightsJson : []); } catch {}
+  try { visualInspectionData = typeof rawVisualJson === "string" ? JSON.parse(rawVisualJson) : rawVisualJson; } catch {}
 
   const certNumber = (report as any).certificateNumber || report.reportNumber || "CERT-2026";
   const stdApplied = (report as any).standardApplied || report.normativeApplied || "Resolución SIyC Nº 25/2025 (OIML R 76-1)";
-  const certType = report.certificateType || (stdApplied.includes("2307") ? "Ensayo Oficial Res. 2307/80" : "Ensayo Oficial Res. 25/2025");
+  const profileStatus = (report as any).regulatoryStatus || (stdApplied.includes("2307") ? "Derogada — aplicación transitoria" : "Vigente");
+  const regulatoryNotice = (report as any).regulatoryNotice;
+  const operationLabel = visualInspectionData?.checklist?.operationLabel || (report as any).operationType || "Calibración / determinación de errores";
+  const documentTitle = (report as any).documentTitle || "Informe de ensayo metrológico";
   const verdictRaw: any = report.result || (report as any).verdict || "Apto";
   const verdictText = (verdictRaw === "Approved" || verdictRaw === "Apto") ? "APTO" : (verdictRaw === "Rejected" || verdictRaw === "No Apto") ? "NO APTO" : String(verdictRaw || "").toUpperCase();
   const isApproved = verdictText === "APTO" || verdictText === "APPROVED";
@@ -98,14 +104,14 @@ export function CalibrationReportPrintPage() {
               {company?.fiscalStreet || "Parque Industrial"} - {company?.fiscalCity || ""}
             </div>
             <div style={{ fontSize: "0.78rem", color: "#555" }}>
-              Laboratorio de Ensayos & Servicios Técnicos Autorizados
+              Servicios técnicos y metrológicos
             </div>
           </div>
         </div>
 
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "#666", fontWeight: 700 }}>
-            INFORME DE ENSAYO METROLÓGICO
+            {documentTitle.toUpperCase()}
           </div>
           <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0d9488" }}>
             {certNumber}
@@ -118,7 +124,14 @@ export function CalibrationReportPrintPage() {
 
       {/* Normativa */}
       <div style={{ textAlign: "center", background: "#f4fbf9", padding: "6px 12px", borderRadius: 6, border: "1px solid #ccede5", marginBottom: 16, fontSize: "0.84rem", fontWeight: 600, color: "#06574c" }}>
-        {certType} • Conforme a {stdApplied}
+        Perfil aplicado: {stdApplied} • {profileStatus}
+      </div>
+
+      {regulatoryNotice && <div style={{ background: "#fff8e8", border: "1px solid #f2d28a", padding: "8px 10px", borderRadius: 6, marginBottom: 16, fontSize: "0.78rem", color: "#76500b" }}><strong>Alcance del informe:</strong> {regulatoryNotice}</div>}
+      <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
+        <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 6, color: "#0d9488" }}>MATRIZ DE ENSAYO REGISTRADA</div>
+        <div><strong>Operación:</strong> {operationLabel} • <strong>Plan:</strong> {visualInspectionData?.checklist?.testPlanVersion || (report as any).testPlanVersion || "MET-BASE-1"}</div>
+        {Array.isArray(visualInspectionData?.checklist?.items) && <ul style={{ margin: "7px 0 0", paddingLeft: 18 }}>{visualInspectionData.checklist.items.map((item: any, index: number) => <li key={`${item.title}-${index}`}>{item.title}</li>)}</ul>}
       </div>
 
       {/* Sección 1: Datos del Cliente y del Instrumento */}
@@ -203,7 +216,7 @@ export function CalibrationReportPrintPage() {
       {/* Ensayo de Repetibilidad */}
       <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
         <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
-          1. ENSAYO DE REPETIBILIDAD / FIDELIDAD
+          1. ENSAYO DE {stdApplied.includes("2307") ? "FIDELIDAD" : "REPETIBILIDAD"}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           {repeatabilityData.halfMax && (
@@ -302,12 +315,12 @@ export function CalibrationReportPrintPage() {
       <div style={{ border: "2px solid #0d9488", borderRadius: 8, padding: 14, background: "#f4fbf9", marginBottom: 24 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: "0.85rem", color: "#555" }}>DICTAMEN METROLÓGICO FINAL:</div>
+            <div style={{ fontSize: "0.85rem", color: "#555" }}>RESULTADO TÉCNICO DEL INFORME:</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 800, color: isApproved ? "#06574c" : "#dc2626" }}>
               {verdictText}
             </div>
             <div style={{ fontSize: "0.8rem", color: "#555", marginTop: 4 }}>
-              Incertidumbre Expandida de Medición: <strong>U = ±{expUncertainty} {equipment?.unit || "kg"}</strong> (k = 2, confianza 95.45%)
+              Incertidumbre expandida informada: <strong>U = ±{expUncertainty} {equipment?.unit || "kg"}</strong> (k = 2)
             </div>
             {report.observations && (
               <div style={{ fontSize: "0.8rem", marginTop: 6, color: "#333" }}>
@@ -317,9 +330,9 @@ export function CalibrationReportPrintPage() {
           </div>
 
           <div style={{ textAlign: "center", borderTop: "1px solid #444", paddingTop: 8, minWidth: 200 }}>
-            <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{report.performedBy || "Metrólogo Autorizado"}</div>
-            <div style={{ fontSize: "0.74rem", color: "#666" }}>Metrólogo / Responsable Técnico</div>
-            <div style={{ fontSize: "0.74rem", color: "#666" }}>Laboratorio de Ensayos</div>
+            <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{report.performedBy || "Técnico responsable"}</div>
+            <div style={{ fontSize: "0.74rem", color: "#666" }}>Técnico / Responsable del informe</div>
+            <div style={{ fontSize: "0.74rem", color: "#666" }}>Servicios técnicos y metrológicos</div>
           </div>
         </div>
       </div>
