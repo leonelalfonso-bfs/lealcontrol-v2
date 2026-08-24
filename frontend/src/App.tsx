@@ -131,6 +131,7 @@ export function App() {
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("Empresa");
   const [appsOpen, setAppsOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showAskLeal, setShowAskLeal] = useState(false);
 
   useEffect(() => {
@@ -203,9 +204,41 @@ export function App() {
   return (
     <ProtectedRoute>
       <div className="app-shell">
-        {/* Main Body with Clean Sidebar */}
+        {/* Mobile Header Bar */}
+        <header className="mobile-header">
+          <button
+            type="button"
+            className="mobile-hamburger-btn"
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            title="Abrir menú"
+          >
+            ☰
+          </button>
+          <div className="mobile-brand-title">
+            <strong>{activeCompanyName}</strong>
+            <span className="badge" style={{ fontSize: "0.68rem" }}>{activeModule.label}</span>
+          </div>
+          <button
+            type="button"
+            className="mobile-apps-btn"
+            onClick={() => setAppsOpen(true)}
+            title="Centro de Aplicaciones"
+          >
+            ▦
+          </button>
+        </header>
+
+        {/* Mobile Sidebar Backdrop */}
+        {mobileSidebarOpen && (
+          <div
+            className="mobile-sidebar-backdrop"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
+        {/* Main Body with Clean Adaptive Sidebar */}
         <div className="app">
-          <aside className="sidebar">
+          <aside className={`sidebar ${mobileSidebarOpen ? "mobile-open" : ""}`}>
             <div className="company-brand" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 6, padding: "8px 6px 12px", borderBottom: "1px solid var(--surface-border)" }}>
               {companyLogo ? (
                 <img src={companyLogo} alt={activeCompanyName} style={{ maxHeight: "42px", maxWidth: "160px", objectFit: "contain", filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.15))" }} />
@@ -249,7 +282,14 @@ export function App() {
               )}
             </div>
 
-            <button type="button" className="applications-launcher" onClick={() => setAppsOpen(true)}>
+            <button
+              type="button"
+              className="applications-launcher"
+              onClick={() => {
+                setAppsOpen(true);
+                setMobileSidebarOpen(false);
+              }}
+            >
               <span>▦</span>
               <span>Aplicaciones</span>
               <span>›</span>
@@ -276,6 +316,7 @@ export function App() {
                   key={item.path}
                   to={item.path}
                   end={item.end}
+                  onClick={() => setMobileSidebarOpen(false)}
                   className={({ isActive }) => (isActive ? "active" : "")}
                 >
                   <span className="nav-icon-badge">{item.icon}</span>

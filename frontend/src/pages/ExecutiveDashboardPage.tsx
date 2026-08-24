@@ -191,7 +191,7 @@ export const ExecutiveDashboardPage: React.FC = () => {
   }, [chartData]);
 
   return (
-    <div className="workspace-page page-wide" style={{ maxWidth: 1400, margin: "0 auto" }}>
+    <div className="workspace-page page-wide" style={{ width: "100%" }}>
       {/* Header & Controls */}
       <div className="page-head" style={{ marginBottom: 20 }}>
         <div>

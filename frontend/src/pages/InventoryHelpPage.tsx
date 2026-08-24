@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 export const InventoryHelpPage: React.FC = () => {
   return (
-    <div className="workspace-page page-wide" style={{ maxWidth: 1200, margin: "0 auto" }}>
+    <div className="workspace-page page-wide" style={{ width: "100%" }}>
       {/* Header */}
       <div className="page-head" style={{ marginBottom: 24 }}>
         <div>

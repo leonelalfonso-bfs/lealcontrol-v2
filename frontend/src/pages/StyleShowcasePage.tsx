@@ -18,7 +18,7 @@ export const StyleShowcasePage: React.FC = () => {
   ];
 
   return (
-    <div className="workspace-page page-wide" style={{ maxWidth: 1400, margin: "0 auto" }}>
+    <div className="workspace-page page-wide" style={{ width: "100%" }}>
       {/* Header */}
       <div className="page-head" style={{ marginBottom: 28 }}>
         <div>
