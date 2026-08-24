@@ -62,6 +62,7 @@ export function MetrologyEquipmentFormPage() {
 
   // Metrological Specs
   const [maxCapacity, setMaxCapacity] = useState(80000);
+  const [maximumOperationalLoad, setMaximumOperationalLoad] = useState(45000);
   const [minCapacity, setMinCapacity] = useState(400);
   const [divisionD, setDivisionD] = useState(20);
   const [verificationIntervalE, setVerificationIntervalE] = useState(20);
@@ -205,6 +206,7 @@ export function MetrologyEquipmentFormPage() {
             setIndicator2Type(eq.indicator2Type || "MechanicalDial");
 
             setMaxCapacity(eq.maxCapacity || 80000);
+            setMaximumOperationalLoad(eq.maximumOperationalLoad || (eq.maxCapacity === 80000 ? 45000 : (eq.maxCapacity || 80000)));
             setMinCapacity(eq.minCapacity || 400);
             setDivisionD(eq.divisionD || 20);
             setVerificationIntervalE(eq.verificationIntervalE || 20);
@@ -278,6 +280,7 @@ export function MetrologyEquipmentFormPage() {
       indicator2Type,
 
       maxCapacity: Number(maxCapacity),
+      maximumOperationalLoad: Number(maximumOperationalLoad) || Number(maxCapacity),
       minCapacity: Number(minCapacity),
       divisionD: Number(divisionD),
       verificationIntervalE: Number(verificationIntervalE),
@@ -924,6 +927,19 @@ export function MetrologyEquipmentFormPage() {
                 onChange={(e) => setMaxCapacity(Number(e.target.value))}
                 style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 800, fontSize: "0.95rem" }}
               />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Carga máxima de uso (ensayo de campo)</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={maximumOperationalLoad}
+                onChange={(e) => setMaximumOperationalLoad(Number(e.target.value))}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 800, fontSize: "0.95rem" }}
+              />
+              <small style={{ display: "block", marginTop: 5, color: "#64748b", lineHeight: 1.35 }}>No modifica el Max metrológico. Se usa para sugerir 50 % y 100 % de fidelidad y siempre puede ajustarse por servicio.</small>
             </div>
 
             <div>

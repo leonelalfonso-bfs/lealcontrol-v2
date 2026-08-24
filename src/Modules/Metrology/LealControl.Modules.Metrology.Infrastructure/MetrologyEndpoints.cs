@@ -244,6 +244,7 @@ public static class MetrologyEndpoints
                     Indicator2ApprovalDate = req.Indicator2ApprovalDate,
                     Indicator2Type = req.Indicator2Type?.Trim() ?? "",
                     MaxCapacity = req.MaxCapacity,
+                    MaximumOperationalLoad = req.MaximumOperationalLoad is > 0 ? req.MaximumOperationalLoad.Value : req.MaxCapacity,
                     MinCapacity = req.MinCapacity,
                     DivisionD = req.DivisionD,
                     VerificationIntervalE = req.VerificationIntervalE,
@@ -322,6 +323,7 @@ public static class MetrologyEndpoints
                 equipment.Indicator2ApprovalDate = req.Indicator2ApprovalDate;
                 equipment.Indicator2Type = req.Indicator2Type?.Trim() ?? "";
                 equipment.MaxCapacity = req.MaxCapacity;
+                equipment.MaximumOperationalLoad = req.MaximumOperationalLoad is > 0 ? req.MaximumOperationalLoad.Value : req.MaxCapacity;
                 equipment.MinCapacity = req.MinCapacity;
                 equipment.DivisionD = req.DivisionD;
                 equipment.VerificationIntervalE = req.VerificationIntervalE;

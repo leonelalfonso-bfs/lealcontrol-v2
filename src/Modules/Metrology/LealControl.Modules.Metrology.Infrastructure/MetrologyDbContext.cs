@@ -151,6 +151,7 @@ public sealed class MetrologyDbContext : DbContext
                 ""Indicator2ApprovalDate"" timestamp with time zone,
                 ""Indicator2Type"" character varying(60) NOT NULL DEFAULT '',
                 ""MaxCapacity"" numeric(18,4) NOT NULL DEFAULT 0,
+                ""MaximumOperationalLoad"" numeric(18,4) NOT NULL DEFAULT 0,
                 ""MinCapacity"" numeric(18,4) NOT NULL DEFAULT 0,
                 ""DivisionD"" numeric(18,4) NOT NULL DEFAULT 0,
                 ""VerificationIntervalE"" numeric(18,4) NOT NULL DEFAULT 0,
@@ -190,6 +191,7 @@ public sealed class MetrologyDbContext : DbContext
             @"ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator2ApprovalNumber"" character varying(120) NOT NULL DEFAULT '';",
             @"ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator2ApprovalDate"" timestamp with time zone;",
             @"ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""Indicator2Type"" character varying(60) NOT NULL DEFAULT '';",
+            @"ALTER TABLE metrology.equipments ADD COLUMN IF NOT EXISTS ""MaximumOperationalLoad"" numeric(18,4) NOT NULL DEFAULT 0;",
 
             @"CREATE TABLE IF NOT EXISTS metrology.standard_weights (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

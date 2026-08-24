@@ -193,6 +193,16 @@ public static class MetrologyRuleEngine
             positions.Add(n > 4 ? $"Apoyo {i} (Celda {i})" : $"Esquina {i}");
         }
 
-        return new EccentricityConfigDto(testLoad, n, positions, ruleApplied);
+        var calculatedTestLoad = testLoad;
+        // For truck scales under the transitional 2307/80 regime, field teams commonly
+        // compose the load with 1,000 kg standards. This is an editable operating suggestion,
+        // not a replacement for the regulatory calculation retained above.
+        var suggestedTestLoad = standard == "Res2307_80" && (platformType == "TruckScale" || platformType == "RollingLoad")
+            ? Math.Ceiling(calculatedTestLoad / 1000m) * 1000m
+            : calculatedTestLoad;
+        if (suggestedTestLoad != calculatedTestLoad)
+            ruleApplied += $" Carga práctica sugerida: {suggestedTestLoad:0.##} (redondeo superior para pesas de 1.000; editable por el técnico).";
+
+        return new EccentricityConfigDto(suggestedTestLoad, n, positions, ruleApplied, calculatedTestLoad, suggestedTestLoad);
     }
 }

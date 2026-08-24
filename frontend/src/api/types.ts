@@ -1568,6 +1568,7 @@ export type MetrologyEquipment = {
   indicator2ApprovalDate?: string | null;
   indicator2Type?: string | null;
   maxCapacity: number;
+  maximumOperationalLoad?: number;
   minCapacity: number;
   divisionD: number;
   verificationIntervalE: number;
@@ -1656,6 +1657,8 @@ export type EccentricityConfig = {
   positionsCount: number;
   emt: number;
   description: string;
+  calculatedTestLoad?: number;
+  suggestedTestLoad?: number;
 };
 
 // ====================================================================

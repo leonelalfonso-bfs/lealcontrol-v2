@@ -53,26 +53,32 @@ export function CalibrationReportFormPage() {
   const [inspSeals, setInspSeals] = useState(true);
   const [inspNotes, setInspNotes] = useState("Instrumento en correctas condiciones mecánicas y estructurales.");
 
-  // Assay 2: Repeatability (Half Max and Full Max)
-  const [repLoad50, setRepLoad50] = useState<string>("40000");
-  const [rep50_1, setRep50_1] = useState<string>("40000");
-  const [rep50_2, setRep50_2] = useState<string>("40000");
-  const [rep50_3, setRep50_3] = useState<string>("40000");
+  // Assay 2: Fidelity / repeatability. Each field cycle is always 0 → load → 0.
+  const [repLoad50, setRepLoad50] = useState<string>("22500");
+  const [rep50_1, setRep50_1] = useState<string>("0");
+  const [rep50_2, setRep50_2] = useState<string>("22500");
+  const [rep50_3, setRep50_3] = useState<string>("0");
+  const [rep50Delta1, setRep50Delta1] = useState<string>("10");
+  const [rep50Delta2, setRep50Delta2] = useState<string>("10");
+  const [rep50Delta3, setRep50Delta3] = useState<string>("10");
 
-  const [repLoad100, setRepLoad100] = useState<string>("80000");
-  const [rep100_1, setRep100_1] = useState<string>("80000");
-  const [rep100_2, setRep100_2] = useState<string>("80000");
-  const [rep100_3, setRep100_3] = useState<string>("80000");
+  const [repLoad100, setRepLoad100] = useState<string>("45000");
+  const [rep100_1, setRep100_1] = useState<string>("0");
+  const [rep100_2, setRep100_2] = useState<string>("45000");
+  const [rep100_3, setRep100_3] = useState<string>("0");
+  const [rep100Delta1, setRep100Delta1] = useState<string>("10");
+  const [rep100Delta2, setRep100Delta2] = useState<string>("10");
+  const [rep100Delta3, setRep100Delta3] = useState<string>("10");
 
-  // Assay 3: Eccentricity (Positions)
+  // Assay 3: Eccentricity (Positions). ΔL is the supplementary mass until I changes by +e.
   const [eccTestLoad, setEccTestLoad] = useState<string>("16000");
-  const [eccPositions, setEccPositions] = useState<Array<{ pos: number; label: string; indication: string }>>([
-    { pos: 1, label: "Apoyo 1 (Celda 1)", indication: "16000" },
-    { pos: 2, label: "Apoyo 2 (Celda 2)", indication: "16000" },
-    { pos: 3, label: "Apoyo 3 (Celda 3)", indication: "16000" },
-    { pos: 4, label: "Apoyo 4 (Celda 4)", indication: "16000" },
-    { pos: 5, label: "Apoyo 5 (Celda 5)", indication: "16000" },
-    { pos: 6, label: "Apoyo 6 (Celda 6)", indication: "16000" }
+  const [eccPositions, setEccPositions] = useState<Array<{ pos: number; label: string; indication: string; deltaL: string }>>([
+    { pos: 1, label: "Apoyo 1 (Celda 1)", indication: "16000", deltaL: "10" },
+    { pos: 2, label: "Apoyo 2 (Celda 2)", indication: "16000", deltaL: "10" },
+    { pos: 3, label: "Apoyo 3 (Celda 3)", indication: "16000", deltaL: "10" },
+    { pos: 4, label: "Apoyo 4 (Celda 4)", indication: "16000", deltaL: "10" },
+    { pos: 5, label: "Apoyo 5 (Celda 5)", indication: "16000", deltaL: "10" },
+    { pos: 6, label: "Apoyo 6 (Celda 6)", indication: "16000", deltaL: "10" }
   ]);
 
   // Assay 4: Linearity (Points)
@@ -108,17 +114,18 @@ export function CalibrationReportFormPage() {
 
     setSelectedEquipment(eq);
 
-    // Initial Repeatability loads
-    const half = (eq.maxCapacity || 80000) * 0.5;
+    // Operational use load is independent of the approved metrological Max.
+    const operationalMax = Number(eq.maximumOperationalLoad) > 0
+      ? Number(eq.maximumOperationalLoad)
+      : ((eq.platformType === "TruckScale" && Number(eq.maxCapacity) === 80000) ? 45000 : (eq.maxCapacity || 80000));
+    const half = operationalMax * 0.5;
+    const halfDelta = ((eq.verificationIntervalE || 20) / 2).toString();
     setRepLoad50(half.toString());
-    setRep50_1(half.toString());
-    setRep50_2(half.toString());
-    setRep50_3(half.toString());
-
-    setRepLoad100((eq.maxCapacity || 80000).toString());
-    setRep100_1((eq.maxCapacity || 80000).toString());
-    setRep100_2((eq.maxCapacity || 80000).toString());
-    setRep100_3((eq.maxCapacity || 80000).toString());
+    setRep50_1("0"); setRep50_2(half.toString()); setRep50_3("0");
+    setRep50Delta1(halfDelta); setRep50Delta2(halfDelta); setRep50Delta3(halfDelta);
+    setRepLoad100(operationalMax.toString());
+    setRep100_1("0"); setRep100_2(operationalMax.toString()); setRep100_3("0");
+    setRep100Delta1(halfDelta); setRep100Delta2(halfDelta); setRep100Delta3(halfDelta);
 
     const std = eq.applicableStandard === "Res2307_80" ? "Res2307_80" : "Res25_2025";
     if (std === "Res2307_80") {
@@ -182,7 +189,8 @@ export function CalibrationReportFormPage() {
         posArr.push({
           pos: i,
           label: count > 4 ? `Apoyo ${i} (Celda ${i})` : `Esquina ${i}`,
-          indication: loadVal.toString()
+          indication: loadVal.toString(),
+          deltaL: ((eq.verificationIntervalE || 20) / 2).toString()
         });
       }
       setEccPositions(posArr);
@@ -201,36 +209,34 @@ export function CalibrationReportFormPage() {
     }
   };
 
-  // Calculations in real-time
-  const rep50Vals = [parseFloat(rep50_1) || 0, parseFloat(rep50_2) || 0, parseFloat(rep50_3) || 0];
-  const rep50Range = Math.max(...rep50Vals) - Math.min(...rep50Vals);
-  const rep50Ok = rep50Range <= repeatabilityEmt;
+  // Calculations in real-time. OIML-style rounding: P = I + e/2 − ΔL.
+  const eInterval = Number(selectedEquipment?.verificationIntervalE || 0);
+  const beforeRounding = (indication: string, deltaL: string) => (parseFloat(indication) || 0) + eInterval / 2 - (parseFloat(deltaL) || 0);
+  const fidelityCycle = (load: string, zeroStart: string, zeroStartDelta: string, indication: string, indicationDelta: string, zeroEnd: string, zeroEndDelta: string) => {
+    const p0 = beforeRounding(zeroStart, zeroStartDelta);
+    const pLoad = beforeRounding(indication, indicationDelta);
+    const pEnd = beforeRounding(zeroEnd, zeroEndDelta);
+    const loadError = pLoad - (parseFloat(load) || 0) - p0;
+    const zeroReturn = pEnd - p0;
+    return { p0, pLoad, pEnd, loadError, zeroReturn, conform: Math.abs(loadError) <= repeatabilityEmt && Math.abs(zeroReturn) <= repeatabilityEmt };
+  };
+  const rep50Cycle = fidelityCycle(repLoad50, rep50_1, rep50Delta1, rep50_2, rep50Delta2, rep50_3, rep50Delta3);
+  const rep100Cycle = fidelityCycle(repLoad100, rep100_1, rep100Delta1, rep100_2, rep100Delta2, rep100_3, rep100Delta3);
+  const rep50Ok = rep50Cycle.conform;
+  const rep100Ok = rep100Cycle.conform;
 
-  const rep100Vals = [parseFloat(rep100_1) || 0, parseFloat(rep100_2) || 0, parseFloat(rep100_3) || 0];
-  const rep100Range = Math.max(...rep100Vals) - Math.min(...rep100Vals);
-  const rep100Ok = rep100Range <= repeatabilityEmt;
-
-  // Eccentricity Max Error
   const eccLoadNum = parseFloat(eccTestLoad) || 0;
-  const eccErrors = eccPositions.map(p => Math.abs((parseFloat(p.indication) || 0) - eccLoadNum));
+  const eccErrors = eccPositions.map(p => Math.abs(beforeRounding(p.indication, p.deltaL) - eccLoadNum));
   const eccMaxError = Math.max(0, ...eccErrors);
   const eccOk = eccentricityConfig ? eccMaxError <= (eccentricityConfig.emt || 20) : true;
 
-  // Linearity Evaluation
   const linErrors = linRows.map(r => {
     const ascErr = Math.abs((parseFloat(r.ascIndication) || 0) - r.targetLoad);
     const descErr = Math.abs((parseFloat(r.descIndication) || 0) - r.targetLoad);
-    return {
-      step: r.step,
-      ascErr,
-      descErr,
-      ascOk: ascErr <= r.emt,
-      descOk: descErr <= r.emt
-    };
+    return { step: r.step, ascErr, descErr, ascOk: ascErr <= r.emt, descOk: descErr <= r.emt };
   });
   const linAllOk = linErrors.every(e => e.ascOk && e.descOk);
 
-  // Overall Result
   const allAssaysPass = inspLevel && inspZero && inspTare && inspSeals && rep50Ok && rep100Ok && eccOk && linAllOk;
   const finalResult = allAssaysPass ? "Apto" : "No Apto";
 
@@ -250,18 +256,23 @@ export function CalibrationReportFormPage() {
       setError(null);
 
       const repeatabilityData = {
-        halfMax: { load: parseFloat(repLoad50), repetitions: rep50Vals, range: rep50Range, emt: repeatabilityEmt, conform: rep50Ok },
-        fullMax: { load: parseFloat(repLoad100), repetitions: rep100Vals, range: rep100Range, emt: repeatabilityEmt, conform: rep100Ok }
+        method: "0 → carga → 0; P = I + e/2 − ΔL",
+        verificationIntervalE: eInterval,
+        operationalMaximumLoad: Number(selectedEquipment.maximumOperationalLoad) || selectedEquipment.maxCapacity,
+        halfOperationalLoad: { load: parseFloat(repLoad50), sequence: [{ stage: "Cero inicial", indication: Number(rep50_1), deltaL: Number(rep50Delta1), beforeRounding: rep50Cycle.p0 }, { stage: "Carga", indication: Number(rep50_2), deltaL: Number(rep50Delta2), beforeRounding: rep50Cycle.pLoad }, { stage: "Cero final", indication: Number(rep50_3), deltaL: Number(rep50Delta3), beforeRounding: rep50Cycle.pEnd }], loadError: rep50Cycle.loadError, zeroReturn: rep50Cycle.zeroReturn, emt: repeatabilityEmt, conform: rep50Ok },
+        fullOperationalLoad: { load: parseFloat(repLoad100), sequence: [{ stage: "Cero inicial", indication: Number(rep100_1), deltaL: Number(rep100Delta1), beforeRounding: rep100Cycle.p0 }, { stage: "Carga", indication: Number(rep100_2), deltaL: Number(rep100Delta2), beforeRounding: rep100Cycle.pLoad }, { stage: "Cero final", indication: Number(rep100_3), deltaL: Number(rep100Delta3), beforeRounding: rep100Cycle.pEnd }], loadError: rep100Cycle.loadError, zeroReturn: rep100Cycle.zeroReturn, emt: repeatabilityEmt, conform: rep100Ok }
       };
 
       const eccentricityData = {
+        calculatedTestLoad: eccentricityConfig?.calculatedTestLoad ?? eccLoadNum,
+        suggestedTestLoad: eccentricityConfig?.suggestedTestLoad ?? eccLoadNum,
         testLoad: eccLoadNum,
         emt: eccentricityConfig?.emt || 20,
+        method: "P = I + e/2 − ΔL",
         positions: eccPositions.map(p => ({
-          pos: p.pos,
-          label: p.label,
-          indication: parseFloat(p.indication) || 0,
-          error: (parseFloat(p.indication) || 0) - eccLoadNum
+          pos: p.pos, label: p.label, indication: parseFloat(p.indication) || 0, deltaL: parseFloat(p.deltaL) || 0,
+          beforeRounding: beforeRounding(p.indication, p.deltaL),
+          error: beforeRounding(p.indication, p.deltaL) - eccLoadNum
         })),
         maxError: eccMaxError,
         conform: eccOk
@@ -305,7 +316,7 @@ export function CalibrationReportFormPage() {
         atmosphericPressureHpa: parseFloat(atmosphericPressure) || 1013,
         approvedBy: "",
         verdict: finalResult === "Apto" ? "Approved" : "Rejected",
-        maxObservedError: Math.max(eccMaxError, ...linErrors.flatMap(x => [x.ascErr, x.descErr])),
+        maxObservedError: Math.max(eccMaxError, Math.abs(rep50Cycle.loadError), Math.abs(rep50Cycle.zeroReturn), Math.abs(rep100Cycle.loadError), Math.abs(rep100Cycle.zeroReturn), ...linErrors.flatMap(x => [x.ascErr, x.descErr])),
         maxAllowedError: Math.max(repeatabilityEmt, eccentricityConfig?.emt || 0, ...linRows.map(x => x.emt)),
         expandedUncertaintyK2: expandedUncertainty,
         visualInspectionJson: JSON.stringify({ level: inspLevel, zero: inspZero, tare: inspTare, seals: inspSeals, notes: inspNotes.trim(), checklist: { profile: regulatoryProfile, operationType, operationLabel: operationLabels[operationType], testPlanVersion: is2307 ? "MET-2307-1" : "MET-25-1", items: testPlanItems.map((title) => ({ title, registered: true })) } }),
@@ -546,52 +557,24 @@ export function CalibrationReportFormPage() {
             </span>
           </div>
 
+          <p className="muted" style={{ marginTop: 0, fontSize: "0.82rem" }}>Cada ciclo se registra como <strong>0 → carga → 0</strong>. Para indicación digital sin resolución fina, informá ΔL: masa suplementaria acumulada que provoca el cambio de +e. El sistema conserva P antes del redondeo.</p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-            {/* Carga al 50% */}
-            <div style={{ background: "rgba(0,0,0,0.02)", padding: 14, borderRadius: 10, border: "1px solid var(--surface-border)" }}>
-              <strong style={{ display: "block", marginBottom: 8 }}>Ensayo a Carga ~50% Max ({repLoad50} {selectedEquipment?.unit})</strong>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
-                <label>
-                  Repetición 1
-                  <input type="number" step="0.0001" value={rep50_1} onChange={(e) => setRep50_1(e.target.value)} />
-                </label>
-                <label>
-                  Repetición 2
-                  <input type="number" step="0.0001" value={rep50_2} onChange={(e) => setRep50_2(e.target.value)} />
-                </label>
-                <label>
-                  Repetición 3
-                  <input type="number" step="0.0001" value={rep50_3} onChange={(e) => setRep50_3(e.target.value)} />
-                </label>
+            {[
+              { title: "50 % de carga máxima de uso", load: repLoad50, setLoad: setRepLoad50, values: [rep50_1, rep50_2, rep50_3], setters: [setRep50_1, setRep50_2, setRep50_3], deltas: [rep50Delta1, rep50Delta2, rep50Delta3], deltaSetters: [setRep50Delta1, setRep50Delta2, setRep50Delta3], cycle: rep50Cycle },
+              { title: "100 % de carga máxima de uso", load: repLoad100, setLoad: setRepLoad100, values: [rep100_1, rep100_2, rep100_3], setters: [setRep100_1, setRep100_2, setRep100_3], deltas: [rep100Delta1, rep100Delta2, rep100Delta3], deltaSetters: [setRep100Delta1, setRep100Delta2, setRep100Delta3], cycle: rep100Cycle }
+            ].map((test) => (
+              <div key={test.title} style={{ background: "rgba(0,0,0,0.02)", padding: 14, borderRadius: 10, border: "1px solid var(--surface-border)" }}>
+                <label style={{ display: "block", fontWeight: 800, marginBottom: 10 }}>{test.title} · carga <input type="number" step="0.0001" value={test.load} onChange={(e) => test.setLoad(e.target.value)} style={{ width: 120, marginLeft: 6 }} /> {selectedEquipment?.unit}</label>
+                {["Cero inicial", "Carga", "Cero final"].map((stage, index) => (
+                  <div key={stage} style={{ display: "grid", gridTemplateColumns: "1.05fr 1fr 1fr", gap: 7, marginBottom: 7, alignItems: "end" }}>
+                    <strong style={{ fontSize: "0.8rem" }}>{stage}</strong>
+                    <label style={{ fontSize: "0.72rem" }}>Indicación I<input type="number" step="0.0001" value={test.values[index]} onChange={(e) => test.setters[index](e.target.value)} /></label>
+                    <label style={{ fontSize: "0.72rem" }}>ΔL hasta +e<input type="number" step="0.0001" value={test.deltas[index]} onChange={(e) => test.deltaSetters[index](e.target.value)} /></label>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: "0.8rem" }}><span>Error carga: <strong>{test.cycle.loadError.toFixed(2)}</strong> · Retorno a cero: <strong>{test.cycle.zeroReturn.toFixed(2)}</strong> {selectedEquipment?.unit}</span><span className={`badge ${test.cycle.conform ? "ok" : "prio-high"}`}>{test.cycle.conform ? "✓ Conforme" : "✗ Supera EMT"}</span></div>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.84rem" }}>
-                <span>Error de Rango: <strong>{rep50Range} {selectedEquipment?.unit}</strong></span>
-                <span className={`badge ${rep50Ok ? "ok" : "prio-high"}`}>{rep50Ok ? "✓ Conforme" : "✗ Supera EMT"}</span>
-              </div>
-            </div>
-
-            {/* Carga al 100% */}
-            <div style={{ background: "rgba(0,0,0,0.02)", padding: 14, borderRadius: 10, border: "1px solid var(--surface-border)" }}>
-              <strong style={{ display: "block", marginBottom: 8 }}>Ensayo a Carga ~100% Max ({repLoad100} {selectedEquipment?.unit})</strong>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
-                <label>
-                  Repetición 1
-                  <input type="number" step="0.0001" value={rep100_1} onChange={(e) => setRep100_1(e.target.value)} />
-                </label>
-                <label>
-                  Repetición 2
-                  <input type="number" step="0.0001" value={rep100_2} onChange={(e) => setRep100_2(e.target.value)} />
-                </label>
-                <label>
-                  Repetición 3
-                  <input type="number" step="0.0001" value={rep100_3} onChange={(e) => setRep100_3(e.target.value)} />
-                </label>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.84rem" }}>
-                <span>Error de Rango: <strong>{rep100Range} {selectedEquipment?.unit}</strong></span>
-                <span className={`badge ${rep100Ok ? "ok" : "prio-high"}`}>{rep100Ok ? "✓ Conforme" : "✗ Supera EMT"}</span>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -609,6 +592,16 @@ export function CalibrationReportFormPage() {
             </span>
           </div>
 
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 0.8fr) minmax(280px, 1.2fr)", gap: 14, marginBottom: 14, alignItems: "start" }}>
+            <label>Carga aplicada por posición (editable)<input type="number" step="0.0001" value={eccTestLoad} onChange={(e) => setEccTestLoad(e.target.value)} /><small className="muted">Teórica: {eccentricityConfig?.calculatedTestLoad ?? eccTestLoad} · sugerida: {eccentricityConfig?.suggestedTestLoad ?? eccTestLoad}. La sugerencia facilita componer la carga con pesas de 1.000 {selectedEquipment?.unit}; no reemplaza el cálculo normativo.</small></label>
+            <div style={{ border: "1px dashed #94a3b8", borderRadius: 10, padding: 10, background: "rgba(59,130,246,0.03)" }}>
+              <strong style={{ fontSize: "0.8rem" }}>Croquis de enumeración de apoyos · frente / acceso ↑</strong>
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccPositions.length / 2)}, minmax(36px, 1fr))`, gap: 6, marginTop: 8 }}>{eccPositions.slice(0, Math.ceil(eccPositions.length / 2)).map((p) => <span key={`top-${p.pos}`} className="tag" style={{ textAlign: "center" }}>{p.pos}</span>)}</div>
+              <div style={{ height: 18, borderLeft: "2px solid #64748b", borderRight: "2px solid #64748b", margin: "5px 10px", textAlign: "center", fontSize: "0.68rem", color: "#64748b" }}>PLATAFORMA</div>
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccPositions.length / 2)}, minmax(36px, 1fr))`, gap: 6 }}>{eccPositions.slice(Math.ceil(eccPositions.length / 2)).map((p) => <span key={`bottom-${p.pos}`} className="tag" style={{ textAlign: "center" }}>{p.pos}</span>)}</div>
+            </div>
+          </div>
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 12 }}>
             {eccPositions.map((p, idx) => {
               const err = Math.abs((parseFloat(p.indication) || 0) - eccLoadNum);
@@ -617,6 +610,7 @@ export function CalibrationReportFormPage() {
                 <div key={p.pos} style={{ background: "rgba(0,0,0,0.02)", padding: 10, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
                   <label style={{ fontSize: "0.8rem", fontWeight: 700 }}>
                     {p.label}
+                    <span className="muted" style={{ display: "block", fontSize: "0.7rem" }}>Indicación I</span>
                     <input
                       type="number"
                       step="0.0001"
@@ -627,6 +621,8 @@ export function CalibrationReportFormPage() {
                         setEccPositions(copy);
                       }}
                     />
+                    <span className="muted" style={{ display: "block", fontSize: "0.7rem", marginTop: 4 }}>ΔL hasta +e</span>
+                    <input type="number" step="0.0001" value={p.deltaL} onChange={(e) => { const copy = [...eccPositions]; copy[idx].deltaL = e.target.value; setEccPositions(copy); }} />
                   </label>
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.76rem" }}>
                     <span className="muted">Error: {err} {selectedEquipment?.unit}</span>

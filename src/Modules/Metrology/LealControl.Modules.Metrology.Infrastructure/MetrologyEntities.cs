@@ -52,6 +52,8 @@ public sealed class MetrologyEquipment : Entity<Guid>
 
     // Parámetros Metrológicos
     public decimal MaxCapacity { get; set; } // e.g. 80000 kg
+    // Operational field-test maximum. It never changes the approved metrological Max.
+    public decimal MaximumOperationalLoad { get; set; }
     public decimal MinCapacity { get; set; } // e.g. 400 kg
     public decimal DivisionD { get; set; } // e.g. 20 kg
     public decimal VerificationIntervalE { get; set; } // e.g. 20 kg
@@ -185,6 +187,7 @@ public record MetrologyEquipmentDto(
     DateTime? Indicator2ApprovalDate,
     string Indicator2Type,
     decimal MaxCapacity,
+    decimal MaximumOperationalLoad,
     decimal MinCapacity,
     decimal DivisionD,
     decimal VerificationIntervalE,
@@ -232,6 +235,7 @@ public record MetrologyEquipmentWriteDto(
     DateTime? Indicator2ApprovalDate,
     string? Indicator2Type,
     decimal MaxCapacity,
+    decimal? MaximumOperationalLoad,
     decimal MinCapacity,
     decimal DivisionD,
     decimal VerificationIntervalE,
@@ -394,7 +398,9 @@ public record EccentricityConfigDto(
     decimal TestLoad,
     int PointsCount,
     List<string> Positions,
-    string RuleApplied
+    string RuleApplied,
+    decimal CalculatedTestLoad,
+    decimal SuggestedTestLoad
 );
 
 public record MetrologyRulesCalculationRequest(

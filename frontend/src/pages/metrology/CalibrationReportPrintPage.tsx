@@ -56,6 +56,8 @@ export function CalibrationReportPrintPage() {
   try { linearityData = typeof rawLinJson === "string" ? JSON.parse(rawLinJson) : (Array.isArray(rawLinJson) ? rawLinJson : []); } catch {}
   try { weightsUsed = typeof rawWeightsJson === "string" ? JSON.parse(rawWeightsJson) : (Array.isArray(rawWeightsJson) ? rawWeightsJson : []); } catch {}
   try { visualInspectionData = typeof rawVisualJson === "string" ? JSON.parse(rawVisualJson) : rawVisualJson; } catch {}
+  const fidelityHalf = repeatabilityData.halfOperationalLoad || repeatabilityData.halfMax;
+  const fidelityFull = repeatabilityData.fullOperationalLoad || repeatabilityData.fullMax;
 
   const certNumber = (report as any).certificateNumber || report.reportNumber || "CERT-2026";
   const stdApplied = (report as any).standardApplied || report.normativeApplied || "Resolución SIyC Nº 25/2025 (OIML R 76-1)";
@@ -219,27 +221,22 @@ export function CalibrationReportPrintPage() {
           1. ENSAYO DE {stdApplied.includes("2307") ? "FIDELIDAD" : "REPETIBILIDAD"}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          {repeatabilityData.halfMax && (
-            <div style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
-              <strong>Carga ~50% Max ({repeatabilityData.halfMax.load} {equipment?.unit || "kg"})</strong>
-              <div>Lecturas: {repeatabilityData.halfMax.repetitions?.join(", ")} {equipment?.unit || "kg"}</div>
-              <div>Diferencia máxima (Rango): <strong>{repeatabilityData.halfMax.range} {equipment?.unit || "kg"}</strong> (EMT: ±{repeatabilityData.halfMax.emt} {equipment?.unit || "kg"})</div>
-              <div style={{ color: repeatabilityData.halfMax.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 2 }}>
-                Resultado: {repeatabilityData.halfMax.conform ? "✓ Conforme" : "✗ No Conforme"}
-              </div>
+          {[
+            { label: "50 % de carga máxima de uso", data: fidelityHalf },
+            { label: "100 % de carga máxima de uso", data: fidelityFull }
+          ].map(({ label, data }) => data && (
+            <div key={label} style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
+              <strong>{label} ({data.load} {equipment?.unit || "kg"})</strong>
+              {data.sequence ? (
+                <div style={{ marginTop: 4 }}>
+                  <div style={{ fontSize: "0.72rem", color: "#666" }}>Ciclo 0 → carga → 0 · P = I + e/2 − ΔL</div>
+                  {data.sequence.map((row: any) => <div key={row.stage} style={{ fontSize: "0.75rem" }}>{row.stage}: I {row.indication} · ΔL {row.deltaL} · P {Number(row.beforeRounding).toFixed(2)}</div>)}
+                  <div>Error de carga: <strong>{Number(data.loadError).toFixed(2)}</strong> · retorno a cero: <strong>{Number(data.zeroReturn).toFixed(2)}</strong> {equipment?.unit || "kg"} (EMT: ±{data.emt})</div>
+                </div>
+              ) : <><div>Lecturas: {data.repetitions?.join(", ")} {equipment?.unit || "kg"}</div><div>Diferencia máxima: <strong>{data.range}</strong> {equipment?.unit || "kg"} (EMT: ±{data.emt})</div></>}
+              <div style={{ color: data.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 2 }}>Resultado: {data.conform ? "✓ Conforme" : "✗ No Conforme"}</div>
             </div>
-          )}
-
-          {repeatabilityData.fullMax && (
-            <div style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
-              <strong>Carga ~100% Max ({repeatabilityData.fullMax.load} {equipment?.unit || "kg"})</strong>
-              <div>Lecturas: {repeatabilityData.fullMax.repetitions?.join(", ")} {equipment?.unit || "kg"}</div>
-              <div>Diferencia máxima (Rango): <strong>{repeatabilityData.fullMax.range} {equipment?.unit || "kg"}</strong> (EMT: ±{repeatabilityData.fullMax.emt} {equipment?.unit || "kg"})</div>
-              <div style={{ color: repeatabilityData.fullMax.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 2 }}>
-                Resultado: {repeatabilityData.fullMax.conform ? "✓ Conforme" : "✗ No Conforme"}
-              </div>
-            </div>
-          )}
+          ))}
         </div>
       </div>
 
@@ -247,16 +244,16 @@ export function CalibrationReportPrintPage() {
       {eccentricityData.positions && (
         <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
           <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
-            2. ENSAYO DE EXCENTRICIDAD DE CARGA (Carga de ensayo: {eccentricityData.testLoad} {equipment?.unit || "kg"})
+            2. ENSAYO DE EXCENTRICIDAD DE CARGA (Aplicada: {eccentricityData.testLoad} {equipment?.unit || "kg"})
+            <span style={{ fontWeight: 400, fontSize: "0.72rem" }}> · teórica: {eccentricityData.calculatedTestLoad ?? eccentricityData.testLoad} · sugerida: {eccentricityData.suggestedTestLoad ?? eccentricityData.testLoad}</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginBottom: 6 }}>
             {eccentricityData.positions.map((p: any) => (
               <div key={p.pos} style={{ background: "#fafafa", padding: 6, borderRadius: 4, textAlign: "center" }}>
                 <div style={{ fontSize: "0.75rem", color: "#666" }}>{p.label}</div>
-                <strong style={{ fontSize: "0.85rem" }}>{p.indication} {equipment?.unit || "kg"}</strong>
-                <div style={{ fontSize: "0.72rem", color: Math.abs(p.error) <= (eccentricityData.emt || 20) ? "#0d9488" : "#dc2626" }}>
-                  Err: {p.error >= 0 ? `+${p.error}` : p.error}
-                </div>
+                <strong style={{ fontSize: "0.85rem" }}>I {p.indication} {equipment?.unit || "kg"}</strong>
+                {p.deltaL !== undefined && <div style={{ fontSize: "0.7rem", color: "#666" }}>ΔL {p.deltaL} · P {Number(p.beforeRounding).toFixed(2)}</div>}
+                <div style={{ fontSize: "0.72rem", color: Math.abs(p.error) <= (eccentricityData.emt || 20) ? "#0d9488" : "#dc2626" }}>Err: {p.error >= 0 ? `+${p.error}` : p.error}</div>
               </div>
             ))}
           </div>
