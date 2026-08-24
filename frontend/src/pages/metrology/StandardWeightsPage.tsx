@@ -485,13 +485,14 @@ export function StandardWeightsPage() {
                 </div>
 
                 {/* Editable Preview Table */}
-                <div className="table-wrap" style={{ marginBottom: 20 }}>
-                  <table style={{ width: "100%", fontSize: "0.84rem" }}>
+                <div className="table-wrap" style={{ marginBottom: 20, overflowX: "auto" }}>
+                  <table style={{ width: "100%", fontSize: "0.88rem", borderCollapse: "separate", borderSpacing: "0 4px" }}>
                     <thead>
                       <tr style={{ background: "#f8fafc" }}>
-                        <th style={{ width: 40, textAlign: "center" }}>
+                        <th style={{ width: 44, textAlign: "center", padding: "10px 8px" }}>
                           <input
                             type="checkbox"
+                            style={{ width: 16, height: 16, cursor: "pointer" }}
                             checked={importRows.length > 0 && importRows.every((r) => r.selected)}
                             onChange={(e) => {
                               const v = e.target.checked;
@@ -499,23 +500,24 @@ export function StandardWeightsPage() {
                             }}
                           />
                         </th>
-                        <th>Identificación *</th>
-                        <th>Marca / Fabricante</th>
-                        <th>N° Serie</th>
-                        <th>Clase</th>
-                        <th>Masa Nom. (kg) *</th>
-                        <th>E. Inicial (As Found)</th>
-                        <th>E. Final (Ec)</th>
-                        <th>Incert. U</th>
-                        <th>Unidad</th>
+                        <th style={{ minWidth: 120, padding: "10px 8px", whiteSpace: "nowrap" }}>Identificación *</th>
+                        <th style={{ minWidth: 140, padding: "10px 8px", whiteSpace: "nowrap" }}>Marca / Fabricante</th>
+                        <th style={{ minWidth: 110, padding: "10px 8px", whiteSpace: "nowrap" }}>N° Serie</th>
+                        <th style={{ minWidth: 75, padding: "10px 8px", whiteSpace: "nowrap" }}>Clase</th>
+                        <th style={{ minWidth: 110, padding: "10px 8px", whiteSpace: "nowrap" }}>Masa Nom. (kg) *</th>
+                        <th style={{ minWidth: 120, padding: "10px 8px", whiteSpace: "nowrap" }}>E. Inicial (As Found)</th>
+                        <th style={{ minWidth: 120, padding: "10px 8px", whiteSpace: "nowrap" }}>E. Final (Ec) *</th>
+                        <th style={{ minWidth: 110, padding: "10px 8px", whiteSpace: "nowrap" }}>Incert. U *</th>
+                        <th style={{ minWidth: 90, padding: "10px 8px", whiteSpace: "nowrap" }}>Unidad</th>
                       </tr>
                     </thead>
                     <tbody>
                       {importRows.map((row, idx) => (
-                        <tr key={idx}>
-                          <td style={{ textAlign: "center" }}>
+                        <tr key={idx} style={{ background: row.selected ? "#f0fdf4" : "#fff" }}>
+                          <td style={{ textAlign: "center", verticalAlign: "middle", padding: "6px 8px" }}>
                             <input
                               type="checkbox"
+                              style={{ width: 16, height: 16, cursor: "pointer" }}
                               checked={row.selected}
                               onChange={(e) => {
                                 const v = e.target.checked;
@@ -525,7 +527,7 @@ export function StandardWeightsPage() {
                               }}
                             />
                           </td>
-                          <td>
+                          <td style={{ padding: "6px 6px" }}>
                             <input
                               type="text"
                               value={row.identification}
@@ -535,10 +537,10 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, identification: v } : r))
                                 );
                               }}
-                              style={{ width: 110, padding: "4px 8px", fontSize: "0.84rem", fontWeight: 700 }}
+                              style={{ width: "100%", minWidth: 110, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 700, borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
                             />
                           </td>
-                          <td>
+                          <td style={{ padding: "6px 6px" }}>
                             <input
                               type="text"
                               value={row.manufacturer}
@@ -548,10 +550,10 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, manufacturer: v } : r))
                                 );
                               }}
-                              style={{ width: 120, padding: "4px 8px", fontSize: "0.84rem" }}
+                              style={{ width: "100%", minWidth: 130, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
                             />
                           </td>
-                          <td>
+                          <td style={{ padding: "6px 6px" }}>
                             <input
                               type="text"
                               value={row.serialNumber}
@@ -561,10 +563,10 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, serialNumber: v } : r))
                                 );
                               }}
-                              style={{ width: 90, padding: "4px 8px", fontSize: "0.84rem" }}
+                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
                             />
                           </td>
-                          <td>
+                          <td style={{ padding: "6px 6px" }}>
                             <input
                               type="text"
                               value={row.accuracyClass}
@@ -574,10 +576,10 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, accuracyClass: v } : r))
                                 );
                               }}
-                              style={{ width: 60, padding: "4px 8px", fontSize: "0.84rem" }}
+                              style={{ width: "100%", minWidth: 65, padding: "7px 8px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box", textAlign: "center" }}
                             />
                           </td>
-                          <td>
+                          <td style={{ padding: "6px 6px" }}>
                             <input
                               type="number"
                               step="any"
@@ -588,10 +590,10 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, nominalValue: v } : r))
                                 );
                               }}
-                              style={{ width: 90, padding: "4px 8px", fontSize: "0.84rem", fontWeight: 700 }}
+                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 700, borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
                             />
                           </td>
-                          <td>
+                          <td style={{ padding: "6px 6px" }}>
                             <input
                               type="number"
                               step="any"
@@ -603,10 +605,10 @@ export function StandardWeightsPage() {
                                 );
                               }}
                               placeholder="—"
-                              style={{ width: 85, padding: "4px 8px", fontSize: "0.84rem" }}
+                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
                             />
                           </td>
-                          <td>
+                          <td style={{ padding: "6px 6px" }}>
                             <input
                               type="number"
                               step="any"
@@ -617,10 +619,10 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, conventionalMassCorrection: v } : r))
                                 );
                               }}
-                              style={{ width: 85, padding: "4px 8px", fontSize: "0.84rem", fontWeight: 700 }}
+                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 700, borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
                             />
                           </td>
-                          <td>
+                          <td style={{ padding: "6px 6px" }}>
                             <input
                               type="number"
                               step="any"
@@ -631,10 +633,10 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, uncertainty: v } : r))
                                 );
                               }}
-                              style={{ width: 80, padding: "4px 8px", fontSize: "0.84rem" }}
+                              style={{ width: "100%", minWidth: 95, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
                             />
                           </td>
-                          <td>
+                          <td style={{ padding: "6px 6px" }}>
                             <select
                               value={row.unitEc}
                               onChange={(e) => {
@@ -643,11 +645,11 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, unitEc: v } : r))
                                 );
                               }}
-                              style={{ width: 55, padding: "4px 6px", fontSize: "0.84rem" }}
+                              style={{ width: "100%", minWidth: 80, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 600, borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", boxSizing: "border-box" }}
                             >
-                              <option value="g">g</option>
-                              <option value="kg">kg</option>
-                              <option value="mg">mg</option>
+                              <option value="g">g (gramos)</option>
+                              <option value="kg">kg (kilos)</option>
+                              <option value="mg">mg (mg)</option>
                             </select>
                           </td>
                         </tr>

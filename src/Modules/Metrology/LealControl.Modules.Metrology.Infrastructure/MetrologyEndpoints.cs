@@ -372,6 +372,7 @@ public static class MetrologyEndpoints
         {
             try
             {
+                await db.EnsureMetrologyTablesAsync(ct);
                 var tenantId = tenantContext.TenantId;
                 var query = db.StandardWeights.AsNoTracking().Where(w => w.TenantId == tenantId);
 
@@ -415,6 +416,7 @@ public static class MetrologyEndpoints
         {
             try
             {
+                await db.EnsureMetrologyTablesAsync(ct);
                 if (string.IsNullOrWhiteSpace(req.Code))
                 {
                     return Results.BadRequest(new { message = "El código de la pesa patrón es obligatorio." });
@@ -469,6 +471,7 @@ public static class MetrologyEndpoints
         {
             try
             {
+                await db.EnsureMetrologyTablesAsync(ct);
                 var tenantId = tenantContext.TenantId;
                 var weight = await db.StandardWeights.FirstOrDefaultAsync(w => w.Id == id && w.TenantId == tenantId, ct);
                 if (weight == null) return Results.NotFound(new { message = "Pesa patrón no encontrada." });
@@ -515,6 +518,7 @@ public static class MetrologyEndpoints
         {
             try
             {
+                await db.EnsureMetrologyTablesAsync(ct);
                 if (req.Weights == null || req.Weights.Count == 0)
                 {
                     return Results.BadRequest(new { message = "Sin pesas para importar." });
@@ -614,6 +618,7 @@ public static class MetrologyEndpoints
         {
             try
             {
+                await db.EnsureMetrologyTablesAsync(ct);
                 if (req.Ids == null || req.Ids.Count == 0)
                 {
                     return Results.BadRequest(new { message = "Sin patrones seleccionados." });
@@ -651,6 +656,7 @@ public static class MetrologyEndpoints
         {
             try
             {
+                await db.EnsureMetrologyTablesAsync(ct);
                 var tenantId = tenantContext.TenantId;
                 var weights = await db.StandardWeights.Where(w => w.TenantId == tenantId).ToListAsync(ct);
                 var count = weights.Count;
@@ -672,6 +678,7 @@ public static class MetrologyEndpoints
         {
             try
             {
+                await db.EnsureMetrologyTablesAsync(ct);
                 if (string.IsNullOrWhiteSpace(code)) return Results.BadRequest(new { message = "Código de patrón requerido." });
 
                 var tenantId = tenantContext.TenantId;
@@ -696,6 +703,7 @@ public static class MetrologyEndpoints
         {
             try
             {
+                await db.EnsureMetrologyTablesAsync(ct);
                 var tenantId = tenantContext.TenantId;
                 var weight = await db.StandardWeights.FirstOrDefaultAsync(w => w.Id == id && w.TenantId == tenantId, ct);
                 if (weight == null) return Results.NotFound(new { message = "Pesa patrón no encontrada." });
