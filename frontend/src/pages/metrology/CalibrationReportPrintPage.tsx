@@ -74,7 +74,7 @@ export function CalibrationReportPrintPage() {
       {/* Action Bar (No Print) */}
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 12, borderBottom: "1px solid #ddd" }}>
         <Link to="/metrologia/informes" className="btn ghost compact">
-          ← Volver a Certificados
+          ← Volver a Informes de Ensayo
         </Link>
         <button type="button" onClick={handlePrint} className="btn" style={{ background: "#0d9488", color: "#fff" }}>
           🖨️ Imprimir / Guardar como PDF
@@ -98,14 +98,14 @@ export function CalibrationReportPrintPage() {
               {company?.fiscalStreet || "Parque Industrial"} - {company?.fiscalCity || ""}
             </div>
             <div style={{ fontSize: "0.78rem", color: "#555" }}>
-              Laboratorio de Metrología & Servicios Técnicos Autorizados
+              Laboratorio de Ensayos & Servicios Técnicos Autorizados
             </div>
           </div>
         </div>
 
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "#666", fontWeight: 700 }}>
-            CERTIFICADO DE CALIBRACIÓN
+            INFORME DE ENSAYO METROLÓGICO
           </div>
           <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#0d9488" }}>
             {certNumber}
@@ -185,7 +185,7 @@ export function CalibrationReportPrintPage() {
       {/* Condiciones Ambientales y Trazabilidad */}
       <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
         <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 6, color: "#0d9488" }}>
-          🛡️ CONDICIONES AMBIENTALES & TRAZABILIDAD A PATRONES NACIONALES (INTI / SAC)
+          🛡️ CONDICIONES AMBIENTALES & TRAZABILIDAD METROLÓGICA
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 8 }}>
           <div><strong>Temperatura:</strong> {tempVal} ºC</div>
@@ -319,13 +319,13 @@ export function CalibrationReportPrintPage() {
           <div style={{ textAlign: "center", borderTop: "1px solid #444", paddingTop: 8, minWidth: 200 }}>
             <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{report.performedBy || "Metrólogo Autorizado"}</div>
             <div style={{ fontSize: "0.74rem", color: "#666" }}>Metrólogo / Responsable Técnico</div>
-            <div style={{ fontSize: "0.74rem", color: "#666" }}>Laboratorio de Calibración</div>
+            <div style={{ fontSize: "0.74rem", color: "#666" }}>Laboratorio de Ensayos</div>
           </div>
         </div>
       </div>
 
       <div style={{ textAlign: "center", fontSize: "0.72rem", color: "#888" }}>
-        Documento técnico emitido mediante el Sistema Modular de Metrología Legal & Calidad — Leal Control ERP
+        Documento técnico emitido mediante el Sistema Modular de Metrología Legal — Leal Control ERP
       </div>
     </div>
   );

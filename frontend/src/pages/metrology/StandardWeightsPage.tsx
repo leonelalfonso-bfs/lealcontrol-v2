@@ -34,13 +34,13 @@ export function StandardWeightsPage() {
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
-            Trazabilidad Metrológica Nacional
+            Trazabilidad Metrológica
           </span>
           <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
-            ⚖️ Padrón de Pesas Patrón & Masas
+            ⚖️ Gestión de Pesas Patrón
           </h1>
           <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-            Pesas de calibración con trazabilidad a patrones de referencia INTI y laboratorios acreditados SAC
+            Pesas de calibración con trazabilidad a patrones de referencia y laboratorios de calibración acreditados
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export function StandardWeightsPage() {
                   <th>Material</th>
                   <th>Error Convencional</th>
                   <th>Incertidumbre (U)</th>
-                  <th>Certificado INTI / SAC</th>
+                  <th>Certificado de Calibración</th>
                   <th>Laboratorio Emisor</th>
                   <th>Vencimiento</th>
                   <th>Estado</th>

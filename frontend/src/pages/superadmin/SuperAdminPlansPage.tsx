@@ -11,7 +11,8 @@ export const ALL_SYSTEM_MODULES = [
   { id: "fleet", name: "Flota & Vehículos", desc: "Control de móviles, combustible y mantenimientos", icon: "🚚" },
   { id: "hr", name: "RRHH & Sueldos", desc: "Legajos, asistencias y liquidación de haberes", icon: "👔" },
   { id: "grains", name: "Cereales & Agro", desc: "Contratos de granos, balanza CPE/CTG y fijaciones", icon: "🌾" },
-  { id: "accounting", name: "Contabilidad & Balances", desc: "Plan de cuentas, asientos, libro diario y balances", icon: "📚" }
+  { id: "accounting", name: "Contabilidad & Balances", desc: "Plan de cuentas, asientos, libro diario y balances", icon: "📚" },
+  { id: "metrology", name: "Metrología Legal", desc: "Laboratorio de ensayos, pesas patrón e informes técnicos", icon: "⚖️" }
 ];
 
 export function SuperAdminPlansPage() {

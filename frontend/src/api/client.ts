@@ -746,6 +746,8 @@ export const api = {
     request<import("./types").StandardWeight[]>("/api/v1/metrology/weights"),
   createStandardWeight: (body: Partial<import("./types").StandardWeight>) =>
     request<import("./types").StandardWeight>("/api/v1/metrology/weights", { method: "POST", body: JSON.stringify(body) }),
+  updateStandardWeight: (id: string, body: Partial<import("./types").StandardWeight>) =>
+    request<import("./types").StandardWeight>(`/api/v1/metrology/weights/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteStandardWeight: (id: string) =>
     request<{ message: string }>(`/api/v1/metrology/weights/${id}`, { method: "DELETE" }),
 

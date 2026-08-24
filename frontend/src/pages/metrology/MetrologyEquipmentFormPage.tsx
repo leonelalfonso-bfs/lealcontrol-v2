@@ -223,9 +223,9 @@ export function MetrologyEquipmentFormPage() {
       {/* Breadcrumb & Header */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b", marginBottom: 6 }}>
-          <Link to="/metrologia" style={{ color: "inherit", textDecoration: "none" }}>Metrología</Link>
+          <Link to="/metrologia" style={{ color: "inherit", textDecoration: "none" }}>Metrología Legal</Link>
           <span>›</span>
-          <Link to="/metrologia/equipos" style={{ color: "inherit", textDecoration: "none" }}>Parque de Balanzas</Link>
+          <Link to="/metrologia/equipos" style={{ color: "inherit", textDecoration: "none" }}>Gestión de Equipos</Link>
           <span>›</span>
           <span style={{ color: "#0d9488", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Alta de Instrumento"}</span>
         </div>

@@ -67,10 +67,10 @@ export function MetrologyEquipmentPage() {
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
-            Metrología Legal & Control de Calidad
+            Metrología Legal
           </span>
           <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
-            ⚖️ Parque de Balanzas e Instrumentos de Pesar
+            ⚖️ Gestión de Equipos
           </h1>
           <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
             Padrón técnico de básculas para camiones, plataformas y tolvas según Resoluciones 25/2025 y 2307/1980
@@ -82,7 +82,7 @@ export function MetrologyEquipmentPage() {
           className="btn"
           style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff", fontWeight: 700 }}
         >
-          ➕ Registrar Nueva Balanza
+          ➕ Registrar Nuevo Equipo
         </Link>
       </div>
 

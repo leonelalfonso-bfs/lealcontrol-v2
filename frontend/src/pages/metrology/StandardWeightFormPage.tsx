@@ -1,28 +1,27 @@
-import { useEffect, useState, FormEvent } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api/client";
-import type { StandardWeight } from "../../api/types";
 
 export function StandardWeightFormPage() {
-  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isEditing = Boolean(id && id !== "nuevo");
+  const { id } = useParams<{ id: string }>();
+  const isEditing = Boolean(id);
 
-  const [loading, setLoading] = useState(isEditing);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form Fields
   const [code, setCode] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
-  const [nominalValue, setNominalValue] = useState("1000");
+  const [nominalValue, setNominalValue] = useState("20");
   const [unit, setUnit] = useState("kg");
   const [accuracyClass, setAccuracyClass] = useState("M1");
   const [material, setMaterial] = useState("Hierro Fundido");
   const [conventionalMassCorrection, setConventionalMassCorrection] = useState("0");
   const [uncertainty, setUncertainty] = useState("0.02");
   const [certificateNumber, setCertificateNumber] = useState("");
-  const [traceabilityLab, setTraceabilityLab] = useState("INTI - Metrología Legal");
+  const [traceabilityLab, setTraceabilityLab] = useState("Laboratorio Acreditado");
   const [calibrationDate, setCalibrationDate] = useState(new Date().toISOString().split("T")[0]);
   const [expirationDate, setExpirationDate] = useState(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
   const [status, setStatus] = useState("Valid");
@@ -43,7 +42,7 @@ export function StandardWeightFormPage() {
             setConventionalMassCorrection(String(w.conventionalMassCorrection ?? 0));
             setUncertainty(String(w.uncertainty ?? 0.02));
             setCertificateNumber(w.certificateNumber || "");
-            setTraceabilityLab(w.traceabilityLab || "INTI - Metrología Legal");
+            setTraceabilityLab(w.traceabilityLab || "Laboratorio Acreditado");
             setCalibrationDate(w.calibrationDate ? w.calibrationDate.slice(0, 10) : "");
             setExpirationDate(w.expirationDate ? w.expirationDate.slice(0, 10) : "");
             setStatus(w.status || "Valid");
@@ -63,15 +62,20 @@ export function StandardWeightFormPage() {
       setError("El código identificador de la pesa es obligatorio.");
       return;
     }
+    const numVal = parseFloat(nominalValue);
+    if (isNaN(numVal) || numVal <= 0) {
+      setError("El valor nominal debe ser un número positivo.");
+      return;
+    }
 
     try {
       setSaving(true);
       setError(null);
 
-      const payload: Partial<StandardWeight> = {
+      const payload = {
         code: code.trim(),
         serialNumber: serialNumber.trim(),
-        nominalValue: parseFloat(nominalValue) || 0,
+        nominalValue: numVal,
         unit,
         accuracyClass,
         material,
@@ -79,14 +83,20 @@ export function StandardWeightFormPage() {
         uncertainty: parseFloat(uncertainty) || 0,
         certificateNumber: certificateNumber.trim(),
         traceabilityLab: traceabilityLab.trim(),
-        calibrationDate: calibrationDate ? new Date(calibrationDate).toISOString() : undefined,
-        expirationDate: expirationDate ? new Date(expirationDate).toISOString() : undefined,
+        calibrationDate: calibrationDate ? new Date(calibrationDate).toISOString() : null,
+        expirationDate: expirationDate ? new Date(expirationDate).toISOString() : null,
         status: status as any
       };
 
-      await api.createStandardWeight(payload);
+      if (isEditing && id) {
+        await api.updateStandardWeight(id, payload);
+      } else {
+        await api.createStandardWeight(payload);
+      }
+
       navigate("/metrologia/patrones");
     } catch (err: any) {
+      console.error("Error al guardar pesa patrón:", err);
       setError(err?.message || "Error al registrar la pesa patrón.");
     } finally {
       setSaving(false);
@@ -96,7 +106,7 @@ export function StandardWeightFormPage() {
   if (loading) {
     return (
       <div className="page-wide" style={{ padding: 40, textAlign: "center" }}>
-        <div className="muted">Cargando certificado de pesa patrón...</div>
+        <div className="muted">Cargando datos de la pesa patrón...</div>
       </div>
     );
   }
@@ -106,9 +116,9 @@ export function StandardWeightFormPage() {
       {/* Breadcrumb & Header */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b", marginBottom: 6 }}>
-          <Link to="/metrologia" style={{ color: "inherit", textDecoration: "none" }}>Metrología</Link>
+          <Link to="/metrologia" style={{ color: "inherit", textDecoration: "none" }}>Metrología Legal</Link>
           <span>›</span>
-          <Link to="/metrologia/patrones" style={{ color: "inherit", textDecoration: "none" }}>Padrón de Pesas Patrón</Link>
+          <Link to="/metrologia/patrones" style={{ color: "inherit", textDecoration: "none" }}>Gestión de Pesas Patrón</Link>
           <span>›</span>
           <span style={{ color: "#0d9488", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Alta de Pesa"}</span>
         </div>
@@ -119,7 +129,7 @@ export function StandardWeightFormPage() {
               {isEditing ? `⚖️ Pesa Patrón: ${code}` : "➕ Registrar Pesa Patrón / Juego de Masas"}
             </h1>
             <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
-              Alta de masa patrón de referencia con trazabilidad metrológica oficial INTI / SAC.
+              Alta de masa patrón de referencia con trazabilidad metrológica de calibración.
             </p>
           </div>
 
@@ -147,75 +157,75 @@ export function StandardWeightFormPage() {
       )}
 
       <form onSubmit={handleSubmit}>
-        {/* SECCIÓN 1: CARACTERÍSTICAS FÍSICAS */}
+        {/* SECCIÓN 1: IDENTIFICACIÓN TÉCNICA */}
         <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid #0d9488" }}>
           <div style={{ fontWeight: 800, fontSize: "1rem", color: "#0f766e", marginBottom: 14 }}>
-            1. IDENTIFICACIÓN Y ESPECIFICACIONES FÍSICAS (OIML R 111)
+            1. IDENTIFICACIÓN TÉCNICA DEL PATRÓN
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Código / Identificador Interno *</label>
+              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Código Interno / Identificador *</label>
               <input
                 type="text"
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="ej. P-1000-01 o JGO-F1-01"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 800, fontSize: "0.92rem" }}
+                placeholder="ej. PAT-1000-01"
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem", fontWeight: 700 }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Número de Serie / Grabado</label>
+              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Número de Serie del Fabricante</label>
               <input
                 type="text"
                 value={serialNumber}
                 onChange={(e) => setSerialNumber(e.target.value)}
-                placeholder="ej. INTI-2024-001"
+                placeholder="ej. SN-8849102"
                 style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
               />
             </div>
 
             <div>
               <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Valor Nominal *</label>
-              <input
-                type="number"
-                step="any"
-                min="0.0001"
-                required
-                value={nominalValue}
-                onChange={(e) => setNominalValue(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 800, fontSize: "0.95rem" }}
-              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={nominalValue}
+                  onChange={(e) => setNominalValue(e.target.value)}
+                  placeholder="ej. 20"
+                  style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem", fontWeight: 700 }}
+                />
+                <select
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  style={{ width: 85, padding: "9px 8px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                >
+                  <option value="kg">kg</option>
+                  <option value="g">g</option>
+                  <option value="mg">mg</option>
+                  <option value="t">t</option>
+                </select>
+              </div>
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Unidad de Medida</label>
-              <select
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
-              >
-                <option value="kg">kg (Kilogramos)</option>
-                <option value="g">g (Gramos)</option>
-                <option value="mg">mg (Miligramos)</option>
-                <option value="t">t (Toneladas)</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Clase de Exactitud (OIML)</label>
+              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Clase de Exactitud (OIML R111) *</label>
               <select
                 value={accuracyClass}
                 onChange={(e) => setAccuracyClass(e.target.value)}
                 style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
               >
-                <option value="E2">Clase E2 (Máxima Precisión)</option>
-                <option value="F1">Clase F1</option>
-                <option value="F2">Clase F2</option>
-                <option value="M1">Clase M1 (Estándar Industrial / Camioneras)</option>
-                <option value="M2">Clase M2</option>
+                <option value="E1">Clase E1 (Patrón Primario)</option>
+                <option value="E2">Clase E2 (Laboratorio de Alta Precisión)</option>
+                <option value="F1">Clase F1 (Calibración Balanzas Analíticas)</option>
+                <option value="F2">Clase F2 (Balanzas Industriales Clase II)</option>
+                <option value="M1">Clase M1 (Básculas Camioneras / Clase III)</option>
+                <option value="M2">Clase M2 (Pesas Comerciales)</option>
+                <option value="M3">Clase M3 (Pesaje Pesado)</option>
               </select>
             </div>
 
@@ -226,10 +236,10 @@ export function StandardWeightFormPage() {
                 onChange={(e) => setMaterial(e.target.value)}
                 style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
               >
-                <option value="Hierro Fundido">Hierro Fundido Pintado / Barnizado</option>
-                <option value="Acero Inoxidable Austenítico">Acero Inoxidable Austenítico</option>
-                <option value="Latón Pulido">Latón Pulido / Cromado</option>
-                <option value="Aluminio">Aluminio (Fracciones)</option>
+                <option value="Hierro Fundido">Hierro Fundido Pintado</option>
+                <option value="Acero Inoxidable">Acero Inoxidable Pulido</option>
+                <option value="Latón Cromado">Latón Cromado</option>
+                <option value="Acero Forjado">Acero Forjado</option>
               </select>
             </div>
           </div>
@@ -238,17 +248,17 @@ export function StandardWeightFormPage() {
         {/* SECCIÓN 2: TRAZABILIDAD & CERTIFICADO DE CALIBRACIÓN */}
         <div className="card pad" style={{ marginBottom: 30, borderLeft: "5px solid #3b82f6" }}>
           <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1d4ed8", marginBottom: 14 }}>
-            2. CERTIFICADO DE CALIBRACIÓN & TRAZABILIDAD INTI / SAC
+            2. CERTIFICADO DE CALIBRACIÓN & TRAZABILIDAD DEL PATRÓN
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Número de Certificado INTI / SAC</label>
+              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Número de Certificado de Calibración</label>
               <input
                 type="text"
                 value={certificateNumber}
                 onChange={(e) => setCertificateNumber(e.target.value)}
-                placeholder="ej. INTI-MET-2024-8841"
+                placeholder="ej. CERT-MET-2024-8841"
                 style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem", fontWeight: 700 }}
               />
             </div>
@@ -259,7 +269,7 @@ export function StandardWeightFormPage() {
                 type="text"
                 value={traceabilityLab}
                 onChange={(e) => setTraceabilityLab(e.target.value)}
-                placeholder="ej. INTI - Centro Metrología Legal"
+                placeholder="ej. Laboratorio de Metrología Acreditado"
                 style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
               />
             </div>

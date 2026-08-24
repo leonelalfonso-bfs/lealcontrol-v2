@@ -35,13 +35,13 @@ export function MetrologyDashboardPage() {
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
-            Laboratorio & Servicios Técnicos
+            Laboratorio de Ensayos
           </span>
           <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
-            ⚖️ Metrología Legal e Industrial
+            ⚖️ Metrología Legal
           </h1>
           <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-            Control de parque de balanzas, trazabilidad a patrones INTI/SAC y ensayos según <strong>Res. 25/2025</strong> y <strong>Res. 2307/80</strong>
+            Gestión de equipos, pesas patrón trazables y emisión de informes técnicos de ensayo
           </p>
         </div>
 
@@ -50,7 +50,7 @@ export function MetrologyDashboardPage() {
             🔄 Actualizar
           </button>
           <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
-            ➕ Cargar Nuevo Ensayo
+            ➕ Nuevo Ensayo
           </Link>
         </div>
       </div>
@@ -58,36 +58,36 @@ export function MetrologyDashboardPage() {
       {/* KPI Cards */}
       <div className="kpi kpi-4" style={{ marginBottom: 24 }}>
         <div className="card pad" style={{ borderLeft: "4px solid #0d9488" }}>
-          <div className="muted">Parque de Balanzas</div>
+          <div className="muted">Equipos Registrados</div>
           <strong style={{ fontSize: "1.8rem" }}>{totalEquipments}</strong>
           <div style={{ fontSize: "0.78rem", color: "var(--ok)", fontWeight: 700, marginTop: 4 }}>
-            ✓ {activeEquipments} operativas en clientes
+            ✓ {activeEquipments} operativos en clientes
           </div>
         </div>
 
         <div className="card pad" style={{ borderLeft: "4px solid #f59e0b" }}>
-          <div className="muted">Calibraciones Vencidas</div>
+          <div className="muted">Ensayos Vencidos</div>
           <strong style={{ fontSize: "1.8rem", color: expiredEquipments > 0 ? "#dc2626" : "inherit" }}>
             {expiredEquipments}
           </strong>
           <div style={{ fontSize: "0.78rem", color: expiredEquipments > 0 ? "#dc2626" : "var(--ink-soft)", fontWeight: 600, marginTop: 4 }}>
-            {expiredEquipments > 0 ? "⚠️ Requieren reinspección técnica" : "✓ Al día con las normativas"}
+            {expiredEquipments > 0 ? "⚠️ Requieren nuevo ensayo" : "✓ Al día"}
           </div>
         </div>
 
         <div className="card pad" style={{ borderLeft: "4px solid #3b82f6" }}>
-          <div className="muted">Patrones de Masa (Pesas)</div>
+          <div className="muted">Pesas Patrón</div>
           <strong style={{ fontSize: "1.8rem" }}>{totalWeights}</strong>
           <div style={{ fontSize: "0.78rem", color: "#2563eb", fontWeight: 700, marginTop: 4 }}>
-            🛡️ {validWeights} con certificado INTI vigente
+            🛡️ {validWeights} con trazabilidad vigente
           </div>
         </div>
 
         <div className="card pad" style={{ borderLeft: "4px solid #8b5cf6" }}>
-          <div className="muted">Certificados Emitidos</div>
+          <div className="muted">Informes de Ensayo</div>
           <strong style={{ fontSize: "1.8rem" }}>{totalReports}</strong>
           <div style={{ fontSize: "0.78rem", color: "#7c3aed", fontWeight: 700, marginTop: 4 }}>
-            📋 Ensayos oficiales registrados
+            📋 Informes técnicos emitidos
           </div>
         </div>
       </div>
@@ -98,8 +98,8 @@ export function MetrologyDashboardPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: "1.8rem" }}>🏢</span>
             <div>
-              <strong style={{ display: "block", fontSize: "0.95rem" }}>Parque de Equipos</strong>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>Ficha técnica de balanzas por cliente</span>
+              <strong style={{ display: "block", fontSize: "0.95rem" }}>Gestión de Equipos</strong>
+              <span className="muted" style={{ fontSize: "0.78rem" }}>Ficha técnica de balanzas e instrumentos</span>
             </div>
           </div>
         </div>
@@ -108,8 +108,8 @@ export function MetrologyDashboardPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: "1.8rem" }}>⚖️</span>
             <div>
-              <strong style={{ display: "block", fontSize: "0.95rem" }}>Pesas Patrón & Trazabilidad</strong>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>Certificados INTI / SAC y masas nominales</span>
+              <strong style={{ display: "block", fontSize: "0.95rem" }}>Gestión de Pesas Patrón</strong>
+              <span className="muted" style={{ fontSize: "0.78rem" }}>Masas nominales y certificados de calibración</span>
             </div>
           </div>
         </div>
@@ -118,8 +118,8 @@ export function MetrologyDashboardPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: "1.8rem" }}>📝</span>
             <div>
-              <strong style={{ display: "block", fontSize: "0.95rem" }}>Nuevo Ensayo en Campo</strong>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>Asistente con cálculo de EMT en vivo</span>
+              <strong style={{ display: "block", fontSize: "0.95rem" }}>Nuevo Ensayo</strong>
+              <span className="muted" style={{ fontSize: "0.78rem" }}>Carga de pruebas y cálculo de EMT en vivo</span>
             </div>
           </div>
         </div>
@@ -128,8 +128,8 @@ export function MetrologyDashboardPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: "1.8rem" }}>📋</span>
             <div>
-              <strong style={{ display: "block", fontSize: "0.95rem" }}>Certificados Emitidos</strong>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>Impresión de protocolos oficiales</span>
+              <strong style={{ display: "block", fontSize: "0.95rem" }}>Informes de Ensayo</strong>
+              <span className="muted" style={{ fontSize: "0.78rem" }}>Historial e impresión de informes emitidos</span>
             </div>
           </div>
         </div>
@@ -138,7 +138,7 @@ export function MetrologyDashboardPage() {
       {/* Tabla de Actividad Reciente */}
       <div className="card pad">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Últimos Informes & Certificados Emitidos</h3>
+          <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Últimos Informes de Ensayo Emitidos</h3>
           <Link to="/metrologia/informes" className="btn ghost compact">
             Ver Todos →
           </Link>
@@ -155,7 +155,7 @@ export function MetrologyDashboardPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Nº Certificado</th>
+                  <th>Nº Informe</th>
                   <th>Fecha</th>
                   <th>Instrumento</th>
                   <th>Cliente</th>
@@ -166,7 +166,7 @@ export function MetrologyDashboardPage() {
               </thead>
               <tbody>
                 {recentReports.map((r) => {
-                  const certNum = (r as any).certificateNumber || r.reportNumber || "CERT";
+                  const certNum = (r as any).certificateNumber || r.reportNumber || "INF";
                   const vRaw: any = r.result || (r as any).verdict || "Apto";
                   const isOk = vRaw === "Apto" || vRaw === "Approved";
                   return (
