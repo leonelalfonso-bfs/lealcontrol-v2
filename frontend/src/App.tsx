@@ -113,6 +113,7 @@ import { MetrologyEquipmentPage } from "./pages/metrology/MetrologyEquipmentPage
 import { MetrologyEquipmentFormPage } from "./pages/metrology/MetrologyEquipmentFormPage";
 import { StandardWeightsPage } from "./pages/metrology/StandardWeightsPage";
 import { StandardWeightFormPage } from "./pages/metrology/StandardWeightFormPage";
+import { StandardWeightsPrintPage } from "./pages/metrology/StandardWeightsPrintPage";
 import { CalibrationReportsPage } from "./pages/metrology/CalibrationReportsPage";
 import { CalibrationReportFormPage } from "./pages/metrology/CalibrationReportFormPage";
 import { CalibrationReportPrintPage } from "./pages/metrology/CalibrationReportPrintPage";
@@ -596,6 +597,7 @@ export function App() {
               <Route path="/metrologia/equipos/:id" element={<MetrologyEquipmentFormPage />} />
               <Route path="/metrologia/patrones" element={<StandardWeightsPage />} />
               <Route path="/metrologia/patrones/nuevo" element={<StandardWeightFormPage />} />
+              <Route path="/metrologia/patrones/imprimir" element={<StandardWeightsPrintPage />} />
               <Route path="/metrologia/patrones/:id" element={<StandardWeightFormPage />} />
               <Route path="/metrologia/ensayos/nuevo" element={<CalibrationReportFormPage />} />
               <Route path="/metrologia/informes" element={<CalibrationReportsPage />} />

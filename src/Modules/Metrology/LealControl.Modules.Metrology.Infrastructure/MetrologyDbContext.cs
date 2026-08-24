@@ -190,15 +190,21 @@ public sealed class MetrologyDbContext : DbContext
                     ""Id"" uuid NOT NULL PRIMARY KEY,
                     ""TenantId"" uuid NOT NULL,
                     ""Code"" character varying(32) NOT NULL,
+                    ""NormalizedId"" character varying(64) NOT NULL DEFAULT '',
                     ""SerialNumber"" character varying(100),
+                    ""Manufacturer"" character varying(160) NOT NULL DEFAULT '',
+                    ""LotName"" character varying(160) NOT NULL DEFAULT '',
                     ""NominalValue"" numeric(18,4) NOT NULL DEFAULT 0,
                     ""Unit"" character varying(10) NOT NULL DEFAULT 'kg',
                     ""AccuracyClass"" character varying(10) NOT NULL DEFAULT 'M1',
                     ""Material"" character varying(64) NOT NULL DEFAULT 'Hierro Fundido',
+                    ""ErrorAsFound"" numeric(18,6),
                     ""ConventionalMassCorrection"" numeric(18,6) NOT NULL DEFAULT 0,
                     ""Uncertainty"" numeric(18,6) NOT NULL DEFAULT 0,
+                    ""UnitEc"" character varying(10) NOT NULL DEFAULT 'g',
+                    ""FactorK"" numeric(6,2) NOT NULL DEFAULT 2.0,
                     ""CertificateNumber"" character varying(100),
-                    ""TraceabilityLab"" character varying(160) NOT NULL DEFAULT 'INTI - Metrología Legal',
+                    ""TraceabilityLab"" character varying(160) NOT NULL DEFAULT 'Laboratorio Acreditado',
                     ""CalibrationDate"" timestamp with time zone,
                     ""ExpirationDate"" timestamp with time zone,
                     ""Status"" character varying(32) NOT NULL DEFAULT 'Valid',
@@ -206,6 +212,14 @@ public sealed class MetrologyDbContext : DbContext
                     ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
                 );
                 CREATE UNIQUE INDEX IF NOT EXISTS ""IX_weights_Tenant_Code"" ON metrology.standard_weights (""TenantId"", ""Code"");
+
+                -- Migraciones incrementales idempotentes de columnas de pesas patrón
+                ALTER TABLE metrology.standard_weights ADD COLUMN IF NOT EXISTS ""NormalizedId"" character varying(64) NOT NULL DEFAULT '';
+                ALTER TABLE metrology.standard_weights ADD COLUMN IF NOT EXISTS ""Manufacturer"" character varying(160) NOT NULL DEFAULT '';
+                ALTER TABLE metrology.standard_weights ADD COLUMN IF NOT EXISTS ""LotName"" character varying(160) NOT NULL DEFAULT '';
+                ALTER TABLE metrology.standard_weights ADD COLUMN IF NOT EXISTS ""ErrorAsFound"" numeric(18,6);
+                ALTER TABLE metrology.standard_weights ADD COLUMN IF NOT EXISTS ""UnitEc"" character varying(10) NOT NULL DEFAULT 'g';
+                ALTER TABLE metrology.standard_weights ADD COLUMN IF NOT EXISTS ""FactorK"" numeric(6,2) NOT NULL DEFAULT 2.0;
 
                 CREATE TABLE IF NOT EXISTS metrology.calibration_reports (
                     ""Id"" uuid NOT NULL PRIMARY KEY,

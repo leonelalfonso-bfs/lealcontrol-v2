@@ -742,14 +742,36 @@ export const api = {
   deleteMetrologyEquipment: (id: string) =>
     request<{ message: string }>(`/api/v1/metrology/equipment/${id}`, { method: "DELETE" }),
 
-  listStandardWeights: () =>
-    request<import("./types").StandardWeight[]>("/api/v1/metrology/weights"),
+  listStandardWeights: (params?: { search?: string; status?: string; lot?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set("search", params.search);
+    if (params?.status) q.set("status", params.status);
+    if (params?.lot) q.set("lot", params.lot);
+    const qs = q.toString();
+    return request<import("./types").StandardWeight[]>(`/api/v1/metrology/weights${qs ? `?${qs}` : ""}`);
+  },
   createStandardWeight: (body: Partial<import("./types").StandardWeight>) =>
     request<import("./types").StandardWeight>("/api/v1/metrology/weights", { method: "POST", body: JSON.stringify(body) }),
   updateStandardWeight: (id: string, body: Partial<import("./types").StandardWeight>) =>
     request<import("./types").StandardWeight>(`/api/v1/metrology/weights/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteStandardWeight: (id: string) =>
     request<{ message: string }>(`/api/v1/metrology/weights/${id}`, { method: "DELETE" }),
+  bulkImportStandardWeights: (weights: any[]) =>
+    request<{ success: boolean; imported: number; updated: number; total: number; message: string }>("/api/v1/metrology/weights/bulk-import", {
+      method: "POST",
+      body: JSON.stringify({ weights })
+    }),
+  bulkUpdateStandardWeightLot: (ids: string[], lotName: string) =>
+    request<{ success: boolean; count: number; message: string }>("/api/v1/metrology/weights/bulk-lot", {
+      method: "POST",
+      body: JSON.stringify({ ids, lotName })
+    }),
+  clearAllStandardWeights: () =>
+    request<{ success: boolean; deleted: number; message: string }>("/api/v1/metrology/weights/clear-all", {
+      method: "POST"
+    }),
+  getStandardWeightHistory: (code: string) =>
+    request<import("./types").StandardWeight[]>(`/api/v1/metrology/weights/history?code=${encodeURIComponent(code)}`),
 
   calculateMetrologyRules: (body: {
     maxCapacity: number;

@@ -73,16 +73,22 @@ public sealed class MetrologyEquipment : Entity<Guid>
 public sealed class StandardWeight : Entity<Guid>
 {
     public TenantId TenantId { get; set; }
-    public string Code { get; set; } = string.Empty; // e.g. PAT-500-01
+    public string Code { get; set; } = string.Empty; // e.g. 04, 1051, 1676, PAT-500-01
+    public string NormalizedId { get; set; } = string.Empty; // e.g. 04, 1051, 1676
     public string SerialNumber { get; set; } = string.Empty;
-    public decimal NominalValue { get; set; } // e.g. 500 kg
+    public string Manufacturer { get; set; } = string.Empty; // e.g. BITAR HNOS. S.H., Sipel S.R.L.
+    public string LotName { get; set; } = string.Empty; // e.g. Camion 1, Lote 22x1t Sipel
+    public decimal NominalValue { get; set; } // e.g. 1000, 500, 20 kg
     public string Unit { get; set; } = "kg";
     public string AccuracyClass { get; set; } = "M1"; // E2, F1, F2, M1, M2
     public string Material { get; set; } = "Hierro Fundido"; // Hierro Fundido, Acero Inoxidable, Latón
-    public decimal ConventionalMassCorrection { get; set; } = 0; // en gramos o kg
-    public decimal Uncertainty { get; set; } = 0; // Incertidumbre U (k=2) en mg o g
-    public string CertificateNumber { get; set; } = string.Empty; // Certificado INTI / SAC
-    public string TraceabilityLab { get; set; } = "INTI - Metrología Legal";
+    public decimal? ErrorAsFound { get; set; } // Error Inicial (As Found)
+    public decimal? ConventionalMassCorrection { get; set; } = 0; // Error Final (As Left / Ec)
+    public decimal? Uncertainty { get; set; } = 0; // Incertidumbre U (k=2)
+    public string UnitEc { get; set; } = "g"; // g o kg
+    public decimal FactorK { get; set; } = 2.0m;
+    public string CertificateNumber { get; set; } = string.Empty; // Certificado de Calibración
+    public string TraceabilityLab { get; set; } = "Laboratorio Acreditado";
     public DateTime? CalibrationDate { get; set; }
     public DateTime? ExpirationDate { get; set; }
     public string Status { get; set; } = "Valid"; // Valid, Expired, Inactive
@@ -233,13 +239,19 @@ public record MetrologyEquipmentWriteDto(
 public record StandardWeightDto(
     Guid Id,
     string Code,
+    string NormalizedId,
     string SerialNumber,
+    string Manufacturer,
+    string LotName,
     decimal NominalValue,
     string Unit,
     string AccuracyClass,
     string Material,
-    decimal ConventionalMassCorrection,
-    decimal Uncertainty,
+    decimal? ErrorAsFound,
+    decimal? ConventionalMassCorrection,
+    decimal? Uncertainty,
+    string UnitEc,
+    decimal FactorK,
     string CertificateNumber,
     string TraceabilityLab,
     DateTime? CalibrationDate,
@@ -252,17 +264,53 @@ public record StandardWeightDto(
 public record StandardWeightWriteDto(
     string Code,
     string? SerialNumber,
+    string? Manufacturer,
+    string? LotName,
     decimal NominalValue,
     string? Unit,
     string? AccuracyClass,
     string? Material,
-    decimal ConventionalMassCorrection,
-    decimal Uncertainty,
+    decimal? ErrorAsFound,
+    decimal? ConventionalMassCorrection,
+    decimal? Uncertainty,
+    string? UnitEc,
+    decimal? FactorK,
     string? CertificateNumber,
     string? TraceabilityLab,
     DateTime? CalibrationDate,
     DateTime? ExpirationDate,
+    string? Status,
     string? Notes
+);
+
+public record StandardWeightBulkImportItem(
+    string Code,
+    string? SerialNumber,
+    string? Manufacturer,
+    string? LotName,
+    decimal NominalValue,
+    string? Unit,
+    string? AccuracyClass,
+    string? Material,
+    decimal? ErrorAsFound,
+    decimal? ConventionalMassCorrection,
+    decimal? Uncertainty,
+    string? UnitEc,
+    decimal? FactorK,
+    string? CertificateNumber,
+    string? TraceabilityLab,
+    DateTime? CalibrationDate,
+    DateTime? ExpirationDate,
+    string? Status
+);
+
+public record StandardWeightBulkImportRequest(
+    List<StandardWeightBulkImportItem> Weights
+);
+
+public record StandardWeightBulkLotRequest(
+    List<Guid> Ids,
+    string LotName
 );
 
 public record CalibrationReportDto(

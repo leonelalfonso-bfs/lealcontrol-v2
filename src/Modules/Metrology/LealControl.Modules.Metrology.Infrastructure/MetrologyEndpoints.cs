@@ -360,11 +360,12 @@ public static class MetrologyEndpoints
         });
 
         // ====================================================================
-        // 3. Pesas Patrón & Trazabilidad INTI (CRUD)
+        // 3. Pesas Patrón & Trazabilidad Metrológica (CRUD + Importación)
         // ====================================================================
         group.MapGet("/weights", async (
             [FromQuery] string? search,
             [FromQuery] string? status,
+            [FromQuery] string? lot,
             ITenantContext tenantContext,
             MetrologyDbContext db,
             CancellationToken ct) =>
@@ -379,7 +380,10 @@ public static class MetrologyEndpoints
                     var term = search.Trim().ToLower();
                     query = query.Where(w =>
                         w.Code.ToLower().Contains(term) ||
+                        w.NormalizedId.ToLower().Contains(term) ||
                         w.SerialNumber.ToLower().Contains(term) ||
+                        w.Manufacturer.ToLower().Contains(term) ||
+                        w.LotName.ToLower().Contains(term) ||
                         w.CertificateNumber.ToLower().Contains(term) ||
                         w.TraceabilityLab.ToLower().Contains(term));
                 }
@@ -389,7 +393,12 @@ public static class MetrologyEndpoints
                     query = query.Where(w => w.Status == status.Trim());
                 }
 
-                var items = await query.OrderBy(w => w.NominalValue).ToListAsync(ct);
+                if (!string.IsNullOrWhiteSpace(lot))
+                {
+                    query = query.Where(w => w.LotName == lot.Trim());
+                }
+
+                var items = await query.OrderBy(w => w.Code).ThenBy(w => w.NominalValue).ToListAsync(ct);
                 return Results.Ok(items);
             }
             catch (Exception ex)
@@ -412,21 +421,31 @@ public static class MetrologyEndpoints
                 }
 
                 var tenantId = tenantContext.TenantId;
+                var code = req.Code.Trim();
+                var normId = System.Text.RegularExpressions.Regex.Replace(code.ToUpperInvariant(), @"[^A-Z0-9]", "");
+
                 var weight = new StandardWeight
                 {
                     TenantId = tenantId,
-                    Code = req.Code.Trim(),
+                    Code = code,
+                    NormalizedId = normId,
                     SerialNumber = req.SerialNumber?.Trim() ?? "",
+                    Manufacturer = req.Manufacturer?.Trim() ?? "",
+                    LotName = req.LotName?.Trim() ?? "",
                     NominalValue = req.NominalValue,
                     Unit = req.Unit ?? "kg",
                     AccuracyClass = req.AccuracyClass ?? "M1",
                     Material = req.Material ?? "Hierro Fundido",
-                    ConventionalMassCorrection = req.ConventionalMassCorrection,
-                    Uncertainty = req.Uncertainty,
+                    ErrorAsFound = req.ErrorAsFound,
+                    ConventionalMassCorrection = req.ConventionalMassCorrection ?? 0,
+                    Uncertainty = req.Uncertainty ?? 0,
+                    UnitEc = req.UnitEc ?? "g",
+                    FactorK = req.FactorK ?? 2.0m,
                     CertificateNumber = req.CertificateNumber?.Trim() ?? "",
-                    TraceabilityLab = req.TraceabilityLab ?? "INTI - Metrología Legal",
+                    TraceabilityLab = req.TraceabilityLab ?? "Laboratorio Acreditado",
                     CalibrationDate = req.CalibrationDate,
                     ExpirationDate = req.ExpirationDate,
+                    Status = req.Status ?? "Valid",
                     Notes = req.Notes
                 };
 
@@ -434,6 +453,238 @@ public static class MetrologyEndpoints
                 await db.SaveChangesAsync(ct);
 
                 return Results.Created($"/api/v1/metrology/weights/{weight.Id}", weight);
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: 500);
+            }
+        });
+
+        group.MapPut("/weights/{id:guid}", async (
+            Guid id,
+            StandardWeightWriteDto req,
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
+        {
+            try
+            {
+                var tenantId = tenantContext.TenantId;
+                var weight = await db.StandardWeights.FirstOrDefaultAsync(w => w.Id == id && w.TenantId == tenantId, ct);
+                if (weight == null) return Results.NotFound(new { message = "Pesa patrón no encontrada." });
+
+                if (!string.IsNullOrWhiteSpace(req.Code))
+                {
+                    weight.Code = req.Code.Trim();
+                    weight.NormalizedId = System.Text.RegularExpressions.Regex.Replace(weight.Code.ToUpperInvariant(), @"[^A-Z0-9]", "");
+                }
+
+                if (req.SerialNumber != null) weight.SerialNumber = req.SerialNumber.Trim();
+                if (req.Manufacturer != null) weight.Manufacturer = req.Manufacturer.Trim();
+                if (req.LotName != null) weight.LotName = req.LotName.Trim();
+                if (req.NominalValue > 0) weight.NominalValue = req.NominalValue;
+                if (req.Unit != null) weight.Unit = req.Unit;
+                if (req.AccuracyClass != null) weight.AccuracyClass = req.AccuracyClass;
+                if (req.Material != null) weight.Material = req.Material;
+                if (req.ErrorAsFound.HasValue) weight.ErrorAsFound = req.ErrorAsFound;
+                if (req.ConventionalMassCorrection.HasValue) weight.ConventionalMassCorrection = req.ConventionalMassCorrection.Value;
+                if (req.Uncertainty.HasValue) weight.Uncertainty = req.Uncertainty.Value;
+                if (req.UnitEc != null) weight.UnitEc = req.UnitEc;
+                if (req.FactorK.HasValue) weight.FactorK = req.FactorK.Value;
+                if (req.CertificateNumber != null) weight.CertificateNumber = req.CertificateNumber.Trim();
+                if (req.TraceabilityLab != null) weight.TraceabilityLab = req.TraceabilityLab.Trim();
+                if (req.CalibrationDate.HasValue) weight.CalibrationDate = req.CalibrationDate;
+                if (req.ExpirationDate.HasValue) weight.ExpirationDate = req.ExpirationDate;
+                if (req.Status != null) weight.Status = req.Status;
+                if (req.Notes != null) weight.Notes = req.Notes;
+
+                await db.SaveChangesAsync(ct);
+                return Results.Ok(weight);
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: 500);
+            }
+        });
+
+        group.MapPost("/weights/bulk-import", async (
+            StandardWeightBulkImportRequest req,
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
+        {
+            try
+            {
+                if (req.Weights == null || req.Weights.Count == 0)
+                {
+                    return Results.BadRequest(new { message = "Sin pesas para importar." });
+                }
+
+                var tenantId = tenantContext.TenantId;
+                var existingWeights = await db.StandardWeights.Where(w => w.TenantId == tenantId).ToListAsync(ct);
+                var existingByCode = existingWeights.ToDictionary(w => w.Code.Trim().ToUpperInvariant(), StringComparer.OrdinalIgnoreCase);
+
+                var importedCount = 0;
+                var updatedCount = 0;
+
+                foreach (var item in req.Weights)
+                {
+                    var code = item.Code?.Trim() ?? "";
+                    if (string.IsNullOrWhiteSpace(code) || item.NominalValue <= 0) continue;
+
+                    var normId = System.Text.RegularExpressions.Regex.Replace(code.ToUpperInvariant(), @"[^A-Z0-9]", "");
+                    var upperKey = code.ToUpperInvariant();
+
+                    if (existingByCode.TryGetValue(upperKey, out var existing))
+                    {
+                        // Update existing record
+                        existing.NormalizedId = normId;
+                        if (!string.IsNullOrWhiteSpace(item.SerialNumber)) existing.SerialNumber = item.SerialNumber.Trim();
+                        if (!string.IsNullOrWhiteSpace(item.Manufacturer)) existing.Manufacturer = item.Manufacturer.Trim();
+                        if (!string.IsNullOrWhiteSpace(item.LotName)) existing.LotName = item.LotName.Trim();
+                        existing.NominalValue = item.NominalValue;
+                        if (!string.IsNullOrWhiteSpace(item.Unit)) existing.Unit = item.Unit;
+                        if (!string.IsNullOrWhiteSpace(item.AccuracyClass)) existing.AccuracyClass = item.AccuracyClass;
+                        if (!string.IsNullOrWhiteSpace(item.Material)) existing.Material = item.Material;
+                        existing.ErrorAsFound = item.ErrorAsFound;
+                        existing.ConventionalMassCorrection = item.ConventionalMassCorrection ?? 0;
+                        existing.Uncertainty = item.Uncertainty ?? 0;
+                        existing.UnitEc = item.UnitEc ?? "g";
+                        existing.FactorK = item.FactorK ?? 2.0m;
+                        if (!string.IsNullOrWhiteSpace(item.CertificateNumber)) existing.CertificateNumber = item.CertificateNumber.Trim();
+                        if (!string.IsNullOrWhiteSpace(item.TraceabilityLab)) existing.TraceabilityLab = item.TraceabilityLab.Trim();
+                        if (item.CalibrationDate.HasValue) existing.CalibrationDate = item.CalibrationDate;
+                        if (item.ExpirationDate.HasValue) existing.ExpirationDate = item.ExpirationDate;
+                        existing.Status = item.Status ?? "Valid";
+                        updatedCount++;
+                    }
+                    else
+                    {
+                        // Create new record
+                        var newWeight = new StandardWeight
+                        {
+                            TenantId = tenantId,
+                            Code = code,
+                            NormalizedId = normId,
+                            SerialNumber = item.SerialNumber?.Trim() ?? "",
+                            Manufacturer = item.Manufacturer?.Trim() ?? "",
+                            LotName = item.LotName?.Trim() ?? "",
+                            NominalValue = item.NominalValue,
+                            Unit = item.Unit ?? "kg",
+                            AccuracyClass = item.AccuracyClass ?? "M1",
+                            Material = item.Material ?? "Hierro Fundido",
+                            ErrorAsFound = item.ErrorAsFound,
+                            ConventionalMassCorrection = item.ConventionalMassCorrection ?? 0,
+                            Uncertainty = item.Uncertainty ?? 0,
+                            UnitEc = item.UnitEc ?? "g",
+                            FactorK = item.FactorK ?? 2.0m,
+                            CertificateNumber = item.CertificateNumber?.Trim() ?? "",
+                            TraceabilityLab = item.TraceabilityLab ?? "Laboratorio Acreditado",
+                            CalibrationDate = item.CalibrationDate,
+                            ExpirationDate = item.ExpirationDate,
+                            Status = item.Status ?? "Valid"
+                        };
+                        db.StandardWeights.Add(newWeight);
+                        existingByCode[upperKey] = newWeight;
+                        importedCount++;
+                    }
+                }
+
+                await db.SaveChangesAsync(ct);
+                return Results.Ok(new
+                {
+                    success = true,
+                    imported = importedCount,
+                    updated = updatedCount,
+                    total = importedCount + updatedCount,
+                    message = $"{importedCount + updatedCount} patrón/es procesado/s ({importedCount} creados, {updatedCount} actualizados)."
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: 500);
+            }
+        });
+
+        group.MapPost("/weights/bulk-lot", async (
+            StandardWeightBulkLotRequest req,
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
+        {
+            try
+            {
+                if (req.Ids == null || req.Ids.Count == 0)
+                {
+                    return Results.BadRequest(new { message = "Sin patrones seleccionados." });
+                }
+
+                var tenantId = tenantContext.TenantId;
+                var weights = await db.StandardWeights.Where(w => w.TenantId == tenantId && req.Ids.Contains(w.Id)).ToListAsync(ct);
+                var lotName = req.LotName?.Trim() ?? "";
+
+                foreach (var w in weights)
+                {
+                    w.LotName = lotName;
+                }
+
+                await db.SaveChangesAsync(ct);
+                return Results.Ok(new
+                {
+                    success = true,
+                    count = weights.Count,
+                    message = string.IsNullOrEmpty(lotName)
+                        ? $"Se quitó el lote de {weights.Count} patrones."
+                        : $"Se asignó el lote \"{lotName}\" a {weights.Count} patrones."
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: 500);
+            }
+        });
+
+        group.MapPost("/weights/clear-all", async (
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
+        {
+            try
+            {
+                var tenantId = tenantContext.TenantId;
+                var weights = await db.StandardWeights.Where(w => w.TenantId == tenantId).ToListAsync(ct);
+                var count = weights.Count;
+                db.StandardWeights.RemoveRange(weights);
+                await db.SaveChangesAsync(ct);
+                return Results.Ok(new { success = true, deleted = count, message = $"Se vació el inventario ({count} patrones eliminados)." });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: 500);
+            }
+        });
+
+        group.MapGet("/weights/history", async (
+            [FromQuery] string code,
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(code)) return Results.BadRequest(new { message = "Código de patrón requerido." });
+
+                var tenantId = tenantContext.TenantId;
+                var term = code.Trim().ToUpperInvariant();
+                var normId = System.Text.RegularExpressions.Regex.Replace(term, @"[^A-Z0-9]", "");
+
+                var history = await db.StandardWeights.AsNoTracking()
+                    .Where(w => w.TenantId == tenantId && (w.Code.ToUpper() == term || w.NormalizedId == normId || w.SerialNumber.ToUpper() == term))
+                    .OrderByDescending(w => w.CalibrationDate)
+                    .ThenByDescending(w => w.CreatedAtUtc)
+                    .ToListAsync(ct);
+
+                return Results.Ok(history);
             }
             catch (Exception ex)
             {

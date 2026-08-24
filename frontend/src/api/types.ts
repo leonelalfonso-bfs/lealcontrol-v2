@@ -1587,18 +1587,25 @@ export type StandardWeight = {
   id: string;
   tenantId: string;
   code: string;
+  normalizedId?: string;
   serialNumber?: string | null;
+  manufacturer?: string | null;
+  lotName?: string | null;
   nominalValue: number;
   unit: string;
   accuracyClass: string;
   material: string;
-  conventionalMassCorrection: number;
-  uncertainty: number;
+  errorAsFound?: number | null;
+  conventionalMassCorrection?: number | null;
+  uncertainty?: number | null;
+  unitEc?: string | null;
+  factorK?: number | null;
   certificateNumber: string;
   traceabilityLab: string;
   calibrationDate?: string | null;
   expirationDate?: string | null;
   status: "Valid" | "Expired" | "InCalibration" | "OutOfService";
+  notes?: string | null;
   createdAtUtc: string;
 };
 
