@@ -313,7 +313,15 @@ export function MetrologyEquipmentFormPage() {
 
       <form onSubmit={handleSubmit}>
         {/* SECCIÓN 1: IDENTIFICACIÓN & CLIENTE */}
-        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid #0d9488" }}>
+        <div
+          className="card pad"
+          style={{
+            marginBottom: 20,
+            borderLeft: "5px solid #0d9488",
+            position: "relative",
+            zIndex: showCustomerDropdown ? 9999 : 5
+          }}
+        >
           <div style={{ fontWeight: 800, fontSize: "1rem", color: "#0f766e", marginBottom: 14 }}>
             1. IDENTIFICACIÓN GENERAL & UBICACIÓN
           </div>
@@ -344,7 +352,7 @@ export function MetrologyEquipmentFormPage() {
             </div>
 
             {/* Campo Autocomplete de Cliente */}
-            <div ref={customerDropdownRef} style={{ position: "relative" }}>
+            <div ref={customerDropdownRef} style={{ position: "relative", zIndex: showCustomerDropdown ? 10000 : 2 }}>
               <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>
                 Cliente / Propietario del Instrumento
               </label>
@@ -427,17 +435,16 @@ export function MetrologyEquipmentFormPage() {
                     <div
                       style={{
                         position: "absolute",
-                        top: "100%",
+                        top: "calc(100% + 4px)",
                         left: 0,
                         right: 0,
-                        zIndex: 50,
-                        background: "#fff",
-                        border: "1px solid #cbd5e1",
+                        zIndex: 10001,
+                        background: "#ffffff",
+                        border: "1px solid #94a3b8",
                         borderRadius: 8,
-                        boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-                        maxHeight: 260,
-                        overflowY: "auto",
-                        marginTop: 4
+                        boxShadow: "0 20px 40px -5px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)",
+                        maxHeight: 280,
+                        overflowY: "auto"
                       }}
                     >
                       {/* Opción Uso Interno */}
@@ -452,7 +459,7 @@ export function MetrologyEquipmentFormPage() {
                         style={{
                           padding: "10px 14px",
                           cursor: "pointer",
-                          borderBottom: "1px solid #f1f5f9",
+                          borderBottom: "1px solid #e2e8f0",
                           background: !customerId ? "#f8fafc" : "#fff",
                           display: "flex",
                           justifyContent: "space-between",
