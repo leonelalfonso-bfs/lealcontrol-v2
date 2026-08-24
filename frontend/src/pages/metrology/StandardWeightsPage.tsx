@@ -246,7 +246,7 @@ export function StandardWeightsPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div>
                 <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem" }}>
-                  ISO/IEC 17025 • Trazabilidad & Estabilidad
+                  Trazabilidad & Estabilidad Metrológica
                 </span>
                 <h2 style={{ margin: "2px 0 0", fontSize: "1.5rem", fontWeight: 800, color: "#0f172a" }}>
                   🕒 Historial de Calibración & Deriva: <span style={{ color: "#0d9488" }}>{historyWeightCode}</span>
@@ -718,7 +718,7 @@ export function StandardWeightsPage() {
                 className="btn"
                 style={{ background: "#fff", border: "1px solid #ea580c", color: "#ea580c", fontWeight: 700 }}
               >
-                📄 Exportar PDF (PG14-R4)
+                📄 Imprimir Inventario
               </Link>
               <button
                 type="button"

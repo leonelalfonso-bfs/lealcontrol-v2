@@ -28,7 +28,7 @@ export function StandardWeightsPrintPage() {
   if (loading) {
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
-        Cargando registro ISO 17025 (PG14-R4)...
+        Cargando listado de pesas patrón...
       </div>
     );
   }
@@ -45,7 +45,7 @@ export function StandardWeightsPrintPage() {
         </button>
       </div>
 
-      {/* ISO 17025 Header */}
+      {/* Metrology Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #0d9488", paddingBottom: 14, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           {company?.logoUrl ? (
@@ -68,9 +68,8 @@ export function StandardWeightsPrintPage() {
         </div>
 
         <div style={{ textAlign: "right", fontSize: "0.82rem", color: "#444" }}>
-          <div style={{ fontWeight: 800, color: "#0d9488", fontSize: "0.95rem" }}>REGISTRO: Listado de Equipos</div>
-          <div>Vinculado a: <strong>PG-14 - Equipamiento (Patrones de Masa)</strong></div>
-          <div><strong>Código:</strong> PG14-R4 | <strong>Versión:</strong> 1.0</div>
+          <div style={{ fontWeight: 800, color: "#0d9488", fontSize: "0.95rem" }}>INVENTARIO DE PESAS PATRÓN</div>
+          <div>Masas de Referencia & Trazabilidad</div>
           <div><strong>Fecha de Emisión:</strong> {new Date().toLocaleDateString("es-AR")}</div>
         </div>
       </div>
@@ -146,11 +145,11 @@ export function StandardWeightsPrintPage() {
       {/* Footer & Signatures */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 40, pageBreakInside: "avoid" }}>
         <div style={{ fontSize: "0.75rem", color: "#666", maxWidth: 450 }}>
-          Este registro forma parte del Sistema de Gestión de la Calidad bajo norma IRAM 301 / ISO/IEC 17025 del Laboratorio de Ensayos.
+          Documento técnico de inventario y estado de calibración de patrones de masa.
         </div>
         <div style={{ textAlign: "center", borderTop: "1px solid #333", paddingTop: 6, minWidth: 220 }}>
-          <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>Responsable Técnico / Calidad</div>
-          <div style={{ fontSize: "0.74rem", color: "#666" }}>Laboratorio de Ensayos Metrológicos</div>
+          <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>Responsable de Metrología</div>
+          <div style={{ fontSize: "0.74rem", color: "#666" }}>Laboratorio de Metrología Legal</div>
         </div>
       </div>
     </div>
