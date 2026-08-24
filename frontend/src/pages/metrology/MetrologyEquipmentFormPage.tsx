@@ -72,6 +72,17 @@ export function MetrologyEquipmentFormPage() {
   const [status, setStatus] = useState("Active");
   const [notes, setNotes] = useState("");
 
+  // Instant local filtering with useMemo
+  const filteredSuggestions = (customerSearchQuery.trim() === ""
+    ? customers.slice(0, 40)
+    : customers.filter((c: any) => {
+        const q = customerSearchQuery.trim().toLowerCase();
+        const name = (c.legalName || c.tradeName || c.name || "").toLowerCase();
+        const doc = (c.documentNumber || "").toLowerCase();
+        return name.includes(q) || doc.includes(q);
+      })
+  );
+
   // Close suggestions dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -83,15 +94,21 @@ export function MetrologyEquipmentFormPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Search customer with debounce or on query change
+  // Search customer on server when query changes (role 'all' to include all contacts)
   useEffect(() => {
-    if (!showCustomerDropdown) return;
+    if (!showCustomerDropdown || !customerSearchQuery.trim()) return;
     const timer = setTimeout(async () => {
       setIsSearchingCustomer(true);
       try {
-        const res: any = await api.listCustomers(customerSearchQuery.trim()).catch(() => ({ items: [] }));
+        const res: any = await api.listCustomers(customerSearchQuery.trim(), "all").catch(() => ({ items: [] }));
         const list = res.items || res || [];
-        setCustomerSuggestions(list);
+        if (list.length > 0) {
+          setCustomers((prev) => {
+            const existingIds = new Set(prev.map((x: any) => x.id));
+            const newItems = list.filter((x: any) => !existingIds.has(x.id));
+            return [...prev, ...newItems];
+          });
+        }
       } catch (err) {
         console.error("Error buscando clientes:", err);
       } finally {
@@ -105,10 +122,9 @@ export function MetrologyEquipmentFormPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const custsRes: any = await api.listCustomers().catch(() => ({ items: [] }));
+        const custsRes: any = await api.listCustomers("", "all").catch(() => ({ items: [] }));
         const custList = custsRes.items || custsRes || [];
         setCustomers(custList);
-        setCustomerSuggestions(custList);
 
         if (isEditing && id) {
           const res = await api.getMetrologyEquipment(id);
@@ -352,7 +368,7 @@ export function MetrologyEquipmentFormPage() {
             </div>
 
             {/* Campo Autocomplete de Cliente */}
-            <div ref={customerDropdownRef} style={{ position: "relative", zIndex: showCustomerDropdown ? 10000 : 2 }}>
+            <div ref={customerDropdownRef} style={{ gridColumn: "span 2", position: "relative", zIndex: showCustomerDropdown ? 10000 : 2 }}>
               <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>
                 Cliente / Propietario del Instrumento
               </label>
@@ -366,20 +382,20 @@ export function MetrologyEquipmentFormPage() {
                     background: "#f0fdf4",
                     border: "1px solid #86efac",
                     borderRadius: 6,
-                    padding: "6px 12px",
+                    padding: "8px 14px",
                     minHeight: 42,
                     boxSizing: "border-box"
                   }}
                 >
                   <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <strong style={{ color: "#166534", fontSize: "0.92rem" }}>🏢 {customerName}</strong>
+                    <strong style={{ color: "#166534", fontSize: "0.95rem" }}>🏢 {customerName}</strong>
                     {selectedCustomerDoc && (
-                      <span className="muted" style={{ fontSize: "0.8rem", marginLeft: 8 }}>
+                      <span className="muted" style={{ fontSize: "0.84rem", marginLeft: 10 }}>
                         (CUIT: {selectedCustomerDoc})
                       </span>
                     )}
                   </div>
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                     <button
                       type="button"
                       onClick={() => {
@@ -387,7 +403,7 @@ export function MetrologyEquipmentFormPage() {
                         setCustomerSearchQuery("");
                       }}
                       className="btn ghost compact"
-                      style={{ fontSize: "0.78rem", padding: "3px 8px" }}
+                      style={{ fontSize: "0.8rem", padding: "4px 10px" }}
                     >
                       Cambiar
                     </button>
@@ -399,7 +415,7 @@ export function MetrologyEquipmentFormPage() {
                         setSelectedCustomerDoc("");
                       }}
                       className="btn ghost compact"
-                      style={{ fontSize: "0.78rem", color: "#dc2626", padding: "3px 8px" }}
+                      style={{ fontSize: "0.8rem", color: "#dc2626", padding: "4px 10px" }}
                       title="Asignar como Uso Interno / Propio"
                     >
                       ✕ Quitar
@@ -416,10 +432,10 @@ export function MetrologyEquipmentFormPage() {
                       setCustomerSearchQuery(e.target.value);
                       setShowCustomerDropdown(true);
                     }}
-                    placeholder="🔍 Escribí nombre, razón social o CUIT..."
+                    placeholder="🔍 Escribí nombre, razón social o CUIT del cliente para buscar..."
                     style={{
                       width: "100%",
-                      padding: "9px 12px",
+                      padding: "10px 14px",
                       borderRadius: 6,
                       border: "1px solid #cbd5e1",
                       fontSize: "0.92rem",
@@ -427,7 +443,7 @@ export function MetrologyEquipmentFormPage() {
                     }}
                   />
                   <small className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 4 }}>
-                    Dejá en blanco para balanzas propias (Uso Interno).
+                    Dejá en blanco si es una balanza propia de la empresa (Uso Interno).
                   </small>
 
                   {/* Dropdown de resultados */}
@@ -440,10 +456,10 @@ export function MetrologyEquipmentFormPage() {
                         right: 0,
                         zIndex: 10001,
                         background: "#ffffff",
-                        border: "1px solid #94a3b8",
+                        border: "2px solid #0d9488",
                         borderRadius: 8,
-                        boxShadow: "0 20px 40px -5px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)",
-                        maxHeight: 280,
+                        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.35)",
+                        maxHeight: 300,
                         overflowY: "auto"
                       }}
                     >
@@ -457,7 +473,7 @@ export function MetrologyEquipmentFormPage() {
                           setCustomerSearchQuery("");
                         }}
                         style={{
-                          padding: "10px 14px",
+                          padding: "12px 16px",
                           cursor: "pointer",
                           borderBottom: "1px solid #e2e8f0",
                           background: !customerId ? "#f8fafc" : "#fff",
@@ -466,22 +482,22 @@ export function MetrologyEquipmentFormPage() {
                           alignItems: "center"
                         }}
                       >
-                        <span style={{ fontWeight: 700, color: "#475569", fontSize: "0.88rem" }}>
+                        <span style={{ fontWeight: 700, color: "#475569", fontSize: "0.9rem" }}>
                           🏢 -- Uso Interno / Propio (Sin Cliente Externo) --
                         </span>
-                        <span className="tag" style={{ fontSize: "0.72rem", background: "#e2e8f0" }}>Propio</span>
+                        <span className="tag" style={{ fontSize: "0.75rem", background: "#e2e8f0" }}>Propio</span>
                       </div>
 
-                      {isSearchingCustomer ? (
-                        <div style={{ padding: "14px", textAlign: "center" }} className="muted">
+                      {isSearchingCustomer && filteredSuggestions.length === 0 ? (
+                        <div style={{ padding: "16px", textAlign: "center" }} className="muted">
                           Buscando en directorio de clientes...
                         </div>
-                      ) : customerSuggestions.length === 0 ? (
-                        <div style={{ padding: "14px", textAlign: "center" }} className="muted">
-                          {customerSearchQuery ? `No se encontraron clientes con "${customerSearchQuery}"` : "Escribí para buscar..."}
+                      ) : filteredSuggestions.length === 0 ? (
+                        <div style={{ padding: "16px", textAlign: "center" }} className="muted">
+                          {customerSearchQuery ? `No se encontraron clientes con "${customerSearchQuery}"` : "No hay clientes cargados en el sistema."}
                         </div>
                       ) : (
-                        customerSuggestions.map((c) => {
+                        filteredSuggestions.map((c: any) => {
                           const displayName = c.legalName || c.tradeName || c.name || "Sin Razón Social";
                           return (
                             <div
@@ -494,24 +510,24 @@ export function MetrologyEquipmentFormPage() {
                                 setCustomerSearchQuery("");
                               }}
                               style={{
-                                padding: "10px 14px",
+                                padding: "11px 16px",
                                 cursor: "pointer",
-                                borderBottom: "1px solid #f8fafc",
+                                borderBottom: "1px solid #f1f5f9",
                                 transition: "background 0.15s"
                               }}
                               onMouseEnter={(e) => (e.currentTarget.style.background = "#f0fdf4")}
                               onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
                             >
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <strong style={{ color: "#0f172a", fontSize: "0.9rem" }}>{displayName}</strong>
+                                <strong style={{ color: "#0f172a", fontSize: "0.92rem" }}>{displayName}</strong>
                                 {c.documentNumber && (
-                                  <span style={{ fontFamily: "monospace", fontSize: "0.82rem", color: "#0d9488", fontWeight: 700 }}>
+                                  <span style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "#0d9488", fontWeight: 700 }}>
                                     CUIT: {c.documentNumber}
                                   </span>
                                 )}
                               </div>
                               {(c.city || c.province) && (
-                                <div className="muted" style={{ fontSize: "0.76rem", marginTop: 2 }}>
+                                <div className="muted" style={{ fontSize: "0.78rem", marginTop: 2 }}>
                                   📍 {[c.city, c.province].filter(Boolean).join(", ")}
                                 </div>
                               )}
