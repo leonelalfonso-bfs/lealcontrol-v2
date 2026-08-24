@@ -15,10 +15,11 @@ export function MetrologyEquipmentFormPage() {
 
   // Customer Autocomplete Search State
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
-  const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [selectedCustomerDoc, setSelectedCustomerDoc] = useState("");
+  const [customerLocations, setCustomerLocations] = useState<{ id: string; name: string; fullAddress?: string }[]>([]);
+  const [isManualLocation, setIsManualLocation] = useState(false);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
 
   // Form State
@@ -83,16 +84,45 @@ export function MetrologyEquipmentFormPage() {
       })
   );
 
+  // Helper to load customer plants/locations
+  const loadCustomerLocations = async (cId: string) => {
+    if (!cId) {
+      setCustomerLocations([]);
+      return;
+    }
+    try {
+      const detail: any = await api.getCustomer(cId).catch(() => null);
+      if (detail && detail.locations && detail.locations.length > 0) {
+        const locs = detail.locations.map((loc: any) => ({
+          id: loc.id,
+          name: loc.name || "Planta Principal",
+          fullAddress: [
+            loc.name,
+            loc.address?.street ? `${loc.address.street} ${loc.address.number || ""}` : "",
+            loc.address?.city,
+            loc.address?.state
+          ].filter(Boolean).join(", ")
+        }));
+        setCustomerLocations(locs);
+      } else {
+        setCustomerLocations([]);
+      }
+    } catch (err) {
+      console.error("Error cargando plantas del cliente:", err);
+      setCustomerLocations([]);
+    }
+  };
+
   // Close suggestions dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
-        setShowCustomerDropdown(false);
+        if (customerId) setShowCustomerDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [customerId]);
 
   // Search customer on server when query changes (role 'all' to include all contacts)
   useEffect(() => {
@@ -144,6 +174,7 @@ export function MetrologyEquipmentFormPage() {
                 setSelectedCustomerDoc(matchedCust.documentNumber || "");
                 setCustomerName(matchedCust.legalName || matchedCust.tradeName || matchedCust.name || eq.customerName || "");
               }
+              loadCustomerLocations(eq.customerId);
             }
 
             setLocation(eq.location || "");
@@ -367,13 +398,13 @@ export function MetrologyEquipmentFormPage() {
               />
             </div>
 
-            {/* Campo Autocomplete de Cliente */}
-            <div ref={customerDropdownRef} style={{ gridColumn: "span 2", position: "relative", zIndex: showCustomerDropdown ? 10000 : 2 }}>
+            {/* Campo Autocomplete de Cliente (Inline no-clipping) */}
+            <div ref={customerDropdownRef} style={{ gridColumn: "span 2" }}>
               <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>
                 Cliente / Propietario del Instrumento
               </label>
 
-              {customerId ? (
+              {customerId && !showCustomerDropdown ? (
                 <div
                   style={{
                     display: "flex",
@@ -381,16 +412,15 @@ export function MetrologyEquipmentFormPage() {
                     justifyContent: "space-between",
                     background: "#f0fdf4",
                     border: "1px solid #86efac",
-                    borderRadius: 6,
-                    padding: "8px 14px",
-                    minHeight: 42,
+                    borderRadius: 8,
+                    padding: "10px 16px",
                     boxSizing: "border-box"
                   }}
                 >
                   <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <strong style={{ color: "#166534", fontSize: "0.95rem" }}>🏢 {customerName}</strong>
+                    <strong style={{ color: "#166534", fontSize: "0.98rem" }}>🏢 {customerName}</strong>
                     {selectedCustomerDoc && (
-                      <span className="muted" style={{ fontSize: "0.84rem", marginLeft: 10 }}>
+                      <span className="muted" style={{ fontSize: "0.86rem", marginLeft: 10 }}>
                         (CUIT: {selectedCustomerDoc})
                       </span>
                     )}
@@ -403,9 +433,9 @@ export function MetrologyEquipmentFormPage() {
                         setCustomerSearchQuery("");
                       }}
                       className="btn ghost compact"
-                      style={{ fontSize: "0.8rem", padding: "4px 10px" }}
+                      style={{ fontSize: "0.82rem", padding: "5px 12px", background: "#fff", border: "1px solid #cbd5e1" }}
                     >
-                      Cambiar
+                      🔍 Cambiar
                     </button>
                     <button
                       type="button"
@@ -413,9 +443,11 @@ export function MetrologyEquipmentFormPage() {
                         setCustomerId("");
                         setCustomerName("");
                         setSelectedCustomerDoc("");
+                        setCustomerLocations([]);
+                        setLocation("");
                       }}
                       className="btn ghost compact"
-                      style={{ fontSize: "0.8rem", color: "#dc2626", padding: "4px 10px" }}
+                      style={{ fontSize: "0.82rem", color: "#dc2626", padding: "5px 12px", background: "#fff", border: "1px solid #fca5a5" }}
                       title="Asignar como Uso Interno / Propio"
                     >
                       ✕ Quitar
@@ -423,133 +455,188 @@ export function MetrologyEquipmentFormPage() {
                   </div>
                 </div>
               ) : (
-                <div style={{ position: "relative" }}>
-                  <input
-                    type="text"
-                    value={customerSearchQuery}
-                    onFocus={() => setShowCustomerDropdown(true)}
-                    onChange={(e) => {
-                      setCustomerSearchQuery(e.target.value);
-                      setShowCustomerDropdown(true);
-                    }}
-                    placeholder="🔍 Escribí nombre, razón social o CUIT del cliente para buscar..."
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: 6,
-                      border: "1px solid #cbd5e1",
-                      fontSize: "0.92rem",
-                      boxSizing: "border-box"
-                    }}
-                  />
-                  <small className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 4 }}>
-                    Dejá en blanco si es una balanza propia de la empresa (Uso Interno).
-                  </small>
-
-                  {/* Dropdown de resultados */}
-                  {showCustomerDropdown && (
-                    <div
+                <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, padding: 14 }}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                    <input
+                      type="text"
+                      value={customerSearchQuery}
+                      onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                      placeholder="🔍 Escribí nombre, razón social o CUIT para buscar cliente..."
                       style={{
-                        position: "absolute",
-                        top: "calc(100% + 4px)",
-                        left: 0,
-                        right: 0,
-                        zIndex: 10001,
-                        background: "#ffffff",
+                        flex: 1,
+                        padding: "10px 14px",
+                        borderRadius: 6,
                         border: "2px solid #0d9488",
-                        borderRadius: 8,
-                        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.35)",
-                        maxHeight: 300,
-                        overflowY: "auto"
+                        fontSize: "0.92rem",
+                        background: "#fff"
+                      }}
+                    />
+                    {customerId && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomerDropdown(false)}
+                        className="btn ghost compact"
+                        style={{ padding: "0 14px" }}
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Lista de selección inline dentro del flujo (Inmune a cualquier corte o z-index) */}
+                  <div
+                    style={{
+                      maxHeight: 220,
+                      overflowY: "auto",
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 6
+                    }}
+                  >
+                    {/* Opción Uso Interno */}
+                    <div
+                      onClick={() => {
+                        setCustomerId("");
+                        setCustomerName("");
+                        setSelectedCustomerDoc("");
+                        setShowCustomerDropdown(false);
+                        setCustomerSearchQuery("");
+                        setCustomerLocations([]);
+                      }}
+                      style={{
+                        padding: "11px 16px",
+                        cursor: "pointer",
+                        borderBottom: "1px solid #e2e8f0",
+                        background: !customerId ? "#f0fdf4" : "#fff",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
                       }}
                     >
-                      {/* Opción Uso Interno */}
-                      <div
-                        onClick={() => {
-                          setCustomerId("");
-                          setCustomerName("");
-                          setSelectedCustomerDoc("");
-                          setShowCustomerDropdown(false);
-                          setCustomerSearchQuery("");
-                        }}
-                        style={{
-                          padding: "12px 16px",
-                          cursor: "pointer",
-                          borderBottom: "1px solid #e2e8f0",
-                          background: !customerId ? "#f8fafc" : "#fff",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center"
-                        }}
-                      >
-                        <span style={{ fontWeight: 700, color: "#475569", fontSize: "0.9rem" }}>
-                          🏢 -- Uso Interno / Propio (Sin Cliente Externo) --
-                        </span>
-                        <span className="tag" style={{ fontSize: "0.75rem", background: "#e2e8f0" }}>Propio</span>
-                      </div>
+                      <span style={{ fontWeight: 700, color: "#475569", fontSize: "0.88rem" }}>
+                        🏢 -- Uso Interno / Propio (Sin Cliente Externo) --
+                      </span>
+                      <span className="tag" style={{ fontSize: "0.72rem", background: "#e2e8f0" }}>Propio</span>
+                    </div>
 
-                      {isSearchingCustomer && filteredSuggestions.length === 0 ? (
-                        <div style={{ padding: "16px", textAlign: "center" }} className="muted">
-                          Buscando en directorio de clientes...
-                        </div>
-                      ) : filteredSuggestions.length === 0 ? (
-                        <div style={{ padding: "16px", textAlign: "center" }} className="muted">
-                          {customerSearchQuery ? `No se encontraron clientes con "${customerSearchQuery}"` : "No hay clientes cargados en el sistema."}
-                        </div>
-                      ) : (
-                        filteredSuggestions.map((c: any) => {
-                          const displayName = c.legalName || c.tradeName || c.name || "Sin Razón Social";
-                          return (
-                            <div
-                              key={c.id}
-                              onClick={() => {
-                                setCustomerId(c.id);
-                                setCustomerName(displayName);
-                                setSelectedCustomerDoc(c.documentNumber || "");
-                                setShowCustomerDropdown(false);
-                                setCustomerSearchQuery("");
-                              }}
-                              style={{
-                                padding: "11px 16px",
-                                cursor: "pointer",
-                                borderBottom: "1px solid #f1f5f9",
-                                transition: "background 0.15s"
-                              }}
-                              onMouseEnter={(e) => (e.currentTarget.style.background = "#f0fdf4")}
-                              onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
-                            >
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <strong style={{ color: "#0f172a", fontSize: "0.92rem" }}>{displayName}</strong>
-                                {c.documentNumber && (
-                                  <span style={{ fontFamily: "monospace", fontSize: "0.85rem", color: "#0d9488", fontWeight: 700 }}>
-                                    CUIT: {c.documentNumber}
-                                  </span>
-                                )}
-                              </div>
-                              {(c.city || c.province) && (
-                                <div className="muted" style={{ fontSize: "0.78rem", marginTop: 2 }}>
-                                  📍 {[c.city, c.province].filter(Boolean).join(", ")}
-                                </div>
+                    {filteredSuggestions.length === 0 ? (
+                      <div style={{ padding: "16px", textAlign: "center" }} className="muted">
+                        {customerSearchQuery ? `No se encontraron clientes con "${customerSearchQuery}"` : "Sin clientes registrados."}
+                      </div>
+                    ) : (
+                      filteredSuggestions.map((c: any) => {
+                        const displayName = c.legalName || c.tradeName || c.name || "Sin Razón Social";
+                        return (
+                          <div
+                            key={c.id}
+                            onClick={() => {
+                              setCustomerId(c.id);
+                              setCustomerName(displayName);
+                              setSelectedCustomerDoc(c.documentNumber || "");
+                              setShowCustomerDropdown(false);
+                              setCustomerSearchQuery("");
+                              loadCustomerLocations(c.id);
+                            }}
+                            style={{
+                              padding: "10px 16px",
+                              cursor: "pointer",
+                              borderBottom: "1px solid #f1f5f9",
+                              transition: "background 0.15s"
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#f0fdf4")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+                          >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <strong style={{ color: "#0f172a", fontSize: "0.92rem" }}>{displayName}</strong>
+                              {c.documentNumber && (
+                                <span style={{ fontFamily: "monospace", fontSize: "0.84rem", color: "#0d9488", fontWeight: 700 }}>
+                                  CUIT: {c.documentNumber}
+                                </span>
                               )}
                             </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  )}
+                            {(c.city || c.province) && (
+                              <div className="muted" style={{ fontSize: "0.78rem", marginTop: 2 }}>
+                                📍 {[c.city, c.province].filter(Boolean).join(", ")}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               )}
             </div>
 
-            <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Ubicación Física / Planta</label>
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="ej. Silos Norte, Báscula Entrada"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
-              />
+            {/* Campo Ubicación Física / Planta vinculado al cliente */}
+            <div style={{ gridColumn: "span 2" }}>
+              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>
+                Ubicación Física / Planta del Instrumento
+              </label>
+
+              {customerLocations.length > 0 && !isManualLocation ? (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <select
+                    value={location}
+                    onChange={(e) => {
+                      if (e.target.value === "__MANUAL__") {
+                        setIsManualLocation(true);
+                      } else {
+                        setLocation(e.target.value);
+                      }
+                    }}
+                    style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem", fontWeight: 600 }}
+                  >
+                    <option value="">-- Seleccionar Planta o Sucursal del Cliente --</option>
+                    {customerLocations.map((loc) => (
+                      <option key={loc.id} value={loc.fullAddress || loc.name}>
+                        📍 {loc.name} {loc.fullAddress && loc.fullAddress !== loc.name ? `(${loc.fullAddress})` : ""}
+                      </option>
+                    ))}
+                    <option value="__MANUAL__">✍️ Ingresar otra ubicación manualmente...</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setIsManualLocation(true)}
+                    className="btn ghost compact"
+                    style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}
+                  >
+                    ✍️ Texto libre
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="ej. Planta Silos Norte, Báscula Entrada, Molino Central"
+                      style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                    />
+                    {customerLocations.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsManualLocation(false)}
+                        className="btn ghost compact"
+                        style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}
+                      >
+                        📍 Ver Plantas del Cliente ({customerLocations.length})
+                      </button>
+                    )}
+                  </div>
+                  {customerLocations.length > 0 && (
+                    <small className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 4 }}>
+                      Plantas detectadas en la ficha del cliente: {customerLocations.map((l) => l.name).join(", ")}.
+                    </small>
+                  )}
+                  {customerLocations.length === 0 && customerId && (
+                    <small className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 4 }}>
+                      Este cliente no tiene sucursales cargadas en el Directorio; podés escribir la ubicación libremente.
+                    </small>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
