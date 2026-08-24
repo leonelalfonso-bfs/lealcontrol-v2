@@ -648,7 +648,6 @@ export function MetrologyEquipmentFormPage() {
               >
                 <option value="Res25_2025">Resolución 25/2025 (Vigente)</option>
                 <option value="Res2307_1980">Resolución 2307/1980 (Histórica)</option>
-                <option value="OIML_R76">OIML R76-1:2006</option>
               </select>
             </div>
           </div>
@@ -668,11 +667,11 @@ export function MetrologyEquipmentFormPage() {
                 onChange={(e) => setPlatformType(e.target.value)}
                 style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
               >
-                <option value="TruckScale">Báscula para Camiones (Hormigón/Metálica)</option>
+                <option value="TruckScale">Báscula para Camiones</option>
                 <option value="IndustrialPlatform">Plataforma Industrial de Piso</option>
                 <option value="BenchScale">Balanza de Mesa / Mostrador</option>
                 <option value="HopperScale">Tolva de Pesaje / Silo</option>
-                <option value="AxleWeigher">Pesaejes Dinámico / Estático</option>
+                <option value="AxleWeigher">Balanza para Pesaje de Ejes</option>
               </select>
             </div>
 
