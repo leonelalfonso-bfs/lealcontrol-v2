@@ -379,6 +379,12 @@ export function InventoryPage() {
   const totalPhysical = items.reduce((sum, i) => sum + i.physicalStock, 0);
   const totalReserved = items.reduce((sum, i) => sum + i.reservedStock, 0);
   const totalIncoming = items.reduce((sum, i) => sum + i.incomingStock, 0);
+  const totalInTransit = transfers.filter((t) => t.status === "InTransit").flatMap((t) => t.items).reduce((sum, i) => sum + i.quantity, 0);
+  const productTotals = Array.from(items.reduce((map, item) => {
+    const current = map.get(item.productId) || { name: item.productName, code: item.productCode, physical: 0, available: 0, minimum: 0, transit: item.inTransitStock };
+    current.physical += item.physicalStock; current.available += item.availableStock; current.minimum += item.minimumStock; current.transit = Math.max(current.transit, item.inTransitStock);
+    map.set(item.productId, current); return map;
+  }, new Map<string, { name: string; code: string; physical: number; available: number; minimum: number; transit: number }>()).values());
   const totalAvailable = items.reduce((sum, i) => sum + i.availableStock, 0);
   const totalValuationArs = items.reduce((sum, i) => sum + i.physicalStock * i.unitCostArs, 0);
   const totalValuationUsd = items.reduce((sum, i) => sum + i.physicalStock * i.unitCostUsd, 0);
@@ -490,6 +496,11 @@ export function InventoryPage() {
               <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>En Recepción de Proveedores</div>
             </div>
             <div className="card">
+              <span className="muted">Unidades en tránsito</span>
+              <strong style={{ fontSize: "1.5rem", color: "#7c3aed" }}>{totalInTransit.toLocaleString("es-AR")} u.</strong>
+              <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>Despachadas, aún sin recepción</div>
+            </div>
+            <div className="card">
               <span className="muted">Valorización Stock</span>
               <strong style={{ fontSize: "1.25rem" }}>
                 {totalValuationUsd > 0 && `USD $${totalValuationUsd.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`}
@@ -540,6 +551,10 @@ export function InventoryPage() {
             </div>
           </div>
 
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="pad"><strong>Resumen consolidado por artículo</strong><span className="muted" style={{ marginLeft: 8 }}>Total de depósitos, tránsito y mínimo</span></div>
+            <div className="table-wrap"><table><thead><tr><th>Artículo</th><th style={{ textAlign: "right" }}>Total depósitos</th><th style={{ textAlign: "right" }}>Disponible</th><th style={{ textAlign: "right" }}>En tránsito</th><th style={{ textAlign: "right" }}>Mínimo</th></tr></thead><tbody>{productTotals.map((item) => <tr key={item.code}><td><strong>{item.code}</strong> · {item.name}</td><td style={{ textAlign: "right" }}>{item.physical.toLocaleString("es-AR")}</td><td style={{ textAlign: "right" }}>{item.available.toLocaleString("es-AR")}</td><td style={{ textAlign: "right", color: "#7c3aed" }}>{item.transit.toLocaleString("es-AR")}</td><td style={{ textAlign: "right" }}>{item.minimum.toLocaleString("es-AR")}</td></tr>)}</tbody></table></div>
+          </div>
           <div className="card">
             {loading ? (
               <p className="pad muted">Cargando matriz de inventario en tiempo real…</p>

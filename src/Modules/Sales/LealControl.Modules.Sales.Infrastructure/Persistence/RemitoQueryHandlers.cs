@@ -7,6 +7,7 @@ using LealControl.BuildingBlocks.Results;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Sales.Application.Remitos;
 using LealControl.Modules.Sales.Domain.Remitos;
+using LealControl.Modules.Sales.Domain.Inventory;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -149,20 +150,18 @@ internal sealed class RemitoQueryHandlers
         }
 
         _dbContext.Remitos.Add(remito);
+        var warehouse = await _dbContext.Warehouses.FirstOrDefaultAsync(w => w.TenantId == tenantId && w.Type == WarehouseType.MainWarehouse, cancellationToken);
 
-        // Descontar stock físico si los productos tienen item en stock
-        foreach (var item in request.Items)
+        // A dispatch changes the balance and writes the same immutable ledger used by every stock circuit.
+        foreach (var item in request.Items.Where(i => i.ProductId.HasValue))
         {
-            if (item.ProductId.HasValue)
-            {
-                var stock = await _dbContext.StockItems
-                    .FirstOrDefaultAsync(s => s.ProductId == item.ProductId.Value && s.TenantId == tenantId, cancellationToken);
-
-                if (stock != null)
-                {
-                    stock.Consume(item.Quantity);
-                }
-            }
+            var stock = await _dbContext.StockItems.FirstOrDefaultAsync(s => s.ProductId == item.ProductId!.Value && s.WarehouseId == (warehouse == null ? null : warehouse.Id) && s.TenantId == tenantId, cancellationToken);
+            if (stock == null) continue;
+            var previous = stock.PhysicalStock;
+            stock.Consume(item.Quantity);
+            _dbContext.StockMovements.Add(StockMovement.Create(tenantId, item.ProductId!.Value, "SaleDelivery", -item.Quantity,
+                previous, stock.PhysicalStock, warehouse?.Id, warehouse?.Name, null, null, null, null, remito.Id,
+                "Remito", remito.RemitoNumber, "Despacho", $"Salida por remito {remito.RemitoNumber} para {remito.CustomerName}"));
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

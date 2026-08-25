@@ -140,92 +140,43 @@ internal sealed class InventoryQueryHandlers
     {
         var tenantId = _tenantContext.TenantId;
         await EnsureDefaultWarehousesAsync(tenantId, cancellationToken);
+        var products = await _dbContext.Products.AsNoTracking().Where(p => p.TenantId == tenantId).OrderBy(p => p.Name).ToListAsync(cancellationToken);
+        var stockItems = await _dbContext.StockItems.Where(s => s.TenantId == tenantId).ToListAsync(cancellationToken);
+        var mainWarehouse = await _dbContext.Warehouses.AsNoTracking().FirstOrDefaultAsync(w => w.TenantId == tenantId && w.Type == WarehouseType.MainWarehouse, cancellationToken);
 
-        var products = await _dbContext.Products
-            .AsNoTracking()
-            .Where(p => p.TenantId == tenantId)
-            .OrderBy(p => p.Name)
-            .ToListAsync(cancellationToken);
-
-        var stockItems = await _dbContext.StockItems
-            .AsNoTracking()
-            .Where(s => s.TenantId == tenantId)
-            .ToListAsync(cancellationToken);
-
-        var defaultWarehouse = await _dbContext.Warehouses
-            .AsNoTracking()
-            .FirstOrDefaultAsync(w => w.TenantId == tenantId && w.Type == WarehouseType.MainWarehouse, cancellationToken);
-
-        var stockMap = stockItems.ToDictionary(s => s.ProductId);
-
-        var list = new List<StockItemDto>();
-        foreach (var p in products)
+        // Products without inventory start at zero; demo quantities must never distort a real balance.
+        foreach (var product in products.Where(p => stockItems.All(s => s.ProductId != p.Id.Value)))
         {
-            var pId = p.Id.Value;
-            if (!stockMap.TryGetValue(pId, out var stock))
-            {
-                stock = StockItem.Create(
-                    tenantId,
-                    pId,
-                    10,
-                    2,
-                    "Pasillo A - Estante 1",
-                    defaultWarehouse?.Id,
-                    defaultWarehouse?.Name ?? "Depósito Central");
-                _dbContext.StockItems.Add(stock);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
-
-            if (request.WarehouseId.HasValue && stock.WarehouseId.HasValue && stock.WarehouseId.Value != request.WarehouseId.Value)
-            {
-                continue;
-            }
-
-            var avail = stock.PhysicalStock - stock.ReservedStock;
-            var status = avail <= 0 ? "OutStock" : avail <= stock.MinimumStock ? "LowStock" : "StockOK";
-
-            if (!string.IsNullOrWhiteSpace(request.Search))
-            {
-                var s = request.Search.Trim().ToLower();
-                if (!p.Name.ToLower().Contains(s) && !p.Code.ToLower().Contains(s)) continue;
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.StatusFilter) && request.StatusFilter != "All")
-            {
-                if (status != request.StatusFilter) continue;
-            }
-
-            var isCostUsd = p.PurchaseCurrency is CurrencyCode.USD_BILLETE or CurrencyCode.USD_DIVISA;
-            var isPriceUsd = p.SaleCurrency is CurrencyCode.USD_BILLETE or CurrencyCode.USD_DIVISA;
-            var costArs = p.PurchaseCurrency == CurrencyCode.ARS ? p.CostPrice : 0;
-            var costUsd = isCostUsd ? p.CostPrice : 0;
-            var priceArs = p.SaleCurrency == CurrencyCode.ARS ? p.BasePrice : 0;
-            var priceUsd = isPriceUsd ? p.BasePrice : 0;
-
-            list.Add(new StockItemDto(
-                stock.Id,
-                pId,
-                p.Code,
-                p.Name,
-                stock.WarehouseId,
-                stock.WarehouseName,
-                stock.PhysicalStock,
-                stock.ReservedStock,
-                avail,
-                stock.IncomingStock,
-                stock.ForecastedStock,
-                stock.MinimumStock,
-                stock.ReorderPoint,
-                stock.WarehouseLocation,
-                status,
-                costArs,
-                costUsd,
-                priceArs,
-                priceUsd,
-                stock.UpdatedAtUtc));
+            var stock = StockItem.Create(tenantId, product.Id.Value, 0, 0, "Sin ubicación", mainWarehouse?.Id, mainWarehouse?.Name);
+            _dbContext.StockItems.Add(stock);
+            stockItems.Add(stock);
         }
+        if (_dbContext.ChangeTracker.HasChanges()) await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return Result<IReadOnlyList<StockItemDto>>.Success(list);
+        var transit = (await _dbContext.StockTransfers.Include(t => t.Items)
+            .Where(t => t.TenantId == tenantId && t.Status == StockTransferStatus.InTransit).ToListAsync(cancellationToken))
+            .SelectMany(t => t.Items).GroupBy(i => i.ProductId).ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+        var productsById = products.ToDictionary(p => p.Id.Value);
+
+        var results = stockItems.Where(s => productsById.ContainsKey(s.ProductId))
+            .Where(s => !request.WarehouseId.HasValue || s.WarehouseId == request.WarehouseId.Value)
+            .Select(s =>
+            {
+                var product = productsById[s.ProductId];
+                var available = s.AvailableStock;
+                var status = available <= 0 ? "OutStock" : available <= s.MinimumStock ? "LowStock" : "StockOK";
+                var costUsd = product.PurchaseCurrency is CurrencyCode.USD_BILLETE or CurrencyCode.USD_DIVISA;
+                var priceUsd = product.SaleCurrency is CurrencyCode.USD_BILLETE or CurrencyCode.USD_DIVISA;
+                return new StockItemDto(s.Id, s.ProductId, product.Code, product.Name, s.WarehouseId, s.WarehouseName,
+                    s.PhysicalStock, s.ReservedStock, available, s.IncomingStock, transit.GetValueOrDefault(s.ProductId),
+                    s.ForecastedStock, s.MinimumStock, s.ReorderPoint, s.WarehouseLocation, status,
+                    product.PurchaseCurrency == CurrencyCode.ARS ? product.CostPrice : 0, costUsd ? product.CostPrice : 0,
+                    product.SaleCurrency == CurrencyCode.ARS ? product.BasePrice : 0, priceUsd ? product.BasePrice : 0, s.UpdatedAtUtc);
+            })
+            .Where(x => string.IsNullOrWhiteSpace(request.Search) || x.ProductName.Contains(request.Search.Trim(), StringComparison.OrdinalIgnoreCase) || x.ProductCode.Contains(request.Search.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Where(x => string.IsNullOrWhiteSpace(request.StatusFilter) || request.StatusFilter == "All" || x.Status == request.StatusFilter)
+            .OrderBy(x => x.ProductName).ThenBy(x => x.WarehouseName).ToList();
+        return Result<IReadOnlyList<StockItemDto>>.Success(results);
     }
 
     public async Task<Result<StockItemDto>> Handle(AdjustStockCommand request, CancellationToken cancellationToken)
@@ -289,6 +240,7 @@ internal sealed class InventoryQueryHandlers
             stock.ReservedStock,
             avail,
             stock.IncomingStock,
+            0,
             stock.ForecastedStock,
             stock.MinimumStock,
             stock.ReorderPoint,
@@ -340,12 +292,11 @@ internal sealed class InventoryQueryHandlers
             transfer.AddItem(item.ProductId, item.ProductCode, item.ProductName, item.Quantity, item.SerialNumbers, item.LotNumber);
 
             // Descontar stock de origen
-            var stock = await _dbContext.StockItems.FirstOrDefaultAsync(s => s.ProductId == item.ProductId && s.TenantId == tenantId, cancellationToken);
-            var prevStock = stock?.PhysicalStock ?? 0;
-            if (stock != null)
-            {
-                stock.TransferOut(item.Quantity);
-            }
+            var stock = await _dbContext.StockItems.FirstOrDefaultAsync(s => s.ProductId == item.ProductId && s.WarehouseId == origin.Id && s.TenantId == tenantId, cancellationToken);
+            if (stock == null)
+                return Result<StockTransferDto>.Failure(Error.Validation("Sales.Transfer.OriginStockMissing", $"No hay saldo en {origin.Name} para {item.ProductCode}."));
+            var prevStock = stock.PhysicalStock;
+            stock.TransferOut(item.Quantity);
 
             var movement = StockMovement.Create(
                 tenantId,
@@ -392,12 +343,14 @@ internal sealed class InventoryQueryHandlers
 
         foreach (var item in transfer.Items)
         {
-            var stock = await _dbContext.StockItems.FirstOrDefaultAsync(s => s.ProductId == item.ProductId && s.TenantId == tenantId, cancellationToken);
-            var prevStock = stock?.PhysicalStock ?? 0;
-            if (stock != null)
+            var stock = await _dbContext.StockItems.FirstOrDefaultAsync(s => s.ProductId == item.ProductId && s.WarehouseId == transfer.DestinationWarehouseId && s.TenantId == tenantId, cancellationToken);
+            if (stock == null)
             {
-                stock.TransferIn(item.Quantity);
+                stock = StockItem.Create(tenantId, item.ProductId, 0, 0, "Sin ubicación", transfer.DestinationWarehouseId, transfer.DestinationWarehouseName);
+                _dbContext.StockItems.Add(stock);
             }
+            var prevStock = stock.PhysicalStock;
+            stock.TransferIn(item.Quantity);
 
             var movement = StockMovement.Create(
                 tenantId,

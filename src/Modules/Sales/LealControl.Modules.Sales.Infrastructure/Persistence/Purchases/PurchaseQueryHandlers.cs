@@ -316,6 +316,7 @@ public sealed class PurchaseQueryHandlers :
         }
 
         _dbContext.Set<PurchaseReception>().Add(reception);
+        var warehouse = await _dbContext.Warehouses.FirstOrDefaultAsync(w => w.TenantId == tenantId && w.Type == WarehouseType.MainWarehouse, cancellationToken);
 
         // Incrementar stock físico en inventario
         foreach (var item in request.Items)
@@ -323,7 +324,7 @@ public sealed class PurchaseQueryHandlers :
             if (item.ProductId.HasValue)
             {
                 var stock = await _dbContext.StockItems
-                    .FirstOrDefaultAsync(s => s.ProductId == item.ProductId.Value && s.TenantId == tenantId, cancellationToken);
+                    .FirstOrDefaultAsync(s => s.ProductId == item.ProductId.Value && s.WarehouseId == (warehouse == null ? null : warehouse.Id) && s.TenantId == tenantId, cancellationToken);
 
                 if (stock != null)
                 {
@@ -331,7 +332,7 @@ public sealed class PurchaseQueryHandlers :
                 }
                 else
                 {
-                    var newStock = StockItem.Create(tenantId, item.ProductId.Value, item.Quantity, 0, request.WarehouseLocation);
+                    var newStock = StockItem.Create(tenantId, item.ProductId.Value, item.Quantity, 0, request.WarehouseLocation, warehouse?.Id, warehouse?.Name);
                     _dbContext.StockItems.Add(newStock);
                 }
 
@@ -342,8 +343,16 @@ public sealed class PurchaseQueryHandlers :
                     item.Quantity,
                     stock?.PhysicalStock ?? 0,
                     (stock?.PhysicalStock ?? 0) + item.Quantity,
+                    warehouse?.Id,
+                    warehouse?.Name,
+                    null,
+                    null,
+                    item.SerialNumber,
+                    null,
                     reception.Id,
                     "PurchaseReception",
+                    reception.ReceptionNumber,
+                    request.ReceivedBy,
                     $"Remito Proveedor #{request.SupplierRemitoNumber} ({request.SupplierName})");
 
                 _dbContext.StockMovements.Add(mov);

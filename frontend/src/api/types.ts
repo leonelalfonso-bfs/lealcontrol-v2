@@ -656,6 +656,7 @@ export type StockItem = {
   reservedStock: number;
   availableStock: number;
   incomingStock: number;
+  inTransitStock: number;
   forecastedStock: number;
   minimumStock: number;
   reorderPoint: number;

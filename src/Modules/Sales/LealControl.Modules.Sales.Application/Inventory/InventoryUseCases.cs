@@ -45,6 +45,7 @@ public sealed record StockItemDto(
     decimal ReservedStock,
     decimal AvailableStock,
     decimal IncomingStock,
+    decimal InTransitStock,
     decimal ForecastedStock,
     decimal MinimumStock,
     decimal ReorderPoint,
