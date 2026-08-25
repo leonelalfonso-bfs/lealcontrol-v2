@@ -45,6 +45,10 @@ export function CalibrationReportFormPage() {
 
   // Selected Standard Weights (IDs)
   const [selectedWeightIds, setSelectedWeightIds] = useState<string[]>([]);
+  const [weightPickerOpen, setWeightPickerOpen] = useState(false);
+  const [draftWeightIds, setDraftWeightIds] = useState<string[]>([]);
+  const [weightLotFilter, setWeightLotFilter] = useState("");
+  const [weightSearch, setWeightSearch] = useState("");
 
   // Assay 1: Visual Inspection
   const [inspLevel, setInspLevel] = useState(true);
@@ -53,22 +57,11 @@ export function CalibrationReportFormPage() {
   const [inspSeals, setInspSeals] = useState(true);
   const [inspNotes, setInspNotes] = useState("Instrumento en correctas condiciones mecánicas y estructurales.");
 
-  // Assay 2: Fidelity / repeatability. Each field cycle is always 0 → load → 0.
-  const [repLoad50, setRepLoad50] = useState<string>("22500");
-  const [rep50_1, setRep50_1] = useState<string>("0");
-  const [rep50_2, setRep50_2] = useState<string>("22500");
-  const [rep50_3, setRep50_3] = useState<string>("0");
-  const [rep50Delta1, setRep50Delta1] = useState<string>("10");
-  const [rep50Delta2, setRep50Delta2] = useState<string>("10");
-  const [rep50Delta3, setRep50Delta3] = useState<string>("10");
-
-  const [repLoad100, setRepLoad100] = useState<string>("45000");
-  const [rep100_1, setRep100_1] = useState<string>("0");
-  const [rep100_2, setRep100_2] = useState<string>("45000");
-  const [rep100_3, setRep100_3] = useState<string>("0");
-  const [rep100Delta1, setRep100Delta1] = useState<string>("10");
-  const [rep100Delta2, setRep100Delta2] = useState<string>("10");
-  const [rep100Delta3, setRep100Delta3] = useState<string>("10");
+  // Assay 2: fidelity is one repeated applied load. Truck scales use passes in both directions.
+  const [fidelityLoad, setFidelityLoad] = useState<string>("45000");
+  const [fidelityInbound, setFidelityInbound] = useState<string[]>(["45000", "45000", "45000"]);
+  const [fidelityOutbound, setFidelityOutbound] = useState<string[]>(["45000", "45000", "45000"]);
+  const [fidelityPlatform, setFidelityPlatform] = useState<string[]>(["45000", "45000", "45000", "45000", "45000"]);
 
   // Assay 3: Eccentricity (Positions). ΔL is the supplementary mass until I changes by +e.
   const [eccTestLoad, setEccTestLoad] = useState<string>("16000");
@@ -93,10 +86,6 @@ export function CalibrationReportFormPage() {
       .then(([eqs, wts]) => {
         setEquipments(eqs || []);
         setWeights(wts || []);
-        if (wts && Array.isArray(wts)) {
-          setSelectedWeightIds(wts.filter(w => w.status === "Valid").map(w => w.id));
-        }
-
         const targetId = preselectedEquipmentId || (eqs && eqs.length > 0 ? eqs[0].id : "");
         if (targetId && eqs) {
           handleSelectEquipment(targetId, eqs);
@@ -114,18 +103,15 @@ export function CalibrationReportFormPage() {
 
     setSelectedEquipment(eq);
 
-    // Operational use load is independent of the approved metrological Max.
+    // The fidelity load is editable. A practical operational load is proposed only as a starting point.
     const operationalMax = Number(eq.maximumOperationalLoad) > 0
       ? Number(eq.maximumOperationalLoad)
       : ((eq.platformType === "TruckScale" && Number(eq.maxCapacity) === 80000) ? 45000 : (eq.maxCapacity || 80000));
-    const half = operationalMax * 0.5;
-    const halfDelta = ((eq.verificationIntervalE || 20) / 2).toString();
-    setRepLoad50(half.toString());
-    setRep50_1("0"); setRep50_2(half.toString()); setRep50_3("0");
-    setRep50Delta1(halfDelta); setRep50Delta2(halfDelta); setRep50Delta3(halfDelta);
-    setRepLoad100(operationalMax.toString());
-    setRep100_1("0"); setRep100_2(operationalMax.toString()); setRep100_3("0");
-    setRep100Delta1(halfDelta); setRep100Delta2(halfDelta); setRep100Delta3(halfDelta);
+    const proposedFidelityLoad = operationalMax;
+    setFidelityLoad(proposedFidelityLoad.toString());
+    setFidelityInbound(Array(3).fill(proposedFidelityLoad.toString()));
+    setFidelityOutbound(Array(3).fill(proposedFidelityLoad.toString()));
+    setFidelityPlatform(Array(5).fill(proposedFidelityLoad.toString()));
 
     const std = eq.applicableStandard === "Res2307_80" ? "Res2307_80" : "Res25_2025";
     if (std === "Res2307_80") {
@@ -209,21 +195,16 @@ export function CalibrationReportFormPage() {
     }
   };
 
-  // Calculations in real-time. OIML-style rounding: P = I + e/2 − ΔL.
+  // Fidelity: one load, repeated observations. Its result is the observed range (max − min).
   const eInterval = Number(selectedEquipment?.verificationIntervalE || 0);
   const beforeRounding = (indication: string, deltaL: string) => (parseFloat(indication) || 0) + eInterval / 2 - (parseFloat(deltaL) || 0);
-  const fidelityCycle = (load: string, zeroStart: string, zeroStartDelta: string, indication: string, indicationDelta: string, zeroEnd: string, zeroEndDelta: string) => {
-    const p0 = beforeRounding(zeroStart, zeroStartDelta);
-    const pLoad = beforeRounding(indication, indicationDelta);
-    const pEnd = beforeRounding(zeroEnd, zeroEndDelta);
-    const loadError = pLoad - (parseFloat(load) || 0) - p0;
-    const zeroReturn = pEnd - p0;
-    return { p0, pLoad, pEnd, loadError, zeroReturn, conform: Math.abs(loadError) <= repeatabilityEmt && Math.abs(zeroReturn) <= repeatabilityEmt };
-  };
-  const rep50Cycle = fidelityCycle(repLoad50, rep50_1, rep50Delta1, rep50_2, rep50Delta2, rep50_3, rep50Delta3);
-  const rep100Cycle = fidelityCycle(repLoad100, rep100_1, rep100Delta1, rep100_2, rep100Delta2, rep100_3, rep100Delta3);
-  const rep50Ok = rep50Cycle.conform;
-  const rep100Ok = rep100Cycle.conform;
+  const fidelityPlatformType = String(selectedEquipment?.platformType ?? "");
+  const truckFidelity = fidelityPlatformType === "TruckScale" || fidelityPlatformType === "RollingLoad";
+  const fidelityReadings = (truckFidelity ? [...fidelityInbound, ...fidelityOutbound] : fidelityPlatform).map((value) => parseFloat(value) || 0);
+  const fidelityMaximum = Math.max(...fidelityReadings, 0);
+  const fidelityMinimum = fidelityReadings.length > 0 ? Math.min(...fidelityReadings) : 0;
+  const fidelityRange = fidelityMaximum - fidelityMinimum;
+  const fidelityOk = fidelityRange <= repeatabilityEmt;
 
   const eccLoadNum = parseFloat(eccTestLoad) || 0;
   const eccErrors = eccPositions.map(p => Math.abs(beforeRounding(p.indication, p.deltaL) - eccLoadNum));
@@ -237,7 +218,7 @@ export function CalibrationReportFormPage() {
   });
   const linAllOk = linErrors.every(e => e.ascOk && e.descOk);
 
-  const allAssaysPass = inspLevel && inspZero && inspTare && inspSeals && rep50Ok && rep100Ok && eccOk && linAllOk;
+  const allAssaysPass = inspLevel && inspZero && inspTare && inspSeals && fidelityOk && eccOk && linAllOk;
   const finalResult = allAssaysPass ? "Apto" : "No Apto";
 
   // Estimated Uncertainty U (k=2)
@@ -256,11 +237,14 @@ export function CalibrationReportFormPage() {
       setError(null);
 
       const repeatabilityData = {
-        method: "0 → carga → 0; P = I + e/2 − ΔL",
-        verificationIntervalE: eInterval,
-        operationalMaximumLoad: Number(selectedEquipment.maximumOperationalLoad) || selectedEquipment.maxCapacity,
-        halfOperationalLoad: { load: parseFloat(repLoad50), sequence: [{ stage: "Cero inicial", indication: Number(rep50_1), deltaL: Number(rep50Delta1), beforeRounding: rep50Cycle.p0 }, { stage: "Carga", indication: Number(rep50_2), deltaL: Number(rep50Delta2), beforeRounding: rep50Cycle.pLoad }, { stage: "Cero final", indication: Number(rep50_3), deltaL: Number(rep50Delta3), beforeRounding: rep50Cycle.pEnd }], loadError: rep50Cycle.loadError, zeroReturn: rep50Cycle.zeroReturn, emt: repeatabilityEmt, conform: rep50Ok },
-        fullOperationalLoad: { load: parseFloat(repLoad100), sequence: [{ stage: "Cero inicial", indication: Number(rep100_1), deltaL: Number(rep100Delta1), beforeRounding: rep100Cycle.p0 }, { stage: "Carga", indication: Number(rep100_2), deltaL: Number(rep100Delta2), beforeRounding: rep100Cycle.pLoad }, { stage: "Cero final", indication: Number(rep100_3), deltaL: Number(rep100Delta3), beforeRounding: rep100Cycle.pEnd }], loadError: rep100Cycle.loadError, zeroReturn: rep100Cycle.zeroReturn, emt: repeatabilityEmt, conform: rep100Ok }
+        method: truckFidelity ? "Tres pasadas de ingreso y tres de egreso con la misma carga aplicada; resultado = lectura máxima − lectura mínima." : "Cinco repeticiones con la misma carga aplicada; resultado = lectura máxima − lectura mínima.",
+        appliedLoad: parseFloat(fidelityLoad) || 0,
+        instrumentType: truckFidelity ? "Báscula de camiones / carga rodante" : "Balanza de plataforma / estacionaria",
+        readings: truckFidelity ? [
+          ...fidelityInbound.map((value, index) => ({ pass: index + 1, direction: "Ingreso", indication: parseFloat(value) || 0 })),
+          ...fidelityOutbound.map((value, index) => ({ pass: index + 1, direction: "Egreso", indication: parseFloat(value) || 0 }))
+        ] : fidelityPlatform.map((value, index) => ({ pass: index + 1, direction: "Repetición", indication: parseFloat(value) || 0 })),
+        minimum: fidelityMinimum, maximum: fidelityMaximum, range: fidelityRange, emt: repeatabilityEmt, conform: fidelityOk
       };
 
       const eccentricityData = {
@@ -316,7 +300,7 @@ export function CalibrationReportFormPage() {
         atmosphericPressureHpa: parseFloat(atmosphericPressure) || 1013,
         approvedBy: "",
         verdict: finalResult === "Apto" ? "Approved" : "Rejected",
-        maxObservedError: Math.max(eccMaxError, Math.abs(rep50Cycle.loadError), Math.abs(rep50Cycle.zeroReturn), Math.abs(rep100Cycle.loadError), Math.abs(rep100Cycle.zeroReturn), ...linErrors.flatMap(x => [x.ascErr, x.descErr])),
+        maxObservedError: Math.max(eccMaxError, fidelityRange, ...linErrors.flatMap(x => [x.ascErr, x.descErr])),
         maxAllowedError: Math.max(repeatabilityEmt, eccentricityConfig?.emt || 0, ...linRows.map(x => x.emt)),
         expandedUncertaintyK2: expandedUncertainty,
         visualInspectionJson: JSON.stringify({ level: inspLevel, zero: inspZero, tare: inspTare, seals: inspSeals, notes: inspNotes.trim(), checklist: { profile: regulatoryProfile, operationType, operationLabel: operationLabels[operationType], testPlanVersion: is2307 ? "MET-2307-1" : "MET-25-1", items: testPlanItems.map((title) => ({ title, registered: true })) } }),
@@ -475,40 +459,9 @@ export function CalibrationReportFormPage() {
             </label>
           </div>
 
-          <div>
-            <label style={{ marginBottom: 6 }}>Pesas Patrón Empleadas para el Ensayo:</label>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {weights.map((w) => {
-                const checked = selectedWeightIds.includes(w.id);
-                return (
-                  <label
-                    key={w.id}
-                    style={{
-                      display: "flex",
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                      background: checked ? "rgba(13, 148, 136, 0.12)" : "rgba(0,0,0,0.04)",
-                      padding: "6px 12px",
-                      borderRadius: 8,
-                      border: checked ? "1px solid #0d9488" : "1px solid transparent",
-                      cursor: "pointer",
-                      fontSize: "0.82rem"
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => {
-                        if (e.target.checked) setSelectedWeightIds([...selectedWeightIds, w.id]);
-                        else setSelectedWeightIds(selectedWeightIds.filter(id => id !== w.id));
-                      }}
-                    />
-                    <span><strong>{w.code}</strong> ({w.nominalValue} {w.unit} - Cl. {w.accuracyClass} - {w.certificateNumber})</span>
-                  </label>
-                );
-              })}
-            </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, padding: 12, borderRadius: 10, background: "rgba(13, 148, 136, 0.045)", border: "1px solid rgba(13, 148, 136, 0.16)" }}>
+            <div><strong style={{ display: "block" }}>Pesas patrón empleadas</strong><span className="muted" style={{ fontSize: "0.82rem" }}>{selectedWeightIds.length === 0 ? "Todavía no seleccionaste patrones." : `${selectedWeightIds.length} pesa${selectedWeightIds.length === 1 ? "" : "s"} seleccionada${selectedWeightIds.length === 1 ? "" : "s"}.`}</span></div>
+            <button type="button" className="btn" onClick={() => { setDraftWeightIds(selectedWeightIds); setWeightLotFilter(""); setWeightSearch(""); setWeightPickerOpen(true); }}>⚖️ Seleccionar pesas</button>
           </div>
         </div>
 
@@ -557,24 +510,15 @@ export function CalibrationReportFormPage() {
             </span>
           </div>
 
-          <p className="muted" style={{ marginTop: 0, fontSize: "0.82rem" }}>Cada ciclo se registra como <strong>0 → carga → 0</strong>. Para indicación digital sin resolución fina, informá ΔL: masa suplementaria acumulada que provoca el cambio de +e. El sistema conserva P antes del redondeo.</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-            {[
-              { title: "50 % de carga máxima de uso", load: repLoad50, setLoad: setRepLoad50, values: [rep50_1, rep50_2, rep50_3], setters: [setRep50_1, setRep50_2, setRep50_3], deltas: [rep50Delta1, rep50Delta2, rep50Delta3], deltaSetters: [setRep50Delta1, setRep50Delta2, setRep50Delta3], cycle: rep50Cycle },
-              { title: "100 % de carga máxima de uso", load: repLoad100, setLoad: setRepLoad100, values: [rep100_1, rep100_2, rep100_3], setters: [setRep100_1, setRep100_2, setRep100_3], deltas: [rep100Delta1, rep100Delta2, rep100Delta3], deltaSetters: [setRep100Delta1, setRep100Delta2, setRep100Delta3], cycle: rep100Cycle }
-            ].map((test) => (
-              <div key={test.title} style={{ background: "rgba(0,0,0,0.02)", padding: 14, borderRadius: 10, border: "1px solid var(--surface-border)" }}>
-                <label style={{ display: "block", fontWeight: 800, marginBottom: 10 }}>{test.title} · carga <input type="number" step="0.0001" value={test.load} onChange={(e) => test.setLoad(e.target.value)} style={{ width: 120, marginLeft: 6 }} /> {selectedEquipment?.unit}</label>
-                {["Cero inicial", "Carga", "Cero final"].map((stage, index) => (
-                  <div key={stage} style={{ display: "grid", gridTemplateColumns: "1.05fr 1fr 1fr", gap: 7, marginBottom: 7, alignItems: "end" }}>
-                    <strong style={{ fontSize: "0.8rem" }}>{stage}</strong>
-                    <label style={{ fontSize: "0.72rem" }}>Indicación I<input type="number" step="0.0001" value={test.values[index]} onChange={(e) => test.setters[index](e.target.value)} /></label>
-                    <label style={{ fontSize: "0.72rem" }}>ΔL hasta +e<input type="number" step="0.0001" value={test.deltas[index]} onChange={(e) => test.deltaSetters[index](e.target.value)} /></label>
-                  </div>
-                ))}
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: "0.8rem" }}><span>Error carga: <strong>{test.cycle.loadError.toFixed(2)}</strong> · Retorno a cero: <strong>{test.cycle.zeroReturn.toFixed(2)}</strong> {selectedEquipment?.unit}</span><span className={`badge ${test.cycle.conform ? "ok" : "prio-high"}`}>{test.cycle.conform ? "✓ Conforme" : "✗ Supera EMT"}</span></div>
-              </div>
-            ))}
+          <p className="muted" style={{ marginTop: 0, fontSize: "0.82rem" }}>{truckFidelity ? "Con la misma carga aplicada se realizan 3 pasadas de ingreso y 3 de egreso. La fidelidad es la diferencia entre la mayor y la menor indicación." : "Con la misma carga aplicada se realizan 5 repeticiones. La fidelidad es la diferencia entre la mayor y la menor indicación."}</p>
+          <div style={{ background: "rgba(0,0,0,0.02)", padding: 14, borderRadius: 10, border: "1px solid var(--surface-border)" }}>
+            <label style={{ display: "block", fontWeight: 800, marginBottom: 12 }}>Carga aplicada para fidelidad (editable)<input type="number" step="0.0001" value={fidelityLoad} onChange={(e) => setFidelityLoad(e.target.value)} style={{ width: 160, marginLeft: 8 }} /> {selectedEquipment?.unit}</label>
+            <div style={{ display: "grid", gridTemplateColumns: truckFidelity ? "1fr 1fr" : "1fr", gap: 14 }}>
+              {truckFidelity ? <>
+                {[{ title: "Ingreso", values: fidelityInbound, setter: setFidelityInbound }, { title: "Egreso", values: fidelityOutbound, setter: setFidelityOutbound }].map((group) => <div key={group.title}><strong style={{ fontSize: "0.88rem" }}>{group.title} · 3 pasadas</strong><div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 7 }}>{group.values.map((value, index) => <label key={index} style={{ fontSize: "0.72rem" }}>Pasada {index + 1}<input type="number" step="0.0001" value={value} onChange={(e) => { const copy = [...group.values]; copy[index] = e.target.value; group.setter(copy); }} /></label>)}</div></div>)}
+              </> : <div><strong style={{ fontSize: "0.88rem" }}>5 repeticiones</strong><div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginTop: 7 }}>{fidelityPlatform.map((value, index) => <label key={index} style={{ fontSize: "0.72rem" }}>Rep. {index + 1}<input type="number" step="0.0001" value={value} onChange={(e) => { const copy = [...fidelityPlatform]; copy[index] = e.target.value; setFidelityPlatform(copy); }} /></label>)}</div></div>}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14, fontSize: "0.84rem", background: "rgba(0,0,0,.03)", padding: "8px 10px", borderRadius: 8 }}><span>Menor: <strong>{fidelityMinimum.toFixed(2)}</strong> · Mayor: <strong>{fidelityMaximum.toFixed(2)}</strong> · Diferencia: <strong>{fidelityRange.toFixed(2)}</strong> {selectedEquipment?.unit}</span><span className={`badge ${fidelityOk ? "ok" : "prio-high"}`}>{fidelityOk ? "✓ Fidelidad conforme" : "✗ Supera EMT"}</span></div>
           </div>
         </div>
 
@@ -604,7 +548,8 @@ export function CalibrationReportFormPage() {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 12 }}>
             {eccPositions.map((p, idx) => {
-              const err = Math.abs((parseFloat(p.indication) || 0) - eccLoadNum);
+              const correctedError = beforeRounding(p.indication, p.deltaL) - eccLoadNum;
+              const err = Math.abs(correctedError);
               const ok = eccentricityConfig ? err <= (eccentricityConfig.emt || 20) : true;
               return (
                 <div key={p.pos} style={{ background: "rgba(0,0,0,0.02)", padding: 10, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
@@ -625,7 +570,7 @@ export function CalibrationReportFormPage() {
                     <input type="number" step="0.0001" value={p.deltaL} onChange={(e) => { const copy = [...eccPositions]; copy[idx].deltaL = e.target.value; setEccPositions(copy); }} />
                   </label>
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: "0.76rem" }}>
-                    <span className="muted">Error: {err} {selectedEquipment?.unit}</span>
+                    <span className="muted">Error corregido: {correctedError >= 0 ? `+${correctedError.toFixed(2)}` : correctedError.toFixed(2)} {selectedEquipment?.unit}</span>
                     <span style={{ color: ok ? "var(--ok)" : "#dc2626", fontWeight: 700 }}>{ok ? "✓" : "✗"}</span>
                   </div>
                 </div>
@@ -771,6 +716,21 @@ export function CalibrationReportFormPage() {
           </div>
         </div>
       </form>
+      {weightPickerOpen && (() => {
+        const validWeights = weights.filter((w) => w.status === "Valid");
+        const lots = Array.from(new Set(validWeights.map((w) => (w.lotName || "").trim()).filter(Boolean))).sort();
+        const query = weightSearch.trim().toLocaleLowerCase("es-AR");
+        const visibleWeights = validWeights.filter((w) => (!weightLotFilter || (w.lotName || "") === weightLotFilter) && (!query || [w.code, w.normalizedId, w.serialNumber, w.lotName, w.certificateNumber].filter(Boolean).join(" ").toLocaleLowerCase("es-AR").includes(query)));
+        const toggle = (id: string) => setDraftWeightIds((ids) => ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id]);
+        const selectVisible = () => setDraftWeightIds(Array.from(new Set([...draftWeightIds, ...visibleWeights.map((w) => w.id)])));
+        const total = draftWeightIds.reduce((value, id) => value + (validWeights.find((w) => w.id === id)?.nominalValue || 0), 0);
+        return <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,.56)", backdropFilter: "blur(7px)", padding: "5vh 4vw", overflow: "auto" }}><div style={{ maxWidth: 1220, margin: "0 auto", background: "#f8fafc", borderRadius: 18, boxShadow: "0 28px 90px rgba(15,23,42,.34)", overflow: "hidden" }}>
+          <div style={{ padding: "20px 24px", background: "linear-gradient(135deg, #0f766e, #0d9488)", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}><div><div style={{ fontSize: ".75rem", textTransform: "uppercase", letterSpacing: ".08em", opacity: .8 }}>Patrones de referencia</div><h2 style={{ margin: "3px 0 0", fontSize: "1.4rem" }}>Seleccionar pesas para el ensayo</h2></div><button type="button" onClick={() => setWeightPickerOpen(false)} style={{ background: "rgba(255,255,255,.16)", border: "1px solid rgba(255,255,255,.38)", color: "white", borderRadius: 9, padding: "9px 13px", cursor: "pointer" }}>✕ Cancelar</button></div>
+          <div style={{ padding: 24 }}><div style={{ display: "grid", gridTemplateColumns: "minmax(220px,.65fr) minmax(260px,1fr) auto", gap: 12, alignItems: "end", marginBottom: 18 }}><label>Lote<select value={weightLotFilter} onChange={(e) => setWeightLotFilter(e.target.value)}><option value="">Todos los lotes</option>{lots.map((lot) => <option key={lot} value={lot}>{lot}</option>)}</select></label><label>Buscar<input value={weightSearch} onChange={(e) => setWeightSearch(e.target.value)} placeholder="Código, serie, certificado..." /></label><button type="button" className="btn ghost" disabled={visibleWeights.length === 0} onClick={selectVisible}>{weightLotFilter ? "Seleccionar lote" : "Seleccionar visibles"}</button></div><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: ".86rem" }}><span>{visibleWeights.length} pesas válidas disponibles</span><strong>{draftWeightIds.length} seleccionadas · {total.toLocaleString("es-AR")} kg nominales</strong></div>
+          <div className="table-wrap" style={{ maxHeight: "52vh", overflow: "auto", border: "1px solid #e2e8f0", borderRadius: 10, background: "white" }}><table><thead><tr><th></th><th>Lote</th><th>Código / ID</th><th>Valor nominal</th><th>Clase</th><th>Certificado</th><th>Vigencia</th></tr></thead><tbody>{visibleWeights.map((w) => <tr key={w.id} style={{ background: draftWeightIds.includes(w.id) ? "rgba(13,148,136,.06)" : undefined }}><td><input type="checkbox" checked={draftWeightIds.includes(w.id)} onChange={() => toggle(w.id)} /></td><td>{w.lotName || <span className="muted">Sin lote</span>}</td><td><strong>{w.code}</strong>{w.normalizedId && <span className="muted" style={{ display: "block", fontSize: ".74rem" }}>ID {w.normalizedId}</span>}</td><td>{w.nominalValue.toLocaleString("es-AR")} {w.unit}</td><td>{w.accuracyClass}</td><td>{w.certificateNumber || "—"}</td><td>{w.expirationDate ? new Date(w.expirationDate).toLocaleDateString("es-AR") : "—"}</td></tr>)}{visibleWeights.length === 0 && <tr><td colSpan={7} className="muted" style={{ textAlign: "center", padding: 24 }}>No hay pesas válidas para este filtro.</td></tr>}</tbody></table></div></div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 24px", borderTop: "1px solid #e2e8f0", background: "white" }}><button type="button" className="btn ghost" onClick={() => setDraftWeightIds([])}>Limpiar selección</button><button type="button" className="btn" onClick={() => { setSelectedWeightIds(draftWeightIds); setWeightPickerOpen(false); }}>Confirmar selección</button></div>
+        </div></div>;
+      })()}
     </div>
   );
 }

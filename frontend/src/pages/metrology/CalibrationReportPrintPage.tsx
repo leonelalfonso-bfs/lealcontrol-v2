@@ -56,6 +56,7 @@ export function CalibrationReportPrintPage() {
   try { linearityData = typeof rawLinJson === "string" ? JSON.parse(rawLinJson) : (Array.isArray(rawLinJson) ? rawLinJson : []); } catch {}
   try { weightsUsed = typeof rawWeightsJson === "string" ? JSON.parse(rawWeightsJson) : (Array.isArray(rawWeightsJson) ? rawWeightsJson : []); } catch {}
   try { visualInspectionData = typeof rawVisualJson === "string" ? JSON.parse(rawVisualJson) : rawVisualJson; } catch {}
+  const fidelityCurrent = Array.isArray(repeatabilityData.readings) ? repeatabilityData : null;
   const fidelityHalf = repeatabilityData.halfOperationalLoad || repeatabilityData.halfMax;
   const fidelityFull = repeatabilityData.fullOperationalLoad || repeatabilityData.fullMax;
 
@@ -220,24 +221,19 @@ export function CalibrationReportPrintPage() {
         <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
           1. ENSAYO DE {stdApplied.includes("2307") ? "FIDELIDAD" : "REPETIBILIDAD"}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          {[
-            { label: "50 % de carga máxima de uso", data: fidelityHalf },
-            { label: "100 % de carga máxima de uso", data: fidelityFull }
-          ].map(({ label, data }) => data && (
-            <div key={label} style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
-              <strong>{label} ({data.load} {equipment?.unit || "kg"})</strong>
-              {data.sequence ? (
-                <div style={{ marginTop: 4 }}>
-                  <div style={{ fontSize: "0.72rem", color: "#666" }}>Ciclo 0 → carga → 0 · P = I + e/2 − ΔL</div>
-                  {data.sequence.map((row: any) => <div key={row.stage} style={{ fontSize: "0.75rem" }}>{row.stage}: I {row.indication} · ΔL {row.deltaL} · P {Number(row.beforeRounding).toFixed(2)}</div>)}
-                  <div>Error de carga: <strong>{Number(data.loadError).toFixed(2)}</strong> · retorno a cero: <strong>{Number(data.zeroReturn).toFixed(2)}</strong> {equipment?.unit || "kg"} (EMT: ±{data.emt})</div>
-                </div>
-              ) : <><div>Lecturas: {data.repetitions?.join(", ")} {equipment?.unit || "kg"}</div><div>Diferencia máxima: <strong>{data.range}</strong> {equipment?.unit || "kg"} (EMT: ±{data.emt})</div></>}
-              <div style={{ color: data.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 2 }}>Resultado: {data.conform ? "✓ Conforme" : "✗ No Conforme"}</div>
-            </div>
-          ))}
-        </div>
+        {fidelityCurrent ? (
+          <div style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
+            <strong>{fidelityCurrent.instrumentType || "Ensayo de fidelidad"} · carga aplicada: {fidelityCurrent.appliedLoad} {equipment?.unit || "kg"}</strong>
+            <div style={{ fontSize: "0.72rem", color: "#666", marginTop: 3 }}>{fidelityCurrent.method}</div>
+            <table style={{ width: "100%", marginTop: 7, fontSize: "0.76rem", borderCollapse: "collapse" }}><thead><tr><th style={{ textAlign: "left" }}>Pasada</th><th style={{ textAlign: "left" }}>Sentido</th><th style={{ textAlign: "right" }}>Indicación</th></tr></thead><tbody>{fidelityCurrent.readings.map((item: any, index: number) => <tr key={`${item.direction}-${index}`}><td>{item.pass}</td><td>{item.direction}</td><td style={{ textAlign: "right" }}>{item.indication} {equipment?.unit || "kg"}</td></tr>)}</tbody></table>
+            <div style={{ marginTop: 7 }}>Menor: <strong>{fidelityCurrent.minimum}</strong> · Mayor: <strong>{fidelityCurrent.maximum}</strong> · Diferencia: <strong>{fidelityCurrent.range}</strong> {equipment?.unit || "kg"} (EMT: ±{fidelityCurrent.emt})</div>
+            <div style={{ color: fidelityCurrent.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 2 }}>Resultado: {fidelityCurrent.conform ? "✓ Conforme" : "✗ No Conforme"}</div>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            {[{ label: "50 % de carga máxima de uso", data: fidelityHalf }, { label: "100 % de carga máxima de uso", data: fidelityFull }].map(({ label, data }) => data && <div key={label} style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}><strong>{label} ({data.load} {equipment?.unit || "kg"})</strong><div>Lecturas: {data.repetitions?.join(", ")} {equipment?.unit || "kg"}</div><div>Diferencia máxima: <strong>{data.range}</strong> {equipment?.unit || "kg"} (EMT: ±{data.emt})</div></div>)}
+          </div>
+        )}
       </div>
 
       {/* Ensayo de Excentricidad */}
