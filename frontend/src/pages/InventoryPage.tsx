@@ -16,6 +16,7 @@ export function InventoryPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
+  const [stockViewMode, setStockViewMode] = useState<"matrix" | "list">("matrix");
 
   // Warehouses State
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -226,6 +227,63 @@ export function InventoryPage() {
     setShowTransferModal(true);
   };
 
+  const handleOpenTransferForProduct = (productId: string) => {
+    if (warehouses.length < 2) {
+      alert("Se requieren al menos 2 depósitos para realizar una transferencia interna.");
+      return;
+    }
+    const prod = items.find((i) => i.productId === productId);
+    setOriginWarehouseId(warehouses[0]?.id ?? "");
+    setDestWarehouseId(warehouses[1]?.id ?? "");
+    setTransferOperator("Logística / Chofer");
+    setTransferNotes("");
+    setTransferLines([
+      {
+        productId: prod?.productId ?? items[0]?.productId ?? "",
+        productCode: prod?.productCode ?? items[0]?.productCode ?? "",
+        productName: prod?.productName ?? items[0]?.productName ?? "",
+        quantity: 1,
+        serialNumbers: "",
+        lotNumber: ""
+      }
+    ]);
+    setShowTransferModal(true);
+  };
+
+  const handleOpenAdjustForGrouped = (grouped: any, preferredWarehouseId?: string) => {
+    const targetWhId = preferredWarehouseId || selectedWarehouseId || warehouses[0]?.id || "";
+    const existingStock = (grouped.byWarehouse && grouped.byWarehouse.get(targetWhId)) || items.find((i) => i.productId === grouped.productId);
+    if (existingStock) {
+      handleOpenAdjust(existingStock);
+    } else {
+      const wh = warehouses.find((w) => w.id === targetWhId);
+      const dummy: StockItem = {
+        id: "",
+        productId: grouped.productId,
+        productCode: grouped.productCode,
+        productName: grouped.productName,
+        warehouseId: targetWhId,
+        warehouseName: wh?.name || "Depósito Central",
+        warehouseLocation: "Estantería Principal",
+        physicalStock: 0,
+        reservedStock: 0,
+        availableStock: 0,
+        incomingStock: 0,
+        inTransitStock: 0,
+        forecastedStock: 0,
+        minimumStock: grouped.minimumStock || 0,
+        reorderPoint: 0,
+        unitCostArs: grouped.unitCostArs || 0,
+        unitCostUsd: grouped.unitCostUsd || 0,
+        priceArs: 0,
+        priceUsd: 0,
+        status: "OutStock",
+        updatedAtUtc: new Date().toISOString()
+      };
+      handleOpenAdjust(dummy);
+    }
+  };
+
   const handleAddTransferLine = () => {
     const p = items[0];
     setTransferLines((prev) => [
@@ -380,15 +438,58 @@ export function InventoryPage() {
   const totalReserved = items.reduce((sum, i) => sum + i.reservedStock, 0);
   const totalIncoming = items.reduce((sum, i) => sum + i.incomingStock, 0);
   const totalInTransit = transfers.filter((t) => t.status === "InTransit").flatMap((t) => t.items).reduce((sum, i) => sum + i.quantity, 0);
-  const productTotals = Array.from(items.reduce((map, item) => {
-    const current = map.get(item.productId) || { name: item.productName, code: item.productCode, physical: 0, available: 0, minimum: 0, transit: item.inTransitStock };
-    current.physical += item.physicalStock; current.available += item.availableStock; current.minimum += item.minimumStock; current.transit = Math.max(current.transit, item.inTransitStock);
-    map.set(item.productId, current); return map;
-  }, new Map<string, { name: string; code: string; physical: number; available: number; minimum: number; transit: number }>()).values());
+  
+  const groupedProducts = Array.from(
+    items.reduce((map, item) => {
+      const existing = map.get(item.productId) || {
+        productId: item.productId,
+        productCode: item.productCode,
+        productName: item.productName,
+        minimumStock: item.minimumStock,
+        inTransitStock: item.inTransitStock,
+        totalPhysical: 0,
+        totalReserved: 0,
+        totalAvailable: 0,
+        totalIncoming: 0,
+        forecastedStock: 0,
+        status: "StockOK",
+        unitCostArs: item.unitCostArs,
+        unitCostUsd: item.unitCostUsd,
+        byWarehouse: new Map<string, StockItem>()
+      };
+      existing.totalPhysical += item.physicalStock;
+      existing.totalReserved += item.reservedStock;
+      existing.totalAvailable += item.availableStock;
+      existing.totalIncoming += item.incomingStock;
+      existing.forecastedStock += item.forecastedStock;
+      existing.inTransitStock = Math.max(existing.inTransitStock, item.inTransitStock);
+      existing.byWarehouse.set(item.warehouseId || "", item);
+
+      if (existing.totalAvailable <= 0) {
+        existing.status = "OutStock";
+      } else if (existing.totalAvailable < existing.minimumStock) {
+        existing.status = "LowStock";
+      } else {
+        existing.status = "StockOK";
+      }
+
+      map.set(item.productId, existing);
+      return map;
+    }, new Map<string, any>()).values()
+  );
+
+  const productTotals = groupedProducts.map((p) => ({
+    name: p.productName,
+    code: p.productCode,
+    physical: p.totalPhysical,
+    available: p.totalAvailable,
+    minimum: p.minimumStock,
+    transit: p.inTransitStock
+  }));
   const totalAvailable = items.reduce((sum, i) => sum + i.availableStock, 0);
   const totalValuationArs = items.reduce((sum, i) => sum + i.physicalStock * i.unitCostArs, 0);
   const totalValuationUsd = items.reduce((sum, i) => sum + i.physicalStock * i.unitCostUsd, 0);
-  const criticalCount = items.filter((i) => i.status !== "StockOK").length;
+  const criticalCount = groupedProducts.filter((i) => i.status !== "StockOK").length;
 
   return (
     <>
@@ -519,6 +620,45 @@ export function InventoryPage() {
             </div>
           </div>
 
+          {/* Selector Rápido de Depósitos / Píldoras */}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+            <button
+              type="button"
+              onClick={() => setSelectedWarehouseId("")}
+              className={`btn ${selectedWarehouseId === "" ? "" : "ghost"}`}
+              style={{
+                fontSize: "0.84rem",
+                padding: "7px 16px",
+                borderRadius: 20,
+                fontWeight: selectedWarehouseId === "" ? 700 : 500
+              }}
+            >
+              🏢 Todos los Depósitos ({totalPhysical.toLocaleString("es-AR")} u.)
+            </button>
+            {warehouses.map((wh) => {
+              const whStock = items.filter((i) => i.warehouseId === wh.id).reduce((s, i) => s + i.physicalStock, 0);
+              const isSel = selectedWarehouseId === wh.id;
+              const icon = wh.type === "MainWarehouse" ? "🏭" : wh.type === "Workshop" ? "🔬" : wh.type === "MobileUnit" ? "🚚" : "📦";
+              return (
+                <button
+                  key={wh.id}
+                  type="button"
+                  onClick={() => setSelectedWarehouseId(wh.id)}
+                  className={`btn ${isSel ? "" : "ghost"}`}
+                  style={{
+                    fontSize: "0.84rem",
+                    padding: "7px 16px",
+                    borderRadius: 20,
+                    fontWeight: isSel ? 700 : 500,
+                    borderColor: isSel ? "var(--color-primary)" : undefined
+                  }}
+                >
+                  {icon} {wh.name} ({whStock.toLocaleString("es-AR")} u.)
+                </button>
+              );
+            })}
+          </div>
+
           <div className="card pad toolbar" style={{ marginBottom: 20, justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
               <input
@@ -549,119 +689,295 @@ export function InventoryPage() {
                 <option value="OutStock">🔴 Quiebre / Sin Stock</option>
               </select>
             </div>
+
+            <div className="row" style={{ gap: 6 }}>
+              <button
+                type="button"
+                className={`btn ${stockViewMode === "matrix" ? "" : "ghost"}`}
+                style={{ fontSize: "0.82rem", padding: "6px 12px" }}
+                onClick={() => setStockViewMode("matrix")}
+              >
+                🏢 Matriz Multi-Depósito
+              </button>
+              <button
+                type="button"
+                className={`btn ${stockViewMode === "list" ? "" : "ghost"}`}
+                style={{ fontSize: "0.82rem", padding: "6px 12px" }}
+                onClick={() => setStockViewMode("list")}
+              >
+                📋 Detalle por Ubicación
+              </button>
+            </div>
           </div>
 
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div className="pad"><strong>Resumen consolidado por artículo</strong><span className="muted" style={{ marginLeft: 8 }}>Total de depósitos, tránsito y mínimo</span></div>
-            <div className="table-wrap"><table><thead><tr><th>Artículo</th><th style={{ textAlign: "right" }}>Total depósitos</th><th style={{ textAlign: "right" }}>Disponible</th><th style={{ textAlign: "right" }}>En tránsito</th><th style={{ textAlign: "right" }}>Mínimo</th></tr></thead><tbody>{productTotals.map((item) => <tr key={item.code}><td><strong>{item.code}</strong> · {item.name}</td><td style={{ textAlign: "right" }}>{item.physical.toLocaleString("es-AR")}</td><td style={{ textAlign: "right" }}>{item.available.toLocaleString("es-AR")}</td><td style={{ textAlign: "right", color: "#7c3aed" }}>{item.transit.toLocaleString("es-AR")}</td><td style={{ textAlign: "right" }}>{item.minimum.toLocaleString("es-AR")}</td></tr>)}</tbody></table></div>
-          </div>
-          <div className="card">
-            {loading ? (
-              <p className="pad muted">Cargando matriz de inventario en tiempo real…</p>
-            ) : items.length === 0 ? (
-              <p className="pad muted" style={{ textAlign: "center" }}>No hay artículos registrados en este depósito o filtro.</p>
-            ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Artículo / Código</th>
-                      <th>Depósito & Ubicación</th>
-                      <th style={{ textAlign: "right" }}>Stock Físico</th>
-                      <th style={{ textAlign: "right" }}>Reservado</th>
-                      <th style={{ textAlign: "right" }}>Disponible</th>
-                      <th style={{ textAlign: "right" }}>Entrante</th>
-                      <th style={{ textAlign: "right" }}>Proyectado</th>
-                      <th style={{ textAlign: "right" }}>Mínimo</th>
-                      <th>Estado</th>
-                      <th style={{ textAlign: "right" }}>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <strong>📦 {item.productCode}</strong>
-                          <div className="muted" style={{ fontSize: "0.85rem" }}>{item.productName}</div>
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 500 }}>🏢 {item.warehouseName}</div>
-                          <div className="muted" style={{ fontSize: "0.78rem" }}>📍 {item.warehouseLocation || "Estantería Principal"}</div>
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <strong>{item.physicalStock.toLocaleString("es-AR")} u.</strong>
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          {item.reservedStock > 0 ? (
-                            <span className="badge warn" style={{ fontSize: "0.78rem" }}>
-                              🔒 {item.reservedStock.toLocaleString("es-AR")}
-                            </span>
-                          ) : (
-                            <span className="muted">0</span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <strong
-                            style={{
-                              color: item.availableStock > 0 ? "#059669" : "#dc2626",
-                              fontSize: "0.95rem"
-                            }}
-                          >
-                            {item.availableStock.toLocaleString("es-AR")} u.
-                          </strong>
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          {item.incomingStock > 0 ? (
-                            <span style={{ color: "#2563eb", fontWeight: 600 }}>
-                              📥 +{item.incomingStock.toLocaleString("es-AR")}
-                            </span>
-                          ) : (
-                            <span className="muted">—</span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <span className="muted">{item.forecastedStock.toLocaleString("es-AR")} u.</span>
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <span className="muted">{item.minimumStock.toLocaleString("es-AR")} u.</span>
-                        </td>
-                        <td>
-                          {item.status === "StockOK" && <span className="badge ok">🟢 Óptimo</span>}
-                          {item.status === "LowStock" && <span className="badge warn">🟡 Reposición</span>}
-                          {item.status === "OutStock" && <span className="badge prio-high">🔴 Sin Stock</span>}
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
-                            <button
-                              type="button"
-                              className="btn ghost"
-                              style={{ padding: "4px 8px", fontSize: "0.78rem" }}
-                              title="Ajuste de Conteo Físico"
-                              onClick={() => handleOpenAdjust(item)}
-                            >
-                              ⚖️ Recuento
-                            </button>
-                            <button
-                              type="button"
-                              className="btn ghost"
-                              style={{ padding: "4px 8px", fontSize: "0.78rem" }}
-                              title="Ver Kardex"
-                              onClick={() => {
-                                setKardexProductFilter(item.productId);
-                                setActiveTab("kardex");
+          {/* VISTA 1: MATRIZ MULTI-DEPÓSITO */}
+          {stockViewMode === "matrix" ? (
+            <div className="card">
+              {loading ? (
+                <p className="pad muted">Cargando matriz de inventario en tiempo real…</p>
+              ) : groupedProducts.length === 0 ? (
+                <p className="pad muted" style={{ textAlign: "center" }}>No hay artículos registrados para este filtro.</p>
+              ) : (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style={{ minWidth: 220 }}>Artículo / Código</th>
+                        {/* Columnas dinámicas por cada depósito */}
+                        {warehouses
+                          .filter((w) => !selectedWarehouseId || w.id === selectedWarehouseId)
+                          .map((w) => {
+                            const whTotal = items.filter((i) => i.warehouseId === w.id).reduce((s, i) => s + i.physicalStock, 0);
+                            return (
+                              <th key={w.id} style={{ textAlign: "right", minWidth: 120, background: "rgba(13, 148, 136, 0.03)" }}>
+                                <div>{w.type === "MainWarehouse" ? "🏭" : w.type === "Workshop" ? "🔬" : "🚚"} {w.name}</div>
+                                <span className="muted" style={{ fontSize: "0.72rem", fontWeight: "normal" }}>
+                                  ({whTotal.toLocaleString("es-AR")} u.)
+                                </span>
+                              </th>
+                            );
+                          })}
+                        <th style={{ textAlign: "right", minWidth: 100 }}>Total Físico</th>
+                        <th style={{ textAlign: "right", minWidth: 90 }}>En Tránsito</th>
+                        <th style={{ textAlign: "right", minWidth: 80 }}>Reservado</th>
+                        <th style={{ textAlign: "right", minWidth: 100 }}>Disponible</th>
+                        <th style={{ textAlign: "right", minWidth: 80 }}>Mínimo</th>
+                        <th>Estado</th>
+                        <th style={{ textAlign: "right", minWidth: 160 }}>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groupedProducts.map((p) => (
+                        <tr key={p.productId}>
+                          <td>
+                            <strong>📦 {p.productCode}</strong>
+                            <div className="muted" style={{ fontSize: "0.84rem" }}>{p.productName}</div>
+                          </td>
+
+                          {/* Celdas por depósito */}
+                          {warehouses
+                            .filter((w) => !selectedWarehouseId || w.id === selectedWarehouseId)
+                            .map((w) => {
+                              const st = p.byWarehouse.get(w.id);
+                              const qty = st ? st.physicalStock : 0;
+                              return (
+                                <td
+                                  key={w.id}
+                                  style={{
+                                    textAlign: "right",
+                                    background: qty > 0 ? "rgba(13, 148, 136, 0.02)" : undefined
+                                  }}
+                                >
+                                  {qty > 0 ? (
+                                    <div>
+                                      <strong style={{ fontSize: "0.95rem" }}>{qty.toLocaleString("es-AR")} u.</strong>
+                                      {st && st.reservedStock > 0 && (
+                                        <div className="muted" style={{ fontSize: "0.72rem", color: "#d97706" }}>
+                                          🔒 {st.reservedStock} res.
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="muted" style={{ opacity: 0.35 }}>—</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+
+                          <td style={{ textAlign: "right" }}>
+                            <strong style={{ fontSize: "1rem" }}>{p.totalPhysical.toLocaleString("es-AR")} u.</strong>
+                          </td>
+
+                          <td style={{ textAlign: "right" }}>
+                            {p.inTransitStock > 0 ? (
+                              <strong style={{ color: "#7c3aed" }}>🚚 {p.inTransitStock.toLocaleString("es-AR")}</strong>
+                            ) : (
+                              <span className="muted">—</span>
+                            )}
+                          </td>
+
+                          <td style={{ textAlign: "right" }}>
+                            {p.totalReserved > 0 ? (
+                              <span className="badge warn" style={{ fontSize: "0.78rem" }}>
+                                🔒 {p.totalReserved.toLocaleString("es-AR")}
+                              </span>
+                            ) : (
+                              <span className="muted">0</span>
+                            )}
+                          </td>
+
+                          <td style={{ textAlign: "right" }}>
+                            <strong
+                              style={{
+                                color: p.totalAvailable > 0 ? "#059669" : "#dc2626",
+                                fontSize: "0.98rem"
                               }}
                             >
-                              📜 Kardex
-                            </button>
-                          </div>
-                        </td>
+                              {p.totalAvailable.toLocaleString("es-AR")} u.
+                            </strong>
+                          </td>
+
+                          <td style={{ textAlign: "right" }}>
+                            <span className="muted">{p.minimumStock.toLocaleString("es-AR")} u.</span>
+                          </td>
+
+                          <td>
+                            {p.status === "StockOK" && <span className="badge ok">🟢 Óptimo</span>}
+                            {p.status === "LowStock" && <span className="badge warn">🟡 Reposición</span>}
+                            {p.status === "OutStock" && <span className="badge prio-high">🔴 Sin Stock</span>}
+                          </td>
+
+                          <td style={{ textAlign: "right" }}>
+                            <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
+                              <button
+                                type="button"
+                                className="btn ghost"
+                                style={{ padding: "4px 8px", fontSize: "0.78rem" }}
+                                title="Transferir entre depósitos"
+                                onClick={() => handleOpenTransferForProduct(p.productId)}
+                              >
+                                🚚 Transferir
+                              </button>
+                              <button
+                                type="button"
+                                className="btn ghost"
+                                style={{ padding: "4px 8px", fontSize: "0.78rem" }}
+                                title="Ajuste / Recuento de Stock"
+                                onClick={() => handleOpenAdjustForGrouped(p)}
+                              >
+                                ⚖️ Recuento
+                              </button>
+                              <button
+                                type="button"
+                                className="btn ghost"
+                                style={{ padding: "4px 8px", fontSize: "0.78rem" }}
+                                title="Ver Kardex"
+                                onClick={() => {
+                                  setKardexProductFilter(p.productId);
+                                  setActiveTab("kardex");
+                                }}
+                              >
+                                📜
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* VISTA 2: DETALLE POR UBICACIÓN (LISTA) */
+            <div className="card">
+              {loading ? (
+                <p className="pad muted">Cargando matriz de inventario en tiempo real…</p>
+              ) : items.length === 0 ? (
+                <p className="pad muted" style={{ textAlign: "center" }}>No hay artículos registrados en este depósito o filtro.</p>
+              ) : (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Artículo / Código</th>
+                        <th>Depósito & Ubicación</th>
+                        <th style={{ textAlign: "right" }}>Stock Físico</th>
+                        <th style={{ textAlign: "right" }}>Reservado</th>
+                        <th style={{ textAlign: "right" }}>Disponible</th>
+                        <th style={{ textAlign: "right" }}>Entrante</th>
+                        <th style={{ textAlign: "right" }}>Proyectado</th>
+                        <th style={{ textAlign: "right" }}>Mínimo</th>
+                        <th>Estado</th>
+                        <th style={{ textAlign: "right" }}>Acciones</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                    </thead>
+                    <tbody>
+                      {items.map((item) => (
+                        <tr key={item.id}>
+                          <td>
+                            <strong>📦 {item.productCode}</strong>
+                            <div className="muted" style={{ fontSize: "0.85rem" }}>{item.productName}</div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 500 }}>🏢 {item.warehouseName}</div>
+                            <div className="muted" style={{ fontSize: "0.78rem" }}>📍 {item.warehouseLocation || "Estantería Principal"}</div>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <strong>{item.physicalStock.toLocaleString("es-AR")} u.</strong>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            {item.reservedStock > 0 ? (
+                              <span className="badge warn" style={{ fontSize: "0.78rem" }}>
+                                🔒 {item.reservedStock.toLocaleString("es-AR")}
+                              </span>
+                            ) : (
+                              <span className="muted">0</span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <strong
+                              style={{
+                                color: item.availableStock > 0 ? "#059669" : "#dc2626",
+                                fontSize: "0.95rem"
+                              }}
+                            >
+                              {item.availableStock.toLocaleString("es-AR")} u.
+                            </strong>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            {item.incomingStock > 0 ? (
+                              <span style={{ color: "#2563eb", fontWeight: 600 }}>
+                                📥 +{item.incomingStock.toLocaleString("es-AR")}
+                              </span>
+                            ) : (
+                              <span className="muted">—</span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <span className="muted">{item.forecastedStock.toLocaleString("es-AR")} u.</span>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <span className="muted">{item.minimumStock.toLocaleString("es-AR")} u.</span>
+                          </td>
+                          <td>
+                            {item.status === "StockOK" && <span className="badge ok">🟢 Óptimo</span>}
+                            {item.status === "LowStock" && <span className="badge warn">🟡 Reposición</span>}
+                            {item.status === "OutStock" && <span className="badge prio-high">🔴 Sin Stock</span>}
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
+                              <button
+                                type="button"
+                                className="btn ghost"
+                                style={{ padding: "4px 8px", fontSize: "0.78rem" }}
+                                title="Ajuste de Conteo Físico"
+                                onClick={() => handleOpenAdjust(item)}
+                              >
+                                ⚖️ Recuento
+                              </button>
+                              <button
+                                type="button"
+                                className="btn ghost"
+                                style={{ padding: "4px 8px", fontSize: "0.78rem" }}
+                                title="Ver Kardex"
+                                onClick={() => {
+                                  setKardexProductFilter(item.productId);
+                                  setActiveTab("kardex");
+                                }}
+                              >
+                                📜 Kardex
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
