@@ -28,6 +28,7 @@ import { ProductsPage } from "./pages/ProductsPage";
 import { PurchaseArcaImportPage } from "./pages/PurchaseArcaImportPage";
 import { PurchaseInvoiceFormPage } from "./pages/PurchaseInvoiceFormPage";
 import { PurchaseInvoicesPage } from "./pages/PurchaseInvoicesPage";
+import { PurchaseInvoicePrintPage } from "./pages/PurchaseInvoicePrintPage";
 import { PurchaseOrderFormPage } from "./pages/PurchaseOrderFormPage";
 import { PurchaseOrderPrintPage } from "./pages/PurchaseOrderPrintPage";
 import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
@@ -521,6 +522,8 @@ export function App() {
               <Route path="/compras/recepciones/nueva" element={<PurchaseReceptionFormPage />} />
               <Route path="/compras/facturas" element={<PurchaseInvoicesPage />} />
               <Route path="/compras/facturas/nueva" element={<PurchaseInvoiceFormPage />} />
+              <Route path="/compras/facturas/:id" element={<PurchaseInvoicePrintPage />} />
+              <Route path="/compras/facturas/:id/imprimir" element={<PurchaseInvoicePrintPage />} />
               <Route path="/compras/arca" element={<PurchaseArcaImportPage />} />
 
               {/* Inventory & Suppliers Routes */}

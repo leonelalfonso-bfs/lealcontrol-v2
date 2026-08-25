@@ -212,6 +212,7 @@ export function PurchaseInvoicesPage() {
                   <th style={{ padding: "10px 8px", textAlign: "right" }}>Total</th>
                   <th style={{ padding: "10px 8px", textAlign: "center" }}>CAE</th>
                   <th style={{ padding: "10px 8px", textAlign: "center" }}>Ingreso de Stock</th>
+                  <th style={{ padding: "10px 8px", textAlign: "center" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -233,8 +234,20 @@ export function PurchaseInvoicesPage() {
                           {inv.invoiceType}
                         </span>
                       </td>
-                      <td style={{ padding: "12px 8px", fontWeight: "bold", fontFamily: "monospace" }}>
-                        {inv.formattedNumber}
+                      <td style={{ padding: "12px 8px" }}>
+                        <Link
+                          to={`/compras/facturas/${inv.id}`}
+                          style={{
+                            fontWeight: "bold",
+                            fontFamily: "monospace",
+                            color: "#0284c7",
+                            textDecoration: "none",
+                            fontSize: "0.92rem"
+                          }}
+                          title="Ver detalle y comprobante completo"
+                        >
+                          {inv.formattedNumber}
+                        </Link>
                       </td>
                       <td style={{ padding: "12px 8px", fontSize: "0.9rem" }}>
                         {new Date(inv.issueDate).toLocaleDateString("es-AR")}
@@ -320,6 +333,22 @@ export function PurchaseInvoicesPage() {
                             📋 No inventariable
                           </span>
                         )}
+                      </td>
+                      <td style={{ padding: "12px 8px", textAlign: "center" }}>
+                        <Link
+                          to={`/compras/facturas/${inv.id}`}
+                          className="btn btn-outline compact"
+                          style={{
+                            fontSize: "0.78rem",
+                            padding: "4px 10px",
+                            fontWeight: 600,
+                            color: "#0284c7",
+                            borderColor: "#cbd5e1"
+                          }}
+                          title="Ver comprobante completo con detalle de renglones y cantidades"
+                        >
+                          👁️ Ver
+                        </Link>
                       </td>
                     </tr>
                   );
