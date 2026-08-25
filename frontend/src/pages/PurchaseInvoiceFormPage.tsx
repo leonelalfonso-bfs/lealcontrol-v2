@@ -14,6 +14,9 @@ interface InvoiceRow {
   vatRate: number;
 }
 
+const money = (n: number, c = "ARS") =>
+  new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n);
+
 export function PurchaseInvoiceFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -150,6 +153,31 @@ export function PurchaseInvoiceFormPage() {
     }
   };
 
+  const handleProductSelect = (index: number, prodId: string) => {
+    const updated = [...items];
+    if (!prodId) {
+      updated[index] = {
+        ...updated[index],
+        productId: undefined,
+        code: "COMPRA",
+        description: updated[index].description || "Insumos / Servicios Generales"
+      };
+    } else {
+      const p = products.find((x) => x.id === prodId);
+      if (p) {
+        updated[index] = {
+          ...updated[index],
+          productId: p.id,
+          code: p.code,
+          description: p.name,
+          unitPrice: (p as any).costPrice || (p as any).price || updated[index].unitPrice || 0,
+          vatRate: (p as any).vatRate || updated[index].vatRate || 21
+        };
+      }
+    }
+    setItems(updated);
+  };
+
   const handleItemChange = (index: number, field: keyof InvoiceRow, value: any) => {
     const updated = [...items];
     updated[index] = { ...updated[index], [field]: value };
@@ -159,7 +187,7 @@ export function PurchaseInvoiceFormPage() {
   const addItemRow = () => {
     setItems([
       ...items,
-      { code: "ITEM", description: "", quantity: 1, unitPrice: 0, vatRate: 21 }
+      { code: "COMPRA", description: "", quantity: 1, unitPrice: 0, vatRate: 21 }
     ]);
   };
 
@@ -445,75 +473,98 @@ export function PurchaseInvoiceFormPage() {
               2. Detalle de Conceptos Facturados & IVA
             </h3>
 
-            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px" }}>
-              <thead>
-                <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", fontSize: "0.82rem", color: "var(--ink-soft)", textAlign: "left" }}>
-                  <th style={{ width: "50%", padding: "8px 4px" }}>Descripción / Concepto</th>
-                  <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>Cant.</th>
-                  <th style={{ width: "18%", padding: "8px 4px", textAlign: "right" }}>Precio Neto U.</th>
-                  <th style={{ width: "14%", padding: "8px 4px", textAlign: "center" }}>Alícuota IVA</th>
-                  <th style={{ width: "8%", padding: "8px 4px" }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it, idx) => (
-                  <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                    <td style={{ padding: "8px 4px" }}>
-                      <input
-                        type="text"
-                        required
-                        value={it.description}
-                        onChange={(e) => handleItemChange(idx, "description", e.target.value)}
-                        style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                      />
-                    </td>
-                    <td style={{ padding: "8px 4px" }}>
-                      <input
-                        type="number"
-                        step="1"
-                        min="0.01"
-                        required
-                        value={it.quantity}
-                        onChange={(e) => handleItemChange(idx, "quantity", parseFloat(e.target.value) || 1)}
-                        style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "center", fontSize: "0.85rem" }}
-                      />
-                    </td>
-                    <td style={{ padding: "8px 4px" }}>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        required
-                        value={it.unitPrice}
-                        onChange={(e) => handleItemChange(idx, "unitPrice", parseFloat(e.target.value) || 0)}
-                        style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "right", fontFamily: "monospace", fontSize: "0.85rem" }}
-                      />
-                    </td>
-                    <td style={{ padding: "8px 4px" }}>
-                      <select
-                        value={it.vatRate}
-                        onChange={(e) => handleItemChange(idx, "vatRate", parseFloat(e.target.value))}
-                        style={{ width: "100%", padding: "6px 4px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
-                      >
-                        <option value="21">21.0%</option>
-                        <option value="10.5">10.5%</option>
-                        <option value="27">27.0%</option>
-                        <option value="0">0% (Exento)</option>
-                      </select>
-                    </td>
-                    <td style={{ padding: "8px 4px", textAlign: "center" }}>
-                      <button
-                        type="button"
-                        onClick={() => removeItemRow(idx)}
-                        style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "1.1rem" }}
-                      >
-                        ✕
-                      </button>
-                    </td>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px" }}>
+                <thead>
+                  <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", fontSize: "0.82rem", color: "var(--ink-soft)", textAlign: "left" }}>
+                    <th style={{ width: "28%", padding: "8px 4px" }}>Catálogo / Insumo</th>
+                    <th style={{ width: "28%", padding: "8px 4px" }}>Descripción / Detalle Factura</th>
+                    <th style={{ width: "9%", padding: "8px 4px", textAlign: "center" }}>Cant.</th>
+                    <th style={{ width: "14%", padding: "8px 4px", textAlign: "right" }}>Precio Neto U.</th>
+                    <th style={{ width: "11%", padding: "8px 4px", textAlign: "center" }}>Alícuota IVA</th>
+                    <th style={{ width: "10%", padding: "8px 4px", textAlign: "right" }}>Subtotal</th>
+                    <th style={{ width: "4%", padding: "8px 4px" }}></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {items.map((it, idx) => (
+                    <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                      <td style={{ padding: "8px 4px" }}>
+                        <select
+                          value={it.productId || ""}
+                          onChange={(e) => handleProductSelect(idx, e.target.value)}
+                          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.83rem" }}
+                        >
+                          <option value="">✍️ (Ítem / Concepto libre)</option>
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              [{p.code}] {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td style={{ padding: "8px 4px" }}>
+                        <input
+                          type="text"
+                          required
+                          value={it.description}
+                          onChange={(e) => handleItemChange(idx, "description", e.target.value)}
+                          placeholder="Concepto o descripción..."
+                          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
+                        />
+                      </td>
+                      <td style={{ padding: "8px 4px" }}>
+                        <input
+                          type="number"
+                          step="1"
+                          min="1"
+                          required
+                          value={it.quantity}
+                          onChange={(e) => handleItemChange(idx, "quantity", parseInt(e.target.value, 10) || 1)}
+                          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "center", fontSize: "0.85rem" }}
+                        />
+                      </td>
+                      <td style={{ padding: "8px 4px" }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          required
+                          value={it.unitPrice}
+                          onChange={(e) => handleItemChange(idx, "unitPrice", parseFloat(e.target.value) || 0)}
+                          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "right", fontFamily: "monospace", fontSize: "0.85rem" }}
+                        />
+                      </td>
+                      <td style={{ padding: "8px 4px" }}>
+                        <select
+                          value={it.vatRate}
+                          onChange={(e) => handleItemChange(idx, "vatRate", parseFloat(e.target.value))}
+                          style={{ width: "100%", padding: "6px 4px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
+                        >
+                          <option value="21">21.0%</option>
+                          <option value="10.5">10.5%</option>
+                          <option value="27">27.0%</option>
+                          <option value="0">0% (Exento)</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: "8px 4px", textAlign: "right", fontWeight: 600, fontSize: "0.85rem" }}>
+                        {money(it.quantity * it.unitPrice)}
+                      </td>
+                      <td style={{ padding: "8px 4px", textAlign: "center" }}>
+                        <button
+                          type="button"
+                          onClick={() => removeItemRow(idx)}
+                          style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "1.1rem" }}
+                          title="Eliminar este concepto"
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <button type="button" onClick={addItemRow} className="btn btn-outline" style={{ fontSize: "0.85rem" }}>
               + Agregar Concepto
