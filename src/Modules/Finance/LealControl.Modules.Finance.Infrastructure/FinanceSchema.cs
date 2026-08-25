@@ -53,5 +53,24 @@ public static class FinanceSchema
           ""RetentionType"" varchar(80), ""RetentionCertificate"" varchar(120), ""Notes"" varchar(500), ""CreatedAtUtc"" timestamptz NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ""IX_CollectionReceiptLines_Receipt"" ON finance.""CollectionReceiptLines"" (""ReceiptId"");
+
+        CREATE TABLE IF NOT EXISTS finance.""FinancialConcepts"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""Code"" varchar(80) NOT NULL, ""Name"" varchar(180) NOT NULL,
+          ""Direction"" integer NOT NULL, ""IsActive"" boolean NOT NULL DEFAULT true, ""RequiresCounterparty"" boolean NOT NULL DEFAULT false,
+          ""RequiresInstrument"" boolean NOT NULL DEFAULT false, ""CashFlowCategory"" varchar(120), ""Notes"" varchar(800),
+          ""CreatedAtUtc"" timestamptz NOT NULL, ""UpdatedAtUtc"" timestamptz
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_FinancialConcepts_Tenant_Code"" ON finance.""FinancialConcepts"" (""TenantId"", ""Code"");
+        CREATE TABLE IF NOT EXISTS finance.""FinancialConceptRules"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""FinancialConceptId"" uuid NOT NULL, ""AccountId"" uuid,
+          ""MovementKind"" integer, ""MatchMode"" varchar(24) NOT NULL, ""Pattern"" varchar(300) NOT NULL, ""Priority"" integer NOT NULL DEFAULT 100,
+          ""IsActive"" boolean NOT NULL DEFAULT true, ""CreatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ""IX_FinancialConceptRules_Tenant_Priority"" ON finance.""FinancialConceptRules"" (""TenantId"", ""Priority"");
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""ConceptId"" uuid;
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""ConceptRuleId"" uuid;
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""ClassificationStatus"" integer NOT NULL DEFAULT 0;
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""ClassificationNote"" varchar(500);
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""ClassifiedAtUtc"" timestamptz;
         ", cancellationToken);
 }

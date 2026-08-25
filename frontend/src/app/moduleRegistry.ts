@@ -215,6 +215,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     items: [
       { path: "/finanzas", label: "Disponibilidad", icon: "💵" },
       { path: "/finanzas/bancos", label: "Bancos y cajas", icon: "🏦" },
+      { path: "/finanzas/conceptos", label: "Conceptos y reglas", icon: "🏷️" },
       { path: "/finanzas/echeqs", label: "eCheqs", icon: "🎫" },
       { path: "/finanzas/cuenta-corriente", label: "Cuenta corriente", icon: "⚖️" },
       { path: "/finanzas/cobranzas", label: "Recibos de cobro", icon: "🧾" },

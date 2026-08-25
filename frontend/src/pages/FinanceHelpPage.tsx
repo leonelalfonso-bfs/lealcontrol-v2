@@ -13,7 +13,10 @@ export function FinanceHelpPage() {
           <Link to="/finanzas/bancos" className="btn btn-outline">
             🏦 Cuentas & Bancos
           </Link>
-          <Link to="/finanzas/echeqs" className="btn btn-primary" style={{ background: "#0d9488" }}>
+          <Link to="/finanzas/conceptos" className="btn btn-primary" style={{ background: "#0d9488" }}>
+            🏷️ Conceptos y reglas
+          </Link>
+          <Link to="/finanzas/echeqs" className="btn btn-outline">
             🎫 Cartera de eCheqs
           </Link>
         </div>
@@ -33,9 +36,19 @@ export function FinanceHelpPage() {
           </ul>
         </section>
 
-        {/* Card 2: Cartera de Cheques & eCheqs */}
         <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>2. Cartera de eCheqs & Cheques Físicos</h2>
+          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>2. Conceptos, reglas y conciliación</h2>
+          <p>Los movimientos importados conservan su información original y se clasifican antes de usarse en los circuitos operativos.</p>
+          <ul>
+            <li><strong>Conceptos de tesorería:</strong> son comunes a bancos, cajas, billeteras y plataformas; no dependen de Contabilidad.</li>
+            <li><strong>Reglas automáticas:</strong> sugieren un concepto por leyenda, cuenta y tipo de movimiento. Nunca confirman por sí solas.</li>
+            <li><strong>Estados separados:</strong> clasificación, conciliación y contabilización son procesos distintos y auditables.</li>
+          </ul>
+        </section>
+
+        {/* Card 3: Cartera de Cheques & eCheqs */}
+        <section className="card pad stack">
+          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>3. Cartera de eCheqs & Cheques Físicos</h2>
           <p>
             Ciclo de vida completo de valores recibidos y emitidos:
           </p>
@@ -48,7 +61,7 @@ export function FinanceHelpPage() {
 
         {/* Card 3: Cuentas Corrientes & Recibos de Cobro */}
         <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>3. Cuentas Corrientes & Recibos de Cobro</h2>
+          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>4. Cuentas Corrientes & Recibos de Cobro</h2>
           <p>
             Gestión de créditos comerciales y retenciones impositivas:
           </p>

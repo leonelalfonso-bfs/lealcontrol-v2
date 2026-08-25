@@ -64,12 +64,7 @@ export function CollectionReceiptsWorkspacePage() {
     });
     const loadMovements = async (id: string) => {
         if (!id) return;
-        setMovements(
-            (await api.listFinanceMovements(id)).filter(
-                (m: Movement) =>
-                    m.kind === "Credit" && m.reconciliationStatus !== 2,
-            ),
-        );
+        setMovements(await api.listCollectionAvailableMovements(id));
     };
     const load = async () => {
         try {
