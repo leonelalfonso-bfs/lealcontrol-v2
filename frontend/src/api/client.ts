@@ -260,9 +260,55 @@ export const api = {
   updateTenantUser: (id: string, body: { fullName: string; role: string; isActive: boolean; password?: string; allowedModulesJson?: string }) =>
     request<import("./types").TenantUser>(`/api/v1/company/users/${id}`, { method: "PUT", body: JSON.stringify(body) }),
 
-  // Suppliers Methods
-  listSuppliers: (search = "") => request<import("./types").Supplier[]>(`/api/v1/crm/suppliers${search ? `?search=${encodeURIComponent(search)}` : ""}`),
-  getSupplier: (id: string) => request<import("./types").Supplier>(`/api/v1/crm/suppliers/${id}`),
+  // Suppliers Methods (Unified Directory)
+  listSuppliers: async (search = ""): Promise<import("./types").Supplier[]> => {
+    try {
+      const paged = await request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=200&search=${encodeURIComponent(search)}&role=supplier`);
+      if (paged.items && paged.items.length > 0) {
+        return paged.items.map(s => ({
+          id: s.id,
+          legalName: s.legalName,
+          tradeName: s.tradeName,
+          documentType: s.documentType,
+          documentNumber: s.documentNumber,
+          taxCondition: s.taxCondition,
+          email: s.email,
+          phone: s.phone,
+          createdAtUtc: new Date().toISOString()
+        }));
+      }
+      const all = await request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=200&search=${encodeURIComponent(search)}`);
+      const supps = (all.items || []).filter(x => x.isSupplier);
+      const target = supps.length > 0 ? supps : all.items || [];
+      return target.map(s => ({
+        id: s.id,
+        legalName: s.legalName,
+        tradeName: s.tradeName,
+        documentType: s.documentType,
+        documentNumber: s.documentNumber,
+        taxCondition: s.taxCondition,
+        email: s.email,
+        phone: s.phone,
+        createdAtUtc: new Date().toISOString()
+      }));
+    } catch {
+      return [];
+    }
+  },
+  getSupplier: async (id: string): Promise<import("./types").Supplier> => {
+    const c = await request<CustomerDetail>(`/api/v1/crm/customers/${id}`);
+    return {
+      id: c.id,
+      legalName: c.legalName,
+      tradeName: c.tradeName,
+      documentType: c.documentType,
+      documentNumber: c.documentNumber,
+      taxCondition: c.taxCondition,
+      email: c.email,
+      phone: c.phone,
+      createdAtUtc: new Date().toISOString()
+    };
+  },
   createSupplier: (body: import("./types").SupplierWrite) =>
     request<import("./types").Supplier>("/api/v1/crm/suppliers", { method: "POST", body: JSON.stringify(body) }),
   updateSupplier: (id: string, body: import("./types").SupplierWrite) =>
