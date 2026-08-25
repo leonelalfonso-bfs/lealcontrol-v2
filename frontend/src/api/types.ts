@@ -1797,5 +1797,73 @@ export type BatchPostingExecuteResponse = {
   exceptions: string[];
 };
 
+export type PaymentOrderLine = {
+  id: string;
+  paymentOrderId: string;
+  method: "Cash" | "BankTransfer" | "ChequeOwn" | "ChequeThirdParty" | "Retention" | string;
+  amount: number;
+  currency: string;
+  accountId?: string | null;
+  bankMovementId?: string | null;
+  chequeId?: string | null;
+  retentionType?: string | null;
+  retentionCertificate?: string | null;
+  notes?: string | null;
+  createdAtUtc: string;
+};
 
+export type PaymentOrderImputation = {
+  id: string;
+  paymentOrderId: string;
+  purchaseInvoiceId: string;
+  invoiceNumber: string;
+  invoiceTotal: number;
+  amountImputed: number;
+  createdAtUtc: string;
+};
 
+export type PaymentOrder = {
+  id: string;
+  supplierId?: string | null;
+  supplierName: string;
+  supplierTaxId?: string | null;
+  orderNumber: string;
+  amount: number;
+  currency: string;
+  paymentDateUtc: string;
+  notes?: string | null;
+  status: string;
+  createdAtUtc: string;
+  linesCount?: number;
+  invoicesCount?: number;
+  invoicesSummary?: string;
+  lines?: PaymentOrderLine[];
+  imputations?: PaymentOrderImputation[];
+};
+
+export type PaymentOrderWriteRequest = {
+  supplierId?: string | null;
+  supplierName: string;
+  supplierTaxId?: string | null;
+  paymentDateUtc: string;
+  currency: string;
+  amount: number;
+  notes?: string | null;
+  lines: Array<{
+    method: string;
+    amount: number;
+    currency: string;
+    accountId?: string | null;
+    bankMovementId?: string | null;
+    chequeId?: string | null;
+    retentionType?: string | null;
+    retentionCertificate?: string | null;
+    notes?: string | null;
+  }>;
+  imputations: Array<{
+    purchaseInvoiceId: string;
+    invoiceNumber: string;
+    invoiceTotal: number;
+    amountImputed: number;
+  }>;
+};

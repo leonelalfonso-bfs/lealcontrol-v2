@@ -72,5 +72,29 @@ public static class FinanceSchema
         ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""ClassificationStatus"" integer NOT NULL DEFAULT 0;
         ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""ClassificationNote"" varchar(500);
         ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""ClassifiedAtUtc"" timestamptz;
+
+        CREATE TABLE IF NOT EXISTS finance.""PaymentOrders"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""SupplierId"" uuid, ""SupplierName"" varchar(240) NOT NULL,
+          ""SupplierTaxId"" varchar(32), ""OrderNumber"" varchar(40) NOT NULL, ""Amount"" numeric(18,2) NOT NULL,
+          ""Currency"" varchar(8) NOT NULL, ""PaymentDateUtc"" timestamptz NOT NULL, ""Notes"" varchar(500),
+          ""Status"" varchar(30) NOT NULL DEFAULT 'Confirmed', ""CreatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ""IX_PaymentOrders_Tenant_Date"" ON finance.""PaymentOrders"" (""TenantId"", ""PaymentDateUtc"");
+
+        CREATE TABLE IF NOT EXISTS finance.""PaymentOrderLines"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""PaymentOrderId"" uuid NOT NULL,
+          ""Method"" varchar(32) NOT NULL, ""Amount"" numeric(18,2) NOT NULL, ""Currency"" varchar(8) NOT NULL,
+          ""AccountId"" uuid, ""BankMovementId"" uuid, ""ChequeId"" uuid,
+          ""RetentionType"" varchar(80), ""RetentionCertificate"" varchar(120), ""Notes"" varchar(500), ""CreatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ""IX_PaymentOrderLines_Order"" ON finance.""PaymentOrderLines"" (""PaymentOrderId"");
+
+        CREATE TABLE IF NOT EXISTS finance.""PaymentOrderImputations"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""PaymentOrderId"" uuid NOT NULL,
+          ""PurchaseInvoiceId"" uuid NOT NULL, ""InvoiceNumber"" varchar(80) NOT NULL,
+          ""InvoiceTotal"" numeric(18,2) NOT NULL, ""AmountImputed"" numeric(18,2) NOT NULL,
+          ""CreatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ""IX_PaymentOrderImputations_Order"" ON finance.""PaymentOrderImputations"" (""PaymentOrderId"");
         ", cancellationToken);
 }

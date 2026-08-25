@@ -67,6 +67,9 @@ import { FinanceConceptsPage } from "./pages/FinanceConceptsPage";
 import { ChequePortfolioPage } from "./pages/ChequePortfolioPage";
 import { CollectionReceiptsWorkspacePage } from "./pages/CollectionReceiptsWorkspacePage";
 import { CurrentAccountsPage } from "./pages/CurrentAccountsPage";
+import { PaymentOrdersPage } from "./pages/PaymentOrdersPage";
+import { PaymentOrderFormPage } from "./pages/PaymentOrderFormPage";
+import { PaymentOrderPrintPage } from "./pages/PaymentOrderPrintPage";
 import { CashFlowPage } from "./pages/CashFlowPage";
 import { HumanResourcesDashboardPage } from "./pages/HumanResourcesDashboardPage";
 import { OrgChartPage } from "./pages/OrgChartPage";
@@ -540,6 +543,9 @@ export function App() {
               <Route path="/finanzas/conceptos" element={<FinanceConceptsPage />} />
               <Route path="/finanzas/echeqs" element={<ChequePortfolioPage />} />
               <Route path="/finanzas/cobranzas" element={<CollectionReceiptsWorkspacePage />} />
+              <Route path="/finanzas/pagos" element={<PaymentOrdersPage />} />
+              <Route path="/finanzas/pagos/nueva" element={<PaymentOrderFormPage />} />
+              <Route path="/finanzas/pagos/:id/imprimir" element={<PaymentOrderPrintPage />} />
 
               <Route path="/finanzas/cuenta-corriente" element={<CurrentAccountsPage />} />
               <Route path="/finanzas/cashflow" element={<CashFlowPage />} />

@@ -215,10 +215,11 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     items: [
       { path: "/finanzas", label: "Disponibilidad", icon: "💵" },
       { path: "/finanzas/bancos", label: "Bancos y cajas", icon: "🏦" },
-      { path: "/finanzas/conceptos", label: "Conceptos y reglas", icon: "🏷️" },
-      { path: "/finanzas/echeqs", label: "eCheqs", icon: "🎫" },
-      { path: "/finanzas/cuenta-corriente", label: "Cuenta corriente", icon: "⚖️" },
+      { path: "/finanzas/cuenta-corriente", label: "Cuentas corrientes", icon: "⚖️" },
       { path: "/finanzas/cobranzas", label: "Recibos de cobro", icon: "🧾" },
+      { path: "/finanzas/pagos", label: "Órdenes de pago", icon: "💳" },
+      { path: "/finanzas/echeqs", label: "Cartera de cheques", icon: "🎫" },
+      { path: "/finanzas/conceptos", label: "Conceptos y reglas", icon: "🏷️" },
       { path: "/finanzas/cashflow", label: "Cash flow", icon: "📈" },
       { path: "/finanzas/ayuda", label: "Ayuda Finanzas", icon: "💡" }
     ]

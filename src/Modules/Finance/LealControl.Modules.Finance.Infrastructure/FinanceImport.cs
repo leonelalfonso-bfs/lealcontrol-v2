@@ -63,7 +63,7 @@ public static class FinanceImport
             movement.ReconciliationStatus = FinancialReconciliationStatus.Reconciled; movement.LinkedEntityType = request.EntityType.Trim(); movement.LinkedEntityId = request.EntityId;
             await db.SaveChangesAsync(ct); return Results.Ok(new { movement.Id, movement.ReconciliationStatus, movement.LinkedEntityType, movement.LinkedEntityId });
         });
-        FinanceConcepts.MapFinanceConceptEndpoints(endpoints); FinanceReceipts.MapFinanceReceiptEndpoints(endpoints); FinanceEcheqs.MapFinanceEcheqEndpoints(endpoints);
+        FinanceConcepts.MapFinanceConceptEndpoints(endpoints); FinanceReceipts.MapFinanceReceiptEndpoints(endpoints); FinanceEcheqs.MapFinanceEcheqEndpoints(endpoints); FinancePayments.MapFinancePaymentEndpoints(endpoints);
         return endpoints;
     }
 
