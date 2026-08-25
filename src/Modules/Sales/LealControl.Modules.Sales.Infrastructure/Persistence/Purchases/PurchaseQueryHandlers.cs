@@ -289,6 +289,15 @@ public sealed class PurchaseQueryHandlers :
             if (order.Status is "Draft" or "Cancelled") return Result<PurchaseReceptionDto>.Failure(Error.Validation("Purchases.Reception.OrderNotReceivable", "La orden debe estar enviada para recibir mercadería."));
             if (order.SupplierId != request.SupplierId) return Result<PurchaseReceptionDto>.Failure(Error.Validation("Purchases.Reception.SupplierMismatch", "El proveedor de la recepción no coincide con la orden."));
         }
+
+        PurchaseInvoice? invoice = null;
+        if (request.PurchaseInvoiceId.HasValue)
+        {
+            invoice = await _dbContext.Set<PurchaseInvoice>()
+                .Include(i => i.Items)
+                .FirstOrDefaultAsync(x => x.Id == request.PurchaseInvoiceId.Value && x.TenantId == tenantId, cancellationToken);
+        }
+
         var count = await _dbContext.Set<PurchaseReception>().CountAsync(r => r.TenantId == tenantId, cancellationToken);
         var recNum = $"REC-{(count + 1):D4}";
 
@@ -316,9 +325,17 @@ public sealed class PurchaseQueryHandlers :
         }
 
         _dbContext.Set<PurchaseReception>().Add(reception);
-        var warehouse = await _dbContext.Warehouses.FirstOrDefaultAsync(w => w.TenantId == tenantId && w.Type == WarehouseType.MainWarehouse, cancellationToken);
 
-        // Incrementar stock físico en inventario
+        if (invoice != null)
+        {
+            invoice.LinkReception(reception.Id);
+        }
+
+        // Buscar depósito destino según ubicación indicada o principal
+        var warehouse = await _dbContext.Warehouses.FirstOrDefaultAsync(w => w.TenantId == tenantId && (w.Name == request.WarehouseLocation || w.Code == request.WarehouseLocation), cancellationToken)
+            ?? await _dbContext.Warehouses.FirstOrDefaultAsync(w => w.TenantId == tenantId && w.Type == WarehouseType.MainWarehouse, cancellationToken);
+
+        // Incrementar stock físico en inventario con costeo exacto
         foreach (var item in request.Items)
         {
             if (item.ProductId.HasValue)
@@ -336,6 +353,16 @@ public sealed class PurchaseQueryHandlers :
                     _dbContext.StockItems.Add(newStock);
                 }
 
+                decimal? unitCost = null;
+                if (invoice != null)
+                {
+                    var invItem = invoice.Items.FirstOrDefault(i => i.ProductId == item.ProductId.Value);
+                    if (invItem != null)
+                    {
+                        unitCost = invItem.UnitPrice;
+                    }
+                }
+
                 var mov = StockMovement.Create(
                     tenantId,
                     item.ProductId.Value,
@@ -345,7 +372,7 @@ public sealed class PurchaseQueryHandlers :
                     (stock?.PhysicalStock ?? 0) + item.Quantity,
                     warehouse?.Id,
                     warehouse?.Name,
-                    null,
+                    unitCost,
                     null,
                     item.SerialNumber,
                     null,

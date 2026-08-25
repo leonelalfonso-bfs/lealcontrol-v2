@@ -934,6 +934,7 @@ export type PurchaseReception = {
 
 export type PurchaseReceptionWrite = {
   purchaseOrderId?: string | null;
+  purchaseInvoiceId?: string | null;
   supplierId: string;
   supplierName: string;
   supplierRemitoNumber: string;

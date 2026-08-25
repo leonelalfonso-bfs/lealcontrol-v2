@@ -178,6 +178,7 @@ public sealed record PurchaseReceptionItemWrite(
 
 public sealed record CreatePurchaseReceptionCommand(
     Guid? PurchaseOrderId,
+    Guid? PurchaseInvoiceId,
     Guid SupplierId,
     string SupplierName,
     string SupplierRemitoNumber,

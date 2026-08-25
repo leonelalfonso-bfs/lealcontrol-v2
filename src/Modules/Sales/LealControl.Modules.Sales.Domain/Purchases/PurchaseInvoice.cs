@@ -209,6 +209,11 @@ public sealed class PurchaseInvoice : Entity<Guid>
         RecalculateTotals();
     }
 
+    public void LinkReception(Guid receptionId)
+    {
+        PurchaseReceptionId = receptionId;
+    }
+
     public void RecalculateTotals()
     {
         Subtotal = _items.Sum(i => i.NetSubtotal);
