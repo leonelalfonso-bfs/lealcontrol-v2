@@ -28,6 +28,7 @@ internal sealed class RemitoConfiguration : IEntityTypeConfiguration<Remito>
         builder.Property(r => r.CarrierName).HasMaxLength(128);
         builder.Property(r => r.DriverLicense).HasMaxLength(64);
         builder.Property(r => r.Status).HasMaxLength(32).IsRequired();
+        builder.Property(r => r.InvoiceNumber).HasMaxLength(32);
 
         builder.HasMany(r => r.Items)
             .WithOne()
@@ -174,6 +175,8 @@ internal sealed class RemitoQueryHandlers
             r.Id,
             r.RemitoNumber,
             r.OrderId,
+            r.InvoiceId,
+            r.InvoiceNumber,
             r.CustomerId,
             r.CustomerName,
             r.CustomerDocument,

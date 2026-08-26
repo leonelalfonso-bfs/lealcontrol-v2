@@ -17,6 +17,8 @@ public sealed record RemitoDto(
     Guid Id,
     string RemitoNumber,
     Guid? OrderId,
+    Guid? InvoiceId,
+    string? InvoiceNumber,
     Guid CustomerId,
     string CustomerName,
     string CustomerDocument,

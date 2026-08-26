@@ -134,6 +134,19 @@ export function InvoicesPage() {
                     <td>
                       <strong>Factura {inv.invoiceType}</strong>
                       <div className="muted">{inv.formattedNumber}</div>
+                      {inv.remitoId ? (
+                        <div style={{ fontSize: "0.72rem", color: "#0f766e", fontWeight: 600, marginTop: 2 }}>
+                          🚚 Desde Remito
+                        </div>
+                      ) : inv.orderId ? (
+                        <div style={{ fontSize: "0.72rem", color: "#4338ca", fontWeight: 600, marginTop: 2 }}>
+                          📦 Desde Pedido
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: "0.72rem", color: "#0284c7", fontWeight: 600, marginTop: 2 }}>
+                          ⚡ Venta Directa
+                        </div>
+                      )}
                     </td>
                     <td>{new Date(inv.issueDate).toLocaleDateString()}</td>
                     <td>

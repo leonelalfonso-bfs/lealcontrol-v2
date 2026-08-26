@@ -72,11 +72,21 @@ public sealed class Remito : Entity<Guid>
 
     public string Status { get; private set; } = "Delivered"; // Delivered, Draft, Cancelled
 
+    public Guid? InvoiceId { get; private set; }
+
+    public string? InvoiceNumber { get; private set; }
+
     public string? Notes { get; private set; }
 
     public DateTime CreatedAtUtc { get; private set; }
 
     public IReadOnlyList<RemitoItem> Items => _items.AsReadOnly();
+
+    public void MarkAsInvoiced(Guid invoiceId, string invoiceNumber)
+    {
+        InvoiceId = invoiceId;
+        InvoiceNumber = invoiceNumber;
+    }
 
     public static Remito Create(
         TenantId tenantId,

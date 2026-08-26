@@ -9,6 +9,7 @@ using LealControl.BuildingBlocks.Results;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Sales.Application.Invoices;
 using LealControl.Modules.Sales.Domain.Invoices;
+using LealControl.Modules.Sales.Domain.Inventory;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -168,6 +169,53 @@ internal sealed class InvoiceQueryHandlers
         }
 
         _dbContext.Invoices.Add(invoice);
+
+        // 1. Si la factura proviene de un Remito existente (request.RemitoId != null):
+        // Vincula el Remito y lo marca como facturado. NO descuenta stock (el remito ya lo egresó).
+        if (request.RemitoId.HasValue)
+        {
+            var remito = await _dbContext.Remitos
+                .FirstOrDefaultAsync(r => r.Id == request.RemitoId.Value && r.TenantId == tenantId, cancellationToken);
+            if (remito != null)
+            {
+                remito.MarkAsInvoiced(invoice.Id, invoice.FormattedNumber);
+            }
+        }
+        else
+        {
+            // 2. Si es una Factura Directa / Venta de Mostrador (sin remito previo):
+            // Descuenta stock físico de los productos inventariables para que no quede la mercadería sin descontar.
+            var warehouse = await _dbContext.Warehouses
+                .FirstOrDefaultAsync(w => w.TenantId == tenantId && w.Type == WarehouseType.MainWarehouse, cancellationToken);
+
+            foreach (var item in request.Items.Where(i => i.ProductId.HasValue))
+            {
+                var stock = await _dbContext.StockItems
+                    .FirstOrDefaultAsync(s => s.ProductId == item.ProductId!.Value && s.WarehouseId == (warehouse == null ? null : warehouse.Id) && s.TenantId == tenantId, cancellationToken);
+                if (stock == null) continue;
+                var previous = stock.PhysicalStock;
+                stock.Consume(item.Quantity);
+                _dbContext.StockMovements.Add(StockMovement.Create(
+                    tenantId,
+                    item.ProductId!.Value,
+                    "SaleInvoiceDirect",
+                    -item.Quantity,
+                    previous,
+                    stock.PhysicalStock,
+                    warehouse?.Id,
+                    warehouse?.Name,
+                    null,
+                    null,
+                    null,
+                    null,
+                    invoice.Id,
+                    "Invoice",
+                    invoice.FormattedNumber,
+                    "Venta Directa",
+                    $"Salida por factura directa {invoice.FormattedNumber} a {invoice.CustomerName}"));
+            }
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Result<InvoiceDto>.Success(MapToDto(invoice));

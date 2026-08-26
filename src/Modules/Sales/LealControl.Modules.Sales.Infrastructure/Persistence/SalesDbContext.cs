@@ -364,6 +364,22 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
                 ""DailyVariationPercentage"" numeric(8,2) NOT NULL DEFAULT 0,
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );
+
+            DO $$ 
+            BEGIN 
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema = 'sales' AND table_name = 'remitos' AND (column_name = 'InvoiceId' OR column_name = 'invoice_id')
+                ) THEN 
+                    ALTER TABLE sales.remitos ADD COLUMN ""InvoiceId"" uuid;
+                END IF;
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema = 'sales' AND table_name = 'remitos' AND (column_name = 'InvoiceNumber' OR column_name = 'invoice_number')
+                ) THEN 
+                    ALTER TABLE sales.remitos ADD COLUMN ""InvoiceNumber"" character varying(32);
+                END IF;
+            END $$;
         ";
 
         await Database.ExecuteSqlRawAsync(sql, cancellationToken);

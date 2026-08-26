@@ -744,6 +744,8 @@ export type Remito = {
   id: string;
   remitoNumber: string;
   orderId?: string | null;
+  invoiceId?: string | null;
+  invoiceNumber?: string | null;
   customerId: string;
   customerName: string;
   customerDocument: string;

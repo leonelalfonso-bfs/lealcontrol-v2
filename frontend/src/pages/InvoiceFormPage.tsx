@@ -53,6 +53,7 @@ export function InvoiceFormPage() {
   const [exchangeRate, setExchangeRate] = useState<number>(1.0);
   const [advancePercent, setAdvancePercent] = useState<number>(100);
   const [notes, setNotes] = useState<string>("");
+  const [sourceRemitoNumber, setSourceRemitoNumber] = useState<string>("");
 
   const [items, setItems] = useState<FormInvoiceItem[]>([
     { productId: undefined, code: "SERV-01", description: "Servicio / Producto", quantity: 1, unitPrice: 10000, discountPercent: 0, vatRate: 21.0 }
@@ -126,7 +127,7 @@ export function InvoiceFormPage() {
                     productId: i.productId ?? undefined,
                     code: prod?.code || "ITEM",
                     description: i.description || prod?.name || "Ítem de venta",
-                    quantity: i.quantity || 1,
+                    quantity: Math.round(i.quantity) || 1,
                     unitPrice: i.unitPrice || 0,
                     discountPercent: i.discountPercent || 0,
                     vatRate: i.taxRate || 21.0
@@ -138,6 +139,7 @@ export function InvoiceFormPage() {
         } else if (remitoId) {
           const remito = await api.getRemito(remitoId).catch(() => null);
           if (remito) {
+            setSourceRemitoNumber(remito.remitoNumber);
             let custDetail: CustomerDetail | null = null;
             if (remito.customerId) {
               custDetail = await api.getCustomer(remito.customerId).catch(() => null);
@@ -151,20 +153,23 @@ export function InvoiceFormPage() {
             setCustomerTaxCondition(foundTax);
             setInvoiceType(foundTax === "ResponsableInscripto" ? "A" : "B");
             setCustomerAddress(remito.deliveryAddress || "");
-            setNotes(`Emitida a partir del Remito N° ${remito.remitoNumber}`);
+            setNotes(`Emitida a partir del Remito de Entrega N° ${remito.remitoNumber}`);
 
             const remitoItems = remito.items || [];
             if (remitoItems.length > 0) {
               setItems(
-                remitoItems.map((i) => ({
-                  productId: i.productId ?? undefined,
-                  code: i.code,
-                  description: i.description,
-                  quantity: i.quantity,
-                  unitPrice: 10000,
-                  discountPercent: 0,
-                  vatRate: 21.0
-                }))
+                remitoItems.map((i) => {
+                  const prod = prodList.find((p) => (i.productId && p.id === i.productId) || (i.code && p.code.toLowerCase() === i.code.toLowerCase()));
+                  return {
+                    productId: i.productId ?? prod?.id ?? undefined,
+                    code: i.code || prod?.code || "ITEM",
+                    description: i.description || prod?.name || "Ítem despachado",
+                    quantity: Math.round(i.quantity) || 1,
+                    unitPrice: prod?.basePrice || 10000,
+                    discountPercent: 0,
+                    vatRate: prod?.taxRate || 21.0
+                  };
+                })
               );
             }
           }
@@ -408,6 +413,49 @@ export function InvoiceFormPage() {
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
           {/* Main Column */}
           <div className="stack" style={{ gap: 20 }}>
+            {sourceRemitoNumber ? (
+              <div
+                style={{
+                  background: "rgba(13, 148, 136, 0.08)",
+                  border: "1px solid rgba(13, 148, 136, 0.3)",
+                  borderRadius: 8,
+                  padding: "12px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12
+                }}
+              >
+                <span style={{ fontSize: "1.5rem" }}>🚚</span>
+                <div>
+                  <strong style={{ color: "#0f766e", fontSize: "0.95rem" }}>
+                    Facturando Remito de Entrega N° {sourceRemitoNumber}
+                  </strong>
+                  <div style={{ fontSize: "0.82rem", color: "#475569", marginTop: 2 }}>
+                    La mercadería ya fue egresada del inventario mediante este remito. Esta factura generará el comprobante fiscal oficial y la cuenta corriente sin duplicar el egreso de stock.
+                  </div>
+                </div>
+              </div>
+            ) : !orderId ? (
+              <div
+                style={{
+                  background: "rgba(59, 130, 246, 0.06)",
+                  border: "1px solid rgba(59, 130, 246, 0.2)",
+                  borderRadius: 8,
+                  padding: "10px 14px",
+                  fontSize: "0.82rem",
+                  color: "#1e40af",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10
+                }}
+              >
+                <span style={{ fontSize: "1.2rem" }}>⚡</span>
+                <div>
+                  <strong>Venta Directa / Mostrador:</strong> Al emitir esta factura, el stock de los productos inventariables se descontará automáticamente del depósito.
+                </div>
+              </div>
+            ) : null}
+
             {/* General Info Card */}
             <div className="card pad">
               <h3 style={{ margin: "0 0 16px", borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
