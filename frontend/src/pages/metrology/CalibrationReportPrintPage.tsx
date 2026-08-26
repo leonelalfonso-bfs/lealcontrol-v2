@@ -313,10 +313,71 @@ export function CalibrationReportPrintPage() {
         )}
       </div>
 
+      {/* Ensayo de Puesta a Cero & Movilidad */}
+      {(visualInspectionData?.zeroSetting || visualInspectionData?.mobility) && (
+        <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
+          <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
+            1. ENSAYO DE PUESTA A CERO (RANGO 4% MAX) & MOVILIDAD (DISCRIMINACIÓN 1.4d)
+          </div>
+          
+          <div style={{ display: "grid", gridTemplateColumns: visualInspectionData.zeroSetting && visualInspectionData.mobility ? "1fr 1.25fr" : "1fr", gap: 12 }}>
+            {visualInspectionData.zeroSetting && (
+              <div style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
+                <strong style={{ fontSize: "0.8rem", color: "#0f766e" }}>🎯 Puesta a Cero (Res. 2307/80)</strong>
+                <div style={{ fontSize: "0.74rem", marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+                  <div>Límite 4% Max: <strong>{visualInspectionData.zeroSetting.maxAllowedRange?.toLocaleString("es-AR")} {equipment?.unit || "kg"}</strong></div>
+                  <div>Puesta a cero en rango ({visualInspectionData.zeroSetting.positiveTestLoad} {equipment?.unit || "kg"}): <strong>{visualInspectionData.zeroSetting.positiveZeroOk ? "✓ Correcto" : "✗ Falló"}</strong></div>
+                  <div>Bloqueo fuera de rango ({visualInspectionData.zeroSetting.overLimitTestLoad} {equipment?.unit || "kg"}): <strong>{visualInspectionData.zeroSetting.overLimitBlockedOk ? "✓ Bloqueado" : "✗ Falló"}</strong></div>
+                  <div>Error a cero E₀: <strong>{visualInspectionData.zeroSetting.zeroErrorCorrected >= 0 ? `+${visualInspectionData.zeroSetting.zeroErrorCorrected}` : visualInspectionData.zeroSetting.zeroErrorCorrected} {equipment?.unit || "kg"}</strong> (EMT: ±{visualInspectionData.zeroSetting.zeroErrorLimit})</div>
+                </div>
+                <div style={{ color: visualInspectionData.zeroSetting.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 4, fontSize: "0.76rem" }}>
+                  Resultado: {visualInspectionData.zeroSetting.conform ? "✓ Conforme" : "✗ No Conforme"}
+                </div>
+              </div>
+            )}
+
+            {visualInspectionData.mobility && (
+              <div style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
+                <strong style={{ fontSize: "0.8rem", color: "#0f766e" }}>🎯 Movilidad / Discriminación (Sobrecarga {visualInspectionData.mobility.overloadValue} {equipment?.unit || "kg"} = 1.4d)</strong>
+                <table style={{ width: "100%", marginTop: 4, fontSize: "0.72rem", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #ddd", background: "#f5f5f5" }}>
+                      <th style={{ textAlign: "left", padding: "2px 4px" }}>Nivel</th>
+                      <th style={{ textAlign: "right", padding: "2px 4px" }}>Carga</th>
+                      <th style={{ textAlign: "right", padding: "2px 4px" }}>I₁</th>
+                      <th style={{ textAlign: "right", padding: "2px 4px" }}>I₂ (+1.4d)</th>
+                      <th style={{ textAlign: "right", padding: "2px 4px" }}>ΔI (≥1d)</th>
+                      <th style={{ textAlign: "center", padding: "2px 4px" }}>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visualInspectionData.mobility.points?.map((mp: any, i: number) => (
+                      <tr key={i} style={{ borderBottom: "1px solid #eee" }}>
+                        <td style={{ padding: "2px 4px" }}>{mp.loadName}</td>
+                        <td style={{ textAlign: "right", padding: "2px 4px" }}>{mp.load}</td>
+                        <td style={{ textAlign: "right", padding: "2px 4px" }}>{mp.initialIndication}</td>
+                        <td style={{ textAlign: "right", padding: "2px 4px" }}>{mp.finalIndication}</td>
+                        <td style={{ textAlign: "right", padding: "2px 4px", fontWeight: 700 }}>+{mp.delta}</td>
+                        <td style={{ textAlign: "center", padding: "2px 4px", color: mp.conform ? "#0d9488" : "#dc2626", fontWeight: 700 }}>
+                          {mp.conform ? "✓ Apto" : "✗ Fuera"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ color: visualInspectionData.mobility.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 4, fontSize: "0.76rem" }}>
+                  Resultado: {visualInspectionData.mobility.conform ? "✓ Conforme" : "✗ No Conforme"}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Ensayo de Repetibilidad / Fidelidad */}
       <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
         <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
-          1. ENSAYO DE {stdApplied.includes("2307") ? "FIDELIDAD" : "REPETIBILIDAD"}
+          2. ENSAYO DE {stdApplied.includes("2307") ? "FIDELIDAD" : "REPETIBILIDAD"}
         </div>
         {hasDualLoad ? (
           <div>

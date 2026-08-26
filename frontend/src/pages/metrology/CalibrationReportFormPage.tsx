@@ -10,6 +10,18 @@ export type FidelityTrial = {
   deltaL: string;
 };
 
+export type FormTab = "general" | "zero_mobility" | "fidelity" | "eccentricity" | "linearity" | "summary";
+
+export interface LinearityRowState {
+  step: number;
+  pesas: string;
+  auxLoad: string;
+  ascIndication: string;
+  ascDeltaL: string;
+  descIndication: string;
+  descDeltaL: string;
+}
+
 const createDefaultTrials = (count: number, defaultLoad: string): FidelityTrial[] => {
   return Array.from({ length: 5 }, (_, i) => ({
     initialZero: "0",
@@ -46,6 +58,9 @@ export function CalibrationReportFormPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Tab Navigation State
+  const [activeTab, setActiveTab] = useState<FormTab>("general");
 
   // Available Data
   const [equipments, setEquipments] = useState<MetrologyEquipment[]>([]);
@@ -84,10 +99,10 @@ export function CalibrationReportFormPage() {
   const testPlanItems = [
     "Identificación e inscripciones del instrumento",
     "Inspección general, instalación y estado del indicador",
-    "Puesta a cero y tara, cuando el dispositivo esté disponible",
+    "Puesta a cero (rango 4% Max) y discriminación / movilidad (1.4d)",
     is2307 ? "Ensayo de fidelidad (baja y alta carga)" : "Ensayo de repetibilidad",
     "Ensayo de excentricidad",
-    "Errores de indicación: cargas crecientes y decrecientes",
+    "Errores de indicación: cargas crecientes y decrecientes con redondeo (ΔL)",
     "Precintos, intervención y cierre del informe"
   ];
 
@@ -99,30 +114,43 @@ export function CalibrationReportFormPage() {
   const [selectedWeightIds, setSelectedWeightIds] = useState<string[]>([]);
   const [weightPickerOpen, setWeightPickerOpen] = useState(false);
   const [draftWeightIds, setDraftWeightIds] = useState<string[]>([]);
-  const [weightLotFilter, setWeightLotFilter] = useState("");
   const [weightSearch, setWeightSearch] = useState("");
 
-  // Assay 1: Visual Inspection
+  // Assay 1: Visual & Functional Inspection
   const [inspLevel, setInspLevel] = useState(true);
   const [inspZero, setInspZero] = useState(true);
   const [inspTare, setInspTare] = useState(true);
   const [inspSeals, setInspSeals] = useState(true);
   const [inspNotes, setInspNotes] = useState("Instrumento en correctas condiciones mecánicas y estructurales.");
 
-  // Assay 2: Fidelity / Repeatability with Dual Load (Baja Carga y Alta Carga)
+  // Assay 2: Puesta a Cero (Rango 4% Max y Exactitud de Cero)
+  const [zeroInRangeLoad, setZeroInRangeLoad] = useState("1600");
+  const [zeroInRangeOk, setZeroInRangeOk] = useState(true);
+  const [zeroOverLimitLoad, setZeroOverLimitLoad] = useState("3500");
+  const [zeroOverLimitBlocked, setZeroOverLimitBlocked] = useState(true);
+  const [zeroErrorDeltaL, setZeroErrorDeltaL] = useState("10");
+
+  // Assay 3: Movilidad / Discriminación (Sobrecarga de 1.4d)
+  const [mobilityPoints, setMobilityPoints] = useState<Array<{ loadName: string; load: string; overload: string; initialIndication: string; finalIndication: string }>>([
+    { loadName: "Cero / Carga Mínima", load: "0", overload: "28", initialIndication: "0", finalIndication: "20" },
+    { loadName: "Media Carga (50% Max)", load: "40000", overload: "28", initialIndication: "40000", finalIndication: "40020" },
+    { loadName: "Carga Máxima (100% Max)", load: "80000", overload: "28", initialIndication: "80000", finalIndication: "80020" }
+  ]);
+
+  // Assay 4: Fidelity / Repeatability with Dual Load (Baja Carga y Alta Carga)
   const [fidelityTab, setFidelityTab] = useState<"low" | "high" | "both">("both");
 
-  // Baja Carga (Low Load) - initial proposal
+  // Baja Carga (Low Load)
   const [fidelityLowInbound, setFidelityLowInbound] = useState<FidelityTrial[]>(() => createDefaultTrials(3, "12500"));
   const [fidelityLowOutbound, setFidelityLowOutbound] = useState<FidelityTrial[]>(() => createDefaultTrials(3, "12500"));
   const [fidelityLowPlatform, setFidelityLowPlatform] = useState<FidelityTrial[]>(() => createDefaultTrials(5, "12500"));
 
-  // Alta Carga (High Load) - initial proposal
+  // Alta Carga (High Load)
   const [fidelityHighInbound, setFidelityHighInbound] = useState<FidelityTrial[]>(() => createDefaultTrials(3, "25000"));
   const [fidelityHighOutbound, setFidelityHighOutbound] = useState<FidelityTrial[]>(() => createDefaultTrials(3, "25000"));
   const [fidelityHighPlatform, setFidelityHighPlatform] = useState<FidelityTrial[]>(() => createDefaultTrials(5, "25000"));
 
-  // Assay 3: Eccentricity (Positions)
+  // Assay 5: Eccentricity (Positions)
   const [eccTestLoad, setEccTestLoad] = useState<string>("16000");
   const [eccPositions, setEccPositions] = useState<Array<{ pos: number; label: string; indication: string; deltaL: string }>>([
     { pos: 1, label: "Apoyo 1 (Celda 1)", indication: "16000", deltaL: "10" },
@@ -133,17 +161,7 @@ export function CalibrationReportFormPage() {
     { pos: 6, label: "Apoyo 6 (Celda 6)", indication: "16000", deltaL: "10" }
   ]);
 
-interface LinearityRowState {
-  step: number;
-  pesas: string;
-  auxLoad: string;
-  ascIndication: string;
-  ascDeltaL: string;
-  descIndication: string;
-  descDeltaL: string;
-}
-
-  // Assay 4: Linearity (Points con pesas, carga auxiliar y redondeo)
+  // Assay 6: Linearity (25 rows con pesas, carga auxiliar y redondeo)
   const [linRows, setLinRows] = useState<LinearityRowState[]>([]);
 
   // Load initial lists
@@ -173,6 +191,8 @@ interface LinearityRowState {
     setSelectedEquipment(eq);
 
     const maxCap = eq.maxCapacity || 80000;
+    const dVal = Number(eq.divisionD || 20);
+    const eInt = Number(eq.verificationIntervalE || 20);
     const isTruck = String(eq.platformType) === "TruckScale" || String(eq.platformType) === "RollingLoad";
 
     // Propose default values for trials
@@ -186,6 +206,22 @@ interface LinearityRowState {
     setFidelityHighInbound(createDefaultTrials(3, highVal.toString()));
     setFidelityHighOutbound(createDefaultTrials(3, highVal.toString()));
     setFidelityHighPlatform(createDefaultTrials(5, highVal.toString()));
+
+    // Zero setting default setup (4% of Max Capacity)
+    const zeroLimit4Pct = Math.round(maxCap * 0.04);
+    setZeroInRangeLoad(Math.round(zeroLimit4Pct * 0.5).toString());
+    setZeroInRangeOk(true);
+    setZeroOverLimitLoad(Math.round(zeroLimit4Pct * 1.2).toString());
+    setZeroOverLimitBlocked(true);
+    setZeroErrorDeltaL((eInt / 2).toString());
+
+    // Mobility default setup (1.4 * d overload)
+    const overload14d = Math.round(dVal * 1.4 * 100) / 100;
+    setMobilityPoints([
+      { loadName: "Cero / Carga Mínima", load: "0", overload: overload14d.toString(), initialIndication: "0", finalIndication: dVal.toString() },
+      { loadName: "Media Carga (50% Max)", load: Math.round(maxCap * 0.5).toString(), overload: overload14d.toString(), initialIndication: Math.round(maxCap * 0.5).toString(), finalIndication: (Math.round(maxCap * 0.5) + dVal).toString() },
+      { loadName: "Carga Máxima (100% Max)", load: maxCap.toString(), overload: overload14d.toString(), initialIndication: maxCap.toString(), finalIndication: (maxCap + dVal).toString() }
+    ]);
 
     const std = eq.applicableStandard === "Res2307_80" ? "Res2307_80" : "Res25_2025";
     if (std === "Res2307_80") {
@@ -258,7 +294,7 @@ interface LinearityRowState {
 
       // Setup Linearity rows (al menos 25 renglones para pesas patron y cargas auxiliares)
       const lRows: LinearityRowState[] = [];
-      const totalSteps = Math.max(25, (lPoints?.length || 0));
+      const totalSteps = Math.max(25, lPoints?.length || 0);
       for (let i = 1; i <= totalSteps; i++) {
         const pt = lPoints && lPoints[i - 1];
         lRows.push({
@@ -278,6 +314,7 @@ interface LinearityRowState {
   };
 
   const eInterval = Number(selectedEquipment?.verificationIntervalE || 20);
+  const dInterval = Number(selectedEquipment?.divisionD || 20);
   const beforeRounding = (indication: string, deltaL: string) =>
     (parseFloat(indication) || 0) + eInterval / 2 - (parseFloat(deltaL) || 0);
 
@@ -334,84 +371,64 @@ interface LinearityRowState {
 
   // Helper to compute stats for a block of trials where the reference load is the 1st reading (Pass #1)
   const computeFidelityBlock = (trials: FidelityTrial[]) => {
-    // Calculate raw corrected readings
-    const preComputed = trials.map((t, idx) => {
-      const rawInd = parseFloat(t.indication);
-      const hasValue = !isNaN(rawInd) && t.indication.trim() !== "";
-      const dL = parseFloat(t.deltaL) || 0;
-      const corrected = hasValue ? (dL > 0 ? rawInd + eInterval / 2 - dL : rawInd) : null;
+    const rawReadings = trials
+      .map((t, idx) => {
+        const ind = parseFloat(t.indication);
+        if (isNaN(ind) || t.indication.trim() === "") return null;
+        const dL = parseFloat(t.deltaL) || 0;
+        const corr = ind + eInterval / 2 - dL;
+        return { index: idx + 1, indication: ind, deltaL: dL, corrected: corr };
+      })
+      .filter((x): x is { index: number; indication: number; deltaL: number; corrected: number } => x !== null);
 
+    if (rawReadings.length === 0) {
       return {
-        index: idx + 1,
-        initialZero: t.initialZero,
-        indication: t.indication,
-        finalZero: t.finalZero,
-        deltaL: t.deltaL,
-        hasValue,
-        corrected
-      };
-    });
-
-    // Reference load is the corrected reading of the 1st active trial (#1)
-    const firstActive = preComputed.find((r) => r.hasValue && r.corrected !== null);
-    const refLoad = firstActive ? (firstActive.corrected as number) : 0;
-    const targetEmt = refLoad > 0 ? getEmtForLoad(refLoad, eInterval, selectedEquipment?.accuracyClass || "III") : 20;
-
-    // Evaluate error against reference load #1 (repeatability evaluates consistency against first reading)
-    const computedRows = preComputed.map((r) => {
-      if (!r.hasValue || r.corrected === null) {
-        return {
-          ...r,
+        refLoad: 0,
+        targetEmt: repeatabilityEmt || 20,
+        computedRows: trials.map((_, i) => ({
+          index: i + 1,
+          hasValue: false,
+          indication: null,
+          corrected: null,
           error: null,
-          emt: null,
-          ok: null
-        };
-      }
-      const error = r.corrected - refLoad;
-      const ok = Math.abs(error) <= targetEmt;
-      return {
-        ...r,
-        error,
-        emt: targetEmt,
-        ok
+          ok: true
+        })),
+        minVal: 0,
+        maxVal: 0,
+        maxDiff: 0,
+        stdDev: 0,
+        conform: true
       };
-    });
-
-    const activeRows = computedRows.filter((r) => r.hasValue && r.corrected !== null);
-    const count = activeRows.length;
-    const correctedValues = activeRows.map((r) => r.corrected as number);
-
-    let stdDev = 0;
-    let maxDiff = 0;
-    let maxVal = 0;
-    let minVal = 0;
-
-    if (count > 0) {
-      maxVal = Math.max(...correctedValues);
-      minVal = Math.min(...correctedValues);
-      maxDiff = maxVal - minVal;
-
-      if (count > 1) {
-        const mean = correctedValues.reduce((a, b) => a + b, 0) / count;
-        const variance = correctedValues.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / (count - 1);
-        stdDev = Math.sqrt(variance);
-      }
     }
 
-    const minRequired = truckFidelity ? 3 : 5;
-    const conform = count >= minRequired && maxDiff <= targetEmt && activeRows.every((r) => r.ok);
+    const refLoad = rawReadings[0].corrected;
+    const targetEmt = getEmtForLoad(refLoad, eInterval, selectedEquipment?.accuracyClass || "III");
 
-    return {
-      refLoad,
-      targetEmt,
-      computedRows,
-      activeCount: count,
-      stdDev,
-      maxDiff,
-      maxVal,
-      minVal,
-      conform
-    };
+    const computedRows = trials.map((t, idx) => {
+      const ind = parseFloat(t.indication);
+      if (isNaN(ind) || t.indication.trim() === "") {
+        return { index: idx + 1, hasValue: false, indication: null, corrected: null, error: null, ok: true };
+      }
+      const dL = parseFloat(t.deltaL) || 0;
+      const corr = ind + eInterval / 2 - dL;
+      const error = corr - refLoad;
+      const ok = Math.abs(error) <= targetEmt;
+      return { index: idx + 1, hasValue: true, indication: ind, corrected: corr, error, ok };
+    });
+
+    const values = rawReadings.map((r) => r.corrected);
+    const minVal = Math.min(...values);
+    const maxVal = Math.max(...values);
+    const maxDiff = maxVal - minVal;
+
+    const n = values.length;
+    const mean = values.reduce((acc, v) => acc + v, 0) / (n || 1);
+    const variance = n > 1 ? values.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / (n - 1) : 0;
+    const stdDev = Math.sqrt(variance);
+
+    const conform = computedRows.every((r) => !r.hasValue || r.ok);
+
+    return { refLoad, targetEmt, computedRows, minVal, maxVal, maxDiff, stdDev, conform };
   };
 
   const lowInboundBlock = useMemo(
@@ -444,11 +461,27 @@ interface LinearityRowState {
   const highOk = truckFidelity ? highInboundBlock.conform && highOutboundBlock.conform : highPlatformBlock.conform;
   const fidelityAllOk = lowOk && highOk;
 
-  // Reference loads for low and high
   const lowAppliedLoad = truckFidelity ? lowInboundBlock.refLoad || lowOutboundBlock.refLoad : lowPlatformBlock.refLoad;
   const highAppliedLoad = truckFidelity ? highInboundBlock.refLoad || highOutboundBlock.refLoad : highPlatformBlock.refLoad;
   const lowEmt = truckFidelity ? lowInboundBlock.targetEmt : lowPlatformBlock.targetEmt;
   const highEmt = truckFidelity ? highInboundBlock.targetEmt : highPlatformBlock.targetEmt;
+
+  // Zero Setting calculation (4% Max Capacity)
+  const zero4PctLimit = Math.round((selectedEquipment?.maxCapacity || 80000) * 0.04);
+  const zeroErrorCorrected = eInterval / 2 - (parseFloat(zeroErrorDeltaL) || 0);
+  const zeroErrorEmt = 0.25 * eInterval;
+  const zeroErrorOk = Math.abs(zeroErrorCorrected) <= zeroErrorEmt;
+  const zeroSettingOk = zeroInRangeOk && zeroOverLimitBlocked && zeroErrorOk;
+
+  // Mobility calculation (1.4 * d overload)
+  const mobilityComputed = mobilityPoints.map((p) => {
+    const init = parseFloat(p.initialIndication) || 0;
+    const fin = parseFloat(p.finalIndication) || 0;
+    const delta = fin - init;
+    const ok = delta >= dInterval;
+    return { ...p, delta, ok };
+  });
+  const mobilityOk = mobilityComputed.every((p) => p.ok);
 
   // Eccentricity
   const eccLoadNum = parseFloat(eccTestLoad) || 0;
@@ -461,76 +494,81 @@ interface LinearityRowState {
   const activeLinRows = linRowsComputed.filter((r) => r.hasAnyData);
   const linAllOk = activeLinRows.length > 0 ? activeLinRows.every((r) => r.conform) : true;
 
-  const allAssaysPass = inspLevel && inspZero && inspTare && inspSeals && fidelityAllOk && eccOk && linAllOk;
+  const inspOk = inspLevel && inspZero && inspTare && inspSeals;
+  const allAssaysPass = inspOk && zeroSettingOk && mobilityOk && fidelityAllOk && eccOk && linAllOk;
   const finalResult = allAssaysPass ? "Apto" : "No Apto";
 
   // Estimated Uncertainty U (k=2)
-  const dVal = selectedEquipment?.divisionD || 20;
-  const maxFidelityDiff = Math.max(
-    lowInboundBlock.maxDiff,
-    lowOutboundBlock.maxDiff,
-    highInboundBlock.maxDiff,
-    highOutboundBlock.maxDiff,
-    lowPlatformBlock.maxDiff,
-    highPlatformBlock.maxDiff
-  );
-  const expandedUncertainty = Math.round((dVal * 0.58 + eccMaxError * 0.3) * 100) / 100;
+  const expandedUncertainty = Math.round((dInterval * 0.58 + eccMaxError * 0.3) * 100) / 100;
+
+  // Tab Navigation Helpers
+  const tabOrder: FormTab[] = ["general", "zero_mobility", "fidelity", "eccentricity", "linearity", "summary"];
+  const tabLabels: Record<FormTab, string> = {
+    general: "1. Datos & Inspección",
+    zero_mobility: "2. Cero & Movilidad",
+    fidelity: "3. Fidelidad",
+    eccentricity: "4. Excentricidad",
+    linearity: "5. Linealidad",
+    summary: "6. Dictamen & Emisión"
+  };
+
+  const goToNextTab = () => {
+    const currIdx = tabOrder.indexOf(activeTab);
+    if (currIdx < tabOrder.length - 1) {
+      setActiveTab(tabOrder[currIdx + 1]);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const goToPrevTab = () => {
+    const currIdx = tabOrder.indexOf(activeTab);
+    if (currIdx > 0) {
+      setActiveTab(tabOrder[currIdx - 1]);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedEquipment) {
       setError("Debe seleccionar un instrumento a calibrar.");
+      setActiveTab("general");
       return;
     }
 
-    try {
-      setSaving(true);
-      setError(null);
+    setSaving(true);
+    setError(null);
 
+    try {
       const repeatabilityData = {
-        method: truckFidelity
-          ? "Báscula de camiones / carga rodante: 3 pasadas de entrada y 3 pasadas de salida (iniciando y finalizando en cero) evaluadas en Baja Carga y Alta Carga respecto a la 1ra indicación."
-          : "Balanza de plataforma / estacionaria: 5 repeticiones sucesivas evaluadas en Baja Carga y Alta Carga respecto a la 1ra indicación.",
-        instrumentType: truckFidelity ? "Báscula de camiones / carga rodante" : "Balanza de plataforma / estacionaria",
-        truckFidelity,
         hasDualLoad: true,
+        method: "Primera pasada como referencia",
         lowLoad: {
-          title: "Fidelidad en Baja Carga",
-          appliedLoad: lowAppliedLoad,
+          load: lowAppliedLoad,
           emt: lowEmt,
-          conform: lowOk,
-          inbound: lowInboundBlock,
-          outbound: lowOutboundBlock,
-          platform: lowPlatformBlock,
-          maxDiff: truckFidelity ? Math.max(lowInboundBlock.maxDiff, lowOutboundBlock.maxDiff) : lowPlatformBlock.maxDiff
+          inbound: truckFidelity ? lowInboundBlock : null,
+          outbound: truckFidelity ? lowOutboundBlock : null,
+          platform: !truckFidelity ? lowPlatformBlock : null,
+          conform: lowOk
         },
         highLoad: {
-          title: "Fidelidad en Alta Carga",
-          appliedLoad: highAppliedLoad,
+          load: highAppliedLoad,
           emt: highEmt,
-          conform: highOk,
-          inbound: highInboundBlock,
-          outbound: highOutboundBlock,
-          platform: highPlatformBlock,
-          maxDiff: truckFidelity ? Math.max(highInboundBlock.maxDiff, highOutboundBlock.maxDiff) : highPlatformBlock.maxDiff
+          inbound: truckFidelity ? highInboundBlock : null,
+          outbound: truckFidelity ? highOutboundBlock : null,
+          platform: !truckFidelity ? highPlatformBlock : null,
+          conform: highOk
         },
-        // Backward compatibility
-        appliedLoad: highAppliedLoad,
-        minimum: truckFidelity ? Math.min(highInboundBlock.minVal, highOutboundBlock.minVal) : highPlatformBlock.minVal,
-        maximum: truckFidelity ? Math.max(highInboundBlock.maxVal, highOutboundBlock.maxVal) : highPlatformBlock.maxVal,
-        range: maxFidelityDiff,
-        emt: highEmt,
-        conform: fidelityAllOk,
         readings: truckFidelity
           ? [
-              ...lowInboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Entrada (Baja)", indication: parseFloat(r.indication) || 0 })),
-              ...lowOutboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Salida (Baja)", indication: parseFloat(r.indication) || 0 })),
-              ...highInboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Entrada (Alta)", indication: parseFloat(r.indication) || 0 })),
-              ...highOutboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Salida (Alta)", indication: parseFloat(r.indication) || 0 }))
+              ...lowInboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Entrada (Baja)", indication: parseFloat(r.indication as any) || 0 })),
+              ...lowOutboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Salida (Baja)", indication: parseFloat(r.indication as any) || 0 })),
+              ...highInboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Entrada (Alta)", indication: parseFloat(r.indication as any) || 0 })),
+              ...highOutboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Salida (Alta)", indication: parseFloat(r.indication as any) || 0 }))
             ]
           : [
-              ...lowPlatformBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Baja Carga", indication: parseFloat(r.indication) || 0 })),
-              ...highPlatformBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Alta Carga", indication: parseFloat(r.indication) || 0 }))
+              ...lowPlatformBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Baja Carga", indication: parseFloat(r.indication as any) || 0 })),
+              ...highPlatformBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Alta Carga", indication: parseFloat(r.indication as any) || 0 }))
             ]
       };
 
@@ -587,11 +625,15 @@ interface LinearityRowState {
         certificateNumber: reportNumber.trim() || undefined,
         equipmentId: selectedEquipment.id,
         standardApplied: regulatoryProfile === "REGIMEN_TRANSITORIO_R2307_80" ? "Res2307_80" : "Res25_2025",
-        calibrationType: operationType,
+        calibrationType: "InService",
         regulatoryProfile,
         operationType,
         documentTitle,
-        testPlanVersion: regulatoryProfile === "REGIMEN_TRANSITORIO_R2307_80" ? "MET-2307-1" : "MET-25-1",
+        regulatoryStatus: is2307 ? "Derogada — aplicación transitoria" : "Vigente",
+        regulatoryNotice: is2307
+          ? "Régimen transitorio aplicado por uso en servicio / habilitación según marco normativo aplicable."
+          : "",
+        testPlanVersion: "MET-BASE-1",
         reportStatus: "Issued",
         calibrationDate: new Date(calibrationDate).toISOString(),
         expirationDate: nextCalibrationDate ? new Date(nextCalibrationDate).toISOString() : undefined,
@@ -601,7 +643,16 @@ interface LinearityRowState {
         atmosphericPressureHpa: parseFloat(atmosphericPressure) || 1013,
         approvedBy: "",
         verdict: finalResult === "Apto" ? "Approved" : "Rejected",
-        maxObservedError: Math.max(eccMaxError, maxFidelityDiff, ...(activeLinRows.length > 0 ? activeLinRows.flatMap((x) => [Math.abs(x.ascError ?? 0), Math.abs(x.descError ?? 0)]) : [0])),
+        maxObservedError: Math.max(
+          eccMaxError,
+          lowInboundBlock.maxDiff,
+          lowOutboundBlock.maxDiff,
+          highInboundBlock.maxDiff,
+          highOutboundBlock.maxDiff,
+          lowPlatformBlock.maxDiff,
+          highPlatformBlock.maxDiff,
+          ...(activeLinRows.length > 0 ? activeLinRows.flatMap((x) => [Math.abs(x.ascError ?? 0), Math.abs(x.descError ?? 0)]) : [0])
+        ),
         maxAllowedError: Math.max(highEmt, eccentricityConfig?.emt || 0, ...(activeLinRows.length > 0 ? activeLinRows.map((x) => x.emt) : [0])),
         expandedUncertaintyK2: expandedUncertainty,
         visualInspectionJson: JSON.stringify({
@@ -613,63 +664,94 @@ interface LinearityRowState {
           checklist: {
             profile: regulatoryProfile,
             operationType,
-            operationLabel: operationLabels[operationType],
-            testPlanVersion: is2307 ? "MET-2307-1" : "MET-25-1",
-            items: testPlanItems.map((title) => ({ title, registered: true }))
+            operationLabel: operationLabels[operationType] || operationType,
+            normativeApplied: is2307 ? "Resolución SCyNEI Nº 2307/1980 (régimen transitorio)" : "Resolución SIyC Nº 25/2025 (OIML R 76-1)",
+            regulatoryStatus: is2307 ? "Derogada — aplicación transitoria" : "Vigente",
+            testPlanItems
+          },
+          zeroSetting: {
+            deviceType: "Manual / Semiautomático (>0<)",
+            rangePercent: 4,
+            maxAllowedRange: zero4PctLimit,
+            positiveTestLoad: parseFloat(zeroInRangeLoad) || 0,
+            positiveZeroOk: zeroInRangeOk,
+            overLimitTestLoad: parseFloat(zeroOverLimitLoad) || 0,
+            overLimitBlockedOk: zeroOverLimitBlocked,
+            zeroErrorDeltaL: parseFloat(zeroErrorDeltaL) || 0,
+            zeroErrorCorrected,
+            zeroErrorEmt,
+            zeroErrorOk,
+            conform: zeroSettingOk
+          },
+          mobility: {
+            overloadFormula: "1.4 × d",
+            overloadValue: Math.round(dInterval * 1.4 * 100) / 100,
+            points: mobilityComputed.map((p) => ({
+              loadName: p.loadName,
+              load: parseFloat(p.load) || 0,
+              overload: parseFloat(p.overload) || 0,
+              initialIndication: parseFloat(p.initialIndication) || 0,
+              finalIndication: parseFloat(p.finalIndication) || 0,
+              delta: p.delta,
+              minRequiredDelta: dInterval,
+              conform: p.ok
+            })),
+            conform: mobilityOk
           }
         }),
         repeatabilityTestJson: JSON.stringify(repeatabilityData),
         eccentricityTestJson: JSON.stringify(eccentricityData),
         linearityTestJson: JSON.stringify(linearityData),
         weightsUsedJson: JSON.stringify(weightsUsed),
-        observations: observations.trim(),
-        sealsPlaced: inspSeals ? "Verificados durante la inspección" : "Requiere observación"
+        observations: observations.trim() || undefined,
+        sealsPlaced: inspSeals ? "Precintos de verificación reglamentarios colocados en indicador y caja de unión." : "Sin precintos reglamentarios."
       });
 
-      navigate(`/metrologia/informes/${created.id}/imprimir`);
+      navigate(`/metrologia/certificados/${created.id}`);
     } catch (err: any) {
-      setError(err?.message || "Error al emitir informe de calibración.");
+      setError(err.message || "Error al emitir el certificado metrológico.");
     } finally {
       setSaving(false);
     }
   };
 
-  // Render a trial table for a block (e.g. Inbound / Outbound / Platform)
   const renderTrialTable = (
     title: string,
     trials: FidelityTrial[],
-    setter: React.Dispatch<React.SetStateAction<FidelityTrial[]>>,
+    setter: (t: FidelityTrial[]) => void,
     block: ReturnType<typeof computeFidelityBlock>
   ) => {
     return (
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <strong style={{ fontSize: "0.92rem", color: "#0f172a" }}>{title}</strong>
+      <div style={{ background: "rgba(0,0,0,0.015)", border: "1px solid var(--surface-border)", borderRadius: 8, padding: 10, marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, borderBottom: "1px solid rgba(0,0,0,0.06)", paddingBottom: 6 }}>
+          <strong style={{ fontSize: "0.86rem", color: "#0f766e" }}>{title}</strong>
           <span className="muted" style={{ fontSize: "0.78rem" }}>
-            Carga de Referencia (#1): <strong>{block.refLoad} {selectedEquipment?.unit}</strong> · EMT: <strong>±{block.targetEmt} {selectedEquipment?.unit}</strong>
+            Carga Base Ref: <strong>{block.refLoad.toFixed(0)} {selectedEquipment?.unit}</strong> · EMT: <strong>±{block.targetEmt} {selectedEquipment?.unit}</strong>
           </span>
         </div>
 
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
             <thead>
-              <tr style={{ background: "#f8fafc", borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left", color: "#475569" }}>
-                <th style={{ padding: "6px 8px", width: "80px" }}>N° Prueba</th>
-                <th style={{ padding: "6px 8px", width: "110px", textAlign: "right" }}>Cero Inicial</th>
-                <th style={{ padding: "6px 8px", width: "130px", textAlign: "right" }}>Indicación</th>
-                <th style={{ padding: "6px 8px", width: "110px", textAlign: "right" }}>Cero Final</th>
-                <th style={{ padding: "6px 8px", width: "140px", textAlign: "right" }}>Desviación Redondeo (ΔL)</th>
-                <th style={{ padding: "6px 8px", width: "120px", textAlign: "right" }}>Lectura Corregida</th>
-                <th style={{ padding: "6px 8px", width: "90px", textAlign: "right" }}>Error</th>
-                <th style={{ padding: "6px 8px", width: "80px", textAlign: "center" }}>EMT</th>
-                <th style={{ padding: "6px 8px", width: "100px", textAlign: "center" }}>Estado</th>
+              <tr style={{ background: "rgba(0,0,0,0.02)", textAlign: "left" }}>
+                <th style={{ padding: "6px 8px", width: 70 }}>Pasada</th>
+                <th style={{ padding: "6px 8px", width: 95, textAlign: "right" }}>Cero Inicial</th>
+                <th style={{ padding: "6px 8px", width: 110, textAlign: "right" }}>Indicación (I)</th>
+                <th style={{ padding: "6px 8px", width: 95, textAlign: "right" }}>Cero Final</th>
+                <th style={{ padding: "6px 8px", width: 100, textAlign: "right" }}>ΔL hasta +e</th>
+                <th style={{ padding: "6px 8px", width: 100, textAlign: "right" }}>P (Corregida)</th>
+                <th style={{ padding: "6px 8px", width: 90, textAlign: "right" }}>Error (E)</th>
+                <th style={{ padding: "6px 8px", width: 70, textAlign: "center" }}>EMT</th>
+                <th style={{ padding: "6px 8px", width: 90, textAlign: "center" }}>Estado</th>
               </tr>
             </thead>
             <tbody>
               {block.computedRows.map((r, idx) => {
                 return (
                   <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                    <td style={{ padding: "6px 8px", fontWeight: 700, color: "#334155" }}>#{r.index}</td>
+                    <td style={{ padding: "6px 8px", fontWeight: 700 }}>
+                      Pasada #{idx + 1} {idx === 0 && <span style={{ fontSize: "0.68rem", color: "#0284c7" }}>(Ref.)</span>}
+                    </td>
                     <td style={{ padding: "4px 8px", textAlign: "right" }}>
                       <input
                         type="number"
@@ -688,13 +770,13 @@ interface LinearityRowState {
                         type="number"
                         step="1"
                         value={trials[idx].indication}
-                        placeholder="—"
                         onChange={(e) => {
                           const copy = [...trials];
                           copy[idx].indication = e.target.value;
                           setter(copy);
                         }}
-                        style={{ width: "100%", maxWidth: "105px", textAlign: "right", fontWeight: 700, padding: "4px 6px", borderRadius: 4, border: "1px solid var(--surface-border)", color: "#0f172a" }}
+                        placeholder="—"
+                        style={{ width: "100%", maxWidth: "100px", textAlign: "right", fontWeight: 700, padding: "4px 6px", borderRadius: 4, border: "1px solid var(--surface-border)" }}
                       />
                     </td>
                     <td style={{ padding: "4px 8px", textAlign: "right" }}>
@@ -855,651 +937,1005 @@ interface LinearityRowState {
         </div>
       )}
 
+      {/* Modern Tabs Navigation Bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          overflowX: "auto",
+          paddingBottom: 4,
+          borderBottom: "2px solid rgba(0,0,0,0.06)",
+          marginBottom: 16
+        }}
+      >
+        {[
+          { id: "general", label: "1. Datos & Inspección", icon: "📋", ok: Boolean(selectedEquipmentId) && inspOk },
+          { id: "zero_mobility", label: "2. Cero & Movilidad", icon: "🎯", ok: zeroSettingOk && mobilityOk },
+          { id: "fidelity", label: "3. Fidelidad", icon: "🔁", ok: fidelityAllOk },
+          { id: "eccentricity", label: "4. Excentricidad", icon: "📐", ok: eccOk },
+          { id: "linearity", label: "5. Linealidad", icon: "⚖️", ok: linAllOk },
+          { id: "summary", label: "6. Dictamen & Emisión", icon: "📜", ok: allAssaysPass }
+        ].map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as FormTab)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "10px 16px",
+                borderRadius: "8px 8px 0 0",
+                border: "none",
+                borderBottom: isActive ? "3px solid #0d9488" : "3px solid transparent",
+                background: isActive ? "rgba(13, 148, 136, 0.12)" : "rgba(0,0,0,0.02)",
+                color: isActive ? "#06574c" : "var(--text-color, #333)",
+                fontWeight: isActive ? 800 : 600,
+                fontSize: "0.88rem",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease"
+              }}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+              {tab.ok && (
+                <span
+                  style={{
+                    fontSize: "0.72rem",
+                    background: "#10b981",
+                    color: "#fff",
+                    padding: "1px 6px",
+                    borderRadius: 10,
+                    fontWeight: 800
+                  }}
+                >
+                  ✓
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        {/* Instrument & General Info */}
-        <div className="card pad">
-          <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>1. Instrumento y Datos Generales</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 14 }}>
-            <label>
-              Instrumento a Calibrar *
-              <select
-                value={selectedEquipmentId}
-                onChange={(e) => handleSelectEquipment(e.target.value)}
-                required
-              >
-                <option value="">-- Seleccionar Instrumento --</option>
-                {equipments.map((eq) => (
-                  <option key={eq.id} value={eq.id}>
-                    {eq.code} - {eq.brand} {eq.model} (Cap. {eq.maxCapacity} {eq.unit}) - {eq.customerName}
-                  </option>
-                ))}
-              </select>
-            </label>
+        {/* TAB 1: DATOS GENERALES & INSPECCION */}
+        {activeTab === "general" && (
+          <>
+            <div className="card pad">
+              <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>1. Instrumento y Datos Generales</h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 14 }}>
+                <label>
+                  Instrumento a Calibrar *
+                  <select
+                    value={selectedEquipmentId}
+                    onChange={(e) => handleSelectEquipment(e.target.value)}
+                    required
+                  >
+                    <option value="">-- Seleccionar Instrumento --</option>
+                    {equipments.map((eq) => (
+                      <option key={eq.id} value={eq.id}>
+                        {eq.code} - {eq.brand} {eq.model} (Cap. {eq.maxCapacity} {eq.unit}) - {eq.customerName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-            <label>
-              N° de Informe / Certificado
-              <input
-                type="text"
-                placeholder="Ej. CERT-2026-001 (Auto si está vacío)"
-                value={reportNumber}
-                onChange={(e) => setReportNumber(e.target.value)}
-              />
-            </label>
+                <label>
+                  N° de Informe / Certificado
+                  <input
+                    type="text"
+                    placeholder="Ej. CERT-2026-001 (Auto si está vacío)"
+                    value={reportNumber}
+                    onChange={(e) => setReportNumber(e.target.value)}
+                  />
+                </label>
 
-            <label>
-              Tipo de Operación
-              <select value={operationType} onChange={(e) => setOperationType(e.target.value)}>
-                {Object.entries(operationLabels).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <label>
+                  Tipo de Operación
+                  <select value={operationType} onChange={(e) => setOperationType(e.target.value)}>
+                    {Object.entries(operationLabels).map(([k, v]) => (
+                      <option key={k} value={k}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-            <label>
-              Fecha de Calibración
-              <input
-                type="date"
-                value={calibrationDate}
-                onChange={(e) => setCalibrationDate(e.target.value)}
-                required
-              />
-            </label>
+                <label>
+                  Fecha de Calibración
+                  <input
+                    type="date"
+                    value={calibrationDate}
+                    onChange={(e) => setCalibrationDate(e.target.value)}
+                    required
+                  />
+                </label>
 
-            <label>
-              Metrólogo Responsable
-              <input
-                type="text"
-                value={performedBy}
-                onChange={(e) => setPerformedBy(e.target.value)}
-                required
-              />
-            </label>
-          </div>
+                <label>
+                  Metrólogo Responsable
+                  <input
+                    type="text"
+                    value={performedBy}
+                    onChange={(e) => setPerformedBy(e.target.value)}
+                    required
+                  />
+                </label>
+              </div>
 
-          {selectedEquipment && (
-            <div
-              style={{
-                background: "rgba(13, 148, 136, 0.06)",
-                padding: 12,
-                borderRadius: 10,
-                marginBottom: 14,
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: 10,
-                fontSize: "0.84rem"
-              }}
-            >
-              <div><strong>Cliente:</strong> {selectedEquipment.customerName || "—"}</div>
-              <div><strong>Ubicación:</strong> {selectedEquipment.location || "—"}</div>
-              <div><strong>Capacidad Max:</strong> {selectedEquipment.maxCapacity} {selectedEquipment.unit}</div>
-              <div><strong>Escalón (e):</strong> {selectedEquipment.verificationIntervalE} {selectedEquipment.unit}</div>
-              <div><strong>Clase:</strong> Clase {selectedEquipment.accuracyClass}</div>
-              <div><strong>Tipo Plataforma:</strong> {truckFidelity ? "🚛 Báscula Camiones / Rodante" : "⚖️ Balanza Plataforma / Estacionaria"}</div>
-            </div>
-          )}
-
-          {/* Environmental Conditions */}
-          <h4 style={{ margin: "14px 0 8px 0", fontSize: "0.95rem" }}>Condiciones Ambientales</h4>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-            <label>
-              Temperatura (°C)
-              <input
-                type="number"
-                step="0.1"
-                value={ambientTemperature}
-                onChange={(e) => setAmbientTemperature(e.target.value)}
-              />
-            </label>
-            <label>
-              Humedad Relativa (%)
-              <input
-                type="number"
-                step="0.1"
-                value={ambientHumidity}
-                onChange={(e) => setAmbientHumidity(e.target.value)}
-              />
-            </label>
-            <label>
-              Presión Atmosférica (hPa)
-              <input
-                type="number"
-                step="0.1"
-                value={atmosphericPressure}
-                onChange={(e) => setAtmosphericPressure(e.target.value)}
-              />
-            </label>
-          </div>
-        </div>
-
-        {/* Assay 1: Visual Inspection */}
-        <div className="card pad">
-          <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>3. Inspección Visual y Funcional</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 12 }}>
-            <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <input type="checkbox" checked={inspLevel} onChange={(e) => setInspLevel(e.target.checked)} />
-              <span>Nivelación Conforme</span>
-            </label>
-            <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <input type="checkbox" checked={inspZero} onChange={(e) => setInspZero(e.target.checked)} />
-              <span>Puesta a Cero Correcta</span>
-            </label>
-            <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <input type="checkbox" checked={inspTare} onChange={(e) => setInspTare(e.target.checked)} />
-              <span>Dispositivo de Tara Conforme</span>
-            </label>
-            <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <input type="checkbox" checked={inspSeals} onChange={(e) => setInspSeals(e.target.checked)} />
-              <span>Precintos y Placa Conformes</span>
-            </label>
-          </div>
-          <label>
-            Notas de Inspección
-            <input type="text" value={inspNotes} onChange={(e) => setInspNotes(e.target.value)} />
-          </label>
-        </div>
-
-        {/* Assay 2: Fidelidad / Repetibilidad (Baja Carga y Alta Carga) */}
-        <div className="card pad">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: "1.15rem" }}>
-                4. {is2307 ? "Ensayo de Fidelidad" : "Ensayo de Repetibilidad"}
-              </h3>
-              <p className="muted" style={{ margin: "2px 0 0 0", fontSize: "0.82rem" }}>
-                {truckFidelity
-                  ? "🚛 Báscula de Camiones: 3 pasadas en Sentido Entrada y 3 en Sentido Salida (iniciando y finalizando en cero). La carga de referencia es la primera indicación (#1)."
-                  : "⚖️ Balanza de Plataforma / Mostrador: 5 repeticiones sucesivas con descarga a cero. La carga de referencia es la primera indicación (#1)."}
-              </p>
-            </div>
-
-            {/* Tab switch */}
-            <div style={{ display: "flex", gap: 6 }}>
-              <button
-                type="button"
-                className={`btn compact ${fidelityTab === "low" ? "btn-primary" : "btn-outline"}`}
-                onClick={() => setFidelityTab("low")}
-                style={{ fontSize: "0.82rem" }}
-              >
-                🔹 Baja Carga ({lowAppliedLoad} {selectedEquipment?.unit}) {lowOk ? "✓" : "✗"}
-              </button>
-              <button
-                type="button"
-                className={`btn compact ${fidelityTab === "high" ? "btn-primary" : "btn-outline"}`}
-                onClick={() => setFidelityTab("high")}
-                style={{ fontSize: "0.82rem" }}
-              >
-                🔸 Alta Carga ({highAppliedLoad} {selectedEquipment?.unit}) {highOk ? "✓" : "✗"}
-              </button>
-              <button
-                type="button"
-                className={`btn compact ${fidelityTab === "both" ? "btn-primary" : "btn-outline"}`}
-                onClick={() => setFidelityTab("both")}
-                style={{ fontSize: "0.82rem" }}
-              >
-                👁️ Ver Ambas Cargas
-              </button>
-            </div>
-          </div>
-
-          {/* Section: Baja Carga */}
-          {(fidelityTab === "low" || fidelityTab === "both") && (
-            <div
-              style={{
-                background: "rgba(2, 132, 199, 0.03)",
-                border: "1px solid rgba(2, 132, 199, 0.2)",
-                borderRadius: 10,
-                padding: 14,
-                marginBottom: 16
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: "1rem", fontWeight: 800, color: "#0369a1" }}>
-                    🔹 Fidelidad en Baja Carga
-                  </span>
-                  <span className="muted" style={{ fontSize: "0.82rem" }}>
-                    (Carga de Referencia #1: <strong>{lowAppliedLoad} {selectedEquipment?.unit}</strong>)
-                  </span>
+              {selectedEquipment && (
+                <div
+                  style={{
+                    background: "rgba(13, 148, 136, 0.06)",
+                    padding: 12,
+                    borderRadius: 10,
+                    marginBottom: 14,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                    gap: 10,
+                    fontSize: "0.84rem"
+                  }}
+                >
+                  <div><strong>Cliente:</strong> {selectedEquipment.customerName || "—"}</div>
+                  <div><strong>Ubicación:</strong> {selectedEquipment.location || "—"}</div>
+                  <div><strong>Capacidad Max:</strong> {selectedEquipment.maxCapacity} {selectedEquipment.unit}</div>
+                  <div><strong>Escalón (e):</strong> {selectedEquipment.verificationIntervalE} {selectedEquipment.unit}</div>
+                  <div><strong>División (d):</strong> {selectedEquipment.divisionD} {selectedEquipment.unit}</div>
+                  <div><strong>Clase:</strong> Clase {selectedEquipment.accuracyClass}</div>
+                  <div><strong>Tipo Plataforma:</strong> {truckFidelity ? "🚛 Báscula Camiones / Rodante" : "⚖️ Balanza Plataforma / Estacionaria"}</div>
                 </div>
-                <span className="tag" style={{ background: "rgba(2, 132, 199, 0.12)", color: "#0369a1", fontWeight: 700 }}>
-                  EMT Permitido = ±{lowEmt} {selectedEquipment?.unit}
+              )}
+
+              {/* Environmental Conditions */}
+              <h4 style={{ margin: "14px 0 8px 0", fontSize: "0.95rem" }}>Condiciones Ambientales</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+                <label>
+                  Temperatura (°C)
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={ambientTemperature}
+                    onChange={(e) => setAmbientTemperature(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Humedad Relativa (%)
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={ambientHumidity}
+                    onChange={(e) => setAmbientHumidity(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Presión Atmosférica (hPa)
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={atmosphericPressure}
+                    onChange={(e) => setAtmosphericPressure(e.target.value)}
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Inspección Visual y Funcional */}
+            <div className="card pad">
+              <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>Inspección Visual y Funcional</h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 12 }}>
+                <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={inspLevel}
+                    onChange={(e) => setInspLevel(e.target.checked)}
+                  />
+                  <span>Nivelación y apoyos correctos</span>
+                </label>
+                <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={inspZero}
+                    onChange={(e) => setInspZero(e.target.checked)}
+                  />
+                  <span>Dispositivo de puesta a cero operativo</span>
+                </label>
+                <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={inspTare}
+                    onChange={(e) => setInspTare(e.target.checked)}
+                  />
+                  <span>Dispositivo de tara operativo</span>
+                </label>
+                <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={inspSeals}
+                    onChange={(e) => setInspSeals(e.target.checked)}
+                  />
+                  <span>Precintos reglamentarios colocados</span>
+                </label>
+              </div>
+
+              <label>
+                Observaciones de Inspección Visual
+                <input
+                  type="text"
+                  value={inspNotes}
+                  onChange={(e) => setInspNotes(e.target.value)}
+                />
+              </label>
+            </div>
+          </>
+        )}
+
+        {/* TAB 2: PUESTA A CERO & MOVILIDAD */}
+        {activeTab === "zero_mobility" && (
+          <>
+            {/* Ensayo de Puesta a Cero (Rango 4% Max) */}
+            <div className="card pad">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.1rem" }}>2. Ensayo de Puesta a Cero (Rango 4% Max)</h3>
+                  <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.76rem" }}>
+                    Resolución SCyNEI 2307/80: Rango máximo de puesta a cero $\le 4\%$ de la Capacidad Máxima ($\pm 2\%$ Max). Error a cero $\le \pm 0.25e$.
+                  </p>
+                </div>
+                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
+                  Límite 4% Max = {zero4PctLimit.toLocaleString("es-AR")} {selectedEquipment?.unit || "kg"}
                 </span>
               </div>
 
-              {truckFidelity ? (
-                <>
-                  {renderTrialTable(
-                    "→ Sentido Entrada (Carga) · 3 pasadas",
-                    fidelityLowInbound,
-                    setFidelityLowInbound,
-                    lowInboundBlock
-                  )}
-                  {renderTrialTable(
-                    "← Sentido Salida (Descarga) · 3 pasadas",
-                    fidelityLowOutbound,
-                    setFidelityLowOutbound,
-                    lowOutboundBlock
-                  )}
-                </>
-              ) : (
-                renderTrialTable(
-                  "5 Repeticiones de Ensayo",
-                  fidelityLowPlatform,
-                  setFidelityLowPlatform,
-                  lowPlatformBlock
-                )
-              )}
-            </div>
-          )}
-
-          {/* Section: Alta Carga */}
-          {(fidelityTab === "high" || fidelityTab === "both") && (
-            <div
-              style={{
-                background: "rgba(245, 158, 11, 0.03)",
-                border: "1px solid rgba(245, 158, 11, 0.2)",
-                borderRadius: 10,
-                padding: 14
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: "1rem", fontWeight: 800, color: "#b45309" }}>
-                    🔸 Fidelidad en Alta Carga
-                  </span>
-                  <span className="muted" style={{ fontSize: "0.82rem" }}>
-                    (Carga de Referencia #1: <strong>{highAppliedLoad} {selectedEquipment?.unit}</strong>)
-                  </span>
-                </div>
-                <span className="tag" style={{ background: "rgba(245, 158, 11, 0.15)", color: "#b45309", fontWeight: 700 }}>
-                  EMT Permitido = ±{highEmt} {selectedEquipment?.unit}
-                </span>
-              </div>
-
-              {truckFidelity ? (
-                <>
-                  {renderTrialTable(
-                    "→ Sentido Entrada (Carga) · 3 pasadas",
-                    fidelityHighInbound,
-                    setFidelityHighInbound,
-                    highInboundBlock
-                  )}
-                  {renderTrialTable(
-                    "← Sentido Salida (Descarga) · 3 pasadas",
-                    fidelityHighOutbound,
-                    setFidelityHighOutbound,
-                    highOutboundBlock
-                  )}
-                </>
-              ) : (
-                renderTrialTable(
-                  "5 Repeticiones de Ensayo",
-                  fidelityHighPlatform,
-                  setFidelityHighPlatform,
-                  highPlatformBlock
-                )
-              )}
-            </div>
-          )}
-
-          {/* Global Fidelity Badge */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: 14,
-              padding: "10px 14px",
-              background: fidelityAllOk ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
-              borderRadius: 8
-            }}
-          >
-            <div>
-              <strong>Estado General del Ensayo de Fidelidad:</strong>{" "}
-              <span className="muted">
-                (Baja Carga: {lowOk ? "✓ Cumple" : "✗ No cumple"} · Alta Carga: {highOk ? "✓ Cumple" : "✗ No cumple"})
-              </span>
-            </div>
-            <span
-              className={`badge ${fidelityAllOk ? "ok" : "prio-high"}`}
-              style={{ fontWeight: 800, fontSize: "0.85rem", padding: "4px 12px", borderRadius: 12 }}
-            >
-              {fidelityAllOk ? "✓ FIDELIDAD CONFORME" : "✗ SUPERA EMT"}
-            </span>
-          </div>
-        </div>
-
-        {/* Assay 3: Excentricidad de Carga */}
-        <div className="card pad">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: "1.1rem" }}>5. Ensayo de Excentricidad de Carga</h3>
-              <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-                Carga de ensayo: <strong>{eccTestLoad} {selectedEquipment?.unit}</strong> ({eccentricityConfig?.description})
-              </p>
-            </div>
-            <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
-              EMT = ±{eccentricityConfig?.emt || 20} {selectedEquipment?.unit || "kg"}
-            </span>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 0.8fr) minmax(280px, 1.2fr)", gap: 14, marginBottom: 14, alignItems: "start" }}>
-            <label>
-              Carga aplicada por posición (editable)
-              <input
-                type="number"
-                step="1"
-                value={eccTestLoad}
-                onChange={(e) => setEccTestLoad(e.target.value)}
-              />
-            </label>
-            <div style={{ border: "1px dashed #94a3b8", borderRadius: 10, padding: 10, background: "rgba(59,130,246,0.03)" }}>
-              <strong style={{ fontSize: "0.8rem" }}>Croquis de enumeración de apoyos · frente / acceso ↑</strong>
-              {/* Fila superior (enfrente: 2, 4, 6, 8...) */}
-              <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccPositions.length / 2)}, minmax(36px, 1fr))`, gap: 6, marginTop: 8 }}>
-                {Array.from({ length: Math.ceil(eccPositions.length / 2) }, (_, i) => 2 * (i + 1))
-                  .filter((num) => num <= eccPositions.length)
-                  .map((num) => (
-                    <span key={`top-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "#e0f2fe", color: "#0369a1" }}>
-                      {num}
-                    </span>
-                  ))}
-              </div>
-              <div style={{ height: 18, borderLeft: "2px solid #64748b", borderRight: "2px solid #64748b", margin: "5px 10px", textAlign: "center", fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>
-                PLATAFORMA
-              </div>
-              {/* Fila inferior (frente / acceso: 1, 3, 5, 7...) */}
-              <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccPositions.length / 2)}, minmax(36px, 1fr))`, gap: 6 }}>
-                {Array.from({ length: Math.ceil(eccPositions.length / 2) }, (_, i) => 2 * i + 1)
-                  .filter((num) => num <= eccPositions.length)
-                  .map((num) => (
-                    <span key={`bottom-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "#e0f2fe", color: "#0369a1" }}>
-                      {num}
-                    </span>
-                  ))}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 12 }}>
-            {eccPositions.map((p, idx) => {
-              const correctedError = beforeRounding(p.indication, p.deltaL) - eccLoadNum;
-              const err = Math.abs(correctedError);
-              const ok = eccentricityConfig ? err <= (eccentricityConfig.emt || 20) : true;
-              return (
-                <div key={p.pos} style={{ background: "rgba(0,0,0,0.02)", padding: 10, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
-                  <label style={{ fontSize: "0.8rem", fontWeight: 700 }}>
-                    {p.label}
-                    <span className="muted" style={{ display: "block", fontSize: "0.7rem" }}>Indicación I</span>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14, marginBottom: 14 }}>
+                {/* Test 1: Puesta a cero dentro del rango */}
+                <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
+                  <strong style={{ fontSize: "0.85rem", color: "#0f766e" }}>A. Puesta a Cero Dentro del Rango</strong>
+                  <p className="muted" style={{ fontSize: "0.74rem", margin: "4px 0 8px" }}>
+                    Carga aplicada menor al 4% Max donde el dispositivo debe poner a cero efectivamente.
+                  </p>
+                  <label style={{ fontSize: "0.8rem" }}>
+                    Carga de prueba aplicada ({selectedEquipment?.unit})
                     <input
                       type="number"
                       step="1"
-                      value={p.indication}
-                      onChange={(e) => {
-                        const copy = [...eccPositions];
-                        copy[idx].indication = e.target.value;
-                        setEccPositions(copy);
-                      }}
-                    />
-                    <span className="muted" style={{ display: "block", fontSize: "0.7rem", marginTop: 4 }}>ΔL hasta +e</span>
-                    <input
-                      type="number"
-                      step="1"
-                      value={p.deltaL}
-                      onChange={(e) => {
-                        const copy = [...eccPositions];
-                        copy[idx].deltaL = e.target.value;
-                        setEccPositions(copy);
-                      }}
+                      value={zeroInRangeLoad}
+                      onChange={(e) => setZeroInRangeLoad(e.target.value)}
                     />
                   </label>
-                  <div style={{ marginTop: 6, fontSize: "0.75rem", display: "flex", justifyContent: "space-between" }}>
-                    <span>Error: <strong>{correctedError >= 0 ? `+${correctedError.toFixed(0)}` : correctedError.toFixed(0)}</strong></span>
-                    <span className={`badge ${ok ? "ok" : "prio-high"}`}>{ok ? "✓ Conforme" : "✗ Fuera"}</span>
+                  <label style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={zeroInRangeOk}
+                      onChange={(e) => setZeroInRangeOk(e.target.checked)}
+                    />
+                    <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>Puesta a cero efectiva (Indicador regresa a 0)</span>
+                  </label>
+                </div>
+
+                {/* Test 2: Bloqueo fuera del rango del 4% */}
+                <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
+                  <strong style={{ fontSize: "0.85rem", color: "#0f766e" }}>B. Bloqueo Fuera del Rango (&gt; 4% Max)</strong>
+                  <p className="muted" style={{ fontSize: "0.74rem", margin: "4px 0 8px" }}>
+                    Carga superior a {zero4PctLimit} {selectedEquipment?.unit} donde el indicador DEBE bloquear la puesta a cero.
+                  </p>
+                  <label style={{ fontSize: "0.8rem" }}>
+                    Carga excesiva de prueba ({selectedEquipment?.unit})
+                    <input
+                      type="number"
+                      step="1"
+                      value={zeroOverLimitLoad}
+                      onChange={(e) => setZeroOverLimitLoad(e.target.value)}
+                    />
+                  </label>
+                  <label style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={zeroOverLimitBlocked}
+                      onChange={(e) => setZeroOverLimitBlocked(e.target.checked)}
+                    />
+                    <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>Puesta a cero rechazada / bloqueada fuera de rango</span>
+                  </label>
+                </div>
+
+                {/* Test 3: Exactitud de Puesta a Cero */}
+                <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
+                  <strong style={{ fontSize: "0.85rem", color: "#0f766e" }}>C. Exactitud de Puesta a Cero (E₀)</strong>
+                  <p className="muted" style={{ fontSize: "0.74rem", margin: "4px 0 8px" }}>
+                    Determinación del error en cero mediante pesitas de redondeo $\Delta L_0$ ($E_0 = 0.5e - \Delta L_0 \le \pm 0.25e$).
+                  </p>
+                  <label style={{ fontSize: "0.8rem" }}>
+                    ΔL hasta cambio de indicación ({selectedEquipment?.unit})
+                    <input
+                      type="number"
+                      step="1"
+                      value={zeroErrorDeltaL}
+                      onChange={(e) => setZeroErrorDeltaL(e.target.value)}
+                    />
+                  </label>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: "0.8rem" }}>
+                    <span>Error E₀: <strong>{zeroErrorCorrected >= 0 ? `+${zeroErrorCorrected.toFixed(1)}` : zeroErrorCorrected.toFixed(1)} {selectedEquipment?.unit}</strong></span>
+                    <span className={`badge ${zeroErrorOk ? "ok" : "prio-high"}`}>
+                      {zeroErrorOk ? `✓ Cumple (EMT ±${zeroErrorEmt})` : `✗ Supera ±${zeroErrorEmt}`}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: "0.84rem", background: "rgba(0,0,0,.03)", padding: "8px 10px", borderRadius: 8 }}>
-            <span>Error Máximo: <strong>{eccMaxError.toFixed(0)}</strong> {selectedEquipment?.unit}</span>
-            <span className={`badge ${eccOk ? "ok" : "prio-high"}`}>{eccOk ? "✓ Excentricidad conforme" : "✗ Supera EMT"}</span>
-          </div>
-        </div>
-
-        {/* Assay 4: Linearity */}
-        <div className="card pad">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: "1.1rem" }}>6. Ensayo de Exactitud y Linealidad</h3>
-              <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.75rem" }}>
-                Determinación de errores con cargas crecientes (↗) y decrecientes (↘), pesas patrón, cargas auxiliares y redondeo (ΔL)
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button
-                type="button"
-                className="btn btn-outline"
-                style={{ fontSize: "0.78rem", padding: "4px 10px" }}
-                onClick={() => {
-                  setLinRows((prev) => [
-                    ...prev,
-                    {
-                      step: prev.length + 1,
-                      pesas: "",
-                      auxLoad: "",
-                      ascIndication: "",
-                      ascDeltaL: "",
-                      descIndication: "",
-                      descDeltaL: ""
-                    }
-                  ]);
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "8px 12px",
+                  background: zeroSettingOk ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                  borderRadius: 8
                 }}
               >
-                + Agregar Renglón
-              </button>
-              <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
-                {linRows.length} Renglones de Carga
+                <div>
+                  <strong>Estado del Ensayo de Puesta a Cero:</strong>{" "}
+                  <span className="muted">(Rango 4%: {zeroInRangeOk && zeroOverLimitBlocked ? "✓ Correcto" : "✗ Falló"} · Error E₀: {zeroErrorOk ? "✓ Correcto" : "✗ Falló"})</span>
+                </div>
+                <span className={`badge ${zeroSettingOk ? "ok" : "prio-high"}`} style={{ fontWeight: 800 }}>
+                  {zeroSettingOk ? "✓ PUESTA A CERO CONFORME" : "✗ NO CONFORME"}
+                </span>
+              </div>
+            </div>
+
+            {/* Ensayo de Movilidad / Discriminación */}
+            <div className="card pad">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.1rem" }}>3. Ensayo de Movilidad / Discriminación (Sobrecarga 1.4d)</h3>
+                  <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.76rem" }}>
+                    Al aplicar suavemente una sobrecarga adicional de $1.4 \times d$ ({Math.round(dInterval * 1.4 * 100) / 100} {selectedEquipment?.unit}) sobre el receptor en equilibrio, la indicación debe variar al menos $1 \times d$ ({dInterval} {selectedEquipment?.unit}).
+                  </p>
+                </div>
+                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
+                  Sobrecarga = 1.4 × d = {Math.round(dInterval * 1.4 * 100) / 100} {selectedEquipment?.unit || "kg"}
+                </span>
+              </div>
+
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                  <thead>
+                    <tr style={{ background: "rgba(0,0,0,0.02)", textAlign: "left" }}>
+                      <th style={{ padding: "6px 8px" }}>Nivel de Carga</th>
+                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Carga Base ({selectedEquipment?.unit})</th>
+                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Sobrecarga (1.4d)</th>
+                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Indicación Inicial (I₁)</th>
+                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Indicación Final (I₂)</th>
+                      <th style={{ padding: "6px 8px", textAlign: "right" }}>Variación (ΔI)</th>
+                      <th style={{ padding: "6px 8px", textAlign: "center" }}>Mínimo Requerido</th>
+                      <th style={{ padding: "6px 8px", textAlign: "center" }}>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mobilityPoints.map((p, idx) => {
+                      const comp = mobilityComputed[idx];
+                      return (
+                        <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                          <td style={{ padding: "6px 8px", fontWeight: 700 }}>{p.loadName}</td>
+                          <td style={{ padding: "4px 8px", textAlign: "right" }}>
+                            <input
+                              type="number"
+                              step="1"
+                              value={p.load}
+                              onChange={(e) => {
+                                const copy = [...mobilityPoints];
+                                copy[idx].load = e.target.value;
+                                setMobilityPoints(copy);
+                              }}
+                              style={{ width: 100, textAlign: "right" }}
+                            />
+                          </td>
+                          <td style={{ padding: "4px 8px", textAlign: "right" }}>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={p.overload}
+                              onChange={(e) => {
+                                const copy = [...mobilityPoints];
+                                copy[idx].overload = e.target.value;
+                                setMobilityPoints(copy);
+                              }}
+                              style={{ width: 85, textAlign: "right" }}
+                            />
+                          </td>
+                          <td style={{ padding: "4px 8px", textAlign: "right" }}>
+                            <input
+                              type="number"
+                              step="1"
+                              value={p.initialIndication}
+                              onChange={(e) => {
+                                const copy = [...mobilityPoints];
+                                copy[idx].initialIndication = e.target.value;
+                                setMobilityPoints(copy);
+                              }}
+                              style={{ width: 100, textAlign: "right", fontWeight: 700 }}
+                            />
+                          </td>
+                          <td style={{ padding: "4px 8px", textAlign: "right" }}>
+                            <input
+                              type="number"
+                              step="1"
+                              value={p.finalIndication}
+                              onChange={(e) => {
+                                const copy = [...mobilityPoints];
+                                copy[idx].finalIndication = e.target.value;
+                                setMobilityPoints(copy);
+                              }}
+                              style={{ width: 100, textAlign: "right", fontWeight: 700 }}
+                            />
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.ok ? "#047857" : "#b91c1c" }}>
+                            +{comp.delta.toFixed(0)} {selectedEquipment?.unit}
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "center", fontFamily: "monospace" }}>
+                            ≥ {dInterval} {selectedEquipment?.unit}
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                            <span className={`badge ${comp.ok ? "ok" : "prio-high"}`}>
+                              {comp.ok ? "✓ CUMPLE" : "✗ NO CUMPLE"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: 12,
+                  padding: "8px 12px",
+                  background: mobilityOk ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                  borderRadius: 8
+                }}
+              >
+                <div>
+                  <strong>Estado General de Movilidad / Sensibilidad:</strong>{" "}
+                  <span className="muted">(Variación mínima $\ge 1d$ verificada en los 3 niveles de carga)</span>
+                </div>
+                <span className={`badge ${mobilityOk ? "ok" : "prio-high"}`} style={{ fontWeight: 800 }}>
+                  {mobilityOk ? "✓ MOVILIDAD CONFORME" : "✗ NO CONFORME"}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* TAB 3: FIDELIDAD */}
+        {activeTab === "fidelity" && (
+          <div className="card pad">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.15rem" }}>
+                  4. {is2307 ? "Ensayo de Fidelidad" : "Ensayo de Repetibilidad"}
+                </h3>
+                <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.78rem" }}>
+                  Baja Carga: {lowAppliedLoad.toFixed(0)} {selectedEquipment?.unit} (EMT: ±{lowEmt}) · Alta Carga: {highAppliedLoad.toFixed(0)} {selectedEquipment?.unit} (EMT: ±{highEmt})
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  type="button"
+                  className={`btn ${fidelityTab === "both" ? "btn-primary" : "btn-outline"} compact`}
+                  onClick={() => setFidelityTab("both")}
+                >
+                  Ambas Cargas
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${fidelityTab === "low" ? "btn-primary" : "btn-outline"} compact`}
+                  onClick={() => setFidelityTab("low")}
+                >
+                  Baja Carga
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${fidelityTab === "high" ? "btn-primary" : "btn-outline"} compact`}
+                  onClick={() => setFidelityTab("high")}
+                >
+                  Alta Carga
+                </button>
+              </div>
+            </div>
+
+            {/* Low Load Section */}
+            {(fidelityTab === "low" || fidelityTab === "both") && (
+              <div style={{ marginBottom: 16 }}>
+                <h4 style={{ margin: "0 0 8px", color: "#0f766e", fontSize: "0.95rem" }}>
+                  🔹 Fidelidad en Baja Carga (~30% / 12.5t)
+                </h4>
+                {truckFidelity ? (
+                  <>
+                    {renderTrialTable(
+                      "→ Sentido Entrada (Carga) · 3 pasadas",
+                      fidelityLowInbound,
+                      setFidelityLowInbound,
+                      lowInboundBlock
+                    )}
+                    {renderTrialTable(
+                      "← Sentido Salida (Descarga) · 3 pasadas",
+                      fidelityLowOutbound,
+                      setFidelityLowOutbound,
+                      lowOutboundBlock
+                    )}
+                  </>
+                ) : (
+                  renderTrialTable(
+                    "5 Repeticiones de Ensayo",
+                    fidelityLowPlatform,
+                    setFidelityLowPlatform,
+                    lowPlatformBlock
+                  )
+                )}
+              </div>
+            )}
+
+            {/* High Load Section */}
+            {(fidelityTab === "high" || fidelityTab === "both") && (
+              <div style={{ marginBottom: 14 }}>
+                <h4 style={{ margin: "0 0 8px", color: "#0f766e", fontSize: "0.95rem" }}>
+                  🔸 Fidelidad en Alta Carga (~60%-100% / 25t)
+                </h4>
+                {truckFidelity ? (
+                  <>
+                    {renderTrialTable(
+                      "→ Sentido Entrada (Carga) · 3 pasadas",
+                      fidelityHighInbound,
+                      setFidelityHighInbound,
+                      highInboundBlock
+                    )}
+                    {renderTrialTable(
+                      "← Sentido Salida (Descarga) · 3 pasadas",
+                      fidelityHighOutbound,
+                      setFidelityHighOutbound,
+                      highOutboundBlock
+                    )}
+                  </>
+                ) : (
+                  renderTrialTable(
+                    "5 Repeticiones de Ensayo",
+                    fidelityHighPlatform,
+                    setFidelityHighPlatform,
+                    highPlatformBlock
+                  )
+                )}
+              </div>
+            )}
+
+            {/* Global Fidelity Badge */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: 14,
+                padding: "10px 14px",
+                background: fidelityAllOk ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                borderRadius: 8
+              }}
+            >
+              <div>
+                <strong>Estado General del Ensayo de Fidelidad:</strong>{" "}
+                <span className="muted">
+                  (Baja Carga: {lowOk ? "✓ Cumple" : "✗ No cumple"} · Alta Carga: {highOk ? "✓ Cumple" : "✗ No cumple"})
+                </span>
+              </div>
+              <span
+                className={`badge ${fidelityAllOk ? "ok" : "prio-high"}`}
+                style={{ fontWeight: 800, fontSize: "0.85rem", padding: "4px 12px", borderRadius: 12 }}
+              >
+                {fidelityAllOk ? "✓ FIDELIDAD CONFORME" : "✗ SUPERA EMT"}
               </span>
             </div>
           </div>
+        )}
 
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
-              <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left" }}>
-                  <th style={{ padding: "8px 6px", width: 90 }}>Pesas</th>
-                  <th style={{ padding: "8px 6px", width: 95 }}>Carga Auxiliar</th>
-                  <th style={{ padding: "8px 6px", width: 110 }}>Lectura Ascendente</th>
-                  <th style={{ padding: "8px 6px", width: 100 }}>Redondeo Ascendente</th>
-                  <th style={{ padding: "8px 6px", width: 115, textAlign: "right" }}>Lectura Corregida Ascendente</th>
-                  <th style={{ padding: "8px 6px", width: 90, textAlign: "right" }}>Error Ascendente</th>
-                  <th style={{ padding: "8px 6px", width: 110 }}>Lectura Descendente</th>
-                  <th style={{ padding: "8px 6px", width: 100 }}>Redondeo Descendente</th>
-                  <th style={{ padding: "8px 6px", width: 115, textAlign: "right" }}>Lectura Corregida Descendente</th>
-                  <th style={{ padding: "8px 6px", width: 90, textAlign: "right" }}>Error Descendente</th>
-                </tr>
-              </thead>
-              <tbody>
-                {linRows.map((r, idx) => {
-                  const comp = computeLinearityRow(r, eInterval);
-                  const ascErrStr = comp.ascError !== null ? (comp.ascError >= 0 ? `+${comp.ascError.toFixed(0)}` : comp.ascError.toFixed(0)) : "-";
-                  const descErrStr = comp.descError !== null ? (comp.descError >= 0 ? `+${comp.descError.toFixed(0)}` : comp.descError.toFixed(0)) : "-";
-                  const ascOk = comp.ascError !== null ? Math.abs(comp.ascError) <= comp.emt : true;
-                  const descOk = comp.descError !== null ? Math.abs(comp.descError) <= comp.emt : true;
-
-                  return (
-                    <tr key={r.step} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                      <td style={{ padding: "4px 6px" }}>
-                        <input
-                          type="number"
-                          step="1"
-                          placeholder="0"
-                          value={r.pesas}
-                          onChange={(e) => {
-                            const copy = [...linRows];
-                            copy[idx].pesas = e.target.value;
-                            setLinRows(copy);
-                          }}
-                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
-                        />
-                      </td>
-                      <td style={{ padding: "4px 6px" }}>
-                        <input
-                          type="number"
-                          step="1"
-                          placeholder="0"
-                          value={r.auxLoad}
-                          onChange={(e) => {
-                            const copy = [...linRows];
-                            copy[idx].auxLoad = e.target.value;
-                            setLinRows(copy);
-                          }}
-                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
-                        />
-                      </td>
-                      <td style={{ padding: "4px 6px" }}>
-                        <input
-                          type="number"
-                          step="1"
-                          placeholder="—"
-                          value={r.ascIndication}
-                          onChange={(e) => {
-                            const copy = [...linRows];
-                            copy[idx].ascIndication = e.target.value;
-                            setLinRows(copy);
-                          }}
-                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16, fontWeight: 700 }}
-                        />
-                      </td>
-                      <td style={{ padding: "4px 6px" }}>
-                        <input
-                          type="number"
-                          step="1"
-                          placeholder="ΔL"
-                          value={r.ascDeltaL}
-                          onChange={(e) => {
-                            const copy = [...linRows];
-                            copy[idx].ascDeltaL = e.target.value;
-                            setLinRows(copy);
-                          }}
-                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
-                        />
-                      </td>
-                      <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>
-                        {comp.ascCorrected !== null ? comp.ascCorrected.toLocaleString("es-AR") : "-"}
-                      </td>
-                      <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.ascError === null ? "inherit" : ascOk ? "#047857" : "#b91c1c" }}>
-                        {ascErrStr}
-                      </td>
-                      <td style={{ padding: "4px 6px" }}>
-                        <input
-                          type="number"
-                          step="1"
-                          placeholder="—"
-                          value={r.descIndication}
-                          onChange={(e) => {
-                            const copy = [...linRows];
-                            copy[idx].descIndication = e.target.value;
-                            setLinRows(copy);
-                          }}
-                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16, fontWeight: 700 }}
-                        />
-                      </td>
-                      <td style={{ padding: "4px 6px" }}>
-                        <input
-                          type="number"
-                          step="1"
-                          placeholder="ΔL"
-                          value={r.descDeltaL}
-                          onChange={(e) => {
-                            const copy = [...linRows];
-                            copy[idx].descDeltaL = e.target.value;
-                            setLinRows(copy);
-                          }}
-                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
-                        />
-                      </td>
-                      <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>
-                        {comp.descCorrected !== null ? comp.descCorrected.toLocaleString("es-AR") : "-"}
-                      </td>
-                      <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.descError === null ? "inherit" : descOk ? "#047857" : "#b91c1c" }}>
-                        {descErrStr}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Weights Picker */}
-        <div className="card pad">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: "1.1rem" }}>2. Patrones Metrológicos Utilizados</h3>
-              <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-                {selectedWeightIds.length} patrones vinculados al ensayo
-              </p>
+        {/* TAB 4: EXCENTRICIDAD */}
+        {activeTab === "eccentricity" && (
+          <div className="card pad">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.1rem" }}>5. Ensayo de Excentricidad de Carga</h3>
+                <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+                  Carga de ensayo: <strong>{eccTestLoad} {selectedEquipment?.unit}</strong> ({eccentricityConfig?.description})
+                </p>
+              </div>
+              <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
+                EMT = ±{eccentricityConfig?.emt || 20} {selectedEquipment?.unit || "kg"}
+              </span>
             </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 0.8fr) minmax(280px, 1.2fr)", gap: 14, marginBottom: 14, alignItems: "start" }}>
+              <label>
+                Carga aplicada por posición (editable)
+                <input
+                  type="number"
+                  step="1"
+                  value={eccTestLoad}
+                  onChange={(e) => setEccTestLoad(e.target.value)}
+                />
+              </label>
+              <div style={{ border: "1px dashed #94a3b8", borderRadius: 10, padding: 10, background: "rgba(59,130,246,0.03)" }}>
+                <strong style={{ fontSize: "0.8rem" }}>Croquis de enumeración de apoyos · frente / acceso ↑</strong>
+                {/* Fila superior (enfrente: 2, 4, 6, 8...) */}
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccPositions.length / 2)}, minmax(36px, 1fr))`, gap: 6, marginTop: 8 }}>
+                  {Array.from({ length: Math.ceil(eccPositions.length / 2) }, (_, i) => 2 * (i + 1))
+                    .filter((num) => num <= eccPositions.length)
+                    .map((num) => (
+                      <span key={`top-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "#e0f2fe", color: "#0369a1" }}>
+                        {num}
+                      </span>
+                    ))}
+                </div>
+                <div style={{ height: 18, borderLeft: "2px solid #64748b", borderRight: "2px solid #64748b", margin: "5px 10px", textAlign: "center", fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>
+                  PLATAFORMA
+                </div>
+                {/* Fila inferior (frente / acceso: 1, 3, 5, 7...) */}
+                <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccPositions.length / 2)}, minmax(36px, 1fr))`, gap: 6 }}>
+                  {Array.from({ length: Math.ceil(eccPositions.length / 2) }, (_, i) => 2 * i + 1)
+                    .filter((num) => num <= eccPositions.length)
+                    .map((num) => (
+                      <span key={`bottom-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "#e0f2fe", color: "#0369a1" }}>
+                        {num}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 12 }}>
+              {eccPositions.map((p, idx) => {
+                const correctedError = beforeRounding(p.indication, p.deltaL) - eccLoadNum;
+                const err = Math.abs(correctedError);
+                const ok = eccentricityConfig ? err <= (eccentricityConfig.emt || 20) : true;
+                return (
+                  <div key={p.pos} style={{ background: "rgba(0,0,0,0.02)", padding: 10, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
+                    <label style={{ fontSize: "0.8rem", fontWeight: 700 }}>
+                      {p.label}
+                      <span className="muted" style={{ display: "block", fontSize: "0.7rem" }}>Indicación I</span>
+                      <input
+                        type="number"
+                        step="1"
+                        value={p.indication}
+                        onChange={(e) => {
+                          const copy = [...eccPositions];
+                          copy[idx].indication = e.target.value;
+                          setEccPositions(copy);
+                        }}
+                      />
+                      <span className="muted" style={{ display: "block", fontSize: "0.7rem", marginTop: 4 }}>ΔL hasta +e</span>
+                      <input
+                        type="number"
+                        step="1"
+                        value={p.deltaL}
+                        onChange={(e) => {
+                          const copy = [...eccPositions];
+                          copy[idx].deltaL = e.target.value;
+                          setEccPositions(copy);
+                        }}
+                      />
+                    </label>
+                    <div style={{ marginTop: 6, fontSize: "0.75rem", display: "flex", justifyContent: "space-between" }}>
+                      <span>Error: <strong>{correctedError >= 0 ? `+${correctedError.toFixed(0)}` : correctedError.toFixed(0)}</strong></span>
+                      <span className={`badge ${ok ? "ok" : "prio-high"}`}>{ok ? "✓ Conforme" : "✗ Fuera"}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10, fontSize: "0.84rem", background: "rgba(0,0,0,.03)", padding: "8px 10px", borderRadius: 8 }}>
+              <span>Error Máximo: <strong>{eccMaxError.toFixed(0)}</strong> {selectedEquipment?.unit}</span>
+              <span className={`badge ${eccOk ? "ok" : "prio-high"}`}>{eccOk ? "✓ Excentricidad conforme" : "✗ Supera EMT"}</span>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: LINEALIDAD */}
+        {activeTab === "linearity" && (
+          <div className="card pad">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "1.1rem" }}>6. Ensayo de Exactitud y Linealidad</h3>
+                <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.75rem" }}>
+                  Determinación de errores con cargas crecientes (↗) y decrecientes (↘), pesas patrón, cargas auxiliares y redondeo (ΔL)
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+                  onClick={() => {
+                    setLinRows((prev) => [
+                      ...prev,
+                      {
+                        step: prev.length + 1,
+                        pesas: "",
+                        auxLoad: "",
+                        ascIndication: "",
+                        ascDeltaL: "",
+                        descIndication: "",
+                        descDeltaL: ""
+                      }
+                    ]);
+                  }}
+                >
+                  + Agregar Renglón
+                </button>
+                <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
+                  {linRows.length} Renglones de Carga
+                </span>
+              </div>
+            </div>
+
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                <thead>
+                  <tr style={{ background: "#f8fafc", borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left" }}>
+                    <th style={{ padding: "8px 6px", width: 90 }}>Pesas</th>
+                    <th style={{ padding: "8px 6px", width: 95 }}>Carga Auxiliar</th>
+                    <th style={{ padding: "8px 6px", width: 110 }}>Lectura Ascendente</th>
+                    <th style={{ padding: "8px 6px", width: 100 }}>Redondeo Ascendente</th>
+                    <th style={{ padding: "8px 6px", width: 115, textAlign: "right" }}>Lectura Corregida Ascendente</th>
+                    <th style={{ padding: "8px 6px", width: 90, textAlign: "right" }}>Error Ascendente</th>
+                    <th style={{ padding: "8px 6px", width: 110 }}>Lectura Descendente</th>
+                    <th style={{ padding: "8px 6px", width: 100 }}>Redondeo Descendente</th>
+                    <th style={{ padding: "8px 6px", width: 115, textAlign: "right" }}>Lectura Corregida Descendente</th>
+                    <th style={{ padding: "8px 6px", width: 90, textAlign: "right" }}>Error Descendente</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {linRows.map((r, idx) => {
+                    const comp = computeLinearityRow(r, eInterval);
+                    const ascErrStr = comp.ascError !== null ? (comp.ascError >= 0 ? `+${comp.ascError.toFixed(0)}` : comp.ascError.toFixed(0)) : "-";
+                    const descErrStr = comp.descError !== null ? (comp.descError >= 0 ? `+${comp.descError.toFixed(0)}` : comp.descError.toFixed(0)) : "-";
+                    const ascOk = comp.ascError !== null ? Math.abs(comp.ascError) <= comp.emt : true;
+                    const descOk = comp.descError !== null ? Math.abs(comp.descError) <= comp.emt : true;
+
+                    return (
+                      <tr key={r.step} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                        <td style={{ padding: "4px 6px" }}>
+                          <input
+                            type="number"
+                            step="1"
+                            placeholder="0"
+                            value={r.pesas}
+                            onChange={(e) => {
+                              const copy = [...linRows];
+                              copy[idx].pesas = e.target.value;
+                              setLinRows(copy);
+                            }}
+                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                          />
+                        </td>
+                        <td style={{ padding: "4px 6px" }}>
+                          <input
+                            type="number"
+                            step="1"
+                            placeholder="0"
+                            value={r.auxLoad}
+                            onChange={(e) => {
+                              const copy = [...linRows];
+                              copy[idx].auxLoad = e.target.value;
+                              setLinRows(copy);
+                            }}
+                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                          />
+                        </td>
+                        <td style={{ padding: "4px 6px" }}>
+                          <input
+                            type="number"
+                            step="1"
+                            placeholder="—"
+                            value={r.ascIndication}
+                            onChange={(e) => {
+                              const copy = [...linRows];
+                              copy[idx].ascIndication = e.target.value;
+                              setLinRows(copy);
+                            }}
+                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16, fontWeight: 700 }}
+                          />
+                        </td>
+                        <td style={{ padding: "4px 6px" }}>
+                          <input
+                            type="number"
+                            step="1"
+                            placeholder="ΔL"
+                            value={r.ascDeltaL}
+                            onChange={(e) => {
+                              const copy = [...linRows];
+                              copy[idx].ascDeltaL = e.target.value;
+                              setLinRows(copy);
+                            }}
+                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                          />
+                        </td>
+                        <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>
+                          {comp.ascCorrected !== null ? comp.ascCorrected.toLocaleString("es-AR") : "-"}
+                        </td>
+                        <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.ascError === null ? "inherit" : ascOk ? "#047857" : "#b91c1c" }}>
+                          {ascErrStr}
+                        </td>
+                        <td style={{ padding: "4px 6px" }}>
+                          <input
+                            type="number"
+                            step="1"
+                            placeholder="—"
+                            value={r.descIndication}
+                            onChange={(e) => {
+                              const copy = [...linRows];
+                              copy[idx].descIndication = e.target.value;
+                              setLinRows(copy);
+                            }}
+                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16, fontWeight: 700 }}
+                          />
+                        </td>
+                        <td style={{ padding: "4px 6px" }}>
+                          <input
+                            type="number"
+                            step="1"
+                            placeholder="ΔL"
+                            value={r.descDeltaL}
+                            onChange={(e) => {
+                              const copy = [...linRows];
+                              copy[idx].descDeltaL = e.target.value;
+                              setLinRows(copy);
+                            }}
+                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                          />
+                        </td>
+                        <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>
+                          {comp.descCorrected !== null ? comp.descCorrected.toLocaleString("es-AR") : "-"}
+                        </td>
+                        <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.descError === null ? "inherit" : descOk ? "#047857" : "#b91c1c" }}>
+                          {descErrStr}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: DICTAMEN FINAL & PATRONES */}
+        {activeTab === "summary" && (
+          <>
+            {/* Weights Picker */}
+            <div className="card pad">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Patrones Metrológicos Utilizados</h3>
+                  <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+                    {selectedWeightIds.length} patrones vinculados al ensayo
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-outline compact"
+                  onClick={() => {
+                    setDraftWeightIds([...selectedWeightIds]);
+                    setWeightPickerOpen(true);
+                  }}
+                >
+                  ⚖️ Seleccionar Patrones ({selectedWeightIds.length})
+                </button>
+              </div>
+            </div>
+
+            {/* Checklist de Aptitud de Ensayos */}
+            <div className="card pad">
+              <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>Resumen Metrológico de Ensayos</h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: 8, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
+                  <span>📋 Inspección Visual & Precintos</span>
+                  <span className={`badge ${inspOk ? "ok" : "prio-high"}`}>{inspOk ? "✓ Conforme" : "✗ No Cumple"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: 8, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
+                  <span>🎯 Puesta a Cero (4% Max)</span>
+                  <span className={`badge ${zeroSettingOk ? "ok" : "prio-high"}`}>{zeroSettingOk ? "✓ Conforme" : "✗ No Cumple"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: 8, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
+                  <span>🎯 Movilidad (1.4d)</span>
+                  <span className={`badge ${mobilityOk ? "ok" : "prio-high"}`}>{mobilityOk ? "✓ Conforme" : "✗ No Cumple"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: 8, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
+                  <span>🔁 Fidelidad / Repetibilidad</span>
+                  <span className={`badge ${fidelityAllOk ? "ok" : "prio-high"}`}>{fidelityAllOk ? "✓ Conforme" : "✗ No Cumple"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: 8, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
+                  <span>📐 Excentricidad de Carga</span>
+                  <span className={`badge ${eccOk ? "ok" : "prio-high"}`}>{eccOk ? "✓ Conforme" : "✗ No Cumple"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", padding: 8, background: "rgba(0,0,0,0.02)", borderRadius: 6 }}>
+                  <span>⚖️ Exactitud y Linealidad</span>
+                  <span className={`badge ${linAllOk ? "ok" : "prio-high"}`}>{linAllOk ? "✓ Conforme" : "✗ No Cumple"}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Final Observations & Verdict */}
+            <div className="card pad" style={{ borderLeft: allAssaysPass ? "4px solid #10b981" : "4px solid #ef4444" }}>
+              <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>7. Dictamen Final y Emisión</h3>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div>
+                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: allAssaysPass ? "#047857" : "#b91c1c" }}>
+                    Dictamen Técnico: {finalResult.toUpperCase()}
+                  </div>
+                  <small className="muted">
+                    Incertidumbre expandida estimada U (k=2): <strong>{expandedUncertainty} {selectedEquipment?.unit}</strong>
+                  </small>
+                </div>
+              </div>
+
+              <label>
+                Observaciones del Certificado
+                <textarea
+                  rows={3}
+                  value={observations}
+                  onChange={(e) => setObservations(e.target.value)}
+                  placeholder="Notas metrológicas adicionales, estado del indicador, precintos colocados..."
+                  style={{ width: "100%", borderRadius: 6, border: "1px solid var(--surface-border)", padding: 8 }}
+                />
+              </label>
+            </div>
+          </>
+        )}
+
+        {/* Wizard Footer Navigation Buttons */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: 8,
+            paddingTop: 14,
+            borderTop: "1px solid rgba(0,0,0,0.06)"
+          }}
+        >
+          {activeTab !== "general" ? (
             <button
               type="button"
-              className="btn btn-outline compact"
-              onClick={() => {
-                setDraftWeightIds([...selectedWeightIds]);
-                setWeightPickerOpen(true);
-              }}
+              className="btn btn-outline"
+              onClick={goToPrevTab}
+              style={{ fontWeight: 600 }}
             >
-              ⚖️ Seleccionar Patrones ({selectedWeightIds.length})
+              ← Anterior: {tabLabels[tabOrder[tabOrder.indexOf(activeTab) - 1]]}
             </button>
-          </div>
-        </div>
+          ) : (
+            <div />
+          )}
 
-        {/* Final Observations & Verdict */}
-        <div className="card pad" style={{ borderLeft: allAssaysPass ? "4px solid #10b981" : "4px solid #ef4444" }}>
-          <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>7. Dictamen Final y Emisión</h3>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div>
-              <div style={{ fontSize: "1.2rem", fontWeight: 800, color: allAssaysPass ? "#047857" : "#b91c1c" }}>
-                Dictamen: {finalResult.toUpperCase()}
-              </div>
-              <small className="muted">
-                Incertidumbre expandida estimada U (k=2): <strong>{expandedUncertainty} {selectedEquipment?.unit}</strong>
-              </small>
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="btn ghost"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={saving || !selectedEquipment}
-                style={{ fontWeight: 800, padding: "10px 24px" }}
-              >
-                {saving ? "Emitiendo Informe..." : "💾 Guardar y Emitir Certificado"}
-              </button>
-            </div>
-          </div>
-
-          <label>
-            Observaciones del Certificado
-            <textarea
-              rows={2}
-              value={observations}
-              onChange={(e) => setObservations(e.target.value)}
-              placeholder="Notas metrológicas adicionales, precintos colocados, estado del indicador..."
-              style={{ width: "100%", borderRadius: 6, border: "1px solid var(--surface-border)", padding: 8 }}
-            />
-          </label>
+          {activeTab !== "summary" ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={goToNextTab}
+              style={{ fontWeight: 700, padding: "8px 20px" }}
+            >
+              Siguiente: {tabLabels[tabOrder[tabOrder.indexOf(activeTab) + 1]]} →
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={saving || !selectedEquipment}
+              style={{ fontWeight: 800, padding: "10px 28px", fontSize: "1rem" }}
+            >
+              {saving ? "Emitiendo Informe..." : "💾 Guardar y Emitir Certificado"}
+            </button>
+          )}
         </div>
       </form>
 
