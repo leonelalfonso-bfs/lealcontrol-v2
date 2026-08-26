@@ -167,18 +167,8 @@ public sealed class PurchaseOrder : Entity<Guid>
 
     public bool CanChangeStatus(string newStatus)
     {
-        return (Status, newStatus) switch
-        {
-            ("Draft", "Sent") => true,
-            ("Draft", "Cancelled") => true,
-            ("Sent", "PartiallyReceived") => true,
-            ("Sent", "Received") => true,
-            ("Sent", "Cancelled") => true,
-            ("PartiallyReceived", "Received") => true,
-            ("PartiallyReceived", "Cancelled") => true,
-            _ when Status == newStatus => true,
-            _ => false
-        };
+        if (Status == "Cancelled" && newStatus != "Cancelled") return false;
+        return true;
     }
 
     public void ChangeStatus(string newStatus)

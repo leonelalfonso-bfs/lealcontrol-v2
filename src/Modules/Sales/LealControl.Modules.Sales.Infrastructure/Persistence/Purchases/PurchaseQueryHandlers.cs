@@ -283,11 +283,14 @@ public sealed class PurchaseQueryHandlers :
         var tenantId = _tenantContext.TenantId;
         if (!request.Items.Any() || request.Items.Any(x => x.Quantity <= 0))
             return Result<PurchaseReceptionDto>.Failure(Error.Validation("Purchases.Reception.InvalidQuantity", "La recepción debe contener cantidades mayores a cero."));
+        PurchaseOrder? order = null;
         if (request.PurchaseOrderId.HasValue)
         {
-            var order = await _dbContext.Set<PurchaseOrder>().FirstOrDefaultAsync(x => x.Id == request.PurchaseOrderId.Value && x.TenantId == tenantId, cancellationToken);
+            order = await _dbContext.Set<PurchaseOrder>()
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(x => x.Id == request.PurchaseOrderId.Value && x.TenantId == tenantId, cancellationToken);
             if (order == null) return Result<PurchaseReceptionDto>.Failure(Error.NotFound("Purchases.Order.NotFound", "La orden vinculada no existe."));
-            if (order.Status is "Draft" or "Cancelled") return Result<PurchaseReceptionDto>.Failure(Error.Validation("Purchases.Reception.OrderNotReceivable", "La orden debe estar enviada para recibir mercadería."));
+            if (order.Status is "Cancelled") return Result<PurchaseReceptionDto>.Failure(Error.Validation("Purchases.Reception.OrderNotReceivable", "La orden de compra vinculada se encuentra anulada."));
             if (order.SupplierId != request.SupplierId) return Result<PurchaseReceptionDto>.Failure(Error.Validation("Purchases.Reception.SupplierMismatch", "El proveedor de la recepción no coincide con la orden."));
         }
 
@@ -326,6 +329,33 @@ public sealed class PurchaseQueryHandlers :
         }
 
         _dbContext.Set<PurchaseReception>().Add(reception);
+
+        if (order != null)
+        {
+            foreach (var item in request.Items)
+            {
+                var ordItem = order.Items.FirstOrDefault(i => (item.ProductId.HasValue && i.ProductId == item.ProductId.Value) || (!string.IsNullOrWhiteSpace(item.Code) && i.Code.ToLower() == item.Code.Trim().ToLower()));
+                if (ordItem != null)
+                {
+                    ordItem.RecordReceived(item.Quantity);
+                }
+            }
+
+            var totalOrdered = order.Items.Sum(i => i.Quantity);
+            var totalReceived = order.Items.Sum(i => i.ReceivedQuantity);
+            if (totalReceived >= totalOrdered && totalOrdered > 0)
+            {
+                order.ChangeStatus("Received");
+            }
+            else if (totalReceived > 0)
+            {
+                order.ChangeStatus("PartiallyReceived");
+            }
+            else if (order.Status == "Draft")
+            {
+                order.ChangeStatus("Sent");
+            }
+        }
 
         if (invoice != null)
         {
