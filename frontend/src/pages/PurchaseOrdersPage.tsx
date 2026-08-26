@@ -169,7 +169,7 @@ export function PurchaseOrdersPage() {
                       </span>
                     </td>
                     <td style={{ padding: "12px 8px", textAlign: "right" }}>
-                      <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                      <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end", alignItems: "center" }}>
                         <Link
                           to={`/compras/ordenes/${o.id}/imprimir`}
                           className="btn btn-outline"
@@ -178,22 +178,45 @@ export function PurchaseOrdersPage() {
                         >
                           📄 PDF
                         </Link>
-                        <Link
-                          to={`/compras/recepciones/nueva?order_id=${o.id}`}
-                          className="btn"
-                          style={{ padding: "4px 8px", fontSize: "0.82rem", background: "#10b981", color: "white" }}
-                          title="Recibir Mercadería"
-                        >
-                          📦 Recibir
-                        </Link>
-                        <Link
-                          to={`/compras/facturas/nueva?order_id=${o.id}`}
-                          className="btn"
-                          style={{ padding: "4px 8px", fontSize: "0.82rem", background: "#3b82f6", color: "white" }}
-                          title="Cargar Factura Proveedor"
-                        >
-                          🧾 Facturar
-                        </Link>
+                        {o.status === "Received" ? (
+                          <span
+                            style={{
+                              fontSize: "0.78rem",
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              background: "rgba(16, 185, 129, 0.15)",
+                              color: "#065f46",
+                              fontWeight: 700
+                            }}
+                            title="Mercadería 100% recibida en almacén"
+                          >
+                            ✓ Recibida
+                          </span>
+                        ) : o.status === "Cancelled" ? null : (
+                          <Link
+                            to={`/compras/recepciones/nueva?order_id=${o.id}`}
+                            className="btn"
+                            style={{
+                              padding: "4px 8px",
+                              fontSize: "0.82rem",
+                              background: o.status === "PartiallyReceived" ? "#f59e0b" : "#10b981",
+                              color: "white"
+                            }}
+                            title={o.status === "PartiallyReceived" ? "Recibir saldo restante de mercadería" : "Recibir Mercadería"}
+                          >
+                            {o.status === "PartiallyReceived" ? "📦 Recibir Saldo" : "📦 Recibir"}
+                          </Link>
+                        )}
+                        {o.status !== "Cancelled" && (
+                          <Link
+                            to={`/compras/facturas/nueva?order_id=${o.id}`}
+                            className="btn"
+                            style={{ padding: "4px 8px", fontSize: "0.82rem", background: "#3b82f6", color: "white" }}
+                            title="Cargar Factura Proveedor"
+                          >
+                            🧾 Facturar
+                          </Link>
+                        )}
                       </div>
                     </td>
                   </tr>

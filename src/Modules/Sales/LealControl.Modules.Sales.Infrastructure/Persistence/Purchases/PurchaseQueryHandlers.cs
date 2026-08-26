@@ -357,6 +357,12 @@ public sealed class PurchaseQueryHandlers :
             }
         }
 
+        if (invoice == null && order != null)
+        {
+            invoice = await _dbContext.Set<PurchaseInvoice>()
+                .FirstOrDefaultAsync(i => i.PurchaseOrderId == order.Id && i.TenantId == tenantId, cancellationToken);
+        }
+
         if (invoice != null)
         {
             invoice.LinkReception(reception.Id);
@@ -462,6 +468,38 @@ public sealed class PurchaseQueryHandlers :
         }
 
         var list = await query.OrderByDescending(i => i.CreatedAtUtc).ToListAsync(cancellationToken);
+
+        // Auto-heal / sync invoices that have a PurchaseOrderId with an existing reception
+        var orderIds = list.Where(i => i.PurchaseReceptionId == null && i.PurchaseOrderId != null)
+            .Select(i => i.PurchaseOrderId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (orderIds.Any())
+        {
+            var recs = await _dbContext.Set<PurchaseReception>()
+                .Where(r => r.TenantId == tenantId && r.PurchaseOrderId != null && orderIds.Contains(r.PurchaseOrderId.Value))
+                .Select(r => new { OrderId = r.PurchaseOrderId!.Value, ReceptionId = r.Id })
+                .ToListAsync(cancellationToken);
+
+            var recDict = recs.GroupBy(x => x.OrderId).ToDictionary(g => g.Key, g => g.First().ReceptionId);
+            bool modified = false;
+
+            foreach (var inv in list)
+            {
+                if (inv.PurchaseReceptionId == null && inv.PurchaseOrderId.HasValue && recDict.TryGetValue(inv.PurchaseOrderId.Value, out var recId))
+                {
+                    inv.LinkReception(recId);
+                    modified = true;
+                }
+            }
+
+            if (modified)
+            {
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+
         return Result<IReadOnlyList<PurchaseInvoiceDto>>.Success(list.Select(MapInvoiceToDto).ToList());
     }
 
@@ -485,11 +523,23 @@ public sealed class PurchaseQueryHandlers :
             return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.InvalidLines", "La factura debe contener líneas válidas."));
         var duplicate = await _dbContext.Set<PurchaseInvoice>().AnyAsync(x => x.TenantId == tenantId && x.SupplierId == request.SupplierId && x.PointOfSale == request.PointOfSale && x.InvoiceNumber == request.InvoiceNumber && x.InvoiceType == request.InvoiceType, cancellationToken);
         if (duplicate) return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.Duplicate", "Ya existe una factura con el mismo tipo, punto de venta y número para este proveedor."));
+        
+        var receptionId = request.PurchaseReceptionId;
         if (request.PurchaseOrderId.HasValue)
         {
             var order = await _dbContext.Set<PurchaseOrder>().FirstOrDefaultAsync(x => x.Id == request.PurchaseOrderId.Value && x.TenantId == tenantId, cancellationToken);
             if (order == null) return Result<PurchaseInvoiceDto>.Failure(Error.NotFound("Purchases.Order.NotFound", "La orden vinculada no existe."));
             if (order.SupplierId != request.SupplierId) return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.SupplierMismatch", "El proveedor de la factura no coincide con la orden."));
+
+            if (!receptionId.HasValue)
+            {
+                var existingRec = await _dbContext.Set<PurchaseReception>()
+                    .FirstOrDefaultAsync(r => r.PurchaseOrderId == request.PurchaseOrderId.Value && r.TenantId == tenantId, cancellationToken);
+                if (existingRec != null)
+                {
+                    receptionId = existingRec.Id;
+                }
+            }
         }
 
         var invoice = PurchaseInvoice.Create(
@@ -498,7 +548,7 @@ public sealed class PurchaseQueryHandlers :
             request.PointOfSale,
             request.InvoiceNumber,
             request.PurchaseOrderId,
-            request.PurchaseReceptionId,
+            receptionId,
             request.SupplierId,
             request.SupplierName,
             request.SupplierDocument,
