@@ -56,9 +56,13 @@ export function CalibrationReportPrintPage() {
   try { linearityData = typeof rawLinJson === "string" ? JSON.parse(rawLinJson) : (Array.isArray(rawLinJson) ? rawLinJson : []); } catch {}
   try { weightsUsed = typeof rawWeightsJson === "string" ? JSON.parse(rawWeightsJson) : (Array.isArray(rawWeightsJson) ? rawWeightsJson : []); } catch {}
   try { visualInspectionData = typeof rawVisualJson === "string" ? JSON.parse(rawVisualJson) : rawVisualJson; } catch {}
-  const fidelityCurrent = Array.isArray(repeatabilityData.readings) ? repeatabilityData : null;
-  const fidelityHalf = repeatabilityData.halfOperationalLoad || repeatabilityData.halfMax;
-  const fidelityFull = repeatabilityData.fullOperationalLoad || repeatabilityData.fullMax;
+
+  const hasDualLoad = repeatabilityData?.hasDualLoad;
+  const fidelityLow = repeatabilityData?.lowLoad;
+  const fidelityHigh = repeatabilityData?.highLoad;
+  const fidelityCurrent = Array.isArray(repeatabilityData?.readings) ? repeatabilityData : null;
+  const fidelityHalf = repeatabilityData?.halfOperationalLoad || repeatabilityData?.halfMax;
+  const fidelityFull = repeatabilityData?.fullOperationalLoad || repeatabilityData?.fullMax;
 
   const certNumber = (report as any).certificateNumber || report.reportNumber || "CERT-2026";
   const stdApplied = (report as any).standardApplied || report.normativeApplied || "Resolución SIyC Nº 25/2025 (OIML R 76-1)";
@@ -76,6 +80,99 @@ export function CalibrationReportPrintPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const renderPrintFidelityBlock = (blockTitle: string, blockData: any) => {
+    if (!blockData) return null;
+    const isTruck = blockData.inbound || blockData.outbound;
+
+    const renderSingleTable = (subTitle: string, subBlock: any) => {
+      if (!subBlock || !subBlock.computedRows) return null;
+      const rows = subBlock.computedRows.filter((r: any) => r.hasValue);
+      if (rows.length === 0) return null;
+
+      return (
+        <div style={{ marginTop: 4, marginBottom: 8 }}>
+          {subTitle && (
+            <div style={{ fontWeight: 700, fontSize: "0.76rem", color: "#334155", marginBottom: 2 }}>
+              {subTitle}
+            </div>
+          )}
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.73rem" }}>
+            <thead>
+              <tr style={{ background: "#f1f5f9", borderBottom: "1px solid #cbd5e1", textAlign: "left" }}>
+                <th style={{ padding: "3px 4px", width: "35px" }}>N°</th>
+                <th style={{ padding: "3px 4px", textAlign: "right" }}>Cero Inicial</th>
+                <th style={{ padding: "3px 4px", textAlign: "right" }}>Indicación</th>
+                <th style={{ padding: "3px 4px", textAlign: "right" }}>Cero Final</th>
+                <th style={{ padding: "3px 4px", textAlign: "right" }}>Desv. Redondeo (ΔL)</th>
+                <th style={{ padding: "3px 4px", textAlign: "right" }}>Lect. Corregida</th>
+                <th style={{ padding: "3px 4px", textAlign: "right" }}>Error</th>
+                <th style={{ padding: "3px 4px", textAlign: "center" }}>EMT</th>
+                <th style={{ padding: "3px 4px", textAlign: "center" }}>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r: any) => (
+                <tr key={r.index} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <td style={{ padding: "2px 4px", fontWeight: 700 }}>#{r.index}</td>
+                  <td style={{ padding: "2px 4px", textAlign: "right" }}>{r.initialZero}</td>
+                  <td style={{ padding: "2px 4px", textAlign: "right", fontWeight: 700 }}>{r.indication}</td>
+                  <td style={{ padding: "2px 4px", textAlign: "right" }}>{r.finalZero}</td>
+                  <td style={{ padding: "2px 4px", textAlign: "right" }}>{r.deltaL}</td>
+                  <td style={{ padding: "2px 4px", textAlign: "right", fontFamily: "monospace" }}>
+                    {r.corrected !== null ? Number(r.corrected).toFixed(0) : "—"}
+                  </td>
+                  <td
+                    style={{
+                      padding: "2px 4px",
+                      textAlign: "right",
+                      fontFamily: "monospace",
+                      fontWeight: 700,
+                      color: r.error !== null && Math.abs(r.error) <= (blockData.emt || 20) ? "#047857" : "#dc2626"
+                    }}
+                  >
+                    {r.error !== null ? (r.error >= 0 ? `+${Number(r.error).toFixed(0)}` : Number(r.error).toFixed(0)) : "—"}
+                  </td>
+                  <td style={{ padding: "2px 4px", textAlign: "center", fontFamily: "monospace" }}>
+                    ±{blockData.emt}
+                  </td>
+                  <td style={{ padding: "2px 4px", textAlign: "center", color: r.ok ? "#047857" : "#dc2626", fontWeight: 700 }}>
+                    {r.ok ? "CUMPLE" : "NO CUMPLE"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ display: "flex", justifyContent: "space-between", background: "#f8fafc", padding: "3px 6px", borderRadius: 4, fontSize: "0.72rem", marginTop: 3 }}>
+            <span>Desviación Estándar (s): <strong>{Number(subBlock.stdDev || 0).toFixed(2)} {equipment?.unit || "kg"}</strong></span>
+            <span>Diferencia Máxima: <strong>{Number(subBlock.maxDiff || 0).toFixed(0)} {equipment?.unit || "kg"}</strong></span>
+            <span style={{ color: subBlock.conform ? "#047857" : "#dc2626", fontWeight: 700 }}>
+              Resultado: {subBlock.conform ? "✓ CUMPLE" : "✗ NO CUMPLE"}
+            </span>
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div style={{ background: "#fafafa", border: "1px solid #e2e8f0", borderRadius: 6, padding: 8, marginBottom: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #e2e8f0", paddingBottom: 4, marginBottom: 4 }}>
+          <strong>{blockTitle} · Carga Aplicada: {blockData.appliedLoad} {equipment?.unit || "kg"}</strong>
+          <span style={{ color: blockData.conform ? "#047857" : "#dc2626", fontWeight: 700, fontSize: "0.76rem" }}>
+            EMT: ±{blockData.emt} {equipment?.unit || "kg"} · {blockData.conform ? "✓ CONFORME" : "✗ NO CONFORME"}
+          </span>
+        </div>
+        {isTruck ? (
+          <>
+            {renderSingleTable("→ Sentido Entrada (Carga) · 3 pasadas", blockData.inbound)}
+            {renderSingleTable("← Sentido Salida (Descarga) · 3 pasadas", blockData.outbound)}
+          </>
+        ) : (
+          renderSingleTable("5 Repeticiones de Ensayo", blockData.platform)
+        )}
+      </div>
+    );
   };
 
   return (
@@ -216,22 +313,54 @@ export function CalibrationReportPrintPage() {
         )}
       </div>
 
-      {/* Ensayo de Repetibilidad */}
+      {/* Ensayo de Repetibilidad / Fidelidad */}
       <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
         <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
           1. ENSAYO DE {stdApplied.includes("2307") ? "FIDELIDAD" : "REPETIBILIDAD"}
         </div>
-        {fidelityCurrent ? (
+        {hasDualLoad ? (
+          <div>
+            {renderPrintFidelityBlock("🔹 Fidelidad en Baja Carga", fidelityLow)}
+            {renderPrintFidelityBlock("🔸 Fidelidad en Alta Carga", fidelityHigh)}
+          </div>
+        ) : fidelityCurrent ? (
           <div style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
             <strong>{fidelityCurrent.instrumentType || "Ensayo de fidelidad"} · carga aplicada: {fidelityCurrent.appliedLoad} {equipment?.unit || "kg"}</strong>
             <div style={{ fontSize: "0.72rem", color: "#666", marginTop: 3 }}>{fidelityCurrent.method}</div>
-            <table style={{ width: "100%", marginTop: 7, fontSize: "0.76rem", borderCollapse: "collapse" }}><thead><tr><th style={{ textAlign: "left" }}>Pasada</th><th style={{ textAlign: "left" }}>Sentido</th><th style={{ textAlign: "right" }}>Indicación</th></tr></thead><tbody>{fidelityCurrent.readings.map((item: any, index: number) => <tr key={`${item.direction}-${index}`}><td>{item.pass}</td><td>{item.direction}</td><td style={{ textAlign: "right" }}>{item.indication} {equipment?.unit || "kg"}</td></tr>)}</tbody></table>
-            <div style={{ marginTop: 7 }}>Menor: <strong>{fidelityCurrent.minimum}</strong> · Mayor: <strong>{fidelityCurrent.maximum}</strong> · Diferencia: <strong>{fidelityCurrent.range}</strong> {equipment?.unit || "kg"} (EMT: ±{fidelityCurrent.emt})</div>
-            <div style={{ color: fidelityCurrent.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 2 }}>Resultado: {fidelityCurrent.conform ? "✓ Conforme" : "✗ No Conforme"}</div>
+            <table style={{ width: "100%", marginTop: 7, fontSize: "0.76rem", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left" }}>Pasada</th>
+                  <th style={{ textAlign: "left" }}>Sentido</th>
+                  <th style={{ textAlign: "right" }}>Indicación</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fidelityCurrent.readings.map((item: any, index: number) => (
+                  <tr key={`${item.direction}-${index}`}>
+                    <td>{item.pass}</td>
+                    <td>{item.direction}</td>
+                    <td style={{ textAlign: "right" }}>{item.indication} {equipment?.unit || "kg"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 7 }}>
+              Menor: <strong>{fidelityCurrent.minimum}</strong> · Mayor: <strong>{fidelityCurrent.maximum}</strong> · Diferencia: <strong>{fidelityCurrent.range}</strong> {equipment?.unit || "kg"} (EMT: ±{fidelityCurrent.emt})
+            </div>
+            <div style={{ color: fidelityCurrent.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 2 }}>
+              Resultado: {fidelityCurrent.conform ? "✓ Conforme" : "✗ No Conforme"}
+            </div>
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            {[{ label: "50 % de carga máxima de uso", data: fidelityHalf }, { label: "100 % de carga máxima de uso", data: fidelityFull }].map(({ label, data }) => data && <div key={label} style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}><strong>{label} ({data.load} {equipment?.unit || "kg"})</strong><div>Lecturas: {data.repetitions?.join(", ")} {equipment?.unit || "kg"}</div><div>Diferencia máxima: <strong>{data.range}</strong> {equipment?.unit || "kg"} (EMT: ±{data.emt})</div></div>)}
+            {[{ label: "50 % de carga máxima de uso", data: fidelityHalf }, { label: "100 % de carga máxima de uso", data: fidelityFull }].map(({ label, data }) => data && (
+              <div key={label} style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
+                <strong>{label} ({data.load} {equipment?.unit || "kg"})</strong>
+                <div>Lecturas: {data.repetitions?.join(", ")} {equipment?.unit || "kg"}</div>
+                <div>Diferencia máxima: <strong>{data.range}</strong> {equipment?.unit || "kg"} (EMT: ±{data.emt})</div>
+              </div>
+            ))}
           </div>
         )}
       </div>
