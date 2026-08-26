@@ -11,6 +11,14 @@ type Account = {
   isActive: boolean;
 };
 
+type Concept = {
+  id: string;
+  code: string;
+  name: string;
+  direction: string;
+  isActive: boolean;
+};
+
 type Movement = {
   id: string;
   operationDateUtc: string;
@@ -22,6 +30,7 @@ type Movement = {
   reportedBalance?: number;
   systemBalance: number;
   difference?: number;
+  conceptId?: string;
   conceptName?: string;
   classificationStatus?: string;
 };
@@ -40,10 +49,22 @@ const statusLabel: Record<string, string> = {
 
 export function FinanceAccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [concepts, setConcepts] = useState<Concept[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [movements, setMovements] = useState<Movement[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loadingMovements, setLoadingMovements] = useState(false);
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
+
+  // Selection state for inline concept dropdowns: movementId -> conceptId
+  const [inlineConcepts, setInlineConcepts] = useState<Record<string, string>>({});
+
+  // Modal for rule creation & advanced classification
+  const [modalMovement, setModalMovement] = useState<Movement | null>(null);
+  const [modalConceptId, setModalConceptId] = useState("");
+  const [modalCreateRule, setModalCreateRule] = useState(false);
+  const [modalPattern, setModalPattern] = useState("");
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -53,27 +74,164 @@ export function FinanceAccountsPage() {
   const [conceptFilter, setConceptFilter] = useState<string>("all");
 
   useEffect(() => {
-    api
-      .listFinanceAccounts()
-      .then(setAccounts)
+    Promise.all([
+      api.listFinanceAccounts().catch(() => []),
+      api.listFinanceConcepts().catch(() => [])
+    ])
+      .then(([accs, concs]) => {
+        setAccounts(accs);
+        setConcepts(concs.filter((c: Concept) => c.isActive));
+      })
       .catch((e) => setError(e.message));
   }, []);
 
   const openAccount = async (account: Account) => {
     setSelectedAccount(account);
     setLoadingMovements(true);
-    // Reset filters on opening account
+    setError(null);
+    setSuccessMsg(null);
     setStatusFilter("all");
     setStartDate("");
     setEndDate("");
     setSearchQuery("");
     setConceptFilter("all");
     try {
-      setMovements(await api.listFinanceMovementDetails(account.id));
+      const list = await api.listFinanceMovementDetails(account.id);
+      setMovements(list);
+      // Initialize inline concept selection
+      const initConcepts: Record<string, string> = {};
+      list.forEach((m: Movement) => {
+        if (m.conceptId) initConcepts[m.id] = m.conceptId;
+      });
+      setInlineConcepts(initConcepts);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudieron cargar los movimientos.");
     } finally {
       setLoadingMovements(false);
+    }
+  };
+
+  const handleClassifyInline = async (movementId: string) => {
+    const conceptId = inlineConcepts[movementId];
+    if (!conceptId) {
+      setError("Por favor seleccioná un concepto antes de confirmar.");
+      return;
+    }
+
+    try {
+      setActionBusy(movementId);
+      setError(null);
+      await api.classifyFinanceMovement(movementId, {
+        financialConceptId: conceptId,
+        confirm: true
+      });
+
+      const selectedConceptObj = concepts.find((c) => c.id === conceptId);
+      setMovements((prev) =>
+        prev.map((m) =>
+          m.id === movementId
+            ? {
+                ...m,
+                conceptId,
+                conceptName: selectedConceptObj?.name || m.conceptName,
+                classificationStatus: "Confirmed"
+              }
+            : m
+        )
+      );
+      setSuccessMsg("Movimiento clasificado y confirmado correctamente.");
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (e: any) {
+      setError(e instanceof Error ? e.message : "Error al clasificar el movimiento.");
+    } finally {
+      setActionBusy(null);
+    }
+  };
+
+  const openClassifyModal = (m: Movement) => {
+    setModalMovement(m);
+    setModalConceptId(inlineConcepts[m.id] || m.conceptId || (concepts[0]?.id ?? ""));
+    setModalCreateRule(false);
+    // Suggest clean pattern from description
+    const cleaned = m.description.split(/[\s\-_/:]+/)[0] || m.description;
+    setModalPattern(cleaned.toUpperCase());
+  };
+
+  const handleSaveModalClassification = async () => {
+    if (!modalMovement || !modalConceptId) return;
+
+    try {
+      setActionBusy(modalMovement.id);
+      setError(null);
+
+      // Classify movement
+      await api.classifyFinanceMovement(modalMovement.id, {
+        financialConceptId: modalConceptId,
+        confirm: true
+      });
+
+      // Optionally create rule
+      if (modalCreateRule && modalPattern.trim()) {
+        try {
+          await api.createFinanceConceptRule({
+            financialConceptId: modalConceptId,
+            accountId: selectedAccount?.id,
+            matchMode: "Contains",
+            pattern: modalPattern.trim(),
+            priority: 100,
+            isActive: true
+          });
+        } catch {
+          // ignore rule error if rule creation fails
+        }
+      }
+
+      const selectedConceptObj = concepts.find((c) => c.id === modalConceptId);
+      setMovements((prev) =>
+        prev.map((m) =>
+          m.id === modalMovement.id
+            ? {
+                ...m,
+                conceptId: modalConceptId,
+                conceptName: selectedConceptObj?.name || m.conceptName,
+                classificationStatus: "Confirmed"
+              }
+            : m
+        )
+      );
+
+      setModalMovement(null);
+      setSuccessMsg("Movimiento confirmado y regla registrada para futuros extractos.");
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (e: any) {
+      setError(e instanceof Error ? e.message : "Error al guardar clasificación.");
+    } finally {
+      setActionBusy(null);
+    }
+  };
+
+  const handleApplyRules = async () => {
+    if (!selectedAccount) return;
+    try {
+      setActionBusy("apply-rules");
+      setError(null);
+      const res = await api.applyFinanceConceptRules();
+      // Reload movements
+      const list = await api.listFinanceMovementDetails(selectedAccount.id);
+      setMovements(list);
+      const initConcepts: Record<string, string> = {};
+      list.forEach((m: Movement) => {
+        if (m.conceptId) initConcepts[m.id] = m.conceptId;
+      });
+      setInlineConcepts(initConcepts);
+      setSuccessMsg(
+        `Reglas aplicadas: ${res.suggested} sugeridos / actualizados, ${res.pending} pendientes.`
+      );
+      setTimeout(() => setSuccessMsg(null), 5000);
+    } catch (e: any) {
+      setError(e instanceof Error ? e.message : "Error al aplicar reglas de tesorería.");
+    } finally {
+      setActionBusy(null);
     }
   };
 
@@ -144,7 +302,7 @@ export function FinanceAccountsPage() {
 
   const filteredNet = filteredCredits - filteredDebits;
 
-  // Export to Excel with custom columns and formatted numbers
+  // Export to Excel
   const handleExportExcel = () => {
     if (!selectedAccount) return;
 
@@ -211,7 +369,6 @@ export function FinanceAccountsPage() {
     exportToExcel(fileName, filteredMovements, columns);
   };
 
-  // Preset Date range helpers
   const setDatePreset = (preset: "thisMonth" | "lastMonth" | "last30Days" | "all") => {
     const today = new Date();
     if (preset === "all") {
@@ -247,12 +404,21 @@ export function FinanceAccountsPage() {
             <span className="eyebrow">FINANZAS · TESORERÍA & EXTRACTOS</span>
             <h1>{selectedAccount.name}</h1>
             <p className="muted">
-              Detalle bancario · comparación entre extracto oficial y movimientos registrados.
+              Detalle bancario · clasificación progresiva de extractos y conciliación.
             </p>
           </div>
           <div className="toolbar" style={{ gap: 10 }}>
             <button className="btn btn-outline" onClick={() => setSelectedAccount(null)}>
               ← Volver a Bancos y Cajas
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={handleApplyRules}
+              disabled={actionBusy !== null}
+              title="Ejecutar motor de reglas para identificar movimientos automáticamente"
+            >
+              ⚙ Aplicar Reglas Automáticas
             </button>
             <button
               type="button"
@@ -272,7 +438,26 @@ export function FinanceAccountsPage() {
           </div>
         </div>
 
-        {error && <div className="alert">{error}</div>}
+        {error && (
+          <div className="alert" style={{ marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+
+        {successMsg && (
+          <div
+            className="alert"
+            style={{
+              marginBottom: 16,
+              background: "rgba(16, 185, 129, 0.12)",
+              borderColor: "#10b981",
+              color: "#065f46",
+              fontWeight: 600
+            }}
+          >
+            ✓ {successMsg}
+          </div>
+        )}
 
         {/* Filtered Financial Summary KPIs */}
         <div className="grid-4" style={{ marginBottom: 16 }}>
@@ -311,10 +496,10 @@ export function FinanceAccountsPage() {
 
           <div className="card pad" style={{ borderLeft: "4px solid #f59e0b" }}>
             <span className="muted" style={{ fontSize: "0.78rem", textTransform: "uppercase", fontWeight: 700 }}>
-              Saldo Actual en Sistema
+              Movimientos por Revisar
             </span>
-            <h3 style={{ margin: "4px 0 0 0", fontSize: "1.35rem", fontWeight: 800 }}>
-              {money(selectedAccount.balance, selectedAccount.currency)}
+            <h3 style={{ margin: "4px 0 0 0", color: totalPending > 0 ? "#b45309" : "#059669", fontSize: "1.35rem", fontWeight: 800 }}>
+              {totalPending + totalSuggested} pendientes
             </h3>
           </div>
         </div>
@@ -340,9 +525,9 @@ export function FinanceAccountsPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
                 <option value="all">🔍 Todos los estados ({movements.length})</option>
-                <option value="Confirmed">✓ Confirmados ({totalConfirmed})</option>
+                <option value="Pending">⏳ Solo Pendientes ({totalPending})</option>
                 <option value="Suggested">🟡 Sugeridos ({totalSuggested})</option>
-                <option value="Pending">⏳ Por revisar ({totalPending})</option>
+                <option value="Confirmed">✓ Confirmados ({totalConfirmed})</option>
               </select>
             </label>
 
@@ -442,26 +627,24 @@ export function FinanceAccountsPage() {
                 <tr>
                   <th>Fecha</th>
                   <th>Concepto / Leyenda</th>
-                  <th>Clasificación</th>
+                  <th>Concepto Tesorería</th>
                   <th>Estado</th>
                   <th>Tipo</th>
-                  <th style={{ textAlign: "right" }}>Ingreso</th>
-                  <th style={{ textAlign: "right" }}>Egreso</th>
+                  <th style={{ textAlign: "right" }}>Importe</th>
                   <th style={{ textAlign: "right" }}>Saldo sistema</th>
-                  <th style={{ textAlign: "right" }}>Saldo extracto</th>
-                  <th style={{ textAlign: "right" }}>Diferencia</th>
+                  <th style={{ textAlign: "center", width: "160px" }}>Acción Clasificar</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingMovements ? (
                   <tr>
-                    <td colSpan={10} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={8} className="muted" style={{ textAlign: "center", padding: 24 }}>
                       Cargando movimientos...
                     </td>
                   </tr>
                 ) : filteredMovements.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={8} className="muted" style={{ textAlign: "center", padding: 24 }}>
                       No hay movimientos que coincidan con los filtros aplicados.
                     </td>
                   </tr>
@@ -469,6 +652,7 @@ export function FinanceAccountsPage() {
                   filteredMovements.map((x) => {
                     const isConfirmed = x.classificationStatus === "Confirmed";
                     const isSuggested = x.classificationStatus === "Suggested";
+                    const isPending = !isConfirmed;
                     const statusText =
                       statusLabel[x.classificationStatus || "Imported"] ||
                       x.classificationStatus ||
@@ -479,7 +663,7 @@ export function FinanceAccountsPage() {
                         key={x.id}
                         style={{
                           background: isConfirmed ? "rgba(16, 185, 129, 0.05)" : undefined,
-                          borderLeft: isConfirmed ? "3px solid #10b981" : undefined
+                          borderLeft: isConfirmed ? "3px solid #10b981" : isSuggested ? "3px solid #f59e0b" : "3px solid #cbd5e1"
                         }}
                       >
                         <td>{new Date(x.operationDateUtc).toLocaleDateString("es-AR")}</td>
@@ -490,12 +674,34 @@ export function FinanceAccountsPage() {
                           </small>
                         </td>
                         <td>
-                          {x.conceptName ? (
-                            <span style={{ fontWeight: 600, color: isConfirmed ? "#0d9488" : "inherit" }}>
-                              🏷️ {x.conceptName}
+                          {isConfirmed ? (
+                            <span style={{ fontWeight: 600, color: "#065f46" }}>
+                              🏷️ {x.conceptName || "Identificado"}
                             </span>
                           ) : (
-                            <span className="muted">Sin identificar</span>
+                            <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                              <select
+                                value={inlineConcepts[x.id] || x.conceptId || ""}
+                                onChange={(e) =>
+                                  setInlineConcepts({ ...inlineConcepts, [x.id]: e.target.value })
+                                }
+                                style={{
+                                  fontSize: "0.82rem",
+                                  padding: "4px 6px",
+                                  borderRadius: "6px",
+                                  border: isSuggested ? "1px solid #f59e0b" : "1px solid var(--surface-border)",
+                                  background: isSuggested ? "#fffbeb" : "white",
+                                  maxWidth: "180px"
+                                }}
+                              >
+                                <option value="">⏳ Sin identificar</option>
+                                {concepts.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           )}
                         </td>
                         <td>
@@ -555,32 +761,65 @@ export function FinanceAccountsPage() {
                         <td
                           style={{
                             textAlign: "right",
-                            color: "#059669",
-                            fontWeight: x.kind === "Credit" ? 700 : 400
+                            color: x.kind === "Credit" ? "#059669" : "#dc2626",
+                            fontWeight: 700
                           }}
                         >
-                          {x.kind === "Credit" ? `+${money(x.amount, x.currency)}` : "—"}
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "right",
-                            color: "#dc2626",
-                            fontWeight: x.kind === "Debit" ? 700 : 400
-                          }}
-                        >
-                          {x.kind === "Debit" ? `−${money(x.amount, x.currency)}` : "—"}
+                          {x.kind === "Credit" ? `+${money(x.amount, x.currency)}` : `−${money(x.amount, x.currency)}`}
                         </td>
                         <td style={{ textAlign: "right", fontWeight: 600 }}>
                           {money(x.systemBalance, x.currency)}
                         </td>
-                        <td style={{ textAlign: "right" }}>
-                          {x.reportedBalance == null ? "—" : money(x.reportedBalance, x.currency)}
-                        </td>
-                        <td
-                          style={{ textAlign: "right" }}
-                          className={x.difference && Math.abs(x.difference) > 0.01 ? "negative" : ""}
-                        >
-                          {x.difference == null ? "—" : money(x.difference, x.currency)}
+                        <td style={{ textAlign: "center" }}>
+                          {isPending ? (
+                            <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+                              <button
+                                type="button"
+                                className="btn compact"
+                                disabled={actionBusy === x.id || !(inlineConcepts[x.id] || x.conceptId)}
+                                onClick={() => handleClassifyInline(x.id)}
+                                style={{
+                                  fontSize: "0.75rem",
+                                  padding: "3px 8px",
+                                  background: "#10b981",
+                                  borderColor: "#10b981",
+                                  color: "white",
+                                  fontWeight: 700,
+                                  borderRadius: "6px"
+                                }}
+                                title="Confirmar clasificación de este movimiento"
+                              >
+                                {actionBusy === x.id ? "..." : "✓ Confirmar"}
+                              </button>
+                              <button
+                                type="button"
+                                className="btn ghost compact"
+                                onClick={() => openClassifyModal(x)}
+                                style={{
+                                  fontSize: "0.75rem",
+                                  padding: "3px 6px",
+                                  borderRadius: "6px"
+                                }}
+                                title="Abrir opciones avanzadas o crear regla automática"
+                              >
+                                ⚙
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn ghost compact"
+                              onClick={() => openClassifyModal(x)}
+                              style={{
+                                fontSize: "0.75rem",
+                                padding: "2px 6px",
+                                color: "#64748b"
+                              }}
+                              title="Cambiar concepto o crear regla"
+                            >
+                              ✏️ Modificar
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -590,6 +829,98 @@ export function FinanceAccountsPage() {
             </table>
           </div>
         </section>
+
+        {/* Modal de Clasificación Avanzada & Reglas */}
+        {modalMovement && (
+          <div className="modal-backdrop">
+            <div className="modal-card card pad" style={{ maxWidth: 500 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <h3 style={{ margin: 0 }}>🏷️ Clasificar Movimiento Bancario</h3>
+                <button
+                  type="button"
+                  className="btn ghost compact"
+                  onClick={() => setModalMovement(null)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.85rem" }}>
+                <div><strong>Fecha:</strong> {new Date(modalMovement.operationDateUtc).toLocaleDateString("es-AR")}</div>
+                <div><strong>Leyenda extracto:</strong> {modalMovement.description}</div>
+                <div>
+                  <strong>Importe:</strong>{" "}
+                  <span style={{ color: modalMovement.kind === "Credit" ? "#059669" : "#dc2626", fontWeight: 700 }}>
+                    {modalMovement.kind === "Credit" ? "+" : "−"}{money(modalMovement.amount, modalMovement.currency)}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <label style={{ display: "block" }}>
+                  <strong>Concepto de Tesorería *</strong>
+                  <select
+                    value={modalConceptId}
+                    onChange={(e) => setModalConceptId(e.target.value)}
+                    style={{ width: "100%", marginTop: "4px", padding: "8px 10px", borderRadius: "6px", border: "1px solid var(--surface-border)" }}
+                  >
+                    <option value="">-- Seleccionar concepto --</option>
+                    {concepts.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.code})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label style={{ display: "flex", gap: "8px", alignItems: "center", fontSize: "0.88rem", marginTop: 4 }}>
+                  <input
+                    type="checkbox"
+                    checked={modalCreateRule}
+                    onChange={(e) => setModalCreateRule(e.target.checked)}
+                  />
+                  <span>Crear regla para clasificar automáticamente en el futuro</span>
+                </label>
+
+                {modalCreateRule && (
+                  <div style={{ padding: "10px", background: "#fffbeb", borderRadius: "6px", border: "1px solid #fde68a", fontSize: "0.82rem" }}>
+                    <label style={{ display: "block" }}>
+                      <strong>Texto a reconocer en futuros extractos:</strong>
+                      <input
+                        type="text"
+                        value={modalPattern}
+                        onChange={(e) => setModalPattern(e.target.value.toUpperCase())}
+                        style={{ width: "100%", marginTop: "4px", padding: "6px 8px", borderRadius: "4px", border: "1px solid #cbd5e1" }}
+                      />
+                    </label>
+                    <small className="muted" style={{ display: "block", marginTop: "4px" }}>
+                      Cada vez que un extracto contenga este texto en <em>{selectedAccount.name}</em>, se sugerirá este concepto automáticamente.
+                    </small>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => setModalMovement(null)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={actionBusy !== null || !modalConceptId}
+                  onClick={handleSaveModalClassification}
+                  style={{ fontWeight: 700 }}
+                >
+                  {actionBusy === modalMovement.id ? "Guardando..." : "✓ Confirmar Clasificación"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -600,7 +931,7 @@ export function FinanceAccountsPage() {
         <div>
           <span className="eyebrow">FINANZAS · TESORERÍA</span>
           <h1>Bancos y cajas</h1>
-          <p className="muted">Seleccioná una cuenta para ver el detalle completo.</p>
+          <p className="muted">Seleccioná una cuenta para ver el detalle y clasificar movimientos.</p>
         </div>
       </div>
       {error && <div className="alert">{error}</div>}

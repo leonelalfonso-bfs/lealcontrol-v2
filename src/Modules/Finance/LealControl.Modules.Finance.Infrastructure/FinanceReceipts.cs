@@ -51,7 +51,7 @@ public static class FinanceReceipts
             var rows = await db.Movements.AsNoTracking().Where(x => x.AccountId == accountId && x.TenantId == tenantId).OrderBy(x => x.OperationDateUtc).ThenBy(x => x.CreatedAtUtc).ToListAsync(ct);
             var conceptIds = rows.Where(x => x.ConceptId.HasValue).Select(x => x.ConceptId!.Value).Distinct().ToList();
             var concepts = await db.FinancialConcepts.AsNoTracking().Where(x => x.TenantId == tenantId && conceptIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Name, ct);
-            var running = account.OpeningBalance; var result = rows.Select(x => { running += x.Kind == FinancialMovementKind.Credit ? x.Amount : -x.Amount; return new { x.Id, x.OperationDateUtc, x.Description, x.ExternalReference, x.Kind, x.Amount, x.Currency, x.ReportedBalance, SystemBalance = running, Difference = x.ReportedBalance.HasValue ? running - x.ReportedBalance.Value : (decimal?)null, x.ReconciliationStatus, ConceptName = x.ConceptId.HasValue && concepts.TryGetValue(x.ConceptId.Value, out var name) ? name : null, x.ClassificationStatus }; }).Reverse();
+            var running = account.OpeningBalance; var result = rows.Select(x => { running += x.Kind == FinancialMovementKind.Credit ? x.Amount : -x.Amount; return new { x.Id, x.OperationDateUtc, x.Description, x.ExternalReference, x.Kind, x.Amount, x.Currency, x.ReportedBalance, SystemBalance = running, Difference = x.ReportedBalance.HasValue ? running - x.ReportedBalance.Value : (decimal?)null, x.ReconciliationStatus, x.ConceptId, ConceptName = x.ConceptId.HasValue && concepts.TryGetValue(x.ConceptId.Value, out var name) ? name : null, x.ClassificationStatus }; }).Reverse();
             return Results.Ok(result);
         }); return endpoints;
     }
