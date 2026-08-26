@@ -372,6 +372,33 @@ export function CalibrationReportPrintPage() {
             2. ENSAYO DE EXCENTRICIDAD DE CARGA (Aplicada: {eccentricityData.testLoad} {equipment?.unit || "kg"})
             <span style={{ fontWeight: 400, fontSize: "0.72rem" }}> · teórica: {eccentricityData.calculatedTestLoad ?? eccentricityData.testLoad} · sugerida: {eccentricityData.suggestedTestLoad ?? eccentricityData.testLoad}</span>
           </div>
+          {/* Croquis de enumeración de apoyos en certificado impreso */}
+          <div style={{ margin: "6px 0 10px", padding: "6px 8px", background: "#f8fafc", borderRadius: 4, border: "1px dashed #cbd5e1" }}>
+            <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 700, marginBottom: 4 }}>Croquis de apoyos · frente / acceso ↑</div>
+            {/* Fila superior (enfrente: 2, 4, 6, 8...) */}
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccentricityData.positions.length / 2)}, 1fr)`, gap: 4 }}>
+              {Array.from({ length: Math.ceil(eccentricityData.positions.length / 2) }, (_, i) => 2 * (i + 1))
+                .filter((num) => num <= eccentricityData.positions.length)
+                .map((num) => (
+                  <span key={`top-${num}`} style={{ textAlign: "center", fontSize: "0.72rem", fontWeight: 700, background: "#e2e8f0", padding: "2px 4px", borderRadius: 2 }}>
+                    Apoyo {num}
+                  </span>
+                ))}
+            </div>
+            <div style={{ height: 12, borderLeft: "1px solid #94a3b8", borderRight: "1px solid #94a3b8", margin: "2px 6px", textAlign: "center", fontSize: "0.62rem", color: "#94a3b8" }}>
+              PLATAFORMA
+            </div>
+            {/* Fila inferior (frente / acceso: 1, 3, 5, 7...) */}
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccentricityData.positions.length / 2)}, 1fr)`, gap: 4 }}>
+              {Array.from({ length: Math.ceil(eccentricityData.positions.length / 2) }, (_, i) => 2 * i + 1)
+                .filter((num) => num <= eccentricityData.positions.length)
+                .map((num) => (
+                  <span key={`bottom-${num}`} style={{ textAlign: "center", fontSize: "0.72rem", fontWeight: 700, background: "#e2e8f0", padding: "2px 4px", borderRadius: 2 }}>
+                    Apoyo {num}
+                  </span>
+                ))}
+            </div>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginBottom: 6 }}>
             {eccentricityData.positions.map((p: any) => (
               <div key={p.pos} style={{ background: "#fafafa", padding: 6, borderRadius: 4, textAlign: "center" }}>
@@ -397,38 +424,67 @@ export function CalibrationReportPrintPage() {
         <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
           3. ENSAYO DE EXACTITUD Y LINEALIDAD (Cargas Crecientes y Decrecientes)
         </div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.76rem" }}>
           <thead>
             <tr style={{ background: "#f0fdfa", borderBottom: "1px solid #ccc" }}>
-              <th style={{ padding: "4px 6px", textAlign: "left" }}>Paso</th>
-              <th style={{ padding: "4px 6px", textAlign: "right" }}>Carga Patrón</th>
-              <th style={{ padding: "4px 6px", textAlign: "right" }}>EMT</th>
-              <th style={{ padding: "4px 6px", textAlign: "right" }}>Lectura (↗)</th>
-              <th style={{ padding: "4px 6px", textAlign: "right" }}>Error (↗)</th>
-              <th style={{ padding: "4px 6px", textAlign: "right" }}>Lectura (↘)</th>
-              <th style={{ padding: "4px 6px", textAlign: "right" }}>Error (↘)</th>
-              <th style={{ padding: "4px 6px", textAlign: "center" }}>Estado</th>
+              <th style={{ padding: "4px 4px", textAlign: "left" }}>#</th>
+              <th style={{ padding: "4px 4px", textAlign: "right" }}>Pesas</th>
+              {linearityData.some((r: any) => (r.auxLoad || 0) > 0) && (
+                <th style={{ padding: "4px 4px", textAlign: "right" }}>Carga Aux.</th>
+              )}
+              <th style={{ padding: "4px 4px", textAlign: "right" }}>Carga Total</th>
+              <th style={{ padding: "4px 4px", textAlign: "right" }}>EMT</th>
+              <th style={{ padding: "4px 4px", textAlign: "right" }}>Lectura (↗)</th>
+              <th style={{ padding: "4px 4px", textAlign: "right" }}>Redondeo (↗)</th>
+              <th style={{ padding: "4px 4px", textAlign: "right" }}>Lect. Corregida (↗)</th>
+              <th style={{ padding: "4px 4px", textAlign: "right" }}>Error (↗)</th>
+              <th style={{ padding: "4px 4px", textAlign: "right" }}>Lectura (↘)</th>
+              <th style={{ padding: "4px 4px", textAlign: "right" }}>Redondeo (↘)</th>
+              <th style={{ padding: "4px 4px", textAlign: "right" }}>Lect. Corregida (↘)</th>
+              <th style={{ padding: "4px 4px", textAlign: "right" }}>Error (↘)</th>
+              <th style={{ padding: "4px 4px", textAlign: "center" }}>Estado</th>
             </tr>
           </thead>
           <tbody>
-            {linearityData.map((r: any) => (
-              <tr key={r.step} style={{ borderBottom: "1px solid #eee" }}>
-                <td style={{ padding: "4px 6px" }}>#{r.step}</td>
-                <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: 700 }}>{r.targetLoad?.toLocaleString("es-AR")} {equipment?.unit || "kg"}</td>
-                <td style={{ padding: "4px 6px", textAlign: "right" }}>±{r.emt}</td>
-                <td style={{ padding: "4px 6px", textAlign: "right" }}>{r.ascIndication}</td>
-                <td style={{ padding: "4px 6px", textAlign: "right", color: Math.abs(r.ascError) <= r.emt ? "inherit" : "#dc2626" }}>
-                  {r.ascError >= 0 ? `+${r.ascError}` : r.ascError}
-                </td>
-                <td style={{ padding: "4px 6px", textAlign: "right" }}>{r.descIndication}</td>
-                <td style={{ padding: "4px 6px", textAlign: "right", color: Math.abs(r.descError) <= r.emt ? "inherit" : "#dc2626" }}>
-                  {r.descError >= 0 ? `+${r.descError}` : r.descError}
-                </td>
-                <td style={{ padding: "4px 6px", textAlign: "center", color: r.conform ? "#0d9488" : "#dc2626", fontWeight: 700 }}>
-                  {r.conform ? "✓ Apto" : "✗ Fuera"}
-                </td>
-              </tr>
-            ))}
+            {linearityData.map((r: any) => {
+              const hasAuxCol = linearityData.some((x: any) => (x.auxLoad || 0) > 0);
+              const targetL = r.targetLoad ?? (r.pesas || 0) + (r.auxLoad || 0);
+              const ascErr = r.ascError !== undefined ? r.ascError : (r.ascIndication ?? 0) - targetL;
+              const descErr = r.descError !== undefined ? r.descError : (r.descIndication ?? 0) - targetL;
+
+              return (
+                <tr key={r.step} style={{ borderBottom: "1px solid #eee" }}>
+                  <td style={{ padding: "4px 4px" }}>#{r.step}</td>
+                  <td style={{ padding: "4px 4px", textAlign: "right" }}>
+                    {r.pesas !== undefined ? r.pesas?.toLocaleString("es-AR") : targetL?.toLocaleString("es-AR")} {equipment?.unit || "kg"}
+                  </td>
+                  {hasAuxCol && (
+                    <td style={{ padding: "4px 4px", textAlign: "right" }}>
+                      {(r.auxLoad || 0) > 0 ? `${r.auxLoad?.toLocaleString("es-AR")} ${equipment?.unit || "kg"}` : "—"}
+                    </td>
+                  )}
+                  <td style={{ padding: "4px 4px", textAlign: "right", fontWeight: 700 }}>
+                    {targetL?.toLocaleString("es-AR")} {equipment?.unit || "kg"}
+                  </td>
+                  <td style={{ padding: "4px 4px", textAlign: "right" }}>±{r.emt}</td>
+                  <td style={{ padding: "4px 4px", textAlign: "right" }}>{r.ascIndication}</td>
+                  <td style={{ padding: "4px 4px", textAlign: "right", color: "#64748b" }}>{r.ascDeltaL !== undefined && r.ascDeltaL !== 0 ? r.ascDeltaL : "—"}</td>
+                  <td style={{ padding: "4px 4px", textAlign: "right", fontWeight: 600 }}>{r.ascCorrected !== undefined ? r.ascCorrected?.toLocaleString("es-AR") : r.ascIndication}</td>
+                  <td style={{ padding: "4px 4px", textAlign: "right", color: Math.abs(ascErr) <= r.emt ? "inherit" : "#dc2626", fontWeight: 700 }}>
+                    {ascErr >= 0 ? `+${ascErr}` : ascErr}
+                  </td>
+                  <td style={{ padding: "4px 4px", textAlign: "right" }}>{r.descIndication}</td>
+                  <td style={{ padding: "4px 4px", textAlign: "right", color: "#64748b" }}>{r.descDeltaL !== undefined && r.descDeltaL !== 0 ? r.descDeltaL : "—"}</td>
+                  <td style={{ padding: "4px 4px", textAlign: "right", fontWeight: 600 }}>{r.descCorrected !== undefined ? r.descCorrected?.toLocaleString("es-AR") : r.descIndication}</td>
+                  <td style={{ padding: "4px 4px", textAlign: "right", color: Math.abs(descErr) <= r.emt ? "inherit" : "#dc2626", fontWeight: 700 }}>
+                    {descErr >= 0 ? `+${descErr}` : descErr}
+                  </td>
+                  <td style={{ padding: "4px 4px", textAlign: "center", color: r.conform ? "#0d9488" : "#dc2626", fontWeight: 700 }}>
+                    {r.conform ? "✓ Apto" : "✗ Fuera"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

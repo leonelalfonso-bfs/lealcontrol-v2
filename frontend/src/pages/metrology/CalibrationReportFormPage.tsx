@@ -133,8 +133,18 @@ export function CalibrationReportFormPage() {
     { pos: 6, label: "Apoyo 6 (Celda 6)", indication: "16000", deltaL: "10" }
   ]);
 
-  // Assay 4: Linearity (Points)
-  const [linRows, setLinRows] = useState<Array<{ step: number; targetLoad: number; emt: number; ascIndication: string; descIndication: string }>>([]);
+interface LinearityRowState {
+  step: number;
+  pesas: string;
+  auxLoad: string;
+  ascIndication: string;
+  ascDeltaL: string;
+  descIndication: string;
+  descDeltaL: string;
+}
+
+  // Assay 4: Linearity (Points con pesas, carga auxiliar y redondeo)
+  const [linRows, setLinRows] = useState<LinearityRowState[]>([]);
 
   // Load initial lists
   useEffect(() => {
@@ -246,14 +256,21 @@ export function CalibrationReportFormPage() {
       }
       setEccPositions(posArr);
 
-      // Setup Linearity rows
-      const lRows = lPoints.map((p: any) => ({
-        step: p.step,
-        targetLoad: p.targetLoad,
-        emt: p.emt,
-        ascIndication: p.targetLoad.toString(),
-        descIndication: p.targetLoad.toString()
-      }));
+      // Setup Linearity rows (al menos 25 renglones para pesas patron y cargas auxiliares)
+      const lRows: LinearityRowState[] = [];
+      const totalSteps = Math.max(25, (lPoints?.length || 0));
+      for (let i = 1; i <= totalSteps; i++) {
+        const pt = lPoints && lPoints[i - 1];
+        lRows.push({
+          step: i,
+          pesas: pt ? pt.targetLoad.toString() : "",
+          auxLoad: "",
+          ascIndication: pt ? pt.targetLoad.toString() : "",
+          ascDeltaL: "",
+          descIndication: pt ? pt.targetLoad.toString() : "",
+          descDeltaL: ""
+        });
+      }
       setLinRows(lRows);
     } catch (err) {
       console.error("Error al calcular reglas metrológicas:", err);
@@ -263,6 +280,54 @@ export function CalibrationReportFormPage() {
   const eInterval = Number(selectedEquipment?.verificationIntervalE || 20);
   const beforeRounding = (indication: string, deltaL: string) =>
     (parseFloat(indication) || 0) + eInterval / 2 - (parseFloat(deltaL) || 0);
+
+  const computeLinearityRow = (r: LinearityRowState, eInt: number) => {
+    const pesasVal = parseFloat(r.pesas) || 0;
+    const auxVal = parseFloat(r.auxLoad) || 0;
+    const totalLoad = pesasVal + auxVal;
+
+    const hasAsc = r.ascIndication.trim() !== "" && !isNaN(parseFloat(r.ascIndication));
+    const rawAsc = parseFloat(r.ascIndication) || 0;
+    const hasAscDelta = r.ascDeltaL.trim() !== "" && !isNaN(parseFloat(r.ascDeltaL));
+    const ascDeltaVal = parseFloat(r.ascDeltaL) || 0;
+    const ascCorrected = hasAsc ? (hasAscDelta ? rawAsc + eInt / 2 - ascDeltaVal : rawAsc) : null;
+    const ascError = ascCorrected !== null ? ascCorrected - totalLoad : null;
+
+    const hasDesc = r.descIndication.trim() !== "" && !isNaN(parseFloat(r.descIndication));
+    const rawDesc = parseFloat(r.descIndication) || 0;
+    const hasDescDelta = r.descDeltaL.trim() !== "" && !isNaN(parseFloat(r.descDeltaL));
+    const descDeltaVal = parseFloat(r.descDeltaL) || 0;
+    const descCorrected = hasDesc ? (hasDescDelta ? rawDesc + eInt / 2 - descDeltaVal : rawDesc) : null;
+    const descError = descCorrected !== null ? descCorrected - totalLoad : null;
+
+    // EMT según escalón e y carga total L
+    const emt = totalLoad <= 500 * eInt ? eInt : totalLoad <= 2000 * eInt ? 2 * eInt : 3 * eInt;
+
+    const hasAnyData = hasAsc || hasDesc || r.pesas.trim() !== "" || r.auxLoad.trim() !== "";
+    const ascOk = ascError !== null ? Math.abs(ascError) <= emt : true;
+    const descOk = descError !== null ? Math.abs(descError) <= emt : true;
+    const conform = hasAnyData ? ascOk && descOk : true;
+
+    return {
+      step: r.step,
+      pesas: pesasVal,
+      auxLoad: auxVal,
+      totalLoad,
+      hasAsc,
+      ascIndication: hasAsc ? rawAsc : null,
+      ascDeltaL: hasAscDelta ? ascDeltaVal : null,
+      ascCorrected,
+      ascError,
+      hasDesc,
+      descIndication: hasDesc ? rawDesc : null,
+      descDeltaL: hasDescDelta ? descDeltaVal : null,
+      descCorrected,
+      descError,
+      emt,
+      hasAnyData,
+      conform
+    };
+  };
 
   const fidelityPlatformType = String(selectedEquipment?.platformType ?? "");
   const truckFidelity = fidelityPlatformType === "TruckScale" || fidelityPlatformType === "RollingLoad";
@@ -392,12 +457,9 @@ export function CalibrationReportFormPage() {
   const eccOk = eccentricityConfig ? eccMaxError <= (eccentricityConfig.emt || 20) : true;
 
   // Linearity
-  const linErrors = linRows.map((r) => {
-    const ascErr = Math.abs((parseFloat(r.ascIndication) || 0) - r.targetLoad);
-    const descErr = Math.abs((parseFloat(r.descIndication) || 0) - r.targetLoad);
-    return { step: r.step, ascErr, descErr, ascOk: ascErr <= r.emt, descOk: descErr <= r.emt };
-  });
-  const linAllOk = linErrors.every((e) => e.ascOk && e.descOk);
+  const linRowsComputed = linRows.map((r) => computeLinearityRow(r, eInterval));
+  const activeLinRows = linRowsComputed.filter((r) => r.hasAnyData);
+  const linAllOk = activeLinRows.length > 0 ? activeLinRows.every((r) => r.conform) : true;
 
   const allAssaysPass = inspLevel && inspZero && inspTare && inspSeals && fidelityAllOk && eccOk && linAllOk;
   const finalResult = allAssaysPass ? "Apto" : "No Apto";
@@ -490,18 +552,25 @@ export function CalibrationReportFormPage() {
         conform: eccOk
       };
 
-      const linearityData = linRows.map((r) => ({
-        step: r.step,
-        targetLoad: r.targetLoad,
-        emt: r.emt,
-        ascIndication: parseFloat(r.ascIndication) || 0,
-        ascError: (parseFloat(r.ascIndication) || 0) - r.targetLoad,
-        descIndication: parseFloat(r.descIndication) || 0,
-        descError: (parseFloat(r.descIndication) || 0) - r.targetLoad,
-        conform:
-          Math.abs((parseFloat(r.ascIndication) || 0) - r.targetLoad) <= r.emt &&
-          Math.abs((parseFloat(r.descIndication) || 0) - r.targetLoad) <= r.emt
-      }));
+      const linearityData = linRows
+        .map((r) => computeLinearityRow(r, eInterval))
+        .filter((r) => r.hasAnyData)
+        .map((r) => ({
+          step: r.step,
+          pesas: r.pesas,
+          auxLoad: r.auxLoad,
+          targetLoad: r.totalLoad,
+          emt: r.emt,
+          ascIndication: r.ascIndication ?? 0,
+          ascDeltaL: r.ascDeltaL ?? 0,
+          ascCorrected: r.ascCorrected ?? 0,
+          ascError: r.ascError ?? 0,
+          descIndication: r.descIndication ?? 0,
+          descDeltaL: r.descDeltaL ?? 0,
+          descCorrected: r.descCorrected ?? 0,
+          descError: r.descError ?? 0,
+          conform: r.conform
+        }));
 
       const weightsUsed = weights
         .filter((w) => selectedWeightIds.includes(w.id))
@@ -532,8 +601,8 @@ export function CalibrationReportFormPage() {
         atmosphericPressureHpa: parseFloat(atmosphericPressure) || 1013,
         approvedBy: "",
         verdict: finalResult === "Apto" ? "Approved" : "Rejected",
-        maxObservedError: Math.max(eccMaxError, maxFidelityDiff, ...linErrors.flatMap((x) => [x.ascErr, x.descErr])),
-        maxAllowedError: Math.max(highEmt, eccentricityConfig?.emt || 0, ...linRows.map((x) => x.emt)),
+        maxObservedError: Math.max(eccMaxError, maxFidelityDiff, ...(activeLinRows.length > 0 ? activeLinRows.flatMap((x) => [Math.abs(x.ascError ?? 0), Math.abs(x.descError ?? 0)]) : [0])),
+        maxAllowedError: Math.max(highEmt, eccentricityConfig?.emt || 0, ...(activeLinRows.length > 0 ? activeLinRows.map((x) => x.emt) : [0])),
         expandedUncertaintyK2: expandedUncertainty,
         visualInspectionJson: JSON.stringify({
           level: inspLevel,
@@ -1128,22 +1197,28 @@ export function CalibrationReportFormPage() {
             </label>
             <div style={{ border: "1px dashed #94a3b8", borderRadius: 10, padding: 10, background: "rgba(59,130,246,0.03)" }}>
               <strong style={{ fontSize: "0.8rem" }}>Croquis de enumeración de apoyos · frente / acceso ↑</strong>
+              {/* Fila superior (enfrente: 2, 4, 6, 8...) */}
               <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccPositions.length / 2)}, minmax(36px, 1fr))`, gap: 6, marginTop: 8 }}>
-                {eccPositions.slice(0, Math.ceil(eccPositions.length / 2)).map((p) => (
-                  <span key={`top-${p.pos}`} className="tag" style={{ textAlign: "center" }}>
-                    {p.pos}
-                  </span>
-                ))}
+                {Array.from({ length: Math.ceil(eccPositions.length / 2) }, (_, i) => 2 * (i + 1))
+                  .filter((num) => num <= eccPositions.length)
+                  .map((num) => (
+                    <span key={`top-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "#e0f2fe", color: "#0369a1" }}>
+                      {num}
+                    </span>
+                  ))}
               </div>
-              <div style={{ height: 18, borderLeft: "2px solid #64748b", borderRight: "2px solid #64748b", margin: "5px 10px", textAlign: "center", fontSize: "0.68rem", color: "#64748b" }}>
+              <div style={{ height: 18, borderLeft: "2px solid #64748b", borderRight: "2px solid #64748b", margin: "5px 10px", textAlign: "center", fontSize: "0.68rem", color: "#64748b", fontWeight: 600 }}>
                 PLATAFORMA
               </div>
+              {/* Fila inferior (frente / acceso: 1, 3, 5, 7...) */}
               <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.ceil(eccPositions.length / 2)}, minmax(36px, 1fr))`, gap: 6 }}>
-                {eccPositions.slice(Math.ceil(eccPositions.length / 2)).map((p) => (
-                  <span key={`bottom-${p.pos}`} className="tag" style={{ textAlign: "center" }}>
-                    {p.pos}
-                  </span>
-                ))}
+                {Array.from({ length: Math.ceil(eccPositions.length / 2) }, (_, i) => 2 * i + 1)
+                  .filter((num) => num <= eccPositions.length)
+                  .map((num) => (
+                    <span key={`bottom-${num}`} className="tag" style={{ textAlign: "center", fontWeight: 700, background: "#e0f2fe", color: "#0369a1" }}>
+                      {num}
+                    </span>
+                  ))}
               </div>
             </div>
           </div>
@@ -1198,75 +1273,161 @@ export function CalibrationReportFormPage() {
         {/* Assay 4: Linearity */}
         <div className="card pad">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <h3 style={{ margin: 0, fontSize: "1.1rem" }}>6. Ensayo de Exactitud y Linealidad</h3>
-            <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
-              Cargas Crecientes y Decrecientes
-            </span>
+            <div>
+              <h3 style={{ margin: 0, fontSize: "1.1rem" }}>6. Ensayo de Exactitud y Linealidad</h3>
+              <p className="muted" style={{ margin: "2px 0 0", fontSize: "0.75rem" }}>
+                Determinación de errores con cargas crecientes (↗) y decrecientes (↘), pesas patrón, cargas auxiliares y redondeo (ΔL)
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ fontSize: "0.78rem", padding: "4px 10px" }}
+                onClick={() => {
+                  setLinRows((prev) => [
+                    ...prev,
+                    {
+                      step: prev.length + 1,
+                      pesas: "",
+                      auxLoad: "",
+                      ascIndication: "",
+                      ascDeltaL: "",
+                      descIndication: "",
+                      descDeltaL: ""
+                    }
+                  ]);
+                }}
+              >
+                + Agregar Renglón
+              </button>
+              <span className="tag" style={{ background: "rgba(13, 148, 136, 0.1)", color: "#0d9488", fontWeight: 700 }}>
+                {linRows.length} Renglones de Carga
+              </span>
+            </div>
           </div>
 
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
               <thead>
                 <tr style={{ background: "#f8fafc", borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left" }}>
-                  <th style={{ padding: "8px 6px" }}>Paso</th>
-                  <th style={{ padding: "8px 6px" }}>Carga Patrón</th>
-                  <th style={{ padding: "8px 6px" }}>EMT</th>
-                  <th style={{ padding: "8px 6px" }}>Lectura Creciente (↗)</th>
-                  <th style={{ padding: "8px 6px" }}>Error (↗)</th>
-                  <th style={{ padding: "8px 6px" }}>Lectura Decreciente (↘)</th>
-                  <th style={{ padding: "8px 6px" }}>Error (↘)</th>
-                  <th style={{ padding: "8px 6px", textAlign: "center" }}>Estado</th>
+                  <th style={{ padding: "8px 6px", width: 90 }}>Pesas</th>
+                  <th style={{ padding: "8px 6px", width: 95 }}>Carga Auxiliar</th>
+                  <th style={{ padding: "8px 6px", width: 110 }}>Lectura Ascendente</th>
+                  <th style={{ padding: "8px 6px", width: 100 }}>Redondeo Ascendente</th>
+                  <th style={{ padding: "8px 6px", width: 115, textAlign: "right" }}>Lectura Corregida Ascendente</th>
+                  <th style={{ padding: "8px 6px", width: 90, textAlign: "right" }}>Error Ascendente</th>
+                  <th style={{ padding: "8px 6px", width: 110 }}>Lectura Descendente</th>
+                  <th style={{ padding: "8px 6px", width: 100 }}>Redondeo Descendente</th>
+                  <th style={{ padding: "8px 6px", width: 115, textAlign: "right" }}>Lectura Corregida Descendente</th>
+                  <th style={{ padding: "8px 6px", width: 90, textAlign: "right" }}>Error Descendente</th>
                 </tr>
               </thead>
               <tbody>
                 {linRows.map((r, idx) => {
-                  const ascErr = (parseFloat(r.ascIndication) || 0) - r.targetLoad;
-                  const descErr = (parseFloat(r.descIndication) || 0) - r.targetLoad;
-                  const ascOk = Math.abs(ascErr) <= r.emt;
-                  const descOk = Math.abs(descErr) <= r.emt;
-                  const stepOk = ascOk && descOk;
+                  const comp = computeLinearityRow(r, eInterval);
+                  const ascErrStr = comp.ascError !== null ? (comp.ascError >= 0 ? `+${comp.ascError.toFixed(0)}` : comp.ascError.toFixed(0)) : "-";
+                  const descErrStr = comp.descError !== null ? (comp.descError >= 0 ? `+${comp.descError.toFixed(0)}` : comp.descError.toFixed(0)) : "-";
+                  const ascOk = comp.ascError !== null ? Math.abs(comp.ascError) <= comp.emt : true;
+                  const descOk = comp.descError !== null ? Math.abs(comp.descError) <= comp.emt : true;
 
                   return (
                     <tr key={r.step} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                      <td style={{ padding: "6px" }}>#{r.step}</td>
-                      <td style={{ padding: "6px", fontWeight: 700 }}>
-                        {r.targetLoad.toLocaleString("es-AR")} {selectedEquipment?.unit}
-                      </td>
-                      <td style={{ padding: "6px" }}>±{r.emt} {selectedEquipment?.unit}</td>
-                      <td style={{ padding: "6px" }}>
+                      <td style={{ padding: "4px 6px" }}>
                         <input
                           type="number"
                           step="1"
+                          placeholder="0"
+                          value={r.pesas}
+                          onChange={(e) => {
+                            const copy = [...linRows];
+                            copy[idx].pesas = e.target.value;
+                            setLinRows(copy);
+                          }}
+                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                        />
+                      </td>
+                      <td style={{ padding: "4px 6px" }}>
+                        <input
+                          type="number"
+                          step="1"
+                          placeholder="0"
+                          value={r.auxLoad}
+                          onChange={(e) => {
+                            const copy = [...linRows];
+                            copy[idx].auxLoad = e.target.value;
+                            setLinRows(copy);
+                          }}
+                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                        />
+                      </td>
+                      <td style={{ padding: "4px 6px" }}>
+                        <input
+                          type="number"
+                          step="1"
+                          placeholder="—"
                           value={r.ascIndication}
                           onChange={(e) => {
                             const copy = [...linRows];
                             copy[idx].ascIndication = e.target.value;
                             setLinRows(copy);
                           }}
-                          style={{ width: 110 }}
+                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16, fontWeight: 700 }}
                         />
                       </td>
-                      <td style={{ padding: "6px", color: ascOk ? "#047857" : "#b91c1c", fontWeight: 700 }}>
-                        {ascErr >= 0 ? `+${ascErr.toFixed(0)}` : ascErr.toFixed(0)}
-                      </td>
-                      <td style={{ padding: "6px" }}>
+                      <td style={{ padding: "4px 6px" }}>
                         <input
                           type="number"
                           step="1"
+                          placeholder="ΔL"
+                          value={r.ascDeltaL}
+                          onChange={(e) => {
+                            const copy = [...linRows];
+                            copy[idx].ascDeltaL = e.target.value;
+                            setLinRows(copy);
+                          }}
+                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                        />
+                      </td>
+                      <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>
+                        {comp.ascCorrected !== null ? comp.ascCorrected.toLocaleString("es-AR") : "-"}
+                      </td>
+                      <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.ascError === null ? "inherit" : ascOk ? "#047857" : "#b91c1c" }}>
+                        {ascErrStr}
+                      </td>
+                      <td style={{ padding: "4px 6px" }}>
+                        <input
+                          type="number"
+                          step="1"
+                          placeholder="—"
                           value={r.descIndication}
                           onChange={(e) => {
                             const copy = [...linRows];
                             copy[idx].descIndication = e.target.value;
                             setLinRows(copy);
                           }}
-                          style={{ width: 110 }}
+                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16, fontWeight: 700 }}
                         />
                       </td>
-                      <td style={{ padding: "6px", color: descOk ? "#047857" : "#b91c1c", fontWeight: 700 }}>
-                        {descErr >= 0 ? `+${descErr.toFixed(0)}` : descErr.toFixed(0)}
+                      <td style={{ padding: "4px 6px" }}>
+                        <input
+                          type="number"
+                          step="1"
+                          placeholder="ΔL"
+                          value={r.descDeltaL}
+                          onChange={(e) => {
+                            const copy = [...linRows];
+                            copy[idx].descDeltaL = e.target.value;
+                            setLinRows(copy);
+                          }}
+                          style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                        />
                       </td>
-                      <td style={{ padding: "6px", textAlign: "center" }}>
-                        <span className={`badge ${stepOk ? "ok" : "prio-high"}`}>{stepOk ? "✓ Apto" : "✗ Fuera"}</span>
+                      <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>
+                        {comp.descCorrected !== null ? comp.descCorrected.toLocaleString("es-AR") : "-"}
+                      </td>
+                      <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.descError === null ? "inherit" : descOk ? "#047857" : "#b91c1c" }}>
+                        {descErrStr}
                       </td>
                     </tr>
                   );
