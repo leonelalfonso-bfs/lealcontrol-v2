@@ -257,7 +257,7 @@ public sealed class PurchaseQueryHandlers :
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var s = request.Search.ToLower();
-            query = query.Where(r => r.ReceptionNumber.ToLower().Contains(s) || r.SupplierName.ToLower().Contains(s) || r.SupplierRemitoNumber.ToLower().Contains(s));
+            query = query.Where(r => r.ReceptionNumber.ToLower().Contains(s) || r.SupplierName.ToLower().Contains(s) || (r.SupplierRemitoNumber != null && r.SupplierRemitoNumber.ToLower().Contains(s)));
         }
 
         var list = await query.OrderByDescending(r => r.CreatedAtUtc).ToListAsync(cancellationToken);
@@ -380,7 +380,9 @@ public sealed class PurchaseQueryHandlers :
                     "PurchaseReception",
                     reception.ReceptionNumber,
                     request.ReceivedBy,
-                    $"Remito Proveedor #{request.SupplierRemitoNumber} ({request.SupplierName})");
+                    string.IsNullOrWhiteSpace(request.SupplierRemitoNumber)
+                        ? $"Recepción directa #{reception.ReceptionNumber} ({request.SupplierName})"
+                        : $"Remito Proveedor #{request.SupplierRemitoNumber} ({request.SupplierName})");
 
                 _dbContext.StockMovements.Add(mov);
             }

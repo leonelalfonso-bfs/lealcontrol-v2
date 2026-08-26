@@ -28,12 +28,25 @@ export function PurchaseReceptionsPage() {
     <div>
       <div className="page-head">
         <div>
-          <h1>Recepciones de Mercadería (Remitos Proveedor)</h1>
-          <p className="muted">Control de ingresos físicos de insumos y repuestos a los depósitos</p>
+          <h1>📦 Recepciones de Mercadería</h1>
+          <p className="muted">Control de ingresos físicos de insumos, repuestos y mercaderías a los depósitos</p>
         </div>
-        <div className="toolbar"><ExcelToolbar fileName="recepciones-compras" rows={receptions} columns={[{ key: "receptionNumber", header: "Número" }, { key: "supplierName", header: "Proveedor" }, { key: "supplierRemitoNumber", header: "Remito" }, { key: "receptionDate", header: "Fecha" }, { key: "warehouseLocation", header: "Depósito" }]} /><Link to="/compras/recepciones/nueva" className="btn btn-primary">
-          + Registrar Recepción de Stock
-        </Link></div>
+        <div className="toolbar">
+          <ExcelToolbar
+            fileName="recepciones-compras"
+            rows={receptions}
+            columns={[
+              { key: "receptionNumber", header: "N° Recepción" },
+              { key: "supplierName", header: "Proveedor" },
+              { key: "supplierRemitoNumber", header: "Remito Proveedor" },
+              { key: "receptionDate", header: "Fecha" },
+              { key: "warehouseLocation", header: "Depósito" }
+            ]}
+          />
+          <Link to="/compras/recepciones/nueva" className="btn btn-primary">
+            + Registrar Recepción de Mercadería
+          </Link>
+        </div>
       </div>
 
       <div className="card filters">
@@ -60,40 +73,52 @@ export function PurchaseReceptionsPage() {
                 <th style={{ padding: "10px 8px" }}>N° Recepción</th>
                 <th style={{ padding: "10px 8px" }}>Fecha</th>
                 <th style={{ padding: "10px 8px" }}>Proveedor</th>
-                <th style={{ padding: "10px 8px" }}>Remito Proveedor</th>
+                <th style={{ padding: "10px 8px" }}>Origen / Remito</th>
                 <th style={{ padding: "10px 8px" }}>Depósito Destino</th>
                 <th style={{ padding: "10px 8px" }}>Recibido Por</th>
                 <th style={{ padding: "10px 8px", textAlign: "center" }}>Cant. Ítems</th>
               </tr>
             </thead>
             <tbody>
-              {receptions.map((r) => (
-                <tr key={r.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                  <td style={{ padding: "12px 8px", fontWeight: "bold", fontFamily: "monospace" }}>
-                    {r.receptionNumber}
-                  </td>
-                  <td style={{ padding: "12px 8px", fontSize: "0.9rem" }}>
-                    {new Date(r.receptionDate).toLocaleDateString("es-AR")}
-                  </td>
-                  <td style={{ padding: "12px 8px", fontWeight: 600 }}>
-                    {r.supplierName}
-                  </td>
-                  <td style={{ padding: "12px 8px", fontFamily: "monospace" }}>
-                    {r.supplierRemitoNumber}
-                  </td>
-                  <td style={{ padding: "12px 8px" }}>
-                    <span style={{ padding: "2px 8px", borderRadius: "6px", background: "#f1f5f9", fontSize: "0.82rem", color: "#334155" }}>
-                      📍 {r.warehouseLocation}
-                    </span>
-                  </td>
-                  <td style={{ padding: "12px 8px", color: "var(--ink-soft)", fontSize: "0.88rem" }}>
-                    {r.receivedBy || "—"}
-                  </td>
-                  <td style={{ padding: "12px 8px", textAlign: "center", fontWeight: "bold" }}>
-                    {r.items.length}
-                  </td>
-                </tr>
-              ))}
+              {receptions.map((r) => {
+                const hasRemito = r.supplierRemitoNumber && r.supplierRemitoNumber.trim() !== "" && r.supplierRemitoNumber !== "S/R" && r.supplierRemitoNumber !== "null";
+
+                return (
+                  <tr key={r.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                    <td style={{ padding: "12px 8px", fontWeight: "bold", fontFamily: "monospace" }}>
+                      📦 {r.receptionNumber}
+                    </td>
+                    <td style={{ padding: "12px 8px", fontSize: "0.9rem" }}>
+                      {new Date(r.receptionDate).toLocaleDateString("es-AR")}
+                    </td>
+                    <td style={{ padding: "12px 8px", fontWeight: 600 }}>
+                      {r.supplierName}
+                    </td>
+                    <td style={{ padding: "12px 8px" }}>
+                      {hasRemito ? (
+                        <strong style={{ fontFamily: "monospace", color: "#0f766e" }}>
+                          🚚 {r.supplierRemitoNumber}
+                        </strong>
+                      ) : (
+                        <span className="badge" style={{ background: "rgba(59, 130, 246, 0.1)", color: "#1d4ed8", fontSize: "0.78rem" }}>
+                          ⚡ Recepción Directa
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: "12px 8px" }}>
+                      <span style={{ padding: "2px 8px", borderRadius: "6px", background: "#f1f5f9", fontSize: "0.82rem", color: "#334155" }}>
+                        📍 {r.warehouseLocation}
+                      </span>
+                    </td>
+                    <td style={{ padding: "12px 8px", color: "var(--ink-soft)", fontSize: "0.88rem" }}>
+                      {r.receivedBy || "—"}
+                    </td>
+                    <td style={{ padding: "12px 8px", textAlign: "center", fontWeight: "bold" }}>
+                      {r.items.length}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

@@ -379,6 +379,13 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
                 ) THEN 
                     ALTER TABLE sales.remitos ADD COLUMN ""InvoiceNumber"" character varying(32);
                 END IF;
+
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema = 'purchases' AND table_name = 'purchase_receptions' AND (column_name = 'SupplierRemitoNumber' OR column_name = 'supplier_remito_number')
+                ) THEN 
+                    ALTER TABLE purchases.purchase_receptions ALTER COLUMN ""SupplierRemitoNumber"" DROP NOT NULL;
+                END IF;
             END $$;
         ";
 

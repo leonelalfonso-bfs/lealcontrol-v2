@@ -925,7 +925,7 @@ export type PurchaseReception = {
   purchaseOrderId?: string | null;
   supplierId: string;
   supplierName: string;
-  supplierRemitoNumber: string;
+  supplierRemitoNumber?: string | null;
   receptionDate: string;
   warehouseLocation: string;
   receivedBy?: string | null;
@@ -939,7 +939,7 @@ export type PurchaseReceptionWrite = {
   purchaseInvoiceId?: string | null;
   supplierId: string;
   supplierName: string;
-  supplierRemitoNumber: string;
+  supplierRemitoNumber?: string | null;
   receptionDate: string;
   warehouseLocation: string;
   receivedBy?: string | null;

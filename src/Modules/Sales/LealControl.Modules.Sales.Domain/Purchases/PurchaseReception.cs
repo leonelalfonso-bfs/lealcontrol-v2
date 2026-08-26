@@ -20,7 +20,7 @@ public sealed class PurchaseReception : Entity<Guid>
         Guid? purchaseOrderId,
         Guid supplierId,
         string supplierName,
-        string supplierRemitoNumber,
+        string? supplierRemitoNumber,
         DateTime receptionDate,
         string warehouseLocation,
         string? receivedBy,
@@ -46,7 +46,7 @@ public sealed class PurchaseReception : Entity<Guid>
     public Guid? PurchaseOrderId { get; private set; }
     public Guid SupplierId { get; private set; }
     public string SupplierName { get; private set; } = string.Empty;
-    public string SupplierRemitoNumber { get; private set; } = string.Empty;
+    public string? SupplierRemitoNumber { get; private set; }
     public DateTime ReceptionDate { get; private set; }
     public string WarehouseLocation { get; private set; } = "Depósito Central";
     public string? ReceivedBy { get; private set; }
@@ -61,7 +61,7 @@ public sealed class PurchaseReception : Entity<Guid>
         Guid? purchaseOrderId,
         Guid supplierId,
         string supplierName,
-        string supplierRemitoNumber,
+        string? supplierRemitoNumber,
         DateTime receptionDate,
         string warehouseLocation,
         string? receivedBy,
