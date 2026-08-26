@@ -112,14 +112,12 @@ export function CalibrationReportFormPage() {
   // Assay 2: Fidelity / Repeatability with Dual Load (Baja Carga y Alta Carga)
   const [fidelityTab, setFidelityTab] = useState<"low" | "high" | "both">("both");
 
-  // Baja Carga (Low Load)
-  const [fidelityLowLoad, setFidelityLowLoad] = useState<string>("12500");
+  // Baja Carga (Low Load) - initial proposal
   const [fidelityLowInbound, setFidelityLowInbound] = useState<FidelityTrial[]>(() => createDefaultTrials(3, "12500"));
   const [fidelityLowOutbound, setFidelityLowOutbound] = useState<FidelityTrial[]>(() => createDefaultTrials(3, "12500"));
   const [fidelityLowPlatform, setFidelityLowPlatform] = useState<FidelityTrial[]>(() => createDefaultTrials(5, "12500"));
 
-  // Alta Carga (High Load)
-  const [fidelityHighLoad, setFidelityHighLoad] = useState<string>("25000");
+  // Alta Carga (High Load) - initial proposal
   const [fidelityHighInbound, setFidelityHighInbound] = useState<FidelityTrial[]>(() => createDefaultTrials(3, "25000"));
   const [fidelityHighOutbound, setFidelityHighOutbound] = useState<FidelityTrial[]>(() => createDefaultTrials(3, "25000"));
   const [fidelityHighPlatform, setFidelityHighPlatform] = useState<FidelityTrial[]>(() => createDefaultTrials(5, "25000"));
@@ -167,16 +165,14 @@ export function CalibrationReportFormPage() {
     const maxCap = eq.maxCapacity || 80000;
     const isTruck = String(eq.platformType) === "TruckScale" || String(eq.platformType) === "RollingLoad";
 
-    // Propose Low Load (~30-50%) and High Load (~80-100%)
+    // Propose default values for trials
     const lowVal = isTruck && maxCap === 80000 ? 12500 : Math.round(maxCap * 0.3) || Math.round(maxCap * 0.5);
     const highVal = isTruck && maxCap === 80000 ? 25000 : (Number(eq.maximumOperationalLoad) || maxCap);
 
-    setFidelityLowLoad(lowVal.toString());
     setFidelityLowInbound(createDefaultTrials(3, lowVal.toString()));
     setFidelityLowOutbound(createDefaultTrials(3, lowVal.toString()));
     setFidelityLowPlatform(createDefaultTrials(5, lowVal.toString()));
 
-    setFidelityHighLoad(highVal.toString());
     setFidelityHighInbound(createDefaultTrials(3, highVal.toString()));
     setFidelityHighOutbound(createDefaultTrials(3, highVal.toString()));
     setFidelityHighPlatform(createDefaultTrials(5, highVal.toString()));
@@ -271,21 +267,14 @@ export function CalibrationReportFormPage() {
   const fidelityPlatformType = String(selectedEquipment?.platformType ?? "");
   const truckFidelity = fidelityPlatformType === "TruckScale" || fidelityPlatformType === "RollingLoad";
 
-  // Dynamic EMT for Low and High loads
-  const lowLoadNum = parseFloat(fidelityLowLoad) || 0;
-  const highLoadNum = parseFloat(fidelityHighLoad) || 0;
-  const lowEmt = getEmtForLoad(lowLoadNum, eInterval, selectedEquipment?.accuracyClass || "III");
-  const highEmt = getEmtForLoad(highLoadNum, eInterval, selectedEquipment?.accuracyClass || "III");
-
-  // Helper to compute stats for a block of trials
-  const computeFidelityBlock = (trials: FidelityTrial[], targetLoad: number, targetEmt: number) => {
-    const computedRows = trials.map((t, idx) => {
+  // Helper to compute stats for a block of trials where the reference load is the 1st reading (Pass #1)
+  const computeFidelityBlock = (trials: FidelityTrial[]) => {
+    // Calculate raw corrected readings
+    const preComputed = trials.map((t, idx) => {
       const rawInd = parseFloat(t.indication);
       const hasValue = !isNaN(rawInd) && t.indication.trim() !== "";
       const dL = parseFloat(t.deltaL) || 0;
       const corrected = hasValue ? (dL > 0 ? rawInd + eInterval / 2 - dL : rawInd) : null;
-      const error = corrected !== null ? corrected - targetLoad : null;
-      const ok = error !== null ? Math.abs(error) <= targetEmt : null;
 
       return {
         index: idx + 1,
@@ -294,8 +283,31 @@ export function CalibrationReportFormPage() {
         finalZero: t.finalZero,
         deltaL: t.deltaL,
         hasValue,
-        corrected,
+        corrected
+      };
+    });
+
+    // Reference load is the corrected reading of the 1st active trial (#1)
+    const firstActive = preComputed.find((r) => r.hasValue && r.corrected !== null);
+    const refLoad = firstActive ? (firstActive.corrected as number) : 0;
+    const targetEmt = refLoad > 0 ? getEmtForLoad(refLoad, eInterval, selectedEquipment?.accuracyClass || "III") : 20;
+
+    // Evaluate error against reference load #1 (repeatability evaluates consistency against first reading)
+    const computedRows = preComputed.map((r) => {
+      if (!r.hasValue || r.corrected === null) {
+        return {
+          ...r,
+          error: null,
+          emt: null,
+          ok: null
+        };
+      }
+      const error = r.corrected - refLoad;
+      const ok = Math.abs(error) <= targetEmt;
+      return {
+        ...r,
         error,
+        emt: targetEmt,
         ok
       };
     });
@@ -325,6 +337,8 @@ export function CalibrationReportFormPage() {
     const conform = count >= minRequired && maxDiff <= targetEmt && activeRows.every((r) => r.ok);
 
     return {
+      refLoad,
+      targetEmt,
       computedRows,
       activeCount: count,
       stdDev,
@@ -336,34 +350,40 @@ export function CalibrationReportFormPage() {
   };
 
   const lowInboundBlock = useMemo(
-    () => computeFidelityBlock(fidelityLowInbound, lowLoadNum, lowEmt),
-    [fidelityLowInbound, lowLoadNum, lowEmt, eInterval, truckFidelity]
+    () => computeFidelityBlock(fidelityLowInbound),
+    [fidelityLowInbound, eInterval, truckFidelity, selectedEquipment?.accuracyClass]
   );
   const lowOutboundBlock = useMemo(
-    () => computeFidelityBlock(fidelityLowOutbound, lowLoadNum, lowEmt),
-    [fidelityLowOutbound, lowLoadNum, lowEmt, eInterval, truckFidelity]
+    () => computeFidelityBlock(fidelityLowOutbound),
+    [fidelityLowOutbound, eInterval, truckFidelity, selectedEquipment?.accuracyClass]
   );
   const lowPlatformBlock = useMemo(
-    () => computeFidelityBlock(fidelityLowPlatform, lowLoadNum, lowEmt),
-    [fidelityLowPlatform, lowLoadNum, lowEmt, eInterval, truckFidelity]
+    () => computeFidelityBlock(fidelityLowPlatform),
+    [fidelityLowPlatform, eInterval, truckFidelity, selectedEquipment?.accuracyClass]
   );
 
   const highInboundBlock = useMemo(
-    () => computeFidelityBlock(fidelityHighInbound, highLoadNum, highEmt),
-    [fidelityHighInbound, highLoadNum, highEmt, eInterval, truckFidelity]
+    () => computeFidelityBlock(fidelityHighInbound),
+    [fidelityHighInbound, eInterval, truckFidelity, selectedEquipment?.accuracyClass]
   );
   const highOutboundBlock = useMemo(
-    () => computeFidelityBlock(fidelityHighOutbound, highLoadNum, highEmt),
-    [fidelityHighOutbound, highLoadNum, highEmt, eInterval, truckFidelity]
+    () => computeFidelityBlock(fidelityHighOutbound),
+    [fidelityHighOutbound, eInterval, truckFidelity, selectedEquipment?.accuracyClass]
   );
   const highPlatformBlock = useMemo(
-    () => computeFidelityBlock(fidelityHighPlatform, highLoadNum, highEmt),
-    [fidelityHighPlatform, highLoadNum, highEmt, eInterval, truckFidelity]
+    () => computeFidelityBlock(fidelityHighPlatform),
+    [fidelityHighPlatform, eInterval, truckFidelity, selectedEquipment?.accuracyClass]
   );
 
   const lowOk = truckFidelity ? lowInboundBlock.conform && lowOutboundBlock.conform : lowPlatformBlock.conform;
   const highOk = truckFidelity ? highInboundBlock.conform && highOutboundBlock.conform : highPlatformBlock.conform;
   const fidelityAllOk = lowOk && highOk;
+
+  // Reference loads for low and high
+  const lowAppliedLoad = truckFidelity ? lowInboundBlock.refLoad || lowOutboundBlock.refLoad : lowPlatformBlock.refLoad;
+  const highAppliedLoad = truckFidelity ? highInboundBlock.refLoad || highOutboundBlock.refLoad : highPlatformBlock.refLoad;
+  const lowEmt = truckFidelity ? lowInboundBlock.targetEmt : lowPlatformBlock.targetEmt;
+  const highEmt = truckFidelity ? highInboundBlock.targetEmt : highPlatformBlock.targetEmt;
 
   // Eccentricity
   const eccLoadNum = parseFloat(eccTestLoad) || 0;
@@ -407,14 +427,14 @@ export function CalibrationReportFormPage() {
 
       const repeatabilityData = {
         method: truckFidelity
-          ? "Báscula de camiones / carga rodante: 3 pasadas de entrada y 3 pasadas de salida (iniciando y finalizando en cero) evaluadas en Baja Carga y Alta Carga."
-          : "Balanza de plataforma / estacionaria: 5 repeticiones sucesivas evaluadas en Baja Carga y Alta Carga.",
+          ? "Báscula de camiones / carga rodante: 3 pasadas de entrada y 3 pasadas de salida (iniciando y finalizando en cero) evaluadas en Baja Carga y Alta Carga respecto a la 1ra indicación."
+          : "Balanza de plataforma / estacionaria: 5 repeticiones sucesivas evaluadas en Baja Carga y Alta Carga respecto a la 1ra indicación.",
         instrumentType: truckFidelity ? "Báscula de camiones / carga rodante" : "Balanza de plataforma / estacionaria",
         truckFidelity,
         hasDualLoad: true,
         lowLoad: {
           title: "Fidelidad en Baja Carga",
-          appliedLoad: lowLoadNum,
+          appliedLoad: lowAppliedLoad,
           emt: lowEmt,
           conform: lowOk,
           inbound: lowInboundBlock,
@@ -424,7 +444,7 @@ export function CalibrationReportFormPage() {
         },
         highLoad: {
           title: "Fidelidad en Alta Carga",
-          appliedLoad: highLoadNum,
+          appliedLoad: highAppliedLoad,
           emt: highEmt,
           conform: highOk,
           inbound: highInboundBlock,
@@ -433,7 +453,7 @@ export function CalibrationReportFormPage() {
           maxDiff: truckFidelity ? Math.max(highInboundBlock.maxDiff, highOutboundBlock.maxDiff) : highPlatformBlock.maxDiff
         },
         // Backward compatibility
-        appliedLoad: highLoadNum,
+        appliedLoad: highAppliedLoad,
         minimum: truckFidelity ? Math.min(highInboundBlock.minVal, highOutboundBlock.minVal) : highPlatformBlock.minVal,
         maximum: truckFidelity ? Math.max(highInboundBlock.maxVal, highOutboundBlock.maxVal) : highPlatformBlock.maxVal,
         range: maxFidelityDiff,
@@ -550,16 +570,14 @@ export function CalibrationReportFormPage() {
     title: string,
     trials: FidelityTrial[],
     setter: React.Dispatch<React.SetStateAction<FidelityTrial[]>>,
-    block: ReturnType<typeof computeFidelityBlock>,
-    targetLoad: number,
-    targetEmt: number
+    block: ReturnType<typeof computeFidelityBlock>
   ) => {
     return (
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <strong style={{ fontSize: "0.92rem", color: "#0f172a" }}>{title}</strong>
           <span className="muted" style={{ fontSize: "0.78rem" }}>
-            Carga Nominal: <strong>{targetLoad} {selectedEquipment?.unit}</strong> · EMT: <strong>±{targetEmt} {selectedEquipment?.unit}</strong>
+            Carga de Referencia (#1): <strong>{block.refLoad} {selectedEquipment?.unit}</strong> · EMT: <strong>±{block.targetEmt} {selectedEquipment?.unit}</strong>
           </span>
         </div>
 
@@ -645,13 +663,13 @@ export function CalibrationReportFormPage() {
                         textAlign: "right",
                         fontFamily: "monospace",
                         fontWeight: 700,
-                        color: r.error === null ? "inherit" : Math.abs(r.error) <= targetEmt ? "#047857" : "#b91c1c"
+                        color: r.error === null ? "inherit" : Math.abs(r.error) <= (block.targetEmt || 20) ? "#047857" : "#b91c1c"
                       }}
                     >
                       {r.error !== null ? (r.error >= 0 ? `+${r.error.toFixed(0)}` : r.error.toFixed(0)) : "—"}
                     </td>
                     <td style={{ padding: "6px 8px", textAlign: "center", fontFamily: "monospace" }}>
-                      {r.hasValue ? `±${targetEmt}` : "—"}
+                      {r.hasValue ? `±${block.targetEmt}` : "—"}
                     </td>
                     <td style={{ padding: "6px 8px", textAlign: "center" }}>
                       {r.hasValue ? (
@@ -721,7 +739,7 @@ export function CalibrationReportFormPage() {
             <span style={{ fontWeight: 700 }}>
               {block.maxDiff.toFixed(0)} {selectedEquipment?.unit}
             </span>{" "}
-            <span className="muted">(EMT: ±{targetEmt})</span>
+            <span className="muted">(EMT: ±{block.targetEmt})</span>
           </div>
           <div>
             <strong>Resultado {title.split("·")[0] || ""}:</strong>{" "}
@@ -922,8 +940,8 @@ export function CalibrationReportFormPage() {
               </h3>
               <p className="muted" style={{ margin: "2px 0 0 0", fontSize: "0.82rem" }}>
                 {truckFidelity
-                  ? "🚛 Báscula de Camiones: 3 pasadas en Sentido Entrada y 3 en Sentido Salida (iniciando y finalizando en cero)."
-                  : "⚖️ Balanza de Plataforma / Mostrador: 5 repeticiones sucesivas con descarga a cero."}
+                  ? "🚛 Báscula de Camiones: 3 pasadas en Sentido Entrada y 3 en Sentido Salida (iniciando y finalizando en cero). La carga de referencia es la primera indicación (#1)."
+                  : "⚖️ Balanza de Plataforma / Mostrador: 5 repeticiones sucesivas con descarga a cero. La carga de referencia es la primera indicación (#1)."}
               </p>
             </div>
 
@@ -935,7 +953,7 @@ export function CalibrationReportFormPage() {
                 onClick={() => setFidelityTab("low")}
                 style={{ fontSize: "0.82rem" }}
               >
-                🔹 Baja Carga ({lowLoadNum} {selectedEquipment?.unit}) {lowOk ? "✓" : "✗"}
+                🔹 Baja Carga ({lowAppliedLoad} {selectedEquipment?.unit}) {lowOk ? "✓" : "✗"}
               </button>
               <button
                 type="button"
@@ -943,7 +961,7 @@ export function CalibrationReportFormPage() {
                 onClick={() => setFidelityTab("high")}
                 style={{ fontSize: "0.82rem" }}
               >
-                🔸 Alta Carga ({highLoadNum} {selectedEquipment?.unit}) {highOk ? "✓" : "✗"}
+                🔸 Alta Carga ({highAppliedLoad} {selectedEquipment?.unit}) {highOk ? "✓" : "✗"}
               </button>
               <button
                 type="button"
@@ -972,17 +990,9 @@ export function CalibrationReportFormPage() {
                   <span style={{ fontSize: "1rem", fontWeight: 800, color: "#0369a1" }}>
                     🔹 Fidelidad en Baja Carga
                   </span>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: 0, fontSize: "0.85rem", fontWeight: 700 }}>
-                    Carga Aplicada:
-                    <input
-                      type="number"
-                      step="1"
-                      value={fidelityLowLoad}
-                      onChange={(e) => setFidelityLowLoad(e.target.value)}
-                      style={{ width: 110, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontWeight: 700 }}
-                    />
-                    {selectedEquipment?.unit}
-                  </label>
+                  <span className="muted" style={{ fontSize: "0.82rem" }}>
+                    (Carga de Referencia #1: <strong>{lowAppliedLoad} {selectedEquipment?.unit}</strong>)
+                  </span>
                 </div>
                 <span className="tag" style={{ background: "rgba(2, 132, 199, 0.12)", color: "#0369a1", fontWeight: 700 }}>
                   EMT Permitido = ±{lowEmt} {selectedEquipment?.unit}
@@ -995,17 +1005,13 @@ export function CalibrationReportFormPage() {
                     "→ Sentido Entrada (Carga) · 3 pasadas",
                     fidelityLowInbound,
                     setFidelityLowInbound,
-                    lowInboundBlock,
-                    lowLoadNum,
-                    lowEmt
+                    lowInboundBlock
                   )}
                   {renderTrialTable(
                     "← Sentido Salida (Descarga) · 3 pasadas",
                     fidelityLowOutbound,
                     setFidelityLowOutbound,
-                    lowOutboundBlock,
-                    lowLoadNum,
-                    lowEmt
+                    lowOutboundBlock
                   )}
                 </>
               ) : (
@@ -1013,9 +1019,7 @@ export function CalibrationReportFormPage() {
                   "5 Repeticiones de Ensayo",
                   fidelityLowPlatform,
                   setFidelityLowPlatform,
-                  lowPlatformBlock,
-                  lowLoadNum,
-                  lowEmt
+                  lowPlatformBlock
                 )
               )}
             </div>
@@ -1036,17 +1040,9 @@ export function CalibrationReportFormPage() {
                   <span style={{ fontSize: "1rem", fontWeight: 800, color: "#b45309" }}>
                     🔸 Fidelidad en Alta Carga
                   </span>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: 6, margin: 0, fontSize: "0.85rem", fontWeight: 700 }}>
-                    Carga Aplicada:
-                    <input
-                      type="number"
-                      step="1"
-                      value={fidelityHighLoad}
-                      onChange={(e) => setFidelityHighLoad(e.target.value)}
-                      style={{ width: 110, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontWeight: 700 }}
-                    />
-                    {selectedEquipment?.unit}
-                  </label>
+                  <span className="muted" style={{ fontSize: "0.82rem" }}>
+                    (Carga de Referencia #1: <strong>{highAppliedLoad} {selectedEquipment?.unit}</strong>)
+                  </span>
                 </div>
                 <span className="tag" style={{ background: "rgba(245, 158, 11, 0.15)", color: "#b45309", fontWeight: 700 }}>
                   EMT Permitido = ±{highEmt} {selectedEquipment?.unit}
@@ -1059,17 +1055,13 @@ export function CalibrationReportFormPage() {
                     "→ Sentido Entrada (Carga) · 3 pasadas",
                     fidelityHighInbound,
                     setFidelityHighInbound,
-                    highInboundBlock,
-                    highLoadNum,
-                    highEmt
+                    highInboundBlock
                   )}
                   {renderTrialTable(
                     "← Sentido Salida (Descarga) · 3 pasadas",
                     fidelityHighOutbound,
                     setFidelityHighOutbound,
-                    highOutboundBlock,
-                    highLoadNum,
-                    highEmt
+                    highOutboundBlock
                   )}
                 </>
               ) : (
@@ -1077,9 +1069,7 @@ export function CalibrationReportFormPage() {
                   "5 Repeticiones de Ensayo",
                   fidelityHighPlatform,
                   setFidelityHighPlatform,
-                  highPlatformBlock,
-                  highLoadNum,
-                  highEmt
+                  highPlatformBlock
                 )
               )}
             </div>

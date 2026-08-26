@@ -158,7 +158,7 @@ export function CalibrationReportPrintPage() {
     return (
       <div style={{ background: "#fafafa", border: "1px solid #e2e8f0", borderRadius: 6, padding: 8, marginBottom: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #e2e8f0", paddingBottom: 4, marginBottom: 4 }}>
-          <strong>{blockTitle} · Carga Aplicada: {blockData.appliedLoad} {equipment?.unit || "kg"}</strong>
+          <strong>{blockTitle} · Carga de Referencia (#1): {blockData.appliedLoad} {equipment?.unit || "kg"}</strong>
           <span style={{ color: blockData.conform ? "#047857" : "#dc2626", fontWeight: 700, fontSize: "0.76rem" }}>
             EMT: ±{blockData.emt} {equipment?.unit || "kg"} · {blockData.conform ? "✓ CONFORME" : "✗ NO CONFORME"}
           </span>
@@ -325,7 +325,7 @@ export function CalibrationReportPrintPage() {
           </div>
         ) : fidelityCurrent ? (
           <div style={{ background: "#fafafa", padding: 8, borderRadius: 4 }}>
-            <strong>{fidelityCurrent.instrumentType || "Ensayo de fidelidad"} · carga aplicada: {fidelityCurrent.appliedLoad} {equipment?.unit || "kg"}</strong>
+            <strong>{fidelityCurrent.instrumentType || "Ensayo de fidelidad"} · carga de referencia: {fidelityCurrent.appliedLoad} {equipment?.unit || "kg"}</strong>
             <div style={{ fontSize: "0.72rem", color: "#666", marginTop: 3 }}>{fidelityCurrent.method}</div>
             <table style={{ width: "100%", marginTop: 7, fontSize: "0.76rem", borderCollapse: "collapse" }}>
               <thead>
