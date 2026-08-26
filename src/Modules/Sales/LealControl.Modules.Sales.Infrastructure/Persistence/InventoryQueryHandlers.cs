@@ -197,6 +197,11 @@ internal sealed class InventoryQueryHandlers
         var diff = request.NewPhysicalStock - prevStock;
         stock.AdjustStock(request.NewPhysicalStock, request.MinimumStock, request.WarehouseLocation, request.WarehouseId, request.WarehouseName);
 
+        if (product.TrackStock)
+        {
+            product.SetStock(request.NewPhysicalStock);
+        }
+
         var isCostUsd = product.PurchaseCurrency is CurrencyCode.USD_BILLETE or CurrencyCode.USD_DIVISA;
         var isPriceUsd = product.SaleCurrency is CurrencyCode.USD_BILLETE or CurrencyCode.USD_DIVISA;
         var costArs = product.PurchaseCurrency == CurrencyCode.ARS ? product.CostPrice : 0;

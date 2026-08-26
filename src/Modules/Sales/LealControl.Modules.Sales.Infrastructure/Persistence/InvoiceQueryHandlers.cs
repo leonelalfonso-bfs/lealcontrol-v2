@@ -10,6 +10,7 @@ using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Sales.Application.Invoices;
 using LealControl.Modules.Sales.Domain.Invoices;
 using LealControl.Modules.Sales.Domain.Inventory;
+using LealControl.Modules.Sales.Domain.Products;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -186,33 +187,61 @@ internal sealed class InvoiceQueryHandlers
             // 2. Si es una Factura Directa / Venta de Mostrador (sin remito previo):
             // Descuenta stock físico de los productos inventariables para que no quede la mercadería sin descontar.
             var warehouse = await _dbContext.Warehouses
-                .FirstOrDefaultAsync(w => w.TenantId == tenantId && w.Type == WarehouseType.MainWarehouse, cancellationToken);
+                .FirstOrDefaultAsync(w => w.TenantId == tenantId && w.Type == WarehouseType.MainWarehouse, cancellationToken)
+                ?? await _dbContext.Warehouses.FirstOrDefaultAsync(w => w.TenantId == tenantId, cancellationToken);
 
-            foreach (var item in request.Items.Where(i => i.ProductId.HasValue))
+            foreach (var item in request.Items)
             {
-                var stock = await _dbContext.StockItems
-                    .FirstOrDefaultAsync(s => s.ProductId == item.ProductId!.Value && s.WarehouseId == (warehouse == null ? null : warehouse.Id) && s.TenantId == tenantId, cancellationToken);
-                if (stock == null) continue;
-                var previous = stock.PhysicalStock;
-                stock.Consume(item.Quantity);
-                _dbContext.StockMovements.Add(StockMovement.Create(
-                    tenantId,
-                    item.ProductId!.Value,
-                    "SaleInvoiceDirect",
-                    -item.Quantity,
-                    previous,
-                    stock.PhysicalStock,
-                    warehouse?.Id,
-                    warehouse?.Name,
-                    null,
-                    null,
-                    null,
-                    null,
-                    invoice.Id,
-                    "Invoice",
-                    invoice.FormattedNumber,
-                    "Venta Directa",
-                    $"Salida por factura directa {invoice.FormattedNumber} a {invoice.CustomerName}"));
+                Guid? prodId = item.ProductId;
+                Product? product = null;
+                if (prodId.HasValue && prodId.Value != Guid.Empty)
+                {
+                    product = await _dbContext.Products.FirstOrDefaultAsync(p => p.Id == new ProductId(prodId.Value) && p.TenantId == tenantId, cancellationToken);
+                }
+                else if (!string.IsNullOrWhiteSpace(item.Code))
+                {
+                    var normCode = item.Code.Trim().ToLower();
+                    product = await _dbContext.Products.FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Code.ToLower() == normCode, cancellationToken);
+                    if (product != null) prodId = product.Id.Value;
+                }
+
+                if (prodId.HasValue && prodId.Value != Guid.Empty)
+                {
+                    var stock = await _dbContext.StockItems
+                        .FirstOrDefaultAsync(s => s.ProductId == prodId.Value && s.TenantId == tenantId && (warehouse == null || s.WarehouseId == warehouse.Id || s.WarehouseId == null), cancellationToken);
+                    if (stock == null)
+                    {
+                        stock = StockItem.Create(tenantId, prodId.Value, 0, 0, "Depósito Central", warehouse?.Id, warehouse?.Name);
+                        _dbContext.StockItems.Add(stock);
+                    }
+
+                    var previous = stock.PhysicalStock;
+                    stock.AdjustStock(previous - item.Quantity, stock.MinimumStock, warehouse?.Name ?? "Depósito Central");
+
+                    if (product != null && product.TrackStock)
+                    {
+                        product.AdjustStock(-item.Quantity);
+                    }
+
+                    _dbContext.StockMovements.Add(StockMovement.Create(
+                        tenantId,
+                        prodId.Value,
+                        "SaleInvoiceDirect",
+                        -item.Quantity,
+                        previous,
+                        stock.PhysicalStock,
+                        warehouse?.Id,
+                        warehouse?.Name,
+                        null,
+                        null,
+                        null,
+                        null,
+                        invoice.Id,
+                        "Invoice",
+                        invoice.FormattedNumber,
+                        "Venta Directa",
+                        $"Salida por factura directa {invoice.FormattedNumber} a {invoice.CustomerName}"));
+                }
             }
         }
 

@@ -266,4 +266,16 @@ public sealed class Product : AggregateRoot<ProductId>
         IsActive = isActive;
         UpdatedAtUtc = DateTime.UtcNow;
     }
+
+    public void AdjustStock(decimal delta)
+    {
+        Stock += delta;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void SetStock(decimal newStock)
+    {
+        Stock = newStock;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
 }

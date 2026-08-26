@@ -12,6 +12,7 @@ using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Sales.Application.Purchases;
 using LealControl.Modules.Sales.Domain.Inventory;
 using LealControl.Modules.Sales.Domain.Purchases;
+using LealControl.Modules.Sales.Domain.Products;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -333,30 +334,49 @@ public sealed class PurchaseQueryHandlers :
 
         // Buscar depósito destino según ubicación indicada o principal
         var warehouse = await _dbContext.Warehouses.FirstOrDefaultAsync(w => w.TenantId == tenantId && (w.Name == request.WarehouseLocation || w.Code == request.WarehouseLocation), cancellationToken)
-            ?? await _dbContext.Warehouses.FirstOrDefaultAsync(w => w.TenantId == tenantId && w.Type == WarehouseType.MainWarehouse, cancellationToken);
+            ?? await _dbContext.Warehouses.FirstOrDefaultAsync(w => w.TenantId == tenantId && w.Type == WarehouseType.MainWarehouse, cancellationToken)
+            ?? await _dbContext.Warehouses.FirstOrDefaultAsync(w => w.TenantId == tenantId, cancellationToken);
 
         // Incrementar stock físico en inventario con costeo exacto
         foreach (var item in request.Items)
         {
-            if (item.ProductId.HasValue)
+            Guid? prodId = item.ProductId;
+            Product? product = null;
+            if (prodId.HasValue && prodId.Value != Guid.Empty)
+            {
+                product = await _dbContext.Products.FirstOrDefaultAsync(p => p.Id == new ProductId(prodId.Value) && p.TenantId == tenantId, cancellationToken);
+            }
+            else if (!string.IsNullOrWhiteSpace(item.Code))
+            {
+                var normCode = item.Code.Trim().ToLower();
+                product = await _dbContext.Products.FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Code.ToLower() == normCode, cancellationToken);
+                if (product != null) prodId = product.Id.Value;
+            }
+
+            if (prodId.HasValue && prodId.Value != Guid.Empty)
             {
                 var stock = await _dbContext.StockItems
-                    .FirstOrDefaultAsync(s => s.ProductId == item.ProductId.Value && s.WarehouseId == (warehouse == null ? null : warehouse.Id) && s.TenantId == tenantId, cancellationToken);
+                    .FirstOrDefaultAsync(s => s.ProductId == prodId.Value && (warehouse == null || s.WarehouseId == warehouse.Id || s.WarehouseId == null) && s.TenantId == tenantId, cancellationToken);
 
                 if (stock != null)
                 {
-                    stock.AdjustStock(stock.PhysicalStock + item.Quantity, stock.MinimumStock, request.WarehouseLocation);
+                    stock.AdjustStock(stock.PhysicalStock + item.Quantity, stock.MinimumStock, request.WarehouseLocation, warehouse?.Id, warehouse?.Name);
                 }
                 else
                 {
-                    var newStock = StockItem.Create(tenantId, item.ProductId.Value, item.Quantity, 0, request.WarehouseLocation, warehouse?.Id, warehouse?.Name);
-                    _dbContext.StockItems.Add(newStock);
+                    stock = StockItem.Create(tenantId, prodId.Value, item.Quantity, 0, request.WarehouseLocation, warehouse?.Id, warehouse?.Name);
+                    _dbContext.StockItems.Add(stock);
+                }
+
+                if (product != null && product.TrackStock)
+                {
+                    product.AdjustStock(+item.Quantity);
                 }
 
                 decimal? unitCost = null;
                 if (invoice != null)
                 {
-                    var invItem = invoice.Items.FirstOrDefault(i => i.ProductId == item.ProductId.Value);
+                    var invItem = invoice.Items.FirstOrDefault(i => i.ProductId == prodId.Value || (!string.IsNullOrWhiteSpace(item.Code) && i.Code.ToLower() == item.Code.Trim().ToLower()));
                     if (invItem != null)
                     {
                         unitCost = invItem.UnitPrice;
@@ -365,11 +385,11 @@ public sealed class PurchaseQueryHandlers :
 
                 var mov = StockMovement.Create(
                     tenantId,
-                    item.ProductId.Value,
+                    prodId.Value,
                     "PurchaseReception",
                     item.Quantity,
-                    stock?.PhysicalStock ?? 0,
-                    (stock?.PhysicalStock ?? 0) + item.Quantity,
+                    (stock.PhysicalStock - item.Quantity),
+                    stock.PhysicalStock,
                     warehouse?.Id,
                     warehouse?.Name,
                     unitCost,
