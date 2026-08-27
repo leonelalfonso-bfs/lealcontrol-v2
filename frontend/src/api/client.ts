@@ -248,6 +248,13 @@ export const api = {
   deleteEmail: (id: string) => request<void>(`/api/v1/communications/messages/${id}`, { method: "DELETE" }),
   sendEmail: (accountId: string, body: object) => request<{id:string;messageId:string}>(`/api/v1/communications/accounts/${accountId}/send`, { method:"POST", body:JSON.stringify(body) }),
 
+  // WhatsApp Gateway Methods
+  getWhatsAppStatus: () => request<{ available: boolean; state: string; phoneNumber?: string; error?: string }>("/api/v1/communications/whatsapp/status"),
+  connectWhatsApp: () => request<{ success: boolean; state: string; qrCodeBase64?: string; error?: string }>("/api/v1/communications/whatsapp/connect", { method: "POST" }),
+  disconnectWhatsApp: () => request<{ success: boolean }>("/api/v1/communications/whatsapp/disconnect", { method: "POST" }),
+  sendWhatsAppMessage: (body: { to: string; message: string; mediaUrl?: string; mediaType?: string; fileName?: string; relatedEntityType?: string; relatedEntityId?: string }) =>
+    request<{ success: boolean; messageId?: string; error?: string }>("/api/v1/communications/whatsapp/send", { method: "POST", body: JSON.stringify(body) }),
+
   // Company Settings & Users Methods
   getCompanySettings: () => request<import("./types").CompanySettings>("/api/v1/company/settings"),
   updateCompanySettings: (body: import("./types").CompanySettings) =>

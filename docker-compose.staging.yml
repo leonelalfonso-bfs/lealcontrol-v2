@@ -19,8 +19,25 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=${POSTGRES_DB:-lealcontrol_staging};Username=${POSTGRES_USER:-leal_staging};Password=${POSTGRES_PASSWORD:-leal_staging_secret}
+      WhatsAppGateway__Url: http://whatsapp-gateway:8080
+      WhatsAppGateway__ApiKey: ${EVOLUTION_API_KEY:-lealcontrol_wa_master_key_2026}
     depends_on: [postgres]
     ports: ["127.0.0.1:5210:8080"]
+    networks: [staging]
+
+  whatsapp-gateway:
+    image: atendai/evolution-api:v2.1.2
+    container_name: lealcontrol-staging-wa-gateway
+    restart: unless-stopped
+    environment:
+      SERVER_URL: http://whatsapp-gateway:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-lealcontrol_wa_master_key_2026}
+      DATABASE_ENABLED: "false"
+      WEBHOOK_GLOBAL_URL: http://api:8080/api/communications/whatsapp/webhook
+      WEBHOOK_GLOBAL_ENABLED: "true"
+      WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
+      WEBHOOK_EVENTS_CONNECTION_UPDATE: "true"
+      WEBHOOK_EVENTS_QRCODE_UPDATED: "true"
     networks: [staging]
 
   web:

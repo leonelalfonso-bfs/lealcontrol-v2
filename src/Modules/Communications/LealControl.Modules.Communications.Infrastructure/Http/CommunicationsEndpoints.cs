@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,15 @@ using MimeKit;
 namespace LealControl.Modules.Communications.Infrastructure.Http;
 
 public sealed record SaveMailAccountRequest(Guid? Id, MailAccountSettings Settings, string? Secret);
+public sealed record SendWhatsAppRequest(
+    string To,
+    string Message,
+    string? MediaUrl = null,
+    string? MediaType = null,
+    string? FileName = null,
+    string? RelatedEntityType = null,
+    Guid? RelatedEntityId = null
+);
 
 public static class CommunicationsEndpoints
 {
@@ -170,6 +180,171 @@ public static class CommunicationsEndpoints
             if (message is null) return Results.NotFound();
             db.Remove(message); await db.SaveChangesAsync(ct); return Results.NoContent();
         });
+
+        // WhatsApp Gateway Endpoints (Evolution API)
+        group.MapGet("/whatsapp/status", async (WhatsAppGatewayService waService, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            var instance = WhatsAppGatewayService.GetTenantInstanceName(tenantId);
+            var status = await waService.GetStatusAsync(instance, ct);
+            return Results.Ok(status);
+        });
+
+        group.MapPost("/whatsapp/connect", async (WhatsAppGatewayService waService, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            var instance = WhatsAppGatewayService.GetTenantInstanceName(tenantId);
+            var result = await waService.ConnectQrAsync(instance, ct);
+            return Results.Ok(result);
+        });
+
+        group.MapPost("/whatsapp/disconnect", async (WhatsAppGatewayService waService, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            var instance = WhatsAppGatewayService.GetTenantInstanceName(tenantId);
+            var ok = await waService.DisconnectAsync(instance, ct);
+            return Results.Ok(new { success = ok });
+        });
+
+        group.MapPost("/whatsapp/send", async (SendWhatsAppRequest req, WhatsAppGatewayService waService, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            if (string.IsNullOrWhiteSpace(req.To)) return Results.BadRequest("El número de destinatario es obligatorio.");
+            if (string.IsNullOrWhiteSpace(req.Message) && string.IsNullOrWhiteSpace(req.MediaUrl)) return Results.BadRequest("El mensaje o archivo es obligatorio.");
+
+            var instance = WhatsAppGatewayService.GetTenantInstanceName(tenantId);
+            WhatsAppSendResult sendResult;
+            if (!string.IsNullOrWhiteSpace(req.MediaUrl))
+            {
+                sendResult = await waService.SendMediaMessageAsync(instance, req.To, req.MediaUrl, req.MediaType ?? "document", req.FileName ?? "documento.pdf", req.Message ?? "", ct);
+            }
+            else
+            {
+                sendResult = await waService.SendTextMessageAsync(instance, req.To, req.Message, ct);
+            }
+
+            if (sendResult.Success)
+            {
+                var cleanPhone = Regex.Replace(req.To, @"[^\d]", "");
+                var preview = string.IsNullOrWhiteSpace(req.Message) ? $"[Archivo: {req.FileName ?? "Documento"}]" : req.Message;
+                var html = $"<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; white-space: pre-wrap;\">{System.Net.WebUtility.HtmlEncode(preview)}</div>";
+
+                var defaultAcc = await db.MailAccounts.FirstOrDefaultAsync(x => x.TenantId == tenant.TenantId.Value, ct);
+                var accId = defaultAcc?.Id ?? Guid.Empty;
+
+                var email = EmailMessage.Create(
+                    tenant.TenantId.Value,
+                    accId,
+                    $"wa_{sendResult.MessageId ?? Guid.NewGuid().ToString("N")}",
+                    null,
+                    $"wa_{cleanPhone}",
+                    EmailDirection.Outgoing,
+                    $"WhatsApp: {req.To}",
+                    "WhatsApp Oficial",
+                    req.To,
+                    preview.Length > 400 ? preview[..400] : preview,
+                    DateTime.UtcNow,
+                    req.RelatedEntityType,
+                    req.RelatedEntityId,
+                    html
+                );
+
+                db.EmailMessages.Add(email);
+                await db.SaveChangesAsync(ct);
+            }
+
+            return Results.Ok(new { success = sendResult.Success, messageId = sendResult.MessageId, error = sendResult.Error });
+        });
+
+        // Webhook (AllowAnonymous)
+        endpoints.MapPost("/api/communications/whatsapp/webhook", async (HttpRequest request, CommunicationsDbContext db, CancellationToken ct) => {
+            try
+            {
+                using var reader = new StreamReader(request.Body);
+                var body = await reader.ReadToEndAsync(ct);
+                if (string.IsNullOrWhiteSpace(body)) return Results.Ok(new { status = "empty" });
+
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+
+                var eventType = root.TryGetProperty("event", out var evProp) ? evProp.GetString() : "";
+                var instance = root.TryGetProperty("instance", out var instProp) ? instProp.GetString() : "";
+
+                if (string.IsNullOrWhiteSpace(instance) || !instance.StartsWith("tenant_"))
+                {
+                    return Results.Ok(new { status = "ignored_no_instance" });
+                }
+
+                var tenantHex = instance["tenant_".Length..];
+                if (!Guid.TryParseExact(tenantHex, "N", out var tenantId))
+                {
+                    return Results.Ok(new { status = "invalid_tenant_guid" });
+                }
+
+                if (eventType == "messages.upsert" && root.TryGetProperty("data", out var dataObj))
+                {
+                    var key = dataObj.TryGetProperty("key", out var kObj) ? kObj : default;
+                    var msgId = key.TryGetProperty("id", out var idProp) ? idProp.GetString() : "";
+                    var remoteJid = key.TryGetProperty("remoteJid", out var rjProp) ? rjProp.GetString() : "";
+                    var fromMe = key.TryGetProperty("fromMe", out var fmProp) && fmProp.GetBoolean();
+                    var pushName = dataObj.TryGetProperty("pushName", out var pnProp) ? pnProp.GetString() : "";
+
+                    if (string.IsNullOrWhiteSpace(msgId) || string.IsNullOrWhiteSpace(remoteJid) || remoteJid.EndsWith("@g.us"))
+                    {
+                        return Results.Ok(new { status = "ignored_group_or_empty" });
+                    }
+
+                    var cleanPhone = Regex.Replace(remoteJid.Split('@')[0], @"[^\d]", "");
+                    var internetId = $"wa_{msgId}";
+
+                    var exists = await db.EmailMessages.AnyAsync(x => x.TenantId == tenantId && x.InternetMessageId == internetId, ct);
+                    if (exists) return Results.Ok(new { status = "already_processed" });
+
+                    var text = "";
+                    if (dataObj.TryGetProperty("message", out var msgObj))
+                    {
+                        if (msgObj.TryGetProperty("conversation", out var convProp)) text = convProp.GetString() ?? "";
+                        else if (msgObj.TryGetProperty("extendedTextMessage", out var extObj) && extObj.TryGetProperty("text", out var extText)) text = extText.GetString() ?? "";
+                        else if (msgObj.TryGetProperty("imageMessage", out var imgObj) && imgObj.TryGetProperty("caption", out var imgCap)) text = imgCap.GetString() ?? "[Imagen de WhatsApp]";
+                        else if (msgObj.TryGetProperty("documentMessage", out var docObj) && docObj.TryGetProperty("fileName", out var docFn)) text = $"[Documento: {docFn.GetString()}]";
+                        else text = "[Mensaje multimedia]";
+                    }
+
+                    if (string.IsNullOrWhiteSpace(text)) text = "[Mensaje de WhatsApp]";
+
+                    var defaultAcc = await db.MailAccounts.FirstOrDefaultAsync(x => x.TenantId == tenantId, ct);
+                    var accId = defaultAcc?.Id ?? Guid.Empty;
+
+                    var html = $"<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; white-space: pre-wrap;\">{System.Net.WebUtility.HtmlEncode(text)}</div>";
+
+                    var email = EmailMessage.Create(
+                        tenantId,
+                        accId,
+                        internetId,
+                        null,
+                        $"wa_{cleanPhone}",
+                        fromMe ? EmailDirection.Outgoing : EmailDirection.Incoming,
+                        !string.IsNullOrWhiteSpace(pushName) ? $"WhatsApp: {pushName} (+{cleanPhone})" : $"WhatsApp: +{cleanPhone}",
+                        fromMe ? "WhatsApp Oficial" : $"+{cleanPhone}",
+                        fromMe ? $"+{cleanPhone}" : "WhatsApp Oficial",
+                        text.Length > 400 ? text[..400] : text,
+                        DateTime.UtcNow,
+                        "Customer",
+                        null,
+                        html
+                    );
+
+                    db.EmailMessages.Add(email);
+                    await db.SaveChangesAsync(ct);
+                }
+
+                return Results.Ok(new { status = "processed" });
+            }
+            catch (Exception ex)
+            {
+                return Results.Ok(new { status = "error", message = ex.Message });
+            }
+        }).AllowAnonymous();
 
         return endpoints;
     }
