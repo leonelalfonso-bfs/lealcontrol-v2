@@ -340,6 +340,24 @@ public sealed class MetaGraphApiService
         }
     }
 
+    public static bool IsTokenExpiredError(string? error)
+    {
+        if (string.IsNullOrWhiteSpace(error)) return false;
+        return error.Contains("Session has expired", StringComparison.OrdinalIgnoreCase)
+            || error.Contains("\"code\":190", StringComparison.Ordinal)
+            || error.Contains("Error validating access token", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string? ShortenMetaError(string? error)
+    {
+        if (string.IsNullOrWhiteSpace(error)) return error;
+        if (IsTokenExpiredError(error))
+            return "El token de acceso de Meta expiró. Reconectá Facebook/Instagram desde Canales con un token nuevo.";
+        if (error.Length > 220)
+            return error[..220] + "…";
+        return error;
+    }
+
     private async Task<MetaSendResult> SendPayloadAsync(string pageAccessToken, string recipientId, object messagePayload, CancellationToken ct)
     {
         try

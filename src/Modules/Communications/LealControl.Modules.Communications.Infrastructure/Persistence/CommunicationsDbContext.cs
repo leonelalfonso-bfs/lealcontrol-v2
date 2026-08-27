@@ -60,6 +60,9 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.HasIndex(x => new { x.TenantId, x.LastMessageAtUtc });
             b.HasIndex(x => new { x.TenantId, x.ChannelType });
             b.Property(x => x.Status).HasMaxLength(20).HasDefaultValue("open");
+            b.Property(x => x.AssignedToUserId);
+            b.Property(x => x.SuggestionDismissed).HasDefaultValue(false);
+            b.Property(x => x.LastIncomingAtUtc);
         });
         modelBuilder.Entity<MessageReplyTemplate>(b => {
             b.ToTable("message_reply_templates"); b.HasKey(x => x.Id);
@@ -221,6 +224,16 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
                 ""Data"" bytea NOT NULL,
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL
             );
+
+            UPDATE communications.conversations c
+            SET ""LastIncomingAtUtc"" = sub.max_ts
+            FROM (
+                SELECT ""ConversationId"", MAX(""OccurredAtUtc"") AS max_ts
+                FROM communications.email_messages
+                WHERE ""Direction"" = 'Incoming' AND ""ConversationId"" IS NOT NULL
+                GROUP BY ""ConversationId""
+            ) sub
+            WHERE c.""Id"" = sub.""ConversationId"" AND c.""LastIncomingAtUtc"" IS NULL;
         ";
 
         await Database.ExecuteSqlRawAsync(sql, cancellationToken);

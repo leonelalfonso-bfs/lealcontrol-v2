@@ -27,8 +27,10 @@ public sealed class ConversationService
         var normalizedPreview = messagePreview.Length > 400 ? messagePreview[..400] : messagePreview;
         var displayName = string.IsNullOrWhiteSpace(participantName) ? participantId : participantName;
 
-        var conversation = await db.Conversations
-            .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.ThreadKey == threadKey, ct);
+        var conversation = db.Conversations.Local
+            .FirstOrDefault(x => x.TenantId == tenantId && x.ThreadKey == threadKey)
+            ?? await db.Conversations
+                .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.ThreadKey == threadKey, ct);
 
         if (conversation is null)
         {
@@ -67,35 +69,58 @@ public sealed class ConversationService
 
         foreach (var group in messages.GroupBy(x => x.ThreadKey))
         {
-            foreach (var message in group.OrderBy(x => x.OccurredAtUtc))
+            var threadKey = group.Key;
+            var firstMsg = group.First();
+            var lastMsg = group.Last();
+
+            var channelType = string.IsNullOrWhiteSpace(firstMsg.ChannelType)
+                ? CommunicationChannelHelper.InferChannelFromThreadKey(threadKey, firstMsg.InternetMessageId)
+                : firstMsg.ChannelType;
+
+            var participantId = ExtractParticipantId(channelType, threadKey, firstMsg.FromAddress, firstMsg.ToAddresses, firstMsg.Direction);
+            var participantName = ExtractParticipantName(firstMsg.Subject, channelType, participantId, firstMsg.FromAddress, firstMsg.ToAddresses, firstMsg.Direction);
+            var (email, phone) = ExtractContactFields(channelType, participantId, firstMsg.FromAddress, firstMsg.ToAddresses, firstMsg.Direction);
+
+            var conversation = db.Conversations.Local
+                .FirstOrDefault(x => x.TenantId == tenantId && x.ThreadKey == threadKey)
+                ?? await db.Conversations
+                    .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.ThreadKey == threadKey, ct);
+
+            if (conversation is null)
             {
-                var channelType = string.IsNullOrWhiteSpace(message.ChannelType)
-                    ? CommunicationChannelHelper.InferChannelFromThreadKey(message.ThreadKey, message.InternetMessageId)
-                    : message.ChannelType;
-
-                var participantId = ExtractParticipantId(channelType, message.ThreadKey, message.FromAddress, message.ToAddresses, message.Direction);
-                var participantName = ExtractParticipantName(message.Subject, channelType, participantId, message.FromAddress, message.ToAddresses, message.Direction);
-                var (email, phone) = ExtractContactFields(channelType, participantId, message.FromAddress, message.ToAddresses, message.Direction);
-
-                var conversation = await EnsureForMessageAsync(
-                    db,
+                conversation = Conversation.Create(
                     tenantId,
                     channelType,
-                    message.ThreadKey,
+                    threadKey,
                     participantId,
-                    participantName,
+                    string.IsNullOrWhiteSpace(participantName) ? participantId : participantName,
                     email,
                     phone,
-                    message.Direction,
-                    message.BodyPreview,
-                    message.OccurredAtUtc,
-                    ct);
+                    lastMsg.BodyPreview,
+                    lastMsg.OccurredAtUtc,
+                    lastMsg.Direction);
+                db.Conversations.Add(conversation);
+            }
+            else
+            {
+                conversation.RecordMessage(lastMsg.Direction, lastMsg.BodyPreview, lastMsg.OccurredAtUtc, participantName);
+                conversation.UpdateParticipantContact(email, phone);
+            }
 
+            foreach (var message in group)
+            {
                 message.SetConversationId(conversation.Id);
             }
         }
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // If already committed or partially conflicted, retry individually or ignore
+        }
     }
 
     public static string ExtractParticipantId(

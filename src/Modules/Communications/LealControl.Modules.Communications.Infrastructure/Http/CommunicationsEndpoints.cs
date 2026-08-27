@@ -135,8 +135,16 @@ public static class CommunicationsEndpoints
             var tenantId = tenant.TenantId.Value;
             if (tenantId == Guid.Empty) return Results.Unauthorized();
 
-            await conversationService.BackfillTenantAsync(db, tenantId, ct);
+            try
+            {
+                await conversationService.BackfillTenantAsync(db, tenantId, ct);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Communications] Error en backfill: {ex.Message}");
+            }
 
+            var slaCutoff = DateTime.UtcNow.AddHours(-2);
             var query = db.Conversations.AsNoTracking().Where(x => x.TenantId == tenantId);
             if (!string.IsNullOrWhiteSpace(channel) && !channel.Equals("all", StringComparison.OrdinalIgnoreCase))
             {
@@ -166,15 +174,37 @@ public static class CommunicationsEndpoints
             else if (string.Equals(folder, "Unassigned", StringComparison.OrdinalIgnoreCase))
                 query = query.Where(c => c.AssignedToUserId == null);
             else if (string.Equals(folder, "NeedsResponse", StringComparison.OrdinalIgnoreCase))
-            {
-                var slaCutoff = DateTime.UtcNow.AddHours(-2);
                 query = query.Where(c => c.LastIncomingAtUtc != null && c.LastIncomingAtUtc < slaCutoff && c.Status != "resolved" && c.Status != "archived");
-            }
 
             var conversations = await query
                 .OrderByDescending(x => x.LastMessageAtUtc)
                 .Take(200)
-                .Select(x => new {
+                .ToListAsync(ct);
+
+            if (conversations.Count == 0)
+            {
+                return Results.Ok(Array.Empty<object>());
+            }
+
+            var conversationIds = conversations.Select(x => x.Id).ToList();
+            var messageFlags = await db.EmailMessages.AsNoTracking()
+                .Where(m => m.ConversationId != null && conversationIds.Contains(m.ConversationId.Value))
+                .GroupBy(m => m.ConversationId!.Value)
+                .Select(g => new
+                {
+                    ConversationId = g.Key,
+                    HasIncoming = g.Any(m => m.Direction == EmailDirection.Incoming),
+                    HasOutgoing = g.Any(m => m.Direction == EmailDirection.Outgoing)
+                })
+                .ToListAsync(ct);
+
+            var flagsById = messageFlags.ToDictionary(x => x.ConversationId);
+
+            var result = conversations.Select(x =>
+            {
+                flagsById.TryGetValue(x.Id, out var flags);
+                return new
+                {
                     x.Id,
                     x.ChannelType,
                     x.ThreadKey,
@@ -191,13 +221,13 @@ public static class CommunicationsEndpoints
                     x.AssignedToUserId,
                     x.SuggestionDismissed,
                     x.LastIncomingAtUtc,
-                    NeedsResponse = x.LastIncomingAtUtc != null && x.LastIncomingAtUtc < DateTime.UtcNow.AddHours(-2) && x.Status != "resolved" && x.Status != "archived",
-                    HasIncoming = db.EmailMessages.Any(m => m.ConversationId == x.Id && m.Direction == EmailDirection.Incoming),
-                    HasOutgoing = db.EmailMessages.Any(m => m.ConversationId == x.Id && m.Direction == EmailDirection.Outgoing)
-                })
-                .ToListAsync(ct);
+                    NeedsResponse = x.LastIncomingAtUtc != null && x.LastIncomingAtUtc < slaCutoff && x.Status != "resolved" && x.Status != "archived",
+                    HasIncoming = flags?.HasIncoming ?? false,
+                    HasOutgoing = flags?.HasOutgoing ?? false
+                };
+            }).ToList();
 
-            return Results.Ok(conversations);
+            return Results.Ok(result);
         });
 
         group.MapGet("/conversations/{id:guid}/messages", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
@@ -668,7 +698,7 @@ public static class CommunicationsEndpoints
                     verifyToken = fb?.VerifyToken ?? "lealcontrol_meta_verify_2026",
                     connectedAtUtc = fb?.ConnectedAtUtc,
                     lastSyncAtUtc = fb?.LastSyncAtUtc,
-                    lastError = fb?.LastError
+                    lastError = MetaGraphApiService.ShortenMetaError(fb?.LastError)
                 },
                 instagram = new
                 {
@@ -680,7 +710,7 @@ public static class CommunicationsEndpoints
                     verifyToken = ig?.VerifyToken ?? "lealcontrol_meta_verify_2026",
                     connectedAtUtc = ig?.ConnectedAtUtc,
                     lastSyncAtUtc = ig?.LastSyncAtUtc,
-                    lastError = ig?.LastError
+                    lastError = MetaGraphApiService.ShortenMetaError(ig?.LastError)
                 }
             });
         });
@@ -769,8 +799,13 @@ public static class CommunicationsEndpoints
                 conn.LastSyncAtUtc = DateTime.UtcNow;
                 if (!fetch.Success)
                 {
-                    conn.LastError = fetch.Error;
-                    channelResults.Add(new { channel = conn.ChannelType, synced = 0, error = fetch.Error });
+                    conn.LastError = MetaGraphApiService.ShortenMetaError(fetch.Error);
+                    if (MetaGraphApiService.IsTokenExpiredError(fetch.Error))
+                    {
+                        conn.IsConnected = false;
+                    }
+                    channelResults.Add(new { channel = conn.ChannelType, synced = 0, error = conn.LastError });
+                    await db.SaveChangesAsync(ct);
                     continue;
                 }
 

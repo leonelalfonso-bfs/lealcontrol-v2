@@ -9,6 +9,40 @@ interface MetaStatusData {
   instagram: { isConnected: boolean; pageId?: string; pageName?: string; instagramAccountId?: string; instagramUsername?: string; verifyToken: string; connectedAtUtc?: string; lastSyncAtUtc?: string; lastError?: string };
 }
 
+function isMetaTokenExpired(err?: string | null): boolean {
+  if (!err) return false;
+  const e = err.toLowerCase();
+  return e.includes("token expiró") || e.includes("session has expired") || e.includes("code\":190") || e.includes("validating access token");
+}
+
+function MetaReconnectBanner({
+  channel,
+  lastError,
+  onReconnect
+}: {
+  channel: "facebook" | "instagram";
+  lastError?: string;
+  onReconnect: (ch: "facebook" | "instagram") => void;
+}) {
+  if (!lastError) return null;
+  const expired = isMetaTokenExpired(lastError);
+  return (
+    <div style={{ fontSize: "0.78rem", color: "#b45309", margin: "6px 0", fontWeight: 600, background: "rgba(251,191,36,0.15)", padding: 8, borderRadius: 6 }}>
+      <div>⚠️ {lastError}</div>
+      {expired && (
+        <button
+          type="button"
+          className="btn btn-primary compact"
+          style={{ marginTop: 8 }}
+          onClick={() => onReconnect(channel)}
+        >
+          🔑 Reconectar con token nuevo
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function ChannelsPage() {
   const [expanded, setExpanded] = useState<Channel | null>(null);
 
@@ -502,9 +536,11 @@ export function ChannelsPage() {
                 )}
               </div>
               {metaStatus?.instagram?.lastError && (
-                <div style={{ fontSize: "0.78rem", color: "#b45309", margin: "6px 0", fontWeight: 600, background: "rgba(251,191,36,0.15)", padding: 8, borderRadius: 6 }}>
-                  ⚠️ {metaStatus.instagram.lastError}
-                </div>
+                <MetaReconnectBanner
+                  channel="instagram"
+                  lastError={metaStatus.instagram.lastError}
+                  onReconnect={handleOpenMetaConfig}
+                />
               )}
               {metaSyncMsg && (
                 <div style={{ fontSize: "0.78rem", color: "#065f46", margin: "6px 0", fontWeight: 600 }}>
@@ -547,6 +583,13 @@ export function ChannelsPage() {
             </div>
           ) : (
             <div style={{ marginTop: 12 }}>
+              {metaStatus?.instagram?.lastError && (
+                <MetaReconnectBanner
+                  channel="instagram"
+                  lastError={metaStatus.instagram.lastError}
+                  onReconnect={handleOpenMetaConfig}
+                />
+              )}
               <button
                 type="button"
                 className="btn btn-primary"
@@ -645,9 +688,11 @@ export function ChannelsPage() {
                 )}
               </div>
               {metaStatus?.facebook?.lastError && (
-                <div style={{ fontSize: "0.78rem", color: "#b45309", margin: "6px 0", fontWeight: 600, background: "rgba(251,191,36,0.15)", padding: 8, borderRadius: 6 }}>
-                  ⚠️ {metaStatus.facebook.lastError}
-                </div>
+                <MetaReconnectBanner
+                  channel="facebook"
+                  lastError={metaStatus.facebook.lastError}
+                  onReconnect={handleOpenMetaConfig}
+                />
               )}
               {metaSyncMsg && (
                 <div style={{ fontSize: "0.78rem", color: "#065f46", margin: "6px 0", fontWeight: 600 }}>
@@ -690,6 +735,13 @@ export function ChannelsPage() {
             </div>
           ) : (
             <div style={{ marginTop: 12 }}>
+              {metaStatus?.facebook?.lastError && (
+                <MetaReconnectBanner
+                  channel="facebook"
+                  lastError={metaStatus.facebook.lastError}
+                  onReconnect={handleOpenMetaConfig}
+                />
+              )}
               <button
                 type="button"
                 className="btn btn-primary"
