@@ -15,6 +15,9 @@ public static class DependencyInjection
         services.AddDbContext<CommunicationsDbContext>(options => options.UseNpgsql(connection, npgsql =>
             npgsql.MigrationsHistoryTable("__ef_migrations_history", CommunicationsDbContext.Schema)));
         services.AddScoped<MailSecretProtector>(); services.AddScoped<MailTransportService>();
+        services.AddScoped<ConversationService>();
+        services.AddScoped<MailSyncService>();
+        services.AddHostedService<CommunicationsSyncBackgroundService>();
         services.AddHttpClient<WhatsAppGatewayService>();
         services.AddHttpClient<MetaGraphApiService>();
         return services;

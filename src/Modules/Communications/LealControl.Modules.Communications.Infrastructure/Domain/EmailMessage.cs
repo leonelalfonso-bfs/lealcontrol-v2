@@ -23,18 +23,22 @@ public sealed class EmailMessage
     public DateTime OccurredAtUtc { get; private set; }
     public string? RelatedEntityType { get; private set; }
     public Guid? RelatedEntityId { get; private set; }
+    public string ChannelType { get; private set; } = "email";
+    public Guid? ConversationId { get; private set; }
 
     public List<EmailAttachment> Attachments { get; private set; } = [];
 
     public static EmailMessage Create(Guid tenantId, Guid accountId, string messageId, string? inReplyTo,
         string threadKey, EmailDirection direction, string subject, string from, string to, string preview,
-        DateTime occurredAtUtc, string? entityType = null, Guid? entityId = null, string? bodyHtml = null) => new()
+        DateTime occurredAtUtc, string? entityType = null, Guid? entityId = null, string? bodyHtml = null,
+        string channelType = "email") => new()
     {
         Id = Guid.NewGuid(), TenantId = tenantId, MailAccountId = accountId,
         InternetMessageId = messageId, InReplyTo = inReplyTo, ThreadKey = threadKey,
         Direction = direction, Subject = subject, FromAddress = from, ToAddresses = to,
         BodyPreview = preview, OccurredAtUtc = occurredAtUtc,
-        RelatedEntityType = entityType, RelatedEntityId = entityId, BodyHtml = bodyHtml
+        RelatedEntityType = entityType, RelatedEntityId = entityId, BodyHtml = bodyHtml,
+        ChannelType = channelType
     };
 
     public void SetBodyHtml(string? html)
@@ -53,6 +57,11 @@ public sealed class EmailMessage
         Subject = subject;
         FromAddress = fromAddress;
         ToAddresses = toAddresses;
+    }
+
+    public void SetConversationId(Guid conversationId)
+    {
+        ConversationId = conversationId;
     }
 }
 

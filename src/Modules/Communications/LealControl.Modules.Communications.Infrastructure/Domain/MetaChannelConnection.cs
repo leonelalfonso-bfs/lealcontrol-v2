@@ -15,6 +15,8 @@ public sealed class MetaChannelConnection
     public string VerifyToken { get; set; } = Guid.NewGuid().ToString("N");
     public bool IsConnected { get; set; }
     public DateTime? ConnectedAtUtc { get; set; }
+    public DateTime? LastSyncAtUtc { get; set; }
+    public string? LastError { get; set; }
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public static MetaChannelConnection Create(Guid tenantId, string channelType)

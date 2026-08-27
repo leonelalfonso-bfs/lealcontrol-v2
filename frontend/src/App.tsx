@@ -53,6 +53,9 @@ import { SuppliersPage } from "./pages/SuppliersPage";
 import { MailSettingsPage } from "./pages/MailSettingsPage";
 import { InboxPage } from "./pages/InboxPage";
 import { ChannelsPage } from "./pages/ChannelsPage";
+import { ReplyTemplatesPage } from "./pages/ReplyTemplatesPage";
+import { CommunicationsNotificationBell } from "./components/CommunicationsNotificationBell";
+import { useCommunicationsBrowserNotifications } from "./hooks/useCommunicationsBrowserNotifications";
 import { ProductionPage } from "./pages/ProductionPage";
 import { ProductionHelpPage } from "./pages/ProductionHelpPage";
 import { ProductionFlowPage } from "./pages/ProductionFlowPage";
@@ -186,6 +189,8 @@ export function App() {
   const modules = allMods.filter((m) => m.id === "inicio" || allowedModuleIds.includes(m.id));
   const activeModule = resolveActiveModule(location.pathname, DEVELOPMENT_ACCESS);
   const activeModuleId = activeModule.id;
+  const hasCommunications = !!user && allowedModuleIds.includes("comunicaciones");
+  useCommunicationsBrowserNotifications(hasCommunications);
 
   if (location.pathname === "/login") {
     return <LoginPage />;
@@ -333,6 +338,8 @@ export function App() {
             </nav>
 
             <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid var(--surface-border)" }}>
+              {hasCommunications && <CommunicationsNotificationBell />}
+
               {/* User Session Bar */}
               {user && (
                 <div style={{
@@ -623,6 +630,7 @@ export function App() {
               <Route path="/configuracion/ayuda" element={<SettingsHelpPage />} />
               <Route path="/comunicaciones" element={<InboxPage />} />
               <Route path="/comunicaciones/canales" element={<ChannelsPage />} />
+              <Route path="/comunicaciones/plantillas" element={<ReplyTemplatesPage />} />
             </Routes>
           </main>
         </div>

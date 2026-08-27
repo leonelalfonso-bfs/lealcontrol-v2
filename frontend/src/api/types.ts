@@ -1158,7 +1158,53 @@ export type MailAccount = {
   imapHost: string; imapPort: number; imapUseSsl: boolean; smtpHost: string; smtpPort: number; smtpUseSsl: boolean;
   username: string; isActive: boolean; isDefaultSender: boolean; lastSyncAtUtc?: string | null; lastError?: string | null; hasSecret: boolean;
 };
-export type EmailMessage = { id:string; mailAccountId:string; internetMessageId:string; inReplyTo?:string|null; threadKey:string; direction:"Incoming"|"Outgoing"; subject:string; fromAddress:string; toAddresses:string; bodyPreview:string; bodyHtml?:string|null; occurredAtUtc:string; relatedEntityType?:string|null; relatedEntityId?:string|null };
+export type EmailMessage = { id:string; mailAccountId:string; conversationId?:string|null; internetMessageId:string; inReplyTo?:string|null; threadKey:string; channelType?:string; direction:"Incoming"|"Outgoing"; subject:string; fromAddress:string; toAddresses:string; bodyPreview:string; bodyHtml?:string|null; occurredAtUtc:string; relatedEntityType?:string|null; relatedEntityId?:string|null; attachments?: EmailAttachmentMeta[] };
+
+export type Conversation = {
+  id: string;
+  channelType: string;
+  threadKey: string;
+  participantId: string;
+  participantName: string;
+  participantEmail?: string | null;
+  participantPhone?: string | null;
+  lastMessagePreview?: string | null;
+  lastMessageAtUtc: string;
+  unreadCount: number;
+  relatedLeadId?: string | null;
+  relatedCustomerId?: string | null;
+  status?: string;
+  assignedToUserId?: string | null;
+  suggestionDismissed?: boolean;
+  lastIncomingAtUtc?: string | null;
+  needsResponse?: boolean;
+  hasIncoming?: boolean;
+  hasOutgoing?: boolean;
+};
+
+export type MessageReplyTemplate = {
+  id: string;
+  name: string;
+  body: string;
+  channelType?: string | null;
+};
+
+export type CustomerMatch = {
+  id: string;
+  legalName: string;
+  tradeName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  whatsApp?: string | null;
+};
+
+export type EmailAttachmentMeta = {
+  id: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  isInline: boolean;
+};
 
 // ==========================================
 // HUMAN RESOURCES (RRHH & LIQUIDACIÓN)

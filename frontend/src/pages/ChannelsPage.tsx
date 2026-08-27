@@ -5,8 +5,8 @@ import { api } from "../api/client";
 type Channel = "WhatsApp" | "Instagram" | "Facebook";
 
 interface MetaStatusData {
-  facebook: { isConnected: boolean; pageId?: string; pageName?: string; verifyToken: string; connectedAtUtc?: string };
-  instagram: { isConnected: boolean; pageId?: string; pageName?: string; instagramAccountId?: string; instagramUsername?: string; verifyToken: string; connectedAtUtc?: string };
+  facebook: { isConnected: boolean; pageId?: string; pageName?: string; verifyToken: string; connectedAtUtc?: string; lastSyncAtUtc?: string; lastError?: string };
+  instagram: { isConnected: boolean; pageId?: string; pageName?: string; instagramAccountId?: string; instagramUsername?: string; verifyToken: string; connectedAtUtc?: string; lastSyncAtUtc?: string; lastError?: string };
 }
 
 export function ChannelsPage() {
@@ -30,8 +30,14 @@ export function ChannelsPage() {
     setMetaSyncMsg(null);
     try {
       const res = await api.syncMetaMessages();
-      setMetaSyncMsg(`✓ Sincronizados ${res.synced} mensajes.`);
-      setTimeout(() => setMetaSyncMsg(null), 4000);
+      const errors = (res.channels || []).filter((c) => c.error).map((c) => `${c.channel}: ${c.error}`);
+      if (errors.length > 0) {
+        setMetaSyncMsg(`⚠️ ${errors.join(" | ")}`);
+      } else {
+        setMetaSyncMsg(`✓ Sincronizados ${res.synced} mensajes.`);
+      }
+      await checkStatus();
+      setTimeout(() => setMetaSyncMsg(null), 8000);
     } catch (err: any) {
       setMetaSyncMsg(`⚠️ ${err.message}`);
     } finally {
@@ -488,7 +494,18 @@ export function ChannelsPage() {
                 <strong>Cuenta vinculada:</strong> @{metaStatus?.instagram?.instagramUsername || "Instagram Oficial"}
                 <br />
                 <strong>Página FB:</strong> {metaStatus?.instagram?.pageName || "Página vinculada"}
+                {metaStatus?.instagram?.lastSyncAtUtc && (
+                  <>
+                    <br />
+                    <strong>Última sync:</strong> {new Date(metaStatus.instagram.lastSyncAtUtc).toLocaleString("es-AR")}
+                  </>
+                )}
               </div>
+              {metaStatus?.instagram?.lastError && (
+                <div style={{ fontSize: "0.78rem", color: "#b45309", margin: "6px 0", fontWeight: 600, background: "rgba(251,191,36,0.15)", padding: 8, borderRadius: 6 }}>
+                  ⚠️ {metaStatus.instagram.lastError}
+                </div>
+              )}
               {metaSyncMsg && (
                 <div style={{ fontSize: "0.78rem", color: "#065f46", margin: "6px 0", fontWeight: 600 }}>
                   {metaSyncMsg}
@@ -620,7 +637,18 @@ export function ChannelsPage() {
                 <strong>Página vinculada:</strong> {metaStatus?.facebook?.pageName || "Página Oficial"}
                 <br />
                 <strong>Page ID:</strong> {metaStatus?.facebook?.pageId || "-"}
+                {metaStatus?.facebook?.lastSyncAtUtc && (
+                  <>
+                    <br />
+                    <strong>Última sync:</strong> {new Date(metaStatus.facebook.lastSyncAtUtc).toLocaleString("es-AR")}
+                  </>
+                )}
               </div>
+              {metaStatus?.facebook?.lastError && (
+                <div style={{ fontSize: "0.78rem", color: "#b45309", margin: "6px 0", fontWeight: 600, background: "rgba(251,191,36,0.15)", padding: 8, borderRadius: 6 }}>
+                  ⚠️ {metaStatus.facebook.lastError}
+                </div>
+              )}
               {metaSyncMsg && (
                 <div style={{ fontSize: "0.78rem", color: "#065f46", margin: "6px 0", fontWeight: 600 }}>
                   {metaSyncMsg}

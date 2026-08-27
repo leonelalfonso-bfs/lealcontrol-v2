@@ -16,6 +16,7 @@ public sealed class WhatsAppGatewayService
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
     private readonly string _apiKey;
+    private readonly string _webhookUrl;
     private readonly ILogger<WhatsAppGatewayService> _logger;
 
     public WhatsAppGatewayService(HttpClient httpClient, IConfiguration configuration, ILogger<WhatsAppGatewayService> logger)
@@ -28,6 +29,9 @@ public sealed class WhatsAppGatewayService
         _apiKey = configuration["WhatsAppGateway:ApiKey"] 
             ?? Environment.GetEnvironmentVariable("WHATSAPP_GATEWAY_APIKEY") 
             ?? "c0cffb77a0e57afb8a2799b3008d9b032615825abe964eae";
+        _webhookUrl = configuration["WhatsAppGateway:WebhookUrl"]
+            ?? Environment.GetEnvironmentVariable("WHATSAPP_GATEWAY_WEBHOOK_URL")
+            ?? "https://v2.lealcontrol.com/api/communications/whatsapp/webhook";
 
         if (!_baseUrl.EndsWith("/")) _baseUrl += "/";
         _httpClient.BaseAddress = new Uri(_baseUrl);
@@ -129,7 +133,7 @@ public sealed class WhatsAppGatewayService
             var webhookPayload = new
             {
                 enabled = true,
-                url = "http://lealcontrol-staging-api:8080/api/communications/whatsapp/webhook",
+                url = _webhookUrl,
                 webhook_by_events = false,
                 events = new[]
                 {
@@ -171,7 +175,8 @@ public sealed class WhatsAppGatewayService
                         var remoteJid = c.TryGetProperty("id", out var idProp) ? idProp.GetString() : (c.TryGetProperty("remoteJid", out var rjProp) ? rjProp.GetString() : "");
                         if (string.IsNullOrWhiteSpace(remoteJid) || remoteJid.EndsWith("@g.us")) continue;
 
-                        var cleanPhone = Regex.Replace(remoteJid.Split('@')[0].Split(':')[0], @"[^\d]", "");
+                        var cleanPhone = CommunicationChannelHelper.NormalizeWhatsAppPhone(
+                            Regex.Replace(remoteJid.Split('@')[0].Split(':')[0], @"[^\d]", ""));
                         if (string.IsNullOrWhiteSpace(cleanPhone)) continue;
 
                         var name = c.TryGetProperty("name", out var nProp) ? nProp.GetString() : null;
@@ -219,9 +224,11 @@ public sealed class WhatsAppGatewayService
                         var remoteJid = chat.TryGetProperty("id", out var idProp) ? idProp.GetString() : (chat.TryGetProperty("remoteJid", out var rjProp) ? rjProp.GetString() : "");
                         if (string.IsNullOrWhiteSpace(remoteJid) || remoteJid.EndsWith("@g.us")) continue;
 
-                        var cleanPhone = Regex.Replace(remoteJid.Split('@')[0].Split(':')[0], @"[^\d]", "");
+                        var participantId = CommunicationChannelHelper.ExtractWhatsAppParticipantId(remoteJid);
+                        if (string.IsNullOrWhiteSpace(participantId)) continue;
+
                         var pushName = chat.TryGetProperty("pushName", out var pnProp) ? pnProp.GetString() : (chat.TryGetProperty("name", out var nProp) ? nProp.GetString() : "");
-                        if (contactsMap != null && contactsMap.TryGetValue(cleanPhone, out var agendaName) && !string.IsNullOrWhiteSpace(agendaName))
+                        if (contactsMap != null && contactsMap.TryGetValue(participantId, out var agendaName) && !string.IsNullOrWhiteSpace(agendaName))
                         {
                             pushName = agendaName;
                         }
@@ -269,10 +276,12 @@ public sealed class WhatsAppGatewayService
                         var remoteJid = key.TryGetProperty("remoteJid", out var rjProp) ? rjProp.GetString() : "";
                         if (string.IsNullOrWhiteSpace(msgId) || string.IsNullOrWhiteSpace(remoteJid) || remoteJid.EndsWith("@g.us")) continue;
 
-                        var cleanPhone = Regex.Replace(remoteJid.Split('@')[0].Split(':')[0], @"[^\d]", "");
+                        var participantId = CommunicationChannelHelper.ExtractWhatsAppParticipantId(remoteJid);
+                        if (string.IsNullOrWhiteSpace(participantId)) continue;
+
                         var fromMe = key.TryGetProperty("fromMe", out var fmProp) && fmProp.GetBoolean();
                         var pushName = item.TryGetProperty("pushName", out var pnProp) ? pnProp.GetString() : "";
-                        if (contactsMap != null && contactsMap.TryGetValue(cleanPhone, out var agendaName) && !string.IsNullOrWhiteSpace(agendaName))
+                        if (contactsMap != null && contactsMap.TryGetValue(participantId, out var agendaName) && !string.IsNullOrWhiteSpace(agendaName))
                         {
                             pushName = agendaName;
                         }
@@ -349,17 +358,28 @@ public sealed class WhatsAppGatewayService
 
     public async Task<WhatsAppSendResult> SendMediaMessageAsync(string instanceName, string number, string mediaUrl, string mediaType, string fileName, string caption, CancellationToken ct = default)
     {
+        return await SendMediaInternalAsync(instanceName, number, mediaUrl, null, mediaType, GuessMimeType(mediaType, fileName), fileName, caption, ct);
+    }
+
+    public async Task<WhatsAppSendResult> SendMediaBase64Async(string instanceName, string number, string base64Data, string mediaType, string mimeType, string fileName, string caption, CancellationToken ct = default)
+    {
+        var media = base64Data.Contains("base64,") ? base64Data : $"data:{mimeType};base64,{base64Data}";
+        return await SendMediaInternalAsync(instanceName, number, media, base64Data, mediaType, mimeType, fileName, caption, ct);
+    }
+
+    private async Task<WhatsAppSendResult> SendMediaInternalAsync(string instanceName, string number, string media, string? rawBase64, string mediaType, string mimeType, string fileName, string caption, CancellationToken ct)
+    {
         try
         {
             var cleanNumber = CleanPhoneNumber(number);
-            var payload = new
+            var payload = new Dictionary<string, object?>
             {
-                number = cleanNumber,
-                mediatype = mediaType, // document, image, audio
-                mimetype = mediaType == "document" ? "application/pdf" : "image/png",
-                caption = caption,
-                media = mediaUrl,
-                fileName = fileName
+                ["number"] = cleanNumber,
+                ["mediatype"] = mediaType,
+                ["mimetype"] = mimeType,
+                ["caption"] = caption,
+                ["media"] = media,
+                ["fileName"] = fileName
             };
 
             var res = await _httpClient.PostAsJsonAsync($"message/sendMedia/{instanceName}", payload, ct);
@@ -384,17 +404,111 @@ public sealed class WhatsAppGatewayService
         }
     }
 
-    private static string ExtractTextFromMessage(JsonElement msgObj)
+    public async Task<WhatsAppMediaDownloadResult?> DownloadMediaAsync(string instanceName, string remoteJid, bool fromMe, string messageId, CancellationToken ct = default)
     {
-        if (msgObj.ValueKind != JsonValueKind.Object) return "";
-        if (msgObj.TryGetProperty("conversation", out var convProp)) return convProp.GetString() ?? "";
-        if (msgObj.TryGetProperty("extendedTextMessage", out var extObj) && extObj.TryGetProperty("text", out var extText)) return extText.GetString() ?? "";
-        if (msgObj.TryGetProperty("imageMessage", out var imgObj) && imgObj.TryGetProperty("caption", out var imgCap)) return imgCap.GetString() ?? "[Imagen de WhatsApp]";
-        if (msgObj.TryGetProperty("videoMessage", out var vidObj) && vidObj.TryGetProperty("caption", out var vidCap)) return vidCap.GetString() ?? "[Video de WhatsApp]";
-        if (msgObj.TryGetProperty("documentMessage", out var docObj) && docObj.TryGetProperty("fileName", out var docFn)) return $"[Documento: {docFn.GetString()}]";
-        if (msgObj.TryGetProperty("audioMessage", out _)) return "[Nota de voz de WhatsApp]";
-        return "";
+        try
+        {
+            var payload = new
+            {
+                message = new
+                {
+                    key = new { remoteJid, fromMe, id = messageId }
+                },
+                convertToMp4 = false
+            };
+
+            var res = await _httpClient.PostAsJsonAsync($"chat/getBase64FromMediaMessage/{instanceName}", payload, ct);
+            if (!res.IsSuccessStatusCode) return null;
+
+            var json = await res.Content.ReadFromJsonAsync<JsonElement>(ct);
+            var base64 = json.TryGetProperty("base64", out var b64Prop) ? b64Prop.GetString() : null;
+            if (string.IsNullOrWhiteSpace(base64)) return null;
+
+            var mimeType = json.TryGetProperty("mimetype", out var mtProp) ? mtProp.GetString() : "application/octet-stream";
+            var fileName = json.TryGetProperty("fileName", out var fnProp) ? fnProp.GetString() : null;
+            var mediaType = GuessMediaTypeFromMime(mimeType);
+
+            byte[] data;
+            var commaIdx = base64.IndexOf("base64,", StringComparison.Ordinal);
+            var raw = commaIdx >= 0 ? base64[(commaIdx + 7)..] : base64;
+            data = Convert.FromBase64String(raw);
+
+            return new WhatsAppMediaDownloadResult(mediaType, mimeType ?? "application/octet-stream", fileName, data);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo descargar media de WhatsApp {MessageId}", messageId);
+            return null;
+        }
     }
+
+    public static ParsedChannelMessage ParseMessageContent(JsonElement msgObj)
+    {
+        if (msgObj.ValueKind != JsonValueKind.Object)
+            return new ParsedChannelMessage("", null, null, null, null);
+
+        if (msgObj.TryGetProperty("conversation", out var convProp))
+            return new ParsedChannelMessage(convProp.GetString() ?? "", null, null, null, null);
+
+        if (msgObj.TryGetProperty("extendedTextMessage", out var extObj) && extObj.TryGetProperty("text", out var extText))
+            return new ParsedChannelMessage(extText.GetString() ?? "", null, null, null, null);
+
+        if (msgObj.TryGetProperty("imageMessage", out var imgObj))
+        {
+            var cap = imgObj.TryGetProperty("caption", out var imgCap) ? imgCap.GetString() : null;
+            var mime = imgObj.TryGetProperty("mimetype", out var mt) ? mt.GetString() : "image/jpeg";
+            return new ParsedChannelMessage(cap ?? "📷 Imagen", "image", mime, "imagen.jpg", null);
+        }
+
+        if (msgObj.TryGetProperty("videoMessage", out var vidObj))
+        {
+            var cap = vidObj.TryGetProperty("caption", out var vidCap) ? vidCap.GetString() : null;
+            var mime = vidObj.TryGetProperty("mimetype", out var mt) ? mt.GetString() : "video/mp4";
+            return new ParsedChannelMessage(cap ?? "🎬 Video", "video", mime, "video.mp4", null);
+        }
+
+        if (msgObj.TryGetProperty("documentMessage", out var docObj))
+        {
+            var fn = docObj.TryGetProperty("fileName", out var docFn) ? docFn.GetString() : "documento";
+            var mime = docObj.TryGetProperty("mimetype", out var mt) ? mt.GetString() : "application/octet-stream";
+            return new ParsedChannelMessage($"📎 {fn}", "document", mime, fn, null);
+        }
+
+        if (msgObj.TryGetProperty("audioMessage", out var audObj))
+        {
+            var mime = audObj.TryGetProperty("mimetype", out var mt) ? mt.GetString() : "audio/ogg; codecs=opus";
+            var seconds = audObj.TryGetProperty("seconds", out var sec) ? sec.GetInt32() : 0;
+            return new ParsedChannelMessage(seconds > 0 ? $"🎤 Nota de voz ({seconds}s)" : "🎤 Nota de voz", "audio", mime, "audio.ogg", null);
+        }
+
+        if (msgObj.TryGetProperty("pttMessage", out var pttObj))
+        {
+            var mime = pttObj.TryGetProperty("mimetype", out var mt) ? mt.GetString() : "audio/ogg; codecs=opus";
+            return new ParsedChannelMessage("🎤 Nota de voz", "audio", mime, "audio.ogg", null);
+        }
+
+        return new ParsedChannelMessage("", null, null, null, null);
+    }
+
+    private static string GuessMediaTypeFromMime(string? mimeType)
+    {
+        if (string.IsNullOrWhiteSpace(mimeType)) return "document";
+        if (mimeType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase)) return "audio";
+        if (mimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)) return "image";
+        if (mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase)) return "video";
+        return "document";
+    }
+
+    private static string GuessMimeType(string mediaType, string fileName)
+    {
+        if (mediaType == "audio")
+            return fileName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) ? "audio/mpeg" : "audio/ogg; codecs=opus";
+        if (mediaType == "image") return "image/jpeg";
+        if (mediaType == "video") return "video/mp4";
+        return "application/pdf";
+    }
+
+    private static string ExtractTextFromMessage(JsonElement msgObj) => ParseMessageContent(msgObj).Text;
 
     private static string? ExtractQrCode(JsonElement json)
     {
@@ -420,3 +534,4 @@ public sealed record WhatsAppStatusResult(bool Available, string State, string? 
 public sealed record WhatsAppConnectResult(bool Success, string State, string? QrCodeBase64, string? Error);
 public sealed record WhatsAppSendResult(bool Success, string? MessageId, string? Error);
 public sealed record WhatsAppMessageItem(string MessageId, string RemoteJid, bool FromMe, string? PushName, string Text, DateTime TimestampUtc);
+public sealed record WhatsAppMediaDownloadResult(string MediaType, string MimeType, string? FileName, byte[] Data);

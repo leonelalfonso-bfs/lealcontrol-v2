@@ -1,8 +1,14 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { api } from "../api/client";
-import type { EmailMessage, MailAccount } from "../api/types";
+import type { Conversation, CustomerMatch, CustomerSummary, EmailMessage, MailAccount, MessageReplyTemplate, TenantUser } from "../api/types";
 import { EmailComposer } from "../components/EmailComposer";
+import { MessageAttachments } from "../components/MessageAttachments";
+import { AudioRecorderButton } from "../components/AudioRecorderButton";
+import {
+  consumePendingConversationOpen,
+  setActiveConversationForNotifications
+} from "../lib/communicationsNotifications";
 
 const emptyLead = "00000000-0000-0000-0000-000000000000";
 
@@ -16,30 +22,14 @@ function normalizeEmailHtml(value: string): string {
 
 type ChannelType = "all" | "email" | "whatsapp" | "instagram" | "facebook";
 
-function getChannel(msg: EmailMessage): "whatsapp" | "instagram" | "facebook" | "email" {
-  if (msg.internetMessageId.startsWith("meta_ig_") || msg.threadKey.startsWith("meta_ig_") || msg.subject.toLowerCase().includes("instagram")) {
-    return "instagram";
-  }
-  if (msg.internetMessageId.startsWith("meta_fb_") || msg.threadKey.startsWith("meta_fb_") || msg.subject.toLowerCase().includes("messenger") || msg.subject.toLowerCase().includes("facebook")) {
-    return "facebook";
-  }
-  if (msg.internetMessageId.startsWith("wa_") || msg.threadKey.startsWith("wa_") || msg.fromAddress.includes("WhatsApp") || msg.toAddresses.includes("WhatsApp") || msg.subject.toLowerCase().includes("whatsapp")) {
-    return "whatsapp";
-  }
-  return "email";
-}
-
 function isOwnBrand(name: string): boolean {
   if (!name) return true;
   const n = name.toLowerCase().trim();
   return (
-    n.includes("balanzas full service") ||
-    n === "instagram oficial" ||
-    n === "@instagram oficial" ||
-    n === "página oficial" ||
-    n === "whatsapp oficial" ||
+    n.includes("oficial") ||
     n === "usuario" ||
-    n === "desconocido"
+    n === "desconocido" ||
+    n === "whatsapp oficial"
   );
 }
 
@@ -54,21 +44,36 @@ function formatThreadDate(dateStr: string): string {
   return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
 }
 
-interface ConversationThread {
-  key: string;
-  channel: "whatsapp" | "instagram" | "facebook" | "email";
-  contactTitle: string;
-  contactAddress: string;
-  lastMessage: EmailMessage;
-  messages: EmailMessage[];
-  lastOccurredAtUtc: string;
+function getConversationChannel(c: Conversation): "whatsapp" | "instagram" | "facebook" | "email" {
+  const ct = (c.channelType || "").toLowerCase();
+  if (ct === "whatsapp" || ct === "instagram" || ct === "facebook" || ct === "email") return ct;
+  return "email";
+}
+
+function channelLabel(ch: string): string {
+  if (ch === "whatsapp") return "WhatsApp";
+  if (ch === "instagram") return "Instagram";
+  if (ch === "facebook") return "Facebook";
+  return "Email";
+}
+
+function isConversationUnlinked(c: Conversation): boolean {
+  return !c.relatedLeadId && !c.relatedCustomerId;
 }
 
 export function InboxPage() {
-  const [messages, setMessages] = useState<EmailMessage[]>([]);
+  const location = useLocation();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeMessages, setActiveMessages] = useState<EmailMessage[]>([]);
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
-  const [folder, setFolder] = useState<"Incoming" | "Outgoing" | "All">("Incoming");
-  const [selectedThreadKey, setSelectedThreadKey] = useState<string | null>(null);
+  const [folder, setFolder] = useState<"Incoming" | "Outgoing" | "All" | "NeedsResponse" | "Unassigned">("Incoming");
+  const [search, setSearch] = useState("");
+  const [searchDebounced, setSearchDebounced] = useState("");
+  const [templates, setTemplates] = useState<MessageReplyTemplate[]>([]);
+  const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
+  const [suggestedMatches, setSuggestedMatches] = useState<CustomerMatch[]>([]);
+  const [pendingAudio, setPendingAudio] = useState<{ base64: string; mimeType: string; fileName: string } | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [compose, setCompose] = useState(false);
   const [reply, setReply] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -87,160 +92,187 @@ export function InboxPage() {
   const [sendingNew, setSendingNew] = useState(false);
 
   const [syncNotification, setSyncNotification] = useState<string | null>(null);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(() => new Set());
+  const [linkCustomerOpen, setLinkCustomerOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerResults, setCustomerResults] = useState<CustomerSummary[]>([]);
+  const [customerSearchBusy, setCustomerSearchBusy] = useState(false);
+  const [linkedCustomerName, setLinkedCustomerName] = useState<string | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
 
-  const load = async () => {
+  const loadConversations = async () => {
     try {
-      try {
-        await Promise.all([api.syncWhatsAppMessages(), api.syncMetaMessages()]);
-      } catch {}
-
-      const [m, a] = await Promise.all([api.listEmails(), api.listMailAccounts()]);
-      setMessages(m);
+      const [c, a] = await Promise.all([
+        api.listConversations({
+          channel: channel === "all" ? undefined : channel,
+          folder: folder === "All" ? undefined : folder,
+          search: searchDebounced || undefined
+        }),
+        api.listMailAccounts()
+      ]);
+      setConversations(c);
       setAccounts(a);
     } catch (e: any) {
       setError(e.message);
     }
   };
 
-  useEffect(() => {
-    void load();
-    const interval = window.setInterval(() => {
-      void load();
-    }, 6000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Group messages into Conversation Threads
-  const threads = useMemo(() => {
-    const map = new Map<string, ConversationThread>();
-
-    for (const m of messages) {
-      const ch = getChannel(m);
-      let threadKey = m.threadKey;
-      if (!threadKey) {
-        threadKey = ch === "email" ? m.internetMessageId : m.fromAddress;
-      }
-
-      const isIncoming = m.direction === "Incoming";
-      const otherAddress = isIncoming ? m.fromAddress : m.toAddresses;
-
-      let extractedTitle = "";
-      if (m.subject.startsWith("WhatsApp: ")) {
-        extractedTitle = m.subject.replace("WhatsApp: ", "").trim();
-      } else if (m.subject.startsWith("Instagram DM: ")) {
-        extractedTitle = m.subject.replace("Instagram DM: ", "").trim();
-      } else if (m.subject.startsWith("Messenger: ")) {
-        extractedTitle = m.subject.replace("Messenger: ", "").trim();
-      } else {
-        extractedTitle = otherAddress;
-      }
-
-      if (!map.has(threadKey)) {
-        map.set(threadKey, {
-          key: threadKey,
-          channel: ch,
-          contactTitle: extractedTitle || otherAddress,
-          contactAddress: otherAddress,
-          lastMessage: m,
-          messages: [m],
-          lastOccurredAtUtc: m.occurredAtUtc
-        });
-      } else {
-        const thread = map.get(threadKey)!;
-        thread.messages.push(m);
-        if (new Date(m.occurredAtUtc) > new Date(thread.lastOccurredAtUtc)) {
-          thread.lastMessage = m;
-          thread.lastOccurredAtUtc = m.occurredAtUtc;
-        }
-        if (!isOwnBrand(extractedTitle) && isOwnBrand(thread.contactTitle)) {
-          thread.contactTitle = extractedTitle;
-        }
-      }
+  const loadActiveMessages = async (conversationId: string) => {
+    try {
+      const msgs = await api.getConversationMessages(conversationId);
+      setActiveMessages(msgs);
+    } catch (e: any) {
+      setError(e.message);
     }
-
-    // Sort messages within each thread chronologically (oldest -> newest)
-    for (const t of map.values()) {
-      t.messages.sort((a, b) => new Date(a.occurredAtUtc).getTime() - new Date(b.occurredAtUtc).getTime());
-    }
-
-    // Convert to array and sort threads by latest message descending
-    return Array.from(map.values()).sort(
-      (a, b) => new Date(b.lastOccurredAtUtc).getTime() - new Date(a.lastOccurredAtUtc).getTime()
-    );
-  }, [messages]);
-
-  const getThreadDisplayName = (t: ConversationThread): string => {
-    if (t.contactTitle && !isOwnBrand(t.contactTitle)) {
-      return t.contactTitle;
-    }
-    const incoming = t.messages.find((m) => m.direction === "Incoming");
-    if (incoming && incoming.fromAddress && !isOwnBrand(incoming.fromAddress)) {
-      return incoming.fromAddress;
-    }
-    const outgoing = t.messages.find((m) => m.direction === "Outgoing");
-    if (outgoing && outgoing.toAddresses && !isOwnBrand(outgoing.toAddresses)) {
-      return outgoing.toAddresses;
-    }
-    if (t.contactAddress && !isOwnBrand(t.contactAddress)) {
-      return t.contactAddress;
-    }
-    if (t.channel === "instagram") return "Contacto de Instagram";
-    if (t.channel === "facebook") return "Contacto de Facebook";
-    if (t.channel === "whatsapp") return "Contacto de WhatsApp";
-    return "Contacto";
   };
 
-  // Filter threads by Folder and Channel
-  const visibleThreads = useMemo(() => {
-    return threads.filter((t) => {
-      const matchChannel = channel === "all" ? true : channel === t.channel;
-      const matchFolder =
-        folder === "All"
-          ? true
-          : folder === "Incoming"
-          ? t.messages.some((m) => m.direction === "Incoming")
-          : t.messages.some((m) => m.direction === "Outgoing");
-      return matchChannel && matchFolder;
-    });
-  }, [threads, folder, channel]);
+  const syncChannels = async () => {
+    try {
+      const [waRes, metaRes] = await Promise.all([
+        api.syncWhatsAppMessages().catch(() => ({ synced: 0 })),
+        api.syncMetaMessages().catch(() => ({ synced: 0, channels: [] }))
+      ]);
 
-  // Set default selected thread
-  useEffect(() => {
-    if (!selectedThreadKey && visibleThreads.length > 0) {
-      setSelectedThreadKey(visibleThreads[0].key);
-    } else if (selectedThreadKey && !threads.some((t) => t.key === selectedThreadKey)) {
-      setSelectedThreadKey(visibleThreads.length > 0 ? visibleThreads[0].key : null);
+      const metaErrors = (metaRes.channels || [])
+        .filter((c) => c.error)
+        .map((c) => `${c.channel}: ${c.error}`)
+        .join(" | ");
+
+      if (metaErrors) {
+        setSyncNotification(`Sync: ${waRes.synced} WA, ${metaRes.synced} Meta. Advertencias: ${metaErrors}`);
+      } else if (waRes.synced > 0 || metaRes.synced > 0) {
+        setSyncNotification(`Sincronización: ${waRes.synced} WhatsApp, ${metaRes.synced} Instagram/Facebook.`);
+      }
+
+      await loadConversations();
+      if (selectedConversationId) {
+        await loadActiveMessages(selectedConversationId);
+      }
+    } catch {
+      // sync errors are non-blocking
     }
-  }, [visibleThreads, selectedThreadKey, threads]);
+  };
 
-  const activeThread = useMemo(() => {
-    return threads.find((t) => t.key === selectedThreadKey) || null;
-  }, [threads, selectedThreadKey]);
+  useEffect(() => {
+    const state = location.state as { conversationId?: string } | null;
+    const pending = consumePendingConversationOpen();
+    const id = state?.conversationId || pending;
+    if (id) setSelectedConversationId(id);
+  }, [location.state]);
+
+  useEffect(() => {
+    setActiveConversationForNotifications(selectedConversationId);
+  }, [selectedConversationId]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ conversationId: string }>).detail;
+      if (detail?.conversationId) setSelectedConversationId(detail.conversationId);
+    };
+    window.addEventListener("leal:open-conversation", handler);
+    return () => window.removeEventListener("leal:open-conversation", handler);
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setSearchDebounced(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    void loadConversations();
+    void syncChannels();
+    void api.listReplyTemplates().then(setTemplates).catch(() => setTemplates([]));
+    void api.listTenantUsers().then(setTenantUsers).catch(() => setTenantUsers([]));
+    const syncInterval = window.setInterval(() => void syncChannels(), 60000);
+    const refreshInterval = window.setInterval(() => void loadConversations(), 15000);
+    return () => {
+      clearInterval(syncInterval);
+      clearInterval(refreshInterval);
+    };
+  }, [channel, folder, searchDebounced]);
+
+  const visibleConversations = conversations;
+
+  useEffect(() => {
+    if (!selectedConversationId && visibleConversations.length > 0) {
+      setSelectedConversationId(visibleConversations[0].id);
+    } else if (selectedConversationId && !visibleConversations.some((c) => c.id === selectedConversationId)) {
+      setSelectedConversationId(visibleConversations.length > 0 ? visibleConversations[0].id : null);
+    }
+  }, [visibleConversations, selectedConversationId]);
+
+  useEffect(() => {
+    if (selectedConversationId) {
+      void loadActiveMessages(selectedConversationId);
+    } else {
+      setActiveMessages([]);
+    }
+  }, [selectedConversationId]);
+
+  const activeConversation = useMemo(
+    () => conversations.find((c) => c.id === selectedConversationId) || null,
+    [conversations, selectedConversationId]
+  );
+
+  useEffect(() => {
+    if (!activeConversation?.relatedCustomerId) {
+      setLinkedCustomerName(null);
+      return;
+    }
+    void api.getCustomer(activeConversation.relatedCustomerId)
+      .then((c) => setLinkedCustomerName(c.tradeName || c.legalName))
+      .catch(() => setLinkedCustomerName(null));
+  }, [activeConversation?.relatedCustomerId]);
+
+  useEffect(() => {
+    if (!linkCustomerOpen) return;
+    const timer = window.setTimeout(() => {
+      setCustomerSearchBusy(true);
+      void api.listCustomers(customerSearch)
+        .then((r) => setCustomerResults(r.items || []))
+        .catch(() => setCustomerResults([]))
+        .finally(() => setCustomerSearchBusy(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [customerSearch, linkCustomerOpen]);
+
+  useEffect(() => {
+    if (!selectedConversationId) {
+      setSuggestedMatches([]);
+      return;
+    }
+    void api.getSuggestedMatches(selectedConversationId).then(setSuggestedMatches).catch(() => setSuggestedMatches([]));
+  }, [selectedConversationId]);
+
+  const getConversationDisplayName = (c: Conversation): string => {
+    if (c.participantName && !isOwnBrand(c.participantName)) return c.participantName;
+    if (c.participantEmail) return c.participantEmail;
+    if (c.participantPhone) return `+${c.participantPhone}`;
+    const ch = getConversationChannel(c);
+    if (ch === "instagram") return "Contacto de Instagram";
+    if (ch === "facebook") return "Contacto de Facebook";
+    if (ch === "whatsapp") return "Contacto de WhatsApp";
+    return c.participantId || "Contacto";
+  };
 
   useEffect(() => {
     if (chatBottomRef.current) {
       chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [activeThread?.messages.length, selectedThreadKey]);
+  }, [activeMessages.length, selectedConversationId]);
 
-  const countEmail = useMemo(() => threads.filter((t) => t.channel === "email").length, [threads]);
-  const countWa = useMemo(() => threads.filter((t) => t.channel === "whatsapp").length, [threads]);
-  const countIg = useMemo(() => threads.filter((t) => t.channel === "instagram").length, [threads]);
-  const countFb = useMemo(() => threads.filter((t) => t.channel === "facebook").length, [threads]);
+  const countEmail = useMemo(() => conversations.filter((c) => getConversationChannel(c) === "email").length, [conversations]);
+  const countWa = useMemo(() => conversations.filter((c) => getConversationChannel(c) === "whatsapp").length, [conversations]);
+  const countIg = useMemo(() => conversations.filter((c) => getConversationChannel(c) === "instagram").length, [conversations]);
+  const countFb = useMemo(() => conversations.filter((c) => getConversationChannel(c) === "facebook").length, [conversations]);
 
   const handleForceSyncOmni = async () => {
     setBusy(true);
     setError(null);
     setSyncNotification(null);
     try {
-      const [waRes, metaRes] = await Promise.all([
-        api.syncWhatsAppMessages().catch(() => ({ synced: 0 })),
-        api.syncMetaMessages().catch(() => ({ synced: 0 }))
-      ]);
-      await load();
-      setSyncNotification(`Sincronización completada: ${waRes.synced} de WhatsApp y ${metaRes.synced} de Instagram/Facebook.`);
-      setTimeout(() => setSyncNotification(null), 5000);
+      await syncChannels();
+      setTimeout(() => setSyncNotification(null), 8000);
     } catch (e: any) {
       setError("Error al sincronizar canales: " + e.message);
     } finally {
@@ -252,11 +284,10 @@ export function InboxPage() {
     setBusy(true);
     setError(null);
     try {
-      try {
-        await Promise.all([api.syncWhatsAppMessages(), api.syncMetaMessages()]);
-      } catch {}
+      await syncChannels();
       for (const account of accounts.filter((a) => a.isActive)) await api.syncMailAccount(account.id);
-      await load();
+      await loadConversations();
+      if (selectedConversationId) await loadActiveMessages(selectedConversationId);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -265,16 +296,14 @@ export function InboxPage() {
   };
 
   const deleteThread = async () => {
-    if (!activeThread) return;
-    const name = getThreadDisplayName(activeThread);
+    if (!activeConversation) return;
+    const name = getConversationDisplayName(activeConversation);
     if (!confirm(`¿Eliminar la conversación con "${name}" solo de Leal Control?`)) return;
     setBusy(true);
     try {
-      for (const m of activeThread.messages) {
-        await api.deleteEmail(m.id);
-      }
-      setSelectedThreadKey(null);
-      await load();
+      await api.deleteConversation(activeConversation.id);
+      setSelectedConversationId(null);
+      await loadConversations();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -283,27 +312,27 @@ export function InboxPage() {
   };
 
   const createLeadFromThread = async () => {
-    if (!activeThread) return;
+    if (!activeConversation) return;
     setBusy(true);
     setError(null);
     try {
-      const ch = activeThread.channel;
+      const ch = getConversationChannel(activeConversation);
       const isEmail = ch === "email";
       const isWa = ch === "whatsapp";
-      const name = getThreadDisplayName(activeThread);
-      await api.captureLead({
-        companyName: isEmail
-          ? activeThread.contactAddress.split("@")[1] || "Nuevo contacto"
-          : name,
+      const name = getConversationDisplayName(activeConversation);
+      const lead = await api.captureLead({
+        name: isEmail ? (activeConversation.participantEmail?.split("@")[1] || name) : name,
         contactName: name,
-        email: isEmail ? activeThread.contactAddress : undefined,
-        phone: isWa ? activeThread.contactAddress.replace(/\D/g, "") : undefined,
+        email: isEmail ? activeConversation.participantEmail || activeConversation.participantId : undefined,
+        phone: isWa ? activeConversation.participantPhone || activeConversation.participantId.replace(/^lid_/, "") : undefined,
         source: isWa ? "WhatsApp" : ch === "instagram" ? "Instagram" : ch === "facebook" ? "Facebook" : "Email",
-        description: `Conversación por ${ch}`,
-        notes: activeThread.lastMessage.bodyPreview
+        description: `Conversación por ${ch}: ${activeConversation.lastMessagePreview || ""}`,
+        assignedTo: null
       });
+      await api.linkConversation(activeConversation.id, { leadId: lead.id });
+      setDismissedSuggestions((prev) => new Set(prev).add(activeConversation.id));
       alert("¡Contacto / Lead creado con éxito en el CRM!");
-      await load();
+      await loadConversations();
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -311,40 +340,100 @@ export function InboxPage() {
     }
   };
 
+  const linkCustomerToThread = async (customerId: string) => {
+    if (!activeConversation) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.linkConversation(activeConversation.id, { customerId });
+      setLinkCustomerOpen(false);
+      setCustomerSearch("");
+      setDismissedSuggestions((prev) => new Set(prev).add(activeConversation.id));
+      await loadConversations();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const dismissSuggestion = async (conversationId: string) => {
+    setDismissedSuggestions((prev) => new Set(prev).add(conversationId));
+    try {
+      await api.dismissConversationSuggestion(conversationId);
+      await loadConversations();
+    } catch { /* ignore */ }
+  };
+
+  const openLinkCustomerModal = () => {
+    setCustomerSearch("");
+    setCustomerResults([]);
+    setLinkCustomerOpen(true);
+  };
+
+  const showLeadSuggestion =
+    !!activeConversation &&
+    isConversationUnlinked(activeConversation) &&
+    activeConversation.hasIncoming &&
+    !activeConversation.suggestionDismissed &&
+    !dismissedSuggestions.has(activeConversation.id);
+
   const handleSendDirectReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeThread || !replyText.trim()) return;
+    if (!activeConversation || (!replyText.trim() && !pendingAudio)) return;
     setSendingReply(true);
-    const ch = activeThread.channel;
-    const lastMsg = activeThread.lastMessage;
+    const ch = getConversationChannel(activeConversation);
+    const lastMsg = activeMessages[activeMessages.length - 1];
 
     try {
+      const participantId = activeConversation.participantId;
       if (ch === "whatsapp") {
-        const targetPhone = activeThread.contactAddress.replace(/\D/g, "");
-        const res = await api.sendWhatsAppMessage({
-          to: targetPhone,
-          message: replyText.trim(),
-          relatedEntityType: lastMsg.relatedEntityType || undefined,
-          relatedEntityId: lastMsg.relatedEntityId || undefined
-        });
+        const targetPhone = participantId.replace(/^lid_/, "");
+        const res = pendingAudio
+          ? await api.sendWhatsAppMessage({
+              to: targetPhone,
+              message: replyText.trim(),
+              mediaBase64: pendingAudio.base64,
+              mediaType: "audio",
+              mimeType: pendingAudio.mimeType,
+              fileName: pendingAudio.fileName,
+              relatedEntityType: lastMsg?.relatedEntityType || undefined,
+              relatedEntityId: lastMsg?.relatedEntityId || undefined
+            })
+          : await api.sendWhatsAppMessage({
+              to: targetPhone,
+              message: replyText.trim(),
+              relatedEntityType: lastMsg?.relatedEntityType || undefined,
+              relatedEntityId: lastMsg?.relatedEntityId || undefined
+            });
         if (res.success) {
           setReplyText("");
-          await load();
+          setPendingAudio(null);
+          await syncChannels();
         } else {
           alert("No se pudo enviar el WhatsApp: " + (res.error || "Error"));
         }
       } else if (ch === "instagram" || ch === "facebook") {
-        const recipientId = activeThread.contactAddress.replace(/^@/, "").replace(/^Usuario FB\s*/i, "").trim();
+        let mediaUrl: string | undefined;
+        if (pendingAudio) {
+          const blob = await (await fetch(`data:${pendingAudio.mimeType};base64,${pendingAudio.base64}`)).blob();
+          const file = new File([blob], pendingAudio.fileName, { type: pendingAudio.mimeType });
+          const uploaded = await api.uploadCommunicationMedia(file);
+          mediaUrl = `${window.location.origin}${uploaded.publicUrl}`;
+        }
         const res = await api.sendMetaMessage({
           channelType: ch,
-          recipientId: recipientId,
-          message: replyText.trim(),
-          relatedEntityType: lastMsg.relatedEntityType || undefined,
-          relatedEntityId: lastMsg.relatedEntityId || undefined
+          recipientId: participantId,
+          message: replyText.trim() || "🎤 Nota de voz",
+          mediaUrl,
+          mediaType: "audio",
+          relatedEntityType: lastMsg?.relatedEntityType || undefined,
+          relatedEntityId: lastMsg?.relatedEntityId || undefined
         });
         if (res.success) {
           setReplyText("");
-          await load();
+          setPendingAudio(null);
+          await syncChannels();
         } else {
           alert(`No se pudo enviar el mensaje de ${ch}: ` + (res.error || "Error"));
         }
@@ -371,7 +460,7 @@ export function InboxPage() {
           setNewRecipient("");
           setNewMessage("");
           setNewModalOpen(false);
-          await load();
+          await loadConversations();
         } else {
           alert("Error al enviar WhatsApp: " + (res.error || "Error"));
         }
@@ -385,7 +474,7 @@ export function InboxPage() {
           setNewRecipient("");
           setNewMessage("");
           setNewModalOpen(false);
-          await load();
+          await loadConversations();
         } else {
           alert(`Error al enviar ${newChannel}: ` + (res.error || "Error"));
         }
@@ -397,7 +486,7 @@ export function InboxPage() {
     }
   };
 
-  const activeDisplayName = activeThread ? getThreadDisplayName(activeThread) : "";
+  const activeDisplayName = activeConversation ? getConversationDisplayName(activeConversation) : "";
 
   return (
     <div className="inbox-page page-wide" style={{ paddingBottom: 40 }}>
@@ -436,7 +525,7 @@ export function InboxPage() {
         <button className={channel === "all" ? "selected" : ""} onClick={() => setChannel("all")}>
           <span>✦</span>
           <b>Todos</b>
-          <small>{threads.length}</small>
+          <small>{conversations.length}</small>
         </button>
         <button className={channel === "email" ? "selected" : ""} onClick={() => setChannel("email")}>
           <span>✉</span>
@@ -465,19 +554,30 @@ export function InboxPage() {
         <aside className="inbox-folders">
           <button className={folder === "Incoming" ? "active" : ""} onClick={() => setFolder("Incoming")}>
             <span>📥 Entrada</span>
-            <strong>{threads.filter((t) => t.messages.some((m) => m.direction === "Incoming")).length}</strong>
+            <strong>{conversations.filter((c) => c.hasIncoming !== false).length}</strong>
           </button>
           <button className={folder === "Outgoing" ? "active" : ""} onClick={() => setFolder("Outgoing")}>
             <span>📤 Enviados</span>
-            <strong>{threads.filter((t) => t.messages.some((m) => m.direction === "Outgoing")).length}</strong>
+            <strong>{conversations.filter((c) => c.hasOutgoing !== false).length}</strong>
           </button>
           <button className={folder === "All" ? "active" : ""} onClick={() => setFolder("All")}>
             <span>📁 Todas</span>
-            <strong>{threads.length}</strong>
+            <strong>{conversations.length}</strong>
+          </button>
+          <button className={folder === "NeedsResponse" ? "active" : ""} onClick={() => setFolder("NeedsResponse")}>
+            <span>⏰ SLA</span>
+            <strong>{conversations.filter((c) => c.needsResponse).length}</strong>
+          </button>
+          <button className={folder === "Unassigned" ? "active" : ""} onClick={() => setFolder("Unassigned")}>
+            <span>👤 Sin asignar</span>
+            <strong>{conversations.filter((c) => !c.assignedToUserId).length}</strong>
           </button>
           <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
             <Link to="/comunicaciones/canales" style={{ fontSize: "0.8rem", color: "#0d9488", fontWeight: 700 }}>
               📲 Conectar Canales
+            </Link>
+            <Link to="/comunicaciones/plantillas" style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
+              📝 Plantillas de respuesta
             </Link>
             <Link to="/configuracion/correo" style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
               ⚙️ Cuentas de correo
@@ -486,19 +586,30 @@ export function InboxPage() {
         </aside>
 
         {/* Middle: Conversation Threads List */}
-        <section className="message-list" style={{ maxWidth: 360, minWidth: 300, borderRight: "1px solid var(--surface-border)", overflowY: "auto" }}>
+        <section className="message-list" style={{ maxWidth: 360, minWidth: 300, borderRight: "1px solid var(--surface-border)", display: "flex", flexDirection: "column" }}>
           <div className="message-list-toolbar" style={{ padding: "12px 16px", fontWeight: 700, fontSize: "0.86rem", color: "var(--ink-soft)", borderBottom: "1px solid var(--surface-border)" }}>
-            CONVERSACIONES ({visibleThreads.length})
+            CONVERSACIONES ({visibleConversations.length})
           </div>
-          {visibleThreads.map((t) => {
-            const icon = t.channel === "whatsapp" ? "💬" : t.channel === "instagram" ? "📸" : t.channel === "facebook" ? "📘" : "✉️";
-            const isActive = selectedThreadKey === t.key;
-            const displayName = getThreadDisplayName(t);
+          <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--surface-border)" }}>
+            <input
+              type="search"
+              placeholder="Buscar..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--surface-border)" }}
+            />
+          </div>
+          <div style={{ overflowY: "auto", flex: 1 }}>
+          {visibleConversations.map((c) => {
+            const ch = getConversationChannel(c);
+            const icon = ch === "whatsapp" ? "💬" : ch === "instagram" ? "📸" : ch === "facebook" ? "📘" : "✉️";
+            const isActive = selectedConversationId === c.id;
+            const displayName = getConversationDisplayName(c);
 
             return (
               <div
-                key={t.key}
-                onClick={() => setSelectedThreadKey(t.key)}
+                key={c.id}
+                onClick={() => setSelectedConversationId(c.id)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -528,11 +639,11 @@ export function InboxPage() {
                     justifyContent: "center",
                     fontSize: "1.3rem",
                     background:
-                      t.channel === "whatsapp"
+                      ch === "whatsapp"
                         ? "#dcfce7"
-                        : t.channel === "instagram"
+                        : ch === "instagram"
                         ? "#fce7f3"
-                        : t.channel === "facebook"
+                        : ch === "facebook"
                         ? "#dbeafe"
                         : "#f1f5f9",
                     flexShrink: 0
@@ -558,28 +669,42 @@ export function InboxPage() {
                       {displayName}
                     </span>
                     <span style={{ fontSize: "0.74rem", color: "var(--ink-soft)", whiteSpace: "nowrap", flexShrink: 0 }}>
-                      {formatThreadDate(t.lastOccurredAtUtc)}
+                      {formatThreadDate(c.lastMessageAtUtc)}
                     </span>
+                    {c.unreadCount > 0 && (
+                      <span style={{ background: "#0d9488", color: "white", borderRadius: 10, padding: "1px 6px", fontSize: "0.7rem", fontWeight: 700 }}>
+                        {c.unreadCount}
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ fontSize: "0.82rem", color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {t.lastMessage.direction === "Outgoing" && <span style={{ color: "#0d9488", fontWeight: 600 }}>Tú: </span>}
-                    {t.lastMessage.bodyPreview || `[Mensaje de ${t.channel}]`}
+                    {c.lastMessagePreview || `[Mensaje de ${ch}]`}
                   </div>
+                  {c.relatedLeadId && (
+                    <div style={{ fontSize: "0.72rem", color: "#0d9488", fontWeight: 600, marginTop: 2 }}>✓ Lead vinculado</div>
+                  )}
+                  {c.relatedCustomerId && (
+                    <div style={{ fontSize: "0.72rem", color: "#2563eb", fontWeight: 600, marginTop: 2 }}>✓ Cliente vinculado</div>
+                  )}
+                  {c.needsResponse && (
+                    <div style={{ fontSize: "0.72rem", color: "#dc2626", fontWeight: 600, marginTop: 2 }}>⏰ Requiere respuesta</div>
+                  )}
                 </div>
               </div>
             );
           })}
-          {visibleThreads.length === 0 && (
+          {visibleConversations.length === 0 && (
             <div className="empty-state" style={{ padding: 24, textAlign: "center" }}>
               No hay conversaciones en este filtro.
             </div>
           )}
+          </div>
         </section>
 
         {/* Right: Full Chat / Email Thread View */}
         <section className="message-reader" style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0 }}>
-          {activeThread ? (
+          {activeConversation ? (
             <>
               {/* Header */}
               <div
@@ -595,24 +720,161 @@ export function InboxPage() {
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: "1.2rem" }}>
-                      {activeThread.channel === "whatsapp" ? "💬" : activeThread.channel === "instagram" ? "📸" : activeThread.channel === "facebook" ? "📘" : "✉️"}
+                      {getConversationChannel(activeConversation) === "whatsapp" ? "💬" : getConversationChannel(activeConversation) === "instagram" ? "📸" : getConversationChannel(activeConversation) === "facebook" ? "📘" : "✉️"}
                     </span>
                     <h2 style={{ margin: 0, fontSize: "1.1rem" }}>{activeDisplayName}</h2>
                   </div>
                   <span className="muted" style={{ fontSize: "0.78rem" }}>
-                    {activeThread.contactAddress} • {activeThread.messages.length} mensaje(s) en el historial
+                    {activeConversation.participantId} • {activeMessages.length} mensaje(s) en el historial
+                    {activeConversation.relatedLeadId ? " • Lead vinculado" : ""}
+                    {activeConversation.relatedCustomerId ? " • Cliente vinculado" : ""}
                   </span>
                 </div>
 
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button className="btn btn-outline compact" onClick={createLeadFromThread}>
-                    ＋ Crear Lead CRM
-                  </button>
+                  {isConversationUnlinked(activeConversation) && (
+                    <>
+                      <button className="btn btn-outline compact" onClick={createLeadFromThread} disabled={busy}>
+                        ＋ Crear Lead CRM
+                      </button>
+                      <button className="btn btn-outline compact" onClick={openLinkCustomerModal} disabled={busy}>
+                        🔗 Vincular cliente
+                      </button>
+                    </>
+                  )}
+                  {activeConversation.relatedCustomerId && (
+                    <Link className="btn btn-outline compact" to={`/clientes/${activeConversation.relatedCustomerId}`}>
+                      Ver cliente
+                    </Link>
+                  )}
                   <button className="btn btn-danger compact" onClick={deleteThread}>
                     Eliminar
                   </button>
                 </div>
               </div>
+
+              {/* Ficha de contacto */}
+              <div
+                style={{
+                  padding: "12px 20px",
+                  borderBottom: "1px solid var(--surface-border)",
+                  background: "var(--surface)",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                  gap: 12,
+                  fontSize: "0.82rem"
+                }}
+              >
+                <div>
+                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Canal</div>
+                  <strong>{channelLabel(getConversationChannel(activeConversation))}</strong>
+                </div>
+                {(activeConversation.participantPhone || getConversationChannel(activeConversation) === "whatsapp") && (
+                  <div>
+                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Teléfono</div>
+                    <strong>{activeConversation.participantPhone || activeConversation.participantId.replace(/^lid_/, "")}</strong>
+                  </div>
+                )}
+                {(activeConversation.participantEmail || getConversationChannel(activeConversation) === "email") && (
+                  <div>
+                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Email</div>
+                    <strong>{activeConversation.participantEmail || activeConversation.participantId}</strong>
+                  </div>
+                )}
+                <div>
+                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado CRM</div>
+                  {activeConversation.relatedCustomerId ? (
+                    <Link to={`/clientes/${activeConversation.relatedCustomerId}`} style={{ color: "#2563eb", fontWeight: 600 }}>
+                      Cliente: {linkedCustomerName || "vinculado"}
+                    </Link>
+                  ) : activeConversation.relatedLeadId ? (
+                    <Link to="/prospectos" style={{ color: "#0d9488", fontWeight: 600 }}>
+                      Lead vinculado
+                    </Link>
+                  ) : (
+                    <span style={{ color: "var(--ink-soft)" }}>Sin vincular</span>
+                  )}
+                </div>
+                <div>
+                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado</div>
+                  <select
+                    value={activeConversation.status || "open"}
+                    onChange={(e) => void api.setConversationStatus(activeConversation.id, e.target.value).then(loadConversations)}
+                    style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
+                  >
+                    <option value="open">Abierta</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="resolved">Resuelta</option>
+                    <option value="archived">Archivada</option>
+                  </select>
+                </div>
+                <div>
+                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Asignado a</div>
+                  <select
+                    value={activeConversation.assignedToUserId || ""}
+                    onChange={(e) => void api.assignConversation(activeConversation.id, e.target.value || undefined).then(loadConversations)}
+                    style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem", maxWidth: 160 }}
+                  >
+                    <option value="">Sin asignar</option>
+                    {tenantUsers.map((u) => (
+                      <option key={u.id} value={u.id}>{u.fullName}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Sugerencia suave — nunca crea lead automáticamente */}
+              {showLeadSuggestion && (
+                <div
+                  style={{
+                    margin: "0 20px",
+                    marginTop: 12,
+                    padding: "12px 16px",
+                    borderRadius: 8,
+                    background: "#fffbeb",
+                    border: "1px solid #fcd34d",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <strong style={{ fontSize: "0.88rem" }}>¿Registrar este contacto en el CRM?</strong>
+                    <div className="muted" style={{ fontSize: "0.8rem", marginTop: 2 }}>
+                      Este contacto escribió por {channelLabel(getConversationChannel(activeConversation))}. Podés crear un lead o vincular un cliente existente.
+                    </div>
+                    {suggestedMatches.length > 0 && (
+                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                        <span className="muted" style={{ fontSize: "0.75rem" }}>¿Es alguno de estos clientes?</span>
+                        {suggestedMatches.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className="btn ghost compact"
+                            style={{ justifyContent: "flex-start", padding: "4px 8px" }}
+                            onClick={() => void linkCustomerToThread(m.id)}
+                          >
+                            🔗 {m.tradeName || m.legalName}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button className="btn compact" onClick={createLeadFromThread} disabled={busy}>
+                      Crear lead
+                    </button>
+                    <button className="btn btn-outline compact" onClick={openLinkCustomerModal} disabled={busy}>
+                      Vincular cliente
+                    </button>
+                    <button className="btn ghost compact" onClick={() => void dismissSuggestion(activeConversation.id)}>
+                      Ahora no
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Chat Messages Body */}
               <div
@@ -623,12 +885,12 @@ export function InboxPage() {
                   display: "flex",
                   flexDirection: "column",
                   gap: 14,
-                  background: activeThread.channel !== "email" ? "rgba(0,0,0,0.02)" : "inherit"
+                  background: getConversationChannel(activeConversation) !== "email" ? "rgba(0,0,0,0.02)" : "inherit"
                 }}
               >
-                {activeThread.messages.map((m) => {
+                {activeMessages.map((m) => {
                   const isOutgoing = m.direction === "Outgoing";
-                  const ch = activeThread.channel;
+                  const ch = getConversationChannel(activeConversation);
 
                   if (ch === "email") {
                     return (
@@ -651,11 +913,11 @@ export function InboxPage() {
                         ) : (
                           <div className="message-body">{m.bodyPreview}</div>
                         )}
+                        <MessageAttachments messageId={m.id} attachments={m.attachments} />
                       </div>
                     );
                   }
 
-                  // Social Chat Bubble (WhatsApp, Instagram, Facebook)
                   return (
                     <div
                       key={m.id}
@@ -686,6 +948,7 @@ export function InboxPage() {
                         }}
                       >
                         <div>{m.bodyPreview}</div>
+                        <MessageAttachments messageId={m.id} attachments={m.attachments} />
                         <div
                           style={{
                             textAlign: "right",
@@ -704,35 +967,61 @@ export function InboxPage() {
                 <div ref={chatBottomRef} />
               </div>
 
-              {/* Chat Reply Box */}
-              {activeThread.channel !== "email" ? (
+              {getConversationChannel(activeConversation) !== "email" ? (
                 <form
                   onSubmit={handleSendDirectReply}
                   style={{
                     padding: "14px 20px",
                     borderTop: "1px solid var(--surface-border)",
                     display: "flex",
-                    gap: 10,
-                    alignItems: "center",
+                    flexDirection: "column",
+                    gap: 8,
                     background: "var(--surface)"
                   }}
                 >
-                  <input
-                    type="text"
-                    required
-                    placeholder={`Escribí una respuesta directa por ${activeThread.channel.toUpperCase()} a ${activeDisplayName}...`}
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    style={{ flex: 1, padding: "10px 14px", borderRadius: 20, border: "1px solid var(--surface-border)", fontSize: "0.9rem" }}
-                  />
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={sendingReply || !replyText.trim()}
-                    style={{ padding: "10px 20px", borderRadius: 20, fontWeight: 700 }}
-                  >
-                    {sendingReply ? "Enviando..." : "📤 Enviar"}
-                  </button>
+                  {pendingAudio && (
+                    <div className="muted" style={{ fontSize: "0.8rem" }}>
+                      🎤 Nota de voz lista para enviar{" "}
+                      <button type="button" className="btn ghost compact" onClick={() => setPendingAudio(null)}>Quitar</button>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    {templates.length > 0 && (
+                      <select
+                        defaultValue=""
+                        onChange={(e) => {
+                          const t = templates.find((x) => x.id === e.target.value);
+                          if (t) setReplyText(t.body);
+                          e.target.value = "";
+                        }}
+                        style={{ maxWidth: 140, padding: "8px", borderRadius: 8, border: "1px solid var(--surface-border)" }}
+                      >
+                        <option value="">Plantilla</option>
+                        {templates.map((t) => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    )}
+                    <AudioRecorderButton
+                      disabled={sendingReply}
+                      onRecorded={(base64, mimeType, fileName) => setPendingAudio({ base64, mimeType, fileName })}
+                    />
+                    <input
+                      type="text"
+                      placeholder={`Responder por ${channelLabel(getConversationChannel(activeConversation))}...`}
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      style={{ flex: 1, padding: "10px 14px", borderRadius: 20, border: "1px solid var(--surface-border)", fontSize: "0.9rem" }}
+                    />
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={sendingReply || (!replyText.trim() && !pendingAudio)}
+                      style={{ padding: "10px 20px", borderRadius: 20, fontWeight: 700 }}
+                    >
+                      {sendingReply ? "Enviando..." : "📤"}
+                    </button>
+                  </div>
                 </form>
               ) : (
                 <div style={{ padding: 14, borderTop: "1px solid var(--surface-border)", display: "flex", justifyContent: "flex-end" }}>
@@ -742,18 +1031,18 @@ export function InboxPage() {
                 </div>
               )}
 
-              {reply && (
+              {reply && activeMessages.length > 0 && (
                 <EmailComposer
                   context={{
-                    entityType: activeThread.lastMessage.relatedEntityType || "Email",
-                    entityId: activeThread.lastMessage.relatedEntityId || emptyLead,
-                    to: activeThread.contactAddress,
-                    subject: activeThread.lastMessage.subject.startsWith("Re:") ? activeThread.lastMessage.subject : `Re: ${activeThread.lastMessage.subject}`,
-                    body: `\n\n--- Mensaje original ---\n${activeThread.lastMessage.bodyPreview}`,
-                    inReplyTo: activeThread.lastMessage.internetMessageId
+                    entityType: activeMessages[activeMessages.length - 1].relatedEntityType || "Email",
+                    entityId: activeMessages[activeMessages.length - 1].relatedEntityId || emptyLead,
+                    to: activeConversation.participantEmail || activeConversation.participantId,
+                    subject: activeMessages[activeMessages.length - 1].subject.startsWith("Re:") ? activeMessages[activeMessages.length - 1].subject : `Re: ${activeMessages[activeMessages.length - 1].subject}`,
+                    body: `\n\n--- Mensaje original ---\n${activeMessages[activeMessages.length - 1].bodyPreview}`,
+                    inReplyTo: activeMessages[activeMessages.length - 1].internetMessageId
                   }}
                   onClose={() => setReply(false)}
-                  onSent={load}
+                  onSent={async () => { await loadConversations(); if (selectedConversationId) await loadActiveMessages(selectedConversationId); }}
                 />
               )}
             </>
@@ -769,7 +1058,7 @@ export function InboxPage() {
         <EmailComposer
           context={{ entityType: "General", entityId: emptyLead, subject: "", body: "" }}
           onClose={() => setCompose(false)}
-          onSent={load}
+          onSent={loadConversations}
         />
       )}
 
@@ -837,6 +1126,57 @@ export function InboxPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal vincular cliente existente */}
+      {linkCustomerOpen && activeConversation && (
+        <div className="modal-backdrop" onClick={() => setLinkCustomerOpen(false)}>
+          <div className="modal-card card pad" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: "1.15rem" }}>Vincular cliente existente</h3>
+              <button type="button" className="btn ghost compact" onClick={() => setLinkCustomerOpen(false)}>
+                ✕
+              </button>
+            </div>
+            <p className="muted" style={{ fontSize: "0.85rem", marginTop: 0 }}>
+              Buscá un cliente del CRM para asociarlo a la conversación con {activeDisplayName}.
+            </p>
+            <input
+              type="search"
+              placeholder="Buscar por nombre, CUIT o razón social..."
+              value={customerSearch}
+              onChange={(e) => setCustomerSearch(e.target.value)}
+              autoFocus
+              style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: "1px solid var(--surface-border)", marginBottom: 12 }}
+            />
+            <div style={{ maxHeight: 280, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+              {customerSearchBusy && <div className="muted" style={{ padding: 12, textAlign: "center" }}>Buscando...</div>}
+              {!customerSearchBusy && customerResults.length === 0 && (
+                <div className="muted" style={{ padding: 12, textAlign: "center" }}>
+                  {customerSearch.trim() ? "No se encontraron clientes." : "Escribí para buscar clientes."}
+                </div>
+              )}
+              {customerResults.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className="btn ghost"
+                  disabled={busy}
+                  onClick={() => void linkCustomerToThread(c.id)}
+                  style={{
+                    textAlign: "left",
+                    padding: "10px 12px",
+                    border: "1px solid var(--surface-border)",
+                    borderRadius: 6
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>{c.tradeName || c.legalName}</div>
+                  {c.documentNumber && <div className="muted" style={{ fontSize: "0.78rem" }}>{c.documentType}: {c.documentNumber}</div>}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

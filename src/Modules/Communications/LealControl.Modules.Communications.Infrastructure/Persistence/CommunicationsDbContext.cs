@@ -12,6 +12,9 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
     public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
     public DbSet<EmailAttachment> EmailAttachments => Set<EmailAttachment>();
     public DbSet<MetaChannelConnection> MetaConnections => Set<MetaChannelConnection>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<MessageReplyTemplate> ReplyTemplates => Set<MessageReplyTemplate>();
+    public DbSet<StoredMedia> StoredMedia => Set<StoredMedia>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,6 +28,7 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.Property(x => x.InstagramUsername).HasMaxLength(200);
             b.Property(x => x.PageAccessToken).HasColumnType("text");
             b.Property(x => x.VerifyToken).HasMaxLength(100);
+            b.Property(x => x.LastError).HasMaxLength(2000);
             b.HasIndex(x => new { x.TenantId, x.ChannelType }).IsUnique();
         });
         modelBuilder.Entity<MailAccount>(b => {
@@ -37,9 +41,39 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.ToTable("email_messages"); b.HasKey(x => x.Id);
             b.Property(x => x.Direction).HasConversion<string>(); b.Property(x => x.BodyPreview).HasMaxLength(2000);
             b.Property(x => x.BodyHtml).HasColumnType("text");
+            b.Property(x => x.ChannelType).HasMaxLength(50).HasDefaultValue("email");
             b.HasIndex(x => new { x.TenantId, x.InternetMessageId }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.ThreadKey });
+            b.HasIndex(x => new { x.TenantId, x.ConversationId });
             b.HasMany(x => x.Attachments).WithOne().HasForeignKey(x => x.EmailMessageId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<Conversation>(b => {
+            b.ToTable("conversations"); b.HasKey(x => x.Id);
+            b.Property(x => x.ChannelType).HasMaxLength(50).IsRequired();
+            b.Property(x => x.ThreadKey).HasMaxLength(120).IsRequired();
+            b.Property(x => x.ParticipantId).HasMaxLength(320).IsRequired();
+            b.Property(x => x.ParticipantName).HasMaxLength(320).IsRequired();
+            b.Property(x => x.ParticipantEmail).HasMaxLength(320);
+            b.Property(x => x.ParticipantPhone).HasMaxLength(50);
+            b.Property(x => x.LastMessagePreview).HasMaxLength(500);
+            b.HasIndex(x => new { x.TenantId, x.ThreadKey }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.LastMessageAtUtc });
+            b.HasIndex(x => new { x.TenantId, x.ChannelType });
+            b.Property(x => x.Status).HasMaxLength(20).HasDefaultValue("open");
+        });
+        modelBuilder.Entity<MessageReplyTemplate>(b => {
+            b.ToTable("message_reply_templates"); b.HasKey(x => x.Id);
+            b.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            b.Property(x => x.Body).HasColumnType("text").IsRequired();
+            b.Property(x => x.ChannelType).HasMaxLength(50);
+            b.HasIndex(x => new { x.TenantId, x.Name });
+        });
+        modelBuilder.Entity<StoredMedia>(b => {
+            b.ToTable("stored_media"); b.HasKey(x => x.Id);
+            b.Property(x => x.FileName).HasMaxLength(300).IsRequired();
+            b.Property(x => x.ContentType).HasMaxLength(150).IsRequired();
+            b.Property(x => x.Data).HasColumnType("bytea").IsRequired();
+            b.HasIndex(x => new { x.TenantId, x.CreatedAtUtc });
         });
         modelBuilder.Entity<EmailAttachment>(b => {
             b.ToTable("email_attachments"); b.HasKey(x => x.Id);
@@ -94,7 +128,8 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
                 ""BodyHtml"" text,
                 ""OccurredAtUtc"" timestamp with time zone NOT NULL,
                 ""RelatedEntityType"" character varying(100),
-                ""RelatedEntityId"" uuid
+                ""RelatedEntityId"" uuid,
+                ""ChannelType"" character varying(50) NOT NULL DEFAULT 'email'
             );
 
             CREATE TABLE IF NOT EXISTS communications.email_attachments (
@@ -121,11 +156,71 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
                 ""VerifyToken"" character varying(100) NOT NULL,
                 ""IsConnected"" boolean NOT NULL DEFAULT false,
                 ""ConnectedAtUtc"" timestamp with time zone,
+                ""LastSyncAtUtc"" timestamp with time zone,
+                ""LastError"" character varying(2000),
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL
             );
 
             CREATE UNIQUE INDEX IF NOT EXISTS ""IX_meta_channel_connections_TenantId_ChannelType"" ON communications.meta_channel_connections (""TenantId"", ""ChannelType"");
             CREATE INDEX IF NOT EXISTS ""IX_email_attachments_EmailMessageId"" ON communications.email_attachments (""EmailMessageId"");
+
+            ALTER TABLE communications.email_messages ADD COLUMN IF NOT EXISTS ""ChannelType"" character varying(50) NOT NULL DEFAULT 'email';
+            ALTER TABLE communications.meta_channel_connections ADD COLUMN IF NOT EXISTS ""LastSyncAtUtc"" timestamp with time zone;
+            ALTER TABLE communications.meta_channel_connections ADD COLUMN IF NOT EXISTS ""LastError"" character varying(2000);
+
+            UPDATE communications.email_messages SET ""ThreadKey"" = REPLACE(""ThreadKey"", 'meta_ig_', 'ig_') WHERE ""ThreadKey"" LIKE 'meta_ig_%';
+            UPDATE communications.email_messages SET ""ThreadKey"" = REPLACE(""ThreadKey"", 'meta_fb_', 'fb_') WHERE ""ThreadKey"" LIKE 'meta_fb_%';
+            UPDATE communications.email_messages SET ""ChannelType"" = 'whatsapp' WHERE ""ChannelType"" = 'email' AND (""ThreadKey"" LIKE 'wa_%' OR ""InternetMessageId"" LIKE 'wa_%');
+            UPDATE communications.email_messages SET ""ChannelType"" = 'instagram' WHERE ""ChannelType"" = 'email' AND (""ThreadKey"" LIKE 'ig_%' OR ""InternetMessageId"" LIKE 'meta_ig_%');
+            UPDATE communications.email_messages SET ""ChannelType"" = 'facebook' WHERE ""ChannelType"" = 'email' AND (""ThreadKey"" LIKE 'fb_%' OR ""InternetMessageId"" LIKE 'meta_fb_%');
+
+            CREATE TABLE IF NOT EXISTS communications.conversations (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ChannelType"" character varying(50) NOT NULL,
+                ""ThreadKey"" character varying(120) NOT NULL,
+                ""ParticipantId"" character varying(320) NOT NULL,
+                ""ParticipantName"" character varying(320) NOT NULL,
+                ""ParticipantEmail"" character varying(320),
+                ""ParticipantPhone"" character varying(50),
+                ""LastMessagePreview"" character varying(500),
+                ""LastMessageAtUtc"" timestamp with time zone NOT NULL,
+                ""UnreadCount"" integer NOT NULL DEFAULT 0,
+                ""RelatedLeadId"" uuid,
+                ""RelatedCustomerId"" uuid,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL,
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL
+            );
+
+            ALTER TABLE communications.email_messages ADD COLUMN IF NOT EXISTS ""ConversationId"" uuid;
+
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_conversations_TenantId_ThreadKey"" ON communications.conversations (""TenantId"", ""ThreadKey"");
+            CREATE INDEX IF NOT EXISTS ""IX_conversations_TenantId_LastMessageAtUtc"" ON communications.conversations (""TenantId"", ""LastMessageAtUtc"");
+            CREATE INDEX IF NOT EXISTS ""IX_email_messages_TenantId_ConversationId"" ON communications.email_messages (""TenantId"", ""ConversationId"");
+
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""Status"" character varying(20) NOT NULL DEFAULT 'open';
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AssignedToUserId"" uuid;
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""SuggestionDismissed"" boolean NOT NULL DEFAULT false;
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""LastIncomingAtUtc"" timestamp with time zone;
+
+            CREATE TABLE IF NOT EXISTS communications.message_reply_templates (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Name"" character varying(120) NOT NULL,
+                ""Body"" text NOT NULL,
+                ""ChannelType"" character varying(50),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL,
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS communications.stored_media (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""FileName"" character varying(300) NOT NULL,
+                ""ContentType"" character varying(150) NOT NULL,
+                ""Data"" bytea NOT NULL,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
         ";
 
         await Database.ExecuteSqlRawAsync(sql, cancellationToken);

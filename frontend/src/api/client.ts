@@ -269,6 +269,61 @@ export const api = {
   testMailAccount: (id: string) => request<{ connected: boolean }>(`/api/v1/communications/accounts/${id}/test`, { method: "POST" }),
   syncMailAccount: (id: string) => request<{ received: number }>(`/api/v1/communications/accounts/${id}/sync`, { method: "POST" }),
   listEmails: (entityType?: string, entityId?: string) => { const p = new URLSearchParams(); if(entityType)p.set("entityType",entityType); if(entityId)p.set("entityId",entityId); return request<import("./types").EmailMessage[]>(`/api/v1/communications/messages${p.size?`?${p}`:""}`); },
+  listConversations: (opts?: { channel?: string; folder?: string; search?: string; customerId?: string; assignedTo?: string; status?: string }) => {
+    const p = new URLSearchParams();
+    if (opts?.channel && opts.channel !== "all") p.set("channel", opts.channel);
+    if (opts?.folder && opts.folder !== "All") p.set("folder", opts.folder);
+    if (opts?.search) p.set("search", opts.search);
+    if (opts?.customerId) p.set("customerId", opts.customerId);
+    if (opts?.assignedTo) p.set("assignedTo", opts.assignedTo);
+    if (opts?.status) p.set("status", opts.status);
+    return request<import("./types").Conversation[]>(`/api/v1/communications/conversations${p.size ? `?${p}` : ""}`);
+  },
+  getConversationMessages: (id: string) => request<import("./types").EmailMessage[]>(`/api/v1/communications/conversations/${id}/messages`),
+  linkConversation: (id: string, body: { leadId?: string; customerId?: string }) =>
+    request<{ success: boolean; relatedLeadId?: string; relatedCustomerId?: string }>(`/api/v1/communications/conversations/${id}/link`, { method: "POST", body: JSON.stringify(body) }),
+  assignConversation: (id: string, userId?: string) =>
+    request<{ success: boolean }>(`/api/v1/communications/conversations/${id}/assign`, { method: "POST", body: JSON.stringify({ userId: userId || null }) }),
+  setConversationStatus: (id: string, status: string) =>
+    request<{ success: boolean }>(`/api/v1/communications/conversations/${id}/status`, { method: "POST", body: JSON.stringify({ status }) }),
+  dismissConversationSuggestion: (id: string) =>
+    request<{ success: boolean }>(`/api/v1/communications/conversations/${id}/dismiss-suggestion`, { method: "POST" }),
+  getSuggestedMatches: (id: string) => request<import("./types").CustomerMatch[]>(`/api/v1/communications/conversations/${id}/suggested-matches`),
+  listReplyTemplates: () => request<import("./types").MessageReplyTemplate[]>("/api/v1/communications/templates"),
+  saveReplyTemplate: (body: { id?: string; name: string; body: string; channelType?: string }) =>
+    request<{ id: string }>("/api/v1/communications/templates", { method: "POST", body: JSON.stringify(body) }),
+  deleteReplyTemplate: (id: string) => request<void>(`/api/v1/communications/templates/${id}`, { method: "DELETE" }),
+  getCommunicationsNotificationSummary: () =>
+    request<{
+      unreadTotal: number;
+      needsResponseCount: number;
+      recent: Array<{
+        id: string;
+        participantName: string;
+        participantId: string;
+        channelType: string;
+        lastMessagePreview?: string | null;
+        unreadCount: number;
+        lastMessageAtUtc: string;
+        needsResponse: boolean;
+      }>;
+    }>("/api/v1/communications/notifications/summary"),
+  uploadCommunicationMedia: async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const tenantId = localStorage.getItem("tenantId") || "";
+    const res = await fetch("/api/v1/communications/media/upload", {
+      method: "POST",
+      headers: { "X-Tenant-Id": tenantId },
+      body: form
+    });
+    if (!res.ok) throw new Error("Error al subir archivo");
+    return res.json() as Promise<{ mediaId: string; publicUrl: string }>;
+  },
+  downloadMessageAttachment: (messageId: string, attachmentId: string) =>
+    `/api/v1/communications/messages/${messageId}/attachments/${attachmentId}/download`,
+  deleteConversation: (id: string) => request<void>(`/api/v1/communications/conversations/${id}`, { method: "DELETE" }),
+  markConversationRead: (id: string) => request<{ success: boolean }>(`/api/v1/communications/conversations/${id}/mark-read`, { method: "POST" }),
   deleteEmail: (id: string) => request<void>(`/api/v1/communications/messages/${id}`, { method: "DELETE" }),
   sendEmail: (accountId: string, body: object) => request<{id:string;messageId:string}>(`/api/v1/communications/accounts/${accountId}/send`, { method:"POST", body:JSON.stringify(body) }),
 
@@ -276,15 +331,15 @@ export const api = {
   getWhatsAppStatus: () => request<{ available: boolean; state: string; phoneNumber?: string; error?: string }>("/api/v1/communications/whatsapp/status"),
   connectWhatsApp: () => request<{ success: boolean; state: string; qrCodeBase64?: string; error?: string }>("/api/v1/communications/whatsapp/connect", { method: "POST" }),
   disconnectWhatsApp: () => request<{ success: boolean }>("/api/v1/communications/whatsapp/disconnect", { method: "POST" }),
-  syncWhatsAppMessages: () => request<{ synced: number }>("/api/v1/communications/whatsapp/sync", { method: "POST" }),
-  sendWhatsAppMessage: (body: { to: string; message: string; mediaUrl?: string; mediaType?: string; fileName?: string; relatedEntityType?: string; relatedEntityId?: string }) =>
+  syncWhatsAppMessages: () => request<{ synced: number; total?: number }>("/api/v1/communications/whatsapp/sync", { method: "POST" }),
+  sendWhatsAppMessage: (body: { to: string; message: string; mediaUrl?: string; mediaType?: string; fileName?: string; mediaBase64?: string; mimeType?: string; relatedEntityType?: string; relatedEntityId?: string }) =>
     request<{ success: boolean; messageId?: string; error?: string }>("/api/v1/communications/whatsapp/send", { method: "POST", body: JSON.stringify(body) }),
 
   // Meta (Instagram & Facebook) Methods
   getMetaStatus: () =>
     request<{
-      facebook: { isConnected: boolean; pageId?: string; pageName?: string; verifyToken: string; connectedAtUtc?: string };
-      instagram: { isConnected: boolean; pageId?: string; pageName?: string; instagramAccountId?: string; instagramUsername?: string; verifyToken: string; connectedAtUtc?: string };
+      facebook: { isConnected: boolean; pageId?: string; pageName?: string; verifyToken: string; connectedAtUtc?: string; lastSyncAtUtc?: string; lastError?: string };
+      instagram: { isConnected: boolean; pageId?: string; pageName?: string; instagramAccountId?: string; instagramUsername?: string; verifyToken: string; connectedAtUtc?: string; lastSyncAtUtc?: string; lastError?: string };
     }>("/api/v1/communications/meta/status"),
   configureMeta: (body: { channelType: "facebook" | "instagram"; pageAccessToken: string }) =>
     request<{ success: boolean; pageId?: string; pageName?: string; instagramAccountId?: string; instagramUsername?: string; error?: string }>("/api/v1/communications/meta/config", {
@@ -293,8 +348,8 @@ export const api = {
     }),
   disconnectMeta: (channelType: "facebook" | "instagram") =>
     request<{ success: boolean }>("/api/v1/communications/meta/disconnect", { method: "POST", body: JSON.stringify({ channelType }) }),
-  syncMetaMessages: () => request<{ synced: number }>("/api/v1/communications/meta/sync", { method: "POST" }),
-  sendMetaMessage: (body: { channelType: "facebook" | "instagram"; recipientId: string; message: string; relatedEntityType?: string; relatedEntityId?: string }) =>
+  syncMetaMessages: () => request<{ synced: number; channels?: Array<{ channel: string; synced: number; error?: string | null }> }>("/api/v1/communications/meta/sync", { method: "POST" }),
+  sendMetaMessage: (body: { channelType: "facebook" | "instagram"; recipientId: string; message: string; mediaUrl?: string; mediaType?: string; relatedEntityType?: string; relatedEntityId?: string }) =>
     request<{ success: boolean; messageId?: string; error?: string }>("/api/v1/communications/meta/send", { method: "POST", body: JSON.stringify(body) }),
 
   // Company Settings & Users Methods

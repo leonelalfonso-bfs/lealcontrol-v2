@@ -12,7 +12,8 @@ export function CustomerDetailPage() {
   const { id } = useParams();
   const location = useLocation();
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
-  const [tab, setTab] = useState<"ficha" | "plantas" | "contactos" | "equipos" | "fiscal" | "timeline">("ficha");
+  const [tab, setTab] = useState<"ficha" | "plantas" | "contactos" | "equipos" | "fiscal" | "timeline" | "comunicaciones">("ficha");
+  const [customerConversations, setCustomerConversations] = useState<import("../api/types").Conversation[]>([]);
   const [timeline, setTimeline] = useState<Activity[]>([]);
   const [opps, setOpps] = useState<Opportunity[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -269,6 +270,16 @@ export function CustomerDetailPage() {
           onClick={() => setTab("timeline")}
         >
           💬 Historial & Chatter ({timeline.length})
+        </button>
+        <button
+          type="button"
+          className={`tab-btn ${tab === "comunicaciones" ? "active" : ""}`}
+          onClick={() => {
+            setTab("comunicaciones");
+            if (id) void api.listConversations({ customerId: id }).then(setCustomerConversations).catch(() => setCustomerConversations([]));
+          }}
+        >
+          📨 Comunicaciones
         </button>
       </div>
 
@@ -600,6 +611,35 @@ export function CustomerDetailPage() {
             {timeline.length === 0 && opps.length === 0 && quotes.length === 0 && <p className="muted" style={{ fontSize: "0.9rem" }}>No hay registros comerciales todavía.</p>}
           </div>
           <ActivityForm customerId={customer.id} onCreated={refresh} />
+        </section>
+      )}
+
+      {tab === "comunicaciones" && (
+        <section className="card pad">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>Comunicaciones con este cliente</h3>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="btn btn-outline compact" onClick={() => setShowEmail(true)}>✉️ Email</button>
+              <Link className="btn btn-outline compact" to="/comunicaciones">Abrir bandeja</Link>
+            </div>
+          </div>
+          {customerConversations.length === 0 ? (
+            <p className="muted">No hay conversaciones vinculadas a este cliente. Vinculá chats desde la bandeja omnicanal.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {customerConversations.map((c) => (
+                <Link
+                  key={c.id}
+                  to="/comunicaciones"
+                  style={{ padding: 12, border: "1px solid var(--surface-border)", borderRadius: 8, textDecoration: "none", color: "inherit" }}
+                >
+                  <div style={{ fontWeight: 600 }}>{c.participantName || c.participantId}</div>
+                  <div className="muted" style={{ fontSize: "0.82rem" }}>{c.channelType} · {c.lastMessagePreview}</div>
+                  <div className="muted" style={{ fontSize: "0.75rem" }}>{new Date(c.lastMessageAtUtc).toLocaleString("es-AR")}</div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
