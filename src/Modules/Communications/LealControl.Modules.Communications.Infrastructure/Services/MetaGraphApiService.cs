@@ -158,10 +158,11 @@ public sealed class MetaGraphApiService
                 {
                     foreach (var conv in dataArray.EnumerateArray())
                     {
+                        var convId = conv.TryGetProperty("id", out var ciProp) ? ciProp.GetString() : Guid.NewGuid().ToString("N");
                         string? customerId = null;
                         string? customerName = null;
 
-                        // Find the participant that is NOT the company's page
+                        // 1. Check participants for the external user
                         if (conv.TryGetProperty("participants", out var partObj) && partObj.TryGetProperty("data", out var partArray) && partArray.ValueKind == JsonValueKind.Array)
                         {
                             foreach (var p in partArray.EnumerateArray())
@@ -169,17 +170,61 @@ public sealed class MetaGraphApiService
                                 var pName = p.TryGetProperty("name", out var pnProp) ? pnProp.GetString() : (p.TryGetProperty("username", out var puProp) ? puProp.GetString() : null);
                                 var pId = p.TryGetProperty("id", out var piProp) ? piProp.GetString() : null;
                                 
-                                // Ignore our own page in participants
-                                if (!string.IsNullOrWhiteSpace(pName) && (string.IsNullOrWhiteSpace(pageName) || !pName.Equals(pageName, StringComparison.OrdinalIgnoreCase)) && (string.IsNullOrWhiteSpace(pageId) || pId == null || !pId.Equals(pageId, StringComparison.OrdinalIgnoreCase)))
+                                var isPage = (!string.IsNullOrWhiteSpace(pName) && !string.IsNullOrWhiteSpace(pageName) && pName.Equals(pageName, StringComparison.OrdinalIgnoreCase))
+                                    || (!string.IsNullOrWhiteSpace(pId) && !string.IsNullOrWhiteSpace(pageId) && pId.Equals(pageId, StringComparison.OrdinalIgnoreCase));
+
+                                if (!isPage)
                                 {
-                                    customerName = pName;
-                                    customerId = pId;
+                                    if (!string.IsNullOrWhiteSpace(pName)) customerName = pName;
+                                    if (!string.IsNullOrWhiteSpace(pId)) customerId = pId;
                                 }
                             }
                         }
 
+                        // 2. Parse messages in conversation
                         if (conv.TryGetProperty("messages", out var msgObj) && msgObj.TryGetProperty("data", out var msgArray) && msgArray.ValueKind == JsonValueKind.Array)
                         {
+                            // First pass on messages to extract customer name if missing
+                            if (string.IsNullOrWhiteSpace(customerName))
+                            {
+                                foreach (var m in msgArray.EnumerateArray())
+                                {
+                                    var fromObj = m.TryGetProperty("from", out var foProp) ? foProp : default;
+                                    var fromName = fromObj.TryGetProperty("name", out var fnProp) ? fnProp.GetString() : (fromObj.TryGetProperty("username", out var fuProp) ? fuProp.GetString() : null);
+                                    var fromId = fromObj.TryGetProperty("id", out var fiProp) ? fiProp.GetString() : null;
+
+                                    var isFromPage = (!string.IsNullOrWhiteSpace(fromName) && !string.IsNullOrWhiteSpace(pageName) && fromName.Equals(pageName, StringComparison.OrdinalIgnoreCase))
+                                        || (!string.IsNullOrWhiteSpace(fromId) && !string.IsNullOrWhiteSpace(pageId) && fromId.Equals(pageId, StringComparison.OrdinalIgnoreCase));
+
+                                    if (!isFromPage)
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(fromName)) customerName = fromName;
+                                        if (!string.IsNullOrWhiteSpace(fromId) && string.IsNullOrWhiteSpace(customerId)) customerId = fromId;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // If customerName is still missing, try resolving PSID name via Graph API
+                            if (string.IsNullOrWhiteSpace(customerName) && !string.IsNullOrWhiteSpace(customerId) && !isIg)
+                            {
+                                try
+                                {
+                                    var userRes = await _httpClient.GetAsync($"{customerId}?fields=first_name,last_name,name&access_token={Uri.EscapeDataString(pageAccessToken)}", ct);
+                                    if (userRes.IsSuccessStatusCode)
+                                    {
+                                        var userJson = await userRes.Content.ReadFromJsonAsync<JsonElement>(ct);
+                                        var uName = userJson.TryGetProperty("name", out var unProp) ? unProp.GetString() : null;
+                                        if (!string.IsNullOrWhiteSpace(uName)) customerName = uName;
+                                    }
+                                }
+                                catch {}
+                            }
+
+                            // Final thread participant ID
+                            var threadParticipantId = !string.IsNullOrWhiteSpace(customerId) ? customerId : (convId ?? Guid.NewGuid().ToString("N"));
+                            var threadContactName = !string.IsNullOrWhiteSpace(customerName) ? customerName : (isIg ? "Contacto de Instagram" : $"Contacto Facebook ({threadParticipantId[..Math.Min(6, threadParticipantId.Length)]})");
+
                             foreach (var m in msgArray.EnumerateArray())
                             {
                                 var mid = m.TryGetProperty("id", out var midProp) ? midProp.GetString() : null;
@@ -187,16 +232,6 @@ public sealed class MetaGraphApiService
                                 var createdStr = m.TryGetProperty("created_time", out var crProp) ? crProp.GetString() : null;
                                 var fromObj = m.TryGetProperty("from", out var foProp) ? foProp : default;
                                 var fromName = fromObj.TryGetProperty("name", out var fnProp) ? fnProp.GetString() : (fromObj.TryGetProperty("username", out var fuProp) ? fuProp.GetString() : null);
-                                var fromId = fromObj.TryGetProperty("id", out var fiProp) ? fiProp.GetString() : null;
-
-                                var isFromPage = (!string.IsNullOrWhiteSpace(fromName) && fromName.Equals(pageName, StringComparison.OrdinalIgnoreCase))
-                                    || (!string.IsNullOrWhiteSpace(fromId) && fromId.Equals(pageId, StringComparison.OrdinalIgnoreCase));
-
-                                if (!isFromPage && string.IsNullOrWhiteSpace(customerName))
-                                {
-                                    customerName = fromName;
-                                    customerId = fromId;
-                                }
 
                                 DateTime createdUtc = DateTime.UtcNow;
                                 if (!string.IsNullOrWhiteSpace(createdStr) && DateTime.TryParse(createdStr, out var parsedDt))
@@ -206,15 +241,12 @@ public sealed class MetaGraphApiService
 
                                 if (!string.IsNullOrWhiteSpace(mid) && !string.IsNullOrWhiteSpace(text))
                                 {
-                                    var finalContactName = !string.IsNullOrWhiteSpace(customerName) ? customerName : (isIg ? "Usuario de Instagram" : "Usuario de Facebook");
-                                    var finalContactId = !string.IsNullOrWhiteSpace(customerId) ? customerId : (fromId ?? "desconocido");
-
                                     list.Add(new MetaMessageItem(
                                         mid,
                                         isIg ? "instagram" : "facebook",
-                                        finalContactId,
-                                        finalContactName,
-                                        fromName ?? finalContactName,
+                                        threadParticipantId,
+                                        threadContactName,
+                                        fromName ?? threadContactName,
                                         text,
                                         createdUtc
                                     ));
@@ -223,7 +255,6 @@ public sealed class MetaGraphApiService
                         }
                     }
 
-                    // If we got messages from this endpoint, we can stop trying fallback endpoints
                     if (list.Count > 0) break;
                 }
             }

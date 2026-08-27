@@ -46,5 +46,13 @@ public sealed class EmailMessage
     {
         BodyPreview = preview;
     }
+
+    public void UpdateMetadata(string threadKey, string subject, string fromAddress, string toAddresses)
+    {
+        ThreadKey = threadKey;
+        Subject = subject;
+        FromAddress = fromAddress;
+        ToAddresses = toAddresses;
+    }
 }
 

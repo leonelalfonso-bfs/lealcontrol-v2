@@ -519,11 +519,25 @@ public static class CommunicationsEndpoints
                 foreach (var m in messages)
                 {
                     var internetId = $"{prefix}_{m.MessageId}";
-                    var exists = await db.EmailMessages.AnyAsync(x => x.TenantId == tenantId && x.InternetMessageId == internetId, ct);
-                    if (exists) continue;
-
                     var isOutgoing = m.FromName.Equals(conn.PageName, StringComparison.OrdinalIgnoreCase) || (conn.InstagramUsername != null && m.FromName.Equals(conn.InstagramUsername, StringComparison.OrdinalIgnoreCase));
                     var contactTitle = !string.IsNullOrWhiteSpace(m.ParticipantName) ? m.ParticipantName : (isIg ? $"@{m.ParticipantId}" : $"Usuario FB {m.ParticipantId}");
+                    var threadKey = $"{prefix}_{m.ParticipantId}";
+
+                    var existing = await db.EmailMessages.FirstOrDefaultAsync(x => x.TenantId == tenantId && x.InternetMessageId == internetId, ct);
+                    if (existing != null)
+                    {
+                        if (existing.ThreadKey != threadKey || existing.Subject.Contains("Balanzas Full Service") || existing.FromAddress.Contains("Balanzas Full Service") && !isOutgoing)
+                        {
+                            existing.UpdateMetadata(
+                                threadKey,
+                                isIg ? $"Instagram DM: {contactTitle}" : $"Messenger: {contactTitle}",
+                                isOutgoing ? senderOfficial : contactTitle,
+                                isOutgoing ? contactTitle : senderOfficial
+                            );
+                            addedCount++;
+                        }
+                        continue;
+                    }
 
                     var html = $"<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; white-space: pre-wrap;\">{System.Net.WebUtility.HtmlEncode(m.Text)}</div>";
 
@@ -532,7 +546,7 @@ public static class CommunicationsEndpoints
                         accId,
                         internetId,
                         null,
-                        $"{prefix}_{m.ParticipantId}",
+                        threadKey,
                         isOutgoing ? EmailDirection.Outgoing : EmailDirection.Incoming,
                         isIg ? $"Instagram DM: {contactTitle}" : $"Messenger: {contactTitle}",
                         isOutgoing ? senderOfficial : contactTitle,
