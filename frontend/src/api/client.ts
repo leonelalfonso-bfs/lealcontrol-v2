@@ -83,8 +83,27 @@ export const api = {
   importIssuedCheques: (csvContent: string) => request<{ imported: number; duplicates: number }>("/api/v1/finance/echeqs/import-issued", { method: "POST", body: JSON.stringify({ csvContent }) }),
   createReceivedCheque: (body: any) => request("/api/v1/finance/echeqs", { method: "POST", body: JSON.stringify(body) }),
   useChequeForPayment: (id: string, reference: string) => request(`/api/v1/finance/echeqs/${id}/use-for-payment`, { method: "POST", body: JSON.stringify({ reference }) }),
-  listCollectionReceipts: () => request<{ id: string; receiptNumber: string; amount: number; currency: string; receiptDateUtc: string; description: string; status: string }[]>("/api/v1/finance/collections"),
-  createCollectionReceipt: (body: { accountId: string; customerId?: string; invoiceId?: string; movementId?: string; chequeId?: string; amount: number; currency: string; invoiceAmount?: number; invoiceCurrency?: string; invoiceExchangeRate?: number; paymentExchangeRate?: number; suggestedAdjustmentArs?: number; suggestedAdjustmentType?: string; receiptDateUtc: string; description: string }) => request("/api/v1/finance/collections", { method: "POST", body: JSON.stringify(body) }),
+  listCollectionReceipts: () => request<{ id: string; customerId?: string; accountId?: string; invoiceId?: string; receiptNumber: string; amount: number; currency: string; receiptDateUtc: string; description: string; status: string; linesCount?: number; invoicesCount?: number; invoicesSummary?: string }[]>("/api/v1/finance/collections"),
+  getCollectionReceipt: (id: string) => request<any>(`/api/v1/finance/collections/${id}`),
+  createCollectionReceipt: (body: {
+    accountId?: string;
+    customerId?: string;
+    invoiceId?: string;
+    movementId?: string;
+    chequeId?: string;
+    amount: number;
+    currency: string;
+    invoiceAmount?: number;
+    invoiceCurrency?: string;
+    invoiceExchangeRate?: number;
+    paymentExchangeRate?: number;
+    suggestedAdjustmentArs?: number;
+    suggestedAdjustmentType?: string;
+    receiptDateUtc: string;
+    description: string;
+    lines?: any[];
+    imputations?: any[];
+  }) => request<{ id: string; receiptNumber: string; status: string }>("/api/v1/finance/collections", { method: "POST", body: JSON.stringify(body) }),
   listPaymentOrders: () => request<import("./types").PaymentOrder[]>("/api/v1/finance/payments"),
   getPaymentOrder: (id: string) => request<import("./types").PaymentOrder>(`/api/v1/finance/payments/${id}`),
   createPaymentOrder: (body: import("./types").PaymentOrderWriteRequest) => request<{ id: string; orderNumber: string; status: string }>("/api/v1/finance/payments", { method: "POST", body: JSON.stringify(body) }),

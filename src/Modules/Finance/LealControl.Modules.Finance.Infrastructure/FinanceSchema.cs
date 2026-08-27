@@ -54,6 +54,15 @@ public static class FinanceSchema
         );
         CREATE INDEX IF NOT EXISTS ""IX_CollectionReceiptLines_Receipt"" ON finance.""CollectionReceiptLines"" (""ReceiptId"");
 
+        CREATE TABLE IF NOT EXISTS finance.""CollectionReceiptImputations"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""ReceiptId"" uuid NOT NULL,
+          ""InvoiceId"" uuid NOT NULL, ""InvoiceNumber"" varchar(80) NOT NULL,
+          ""InvoiceTotal"" numeric(18,2) NOT NULL, ""AmountImputed"" numeric(18,2) NOT NULL,
+          ""CreatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ""IX_CollectionReceiptImputations_Receipt"" ON finance.""CollectionReceiptImputations"" (""ReceiptId"");
+        CREATE INDEX IF NOT EXISTS ""IX_CollectionReceiptImputations_Invoice"" ON finance.""CollectionReceiptImputations"" (""InvoiceId"");
+
         CREATE TABLE IF NOT EXISTS finance.""FinancialConcepts"" (
           ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""Code"" varchar(80) NOT NULL, ""Name"" varchar(180) NOT NULL,
           ""Direction"" integer NOT NULL, ""IsActive"" boolean NOT NULL DEFAULT true, ""RequiresCounterparty"" boolean NOT NULL DEFAULT false,

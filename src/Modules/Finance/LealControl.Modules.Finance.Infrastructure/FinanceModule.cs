@@ -19,6 +19,7 @@ public sealed class FinancialMovement { public Guid Id { get; set; } public Guid
 public sealed class CollectionReceipt { public Guid Id { get; set; } public Guid TenantId { get; set; } public Guid AccountId { get; set; } public Guid? CustomerId { get; set; } public Guid? InvoiceId { get; set; } public string ReceiptNumber { get; set; } = ""; public decimal Amount { get; set; } public string Currency { get; set; } = "ARS"; public string? InvoiceCurrency { get; set; } public decimal? InvoiceAmount { get; set; } public decimal? InvoiceExchangeRate { get; set; } public decimal? PaymentExchangeRate { get; set; } public decimal? SuggestedAdjustmentArs { get; set; } public string? SuggestedAdjustmentType { get; set; } public DateTime ReceiptDateUtc { get; set; } public string Description { get; set; } = ""; public string Status { get; set; } = "Confirmed"; public DateTime CreatedAtUtc { get; set; } }
 public sealed record CreateAccountRequest(string Name, string Currency, FinancialAccountType Type, decimal OpeningBalance);
 public sealed class CollectionReceiptLine { public Guid Id { get; set; } public Guid TenantId { get; set; } public Guid ReceiptId { get; set; } public string Method { get; set; } = ""; public decimal Amount { get; set; } public string Currency { get; set; } = "ARS"; public Guid? AccountId { get; set; } public Guid? BankMovementId { get; set; } public Guid? ChequeId { get; set; } public string? RetentionType { get; set; } public string? RetentionCertificate { get; set; } public string? Notes { get; set; } public DateTime CreatedAtUtc { get; set; } }
+public sealed class CollectionReceiptImputation { public Guid Id { get; set; } public Guid TenantId { get; set; } public Guid ReceiptId { get; set; } public Guid InvoiceId { get; set; } public string InvoiceNumber { get; set; } = ""; public decimal InvoiceTotal { get; set; } public decimal AmountImputed { get; set; } public DateTime CreatedAtUtc { get; set; } }
 public sealed record CreateMovementRequest(Guid AccountId, FinancialMovementKind Kind, decimal Amount, string Currency, DateTime OperationDateUtc, string Description, string? ExternalReference);
 public sealed record TransferRequest(Guid FromAccountId, Guid ToAccountId, decimal Amount, string Currency, DateTime OperationDateUtc, string Description);
 
@@ -32,6 +33,8 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
     public DbSet<FinancialAccount> Accounts => Set<FinancialAccount>();
     public DbSet<FinancialMovement> Movements => Set<FinancialMovement>();
     public DbSet<CollectionReceipt> CollectionReceipts => Set<CollectionReceipt>();
+    public DbSet<CollectionReceiptLine> CollectionReceiptLines => Set<CollectionReceiptLine>();
+    public DbSet<CollectionReceiptImputation> CollectionReceiptImputations => Set<CollectionReceiptImputation>();
     public DbSet<ReceivedCheque> ReceivedCheques => Set<ReceivedCheque>();
     public DbSet<FinancialConcept> FinancialConcepts => Set<FinancialConcept>();
     public DbSet<FinancialConceptRule> FinancialConceptRules => Set<FinancialConceptRule>();
@@ -39,7 +42,6 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
     public DbSet<PaymentOrderLine> PaymentOrderLines => Set<PaymentOrderLine>();
     public DbSet<PaymentOrderImputation> PaymentOrderImputations => Set<PaymentOrderImputation>();
     protected override void OnModelCreating(ModelBuilder modelBuilder) { modelBuilder.HasDefaultSchema(Schema); modelBuilder.Entity<FinancialAccount>(b => { b.ToTable("FinancialAccounts"); b.HasKey(x => x.Id); b.Property(x => x.Name).HasMaxLength(180).IsRequired(); b.Property(x => x.Currency).HasMaxLength(8).IsRequired(); b.Property(x => x.OpeningBalance).HasPrecision(18, 2); b.HasIndex(x => new { x.TenantId, x.Name }); }); modelBuilder.Entity<FinancialMovement>(b => { b.ToTable("FinancialMovements"); b.HasKey(x => x.Id); b.Property(x => x.Amount).HasPrecision(18, 2); b.Property(x => x.Currency).HasMaxLength(8); b.Property(x => x.Description).HasMaxLength(500); b.Property(x => x.ExternalReference).HasMaxLength(180); b.HasIndex(x => new { x.TenantId, x.AccountId, x.OperationDateUtc }); }); modelBuilder.Entity<CollectionReceipt>(b => { b.ToTable("CollectionReceipts"); b.HasKey(x => x.Id); b.Property(x => x.Amount).HasPrecision(18, 2); b.Property(x => x.Currency).HasMaxLength(8).IsRequired(); b.Property(x => x.ReceiptNumber).HasMaxLength(40).IsRequired(); b.Property(x => x.Description).HasMaxLength(500).IsRequired(); b.Property(x => x.Status).HasMaxLength(30).IsRequired(); }); }
-    public DbSet<CollectionReceiptLine> CollectionReceiptLines => Set<CollectionReceiptLine>();
 }
 
 public static class DependencyInjection
