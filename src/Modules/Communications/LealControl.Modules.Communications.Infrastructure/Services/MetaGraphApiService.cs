@@ -40,10 +40,13 @@ public sealed class MetaGraphApiService
             if (meRes.IsSuccessStatusCode)
             {
                 var json = await meRes.Content.ReadFromJsonAsync<JsonElement>(ct);
-                foundPageId = json.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
-                foundPageName = json.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+                if (json.ValueKind == JsonValueKind.Object)
+                {
+                    foundPageId = json.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String ? idProp.GetString() : null;
+                    foundPageName = json.TryGetProperty("name", out var nameProp) && nameProp.ValueKind == JsonValueKind.String ? nameProp.GetString() : null;
 
-                ExtractInstagramFields(json, ref foundIgId, ref foundIgUsername);
+                    ExtractInstagramFields(json, ref foundIgId, ref foundIgUsername);
+                }
             }
 
             // 2. Try querying "me/accounts" (Facebook Pages managed by this user/system user)
@@ -52,13 +55,15 @@ public sealed class MetaGraphApiService
             if (accountsRes.IsSuccessStatusCode)
             {
                 var accountsJson = await accountsRes.Content.ReadFromJsonAsync<JsonElement>(ct);
-                if (accountsJson.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array && dataArray.GetArrayLength() > 0)
+                if (accountsJson.ValueKind == JsonValueKind.Object && accountsJson.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array && dataArray.GetArrayLength() > 0)
                 {
                     foreach (var page in dataArray.EnumerateArray())
                     {
-                        var pId = page.TryGetProperty("id", out var piProp) ? piProp.GetString() : null;
-                        var pName = page.TryGetProperty("name", out var pnProp) ? pnProp.GetString() : null;
-                        var pToken = page.TryGetProperty("access_token", out var ptProp) ? ptProp.GetString() : cleanToken;
+                        if (page.ValueKind != JsonValueKind.Object) continue;
+
+                        var pId = page.TryGetProperty("id", out var piProp) && piProp.ValueKind == JsonValueKind.String ? piProp.GetString() : null;
+                        var pName = page.TryGetProperty("name", out var pnProp) && pnProp.ValueKind == JsonValueKind.String ? pnProp.GetString() : null;
+                        var pToken = page.TryGetProperty("access_token", out var ptProp) && ptProp.ValueKind == JsonValueKind.String ? ptProp.GetString() : cleanToken;
 
                         if (foundPageId is null)
                         {
@@ -79,13 +84,16 @@ public sealed class MetaGraphApiService
                                 if (spRes.IsSuccessStatusCode)
                                 {
                                     var spJson = await spRes.Content.ReadFromJsonAsync<JsonElement>(ct);
-                                    ExtractInstagramFields(spJson, ref foundIgId, ref foundIgUsername);
-                                    if (foundIgId is not null)
+                                    if (spJson.ValueKind == JsonValueKind.Object)
                                     {
-                                        foundPageId = pId;
-                                        foundPageName = pName;
-                                        foundPageToken = pToken;
-                                        break;
+                                        ExtractInstagramFields(spJson, ref foundIgId, ref foundIgUsername);
+                                        if (foundIgId is not null)
+                                        {
+                                            foundPageId = pId;
+                                            foundPageName = pName;
+                                            foundPageToken = pToken;
+                                            break;
+                                        }
                                     }
                                 }
                             }
@@ -115,11 +123,14 @@ public sealed class MetaGraphApiService
                     if (igAccRes.IsSuccessStatusCode)
                     {
                         var igAccJson = await igAccRes.Content.ReadFromJsonAsync<JsonElement>(ct);
-                        if (igAccJson.TryGetProperty("data", out var igArr) && igArr.ValueKind == JsonValueKind.Array && igArr.GetArrayLength() > 0)
+                        if (igAccJson.ValueKind == JsonValueKind.Object && igAccJson.TryGetProperty("data", out var igArr) && igArr.ValueKind == JsonValueKind.Array && igArr.GetArrayLength() > 0)
                         {
                             var firstIg = igArr[0];
-                            if (firstIg.TryGetProperty("id", out var iid)) foundIgId = iid.GetString();
-                            if (firstIg.TryGetProperty("username", out var iun)) foundIgUsername = iun.GetString();
+                            if (firstIg.ValueKind == JsonValueKind.Object)
+                            {
+                                if (firstIg.TryGetProperty("id", out var iid) && iid.ValueKind == JsonValueKind.String) foundIgId = iid.GetString();
+                                if (firstIg.TryGetProperty("username", out var iun) && iun.ValueKind == JsonValueKind.String) foundIgUsername = iun.GetString();
+                            }
                         }
                     }
                 }
@@ -146,21 +157,26 @@ public sealed class MetaGraphApiService
 
     private static void ExtractInstagramFields(JsonElement json, ref string? igId, ref string? igUsername)
     {
+        if (json.ValueKind != JsonValueKind.Object) return;
+
         if (json.TryGetProperty("instagram_business_account", out var igObj) && igObj.ValueKind == JsonValueKind.Object)
         {
-            if (igObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
-            if (igObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
+            if (igObj.TryGetProperty("id", out var igIdProp) && igIdProp.ValueKind == JsonValueKind.String) igId = igIdProp.GetString();
+            if (igObj.TryGetProperty("username", out var igUserProp) && igUserProp.ValueKind == JsonValueKind.String) igUsername = igUserProp.GetString();
         }
         else if (json.TryGetProperty("connected_instagram_account", out var connIgObj) && connIgObj.ValueKind == JsonValueKind.Object)
         {
-            if (connIgObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
-            if (connIgObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
+            if (connIgObj.TryGetProperty("id", out var igIdProp) && igIdProp.ValueKind == JsonValueKind.String) igId = igIdProp.GetString();
+            if (connIgObj.TryGetProperty("username", out var igUserProp) && igUserProp.ValueKind == JsonValueKind.String) igUsername = igUserProp.GetString();
         }
-        else if (json.TryGetProperty("instagram_accounts", out var igAccObj) && igAccObj.TryGetProperty("data", out var igData) && igData.ValueKind == JsonValueKind.Array && igData.GetArrayLength() > 0)
+        else if (json.TryGetProperty("instagram_accounts", out var igAccObj) && igAccObj.ValueKind == JsonValueKind.Object && igAccObj.TryGetProperty("data", out var igData) && igData.ValueKind == JsonValueKind.Array && igData.GetArrayLength() > 0)
         {
             var first = igData[0];
-            if (first.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
-            if (first.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
+            if (first.ValueKind == JsonValueKind.Object)
+            {
+                if (first.TryGetProperty("id", out var igIdProp) && igIdProp.ValueKind == JsonValueKind.String) igId = igIdProp.GetString();
+                if (first.TryGetProperty("username", out var igUserProp) && igUserProp.ValueKind == JsonValueKind.String) igUsername = igUserProp.GetString();
+            }
         }
     }
 
@@ -226,9 +242,9 @@ public sealed class MetaGraphApiService
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadFromJsonAsync<JsonElement>(ct);
-                    if (json.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array)
+                    if (json.ValueKind == JsonValueKind.Object && json.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array)
                     {
-                        ParseConversationsData(dataArray, list, isIg, pageName, pageId, igAccountId, pageAccessToken, ct);
+                        await ParseConversationsDataAsync(dataArray, list, isIg, pageName, pageId, igAccountId, pageAccessToken, ct);
                         return new MetaConversationFetchResult(list, true, null);
                     }
                 }
@@ -252,7 +268,7 @@ public sealed class MetaGraphApiService
         return new MetaConversationFetchResult(list, false, lastError ?? "No se pudieron obtener las conversaciones de Meta.");
     }
 
-    private async void ParseConversationsData(
+    private async Task ParseConversationsDataAsync(
         JsonElement dataArray,
         List<MetaMessageItem> list,
         bool isIg,
@@ -264,22 +280,23 @@ public sealed class MetaGraphApiService
     {
         foreach (var conv in dataArray.EnumerateArray())
         {
-            var convId = conv.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
-            var participants = conv.TryGetProperty("participants", out var pProp) ? pProp : default;
-            var messages = conv.TryGetProperty("messages", out var mProp) ? mProp : default;
+            if (conv.ValueKind != JsonValueKind.Object) continue;
 
-            if (!messages.TryGetProperty("data", out var msgArray) || msgArray.ValueKind != JsonValueKind.Array)
-                continue;
+            var convId = conv.TryGetProperty("id", out var idProp) && idProp.ValueKind == JsonValueKind.String ? idProp.GetString() : null;
 
             string? customerName = null;
             string? customerId = null;
 
-            if (participants.TryGetProperty("data", out var partArray) && partArray.ValueKind == JsonValueKind.Array)
+            if (conv.TryGetProperty("participants", out var participants) && participants.ValueKind == JsonValueKind.Object &&
+                participants.TryGetProperty("data", out var partArray) && partArray.ValueKind == JsonValueKind.Array)
             {
                 foreach (var p in partArray.EnumerateArray())
                 {
-                    var fromId = p.TryGetProperty("id", out var pidProp) ? pidProp.GetString() : null;
-                    var fromName = p.TryGetProperty("name", out var pnProp) ? pnProp.GetString() : (p.TryGetProperty("username", out var puProp) ? puProp.GetString() : null);
+                    if (p.ValueKind != JsonValueKind.Object) continue;
+                    var fromId = p.TryGetProperty("id", out var pidProp) && pidProp.ValueKind == JsonValueKind.String ? pidProp.GetString() : null;
+                    var fromName = p.TryGetProperty("name", out var pnProp) && pnProp.ValueKind == JsonValueKind.String
+                        ? pnProp.GetString()
+                        : (p.TryGetProperty("username", out var puProp) && puProp.ValueKind == JsonValueKind.String ? puProp.GetString() : null);
 
                     var isFromPage = (!string.IsNullOrWhiteSpace(fromName) && !string.IsNullOrWhiteSpace(pageName) && fromName.Equals(pageName, StringComparison.OrdinalIgnoreCase))
                         || (!string.IsNullOrWhiteSpace(fromId) && !string.IsNullOrWhiteSpace(pageId) && fromId.Equals(pageId, StringComparison.OrdinalIgnoreCase));
@@ -301,8 +318,11 @@ public sealed class MetaGraphApiService
                     if (userRes.IsSuccessStatusCode)
                     {
                         var userJson = await userRes.Content.ReadFromJsonAsync<JsonElement>(ct);
-                        var uName = userJson.TryGetProperty("name", out var unProp) ? unProp.GetString() : null;
-                        if (!string.IsNullOrWhiteSpace(uName)) customerName = uName;
+                        if (userJson.ValueKind == JsonValueKind.Object && userJson.TryGetProperty("name", out var unProp) && unProp.ValueKind == JsonValueKind.String)
+                        {
+                            var uName = unProp.GetString();
+                            if (!string.IsNullOrWhiteSpace(uName)) customerName = uName;
+                        }
                     }
                 }
                 catch
@@ -316,45 +336,62 @@ public sealed class MetaGraphApiService
                 ? customerName
                 : (isIg ? $"Contacto Instagram ({threadParticipantId[..Math.Min(6, threadParticipantId.Length)]})" : $"Contacto Facebook ({threadParticipantId[..Math.Min(6, threadParticipantId.Length)]})");
 
-            foreach (var m in msgArray.EnumerateArray())
+            if (conv.TryGetProperty("messages", out var messages) && messages.ValueKind == JsonValueKind.Object &&
+                messages.TryGetProperty("data", out var msgArray) && msgArray.ValueKind == JsonValueKind.Array)
             {
-                var mid = m.TryGetProperty("id", out var midProp) ? midProp.GetString() : null;
-                var text = m.TryGetProperty("message", out var textProp) ? textProp.GetString() : null;
-                var createdStr = m.TryGetProperty("created_time", out var crProp) ? crProp.GetString() : null;
-                var fromObj = m.TryGetProperty("from", out var foProp) ? foProp : default;
-                var fromName = fromObj.TryGetProperty("name", out var fnProp) ? fnProp.GetString() : (fromObj.TryGetProperty("username", out var fuProp) ? fuProp.GetString() : null);
-
-                string? attachmentType = null;
-                string? attachmentUrl = null;
-                if (m.TryGetProperty("attachments", out var attObj) && attObj.TryGetProperty("data", out var attData) && attData.ValueKind == JsonValueKind.Array && attData.GetArrayLength() > 0)
+                foreach (var m in msgArray.EnumerateArray())
                 {
-                    var firstAtt = attData[0];
-                    attachmentType = firstAtt.TryGetProperty("type", out var atProp) ? atProp.GetString() : null;
-                    if (firstAtt.TryGetProperty("payload", out var payload) && payload.TryGetProperty("url", out var urlProp))
+                    if (m.ValueKind != JsonValueKind.Object) continue;
+
+                    var mid = m.TryGetProperty("id", out var midProp) && midProp.ValueKind == JsonValueKind.String ? midProp.GetString() : null;
+                    var text = m.TryGetProperty("message", out var textProp) && textProp.ValueKind == JsonValueKind.String ? textProp.GetString() : null;
+                    var createdStr = m.TryGetProperty("created_time", out var crProp) && crProp.ValueKind == JsonValueKind.String ? crProp.GetString() : null;
+
+                    string? fromName = null;
+                    if (m.TryGetProperty("from", out var fromObj) && fromObj.ValueKind == JsonValueKind.Object)
                     {
-                        attachmentUrl = urlProp.GetString();
+                        fromName = fromObj.TryGetProperty("name", out var fnProp) && fnProp.ValueKind == JsonValueKind.String
+                            ? fnProp.GetString()
+                            : (fromObj.TryGetProperty("username", out var fuProp) && fuProp.ValueKind == JsonValueKind.String ? fuProp.GetString() : null);
                     }
-                }
 
-                DateTime createdUtc = DateTime.UtcNow;
-                if (!string.IsNullOrWhiteSpace(createdStr) && DateTime.TryParse(createdStr, out var parsedDt))
-                {
-                    createdUtc = parsedDt.ToUniversalTime();
-                }
+                    string? attachmentType = null;
+                    string? attachmentUrl = null;
+                    if (m.TryGetProperty("attachments", out var attObj) && attObj.ValueKind == JsonValueKind.Object &&
+                        attObj.TryGetProperty("data", out var attData) && attData.ValueKind == JsonValueKind.Array && attData.GetArrayLength() > 0)
+                    {
+                        var firstAtt = attData[0];
+                        if (firstAtt.ValueKind == JsonValueKind.Object)
+                        {
+                            attachmentType = firstAtt.TryGetProperty("type", out var atProp) && atProp.ValueKind == JsonValueKind.String ? atProp.GetString() : null;
+                            if (firstAtt.TryGetProperty("payload", out var payload) && payload.ValueKind == JsonValueKind.Object &&
+                                payload.TryGetProperty("url", out var urlProp) && urlProp.ValueKind == JsonValueKind.String)
+                            {
+                                attachmentUrl = urlProp.GetString();
+                            }
+                        }
+                    }
 
-                if (!string.IsNullOrWhiteSpace(mid) && (!string.IsNullOrWhiteSpace(text) || !string.IsNullOrWhiteSpace(attachmentType)))
-                {
-                    list.Add(new MetaMessageItem(
-                        mid,
-                        isIg ? CommunicationChannelHelper.Instagram : CommunicationChannelHelper.Facebook,
-                        threadParticipantId,
-                        threadContactName,
-                        fromName ?? threadContactName,
-                        text ?? CommunicationMediaHelper.MediaPreviewLabel(attachmentType, null),
-                        createdUtc,
-                        attachmentType,
-                        attachmentUrl
-                    ));
+                    DateTime createdUtc = DateTime.UtcNow;
+                    if (!string.IsNullOrWhiteSpace(createdStr) && DateTime.TryParse(createdStr, out var parsedDt))
+                    {
+                        createdUtc = parsedDt.ToUniversalTime();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(mid) && (!string.IsNullOrWhiteSpace(text) || !string.IsNullOrWhiteSpace(attachmentType)))
+                    {
+                        list.Add(new MetaMessageItem(
+                            mid,
+                            isIg ? CommunicationChannelHelper.Instagram : CommunicationChannelHelper.Facebook,
+                            threadParticipantId,
+                            threadContactName,
+                            fromName ?? threadContactName,
+                            text ?? CommunicationMediaHelper.MediaPreviewLabel(attachmentType, null),
+                            createdUtc,
+                            attachmentType,
+                            attachmentUrl
+                        ));
+                    }
                 }
             }
         }
@@ -428,7 +465,7 @@ public sealed class MetaGraphApiService
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadFromJsonAsync<JsonElement>(ct);
-                var msgId = json.TryGetProperty("message_id", out var mid) ? mid.GetString() : null;
+                var msgId = json.ValueKind == JsonValueKind.Object && json.TryGetProperty("message_id", out var mid) && mid.ValueKind == JsonValueKind.String ? mid.GetString() : null;
                 return new MetaSendResult(true, msgId, null);
             }
 
