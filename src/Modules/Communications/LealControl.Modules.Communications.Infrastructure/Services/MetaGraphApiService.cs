@@ -20,7 +20,7 @@ public sealed class MetaGraphApiService
         _httpClient = httpClient;
         _logger = logger;
         _httpClient.BaseAddress = new Uri(GraphApiBaseUrl);
-        _httpClient.Timeout = TimeSpan.FromSeconds(15);
+        _httpClient.Timeout = TimeSpan.FromSeconds(20);
     }
 
     public async Task<MetaPageInfoResult> GetPageInfoAsync(string token, CancellationToken ct = default)
@@ -28,30 +28,25 @@ public sealed class MetaGraphApiService
         var cleanToken = token.Trim();
         try
         {
-            var pageUrl = $"me?fields=id,name,instagram_business_account{{id,username}},connected_instagram_account{{id,username}}&access_token={Uri.EscapeDataString(cleanToken)}";
-            var pageRes = await _httpClient.GetAsync(pageUrl, ct);
-            if (pageRes.IsSuccessStatusCode)
+            string? foundPageId = null;
+            string? foundPageName = null;
+            string? foundPageToken = cleanToken;
+            string? foundIgId = null;
+            string? foundIgUsername = null;
+
+            // 1. Try querying "me" directly
+            var meUrl = $"me?fields=id,name,instagram_business_account{{id,username}},connected_instagram_account{{id,username}}&access_token={Uri.EscapeDataString(cleanToken)}";
+            var meRes = await _httpClient.GetAsync(meUrl, ct);
+            if (meRes.IsSuccessStatusCode)
             {
-                var json = await pageRes.Content.ReadFromJsonAsync<JsonElement>(ct);
-                var pageId = json.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
-                var pageName = json.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
-                string? igId = null;
-                string? igUsername = null;
+                var json = await meRes.Content.ReadFromJsonAsync<JsonElement>(ct);
+                foundPageId = json.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+                foundPageName = json.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
 
-                if (json.TryGetProperty("instagram_business_account", out var igObj))
-                {
-                    if (igObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
-                    if (igObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
-                }
-                else if (json.TryGetProperty("connected_instagram_account", out var connIgObj))
-                {
-                    if (connIgObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
-                    if (connIgObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
-                }
-
-                return new MetaPageInfoResult(true, pageId, pageName, igId, igUsername, cleanToken, null);
+                ExtractInstagramFields(json, ref foundIgId, ref foundIgUsername);
             }
 
+            // 2. Try querying "me/accounts" (Facebook Pages managed by this user/system user)
             var accountsUrl = $"me/accounts?fields=id,name,access_token,instagram_business_account{{id,username}},connected_instagram_account{{id,username}}&access_token={Uri.EscapeDataString(cleanToken)}";
             var accountsRes = await _httpClient.GetAsync(accountsUrl, ct);
             if (accountsRes.IsSuccessStatusCode)
@@ -59,56 +54,113 @@ public sealed class MetaGraphApiService
                 var accountsJson = await accountsRes.Content.ReadFromJsonAsync<JsonElement>(ct);
                 if (accountsJson.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array && dataArray.GetArrayLength() > 0)
                 {
-                    JsonElement selectedPage = default;
                     foreach (var page in dataArray.EnumerateArray())
                     {
-                        selectedPage = page;
-                        if (page.TryGetProperty("instagram_business_account", out _) || page.TryGetProperty("connected_instagram_account", out _))
+                        var pId = page.TryGetProperty("id", out var piProp) ? piProp.GetString() : null;
+                        var pName = page.TryGetProperty("name", out var pnProp) ? pnProp.GetString() : null;
+                        var pToken = page.TryGetProperty("access_token", out var ptProp) ? ptProp.GetString() : cleanToken;
+
+                        if (foundPageId is null)
                         {
+                            foundPageId = pId;
+                            foundPageName = pName;
+                            foundPageToken = pToken;
+                        }
+
+                        ExtractInstagramFields(page, ref foundIgId, ref foundIgUsername);
+
+                        // If not found in summary, try querying the specific page directly with its page token
+                        if (foundIgId is null && !string.IsNullOrWhiteSpace(pId))
+                        {
+                            try
+                            {
+                                var singlePageUrl = $"{pId}?fields=id,name,access_token,instagram_business_account{{id,username}},connected_instagram_account{{id,username}},instagram_accounts{{id,username}}&access_token={Uri.EscapeDataString(pToken ?? cleanToken)}";
+                                var spRes = await _httpClient.GetAsync(singlePageUrl, ct);
+                                if (spRes.IsSuccessStatusCode)
+                                {
+                                    var spJson = await spRes.Content.ReadFromJsonAsync<JsonElement>(ct);
+                                    ExtractInstagramFields(spJson, ref foundIgId, ref foundIgUsername);
+                                    if (foundIgId is not null)
+                                    {
+                                        foundPageId = pId;
+                                        foundPageName = pName;
+                                        foundPageToken = pToken;
+                                        break;
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // continue to next page
+                            }
+                        }
+                        else if (foundIgId is not null)
+                        {
+                            foundPageId = pId;
+                            foundPageName = pName;
+                            foundPageToken = pToken;
                             break;
                         }
                     }
-
-                    var pId = selectedPage.TryGetProperty("id", out var piProp) ? piProp.GetString() : null;
-                    var pName = selectedPage.TryGetProperty("name", out var pnProp) ? pnProp.GetString() : null;
-                    var pToken = selectedPage.TryGetProperty("access_token", out var ptProp) ? ptProp.GetString() : cleanToken;
-                    string? igId = null;
-                    string? igUsername = null;
-
-                    if (selectedPage.TryGetProperty("instagram_business_account", out var igObj))
-                    {
-                        if (igObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
-                        if (igObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
-                    }
-                    else if (selectedPage.TryGetProperty("connected_instagram_account", out var connIgObj))
-                    {
-                        if (connIgObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
-                        if (connIgObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
-                    }
-
-                    return new MetaPageInfoResult(true, pId, pName, igId, igUsername, pToken, null);
                 }
-
-                return new MetaPageInfoResult(false, null, null, null, null, null, "El usuario de Facebook no tiene ninguna Página administrada. Cree o vincule una Página comercial.");
             }
 
-            var basicUrl = $"me?fields=id,name&access_token={Uri.EscapeDataString(cleanToken)}";
-            var basicRes = await _httpClient.GetAsync(basicUrl, ct);
-            if (basicRes.IsSuccessStatusCode)
+            // 3. If Instagram ID still not found, try querying Instagram accounts directly
+            if (foundIgId is null && !string.IsNullOrWhiteSpace(foundPageId))
             {
-                var basicJson = await basicRes.Content.ReadFromJsonAsync<JsonElement>(ct);
-                var id = basicJson.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
-                var name = basicJson.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
-                return new MetaPageInfoResult(true, id, name, null, null, cleanToken, null);
+                try
+                {
+                    var igAccUrl = $"{foundPageId}/instagram_accounts?fields=id,username&access_token={Uri.EscapeDataString(foundPageToken ?? cleanToken)}";
+                    var igAccRes = await _httpClient.GetAsync(igAccUrl, ct);
+                    if (igAccRes.IsSuccessStatusCode)
+                    {
+                        var igAccJson = await igAccRes.Content.ReadFromJsonAsync<JsonElement>(ct);
+                        if (igAccJson.TryGetProperty("data", out var igArr) && igArr.ValueKind == JsonValueKind.Array && igArr.GetArrayLength() > 0)
+                        {
+                            var firstIg = igArr[0];
+                            if (firstIg.TryGetProperty("id", out var iid)) foundIgId = iid.GetString();
+                            if (firstIg.TryGetProperty("username", out var iun)) foundIgUsername = iun.GetString();
+                        }
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
             }
 
-            var errBody = await pageRes.Content.ReadAsStringAsync(ct);
-            return new MetaPageInfoResult(false, null, null, null, null, null, $"Token inválido o expirado. Meta respondió: {errBody}");
+            if (!string.IsNullOrWhiteSpace(foundPageId) || !string.IsNullOrWhiteSpace(foundIgId))
+            {
+                return new MetaPageInfoResult(true, foundPageId, foundPageName, foundIgId, foundIgUsername, foundPageToken, null);
+            }
+
+            var errBody = await meRes.Content.ReadAsStringAsync(ct);
+            return new MetaPageInfoResult(false, null, null, null, null, null, $"No se detectó ninguna Página de Facebook ni cuenta de Instagram comercial. Meta respondió: {errBody}");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error consultando información de página en Meta Graph API");
             return new MetaPageInfoResult(false, null, null, null, null, null, ex.Message);
+        }
+    }
+
+    private static void ExtractInstagramFields(JsonElement json, ref string? igId, ref string? igUsername)
+    {
+        if (json.TryGetProperty("instagram_business_account", out var igObj) && igObj.ValueKind == JsonValueKind.Object)
+        {
+            if (igObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
+            if (igObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
+        }
+        else if (json.TryGetProperty("connected_instagram_account", out var connIgObj) && connIgObj.ValueKind == JsonValueKind.Object)
+        {
+            if (connIgObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
+            if (connIgObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
+        }
+        else if (json.TryGetProperty("instagram_accounts", out var igAccObj) && igAccObj.TryGetProperty("data", out var igData) && igData.ValueKind == JsonValueKind.Array && igData.GetArrayLength() > 0)
+        {
+            var first = igData[0];
+            if (first.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
+            if (first.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
         }
     }
 
@@ -128,105 +180,106 @@ public sealed class MetaGraphApiService
 
         if (isIg)
         {
-            if (string.IsNullOrWhiteSpace(igAccountId))
+            // If igAccountId was missing, try to resolve it on the fly
+            if (string.IsNullOrWhiteSpace(igAccountId) && !string.IsNullOrWhiteSpace(pageId))
             {
-                return new MetaConversationFetchResult(list, false,
-                    "No hay cuenta de Instagram Business vinculada. Conectá Instagram desde una Página de Facebook con cuenta comercial de IG.");
+                try
+                {
+                    var pageInfo = await GetPageInfoAsync(pageAccessToken, ct);
+                    if (!string.IsNullOrWhiteSpace(pageInfo.InstagramAccountId))
+                    {
+                        igAccountId = pageInfo.InstagramAccountId;
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
             }
 
-            endpointsToTry.Add($"{igAccountId}/conversations?platform=instagram&fields={fields}&access_token={Uri.EscapeDataString(pageAccessToken)}");
+            if (!string.IsNullOrWhiteSpace(igAccountId))
+            {
+                endpointsToTry.Add($"{igAccountId}/conversations?platform=instagram&fields={fields}&access_token={Uri.EscapeDataString(pageAccessToken)}");
+            }
             if (!string.IsNullOrWhiteSpace(pageId))
             {
                 endpointsToTry.Add($"{pageId}/conversations?platform=instagram&fields={fields}&access_token={Uri.EscapeDataString(pageAccessToken)}");
             }
+            endpointsToTry.Add($"me/conversations?platform=instagram&fields={fields}&access_token={Uri.EscapeDataString(pageAccessToken)}");
         }
         else
         {
-            if (string.IsNullOrWhiteSpace(pageId))
+            if (!string.IsNullOrWhiteSpace(pageId))
             {
-                return new MetaConversationFetchResult(list, false, "No hay Page ID configurado para Facebook Messenger.");
+                endpointsToTry.Add($"{pageId}/conversations?fields={fields}&access_token={Uri.EscapeDataString(pageAccessToken)}");
             }
-
-            endpointsToTry.Add($"{pageId}/conversations?fields={fields}&access_token={Uri.EscapeDataString(pageAccessToken)}");
+            endpointsToTry.Add($"me/conversations?fields={fields}&access_token={Uri.EscapeDataString(pageAccessToken)}");
         }
 
-        foreach (var convUrl in endpointsToTry)
+        var triedAny = false;
+        foreach (var endpoint in endpointsToTry)
         {
-            var res = await _httpClient.GetAsync(convUrl, ct);
-            if (!res.IsSuccessStatusCode)
+            triedAny = true;
+            try
             {
-                lastError = await res.Content.ReadAsStringAsync(ct);
-                _logger.LogWarning("Meta Graph API error ({Channel}): {Status} {Body}", channelType, res.StatusCode, lastError);
-                continue;
-            }
-
-            var json = await res.Content.ReadFromJsonAsync<JsonElement>(ct);
-            if (json.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array && dataArray.GetArrayLength() > 0)
-            {
-                foreach (var conv in dataArray.EnumerateArray())
+                var response = await _httpClient.GetAsync(endpoint, ct);
+                if (response.IsSuccessStatusCode)
                 {
-                    await ParseConversationMessagesAsync(conv, isIg, pageName, pageId, pageAccessToken, list, ct);
+                    var json = await response.Content.ReadFromJsonAsync<JsonElement>(ct);
+                    if (json.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array)
+                    {
+                        ParseConversationsData(dataArray, list, isIg, pageName, pageId, igAccountId, pageAccessToken, ct);
+                        return new MetaConversationFetchResult(list, true, null);
+                    }
                 }
-
-                if (list.Count > 0)
+                else
                 {
-                    return new MetaConversationFetchResult(list, true, null);
+                    var body = await response.Content.ReadAsStringAsync(ct);
+                    lastError = $"HTTP {response.StatusCode}: {body}";
                 }
             }
+            catch (Exception ex)
+            {
+                lastError = ex.Message;
+            }
         }
 
-        if (list.Count == 0)
+        if (!triedAny)
         {
-            var channelLabel = isIg ? "Instagram Direct" : "Facebook Messenger";
-            var detail = string.IsNullOrWhiteSpace(lastError)
-                ? $"No se encontraron conversaciones de {channelLabel}. Verificá permisos pages_messaging e instagram_manage_messages."
-                : $"Meta API respondió con error para {channelLabel}: {lastError}";
-            return new MetaConversationFetchResult(list, false, detail);
+            return new MetaConversationFetchResult(list, false, "No se encontraron identificadores de Página ni Instagram para sincronizar.");
         }
 
-        return new MetaConversationFetchResult(list, true, null);
+        return new MetaConversationFetchResult(list, false, lastError ?? "No se pudieron obtener las conversaciones de Meta.");
     }
 
-    private async Task ParseConversationMessagesAsync(
-        JsonElement conv,
+    private async void ParseConversationsData(
+        JsonElement dataArray,
+        List<MetaMessageItem> list,
         bool isIg,
         string? pageName,
         string? pageId,
+        string? igAccountId,
         string pageAccessToken,
-        List<MetaMessageItem> list,
         CancellationToken ct)
     {
-        var convId = conv.TryGetProperty("id", out var ciProp) ? ciProp.GetString() : Guid.NewGuid().ToString("N");
-        string? customerId = null;
-        string? customerName = null;
-
-        if (conv.TryGetProperty("participants", out var partObj) && partObj.TryGetProperty("data", out var partArray) && partArray.ValueKind == JsonValueKind.Array)
+        foreach (var conv in dataArray.EnumerateArray())
         {
-            foreach (var p in partArray.EnumerateArray())
+            var convId = conv.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+            var participants = conv.TryGetProperty("participants", out var pProp) ? pProp : default;
+            var messages = conv.TryGetProperty("messages", out var mProp) ? mProp : default;
+
+            if (!messages.TryGetProperty("data", out var msgArray) || msgArray.ValueKind != JsonValueKind.Array)
+                continue;
+
+            string? customerName = null;
+            string? customerId = null;
+
+            if (participants.TryGetProperty("data", out var partArray) && partArray.ValueKind == JsonValueKind.Array)
             {
-                var pName = p.TryGetProperty("name", out var pnProp) ? pnProp.GetString() : (p.TryGetProperty("username", out var puProp) ? puProp.GetString() : null);
-                var pId = p.TryGetProperty("id", out var piProp) ? piProp.GetString() : null;
-
-                var isPage = (!string.IsNullOrWhiteSpace(pName) && !string.IsNullOrWhiteSpace(pageName) && pName.Equals(pageName, StringComparison.OrdinalIgnoreCase))
-                    || (!string.IsNullOrWhiteSpace(pId) && !string.IsNullOrWhiteSpace(pageId) && pId.Equals(pageId, StringComparison.OrdinalIgnoreCase));
-
-                if (!isPage)
+                foreach (var p in partArray.EnumerateArray())
                 {
-                    if (!string.IsNullOrWhiteSpace(pName)) customerName = pName;
-                    if (!string.IsNullOrWhiteSpace(pId)) customerId = pId;
-                }
-            }
-        }
-
-        if (conv.TryGetProperty("messages", out var msgObj) && msgObj.TryGetProperty("data", out var msgArray) && msgArray.ValueKind == JsonValueKind.Array)
-        {
-            if (string.IsNullOrWhiteSpace(customerName))
-            {
-                foreach (var m in msgArray.EnumerateArray())
-                {
-                    var fromObj = m.TryGetProperty("from", out var foProp) ? foProp : default;
-                    var fromName = fromObj.TryGetProperty("name", out var fnProp) ? fnProp.GetString() : (fromObj.TryGetProperty("username", out var fuProp) ? fuProp.GetString() : null);
-                    var fromId = fromObj.TryGetProperty("id", out var fiProp) ? fiProp.GetString() : null;
+                    var fromId = p.TryGetProperty("id", out var pidProp) ? pidProp.GetString() : null;
+                    var fromName = p.TryGetProperty("name", out var pnProp) ? pnProp.GetString() : (p.TryGetProperty("username", out var puProp) ? puProp.GetString() : null);
 
                     var isFromPage = (!string.IsNullOrWhiteSpace(fromName) && !string.IsNullOrWhiteSpace(pageName) && fromName.Equals(pageName, StringComparison.OrdinalIgnoreCase))
                         || (!string.IsNullOrWhiteSpace(fromId) && !string.IsNullOrWhiteSpace(pageId) && fromId.Equals(pageId, StringComparison.OrdinalIgnoreCase));

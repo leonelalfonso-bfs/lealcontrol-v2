@@ -743,6 +743,26 @@ public static class CommunicationsEndpoints
             conn.ConnectedAtUtc = DateTime.UtcNow;
             conn.UpdatedAtUtc = DateTime.UtcNow;
 
+            // Auto-configure the counterpart channel (Instagram/Facebook) if token provides access to both
+            var otherType = channelType == "facebook" ? "instagram" : "facebook";
+            if (!string.IsNullOrWhiteSpace(pageInfo.InstagramAccountId) || !string.IsNullOrWhiteSpace(pageInfo.PageId))
+            {
+                var otherConn = await db.MetaConnections.FirstOrDefaultAsync(x => x.TenantId == tenantId && x.ChannelType == otherType, ct);
+                if (otherConn is null)
+                {
+                    otherConn = MetaChannelConnection.Create(tenantId, otherType);
+                    db.MetaConnections.Add(otherConn);
+                }
+                otherConn.PageId = pageInfo.PageId;
+                otherConn.PageName = pageInfo.PageName;
+                otherConn.InstagramAccountId = pageInfo.InstagramAccountId;
+                otherConn.InstagramUsername = pageInfo.InstagramUsername;
+                otherConn.PageAccessToken = pageInfo.ResolvedPageAccessToken ?? req.PageAccessToken;
+                otherConn.IsConnected = true;
+                otherConn.ConnectedAtUtc = DateTime.UtcNow;
+                otherConn.UpdatedAtUtc = DateTime.UtcNow;
+            }
+
             await db.SaveChangesAsync(ct);
 
             return Results.Ok(new
