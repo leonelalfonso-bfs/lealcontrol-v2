@@ -28,6 +28,9 @@ public sealed record SendWhatsAppRequest(
     string? RelatedEntityType = null,
     Guid? RelatedEntityId = null
 );
+public sealed record ConfigureMetaChannelRequest(string ChannelType, string PageAccessToken);
+public sealed record DisconnectMetaChannelRequest(string ChannelType);
+public sealed record SendMetaMessageRequest(string ChannelType, string RecipientId, string Message, string? RelatedEntityType = null, Guid? RelatedEntityId = null);
 
 public static class CommunicationsEndpoints
 {
@@ -343,6 +346,252 @@ public static class CommunicationsEndpoints
             catch (Exception ex)
             {
                 return Results.Ok(new { status = "error", message = ex.Message });
+            }
+        }).AllowAnonymous();
+
+        // Meta (Instagram Direct & Facebook Messenger) Endpoints
+        group.MapGet("/meta/status", async (CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+            var connections = await db.MetaConnections.AsNoTracking()
+                .Where(x => x.TenantId == tenantId)
+                .ToListAsync(ct);
+
+            var fb = connections.FirstOrDefault(x => x.ChannelType == "facebook");
+            var ig = connections.FirstOrDefault(x => x.ChannelType == "instagram");
+
+            return Results.Ok(new
+            {
+                facebook = new
+                {
+                    isConnected = fb?.IsConnected == true,
+                    pageId = fb?.PageId,
+                    pageName = fb?.PageName,
+                    verifyToken = fb?.VerifyToken ?? "lealcontrol_meta_verify_2026",
+                    connectedAtUtc = fb?.ConnectedAtUtc
+                },
+                instagram = new
+                {
+                    isConnected = ig?.IsConnected == true,
+                    pageId = ig?.PageId,
+                    pageName = ig?.PageName,
+                    instagramAccountId = ig?.InstagramAccountId,
+                    instagramUsername = ig?.InstagramUsername,
+                    verifyToken = ig?.VerifyToken ?? "lealcontrol_meta_verify_2026",
+                    connectedAtUtc = ig?.ConnectedAtUtc
+                }
+            });
+        });
+
+        group.MapPost("/meta/config", async (ConfigureMetaChannelRequest req, MetaGraphApiService metaService, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            if (string.IsNullOrWhiteSpace(req.PageAccessToken)) return Results.BadRequest("El token de acceso de página es obligatorio.");
+
+            var channelType = (req.ChannelType ?? "facebook").ToLowerInvariant();
+            var pageInfo = await metaService.GetPageInfoAsync(req.PageAccessToken, ct);
+            if (!pageInfo.Success)
+            {
+                return Results.BadRequest(new { error = pageInfo.Error });
+            }
+
+            var conn = await db.MetaConnections.FirstOrDefaultAsync(x => x.TenantId == tenantId && x.ChannelType == channelType, ct);
+            if (conn is null)
+            {
+                conn = MetaChannelConnection.Create(tenantId, channelType);
+                db.MetaConnections.Add(conn);
+            }
+
+            conn.PageId = pageInfo.PageId;
+            conn.PageName = pageInfo.PageName;
+            conn.InstagramAccountId = pageInfo.InstagramAccountId;
+            conn.InstagramUsername = pageInfo.InstagramUsername;
+            conn.PageAccessToken = req.PageAccessToken;
+            conn.IsConnected = true;
+            conn.ConnectedAtUtc = DateTime.UtcNow;
+            conn.UpdatedAtUtc = DateTime.UtcNow;
+
+            await db.SaveChangesAsync(ct);
+
+            return Results.Ok(new
+            {
+                success = true,
+                pageId = conn.PageId,
+                pageName = conn.PageName,
+                instagramAccountId = conn.InstagramAccountId,
+                instagramUsername = conn.InstagramUsername
+            });
+        });
+
+        group.MapPost("/meta/disconnect", async (DisconnectMetaChannelRequest req, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+            var channelType = (req.ChannelType ?? "facebook").ToLowerInvariant();
+            var conn = await db.MetaConnections.FirstOrDefaultAsync(x => x.TenantId == tenantId && x.ChannelType == channelType, ct);
+            if (conn is not null)
+            {
+                conn.IsConnected = false;
+                conn.PageAccessToken = null;
+                conn.UpdatedAtUtc = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+            }
+
+            return Results.Ok(new { success = true });
+        });
+
+        group.MapPost("/meta/send", async (SendMetaMessageRequest req, MetaGraphApiService metaService, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            if (string.IsNullOrWhiteSpace(req.RecipientId) || string.IsNullOrWhiteSpace(req.Message))
+            {
+                return Results.BadRequest("Destinatario y mensaje son obligatorios.");
+            }
+
+            var channelType = (req.ChannelType ?? "facebook").ToLowerInvariant();
+            var conn = await db.MetaConnections.FirstOrDefaultAsync(x => x.TenantId == tenantId && x.ChannelType == channelType, ct);
+            if (conn is null || !conn.IsConnected || string.IsNullOrWhiteSpace(conn.PageAccessToken))
+            {
+                return Results.BadRequest("El canal seleccionado no está conectado.");
+            }
+
+            var sendRes = await metaService.SendMessageAsync(conn.PageAccessToken, req.RecipientId, req.Message, ct);
+            if (!sendRes.Success)
+            {
+                return Results.BadRequest(new { error = sendRes.Error });
+            }
+
+            var defaultAcc = await db.MailAccounts.FirstOrDefaultAsync(x => x.TenantId == tenantId, ct);
+            var accId = defaultAcc?.Id ?? Guid.Empty;
+
+            var isIg = channelType == "instagram";
+            var prefix = isIg ? "ig" : "fb";
+            var senderTitle = isIg ? (conn.InstagramUsername != null ? $"@{conn.InstagramUsername}" : "Instagram Oficial") : (conn.PageName ?? "Página Oficial");
+            var recipientTitle = isIg ? $"@{req.RecipientId}" : $"Usuario FB {req.RecipientId}";
+
+            var email = EmailMessage.Create(
+                tenantId,
+                accId,
+                $"{prefix}_{sendRes.MessageId ?? Guid.NewGuid().ToString("N")}",
+                null,
+                $"{prefix}_{req.RecipientId}",
+                EmailDirection.Outgoing,
+                isIg ? $"Instagram DM: {recipientTitle}" : $"Messenger: {recipientTitle}",
+                senderTitle,
+                recipientTitle,
+                req.Message.Length > 400 ? req.Message[..400] : req.Message,
+                DateTime.UtcNow,
+                req.RelatedEntityType,
+                req.RelatedEntityId,
+                $"<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; white-space: pre-wrap;\">{System.Net.WebUtility.HtmlEncode(req.Message)}</div>"
+            );
+
+            db.EmailMessages.Add(email);
+            await db.SaveChangesAsync(ct);
+
+            return Results.Ok(new { success = true, messageId = sendRes.MessageId });
+        });
+
+        // Meta Webhook Verification (Handshake)
+        endpoints.MapGet("/api/communications/meta/webhook", (HttpContext context) => {
+            var mode = context.Request.Query["hub.mode"].ToString();
+            var token = context.Request.Query["hub.verify_token"].ToString();
+            var challenge = context.Request.Query["hub.challenge"].ToString();
+
+            if (mode == "subscribe" && !string.IsNullOrWhiteSpace(token) && !string.IsNullOrWhiteSpace(challenge))
+            {
+                return Results.Content(challenge, "text/plain");
+            }
+
+            return Results.Forbid();
+        }).AllowAnonymous();
+
+        // Meta Webhook Events (Messages received)
+        endpoints.MapPost("/api/communications/meta/webhook", async (HttpRequest request, CommunicationsDbContext db, CancellationToken ct) => {
+            try
+            {
+                using var reader = new StreamReader(request.Body);
+                var body = await reader.ReadToEndAsync(ct);
+                if (string.IsNullOrWhiteSpace(body)) return Results.Ok("EMPTY");
+
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+
+                var objType = root.TryGetProperty("object", out var oProp) ? oProp.GetString() : "";
+                if (objType != "page" && objType != "instagram") return Results.Ok("IGNORED_OBJECT");
+
+                if (root.TryGetProperty("entry", out var entryArray) && entryArray.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var entry in entryArray.EnumerateArray())
+                    {
+                        var entryId = entry.TryGetProperty("id", out var idProp) ? idProp.GetString() : "";
+                        if (string.IsNullOrWhiteSpace(entryId)) continue;
+
+                        var conn = await db.MetaConnections.FirstOrDefaultAsync(x => x.IsConnected && (x.PageId == entryId || x.InstagramAccountId == entryId), ct);
+                        if (conn is null) continue;
+
+                        if (entry.TryGetProperty("messaging", out var messagingArray) && messagingArray.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var msg in messagingArray.EnumerateArray())
+                            {
+                                var senderId = msg.TryGetProperty("sender", out var sObj) && sObj.TryGetProperty("id", out var sId) ? sId.GetString() : "";
+                                var recipientId = msg.TryGetProperty("recipient", out var rObj) && rObj.TryGetProperty("id", out var rId) ? rId.GetString() : "";
+
+                                if (string.IsNullOrWhiteSpace(senderId) || senderId == entryId) continue; // skip echo / self
+
+                                if (msg.TryGetProperty("message", out var mObj))
+                                {
+                                    var mid = mObj.TryGetProperty("mid", out var midProp) ? midProp.GetString() : Guid.NewGuid().ToString("N");
+                                    var isEcho = mObj.TryGetProperty("is_echo", out var echoProp) && echoProp.GetBoolean();
+                                    if (isEcho) continue;
+
+                                    var text = mObj.TryGetProperty("text", out var tProp) ? tProp.GetString() : "[Archivo adjunto / multimedia]";
+                                    if (string.IsNullOrWhiteSpace(text)) text = "[Mensaje de Meta]";
+
+                                    var isIg = objType == "instagram" || conn.InstagramAccountId == entryId;
+                                    var prefix = isIg ? "ig" : "fb";
+                                    var internetId = $"meta_{prefix}_{mid}";
+
+                                    var exists = await db.EmailMessages.AnyAsync(x => x.TenantId == conn.TenantId && x.InternetMessageId == internetId, ct);
+                                    if (exists) continue;
+
+                                    var defaultAcc = await db.MailAccounts.FirstOrDefaultAsync(x => x.TenantId == conn.TenantId, ct);
+                                    var accId = defaultAcc?.Id ?? Guid.Empty;
+
+                                    var senderName = isIg ? $"@{senderId}" : $"Usuario Facebook {senderId}";
+                                    var targetName = isIg ? (conn.InstagramUsername != null ? $"@{conn.InstagramUsername}" : "Instagram") : (conn.PageName ?? "Facebook");
+
+                                    var email = EmailMessage.Create(
+                                        conn.TenantId,
+                                        accId,
+                                        internetId,
+                                        null,
+                                        $"{prefix}_{senderId}",
+                                        EmailDirection.Incoming,
+                                        isIg ? $"Instagram DM: {senderName}" : $"Messenger: {senderName}",
+                                        senderName,
+                                        targetName,
+                                        text.Length > 400 ? text[..400] : text,
+                                        DateTime.UtcNow,
+                                        "Customer",
+                                        null,
+                                        $"<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; white-space: pre-wrap;\">{System.Net.WebUtility.HtmlEncode(text)}</div>"
+                                    );
+
+                                    db.EmailMessages.Add(email);
+                                    await db.SaveChangesAsync(ct);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return Results.Ok("EVENT_RECEIVED");
+            }
+            catch
+            {
+                return Results.Ok("ERROR_HANDLED");
             }
         }).AllowAnonymous();
 

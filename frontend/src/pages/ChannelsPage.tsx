@@ -1,8 +1,13 @@
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 
 type Channel = "WhatsApp" | "Instagram" | "Facebook";
+
+interface MetaStatusData {
+  facebook: { isConnected: boolean; pageId?: string; pageName?: string; verifyToken: string; connectedAtUtc?: string };
+  instagram: { isConnected: boolean; pageId?: string; pageName?: string; instagramAccountId?: string; instagramUsername?: string; verifyToken: string; connectedAtUtc?: string };
+}
 
 export function ChannelsPage() {
   const [expanded, setExpanded] = useState<Channel | null>(null);
@@ -16,14 +21,25 @@ export function ChannelsPage() {
   const [qrError, setQrError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
 
+  // Meta (Instagram & Facebook) State
+  const [metaStatus, setMetaStatus] = useState<MetaStatusData | null>(null);
+  const [metaModalChannel, setMetaModalChannel] = useState<"facebook" | "instagram" | null>(null);
+  const [metaTokenInput, setMetaTokenInput] = useState("");
+  const [savingMeta, setSavingMeta] = useState(false);
+  const [metaError, setMetaError] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
   // Test Message Modal State
   const [testModalOpen, setTestModalOpen] = useState(false);
-  const [testPhone, setTestPhone] = useState("");
+  const [testChannel, setTestChannel] = useState<"whatsapp" | "facebook" | "instagram">("whatsapp");
+  const [testRecipient, setTestRecipient] = useState("");
   const [testMessage, setTestMessage] = useState("Hola! Este es un mensaje de prueba enviado desde Leal Control ERP.");
   const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const pollRef = useRef<number | null>(null);
+
+  const webhookUrl = `${window.location.origin}/api/communications/meta/webhook`;
 
   const checkStatus = async () => {
     try {
@@ -42,6 +58,13 @@ export function ChannelsPage() {
       }
     } catch {
       setWaStatus("offline");
+    }
+
+    try {
+      const m = await api.getMetaStatus();
+      setMetaStatus(m);
+    } catch {
+      // ignore
     }
   };
 
@@ -76,7 +99,6 @@ export function ChannelsPage() {
       setQrLoading(false);
     }
 
-    // Start fast polling while modal is open
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = window.setInterval(async () => {
       try {
@@ -96,7 +118,7 @@ export function ChannelsPage() {
     if (pollRef.current) clearInterval(pollRef.current);
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnectWa = async () => {
     if (!confirm("¿Está seguro de que desea desconectar la cuenta de WhatsApp de Leal Control?")) return;
     setDisconnecting(true);
     try {
@@ -109,21 +131,80 @@ export function ChannelsPage() {
     }
   };
 
+  const handleOpenMetaConfig = (ch: "facebook" | "instagram") => {
+    setMetaModalChannel(ch);
+    setMetaTokenInput("");
+    setMetaError(null);
+  };
+
+  const handleSaveMetaConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!metaModalChannel || !metaTokenInput.trim()) return;
+    setSavingMeta(true);
+    setMetaError(null);
+    try {
+      const res = await api.configureMeta({
+        channelType: metaModalChannel,
+        pageAccessToken: metaTokenInput.trim()
+      });
+      if (res.success) {
+        setMetaModalChannel(null);
+        await checkStatus();
+        alert(`¡Canal ${metaModalChannel === "instagram" ? "Instagram Direct" : "Facebook Messenger"} conectado con éxito!`);
+      } else {
+        setMetaError(res.error || "No se pudo conectar con Meta.");
+      }
+    } catch (err: any) {
+      setMetaError(err.message || "Error de conexión con Meta API.");
+    } finally {
+      setSavingMeta(false);
+    }
+  };
+
+  const handleDisconnectMeta = async (ch: "facebook" | "instagram") => {
+    if (!confirm(`¿Desconectar ${ch === "instagram" ? "Instagram Direct" : "Facebook Messenger"} de Leal Control?`)) return;
+    try {
+      await api.disconnectMeta(ch);
+      await checkStatus();
+    } catch (err: any) {
+      alert("Error al desconectar: " + err.message);
+    }
+  };
+
+  const copyToClipboard = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
   const handleSendTestMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!testPhone.trim()) return;
+    if (!testRecipient.trim()) return;
     setSendingTest(true);
     setTestResult(null);
 
     try {
-      const res = await api.sendWhatsAppMessage({
-        to: testPhone.trim(),
-        message: testMessage.trim()
-      });
-      if (res.success) {
-        setTestResult({ ok: true, msg: "¡Mensaje de WhatsApp enviado con éxito!" });
+      if (testChannel === "whatsapp") {
+        const res = await api.sendWhatsAppMessage({
+          to: testRecipient.trim(),
+          message: testMessage.trim()
+        });
+        if (res.success) {
+          setTestResult({ ok: true, msg: "¡Mensaje de WhatsApp enviado con éxito!" });
+        } else {
+          setTestResult({ ok: false, msg: res.error || "No se pudo enviar el mensaje." });
+        }
       } else {
-        setTestResult({ ok: false, msg: res.error || "No se pudo enviar el mensaje." });
+        const res = await api.sendMetaMessage({
+          channelType: testChannel,
+          recipientId: testRecipient.trim(),
+          message: testMessage.trim()
+        });
+        if (res.success) {
+          setTestResult({ ok: true, msg: `¡Mensaje de ${testChannel === "instagram" ? "Instagram" : "Facebook"} enviado con éxito!` });
+        } else {
+          setTestResult({ ok: false, msg: res.error || "No se pudo enviar el mensaje." });
+        }
       }
     } catch (err: any) {
       setTestResult({ ok: false, msg: err.message || "Error al enviar mensaje." });
@@ -132,6 +213,9 @@ export function ChannelsPage() {
     }
   };
 
+  const igConnected = metaStatus?.instagram?.isConnected;
+  const fbConnected = metaStatus?.facebook?.isConnected;
+
   return (
     <div className="channels-page page-wide" style={{ paddingBottom: 50 }}>
       <div className="page-head">
@@ -139,7 +223,7 @@ export function ChannelsPage() {
           <span className="eyebrow">COMUNICACIONES</span>
           <h1>Canales Sociales & Mensajería</h1>
           <p className="muted">
-            Conectá los canales donde tus clientes ya conversan y gestioná todo desde una sola bandeja omnicanal.
+            Conectá los canales donde tus clientes ya conversan y gestioná todo desde una sola bandeja omnicanal con costo $0 por mensaje.
           </p>
         </div>
       </div>
@@ -150,7 +234,7 @@ export function ChannelsPage() {
           <span className="eyebrow">BANDEJA OMNICANAL</span>
           <h2>Una conversación, un historial</h2>
           <p className="muted">
-            Cada mensaje se vincula automáticamente con una empresa, contacto, prospecto u oportunidad del CRM, sin importar si llegó por email o WhatsApp.
+            Cada mensaje entrante por WhatsApp, Instagram Direct o Facebook Messenger se vincula automáticamente con la ficha del cliente y oportunidad en el CRM.
           </p>
         </div>
         <span className="channel-orbit">✉　💬　📸　📘</span>
@@ -213,7 +297,7 @@ export function ChannelsPage() {
           </div>
 
           <p className="muted" style={{ fontSize: "0.86rem", marginBottom: 14 }}>
-            Atención comercial, respuesta de consultas y envío directo de presupuestos, remitos y facturas desde WhatsApp Web con código QR ($0 costo).
+            Atención comercial y envío directo de presupuestos, remitos y facturas desde WhatsApp Web con código QR ($0 costo).
           </p>
 
           {waStatus === "connected" ? (
@@ -229,6 +313,8 @@ export function ChannelsPage() {
                   type="button"
                   className="btn btn-outline compact"
                   onClick={() => {
+                    setTestChannel("whatsapp");
+                    setTestRecipient(waPhone ? `+${waPhone}` : "");
                     setTestModalOpen(true);
                     setTestResult(null);
                   }}
@@ -240,7 +326,7 @@ export function ChannelsPage() {
                   className="btn ghost compact"
                   style={{ color: "#dc2626" }}
                   disabled={disconnecting}
-                  onClick={handleDisconnect}
+                  onClick={handleDisconnectWa}
                 >
                   {disconnecting ? "Desconectando..." : "Desconectar"}
                 </button>
@@ -266,22 +352,28 @@ export function ChannelsPage() {
               style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}
               onClick={() => setExpanded(expanded === "WhatsApp" ? null : "WhatsApp")}
             >
-              {expanded === "WhatsApp" ? "▲ Ocultar cómo funciona" : "▼ ¿Cómo funciona la conexión QR?"}
+              {expanded === "WhatsApp" ? "▲ Ocultar ayuda" : "▼ ¿Cómo funciona la conexión QR?"}
             </button>
             {expanded === "WhatsApp" && (
               <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", marginTop: 6, lineHeight: 1.4 }}>
                 <ol style={{ paddingLeft: 18, margin: 0 }}>
                   <li>Hacés clic en "Conectar con Código QR".</li>
-                  <li>Abrís WhatsApp en tu teléfono → <strong>Dispositivos vinculados</strong> → <strong>Vincular dispositivo</strong>.</li>
-                  <li>Escaneás el QR en pantalla y quedás conectado al instante sin ningún trámite con Meta.</li>
+                  <li>Abrís WhatsApp en tu teléfono → <strong>Dispositivos vinculados</strong> → <strong>Vincular un dispositivo</strong>.</li>
+                  <li>Escaneás el QR en pantalla y quedás conectado al instante sin intermediarios ni costos por mensaje.</li>
                 </ol>
               </div>
             )}
           </div>
         </article>
 
-        {/* 2. INSTAGRAM DIRECT */}
-        <article className="card pad channel-card" style={{ opacity: 0.9 }}>
+        {/* 2. INSTAGRAM DIRECT CARD */}
+        <article
+          className="card pad channel-card"
+          style={{
+            borderLeft: `4px solid ${igConnected ? "#e1306c" : "#c24b8d"}`,
+            background: igConnected ? "rgba(225, 48, 108, 0.02)" : "inherit"
+          }}
+        >
           <div className="channel-card-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <span className="channel-icon" style={{ fontSize: "1.8rem", color: "#c24b8d" }}>
@@ -289,27 +381,119 @@ export function ChannelsPage() {
               </span>
               <div>
                 <h2 style={{ margin: 0, fontSize: "1.2rem" }}>Instagram Direct</h2>
-                <span className="channel-status" style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                  Preparado para conectar (Meta Graph API)
+                <span
+                  className="channel-status"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    color: igConnected ? "#047857" : "#64748b"
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: igConnected ? "#10b981" : "#94a3b8"
+                    }}
+                  />
+                  {igConnected
+                    ? `Conectado (@${metaStatus?.instagram?.instagramUsername || "Instagram"})`
+                    : "Preparado para conectar"}
                 </span>
               </div>
             </div>
+
+            {igConnected && (
+              <span className="badge ok" style={{ fontSize: "0.76rem", padding: "3px 8px" }}>
+                ACTIVO
+              </span>
+            )}
           </div>
+
           <p className="muted" style={{ fontSize: "0.86rem", marginBottom: 14 }}>
-            Mensajes directos de cuentas comerciales vinculadas a Meta. 100% gratuito e ilimitado.
+            Mensajes directos de cuentas profesionales vinculadas a Meta Graph API. 100% gratuito e ilimitado.
           </p>
-          <button
-            type="button"
-            className="btn btn-outline"
-            style={{ width: "100%", justifyContent: "center" }}
-            onClick={() => alert("La conexión con Instagram Direct requiere vincular la página comercial en Meta Developers.")}
-          >
-            📘 Conectar con Facebook / Meta
-          </button>
+
+          {igConnected ? (
+            <div style={{ background: "rgba(0,0,0,0.03)", padding: 12, borderRadius: 8, marginBottom: 12 }}>
+              <div style={{ fontSize: "0.82rem", marginBottom: 6 }}>
+                <strong>Cuenta vinculada:</strong> @{metaStatus?.instagram?.instagramUsername || "Instagram Oficial"}
+                <br />
+                <strong>Página FB:</strong> {metaStatus?.instagram?.pageName || "Página vinculada"}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                <Link to="/comunicaciones" className="btn btn-primary compact">
+                  📬 Ir a la Bandeja
+                </Link>
+                <button
+                  type="button"
+                  className="btn btn-outline compact"
+                  onClick={() => {
+                    setTestChannel("instagram");
+                    setTestRecipient("");
+                    setTestModalOpen(true);
+                    setTestResult(null);
+                  }}
+                >
+                  ✉️ Probar Envío
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost compact"
+                  style={{ color: "#dc2626" }}
+                  onClick={() => handleDisconnectMeta("instagram")}
+                >
+                  Desconectar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: "100%", justifyContent: "center", gap: 8, padding: "10px 16px", fontWeight: 700 }}
+                onClick={() => handleOpenMetaConfig("instagram")}
+              >
+                <span>📸</span> Conectar Instagram Direct
+              </button>
+            </div>
+          )}
+
+          <div style={{ marginTop: 12, borderTop: "1px dashed var(--surface-border)", paddingTop: 8 }}>
+            <button
+              type="button"
+              className="btn ghost compact"
+              style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}
+              onClick={() => setExpanded(expanded === "Instagram" ? null : "Instagram")}
+            >
+              {expanded === "Instagram" ? "▲ Ocultar requisitos" : "▼ Requisitos y Webhook Meta"}
+            </button>
+            {expanded === "Instagram" && (
+              <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", marginTop: 6, lineHeight: 1.4 }}>
+                <p style={{ margin: "0 0 4px" }}>Para recibir mensajes de Instagram Direct:</p>
+                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                  <li>Tu cuenta de Instagram debe ser Comercial o Creador.</li>
+                  <li>Debe estar vinculada a una Página de Facebook.</li>
+                  <li>Habilitar en Instagram: <em>Configuración → Privacidad → Mensajes → Permitir acceso a los mensajes</em>.</li>
+                </ul>
+              </div>
+            )}
+          </div>
         </article>
 
-        {/* 3. FACEBOOK MESSENGER */}
-        <article className="card pad channel-card" style={{ opacity: 0.9 }}>
+        {/* 3. FACEBOOK MESSENGER CARD */}
+        <article
+          className="card pad channel-card"
+          style={{
+            borderLeft: `4px solid ${fbConnected ? "#1877f2" : "#477cc8"}`,
+            background: fbConnected ? "rgba(24, 119, 242, 0.02)" : "inherit"
+          }}
+        >
           <div className="channel-card-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <span className="channel-icon" style={{ fontSize: "1.8rem", color: "#477cc8" }}>
@@ -317,27 +501,112 @@ export function ChannelsPage() {
               </span>
               <div>
                 <h2 style={{ margin: 0, fontSize: "1.2rem" }}>Facebook Messenger</h2>
-                <span className="channel-status" style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                  Preparado para conectar (Meta Graph API)
+                <span
+                  className="channel-status"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    color: fbConnected ? "#047857" : "#64748b"
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: fbConnected ? "#10b981" : "#94a3b8"
+                    }}
+                  />
+                  {fbConnected
+                    ? `Conectado (${metaStatus?.facebook?.pageName || "Página"})`
+                    : "Preparado para conectar"}
                 </span>
               </div>
             </div>
+
+            {fbConnected && (
+              <span className="badge ok" style={{ fontSize: "0.76rem", padding: "3px 8px" }}>
+                ACTIVO
+              </span>
+            )}
           </div>
+
           <p className="muted" style={{ fontSize: "0.86rem", marginBottom: 14 }}>
-            Messenger de páginas de fans de la empresa, integrado en el mismo historial del CRM.
+            Messenger de páginas comerciales de Facebook, integrado al mismo hilo y fichas del CRM.
           </p>
-          <button
-            type="button"
-            className="btn btn-outline"
-            style={{ width: "100%", justifyContent: "center" }}
-            onClick={() => alert("La conexión con Facebook Messenger requiere permisos de página comercial en Meta Developers.")}
-          >
-            📘 Conectar con Facebook / Meta
-          </button>
+
+          {fbConnected ? (
+            <div style={{ background: "rgba(0,0,0,0.03)", padding: 12, borderRadius: 8, marginBottom: 12 }}>
+              <div style={{ fontSize: "0.82rem", marginBottom: 6 }}>
+                <strong>Página vinculada:</strong> {metaStatus?.facebook?.pageName || "Página Oficial"}
+                <br />
+                <strong>Page ID:</strong> {metaStatus?.facebook?.pageId || "-"}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                <Link to="/comunicaciones" className="btn btn-primary compact">
+                  📬 Ir a la Bandeja
+                </Link>
+                <button
+                  type="button"
+                  className="btn btn-outline compact"
+                  onClick={() => {
+                    setTestChannel("facebook");
+                    setTestRecipient("");
+                    setTestModalOpen(true);
+                    setTestResult(null);
+                  }}
+                >
+                  ✉️ Probar Envío
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost compact"
+                  style={{ color: "#dc2626" }}
+                  onClick={() => handleDisconnectMeta("facebook")}
+                >
+                  Desconectar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: "100%", justifyContent: "center", gap: 8, padding: "10px 16px", fontWeight: 700 }}
+                onClick={() => handleOpenMetaConfig("facebook")}
+              >
+                <span>📘</span> Conectar Facebook Messenger
+              </button>
+            </div>
+          )}
+
+          <div style={{ marginTop: 12, borderTop: "1px dashed var(--surface-border)", paddingTop: 8 }}>
+            <button
+              type="button"
+              className="btn ghost compact"
+              style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}
+              onClick={() => setExpanded(expanded === "Facebook" ? null : "Facebook")}
+            >
+              {expanded === "Facebook" ? "▲ Ocultar requisitos" : "▼ Requisitos y Webhook Meta"}
+            </button>
+            {expanded === "Facebook" && (
+              <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", marginTop: 6, lineHeight: 1.4 }}>
+                <p style={{ margin: "0 0 4px" }}>Para recibir mensajes de Facebook Messenger:</p>
+                <ul style={{ paddingLeft: 18, margin: 0 }}>
+                  <li>Página de Facebook comercial de la empresa.</li>
+                  <li>Token de acceso de página con permisos <code>pages_messaging</code>.</li>
+                </ul>
+              </div>
+            )}
+          </div>
         </article>
       </div>
 
-      {/* QR Code Modal */}
+      {/* QR Code Modal for WhatsApp */}
       {qrModalOpen && (
         <div className="modal-backdrop">
           <div className="modal-card card pad" style={{ maxWidth: 460, textAlign: "center" }}>
@@ -410,13 +679,103 @@ export function ChannelsPage() {
         </div>
       )}
 
+      {/* Meta (Facebook / Instagram) Configuration Modal */}
+      {metaModalChannel && (
+        <div className="modal-backdrop">
+          <div className="modal-card card pad" style={{ maxWidth: 540 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: "1.15rem", display: "flex", alignItems: "center", gap: 8 }}>
+                <span>{metaModalChannel === "instagram" ? "📸" : "📘"}</span> Vincular {metaModalChannel === "instagram" ? "Instagram Direct" : "Facebook Messenger"}
+              </h3>
+              <button type="button" className="btn ghost compact" onClick={() => setMetaModalChannel(null)}>
+                ✕
+              </button>
+            </div>
+
+            {/* Step 1: Webhook Info */}
+            <div style={{ background: "rgba(0,0,0,0.03)", padding: 12, borderRadius: 8, marginBottom: 14 }}>
+              <strong style={{ fontSize: "0.85rem", display: "block", marginBottom: 6 }}>1. Datos de Webhook para Meta Developers:</strong>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: "0.8rem" }}>
+                <div>
+                  <span className="muted">Callback URL:</span>
+                  <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
+                    <input type="text" readOnly value={webhookUrl} style={{ flex: 1, padding: "4px 8px", fontSize: "0.78rem" }} />
+                    <button type="button" className="btn btn-outline compact" onClick={() => copyToClipboard(webhookUrl, "url")}>
+                      {copiedField === "url" ? "✓ Copiado" : "📋 Copiar"}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <span className="muted">Verify Token:</span>
+                  <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
+                    <input
+                      type="text"
+                      readOnly
+                      value={metaModalChannel === "instagram" ? metaStatus?.instagram?.verifyToken || "lealcontrol_meta_verify_2026" : metaStatus?.facebook?.verifyToken || "lealcontrol_meta_verify_2026"}
+                      style={{ flex: 1, padding: "4px 8px", fontSize: "0.78rem" }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline compact"
+                      onClick={() =>
+                        copyToClipboard(
+                          metaModalChannel === "instagram"
+                            ? metaStatus?.instagram?.verifyToken || "lealcontrol_meta_verify_2026"
+                            : metaStatus?.facebook?.verifyToken || "lealcontrol_meta_verify_2026",
+                          "token"
+                        )
+                      }
+                    >
+                      {copiedField === "token" ? "✓ Copiado" : "📋 Copiar"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2: Form */}
+            <form onSubmit={handleSaveMetaConfig} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <label>
+                <strong>2. Page Access Token de Meta *</strong>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Pegá aquí el Token de Acceso de Página (EAA...)"
+                  value={metaTokenInput}
+                  onChange={(e) => setMetaTokenInput(e.target.value)}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
+                />
+                <small className="muted">
+                  Generado desde la consola de Meta for Developers (Graph API Explorer o App Dashboard) con permisos para mensajes.
+                </small>
+              </label>
+
+              {metaError && (
+                <div className="alert alert-danger" style={{ fontSize: "0.82rem", padding: "8px 12px" }}>
+                  {metaError}
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 6 }}>
+                <button type="button" className="btn ghost" onClick={() => setMetaModalChannel(null)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={savingMeta || !metaTokenInput.trim()}>
+                  {savingMeta ? "Validando y Conectando..." : "💾 Guardar y Conectar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Test Message Modal */}
       {testModalOpen && (
         <div className="modal-backdrop">
           <div className="modal-card card pad" style={{ maxWidth: 480 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <h3 style={{ margin: 0, fontSize: "1.15rem", display: "flex", alignItems: "center", gap: 8 }}>
-                <span>💬</span> Probar Envío de WhatsApp
+                <span>{testChannel === "whatsapp" ? "💬" : testChannel === "instagram" ? "📸" : "📘"}</span> Probar Envío de Mensaje ({testChannel.toUpperCase()})
               </h3>
               <button type="button" className="btn ghost compact" onClick={() => setTestModalOpen(false)}>
                 ✕
@@ -425,16 +784,19 @@ export function ChannelsPage() {
 
             <form onSubmit={handleSendTestMessage} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <label>
-                Número de Celular Destinatario *
+                {testChannel === "whatsapp"
+                  ? "Número de Celular Destinatario *"
+                  : testChannel === "instagram"
+                  ? "ID de Usuario o PSID de Instagram *"
+                  : "ID de Usuario o PSID de Facebook *"}
                 <input
                   type="text"
                   required
-                  placeholder="Ej: 5493415551234 (con código de país y área)"
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
+                  placeholder={testChannel === "whatsapp" ? "Ej: 5493415551234" : "Ej: 1234567890"}
+                  value={testRecipient}
+                  onChange={(e) => setTestRecipient(e.target.value)}
                   style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
                 />
-                <small className="muted">En Argentina incluir 549 seguido de la característica y número sin el 15.</small>
               </label>
 
               <label>
@@ -467,7 +829,7 @@ export function ChannelsPage() {
                 <button type="button" className="btn ghost" onClick={() => setTestModalOpen(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={sendingTest || !testPhone.trim()}>
+                <button type="submit" className="btn btn-primary" disabled={sendingTest || !testRecipient.trim()}>
                   {sendingTest ? "Enviando..." : "📤 Enviar Mensaje"}
                 </button>
               </div>

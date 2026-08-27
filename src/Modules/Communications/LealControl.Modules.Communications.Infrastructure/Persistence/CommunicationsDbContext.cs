@@ -11,10 +11,22 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
     public DbSet<MailAccount> MailAccounts => Set<MailAccount>();
     public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
     public DbSet<EmailAttachment> EmailAttachments => Set<EmailAttachment>();
+    public DbSet<MetaChannelConnection> MetaConnections => Set<MetaChannelConnection>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schema);
+        modelBuilder.Entity<MetaChannelConnection>(b => {
+            b.ToTable("meta_channel_connections"); b.HasKey(x => x.Id);
+            b.Property(x => x.ChannelType).HasMaxLength(50);
+            b.Property(x => x.PageId).HasMaxLength(100);
+            b.Property(x => x.PageName).HasMaxLength(200);
+            b.Property(x => x.InstagramAccountId).HasMaxLength(100);
+            b.Property(x => x.InstagramUsername).HasMaxLength(200);
+            b.Property(x => x.PageAccessToken).HasColumnType("text");
+            b.Property(x => x.VerifyToken).HasMaxLength(100);
+            b.HasIndex(x => new { x.TenantId, x.ChannelType }).IsUnique();
+        });
         modelBuilder.Entity<MailAccount>(b => {
             b.ToTable("mail_accounts"); b.HasKey(x => x.Id);
             b.Property(x => x.Provider).HasConversion<string>(); b.Property(x => x.AuthMode).HasConversion<string>();
@@ -97,6 +109,22 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
                 ""Data"" bytea NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS communications.meta_channel_connections (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ChannelType"" character varying(50) NOT NULL,
+                ""PageId"" character varying(100),
+                ""PageName"" character varying(200),
+                ""InstagramAccountId"" character varying(100),
+                ""InstagramUsername"" character varying(200),
+                ""PageAccessToken"" text,
+                ""VerifyToken"" character varying(100) NOT NULL,
+                ""IsConnected"" boolean NOT NULL DEFAULT false,
+                ""ConnectedAtUtc"" timestamp with time zone,
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL
+            );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_meta_channel_connections_TenantId_ChannelType"" ON communications.meta_channel_connections (""TenantId"", ""ChannelType"");
             CREATE INDEX IF NOT EXISTS ""IX_email_attachments_EmailMessageId"" ON communications.email_attachments (""EmailMessageId"");
         ";
 

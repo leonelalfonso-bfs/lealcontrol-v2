@@ -14,8 +14,19 @@ function normalizeEmailHtml(value: string): string {
   return holder.value;
 }
 
-function isWhatsApp(msg: EmailMessage): boolean {
-  return msg.internetMessageId.startsWith("wa_") || msg.threadKey.startsWith("wa_") || msg.fromAddress.includes("WhatsApp") || msg.toAddresses.includes("WhatsApp");
+type ChannelType = "all" | "email" | "whatsapp" | "instagram" | "facebook";
+
+function getChannel(msg: EmailMessage): "whatsapp" | "instagram" | "facebook" | "email" {
+  if (msg.internetMessageId.startsWith("meta_ig_") || msg.threadKey.startsWith("meta_ig_") || msg.subject.toLowerCase().includes("instagram")) {
+    return "instagram";
+  }
+  if (msg.internetMessageId.startsWith("meta_fb_") || msg.threadKey.startsWith("meta_fb_") || msg.subject.toLowerCase().includes("messenger") || msg.subject.toLowerCase().includes("facebook")) {
+    return "facebook";
+  }
+  if (msg.internetMessageId.startsWith("wa_") || msg.threadKey.startsWith("wa_") || msg.fromAddress.includes("WhatsApp") || msg.toAddresses.includes("WhatsApp") || msg.subject.toLowerCase().includes("whatsapp")) {
+    return "whatsapp";
+  }
+  return "email";
 }
 
 export function InboxPage() {
@@ -28,17 +39,18 @@ export function InboxPage() {
   const [reply, setReply] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [channel, setChannel] = useState<"all" | "email" | "whatsapp">("all");
+  const [channel, setChannel] = useState<ChannelType>("all");
 
-  // WhatsApp Direct Reply State
-  const [waReplyText, setWaReplyText] = useState("");
-  const [sendingWaReply, setSendingWaReply] = useState(false);
+  // Social / WhatsApp Direct Reply State
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
 
-  // New WhatsApp Message Modal State
-  const [newWaModalOpen, setNewWaModalOpen] = useState(false);
-  const [newWaPhone, setNewWaPhone] = useState("");
-  const [newWaMessage, setNewWaMessage] = useState("");
-  const [sendingNewWa, setSendingNewWa] = useState(false);
+  // New Message Modal State
+  const [newModalOpen, setNewModalOpen] = useState(false);
+  const [newChannel, setNewChannel] = useState<"whatsapp" | "instagram" | "facebook">("whatsapp");
+  const [newRecipient, setNewRecipient] = useState("");
+  const [newMessage, setNewMessage] = useState("");
+  const [sendingNew, setSendingNew] = useState(false);
 
   const load = () =>
     Promise.all([api.listEmails(), api.listMailAccounts()])
@@ -56,15 +68,16 @@ export function InboxPage() {
   const visible = useMemo(() => {
     return messages.filter((m) => {
       const matchFolder = folder === "All" || m.direction === folder;
-      const isWa = isWhatsApp(m);
-      const matchChannel =
-        channel === "all" ? true : channel === "whatsapp" ? isWa : !isWa;
+      const ch = getChannel(m);
+      const matchChannel = channel === "all" ? true : channel === ch;
       return matchFolder && matchChannel;
     });
   }, [messages, folder, channel]);
 
-  const countEmail = useMemo(() => messages.filter((m) => !isWhatsApp(m)).length, [messages]);
-  const countWa = useMemo(() => messages.filter((m) => isWhatsApp(m)).length, [messages]);
+  const countEmail = useMemo(() => messages.filter((m) => getChannel(m) === "email").length, [messages]);
+  const countWa = useMemo(() => messages.filter((m) => getChannel(m) === "whatsapp").length, [messages]);
+  const countIg = useMemo(() => messages.filter((m) => getChannel(m) === "instagram").length, [messages]);
+  const countFb = useMemo(() => messages.filter((m) => getChannel(m) === "facebook").length, [messages]);
 
   const syncAll = async () => {
     setBusy(true);
@@ -101,14 +114,18 @@ export function InboxPage() {
     setBusy(true);
     setError(null);
     try {
-      const isWa = isWhatsApp(selected);
+      const ch = getChannel(selected);
+      const isEmail = ch === "email";
+      const isWa = ch === "whatsapp";
       await api.captureLead({
-        companyName: isWa ? `Contacto ${selected.fromAddress}` : selected.fromAddress.split("@")[1] || "Nuevo contacto",
+        companyName: isEmail
+          ? selected.fromAddress.split("@")[1] || "Nuevo contacto"
+          : `${ch.toUpperCase()}: ${selected.fromAddress}`,
         contactName: selected.fromAddress,
-        email: isWa ? undefined : selected.fromAddress,
+        email: isEmail ? selected.fromAddress : undefined,
         phone: isWa ? selected.fromAddress.replace(/\D/g, "") : undefined,
-        source: isWa ? "WhatsApp" : "Email",
-        description: `Mensaje recibido: ${selected.subject}`,
+        source: isWa ? "WhatsApp" : ch === "instagram" ? "Instagram" : ch === "facebook" ? "Facebook" : "Email",
+        description: `Mensaje recibido por ${ch}: ${selected.subject}`,
         notes: selected.bodyPreview
       });
       await load();
@@ -119,54 +136,94 @@ export function InboxPage() {
     }
   };
 
-  const handleSendWaReply = async (e: React.FormEvent) => {
+  const handleSendDirectReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selected || !waReplyText.trim()) return;
-    setSendingWaReply(true);
+    if (!selected || !replyText.trim()) return;
+    setSendingReply(true);
+    const ch = getChannel(selected);
+
     try {
-      const targetPhone = selected.direction === "Incoming" ? selected.fromAddress : selected.toAddresses;
-      const res = await api.sendWhatsAppMessage({
-        to: targetPhone,
-        message: waReplyText.trim(),
-        relatedEntityType: selected.relatedEntityType || undefined,
-        relatedEntityId: selected.relatedEntityId || undefined
-      });
-      if (res.success) {
-        setWaReplyText("");
-        await load();
-      } else {
-        alert("No se pudo enviar la respuesta por WhatsApp: " + (res.error || "Error desconocido"));
+      if (ch === "whatsapp") {
+        const targetPhone = selected.direction === "Incoming" ? selected.fromAddress : selected.toAddresses;
+        const res = await api.sendWhatsAppMessage({
+          to: targetPhone,
+          message: replyText.trim(),
+          relatedEntityType: selected.relatedEntityType || undefined,
+          relatedEntityId: selected.relatedEntityId || undefined
+        });
+        if (res.success) {
+          setReplyText("");
+          await load();
+        } else {
+          alert("No se pudo enviar el WhatsApp: " + (res.error || "Error"));
+        }
+      } else if (ch === "instagram" || ch === "facebook") {
+        const recipientId = selected.direction === "Incoming"
+          ? selected.fromAddress.replace(/^@/, "").replace(/^Usuario FB\s*/i, "")
+          : selected.toAddresses.replace(/^@/, "").replace(/^Usuario FB\s*/i, "");
+        const res = await api.sendMetaMessage({
+          channelType: ch,
+          recipientId: recipientId.trim(),
+          message: replyText.trim(),
+          relatedEntityType: selected.relatedEntityType || undefined,
+          relatedEntityId: selected.relatedEntityId || undefined
+        });
+        if (res.success) {
+          setReplyText("");
+          await load();
+        } else {
+          alert(`No se pudo enviar el mensaje de ${ch}: ` + (res.error || "Error"));
+        }
       }
     } catch (err: any) {
-      alert("Error al responder por WhatsApp: " + err.message);
+      alert("Error al responder: " + err.message);
     } finally {
-      setSendingWaReply(false);
+      setSendingReply(false);
     }
   };
 
-  const handleSendNewWa = async (e: React.FormEvent) => {
+  const handleSendNew = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newWaPhone.trim() || !newWaMessage.trim()) return;
-    setSendingNewWa(true);
+    if (!newRecipient.trim() || !newMessage.trim()) return;
+    setSendingNew(true);
+
     try {
-      const res = await api.sendWhatsAppMessage({
-        to: newWaPhone.trim(),
-        message: newWaMessage.trim()
-      });
-      if (res.success) {
-        setNewWaPhone("");
-        setNewWaMessage("");
-        setNewWaModalOpen(false);
-        await load();
+      if (newChannel === "whatsapp") {
+        const res = await api.sendWhatsAppMessage({
+          to: newRecipient.trim(),
+          message: newMessage.trim()
+        });
+        if (res.success) {
+          setNewRecipient("");
+          setNewMessage("");
+          setNewModalOpen(false);
+          await load();
+        } else {
+          alert("Error al enviar WhatsApp: " + (res.error || "Error"));
+        }
       } else {
-        alert("Error al enviar WhatsApp: " + (res.error || "Error del gateway"));
+        const res = await api.sendMetaMessage({
+          channelType: newChannel,
+          recipientId: newRecipient.trim(),
+          message: newMessage.trim()
+        });
+        if (res.success) {
+          setNewRecipient("");
+          setNewMessage("");
+          setNewModalOpen(false);
+          await load();
+        } else {
+          alert(`Error al enviar ${newChannel}: ` + (res.error || "Error"));
+        }
       }
     } catch (err: any) {
-      alert("Error al enviar: " + err.message);
+      alert("Error: " + err.message);
     } finally {
-      setSendingNewWa(false);
+      setSendingNew(false);
     }
   };
+
+  const selectedChannel = selected ? getChannel(selected) : "email";
 
   return (
     <div className="inbox-page page-wide" style={{ paddingBottom: 40 }}>
@@ -174,14 +231,14 @@ export function InboxPage() {
         <div>
           <span className="eyebrow">COMUNICACIONES</span>
           <h1>Bandeja Omnicanal</h1>
-          <p className="muted">Conversaciones comerciales y operativas vinculadas con CRM y comprobantes.</p>
+          <p className="muted">Conversaciones de Email, WhatsApp, Instagram y Facebook unificadas con el CRM.</p>
         </div>
         <div className="toolbar" style={{ display: "flex", gap: 8 }}>
           <button className="btn btn-outline" onClick={() => void syncAll()} disabled={busy}>
             🔄 Recibir Correo
           </button>
-          <button className="btn btn-outline" onClick={() => setNewWaModalOpen(true)}>
-            💬 Nuevo WhatsApp
+          <button className="btn btn-outline" onClick={() => setNewModalOpen(true)}>
+            💬 Mensaje Directo
           </button>
           <button className="btn btn-primary" onClick={() => setCompose(true)}>
             ✉️ Nuevo Email
@@ -192,7 +249,7 @@ export function InboxPage() {
       {error && <div className="alert">{error}</div>}
 
       {/* Channel Filters */}
-      <div className="channel-filter card" style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+      <div className="channel-filter card" style={{ display: "flex", gap: 10, marginBottom: 14, overflowX: "auto" }}>
         <button className={channel === "all" ? "selected" : ""} onClick={() => setChannel("all")}>
           <span>✦</span>
           <b>Todos</b>
@@ -208,15 +265,15 @@ export function InboxPage() {
           <b>WhatsApp</b>
           <small>{countWa}</small>
         </button>
-        <button className="channel-disabled" disabled title="Próximamente">
+        <button className={channel === "instagram" ? "selected" : ""} onClick={() => setChannel("instagram")}>
           <span>📸</span>
           <b>Instagram</b>
-          <small>Próximo</small>
+          <small>{countIg}</small>
         </button>
-        <button className="channel-disabled" disabled title="Próximamente">
+        <button className={channel === "facebook" ? "selected" : ""} onClick={() => setChannel("facebook")}>
           <span>📘</span>
           <b>Facebook</b>
-          <small>Próximo</small>
+          <small>{countFb}</small>
         </button>
       </div>
 
@@ -236,7 +293,7 @@ export function InboxPage() {
           </button>
           <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
             <Link to="/comunicaciones/canales" style={{ fontSize: "0.8rem", color: "#0d9488", fontWeight: 700 }}>
-              📲 Conectar WhatsApp
+              📲 Conectar Canales
             </Link>
             <Link to="/configuracion/correo" style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
               ⚙️ Cuentas de correo
@@ -262,7 +319,8 @@ export function InboxPage() {
             )}
           </div>
           {visible.map((message) => {
-            const isWa = isWhatsApp(message);
+            const ch = getChannel(message);
+            const icon = ch === "whatsapp" ? "💬" : ch === "instagram" ? "📸" : ch === "facebook" ? "📘" : "✉️";
             return (
               <article key={message.id} className={`message-item ${selected?.id === message.id ? "active" : ""}`}>
                 <input type="checkbox" checked={selectedIds.includes(message.id)} onChange={() => toggle(message.id)} />
@@ -270,10 +328,10 @@ export function InboxPage() {
                   <span className={`direction-dot ${message.direction.toLowerCase()}`} />
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: "0.8rem" }}>{isWa ? "💬" : "✉️"}</span>
+                      <span style={{ fontSize: "0.85rem" }}>{icon}</span>
                       <strong>{message.direction === "Incoming" ? message.fromAddress : message.toAddresses}</strong>
                     </div>
-                    <b>{message.subject || (isWa ? "Mensaje de WhatsApp" : "(sin asunto)")}</b>
+                    <b>{message.subject || `(Mensaje de ${ch})`}</b>
                     <small>{message.bodyPreview.slice(0, 130)}</small>
                   </div>
                   <time>{new Date(message.occurredAtUtc).toLocaleDateString("es-AR")}</time>
@@ -289,7 +347,7 @@ export function InboxPage() {
           {selected ? (
             <>
               <div className="reader-actions">
-                {!isWhatsApp(selected) && (
+                {selectedChannel === "email" && (
                   <button className="btn btn-outline compact" onClick={() => setReply(true)}>
                     ↩ Responder Email
                   </button>
@@ -311,21 +369,33 @@ export function InboxPage() {
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                <span className="eyebrow" style={{ color: isWhatsApp(selected) ? "#25a56a" : "inherit" }}>
-                  {isWhatsApp(selected)
-                    ? selected.direction === "Incoming"
-                      ? "💬 WHATSAPP RECIBIDO"
-                      : "💬 WHATSAPP ENVIADO"
-                    : selected.direction === "Incoming"
-                    ? "✉️ CORREO RECIBIDO"
-                    : "✉️ CORREO ENVIADO"}
+                <span
+                  className="eyebrow"
+                  style={{
+                    color:
+                      selectedChannel === "whatsapp"
+                        ? "#25a56a"
+                        : selectedChannel === "instagram"
+                        ? "#c24b8d"
+                        : selectedChannel === "facebook"
+                        ? "#1877f2"
+                        : "inherit"
+                  }}
+                >
+                  {selectedChannel === "whatsapp"
+                    ? `💬 WHATSAPP ${selected.direction === "Incoming" ? "RECIBIDO" : "ENVIADO"}`
+                    : selectedChannel === "instagram"
+                    ? `📸 INSTAGRAM DM ${selected.direction === "Incoming" ? "RECIBIDO" : "ENVIADO"}`
+                    : selectedChannel === "facebook"
+                    ? `📘 FACEBOOK ${selected.direction === "Incoming" ? "RECIBIDO" : "ENVIADO"}`
+                    : `✉️ CORREO ${selected.direction === "Incoming" ? "RECIBIDO" : "ENVIADO"}`}
                 </span>
                 <span className="muted" style={{ fontSize: "0.75rem" }}>
                   • {new Date(selected.occurredAtUtc).toLocaleString("es-AR")}
                 </span>
               </div>
 
-              <h2 style={{ margin: "6px 0 10px" }}>{selected.subject || "(Mensaje de WhatsApp)"}</h2>
+              <h2 style={{ margin: "6px 0 10px" }}>{selected.subject || `(Mensaje de ${selectedChannel})`}</h2>
 
               <div className="message-addresses" style={{ background: "rgba(0,0,0,0.02)", padding: 8, borderRadius: 6, marginBottom: 12 }}>
                 <strong>De:</strong> {selected.fromAddress}
@@ -334,10 +404,21 @@ export function InboxPage() {
               </div>
 
               {/* Message Content */}
-              {isWhatsApp(selected) ? (
+              {selectedChannel !== "email" ? (
                 <div
                   style={{
-                    background: selected.direction === "Outgoing" ? "#dcf8c6" : "#f0fdf4",
+                    background:
+                      selectedChannel === "whatsapp"
+                        ? selected.direction === "Outgoing"
+                          ? "#dcf8c6"
+                          : "#f0fdf4"
+                        : selectedChannel === "instagram"
+                        ? selected.direction === "Outgoing"
+                          ? "#fce7f3"
+                          : "#fdf2f8"
+                        : selected.direction === "Outgoing"
+                        ? "#dbeafe"
+                        : "#eff6ff",
                     padding: "14px 18px",
                     borderRadius: 12,
                     border: "1px solid rgba(0,0,0,0.06)",
@@ -366,10 +447,10 @@ export function InboxPage() {
                 </div>
               )}
 
-              {/* WhatsApp Quick Reply Box */}
-              {isWhatsApp(selected) && (
+              {/* Social / WhatsApp Direct Reply Box */}
+              {selectedChannel !== "email" && (
                 <form
-                  onSubmit={handleSendWaReply}
+                  onSubmit={handleSendDirectReply}
                   style={{
                     marginTop: 20,
                     padding: 12,
@@ -382,18 +463,18 @@ export function InboxPage() {
                   <textarea
                     rows={2}
                     required
-                    placeholder="Escribí una respuesta directa de WhatsApp..."
-                    value={waReplyText}
-                    onChange={(e) => setWaReplyText(e.target.value)}
+                    placeholder={`Escribí una respuesta directa por ${selectedChannel.toUpperCase()}...`}
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
                     style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--surface-border)", resize: "none" }}
                   />
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    disabled={sendingWaReply || !waReplyText.trim()}
+                    disabled={sendingReply || !replyText.trim()}
                     style={{ padding: "10px 18px", fontWeight: 700 }}
                   >
-                    {sendingWaReply ? "Enviando..." : "📤 Enviar"}
+                    {sendingReply ? "Enviando..." : "📤 Responder"}
                   </button>
                 </form>
               )}
@@ -427,28 +508,45 @@ export function InboxPage() {
         />
       )}
 
-      {/* Modal for New WhatsApp Message */}
-      {newWaModalOpen && (
+      {/* Modal for New Social Message */}
+      {newModalOpen && (
         <div className="modal-backdrop">
           <div className="modal-card card pad" style={{ maxWidth: 480 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ margin: 0, fontSize: "1.15rem", display: "flex", alignItems: "center", gap: 8 }}>
-                <span>💬</span> Nuevo Mensaje de WhatsApp
+                <span>💬</span> Nuevo Mensaje Social
               </h3>
-              <button type="button" className="btn ghost compact" onClick={() => setNewWaModalOpen(false)}>
+              <button type="button" className="btn ghost compact" onClick={() => setNewModalOpen(false)}>
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSendNewWa} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <form onSubmit={handleSendNew} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <label>
-                Número de Teléfono Destinatario *
+                Canal de Salida
+                <select
+                  value={newChannel}
+                  onChange={(e) => setNewChannel(e.target.value as any)}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                >
+                  <option value="whatsapp">💬 WhatsApp</option>
+                  <option value="instagram">📸 Instagram Direct</option>
+                  <option value="facebook">📘 Facebook Messenger</option>
+                </select>
+              </label>
+
+              <label>
+                {newChannel === "whatsapp"
+                  ? "Número de Teléfono *"
+                  : newChannel === "instagram"
+                  ? "ID de Usuario de Instagram (PSID) *"
+                  : "ID de Usuario de Facebook (PSID) *"}
                 <input
                   type="text"
                   required
-                  placeholder="Ej: 5493415551234"
-                  value={newWaPhone}
-                  onChange={(e) => setNewWaPhone(e.target.value)}
+                  placeholder={newChannel === "whatsapp" ? "Ej: 5493415551234" : "Ej: 1234567890"}
+                  value={newRecipient}
+                  onChange={(e) => setNewRecipient(e.target.value)}
                   style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
                 />
               </label>
@@ -459,18 +557,18 @@ export function InboxPage() {
                   rows={4}
                   required
                   placeholder="Escribí el mensaje para el cliente..."
-                  value={newWaMessage}
-                  onChange={(e) => setNewWaMessage(e.target.value)}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
                   style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
                 />
               </label>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 6 }}>
-                <button type="button" className="btn ghost" onClick={() => setNewWaModalOpen(false)}>
+                <button type="button" className="btn ghost" onClick={() => setNewModalOpen(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={sendingNewWa || !newWaPhone.trim() || !newWaMessage.trim()}>
-                  {sendingNewWa ? "Enviando..." : "📤 Enviar WhatsApp"}
+                <button type="submit" className="btn btn-primary" disabled={sendingNew || !newRecipient.trim() || !newMessage.trim()}>
+                  {sendingNew ? "Enviando..." : "📤 Enviar Mensaje"}
                 </button>
               </div>
             </form>

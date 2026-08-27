@@ -255,6 +255,22 @@ export const api = {
   sendWhatsAppMessage: (body: { to: string; message: string; mediaUrl?: string; mediaType?: string; fileName?: string; relatedEntityType?: string; relatedEntityId?: string }) =>
     request<{ success: boolean; messageId?: string; error?: string }>("/api/v1/communications/whatsapp/send", { method: "POST", body: JSON.stringify(body) }),
 
+  // Meta (Instagram & Facebook) Methods
+  getMetaStatus: () =>
+    request<{
+      facebook: { isConnected: boolean; pageId?: string; pageName?: string; verifyToken: string; connectedAtUtc?: string };
+      instagram: { isConnected: boolean; pageId?: string; pageName?: string; instagramAccountId?: string; instagramUsername?: string; verifyToken: string; connectedAtUtc?: string };
+    }>("/api/v1/communications/meta/status"),
+  configureMeta: (body: { channelType: "facebook" | "instagram"; pageAccessToken: string }) =>
+    request<{ success: boolean; pageId?: string; pageName?: string; instagramAccountId?: string; instagramUsername?: string; error?: string }>("/api/v1/communications/meta/config", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+  disconnectMeta: (channelType: "facebook" | "instagram") =>
+    request<{ success: boolean }>("/api/v1/communications/meta/disconnect", { method: "POST", body: JSON.stringify({ channelType }) }),
+  sendMetaMessage: (body: { channelType: "facebook" | "instagram"; recipientId: string; message: string; relatedEntityType?: string; relatedEntityId?: string }) =>
+    request<{ success: boolean; messageId?: string; error?: string }>("/api/v1/communications/meta/send", { method: "POST", body: JSON.stringify(body) }),
+
   // Company Settings & Users Methods
   getCompanySettings: () => request<import("./types").CompanySettings>("/api/v1/company/settings"),
   updateCompanySettings: (body: import("./types").CompanySettings) =>
