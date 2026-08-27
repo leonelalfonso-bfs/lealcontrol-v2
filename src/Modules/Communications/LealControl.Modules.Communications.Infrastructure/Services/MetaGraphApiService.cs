@@ -28,8 +28,8 @@ public sealed class MetaGraphApiService
         var cleanToken = token.Trim();
         try
         {
-            // 1. Try if token is already a Page Access Token with IG
-            var pageUrl = $"me?fields=id,name,instagram_business_account{{id,username}}&access_token={Uri.EscapeDataString(cleanToken)}";
+            // 1. Try if token is a Page Access Token
+            var pageUrl = $"me?fields=id,name,instagram_business_account{{id,username}},connected_instagram_account{{id,username}}&access_token={Uri.EscapeDataString(cleanToken)}";
             var pageRes = await _httpClient.GetAsync(pageUrl, ct);
             if (pageRes.IsSuccessStatusCode)
             {
@@ -44,12 +44,17 @@ public sealed class MetaGraphApiService
                     if (igObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
                     if (igObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
                 }
+                else if (json.TryGetProperty("connected_instagram_account", out var connIgObj))
+                {
+                    if (connIgObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
+                    if (connIgObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
+                }
 
                 return new MetaPageInfoResult(true, pageId, pageName, igId, igUsername, cleanToken, null);
             }
 
             // 2. If 400, maybe it's a User Access Token -> fetch /me/accounts
-            var accountsUrl = $"me/accounts?fields=id,name,access_token,instagram_business_account{{id,username}}&access_token={Uri.EscapeDataString(cleanToken)}";
+            var accountsUrl = $"me/accounts?fields=id,name,access_token,instagram_business_account{{id,username}},connected_instagram_account{{id,username}}&access_token={Uri.EscapeDataString(cleanToken)}";
             var accountsRes = await _httpClient.GetAsync(accountsUrl, ct);
             if (accountsRes.IsSuccessStatusCode)
             {
@@ -60,7 +65,7 @@ public sealed class MetaGraphApiService
                     foreach (var page in dataArray.EnumerateArray())
                     {
                         selectedPage = page;
-                        if (page.TryGetProperty("instagram_business_account", out _))
+                        if (page.TryGetProperty("instagram_business_account", out _) || page.TryGetProperty("connected_instagram_account", out _))
                         {
                             break;
                         }
@@ -76,6 +81,11 @@ public sealed class MetaGraphApiService
                     {
                         if (igObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
                         if (igObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
+                    }
+                    else if (selectedPage.TryGetProperty("connected_instagram_account", out var connIgObj))
+                    {
+                        if (connIgObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
+                        if (connIgObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
                     }
 
                     return new MetaPageInfoResult(true, pId, pName, igId, igUsername, pToken, null);
@@ -107,93 +117,114 @@ public sealed class MetaGraphApiService
         }
     }
 
-    public async Task<List<MetaMessageItem>> FetchRecentConversationsAsync(string pageAccessToken, string channelType, CancellationToken ct = default)
+    public async Task<List<MetaMessageItem>> FetchRecentConversationsAsync(string pageAccessToken, string channelType, string? pageName = null, string? pageId = null, string? igAccountId = null, CancellationToken ct = default)
     {
         var list = new List<MetaMessageItem>();
         try
         {
             var isIg = channelType.Equals("instagram", StringComparison.OrdinalIgnoreCase);
-            var convUrl = isIg
-                ? $"me/conversations?platform=instagram&fields=id,snippet,updated_time,participants,messages{{id,message,from,created_time}}&access_token={Uri.EscapeDataString(pageAccessToken)}"
-                : $"me/conversations?fields=id,snippet,updated_time,participants,messages{{id,message,from,created_time}}&access_token={Uri.EscapeDataString(pageAccessToken)}";
-
-            var res = await _httpClient.GetAsync(convUrl, ct);
-            if (!res.IsSuccessStatusCode)
+            
+            // Multiple endpoint options for Instagram vs Facebook
+            var endpointsToTry = new List<string>();
+            if (isIg)
             {
-                _logger.LogWarning("Error fetching conversations from Meta ({Status})", res.StatusCode);
-                return list;
+                if (!string.IsNullOrWhiteSpace(igAccountId))
+                {
+                    endpointsToTry.Add($"{igAccountId}/conversations?platform=instagram&fields=id,snippet,updated_time,participants,messages{{id,message,from,created_time}}&access_token={Uri.EscapeDataString(pageAccessToken)}");
+                }
+                if (!string.IsNullOrWhiteSpace(pageId))
+                {
+                    endpointsToTry.Add($"{pageId}/conversations?platform=instagram&fields=id,snippet,updated_time,participants,messages{{id,message,from,created_time}}&access_token={Uri.EscapeDataString(pageAccessToken)}");
+                }
+                endpointsToTry.Add($"me/conversations?platform=instagram&fields=id,snippet,updated_time,participants,messages{{id,message,from,created_time}}&access_token={Uri.EscapeDataString(pageAccessToken)}");
+                endpointsToTry.Add($"me/conversations?fields=id,snippet,updated_time,participants,messages{{id,message,from,created_time}}&access_token={Uri.EscapeDataString(pageAccessToken)}");
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(pageId))
+                {
+                    endpointsToTry.Add($"{pageId}/conversations?fields=id,snippet,updated_time,participants,messages{{id,message,from,created_time}}&access_token={Uri.EscapeDataString(pageAccessToken)}");
+                }
+                endpointsToTry.Add($"me/conversations?fields=id,snippet,updated_time,participants,messages{{id,message,from,created_time}}&access_token={Uri.EscapeDataString(pageAccessToken)}");
             }
 
-            var json = await res.Content.ReadFromJsonAsync<JsonElement>(ct);
-            if (json.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array)
+            foreach (var convUrl in endpointsToTry)
             {
-                foreach (var conv in dataArray.EnumerateArray())
+                var res = await _httpClient.GetAsync(convUrl, ct);
+                if (!res.IsSuccessStatusCode) continue;
+
+                var json = await res.Content.ReadFromJsonAsync<JsonElement>(ct);
+                if (json.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array && dataArray.GetArrayLength() > 0)
                 {
-                    string? participantId = null;
-                    string? participantName = null;
-
-                    if (conv.TryGetProperty("participants", out var partObj) && partObj.TryGetProperty("data", out var partArray) && partArray.ValueKind == JsonValueKind.Array)
+                    foreach (var conv in dataArray.EnumerateArray())
                     {
-                        foreach (var p in partArray.EnumerateArray())
+                        string? customerId = null;
+                        string? customerName = null;
+
+                        // Find the participant that is NOT the company's page
+                        if (conv.TryGetProperty("participants", out var partObj) && partObj.TryGetProperty("data", out var partArray) && partArray.ValueKind == JsonValueKind.Array)
                         {
-                            var pName = p.TryGetProperty("name", out var pnProp) ? pnProp.GetString() : (p.TryGetProperty("username", out var puProp) ? puProp.GetString() : null);
-                            var pId = p.TryGetProperty("id", out var piProp) ? piProp.GetString() : null;
-                            if (!string.IsNullOrWhiteSpace(pName))
+                            foreach (var p in partArray.EnumerateArray())
                             {
-                                participantName = pName;
-                                participantId = pId;
+                                var pName = p.TryGetProperty("name", out var pnProp) ? pnProp.GetString() : (p.TryGetProperty("username", out var puProp) ? puProp.GetString() : null);
+                                var pId = p.TryGetProperty("id", out var piProp) ? piProp.GetString() : null;
+                                
+                                // Ignore our own page in participants
+                                if (!string.IsNullOrWhiteSpace(pName) && (string.IsNullOrWhiteSpace(pageName) || !pName.Equals(pageName, StringComparison.OrdinalIgnoreCase)) && (string.IsNullOrWhiteSpace(pageId) || pId == null || !pId.Equals(pageId, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    customerName = pName;
+                                    customerId = pId;
+                                }
+                            }
+                        }
+
+                        if (conv.TryGetProperty("messages", out var msgObj) && msgObj.TryGetProperty("data", out var msgArray) && msgArray.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var m in msgArray.EnumerateArray())
+                            {
+                                var mid = m.TryGetProperty("id", out var midProp) ? midProp.GetString() : null;
+                                var text = m.TryGetProperty("message", out var textProp) ? textProp.GetString() : null;
+                                var createdStr = m.TryGetProperty("created_time", out var crProp) ? crProp.GetString() : null;
+                                var fromObj = m.TryGetProperty("from", out var foProp) ? foProp : default;
+                                var fromName = fromObj.TryGetProperty("name", out var fnProp) ? fnProp.GetString() : (fromObj.TryGetProperty("username", out var fuProp) ? fuProp.GetString() : null);
+                                var fromId = fromObj.TryGetProperty("id", out var fiProp) ? fiProp.GetString() : null;
+
+                                var isFromPage = (!string.IsNullOrWhiteSpace(fromName) && fromName.Equals(pageName, StringComparison.OrdinalIgnoreCase))
+                                    || (!string.IsNullOrWhiteSpace(fromId) && fromId.Equals(pageId, StringComparison.OrdinalIgnoreCase));
+
+                                if (!isFromPage && string.IsNullOrWhiteSpace(customerName))
+                                {
+                                    customerName = fromName;
+                                    customerId = fromId;
+                                }
+
+                                DateTime createdUtc = DateTime.UtcNow;
+                                if (!string.IsNullOrWhiteSpace(createdStr) && DateTime.TryParse(createdStr, out var parsedDt))
+                                {
+                                    createdUtc = parsedDt.ToUniversalTime();
+                                }
+
+                                if (!string.IsNullOrWhiteSpace(mid) && !string.IsNullOrWhiteSpace(text))
+                                {
+                                    var finalContactName = !string.IsNullOrWhiteSpace(customerName) ? customerName : (isIg ? "Usuario de Instagram" : "Usuario de Facebook");
+                                    var finalContactId = !string.IsNullOrWhiteSpace(customerId) ? customerId : (fromId ?? "desconocido");
+
+                                    list.Add(new MetaMessageItem(
+                                        mid,
+                                        isIg ? "instagram" : "facebook",
+                                        finalContactId,
+                                        finalContactName,
+                                        fromName ?? finalContactName,
+                                        text,
+                                        createdUtc
+                                    ));
+                                }
                             }
                         }
                     }
 
-                    if (conv.TryGetProperty("messages", out var msgObj) && msgObj.TryGetProperty("data", out var msgArray) && msgArray.ValueKind == JsonValueKind.Array)
-                    {
-                        foreach (var m in msgArray.EnumerateArray())
-                        {
-                            var mid = m.TryGetProperty("id", out var midProp) ? midProp.GetString() : null;
-                            var text = m.TryGetProperty("message", out var textProp) ? textProp.GetString() : null;
-                            var createdStr = m.TryGetProperty("created_time", out var crProp) ? crProp.GetString() : null;
-                            var fromObj = m.TryGetProperty("from", out var foProp) ? foProp : default;
-                            var fromName = fromObj.TryGetProperty("name", out var fnProp) ? fnProp.GetString() : (fromObj.TryGetProperty("username", out var fuProp) ? fuProp.GetString() : null);
-                            var fromId = fromObj.TryGetProperty("id", out var fiProp) ? fiProp.GetString() : null;
-
-                            DateTime createdUtc = DateTime.UtcNow;
-                            if (!string.IsNullOrWhiteSpace(createdStr) && DateTime.TryParse(createdStr, out var parsedDt))
-                            {
-                                createdUtc = parsedDt.ToUniversalTime();
-                            }
-
-                            if (!string.IsNullOrWhiteSpace(mid) && !string.IsNullOrWhiteSpace(text))
-                            {
-                                list.Add(new MetaMessageItem(
-                                    mid,
-                                    isIg ? "instagram" : "facebook",
-                                    participantId ?? fromId ?? "desconocido",
-                                    participantName ?? fromName ?? (isIg ? "Usuario Instagram" : "Usuario Facebook"),
-                                    fromName ?? "Usuario",
-                                    text,
-                                    createdUtc
-                                ));
-                            }
-                        }
-                    }
-                    else if (conv.TryGetProperty("snippet", out var snipProp))
-                    {
-                        var snippet = snipProp.GetString();
-                        var convId = conv.TryGetProperty("id", out var ciProp) ? ciProp.GetString() : Guid.NewGuid().ToString("N");
-                        if (!string.IsNullOrWhiteSpace(snippet))
-                        {
-                            list.Add(new MetaMessageItem(
-                                convId ?? Guid.NewGuid().ToString("N"),
-                                isIg ? "instagram" : "facebook",
-                                participantId ?? "desconocido",
-                                participantName ?? (isIg ? "Usuario Instagram" : "Usuario Facebook"),
-                                participantName ?? "Usuario",
-                                snippet,
-                                DateTime.UtcNow
-                            ));
-                        }
-                    }
+                    // If we got messages from this endpoint, we can stop trying fallback endpoints
+                    if (list.Count > 0) break;
                 }
             }
         }

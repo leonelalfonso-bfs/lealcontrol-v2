@@ -514,7 +514,7 @@ public static class CommunicationsEndpoints
                 var prefix = isIg ? "meta_ig" : "meta_fb";
                 var senderOfficial = isIg ? (conn.InstagramUsername != null ? $"@{conn.InstagramUsername}" : "Instagram Oficial") : (conn.PageName ?? "Página Oficial");
 
-                var messages = await metaService.FetchRecentConversationsAsync(conn.PageAccessToken!, conn.ChannelType, ct);
+                var messages = await metaService.FetchRecentConversationsAsync(conn.PageAccessToken!, conn.ChannelType, conn.PageName, conn.PageId, conn.InstagramAccountId, ct);
 
                 foreach (var m in messages)
                 {
