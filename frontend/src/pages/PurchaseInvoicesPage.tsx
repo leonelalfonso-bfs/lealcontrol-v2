@@ -1,223 +1,248 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { type PurchaseInvoice } from "../api/types";
-import { ExcelToolbar } from "../components/ExcelTools";
 import { InvoiceOcrUploadModal } from "../components/InvoiceOcrUploadModal";
+
+const money = (n: number, c = "ARS") =>
+  new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
 
 export function PurchaseInvoicesPage() {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [stockStatusFilter, setStockStatusFilter] = useState("all");
-  const [showOcrModal, setShowOcrModal] = useState(false);
+  const [paymentOrders, setPaymentOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedType, setSelectedType] = useState<string>("All");
+  const [selectedStatus, setSelectedStatus] = useState<string>("All");
+  const [paymentFilter, setPaymentFilter] = useState<string>("All");
+  const [showOcrModal, setShowOcrModal] = useState<boolean>(false);
+
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [invData, poData] = await Promise.all([
+        api.listPurchaseInvoices(searchTerm, selectedType),
+        api.listPaymentOrders().catch(() => [] as any[])
+      ]);
+      setInvoices(invData || []);
+      setPaymentOrders(poData || []);
+    } catch (err: any) {
+      setError(err.message || "Error al cargar las facturas de compra.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true);
-        const data = await api.listPurchaseInvoices(search, statusFilter);
-        setInvoices(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
-  }, [search, statusFilter]);
+    void loadData();
+  }, [selectedType]);
+
+  // Enrich purchase invoices with payment and days calculations
+  const enrichedInvoices = useMemo(() => {
+    const now = new Date().getTime();
+
+    return invoices.map((inv) => {
+      // Find matching payment orders for this invoice
+      const pastPaid = paymentOrders
+        .filter((po: any) => po.invoicesSummary && po.invoicesSummary.includes(inv.formattedNumber))
+        .reduce((sum: number, po: any) => sum + (Number(po.amount) || 0), 0);
+
+      const totalPagado = pastPaid;
+      const saldoPendiente = Math.max(0, inv.total - totalPagado);
+      const isPaid = totalPagado >= inv.total - 0.01 && inv.total > 0;
+      const isPartial = totalPagado > 0.01 && saldoPendiente > 0.01;
+      const isPending = totalPagado <= 0.01;
+
+      const paymentState = isPaid ? "Paid" : isPartial ? "Partial" : "Pending";
+
+      const issueTime = new Date(inv.issueDate).getTime();
+      const dueTime = new Date(inv.dueDate).getTime();
+      const daysSinceIssue = Math.max(0, Math.floor((now - issueTime) / (1000 * 60 * 60 * 24)));
+      const daysOverdue = Math.floor((now - dueTime) / (1000 * 60 * 60 * 24));
+
+      return {
+        ...inv,
+        totalPagado,
+        saldoPendiente,
+        paymentState,
+        isPaid,
+        isPartial,
+        isPending,
+        daysSinceIssue,
+        daysOverdue
+      };
+    });
+  }, [invoices, paymentOrders]);
 
   const filteredInvoices = useMemo(() => {
-    return invoices.filter((inv) => {
-      const hasInventoryItems = inv.items && inv.items.some((i) => !!i.productId);
-      const isReceived = !!inv.purchaseReceptionId;
+    return enrichedInvoices.filter((inv) => {
+      const matchSearch =
+        searchTerm === "" ||
+        inv.formattedNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        inv.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        inv.supplierDocument.toLowerCase().includes(searchTerm.toLowerCase());
 
-      if (stockStatusFilter === "pending") {
-        return hasInventoryItems && !isReceived;
-      }
-      if (stockStatusFilter === "received") {
-        return isReceived;
-      }
-      if (stockStatusFilter === "services") {
-        return !hasInventoryItems;
-      }
-      return true;
+      const matchStatus = selectedStatus === "All" || inv.status === selectedStatus;
+      const matchPayment = paymentFilter === "All" || inv.paymentState === paymentFilter;
+
+      return matchSearch && matchStatus && matchPayment;
     });
-  }, [invoices, stockStatusFilter]);
+  }, [enrichedInvoices, searchTerm, selectedStatus, paymentFilter]);
 
-  const pendingReceptionCount = useMemo(() => {
-    return invoices.filter(
-      (inv) =>
-        inv.status !== "Cancelled" &&
-        inv.items &&
-        inv.items.some((i) => !!i.productId) &&
-        !inv.purchaseReceptionId
-    ).length;
-  }, [invoices]);
+  // Totals calculations
+  const totalArs = invoices.filter((i) => i.currency === "ARS").reduce((acc, curr) => acc + curr.total, 0);
+  const totalUsd = invoices.filter((i) => i.currency === "USD").reduce((acc, curr) => acc + curr.total, 0);
+  
+  const pendingArs = enrichedInvoices
+    .filter((i) => i.currency === "ARS" && !i.isPaid)
+    .reduce((s, i) => s + i.saldoPendiente, 0);
 
-  const totalPayable = invoices
-    .filter((i) => i.status !== "Cancelled")
-    .reduce((acc, i) => acc + i.total * (i.currency === "USD" ? i.exchangeRate : 1), 0);
-
-  const totalIvaCredit = invoices
-    .filter((i) => i.status !== "Cancelled")
-    .reduce((acc, i) => acc + (i.iva21 + i.iva105 + i.iva27) * (i.currency === "USD" ? i.exchangeRate : 1), 0);
+  const pendingUsd = enrichedInvoices
+    .filter((i) => i.currency === "USD" && !i.isPaid)
+    .reduce((s, i) => s + i.saldoPendiente, 0);
 
   return (
     <div className="page-wide" style={{ paddingBottom: 60 }}>
+      {/* Header */}
       <div className="page-head">
         <div>
-          <h1>Facturas de Proveedores (Libro IVA Compras)</h1>
-          <p className="muted">Registro fiscal de comprobantes recibidos, IVA Crédito Fiscal, Cuentas por Pagar e Ingreso de Stock</p>
+          <span className="eyebrow">COMPRAS & PROVEEDORES</span>
+          <h1>Facturas de Compra</h1>
+          <p className="muted">
+            Registro fiscal de compras, control de pagos, recepción de stock y vinculación con órdenes de pago.
+          </p>
         </div>
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <div className="toolbar">
           <button
             type="button"
+            className="btn btn-outline"
             onClick={() => setShowOcrModal(true)}
-            className="btn"
-            style={{ background: "linear-gradient(135deg, #1e40af, #3b82f6)", color: "white", fontWeight: 700 }}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
           >
-            📷 Cargar con IA (Foto / PDF)
+            📸 Subir PDF / Factura IA (OCR)
           </button>
-          <Link to="/compras/arca" className="btn" style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "white" }}>
-            📥 Importador ARCA
+          <Link to="/compras/facturas/nueva" className="btn btn-primary">
+            ＋ Cargar Factura Manual
           </Link>
-          <div className="toolbar">
-            <ExcelToolbar
-              fileName="facturas-proveedor"
-              rows={invoices}
-              columns={[
-                { key: "formattedNumber", header: "Número" },
-                { key: "supplierName", header: "Proveedor" },
-                { key: "supplierDocument", header: "CUIT" },
-                { key: "issueDate", header: "Fecha Emisión" },
-                { key: "dueDate", header: "Fecha Vencimiento" },
-                { key: "currency", header: "Moneda" },
-                { key: "subtotal", header: "Neto Gravado" },
-                { key: "total", header: "Total Factura" },
-                {
-                  key: "receptionStatus",
-                  header: "Estado Recepción Stock",
-                  value: (row) =>
-                    row.purchaseReceptionId
-                      ? "Mercadería Recibida"
-                      : row.items?.some((i) => i.productId)
-                      ? "Recepción Pendiente"
-                      : "No inventariable"
-                },
-                { key: "status", header: "Estado Pago" }
-              ]}
-            />
-            <Link to="/compras/facturas/nueva" className="btn btn-primary">
-              + Cargar Factura Manual
-            </Link>
+        </div>
+      </div>
+
+      {error && (
+        <div className="alert" style={{ background: "#fee2e2", color: "#991b1b", borderColor: "#f87171", marginBottom: 16 }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      {/* KPIs Summary */}
+      <div className="kpi kpi-4" style={{ marginBottom: 20 }}>
+        <div className="card">
+          <span className="muted">Total Facturas de Compra</span>
+          <strong>{invoices.length}</strong>
+          <small className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 2 }}>
+            Comprobantes de proveedores
+          </small>
+        </div>
+        <div className="card">
+          <span className="muted">Total Compras (ARS)</span>
+          <strong style={{ color: "#0f172a" }}>{money(totalArs, "ARS")}</strong>
+          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingArs > 0 ? "#dc2626" : "#059669", fontWeight: 600 }}>
+            Pendiente de Pago: {money(pendingArs, "ARS")}
+          </small>
+        </div>
+        <div className="card">
+          <span className="muted">Total Compras (USD)</span>
+          <strong style={{ color: "#2563eb" }}>{money(totalUsd, "USD")}</strong>
+          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingUsd > 0 ? "#dc2626" : "#059669", fontWeight: 600 }}>
+            Pendiente de Pago: {money(pendingUsd, "USD")}
+          </small>
+        </div>
+        <div className="card">
+          <span className="muted">Estado de Pagos</span>
+          <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+            <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.9rem" }}>
+              🟢 {enrichedInvoices.filter((i) => i.isPaid).length} Pagadas
+            </span>
+            <span style={{ color: "#dc2626", fontWeight: 700, fontSize: "0.9rem" }}>
+              🔴 {enrichedInvoices.filter((i) => !i.isPaid).length} Pendientes
+            </span>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "20px" }}>
-        <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(220, 38, 38, 0.05))", borderLeft: "4px solid #ef4444" }}>
-          <div style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#b91c1c", textTransform: "uppercase" }}>
-            Total Cuentas por Pagar
-          </div>
-          <div style={{ fontSize: "1.5rem", fontWeight: "bold", marginTop: "4px", color: "#b91c1c" }}>
-            $ {totalPayable.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-          </div>
+      {/* Filters Toolbar */}
+      <div className="card pad toolbar" style={{ marginBottom: 20, justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+          <input
+            type="text"
+            placeholder="Buscar por N° Factura, Proveedor, CUIT..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ minWidth: 260 }}
+          />
+
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+            style={{ width: 160 }}
+          >
+            <option value="All">Todos los Tipos</option>
+            <option value="Factura A">Factura A</option>
+            <option value="Factura B">Factura B</option>
+            <option value="Factura C">Factura C</option>
+            <option value="Factura M">Factura M</option>
+            <option value="Nota de Débito A">Nota de Débito A</option>
+            <option value="Nota de Crédito A">Nota de Crédito A</option>
+          </select>
+
+          {/* Payment Status Filter */}
+          <select
+            value={paymentFilter}
+            onChange={(e) => setPaymentFilter(e.target.value)}
+            style={{ width: 180, fontWeight: 600 }}
+          >
+            <option value="All">Todos los Pagos</option>
+            <option value="Pending">🔴 Pendientes de Pago</option>
+            <option value="Partial">🟡 Pago Parcial</option>
+            <option value="Paid">🟢 Pagadas (100%)</option>
+          </select>
         </div>
 
-        <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.05))", borderLeft: "4px solid #10b981" }}>
-          <div style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#047857", textTransform: "uppercase" }}>
-            IVA Crédito Fiscal Acumulado
-          </div>
-          <div style={{ fontSize: "1.5rem", fontWeight: "bold", marginTop: "4px", color: "#047857" }}>
-            $ {totalIvaCredit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-          </div>
-        </div>
-
-        <div className="card pad" style={{ background: pendingReceptionCount > 0 ? "linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.06))" : "rgba(241, 245, 249, 0.6)", borderLeft: pendingReceptionCount > 0 ? "4px solid #f59e0b" : "4px solid #94a3b8" }}>
-          <div style={{ fontSize: "0.78rem", fontWeight: "bold", color: pendingReceptionCount > 0 ? "#92400e" : "#475569", textTransform: "uppercase" }}>
-            📥 Recepciones de Stock Pendientes
-          </div>
-          <div style={{ fontSize: "1.5rem", fontWeight: "bold", marginTop: "4px", color: pendingReceptionCount > 0 ? "#b45309" : "#334155" }}>
-            {pendingReceptionCount} {pendingReceptionCount === 1 ? "factura" : "facturas"}
-          </div>
-        </div>
-
-        <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(2, 132, 199, 0.05))", borderLeft: "4px solid #0284c7" }}>
-          <div style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#0369a1", textTransform: "uppercase" }}>
-            Facturas Registradas
-          </div>
-          <div style={{ fontSize: "1.5rem", fontWeight: "bold", marginTop: "4px" }}>
-            {invoices.length}
-          </div>
-        </div>
+        <button type="button" className="btn btn-outline" onClick={() => void loadData()}>
+          🔄 Actualizar
+        </button>
       </div>
 
-      {/* Filter Bar */}
-      <div className="card filters" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-        <input
-          type="text"
-          placeholder="Buscar por N° factura, proveedor o CUIT..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: "220px", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
-        />
-
-        <select
-          value={stockStatusFilter}
-          onChange={(e) => setStockStatusFilter(e.target.value)}
-          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontWeight: 600 }}
-        >
-          <option value="all">📦 Todos los estados de stock</option>
-          <option value="pending">📥 Recepción Pendiente ({pendingReceptionCount})</option>
-          <option value="received">✓ Con Mercadería Recibida</option>
-          <option value="services">📋 Solo Servicios / No inventariable</option>
-        </select>
-
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
-        >
-          <option value="">Todos los Estados de Pago</option>
-          <option value="Recorded">Registrada / Pendiente de Pago</option>
-          <option value="Paid">Pagada</option>
-          <option value="Cancelled">Anulada</option>
-        </select>
-      </div>
-
-      {/* Invoices Table */}
-      <div className="card pad" style={{ marginTop: "16px" }}>
+      {/* Main Table */}
+      <div className="card">
         {loading ? (
-          <div style={{ padding: "20px", textAlign: "center", color: "var(--ink-soft)" }}>Cargando facturas de compra...</div>
+          <p className="pad muted">Cargando facturas de compra...</p>
         ) : filteredInvoices.length === 0 ? (
-          <div style={{ padding: "30px", textAlign: "center", color: "var(--ink-soft)" }}>
-            No se encontraron facturas de proveedores con los filtros aplicados.
-          </div>
+          <p className="pad muted" style={{ textAlign: "center", padding: 32 }}>
+            No se encontraron facturas de compra para los filtros seleccionados.
+          </p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="table" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <div className="table-wrap">
+            <table>
               <thead>
-                <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", textAlign: "left", fontSize: "0.85rem", color: "var(--ink-soft)" }}>
+                <tr>
                   <th style={{ padding: "10px 8px" }}>Tipo</th>
                   <th style={{ padding: "10px 8px" }}>N° Comprobante</th>
-                  <th style={{ padding: "10px 8px" }}>Emisión</th>
-                  <th style={{ padding: "10px 8px" }}>Vencimiento</th>
+                  <th style={{ padding: "10px 8px" }}>Fecha Emisión</th>
                   <th style={{ padding: "10px 8px" }}>Proveedor</th>
-                  <th style={{ padding: "10px 8px", textAlign: "right" }}>Neto Grav.</th>
-                  <th style={{ padding: "10px 8px", textAlign: "right" }}>IVA</th>
                   <th style={{ padding: "10px 8px", textAlign: "right" }}>Total</th>
                   <th style={{ padding: "10px 8px", textAlign: "center" }}>CAE</th>
-                  <th style={{ padding: "10px 8px", textAlign: "center" }}>Ingreso de Stock</th>
+                  <th style={{ padding: "10px 8px", textAlign: "center" }}>Estado Pago & Días</th>
+                  <th style={{ padding: "10px 8px", textAlign: "center" }}>Ingreso Stock</th>
                   <th style={{ padding: "10px 8px", textAlign: "center" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredInvoices.map((inv) => {
-                  const ivaTotal = inv.iva21 + inv.iva105 + inv.iva27;
                   const hasInventoryItems = inv.items && inv.items.some((i) => !!i.productId);
                   const isReceived = !!inv.purchaseReceptionId;
 
@@ -249,27 +274,21 @@ export function PurchaseInvoicesPage() {
                           {inv.formattedNumber}
                         </Link>
                       </td>
-                      <td style={{ padding: "12px 8px", fontSize: "0.9rem" }}>
-                        {new Date(inv.issueDate).toLocaleDateString("es-AR")}
-                      </td>
-                      <td style={{ padding: "12px 8px", fontSize: "0.9rem", color: "#b91c1c" }}>
-                        {new Date(inv.dueDate).toLocaleDateString("es-AR")}
+                      <td style={{ padding: "12px 8px", fontSize: "0.88rem" }}>
+                        <div>{new Date(inv.issueDate).toLocaleDateString("es-AR")}</div>
+                        <small className="muted" style={{ fontSize: "0.75rem", color: inv.daysOverdue > 0 ? "#dc2626" : "inherit" }}>
+                          Vto: {new Date(inv.dueDate).toLocaleDateString("es-AR")}
+                        </small>
                       </td>
                       <td style={{ padding: "12px 8px" }}>
                         <div style={{ fontWeight: 600 }}>{inv.supplierName}</div>
                         <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>CUIT: {inv.supplierDocument}</div>
                       </td>
-                      <td style={{ padding: "12px 8px", textAlign: "right", fontFamily: "monospace" }}>
-                        {inv.currency === "USD" ? "USD " : "$ "}
-                        {inv.subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: "12px 8px", textAlign: "right", fontFamily: "monospace", color: "#047857" }}>
-                        {inv.currency === "USD" ? "USD " : "$ "}
-                        {ivaTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                      </td>
                       <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: "bold", fontFamily: "monospace", color: "#0f172a" }}>
-                        {inv.currency === "USD" ? "USD " : "$ "}
-                        {inv.total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                        {money(inv.total, inv.currency)}
+                        <div className="muted" style={{ fontSize: "0.75rem", fontWeight: "normal" }}>
+                          Neto: {money(inv.subtotal, inv.currency)}
+                        </div>
                       </td>
                       <td style={{ padding: "12px 8px", textAlign: "center" }}>
                         {inv.cae ? (
@@ -280,6 +299,78 @@ export function PurchaseInvoicesPage() {
                           <span style={{ color: "#94a3b8" }}>—</span>
                         )}
                       </td>
+
+                      {/* Estado de Pago y Días sin pagar */}
+                      <td style={{ padding: "12px 8px", textAlign: "center" }}>
+                        {inv.isPaid ? (
+                          <div>
+                            <span
+                              className="badge ok"
+                              style={{
+                                background: "rgba(16, 185, 129, 0.15)",
+                                color: "#065f46",
+                                fontWeight: 700,
+                                padding: "4px 8px"
+                              }}
+                            >
+                              🟢 Pagada
+                            </span>
+                            <div className="muted" style={{ fontSize: "0.72rem", marginTop: 2 }}>
+                              ✓ 100% saldada
+                            </div>
+                          </div>
+                        ) : inv.isPartial ? (
+                          <div>
+                            <span
+                              className="badge warn"
+                              style={{
+                                background: "rgba(245, 158, 11, 0.18)",
+                                color: "#92400e",
+                                fontWeight: 700,
+                                padding: "4px 8px"
+                              }}
+                            >
+                              🟡 Pago Parcial
+                            </span>
+                            <div style={{ fontSize: "0.75rem", color: "#dc2626", fontWeight: 700, marginTop: 2 }}>
+                              Resta: {money(inv.saldoPendiente, inv.currency)}
+                            </div>
+                            <div className="muted" style={{ fontSize: "0.72rem" }}>
+                              {inv.daysSinceIssue === 0 ? "Emitida hoy" : `${inv.daysSinceIssue}d sin pagar`}
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <span
+                              className="badge off"
+                              style={{
+                                background: "rgba(239, 68, 68, 0.12)",
+                                color: "#991b1b",
+                                fontWeight: 700,
+                                padding: "4px 8px"
+                              }}
+                            >
+                              🔴 Pendiente
+                            </span>
+                            <div
+                              style={{
+                                fontSize: "0.75rem",
+                                fontWeight: inv.daysOverdue > 0 ? 700 : 500,
+                                color: inv.daysOverdue > 0 ? "#dc2626" : "var(--ink-soft)",
+                                marginTop: 2
+                              }}
+                            >
+                              {inv.daysOverdue > 0
+                                ? `⚠️ Vencida hace ${inv.daysOverdue}d`
+                                : inv.daysSinceIssue === 0
+                                ? "Emitida hoy (0d)"
+                                : `${inv.daysSinceIssue}d sin pagar`}
+                            </div>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Stock Status */}
                       <td style={{ padding: "12px 8px", textAlign: "center" }}>
                         {isReceived ? (
                           <span
@@ -334,21 +425,43 @@ export function PurchaseInvoicesPage() {
                           </span>
                         )}
                       </td>
+
+                      {/* Actions */}
                       <td style={{ padding: "12px 8px", textAlign: "center" }}>
-                        <Link
-                          to={`/compras/facturas/${inv.id}`}
-                          className="btn btn-outline compact"
-                          style={{
-                            fontSize: "0.78rem",
-                            padding: "4px 10px",
-                            fontWeight: 600,
-                            color: "#0284c7",
-                            borderColor: "#cbd5e1"
-                          }}
-                          title="Ver comprobante completo con detalle de renglones y cantidades"
-                        >
-                          👁️ Ver
-                        </Link>
+                        <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                          {!inv.isPaid && (
+                            <Link
+                              to={`/finanzas/pagos/nueva?supplierId=${inv.supplierId}`}
+                              className="btn compact"
+                              style={{
+                                fontSize: "0.78rem",
+                                padding: "4px 10px",
+                                background: "#0284c7",
+                                color: "#ffffff",
+                                fontWeight: 700,
+                                borderRadius: "6px",
+                                textDecoration: "none"
+                              }}
+                              title="Emitir orden de pago al proveedor"
+                            >
+                              💳 Pagar
+                            </Link>
+                          )}
+                          <Link
+                            to={`/compras/facturas/${inv.id}`}
+                            className="btn btn-outline compact"
+                            style={{
+                              fontSize: "0.78rem",
+                              padding: "4px 10px",
+                              fontWeight: 600,
+                              color: "#0284c7",
+                              borderColor: "#cbd5e1"
+                            }}
+                            title="Ver comprobante completo con detalle de renglones y cantidades"
+                          >
+                            👁️ Ver
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -363,7 +476,7 @@ export function PurchaseInvoicesPage() {
       <InvoiceOcrUploadModal
         isOpen={showOcrModal}
         onClose={() => setShowOcrModal(false)}
-        onApplyInvoice={(res) => {
+        onApplyInvoice={() => {
           navigate("/compras/facturas/nueva");
         }}
       />
