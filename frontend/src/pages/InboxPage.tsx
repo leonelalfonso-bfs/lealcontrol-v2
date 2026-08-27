@@ -29,6 +29,31 @@ function getChannel(msg: EmailMessage): "whatsapp" | "instagram" | "facebook" | 
   return "email";
 }
 
+function isOwnBrand(name: string): boolean {
+  if (!name) return true;
+  const n = name.toLowerCase().trim();
+  return (
+    n.includes("balanzas full service") ||
+    n === "instagram oficial" ||
+    n === "@instagram oficial" ||
+    n === "página oficial" ||
+    n === "whatsapp oficial" ||
+    n === "usuario" ||
+    n === "desconocido"
+  );
+}
+
+function formatThreadDate(dateStr: string): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  if (isToday) {
+    return d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+}
+
 interface ConversationThread {
   key: string;
   channel: "whatsapp" | "instagram" | "facebook" | "email";
@@ -98,23 +123,25 @@ export function InboxPage() {
       }
 
       const isIncoming = m.direction === "Incoming";
-      const contactAddress = isIncoming ? m.fromAddress : m.toAddresses;
+      const otherAddress = isIncoming ? m.fromAddress : m.toAddresses;
 
-      let contactTitle = contactAddress;
+      let extractedTitle = "";
       if (m.subject.startsWith("WhatsApp: ")) {
-        contactTitle = m.subject.replace("WhatsApp: ", "").trim();
+        extractedTitle = m.subject.replace("WhatsApp: ", "").trim();
       } else if (m.subject.startsWith("Instagram DM: ")) {
-        contactTitle = m.subject.replace("Instagram DM: ", "").trim();
+        extractedTitle = m.subject.replace("Instagram DM: ", "").trim();
       } else if (m.subject.startsWith("Messenger: ")) {
-        contactTitle = m.subject.replace("Messenger: ", "").trim();
+        extractedTitle = m.subject.replace("Messenger: ", "").trim();
+      } else {
+        extractedTitle = otherAddress;
       }
 
       if (!map.has(threadKey)) {
         map.set(threadKey, {
           key: threadKey,
           channel: ch,
-          contactTitle: contactTitle || contactAddress,
-          contactAddress: contactAddress,
+          contactTitle: extractedTitle || otherAddress,
+          contactAddress: otherAddress,
           lastMessage: m,
           messages: [m],
           lastOccurredAtUtc: m.occurredAtUtc
@@ -125,9 +152,9 @@ export function InboxPage() {
         if (new Date(m.occurredAtUtc) > new Date(thread.lastOccurredAtUtc)) {
           thread.lastMessage = m;
           thread.lastOccurredAtUtc = m.occurredAtUtc;
-          if (contactTitle && !contactTitle.startsWith("+") && !contactTitle.startsWith("@")) {
-            thread.contactTitle = contactTitle;
-          }
+        }
+        if (!isOwnBrand(extractedTitle) && isOwnBrand(thread.contactTitle)) {
+          thread.contactTitle = extractedTitle;
         }
       }
     }
@@ -142,6 +169,27 @@ export function InboxPage() {
       (a, b) => new Date(b.lastOccurredAtUtc).getTime() - new Date(a.lastOccurredAtUtc).getTime()
     );
   }, [messages]);
+
+  const getThreadDisplayName = (t: ConversationThread): string => {
+    if (t.contactTitle && !isOwnBrand(t.contactTitle)) {
+      return t.contactTitle;
+    }
+    const incoming = t.messages.find((m) => m.direction === "Incoming");
+    if (incoming && incoming.fromAddress && !isOwnBrand(incoming.fromAddress)) {
+      return incoming.fromAddress;
+    }
+    const outgoing = t.messages.find((m) => m.direction === "Outgoing");
+    if (outgoing && outgoing.toAddresses && !isOwnBrand(outgoing.toAddresses)) {
+      return outgoing.toAddresses;
+    }
+    if (t.contactAddress && !isOwnBrand(t.contactAddress)) {
+      return t.contactAddress;
+    }
+    if (t.channel === "instagram") return "Contacto de Instagram";
+    if (t.channel === "facebook") return "Contacto de Facebook";
+    if (t.channel === "whatsapp") return "Contacto de WhatsApp";
+    return "Contacto";
+  };
 
   // Filter threads by Folder and Channel
   const visibleThreads = useMemo(() => {
@@ -217,7 +265,9 @@ export function InboxPage() {
   };
 
   const deleteThread = async () => {
-    if (!activeThread || !confirm(`¿Eliminar la conversación con "${activeThread.contactTitle}" solo de Leal Control?`)) return;
+    if (!activeThread) return;
+    const name = getThreadDisplayName(activeThread);
+    if (!confirm(`¿Eliminar la conversación con "${name}" solo de Leal Control?`)) return;
     setBusy(true);
     try {
       for (const m of activeThread.messages) {
@@ -240,11 +290,12 @@ export function InboxPage() {
       const ch = activeThread.channel;
       const isEmail = ch === "email";
       const isWa = ch === "whatsapp";
+      const name = getThreadDisplayName(activeThread);
       await api.captureLead({
         companyName: isEmail
           ? activeThread.contactAddress.split("@")[1] || "Nuevo contacto"
-          : `${activeThread.contactTitle}`,
-        contactName: activeThread.contactTitle,
+          : name,
+        contactName: name,
         email: isEmail ? activeThread.contactAddress : undefined,
         phone: isWa ? activeThread.contactAddress.replace(/\D/g, "") : undefined,
         source: isWa ? "WhatsApp" : ch === "instagram" ? "Instagram" : ch === "facebook" ? "Facebook" : "Email",
@@ -346,6 +397,8 @@ export function InboxPage() {
     }
   };
 
+  const activeDisplayName = activeThread ? getThreadDisplayName(activeThread) : "";
+
   return (
     <div className="inbox-page page-wide" style={{ paddingBottom: 40 }}>
       <div className="page-head">
@@ -440,6 +493,8 @@ export function InboxPage() {
           {visibleThreads.map((t) => {
             const icon = t.channel === "whatsapp" ? "💬" : t.channel === "instagram" ? "📸" : t.channel === "facebook" ? "📘" : "✉️";
             const isActive = selectedThreadKey === t.key;
+            const displayName = getThreadDisplayName(t);
+
             return (
               <article
                 key={t.key}
@@ -452,26 +507,59 @@ export function InboxPage() {
                   style={{
                     width: "100%",
                     display: "flex",
-                    alignItems: "flex-start",
-                    gap: 10,
+                    alignItems: "center",
+                    gap: 12,
                     padding: "12px 14px",
                     background: isActive ? "rgba(13, 148, 136, 0.08)" : "transparent",
                     border: "none",
                     textAlign: "left"
                   }}
                 >
-                  <span style={{ fontSize: "1.3rem", marginTop: 2 }}>{icon}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                      <strong style={{ fontSize: "0.9rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--ink)" }}>
-                        {t.contactTitle}
-                      </strong>
-                      <time style={{ fontSize: "0.72rem", color: "var(--ink-soft)" }}>
-                        {new Date(t.lastOccurredAtUtc).toLocaleDateString("es-AR", { month: "short", day: "numeric" })}
-                      </time>
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "1.2rem",
+                      background:
+                        t.channel === "whatsapp"
+                          ? "#dcfce7"
+                          : t.channel === "instagram"
+                          ? "#fce7f3"
+                          : t.channel === "facebook"
+                          ? "#dbeafe"
+                          : "#f1f5f9",
+                      flexShrink: 0
+                    }}
+                  >
+                    {icon}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: "0.88rem",
+                          color: "var(--ink)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          maxWidth: "68%"
+                        }}
+                      >
+                        {displayName}
+                      </span>
+                      <span style={{ fontSize: "0.72rem", color: "var(--ink-soft)", whiteSpace: "nowrap" }}>
+                        {formatThreadDate(t.lastOccurredAtUtc)}
+                      </span>
                     </div>
-                    <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {t.lastMessage.direction === "Outgoing" && <span style={{ color: "#0d9488" }}>Tú: </span>}
+
+                    <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {t.lastMessage.direction === "Outgoing" && <span style={{ color: "#0d9488", fontWeight: 600 }}>Tú: </span>}
                       {t.lastMessage.bodyPreview || `[Mensaje de ${t.channel}]`}
                     </div>
                   </div>
@@ -506,7 +594,7 @@ export function InboxPage() {
                     <span style={{ fontSize: "1.2rem" }}>
                       {activeThread.channel === "whatsapp" ? "💬" : activeThread.channel === "instagram" ? "📸" : activeThread.channel === "facebook" ? "📘" : "✉️"}
                     </span>
-                    <h2 style={{ margin: 0, fontSize: "1.1rem" }}>{activeThread.contactTitle}</h2>
+                    <h2 style={{ margin: 0, fontSize: "1.1rem" }}>{activeDisplayName}</h2>
                   </div>
                   <span className="muted" style={{ fontSize: "0.78rem" }}>
                     {activeThread.contactAddress} • {activeThread.messages.length} mensaje(s) en el historial
@@ -629,7 +717,7 @@ export function InboxPage() {
                   <input
                     type="text"
                     required
-                    placeholder={`Escribí una respuesta directa por ${activeThread.channel.toUpperCase()} a ${activeThread.contactTitle}...`}
+                    placeholder={`Escribí una respuesta directa por ${activeThread.channel.toUpperCase()} a ${activeDisplayName}...`}
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     style={{ flex: 1, padding: "10px 14px", borderRadius: 20, border: "1px solid var(--surface-border)", fontSize: "0.9rem" }}
