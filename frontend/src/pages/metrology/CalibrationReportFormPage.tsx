@@ -22,6 +22,14 @@ export interface LinearityRowState {
   descDeltaL: string;
 }
 
+export interface MetrologySealRow {
+  id: string;
+  location: string;
+  code: string;
+  type: string;
+  notes: string;
+}
+
 const createDefaultTrials = (count: number, defaultLoad: string): FidelityTrial[] => {
   return Array.from({ length: 5 }, (_, i) => ({
     initialZero: "0",
@@ -116,9 +124,8 @@ export function CalibrationReportFormPage() {
   const [draftWeightIds, setDraftWeightIds] = useState<string[]>([]);
   const [weightSearch, setWeightSearch] = useState("");
 
-  // Assay 1: Visual & Functional Inspection
+  // Assay 1: Visual & Functional Inspection (sin cero, ya que cuenta con ensayo dedicado)
   const [inspLevel, setInspLevel] = useState(true);
-  const [inspZero, setInspZero] = useState(true);
   const [inspTare, setInspTare] = useState(true);
   const [inspSeals, setInspSeals] = useState(true);
   const [inspNotes, setInspNotes] = useState("Instrumento en correctas condiciones mecánicas y estructurales.");
@@ -163,6 +170,14 @@ export function CalibrationReportFormPage() {
 
   // Assay 6: Linearity (25 rows con pesas, carga auxiliar y redondeo)
   const [linRows, setLinRows] = useState<LinearityRowState[]>([]);
+
+  // Control y Registro de Precintos Metrológicos
+  const [seals, setSeals] = useState<MetrologySealRow[]>([
+    { id: "1", location: "Indicador electrónico", code: "", type: "Autoadhesivo (a)", notes: "" },
+    { id: "2", location: "Caja de unión", code: "", type: "Autoadhesivo (a)", notes: "" },
+    { id: "3", location: "Placa de identificación de indicador", code: "", type: "Autoadhesivo (a)", notes: "" },
+    { id: "4", location: "Placa de identificación de plataforma", code: "", type: "Autoadhesivo (a)", notes: "" }
+  ]);
 
   // Load initial lists
   useEffect(() => {
@@ -494,7 +509,8 @@ export function CalibrationReportFormPage() {
   const activeLinRows = linRowsComputed.filter((r) => r.hasAnyData);
   const linAllOk = activeLinRows.length > 0 ? activeLinRows.every((r) => r.conform) : true;
 
-  const inspOk = inspLevel && inspZero && inspTare && inspSeals;
+  // Visual inspection OK (nivelación, tara y precintos)
+  const inspOk = inspLevel && inspTare && inspSeals;
   const allAssaysPass = inspOk && zeroSettingOk && mobilityOk && fidelityAllOk && eccOk && linAllOk;
   const finalResult = allAssaysPass ? "Apto" : "No Apto";
 
@@ -621,6 +637,12 @@ export function CalibrationReportFormPage() {
           certificateNumber: w.certificateNumber
         }));
 
+      const validSeals = seals.filter((s) => s.location.trim() || s.code.trim());
+      const sealsSummary = validSeals
+        .filter((s) => s.code.trim())
+        .map((s) => `${s.location}: ${s.code} (${s.type})`)
+        .join("; ");
+
       const created = await api.saveCalibrationReport({
         certificateNumber: reportNumber.trim() || undefined,
         equipmentId: selectedEquipment.id,
@@ -657,10 +679,10 @@ export function CalibrationReportFormPage() {
         expandedUncertaintyK2: expandedUncertainty,
         visualInspectionJson: JSON.stringify({
           level: inspLevel,
-          zero: inspZero,
           tare: inspTare,
           seals: inspSeals,
           notes: inspNotes.trim(),
+          sealsList: validSeals,
           checklist: {
             profile: regulatoryProfile,
             operationType,
@@ -704,7 +726,7 @@ export function CalibrationReportFormPage() {
         linearityTestJson: JSON.stringify(linearityData),
         weightsUsedJson: JSON.stringify(weightsUsed),
         observations: observations.trim() || undefined,
-        sealsPlaced: inspSeals ? "Precintos de verificación reglamentarios colocados en indicador y caja de unión." : "Sin precintos reglamentarios."
+        sealsPlaced: sealsSummary || (inspSeals ? "Precintos reglamentarios colocados en indicador y caja de unión." : "Sin precintos reglamentarios.")
       });
 
       navigate(`/metrologia/certificados/${created.id}`);
@@ -1121,10 +1143,10 @@ export function CalibrationReportFormPage() {
               </div>
             </div>
 
-            {/* Inspección Visual y Funcional */}
+            {/* Inspección Visual y Funcional (Sin cero, ya que cuenta con pestaña y ensayo exclusivo) */}
             <div className="card pad">
               <h3 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>Inspección Visual y Funcional</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 12 }}>
                 <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
                   <input
                     type="checkbox"
@@ -1132,14 +1154,6 @@ export function CalibrationReportFormPage() {
                     onChange={(e) => setInspLevel(e.target.checked)}
                   />
                   <span>Nivelación y apoyos correctos</span>
-                </label>
-                <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={inspZero}
-                    onChange={(e) => setInspZero(e.target.checked)}
-                  />
-                  <span>Dispositivo de puesta a cero operativo</span>
                 </label>
                 <label style={{ flexDirection: "row", alignItems: "center", gap: 8, cursor: "pointer" }}>
                   <input
@@ -1812,6 +1826,120 @@ export function CalibrationReportFormPage() {
         {/* TAB 6: DICTAMEN FINAL & PATRONES */}
         {activeTab === "summary" && (
           <>
+            {/* Control y Registro de Precintos Metrológicos (según requerimiento) */}
+            <div className="card pad">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: "1.2rem" }}>🔒</span>
+                  <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Control y Registro de Precintos Metrológicos</h3>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-outline compact"
+                  style={{ fontSize: "0.78rem" }}
+                  onClick={() => {
+                    setSeals((prev) => [
+                      ...prev,
+                      {
+                        id: Date.now().toString(),
+                        location: "",
+                        code: "",
+                        type: "Autoadhesivo (a)",
+                        notes: ""
+                      }
+                    ]);
+                  }}
+                >
+                  + Añadir Precinto
+                </button>
+              </div>
+
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                  <thead>
+                    <tr style={{ background: "rgba(0,0,0,0.02)", textAlign: "left" }}>
+                      <th style={{ padding: "6px 8px", width: "30%" }}>Ubicación del Precinto</th>
+                      <th style={{ padding: "6px 8px", width: "25%" }}>N° de Precinto / Código</th>
+                      <th style={{ padding: "6px 8px", width: "22%" }}>Tipo de Precinto</th>
+                      <th style={{ padding: "6px 8px", width: "18%" }}>Observaciones</th>
+                      <th style={{ padding: "6px 8px", width: 45, textAlign: "center" }}>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {seals.map((s, idx) => (
+                      <tr key={s.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                        <td style={{ padding: "4px 8px" }}>
+                          <input
+                            type="text"
+                            value={s.location}
+                            placeholder="Ej. Indicador electrónico..."
+                            onChange={(e) => {
+                              const copy = [...seals];
+                              copy[idx].location = e.target.value;
+                              setSeals(copy);
+                            }}
+                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                          />
+                        </td>
+                        <td style={{ padding: "4px 8px" }}>
+                          <input
+                            type="text"
+                            value={s.code}
+                            placeholder="Ej. 17741"
+                            onChange={(e) => {
+                              const copy = [...seals];
+                              copy[idx].code = e.target.value;
+                              setSeals(copy);
+                            }}
+                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16, fontWeight: 700 }}
+                          />
+                        </td>
+                        <td style={{ padding: "4px 8px" }}>
+                          <input
+                            type="text"
+                            value={s.type}
+                            placeholder="Autoadhesivo (a)"
+                            onChange={(e) => {
+                              const copy = [...seals];
+                              copy[idx].type = e.target.value;
+                              setSeals(copy);
+                            }}
+                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                          />
+                        </td>
+                        <td style={{ padding: "4px 8px" }}>
+                          <input
+                            type="text"
+                            value={s.notes}
+                            placeholder="Opcional"
+                            onChange={(e) => {
+                              const copy = [...seals];
+                              copy[idx].notes = e.target.value;
+                              setSeals(copy);
+                            }}
+                            style={{ width: "100%", padding: "5px 8px", borderRadius: 16 }}
+                          />
+                        </td>
+                        <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                          <button
+                            type="button"
+                            className="btn ghost compact"
+                            style={{ color: "#dc2626", padding: "4px 6px" }}
+                            title="Eliminar precinto"
+                            onClick={() => {
+                              setSeals(seals.filter((_, i) => i !== idx));
+                            }}
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             {/* Weights Picker */}
             <div className="card pad">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>

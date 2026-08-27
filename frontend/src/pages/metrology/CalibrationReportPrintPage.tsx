@@ -550,6 +550,39 @@ export function CalibrationReportPrintPage() {
         </table>
       </div>
 
+      {/* Control y Registro de Precintos Metrológicos */}
+      {((visualInspectionData?.sealsList && visualInspectionData.sealsList.length > 0) || report.sealsPlaced) && (
+        <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
+          <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
+            🔒 CONTROL Y REGISTRO DE PRECINTOS METROLÓGICOS
+          </div>
+          {visualInspectionData?.sealsList && visualInspectionData.sealsList.length > 0 ? (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.76rem" }}>
+              <thead>
+                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #cbd5e1", textAlign: "left" }}>
+                  <th style={{ padding: "4px 6px", width: "30%" }}>Ubicación del Precinto</th>
+                  <th style={{ padding: "4px 6px", width: "25%" }}>N° de Precinto / Código</th>
+                  <th style={{ padding: "4px 6px", width: "25%" }}>Tipo de Precinto</th>
+                  <th style={{ padding: "4px 6px", width: "20%" }}>Observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visualInspectionData.sealsList.map((s: any, idx: number) => (
+                  <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
+                    <td style={{ padding: "4px 6px", fontWeight: 600 }}>{s.location || "—"}</td>
+                    <td style={{ padding: "4px 6px", fontWeight: 700, color: "#0f766e" }}>{s.code || "—"}</td>
+                    <td style={{ padding: "4px 6px" }}>{s.type || "Autoadhesivo (a)"}</td>
+                    <td style={{ padding: "4px 6px", color: "#64748b" }}>{s.notes || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ fontSize: "0.78rem" }}>{report.sealsPlaced}</div>
+          )}
+        </div>
+      )}
+
       {/* Dictamen Final & Firmas */}
       <div style={{ border: "2px solid #0d9488", borderRadius: 8, padding: 14, background: "#f4fbf9", marginBottom: 24 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

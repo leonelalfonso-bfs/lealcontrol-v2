@@ -1645,6 +1645,19 @@ export type CalibrationReport = {
   result: "Apto" | "Apto con Observaciones" | "No Apto";
   observations?: string | null;
   status: "Draft" | "Issued" | "Cancelled";
+  sealsPlaced?: string | null;
+  visualInspectionJson?: string | null;
+  standardApplied?: string | null;
+  regulatoryProfile?: string | null;
+  operationType?: string | null;
+  documentTitle?: string | null;
+  regulatoryStatus?: string | null;
+  regulatoryNotice?: string | null;
+  testPlanVersion?: string | null;
+  reportStatus?: string | null;
+  certificateNumber?: string | null;
+  verdict?: string | null;
+  expandedUncertaintyK2?: number | null;
   createdAtUtc: string;
 };
 
