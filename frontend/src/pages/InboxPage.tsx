@@ -486,8 +486,8 @@ export function InboxPage() {
         </aside>
 
         {/* Middle: Conversation Threads List */}
-        <section className="message-list" style={{ maxWidth: 360, minWidth: 300, borderRight: "1px solid var(--surface-border)" }}>
-          <div className="message-list-toolbar" style={{ padding: "10px 14px", fontWeight: 700, fontSize: "0.86rem", color: "var(--ink-soft)" }}>
+        <section className="message-list" style={{ maxWidth: 360, minWidth: 300, borderRight: "1px solid var(--surface-border)", overflowY: "auto" }}>
+          <div className="message-list-toolbar" style={{ padding: "12px 16px", fontWeight: 700, fontSize: "0.86rem", color: "var(--ink-soft)", borderBottom: "1px solid var(--surface-border)" }}>
             CONVERSACIONES ({visibleThreads.length})
           </div>
           {visibleThreads.map((t) => {
@@ -496,75 +496,78 @@ export function InboxPage() {
             const displayName = getThreadDisplayName(t);
 
             return (
-              <article
+              <div
                 key={t.key}
-                className={`message-item ${isActive ? "active" : ""}`}
-                style={{ padding: 0, cursor: "pointer", borderBottom: "1px solid var(--surface-border)" }}
+                onClick={() => setSelectedThreadKey(t.key)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "14px 16px",
+                  borderBottom: "1px solid var(--surface-border)",
+                  background: isActive ? "rgba(13, 148, 136, 0.08)" : "transparent",
+                  cursor: "pointer",
+                  transition: "background 0.15s ease",
+                  borderLeft: isActive ? "4px solid #0d9488" : "4px solid transparent"
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) e.currentTarget.style.background = "rgba(0,0,0,0.03)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) e.currentTarget.style.background = "transparent";
+                }}
               >
-                <button
-                  type="button"
-                  onClick={() => setSelectedThreadKey(t.key)}
+                {/* Avatar Badge */}
+                <div
                   style={{
-                    width: "100%",
+                    width: 44,
+                    height: 44,
+                    borderRadius: "50%",
                     display: "flex",
                     alignItems: "center",
-                    gap: 12,
-                    padding: "12px 14px",
-                    background: isActive ? "rgba(13, 148, 136, 0.08)" : "transparent",
-                    border: "none",
-                    textAlign: "left"
+                    justifyContent: "center",
+                    fontSize: "1.3rem",
+                    background:
+                      t.channel === "whatsapp"
+                        ? "#dcfce7"
+                        : t.channel === "instagram"
+                        ? "#fce7f3"
+                        : t.channel === "facebook"
+                        ? "#dbeafe"
+                        : "#f1f5f9",
+                    flexShrink: 0
                   }}
                 >
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "1.2rem",
-                      background:
-                        t.channel === "whatsapp"
-                          ? "#dcfce7"
-                          : t.channel === "instagram"
-                          ? "#fce7f3"
-                          : t.channel === "facebook"
-                          ? "#dbeafe"
-                          : "#f1f5f9",
-                      flexShrink: 0
-                    }}
-                  >
-                    {icon}
+                  {icon}
+                </div>
+
+                {/* Content info */}
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: "0.92rem",
+                        color: "var(--ink)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        maxWidth: "180px"
+                      }}
+                    >
+                      {displayName}
+                    </span>
+                    <span style={{ fontSize: "0.74rem", color: "var(--ink-soft)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                      {formatThreadDate(t.lastOccurredAtUtc)}
+                    </span>
                   </div>
 
-                  <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <span
-                        style={{
-                          fontWeight: 700,
-                          fontSize: "0.88rem",
-                          color: "var(--ink)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          maxWidth: "68%"
-                        }}
-                      >
-                        {displayName}
-                      </span>
-                      <span style={{ fontSize: "0.72rem", color: "var(--ink-soft)", whiteSpace: "nowrap" }}>
-                        {formatThreadDate(t.lastOccurredAtUtc)}
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {t.lastMessage.direction === "Outgoing" && <span style={{ color: "#0d9488", fontWeight: 600 }}>Tú: </span>}
-                      {t.lastMessage.bodyPreview || `[Mensaje de ${t.channel}]`}
-                    </div>
+                  <div style={{ fontSize: "0.82rem", color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {t.lastMessage.direction === "Outgoing" && <span style={{ color: "#0d9488", fontWeight: 600 }}>Tú: </span>}
+                    {t.lastMessage.bodyPreview || `[Mensaje de ${t.channel}]`}
                   </div>
-                </button>
-              </article>
+                </div>
+              </div>
             );
           })}
           {visibleThreads.length === 0 && (
