@@ -155,13 +155,14 @@ export function App() {
   const userRole = user?.role || "Comercial";
   let allowedModuleIds: string[] = [];
   if (userRole === "Admin") {
-    allowedModuleIds = ["inicio", "directorio", "crm", "ventas", "compras", "inventario", "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "administracion"];
+    allowedModuleIds = ["inicio", "directorio", "crm", "comunicaciones", "ventas", "compras", "inventario", "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "administracion"];
   } else {
     try {
       const raw = typeof user?.allowedModulesJson === "string" ? JSON.parse(user.allowedModulesJson) : user?.allowedModulesJson || [];
       const map: Record<string, string[]> = {
         sales: ["ventas"],
-        crm: ["crm", "directorio"],
+        crm: ["crm", "directorio", "comunicaciones"],
+        communications: ["comunicaciones"],
         purchases: ["compras"],
         inventory: ["inventario", "produccion"],
         finance: ["finanzas"],
@@ -177,7 +178,7 @@ export function App() {
         else allowedModuleIds.push(r);
       });
     } catch {
-      allowedModuleIds = ["inicio", "ventas", "crm"];
+      allowedModuleIds = ["inicio", "ventas", "crm", "comunicaciones"];
     }
   }
 
