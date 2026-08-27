@@ -215,7 +215,8 @@ public static class CommunicationsEndpoints
             var instance = WhatsAppGatewayService.GetTenantInstanceName(tenantId);
 
             await waService.ConfigureInstanceWebhookAsync(instance, ct);
-            var messages = await waService.FetchRecentMessagesAsync(instance, ct);
+            var contactsMap = await waService.FetchContactsMapAsync(instance, ct);
+            var messages = await waService.FetchRecentMessagesAsync(instance, contactsMap, ct);
             var addedCount = 0;
 
             var defaultAcc = await db.MailAccounts.FirstOrDefaultAsync(x => x.TenantId == tenantId, ct);
@@ -223,11 +224,14 @@ public static class CommunicationsEndpoints
 
             foreach (var m in messages)
             {
-                var cleanPhone = Regex.Replace(m.RemoteJid.Split('@')[0], @"[^\d]", "");
+                var cleanPhone = Regex.Replace(m.RemoteJid.Split('@')[0].Split(':')[0], @"[^\d]", "");
                 var internetId = $"wa_{m.MessageId}";
 
                 var exists = await db.EmailMessages.AnyAsync(x => x.TenantId == tenantId && x.InternetMessageId == internetId, ct);
                 if (exists) continue;
+
+                var contactName = !string.IsNullOrWhiteSpace(m.PushName) ? m.PushName : (contactsMap.TryGetValue(cleanPhone, out var cn) ? cn : null);
+                var contactDisplayName = !string.IsNullOrWhiteSpace(contactName) ? $"{contactName} (+{cleanPhone})" : $"+{cleanPhone}";
 
                 var html = $"<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; white-space: pre-wrap;\">{System.Net.WebUtility.HtmlEncode(m.Text)}</div>";
 
@@ -238,9 +242,9 @@ public static class CommunicationsEndpoints
                     null,
                     $"wa_{cleanPhone}",
                     m.FromMe ? EmailDirection.Outgoing : EmailDirection.Incoming,
-                    !string.IsNullOrWhiteSpace(m.PushName) ? $"WhatsApp: {m.PushName} (+{cleanPhone})" : $"WhatsApp: +{cleanPhone}",
-                    m.FromMe ? "WhatsApp Oficial" : $"+{cleanPhone}",
-                    m.FromMe ? $"+{cleanPhone}" : "WhatsApp Oficial",
+                    $"WhatsApp: {contactDisplayName}",
+                    m.FromMe ? "WhatsApp Oficial" : contactDisplayName,
+                    m.FromMe ? contactDisplayName : "WhatsApp Oficial",
                     m.Text.Length > 400 ? m.Text[..400] : m.Text,
                     m.TimestampUtc,
                     "Customer",
@@ -257,7 +261,7 @@ public static class CommunicationsEndpoints
                 await db.SaveChangesAsync(ct);
             }
 
-            return Results.Ok(new { synced = addedCount });
+            return Results.Ok(new { synced = addedCount, total = messages.Count });
         });
 
         group.MapPost("/whatsapp/send", async (SendWhatsAppRequest req, WhatsAppGatewayService waService, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
@@ -490,6 +494,67 @@ public static class CommunicationsEndpoints
             }
 
             return Results.Ok(new { success = true });
+        });
+
+        group.MapPost("/meta/sync", async (MetaGraphApiService metaService, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+
+            var connections = await db.MetaConnections
+                .Where(x => x.TenantId == tenantId && x.IsConnected && !string.IsNullOrWhiteSpace(x.PageAccessToken))
+                .ToListAsync(ct);
+
+            var defaultAcc = await db.MailAccounts.FirstOrDefaultAsync(x => x.TenantId == tenantId, ct);
+            var accId = defaultAcc?.Id ?? Guid.Empty;
+            var addedCount = 0;
+
+            foreach (var conn in connections)
+            {
+                var isIg = conn.ChannelType == "instagram";
+                var prefix = isIg ? "meta_ig" : "meta_fb";
+                var senderOfficial = isIg ? (conn.InstagramUsername != null ? $"@{conn.InstagramUsername}" : "Instagram Oficial") : (conn.PageName ?? "Página Oficial");
+
+                var messages = await metaService.FetchRecentConversationsAsync(conn.PageAccessToken!, conn.ChannelType, ct);
+
+                foreach (var m in messages)
+                {
+                    var internetId = $"{prefix}_{m.MessageId}";
+                    var exists = await db.EmailMessages.AnyAsync(x => x.TenantId == tenantId && x.InternetMessageId == internetId, ct);
+                    if (exists) continue;
+
+                    var isOutgoing = m.FromName.Equals(conn.PageName, StringComparison.OrdinalIgnoreCase) || (conn.InstagramUsername != null && m.FromName.Equals(conn.InstagramUsername, StringComparison.OrdinalIgnoreCase));
+                    var contactTitle = !string.IsNullOrWhiteSpace(m.ParticipantName) ? m.ParticipantName : (isIg ? $"@{m.ParticipantId}" : $"Usuario FB {m.ParticipantId}");
+
+                    var html = $"<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; white-space: pre-wrap;\">{System.Net.WebUtility.HtmlEncode(m.Text)}</div>";
+
+                    var email = EmailMessage.Create(
+                        tenantId,
+                        accId,
+                        internetId,
+                        null,
+                        $"{prefix}_{m.ParticipantId}",
+                        isOutgoing ? EmailDirection.Outgoing : EmailDirection.Incoming,
+                        isIg ? $"Instagram DM: {contactTitle}" : $"Messenger: {contactTitle}",
+                        isOutgoing ? senderOfficial : contactTitle,
+                        isOutgoing ? contactTitle : senderOfficial,
+                        m.Text.Length > 400 ? m.Text[..400] : m.Text,
+                        m.CreatedAtUtc,
+                        "Customer",
+                        null,
+                        html
+                    );
+
+                    db.EmailMessages.Add(email);
+                    addedCount++;
+                }
+            }
+
+            if (addedCount > 0)
+            {
+                await db.SaveChangesAsync(ct);
+            }
+
+            return Results.Ok(new { synced = addedCount });
         });
 
         group.MapPost("/meta/send", async (SendMetaMessageRequest req, MetaGraphApiService metaService, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {

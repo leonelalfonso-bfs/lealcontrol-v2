@@ -54,9 +54,9 @@ export function InboxPage() {
 
   const load = async () => {
     try {
-      // Sync WhatsApp messages in background
+      // Sync WhatsApp & Meta in background
       try {
-        await api.syncWhatsAppMessages();
+        await Promise.all([api.syncWhatsAppMessages(), api.syncMetaMessages()]);
       } catch {}
 
       const [m, a] = await Promise.all([api.listEmails(), api.listMailAccounts()]);
@@ -92,17 +92,20 @@ export function InboxPage() {
 
   const [syncNotification, setSyncNotification] = useState<string | null>(null);
 
-  const handleForceSyncWhatsApp = async () => {
+  const handleForceSyncOmni = async () => {
     setBusy(true);
     setError(null);
     setSyncNotification(null);
     try {
-      const res = await api.syncWhatsAppMessages();
+      const [waRes, metaRes] = await Promise.all([
+        api.syncWhatsAppMessages().catch(() => ({ synced: 0 })),
+        api.syncMetaMessages().catch(() => ({ synced: 0 }))
+      ]);
       await load();
-      setSyncNotification(`Sincronización completada: ${res.synced} nuevo(s) mensaje(s) de WhatsApp recibidos.`);
+      setSyncNotification(`Sincronización completada: ${waRes.synced} de WhatsApp y ${metaRes.synced} de Instagram/Facebook.`);
       setTimeout(() => setSyncNotification(null), 5000);
     } catch (e: any) {
-      setError("Error al sincronizar WhatsApp: " + e.message);
+      setError("Error al sincronizar canales: " + e.message);
     } finally {
       setBusy(false);
     }
@@ -113,7 +116,7 @@ export function InboxPage() {
     setError(null);
     try {
       try {
-        await api.syncWhatsAppMessages();
+        await Promise.all([api.syncWhatsAppMessages(), api.syncMetaMessages()]);
       } catch {}
       for (const account of accounts.filter((a) => a.isActive)) await api.syncMailAccount(account.id);
       await load();
@@ -266,8 +269,8 @@ export function InboxPage() {
           <p className="muted">Conversaciones de Email, WhatsApp, Instagram y Facebook unificadas con el CRM.</p>
         </div>
         <div className="toolbar" style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-outline" onClick={() => void handleForceSyncWhatsApp()} disabled={busy} style={{ color: "#0d9488", borderColor: "#0d9488", fontWeight: 700 }}>
-            💬 🔄 Sincronizar WhatsApp
+          <button className="btn btn-outline" onClick={() => void handleForceSyncOmni()} disabled={busy} style={{ color: "#0d9488", borderColor: "#0d9488", fontWeight: 700 }}>
+            💬 📸 🔄 Sincronizar Redes
           </button>
           <button className="btn btn-outline" onClick={() => void syncAll()} disabled={busy}>
             🔄 Recibir Correo

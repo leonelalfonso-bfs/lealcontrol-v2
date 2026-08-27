@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -78,11 +79,9 @@ public sealed class WhatsAppGatewayService
     {
         try
         {
-            // First check if instance exists
             var checkRes = await _httpClient.GetAsync($"instance/connectionState/{instanceName}", ct);
             if (!checkRes.IsSuccessStatusCode)
             {
-                // Create instance
                 var createPayload = new
                 {
                     instanceName,
@@ -99,10 +98,8 @@ public sealed class WhatsAppGatewayService
                 }
             }
 
-            // Configure webhook for the instance to ensure it receives messages
             await ConfigureInstanceWebhookAsync(instanceName, ct);
 
-            // Connect existing instance to get QR
             var connectRes = await _httpClient.GetAsync($"instance/connect/{instanceName}", ct);
             if (connectRes.IsSuccessStatusCode)
             {
@@ -150,7 +147,59 @@ public sealed class WhatsAppGatewayService
         }
     }
 
-    public async Task<List<WhatsAppMessageItem>> FetchRecentMessagesAsync(string instanceName, CancellationToken ct = default)
+    public async Task<Dictionary<string, string>> FetchContactsMapAsync(string instanceName, CancellationToken ct = default)
+    {
+        var map = new Dictionary<string, string>();
+        try
+        {
+            var res = await _httpClient.PostAsJsonAsync($"chat/findContacts/{instanceName}", new { where = new { } }, ct);
+            if (!res.IsSuccessStatusCode)
+            {
+                res = await _httpClient.GetAsync($"chat/findContacts/{instanceName}", ct);
+            }
+
+            if (res.IsSuccessStatusCode)
+            {
+                var json = await res.Content.ReadFromJsonAsync<JsonElement>(ct);
+                var array = json;
+                if (json.TryGetProperty("records", out var rArray)) array = rArray;
+
+                if (array.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var c in array.EnumerateArray())
+                    {
+                        var remoteJid = c.TryGetProperty("id", out var idProp) ? idProp.GetString() : (c.TryGetProperty("remoteJid", out var rjProp) ? rjProp.GetString() : "");
+                        if (string.IsNullOrWhiteSpace(remoteJid) || remoteJid.EndsWith("@g.us")) continue;
+
+                        var cleanPhone = Regex.Replace(remoteJid.Split('@')[0].Split(':')[0], @"[^\d]", "");
+                        if (string.IsNullOrWhiteSpace(cleanPhone)) continue;
+
+                        var name = c.TryGetProperty("name", out var nProp) ? nProp.GetString() : null;
+                        var pushName = c.TryGetProperty("pushName", out var pnProp) ? pnProp.GetString() : null;
+                        var verifiedName = c.TryGetProperty("verifiedName", out var vnProp) ? vnProp.GetString() : null;
+                        var notify = c.TryGetProperty("notify", out var notProp) ? notProp.GetString() : null;
+
+                        var bestName = !string.IsNullOrWhiteSpace(name) ? name
+                            : !string.IsNullOrWhiteSpace(verifiedName) ? verifiedName
+                            : !string.IsNullOrWhiteSpace(pushName) ? pushName
+                            : notify;
+
+                        if (!string.IsNullOrWhiteSpace(bestName) && !bestName.Equals(cleanPhone, StringComparison.OrdinalIgnoreCase))
+                        {
+                            map[cleanPhone] = bestName;
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudieron obtener contactos de agenda de WhatsApp para {Instance}", instanceName);
+        }
+        return map;
+    }
+
+    public async Task<List<WhatsAppMessageItem>> FetchRecentMessagesAsync(string instanceName, Dictionary<string, string>? contactsMap = null, CancellationToken ct = default)
     {
         var list = new List<WhatsAppMessageItem>();
         try
@@ -168,10 +217,18 @@ public sealed class WhatsAppGatewayService
                     foreach (var chat in chatArray.EnumerateArray())
                     {
                         var remoteJid = chat.TryGetProperty("id", out var idProp) ? idProp.GetString() : (chat.TryGetProperty("remoteJid", out var rjProp) ? rjProp.GetString() : "");
+                        if (string.IsNullOrWhiteSpace(remoteJid) || remoteJid.EndsWith("@g.us")) continue;
+
+                        var cleanPhone = Regex.Replace(remoteJid.Split('@')[0].Split(':')[0], @"[^\d]", "");
                         var pushName = chat.TryGetProperty("pushName", out var pnProp) ? pnProp.GetString() : (chat.TryGetProperty("name", out var nProp) ? nProp.GetString() : "");
+                        if (contactsMap != null && contactsMap.TryGetValue(cleanPhone, out var agendaName) && !string.IsNullOrWhiteSpace(agendaName))
+                        {
+                            pushName = agendaName;
+                        }
+
                         var lastMsg = chat.TryGetProperty("lastMessage", out var lmProp) ? lmProp : default;
 
-                        if (!string.IsNullOrWhiteSpace(remoteJid) && !remoteJid.EndsWith("@g.us") && lastMsg.ValueKind == JsonValueKind.Object)
+                        if (lastMsg.ValueKind == JsonValueKind.Object)
                         {
                             var key = lastMsg.TryGetProperty("key", out var kProp) ? kProp : default;
                             var msgId = key.TryGetProperty("id", out var midProp) ? midProp.GetString() : "";
@@ -210,8 +267,16 @@ public sealed class WhatsAppGatewayService
                         var key = item.TryGetProperty("key", out var kProp) ? kProp : default;
                         var msgId = key.TryGetProperty("id", out var midProp) ? midProp.GetString() : "";
                         var remoteJid = key.TryGetProperty("remoteJid", out var rjProp) ? rjProp.GetString() : "";
+                        if (string.IsNullOrWhiteSpace(msgId) || string.IsNullOrWhiteSpace(remoteJid) || remoteJid.EndsWith("@g.us")) continue;
+
+                        var cleanPhone = Regex.Replace(remoteJid.Split('@')[0].Split(':')[0], @"[^\d]", "");
                         var fromMe = key.TryGetProperty("fromMe", out var fmProp) && fmProp.GetBoolean();
                         var pushName = item.TryGetProperty("pushName", out var pnProp) ? pnProp.GetString() : "";
+                        if (contactsMap != null && contactsMap.TryGetValue(cleanPhone, out var agendaName) && !string.IsNullOrWhiteSpace(agendaName))
+                        {
+                            pushName = agendaName;
+                        }
+
                         var text = ExtractTextFromMessage(item.TryGetProperty("message", out var mProp) ? mProp : default);
 
                         var timestamp = DateTime.UtcNow;
@@ -220,12 +285,9 @@ public sealed class WhatsAppGatewayService
                             timestamp = DateTimeOffset.FromUnixTimeSeconds(tsVal).UtcDateTime;
                         }
 
-                        if (!string.IsNullOrWhiteSpace(msgId) && !string.IsNullOrWhiteSpace(remoteJid) && !remoteJid.EndsWith("@g.us"))
+                        if (!list.Exists(x => x.MessageId == msgId))
                         {
-                            if (!list.Exists(x => x.MessageId == msgId))
-                            {
-                                list.Add(new WhatsAppMessageItem(msgId, remoteJid, fromMe, pushName, string.IsNullOrWhiteSpace(text) ? "[Mensaje multimedia]" : text, timestamp));
-                            }
+                            list.Add(new WhatsAppMessageItem(msgId, remoteJid, fromMe, pushName, string.IsNullOrWhiteSpace(text) ? "[Mensaje multimedia]" : text, timestamp));
                         }
                     }
                 }
@@ -328,7 +390,9 @@ public sealed class WhatsAppGatewayService
         if (msgObj.TryGetProperty("conversation", out var convProp)) return convProp.GetString() ?? "";
         if (msgObj.TryGetProperty("extendedTextMessage", out var extObj) && extObj.TryGetProperty("text", out var extText)) return extText.GetString() ?? "";
         if (msgObj.TryGetProperty("imageMessage", out var imgObj) && imgObj.TryGetProperty("caption", out var imgCap)) return imgCap.GetString() ?? "[Imagen de WhatsApp]";
+        if (msgObj.TryGetProperty("videoMessage", out var vidObj) && vidObj.TryGetProperty("caption", out var vidCap)) return vidCap.GetString() ?? "[Video de WhatsApp]";
         if (msgObj.TryGetProperty("documentMessage", out var docObj) && docObj.TryGetProperty("fileName", out var docFn)) return $"[Documento: {docFn.GetString()}]";
+        if (msgObj.TryGetProperty("audioMessage", out _)) return "[Nota de voz de WhatsApp]";
         return "";
     }
 
@@ -347,7 +411,7 @@ public sealed class WhatsAppGatewayService
 
     private static string CleanPhoneNumber(string number)
     {
-        var digits = System.Text.RegularExpressions.Regex.Replace(number, @"[^\d]", "");
+        var digits = Regex.Replace(number, @"[^\d]", "");
         return digits;
     }
 }

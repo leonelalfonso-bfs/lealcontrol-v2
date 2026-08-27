@@ -269,6 +269,7 @@ export const api = {
     }),
   disconnectMeta: (channelType: "facebook" | "instagram") =>
     request<{ success: boolean }>("/api/v1/communications/meta/disconnect", { method: "POST", body: JSON.stringify({ channelType }) }),
+  syncMetaMessages: () => request<{ synced: number }>("/api/v1/communications/meta/sync", { method: "POST" }),
   sendMetaMessage: (body: { channelType: "facebook" | "instagram"; recipientId: string; message: string; relatedEntityType?: string; relatedEntityId?: string }) =>
     request<{ success: boolean; messageId?: string; error?: string }>("/api/v1/communications/meta/send", { method: "POST", body: JSON.stringify(body) }),
 

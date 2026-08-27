@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -55,7 +56,6 @@ public sealed class MetaGraphApiService
                 var accountsJson = await accountsRes.Content.ReadFromJsonAsync<JsonElement>(ct);
                 if (accountsJson.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array && dataArray.GetArrayLength() > 0)
                 {
-                    // Find first page with instagram_business_account, or just the first page
                     JsonElement selectedPage = default;
                     foreach (var page in dataArray.EnumerateArray())
                     {
@@ -107,6 +107,104 @@ public sealed class MetaGraphApiService
         }
     }
 
+    public async Task<List<MetaMessageItem>> FetchRecentConversationsAsync(string pageAccessToken, string channelType, CancellationToken ct = default)
+    {
+        var list = new List<MetaMessageItem>();
+        try
+        {
+            var isIg = channelType.Equals("instagram", StringComparison.OrdinalIgnoreCase);
+            var convUrl = isIg
+                ? $"me/conversations?platform=instagram&fields=id,snippet,updated_time,participants,messages{{id,message,from,created_time}}&access_token={Uri.EscapeDataString(pageAccessToken)}"
+                : $"me/conversations?fields=id,snippet,updated_time,participants,messages{{id,message,from,created_time}}&access_token={Uri.EscapeDataString(pageAccessToken)}";
+
+            var res = await _httpClient.GetAsync(convUrl, ct);
+            if (!res.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Error fetching conversations from Meta ({Status})", res.StatusCode);
+                return list;
+            }
+
+            var json = await res.Content.ReadFromJsonAsync<JsonElement>(ct);
+            if (json.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var conv in dataArray.EnumerateArray())
+                {
+                    string? participantId = null;
+                    string? participantName = null;
+
+                    if (conv.TryGetProperty("participants", out var partObj) && partObj.TryGetProperty("data", out var partArray) && partArray.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var p in partArray.EnumerateArray())
+                        {
+                            var pName = p.TryGetProperty("name", out var pnProp) ? pnProp.GetString() : (p.TryGetProperty("username", out var puProp) ? puProp.GetString() : null);
+                            var pId = p.TryGetProperty("id", out var piProp) ? piProp.GetString() : null;
+                            if (!string.IsNullOrWhiteSpace(pName))
+                            {
+                                participantName = pName;
+                                participantId = pId;
+                            }
+                        }
+                    }
+
+                    if (conv.TryGetProperty("messages", out var msgObj) && msgObj.TryGetProperty("data", out var msgArray) && msgArray.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var m in msgArray.EnumerateArray())
+                        {
+                            var mid = m.TryGetProperty("id", out var midProp) ? midProp.GetString() : null;
+                            var text = m.TryGetProperty("message", out var textProp) ? textProp.GetString() : null;
+                            var createdStr = m.TryGetProperty("created_time", out var crProp) ? crProp.GetString() : null;
+                            var fromObj = m.TryGetProperty("from", out var foProp) ? foProp : default;
+                            var fromName = fromObj.TryGetProperty("name", out var fnProp) ? fnProp.GetString() : (fromObj.TryGetProperty("username", out var fuProp) ? fuProp.GetString() : null);
+                            var fromId = fromObj.TryGetProperty("id", out var fiProp) ? fiProp.GetString() : null;
+
+                            DateTime createdUtc = DateTime.UtcNow;
+                            if (!string.IsNullOrWhiteSpace(createdStr) && DateTime.TryParse(createdStr, out var parsedDt))
+                            {
+                                createdUtc = parsedDt.ToUniversalTime();
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(mid) && !string.IsNullOrWhiteSpace(text))
+                            {
+                                list.Add(new MetaMessageItem(
+                                    mid,
+                                    isIg ? "instagram" : "facebook",
+                                    participantId ?? fromId ?? "desconocido",
+                                    participantName ?? fromName ?? (isIg ? "Usuario Instagram" : "Usuario Facebook"),
+                                    fromName ?? "Usuario",
+                                    text,
+                                    createdUtc
+                                ));
+                            }
+                        }
+                    }
+                    else if (conv.TryGetProperty("snippet", out var snipProp))
+                    {
+                        var snippet = snipProp.GetString();
+                        var convId = conv.TryGetProperty("id", out var ciProp) ? ciProp.GetString() : Guid.NewGuid().ToString("N");
+                        if (!string.IsNullOrWhiteSpace(snippet))
+                        {
+                            list.Add(new MetaMessageItem(
+                                convId ?? Guid.NewGuid().ToString("N"),
+                                isIg ? "instagram" : "facebook",
+                                participantId ?? "desconocido",
+                                participantName ?? (isIg ? "Usuario Instagram" : "Usuario Facebook"),
+                                participantName ?? "Usuario",
+                                snippet,
+                                DateTime.UtcNow
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error sincronizando conversaciones de Meta ({Channel})", channelType);
+        }
+
+        return list;
+    }
+
     public async Task<MetaSendResult> SendMessageAsync(string pageAccessToken, string recipientId, string text, CancellationToken ct = default)
     {
         try
@@ -141,3 +239,4 @@ public sealed class MetaGraphApiService
 
 public sealed record MetaPageInfoResult(bool Success, string? PageId, string? PageName, string? InstagramAccountId, string? InstagramUsername, string? ResolvedPageAccessToken, string? Error);
 public sealed record MetaSendResult(bool Success, string? MessageId, string? Error);
+public sealed record MetaMessageItem(string MessageId, string ChannelType, string ParticipantId, string ParticipantName, string FromName, string Text, DateTime CreatedAtUtc);

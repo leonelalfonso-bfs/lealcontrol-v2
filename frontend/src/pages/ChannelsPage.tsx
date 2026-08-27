@@ -22,6 +22,22 @@ export function ChannelsPage() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [waSyncing, setWaSyncing] = useState(false);
   const [waSyncMsg, setWaSyncMsg] = useState<string | null>(null);
+  const [metaSyncing, setMetaSyncing] = useState(false);
+  const [metaSyncMsg, setMetaSyncMsg] = useState<string | null>(null);
+
+  const handleForceMetaSync = async () => {
+    setMetaSyncing(true);
+    setMetaSyncMsg(null);
+    try {
+      const res = await api.syncMetaMessages();
+      setMetaSyncMsg(`✓ Sincronizados ${res.synced} mensajes.`);
+      setTimeout(() => setMetaSyncMsg(null), 4000);
+    } catch (err: any) {
+      setMetaSyncMsg(`⚠️ ${err.message}`);
+    } finally {
+      setMetaSyncing(false);
+    }
+  };
 
   // Meta (Instagram & Facebook) State
   const [metaStatus, setMetaStatus] = useState<MetaStatusData | null>(null);
@@ -473,10 +489,23 @@ export function ChannelsPage() {
                 <br />
                 <strong>Página FB:</strong> {metaStatus?.instagram?.pageName || "Página vinculada"}
               </div>
+              {metaSyncMsg && (
+                <div style={{ fontSize: "0.78rem", color: "#065f46", margin: "6px 0", fontWeight: 600 }}>
+                  {metaSyncMsg}
+                </div>
+              )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
                 <Link to="/comunicaciones" className="btn btn-primary compact">
                   📬 Ir a la Bandeja
                 </Link>
+                <button
+                  type="button"
+                  className="btn btn-outline compact"
+                  onClick={handleForceMetaSync}
+                  disabled={metaSyncing}
+                >
+                  {metaSyncing ? "Sincronizando..." : "🔄 Forzar Sincronización"}
+                </button>
                 <button
                   type="button"
                   className="btn btn-outline compact"
@@ -592,10 +621,23 @@ export function ChannelsPage() {
                 <br />
                 <strong>Page ID:</strong> {metaStatus?.facebook?.pageId || "-"}
               </div>
+              {metaSyncMsg && (
+                <div style={{ fontSize: "0.78rem", color: "#065f46", margin: "6px 0", fontWeight: 600 }}>
+                  {metaSyncMsg}
+                </div>
+              )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
                 <Link to="/comunicaciones" className="btn btn-primary compact">
                   📬 Ir a la Bandeja
                 </Link>
+                <button
+                  type="button"
+                  className="btn btn-outline compact"
+                  onClick={handleForceMetaSync}
+                  disabled={metaSyncing}
+                >
+                  {metaSyncing ? "Sincronizando..." : "🔄 Forzar Sincronización"}
+                </button>
                 <button
                   type="button"
                   className="btn btn-outline compact"
