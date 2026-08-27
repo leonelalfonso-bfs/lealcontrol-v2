@@ -252,6 +252,7 @@ export const api = {
   getWhatsAppStatus: () => request<{ available: boolean; state: string; phoneNumber?: string; error?: string }>("/api/v1/communications/whatsapp/status"),
   connectWhatsApp: () => request<{ success: boolean; state: string; qrCodeBase64?: string; error?: string }>("/api/v1/communications/whatsapp/connect", { method: "POST" }),
   disconnectWhatsApp: () => request<{ success: boolean }>("/api/v1/communications/whatsapp/disconnect", { method: "POST" }),
+  syncWhatsAppMessages: () => request<{ synced: number }>("/api/v1/communications/whatsapp/sync", { method: "POST" }),
   sendWhatsAppMessage: (body: { to: string; message: string; mediaUrl?: string; mediaType?: string; fileName?: string; relatedEntityType?: string; relatedEntityId?: string }) =>
     request<{ success: boolean; messageId?: string; error?: string }>("/api/v1/communications/whatsapp/send", { method: "POST", body: JSON.stringify(body) }),
 

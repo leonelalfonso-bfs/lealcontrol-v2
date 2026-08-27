@@ -52,17 +52,28 @@ export function InboxPage() {
   const [newMessage, setNewMessage] = useState("");
   const [sendingNew, setSendingNew] = useState(false);
 
-  const load = () =>
-    Promise.all([api.listEmails(), api.listMailAccounts()])
-      .then(([m, a]) => {
-        setMessages(m);
-        setAccounts(a);
-        if (selected && !m.some((x) => x.id === selected.id)) setSelected(null);
-      })
-      .catch((e: Error) => setError(e.message));
+  const load = async () => {
+    try {
+      // Sync WhatsApp messages in background
+      try {
+        await api.syncWhatsAppMessages();
+      } catch {}
+
+      const [m, a] = await Promise.all([api.listEmails(), api.listMailAccounts()]);
+      setMessages(m);
+      setAccounts(a);
+      if (selected && !m.some((x) => x.id === selected.id)) setSelected(null);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
 
   useEffect(() => {
     void load();
+    const interval = window.setInterval(() => {
+      void load();
+    }, 6000);
+    return () => clearInterval(interval);
   }, []);
 
   const visible = useMemo(() => {
@@ -83,6 +94,9 @@ export function InboxPage() {
     setBusy(true);
     setError(null);
     try {
+      try {
+        await api.syncWhatsAppMessages();
+      } catch {}
       for (const account of accounts.filter((a) => a.isActive)) await api.syncMailAccount(account.id);
       await load();
     } catch (e) {

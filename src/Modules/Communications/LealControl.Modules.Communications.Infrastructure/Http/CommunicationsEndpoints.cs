@@ -209,6 +209,57 @@ public static class CommunicationsEndpoints
             return Results.Ok(new { success = ok });
         });
 
+        group.MapPost("/whatsapp/sync", async (WhatsAppGatewayService waService, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            var instance = WhatsAppGatewayService.GetTenantInstanceName(tenantId);
+
+            await waService.ConfigureInstanceWebhookAsync(instance, ct);
+            var messages = await waService.FetchRecentMessagesAsync(instance, ct);
+            var addedCount = 0;
+
+            var defaultAcc = await db.MailAccounts.FirstOrDefaultAsync(x => x.TenantId == tenantId, ct);
+            var accId = defaultAcc?.Id ?? Guid.Empty;
+
+            foreach (var m in messages)
+            {
+                var cleanPhone = Regex.Replace(m.RemoteJid.Split('@')[0], @"[^\d]", "");
+                var internetId = $"wa_{m.MessageId}";
+
+                var exists = await db.EmailMessages.AnyAsync(x => x.TenantId == tenantId && x.InternetMessageId == internetId, ct);
+                if (exists) continue;
+
+                var html = $"<div style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; white-space: pre-wrap;\">{System.Net.WebUtility.HtmlEncode(m.Text)}</div>";
+
+                var email = EmailMessage.Create(
+                    tenantId,
+                    accId,
+                    internetId,
+                    null,
+                    $"wa_{cleanPhone}",
+                    m.FromMe ? EmailDirection.Outgoing : EmailDirection.Incoming,
+                    !string.IsNullOrWhiteSpace(m.PushName) ? $"WhatsApp: {m.PushName} (+{cleanPhone})" : $"WhatsApp: +{cleanPhone}",
+                    m.FromMe ? "WhatsApp Oficial" : $"+{cleanPhone}",
+                    m.FromMe ? $"+{cleanPhone}" : "WhatsApp Oficial",
+                    m.Text.Length > 400 ? m.Text[..400] : m.Text,
+                    m.TimestampUtc,
+                    "Customer",
+                    null,
+                    html
+                );
+
+                db.EmailMessages.Add(email);
+                addedCount++;
+            }
+
+            if (addedCount > 0)
+            {
+                await db.SaveChangesAsync(ct);
+            }
+
+            return Results.Ok(new { synced = addedCount });
+        });
+
         group.MapPost("/whatsapp/send", async (SendWhatsAppRequest req, WhatsAppGatewayService waService, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
             var tenantId = tenant.TenantId.Value;
             if (tenantId == Guid.Empty) return Results.Unauthorized();
