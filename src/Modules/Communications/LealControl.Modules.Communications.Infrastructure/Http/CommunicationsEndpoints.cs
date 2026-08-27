@@ -458,7 +458,7 @@ public static class CommunicationsEndpoints
             conn.PageName = pageInfo.PageName;
             conn.InstagramAccountId = pageInfo.InstagramAccountId;
             conn.InstagramUsername = pageInfo.InstagramUsername;
-            conn.PageAccessToken = req.PageAccessToken;
+            conn.PageAccessToken = pageInfo.ResolvedPageAccessToken ?? req.PageAccessToken;
             conn.IsConnected = true;
             conn.ConnectedAtUtc = DateTime.UtcNow;
             conn.UpdatedAtUtc = DateTime.UtcNow;

@@ -22,37 +22,88 @@ public sealed class MetaGraphApiService
         _httpClient.Timeout = TimeSpan.FromSeconds(15);
     }
 
-    public async Task<MetaPageInfoResult> GetPageInfoAsync(string pageAccessToken, CancellationToken ct = default)
+    public async Task<MetaPageInfoResult> GetPageInfoAsync(string token, CancellationToken ct = default)
     {
+        var cleanToken = token.Trim();
         try
         {
-            var url = $"me?fields=id,name,instagram_business_account{{id,username}}&access_token={Uri.EscapeDataString(pageAccessToken)}";
-            var response = await _httpClient.GetAsync(url, ct);
-            if (!response.IsSuccessStatusCode)
+            // 1. Try if token is already a Page Access Token with IG
+            var pageUrl = $"me?fields=id,name,instagram_business_account{{id,username}}&access_token={Uri.EscapeDataString(cleanToken)}";
+            var pageRes = await _httpClient.GetAsync(pageUrl, ct);
+            if (pageRes.IsSuccessStatusCode)
             {
-                var err = await response.Content.ReadAsStringAsync(ct);
-                return new MetaPageInfoResult(false, null, null, null, null, $"Error de Meta API ({response.StatusCode}): {err}");
+                var json = await pageRes.Content.ReadFromJsonAsync<JsonElement>(ct);
+                var pageId = json.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+                var pageName = json.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+                string? igId = null;
+                string? igUsername = null;
+
+                if (json.TryGetProperty("instagram_business_account", out var igObj))
+                {
+                    if (igObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
+                    if (igObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
+                }
+
+                return new MetaPageInfoResult(true, pageId, pageName, igId, igUsername, cleanToken, null);
             }
 
-            var json = await response.Content.ReadFromJsonAsync<JsonElement>(ct);
-            var pageId = json.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
-            var pageName = json.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
-            
-            string? igId = null;
-            string? igUsername = null;
-
-            if (json.TryGetProperty("instagram_business_account", out var igObj))
+            // 2. If 400, maybe it's a User Access Token -> fetch /me/accounts
+            var accountsUrl = $"me/accounts?fields=id,name,access_token,instagram_business_account{{id,username}}&access_token={Uri.EscapeDataString(cleanToken)}";
+            var accountsRes = await _httpClient.GetAsync(accountsUrl, ct);
+            if (accountsRes.IsSuccessStatusCode)
             {
-                if (igObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
-                if (igObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
+                var accountsJson = await accountsRes.Content.ReadFromJsonAsync<JsonElement>(ct);
+                if (accountsJson.TryGetProperty("data", out var dataArray) && dataArray.ValueKind == JsonValueKind.Array && dataArray.GetArrayLength() > 0)
+                {
+                    // Find first page with instagram_business_account, or just the first page
+                    JsonElement selectedPage = default;
+                    foreach (var page in dataArray.EnumerateArray())
+                    {
+                        selectedPage = page;
+                        if (page.TryGetProperty("instagram_business_account", out _))
+                        {
+                            break;
+                        }
+                    }
+
+                    var pId = selectedPage.TryGetProperty("id", out var piProp) ? piProp.GetString() : null;
+                    var pName = selectedPage.TryGetProperty("name", out var pnProp) ? pnProp.GetString() : null;
+                    var pToken = selectedPage.TryGetProperty("access_token", out var ptProp) ? ptProp.GetString() : cleanToken;
+                    string? igId = null;
+                    string? igUsername = null;
+
+                    if (selectedPage.TryGetProperty("instagram_business_account", out var igObj))
+                    {
+                        if (igObj.TryGetProperty("id", out var igIdProp)) igId = igIdProp.GetString();
+                        if (igObj.TryGetProperty("username", out var igUserProp)) igUsername = igUserProp.GetString();
+                    }
+
+                    return new MetaPageInfoResult(true, pId, pName, igId, igUsername, pToken, null);
+                }
+                else
+                {
+                    return new MetaPageInfoResult(false, null, null, null, null, null, "El usuario de Facebook no tiene ninguna Página administrada. Cree o vincule una Página comercial.");
+                }
             }
 
-            return new MetaPageInfoResult(true, pageId, pageName, igId, igUsername, null);
+            // 3. Try basic /me?fields=id,name
+            var basicUrl = $"me?fields=id,name&access_token={Uri.EscapeDataString(cleanToken)}";
+            var basicRes = await _httpClient.GetAsync(basicUrl, ct);
+            if (basicRes.IsSuccessStatusCode)
+            {
+                var basicJson = await basicRes.Content.ReadFromJsonAsync<JsonElement>(ct);
+                var id = basicJson.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+                var name = basicJson.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : null;
+                return new MetaPageInfoResult(true, id, name, null, null, cleanToken, null);
+            }
+
+            var errBody = await pageRes.Content.ReadAsStringAsync(ct);
+            return new MetaPageInfoResult(false, null, null, null, null, null, $"Token inválido o expirado. Meta respondió: {errBody}");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error consultando información de página en Meta Graph API");
-            return new MetaPageInfoResult(false, null, null, null, null, ex.Message);
+            return new MetaPageInfoResult(false, null, null, null, null, null, ex.Message);
         }
     }
 
@@ -88,5 +139,5 @@ public sealed class MetaGraphApiService
     }
 }
 
-public sealed record MetaPageInfoResult(bool Success, string? PageId, string? PageName, string? InstagramAccountId, string? InstagramUsername, string? Error);
+public sealed record MetaPageInfoResult(bool Success, string? PageId, string? PageName, string? InstagramAccountId, string? InstagramUsername, string? ResolvedPageAccessToken, string? Error);
 public sealed record MetaSendResult(bool Success, string? MessageId, string? Error);
