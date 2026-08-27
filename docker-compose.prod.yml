@@ -12,34 +12,16 @@ services:
   api:
     build: { context: ., dockerfile: deploy/Dockerfile.api }
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=${POSTGRES_DB:-lealcontrol_v2};Username=${POSTGRES_USER:-lealv2};Password=${POSTGRES_PASSWORD}
-      WhatsAppGateway__Url: http://whatsapp-gateway:8080
-      WhatsAppGateway__ApiKey: ${EVOLUTION_API_KEY:-lealcontrol_wa_master_key_2026}
+      WhatsAppGateway__Url: ${WHATSAPP_GATEWAY_URL:-http://host.docker.internal:8080}
+      WhatsAppGateway__ApiKey: ${WHATSAPP_GATEWAY_APIKEY:-c0cffb77a0e57afb8a2799b3008d9b032615825abe964eae}
     depends_on: [postgres]
     ports: ["127.0.0.1:5209:8080"]
-    networks: [v2]
-  whatsapp-gateway:
-    image: evoapicloud/evolution-api:v2.3.0
-    container_name: lealcontrol-v2-wa-gateway
-    restart: unless-stopped
-    environment:
-      SERVER_PORT: 8080
-      SERVER_URL: http://whatsapp-gateway:8080
-      AUTHENTICATION_TYPE: apikey
-      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-lealcontrol_wa_master_key_2026}
-      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
-      DATABASE_ENABLED: "false"
-      DEL_INSTANCE: "false"
-      WEBHOOK_GLOBAL_URL: http://api:8080/api/communications/whatsapp/webhook
-      WEBHOOK_GLOBAL_ENABLED: "true"
-      WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
-      WEBHOOK_EVENTS_CONNECTION_UPDATE: "true"
-      WEBHOOK_EVENTS_QRCODE_UPDATED: "true"
-    volumes:
-      - lealcontrol_v2_wa_instances:/evolution/instances
     networks: [v2]
   web:
     build: { context: ., dockerfile: deploy/Dockerfile.web }
@@ -51,4 +33,3 @@ networks:
   v2: { name: lealcontrol-v2 }
 volumes:
   lealcontrol_v2_pg: { name: lealcontrol-v2-pg }
-  lealcontrol_v2_wa_instances: { name: lealcontrol-v2-wa-instances }
