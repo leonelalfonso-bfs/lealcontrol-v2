@@ -90,6 +90,24 @@ export function InboxPage() {
   const countIg = useMemo(() => messages.filter((m) => getChannel(m) === "instagram").length, [messages]);
   const countFb = useMemo(() => messages.filter((m) => getChannel(m) === "facebook").length, [messages]);
 
+  const [syncNotification, setSyncNotification] = useState<string | null>(null);
+
+  const handleForceSyncWhatsApp = async () => {
+    setBusy(true);
+    setError(null);
+    setSyncNotification(null);
+    try {
+      const res = await api.syncWhatsAppMessages();
+      await load();
+      setSyncNotification(`Sincronización completada: ${res.synced} nuevo(s) mensaje(s) de WhatsApp recibidos.`);
+      setTimeout(() => setSyncNotification(null), 5000);
+    } catch (e: any) {
+      setError("Error al sincronizar WhatsApp: " + e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const syncAll = async () => {
     setBusy(true);
     setError(null);
@@ -248,6 +266,9 @@ export function InboxPage() {
           <p className="muted">Conversaciones de Email, WhatsApp, Instagram y Facebook unificadas con el CRM.</p>
         </div>
         <div className="toolbar" style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-outline" onClick={() => void handleForceSyncWhatsApp()} disabled={busy} style={{ color: "#0d9488", borderColor: "#0d9488", fontWeight: 700 }}>
+            💬 🔄 Sincronizar WhatsApp
+          </button>
           <button className="btn btn-outline" onClick={() => void syncAll()} disabled={busy}>
             🔄 Recibir Correo
           </button>
@@ -259,6 +280,12 @@ export function InboxPage() {
           </button>
         </div>
       </div>
+
+      {syncNotification && (
+        <div className="alert" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#065f46", borderColor: "#10b981", marginBottom: 12 }}>
+          ✓ {syncNotification}
+        </div>
+      )}
 
       {error && <div className="alert">{error}</div>}
 

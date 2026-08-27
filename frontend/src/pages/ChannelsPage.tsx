@@ -20,11 +20,14 @@ export function ChannelsPage() {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [waSyncing, setWaSyncing] = useState(false);
+  const [waSyncMsg, setWaSyncMsg] = useState<string | null>(null);
 
   // Meta (Instagram & Facebook) State
   const [metaStatus, setMetaStatus] = useState<MetaStatusData | null>(null);
   const [metaModalChannel, setMetaModalChannel] = useState<"facebook" | "instagram" | null>(null);
-  const [showAdvancedMeta, setShowAdvancedMeta] = useState(false);
+  const [metaAuthMode, setMetaAuthMode] = useState<"token" | "oauth">("token");
+  const [metaAppIdInput, setMetaAppIdInput] = useState("");
   const [metaTokenInput, setMetaTokenInput] = useState("");
   const [savingMeta, setSavingMeta] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
@@ -119,6 +122,20 @@ export function ChannelsPage() {
     if (pollRef.current) clearInterval(pollRef.current);
   };
 
+  const handleForceWaSync = async () => {
+    setWaSyncing(true);
+    setWaSyncMsg(null);
+    try {
+      const res = await api.syncWhatsAppMessages();
+      setWaSyncMsg(`✓ Sincronizados ${res.synced} nuevos mensajes.`);
+      setTimeout(() => setWaSyncMsg(null), 4000);
+    } catch (err: any) {
+      setWaSyncMsg(`⚠️ ${err.message}`);
+    } finally {
+      setWaSyncing(false);
+    }
+  };
+
   const handleDisconnectWa = async () => {
     if (!confirm("¿Está seguro de que desea desconectar la cuenta de WhatsApp de Leal Control?")) return;
     setDisconnecting(true);
@@ -136,21 +153,22 @@ export function ChannelsPage() {
     setMetaModalChannel(ch);
     setMetaTokenInput("");
     setMetaError(null);
-    setShowAdvancedMeta(false);
+    setMetaAuthMode("token");
   };
 
   const handleMetaOAuthLogin = () => {
-    // Standard Facebook Login for Business dialog URL
-    const appId = "1138243454705352"; // Official Leal Control Meta App ID or generic OAuth
+    const appId = metaAppIdInput.trim();
+    if (!appId) {
+      alert("Por favor ingresá tu Meta App ID para iniciar sesión con Facebook.");
+      return;
+    }
     const redirectUri = window.location.href.split("#")[0];
     const scope = "pages_show_list,pages_read_engagement,pages_manage_metadata,pages_messaging,instagram_basic,instagram_manage_messages";
-    
-    // Open Facebook OAuth Popup
     const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=token`;
     
     const popup = window.open(authUrl, "FacebookLogin", "width=600,height=700");
     if (!popup) {
-      alert("Por favor permita las ventanas emergentes (popups) en su navegador para iniciar sesión con Facebook.");
+      alert("Por favor permití las ventanas emergentes en tu navegador para iniciar sesión con Facebook.");
     }
   };
 
@@ -322,10 +340,23 @@ export function ChannelsPage() {
               <div style={{ fontSize: "0.82rem", marginBottom: 6 }}>
                 <strong>Línea vinculada:</strong> {waPhone ? `+${waPhone}` : "Dispositivo principal conectado"}
               </div>
+              {waSyncMsg && (
+                <div style={{ fontSize: "0.78rem", color: "#065f46", margin: "6px 0", fontWeight: 600 }}>
+                  {waSyncMsg}
+                </div>
+              )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
                 <Link to="/comunicaciones" className="btn btn-primary compact">
                   📬 Ir a la Bandeja
                 </Link>
+                <button
+                  type="button"
+                  className="btn btn-outline compact"
+                  onClick={handleForceWaSync}
+                  disabled={waSyncing}
+                >
+                  {waSyncing ? "Sincronizando..." : "🔄 Forzar Sincronización"}
+                </button>
                 <button
                   type="button"
                   className="btn btn-outline compact"
@@ -694,7 +725,7 @@ export function ChannelsPage() {
         </div>
       )}
 
-      {/* Meta (Facebook / Instagram) 1-Click Login & Configuration Modal */}
+      {/* Meta (Facebook / Instagram) Clean Configuration Modal */}
       {metaModalChannel && (
         <div className="modal-backdrop">
           <div className="modal-card card pad" style={{ maxWidth: 480 }}>
@@ -707,95 +738,97 @@ export function ChannelsPage() {
               </button>
             </div>
 
-            {/* 1-Click OAuth Login Primary Button */}
-            <div style={{ textAlign: "center", padding: "16px 10px 10px" }}>
-              <p className="muted" style={{ fontSize: "0.88rem", marginBottom: 18 }}>
-                Vinculá tu cuenta oficial en 1 solo clic. Al hacer clic se abrirá la ventana de Meta para que selecciones tu Página o perfil comercial:
-              </p>
-
+            {/* Mode Tabs */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 14, borderBottom: "1px solid var(--surface-border)", paddingBottom: 8 }}>
               <button
                 type="button"
-                className="btn btn-primary"
-                onClick={handleMetaOAuthLogin}
-                style={{
-                  width: "100%",
-                  padding: "12px 18px",
-                  fontSize: "1rem",
-                  fontWeight: 700,
-                  justifyContent: "center",
-                  background: metaModalChannel === "instagram" ? "linear-gradient(135deg, #e1306c, #833ab4)" : "#1877f2",
-                  color: "#ffffff",
-                  gap: 10,
-                  borderRadius: 8
-                }}
+                className={`btn compact ${metaAuthMode === "token" ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setMetaAuthMode("token")}
               >
-                <span>{metaModalChannel === "instagram" ? "📸" : "📘"}</span> Continuar con {metaModalChannel === "instagram" ? "Instagram / Facebook" : "Facebook"}
+                🔑 Token de Página (Recomendado)
               </button>
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 14, color: "#10b981", fontSize: "0.8rem", fontWeight: 600 }}>
-                <span>🔒</span> Conexión cifrada oficial de Meta
-              </div>
+              <button
+                type="button"
+                className={`btn compact ${metaAuthMode === "oauth" ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setMetaAuthMode("oauth")}
+              >
+                🌐 Iniciar con Facebook
+              </button>
             </div>
 
-            {/* Collapsible Advanced Settings */}
-            <div style={{ marginTop: 16, borderTop: "1px dashed var(--surface-border)", paddingTop: 10 }}>
-              <button
-                type="button"
-                className="btn ghost compact"
-                style={{ fontSize: "0.78rem", color: "var(--ink-soft)", width: "100%", justifyContent: "center" }}
-                onClick={() => setShowAdvancedMeta(!showAdvancedMeta)}
-              >
-                {showAdvancedMeta ? "▲ Ocultar configuración manual avanzada" : "▼ ¿Tenés un Token de Página? Configuración manual"}
-              </button>
+            {metaAuthMode === "token" ? (
+              <form onSubmit={handleSaveMetaConfig} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <p className="muted" style={{ fontSize: "0.84rem", margin: 0 }}>
+                  Pegá el Token de Acceso de tu Página de Facebook (asociada a Instagram). Leal Control detectará automáticamente el nombre de tu Página y tu cuenta de Instagram:
+                </p>
 
-              {showAdvancedMeta && (
-                <div style={{ marginTop: 12 }}>
-                  <div style={{ background: "rgba(0,0,0,0.03)", padding: 10, borderRadius: 6, marginBottom: 12, fontSize: "0.78rem" }}>
-                    <div>
-                      <span className="muted">Callback Webhook URL:</span>
-                      <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                        <input type="text" readOnly value={webhookUrl} style={{ flex: 1, padding: "4px 6px", fontSize: "0.75rem" }} />
-                        <button type="button" className="btn btn-outline compact" onClick={() => copyToClipboard(webhookUrl, "url")}>
-                          {copiedField === "url" ? "✓" : "Copiar"}
-                        </button>
-                      </div>
-                    </div>
+                <label style={{ fontSize: "0.84rem" }}>
+                  <strong>Page Access Token (EAA...): *</strong>
+                  <textarea
+                    rows={3}
+                    required
+                    placeholder="Pegá aquí el Token de Acceso de Página..."
+                    value={metaTokenInput}
+                    onChange={(e) => setMetaTokenInput(e.target.value)}
+                    style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem", marginTop: 4 }}
+                  />
+                </label>
+
+                {metaError && (
+                  <div className="alert alert-danger" style={{ fontSize: "0.82rem", padding: "8px 12px" }}>
+                    {metaError}
                   </div>
+                )}
 
-                  <form onSubmit={handleSaveMetaConfig} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <label style={{ fontSize: "0.8rem" }}>
-                      Page Access Token manual:
-                      <textarea
-                        rows={2}
-                        required
-                        placeholder="Pegá aquí el Token de Acceso de Página (EAA...)"
-                        value={metaTokenInput}
-                        onChange={(e) => setMetaTokenInput(e.target.value)}
-                        style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.78rem" }}
-                      />
-                    </label>
-
-                    {metaError && (
-                      <div className="alert alert-danger" style={{ fontSize: "0.78rem", padding: "6px 10px" }}>
-                        {metaError}
-                      </div>
-                    )}
-
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                      <button type="submit" className="btn btn-primary compact" disabled={savingMeta || !metaTokenInput.trim()}>
-                        {savingMeta ? "Validando..." : "Guardar Token"}
-                      </button>
-                    </div>
-                  </form>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+                  <button type="button" className="btn ghost" onClick={() => setMetaModalChannel(null)}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={savingMeta || !metaTokenInput.trim()}>
+                    {savingMeta ? "Validando y Conectando..." : "💾 Guardar y Conectar"}
+                  </button>
                 </div>
-              )}
-            </div>
+              </form>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <p className="muted" style={{ fontSize: "0.84rem", margin: 0 }}>
+                  Ingresá el <strong>App ID</strong> de tu aplicación de Meta Developers para abrir la ventana de autorización:
+                </p>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-              <button type="button" className="btn ghost" onClick={() => setMetaModalChannel(null)}>
-                Cerrar
-              </button>
-            </div>
+                <label style={{ fontSize: "0.84rem" }}>
+                  <strong>Meta App ID: *</strong>
+                  <input
+                    type="text"
+                    placeholder="Ej: 123456789012345"
+                    value={metaAppIdInput}
+                    onChange={(e) => setMetaAppIdInput(e.target.value)}
+                    style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.85rem", marginTop: 4 }}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleMetaOAuthLogin}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    fontWeight: 700,
+                    justifyContent: "center",
+                    background: "#1877f2",
+                    color: "#ffffff"
+                  }}
+                >
+                  🟦 Continuar con Facebook
+                </button>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+                  <button type="button" className="btn ghost" onClick={() => setMetaModalChannel(null)}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
