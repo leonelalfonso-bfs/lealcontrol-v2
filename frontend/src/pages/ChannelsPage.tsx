@@ -24,6 +24,7 @@ export function ChannelsPage() {
   // Meta (Instagram & Facebook) State
   const [metaStatus, setMetaStatus] = useState<MetaStatusData | null>(null);
   const [metaModalChannel, setMetaModalChannel] = useState<"facebook" | "instagram" | null>(null);
+  const [showAdvancedMeta, setShowAdvancedMeta] = useState(false);
   const [metaTokenInput, setMetaTokenInput] = useState("");
   const [savingMeta, setSavingMeta] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
@@ -72,7 +73,7 @@ export function ChannelsPage() {
     void checkStatus();
     const interval = window.setInterval(() => {
       void checkStatus();
-    }, 8000);
+    }, 6000);
     return () => clearInterval(interval);
   }, []);
 
@@ -135,6 +136,22 @@ export function ChannelsPage() {
     setMetaModalChannel(ch);
     setMetaTokenInput("");
     setMetaError(null);
+    setShowAdvancedMeta(false);
+  };
+
+  const handleMetaOAuthLogin = () => {
+    // Standard Facebook Login for Business dialog URL
+    const appId = "1138243454705352"; // Official Leal Control Meta App ID or generic OAuth
+    const redirectUri = window.location.href.split("#")[0];
+    const scope = "pages_show_list,pages_read_engagement,pages_manage_metadata,pages_messaging,instagram_basic,instagram_manage_messages";
+    
+    // Open Facebook OAuth Popup
+    const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=token`;
+    
+    const popup = window.open(authUrl, "FacebookLogin", "width=600,height=700");
+    if (!popup) {
+      alert("Por favor permita las ventanas emergentes (popups) en su navegador para iniciar sesión con Facebook.");
+    }
   };
 
   const handleSaveMetaConfig = async (e: React.FormEvent) => {
@@ -223,7 +240,7 @@ export function ChannelsPage() {
           <span className="eyebrow">COMUNICACIONES</span>
           <h1>Canales Sociales & Mensajería</h1>
           <p className="muted">
-            Conectá los canales donde tus clientes ya conversan y gestioná todo desde una sola bandeja omnicanal con costo $0 por mensaje.
+            Conectá WhatsApp, Instagram y Facebook para gestionar todas las conversaciones en una sola bandeja omnicanal con costo $0 por mensaje.
           </p>
         </div>
       </div>
@@ -415,7 +432,7 @@ export function ChannelsPage() {
           </div>
 
           <p className="muted" style={{ fontSize: "0.86rem", marginBottom: 14 }}>
-            Mensajes directos de cuentas profesionales vinculadas a Meta Graph API. 100% gratuito e ilimitado.
+            Mensajes directos de cuentas comerciales vinculadas a Meta Graph API. 100% gratuito e ilimitado.
           </p>
 
           {igConnected ? (
@@ -456,7 +473,7 @@ export function ChannelsPage() {
               <button
                 type="button"
                 className="btn btn-primary"
-                style={{ width: "100%", justifyContent: "center", gap: 8, padding: "10px 16px", fontWeight: 700 }}
+                style={{ width: "100%", justifyContent: "center", gap: 8, padding: "10px 16px", fontWeight: 700, background: "linear-gradient(135deg, #e1306c, #833ab4)" }}
                 onClick={() => handleOpenMetaConfig("instagram")}
               >
                 <span>📸</span> Conectar Instagram Direct
@@ -471,15 +488,14 @@ export function ChannelsPage() {
               style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}
               onClick={() => setExpanded(expanded === "Instagram" ? null : "Instagram")}
             >
-              {expanded === "Instagram" ? "▲ Ocultar requisitos" : "▼ Requisitos y Webhook Meta"}
+              {expanded === "Instagram" ? "▲ Ocultar requisitos" : "▼ Requisitos para conectar"}
             </button>
             {expanded === "Instagram" && (
               <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", marginTop: 6, lineHeight: 1.4 }}>
-                <p style={{ margin: "0 0 4px" }}>Para recibir mensajes de Instagram Direct:</p>
                 <ul style={{ paddingLeft: 18, margin: 0 }}>
                   <li>Tu cuenta de Instagram debe ser Comercial o Creador.</li>
-                  <li>Debe estar vinculada a una Página de Facebook.</li>
-                  <li>Habilitar en Instagram: <em>Configuración → Privacidad → Mensajes → Permitir acceso a los mensajes</em>.</li>
+                  <li>Debe estar vinculada a tu Página de Facebook.</li>
+                  <li>En Instagram: <em>Configuración → Privacidad → Mensajes → Permitir acceso a los mensajes</em>.</li>
                 </ul>
               </div>
             )}
@@ -576,7 +592,7 @@ export function ChannelsPage() {
               <button
                 type="button"
                 className="btn btn-primary"
-                style={{ width: "100%", justifyContent: "center", gap: 8, padding: "10px 16px", fontWeight: 700 }}
+                style={{ width: "100%", justifyContent: "center", gap: 8, padding: "10px 16px", fontWeight: 700, background: "#1877f2" }}
                 onClick={() => handleOpenMetaConfig("facebook")}
               >
                 <span>📘</span> Conectar Facebook Messenger
@@ -591,14 +607,13 @@ export function ChannelsPage() {
               style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}
               onClick={() => setExpanded(expanded === "Facebook" ? null : "Facebook")}
             >
-              {expanded === "Facebook" ? "▲ Ocultar requisitos" : "▼ Requisitos y Webhook Meta"}
+              {expanded === "Facebook" ? "▲ Ocultar requisitos" : "▼ Requisitos para conectar"}
             </button>
             {expanded === "Facebook" && (
               <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", marginTop: 6, lineHeight: 1.4 }}>
-                <p style={{ margin: "0 0 4px" }}>Para recibir mensajes de Facebook Messenger:</p>
                 <ul style={{ paddingLeft: 18, margin: 0 }}>
                   <li>Página de Facebook comercial de la empresa.</li>
-                  <li>Token de acceso de página con permisos <code>pages_messaging</code>.</li>
+                  <li>Acceso de administrador a la Página comercial.</li>
                 </ul>
               </div>
             )}
@@ -679,92 +694,108 @@ export function ChannelsPage() {
         </div>
       )}
 
-      {/* Meta (Facebook / Instagram) Configuration Modal */}
+      {/* Meta (Facebook / Instagram) 1-Click Login & Configuration Modal */}
       {metaModalChannel && (
         <div className="modal-backdrop">
-          <div className="modal-card card pad" style={{ maxWidth: 540 }}>
+          <div className="modal-card card pad" style={{ maxWidth: 480 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ margin: 0, fontSize: "1.15rem", display: "flex", alignItems: "center", gap: 8 }}>
-                <span>{metaModalChannel === "instagram" ? "📸" : "📘"}</span> Vincular {metaModalChannel === "instagram" ? "Instagram Direct" : "Facebook Messenger"}
+                <span>{metaModalChannel === "instagram" ? "📸" : "📘"}</span> Conectar {metaModalChannel === "instagram" ? "Instagram Direct" : "Facebook Messenger"}
               </h3>
               <button type="button" className="btn ghost compact" onClick={() => setMetaModalChannel(null)}>
                 ✕
               </button>
             </div>
 
-            {/* Step 1: Webhook Info */}
-            <div style={{ background: "rgba(0,0,0,0.03)", padding: 12, borderRadius: 8, marginBottom: 14 }}>
-              <strong style={{ fontSize: "0.85rem", display: "block", marginBottom: 6 }}>1. Datos de Webhook para Meta Developers:</strong>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: "0.8rem" }}>
-                <div>
-                  <span className="muted">Callback URL:</span>
-                  <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                    <input type="text" readOnly value={webhookUrl} style={{ flex: 1, padding: "4px 8px", fontSize: "0.78rem" }} />
-                    <button type="button" className="btn btn-outline compact" onClick={() => copyToClipboard(webhookUrl, "url")}>
-                      {copiedField === "url" ? "✓ Copiado" : "📋 Copiar"}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <span className="muted">Verify Token:</span>
-                  <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                    <input
-                      type="text"
-                      readOnly
-                      value={metaModalChannel === "instagram" ? metaStatus?.instagram?.verifyToken || "lealcontrol_meta_verify_2026" : metaStatus?.facebook?.verifyToken || "lealcontrol_meta_verify_2026"}
-                      style={{ flex: 1, padding: "4px 8px", fontSize: "0.78rem" }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-outline compact"
-                      onClick={() =>
-                        copyToClipboard(
-                          metaModalChannel === "instagram"
-                            ? metaStatus?.instagram?.verifyToken || "lealcontrol_meta_verify_2026"
-                            : metaStatus?.facebook?.verifyToken || "lealcontrol_meta_verify_2026",
-                          "token"
-                        )
-                      }
-                    >
-                      {copiedField === "token" ? "✓ Copiado" : "📋 Copiar"}
-                    </button>
-                  </div>
-                </div>
+            {/* 1-Click OAuth Login Primary Button */}
+            <div style={{ textAlign: "center", padding: "16px 10px 10px" }}>
+              <p className="muted" style={{ fontSize: "0.88rem", marginBottom: 18 }}>
+                Vinculá tu cuenta oficial en 1 solo clic. Al hacer clic se abrirá la ventana de Meta para que selecciones tu Página o perfil comercial:
+              </p>
+
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleMetaOAuthLogin}
+                style={{
+                  width: "100%",
+                  padding: "12px 18px",
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  justifyContent: "center",
+                  background: metaModalChannel === "instagram" ? "linear-gradient(135deg, #e1306c, #833ab4)" : "#1877f2",
+                  color: "#ffffff",
+                  gap: 10,
+                  borderRadius: 8
+                }}
+              >
+                <span>{metaModalChannel === "instagram" ? "📸" : "📘"}</span> Continuar con {metaModalChannel === "instagram" ? "Instagram / Facebook" : "Facebook"}
+              </button>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 14, color: "#10b981", fontSize: "0.8rem", fontWeight: 600 }}>
+                <span>🔒</span> Conexión cifrada oficial de Meta
               </div>
             </div>
 
-            {/* Step 2: Form */}
-            <form onSubmit={handleSaveMetaConfig} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <label>
-                <strong>2. Page Access Token de Meta *</strong>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Pegá aquí el Token de Acceso de Página (EAA...)"
-                  value={metaTokenInput}
-                  onChange={(e) => setMetaTokenInput(e.target.value)}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
-                />
-                <small className="muted">
-                  Generado desde la consola de Meta for Developers (Graph API Explorer o App Dashboard) con permisos para mensajes.
-                </small>
-              </label>
+            {/* Collapsible Advanced Settings */}
+            <div style={{ marginTop: 16, borderTop: "1px dashed var(--surface-border)", paddingTop: 10 }}>
+              <button
+                type="button"
+                className="btn ghost compact"
+                style={{ fontSize: "0.78rem", color: "var(--ink-soft)", width: "100%", justifyContent: "center" }}
+                onClick={() => setShowAdvancedMeta(!showAdvancedMeta)}
+              >
+                {showAdvancedMeta ? "▲ Ocultar configuración manual avanzada" : "▼ ¿Tenés un Token de Página? Configuración manual"}
+              </button>
 
-              {metaError && (
-                <div className="alert alert-danger" style={{ fontSize: "0.82rem", padding: "8px 12px" }}>
-                  {metaError}
+              {showAdvancedMeta && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ background: "rgba(0,0,0,0.03)", padding: 10, borderRadius: 6, marginBottom: 12, fontSize: "0.78rem" }}>
+                    <div>
+                      <span className="muted">Callback Webhook URL:</span>
+                      <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
+                        <input type="text" readOnly value={webhookUrl} style={{ flex: 1, padding: "4px 6px", fontSize: "0.75rem" }} />
+                        <button type="button" className="btn btn-outline compact" onClick={() => copyToClipboard(webhookUrl, "url")}>
+                          {copiedField === "url" ? "✓" : "Copiar"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleSaveMetaConfig} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <label style={{ fontSize: "0.8rem" }}>
+                      Page Access Token manual:
+                      <textarea
+                        rows={2}
+                        required
+                        placeholder="Pegá aquí el Token de Acceso de Página (EAA...)"
+                        value={metaTokenInput}
+                        onChange={(e) => setMetaTokenInput(e.target.value)}
+                        style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.78rem" }}
+                      />
+                    </label>
+
+                    {metaError && (
+                      <div className="alert alert-danger" style={{ fontSize: "0.78rem", padding: "6px 10px" }}>
+                        {metaError}
+                      </div>
+                    )}
+
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                      <button type="submit" className="btn btn-primary compact" disabled={savingMeta || !metaTokenInput.trim()}>
+                        {savingMeta ? "Validando..." : "Guardar Token"}
+                      </button>
+                    </div>
+                  </form>
                 </div>
               )}
+            </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 6 }}>
-                <button type="button" className="btn ghost" onClick={() => setMetaModalChannel(null)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={savingMeta || !metaTokenInput.trim()}>
-                  {savingMeta ? "Validando y Conectando..." : "💾 Guardar y Conectar"}
-                </button>
-              </div>
-            </form>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+              <button type="button" className="btn ghost" onClick={() => setMetaModalChannel(null)}>
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}

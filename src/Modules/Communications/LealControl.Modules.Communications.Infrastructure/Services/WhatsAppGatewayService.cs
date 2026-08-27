@@ -131,18 +131,15 @@ public sealed class WhatsAppGatewayService
         {
             var webhookPayload = new
             {
-                webhook = new
+                enabled = true,
+                url = "http://lealcontrol-staging-api:8080/api/communications/whatsapp/webhook",
+                webhook_by_events = false,
+                events = new[]
                 {
-                    enabled = true,
-                    url = "http://lealcontrol-staging-api:8080/api/communications/whatsapp/webhook",
-                    byEvents = false,
-                    base64 = false,
-                    events = new[]
-                    {
-                        "MESSAGES_UPSERT",
-                        "MESSAGES_UPDATE",
-                        "CONNECTION_UPDATE"
-                    }
+                    "MESSAGES_UPSERT",
+                    "MESSAGES_UPDATE",
+                    "CONNECTION_UPDATE",
+                    "QRCODE_UPDATED"
                 }
             };
             await _httpClient.PostAsJsonAsync($"webhook/set/{instanceName}", webhookPayload, ct);
@@ -158,66 +155,78 @@ public sealed class WhatsAppGatewayService
         var list = new List<WhatsAppMessageItem>();
         try
         {
-            var payload = new { where = new { } };
-            var res = await _httpClient.PostAsJsonAsync($"chat/findMessages/{instanceName}", payload, ct);
-            if (!res.IsSuccessStatusCode)
+            // 1. Try GET /chat/findChats
+            var chatsRes = await _httpClient.GetAsync($"chat/findChats/{instanceName}", ct);
+            if (chatsRes.IsSuccessStatusCode)
             {
-                // Fallback to GET /chat/findChats
-                var chatsRes = await _httpClient.GetAsync($"chat/findChats/{instanceName}", ct);
-                if (chatsRes.IsSuccessStatusCode)
-                {
-                    var chatsJson = await chatsRes.Content.ReadFromJsonAsync<JsonElement>(ct);
-                    if (chatsJson.ValueKind == JsonValueKind.Array)
-                    {
-                        foreach (var chat in chatsJson.EnumerateArray())
-                        {
-                            var remoteJid = chat.TryGetProperty("id", out var idProp) ? idProp.GetString() : "";
-                            var pushName = chat.TryGetProperty("pushName", out var pnProp) ? pnProp.GetString() : (chat.TryGetProperty("name", out var nProp) ? nProp.GetString() : "");
-                            var lastMsg = chat.TryGetProperty("lastMessage", out var lmProp) ? lmProp : default;
-                            
-                            if (!string.IsNullOrWhiteSpace(remoteJid) && !remoteJid.EndsWith("@g.us") && lastMsg.ValueKind == JsonValueKind.Object)
-                            {
-                                var key = lastMsg.TryGetProperty("key", out var kProp) ? kProp : default;
-                                var msgId = key.TryGetProperty("id", out var midProp) ? midProp.GetString() : "";
-                                var fromMe = key.TryGetProperty("fromMe", out var fmProp) && fmProp.GetBoolean();
-                                var text = ExtractTextFromMessage(lastMsg.TryGetProperty("message", out var mProp) ? mProp : default);
+                var chatsJson = await chatsRes.Content.ReadFromJsonAsync<JsonElement>(ct);
+                var chatArray = chatsJson;
+                if (chatsJson.TryGetProperty("records", out var cr)) chatArray = cr;
 
-                                if (!string.IsNullOrWhiteSpace(msgId) && !string.IsNullOrWhiteSpace(text))
-                                {
-                                    list.Add(new WhatsAppMessageItem(msgId, remoteJid, fromMe, pushName, text, DateTime.UtcNow));
-                                }
+                if (chatArray.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var chat in chatArray.EnumerateArray())
+                    {
+                        var remoteJid = chat.TryGetProperty("id", out var idProp) ? idProp.GetString() : (chat.TryGetProperty("remoteJid", out var rjProp) ? rjProp.GetString() : "");
+                        var pushName = chat.TryGetProperty("pushName", out var pnProp) ? pnProp.GetString() : (chat.TryGetProperty("name", out var nProp) ? nProp.GetString() : "");
+                        var lastMsg = chat.TryGetProperty("lastMessage", out var lmProp) ? lmProp : default;
+
+                        if (!string.IsNullOrWhiteSpace(remoteJid) && !remoteJid.EndsWith("@g.us") && lastMsg.ValueKind == JsonValueKind.Object)
+                        {
+                            var key = lastMsg.TryGetProperty("key", out var kProp) ? kProp : default;
+                            var msgId = key.TryGetProperty("id", out var midProp) ? midProp.GetString() : "";
+                            var fromMe = key.TryGetProperty("fromMe", out var fmProp) && fmProp.GetBoolean();
+                            var text = ExtractTextFromMessage(lastMsg.TryGetProperty("message", out var mProp) ? mProp : default);
+
+                            var ts = DateTime.UtcNow;
+                            if (lastMsg.TryGetProperty("messageTimestamp", out var tsProp) && tsProp.TryGetInt64(out var tsVal))
+                            {
+                                ts = DateTimeOffset.FromUnixTimeSeconds(tsVal).UtcDateTime;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(msgId) && !string.IsNullOrWhiteSpace(text))
+                            {
+                                list.Add(new WhatsAppMessageItem(msgId, remoteJid, fromMe, pushName, text, ts));
                             }
                         }
                     }
                 }
-                return list;
             }
 
-            var json = await res.Content.ReadFromJsonAsync<JsonElement>(ct);
-            var records = json;
-            if (json.TryGetProperty("records", out var rArray)) records = rArray;
-            else if (json.TryGetProperty("messages", out var mArray)) records = mArray;
-
-            if (records.ValueKind == JsonValueKind.Array)
+            // 2. Also try POST /chat/findMessages
+            var payload = new { where = new { } };
+            var res = await _httpClient.PostAsJsonAsync($"chat/findMessages/{instanceName}", payload, ct);
+            if (res.IsSuccessStatusCode)
             {
-                foreach (var item in records.EnumerateArray())
+                var json = await res.Content.ReadFromJsonAsync<JsonElement>(ct);
+                var records = json;
+                if (json.TryGetProperty("records", out var rArray)) records = rArray;
+                else if (json.TryGetProperty("messages", out var mArray)) records = mArray;
+
+                if (records.ValueKind == JsonValueKind.Array)
                 {
-                    var key = item.TryGetProperty("key", out var kProp) ? kProp : default;
-                    var msgId = key.TryGetProperty("id", out var midProp) ? midProp.GetString() : "";
-                    var remoteJid = key.TryGetProperty("remoteJid", out var rjProp) ? rjProp.GetString() : "";
-                    var fromMe = key.TryGetProperty("fromMe", out var fmProp) && fmProp.GetBoolean();
-                    var pushName = item.TryGetProperty("pushName", out var pnProp) ? pnProp.GetString() : "";
-                    var text = ExtractTextFromMessage(item.TryGetProperty("message", out var mProp) ? mProp : default);
-
-                    var timestamp = DateTime.UtcNow;
-                    if (item.TryGetProperty("messageTimestamp", out var tsProp) && tsProp.TryGetInt64(out var tsVal))
+                    foreach (var item in records.EnumerateArray())
                     {
-                        timestamp = DateTimeOffset.FromUnixTimeSeconds(tsVal).UtcDateTime;
-                    }
+                        var key = item.TryGetProperty("key", out var kProp) ? kProp : default;
+                        var msgId = key.TryGetProperty("id", out var midProp) ? midProp.GetString() : "";
+                        var remoteJid = key.TryGetProperty("remoteJid", out var rjProp) ? rjProp.GetString() : "";
+                        var fromMe = key.TryGetProperty("fromMe", out var fmProp) && fmProp.GetBoolean();
+                        var pushName = item.TryGetProperty("pushName", out var pnProp) ? pnProp.GetString() : "";
+                        var text = ExtractTextFromMessage(item.TryGetProperty("message", out var mProp) ? mProp : default);
 
-                    if (!string.IsNullOrWhiteSpace(msgId) && !string.IsNullOrWhiteSpace(remoteJid) && !remoteJid.EndsWith("@g.us"))
-                    {
-                        list.Add(new WhatsAppMessageItem(msgId, remoteJid, fromMe, pushName, string.IsNullOrWhiteSpace(text) ? "[Mensaje multimedia]" : text, timestamp));
+                        var timestamp = DateTime.UtcNow;
+                        if (item.TryGetProperty("messageTimestamp", out var tsProp) && tsProp.TryGetInt64(out var tsVal))
+                        {
+                            timestamp = DateTimeOffset.FromUnixTimeSeconds(tsVal).UtcDateTime;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(msgId) && !string.IsNullOrWhiteSpace(remoteJid) && !remoteJid.EndsWith("@g.us"))
+                        {
+                            if (!list.Exists(x => x.MessageId == msgId))
+                            {
+                                list.Add(new WhatsAppMessageItem(msgId, remoteJid, fromMe, pushName, string.IsNullOrWhiteSpace(text) ? "[Mensaje multimedia]" : text, timestamp));
+                            }
+                        }
                     }
                 }
             }
