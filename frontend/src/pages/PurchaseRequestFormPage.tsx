@@ -271,11 +271,11 @@ export function PurchaseRequestFormPage() {
                   <td style={{ padding: "8px 4px" }}>
                     <input
                       type="number"
-                      step="1"
-                      min="0.01"
+                      step="any"
+                      min="0"
                       required
                       value={it.quantity}
-                      onChange={(e) => handleItemChange(idx, "quantity", parseFloat(e.target.value) || 1)}
+                      onChange={(e) => handleItemChange(idx, "quantity", e.target.value === "" ? "" : parseFloat(e.target.value))}
                       style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "center", fontSize: "0.85rem", fontWeight: "bold" }}
                     />
                   </td>
