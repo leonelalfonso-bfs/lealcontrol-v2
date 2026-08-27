@@ -75,7 +75,12 @@ export const api = {
   previewFinanceBankImport: (accountId: string, csvContent: string) => request<{ operationDateUtc: string; amount: number; kind: string; description: string; externalReference?: string; error?: string }[]>("/api/v1/finance/imports/bank/preview", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
   confirmFinanceBankImport: (accountId: string, csvContent: string) => request<{ imported: number; duplicates: number; rejected: number }>("/api/v1/finance/imports/bank/confirm", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
   listFinanceMovements: (accountId: string) => request<{ id: string; operationDateUtc: string; kind: string; amount: number; currency: string; description: string; externalReference?: string; transferId?: string; reconciliationStatus: number; linkedEntityType?: string; linkedEntityId?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements`),
-  listCollectionAvailableMovements: (accountId: string) => request<any[]>(`/api/v1/finance/collections/available-movements?accountId=${encodeURIComponent(accountId)}`),
+  listCollectionAvailableMovements: (accountId?: string, conceptId?: string) => {
+    const params = new URLSearchParams();
+    if (accountId) params.set("accountId", accountId);
+    if (conceptId) params.set("conceptId", conceptId);
+    return request<any[]>(`/api/v1/finance/collections/available-movements?${params.toString()}`);
+  },
   listFinanceMovementDetails: (accountId: string) => request<{ id: string; operationDateUtc: string; description: string; externalReference?: string; kind: string; amount: number; currency: string; reportedBalance?: number; systemBalance: number; difference?: number; reconciliationStatus: string; stage?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements-detail`),
   reconcileFinanceMovement: (movementId: string, body: { entityType: string; entityId: string }) => request(`/api/v1/finance/movements/${movementId}/reconcile`, { method: "POST", body: JSON.stringify(body) }),
   listReceivedCheques: () => request<any[]>("/api/v1/finance/echeqs"),
