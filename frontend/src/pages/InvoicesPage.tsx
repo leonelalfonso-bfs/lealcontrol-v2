@@ -60,7 +60,15 @@ export function InvoicesPage() {
       // Find receipts matching this invoice
       const pastImputed = receipts
         .filter((r) => r.invoiceId === inv.id || (r.invoicesSummary && r.invoicesSummary.includes(inv.formattedNumber)))
-        .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+        .reduce((sum, r) => {
+          if (inv.currency === "USD") {
+            if (r.invoiceAmount && r.invoiceCurrency === "USD") return sum + Number(r.invoiceAmount);
+            if (r.currency === "USD") return sum + Number(r.amount);
+            if (r.paymentExchangeRate && r.paymentExchangeRate > 0) return sum + (Number(r.amount) / Number(r.paymentExchangeRate));
+            if (inv.exchangeRate && inv.exchangeRate > 0) return sum + (Number(r.amount) / Number(inv.exchangeRate));
+          }
+          return sum + (Number(r.amount) || 0);
+        }, 0);
 
       const totalCobrado = pastImputed;
       const saldoPendiente = Math.max(0, inv.total - totalCobrado);

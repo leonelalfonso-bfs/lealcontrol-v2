@@ -50,7 +50,14 @@ export function PurchaseInvoicesPage() {
       // Find matching payment orders for this invoice
       const pastPaid = paymentOrders
         .filter((po: any) => po.invoicesSummary && po.invoicesSummary.includes(inv.formattedNumber))
-        .reduce((sum: number, po: any) => sum + (Number(po.amount) || 0), 0);
+        .reduce((sum: number, po: any) => {
+          if (inv.currency === "USD") {
+            if (po.currency === "USD") return sum + Number(po.amount);
+            if (po.exchangeRate && po.exchangeRate > 0) return sum + (Number(po.amount) / Number(po.exchangeRate));
+            if (inv.exchangeRate && inv.exchangeRate > 0) return sum + (Number(po.amount) / Number(inv.exchangeRate));
+          }
+          return sum + (Number(po.amount) || 0);
+        }, 0);
 
       const totalPagado = pastPaid;
       const saldoPendiente = Math.max(0, inv.total - totalPagado);

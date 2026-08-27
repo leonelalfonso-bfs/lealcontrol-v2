@@ -29,8 +29,16 @@ type PaymentLine = {
 type ImputationRow = {
   invoice: Invoice;
   selected: boolean;
-  amountImputed: number;
-  pendingBalance: number;
+  isUsd: boolean;
+  invoiceTotalOriginal: number;
+  invoiceRate: number;
+  paymentRate: number;
+  pendingBalanceUsd: number;
+  pendingBalanceArs: number;
+  amountImputedArs: number;
+  amountImputedUsd: number;
+  differenceExchangeArs: number;
+  adjustmentType: string;
 };
 
 const money = (n: number, c = "ARS") =>
@@ -99,14 +107,14 @@ export function CollectionReceiptsWorkspacePage() {
       );
 
       // Initial default line: Bank Transfer with first active bank account
-      const firstBank = (accRes || []).find((a) => a.isActive);
+      const firstBank = (accRes || []).find((a) => a.isActive && (a.currency || "ARS") === currency) || (accRes || []).find((a) => a.isActive);
       if (firstBank && lines.length === 0) {
         setLines([
           {
             id: Math.random().toString(36).substring(2, 9),
             method: String(firstBank.type) === "Cash" || String(firstBank.type) === "1" ? "Cash" : "BankTransfer",
             amount: 0,
-            currency: firstBank.currency || "ARS",
+            currency: firstBank.currency || currency,
             accountId: firstBank.id,
             notes: ""
           }
@@ -134,7 +142,7 @@ export function CollectionReceiptsWorkspacePage() {
     void loadData();
   }, []);
 
-  // Update imputations and description when customer changes
+  // Update imputations when customer or currency changes
   useEffect(() => {
     if (!selectedCustomerId) {
       setImputations([]);
@@ -150,20 +158,50 @@ export function CollectionReceiptsWorkspacePage() {
       (inv) => inv.customerId === selectedCustomerId && inv.status !== "Cancelled"
     );
 
-    // Calculate pending balance for each invoice by deducting previously imputed amounts
+    // Calculate pending balances in USD and ARS accurately
     const rows: ImputationRow[] = custInvoices.map((inv) => {
-      // Find all past receipts imputed to this invoice
-      const pastImputed = receipts
-        .filter((r) => r.invoiceId === inv.id || (r.invoicesSummary && r.invoicesSummary.includes(inv.formattedNumber)))
-        .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+      const isUsd = inv.currency === "USD";
+      const invoiceRate = inv.exchangeRate && inv.exchangeRate > 0 ? inv.exchangeRate : 1;
 
-      const pending = Math.max(0, (inv.total || 0) - pastImputed);
+      // Calculate past imputed in USD
+      const pastImputedUsd = receipts
+        .filter((r) => r.invoiceId === inv.id || (r.invoicesSummary && r.invoicesSummary.includes(inv.formattedNumber)))
+        .reduce((sum, r) => {
+          if (r.invoiceAmount && r.invoiceCurrency === "USD") return sum + Number(r.invoiceAmount);
+          if (r.currency === "USD") return sum + Number(r.amount);
+          if (r.paymentExchangeRate && r.paymentExchangeRate > 0) return sum + (Number(r.amount) / Number(r.paymentExchangeRate));
+          if (inv.exchangeRate && inv.exchangeRate > 0) return sum + (Number(r.amount) / Number(inv.exchangeRate));
+          return sum;
+        }, 0);
+
+      // Calculate past imputed in ARS
+      const pastImputedArs = receipts
+        .filter((r) => r.invoiceId === inv.id || (r.invoicesSummary && r.invoicesSummary.includes(inv.formattedNumber)))
+        .reduce((sum, r) => {
+          if (r.currency === "USD") return sum + (Number(r.amount) * (r.invoiceExchangeRate || invoiceRate));
+          return sum + Number(r.amount);
+        }, 0);
+
+      const pendingBalanceUsd = isUsd ? Math.max(0, (inv.total || 0) - pastImputedUsd) : 0;
+      const pendingBalanceArs = isUsd ? pendingBalanceUsd * invoiceRate : Math.max(0, (inv.total || 0) - pastImputedArs);
+
+      const paymentRate = invoiceRate; // Default to invoice issuance rate
+      const defaultArs = isUsd ? pendingBalanceUsd * paymentRate : pendingBalanceArs;
+      const defaultUsd = isUsd ? pendingBalanceUsd : (paymentRate > 0 ? defaultArs / paymentRate : 0);
 
       return {
         invoice: inv,
         selected: false,
-        amountImputed: pending,
-        pendingBalance: pending
+        isUsd,
+        invoiceTotalOriginal: inv.total || 0,
+        invoiceRate,
+        paymentRate,
+        pendingBalanceUsd,
+        pendingBalanceArs,
+        amountImputedArs: defaultArs,
+        amountImputedUsd: defaultUsd,
+        differenceExchangeArs: 0,
+        adjustmentType: "Sin ajuste"
       };
     });
 
@@ -184,14 +222,23 @@ export function CollectionReceiptsWorkspacePage() {
     });
   }, [availableMovements, movementConceptFilter]);
 
-  // Totals calculations
-  const totalImputed = useMemo(
-    () =>
-      imputations
-        .filter((i) => i.selected)
-        .reduce((sum, i) => sum + (Number(i.amountImputed) || 0), 0),
-    [imputations]
-  );
+  // Totals calculations in Receipt Currency
+  const totalImputed = useMemo(() => {
+    return imputations
+      .filter((i) => i.selected)
+      .reduce((sum, i) => {
+        if (currency === "USD") {
+          return sum + (Number(i.amountImputedUsd) || 0);
+        }
+        return sum + (Number(i.amountImputedArs) || 0);
+      }, 0);
+  }, [imputations, currency]);
+
+  const totalExchangeDifference = useMemo(() => {
+    return imputations
+      .filter((i) => i.selected && i.isUsd)
+      .reduce((sum, i) => sum + (Number(i.differenceExchangeArs) || 0), 0);
+  }, [imputations]);
 
   const totalCobrado = useMemo(
     () => lines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0),
@@ -205,25 +252,81 @@ export function CollectionReceiptsWorkspacePage() {
   const toggleSelectInvoice = (idx: number) => {
     setImputations((prev) => {
       const next = [...prev];
-      const current = next[idx];
-      const newSelected = !current.selected;
+      const cur = next[idx];
+      const newSelected = !cur.selected;
+
+      const imputedArs = newSelected ? cur.pendingBalanceArs : 0;
+      const imputedUsd = newSelected ? cur.pendingBalanceUsd : 0;
+      const diffArs = cur.isUsd && newSelected ? imputedUsd * (cur.paymentRate - cur.invoiceRate) : 0;
+
       next[idx] = {
-        ...current,
+        ...cur,
         selected: newSelected,
-        amountImputed: newSelected ? current.pendingBalance : 0
+        amountImputedArs: imputedArs,
+        amountImputedUsd: imputedUsd,
+        differenceExchangeArs: diffArs,
+        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
       };
       return next;
     });
   };
 
-  const handleImputedAmountChange = (idx: number, val: number) => {
+  const handlePaymentRateChange = (idx: number, rate: number) => {
     setImputations((prev) => {
       const next = [...prev];
-      const clamped = Math.max(0, val);
+      const cur = next[idx];
+      const validRate = Math.max(0.0001, rate);
+
+      // Recompute ARS amount and difference of exchange
+      const imputedArs = cur.amountImputedUsd * validRate;
+      const diffArs = cur.isUsd ? cur.amountImputedUsd * (validRate - cur.invoiceRate) : 0;
+
       next[idx] = {
-        ...next[idx],
-        amountImputed: clamped,
-        selected: clamped > 0
+        ...cur,
+        paymentRate: validRate,
+        amountImputedArs: imputedArs,
+        differenceExchangeArs: diffArs,
+        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
+      };
+      return next;
+    });
+  };
+
+  const handleImputedArsChange = (idx: number, val: number) => {
+    setImputations((prev) => {
+      const next = [...prev];
+      const cur = next[idx];
+      const clampedArs = Math.max(0, val);
+      const computedUsd = cur.paymentRate > 0 ? clampedArs / cur.paymentRate : 0;
+      const diffArs = cur.isUsd ? computedUsd * (cur.paymentRate - cur.invoiceRate) : 0;
+
+      next[idx] = {
+        ...cur,
+        amountImputedArs: clampedArs,
+        amountImputedUsd: computedUsd,
+        differenceExchangeArs: diffArs,
+        selected: clampedArs > 0,
+        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
+      };
+      return next;
+    });
+  };
+
+  const handleImputedUsdChange = (idx: number, val: number) => {
+    setImputations((prev) => {
+      const next = [...prev];
+      const cur = next[idx];
+      const clampedUsd = Math.max(0, val);
+      const computedArs = clampedUsd * cur.paymentRate;
+      const diffArs = cur.isUsd ? clampedUsd * (cur.paymentRate - cur.invoiceRate) : 0;
+
+      next[idx] = {
+        ...cur,
+        amountImputedUsd: clampedUsd,
+        amountImputedArs: computedArs,
+        differenceExchangeArs: diffArs,
+        selected: clampedUsd > 0,
+        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
       };
       return next;
     });
@@ -231,11 +334,17 @@ export function CollectionReceiptsWorkspacePage() {
 
   const handleSelectAllInvoices = () => {
     setImputations((prev) =>
-      prev.map((r) => ({
-        ...r,
-        selected: true,
-        amountImputed: r.pendingBalance
-      }))
+      prev.map((r) => {
+        const diffArs = r.isUsd ? r.pendingBalanceUsd * (r.paymentRate - r.invoiceRate) : 0;
+        return {
+          ...r,
+          selected: true,
+          amountImputedArs: r.isUsd ? r.pendingBalanceUsd * r.paymentRate : r.pendingBalanceArs,
+          amountImputedUsd: r.pendingBalanceUsd,
+          differenceExchangeArs: diffArs,
+          adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
+        };
+      })
     );
   };
 
@@ -244,14 +353,17 @@ export function CollectionReceiptsWorkspacePage() {
       prev.map((r) => ({
         ...r,
         selected: false,
-        amountImputed: 0
+        amountImputedArs: 0,
+        amountImputedUsd: 0,
+        differenceExchangeArs: 0,
+        adjustmentType: "Sin ajuste"
       }))
     );
   };
 
   // Handlers for Payment Lines
   const addLine = (method: PaymentLine["method"]) => {
-    const firstAcc = accounts.find((a) => a.isActive);
+    const matchingAcc = accounts.find((a) => a.isActive && (a.currency || "ARS") === currency) || accounts.find((a) => a.isActive);
     const suggestedAmount = Math.max(0, totalImputed - totalCobrado);
     const defaultConcept = concepts.find((c) => c.code === "COBRO_CLIENTE" || c.code === "COBRO_CLIENTES");
 
@@ -261,8 +373,8 @@ export function CollectionReceiptsWorkspacePage() {
         id: Math.random().toString(36).substring(2, 9),
         method,
         amount: suggestedAmount,
-        currency: firstAcc?.currency || currency,
-        accountId: method === "BankTransfer" || method === "Cash" ? firstAcc?.id : undefined,
+        currency,
+        accountId: method === "BankTransfer" || method === "Cash" ? matchingAcc?.id : undefined,
         conceptId: defaultConcept?.id,
         notes: ""
       }
@@ -317,7 +429,8 @@ export function CollectionReceiptsWorkspacePage() {
     setSuccessMsg(null);
 
     try {
-      const selectedImputations = imputations.filter((i) => i.selected && i.amountImputed > 0);
+      const selectedImputations = imputations.filter((i) => i.selected && (currency === "USD" ? i.amountImputedUsd > 0 : i.amountImputedArs > 0));
+      const firstUsdImp = selectedImputations.find((i) => i.isUsd);
 
       const payload = {
         customerId: selectedCustomer.id,
@@ -326,6 +439,13 @@ export function CollectionReceiptsWorkspacePage() {
         amount: totalCobrado,
         description: description.trim(),
         receiptDateUtc: new Date(`${receiptDate}T12:00:00Z`).toISOString(),
+        invoiceId: firstUsdImp ? firstUsdImp.invoice.id : undefined,
+        invoiceAmount: firstUsdImp ? firstUsdImp.amountImputedUsd : undefined,
+        invoiceCurrency: firstUsdImp ? "USD" : undefined,
+        invoiceExchangeRate: firstUsdImp ? firstUsdImp.invoiceRate : undefined,
+        paymentExchangeRate: firstUsdImp ? firstUsdImp.paymentRate : undefined,
+        suggestedAdjustmentArs: totalExchangeDifference !== 0 ? totalExchangeDifference : undefined,
+        suggestedAdjustmentType: totalExchangeDifference > 0.01 ? "Nota de débito sugerida" : totalExchangeDifference < -0.01 ? "Nota de crédito sugerida" : undefined,
         lines: lines.map((l) => ({
           method: l.method,
           amount: Number(l.amount) || 0,
@@ -342,7 +462,7 @@ export function CollectionReceiptsWorkspacePage() {
           invoiceId: i.invoice.id,
           invoiceNumber: i.invoice.formattedNumber,
           invoiceTotal: i.invoice.total,
-          amountImputed: Number(i.amountImputed) || 0
+          amountImputed: currency === "USD" ? Number(i.amountImputedUsd) : Number(i.amountImputedArs)
         }))
       };
 
@@ -386,7 +506,7 @@ export function CollectionReceiptsWorkspacePage() {
           <span className="eyebrow">FINANZAS · COBRANZAS</span>
           <h1>Recibos de Cobro a Clientes</h1>
           <p className="muted">
-            Imputación precisa de facturas, cartera de transferencias bancarias clasificadas, cheques, retenciones y conciliación en 1 clic.
+            Cobro en ARS o USD directo, cálculo exacto de tipos de cambio, diferencias de cotización y conciliación bancaria.
           </p>
         </div>
         <div className="toolbar">
@@ -412,14 +532,14 @@ export function CollectionReceiptsWorkspacePage() {
       )}
 
       {/* Main Grid: Form Left, Balance Right */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 340px", gap: 20, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 350px", gap: 20, alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           
           {/* STEP 1: CLIENTE Y DATOS GENERALES */}
           <section className="card pad">
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
               <span style={{ fontSize: "1.2rem" }}>👤</span>
-              <h2 style={{ margin: 0, fontSize: "1.1rem" }}>1. Cliente y Datos Generales</h2>
+              <h2 style={{ margin: 0, fontSize: "1.1rem" }}>1. Cliente y Moneda de Cobro</h2>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
@@ -451,14 +571,18 @@ export function CollectionReceiptsWorkspacePage() {
               </label>
 
               <label>
-                Moneda del Recibo *
+                Moneda que Paga el Cliente *
                 <select
                   value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                  onChange={(e) => {
+                    const newCurr = e.target.value;
+                    setCurrency(newCurr);
+                    setLines((prev) => prev.map((l) => ({ ...l, currency: newCurr })));
+                  }}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)", fontWeight: 700 }}
                 >
-                  <option value="ARS">ARS ($ - Pesos Argentinos)</option>
-                  <option value="USD">USD (U$S - Dólares Estadounidenses)</option>
+                  <option value="ARS">ARS ($ Pesos Argentinos - Modalidad TC)</option>
+                  <option value="USD">USD (U$S Dólares Estadounidenses Directos)</option>
                 </select>
               </label>
 
@@ -512,11 +636,13 @@ export function CollectionReceiptsWorkspacePage() {
                     <tr>
                       <th style={{ width: 40, textAlign: "center" }}>Aplicar</th>
                       <th>Comprobante</th>
-                      <th>Fecha</th>
-                      <th>Vto.</th>
-                      <th style={{ textAlign: "right" }}>Total Factura</th>
+                      <th>Fecha / Vto</th>
+                      <th style={{ textAlign: "right" }}>Total Original</th>
                       <th style={{ textAlign: "right" }}>Saldo Pendiente</th>
-                      <th style={{ textAlign: "right", width: 160 }}>Monto a Imputar</th>
+                      {currency === "ARS" && <th style={{ textAlign: "center", width: 110 }}>TC Cobro</th>}
+                      <th style={{ textAlign: "right", width: 160 }}>
+                        {currency === "USD" ? "Monto a Imputar (USD)" : "Monto a Imputar (ARS)"}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -536,31 +662,101 @@ export function CollectionReceiptsWorkspacePage() {
                             {row.invoice.invoiceType} · Pto Vta {row.invoice.pointOfSale}
                           </small>
                         </td>
-                        <td>{new Date(row.invoice.issueDate).toLocaleDateString("es-AR")}</td>
-                        <td>{new Date(row.invoice.dueDate).toLocaleDateString("es-AR")}</td>
-                        <td style={{ textAlign: "right" }}>{money(row.invoice.total, row.invoice.currency)}</td>
-                        <td style={{ textAlign: "right", fontWeight: 600, color: "#0d9488" }}>
-                          {money(row.pendingBalance, row.invoice.currency)}
+                        <td>
+                          <div style={{ fontSize: "0.82rem" }}>
+                            {new Date(row.invoice.issueDate).toLocaleDateString("es-AR")}
+                            <small className="muted" style={{ display: "block", fontSize: "0.72rem" }}>
+                              Vto: {new Date(row.invoice.dueDate).toLocaleDateString("es-AR")}
+                            </small>
+                          </div>
                         </td>
                         <td style={{ textAlign: "right" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
-                            <span style={{ fontSize: "0.85rem", color: "var(--ink-soft)" }}>$</span>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={row.amountImputed}
-                              onChange={(e) => handleImputedAmountChange(idx, Number(e.target.value) || 0)}
-                              style={{
-                                width: 110,
-                                textAlign: "right",
-                                padding: "4px 8px",
-                                borderRadius: 4,
-                                border: row.amountImputed > row.pendingBalance ? "1px solid #dc2626" : "1px solid var(--surface-border)",
-                                fontWeight: 700
-                              }}
-                            />
+                          <strong>{money(row.invoiceTotalOriginal, row.invoice.currency)}</strong>
+                          {row.isUsd && (
+                            <small className="muted" style={{ display: "block", fontSize: "0.72rem" }}>
+                              TC Emisión: ${row.invoiceRate.toLocaleString("es-AR")}
+                            </small>
+                          )}
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <strong style={{ color: "#0d9488" }}>
+                            {row.isUsd ? money(row.pendingBalanceUsd, "USD") : money(row.pendingBalanceArs, "ARS")}
+                          </strong>
+                          {row.isUsd && currency === "ARS" && (
+                            <small className="muted" style={{ display: "block", fontSize: "0.72rem" }}>
+                              Equiv: {money(row.pendingBalanceUsd * row.paymentRate, "ARS")}
+                            </small>
+                          )}
+                        </td>
+
+                        {/* TC Cobro input for USD Invoices when paying in ARS */}
+                        {currency === "ARS" && (
+                          <td style={{ textAlign: "center" }}>
+                            {row.isUsd ? (
+                              <div>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  step="0.01"
+                                  value={row.paymentRate}
+                                  onChange={(e) => handlePaymentRateChange(idx, Number(e.target.value) || 1)}
+                                  style={{ width: 85, textAlign: "right", padding: "3px 6px", borderRadius: 4, border: "1px solid var(--surface-border)", fontWeight: 700 }}
+                                />
+                                {row.differenceExchangeArs !== 0 && (
+                                  <small style={{ display: "block", fontSize: "0.7rem", color: row.differenceExchangeArs > 0 ? "#059669" : "#dc2626", fontWeight: 700 }}>
+                                    {row.differenceExchangeArs > 0 ? `+${money(row.differenceExchangeArs)} (ND)` : `${money(row.differenceExchangeArs)} (NC)`}
+                                  </small>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="muted" style={{ fontSize: "0.8rem" }}>—</span>
+                            )}
+                          </td>
+                        )}
+
+                        {/* Amount Input */}
+                        <td style={{ textAlign: "right" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
+                            <span style={{ fontSize: "0.85rem", color: "var(--ink-soft)" }}>{currency === "USD" ? "U$S" : "$"}</span>
+                            {currency === "USD" ? (
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={row.amountImputedUsd}
+                                onChange={(e) => handleImputedUsdChange(idx, Number(e.target.value) || 0)}
+                                style={{
+                                  width: 105,
+                                  textAlign: "right",
+                                  padding: "4px 8px",
+                                  borderRadius: 4,
+                                  border: "1px solid var(--surface-border)",
+                                  fontWeight: 700
+                                }}
+                              />
+                            ) : (
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={row.amountImputedArs}
+                                onChange={(e) => handleImputedArsChange(idx, Number(e.target.value) || 0)}
+                                style={{
+                                  width: 115,
+                                  textAlign: "right",
+                                  padding: "4px 8px",
+                                  borderRadius: 4,
+                                  border: "1px solid var(--surface-border)",
+                                  fontWeight: 700
+                                }}
+                              />
+                            )}
                           </div>
+                          {row.isUsd && currency === "ARS" && (
+                            <small className="muted" style={{ display: "block", fontSize: "0.72rem", textAlign: "right", marginTop: 2 }}>
+                              Cancela: {money(row.amountImputedUsd, "USD")}
+                            </small>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -575,7 +771,7 @@ export function CollectionReceiptsWorkspacePage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: "1.2rem" }}>💳</span>
-                <h2 style={{ margin: 0, fontSize: "1.1rem" }}>3. Medios de Cobro (Ingreso de Fondos)</h2>
+                <h2 style={{ margin: 0, fontSize: "1.1rem" }}>3. Medios de Cobro (Ingreso de Fondos en {currency})</h2>
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 <button type="button" className="btn btn-outline compact" onClick={() => addLine("BankTransfer")}>
@@ -632,13 +828,13 @@ export function CollectionReceiptsWorkspacePage() {
                       {/* Bank or Cash Accounts */}
                       {(line.method === "BankTransfer" || line.method === "Cash") && (
                         <label>
-                          Cuenta de Ingreso *
+                          Cuenta de Ingreso ({currency}) *
                           <select
                             value={line.accountId || ""}
                             onChange={(e) => updateLine(line.id, { accountId: e.target.value, movementId: undefined })}
                             style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
                           >
-                            {accounts.map((a) => (
+                            {accounts.filter((a) => a.isActive).map((a) => (
                               <option key={a.id} value={a.id}>
                                 {a.name} ({a.currency}) - Saldo: {money(a.balance, a.currency)}
                               </option>
@@ -656,7 +852,7 @@ export function CollectionReceiptsWorkspacePage() {
                             onChange={(e) => updateLine(line.id, { conceptId: e.target.value || undefined })}
                             style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
                           >
-                            <option value="">-- Concepto por defecto (Cobro a cliente) --</option>
+                            <option value="">-- Cobro a cliente (Predeterminado) --</option>
                             {concepts.map((c) => (
                               <option key={c.id} value={c.id}>
                                 🏷️ {c.name} ({c.code})
@@ -666,7 +862,7 @@ export function CollectionReceiptsWorkspacePage() {
                         </label>
                       )}
 
-                      {/* Bank Movement link (with Concept Filter & Counterparty Name) */}
+                      {/* Bank Movement link */}
                       {line.method === "BankTransfer" && (
                         <div style={{ gridColumn: "1 / -1", background: "#f8fafc", padding: 12, borderRadius: 6, border: "1px solid #e2e8f0" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -674,13 +870,13 @@ export function CollectionReceiptsWorkspacePage() {
                               🏦 Vincular Transferencia Bancaria Acreditada (Extracto Banco)
                             </span>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ fontSize: "0.75rem", color: "var(--ink-soft)" }}>Filtrar por Concepto:</span>
+                              <span style={{ fontSize: "0.75rem", color: "var(--ink-soft)" }}>Filtrar Concepto:</span>
                               <select
                                 value={movementConceptFilter}
                                 onChange={(e) => setMovementConceptFilter(e.target.value)}
                                 style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
                               >
-                                <option value="all">Ver todas las transferencias</option>
+                                <option value="all">Ver todas</option>
                                 {concepts.map((c) => (
                                   <option key={c.id} value={c.id}>
                                     🏷️ {c.name}
@@ -711,12 +907,6 @@ export function CollectionReceiptsWorkspacePage() {
                               </option>
                             ))}
                           </select>
-
-                          {line.movementId && (
-                            <div style={{ marginTop: 8, fontSize: "0.8rem", color: "#065f46", background: "#ecfdf5", padding: "6px 10px", borderRadius: 4 }}>
-                              ✓ Movimiento bancario seleccionado y listo para conciliación automática en 1 clic.
-                            </div>
-                          )}
                         </div>
                       )}
 
@@ -740,7 +930,7 @@ export function CollectionReceiptsWorkspacePage() {
                             <option value="">-- Seleccioná un cheque disponible --</option>
                             {availableCheques.map((c) => (
                               <option key={c.id} value={c.id}>
-                                N° {c.checkNumber} · {money(c.amount, c.currency)} · {c.bankName || "Banco"} · Librador: {c.issuerName || "Sin datos"} · Vto: {c.dueDateUtc ? new Date(c.dueDateUtc).toLocaleDateString("es-AR") : "s/f"}
+                                N° {c.checkNumber} · {money(c.amount, c.currency)} · {c.bankName || "Banco"} · Librador: {c.issuerName || "Sin datos"}
                               </option>
                             ))}
                           </select>
@@ -779,7 +969,7 @@ export function CollectionReceiptsWorkspacePage() {
 
                       {/* Amount */}
                       <label>
-                        Importe Cobrado *
+                        Importe Cobrado ({currency}) *
                         <input
                           type="number"
                           min="0"
@@ -808,7 +998,7 @@ export function CollectionReceiptsWorkspacePage() {
         {/* SUMMARY / BALANCE SIDEBAR */}
         <aside style={{ position: "sticky", top: 20, display: "flex", flexDirection: "column", gap: 16 }}>
           <div className="card pad" style={{ borderTop: "4px solid #0d9488" }}>
-            <h3 style={{ margin: "0 0 14px 0", fontSize: "1.05rem" }}>Balance de Cobro</h3>
+            <h3 style={{ margin: "0 0 14px 0", fontSize: "1.05rem" }}>Balance de Cobro ({currency})</h3>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: "0.9rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -820,6 +1010,15 @@ export function CollectionReceiptsWorkspacePage() {
                 <span className="muted">Total Imputado a Facturas:</span>
                 <strong>{money(totalImputed, currency)}</strong>
               </div>
+
+              {totalExchangeDifference !== 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f0fdf4", padding: "6px 8px", borderRadius: 6 }}>
+                  <span style={{ fontSize: "0.8rem", color: "#166534" }}>Diferencia de Cambio:</span>
+                  <strong style={{ color: totalExchangeDifference > 0 ? "#059669" : "#dc2626", fontSize: "0.88rem" }}>
+                    {totalExchangeDifference > 0 ? `+${money(totalExchangeDifference)} (ND)` : `${money(totalExchangeDifference)} (NC)`}
+                  </strong>
+                </div>
+              )}
 
               <div style={{ borderTop: "1px dashed var(--surface-border)", paddingTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span className="muted">Diferencia / Excedente:</span>
@@ -871,7 +1070,7 @@ export function CollectionReceiptsWorkspacePage() {
                 <th>Fecha</th>
                 <th>Cliente / Detalle</th>
                 <th>Comprobantes Imputados</th>
-                <th>Líneas</th>
+                <th>Moneda / TC</th>
                 <th style={{ textAlign: "right" }}>Importe Total</th>
                 <th style={{ textAlign: "center" }}>Acciones</th>
               </tr>
@@ -899,7 +1098,14 @@ export function CollectionReceiptsWorkspacePage() {
                         </small>
                       </td>
                       <td>{r.invoicesSummary || (r.invoiceId ? "1 factura" : "Anticipo a cuenta")}</td>
-                      <td>{r.linesCount || 1} medio(s)</td>
+                      <td>
+                        <span style={{ fontWeight: 600 }}>{r.currency}</span>
+                        {r.paymentExchangeRate && r.paymentExchangeRate > 1 && (
+                          <small className="muted" style={{ display: "block", fontSize: "0.72rem" }}>
+                            TC: ${r.paymentExchangeRate.toLocaleString("es-AR")}
+                          </small>
+                        )}
+                      </td>
                       <td style={{ textAlign: "right", fontWeight: 700, color: "#065f46" }}>
                         {money(r.amount, r.currency)}
                       </td>
