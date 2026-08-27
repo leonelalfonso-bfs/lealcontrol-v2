@@ -47,6 +47,30 @@ const statusLabel: Record<string, string> = {
   Excluded: "Excluido"
 };
 
+function parseMovementDetails(description: string) {
+  if (!description) return { mainDesc: "Movimiento", titular: "", cuit: "", extra: "" };
+  const parts = description.split(" · ");
+  const mainDesc = parts[0] || description;
+  let titular = "";
+  let cuit = "";
+  let extra = "";
+
+  for (let i = 1; i < parts.length; i++) {
+    const p = parts[i];
+    if (p.startsWith("Titular: ")) {
+      titular = p.replace("Titular: ", "").trim();
+    } else if (p.startsWith("CUIT: ")) {
+      cuit = p.replace("CUIT: ", "").trim();
+    } else if (p.startsWith("Canal: ") || p.startsWith("CBU: ")) {
+      extra += (extra ? " · " : "") + p;
+    } else {
+      extra += (extra ? " · " : "") + p;
+    }
+  }
+
+  return { mainDesc, titular, cuit, extra };
+}
+
 export function FinanceAccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [concepts, setConcepts] = useState<Concept[]>([]);
@@ -65,6 +89,12 @@ export function FinanceAccountsPage() {
   const [modalConceptId, setModalConceptId] = useState("");
   const [modalCreateRule, setModalCreateRule] = useState(false);
   const [modalPattern, setModalPattern] = useState("");
+
+  // Modal for Bank CSV Import / Update
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importCsv, setImportCsv] = useState("");
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -153,8 +183,9 @@ export function FinanceAccountsPage() {
     setModalConceptId(inlineConcepts[m.id] || m.conceptId || (concepts[0]?.id ?? ""));
     setModalCreateRule(false);
     // Suggest clean pattern from description
-    const cleaned = m.description.split(/[\s\-_/:]+/)[0] || m.description;
-    setModalPattern(cleaned.toUpperCase());
+    const { titular, mainDesc } = parseMovementDetails(m.description);
+    const patternSuggestion = titular || mainDesc.split(/[\s\-_/:]+/)[0] || m.description;
+    setModalPattern(patternSuggestion.toUpperCase());
   };
 
   const handleSaveModalClassification = async () => {
@@ -182,7 +213,7 @@ export function FinanceAccountsPage() {
             isActive: true
           });
         } catch {
-          // ignore rule error if rule creation fails
+          // ignore rule error
         }
       }
 
@@ -235,6 +266,47 @@ export function FinanceAccountsPage() {
     }
   };
 
+  // CSV Import handlers
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target?.result as string;
+      setImportCsv(text);
+      if (selectedAccount && text.trim()) {
+        try {
+          setImportLoading(true);
+          const preview = await api.previewFinanceBankImport(selectedAccount.id, text);
+          setImportPreview(preview);
+        } catch (err: any) {
+          setError(err.message || "Error al previsualizar extracto.");
+        } finally {
+          setImportLoading(false);
+        }
+      }
+    };
+    reader.readAsText(file, "ISO-8859-1"); // Standard encoding for Argentina bank CSVs
+  };
+
+  const handleConfirmImport = async () => {
+    if (!selectedAccount || !importCsv.trim()) return;
+    setImportLoading(true);
+    setError(null);
+    try {
+      const res = await api.confirmFinanceBankImport(selectedAccount.id, importCsv);
+      setShowImportModal(false);
+      setImportCsv("");
+      setImportPreview([]);
+      setSuccessMsg(`¡Extracto procesado! Nuevos importados: ${res.imported}. Movimientos actualizados con Titular/CUIT: ${res.updated || 0}. Duplicados: ${res.duplicates}.`);
+      await openAccount(selectedAccount);
+    } catch (err: any) {
+      setError(err.message || "Error al importar extracto.");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   // Unique list of concepts present in movements for filter dropdown
   const uniqueConcepts = useMemo(() => {
     const set = new Set<string>();
@@ -248,55 +320,47 @@ export function FinanceAccountsPage() {
   const filteredMovements = useMemo(() => {
     return movements.filter((m) => {
       // Classification filter
-      if (statusFilter === "Confirmed" && m.classificationStatus !== "Confirmed") return false;
+      if (statusFilter === "Pending" && m.classificationStatus === "Confirmed") return false;
       if (statusFilter === "Suggested" && m.classificationStatus !== "Suggested") return false;
-      if (statusFilter === "Pending") {
-        if (m.classificationStatus === "Confirmed" || m.classificationStatus === "Suggested")
-          return false;
-      }
+      if (statusFilter === "Confirmed" && m.classificationStatus !== "Confirmed") return false;
 
       // Concept filter
       if (conceptFilter !== "all" && m.conceptName !== conceptFilter) return false;
 
-      // Search Query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const descMatch = m.description.toLowerCase().includes(q);
-        const refMatch = m.externalReference?.toLowerCase().includes(q) || false;
-        const conceptMatch = m.conceptName?.toLowerCase().includes(q) || false;
-        if (!descMatch && !refMatch && !conceptMatch) return false;
-      }
-
       // Date range filter
       if (startDate) {
-        const mDate = new Date(m.operationDateUtc);
-        const sDate = new Date(`${startDate}T00:00:00`);
-        if (mDate < sDate) return false;
+        const mDate = m.operationDateUtc.slice(0, 10);
+        if (mDate < startDate) return false;
       }
       if (endDate) {
-        const mDate = new Date(m.operationDateUtc);
-        const eDate = new Date(`${endDate}T23:59:59`);
-        if (mDate > eDate) return false;
+        const mDate = m.operationDateUtc.slice(0, 10);
+        if (mDate > endDate) return false;
+      }
+
+      // Search query (matches description, titular, cuit, externalReference)
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const descMatch = m.description?.toLowerCase().includes(q);
+        const refMatch = m.externalReference?.toLowerCase().includes(q);
+        const concMatch = m.conceptName?.toLowerCase().includes(q);
+        if (!descMatch && !refMatch && !concMatch) return false;
       }
 
       return true;
     });
-  }, [movements, statusFilter, conceptFilter, searchQuery, startDate, endDate]);
+  }, [movements, statusFilter, conceptFilter, startDate, endDate, searchQuery]);
 
-  // Financial summary of filtered rows
-  const filteredCredits = useMemo(
+  // Total summary of filtered movements
+  const { filteredCredits, filteredDebits } = useMemo(
     () =>
-      filteredMovements
-        .filter((m) => m.kind === "Credit")
-        .reduce((sum, m) => sum + (m.amount || 0), 0),
-    [filteredMovements]
-  );
-
-  const filteredDebits = useMemo(
-    () =>
-      filteredMovements
-        .filter((m) => m.kind === "Debit")
-        .reduce((sum, m) => sum + (m.amount || 0), 0),
+      filteredMovements.reduce(
+        (acc, m) => {
+          if (m.kind === "Credit") acc.filteredCredits += m.amount;
+          else acc.filteredDebits += m.amount;
+          return acc;
+        },
+        { filteredCredits: 0, filteredDebits: 0 }
+      ),
     [filteredMovements]
   );
 
@@ -316,7 +380,7 @@ export function FinanceAccountsPage() {
       },
       {
         key: "description",
-        header: "Concepto / Detalle",
+        header: "Leyenda Extracto",
         value: (row) => row.description
       },
       {
@@ -358,11 +422,6 @@ export function FinanceAccountsPage() {
         key: "reportedBalance",
         header: `Saldo Extracto (${selectedAccount.currency})`,
         value: (row) => (row.reportedBalance == null ? "" : row.reportedBalance)
-      },
-      {
-        key: "difference",
-        header: `Diferencia (${selectedAccount.currency})`,
-        value: (row) => (row.difference == null ? "" : row.difference)
       }
     ];
 
@@ -404,12 +463,24 @@ export function FinanceAccountsPage() {
             <span className="eyebrow">FINANZAS · TESORERÍA & EXTRACTOS</span>
             <h1>{selectedAccount.name}</h1>
             <p className="muted">
-              Detalle bancario · clasificación progresiva de extractos y conciliación.
+              Detalle bancario · identificación de titulares/CUITs, clasificación progresiva y conciliación.
             </p>
           </div>
           <div className="toolbar" style={{ gap: 10 }}>
             <button className="btn btn-outline" onClick={() => setSelectedAccount(null)}>
-              ← Volver a Bancos y Cajas
+              ← Volver a Cuentas
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setShowImportModal(true);
+                setImportCsv("");
+                setImportPreview([]);
+              }}
+              style={{ fontWeight: 700 }}
+            >
+              📤 Importar / Actualizar Extracto CSV
             </button>
             <button
               type="button"
@@ -418,29 +489,23 @@ export function FinanceAccountsPage() {
               disabled={actionBusy !== null}
               title="Ejecutar motor de reglas para identificar movimientos automáticamente"
             >
-              ⚙ Aplicar Reglas Automáticas
+              ⚙ Aplicar Reglas
             </button>
             <button
               type="button"
-              className="btn"
+              className="btn btn-outline"
               onClick={handleExportExcel}
               disabled={filteredMovements.length === 0}
-              style={{
-                backgroundColor: "#16a34a",
-                borderColor: "#16a34a",
-                color: "#ffffff",
-                fontWeight: 700
-              }}
               title="Descargar extracto en Excel con los filtros aplicados"
             >
-              📊 Exportar Excel ({filteredMovements.length})
+              📊 Excel ({filteredMovements.length})
             </button>
           </div>
         </div>
 
         {error && (
-          <div className="alert" style={{ marginBottom: 16 }}>
-            {error}
+          <div className="alert" style={{ background: "#fee2e2", color: "#991b1b", borderColor: "#f87171", marginBottom: 16 }}>
+            ⚠️ {error}
           </div>
         )}
 
@@ -448,59 +513,46 @@ export function FinanceAccountsPage() {
           <div
             className="alert"
             style={{
-              marginBottom: 16,
-              background: "rgba(16, 185, 129, 0.12)",
-              borderColor: "#10b981",
-              color: "#065f46",
-              fontWeight: 600
+              background: "#dcfce7",
+              color: "#166534",
+              borderColor: "#86efac",
+              marginBottom: 16
             }}
           >
             ✓ {successMsg}
           </div>
         )}
 
-        {/* Filtered Financial Summary KPIs */}
-        <div className="grid-4" style={{ marginBottom: 16 }}>
-          <div className="card pad" style={{ borderLeft: "4px solid #10b981" }}>
-            <span className="muted" style={{ fontSize: "0.78rem", textTransform: "uppercase", fontWeight: 700 }}>
-              Ingresos del Período
-            </span>
-            <h3 style={{ margin: "4px 0 0 0", color: "#059669", fontSize: "1.35rem" }}>
+        {/* KPIs Summary Cards */}
+        <div className="kpi kpi-4" style={{ marginBottom: 20 }}>
+          <div className="card">
+            <span className="muted">Saldo Actual en Sistema</span>
+            <h3 style={{ margin: "4px 0 0 0", color: selectedAccount.balance < 0 ? "#dc2626" : "#0f172a", fontSize: "1.35rem", fontWeight: 800 }}>
+              {money(selectedAccount.balance, selectedAccount.currency)}
+            </h3>
+          </div>
+          <div className="card">
+            <span className="muted">Total Ingresos (Filtro)</span>
+            <h3 style={{ margin: "4px 0 0 0", color: "#059669", fontSize: "1.35rem", fontWeight: 800 }}>
               +{money(filteredCredits, selectedAccount.currency)}
             </h3>
           </div>
-
-          <div className="card pad" style={{ borderLeft: "4px solid #ef4444" }}>
-            <span className="muted" style={{ fontSize: "0.78rem", textTransform: "uppercase", fontWeight: 700 }}>
-              Egresos del Período
-            </span>
-            <h3 style={{ margin: "4px 0 0 0", color: "#dc2626", fontSize: "1.35rem" }}>
+          <div className="card">
+            <span className="muted">Total Egresos (Filtro)</span>
+            <h3 style={{ margin: "4px 0 0 0", color: "#dc2626", fontSize: "1.35rem", fontWeight: 800 }}>
               −{money(filteredDebits, selectedAccount.currency)}
             </h3>
           </div>
-
-          <div className="card pad" style={{ borderLeft: "4px solid #3b82f6" }}>
-            <span className="muted" style={{ fontSize: "0.78rem", textTransform: "uppercase", fontWeight: 700 }}>
-              Flujo Neto Filtrado
-            </span>
-            <h3
-              style={{
-                margin: "4px 0 0 0",
-                color: filteredNet >= 0 ? "#059669" : "#dc2626",
-                fontSize: "1.35rem"
-              }}
-            >
-              {filteredNet >= 0 ? `+${money(filteredNet, selectedAccount.currency)}` : money(filteredNet, selectedAccount.currency)}
-            </h3>
-          </div>
-
-          <div className="card pad" style={{ borderLeft: "4px solid #f59e0b" }}>
-            <span className="muted" style={{ fontSize: "0.78rem", textTransform: "uppercase", fontWeight: 700 }}>
-              Movimientos por Revisar
-            </span>
-            <h3 style={{ margin: "4px 0 0 0", color: totalPending > 0 ? "#b45309" : "#059669", fontSize: "1.35rem", fontWeight: 800 }}>
-              {totalPending + totalSuggested} pendientes
-            </h3>
+          <div className="card">
+            <span className="muted">Clasificación de Tesorería</span>
+            <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+              <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.88rem" }}>
+                ✓ {totalConfirmed} confirmados
+              </span>
+              <span style={{ color: "#b45309", fontWeight: 700, fontSize: "0.88rem" }}>
+                ⏳ {totalPending + totalSuggested} pendientes
+              </span>
+            </div>
           </div>
         </div>
 
@@ -508,12 +560,13 @@ export function FinanceAccountsPage() {
         <section className="card pad" style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "flex-end" }}>
             {/* Search Input */}
-            <label style={{ flex: "1 1 240px" }}>
-              Buscar concepto o referencia
+            <label style={{ flex: "1 1 260px" }}>
+              Buscar titular, CUIT, concepto o referencia
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Ej.: Depósito, COMISION, IIBB..."
+                placeholder="Ej.: CONSORCIO, 30716480107, KRAFT, IIBB..."
+                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
               />
             </label>
 
@@ -523,9 +576,10 @@ export function FinanceAccountsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
+                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
               >
-                <option value="all">🔍 Todos los estados ({movements.length})</option>
-                <option value="Pending">⏳ Solo Pendientes ({totalPending})</option>
+                <option value="all">🔍 Todos ({movements.length})</option>
+                <option value="Pending">⏳ Pendientes ({totalPending})</option>
                 <option value="Suggested">🟡 Sugeridos ({totalSuggested})</option>
                 <option value="Confirmed">✓ Confirmados ({totalConfirmed})</option>
               </select>
@@ -538,6 +592,7 @@ export function FinanceAccountsPage() {
                 <select
                   value={conceptFilter}
                   onChange={(e) => setConceptFilter(e.target.value)}
+                  style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
                 >
                   <option value="all">🏷️ Todos los conceptos</option>
                   {uniqueConcepts.map((c) => (
@@ -556,6 +611,7 @@ export function FinanceAccountsPage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
               />
             </label>
 
@@ -566,6 +622,7 @@ export function FinanceAccountsPage() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
               />
             </label>
 
@@ -573,7 +630,7 @@ export function FinanceAccountsPage() {
             <div className="toolbar" style={{ gap: 6, paddingBottom: 2 }}>
               <button
                 type="button"
-                className="btn btn-outline btn-sm"
+                className="btn btn-outline compact"
                 onClick={() => setDatePreset("thisMonth")}
                 title="Filtrar movimientos del mes en curso"
               >
@@ -581,7 +638,7 @@ export function FinanceAccountsPage() {
               </button>
               <button
                 type="button"
-                className="btn btn-outline btn-sm"
+                className="btn btn-outline compact"
                 onClick={() => setDatePreset("last30Days")}
                 title="Últimos 30 días"
               >
@@ -589,7 +646,7 @@ export function FinanceAccountsPage() {
               </button>
               <button
                 type="button"
-                className="btn ghost btn-sm"
+                className="btn ghost compact"
                 onClick={() => setDatePreset("all")}
                 title="Limpiar rango de fechas"
               >
@@ -611,7 +668,7 @@ export function FinanceAccountsPage() {
             <div className="toolbar" style={{ gap: 8 }}>
               <button
                 type="button"
-                className="btn btn-outline btn-sm"
+                className="btn btn-outline compact"
                 onClick={handleExportExcel}
                 disabled={filteredMovements.length === 0}
                 style={{ fontWeight: 600 }}
@@ -626,7 +683,8 @@ export function FinanceAccountsPage() {
               <thead>
                 <tr>
                   <th>Fecha</th>
-                  <th>Concepto / Leyenda</th>
+                  <th>Movimiento / Leyenda</th>
+                  <th>Titular / Contraparte</th>
                   <th>Concepto Tesorería</th>
                   <th>Estado</th>
                   <th>Tipo</th>
@@ -638,13 +696,13 @@ export function FinanceAccountsPage() {
               <tbody>
                 {loadingMovements ? (
                   <tr>
-                    <td colSpan={8} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={9} className="muted" style={{ textAlign: "center", padding: 24 }}>
                       Cargando movimientos...
                     </td>
                   </tr>
                 ) : filteredMovements.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={9} className="muted" style={{ textAlign: "center", padding: 24 }}>
                       No hay movimientos que coincidan con los filtros aplicados.
                     </td>
                   </tr>
@@ -653,10 +711,7 @@ export function FinanceAccountsPage() {
                     const isConfirmed = x.classificationStatus === "Confirmed";
                     const isSuggested = x.classificationStatus === "Suggested";
                     const isPending = !isConfirmed;
-                    const statusText =
-                      statusLabel[x.classificationStatus || "Imported"] ||
-                      x.classificationStatus ||
-                      "Pendiente";
+                    const { mainDesc, titular, cuit, extra } = parseMovementDetails(x.description);
 
                     return (
                       <tr
@@ -668,10 +723,26 @@ export function FinanceAccountsPage() {
                       >
                         <td>{new Date(x.operationDateUtc).toLocaleDateString("es-AR")}</td>
                         <td>
-                          <strong>{x.description}</strong>
+                          <strong>{mainDesc}</strong>
                           <small className="muted" style={{ display: "block", fontSize: "0.76rem" }}>
-                            {x.externalReference || "Sin referencia"}
+                            {x.externalReference ? `Comprobante N° ${x.externalReference}` : extra || "Sin comprobante"}
                           </small>
+                        </td>
+                        <td>
+                          {titular ? (
+                            <div>
+                              <strong style={{ color: "#0f172a", fontSize: "0.86rem", display: "block" }}>
+                                {titular}
+                              </strong>
+                              {cuit && (
+                                <small style={{ color: "#0369a1", fontSize: "0.75rem", fontFamily: "monospace", fontWeight: 600 }}>
+                                  CUIT: {cuit}
+                                </small>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="muted" style={{ fontSize: "0.8rem" }}>—</span>
+                          )}
                         </td>
                         <td>
                           {isConfirmed ? (
@@ -735,16 +806,17 @@ export function FinanceAccountsPage() {
                             </span>
                           ) : (
                             <span
-                              className="badge"
+                              className="badge off"
                               style={{
-                                background: "rgba(100, 116, 139, 0.1)",
+                                background: "rgba(100, 116, 139, 0.12)",
                                 color: "#475569",
+                                fontWeight: 500,
                                 padding: "2px 8px",
                                 borderRadius: 12,
                                 fontSize: "0.78rem"
                               }}
                             >
-                              ⏳ {statusText}
+                              ⏳ Pendiente
                             </span>
                           )}
                         </td>
@@ -752,7 +824,8 @@ export function FinanceAccountsPage() {
                           <span
                             style={{
                               color: x.kind === "Credit" ? "#059669" : "#dc2626",
-                              fontWeight: 600
+                              fontWeight: 600,
+                              fontSize: "0.85rem"
                             }}
                           >
                             {x.kind === "Credit" ? "Ingreso" : "Egreso"}
@@ -761,13 +834,22 @@ export function FinanceAccountsPage() {
                         <td
                           style={{
                             textAlign: "right",
-                            color: x.kind === "Credit" ? "#059669" : "#dc2626",
-                            fontWeight: 700
+                            fontFamily: "monospace",
+                            fontWeight: 700,
+                            color: x.kind === "Credit" ? "#059669" : "#dc2626"
                           }}
                         >
-                          {x.kind === "Credit" ? `+${money(x.amount, x.currency)}` : `−${money(x.amount, x.currency)}`}
+                          {x.kind === "Credit" ? "+" : "−"}
+                          {money(x.amount, x.currency)}
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 600 }}>
+                        <td
+                          style={{
+                            textAlign: "right",
+                            fontFamily: "monospace",
+                            fontWeight: 600,
+                            color: "#0f172a"
+                          }}
+                        >
                           {money(x.systemBalance, x.currency)}
                         </td>
                         <td style={{ textAlign: "center" }}>
@@ -829,6 +911,116 @@ export function FinanceAccountsPage() {
             </table>
           </div>
         </section>
+
+        {/* Modal de Importación / Actualización de Extracto CSV */}
+        {showImportModal && (
+          <div className="modal-backdrop">
+            <div className="modal-card card pad" style={{ maxWidth: 780, maxHeight: "90vh", overflowY: "auto" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <h3 style={{ margin: 0 }}>📤 Importar o Actualizar Extracto Bancario ({selectedAccount.name})</h3>
+                <button type="button" className="btn ghost compact" onClick={() => setShowImportModal(false)}>
+                  ✕
+                </button>
+              </div>
+
+              <p className="muted" style={{ fontSize: "0.85rem", marginTop: 0 }}>
+                Seleccioná el archivo <strong>CSV exportado de Banco Galicia / Santander / Macro / etc.</strong> o pegá el contenido. El sistema extraerá automáticamente los <strong>nombres de los titulares, CUITs y motivos</strong>, y actualizará los movimientos existentes.
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+                <label>
+                  <strong>Seleccionar archivo CSV:</strong>
+                  <input
+                    type="file"
+                    accept=".csv,.txt"
+                    onChange={handleFileChange}
+                    style={{ marginTop: 6, display: "block" }}
+                  />
+                </label>
+
+                <label>
+                  <strong>O pegar contenido CSV:</strong>
+                  <textarea
+                    rows={4}
+                    value={importCsv}
+                    onChange={async (e) => {
+                      const text = e.target.value;
+                      setImportCsv(text);
+                      if (text.trim()) {
+                        try {
+                          const preview = await api.previewFinanceBankImport(selectedAccount.id, text);
+                          setImportPreview(preview);
+                        } catch {
+                          setImportPreview([]);
+                        }
+                      }
+                    }}
+                    placeholder="Pegar filas del CSV aquí..."
+                    style={{ width: "100%", padding: "8px", fontFamily: "monospace", fontSize: "0.8rem", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                  />
+                </label>
+              </div>
+
+              {/* Preview Table */}
+              {importPreview.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <h4 style={{ margin: "0 0 8px 0" }}>Vista Previa ({importPreview.length} filas detectadas):</h4>
+                  <div className="table-wrap" style={{ maxHeight: 220, overflowY: "auto" }}>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Movimiento & Titular / CUIT</th>
+                          <th>Tipo</th>
+                          <th style={{ textAlign: "right" }}>Importe</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importPreview.slice(0, 15).map((row, idx) => (
+                          <tr key={idx}>
+                            <td>{new Date(row.operationDateUtc).toLocaleDateString("es-AR")}</td>
+                            <td>
+                              <strong>{row.description}</strong>
+                              {row.externalReference && (
+                                <small className="muted" style={{ display: "block", fontSize: "0.72rem" }}>
+                                  Ref: {row.externalReference}
+                                </small>
+                              )}
+                            </td>
+                            <td>{row.kind === 0 || row.kind === "Credit" ? "Ingreso" : "Egreso"}</td>
+                            <td style={{ textAlign: "right", fontWeight: 700, color: row.kind === 0 || row.kind === "Credit" ? "#059669" : "#dc2626" }}>
+                              {money(row.amount, selectedAccount.currency)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {importPreview.length > 15 && (
+                    <small className="muted" style={{ display: "block", marginTop: 4 }}>
+                      ... y {importPreview.length - 15} filas más.
+                    </small>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                <button type="button" className="btn ghost" onClick={() => setShowImportModal(false)}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={importLoading || !importCsv.trim()}
+                  onClick={handleConfirmImport}
+                  style={{ fontWeight: 700 }}
+                >
+                  {importLoading ? "Procesando Extracto..." : "✓ Confirmar e Importar / Actualizar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal de Clasificación Avanzada & Reglas */}
         {modalMovement && (
@@ -930,8 +1122,8 @@ export function FinanceAccountsPage() {
       <div className="page-head">
         <div>
           <span className="eyebrow">FINANZAS · TESORERÍA</span>
-          <h1>Bancos y cajas</h1>
-          <p className="muted">Seleccioná una cuenta para ver el detalle y clasificar movimientos.</p>
+          <h1>Bancos y Cajas</h1>
+          <p className="muted">Seleccioná una cuenta para ver el detalle, importar extractos y clasificar movimientos.</p>
         </div>
       </div>
       {error && <div className="alert">{error}</div>}

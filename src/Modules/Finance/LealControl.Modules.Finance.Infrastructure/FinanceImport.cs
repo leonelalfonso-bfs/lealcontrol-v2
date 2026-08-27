@@ -30,40 +30,69 @@ public static class FinanceImport
 
             var parsed = Parse(request.CsvContent);
             var valid = parsed.Where(x => x.Error is null).ToList();
-            var existing = await db.Movements.AsNoTracking()
+
+            var existing = await db.Movements
                 .Where(x => x.TenantId == tenantId && x.AccountId == request.AccountId)
-                .Select(x => new { x.OperationDateUtc, x.Amount, x.Kind, x.Description, x.ExternalReference })
                 .ToListAsync(ct);
 
-            var fresh = valid.Where(row => !existing.Any(item => 
-                item.OperationDateUtc.Date == row.OperationDateUtc.Date && 
-                item.Amount == row.Amount && 
-                item.Kind == row.Kind && 
-                (string.IsNullOrWhiteSpace(row.ExternalReference) ? item.Description == row.Description : item.ExternalReference == row.ExternalReference)
-            )).ToList();
-
             await FinanceConcepts.EnsureBaseConceptsAsync(db, tenantId, ct);
-            foreach (var row in fresh)
+
+            int updatedCount = 0;
+            int freshCount = 0;
+
+            foreach (var row in valid)
             {
-                var movement = new FinancialMovement
+                // Match existing movement by date, amount and kind
+                var match = existing.FirstOrDefault(item =>
+                    item.OperationDateUtc.Date == row.OperationDateUtc.Date &&
+                    item.Amount == row.Amount &&
+                    item.Kind == row.Kind &&
+                    (string.IsNullOrWhiteSpace(row.ExternalReference) || item.ExternalReference == row.ExternalReference || string.IsNullOrWhiteSpace(item.ExternalReference))
+                );
+
+                if (match != null)
                 {
-                    Id = Guid.NewGuid(),
-                    TenantId = tenantId,
-                    AccountId = request.AccountId,
-                    Kind = row.Kind,
-                    Amount = row.Amount,
-                    Currency = "ARS",
-                    OperationDateUtc = row.OperationDateUtc,
-                    Description = row.Description,
-                    ExternalReference = row.ExternalReference,
-                    ReportedBalance = row.ReportedBalance,
-                    CreatedAtUtc = DateTime.UtcNow
-                };
-                await FinanceConcepts.ApplySuggestionAsync(db, tenantId, movement, ct);
-                db.Movements.Add(movement);
+                    // If the existing movement has generic description but the new row has enriched titular/CUIT info, update it!
+                    if (row.Description.Contains("Titular:") || !string.IsNullOrWhiteSpace(row.ExternalReference))
+                    {
+                        match.Description = row.Description;
+                        if (!string.IsNullOrWhiteSpace(row.ExternalReference)) match.ExternalReference = row.ExternalReference;
+                        if (row.ReportedBalance.HasValue) match.ReportedBalance = row.ReportedBalance;
+                        await FinanceConcepts.ApplySuggestionAsync(db, tenantId, match, ct);
+                        updatedCount++;
+                    }
+                }
+                else
+                {
+                    var movement = new FinancialMovement
+                    {
+                        Id = Guid.NewGuid(),
+                        TenantId = tenantId,
+                        AccountId = request.AccountId,
+                        Kind = row.Kind,
+                        Amount = row.Amount,
+                        Currency = "ARS",
+                        OperationDateUtc = row.OperationDateUtc,
+                        Description = row.Description,
+                        ExternalReference = row.ExternalReference,
+                        ReportedBalance = row.ReportedBalance,
+                        CreatedAtUtc = DateTime.UtcNow
+                    };
+                    await FinanceConcepts.ApplySuggestionAsync(db, tenantId, movement, ct);
+                    db.Movements.Add(movement);
+                    existing.Add(movement);
+                    freshCount++;
+                }
             }
+
             await db.SaveChangesAsync(ct);
-            return Results.Ok(new { Imported = fresh.Count, Duplicates = valid.Count - fresh.Count, Rejected = parsed.Count(x => x.Error is not null) });
+            return Results.Ok(new
+            {
+                Imported = freshCount,
+                Updated = updatedCount,
+                Duplicates = valid.Count - freshCount - updatedCount,
+                Rejected = parsed.Count(x => x.Error is not null)
+            });
         });
 
         var finance = endpoints.MapGroup("/api/v1/finance").WithTags("Finance");
@@ -139,7 +168,7 @@ public static class FinanceImport
         return endpoints;
     }
 
-    private static List<BankImportRow> Parse(string content)
+    public static List<BankImportRow> Parse(string content)
     {
         var records = ReadCsvRecords(content);
         if (records.Count < 2) return [];
@@ -148,18 +177,20 @@ public static class FinanceImport
         
         var dateIndex = Index(header, "fecha", "f. operacion", "f. oper.", "fecha operacion", "f. valor", "fecha valor", "date");
         var descriptionIndex = Index(header, "descripción", "descripcion", "detalle", "concepto", "movimiento", "leyenda", "motivo", "description");
+        var originIndex = Index(header, "origen", "canal", "sucursal", "origin");
         var debitIndex = Index(header, "débitos", "debitos", "debito", "débito", "importe debito", "importe débito", "egreso", "egresos", "cargo", "debit");
         var creditIndex = Index(header, "créditos", "creditos", "credito", "crédito", "importe credito", "importe crédito", "ingreso", "ingresos", "abono", "credit");
         var balanceIndex = Index(header, "saldo", "saldo contable", "saldo disponible", "balance");
-        var originIndex = Index(header, "origen", "canal", "sucursal", "origin");
-        var conceptIndex = Index(header, "concepto", "tipo movimiento", "tipo de movimiento", "tipo");
         var referenceIndex = Index(header, "número de comprobante", "numero de comprobante", "referencia", "comprobante", "nro comprobante", "nro de comprobante", "nro operacion", "nro de operacion", "id transacción", "id transaccion", "reference");
-        
-        // Counterparty / Sender / CUIT / Reason extractions
-        var counterpartyIndex = Index(header, "titular", "ordenante", "destinatario / remitente", "remitente", "beneficiario", "nombre", "razon social", "razón social", "contraparte", "cuenta origen", "nombre y apellido", "titular origen");
-        var taxIdIndex = Index(header, "cuit / cuil", "cuit", "cuil", "cuit/cuil", "documento", "cuit/cuil ordenante", "cuit/cuil beneficiario", "cuit ordenante");
-        var additionalInfoIndex = Index(header, "informacion adicional", "información adicional", "observaciones", "datos adicionales", "detalle ampliado", "motivo");
-        var cbuIndex = Index(header, "cbu / cvu", "cbu", "cvu", "cbu/cvu", "cuenta origen cbu");
+
+        // Specific Banco Galicia columns
+        var leyendas1Index = Index(header, "leyendas adicionales1", "leyendas adicionales 1", "leyenda adicional 1", "titular", "ordenante", "destinatario / remitente", "remitente", "beneficiario", "nombre", "razon social", "razón social", "contraparte", "cuenta origen", "nombre y apellido", "titular origen");
+        var leyendas2Index = Index(header, "leyendas adicionales2", "leyendas adicionales 2", "leyenda adicional 2", "cuit / cuil", "cuit", "cuil", "cuit/cuil", "documento", "cuit/cuil ordenante", "cuit/cuil beneficiario", "cuit ordenante");
+        var leyendas3Index = Index(header, "leyendas adicionales3", "leyendas adicionales 3", "leyenda adicional 3", "informacion adicional", "información adicional", "observaciones", "datos adicionales", "detalle ampliado", "motivo", "cbu / cvu", "cbu", "cvu", "cbu/cvu", "cuenta origen cbu");
+        var leyendas4Index = Index(header, "leyendas adicionales4", "leyendas adicionales 4", "leyenda adicional 4");
+        var obsClienteIndex = Index(header, "observaciones cliente", "observaciones");
+        var terminalIndex = Index(header, "número de terminal", "numero de terminal");
+        var tipoMovIndex = Index(header, "tipo de movimiento");
 
         var result = new List<BankImportRow>();
         foreach (var cells in records.Skip(1))
@@ -175,26 +206,24 @@ public static class FinanceImport
 
             var descRaw = Cell(cells, descriptionIndex);
             var origin = Cell(cells, originIndex);
-            var concept = Cell(cells, conceptIndex);
-            var counterparty = Cell(cells, counterpartyIndex);
-            var taxId = Cell(cells, taxIdIndex);
-            var addInfo = Cell(cells, additionalInfoIndex);
-            var cbu = Cell(cells, cbuIndex);
+            var titular = Cell(cells, leyendas1Index);
+            var cuit = Cell(cells, leyendas2Index);
+            var extra3 = Cell(cells, leyendas3Index);
+            var extra4 = Cell(cells, leyendas4Index);
+            var obs = Cell(cells, obsClienteIndex);
 
             var descParts = new List<string>();
             if (!string.IsNullOrWhiteSpace(descRaw)) descParts.Add(descRaw);
-            if (!string.IsNullOrWhiteSpace(counterparty) && !descRaw.Contains(counterparty, StringComparison.OrdinalIgnoreCase))
-                descParts.Add($"Titular: {counterparty}");
-            if (!string.IsNullOrWhiteSpace(taxId) && !descRaw.Contains(taxId, StringComparison.OrdinalIgnoreCase))
-                descParts.Add($"CUIT: {taxId}");
-            if (!string.IsNullOrWhiteSpace(origin) && !descRaw.Contains(origin, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrWhiteSpace(titular)) descParts.Add($"Titular: {titular}");
+            if (!string.IsNullOrWhiteSpace(cuit)) descParts.Add($"CUIT: {cuit}");
+            if (!string.IsNullOrWhiteSpace(extra3) && !extra3.Equals("VARIOS", StringComparison.OrdinalIgnoreCase) && !descParts.Contains(extra3))
+                descParts.Add(extra3);
+            if (!string.IsNullOrWhiteSpace(extra4) && !descParts.Contains(extra4))
+                descParts.Add(extra4);
+            if (!string.IsNullOrWhiteSpace(origin) && !descParts.Contains(origin))
                 descParts.Add($"Canal: {origin}");
-            if (!string.IsNullOrWhiteSpace(addInfo) && !descRaw.Contains(addInfo, StringComparison.OrdinalIgnoreCase) && !descParts.Contains(addInfo))
-                descParts.Add(addInfo);
-            if (!string.IsNullOrWhiteSpace(cbu) && !descRaw.Contains(cbu, StringComparison.OrdinalIgnoreCase))
-                descParts.Add($"CBU: {cbu}");
-            if (!string.IsNullOrWhiteSpace(concept) && !descRaw.Contains(concept, StringComparison.OrdinalIgnoreCase) && !descParts.Contains(concept))
-                descParts.Add(concept);
+            if (!string.IsNullOrWhiteSpace(obs) && !descParts.Contains(obs))
+                descParts.Add(obs);
 
             var description = string.Join(" · ", descParts.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
             var reference = Cell(cells, referenceIndex);
@@ -267,7 +296,7 @@ public static class FinanceImport
         index >= 0 && index < row.Count ? row[index].Trim() : "";
 
     private static string Normalize(string value) =>
-        value.Trim().ToLowerInvariant().Replace("\u00a0", " ").Replace("\"", "").Replace("'", "");
+        value.Trim().ToLowerInvariant().Replace("\u00a0", " ").Replace("\"", "").Replace("'", "").Replace("\ufeff", "");
 
     private static decimal ParseDecimal(string raw)
     {
