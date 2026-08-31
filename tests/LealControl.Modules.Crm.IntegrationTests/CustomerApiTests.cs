@@ -7,13 +7,22 @@ namespace LealControl.Modules.Crm.IntegrationTests;
 
 public sealed class CustomerApiTests : IClassFixture<CrmWebApplicationFactory>
 {
-    private readonly HttpClient _client;
+    private readonly CrmWebApplicationFactory _factory;
 
-    public CustomerApiTests(CrmWebApplicationFactory factory) => _client = factory.CreateClient();
+    public CustomerApiTests(CrmWebApplicationFactory factory) => _factory = factory;
+
+    [Fact]
+    public async Task Customers_without_token_are_unauthorized()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/crm/customers");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
 
     [Fact]
     public async Task Register_and_get_customer()
     {
+        var client = _factory.CreateAuthenticatedClient();
         var payload = new
         {
             legalName = "Acme SA",
@@ -34,7 +43,7 @@ public sealed class CustomerApiTests : IClassFixture<CrmWebApplicationFactory>
             paymentTermsDays = 30
         };
 
-        var created = await _client.PostAsJsonAsync("/api/v1/crm/customers", payload);
+        var created = await client.PostAsJsonAsync("/api/v1/crm/customers", payload);
         created.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var body = await created.Content.ReadFromJsonAsync<CustomerResponse>();
@@ -42,13 +51,14 @@ public sealed class CustomerApiTests : IClassFixture<CrmWebApplicationFactory>
         body!.LegalName.Should().Be("Acme SA");
         body.DocumentNumber.Should().Be("20123456786");
 
-        var fetched = await _client.GetAsync($"/api/v1/crm/customers/{body.Id}");
+        var fetched = await client.GetAsync($"/api/v1/crm/customers/{body.Id}");
         fetched.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
     public async Task Duplicate_cuit_is_conflict()
     {
+        var client = _factory.CreateAuthenticatedClient();
         var payload = new
         {
             legalName = "Duplicado SA",
@@ -60,8 +70,8 @@ public sealed class CustomerApiTests : IClassFixture<CrmWebApplicationFactory>
             isSupplier = false
         };
 
-        (await _client.PostAsJsonAsync("/api/v1/crm/customers", payload)).StatusCode.Should().Be(HttpStatusCode.Created);
-        (await _client.PostAsJsonAsync("/api/v1/crm/customers", payload)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await client.PostAsJsonAsync("/api/v1/crm/customers", payload)).StatusCode.Should().Be(HttpStatusCode.Created);
+        (await client.PostAsJsonAsync("/api/v1/crm/customers", payload)).StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     private sealed record CustomerResponse(Guid Id, string LegalName, string DocumentNumber);

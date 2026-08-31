@@ -82,7 +82,7 @@ public sealed class TenantUser : Entity<Guid>
     {
         if (string.IsNullOrEmpty(PasswordHash))
         {
-            return password == "admin123" || password == "leal123";
+            return false;
         }
 
         return PasswordSecurity.VerifyPassword(password, PasswordHash);
@@ -137,25 +137,43 @@ public static class PasswordSecurity
 
     public static bool VerifyPassword(string password, string storedHash)
     {
-        if (string.IsNullOrWhiteSpace(storedHash) || !storedHash.Contains('.'))
+        if (string.IsNullOrWhiteSpace(storedHash))
             return false;
 
-        var parts = storedHash.Split('.');
-        if (parts.Length != 2) return false;
+        if (storedHash.Contains('.'))
+        {
+            var parts = storedHash.Split('.');
+            if (parts.Length != 2) return false;
+
+            try
+            {
+                byte[] salt = Convert.FromBase64String(parts[0]);
+                byte[] expectedHash = Convert.FromBase64String(parts[1]);
+
+                byte[] actualHash = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
+                    password,
+                    salt,
+                    iterations: 100_000,
+                    hashAlgorithm: System.Security.Cryptography.HashAlgorithmName.SHA256,
+                    outputLength: 32);
+
+                return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         try
         {
-            byte[] salt = Convert.FromBase64String(parts[0]);
-            byte[] expectedHash = Convert.FromBase64String(parts[1]);
-
-            byte[] actualHash = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
-                password,
-                salt,
-                iterations: 100_000,
-                hashAlgorithm: System.Security.Cryptography.HashAlgorithmName.SHA256,
-                outputLength: 32);
-
-            return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var bytes = System.Text.Encoding.UTF8.GetBytes(password + "LealControlSalt2026");
+            var legacyHash = Convert.ToBase64String(sha256.ComputeHash(bytes));
+            var a = System.Text.Encoding.UTF8.GetBytes(legacyHash);
+            var b = System.Text.Encoding.UTF8.GetBytes(storedHash);
+            if (a.Length != b.Length) return false;
+            return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(a, b);
         }
         catch
         {

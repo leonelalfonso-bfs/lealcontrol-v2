@@ -52,6 +52,10 @@ public sealed class QaWebApplicationFactory : WebApplicationFactory<Program>, IA
         builder.UseEnvironment("Development");
         builder.UseSetting("ConnectionStrings:Database", ConnectionString);
         builder.UseSetting("QA_TEST_CENTER_ENABLED", "true");
+        builder.UseSetting("Jwt:Secret", "DevOnly_LealControl_Local_JWT_Key_Not_For_Production_Use_32b!");
+        builder.UseSetting("Jwt:Issuer", "lealcontrol");
+        builder.UseSetting("Jwt:Audience", "lealcontrol-web");
+        builder.UseSetting("Jwt:LifetimeHours", "8");
     }
 
     public HttpClient CreateAuthenticatedClient(Guid tenantId, Guid userId, string role = "Admin", string name = "QA Admin")

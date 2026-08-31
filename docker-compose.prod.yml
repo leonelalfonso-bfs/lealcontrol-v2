@@ -1,3 +1,6 @@
+# Producción: https://erp.lealcontrol.com
+# Carpeta en el VPS: /opt/lealcontrol-v2 (el nombre "v2" es histórico; el dominio de prod es erp).
+# Puertos: web 5174, api 5209. Rama git: main.
 services:
   postgres:
     image: postgres:16-alpine
@@ -5,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-lealcontrol_v2}
       POSTGRES_USER: ${POSTGRES_USER:-lealv2}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - lealcontrol_v2_pg:/var/lib/postgresql/data
     networks: [v2]
@@ -15,10 +18,20 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Database: Host=postgres;Port=5432;Database=${POSTGRES_DB:-lealcontrol_v2};Username=${POSTGRES_USER:-lealv2};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Database: Host=postgres;Port=5432;Database=${POSTGRES_DB:-lealcontrol_v2};Username=${POSTGRES_USER:-lealv2};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      Jwt__Issuer: ${Jwt__Issuer:-lealcontrol}
+      Jwt__Audience: ${Jwt__Audience:-lealcontrol-web}
+      Jwt__LifetimeHours: ${Jwt__LifetimeHours:-8}
+      Cors__Origins__0: ${PUBLIC_WEB_ORIGIN:?PUBLIC_WEB_ORIGIN is required}
       WhatsAppGateway__Url: ${WHATSAPP_GATEWAY_URL:-http://evolution-api-evolution-api-1:8080}
-      WhatsAppGateway__ApiKey: ${WHATSAPP_GATEWAY_APIKEY:-c0cffb77a0e57afb8a2799b3008d9b032615825abe964eae}
-      WhatsAppGateway__WebhookUrl: ${WHATSAPP_GATEWAY_WEBHOOK_URL:-https://v2.lealcontrol.com/api/communications/whatsapp/webhook}
+      WhatsAppGateway__ApiKey: ${WHATSAPP_GATEWAY_APIKEY:?WHATSAPP_GATEWAY_APIKEY is required}
+      WhatsAppGateway__WebhookUrl: ${WHATSAPP_GATEWAY_WEBHOOK_URL:-}
+      WhatsAppGateway__WebhookSecret: ${WHATSAPP_WEBHOOK_SECRET:?WHATSAPP_WEBHOOK_SECRET is required}
+      Meta__VerifyToken: ${Meta__VerifyToken:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      SUPERADMIN_BOOTSTRAP_PASSWORD: ${SUPERADMIN_BOOTSTRAP_PASSWORD:-}
+      SUPERADMIN_BOOTSTRAP_EMAIL: ${SUPERADMIN_BOOTSTRAP_EMAIL:-}
     depends_on: [postgres]
     volumes:
       - lealcontrol_v2_dp_keys:/root/.aspnet/DataProtection-Keys

@@ -65,6 +65,48 @@ public sealed class ModuleBoundaryTests
         result.IsSuccessful.Should().BeTrue(Format(result));
     }
 
+    [Fact]
+    public void Sales_domain_does_not_depend_on_other_layers()
+    {
+        var result = Types.InAssembly(typeof(LealControl.Modules.Sales.Domain.Products.Product).Assembly)
+            .ShouldNot()
+            .HaveDependencyOnAny(
+                "LealControl.Modules.Sales.Application",
+                "LealControl.Modules.Sales.Infrastructure",
+                "LealControl.Api",
+                "Microsoft.EntityFrameworkCore",
+                "Microsoft.AspNetCore")
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(Format(result));
+    }
+
+    [Fact]
+    public void Sales_application_does_not_depend_on_infrastructure_or_host()
+    {
+        var result = Types.InAssembly(typeof(LealControl.Modules.Sales.Application.DependencyInjection).Assembly)
+            .ShouldNot()
+            .HaveDependencyOnAny(
+                "LealControl.Modules.Sales.Infrastructure",
+                "LealControl.Api",
+                "Microsoft.EntityFrameworkCore",
+                "Npgsql")
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(Format(result));
+    }
+
+    [Fact]
+    public void Sales_infrastructure_does_not_reference_the_host()
+    {
+        var result = Types.InAssembly(typeof(LealControl.Modules.Sales.Infrastructure.DependencyInjection).Assembly)
+            .ShouldNot()
+            .HaveDependencyOn("LealControl.Api")
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(Format(result));
+    }
+
     private static string Format(TestResult result) =>
         result.IsSuccessful
             ? string.Empty

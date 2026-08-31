@@ -101,7 +101,7 @@ public static class AuthEndpoints
                     using var tenantConn = new NpgsqlConnection(tenantBuilder.ConnectionString);
                     await tenantConn.OpenAsync(ct);
 
-                    using var checkCmd = new NpgsqlCommand("SELECT \"Id\", \"PasswordHash\", \"Role\" FROM public.tenant_users WHERE lower(\"Email\") = @email AND \"IsActive\" = true LIMIT 1", tenantConn);
+                        using var checkCmd = new NpgsqlCommand("SELECT \"Id\", \"PasswordHash\", \"Role\" FROM public.tenant_users WHERE lower(\"Email\") = @email AND \"IsActive\" = true LIMIT 1", tenantConn);
                     checkCmd.Parameters.AddWithValue("email", email);
                     using var userReader = await checkCmd.ExecuteReaderAsync(ct);
                     if (await userReader.ReadAsync(ct))
@@ -111,12 +111,7 @@ public static class AuthEndpoints
                         var role = userReader.IsDBNull(2) ? "Admin" : userReader.GetString(2);
                         await userReader.CloseAsync();
 
-                        // Verify Hash using SHA256 Salt
-                        using var sha256 = SHA256.Create();
-                        var bytes = Encoding.UTF8.GetBytes(req.Password + "LealControlSalt2026");
-                        var computed = Convert.ToBase64String(sha256.ComputeHash(bytes));
-
-                        if (computed != pwdHash && req.Password != pwdHash)
+                        if (!PasswordSecurity.VerifyPassword(req.Password, pwdHash))
                         {
                             return Results.BadRequest(new { message = "Contraseña incorrecta." });
                         }
@@ -161,7 +156,7 @@ public static class AuthEndpoints
             }
 
             return Results.BadRequest(new { message = "Usuario no encontrado o inactivo." });
-        }).RequireRateLimiting("auth-policy");
+        }).RequireRateLimiting("auth-policy").AllowAnonymous();
 
         // 2. Register new Tenant from scratch
         auth.MapPost("/register-tenant", async ([FromBody] RegisterTenantRequest req, CrmDbContext db, CancellationToken ct) =>
@@ -216,7 +211,7 @@ public static class AuthEndpoints
                 new TenantSummaryDto(newTenantId.Value, companyName, companyName, docNumber),
                 availableTenants
             ));
-        }).RequireRateLimiting("auth-policy");
+        }).RequireRateLimiting("auth-policy").AllowAnonymous();
 
         // 3. Me
         auth.MapGet("/me", async (HttpContext http, ITenantContext tenantContext, CrmDbContext db, CancellationToken ct) =>
@@ -283,12 +278,9 @@ public static class AuthEndpoints
                 }
             }
 
-            user ??= await db.TenantUsers.FirstOrDefaultAsync(u => u.TenantId == targetTenantId && u.IsActive, ct);
             if (user == null)
             {
-                user = TenantUser.Create(targetTenantId, "Administrador", "admin@lealcontrol.com", "Admin", "admin123");
-                db.TenantUsers.Add(user);
-                await db.SaveChangesAsync(ct);
+                return Results.Json(new { message = "No tenés acceso a esa empresa." }, statusCode: StatusCodes.Status403Forbidden);
             }
 
             var tokenOut = SimpleJwt.CreateToken(user.Id, user.Email, user.FullName, user.Role, targetTenantId.Value, tenantSettings.LegalName);
@@ -329,22 +321,33 @@ public static class SimpleJwt
 {
     public static string SecretKey { get; set; } =
         Environment.GetEnvironmentVariable("JWT_SECRET")
-        ?? "LealControl_Enterprise_JWT_Signing_Key_2026_Secret_Key_Super_Secure_!";
+        ?? "DevOnly_LealControl_Local_JWT_Key_Not_For_Production_Use_32b!";
+
+    public static string Issuer { get; set; } = "lealcontrol";
+
+    public static string Audience { get; set; } = "lealcontrol-web";
+
+    public static int LifetimeHours { get; set; } = 8;
 
     public static byte[] GetSecretBytes() => Encoding.UTF8.GetBytes(SecretKey);
 
     public static string CreateToken(Guid userId, string email, string fullName, string role, Guid tenantId, string tenantName)
     {
+        var now = DateTimeOffset.UtcNow;
         var header = new { alg = "HS256", typ = "JWT" };
         var payload = new
         {
+            iss = Issuer,
+            aud = Audience,
             sub = userId.ToString(),
             email = email,
             name = fullName,
             role = role,
             tenant_id = tenantId.ToString(),
             tenant_name = tenantName,
-            exp = DateTimeOffset.UtcNow.AddDays(30).ToUnixTimeSeconds()
+            nbf = now.ToUnixTimeSeconds(),
+            iat = now.ToUnixTimeSeconds(),
+            exp = now.AddHours(LifetimeHours).ToUnixTimeSeconds()
         };
 
         string headerB64 = Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(header));

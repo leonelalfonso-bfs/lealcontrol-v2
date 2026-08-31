@@ -21,6 +21,7 @@ using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Api.SuperAdmin;
 using LealControl.Api.Automation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -69,13 +70,37 @@ try
     builder.Services.ConfigureHttpJsonOptions(options =>
         options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
-    // Configuración de Seguridad y Autenticación JWT Bearer
+    const string retiredJwtFallback = "LealControl_Enterprise_JWT_Signing_Key_2026_Secret_Key_Super_Secure_!";
     var jwtSecret = builder.Configuration["Jwt:Secret"]
         ?? builder.Configuration["JWT_SECRET"]
-        ?? Environment.GetEnvironmentVariable("JWT_SECRET")
-        ?? "LealControl_Enterprise_JWT_Signing_Key_2026_Secret_Key_Super_Secure_!";
+        ?? Environment.GetEnvironmentVariable("JWT_SECRET");
 
-    LealControl.Modules.Crm.Infrastructure.Http.SimpleJwt.SecretKey = jwtSecret;
+    if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret == retiredJwtFallback)
+    {
+        if (builder.Environment.IsProduction())
+        {
+            throw new InvalidOperationException(
+                "JWT_SECRET (o Jwt:Secret) es obligatorio en Production. No hay clave de respaldo en el código.");
+        }
+
+        jwtSecret = "DevOnly_LealControl_Local_JWT_Key_Not_For_Production_Use_32b!";
+        Log.Warning("Usando clave JWT local de desarrollo. Definí Jwt:Secret o JWT_SECRET para coincidir con los tests.");
+    }
+
+    var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "lealcontrol";
+    var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "lealcontrol-web";
+    var jwtLifetimeHours = 8;
+    if (int.TryParse(builder.Configuration["Jwt:LifetimeHours"], out var parsedHours) && parsedHours > 0)
+    {
+        jwtLifetimeHours = parsedHours;
+    }
+
+    var requireHttpsMetadata = builder.Configuration.GetValue("Jwt:RequireHttpsMetadata", false);
+
+    SimpleJwt.SecretKey = jwtSecret;
+    SimpleJwt.Issuer = jwtIssuer;
+    SimpleJwt.Audience = jwtAudience;
+    SimpleJwt.LifetimeHours = jwtLifetimeHours;
     var jwtKeyBytes = Encoding.UTF8.GetBytes(jwtSecret);
 
     builder.Services.AddAuthentication(options =>
@@ -85,19 +110,29 @@ try
     })
     .AddJwtBearer(options =>
     {
-        options.RequireHttpsMetadata = false;
+        options.RequireHttpsMetadata = requireHttpsMetadata;
         options.SaveToken = true;
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(jwtKeyBytes),
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(2)
+            ClockSkew = TimeSpan.FromMinutes(2),
+            RoleClaimType = "role",
+            NameClaimType = "sub"
         };
     });
-    builder.Services.AddAuthorization();
+    builder.Services.AddAuthorization(options =>
+    {
+        options.FallbackPolicy = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .Build();
+    });
 
     // Persistencia de Llaves Criptográficas (Data Protection)
     var keysFolder = builder.Configuration["DataProtection:KeysFolder"]
@@ -174,14 +209,26 @@ try
         .AddDbContextCheck<CrmDbContext>("crm-db")
         .AddDbContextCheck<SalesDbContext>("sales-db")
         .AddDbContextCheck<CommunicationsDbContext>("communications-db");
+    var configuredOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
+        ?.Where(o => !string.IsNullOrWhiteSpace(o))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray() ?? Array.Empty<string>();
+
+    if (configuredOrigins.Length == 0)
+    {
+        configuredOrigins =
+        [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5273",
+            "http://127.0.0.1:5273"
+        ];
+    }
+
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("web", policy =>
-            policy.WithOrigins(
-                    "http://localhost:5173",
-                    "http://127.0.0.1:5173",
-                    "http://localhost:5273",
-                    "http://127.0.0.1:5273")
+            policy.WithOrigins(configuredOrigins)
                 .AllowAnyHeader()
                 .AllowAnyMethod());
     });
@@ -205,7 +252,7 @@ try
     await using (var scope = app.Services.CreateAsyncScope())
     {
         var masterDb = scope.ServiceProvider.GetRequiredService<MasterDbContext>();
-        await masterDb.EnsureMasterTablesCreatedAsync();
+        await masterDb.EnsureMasterTablesCreatedAsync(app.Environment, app.Configuration);
 
         var crm = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
         try { await crm.Database.MigrateAsync(); } catch (Exception ex) { Log.Warning(ex, "CRM Migration skipped or already applied."); }
@@ -235,8 +282,8 @@ try
         await metrology.EnsureMetrologyTablesAsync();
     }
 
-    app.MapGet("/", () => Results.Redirect("/swagger"));
-    app.MapHealthChecks("/health");
+    app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
+    app.MapHealthChecks("/health").AllowAnonymous();
     app.MapCrmModule();
     app.MapSalesModule();
     app.MapCommunicationsModule();

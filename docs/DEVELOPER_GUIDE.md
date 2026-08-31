@@ -48,6 +48,8 @@ Bienvenido a la base de código de **Leal Control ERP 2.0**. Esta guía explica 
 4. **Registro de Ruta:** Registrá el `<Route>` en `frontend/src/App.tsx`.
 5. **Navegación:** Si debe figurar en el menú lateral, agregalo al arreglo `items` del módulo en `frontend/src/app/moduleRegistry.ts`.
 
+Un módulo o circuito = un PR hacia `staging`. No mezclar seguridad con features de negocio.
+
 ---
 
 ## 3. Convenciones de Código y Estilos
@@ -80,17 +82,51 @@ cd frontend && npm run build
 
 ---
 
-## 5. Protocolo de Despliegue en Producción
+## 5. Ambientes reales y GitHub
 
-1. Todos los cambios se integran en la rama `main`.
-2. Conectate por SSH al servidor VPS de producción:
-   ```bash
-   ssh root@tu-servidor-ip
-   cd /opt/lealcontrol-v2
-   git pull origin main
-   docker compose -f docker-compose.prod.yml up -d --build
-   ```
-3. Verificá los logs del contenedor para asegurar que no hubo errores en el arranque:
-   ```bash
-   docker compose -f docker-compose.prod.yml logs -f --tail=100
-   ```
+| Para qué | Dominio | Carpeta en el VPS (nombre viejo) | Puertos | Rama git | Compose |
+|---|---|---|---|---|---|
+| Pruebas con colaboradores | https://v2.lealcontrol.com | `/opt/lealcontrol-staging` | web 5175, api 5210 | `staging` | `docker-compose.staging.yml` |
+| Producción | https://erp.lealcontrol.com | `/opt/lealcontrol-v2` | web 5174, api 5209 | `main` | `docker-compose.prod.yml` |
+
+La carpeta se llama `lealcontrol-v2` pero **sirve erp (producción)**. La carpeta `lealcontrol-staging` **sirve v2 (pruebas)**. No las intercambies.
+
+Orden de trabajo:
+
+1. PR hacia `staging` → se prueba en **v2.lealcontrol.com**.
+2. Smoke: login, health, el circuito del módulo.
+3. PR `staging` → `main` → **erp.lealcontrol.com** (environment GitHub `production` con aprobación).
+
+### Secrets de GitHub Actions
+
+| Secret | Uso |
+|---|---|
+| `STAGING_SSH_*` | Deploy a **v2** (pruebas). Default dir `/opt/lealcontrol-staging` |
+| `PROD_SSH_*` | Deploy a **erp** (producción). Default dir `/opt/lealcontrol-v2` |
+| `STAGING_APP_DIR` / `PROD_APP_DIR` | Solo si la carpeta no es la default |
+
+En cada carpeta del VPS: `.env` propio. **No commitear `.env`.** En pruebas v2: `PUBLIC_WEB_ORIGIN=https://v2.lealcontrol.com`. En prod erp: `https://erp.lealcontrol.com`. JWT y password de Postgres **distintos**.
+
+La API no arranca en estos compose sin `JWT_SECRET`. También exige `POSTGRES_PASSWORD`, `PUBLIC_WEB_ORIGIN`, `WHATSAPP_GATEWAY_APIKEY` y `WHATSAPP_WEBHOOK_SECRET`.
+
+SuperAdmin inicial: solo si existe `SUPERADMIN_BOOTSTRAP_PASSWORD`.
+
+### Deploy manual (emergencia)
+
+Pruebas (v2.lealcontrol.com):
+
+```bash
+cd /opt/lealcontrol-staging
+git pull --ff-only origin staging
+docker compose -f docker-compose.staging.yml --env-file .env up -d --build
+docker compose -f docker-compose.staging.yml logs --tail=50 api
+```
+
+Producción (erp.lealcontrol.com):
+
+```bash
+cd /opt/lealcontrol-v2
+git pull --ff-only origin main
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+docker compose -f docker-compose.prod.yml logs --tail=50 api
+```

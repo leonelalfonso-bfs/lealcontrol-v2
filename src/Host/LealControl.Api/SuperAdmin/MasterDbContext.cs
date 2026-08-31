@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace LealControl.Api.SuperAdmin;
 
@@ -90,7 +92,10 @@ public sealed class MasterDbContext : DbContext
         });
     }
 
-    public async Task EnsureMasterTablesCreatedAsync(CancellationToken cancellationToken = default)
+    public async Task EnsureMasterTablesCreatedAsync(
+        IHostEnvironment environment,
+        IConfiguration configuration,
+        CancellationToken cancellationToken = default)
     {
         var sql = @"
             CREATE TABLE IF NOT EXISTS public.master_tenants (
@@ -180,17 +185,28 @@ public sealed class MasterDbContext : DbContext
         var hasAdmin = await SuperAdmins.AnyAsync(cancellationToken);
         if (!hasAdmin)
         {
-            var defaultHash = HashPassword("admin123");
-            SuperAdmins.Add(new SuperAdminUser
+            var bootstrapPassword = configuration["SUPERADMIN_BOOTSTRAP_PASSWORD"]
+                ?? configuration["SuperAdmin:BootstrapPassword"];
+            if (!string.IsNullOrWhiteSpace(bootstrapPassword))
             {
-                Id = Guid.NewGuid(),
-                FullName = "Administrador Master LEAL",
-                Email = "admin@lealcontrol.com",
-                PasswordHash = defaultHash,
-                Role = "SuperAdmin",
-                IsActive = true,
-                CreatedAtUtc = DateTime.UtcNow
-            });
+                var email = configuration["SUPERADMIN_BOOTSTRAP_EMAIL"]
+                    ?? configuration["SuperAdmin:BootstrapEmail"]
+                    ?? "admin@lealcontrol.com";
+                SuperAdmins.Add(new SuperAdminUser
+                {
+                    Id = Guid.NewGuid(),
+                    FullName = "Administrador Master LEAL",
+                    Email = email.Trim().ToLowerInvariant(),
+                    PasswordHash = HashPassword(bootstrapPassword),
+                    Role = "SuperAdmin",
+                    IsActive = true,
+                    CreatedAtUtc = DateTime.UtcNow
+                });
+            }
+            else if (environment.IsDevelopment())
+            {
+                Console.WriteLine("SuperAdmin no sembrado: definí SUPERADMIN_BOOTSTRAP_PASSWORD para crear el usuario inicial.");
+            }
         }
 
         // Seed Default Plans

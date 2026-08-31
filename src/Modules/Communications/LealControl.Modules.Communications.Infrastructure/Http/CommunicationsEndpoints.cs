@@ -17,6 +17,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using MimeKit;
 
 namespace LealControl.Modules.Communications.Infrastructure.Http;
@@ -383,7 +385,7 @@ public static class CommunicationsEndpoints
             return Results.NoContent();
         });
 
-        group.MapPost("/media/upload", async (HttpRequest request, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+        group.MapPost("/media/upload", async (HttpRequest request, CommunicationsDbContext db, ITenantContext tenant, IConfiguration configuration, CancellationToken ct) => {
             if (!request.HasFormContentType) return Results.BadRequest(new { detail = "Se requiere multipart/form-data." });
             var form = await request.ReadFormAsync(ct);
             var file = form.Files.FirstOrDefault();
@@ -394,7 +396,9 @@ public static class CommunicationsEndpoints
             var stored = StoredMedia.Create(tenant.TenantId.Value, file.FileName, file.ContentType ?? "application/octet-stream", ms.ToArray());
             db.StoredMedia.Add(stored);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(new { mediaId = stored.Id, publicUrl = $"/api/communications/public/media/{stored.Id}" });
+            var secret = configuration["Jwt:Secret"] ?? configuration["JWT_SECRET"] ?? Environment.GetEnvironmentVariable("JWT_SECRET") ?? "";
+            var access = MediaAccessTokens.Create(stored.Id, secret, TimeSpan.FromHours(12));
+            return Results.Ok(new { mediaId = stored.Id, publicUrl = $"/api/communications/public/media/{stored.Id}?token={access}" });
         }).DisableAntiforgery();
 
         group.MapPost("/conversations/{id:guid}/mark-read", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
@@ -726,24 +730,21 @@ public static class CommunicationsEndpoints
         });
 
         // Webhook (AllowAnonymous)
-        endpoints.MapPost("/api/communications/whatsapp/webhook", async (HttpRequest request, CommunicationsDbContext db, WhatsAppGatewayService waService, ConversationService conversationService, CancellationToken ct) => {
+        endpoints.MapPost("/api/communications/whatsapp/webhook", async (HttpRequest request, CommunicationsDbContext db, WhatsAppGatewayService waService, ConversationService conversationService, IConfiguration configuration, CancellationToken ct) => {
             try
             {
-                var expectedKey = Environment.GetEnvironmentVariable("WHATSAPP_WEBHOOK_SECRET")
+                var expectedKey = configuration["WhatsAppGateway:WebhookSecret"]
+                    ?? Environment.GetEnvironmentVariable("WHATSAPP_WEBHOOK_SECRET")
+                    ?? configuration["WhatsAppGateway:ApiKey"]
                     ?? Environment.GetEnvironmentVariable("WHATSAPP_GATEWAY_APIKEY");
                 var receivedKey = request.Headers["apikey"].ToString();
                 if (string.IsNullOrWhiteSpace(receivedKey)) receivedKey = request.Headers["x-api-key"].ToString();
                 if (string.IsNullOrWhiteSpace(receivedKey)) receivedKey = request.Headers["X-Webhook-Secret"].ToString();
                 if (string.IsNullOrWhiteSpace(receivedKey)) receivedKey = request.Query["apikey"].ToString();
 
-                if (!string.IsNullOrWhiteSpace(expectedKey) && !string.IsNullOrWhiteSpace(receivedKey))
+                if (string.IsNullOrWhiteSpace(expectedKey) || string.IsNullOrWhiteSpace(receivedKey) || !SecretsEqual(expectedKey, receivedKey))
                 {
-                    var expBytes = Encoding.UTF8.GetBytes(expectedKey);
-                    var recBytes = Encoding.UTF8.GetBytes(receivedKey);
-                    if (!CryptographicOperations.FixedTimeEquals(expBytes, recBytes))
-                    {
-                        return Results.Unauthorized();
-                    }
+                    return Results.Unauthorized();
                 }
 
                 using var reader = new StreamReader(request.Body);
@@ -889,7 +890,7 @@ public static class CommunicationsEndpoints
                     isConnected = fb?.IsConnected == true,
                     pageId = fb?.PageId,
                     pageName = fb?.PageName,
-                    verifyToken = fb?.VerifyToken ?? "lealcontrol_meta_verify_2026",
+                    verifyToken = fb?.VerifyToken ?? "",
                     connectedAtUtc = fb?.ConnectedAtUtc,
                     lastSyncAtUtc = fb?.LastSyncAtUtc,
                     lastError = MetaGraphApiService.ShortenMetaError(fb?.LastError)
@@ -901,7 +902,7 @@ public static class CommunicationsEndpoints
                     pageName = ig?.PageName,
                     instagramAccountId = ig?.InstagramAccountId,
                     instagramUsername = ig?.InstagramUsername,
-                    verifyToken = ig?.VerifyToken ?? "lealcontrol_meta_verify_2026",
+                    verifyToken = ig?.VerifyToken ?? "",
                     connectedAtUtc = ig?.ConnectedAtUtc,
                     lastSyncAtUtc = ig?.LastSyncAtUtc,
                     lastError = MetaGraphApiService.ShortenMetaError(ig?.LastError)
@@ -1161,7 +1162,15 @@ public static class CommunicationsEndpoints
             return Results.Ok(new { success = true, messageId = sendRes.MessageId });
         });
 
-        endpoints.MapGet("/api/communications/public/media/{id:guid}", async (Guid id, HttpContext context, CommunicationsDbContext db, CancellationToken ct) => {
+        endpoints.MapGet("/api/communications/public/media/{id:guid}", async (Guid id, HttpContext context, CommunicationsDbContext db, IConfiguration configuration, CancellationToken ct) => {
+            var secret = configuration["Jwt:Secret"] ?? configuration["JWT_SECRET"] ?? Environment.GetEnvironmentVariable("JWT_SECRET") ?? "";
+            var queryToken = context.Request.Query["token"].ToString();
+            var authenticated = context.User?.Identity?.IsAuthenticated == true;
+            if (!authenticated && !MediaAccessTokens.TryValidate(id, queryToken, secret))
+            {
+                return Results.Unauthorized();
+            }
+
             var media = await db.StoredMedia.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
             if (media is null) return Results.NotFound();
 
@@ -1179,7 +1188,7 @@ public static class CommunicationsEndpoints
         }).AllowAnonymous();
 
         // Meta Webhook Verification (Handshake)
-        endpoints.MapGet("/api/communications/meta/webhook", async (HttpContext context, CommunicationsDbContext db, CancellationToken ct) => {
+        endpoints.MapGet("/api/communications/meta/webhook", async (HttpContext context, CommunicationsDbContext db, IConfiguration configuration, CancellationToken ct) => {
             var mode = context.Request.Query["hub.mode"].ToString();
             var token = context.Request.Query["hub.verify_token"].ToString();
             var challenge = context.Request.Query["hub.challenge"].ToString();
@@ -1189,7 +1198,8 @@ public static class CommunicationsEndpoints
                 return Results.Forbid();
             }
 
-            var tokenValid = token == "lealcontrol_meta_verify_2026"
+            var configured = configuration["Meta:VerifyToken"] ?? Environment.GetEnvironmentVariable("META_VERIFY_TOKEN");
+            var tokenValid = (!string.IsNullOrWhiteSpace(configured) && SecretsEqual(configured, token))
                 || await db.MetaConnections.AnyAsync(x => x.IsConnected && x.VerifyToken == token, ct);
 
             if (!tokenValid)
@@ -1201,23 +1211,30 @@ public static class CommunicationsEndpoints
         }).AllowAnonymous();
 
         // Meta Webhook Events (Messages received)
-        endpoints.MapPost("/api/communications/meta/webhook", async (HttpRequest request, CommunicationsDbContext db, MetaGraphApiService metaService, ConversationService conversationService, CancellationToken ct) => {
+        endpoints.MapPost("/api/communications/meta/webhook", async (HttpRequest request, CommunicationsDbContext db, MetaGraphApiService metaService, ConversationService conversationService, IConfiguration configuration, IHostEnvironment env, CancellationToken ct) => {
             try
             {
                 using var reader = new StreamReader(request.Body);
                 var body = await reader.ReadToEndAsync(ct);
                 if (string.IsNullOrWhiteSpace(body)) return Results.Ok("EMPTY");
 
-                // Validar firma criptográfica X-Hub-Signature-256 de Meta si el AppSecret está configurado
-                var appSecret = Environment.GetEnvironmentVariable("META_APP_SECRET");
+                var appSecret = configuration["Meta:AppSecret"] ?? Environment.GetEnvironmentVariable("META_APP_SECRET");
                 var sigHeader = request.Headers["X-Hub-Signature-256"].ToString();
-                if (!string.IsNullOrWhiteSpace(appSecret) && !string.IsNullOrWhiteSpace(sigHeader))
+                if (env.IsProduction() && string.IsNullOrWhiteSpace(appSecret))
                 {
+                    return Results.Unauthorized();
+                }
+
+                if (!string.IsNullOrWhiteSpace(appSecret))
+                {
+                    if (string.IsNullOrWhiteSpace(sigHeader))
+                    {
+                        return Results.Unauthorized();
+                    }
+
                     using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(appSecret));
                     var hash = "sha256=" + Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(body))).ToLowerInvariant();
-                    var expBytes = Encoding.UTF8.GetBytes(hash);
-                    var recBytes = Encoding.UTF8.GetBytes(sigHeader);
-                    if (!CryptographicOperations.FixedTimeEquals(expBytes, recBytes))
+                    if (!SecretsEqual(hash, sigHeader))
                     {
                         return Results.Unauthorized();
                     }
@@ -1518,6 +1535,13 @@ public static class CommunicationsEndpoints
             return fromClaim;
 
         return null;
+    }
+
+    private static bool SecretsEqual(string expected, string received)
+    {
+        var a = SHA256.HashData(Encoding.UTF8.GetBytes(expected));
+        var b = SHA256.HashData(Encoding.UTF8.GetBytes(received ?? string.Empty));
+        return CryptographicOperations.FixedTimeEquals(a, b);
     }
 }
 

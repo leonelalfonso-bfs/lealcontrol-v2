@@ -367,9 +367,9 @@ public sealed class AccountingDbContext : DbContext
                 ""ErrorsCount"" integer NOT NULL DEFAULT 0,
                 ""Status"" character varying(32) NOT NULL DEFAULT 'Completed',
                 ""DurationSeconds"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""SummaryJson"" text NOT NULL DEFAULT '{}',
+                ""SummaryJson"" text NOT NULL DEFAULT '{{}}',
                 ""LogDetailsJson"" text NOT NULL DEFAULT '[]',
-                ""FiltersAppliedJson"" text NOT NULL DEFAULT '{}'
+                ""FiltersAppliedJson"" text NOT NULL DEFAULT '{{}}'
             );",
 
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_batch_runs_Tenant_BatchNumber"" ON accounting.batch_runs (""TenantId"", ""BatchNumber"");",

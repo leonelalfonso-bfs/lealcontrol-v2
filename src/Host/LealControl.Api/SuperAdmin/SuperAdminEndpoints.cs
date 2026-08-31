@@ -110,7 +110,7 @@ public static class SuperAdminEndpoints
                     user.Role
                 }
             });
-        }).RequireRateLimiting("auth-policy");
+        }).RequireRateLimiting("auth-policy").AllowAnonymous();
 
         // 2. Change SuperAdmin Password
         group.MapPost("/auth/change-password", async (

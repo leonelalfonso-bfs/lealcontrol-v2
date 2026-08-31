@@ -260,7 +260,7 @@ public sealed class MetrologyDbContext : DbContext
                 ""MaxObservedError"" numeric(18,4) NOT NULL DEFAULT 0,
                 ""MaxAllowedError"" numeric(18,4) NOT NULL DEFAULT 0,
                 ""ExpandedUncertaintyK2"" numeric(18,4) NOT NULL DEFAULT 0,
-                ""VisualInspectionJson"" text NOT NULL DEFAULT '{}',
+                ""VisualInspectionJson"" text NOT NULL DEFAULT '{{}}',
                 ""RepeatabilityTestJson"" text NOT NULL DEFAULT '[]',
                 ""EccentricityTestJson"" text NOT NULL DEFAULT '[]',
                 ""LinearityTestJson"" text NOT NULL DEFAULT '[]',
