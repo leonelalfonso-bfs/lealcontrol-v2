@@ -260,8 +260,11 @@ public sealed class MasterDbContext : DbContext
             );
         }
 
-        // Seed Primary Default Tenant
+        // Seed Primary Default Tenant (DbName = base de datos de esta instancia)
         var defaultTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var configuredDbName = new Npgsql.NpgsqlConnectionStringBuilder(
+            configuration.GetConnectionString("Database") ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal").Database
+            ?? "lealcontrol";
         var hasDefaultTenant = await Tenants.AnyAsync(t => t.Id == defaultTenantId, cancellationToken);
         if (!hasDefaultTenant)
         {
@@ -270,7 +273,7 @@ public sealed class MasterDbContext : DbContext
                 Id = defaultTenantId,
                 Name = "Empresa Demostración",
                 Slug = "demo",
-                DbName = "lealcontrol",
+                DbName = configuredDbName,
                 PlanCode = "agro",
                 Status = "Active",
                 MonthlyPriceArs = 95000,

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -279,11 +280,7 @@ public static class FleetModule
 {
     public static IServiceCollection AddFleetModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var connection = configuration.GetConnectionString("Database")
-            ?? throw new InvalidOperationException("Falta ConnectionStrings:Database.");
-
-        services.AddDbContext<FleetDbContext>(o =>
-            o.UseNpgsql(connection, n => n.MigrationsHistoryTable("__ef_migrations_history", FleetDbContext.Schema)));
+        services.AddTenantDbContext<FleetDbContext>(FleetDbContext.Schema);
 
         return services;
     }

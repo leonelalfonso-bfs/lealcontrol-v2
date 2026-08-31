@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -19,11 +20,8 @@ public static class MetrologyEndpoints
 {
     public static IServiceCollection AddMetrologyModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Database")
-            ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
-
-        services.AddDbContext<MetrologyDbContext>(options =>
-            options.UseNpgsql(connectionString, b => b.MigrationsAssembly(typeof(MetrologyDbContext).Assembly.FullName)));
+        services.AddTenantDbContext<MetrologyDbContext>(
+            configureNpgsql: b => b.MigrationsAssembly(typeof(MetrologyDbContext).Assembly.FullName));
 
         return services;
     }

@@ -12,13 +12,6 @@ using Npgsql;
 
 namespace LealControl.Api.SuperAdmin;
 
-public interface ITenantConnectionProvider
-{
-    string GetConnectionString(TenantId tenantId);
-    Task<string> GetConnectionStringAsync(TenantId tenantId, CancellationToken cancellationToken = default);
-    void InvalidateCache(TenantId tenantId);
-}
-
 public sealed class TenantConnectionProvider : ITenantConnectionProvider
 {
     private readonly string _defaultConnectionString;

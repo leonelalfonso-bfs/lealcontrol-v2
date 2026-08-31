@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -538,11 +539,7 @@ public static class HumanResourcesModule
 {
     public static IServiceCollection AddHumanResourcesModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var connection = configuration.GetConnectionString("Database")
-            ?? throw new InvalidOperationException("Falta ConnectionStrings:Database.");
-
-        services.AddDbContext<HumanResourcesDbContext>(o =>
-            o.UseNpgsql(connection, n => n.MigrationsHistoryTable("__ef_migrations_history", HumanResourcesDbContext.Schema)));
+        services.AddTenantDbContext<HumanResourcesDbContext>(HumanResourcesDbContext.Schema);
 
         return services;
     }

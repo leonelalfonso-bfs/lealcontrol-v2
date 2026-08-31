@@ -247,40 +247,8 @@ try
         app.UseSwaggerUI();
     }
 
-    // Cada instancia, incluida la de pruebas/producción, debe crear y actualizar
-    // su esquema antes de atender solicitudes. EF registra las migraciones aplicadas.
-    await using (var scope = app.Services.CreateAsyncScope())
-    {
-        var masterDb = scope.ServiceProvider.GetRequiredService<MasterDbContext>();
-        await masterDb.EnsureMasterTablesCreatedAsync(app.Environment, app.Configuration);
-
-        var crm = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
-        try { await crm.Database.MigrateAsync(); } catch (Exception ex) { Log.Warning(ex, "CRM Migration skipped or already applied."); }
-        await crm.EnsureCrmTablesAsync();
-
-        var sales = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
-        try { await sales.Database.MigrateAsync(); } catch (Exception ex) { Log.Warning(ex, "Sales Migration skipped or already applied."); }
-        await sales.EnsureTablesCreatedAsync();
-
-        var communications = scope.ServiceProvider.GetRequiredService<CommunicationsDbContext>();
-        try { await communications.Database.MigrateAsync(); } catch (Exception ex) { Log.Warning(ex, "Communications Migration skipped or already applied."); }
-        await communications.EnsureTablesCreatedAsync();
-
-        var finance = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
-        await finance.EnsureFinanceTablesAsync();
-
-        var hr = scope.ServiceProvider.GetRequiredService<HumanResourcesDbContext>();
-        await hr.EnsureHrTablesAsync();
-
-        var fleet = scope.ServiceProvider.GetRequiredService<FleetDbContext>();
-        await fleet.EnsureFleetTablesAsync();
-
-        var accounting = scope.ServiceProvider.GetRequiredService<AccountingDbContext>();
-        await accounting.EnsureAccountingTablesAsync();
-
-        var metrology = scope.ServiceProvider.GetRequiredService<MetrologyDbContext>();
-        await metrology.EnsureMetrologyTablesAsync();
-    }
+    // Cada instancia debe crear/actualizar esquema en la base maestra y en cada BD de tenant.
+    await TenantDatabaseBootstrapper.InitializeAllAsync(app.Services, app.Configuration, app.Environment);
 
     app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
     app.MapHealthChecks("/health").AllowAnonymous();
