@@ -144,6 +144,7 @@ export function App() {
   const [showAskLeal, setShowAskLeal] = useState(false);
 
   useEffect(() => {
+    if (!user || !tenant?.id) return;
     void api
       .getCompanySettings()
       .then((settings) => {
@@ -151,7 +152,7 @@ export function App() {
         setCompanyName(settings.tradeName || settings.legalName || "Empresa");
       })
       .catch(() => undefined);
-  }, [tenant?.id]);
+  }, [user, tenant?.id]);
 
   const activeCompanyName = tenant?.tradeName || tenant?.legalName || companyName;
 
