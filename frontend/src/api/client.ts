@@ -809,6 +809,12 @@ export const api = {
     request<any>("/api/v1/superadmin/plans", { method: "POST", body: JSON.stringify(body) }),
   updateSuperAdminPlan: (id: string, body: any) =>
     request<any>(`/api/v1/superadmin/plans/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  listSuperAdminDemoRequests: () =>
+    request<any[]>("/api/v1/superadmin/demo-requests"),
+  updateSuperAdminDemoRequestStatus: (id: string, status: string) =>
+    request<any>(`/api/v1/superadmin/demo-requests/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
+  provisionSuperAdminDemoRequest: (id: string, body: { adminPassword: string; slug?: string; planCode?: string; adminFullName?: string; enabledModulesJson?: string; monthlyPriceArs?: number }) =>
+    request<{ success: boolean; dbName: string; message: string; adminEmail?: string; loginUrl?: string }>(`/api/v1/superadmin/demo-requests/${id}/provision`, { method: "POST", body: JSON.stringify(body) }),
 
   // Accounting Module
   listAccounts: () =>

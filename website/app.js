@@ -2,6 +2,11 @@
 // LEAL CONTROL ERP 2.0 - PUBLIC WEBSITE INTERACTIVITY & DEMO INTAKE
 // ==========================================================================
 
+function getPublicApiBase() {
+  const meta = document.querySelector('meta[name="leal-api-base"]');
+  return (meta?.getAttribute("content") || "").replace(/\/$/, "");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   // 1. Interactive Module Showcase Data & Switcher (10 Full Modules)
   const moduleData = {
@@ -465,11 +470,15 @@ document.addEventListener("DOMContentLoaded", () => {
       };
 
       try {
-        await fetch("/api/v1/public/demo-requests", {
+        const apiBase = getPublicApiBase();
+        const response = await fetch(`${apiBase}/api/v1/public/demo-requests`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
+        if (!response.ok) {
+          console.warn("Demo request API responded", response.status);
+        }
       } catch (err) {
         console.warn("API offline or CORS, proceeding with local UX confirm:", err);
       }

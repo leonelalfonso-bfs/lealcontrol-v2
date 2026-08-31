@@ -10,11 +10,13 @@ using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Crm.Domain.Settings;
 using LealControl.Modules.Crm.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
 
 namespace LealControl.Modules.Crm.Infrastructure.Http;
@@ -158,9 +160,16 @@ public static class AuthEndpoints
             return Results.BadRequest(new { message = "Usuario no encontrado o inactivo." });
         }).RequireRateLimiting("auth-policy").AllowAnonymous();
 
-        // 2. Register new Tenant from scratch
-        auth.MapPost("/register-tenant", async ([FromBody] RegisterTenantRequest req, CrmDbContext db, CancellationToken ct) =>
+        // 2. Register new Tenant from scratch (disabled in Production — use SuperAdmin provisioning)
+        auth.MapPost("/register-tenant", async ([FromBody] RegisterTenantRequest req, CrmDbContext db, IHostEnvironment env, CancellationToken ct) =>
         {
+            if (env.IsProduction())
+            {
+                return Results.Json(
+                    new { message = "El registro público está deshabilitado. Solicitá una demo en www.lealcontrol.com" },
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
             if (req == null || string.IsNullOrWhiteSpace(req.CompanyName))
             {
                 return Results.BadRequest(new { message = "El nombre de la empresa es obligatorio." });

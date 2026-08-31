@@ -105,6 +105,7 @@ import { SuperAdminLoginPage } from "./pages/superadmin/SuperAdminLoginPage";
 import { SuperAdminDashboardPage } from "./pages/superadmin/SuperAdminDashboardPage";
 import { SuperAdminTenantsPage } from "./pages/superadmin/SuperAdminTenantsPage";
 import { SuperAdminPlansPage } from "./pages/superadmin/SuperAdminPlansPage";
+import { SuperAdminDemoRequestsPage } from "./pages/superadmin/SuperAdminDemoRequestsPage";
 import { AccountingDashboardPage } from "./pages/accounting/AccountingDashboardPage";
 import { JournalTemplatesPage } from "./pages/accounting/JournalTemplatesPage";
 import { JournalTemplateFormPage } from "./pages/accounting/JournalTemplateFormPage";
@@ -210,6 +211,9 @@ export function App() {
     }
     if (location.pathname === "/superadmin/planes") {
       return <SuperAdminPlansPage />;
+    }
+    if (location.pathname === "/superadmin/demos") {
+      return <SuperAdminDemoRequestsPage />;
     }
     return <SuperAdminDashboardPage />;
   }

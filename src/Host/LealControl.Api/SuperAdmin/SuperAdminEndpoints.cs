@@ -7,11 +7,13 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Tenancy;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace LealControl.Api.SuperAdmin;
@@ -547,7 +549,7 @@ public static class SuperAdminEndpoints
                 message = "Solicitud de Demo recibida con éxito. Nuestro equipo te contactará a la brevedad.",
                 requestId = demo.Id
             });
-        }).WithTags("Public Landing");
+        }).WithTags("Public Landing").RequireRateLimiting("auth-policy").AllowAnonymous();
 
         // 13. List Demo Requests (SuperAdmin)
         group.MapGet("/demo-requests", async (MasterDbContext masterDb, CancellationToken ct) =>
@@ -568,6 +570,83 @@ public static class SuperAdminEndpoints
             demo.Status = req.Status;
             await masterDb.SaveChangesAsync(ct);
             return Results.Ok(demo);
+        });
+
+        // 15. Provision tenant from demo request
+        group.MapPost("/demo-requests/{id:guid}/provision", async (
+            Guid id,
+            ProvisionFromDemoRequest req,
+            MasterDbContext masterDb,
+            ITenantProvisionerService provisioner,
+            CancellationToken ct) =>
+        {
+            var demo = await masterDb.DemoRequests.FirstOrDefaultAsync(d => d.Id == id, ct);
+            if (demo == null)
+            {
+                return Results.NotFound(new { message = "Solicitud no encontrada." });
+            }
+
+            if (string.Equals(demo.Status, "Provisioned", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.BadRequest(new { message = "Esta solicitud ya fue aprovisionada." });
+            }
+
+            if (string.IsNullOrWhiteSpace(req.AdminPassword))
+            {
+                return Results.BadRequest(new { message = "La contraseña del administrador es obligatoria." });
+            }
+
+            var planCode = string.IsNullOrWhiteSpace(req.PlanCode) ? "pyme" : req.PlanCode.Trim();
+            var plan = await masterDb.Plans.FirstOrDefaultAsync(p => p.Code == planCode, ct);
+            var modules = !string.IsNullOrWhiteSpace(req.EnabledModulesJson)
+                ? req.EnabledModulesJson
+                : (!string.IsNullOrWhiteSpace(demo.InterestedModulesJson) && demo.InterestedModulesJson != "[]"
+                    ? demo.InterestedModulesJson
+                    : (plan?.EnabledModulesJson ?? @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]"));
+
+            var slug = string.IsNullOrWhiteSpace(req.Slug) ? demo.CompanyName : req.Slug;
+            var adminName = string.IsNullOrWhiteSpace(req.AdminFullName) ? demo.ContactFullName : req.AdminFullName;
+            var monthlyArs = req.MonthlyPriceArs ?? plan?.PriceArs ?? 95000m;
+
+            var result = await provisioner.ProvisionTenantAsync(
+                demo.CompanyName.Trim(),
+                slug,
+                planCode,
+                adminName.Trim(),
+                demo.Email.Trim().ToLowerInvariant(),
+                req.AdminPassword,
+                demo.Phone,
+                monthlyArs,
+                plan?.PriceUsd ?? 0m,
+                ct);
+
+            if (!result.Success)
+            {
+                return Results.BadRequest(new { success = false, message = result.Message });
+            }
+
+            var tenant = await masterDb.Tenants.FirstOrDefaultAsync(t => t.DbName == result.DbName, ct);
+            if (tenant != null)
+            {
+                tenant.EnabledModulesJson = modules;
+                if (!string.IsNullOrWhiteSpace(demo.Cuit))
+                {
+                    tenant.Notes = $"CUIT demo: {demo.Cuit}";
+                }
+            }
+
+            demo.Status = "Provisioned";
+            await masterDb.SaveChangesAsync(ct);
+
+            return Results.Ok(new
+            {
+                success = true,
+                dbName = result.DbName,
+                message = result.Message,
+                demo,
+                loginUrl = "https://erp.lealcontrol.com/login",
+                adminEmail = demo.Email
+            });
         });
 
         return endpoints;
@@ -662,3 +741,10 @@ public sealed record CreatePlanRequest(string Code, string Name, decimal PriceAr
 public sealed record UpdatePlanRequest(string Name, decimal PriceArs, decimal PriceUsd, int MaxUsers, string Description, string FeaturesJson, string? EnabledModulesJson);
 public sealed record CreateDemoRequestDto(string CompanyName, string? Cuit, string ContactFullName, string Email, string Phone, string? EstimatedUsers, string? InterestedModulesJson, string? Message);
 public sealed record UpdateDemoRequestStatusDto(string Status);
+public sealed record ProvisionFromDemoRequest(
+    string AdminPassword,
+    string? Slug = null,
+    string? PlanCode = null,
+    string? AdminFullName = null,
+    string? EnabledModulesJson = null,
+    decimal? MonthlyPriceArs = null);
