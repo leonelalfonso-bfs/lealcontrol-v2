@@ -462,7 +462,7 @@ public sealed class PurchaseQueryHandlers :
             query = query.Where(i => i.FormattedNumber.Contains(s) || i.SupplierName.ToLower().Contains(s) || i.SupplierDocument.Contains(s));
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Status))
+        if (!string.IsNullOrWhiteSpace(request.Status) && !string.Equals(request.Status, "all", StringComparison.OrdinalIgnoreCase))
         {
             query = query.Where(i => i.Status == request.Status);
         }

@@ -593,7 +593,7 @@ export const api = {
   listPurchaseInvoices: (search = "", status = "") => {
     const params = new URLSearchParams();
     if (search) params.append("search", search);
-    if (status) params.append("status", status);
+    if (status && status.toLowerCase() !== "all") params.append("status", status);
     const q = params.toString();
     return request<import("./types").PurchaseInvoice[]>(`/api/v1/purchases/invoices${q ? `?${q}` : ""}`);
   },

@@ -26,7 +26,7 @@ export function PurchaseInvoicesPage() {
     setError(null);
     try {
       const [invData, poData] = await Promise.all([
-        api.listPurchaseInvoices(searchTerm, selectedType),
+        api.listPurchaseInvoices(),
         api.listPaymentOrders().catch(() => [] as any[])
       ]);
       setInvoices(invData || []);
@@ -40,7 +40,7 @@ export function PurchaseInvoicesPage() {
 
   useEffect(() => {
     void loadData();
-  }, [selectedType]);
+  }, []);
 
   // Enrich purchase invoices with payment and days calculations
   const enrichedInvoices = useMemo(() => {
@@ -94,12 +94,13 @@ export function PurchaseInvoicesPage() {
         inv.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         inv.supplierDocument.toLowerCase().includes(searchTerm.toLowerCase());
 
+      const matchType = selectedType === "All" || inv.invoiceType === selectedType;
       const matchStatus = selectedStatus === "All" || inv.status === selectedStatus;
       const matchPayment = paymentFilter === "All" || inv.paymentState === paymentFilter;
 
-      return matchSearch && matchStatus && matchPayment;
+      return matchSearch && matchType && matchStatus && matchPayment;
     });
-  }, [enrichedInvoices, searchTerm, selectedStatus, paymentFilter]);
+  }, [enrichedInvoices, searchTerm, selectedType, selectedStatus, paymentFilter]);
 
   // Totals calculations
   const totalArs = invoices.filter((i) => i.currency === "ARS").reduce((acc, curr) => acc + curr.total, 0);
