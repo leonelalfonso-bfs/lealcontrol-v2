@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json.Serialization;
 using LealControl.BuildingBlocks.Time;
 using LealControl.Modules.Crm.Infrastructure;
@@ -17,8 +18,10 @@ using LealControl.Modules.Metrology.Infrastructure;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Api.SuperAdmin;
 using LealControl.Api.Automation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
@@ -61,6 +64,37 @@ try
     builder.Services.AddMetrologyModule(builder.Configuration);
     builder.Services.ConfigureHttpJsonOptions(options =>
         options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+    // Configuración de Seguridad y Autenticación JWT Bearer
+    var jwtSecret = builder.Configuration["Jwt:Secret"]
+        ?? builder.Configuration["JWT_SECRET"]
+        ?? Environment.GetEnvironmentVariable("JWT_SECRET")
+        ?? "LealControl_Enterprise_JWT_Signing_Key_2026_Secret_Key_Super_Secure_!";
+
+    LealControl.Modules.Crm.Infrastructure.Http.SimpleJwt.SecretKey = jwtSecret;
+    var jwtKeyBytes = Encoding.UTF8.GetBytes(jwtSecret);
+
+    builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(jwtKeyBytes),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(2)
+        };
+    });
+    builder.Services.AddAuthorization();
+
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {
@@ -69,6 +103,31 @@ try
             Title = "Leal Control ERP 2.0",
             Version = "v1",
             Description = "API modular. Módulos: CRM + Sales + Finance + RRHH + Flota."
+        });
+
+        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Description = "JWT Authorization header using the Bearer scheme. Formato: Bearer {token}",
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT"
+        });
+
+        options.AddSecurityRequirement(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                Array.Empty<string>()
+            }
         });
     });
     builder.Services.AddHealthChecks()
@@ -91,6 +150,8 @@ try
 
     app.UseSerilogRequestLogging();
     app.UseCors("web");
+    app.UseAuthentication();
+    app.UseAuthorization();
 
     if (app.Environment.IsDevelopment())
     {

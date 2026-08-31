@@ -327,7 +327,11 @@ public sealed record DecodedToken(Guid? UserId, string? Email, string? FullName,
 
 public static class SimpleJwt
 {
-    private static readonly byte[] SecretBytes = Encoding.UTF8.GetBytes("LealControl_Enterprise_JWT_Signing_Key_2026_Secret_Key_Super_Secure_!");
+    public static string SecretKey { get; set; } =
+        Environment.GetEnvironmentVariable("JWT_SECRET")
+        ?? "LealControl_Enterprise_JWT_Signing_Key_2026_Secret_Key_Super_Secure_!";
+
+    public static byte[] GetSecretBytes() => Encoding.UTF8.GetBytes(SecretKey);
 
     public static string CreateToken(Guid userId, string email, string fullName, string role, Guid tenantId, string tenantName)
     {
@@ -355,10 +359,27 @@ public static class SimpleJwt
         try
         {
             var parts = token.Split('.');
-            if (parts.Length < 2) return null;
+            if (parts.Length != 3) return null;
+
+            // Verify signature
+            var expectedSignature = ComputeSignature($"{parts[0]}.{parts[1]}");
+            var sigBytes = Encoding.UTF8.GetBytes(parts[2]);
+            var expectedBytes = Encoding.UTF8.GetBytes(expectedSignature);
+            if (!CryptographicOperations.FixedTimeEquals(sigBytes, expectedBytes))
+            {
+                return null;
+            }
+
             var payloadJson = Encoding.UTF8.GetString(Base64UrlDecode(parts[1]));
             using var doc = JsonDocument.Parse(payloadJson);
             var root = doc.RootElement;
+
+            // Verify expiration
+            if (root.TryGetProperty("exp", out var expProp) && expProp.TryGetInt64(out var expUnix))
+            {
+                if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() > expUnix)
+                    return null;
+            }
 
             Guid? userId = root.TryGetProperty("sub", out var sub) && Guid.TryParse(sub.GetString(), out var uid) ? uid : null;
             string? email = root.TryGetProperty("email", out var em) ? em.GetString() : null;
@@ -376,7 +397,7 @@ public static class SimpleJwt
 
     private static string ComputeSignature(string data)
     {
-        using var hmac = new HMACSHA256(SecretBytes);
+        using var hmac = new HMACSHA256(GetSecretBytes());
         byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
         return Base64UrlEncode(hash);
     }

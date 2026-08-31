@@ -20,7 +20,53 @@ public static class SuperAdminEndpoints
 {
     public static IEndpointRouteBuilder MapSuperAdminModule(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/superadmin").WithTags("SuperAdmin Master SaaS");
+        var group = endpoints.MapGroup("/api/v1/superadmin")
+            .WithTags("SuperAdmin Master SaaS")
+            .AddEndpointFilter(async (invocationContext, next) =>
+            {
+                var http = invocationContext.HttpContext;
+                var path = http.Request.Path.Value ?? string.Empty;
+
+                // 1. Permitir login maestro sin token previo
+                if (path.EndsWith("/auth/login", StringComparison.OrdinalIgnoreCase))
+                {
+                    return await next(invocationContext);
+                }
+
+                // 2. Verificar autenticacion
+                var user = http.User;
+                string? role = null;
+
+                if (user?.Identity?.IsAuthenticated == true)
+                {
+                    role = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? user.FindFirst("role")?.Value;
+                }
+                else
+                {
+                    var authHeader = http.Request.Headers["Authorization"].ToString();
+                    if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var tokenStr = authHeader.Substring(7).Trim();
+                        var decoded = LealControl.Modules.Crm.Infrastructure.Http.SimpleJwt.DecodeToken(tokenStr);
+                        if (decoded != null)
+                        {
+                            role = decoded.Role;
+                        }
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(role))
+                {
+                    return Results.Json(new { message = "Acceso no autorizado. Se requieren credenciales de SuperAdmin." }, statusCode: StatusCodes.Status401Unauthorized);
+                }
+
+                if (!string.Equals(role, "SuperAdmin", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.Json(new { message = "Permisos insuficientes. Se requiere rol SuperAdmin." }, statusCode: StatusCodes.Status403Forbidden);
+                }
+
+                return await next(invocationContext);
+            });
 
         // 1. SuperAdmin Login
         group.MapPost("/auth/login", async (
@@ -530,12 +576,58 @@ public static class SuperAdminEndpoints
     public static IEndpointRouteBuilder MapTenantBackupSelfService(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet("/api/v1/company/backup/export-sql", async (
+            HttpContext http,
             ITenantContext tenantContext,
             MasterDbContext masterDb,
             ITenantProvisionerService provisioner,
             CancellationToken ct) =>
         {
+            var user = http.User;
+            string? role = null;
+            Guid? tokenTenantId = null;
+
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                role = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? user.FindFirst("role")?.Value;
+                var tid = user.FindFirst("tenant_id")?.Value;
+                if (Guid.TryParse(tid, out var parsedTid)) tokenTenantId = parsedTid;
+            }
+            else
+            {
+                var authHeader = http.Request.Headers["Authorization"].ToString();
+                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var tokenStr = authHeader.Substring(7).Trim();
+                    var decoded = LealControl.Modules.Crm.Infrastructure.Http.SimpleJwt.DecodeToken(tokenStr);
+                    if (decoded != null)
+                    {
+                        role = decoded.Role;
+                        tokenTenantId = decoded.TenantId;
+                    }
+                }
+            }
+
+            var isSuperAdmin = string.Equals(role, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
+            var isAdmin = string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) 
+                       || string.Equals(role, "Administrador", StringComparison.OrdinalIgnoreCase);
+
+            if (!isSuperAdmin && !isAdmin)
+            {
+                return Results.Json(new { message = "Se requieren privilegios de Administrador para exportar la base de datos." }, statusCode: StatusCodes.Status403Forbidden);
+            }
+
             var tenantId = tenantContext.TenantId.Value;
+            if (tenantId == Guid.Empty)
+            {
+                return Results.Json(new { message = "Identificador de empresa no válido." }, statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            // Si no es SuperAdmin, el usuario solo puede exportar la base de datos de su propio tenant
+            if (!isSuperAdmin && tokenTenantId.HasValue && tokenTenantId.Value != tenantId)
+            {
+                return Results.Json(new { message = "No tiene autorización para descargar datos de otra empresa." }, statusCode: StatusCodes.Status403Forbidden);
+            }
+
             var tenant = await masterDb.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, ct);
             var dbName = tenant?.DbName ?? "lealcontrol";
             var slug = tenant?.Slug ?? "empresa";

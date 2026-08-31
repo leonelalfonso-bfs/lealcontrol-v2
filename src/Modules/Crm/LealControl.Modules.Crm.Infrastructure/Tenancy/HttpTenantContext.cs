@@ -1,5 +1,8 @@
+using System;
+using System.Security.Claims;
 using LealControl.BuildingBlocks.Tenancy;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace LealControl.Modules.Crm.Infrastructure.Tenancy;
@@ -17,11 +20,16 @@ public sealed class HttpTenantContext : ITenantContext
 
     private readonly IHttpContextAccessor _http;
     private readonly TenancyOptions _options;
+    private readonly IHostEnvironment _env;
 
-    public HttpTenantContext(IHttpContextAccessor http, IOptions<TenancyOptions> options)
+    public HttpTenantContext(
+        IHttpContextAccessor http,
+        IOptions<TenancyOptions> options,
+        IHostEnvironment env)
     {
         _http = http;
         _options = options.Value;
+        _env = env;
     }
 
     public TenantId TenantId
@@ -29,19 +37,41 @@ public sealed class HttpTenantContext : ITenantContext
         get
         {
             var user = _http.HttpContext?.User;
-            var claim = user?.FindFirst("tenant_id")?.Value;
-            if (!string.IsNullOrWhiteSpace(claim) && Guid.TryParse(claim, out var fromClaim))
+            var headerValue = _http.HttpContext?.Request.Headers[HeaderName].ToString();
+
+            // 1. Authenticated user
+            if (user?.Identity?.IsAuthenticated == true)
             {
-                return new TenantId(fromClaim);
+                var role = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("role")?.Value;
+                var isSuperAdmin = string.Equals(role, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
+
+                // SuperAdmin is permitted to act on behalf of a specific tenant via header
+                if (isSuperAdmin && Guid.TryParse(headerValue, out var superAdminTargetTenant) && superAdminTargetTenant != Guid.Empty)
+                {
+                    return new TenantId(superAdminTargetTenant);
+                }
+
+                // Regular users are strictly locked to their verified JWT tenant claim
+                var claim = user.FindFirst("tenant_id")?.Value;
+                if (!string.IsNullOrWhiteSpace(claim) && Guid.TryParse(claim, out var fromClaim) && fromClaim != Guid.Empty)
+                {
+                    return new TenantId(fromClaim);
+                }
             }
 
-            var header = _http.HttpContext?.Request.Headers[HeaderName].ToString();
-            if (Guid.TryParse(header, out var parsed))
+            // 2. Unauthenticated request: accept header if explicitly provided
+            if (Guid.TryParse(headerValue, out var parsed) && parsed != Guid.Empty)
             {
                 return new TenantId(parsed);
             }
 
-            return new TenantId(_options.DevelopmentTenantId);
+            // 3. Fallback only in local development
+            if (_env.IsDevelopment())
+            {
+                return new TenantId(_options.DevelopmentTenantId);
+            }
+
+            return new TenantId(Guid.Empty);
         }
     }
 

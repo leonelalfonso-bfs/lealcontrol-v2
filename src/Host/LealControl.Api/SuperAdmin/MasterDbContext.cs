@@ -273,14 +273,61 @@ public sealed class MasterDbContext : DbContext
 
     public static string HashPassword(string password)
     {
-        using var sha256 = SHA256.Create();
-        var bytes = Encoding.UTF8.GetBytes(password + "LealControlSalt2026");
-        var hash = sha256.ComputeHash(bytes);
-        return Convert.ToBase64String(hash);
+        byte[] salt = RandomNumberGenerator.GetBytes(16);
+        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(
+            password,
+            salt,
+            iterations: 100_000,
+            hashAlgorithm: HashAlgorithmName.SHA256,
+            outputLength: 32);
+
+        return $"{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
     }
 
     public static bool VerifyPassword(string password, string storedHash)
     {
-        return HashPassword(password) == storedHash;
+        if (string.IsNullOrWhiteSpace(storedHash))
+            return false;
+
+        // Modern PBKDF2 format (salt.hash)
+        if (storedHash.Contains('.'))
+        {
+            var parts = storedHash.Split('.');
+            if (parts.Length != 2) return false;
+
+            try
+            {
+                byte[] salt = Convert.FromBase64String(parts[0]);
+                byte[] expectedHash = Convert.FromBase64String(parts[1]);
+
+                byte[] actualHash = Rfc2898DeriveBytes.Pbkdf2(
+                    password,
+                    salt,
+                    iterations: 100_000,
+                    hashAlgorithm: HashAlgorithmName.SHA256,
+                    outputLength: 32);
+
+                return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // Legacy SHA-256 fallback (backward-compatible for existing installations)
+        try
+        {
+            using var sha256 = SHA256.Create();
+            var bytes = Encoding.UTF8.GetBytes(password + "LealControlSalt2026");
+            var legacyHash = Convert.ToBase64String(sha256.ComputeHash(bytes));
+            return CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(legacyHash),
+                Encoding.UTF8.GetBytes(storedHash));
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
