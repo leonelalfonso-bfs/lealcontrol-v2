@@ -227,9 +227,8 @@ public sealed class MetaGraphApiService
         {
             if (!string.IsNullOrWhiteSpace(pageId))
             {
-                endpointsToTry.Add($"{pageId}/conversations?fields={fields}&access_token={Uri.EscapeDataString(pageAccessToken)}");
+                endpointsToTry.Add($"{pageId}/conversations?platform=messenger&fields={fields}&access_token={Uri.EscapeDataString(pageAccessToken)}");
             }
-            endpointsToTry.Add($"me/conversations?fields={fields}&access_token={Uri.EscapeDataString(pageAccessToken)}");
         }
 
         var triedAny = false;
@@ -415,11 +414,18 @@ public sealed class MetaGraphApiService
         return await SendPayloadAsync(pageAccessToken, recipientId, payload, ct);
     }
 
-    public async Task<byte[]?> DownloadAttachmentAsync(string url, CancellationToken ct = default)
+    public async Task<byte[]?> DownloadAttachmentAsync(string url, string? pageAccessToken = null, CancellationToken ct = default)
     {
         try
         {
-            var response = await _httpClient.GetAsync(url, ct);
+            var requestUrl = url;
+            if (!string.IsNullOrWhiteSpace(pageAccessToken) && !url.Contains("access_token=", StringComparison.OrdinalIgnoreCase))
+            {
+                requestUrl += url.Contains('?') ? "&" : "?";
+                requestUrl += $"access_token={Uri.EscapeDataString(pageAccessToken)}";
+            }
+
+            var response = await _httpClient.GetAsync(requestUrl, ct);
             if (!response.IsSuccessStatusCode) return null;
             return await response.Content.ReadAsByteArrayAsync(ct);
         }

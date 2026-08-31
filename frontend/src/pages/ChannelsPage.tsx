@@ -1,8 +1,23 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 
 type Channel = "WhatsApp" | "Instagram" | "Facebook";
+
+export interface TeamWhatsAppLine {
+  id: string;
+  tenantId: string;
+  userId?: string;
+  userName?: string;
+  instanceName: string;
+  phoneNumber?: string;
+  state: string;
+  isConnected: boolean;
+  connectedAtUtc?: string;
+  lastSyncAtUtc?: string;
+  lastError?: string;
+}
 
 interface MetaStatusData {
   facebook: { isConnected: boolean; pageId?: string; pageName?: string; verifyToken: string; connectedAtUtc?: string; lastSyncAtUtc?: string; lastError?: string };
@@ -44,9 +59,10 @@ function MetaReconnectBanner({
 }
 
 export function ChannelsPage() {
+  const { user } = useAuth();
   const [expanded, setExpanded] = useState<Channel | null>(null);
 
-  // WhatsApp Gateway State
+  // WhatsApp Gateway State (Línea del Usuario Actual)
   const [waStatus, setWaStatus] = useState<"loading" | "connected" | "disconnected" | "connecting" | "offline">("loading");
   const [waPhone, setWaPhone] = useState<string | null>(null);
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -58,6 +74,9 @@ export function ChannelsPage() {
   const [waSyncMsg, setWaSyncMsg] = useState<string | null>(null);
   const [metaSyncing, setMetaSyncing] = useState(false);
   const [metaSyncMsg, setMetaSyncMsg] = useState<string | null>(null);
+
+  // WhatsApp Gateway State (Líneas del Equipo)
+  const [teamLines, setTeamLines] = useState<TeamWhatsAppLine[]>([]);
 
   const handleForceMetaSync = async () => {
     setMetaSyncing(true);
@@ -103,10 +122,10 @@ export function ChannelsPage() {
 
   const checkStatus = async () => {
     try {
-      const res = await api.getWhatsAppStatus();
+      const res = await api.getWhatsAppStatus(user?.id);
       if (!res.available) {
         setWaStatus("offline");
-      } else if (res.state === "open" || res.state === "connected") {
+      } else if (res.state === "open" || res.state === "connected" || res.isConnected) {
         setWaStatus("connected");
         setWaPhone(res.phoneNumber || null);
         if (qrModalOpen) setQrModalOpen(false);
@@ -118,6 +137,13 @@ export function ChannelsPage() {
       }
     } catch {
       setWaStatus("offline");
+    }
+
+    try {
+      const lines = await api.listTeamWhatsAppLines();
+      setTeamLines(lines);
+    } catch {
+      // ignore
     }
 
     try {
@@ -134,7 +160,7 @@ export function ChannelsPage() {
       void checkStatus();
     }, 6000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user?.id]);
 
   const handleOpenQrModal = async () => {
     setQrModalOpen(true);
@@ -143,7 +169,7 @@ export function ChannelsPage() {
     setQrCodeBase64(null);
 
     try {
-      const res = await api.connectWhatsApp();
+      const res = await api.connectWhatsApp(user?.id, user?.fullName);
       if (res.success && res.qrCodeBase64) {
         setQrCodeBase64(res.qrCodeBase64);
         setWaStatus("connecting");
@@ -162,8 +188,8 @@ export function ChannelsPage() {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = window.setInterval(async () => {
       try {
-        const s = await api.getWhatsAppStatus();
-        if (s.state === "open" || s.state === "connected") {
+        const s = await api.getWhatsAppStatus(user?.id);
+        if (s.state === "open" || s.state === "connected" || s.isConnected) {
           setWaStatus("connected");
           setWaPhone(s.phoneNumber || null);
           setQrModalOpen(false);
@@ -182,7 +208,7 @@ export function ChannelsPage() {
     setWaSyncing(true);
     setWaSyncMsg(null);
     try {
-      const res = await api.syncWhatsAppMessages();
+      const res = await api.syncWhatsAppMessages(user?.id);
       setWaSyncMsg(`✓ Sincronizados ${res.synced} nuevos mensajes.`);
       setTimeout(() => setWaSyncMsg(null), 4000);
     } catch (err: any) {
@@ -193,13 +219,13 @@ export function ChannelsPage() {
   };
 
   const handleDisconnectWa = async () => {
-    if (!confirm("¿Está seguro de que desea desconectar la cuenta de WhatsApp de Leal Control?")) return;
+    if (!confirm("¿Está seguro de que desea desconectar su cuenta de WhatsApp de Leal Control?")) return;
     setDisconnecting(true);
     try {
-      await api.disconnectWhatsApp();
+      await api.disconnectWhatsApp(user?.id);
       await checkStatus();
     } catch (err: any) {
-      alert("Error al desconectar: " + err.message);
+      alert("Error al desconectar: " + (err.message || "Error"));
     } finally {
       setDisconnecting(false);
     }
@@ -278,7 +304,8 @@ export function ChannelsPage() {
       if (testChannel === "whatsapp") {
         const res = await api.sendWhatsAppMessage({
           to: testRecipient.trim(),
-          message: testMessage.trim()
+          message: testMessage.trim(),
+          userId: user?.id
         });
         if (res.success) {
           setTestResult({ ok: true, msg: "¡Mensaje de WhatsApp enviado con éxito!" });
@@ -333,7 +360,7 @@ export function ChannelsPage() {
 
       {/* Channels Grid */}
       <div className="channel-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 18 }}>
-        {/* 1. WHATSAPP CARD (ACTIVE GATEWAY) */}
+        {/* 1. WHATSAPP CARD (ACTIVE GATEWAY - MULTI-USUARIO) */}
         <article
           className="card pad channel-card"
           style={{
@@ -347,7 +374,10 @@ export function ChannelsPage() {
                 💬
               </span>
               <div>
-                <h2 style={{ margin: 0, fontSize: "1.2rem" }}>WhatsApp Business</h2>
+                <h2 style={{ margin: 0, fontSize: "1.2rem" }}>Mi WhatsApp Corporativo</h2>
+                <div style={{ fontSize: "0.76rem", color: "var(--ink-soft)" }}>
+                  Asociado a: <strong>{user?.fullName || "Tu usuario"}</strong>
+                </div>
                 <span
                   className="channel-status"
                   style={{
@@ -356,6 +386,7 @@ export function ChannelsPage() {
                     gap: 6,
                     fontSize: "0.8rem",
                     fontWeight: 700,
+                    marginTop: 4,
                     color: waStatus === "connected" ? "#047857" : waStatus === "connecting" ? "#d97706" : "#64748b"
                   }}
                 >
@@ -388,13 +419,13 @@ export function ChannelsPage() {
           </div>
 
           <p className="muted" style={{ fontSize: "0.86rem", marginBottom: 14 }}>
-            Atención comercial y envío directo de presupuestos, remitos y facturas desde WhatsApp Web con código QR ($0 costo).
+            Conectá tu propio teléfono para atender y responder a tus clientes desde tu WhatsApp personal o corporativo ($0 costo).
           </p>
 
           {waStatus === "connected" ? (
             <div style={{ background: "rgba(0,0,0,0.03)", padding: 12, borderRadius: 8, marginBottom: 12 }}>
               <div style={{ fontSize: "0.82rem", marginBottom: 6 }}>
-                <strong>Línea vinculada:</strong> {waPhone ? `+${waPhone}` : "Dispositivo principal conectado"}
+                <strong>Tu número vinculado:</strong> {waPhone ? `+${waPhone}` : "Dispositivo conectado"}
               </div>
               {waSyncMsg && (
                 <div style={{ fontSize: "0.78rem", color: "#065f46", margin: "6px 0", fontWeight: 600 }}>
@@ -403,7 +434,7 @@ export function ChannelsPage() {
               )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
                 <Link to="/comunicaciones" className="btn btn-primary compact">
-                  📬 Ir a la Bandeja
+                  📬 Ir a Mis Chats
                 </Link>
                 <button
                   type="button"
@@ -411,7 +442,7 @@ export function ChannelsPage() {
                   onClick={handleForceWaSync}
                   disabled={waSyncing}
                 >
-                  {waSyncing ? "Sincronizando..." : "🔄 Forzar Sincronización"}
+                  {waSyncing ? "Sincronizando..." : "🔄 Sincronizar mi línea"}
                 </button>
                 <button
                   type="button"
@@ -432,7 +463,7 @@ export function ChannelsPage() {
                   disabled={disconnecting}
                   onClick={handleDisconnectWa}
                 >
-                  {disconnecting ? "Desconectando..." : "Desconectar"}
+                  {disconnecting ? "Desconectando..." : "Desconectar mi línea"}
                 </button>
               </div>
             </div>
@@ -444,7 +475,7 @@ export function ChannelsPage() {
                 style={{ width: "100%", justifyContent: "center", gap: 8, padding: "10px 16px", fontWeight: 700 }}
                 onClick={handleOpenQrModal}
               >
-                <span>📲</span> Conectar WhatsApp con Código QR
+                <span>📲</span> Conectar mi WhatsApp con Código QR
               </button>
             </div>
           )}
@@ -519,7 +550,7 @@ export function ChannelsPage() {
           </div>
 
           <p className="muted" style={{ fontSize: "0.86rem", marginBottom: 14 }}>
-            Mensajes directos de cuentas comerciales vinculadas a Meta Graph API. 100% gratuito e ilimitado.
+            Mensajes directos de Instagram Business. Es un canal independiente de Facebook Messenger: conectalo solo si usás IG Direct.
           </p>
 
           {igConnected ? (
@@ -671,7 +702,7 @@ export function ChannelsPage() {
           </div>
 
           <p className="muted" style={{ fontSize: "0.86rem", marginBottom: 14 }}>
-            Messenger de páginas comerciales de Facebook, integrado al mismo hilo y fichas del CRM.
+            Messenger de tu Página de Facebook. Canal separado de Instagram: conectalo aunque no uses IG Direct.
           </p>
 
           {fbConnected ? (
@@ -772,6 +803,86 @@ export function ChannelsPage() {
             )}
           </div>
         </article>
+      </div>
+
+      {/* Team WhatsApp Lines Section */}
+      <div className="card pad" style={{ marginTop: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+          <div>
+            <span className="eyebrow">EQUIPO COMERCIAL & ATENCIÓN</span>
+            <h3 style={{ margin: 0, fontSize: "1.15rem" }}>👥 Líneas de WhatsApp del Equipo</h3>
+            <p className="muted" style={{ fontSize: "0.84rem", margin: "4px 0 0 0" }}>
+              Cada colaborador de la empresa puede escanear su propio WhatsApp para atender a sus clientes de forma personalizada.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-outline compact"
+            onClick={checkStatus}
+          >
+            🔄 Actualizar estados
+          </button>
+        </div>
+
+        <div className="table-responsive">
+          <table className="table" style={{ width: "100%", fontSize: "0.88rem" }}>
+            <thead>
+              <tr>
+                <th>Colaborador</th>
+                <th>Número de WhatsApp</th>
+                <th>Estado</th>
+                <th>Conectado Desde</th>
+                <th>Última Sincronización</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamLines.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: "center", padding: "20px", color: "var(--ink-soft)" }}>
+                    Aún no hay líneas registradas en el equipo. Conectá tu propio WhatsApp arriba para activarla.
+                  </td>
+                </tr>
+              ) : (
+                teamLines.map((line) => {
+                  const isMe = line.userId === user?.id;
+                  return (
+                    <tr key={line.id} style={{ background: isMe ? "rgba(13, 148, 136, 0.04)" : "inherit" }}>
+                      <td>
+                        <strong>{line.userName || (isMe ? `${user?.fullName} (Tú)` : "Línea Corporativa")}</strong>
+                        {isMe && (
+                          <span className="badge info" style={{ marginLeft: 6, fontSize: "0.7rem", padding: "1px 6px" }}>
+                            Tu línea
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {line.phoneNumber ? (
+                          <span style={{ fontFamily: "monospace", fontWeight: 600, color: "#047857" }}>+{line.phoneNumber}</span>
+                        ) : (
+                          <span className="muted" style={{ fontSize: "0.8rem" }}>Sin número detectado</span>
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className={`badge ${line.isConnected ? "ok" : line.state === "connecting" ? "warn" : "neutral"}`}
+                          style={{ fontSize: "0.75rem" }}
+                        >
+                          {line.isConnected ? "🟢 ACTIVO" : line.state === "connecting" ? "🟡 CONECTANDO" : "⚪ DESCONECTADO"}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
+                        {line.connectedAtUtc ? new Date(line.connectedAtUtc).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "-"}
+                      </td>
+                      <td style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
+                        {line.lastSyncAtUtc ? new Date(line.lastSyncAtUtc).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : "-"}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* QR Code Modal for WhatsApp */}

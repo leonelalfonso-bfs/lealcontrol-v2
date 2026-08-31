@@ -131,7 +131,15 @@ public sealed class ConversationService
         EmailDirection direction)
     {
         if (channelType == CommunicationChannelHelper.WhatsApp && threadKey.StartsWith("wa_", StringComparison.Ordinal))
-            return threadKey["wa_".Length..];
+        {
+            var raw = threadKey["wa_".Length..];
+            var lastUnder = raw.LastIndexOf('_');
+            if (lastUnder > 0 && raw.Length - lastUnder - 1 == 32)
+            {
+                return raw[..lastUnder];
+            }
+            return raw;
+        }
 
         if (channelType == CommunicationChannelHelper.Instagram && threadKey.StartsWith("ig_", StringComparison.Ordinal))
             return threadKey["ig_".Length..];

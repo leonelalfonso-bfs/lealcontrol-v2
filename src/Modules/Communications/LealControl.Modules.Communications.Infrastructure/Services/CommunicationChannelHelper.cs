@@ -37,7 +37,10 @@ public static class CommunicationChannelHelper
         return NormalizeWhatsAppPhone(localPart);
     }
 
-    public static string WhatsAppThreadKey(string participantId) => $"wa_{participantId}";
+    public static string WhatsAppThreadKey(string participantId, Guid? userId = null) =>
+        userId.HasValue && userId.Value != Guid.Empty
+            ? $"wa_{participantId}_{userId.Value:N}"
+            : $"wa_{participantId}";
 
     public static string WhatsAppInternetId(string messageId) => $"wa_{messageId}";
 
@@ -49,6 +52,13 @@ public static class CommunicationChannelHelper
     {
         var prefix = channelType.Equals(Instagram, StringComparison.OrdinalIgnoreCase) ? "ig" : "fb";
         return $"meta_{prefix}_{messageId}";
+    }
+
+    public static bool IsSameMetaMessageId(string? storedInternetId, string messageId)
+    {
+        if (string.IsNullOrWhiteSpace(storedInternetId) || string.IsNullOrWhiteSpace(messageId)) return false;
+        return storedInternetId == MetaInternetId(Facebook, messageId)
+            || storedInternetId == MetaInternetId(Instagram, messageId);
     }
 
     public static string MetaThreadKey(string channelType, string participantId)

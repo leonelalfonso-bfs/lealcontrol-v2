@@ -44,6 +44,48 @@ public sealed class WhatsAppGatewayService
         return $"tenant_{tenantId:N}";
     }
 
+    public static string GetUserInstanceName(Guid tenantId, Guid userId)
+    {
+        return $"tenant_{tenantId:N}_user_{userId:N}";
+    }
+
+    public static string GetInstanceName(Guid tenantId, Guid? userId)
+    {
+        return userId.HasValue && userId.Value != Guid.Empty
+            ? GetUserInstanceName(tenantId, userId.Value)
+            : GetTenantInstanceName(tenantId);
+    }
+
+    public static bool TryParseInstance(string instance, out Guid tenantId, out Guid? userId)
+    {
+        tenantId = Guid.Empty;
+        userId = null;
+
+        if (string.IsNullOrWhiteSpace(instance) || !instance.StartsWith("tenant_"))
+            return false;
+
+        var remainder = instance["tenant_".Length..];
+        var userIndex = remainder.IndexOf("_user_", StringComparison.OrdinalIgnoreCase);
+
+        if (userIndex >= 0)
+        {
+            var tenantHex = remainder[..userIndex];
+            var userHex = remainder[(userIndex + "_user_".Length)..];
+
+            if (Guid.TryParseExact(tenantHex, "N", out tenantId))
+            {
+                if (Guid.TryParseExact(userHex, "N", out var parsedUser))
+                {
+                    userId = parsedUser;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        return Guid.TryParseExact(remainder, "N", out tenantId);
+    }
+
     public async Task<WhatsAppStatusResult> GetStatusAsync(string instanceName, CancellationToken ct = default)
     {
         try
@@ -240,7 +282,7 @@ public sealed class WhatsAppGatewayService
                             var key = lastMsg.TryGetProperty("key", out var kProp) ? kProp : default;
                             var msgId = key.TryGetProperty("id", out var midProp) ? midProp.GetString() : "";
                             var fromMe = key.TryGetProperty("fromMe", out var fmProp) && fmProp.GetBoolean();
-                            var text = ExtractTextFromMessage(lastMsg.TryGetProperty("message", out var mProp) ? mProp : default);
+                            var msgObj = lastMsg.TryGetProperty("message", out var mProp) ? mProp : default;
 
                             var ts = DateTime.UtcNow;
                             if (lastMsg.TryGetProperty("messageTimestamp", out var tsProp) && tsProp.TryGetInt64(out var tsVal))
@@ -248,9 +290,10 @@ public sealed class WhatsAppGatewayService
                                 ts = DateTimeOffset.FromUnixTimeSeconds(tsVal).UtcDateTime;
                             }
 
-                            if (!string.IsNullOrWhiteSpace(msgId) && !string.IsNullOrWhiteSpace(text))
+                            var item = BuildMessageItem(msgId, remoteJid!, fromMe, pushName, msgObj, ts);
+                            if (item != null && !list.Exists(x => x.MessageId == item.MessageId))
                             {
-                                list.Add(new WhatsAppMessageItem(msgId, remoteJid, fromMe, pushName, text, ts));
+                                list.Add(item);
                             }
                         }
                     }
@@ -286,7 +329,7 @@ public sealed class WhatsAppGatewayService
                             pushName = agendaName;
                         }
 
-                        var text = ExtractTextFromMessage(item.TryGetProperty("message", out var mProp) ? mProp : default);
+                        var msgObj = item.TryGetProperty("message", out var mProp) ? mProp : default;
 
                         var timestamp = DateTime.UtcNow;
                         if (item.TryGetProperty("messageTimestamp", out var tsProp) && tsProp.TryGetInt64(out var tsVal))
@@ -294,9 +337,10 @@ public sealed class WhatsAppGatewayService
                             timestamp = DateTimeOffset.FromUnixTimeSeconds(tsVal).UtcDateTime;
                         }
 
-                        if (!list.Exists(x => x.MessageId == msgId))
+                        var built = BuildMessageItem(msgId, remoteJid, fromMe, pushName, msgObj, timestamp);
+                        if (built != null && !list.Exists(x => x.MessageId == built.MessageId))
                         {
-                            list.Add(new WhatsAppMessageItem(msgId, remoteJid, fromMe, pushName, string.IsNullOrWhiteSpace(text) ? "[Mensaje multimedia]" : text, timestamp));
+                            list.Add(built);
                         }
                     }
                 }
@@ -447,6 +491,8 @@ public sealed class WhatsAppGatewayService
         if (msgObj.ValueKind != JsonValueKind.Object)
             return new ParsedChannelMessage("", null, null, null, null);
 
+        msgObj = UnwrapMessageElement(msgObj);
+
         if (msgObj.TryGetProperty("conversation", out var convProp))
             return new ParsedChannelMessage(convProp.GetString() ?? "", null, null, null, null);
 
@@ -488,6 +534,57 @@ public sealed class WhatsAppGatewayService
         }
 
         return new ParsedChannelMessage("", null, null, null, null);
+    }
+
+    private static JsonElement UnwrapMessageElement(JsonElement msgObj)
+    {
+        if (msgObj.ValueKind != JsonValueKind.Object) return msgObj;
+
+        if (msgObj.TryGetProperty("ephemeralMessage", out var ephemeral) && ephemeral.TryGetProperty("message", out var ephemeralMsg))
+            return UnwrapMessageElement(ephemeralMsg);
+
+        if (msgObj.TryGetProperty("viewOnceMessage", out var viewOnce) && viewOnce.TryGetProperty("message", out var viewOnceMsg))
+            return UnwrapMessageElement(viewOnceMsg);
+
+        if (msgObj.TryGetProperty("viewOnceMessageV2", out var viewOnceV2) && viewOnceV2.TryGetProperty("message", out var viewOnceV2Msg))
+            return UnwrapMessageElement(viewOnceV2Msg);
+
+        if (msgObj.TryGetProperty("documentWithCaptionMessage", out var docCap) && docCap.TryGetProperty("message", out var docCapMsg))
+            return UnwrapMessageElement(docCapMsg);
+
+        if (msgObj.TryGetProperty("editedMessage", out var edited) && edited.TryGetProperty("message", out var editedMsg))
+            return UnwrapMessageElement(editedMsg);
+
+        return msgObj;
+    }
+
+    private static WhatsAppMessageItem? BuildMessageItem(
+        string? msgId,
+        string remoteJid,
+        bool fromMe,
+        string? pushName,
+        JsonElement messageElement,
+        DateTime timestampUtc)
+    {
+        if (string.IsNullOrWhiteSpace(msgId)) return null;
+
+        var parsed = ParseMessageContent(messageElement);
+        var text = parsed.Text;
+        if (string.IsNullOrWhiteSpace(text) && !string.IsNullOrWhiteSpace(parsed.MediaType))
+            text = CommunicationMediaHelper.MediaPreviewLabel(parsed.MediaType, parsed.FileName);
+        if (string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(parsed.MediaType))
+            return null;
+
+        return new WhatsAppMessageItem(
+            msgId,
+            remoteJid,
+            fromMe,
+            pushName,
+            text,
+            timestampUtc,
+            parsed.MediaType,
+            parsed.MimeType,
+            parsed.FileName);
     }
 
     private static string GuessMediaTypeFromMime(string? mimeType)
@@ -533,5 +630,14 @@ public sealed class WhatsAppGatewayService
 public sealed record WhatsAppStatusResult(bool Available, string State, string? PhoneNumber, string? Error);
 public sealed record WhatsAppConnectResult(bool Success, string State, string? QrCodeBase64, string? Error);
 public sealed record WhatsAppSendResult(bool Success, string? MessageId, string? Error);
-public sealed record WhatsAppMessageItem(string MessageId, string RemoteJid, bool FromMe, string? PushName, string Text, DateTime TimestampUtc);
+public sealed record WhatsAppMessageItem(
+    string MessageId,
+    string RemoteJid,
+    bool FromMe,
+    string? PushName,
+    string Text,
+    DateTime TimestampUtc,
+    string? MediaType = null,
+    string? MimeType = null,
+    string? FileName = null);
 public sealed record WhatsAppMediaDownloadResult(string MediaType, string MimeType, string? FileName, byte[] Data);

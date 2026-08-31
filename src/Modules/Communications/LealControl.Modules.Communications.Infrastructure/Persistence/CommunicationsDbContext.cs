@@ -15,10 +15,21 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<MessageReplyTemplate> ReplyTemplates => Set<MessageReplyTemplate>();
     public DbSet<StoredMedia> StoredMedia => Set<StoredMedia>();
+    public DbSet<WhatsAppConnection> WhatsAppConnections => Set<WhatsAppConnection>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schema);
+        modelBuilder.Entity<WhatsAppConnection>(b => {
+            b.ToTable("whatsapp_connections"); b.HasKey(x => x.Id);
+            b.Property(x => x.InstanceName).HasMaxLength(120).IsRequired();
+            b.Property(x => x.UserName).HasMaxLength(200);
+            b.Property(x => x.PhoneNumber).HasMaxLength(50);
+            b.Property(x => x.State).HasMaxLength(50).HasDefaultValue("disconnected");
+            b.Property(x => x.LastError).HasMaxLength(2000);
+            b.HasIndex(x => new { x.TenantId, x.InstanceName }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.UserId });
+        });
         modelBuilder.Entity<MetaChannelConnection>(b => {
             b.ToTable("meta_channel_connections"); b.HasKey(x => x.Id);
             b.Property(x => x.ChannelType).HasMaxLength(50);
@@ -224,6 +235,25 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
                 ""Data"" bytea NOT NULL,
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS communications.whatsapp_connections (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""UserId"" uuid,
+                ""UserName"" character varying(200),
+                ""InstanceName"" character varying(120) NOT NULL,
+                ""PhoneNumber"" character varying(50),
+                ""State"" character varying(50) NOT NULL DEFAULT 'disconnected',
+                ""IsConnected"" boolean NOT NULL DEFAULT false,
+                ""ConnectedAtUtc"" timestamp with time zone,
+                ""LastSyncAtUtc"" timestamp with time zone,
+                ""LastError"" character varying(2000),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL,
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL
+            );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_whatsapp_connections_TenantId_InstanceName"" ON communications.whatsapp_connections (""TenantId"", ""InstanceName"");
+            CREATE INDEX IF NOT EXISTS ""IX_whatsapp_connections_TenantId_UserId"" ON communications.whatsapp_connections (""TenantId"", ""UserId"");
 
             UPDATE communications.conversations c
             SET ""LastIncomingAtUtc"" = sub.max_ts

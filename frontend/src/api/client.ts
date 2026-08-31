@@ -36,6 +36,13 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   if (tenantId) {
     headers["X-Tenant-Id"] = tenantId;
   }
+  const userStr = typeof window !== "undefined" ? localStorage.getItem("leal_user") : null;
+  if (userStr) {
+    try {
+      const u = JSON.parse(userStr);
+      if (u?.id) headers["X-User-Id"] = u.id;
+    } catch {}
+  }
 
   const response = await fetch(`${API_BASE}${path}`, {
     headers,
@@ -327,13 +334,62 @@ export const api = {
   deleteEmail: (id: string) => request<void>(`/api/v1/communications/messages/${id}`, { method: "DELETE" }),
   sendEmail: (accountId: string, body: object) => request<{id:string;messageId:string}>(`/api/v1/communications/accounts/${accountId}/send`, { method:"POST", body:JSON.stringify(body) }),
 
-  // WhatsApp Gateway Methods
-  getWhatsAppStatus: () => request<{ available: boolean; state: string; phoneNumber?: string; error?: string }>("/api/v1/communications/whatsapp/status"),
-  connectWhatsApp: () => request<{ success: boolean; state: string; qrCodeBase64?: string; error?: string }>("/api/v1/communications/whatsapp/connect", { method: "POST" }),
-  disconnectWhatsApp: () => request<{ success: boolean }>("/api/v1/communications/whatsapp/disconnect", { method: "POST" }),
-  syncWhatsAppMessages: () => request<{ synced: number; total?: number }>("/api/v1/communications/whatsapp/sync", { method: "POST" }),
-  sendWhatsAppMessage: (body: { to: string; message: string; mediaUrl?: string; mediaType?: string; fileName?: string; mediaBase64?: string; mimeType?: string; relatedEntityType?: string; relatedEntityId?: string }) =>
-    request<{ success: boolean; messageId?: string; error?: string }>("/api/v1/communications/whatsapp/send", { method: "POST", body: JSON.stringify(body) }),
+  // WhatsApp Gateway Methods (Multi-Usuario por Empleado)
+  getWhatsAppStatus: (userId?: string) =>
+    request<{ available: boolean; state: string; phoneNumber?: string; error?: string; instanceName?: string; userId?: string; isConnected?: boolean }>(
+      `/api/v1/communications/whatsapp/status${userId ? `?userId=${encodeURIComponent(userId)}` : ""}`
+    ),
+  connectWhatsApp: (userId?: string, userName?: string) => {
+    const params = new URLSearchParams();
+    if (userId) params.set("userId", userId);
+    if (userName) params.set("userName", userName);
+    const qs = params.toString();
+    return request<{ success: boolean; state: string; qrCodeBase64?: string; error?: string; instanceName?: string; userId?: string }>(
+      `/api/v1/communications/whatsapp/connect${qs ? `?${qs}` : ""}`,
+      { method: "POST" }
+    );
+  },
+  disconnectWhatsApp: (userId?: string) =>
+    request<{ success: boolean; instanceName?: string; userId?: string }>(
+      `/api/v1/communications/whatsapp/disconnect${userId ? `?userId=${encodeURIComponent(userId)}` : ""}`,
+      { method: "POST" }
+    ),
+  syncWhatsAppMessages: (userId?: string) =>
+    request<{ synced: number; total?: number }>(
+      `/api/v1/communications/whatsapp/sync${userId ? `?userId=${encodeURIComponent(userId)}` : ""}`,
+      { method: "POST" }
+    ),
+  listTeamWhatsAppLines: () =>
+    request<Array<{
+      id: string;
+      tenantId: string;
+      userId?: string;
+      userName?: string;
+      instanceName: string;
+      phoneNumber?: string;
+      state: string;
+      isConnected: boolean;
+      connectedAtUtc?: string;
+      lastSyncAtUtc?: string;
+      lastError?: string;
+    }>>("/api/v1/communications/whatsapp/team-lines"),
+  sendWhatsAppMessage: (body: {
+    to: string;
+    message: string;
+    mediaUrl?: string;
+    mediaType?: string;
+    fileName?: string;
+    mediaBase64?: string;
+    mimeType?: string;
+    relatedEntityType?: string;
+    relatedEntityId?: string;
+    userId?: string;
+    instanceName?: string;
+  }) =>
+    request<{ success: boolean; messageId?: string; error?: string; instanceUsed?: string }>("/api/v1/communications/whatsapp/send", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
 
   // Meta (Instagram & Facebook) Methods
   getMetaStatus: () =>

@@ -4,11 +4,27 @@ import type { EmailAttachmentMeta } from "../api/types";
 type Props = {
   messageId: string;
   attachments?: EmailAttachmentMeta[];
+  bodyPreview?: string;
 };
+
+function isAudioAttachment(att: EmailAttachmentMeta): boolean {
+  if (att.contentType.startsWith("audio/")) return true;
+  if (/\.(ogg|opus|mp3|m4a|aac|wav|webm)$/i.test(att.fileName)) return true;
+  return att.contentType === "application/octet-stream" && /\.ogg$/i.test(att.fileName);
+}
+
+function audioMimeType(att: EmailAttachmentMeta): string {
+  if (att.contentType.startsWith("audio/")) return att.contentType;
+  if (/\.mp3$/i.test(att.fileName)) return "audio/mpeg";
+  if (/\.(m4a|aac)$/i.test(att.fileName)) return "audio/mp4";
+  if (/\.wav$/i.test(att.fileName)) return "audio/wav";
+  return "audio/ogg; codecs=opus";
+}
 
 function AuthenticatedMedia({ messageId, att }: { messageId: string; att: EmailAttachmentMeta }) {
   const [src, setSrc] = useState<string | null>(null);
-  const isAudio = att.contentType.startsWith("audio/");
+  const [loadError, setLoadError] = useState(false);
+  const isAudio = isAudioAttachment(att);
   const isImage = att.contentType.startsWith("image/");
 
   useEffect(() => {
@@ -16,24 +32,39 @@ function AuthenticatedMedia({ messageId, att }: { messageId: string; att: EmailA
     const url = `/api/v1/communications/messages/${messageId}/attachments/${att.id}/download`;
     let objectUrl: string | null = null;
     void fetch(url, { headers: { "X-Tenant-Id": tenantId } })
-      .then((r) => r.blob())
-      .then((blob) => {
-        objectUrl = URL.createObjectURL(blob);
-        setSrc(objectUrl);
+      .then((r) => {
+        if (!r.ok) throw new Error("download failed");
+        return r.blob();
       })
-      .catch(() => setSrc(null));
+      .then((blob) => {
+        const typedBlob = isAudio ? new Blob([blob], { type: audioMimeType(att) }) : blob;
+        objectUrl = URL.createObjectURL(typedBlob);
+        setSrc(objectUrl);
+        setLoadError(false);
+      })
+      .catch(() => {
+        setSrc(null);
+        setLoadError(true);
+      });
     return () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [messageId, att.id]);
+  }, [messageId, att.id, att.contentType, att.fileName, isAudio]);
 
-  if (!src) return <span className="muted" style={{ fontSize: "0.8rem" }}>Cargando {att.fileName}...</span>;
+  if (loadError) {
+    return <span className="muted" style={{ fontSize: "0.8rem" }}>No se pudo cargar {att.fileName}</span>;
+  }
+
+  if (!src) return <span className="muted" style={{ fontSize: "0.8rem" }}>Cargando {isAudio ? "nota de voz" : att.fileName}...</span>;
 
   if (isAudio) {
     return (
-      <audio controls preload="metadata" style={{ maxWidth: "100%", height: 32 }}>
-        <source src={src} type={att.contentType} />
-      </audio>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <audio controls preload="metadata" style={{ maxWidth: "100%", minWidth: 220, height: 36 }}>
+          <source src={src} type={audioMimeType(att)} />
+        </audio>
+        <span className="muted" style={{ fontSize: "0.72rem" }}>🎤 Nota de voz</span>
+      </div>
     );
   }
 
@@ -48,12 +79,29 @@ function AuthenticatedMedia({ messageId, att }: { messageId: string; att: EmailA
   );
 }
 
-export function MessageAttachments({ messageId, attachments }: Props) {
-  if (!attachments?.length) return null;
+export function MessageAttachments({ messageId, attachments, bodyPreview }: Props) {
+  const hasAttachments = (attachments?.length ?? 0) > 0;
+  const looksLikeMediaOnly =
+    !hasAttachments &&
+    !!bodyPreview &&
+    (bodyPreview.includes("[Mensaje multimedia]") ||
+      bodyPreview.includes("[Archivo multimedia]") ||
+      bodyPreview.includes("🎤"));
+
+  if (!hasAttachments) {
+    if (looksLikeMediaOnly) {
+      return (
+        <div style={{ marginTop: 6, fontSize: "0.78rem", color: "var(--ink-soft)" }}>
+          Archivo multimedia pendiente de descarga. Usá «Sincronizar» para reintentar.
+        </div>
+      );
+    }
+    return null;
+  }
 
   return (
     <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-      {attachments.map((att) => (
+      {attachments!.map((att) => (
         <AuthenticatedMedia key={att.id} messageId={messageId} att={att} />
       ))}
     </div>

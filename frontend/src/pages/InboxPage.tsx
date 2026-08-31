@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import type { Conversation, CustomerMatch, CustomerSummary, EmailMessage, MailAccount, MessageReplyTemplate, TenantUser } from "../api/types";
 import { EmailComposer } from "../components/EmailComposer";
 import { MessageAttachments } from "../components/MessageAttachments";
@@ -62,11 +63,12 @@ function isConversationUnlinked(c: Conversation): boolean {
 }
 
 export function InboxPage() {
+  const { user } = useAuth();
   const location = useLocation();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeMessages, setActiveMessages] = useState<EmailMessage[]>([]);
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
-  const [folder, setFolder] = useState<"Incoming" | "Outgoing" | "All" | "NeedsResponse" | "Unassigned">("Incoming");
+  const [folder, setFolder] = useState<"Mine" | "Incoming" | "Outgoing" | "All" | "NeedsResponse" | "Unassigned">("Mine");
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [templates, setTemplates] = useState<MessageReplyTemplate[]>([]);
@@ -92,6 +94,7 @@ export function InboxPage() {
   const [sendingNew, setSendingNew] = useState(false);
 
   const [syncNotification, setSyncNotification] = useState<string | null>(null);
+  const [channelCounts, setChannelCounts] = useState({ email: 0, whatsapp: 0, instagram: 0, facebook: 0 });
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(() => new Set());
   const [linkCustomerOpen, setLinkCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
@@ -102,15 +105,24 @@ export function InboxPage() {
 
   const loadConversations = async () => {
     try {
-      const [c, a] = await Promise.all([
+      const folderParam = folder === "All" || folder === "Mine" ? undefined : folder;
+      const searchParam = searchDebounced || undefined;
+      const [c, countsSource, a] = await Promise.all([
         api.listConversations({
           channel: channel === "all" ? undefined : channel,
-          folder: folder === "All" ? undefined : folder,
-          search: searchDebounced || undefined
+          folder: folderParam,
+          search: searchParam
         }),
+        api.listConversations({ folder: folderParam, search: searchParam }),
         api.listMailAccounts()
       ]);
       setConversations(c);
+      setChannelCounts({
+        email: countsSource.filter((x) => getConversationChannel(x) === "email").length,
+        whatsapp: countsSource.filter((x) => getConversationChannel(x) === "whatsapp").length,
+        instagram: countsSource.filter((x) => getConversationChannel(x) === "instagram").length,
+        facebook: countsSource.filter((x) => getConversationChannel(x) === "facebook").length
+      });
       setAccounts(a);
     } catch (e: any) {
       setError(e.message);
@@ -191,7 +203,16 @@ export function InboxPage() {
     };
   }, [channel, folder, searchDebounced]);
 
-  const visibleConversations = conversations;
+  const visibleConversations = useMemo(() => {
+    let list = conversations;
+    if (folder === "Mine") {
+      const userHex = user?.id ? user.id.replace(/-/g, "").toLowerCase() : "";
+      list = list.filter(
+        (c) => c.assignedToUserId === user?.id || (userHex && c.threadKey?.toLowerCase().includes(userHex))
+      );
+    }
+    return list;
+  }, [conversations, folder, user?.id]);
 
   useEffect(() => {
     if (!selectedConversationId && visibleConversations.length > 0) {
@@ -261,10 +282,10 @@ export function InboxPage() {
     }
   }, [activeMessages.length, selectedConversationId]);
 
-  const countEmail = useMemo(() => conversations.filter((c) => getConversationChannel(c) === "email").length, [conversations]);
-  const countWa = useMemo(() => conversations.filter((c) => getConversationChannel(c) === "whatsapp").length, [conversations]);
-  const countIg = useMemo(() => conversations.filter((c) => getConversationChannel(c) === "instagram").length, [conversations]);
-  const countFb = useMemo(() => conversations.filter((c) => getConversationChannel(c) === "facebook").length, [conversations]);
+  const countEmail = channelCounts.email;
+  const countWa = channelCounts.whatsapp;
+  const countIg = channelCounts.instagram;
+  const countFb = channelCounts.facebook;
 
   const handleForceSyncOmni = async () => {
     setBusy(true);
@@ -398,13 +419,15 @@ export function InboxPage() {
               mimeType: pendingAudio.mimeType,
               fileName: pendingAudio.fileName,
               relatedEntityType: lastMsg?.relatedEntityType || undefined,
-              relatedEntityId: lastMsg?.relatedEntityId || undefined
+              relatedEntityId: lastMsg?.relatedEntityId || undefined,
+              userId: user?.id
             })
           : await api.sendWhatsAppMessage({
               to: targetPhone,
               message: replyText.trim(),
               relatedEntityType: lastMsg?.relatedEntityType || undefined,
-              relatedEntityId: lastMsg?.relatedEntityId || undefined
+              relatedEntityId: lastMsg?.relatedEntityId || undefined,
+              userId: user?.id
             });
         if (res.success) {
           setReplyText("");
@@ -454,7 +477,8 @@ export function InboxPage() {
       if (newChannel === "whatsapp") {
         const res = await api.sendWhatsAppMessage({
           to: newRecipient.trim(),
-          message: newMessage.trim()
+          message: newMessage.trim(),
+          userId: user?.id
         });
         if (res.success) {
           setNewRecipient("");
@@ -552,6 +576,17 @@ export function InboxPage() {
       <div className="inbox-shell card" style={{ minHeight: "70vh" }}>
         {/* Left Side: Folders & Actions */}
         <aside className="inbox-folders">
+          <button className={folder === "Mine" ? "active" : ""} onClick={() => setFolder("Mine")}>
+            <span>👤 Mis Chats</span>
+            <strong>
+              {
+                conversations.filter((c) => {
+                  const userHex = user?.id ? user.id.replace(/-/g, "").toLowerCase() : "";
+                  return c.assignedToUserId === user?.id || (userHex && c.threadKey?.toLowerCase().includes(userHex));
+                }).length
+              }
+            </strong>
+          </button>
           <button className={folder === "Incoming" ? "active" : ""} onClick={() => setFolder("Incoming")}>
             <span>📥 Entrada</span>
             <strong>{conversations.filter((c) => c.hasIncoming !== false).length}</strong>
@@ -681,6 +716,11 @@ export function InboxPage() {
                   <div style={{ fontSize: "0.82rem", color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {c.lastMessagePreview || `[Mensaje de ${ch}]`}
                   </div>
+                  {c.assignedToUserId && (
+                    <div style={{ fontSize: "0.72rem", color: "#0d9488", fontWeight: 600, marginTop: 2 }}>
+                      👤 {tenantUsers.find((u) => u.id === c.assignedToUserId)?.fullName || "Asignado"}
+                    </div>
+                  )}
                   {c.relatedLeadId && (
                     <div style={{ fontSize: "0.72rem", color: "#0d9488", fontWeight: 600, marginTop: 2 }}>✓ Lead vinculado</div>
                   )}
@@ -913,7 +953,7 @@ export function InboxPage() {
                         ) : (
                           <div className="message-body">{m.bodyPreview}</div>
                         )}
-                        <MessageAttachments messageId={m.id} attachments={m.attachments} />
+                        <MessageAttachments messageId={m.id} attachments={m.attachments} bodyPreview={m.bodyPreview} />
                       </div>
                     );
                   }
@@ -948,7 +988,7 @@ export function InboxPage() {
                         }}
                       >
                         <div>{m.bodyPreview}</div>
-                        <MessageAttachments messageId={m.id} attachments={m.attachments} />
+                        <MessageAttachments messageId={m.id} attachments={m.attachments} bodyPreview={m.bodyPreview} />
                         <div
                           style={{
                             textAlign: "right",
