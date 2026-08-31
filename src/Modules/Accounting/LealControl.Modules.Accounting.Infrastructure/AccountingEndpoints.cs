@@ -741,12 +741,13 @@ public static class AccountingEndpoints
 
             var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
 
+            var isCreditNote = req.InvoiceNumber.Contains("NC") || req.InvoiceNumber.StartsWith("NC");
             var entry = new JournalEntry
             {
                 TenantId = tenantId,
                 EntryNumber = maxNumber + 1,
                 Date = req.Date,
-                Concept = $"Factura Compra {req.InvoiceNumber} - {req.SupplierName}",
+                Concept = isCreditNote ? $"Nota de Crédito Compra {req.InvoiceNumber} - {req.SupplierName}" : $"Factura Compra {req.InvoiceNumber} - {req.SupplierName}",
                 EntryType = "Automated",
                 SourceModule = "Purchases",
                 SourceDocumentId = req.PurchaseId.ToString(),
@@ -757,44 +758,91 @@ public static class AccountingEndpoints
                 CreatedAtUtc = DateTime.UtcNow
             };
 
-            entry.Lines.Add(new JournalEntryLine
+            if (isCreditNote)
             {
-                JournalEntryId = entry.Id,
-                TenantId = tenantId,
-                AccountId = gasto.Id,
-                AccountCode = gasto.Code,
-                AccountName = gasto.Name,
-                Debit = req.NetAmount,
-                Credit = 0,
-                Memo = $"Compra mercaderías {req.SupplierName}"
-            });
+                // Debe: Proveedores (disminuye deuda comercial)
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    JournalEntryId = entry.Id,
+                    TenantId = tenantId,
+                    AccountId = proveedores.Id,
+                    AccountCode = proveedores.Code,
+                    AccountName = proveedores.Name,
+                    Debit = req.TotalAmount,
+                    Credit = 0,
+                    Memo = $"Disminución deuda comercial {req.SupplierName}"
+                });
 
-            if (req.VatAmount > 0)
+                // Haber: Gasto/Mercaderías (reversión costo)
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    JournalEntryId = entry.Id,
+                    TenantId = tenantId,
+                    AccountId = gasto.Id,
+                    AccountCode = gasto.Code,
+                    AccountName = gasto.Name,
+                    Debit = 0,
+                    Credit = req.NetAmount,
+                    Memo = $"Reversión compra mercaderías {req.SupplierName}"
+                });
+
+                // Haber: IVA Crédito Fiscal (reversión crédito fiscal)
+                if (req.VatAmount > 0)
+                {
+                    entry.Lines.Add(new JournalEntryLine
+                    {
+                        JournalEntryId = entry.Id,
+                        TenantId = tenantId,
+                        AccountId = ivaCredito.Id,
+                        AccountCode = ivaCredito.Code,
+                        AccountName = ivaCredito.Name,
+                        Debit = 0,
+                        Credit = req.VatAmount,
+                        Memo = $"Reversión IVA Crédito Fiscal s/{req.InvoiceNumber}"
+                    });
+                }
+            }
+            else
             {
                 entry.Lines.Add(new JournalEntryLine
                 {
                     JournalEntryId = entry.Id,
                     TenantId = tenantId,
-                    AccountId = ivaCredito.Id,
-                    AccountCode = ivaCredito.Code,
-                    AccountName = ivaCredito.Name,
-                    Debit = req.VatAmount,
+                    AccountId = gasto.Id,
+                    AccountCode = gasto.Code,
+                    AccountName = gasto.Name,
+                    Debit = req.NetAmount,
                     Credit = 0,
-                    Memo = $"IVA Crédito Fiscal s/{req.InvoiceNumber}"
+                    Memo = $"Compra mercaderías {req.SupplierName}"
+                });
+
+                if (req.VatAmount > 0)
+                {
+                    entry.Lines.Add(new JournalEntryLine
+                    {
+                        JournalEntryId = entry.Id,
+                        TenantId = tenantId,
+                        AccountId = ivaCredito.Id,
+                        AccountCode = ivaCredito.Code,
+                        AccountName = ivaCredito.Name,
+                        Debit = req.VatAmount,
+                        Credit = 0,
+                        Memo = $"IVA Crédito Fiscal s/{req.InvoiceNumber}"
+                    });
+                }
+
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    JournalEntryId = entry.Id,
+                    TenantId = tenantId,
+                    AccountId = proveedores.Id,
+                    AccountCode = proveedores.Code,
+                    AccountName = proveedores.Name,
+                    Debit = 0,
+                    Credit = req.TotalAmount,
+                    Memo = $"Deuda comercial {req.SupplierName}"
                 });
             }
-
-            entry.Lines.Add(new JournalEntryLine
-            {
-                JournalEntryId = entry.Id,
-                TenantId = tenantId,
-                AccountId = proveedores.Id,
-                AccountCode = proveedores.Code,
-                AccountName = proveedores.Name,
-                Debit = 0,
-                Credit = req.TotalAmount,
-                Memo = $"Deuda comercial {req.SupplierName}"
-            });
 
             db.JournalEntries.Add(entry);
             await db.SaveChangesAsync(ct);

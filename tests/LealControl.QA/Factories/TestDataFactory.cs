@@ -73,6 +73,37 @@ public static class TestDataFactory
         return body!;
     }
 
+    public static async Task<CreatedCustomer> CreateSupplierAsync(QaTestContext context, string? prefix = null)
+    {
+        var num = Interlocked.Increment(ref _customerCounter);
+        var cuit = GenerateValidCuit(num);
+        var legalName = $"{prefix ?? "QA-SUPPLIER"}-{num:D4} S.R.L.";
+
+        var payload = new
+        {
+            legalName,
+            tradeName = legalName,
+            documentType = "Cuit",
+            documentNumber = cuit,
+            taxCondition = "ResponsableInscripto",
+            iibbRegime = "Local",
+            isCustomer = false,
+            isSupplier = true,
+            email = $"qa-supp-{num}@lealcontrol.test",
+            phone = "3415551111",
+            fiscalStreet = "Parque Industrial Norte 45",
+            fiscalCity = "Córdoba",
+            fiscalProvince = "Cordoba",
+            fiscalPostalCode = "5000"
+        };
+
+        var res = await context.HttpClient.PostAsJsonAsync("/api/v1/crm/customers", payload);
+        res.EnsureSuccessStatusCode();
+
+        var body = await res.Content.ReadFromJsonAsync<CreatedCustomer>();
+        return body!;
+    }
+
     public static async Task<CreatedProduct> CreateProductAsync(
         QaTestContext context,
         decimal initialStock = 100m,

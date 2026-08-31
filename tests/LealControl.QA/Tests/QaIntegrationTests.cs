@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using LealControl.QA.Infrastructure;
 using LealControl.QA.Models;
+using LealControl.QA.Scenarios.Purchases;
 using LealControl.QA.Scenarios.Sales;
 using Xunit;
 using Xunit.Abstractions;
@@ -49,6 +50,10 @@ public sealed class QaIntegrationTests : IClassFixture<QaWebApplicationFactory>
         }
         _output.WriteLine("====================================================================");
     }
+
+    // ====================================================================
+    // VENTAS (SALES)
+    // ====================================================================
 
     [Fact]
     public async Task Run_QaSale001_CashSale_AllAuditsPass()
@@ -103,6 +108,52 @@ public sealed class QaIntegrationTests : IClassFixture<QaWebApplicationFactory>
         PrintReport(result);
 
         result.Issues.Should().BeEmpty("todas las alícuotas impositivas deben calcularse y asentarse de forma determinística");
+        result.Status.Should().Be(QaCheckStatus.Passed);
+    }
+
+    // ====================================================================
+    // COMPRAS (PURCHASES)
+    // ====================================================================
+
+    [Fact]
+    public async Task Run_QaPurchase001_CashPurchase_AllAuditsPass()
+    {
+        await using var context = new QaTestContext(_factory);
+        var scenario = new QaPurchase001Scenario();
+
+        var result = await scenario.ExecuteAsync(context);
+        context.Run.Scenarios.Add(result);
+        PrintReport(result);
+
+        result.Issues.Should().BeEmpty("la compra contado con recepción debe incrementar stock y cancelar saldo con proveedor");
+        result.Status.Should().Be(QaCheckStatus.Passed);
+    }
+
+    [Fact]
+    public async Task Run_QaPurchase002_CreditPurchaseAndPartialPayments_AllAuditsPass()
+    {
+        await using var context = new QaTestContext(_factory);
+        var scenario = new QaPurchase002Scenario();
+
+        var result = await scenario.ExecuteAsync(context);
+        context.Run.Scenarios.Add(result);
+        PrintReport(result);
+
+        result.Issues.Should().BeEmpty("la compra a crédito y pagos parciales deben auditar saldo de proveedor determinísticamente");
+        result.Status.Should().Be(QaCheckStatus.Passed);
+    }
+
+    [Fact]
+    public async Task Run_QaPurchase003_SupplierCreditNote_AllAuditsPass()
+    {
+        await using var context = new QaTestContext(_factory);
+        var scenario = new QaPurchase003Scenario();
+
+        var result = await scenario.ExecuteAsync(context);
+        context.Run.Scenarios.Add(result);
+        PrintReport(result);
+
+        result.Issues.Should().BeEmpty("la nota de crédito de proveedor debe deducir la deuda comercial y balancear contabilidad");
         result.Status.Should().Be(QaCheckStatus.Passed);
     }
 }
