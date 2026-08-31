@@ -118,6 +118,8 @@ public static class FinanceImport
             var query = from movement in db.Movements.AsNoTracking()
                         join concept in db.FinancialConcepts.AsNoTracking() on movement.ConceptId equals concept.Id into concepts
                         from concept in concepts.DefaultIfEmpty()
+                        join account in db.Accounts.AsNoTracking() on movement.AccountId equals account.Id into accounts
+                        from account in accounts.DefaultIfEmpty()
                         where movement.TenantId == tenantId
                               && (accountId == null || movement.AccountId == accountId.Value)
                               && movement.Kind == FinancialMovementKind.Credit
@@ -126,6 +128,45 @@ public static class FinanceImport
                         {
                             movement.Id,
                             movement.AccountId,
+                            AccountName = account != null ? account.Name : "",
+                            movement.OperationDateUtc,
+                            movement.Amount,
+                            movement.Currency,
+                            movement.Description,
+                            movement.ExternalReference,
+                            movement.ReconciliationStatus,
+                            movement.ConceptId,
+                            ConceptName = concept != null ? concept.Name : "Sin clasificar",
+                            ConceptCode = concept != null ? concept.Code : null,
+                            movement.ClassificationStatus
+                        };
+
+            if (conceptId.HasValue && conceptId.Value != Guid.Empty)
+            {
+                query = query.Where(x => x.ConceptId == conceptId.Value);
+            }
+
+            var rows = await query.OrderByDescending(x => x.OperationDateUtc).Take(200).ToListAsync(ct);
+            return Results.Ok(rows);
+        });
+
+        finance.MapGet("/payments/available-movements", async (Guid? accountId, Guid? conceptId, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var query = from movement in db.Movements.AsNoTracking()
+                        join concept in db.FinancialConcepts.AsNoTracking() on movement.ConceptId equals concept.Id into concepts
+                        from concept in concepts.DefaultIfEmpty()
+                        join account in db.Accounts.AsNoTracking() on movement.AccountId equals account.Id into accounts
+                        from account in accounts.DefaultIfEmpty()
+                        where movement.TenantId == tenantId
+                              && (accountId == null || movement.AccountId == accountId.Value)
+                              && movement.Kind == FinancialMovementKind.Debit
+                              && movement.ReconciliationStatus != FinancialReconciliationStatus.Reconciled
+                        select new
+                        {
+                            movement.Id,
+                            movement.AccountId,
+                            AccountName = account != null ? account.Name : "",
                             movement.OperationDateUtc,
                             movement.Amount,
                             movement.Currency,

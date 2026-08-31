@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   Activity,
   CustomerDetail,
   CustomerSummary,
@@ -82,11 +82,17 @@ export const api = {
   previewFinanceBankImport: (accountId: string, csvContent: string) => request<{ operationDateUtc: string; amount: number; kind: string; description: string; externalReference?: string; error?: string }[]>("/api/v1/finance/imports/bank/preview", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
   confirmFinanceBankImport: (accountId: string, csvContent: string) => request<{ imported: number; updated?: number; duplicates: number; rejected: number }>("/api/v1/finance/imports/bank/confirm", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
   listFinanceMovements: (accountId: string) => request<{ id: string; operationDateUtc: string; kind: string; amount: number; currency: string; description: string; externalReference?: string; transferId?: string; reconciliationStatus: number; linkedEntityType?: string; linkedEntityId?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements`),
-  listCollectionAvailableMovements: (accountId?: string, conceptId?: string) => {
+    listCollectionAvailableMovements: (accountId?: string, conceptId?: string) => {
     const params = new URLSearchParams();
     if (accountId) params.set("accountId", accountId);
     if (conceptId) params.set("conceptId", conceptId);
     return request<any[]>(`/api/v1/finance/collections/available-movements?${params.toString()}`);
+  },
+  listPaymentAvailableMovements: (accountId?: string, conceptId?: string) => {
+    const params = new URLSearchParams();
+    if (accountId) params.set("accountId", accountId);
+    if (conceptId) params.set("conceptId", conceptId);
+    return request<any[]>(`/api/v1/finance/payments/available-movements?${params.toString()}`);
   },
   listFinanceMovementDetails: (accountId: string) => request<{ id: string; operationDateUtc: string; description: string; externalReference?: string; kind: string; amount: number; currency: string; reportedBalance?: number; systemBalance: number; difference?: number; reconciliationStatus: string; stage?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements-detail`),
   reconcileFinanceMovement: (movementId: string, body: { entityType: string; entityId: string }) => request(`/api/v1/finance/movements/${movementId}/reconcile`, { method: "POST", body: JSON.stringify(body) }),
@@ -637,7 +643,7 @@ export const api = {
     request<import("./types").PurchaseRequest>(`/api/v1/purchases/requests/${requestId}/quotations/${quotationId}`, { method: "DELETE" }),
 
   // ==========================================
-  // HUMAN RESOURCES (RRHH & LIQUIDACIÓN)
+  // HUMAN RESOURCES (RRHH & LIQUIDACIÃ“N)
   // ==========================================
   getHrDashboardSummary: () =>
     request<import("./types").HrDashboardSummary>("/api/v1/hr/dashboard-summary"),
@@ -707,7 +713,7 @@ export const api = {
     request<{ message: string; signedAt: string }>(`/api/v1/hr/payroll/slips/${slipId}/sign-employee`, { method: "POST" }),
 
   // ==========================================
-  // FLEET (GESTIÓN DE FLOTA)
+  // FLEET (GESTIÃ“N DE FLOTA)
   // ==========================================
   listVehicles: (search?: string) => {
     const q = search ? `?search=${encodeURIComponent(search)}` : "";
@@ -903,7 +909,7 @@ export const api = {
     request<any>(`/api/v1/accounting/bank-statements/lines/${lineId}/quick-post`, { method: "POST", body: JSON.stringify({ feeType }) }),
 
   // ==========================================
-  // ASIENTOS MODELOS (PLANTILLAS CONFIGURABLES) & CONTABILIZACIÓN EN LOTE
+  // ASIENTOS MODELOS (PLANTILLAS CONFIGURABLES) & CONTABILIZACIÃ“N EN LOTE
   // ==========================================
   listJournalTemplates: (sourceModule?: string) => {
     const q = sourceModule ? `?sourceModule=${sourceModule}` : "";
@@ -1029,3 +1035,4 @@ export const api = {
   saveCalibrationReport: (body: Record<string, unknown>) =>
     request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) })
 };
+

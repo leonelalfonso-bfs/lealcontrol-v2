@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { CustomerSummary, Invoice } from "../api/types";
@@ -47,6 +47,9 @@ const money = (n: number, c = "ARS") =>
 export function CollectionReceiptsWorkspacePage() {
   const [searchParams] = useSearchParams();
   const initialCustomerId = searchParams.get("customerId");
+  const initialMovementId = searchParams.get("movementId");
+  const initialAccountId = searchParams.get("accountId");
+  const initialAmount = searchParams.get("amount");
 
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(initialCustomerId || "");
@@ -106,20 +109,37 @@ export function CollectionReceiptsWorkspacePage() {
         )
       );
 
-      // Initial default line: Bank Transfer with first active bank account
-      const firstBank = (accRes || []).find((a) => a.isActive && (a.currency || "ARS") === currency) || (accRes || []).find((a) => a.isActive);
-      if (firstBank && lines.length === 0) {
+            // If movementId was passed from Bancos y Cajas
+      if (initialMovementId) {
+        const parsedAmount = initialAmount ? parseFloat(initialAmount) || 0 : 0;
         setLines([
           {
             id: Math.random().toString(36).substring(2, 9),
-            method: String(firstBank.type) === "Cash" || String(firstBank.type) === "1" ? "Cash" : "BankTransfer",
-            amount: 0,
-            currency: firstBank.currency || currency,
-            accountId: firstBank.id,
+            method: "BankTransfer",
+            amount: parsedAmount,
+            currency,
+            accountId: initialAccountId || undefined,
+            movementId: initialMovementId,
             notes: ""
           }
         ]);
-        void loadMovementsForAccount(firstBank.id);
+        void loadMovementsForAccount(initialAccountId || undefined);
+      } else {
+        // Initial default line: Bank Transfer with first active bank account
+        const firstBank = (accRes || []).find((a) => a.isActive && (a.currency || "ARS") === currency) || (accRes || []).find((a) => a.isActive);
+        if (firstBank && lines.length === 0) {
+          setLines([
+            {
+              id: Math.random().toString(36).substring(2, 9),
+              method: String(firstBank.type) === "Cash" || String(firstBank.type) === "1" ? "Cash" : "BankTransfer",
+              amount: 0,
+              currency: firstBank.currency || currency,
+              accountId: firstBank.id,
+              notes: ""
+            }
+          ]);
+          void loadMovementsForAccount(firstBank.id);
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar datos.");
@@ -128,10 +148,9 @@ export function CollectionReceiptsWorkspacePage() {
     }
   };
 
-  const loadMovementsForAccount = async (accountId: string) => {
-    if (!accountId) return;
+  const loadMovementsForAccount = async (accountId?: string) => {
     try {
-      const movs = await api.listCollectionAvailableMovements(accountId);
+      const movs = await api.listCollectionAvailableMovements(accountId || undefined);
       setAvailableMovements(movs || []);
     } catch {
       setAvailableMovements([]);
@@ -265,7 +284,7 @@ export function CollectionReceiptsWorkspacePage() {
         amountImputedArs: imputedArs,
         amountImputedUsd: imputedUsd,
         differenceExchangeArs: diffArs,
-        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
+        adjustmentType: diffArs > 0.01 ? "Nota de dÃ©bito sugerida" : diffArs < -0.01 ? "Nota de crÃ©dito sugerida" : "Sin ajuste"
       };
       return next;
     });
@@ -286,7 +305,7 @@ export function CollectionReceiptsWorkspacePage() {
         paymentRate: validRate,
         amountImputedArs: imputedArs,
         differenceExchangeArs: diffArs,
-        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
+        adjustmentType: diffArs > 0.01 ? "Nota de dÃ©bito sugerida" : diffArs < -0.01 ? "Nota de crÃ©dito sugerida" : "Sin ajuste"
       };
       return next;
     });
@@ -306,7 +325,7 @@ export function CollectionReceiptsWorkspacePage() {
         amountImputedUsd: computedUsd,
         differenceExchangeArs: diffArs,
         selected: clampedArs > 0,
-        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
+        adjustmentType: diffArs > 0.01 ? "Nota de dÃ©bito sugerida" : diffArs < -0.01 ? "Nota de crÃ©dito sugerida" : "Sin ajuste"
       };
       return next;
     });
@@ -326,7 +345,7 @@ export function CollectionReceiptsWorkspacePage() {
         amountImputedArs: computedArs,
         differenceExchangeArs: diffArs,
         selected: clampedUsd > 0,
-        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
+        adjustmentType: diffArs > 0.01 ? "Nota de dÃ©bito sugerida" : diffArs < -0.01 ? "Nota de crÃ©dito sugerida" : "Sin ajuste"
       };
       return next;
     });
@@ -342,7 +361,7 @@ export function CollectionReceiptsWorkspacePage() {
           amountImputedArs: r.isUsd ? r.pendingBalanceUsd * r.paymentRate : r.pendingBalanceArs,
           amountImputedUsd: r.pendingBalanceUsd,
           differenceExchangeArs: diffArs,
-          adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
+          adjustmentType: diffArs > 0.01 ? "Nota de dÃ©bito sugerida" : diffArs < -0.01 ? "Nota de crÃ©dito sugerida" : "Sin ajuste"
         };
       })
     );
@@ -362,10 +381,11 @@ export function CollectionReceiptsWorkspacePage() {
   };
 
   // Handlers for Payment Lines
-  const addLine = (method: PaymentLine["method"]) => {
+    const addLine = (method: PaymentLine["method"]) => {
     const matchingAcc = accounts.find((a) => a.isActive && (a.currency || "ARS") === currency) || accounts.find((a) => a.isActive);
     const suggestedAmount = Math.max(0, totalImputed - totalCobrado);
     const defaultConcept = concepts.find((c) => c.code === "COBRO_CLIENTE" || c.code === "COBRO_CLIENTES");
+    const targetAccId = method === "BankTransfer" || method === "Cash" ? matchingAcc?.id : undefined;
 
     setLines((prev) => [
       ...prev,
@@ -374,11 +394,15 @@ export function CollectionReceiptsWorkspacePage() {
         method,
         amount: suggestedAmount,
         currency,
-        accountId: method === "BankTransfer" || method === "Cash" ? matchingAcc?.id : undefined,
+        accountId: targetAccId,
         conceptId: defaultConcept?.id,
         notes: ""
       }
     ]);
+
+    if (method === "BankTransfer") {
+      void loadMovementsForAccount(targetAccId);
+    }
   };
 
   const removeLine = (id: string) => {
@@ -403,7 +427,7 @@ export function CollectionReceiptsWorkspacePage() {
   // Submit Handler
   const handleSave = async () => {
     if (!selectedCustomer) {
-      setError("Por favor seleccioná un cliente.");
+      setError("Por favor seleccionÃ¡ un cliente.");
       return;
     }
 
@@ -414,13 +438,13 @@ export function CollectionReceiptsWorkspacePage() {
 
     if (hasOverImputation) {
       setError(
-        `El total imputado a comprobantes (${money(totalImputed, currency)}) no puede superar el total de cobro recibido (${money(totalCobrado, currency)}). Ajustá los importes imputados.`
+        `El total imputado a comprobantes (${money(totalImputed, currency)}) no puede superar el total de cobro recibido (${money(totalCobrado, currency)}). AjustÃ¡ los importes imputados.`
       );
       return;
     }
 
     if (!description.trim()) {
-      setError("Por favor indicá una descripción para el recibo.");
+      setError("Por favor indicÃ¡ una descripciÃ³n para el recibo.");
       return;
     }
 
@@ -445,7 +469,7 @@ export function CollectionReceiptsWorkspacePage() {
         invoiceExchangeRate: firstUsdImp ? firstUsdImp.invoiceRate : undefined,
         paymentExchangeRate: firstUsdImp ? firstUsdImp.paymentRate : undefined,
         suggestedAdjustmentArs: totalExchangeDifference !== 0 ? totalExchangeDifference : undefined,
-        suggestedAdjustmentType: totalExchangeDifference > 0.01 ? "Nota de débito sugerida" : totalExchangeDifference < -0.01 ? "Nota de crédito sugerida" : undefined,
+        suggestedAdjustmentType: totalExchangeDifference > 0.01 ? "Nota de dÃ©bito sugerida" : totalExchangeDifference < -0.01 ? "Nota de crÃ©dito sugerida" : undefined,
         lines: lines.map((l) => ({
           method: l.method,
           amount: Number(l.amount) || 0,
@@ -467,7 +491,7 @@ export function CollectionReceiptsWorkspacePage() {
       };
 
       const res = await api.createCollectionReceipt(payload);
-      setSuccessMsg(`¡Recibo de Cobro ${res.receiptNumber} emitido exitosamente por ${money(totalCobrado, currency)}!`);
+      setSuccessMsg(`Â¡Recibo de Cobro ${res.receiptNumber} emitido exitosamente por ${money(totalCobrado, currency)}!`);
       
       // Reset form
       setLines([
@@ -503,31 +527,31 @@ export function CollectionReceiptsWorkspacePage() {
       {/* Header */}
       <div className="page-head">
         <div>
-          <span className="eyebrow">FINANZAS · COBRANZAS</span>
+          <span className="eyebrow">FINANZAS Â· COBRANZAS</span>
           <h1>Recibos de Cobro a Clientes</h1>
           <p className="muted">
-            Cobro en ARS o USD directo, cálculo exacto de tipos de cambio, diferencias de cotización y conciliación bancaria.
+            Cobro en ARS o USD directo, cÃ¡lculo exacto de tipos de cambio, diferencias de cotizaciÃ³n y conciliaciÃ³n bancaria.
           </p>
         </div>
         <div className="toolbar">
           <Link to="/finanzas/cuentas-corrientes" className="btn btn-outline">
-            📊 Cuentas Corrientes
+            ðŸ“Š Cuentas Corrientes
           </Link>
           <Link to="/finanzas/cuentas" className="btn btn-outline">
-            🏦 Cuentas Financieras
+            ðŸ¦ Cuentas Financieras
           </Link>
         </div>
       </div>
 
       {error && (
         <div className="alert" style={{ background: "#fee2e2", color: "#991b1b", borderColor: "#f87171", marginBottom: 16 }}>
-          ⚠️ {error}
+          âš ï¸ {error}
         </div>
       )}
 
       {successMsg && (
         <div className="alert" style={{ background: "#dcfce7", color: "#166534", borderColor: "#86efac", marginBottom: 16 }}>
-          ✓ {successMsg}
+          âœ“ {successMsg}
         </div>
       )}
 
@@ -538,7 +562,7 @@ export function CollectionReceiptsWorkspacePage() {
           {/* STEP 1: CLIENTE Y DATOS GENERALES */}
           <section className="card pad">
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <span style={{ fontSize: "1.2rem" }}>👤</span>
+              <span style={{ fontSize: "1.2rem" }}>ðŸ‘¤</span>
               <h2 style={{ margin: 0, fontSize: "1.1rem" }}>1. Cliente y Moneda de Cobro</h2>
             </div>
 
@@ -582,7 +606,7 @@ export function CollectionReceiptsWorkspacePage() {
                   style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)", fontWeight: 700 }}
                 >
                   <option value="ARS">ARS ($ Pesos Argentinos - Modalidad TC)</option>
-                  <option value="USD">USD (U$S Dólares Estadounidenses Directos)</option>
+                  <option value="USD">USD (U$S DÃ³lares Estadounidenses Directos)</option>
                 </select>
               </label>
 
@@ -604,7 +628,7 @@ export function CollectionReceiptsWorkspacePage() {
           <section className="card pad">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: "1.2rem" }}>📄</span>
+                <span style={{ fontSize: "1.2rem" }}>ðŸ“„</span>
                 <h2 style={{ margin: 0, fontSize: "1.1rem" }}>2. Facturas y Comprobantes a Imputar</h2>
               </div>
               {imputations.length > 0 && (
@@ -621,12 +645,12 @@ export function CollectionReceiptsWorkspacePage() {
 
             {!selectedCustomerId ? (
               <p className="muted" style={{ margin: 0, padding: 12, textAlign: "center" }}>
-                Seleccioná un cliente para visualizar sus comprobantes pendientes de cobro.
+                SeleccionÃ¡ un cliente para visualizar sus comprobantes pendientes de cobro.
               </p>
             ) : imputations.length === 0 ? (
               <div style={{ background: "rgba(0,0,0,0.02)", padding: 16, borderRadius: 8, textAlign: "center" }}>
                 <p className="muted" style={{ margin: 0 }}>
-                  El cliente no posee comprobantes pendientes con saldo. Podés emitir el recibo como <strong>Anticipo / Saldo a Favor</strong>.
+                  El cliente no posee comprobantes pendientes con saldo. PodÃ©s emitir el recibo como <strong>Anticipo / Saldo a Favor</strong>.
                 </p>
               </div>
             ) : (
@@ -659,7 +683,7 @@ export function CollectionReceiptsWorkspacePage() {
                         <td>
                           <strong>{row.invoice.formattedNumber}</strong>
                           <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
-                            {row.invoice.invoiceType} · Pto Vta {row.invoice.pointOfSale}
+                            {row.invoice.invoiceType} Â· Pto Vta {row.invoice.pointOfSale}
                           </small>
                         </td>
                         <td>
@@ -674,7 +698,7 @@ export function CollectionReceiptsWorkspacePage() {
                           <strong>{money(row.invoiceTotalOriginal, row.invoice.currency)}</strong>
                           {row.isUsd && (
                             <small className="muted" style={{ display: "block", fontSize: "0.72rem" }}>
-                              TC Emisión: ${row.invoiceRate.toLocaleString("es-AR")}
+                              TC EmisiÃ³n: ${row.invoiceRate.toLocaleString("es-AR")}
                             </small>
                           )}
                         </td>
@@ -709,7 +733,7 @@ export function CollectionReceiptsWorkspacePage() {
                                 )}
                               </div>
                             ) : (
-                              <span className="muted" style={{ fontSize: "0.8rem" }}>—</span>
+                              <span className="muted" style={{ fontSize: "0.8rem" }}>â€”</span>
                             )}
                           </td>
                         )}
@@ -770,28 +794,28 @@ export function CollectionReceiptsWorkspacePage() {
           <section className="card pad">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: "1.2rem" }}>💳</span>
+                <span style={{ fontSize: "1.2rem" }}>ðŸ’³</span>
                 <h2 style={{ margin: 0, fontSize: "1.1rem" }}>3. Medios de Cobro (Ingreso de Fondos en {currency})</h2>
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 <button type="button" className="btn btn-outline compact" onClick={() => addLine("BankTransfer")}>
-                  ＋ Transferencia
+                  ï¼‹ Transferencia
                 </button>
                 <button type="button" className="btn btn-outline compact" onClick={() => addLine("Cash")}>
-                  ＋ Efectivo
+                  ï¼‹ Efectivo
                 </button>
                 <button type="button" className="btn btn-outline compact" onClick={() => addLine("Cheque")}>
-                  ＋ Cheque
+                  ï¼‹ Cheque
                 </button>
                 <button type="button" className="btn btn-outline compact" onClick={() => addLine("Retention")}>
-                  ＋ Retención
+                  ï¼‹ RetenciÃ³n
                 </button>
               </div>
             </div>
 
             {lines.length === 0 ? (
               <p className="muted" style={{ textAlign: "center", padding: 14 }}>
-                Agregá al menos un medio de cobro (transferencia, efectivo, cheque o retención).
+                AgregÃ¡ al menos un medio de cobro (transferencia, efectivo, cheque o retenciÃ³n).
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -811,7 +835,7 @@ export function CollectionReceiptsWorkspacePage() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>
-                          #{idx + 1} {line.method === "BankTransfer" ? "🏦 Transferencia Bancaria" : line.method === "Cash" ? "💵 Efectivo / Caja" : line.method === "Cheque" ? "🎫 Cheque Recibido" : "📋 Retención Sufrida"}
+                          #{idx + 1} {line.method === "BankTransfer" ? "ðŸ¦ Transferencia Bancaria" : line.method === "Cash" ? "ðŸ’µ Efectivo / Caja" : line.method === "Cheque" ? "ðŸŽ« Cheque Recibido" : "ðŸ“‹ RetenciÃ³n Sufrida"}
                         </span>
                       </div>
                       <button
@@ -820,7 +844,7 @@ export function CollectionReceiptsWorkspacePage() {
                         style={{ color: "#dc2626", padding: "2px 8px" }}
                         onClick={() => removeLine(line.id)}
                       >
-                        ✕ Quitar
+                        âœ• Quitar
                       </button>
                     </div>
 
@@ -855,7 +879,7 @@ export function CollectionReceiptsWorkspacePage() {
                             <option value="">-- Cobro a cliente (Predeterminado) --</option>
                             {concepts.map((c) => (
                               <option key={c.id} value={c.id}>
-                                🏷️ {c.name} ({c.code})
+                                ðŸ·ï¸ {c.name} ({c.code})
                               </option>
                             ))}
                           </select>
@@ -867,7 +891,7 @@ export function CollectionReceiptsWorkspacePage() {
                         <div style={{ gridColumn: "1 / -1", background: "#f8fafc", padding: 12, borderRadius: 6, border: "1px solid #e2e8f0" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                             <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f766e" }}>
-                              🏦 Vincular Transferencia Bancaria Acreditada (Extracto Banco)
+                              ðŸ¦ Vincular Transferencia Bancaria Acreditada (Extracto Banco)
                             </span>
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <span style={{ fontSize: "0.75rem", color: "var(--ink-soft)" }}>Filtrar Concepto:</span>
@@ -879,7 +903,7 @@ export function CollectionReceiptsWorkspacePage() {
                                 <option value="all">Ver todas</option>
                                 {concepts.map((c) => (
                                   <option key={c.id} value={c.id}>
-                                    🏷️ {c.name}
+                                    ðŸ·ï¸ {c.name}
                                   </option>
                                 ))}
                                 <option value="unclassified">Sin clasificar</option>
@@ -894,6 +918,7 @@ export function CollectionReceiptsWorkspacePage() {
                               const mov = availableMovements.find((m) => m.id === movId);
                               updateLine(line.id, {
                                 movementId: movId || undefined,
+                                accountId: mov ? mov.accountId : line.accountId,
                                 amount: mov ? Number(mov.amount) : line.amount,
                                 notes: mov ? mov.description : line.notes
                               });
@@ -903,7 +928,7 @@ export function CollectionReceiptsWorkspacePage() {
                             <option value="">-- Ingreso directo (sin vincular con extracto previo) --</option>
                             {filteredAvailableMovements.map((m) => (
                               <option key={m.id} value={m.id}>
-                                {new Date(m.operationDateUtc).toLocaleDateString("es-AR")} · {money(m.amount, m.currency)} · [{m.ConceptName || "Sin clasificar"}] · {m.description}
+                                {new Date(m.operationDateUtc).toLocaleDateString("es-AR")} Â· {money(m.amount, m.currency)} Â· [{m.conceptName || m.ConceptName || "Sin clasificar"}]{m.accountName ? ` · ${m.accountName}` : ""} Â· {m.description}
                               </option>
                             ))}
                           </select>
@@ -922,15 +947,15 @@ export function CollectionReceiptsWorkspacePage() {
                               updateLine(line.id, {
                                 chequeId: chId || undefined,
                                 amount: ch ? Number(ch.amount) : line.amount,
-                                notes: ch ? `Cheque N° ${ch.checkNumber} (${ch.bankName || "Banco"} - Librador: ${ch.issuerName || "s/d"})` : line.notes
+                                notes: ch ? `Cheque NÂ° ${ch.checkNumber} (${ch.bankName || "Banco"} - Librador: ${ch.issuerName || "s/d"})` : line.notes
                               });
                             }}
                             style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
                           >
-                            <option value="">-- Seleccioná un cheque disponible --</option>
+                            <option value="">-- SeleccionÃ¡ un cheque disponible --</option>
                             {availableCheques.map((c) => (
                               <option key={c.id} value={c.id}>
-                                N° {c.checkNumber} · {money(c.amount, c.currency)} · {c.bankName || "Banco"} · Librador: {c.issuerName || "Sin datos"}
+                                NÂ° {c.checkNumber} Â· {money(c.amount, c.currency)} Â· {c.bankName || "Banco"} Â· Librador: {c.issuerName || "Sin datos"}
                               </option>
                             ))}
                           </select>
@@ -941,7 +966,7 @@ export function CollectionReceiptsWorkspacePage() {
                       {line.method === "Retention" && (
                         <>
                           <label>
-                            Tipo de Retención *
+                            Tipo de RetenciÃ³n *
                             <select
                               value={line.retentionType || "IIBB"}
                               onChange={(e) => updateLine(line.id, { retentionType: e.target.value })}
@@ -949,13 +974,13 @@ export function CollectionReceiptsWorkspacePage() {
                             >
                               <option value="IIBB">Ingresos Brutos (IIBB)</option>
                               <option value="Ganancias">Impuesto a las Ganancias</option>
-                              <option value="IVA">Retención de IVA</option>
+                              <option value="IVA">RetenciÃ³n de IVA</option>
                               <option value="SUSS">Seguridad Social (SUSS)</option>
                             </select>
                           </label>
 
                           <label>
-                            N° Certificado de Retención
+                            NÂ° Certificado de RetenciÃ³n
                             <input
                               type="text"
                               value={line.retentionCertificate || ""}
@@ -1030,19 +1055,19 @@ export function CollectionReceiptsWorkspacePage() {
 
             {hasOverImputation && (
               <div style={{ marginTop: 14, padding: 10, borderRadius: 6, background: "#fee2e2", color: "#991b1b", fontSize: "0.82rem", lineHeight: 1.4 }}>
-                ⚠️ <strong>Cobro insuficiente:</strong> Estás imputando {money(totalImputed, currency)} a facturas, pero los medios de cobro suman solo {money(totalCobrado, currency)}. Ajustá los montos imputados a las facturas.
+                âš ï¸ <strong>Cobro insuficiente:</strong> EstÃ¡s imputando {money(totalImputed, currency)} a facturas, pero los medios de cobro suman solo {money(totalCobrado, currency)}. AjustÃ¡ los montos imputados a las facturas.
               </div>
             )}
 
             {!hasOverImputation && difference > 0.01 && (
               <div style={{ marginTop: 14, padding: 10, borderRadius: 6, background: "#e0f2fe", color: "#0369a1", fontSize: "0.82rem", lineHeight: 1.4 }}>
-                ℹ️ <strong>Anticipo:</strong> El cobro supera las facturas imputadas en {money(difference, currency)}. Este monto quedará como saldo a favor del cliente en su cuenta corriente.
+                â„¹ï¸ <strong>Anticipo:</strong> El cobro supera las facturas imputadas en {money(difference, currency)}. Este monto quedarÃ¡ como saldo a favor del cliente en su cuenta corriente.
               </div>
             )}
 
             {!hasOverImputation && Math.abs(difference) <= 0.01 && totalCobrado > 0 && (
               <div style={{ marginTop: 14, padding: 10, borderRadius: 6, background: "#dcfce7", color: "#166534", fontSize: "0.82rem" }}>
-                ✓ Cobro e imputaciones equilibrados al 100%.
+                âœ“ Cobro e imputaciones equilibrados al 100%.
               </div>
             )}
 
@@ -1053,7 +1078,7 @@ export function CollectionReceiptsWorkspacePage() {
               onClick={() => void handleSave()}
               style={{ width: "100%", justifyContent: "center", marginTop: 18, padding: "12px 16px", fontWeight: 700 }}
             >
-              {saving ? "Emitiendo Recibo..." : "🧾 Confirmar Recibo de Cobro"}
+              {saving ? "Emitiendo Recibo..." : "ðŸ§¾ Confirmar Recibo de Cobro"}
             </button>
           </div>
         </aside>
@@ -1061,12 +1086,12 @@ export function CollectionReceiptsWorkspacePage() {
 
       {/* RECENT RECEIPTS TABLE */}
       <section className="card pad" style={{ marginTop: 30 }}>
-        <h2 style={{ margin: "0 0 14px 0", fontSize: "1.1rem" }}>Últimos Recibos de Cobro Emitidos</h2>
+        <h2 style={{ margin: "0 0 14px 0", fontSize: "1.1rem" }}>Ãšltimos Recibos de Cobro Emitidos</h2>
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>N° Recibo</th>
+                <th>NÂ° Recibo</th>
                 <th>Fecha</th>
                 <th>Cliente / Detalle</th>
                 <th>Comprobantes Imputados</th>
@@ -1079,7 +1104,7 @@ export function CollectionReceiptsWorkspacePage() {
               {receipts.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 24 }}>
-                    No hay recibos registrados aún.
+                    No hay recibos registrados aÃºn.
                   </td>
                 </tr>
               ) : (
@@ -1115,7 +1140,7 @@ export function CollectionReceiptsWorkspacePage() {
                           className="btn btn-outline compact"
                           onClick={() => void openReceiptDetail(r.id)}
                         >
-                          👁️ Ver Detalle
+                          ðŸ‘ï¸ Ver Detalle
                         </button>
                       </td>
                     </tr>
@@ -1161,16 +1186,16 @@ export function CollectionReceiptsWorkspacePage() {
                 <span className="eyebrow">RECIBO OFICIAL DE COBRANZA</span>
                 <h2 style={{ margin: 0 }}>{selectedReceiptDetail.receiptNumber}</h2>
                 <span className="muted" style={{ fontSize: "0.82rem" }}>
-                  Fecha: {new Date(selectedReceiptDetail.receiptDateUtc).toLocaleDateString("es-AR")} · {selectedReceiptDetail.description}
+                  Fecha: {new Date(selectedReceiptDetail.receiptDateUtc).toLocaleDateString("es-AR")} Â· {selectedReceiptDetail.description}
                 </span>
               </div>
               <button className="btn btn-outline compact" onClick={() => setSelectedReceiptDetail(null)}>
-                ✕ Cerrar
+                âœ• Cerrar
               </button>
             </div>
 
             {/* Imputations */}
-            <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>📄 Comprobantes Imputados</h3>
+            <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>ðŸ“„ Comprobantes Imputados</h3>
             <div className="table-wrap" style={{ marginBottom: 16 }}>
               <table>
                 <thead>
@@ -1199,7 +1224,7 @@ export function CollectionReceiptsWorkspacePage() {
             </div>
 
             {/* Payment lines */}
-            <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>💳 Medios de Cobro</h3>
+            <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>ðŸ’³ Medios de Cobro</h3>
             <div className="table-wrap" style={{ marginBottom: 16 }}>
               <table>
                 <thead>
@@ -1233,3 +1258,5 @@ export function CollectionReceiptsWorkspacePage() {
     </div>
   );
 }
+
+

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { exportToExcel, type ExcelColumn } from "../components/ExcelTools";
 
@@ -49,7 +50,7 @@ const statusLabel: Record<string, string> = {
 
 function parseMovementDetails(description: string) {
   if (!description) return { mainDesc: "Movimiento", titular: "", cuit: "", extra: "" };
-  const parts = description.split(" · ");
+  const parts = description.split(" Â· ");
   const mainDesc = parts[0] || description;
   let titular = "";
   let cuit = "";
@@ -62,9 +63,9 @@ function parseMovementDetails(description: string) {
     } else if (p.startsWith("CUIT: ")) {
       cuit = p.replace("CUIT: ", "").trim();
     } else if (p.startsWith("Canal: ") || p.startsWith("CBU: ")) {
-      extra += (extra ? " · " : "") + p;
+      extra += (extra ? " Â· " : "") + p;
     } else {
-      extra += (extra ? " · " : "") + p;
+      extra += (extra ? " Â· " : "") + p;
     }
   }
 
@@ -144,7 +145,7 @@ export function FinanceAccountsPage() {
   const handleClassifyInline = async (movementId: string) => {
     const conceptId = inlineConcepts[movementId];
     if (!conceptId) {
-      setError("Por favor seleccioná un concepto antes de confirmar.");
+      setError("Por favor seleccionÃ¡ un concepto antes de confirmar.");
       return;
     }
 
@@ -235,7 +236,7 @@ export function FinanceAccountsPage() {
       setSuccessMsg("Movimiento confirmado y regla registrada para futuros extractos.");
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (e: any) {
-      setError(e instanceof Error ? e.message : "Error al guardar clasificación.");
+      setError(e instanceof Error ? e.message : "Error al guardar clasificaciÃ³n.");
     } finally {
       setActionBusy(null);
     }
@@ -260,7 +261,7 @@ export function FinanceAccountsPage() {
       );
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (e: any) {
-      setError(e instanceof Error ? e.message : "Error al aplicar reglas de tesorería.");
+      setError(e instanceof Error ? e.message : "Error al aplicar reglas de tesorerÃ­a.");
     } finally {
       setActionBusy(null);
     }
@@ -298,7 +299,7 @@ export function FinanceAccountsPage() {
       setShowImportModal(false);
       setImportCsv("");
       setImportPreview([]);
-      setSuccessMsg(`¡Extracto procesado! Nuevos importados: ${res.imported}. Movimientos actualizados con Titular/CUIT: ${res.updated || 0}. Duplicados: ${res.duplicates}.`);
+      setSuccessMsg(`Â¡Extracto procesado! Nuevos importados: ${res.imported}. Movimientos actualizados con Titular/CUIT: ${res.updated || 0}. Duplicados: ${res.duplicates}.`);
       await openAccount(selectedAccount);
     } catch (err: any) {
       setError(err.message || "Error al importar extracto.");
@@ -390,7 +391,7 @@ export function FinanceAccountsPage() {
       },
       {
         key: "conceptName",
-        header: "Concepto Tesorería",
+        header: "Concepto TesorerÃ­a",
         value: (row) => row.conceptName || "Sin identificar"
       },
       {
@@ -460,15 +461,15 @@ export function FinanceAccountsPage() {
         {/* Page Head */}
         <div className="page-head">
           <div>
-            <span className="eyebrow">FINANZAS · TESORERÍA & EXTRACTOS</span>
+            <span className="eyebrow">FINANZAS Â· TESORERÃA & EXTRACTOS</span>
             <h1>{selectedAccount.name}</h1>
             <p className="muted">
-              Detalle bancario · identificación de titulares/CUITs, clasificación progresiva y conciliación.
+              Detalle bancario Â· identificaciÃ³n de titulares/CUITs, clasificaciÃ³n progresiva y conciliaciÃ³n.
             </p>
           </div>
           <div className="toolbar" style={{ gap: 10 }}>
             <button className="btn btn-outline" onClick={() => setSelectedAccount(null)}>
-              ← Volver a Cuentas
+              â† Volver a Cuentas
             </button>
             <button
               type="button"
@@ -480,16 +481,16 @@ export function FinanceAccountsPage() {
               }}
               style={{ fontWeight: 700 }}
             >
-              📤 Importar / Actualizar Extracto CSV
+              ðŸ“¤ Importar / Actualizar Extracto CSV
             </button>
             <button
               type="button"
               className="btn btn-outline"
               onClick={handleApplyRules}
               disabled={actionBusy !== null}
-              title="Ejecutar motor de reglas para identificar movimientos automáticamente"
+              title="Ejecutar motor de reglas para identificar movimientos automÃ¡ticamente"
             >
-              ⚙ Aplicar Reglas
+              âš™ Aplicar Reglas
             </button>
             <button
               type="button"
@@ -498,14 +499,14 @@ export function FinanceAccountsPage() {
               disabled={filteredMovements.length === 0}
               title="Descargar extracto en Excel con los filtros aplicados"
             >
-              📊 Excel ({filteredMovements.length})
+              ðŸ“Š Excel ({filteredMovements.length})
             </button>
           </div>
         </div>
 
         {error && (
           <div className="alert" style={{ background: "#fee2e2", color: "#991b1b", borderColor: "#f87171", marginBottom: 16 }}>
-            ⚠️ {error}
+            âš ï¸ {error}
           </div>
         )}
 
@@ -519,7 +520,7 @@ export function FinanceAccountsPage() {
               marginBottom: 16
             }}
           >
-            ✓ {successMsg}
+            âœ“ {successMsg}
           </div>
         )}
 
@@ -540,17 +541,17 @@ export function FinanceAccountsPage() {
           <div className="card">
             <span className="muted">Total Egresos (Filtro)</span>
             <h3 style={{ margin: "4px 0 0 0", color: "#dc2626", fontSize: "1.35rem", fontWeight: 800 }}>
-              −{money(filteredDebits, selectedAccount.currency)}
+              âˆ’{money(filteredDebits, selectedAccount.currency)}
             </h3>
           </div>
           <div className="card">
-            <span className="muted">Clasificación de Tesorería</span>
+            <span className="muted">ClasificaciÃ³n de TesorerÃ­a</span>
             <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
               <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.88rem" }}>
-                ✓ {totalConfirmed} confirmados
+                âœ“ {totalConfirmed} confirmados
               </span>
               <span style={{ color: "#b45309", fontWeight: 700, fontSize: "0.88rem" }}>
-                ⏳ {totalPending + totalSuggested} pendientes
+                â³ {totalPending + totalSuggested} pendientes
               </span>
             </div>
           </div>
@@ -572,29 +573,29 @@ export function FinanceAccountsPage() {
 
             {/* Classification Status Filter */}
             <label style={{ flex: "0 1 180px" }}>
-              Estado / Clasificación
+              Estado / ClasificaciÃ³n
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
               >
-                <option value="all">🔍 Todos ({movements.length})</option>
-                <option value="Pending">⏳ Pendientes ({totalPending})</option>
-                <option value="Suggested">🟡 Sugeridos ({totalSuggested})</option>
-                <option value="Confirmed">✓ Confirmados ({totalConfirmed})</option>
+                <option value="all">ðŸ” Todos ({movements.length})</option>
+                <option value="Pending">â³ Pendientes ({totalPending})</option>
+                <option value="Suggested">ðŸŸ¡ Sugeridos ({totalSuggested})</option>
+                <option value="Confirmed">âœ“ Confirmados ({totalConfirmed})</option>
               </select>
             </label>
 
             {/* Concept Filter */}
             {uniqueConcepts.length > 0 && (
               <label style={{ flex: "0 1 200px" }}>
-                Concepto de Tesorería
+                Concepto de TesorerÃ­a
                 <select
                   value={conceptFilter}
                   onChange={(e) => setConceptFilter(e.target.value)}
                   style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
                 >
-                  <option value="all">🏷️ Todos los conceptos</option>
+                  <option value="all">ðŸ·ï¸ Todos los conceptos</option>
                   {uniqueConcepts.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -640,9 +641,9 @@ export function FinanceAccountsPage() {
                 type="button"
                 className="btn btn-outline compact"
                 onClick={() => setDatePreset("last30Days")}
-                title="Últimos 30 días"
+                title="Ãšltimos 30 dÃ­as"
               >
-                30 días
+                30 dÃ­as
               </button>
               <button
                 type="button"
@@ -673,7 +674,7 @@ export function FinanceAccountsPage() {
                 disabled={filteredMovements.length === 0}
                 style={{ fontWeight: 600 }}
               >
-                📥 Descargar Excel
+                ðŸ“¥ Descargar Excel
               </button>
             </div>
           </div>
@@ -685,12 +686,12 @@ export function FinanceAccountsPage() {
                   <th>Fecha</th>
                   <th>Movimiento / Leyenda</th>
                   <th>Titular / Contraparte</th>
-                  <th>Concepto Tesorería</th>
+                  <th>Concepto TesorerÃ­a</th>
                   <th>Estado</th>
                   <th>Tipo</th>
                   <th style={{ textAlign: "right" }}>Importe</th>
                   <th style={{ textAlign: "right" }}>Saldo sistema</th>
-                  <th style={{ textAlign: "center", width: "160px" }}>Acción Clasificar</th>
+                  <th style={{ textAlign: "center", width: "160px" }}>AcciÃ³n Clasificar</th>
                 </tr>
               </thead>
               <tbody>
@@ -725,7 +726,7 @@ export function FinanceAccountsPage() {
                         <td>
                           <strong>{mainDesc}</strong>
                           <small className="muted" style={{ display: "block", fontSize: "0.76rem" }}>
-                            {x.externalReference ? `Comprobante N° ${x.externalReference}` : extra || "Sin comprobante"}
+                            {x.externalReference ? `Comprobante NÂ° ${x.externalReference}` : extra || "Sin comprobante"}
                           </small>
                         </td>
                         <td>
@@ -741,13 +742,13 @@ export function FinanceAccountsPage() {
                               )}
                             </div>
                           ) : (
-                            <span className="muted" style={{ fontSize: "0.8rem" }}>—</span>
+                            <span className="muted" style={{ fontSize: "0.8rem" }}>â€”</span>
                           )}
                         </td>
                         <td>
                           {isConfirmed ? (
                             <span style={{ fontWeight: 600, color: "#065f46" }}>
-                              🏷️ {x.conceptName || "Identificado"}
+                              ðŸ·ï¸ {x.conceptName || "Identificado"}
                             </span>
                           ) : (
                             <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
@@ -765,7 +766,7 @@ export function FinanceAccountsPage() {
                                   maxWidth: "180px"
                                 }}
                               >
-                                <option value="">⏳ Sin identificar</option>
+                                <option value="">â³ Sin identificar</option>
                                 {concepts.map((c) => (
                                   <option key={c.id} value={c.id}>
                                     {c.name}
@@ -788,7 +789,7 @@ export function FinanceAccountsPage() {
                                 fontSize: "0.78rem"
                               }}
                             >
-                              ✓ Confirmado
+                              âœ“ Confirmado
                             </span>
                           ) : isSuggested ? (
                             <span
@@ -802,7 +803,7 @@ export function FinanceAccountsPage() {
                                 fontSize: "0.78rem"
                               }}
                             >
-                              🟡 Sugerido
+                              ðŸŸ¡ Sugerido
                             </span>
                           ) : (
                             <span
@@ -816,7 +817,7 @@ export function FinanceAccountsPage() {
                                 fontSize: "0.78rem"
                               }}
                             >
-                              ⏳ Pendiente
+                              â³ Pendiente
                             </span>
                           )}
                         </td>
@@ -839,7 +840,7 @@ export function FinanceAccountsPage() {
                             color: x.kind === "Credit" ? "#059669" : "#dc2626"
                           }}
                         >
-                          {x.kind === "Credit" ? "+" : "−"}
+                          {x.kind === "Credit" ? "+" : "âˆ’"}
                           {money(x.amount, x.currency)}
                         </td>
                         <td
@@ -869,9 +870,9 @@ export function FinanceAccountsPage() {
                                   fontWeight: 700,
                                   borderRadius: "6px"
                                 }}
-                                title="Confirmar clasificación de este movimiento"
+                                title="Confirmar clasificaciÃ³n de este movimiento"
                               >
-                                {actionBusy === x.id ? "..." : "✓ Confirmar"}
+                                {actionBusy === x.id ? "..." : "âœ“ Confirmar"}
                               </button>
                               <button
                                 type="button"
@@ -882,9 +883,9 @@ export function FinanceAccountsPage() {
                                   padding: "3px 6px",
                                   borderRadius: "6px"
                                 }}
-                                title="Abrir opciones avanzadas o crear regla automática"
+                                title="Abrir opciones avanzadas o crear regla automÃ¡tica"
                               >
-                                ⚙
+                                âš™
                               </button>
                             </div>
                           ) : (
@@ -899,7 +900,7 @@ export function FinanceAccountsPage() {
                               }}
                               title="Cambiar concepto o crear regla"
                             >
-                              ✏️ Modificar
+                              âœï¸ Modificar
                             </button>
                           )}
                         </td>
@@ -912,19 +913,19 @@ export function FinanceAccountsPage() {
           </div>
         </section>
 
-        {/* Modal de Importación / Actualización de Extracto CSV */}
+        {/* Modal de ImportaciÃ³n / ActualizaciÃ³n de Extracto CSV */}
         {showImportModal && (
           <div className="modal-backdrop">
             <div className="modal-card card pad" style={{ maxWidth: 780, maxHeight: "90vh", overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <h3 style={{ margin: 0 }}>📤 Importar o Actualizar Extracto Bancario ({selectedAccount.name})</h3>
+                <h3 style={{ margin: 0 }}>ðŸ“¤ Importar o Actualizar Extracto Bancario ({selectedAccount.name})</h3>
                 <button type="button" className="btn ghost compact" onClick={() => setShowImportModal(false)}>
-                  ✕
+                  âœ•
                 </button>
               </div>
 
               <p className="muted" style={{ fontSize: "0.85rem", marginTop: 0 }}>
-                Seleccioná el archivo <strong>CSV exportado de Banco Galicia / Santander / Macro / etc.</strong> o pegá el contenido. El sistema extraerá automáticamente los <strong>nombres de los titulares, CUITs y motivos</strong>, y actualizará los movimientos existentes.
+                SeleccionÃ¡ el archivo <strong>CSV exportado de Banco Galicia / Santander / Macro / etc.</strong> o pegÃ¡ el contenido. El sistema extraerÃ¡ automÃ¡ticamente los <strong>nombres de los titulares, CUITs y motivos</strong>, y actualizarÃ¡ los movimientos existentes.
               </p>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
@@ -955,7 +956,7 @@ export function FinanceAccountsPage() {
                         }
                       }
                     }}
-                    placeholder="Pegar filas del CSV aquí..."
+                    placeholder="Pegar filas del CSV aquÃ­..."
                     style={{ width: "100%", padding: "8px", fontFamily: "monospace", fontSize: "0.8rem", borderRadius: 6, border: "1px solid var(--surface-border)" }}
                   />
                 </label>
@@ -998,7 +999,7 @@ export function FinanceAccountsPage() {
                   </div>
                   {importPreview.length > 15 && (
                     <small className="muted" style={{ display: "block", marginTop: 4 }}>
-                      ... y {importPreview.length - 15} filas más.
+                      ... y {importPreview.length - 15} filas mÃ¡s.
                     </small>
                   )}
                 </div>
@@ -1015,25 +1016,25 @@ export function FinanceAccountsPage() {
                   onClick={handleConfirmImport}
                   style={{ fontWeight: 700 }}
                 >
-                  {importLoading ? "Procesando Extracto..." : "✓ Confirmar e Importar / Actualizar"}
+                  {importLoading ? "Procesando Extracto..." : "âœ“ Confirmar e Importar / Actualizar"}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Modal de Clasificación Avanzada & Reglas */}
+        {/* Modal de ClasificaciÃ³n Avanzada & Reglas */}
         {modalMovement && (
           <div className="modal-backdrop">
             <div className="modal-card card pad" style={{ maxWidth: 500 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <h3 style={{ margin: 0 }}>🏷️ Clasificar Movimiento Bancario</h3>
+                <h3 style={{ margin: 0 }}>ðŸ·ï¸ Clasificar Movimiento Bancario</h3>
                 <button
                   type="button"
                   className="btn ghost compact"
                   onClick={() => setModalMovement(null)}
                 >
-                  ✕
+                  âœ•
                 </button>
               </div>
 
@@ -1043,14 +1044,14 @@ export function FinanceAccountsPage() {
                 <div>
                   <strong>Importe:</strong>{" "}
                   <span style={{ color: modalMovement.kind === "Credit" ? "#059669" : "#dc2626", fontWeight: 700 }}>
-                    {modalMovement.kind === "Credit" ? "+" : "−"}{money(modalMovement.amount, modalMovement.currency)}
+                    {modalMovement.kind === "Credit" ? "+" : "âˆ’"}{money(modalMovement.amount, modalMovement.currency)}
                   </span>
                 </div>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <label style={{ display: "block" }}>
-                  <strong>Concepto de Tesorería *</strong>
+                  <strong>Concepto de TesorerÃ­a *</strong>
                   <select
                     value={modalConceptId}
                     onChange={(e) => setModalConceptId(e.target.value)}
@@ -1071,7 +1072,7 @@ export function FinanceAccountsPage() {
                     checked={modalCreateRule}
                     onChange={(e) => setModalCreateRule(e.target.checked)}
                   />
-                  <span>Crear regla para clasificar automáticamente en el futuro</span>
+                  <span>Crear regla para clasificar automÃ¡ticamente en el futuro</span>
                 </label>
 
                 {modalCreateRule && (
@@ -1086,7 +1087,7 @@ export function FinanceAccountsPage() {
                       />
                     </label>
                     <small className="muted" style={{ display: "block", marginTop: "4px" }}>
-                      Cada vez que un extracto contenga este texto en <em>{selectedAccount.name}</em>, se sugerirá este concepto automáticamente.
+                      Cada vez que un extracto contenga este texto en <em>{selectedAccount.name}</em>, se sugerirÃ¡ este concepto automÃ¡ticamente.
                     </small>
                   </div>
                 )}
@@ -1107,7 +1108,7 @@ export function FinanceAccountsPage() {
                   onClick={handleSaveModalClassification}
                   style={{ fontWeight: 700 }}
                 >
-                  {actionBusy === modalMovement.id ? "Guardando..." : "✓ Confirmar Clasificación"}
+                  {actionBusy === modalMovement.id ? "Guardando..." : "âœ“ Confirmar ClasificaciÃ³n"}
                 </button>
               </div>
             </div>
@@ -1121,9 +1122,9 @@ export function FinanceAccountsPage() {
     <div className="page-wide">
       <div className="page-head">
         <div>
-          <span className="eyebrow">FINANZAS · TESORERÍA</span>
+          <span className="eyebrow">FINANZAS Â· TESORERÃA</span>
           <h1>Bancos y Cajas</h1>
-          <p className="muted">Seleccioná una cuenta para ver el detalle, importar extractos y clasificar movimientos.</p>
+          <p className="muted">SeleccionÃ¡ una cuenta para ver el detalle, importar extractos y clasificar movimientos.</p>
         </div>
       </div>
       {error && <div className="alert">{error}</div>}
@@ -1131,15 +1132,15 @@ export function FinanceAccountsPage() {
         {accounts.map((x) => (
           <button className="account-card" key={x.id} onClick={() => void openAccount(x)}>
             <div className="account-card-title">
-              <span className="account-icon">▦</span>
+              <span className="account-icon">â–¦</span>
               <strong>{x.name}</strong>
             </div>
             <span className="muted">
-              {x.type} · {x.currency}
+              {x.type} Â· {x.currency}
             </span>
             <div className="account-card-footer">
               <strong className={x.balance < 0 ? "negative" : ""}>{money(x.balance, x.currency)}</strong>
-              <span>Ver cuenta →</span>
+              <span>Ver cuenta â†’</span>
             </div>
           </button>
         ))}
@@ -1147,3 +1148,4 @@ export function FinanceAccountsPage() {
     </div>
   );
 }
+

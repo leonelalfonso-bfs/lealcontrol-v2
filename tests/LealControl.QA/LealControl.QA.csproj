@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Host\LealControl.Api\LealControl.Api.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\LealControl.BuildingBlocks\LealControl.BuildingBlocks.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Crm\LealControl.Modules.Crm.Domain\LealControl.Modules.Crm.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Crm\LealControl.Modules.Crm.Application\LealControl.Modules.Crm.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Crm\LealControl.Modules.Crm.Infrastructure\LealControl.Modules.Crm.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Sales\LealControl.Modules.Sales.Domain\LealControl.Modules.Sales.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Sales\LealControl.Modules.Sales.Application\LealControl.Modules.Sales.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Sales\LealControl.Modules.Sales.Infrastructure\LealControl.Modules.Sales.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Finance\LealControl.Modules.Finance.Infrastructure\LealControl.Modules.Finance.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Accounting\LealControl.Modules.Accounting.Infrastructure\LealControl.Modules.Accounting.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

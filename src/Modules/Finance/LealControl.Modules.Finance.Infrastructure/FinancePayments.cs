@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -174,8 +174,19 @@ public static class FinancePayments
                     CreatedAtUtc = DateTime.UtcNow
                 });
 
-                // Bank Transfer or Cash Outflow
-                if ((line.Method == "BankTransfer" || line.Method == "Cash") && line.AccountId.HasValue)
+                                // If it's a bank movement reconciliation
+                if (line.BankMovementId.HasValue)
+                {
+                    var movement = await db.Movements.SingleOrDefaultAsync(x => x.Id == line.BankMovementId.Value && x.TenantId == tenantId, ct);
+                    if (movement != null)
+                    {
+                        movement.ReconciliationStatus = FinancialReconciliationStatus.Reconciled;
+                        movement.LinkedEntityType = "PaymentOrder";
+                        movement.LinkedEntityId = orderId;
+                    }
+                }
+                // Else if bank or cash without pre-existing movement: create debit movement
+                else if ((line.Method == "BankTransfer" || line.Method == "Cash") && line.AccountId.HasValue)
                 {
                     var account = await db.Accounts.SingleOrDefaultAsync(x => x.Id == line.AccountId.Value && x.TenantId == tenantId && x.IsActive, ct);
                     if (account != null)
@@ -245,3 +256,4 @@ public static class FinancePayments
         return endpoints;
     }
 }
+

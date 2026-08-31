@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { CustomerSummary, PurchaseInvoice } from "../api/types";
@@ -38,11 +38,17 @@ export function PaymentOrderFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialSupplierId = searchParams.get("supplierId");
+  const initialMovementId = searchParams.get("movementId");
+  const initialAccountId = searchParams.get("accountId");
+  const initialAmount = searchParams.get("amount");
 
   const [suppliers, setSuppliers] = useState<CustomerSummary[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>(initialSupplierId || "");
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [availableCheques, setAvailableCheques] = useState<any[]>([]);
+  const [availableMovements, setAvailableMovements] = useState<any[]>([]);
+  const [movementConceptFilter, setMovementConceptFilter] = useState<string>("all");
+  const [concepts, setConcepts] = useState<any[]>([]);
   const [purchaseInvoices, setPurchaseInvoices] = useState<PurchaseInvoice[]>([]);
 
   const [paymentDate, setPaymentDate] = useState<string>(
@@ -61,16 +67,34 @@ export function PaymentOrderFormPage() {
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const loadMovementsForAccount = async (accountId?: string) => {
+    try {
+      const movs = await api.listPaymentAvailableMovements(accountId || undefined);
+      setAvailableMovements(movs || []);
+    } catch {
+      setAvailableMovements([]);
+    }
+  };
+
+  const filteredAvailableMovements = useMemo(() => {
+    return availableMovements.filter((m) => {
+      if (movementConceptFilter === "all") return true;
+      if (movementConceptFilter === "unclassified") return !m.conceptId;
+      return m.conceptId === movementConceptFilter;
+    });
+  }, [availableMovements, movementConceptFilter]);
+
   // Load initial data
   useEffect(() => {
     async function init() {
       setLoading(true);
       try {
-        const [dirRes, accRes, chqRes, invRes] = await Promise.all([
+        const [dirRes, accRes, chqRes, invRes, concRes] = await Promise.all([
           api.listCustomers("", ""),
           api.listFinanceAccounts().catch(() => [] as Account[]),
           api.listReceivedCheques().catch(() => [] as any[]),
-          api.listPurchaseInvoices("", "").catch(() => [] as PurchaseInvoice[])
+          api.listPurchaseInvoices("", "").catch(() => [] as PurchaseInvoice[]),
+          api.listFinanceConcepts().catch(() => [] as any[])
         ]);
 
         const supps = (dirRes.items || []).filter((d) => d.isSupplier);
@@ -82,20 +106,37 @@ export function PaymentOrderFormPage() {
           )
         );
         setPurchaseInvoices(invRes || []);
+        setConcepts((concRes || []).filter((c: any) => c.isActive));
 
-        // Initial default line: Bank Transfer with first active bank account
-        const firstBank = (accRes || []).find((a) => a.isActive);
-        if (firstBank) {
+                if (initialMovementId) {
+          const parsedAmount = initialAmount ? parseFloat(initialAmount) || 0 : 0;
           setLines([
             {
               id: Math.random().toString(36).substring(2, 9),
-              method: String(firstBank.type) === "Cash" || String(firstBank.type) === "1" ? "Cash" : "BankTransfer",
-              amount: 0,
-              currency: firstBank.currency || "ARS",
-              accountId: firstBank.id,
+              method: "BankTransfer",
+              amount: parsedAmount,
+              currency: "ARS",
+              accountId: initialAccountId || undefined,
+              bankMovementId: initialMovementId,
               notes: ""
             }
           ]);
+          void loadMovementsForAccount(initialAccountId || undefined);
+        } else {
+          const firstBank = (accRes || []).find((a) => a.isActive);
+          if (firstBank) {
+            setLines([
+              {
+                id: Math.random().toString(36).substring(2, 9),
+                method: String(firstBank.type) === "Cash" || String(firstBank.type) === "1" ? "Cash" : "BankTransfer",
+                amount: 0,
+                currency: firstBank.currency || "ARS",
+                accountId: firstBank.id,
+                notes: ""
+              }
+            ]);
+            void loadMovementsForAccount(firstBank.id);
+          }
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Error al cargar datos maestros.");
@@ -206,8 +247,19 @@ export function PaymentOrderFormPage() {
     setLines((prev) => prev.filter((l) => l.id !== id));
   };
 
-  const updateLine = (id: string, patch: Partial<PaymentLine>) => {
-    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+    const updateLine = (id: string, patch: Partial<PaymentLine>) => {
+    setLines((prev) =>
+      prev.map((l) => {
+        if (l.id === id) {
+          const updated = { ...l, ...patch };
+          if (patch.accountId && (updated.method === "BankTransfer" || updated.method === "Cash")) {
+            void loadMovementsForAccount(patch.accountId);
+          }
+          return updated;
+        }
+        return l;
+      })
+    );
   };
 
   // Submit Handler
@@ -275,18 +327,18 @@ export function PaymentOrderFormPage() {
       {/* Header */}
       <div className="page-head">
         <div>
-          <span className="eyebrow">FINANZAS · EMISIÓN DE PAGOS</span>
+          <span className="eyebrow">FINANZAS Â· EMISIÃ“N DE PAGOS</span>
           <h1>Nueva Orden de Pago a Proveedor</h1>
           <p className="muted">
-            Imputación de facturas de compra y desglose de medios de pago (transferencias, cheques y retenciones).
+            ImputaciÃ³n de facturas de compra y desglose de medios de pago (transferencias, cheques y retenciones).
           </p>
         </div>
         <div className="toolbar" style={{ gap: 10 }}>
           <Link className="btn btn-outline" to="/finanzas/pagos">
-            ← Cancelar / Volver
+            â† Cancelar / Volver
           </Link>
           <button className="btn" onClick={() => void handleSave()} disabled={saving || loading}>
-            {saving ? "Emitiendo..." : "💾 Emitir Orden de Pago"}
+            {saving ? "Emitiendo..." : "ðŸ’¾ Emitir Orden de Pago"}
           </button>
         </div>
       </div>
@@ -317,7 +369,7 @@ export function PaymentOrderFormPage() {
               </label>
 
               <label>
-                Fecha de Emisión / Pago
+                Fecha de EmisiÃ³n / Pago
                 <input
                   type="date"
                   value={paymentDate}
@@ -330,7 +382,7 @@ export function PaymentOrderFormPage() {
                 <input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Ej.: Cancelación factura mensual de insumos de taller..."
+                  placeholder="Ej.: CancelaciÃ³n factura mensual de insumos de taller..."
                 />
               </label>
             </div>
@@ -349,13 +401,13 @@ export function PaymentOrderFormPage() {
                 }}
               >
                 <span>
-                  <strong>Razón Social:</strong> {selectedSupplier.legalName || selectedSupplier.tradeName}
+                  <strong>RazÃ³n Social:</strong> {selectedSupplier.legalName || selectedSupplier.tradeName}
                 </span>
                 <span>
                   <strong>CUIT:</strong> {selectedSupplier.documentNumber || "No informado"}
                 </span>
                 <span>
-                  <strong>Condición IVA:</strong> {selectedSupplier.taxCondition || "Resp. Inscripto"}
+                  <strong>CondiciÃ³n IVA:</strong> {selectedSupplier.taxCondition || "Resp. Inscripto"}
                 </span>
               </div>
             )}
@@ -376,7 +428,7 @@ export function PaymentOrderFormPage() {
                   className="btn btn-outline btn-sm"
                   onClick={handleSelectAllInvoices}
                 >
-                  ✓ Imputar todas
+                  âœ“ Imputar todas
                 </button>
               )}
             </div>
@@ -391,7 +443,7 @@ export function PaymentOrderFormPage() {
                   Este proveedor no tiene facturas de compra cargadas en el sistema.
                 </p>
                 <small className="muted">
-                  Podés emitir la Orden de Pago como <strong>Pago a Cuenta / Anticipo</strong> cargando los medios de pago a la derecha.
+                  PodÃ©s emitir la Orden de Pago como <strong>Pago a Cuenta / Anticipo</strong> cargando los medios de pago a la derecha.
                 </small>
               </div>
             ) : (
@@ -469,7 +521,7 @@ export function PaymentOrderFormPage() {
               <div>
                 <h2 style={{ margin: 0, fontSize: "1.1rem" }}>3. Medios de Pago y Valores</h2>
                 <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-                  Efectivo, transferencias, cheques y certificados de retención.
+                  Efectivo, transferencias, cheques y certificados de retenciÃ³n.
                 </p>
               </div>
               <div className="toolbar" style={{ gap: 6 }}>
@@ -492,14 +544,14 @@ export function PaymentOrderFormPage() {
                   className="btn btn-outline btn-sm"
                   onClick={() => addLine("Retention")}
                 >
-                  + Retención
+                  + RetenciÃ³n
                 </button>
               </div>
             </div>
 
             {lines.length === 0 ? (
               <p className="muted" style={{ textAlign: "center", padding: 20 }}>
-                No ha añadido medios de pago. Haga clic en los botones superiores para agregar uno.
+                No ha aÃ±adido medios de pago. Haga clic en los botones superiores para agregar uno.
               </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -528,7 +580,7 @@ export function PaymentOrderFormPage() {
                       }}
                       title="Eliminar este medio de pago"
                     >
-                      ✕
+                      âœ•
                     </button>
 
                     <div className="grid-2" style={{ gap: 10 }}>
@@ -542,11 +594,11 @@ export function PaymentOrderFormPage() {
                             })
                           }
                         >
-                          <option value="BankTransfer">🏦 Transferencia Bancaria</option>
-                          <option value="Cash">💵 Efectivo (Caja)</option>
-                          <option value="ChequeThirdParty">📜 Cheque de Terceros (Endoso)</option>
-                          <option value="ChequeOwn">✍️ Cheque Propio Emitido</option>
-                          <option value="Retention">🏛️ Retención Practicada</option>
+                          <option value="BankTransfer">ðŸ¦ Transferencia Bancaria</option>
+                          <option value="Cash">ðŸ’µ Efectivo (Caja)</option>
+                          <option value="ChequeThirdParty">ðŸ“œ Cheque de Terceros (Endoso)</option>
+                          <option value="ChequeOwn">âœï¸ Cheque Propio Emitido</option>
+                          <option value="Retention">ðŸ›ï¸ RetenciÃ³n Practicada</option>
                         </select>
                       </label>
 
@@ -591,7 +643,7 @@ export function PaymentOrderFormPage() {
                                 chequeId: e.target.value,
                                 amount: chq ? chq.amount : line.amount,
                                 notes: chq
-                                  ? `Cheque N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${new Date(chq.dueDateUtc).toLocaleDateString("es-AR")}`
+                                  ? `Cheque NÂ° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${new Date(chq.dueDateUtc).toLocaleDateString("es-AR")}`
                                   : ""
                               });
                             }}
@@ -599,7 +651,7 @@ export function PaymentOrderFormPage() {
                             <option value="">-- Elegir cheque disponible en cartera --</option>
                             {availableCheques.map((c) => (
                               <option key={c.id} value={c.id}>
-                                N° {c.checkNumber} | {c.bankName || "Banco"} | Venc:{" "}
+                                NÂ° {c.checkNumber} | {c.bankName || "Banco"} | Venc:{" "}
                                 {new Date(c.dueDateUtc).toLocaleDateString("es-AR")} |{" "}
                                 {money(c.amount, c.currency)}
                               </option>
@@ -611,7 +663,7 @@ export function PaymentOrderFormPage() {
                       {line.method === "Retention" && (
                         <>
                           <label>
-                            Tipo de Retención
+                            Tipo de RetenciÃ³n
                             <select
                               value={line.retentionType || "Ganancias"}
                               onChange={(e) =>
@@ -626,7 +678,7 @@ export function PaymentOrderFormPage() {
                           </label>
 
                           <label>
-                            N° Certificado Retención
+                            NÂ° Certificado RetenciÃ³n
                             <input
                               value={line.retentionCertificate || ""}
                               onChange={(e) =>
@@ -643,7 +695,7 @@ export function PaymentOrderFormPage() {
                         <input
                           value={line.notes || ""}
                           onChange={(e) => updateLine(line.id, { notes: e.target.value })}
-                          placeholder="N° de transferencia, banco o nota..."
+                          placeholder="NÂ° de transferencia, banco o nota..."
                         />
                       </label>
                     </div>
@@ -698,7 +750,7 @@ export function PaymentOrderFormPage() {
                         fontSize: "0.88rem"
                       }}
                     >
-                      ✓ Orden Balanceada: Imputación y Medios de Pago coinciden al 100%
+                      âœ“ Orden Balanceada: ImputaciÃ³n y Medios de Pago coinciden al 100%
                     </div>
                   ) : (
                     <div
@@ -713,7 +765,7 @@ export function PaymentOrderFormPage() {
                         fontSize: "0.88rem"
                       }}
                     >
-                      ⚠️ Desbalance: {difference > 0 ? "Sobran" : "Faltan"} {money(Math.abs(difference))} en medios de pago
+                      âš ï¸ Desbalance: {difference > 0 ? "Sobran" : "Faltan"} {money(Math.abs(difference))} en medios de pago
                     </div>
                   )}
                 </div>
@@ -728,7 +780,7 @@ export function PaymentOrderFormPage() {
                 disabled={saving || loading || !selectedSupplierId}
                 onClick={() => void handleSave()}
               >
-                {saving ? "Procesando Orden de Pago..." : "💾 Emitir Orden de Pago"}
+                {saving ? "Procesando Orden de Pago..." : "ðŸ’¾ Emitir Orden de Pago"}
               </button>
             </div>
           </section>
@@ -737,3 +789,5 @@ export function PaymentOrderFormPage() {
     </div>
   );
 }
+
+
