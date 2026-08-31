@@ -1,5 +1,7 @@
+using System.IO;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using LealControl.BuildingBlocks.Time;
 using LealControl.Modules.Crm.Infrastructure;
 using LealControl.Modules.Crm.Infrastructure.Http;
@@ -19,6 +21,8 @@ using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Api.SuperAdmin;
 using LealControl.Api.Automation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
@@ -95,6 +99,42 @@ try
     });
     builder.Services.AddAuthorization();
 
+    // Persistencia de Llaves Criptográficas (Data Protection)
+    var keysFolder = builder.Configuration["DataProtection:KeysFolder"]
+        ?? Environment.GetEnvironmentVariable("DATAPROTECTION_KEYS_FOLDER")
+        ?? (builder.Environment.IsDevelopment()
+            ? Path.Combine(Path.GetTempPath(), "lealcontrol-dataprotection-keys")
+            : "/root/.aspnet/DataProtection-Keys");
+
+    try
+    {
+        if (!Directory.Exists(keysFolder)) Directory.CreateDirectory(keysFolder);
+        builder.Services.AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
+            .SetApplicationName("LealControl");
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "No se pudo inicializar la persistencia de DataProtection en {Folder}. Se utilizará el proveedor en memoria.", keysFolder);
+    }
+
+    // Rate Limiting para protección contra fuerza bruta
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.AddPolicy("auth-policy", httpContext =>
+        {
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
+        });
+    });
+
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {
@@ -150,6 +190,7 @@ try
 
     app.UseSerilogRequestLogging();
     app.UseCors("web");
+    app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();
 

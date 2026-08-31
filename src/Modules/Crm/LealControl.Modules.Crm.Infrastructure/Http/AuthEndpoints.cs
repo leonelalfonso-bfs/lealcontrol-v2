@@ -161,7 +161,7 @@ public static class AuthEndpoints
             }
 
             return Results.BadRequest(new { message = "Usuario no encontrado o inactivo." });
-        });
+        }).RequireRateLimiting("auth-policy");
 
         // 2. Register new Tenant from scratch
         auth.MapPost("/register-tenant", async ([FromBody] RegisterTenantRequest req, CrmDbContext db, CancellationToken ct) =>
@@ -216,7 +216,7 @@ public static class AuthEndpoints
                 new TenantSummaryDto(newTenantId.Value, companyName, companyName, docNumber),
                 availableTenants
             ));
-        });
+        }).RequireRateLimiting("auth-policy");
 
         // 3. Me
         auth.MapGet("/me", async (HttpContext http, ITenantContext tenantContext, CrmDbContext db, CancellationToken ct) =>
@@ -304,7 +304,7 @@ public static class AuthEndpoints
                 new TenantSummaryDto(targetTenantId.Value, tenantSettings.LegalName, tenantSettings.TradeName, tenantSettings.DocumentNumber),
                 availableTenants
             ));
-        });
+        }).RequireRateLimiting("auth-policy");
 
         // 5. List all registered Tenants
         auth.MapGet("/tenants", async (ITenantContext tenantContext, CrmDbContext db, CancellationToken ct) =>

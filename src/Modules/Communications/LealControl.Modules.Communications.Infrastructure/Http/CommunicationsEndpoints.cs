@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -727,6 +729,23 @@ public static class CommunicationsEndpoints
         endpoints.MapPost("/api/communications/whatsapp/webhook", async (HttpRequest request, CommunicationsDbContext db, WhatsAppGatewayService waService, ConversationService conversationService, CancellationToken ct) => {
             try
             {
+                var expectedKey = Environment.GetEnvironmentVariable("WHATSAPP_WEBHOOK_SECRET")
+                    ?? Environment.GetEnvironmentVariable("WHATSAPP_GATEWAY_APIKEY");
+                var receivedKey = request.Headers["apikey"].ToString();
+                if (string.IsNullOrWhiteSpace(receivedKey)) receivedKey = request.Headers["x-api-key"].ToString();
+                if (string.IsNullOrWhiteSpace(receivedKey)) receivedKey = request.Headers["X-Webhook-Secret"].ToString();
+                if (string.IsNullOrWhiteSpace(receivedKey)) receivedKey = request.Query["apikey"].ToString();
+
+                if (!string.IsNullOrWhiteSpace(expectedKey) && !string.IsNullOrWhiteSpace(receivedKey))
+                {
+                    var expBytes = Encoding.UTF8.GetBytes(expectedKey);
+                    var recBytes = Encoding.UTF8.GetBytes(receivedKey);
+                    if (!CryptographicOperations.FixedTimeEquals(expBytes, recBytes))
+                    {
+                        return Results.Unauthorized();
+                    }
+                }
+
                 using var reader = new StreamReader(request.Body);
                 var body = await reader.ReadToEndAsync(ct);
                 if (string.IsNullOrWhiteSpace(body)) return Results.Ok(new { status = "empty" });
@@ -1142,9 +1161,20 @@ public static class CommunicationsEndpoints
             return Results.Ok(new { success = true, messageId = sendRes.MessageId });
         });
 
-        endpoints.MapGet("/api/communications/public/media/{id:guid}", async (Guid id, CommunicationsDbContext db, CancellationToken ct) => {
+        endpoints.MapGet("/api/communications/public/media/{id:guid}", async (Guid id, HttpContext context, CommunicationsDbContext db, CancellationToken ct) => {
             var media = await db.StoredMedia.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
             if (media is null) return Results.NotFound();
+
+            context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+            context.Response.Headers.Append("Content-Security-Policy", "sandbox");
+
+            var ctSafe = media.ContentType.ToLowerInvariant();
+            var isSafeInline = ctSafe.StartsWith("image/") || ctSafe.StartsWith("audio/") || ctSafe.StartsWith("video/") || ctSafe == "application/pdf";
+            if (!isSafeInline)
+            {
+                context.Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{Uri.EscapeDataString(media.FileName)}\"");
+            }
+
             return Results.File(media.Data, media.ContentType, media.FileName);
         }).AllowAnonymous();
 
@@ -1177,6 +1207,21 @@ public static class CommunicationsEndpoints
                 using var reader = new StreamReader(request.Body);
                 var body = await reader.ReadToEndAsync(ct);
                 if (string.IsNullOrWhiteSpace(body)) return Results.Ok("EMPTY");
+
+                // Validar firma criptográfica X-Hub-Signature-256 de Meta si el AppSecret está configurado
+                var appSecret = Environment.GetEnvironmentVariable("META_APP_SECRET");
+                var sigHeader = request.Headers["X-Hub-Signature-256"].ToString();
+                if (!string.IsNullOrWhiteSpace(appSecret) && !string.IsNullOrWhiteSpace(sigHeader))
+                {
+                    using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(appSecret));
+                    var hash = "sha256=" + Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes(body))).ToLowerInvariant();
+                    var expBytes = Encoding.UTF8.GetBytes(hash);
+                    var recBytes = Encoding.UTF8.GetBytes(sigHeader);
+                    if (!CryptographicOperations.FixedTimeEquals(expBytes, recBytes))
+                    {
+                        return Results.Unauthorized();
+                    }
+                }
 
                 using var doc = JsonDocument.Parse(body);
                 var root = doc.RootElement;

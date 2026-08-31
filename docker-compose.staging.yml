@@ -22,6 +22,8 @@ services:
       WhatsAppGateway__Url: ${WHATSAPP_GATEWAY_URL:-http://evolution-api-evolution-api-1:8080}
       WhatsAppGateway__ApiKey: ${WHATSAPP_GATEWAY_APIKEY:-c0cffb77a0e57afb8a2799b3008d9b032615825abe964eae}
     depends_on: [postgres]
+    volumes:
+      - lealcontrol_staging_dp_keys:/root/.aspnet/DataProtection-Keys
     ports: ["127.0.0.1:5210:8080"]
     networks: [staging, evolution_net]
 
@@ -41,3 +43,4 @@ networks:
 
 volumes:
   lealcontrol_staging_pg: { name: lealcontrol-staging-pg }
+  lealcontrol_staging_dp_keys: { name: lealcontrol-staging-dp-keys }
