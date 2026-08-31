@@ -622,43 +622,93 @@ public static class AccountingEndpoints
                 CreatedAtUtc = DateTime.UtcNow
             };
 
-            entry.Lines.Add(new JournalEntryLine
+            var isCreditNote = req.InvoiceNumber.Contains("NC") || req.InvoiceNumber.StartsWith("NC");
+            if (isCreditNote)
             {
-                JournalEntryId = entry.Id,
-                TenantId = tenantId,
-                AccountId = deudores.Id,
-                AccountCode = deudores.Code,
-                AccountName = deudores.Name,
-                Debit = req.TotalAmount,
-                Credit = 0,
-                Memo = $"Crédito cliente {req.CustomerName}"
-            });
+                entry.Concept = $"Nota de Crédito {req.InvoiceNumber} - {req.CustomerName}";
 
-            entry.Lines.Add(new JournalEntryLine
-            {
-                JournalEntryId = entry.Id,
-                TenantId = tenantId,
-                AccountId = ventas.Id,
-                AccountCode = ventas.Code,
-                AccountName = ventas.Name,
-                Debit = 0,
-                Credit = req.NetAmount,
-                Memo = $"Ingreso ventas netas {req.InvoiceNumber}"
-            });
+                // Debe: Ventas (reversión ingreso neto)
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    JournalEntryId = entry.Id,
+                    TenantId = tenantId,
+                    AccountId = ventas.Id,
+                    AccountCode = ventas.Code,
+                    AccountName = ventas.Name,
+                    Debit = req.NetAmount,
+                    Credit = 0,
+                    Memo = $"Reversión ventas netas s/{req.InvoiceNumber}"
+                });
 
-            if (req.VatAmount > 0)
+                // Debe: IVA Débito Fiscal (reversión débito fiscal)
+                if (req.VatAmount > 0)
+                {
+                    entry.Lines.Add(new JournalEntryLine
+                    {
+                        JournalEntryId = entry.Id,
+                        TenantId = tenantId,
+                        AccountId = ivaDebito.Id,
+                        AccountCode = ivaDebito.Code,
+                        AccountName = ivaDebito.Name,
+                        Debit = req.VatAmount,
+                        Credit = 0,
+                        Memo = $"Reversión IVA Débito Fiscal s/{req.InvoiceNumber}"
+                    });
+                }
+
+                // Haber: Deudores por Ventas (disminución saldo cliente)
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    JournalEntryId = entry.Id,
+                    TenantId = tenantId,
+                    AccountId = deudores.Id,
+                    AccountCode = deudores.Code,
+                    AccountName = deudores.Name,
+                    Debit = 0,
+                    Credit = req.TotalAmount,
+                    Memo = $"Disminución cuenta corriente {req.CustomerName}"
+                });
+            }
+            else
             {
                 entry.Lines.Add(new JournalEntryLine
                 {
                     JournalEntryId = entry.Id,
                     TenantId = tenantId,
-                    AccountId = ivaDebito.Id,
-                    AccountCode = ivaDebito.Code,
-                    AccountName = ivaDebito.Name,
-                    Debit = 0,
-                    Credit = req.VatAmount,
-                    Memo = $"IVA Débito Fiscal s/{req.InvoiceNumber}"
+                    AccountId = deudores.Id,
+                    AccountCode = deudores.Code,
+                    AccountName = deudores.Name,
+                    Debit = req.TotalAmount,
+                    Credit = 0,
+                    Memo = $"Crédito cliente {req.CustomerName}"
                 });
+
+                entry.Lines.Add(new JournalEntryLine
+                {
+                    JournalEntryId = entry.Id,
+                    TenantId = tenantId,
+                    AccountId = ventas.Id,
+                    AccountCode = ventas.Code,
+                    AccountName = ventas.Name,
+                    Debit = 0,
+                    Credit = req.NetAmount,
+                    Memo = $"Ingreso ventas netas {req.InvoiceNumber}"
+                });
+
+                if (req.VatAmount > 0)
+                {
+                    entry.Lines.Add(new JournalEntryLine
+                    {
+                        JournalEntryId = entry.Id,
+                        TenantId = tenantId,
+                        AccountId = ivaDebito.Id,
+                        AccountCode = ivaDebito.Code,
+                        AccountName = ivaDebito.Name,
+                        Debit = 0,
+                        Credit = req.VatAmount,
+                        Memo = $"IVA Débito Fiscal s/{req.InvoiceNumber}"
+                    });
+                }
             }
 
             db.JournalEntries.Add(entry);

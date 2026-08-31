@@ -24,7 +24,7 @@ public sealed class CustomerAccountAuditor : IQaAuditor
         var invoices = await salesDb.Invoices.AsNoTracking().Where(i => i.TenantId == tenantId && i.CustomerId == customerId && i.Status != "Cancelled")
             .ToListAsync();
 
-        var totalDebits = invoices.Sum(i => i.Total);
+        var totalDebits = invoices.Sum(i => i.InvoiceType.StartsWith("NC", StringComparison.OrdinalIgnoreCase) ? -i.Total : i.Total);
 
         // 2. Sum credits (Collection Receipts)
         var receipts = await financeDb.CollectionReceipts.AsNoTracking().Where(r => r.TenantId == tenantId.Value && r.CustomerId == customerId && r.Status != "Cancelled")

@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using FluentAssertions;
 using LealControl.QA.Infrastructure;
 using LealControl.QA.Models;
@@ -19,18 +19,8 @@ public sealed class QaIntegrationTests : IClassFixture<QaWebApplicationFactory>
         _output = output;
     }
 
-    [Fact]
-    public async Task Run_QaSale001_CashSale_AllAuditsPass()
+    private void PrintReport(QaScenarioResult result)
     {
-        // ARRANGE
-        await using var context = new QaTestContext(_factory);
-        var scenario = new QaSale001Scenario();
-
-        // ACT
-        var result = await scenario.ExecuteAsync(context);
-        context.Run.Scenarios.Add(result);
-
-        // Print human-readable report to test output
         _output.WriteLine("====================================================================");
         _output.WriteLine($"LEAL ERP TEST CENTER — {result.ScenarioName}");
         _output.WriteLine($"Estado: {result.Status} | Duración: {result.Duration.TotalMilliseconds:F0} ms");
@@ -58,9 +48,61 @@ public sealed class QaIntegrationTests : IClassFixture<QaWebApplicationFactory>
             }
         }
         _output.WriteLine("====================================================================");
+    }
 
-        // ASSERT
+    [Fact]
+    public async Task Run_QaSale001_CashSale_AllAuditsPass()
+    {
+        await using var context = new QaTestContext(_factory);
+        var scenario = new QaSale001Scenario();
+
+        var result = await scenario.ExecuteAsync(context);
+        context.Run.Scenarios.Add(result);
+        PrintReport(result);
+
         result.Issues.Should().BeEmpty("todos los cheques matemáticos y de negocio deben ser 100% aprobados");
+        result.Status.Should().Be(QaCheckStatus.Passed);
+    }
+
+    [Fact]
+    public async Task Run_QaSale002_CreditSaleAndPartialCollections_AllAuditsPass()
+    {
+        await using var context = new QaTestContext(_factory);
+        var scenario = new QaSale002Scenario();
+
+        var result = await scenario.ExecuteAsync(context);
+        context.Run.Scenarios.Add(result);
+        PrintReport(result);
+
+        result.Issues.Should().BeEmpty("todos los cheques matemáticos y de cuenta corriente deben ser 100% aprobados");
+        result.Status.Should().Be(QaCheckStatus.Passed);
+    }
+
+    [Fact]
+    public async Task Run_QaSale003_CreditNoteReturn_AllAuditsPass()
+    {
+        await using var context = new QaTestContext(_factory);
+        var scenario = new QaSale003Scenario();
+
+        var result = await scenario.ExecuteAsync(context);
+        context.Run.Scenarios.Add(result);
+        PrintReport(result);
+
+        result.Issues.Should().BeEmpty("la nota de crédito debe restituir stock y disminuir saldo sin discrepancias");
+        result.Status.Should().Be(QaCheckStatus.Passed);
+    }
+
+    [Fact]
+    public async Task Run_QaSale004_MultiVatSale_AllAuditsPass()
+    {
+        await using var context = new QaTestContext(_factory);
+        var scenario = new QaSale004Scenario();
+
+        var result = await scenario.ExecuteAsync(context);
+        context.Run.Scenarios.Add(result);
+        PrintReport(result);
+
+        result.Issues.Should().BeEmpty("todas las alícuotas impositivas deben calcularse y asentarse de forma determinística");
         result.Status.Should().Be(QaCheckStatus.Passed);
     }
 }

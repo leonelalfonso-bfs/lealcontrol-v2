@@ -215,19 +215,22 @@ internal sealed class InvoiceQueryHandlers
                         _dbContext.StockItems.Add(stock);
                     }
 
+                    var isCreditNote = request.InvoiceType.StartsWith("NC", StringComparison.OrdinalIgnoreCase);
+                    var stockDelta = isCreditNote ? item.Quantity : -item.Quantity;
+
                     var previous = stock.PhysicalStock;
-                    stock.AdjustStock(previous - item.Quantity, stock.MinimumStock, warehouse?.Name ?? "Depósito Central");
+                    stock.AdjustStock(previous + stockDelta, stock.MinimumStock, warehouse?.Name ?? "Depósito Central");
 
                     if (product != null && product.TrackStock)
                     {
-                        product.AdjustStock(-item.Quantity);
+                        product.AdjustStock(stockDelta);
                     }
 
                     _dbContext.StockMovements.Add(StockMovement.Create(
                         tenantId,
                         prodId.Value,
-                        "SaleInvoiceDirect",
-                        -item.Quantity,
+                        isCreditNote ? "CreditNoteReturn" : "SaleInvoiceDirect",
+                        stockDelta,
                         previous,
                         stock.PhysicalStock,
                         warehouse?.Id,
@@ -237,10 +240,12 @@ internal sealed class InvoiceQueryHandlers
                         null,
                         null,
                         invoice.Id,
-                        "Invoice",
+                        isCreditNote ? "CreditNote" : "Invoice",
                         invoice.FormattedNumber,
-                        "Venta Directa",
-                        $"Salida por factura directa {invoice.FormattedNumber} a {invoice.CustomerName}"));
+                        isCreditNote ? "Devolución Nota de Crédito" : "Venta Directa",
+                        isCreditNote
+                            ? $"Ingreso por nota de crédito {invoice.FormattedNumber} de {invoice.CustomerName}"
+                            : $"Salida por factura directa {invoice.FormattedNumber} a {invoice.CustomerName}"));
                 }
             }
         }
