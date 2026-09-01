@@ -124,12 +124,8 @@ public static class MultiTenantAuthResolver
             await conn.OpenAsync(cancellationToken);
 
             const string sql = @"
-                SELECT u.""TenantId"", u.""Id"", u.""PasswordHash"", u.""Role"", u.""FullName"",
-                       COALESCE(s.""LegalName"", s.""CompanyName"", 'LEAL CONTROL ERP'),
-                       s.""TradeName"",
-                       COALESCE(s.""DocumentNumber"", '')
+                SELECT u.""TenantId"", u.""Id"", u.""PasswordHash"", u.""Role"", u.""FullName""
                 FROM public.tenant_users u
-                LEFT JOIN public.tenant_settings s ON s.""TenantId"" = u.""TenantId""
                 WHERE lower(u.""Email"") = @email AND u.""IsActive"" = true";
 
             await using var cmd = new NpgsqlCommand(sql, conn);
@@ -143,14 +139,14 @@ public static class MultiTenantAuthResolver
                 var pwdHash = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
                 var role = reader.IsDBNull(3) ? "Admin" : reader.GetString(3);
                 var fullName = reader.GetString(4);
-                var legalName = reader.IsDBNull(5) ? "LEAL CONTROL ERP" : reader.GetString(5);
-                var tradeName = reader.IsDBNull(6) ? null : reader.GetString(6);
-                var docNumber = reader.IsDBNull(7) ? string.Empty : reader.GetString(7);
 
                 if (password != null && !PasswordSecurity.VerifyPassword(password, pwdHash))
                 {
                     continue;
                 }
+
+                var (legalName, tradeName, docNumber) = await ResolveTenantLabelsAsync(
+                    connectionString, tenantId, cancellationToken);
 
                 results.Add(new TenantMembership(
                     tenantId,
@@ -170,5 +166,75 @@ public static class MultiTenantAuthResolver
         }
 
         return results;
+    }
+
+    private static async Task<(string LegalName, string? TradeName, string DocumentNumber)> ResolveTenantLabelsAsync(
+        string connectionString,
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var conn = new NpgsqlConnection(connectionString);
+            await conn.OpenAsync(cancellationToken);
+
+            // master_tenants lives in the default/catalog database
+            await using var masterCmd = new NpgsqlCommand(
+                @"SELECT ""Name"" FROM public.master_tenants WHERE ""Id"" = @id LIMIT 1", conn);
+            masterCmd.Parameters.AddWithValue("id", tenantId);
+            var masterName = await masterCmd.ExecuteScalarAsync(cancellationToken) as string;
+            if (!string.IsNullOrWhiteSpace(masterName))
+            {
+                return (masterName, masterName, string.Empty);
+            }
+
+            // Shared schema (LegalName)
+            try
+            {
+                await using var legalCmd = new NpgsqlCommand(
+                    @"SELECT ""LegalName"", ""TradeName"", ""DocumentNumber""
+                      FROM public.tenant_settings WHERE ""TenantId"" = @id LIMIT 1", conn);
+                legalCmd.Parameters.AddWithValue("id", tenantId);
+                await using var reader = await legalCmd.ExecuteReaderAsync(cancellationToken);
+                if (await reader.ReadAsync(cancellationToken))
+                {
+                    return (
+                        reader.IsDBNull(0) ? "LEAL CONTROL ERP" : reader.GetString(0),
+                        reader.IsDBNull(1) ? null : reader.GetString(1),
+                        reader.IsDBNull(2) ? string.Empty : reader.GetString(2));
+                }
+            }
+            catch
+            {
+                // Column LegalName may not exist on provisioned tenant DBs.
+            }
+
+            // Provisioned tenant schema (CompanyName)
+            try
+            {
+                await using var companyCmd = new NpgsqlCommand(
+                    @"SELECT ""CompanyName"", ""TradeName"", ""DocumentNumber""
+                      FROM public.tenant_settings WHERE ""TenantId"" = @id LIMIT 1", conn);
+                companyCmd.Parameters.AddWithValue("id", tenantId);
+                await using var reader = await companyCmd.ExecuteReaderAsync(cancellationToken);
+                if (await reader.ReadAsync(cancellationToken))
+                {
+                    return (
+                        reader.IsDBNull(0) ? "LEAL CONTROL ERP" : reader.GetString(0),
+                        reader.IsDBNull(1) ? null : reader.GetString(1),
+                        reader.IsDBNull(2) ? string.Empty : reader.GetString(2));
+                }
+            }
+            catch
+            {
+                // Ignore schema differences between shared and dedicated DBs.
+            }
+        }
+        catch
+        {
+            // Ignore lookup errors — login should still succeed.
+        }
+
+        return ("LEAL CONTROL ERP", null, string.Empty);
     }
 }
