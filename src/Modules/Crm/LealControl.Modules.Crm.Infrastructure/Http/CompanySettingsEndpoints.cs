@@ -50,6 +50,12 @@ public static class CompanySettingsEndpoints
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
         });
 
+        group.MapDelete("/users/{id:guid}", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var res = await sender.Send(new DeleteTenantUserCommand(id), cancellationToken);
+            return res.IsSuccess ? Results.NoContent() : Results.BadRequest(res.Error);
+        });
+
         return endpoints;
     }
 }

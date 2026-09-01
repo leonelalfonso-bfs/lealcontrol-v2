@@ -426,6 +426,8 @@ export const api = {
     request<import("./types").TenantUser>("/api/v1/company/users", { method: "POST", body: JSON.stringify(body) }),
   updateTenantUser: (id: string, body: { fullName: string; role: string; isActive: boolean; password?: string; allowedModulesJson?: string }) =>
     request<import("./types").TenantUser>(`/api/v1/company/users/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteTenantUser: (id: string) =>
+    request<void>(`/api/v1/company/users/${id}`, { method: "DELETE" }),
 
   // Suppliers Methods (Unified Directory)
   listSuppliers: async (search = ""): Promise<import("./types").Supplier[]> => {

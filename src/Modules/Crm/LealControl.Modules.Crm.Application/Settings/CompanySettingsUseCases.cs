@@ -57,6 +57,8 @@ public sealed record CreateTenantUserCommand(string FullName, string Email, stri
 public sealed record UpdateTenantUserCommand(Guid Id, string FullName, string Role, bool IsActive, string? Password = null, string? AllowedModulesJson = null)
     : IRequest<Result<TenantUserDto>>;
 
+public sealed record DeleteTenantUserCommand(Guid Id) : IRequest<Result<bool>>;
+
 public sealed record GetCompanySettingsQuery : IRequest<Result<CompanySettingsDto>>;
 
 public sealed record ListTenantUsersQuery : IRequest<Result<IReadOnlyList<TenantUserDto>>>;
