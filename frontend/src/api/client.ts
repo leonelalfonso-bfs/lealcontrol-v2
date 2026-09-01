@@ -22,7 +22,8 @@ const API_BASE = "";
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const normalToken = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
   const superToken = typeof window !== "undefined" ? localStorage.getItem("leal_superadmin_token") : null;
-  const token = normalToken || superToken;
+  const isSuperAdminApi = path.startsWith("/api/v1/superadmin");
+  const token = isSuperAdminApi ? superToken : (normalToken || superToken);
   const tenantId = typeof window !== "undefined" ? localStorage.getItem("leal_tenant_id") : null;
 
   const headers: Record<string, string> = {
