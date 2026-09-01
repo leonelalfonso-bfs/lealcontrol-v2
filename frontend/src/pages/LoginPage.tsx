@@ -18,6 +18,15 @@ export function LoginPage() {
   const [tenantChoices, setTenantChoices] = useState<TenantInfo[]>([]);
   const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
 
+  const sortTenantChoices = (tenants: TenantInfo[]) => {
+    const preferred = typeof window !== "undefined" ? localStorage.getItem("leal_preferred_tenant_id") : null;
+    return [...tenants].sort((a, b) => {
+      if (preferred && a.id === preferred) return -1;
+      if (preferred && b.id === preferred) return 1;
+      return (a.legalName || a.tradeName || "").localeCompare(b.legalName || b.tradeName || "", "es");
+    });
+  };
+
   // Login Form State
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,11 +42,14 @@ export function LoginPage() {
       setLoading(true);
       setError(null);
       const res = await api.login({ email: email.trim(), password });
-      if (res.availableTenants.length > 1) {
-        setTenantChoices(res.availableTenants);
+      if (res.requiresTenantSelection || (res.availableTenants.length > 1 && !res.token)) {
+        setTenantChoices(sortTenantChoices(res.availableTenants));
         setPendingCredentials({ email: email.trim(), password });
         setStep("tenant");
         return;
+      }
+      if (!res.token || !res.user || !res.tenant) {
+        throw new Error("No se pudo iniciar sesión. Verificá tus credenciales.");
       }
       applySession(res);
       navigate(from, { replace: true });
@@ -358,8 +370,13 @@ export function LoginPage() {
                 }}
               >
                 <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
-                  🏢 {t.tradeName || t.legalName}
+                  🏢 {t.legalName}
                 </div>
+                {t.tradeName && t.tradeName !== t.legalName && (
+                  <div style={{ fontSize: "0.8rem", color: "#cbd5e1", marginTop: 2 }}>
+                    {t.tradeName}
+                  </div>
+                )}
                 {t.documentNumber && (
                   <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: 4 }}>
                     CUIT {t.documentNumber}

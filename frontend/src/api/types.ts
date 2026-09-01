@@ -1471,10 +1471,11 @@ export type TenantInfo = {
 };
 
 export type AuthResponse = {
-  token: string;
-  user: UserInfo;
-  tenant: TenantInfo;
+  token?: string;
+  user?: UserInfo;
+  tenant?: TenantInfo;
   availableTenants: TenantInfo[];
+  requiresTenantSelection?: boolean;
 };
 
 export type GrainContract = {

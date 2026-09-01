@@ -20,6 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos de inactividad
 const AVAILABLE_TENANTS_KEY = "leal_available_tenants";
+const PREFERRED_TENANT_KEY = "leal_preferred_tenant_id";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isSessionExpiredOnLoad = () => {
@@ -129,6 +130,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [token]);
 
   const applySession = (res: AuthResponse) => {
+    if (!res.token || !res.user || !res.tenant) {
+      return;
+    }
+
     setToken(res.token);
     setUser(res.user);
     setTenant(res.tenant);
@@ -138,6 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("leal_user", JSON.stringify(res.user));
     localStorage.setItem("leal_tenant", JSON.stringify(res.tenant));
     localStorage.setItem("leal_tenant_id", res.tenant.id);
+    localStorage.setItem(PREFERRED_TENANT_KEY, res.tenant.id);
     localStorage.setItem(AVAILABLE_TENANTS_KEY, JSON.stringify(res.availableTenants || []));
     localStorage.setItem("leal_last_activity", Date.now().toString());
   };
@@ -146,7 +152,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string, tenantId?: string) => {
     const res = await api.login({ email, password, tenantId });
-    applySession(res);
+    if (!res.requiresTenantSelection && res.token) {
+      applySession(res);
+    }
     return res;
   };
 

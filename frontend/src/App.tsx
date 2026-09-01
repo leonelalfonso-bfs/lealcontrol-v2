@@ -291,7 +291,7 @@ export function App() {
                   >
                     {availableTenants.map((t) => (
                       <option key={t.id} value={t.id}>
-                        🏢 {t.tradeName || t.legalName}
+                        🏢 {t.legalName}{t.documentNumber ? ` (${t.documentNumber})` : ""}
                       </option>
                     ))}
                   </select>

@@ -5,7 +5,7 @@ import { provinces, type CompanySettings, type TenantUser } from "../api/types";
 import { ALL_SYSTEM_MODULES } from "./superadmin/SuperAdminPlansPage";
 
 export function SettingsPage() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, tenant } = useAuth();
   const [tab, setTab] = useState<"general" | "arca" | "banks" | "users" | "backup">("general");
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [users, setUsers] = useState<TenantUser[]>([]);
@@ -653,6 +653,8 @@ export function SettingsPage() {
               <h3>👥 Gestión de Usuarios & Control de Accesos</h3>
               <p className="muted" style={{ fontSize: "0.85rem", marginTop: 2 }}>
                 Asigná qué módulos y secciones específicas puede ver y operar cada empleado de tu empresa.
+                Los usuarios se crean solo en la empresa con la que estás conectado ahora
+                {tenant?.legalName ? ` (${tenant.legalName})` : ""}.
               </p>
             </div>
             <button type="button" className="btn" onClick={openNewUserModal}>

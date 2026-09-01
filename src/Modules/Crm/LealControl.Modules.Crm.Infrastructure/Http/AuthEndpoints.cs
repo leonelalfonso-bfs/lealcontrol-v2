@@ -42,6 +42,15 @@ public static class AuthEndpoints
 
             var memberships = await MultiTenantAuthResolver.FindAllAsync(masterConnStr, email, req.Password, ct);
 
+            if (memberships.Count > 1 && (!req.TenantId.HasValue || req.TenantId.Value == Guid.Empty))
+            {
+                return Results.Ok(new
+                {
+                    requiresTenantSelection = true,
+                    availableTenants = MultiTenantAuthResolver.ToSummaries(memberships)
+                });
+            }
+
             if (memberships.Count > 0)
             {
                 TenantMembership active;
