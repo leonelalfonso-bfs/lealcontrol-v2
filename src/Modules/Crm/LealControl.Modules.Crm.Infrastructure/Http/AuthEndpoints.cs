@@ -28,7 +28,7 @@ public static class AuthEndpoints
         var auth = endpoints.MapGroup("/api/v1/auth").WithTags("Authentication & Tenancy");
 
         // 1. Login
-        auth.MapPost("/login", async ([FromBody] LoginRequest req, CrmDbContext db, IConfiguration configuration, CancellationToken ct) =>
+        auth.MapPost("/login", async ([FromBody] LoginRequest req, CrmDbContext db, IConfiguration configuration, IHostEnvironment env, CancellationToken ct) =>
         {
             if (req == null || string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
             {
@@ -81,7 +81,7 @@ public static class AuthEndpoints
             }
 
             // Fallback for default development admin
-            if (email == "admin@lealcontrol.com" || email == "admin@leal.com" || email == "admin")
+            if (env.IsDevelopment() && (email == "admin@lealcontrol.com" || email == "admin@leal.com" || email == "admin"))
             {
                 var devTenantId = new TenantId(Guid.Parse("11111111-1111-1111-1111-111111111111"));
                 var newAdmin = TenantUser.Create(devTenantId, "Administrador Leal", email, "Admin", "admin123");

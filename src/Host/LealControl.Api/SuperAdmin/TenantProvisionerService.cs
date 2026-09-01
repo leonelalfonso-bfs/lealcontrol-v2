@@ -82,6 +82,7 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
             // 2. Initialize Tables and Schema inside the new database
             var tenantConnString = BuildTenantConnectionString(dbName);
             await InitializeTenantSchemaAndAdmin(tenantConnString, tenantId, name, adminFullName, adminEmail, adminPassword, cancellationToken);
+            await TenantDatabaseBootstrapper.EnsureDatabaseSchemaAsync(_defaultConnectionString, dbName, cancellationToken);
 
             // 3. Register in Master DB
             var tenant = new MasterTenant
@@ -215,6 +216,7 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
                 ""Id"" uuid NOT NULL PRIMARY KEY,
                 ""TenantId"" uuid NOT NULL,
                 ""CompanyName"" character varying(160) NOT NULL,
+                ""LegalName"" character varying(256) NOT NULL DEFAULT 'LEAL CONTROL ERP S.A.',
                 ""TradeName"" character varying(160),
                 ""DocumentType"" character varying(20) NOT NULL DEFAULT 'Cuit',
                 ""DocumentNumber"" character varying(20) NOT NULL DEFAULT '30715489629',
@@ -246,6 +248,8 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );
 
+            ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""LegalName"" character varying(256) NOT NULL DEFAULT 'LEAL CONTROL ERP S.A.';
+
             CREATE TABLE IF NOT EXISTS public.tenant_users (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
                 ""TenantId"" uuid NOT NULL,
@@ -254,9 +258,12 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
                 ""Role"" character varying(64) NOT NULL DEFAULT 'Administrador',
                 ""PasswordHash"" character varying(256),
                 ""IsActive"" boolean NOT NULL DEFAULT true,
+                ""AllowedModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]',
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""LastLoginUtc"" timestamp with time zone
             );
+
+            ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""AllowedModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]';
         ";
 
         using (var cmd = new NpgsqlCommand(initSql, conn))
@@ -266,8 +273,8 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
 
         // Insert initial Admin User and Settings
         var insertSettingsSql = @"
-            INSERT INTO public.tenant_settings (""Id"", ""TenantId"", ""CompanyName"", ""Email"")
-            VALUES (@id, @tenantId, @compName, @email)
+            INSERT INTO public.tenant_settings (""Id"", ""TenantId"", ""CompanyName"", ""LegalName"", ""TradeName"", ""Email"")
+            VALUES (@id, @tenantId, @compName, @compName, @compName, @email)
             ON CONFLICT DO NOTHING;
         ";
         using (var cmd = new NpgsqlCommand(insertSettingsSql, conn))
@@ -280,8 +287,8 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
         }
 
         var insertUserSql = @"
-            INSERT INTO public.tenant_users (""Id"", ""TenantId"", ""FullName"", ""Email"", ""Role"", ""PasswordHash"")
-            VALUES (@id, @tenantId, @fullName, @email, 'Administrador', @pwdHash)
+            INSERT INTO public.tenant_users (""Id"", ""TenantId"", ""FullName"", ""Email"", ""Role"", ""PasswordHash"", ""AllowedModulesJson"")
+            VALUES (@id, @tenantId, @fullName, @email, 'Administrador', @pwdHash, '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]')
             ON CONFLICT DO NOTHING;
         ";
         using (var cmd = new NpgsqlCommand(insertUserSql, conn))

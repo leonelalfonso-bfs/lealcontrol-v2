@@ -71,7 +71,7 @@ public static class TenantDatabaseBootstrapper
         Log.Information("Tenant demo actualizado: DbName → {DbName}", defaultDbName);
     }
 
-    private static async Task EnsureDatabaseSchemaAsync(
+    internal static async Task EnsureDatabaseSchemaAsync(
         string baseConnectionString,
         string dbName,
         CancellationToken cancellationToken)
