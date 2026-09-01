@@ -427,7 +427,7 @@ export function FinanceAccountsPage() {
       }
     ];
 
-    exportToExcel(fileName, filteredMovements, columns);
+    void exportToExcel(fileName, filteredMovements, columns);
   };
 
   const setDatePreset = (preset: "thisMonth" | "lastMonth" | "last30Days" | "all") => {

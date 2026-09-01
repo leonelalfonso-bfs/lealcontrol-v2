@@ -376,7 +376,7 @@ export function CurrentAccountsPage() {
       { key: "saldoArs", header: "Saldo Pendiente ARS", value: (r) => tab === "customers" ? r.receivableBalance : tab === "suppliers" ? r.payableBalance : r.netBalance },
       { key: "saldoUsd", header: "Saldo Pendiente USD", value: (r) => tab === "customers" ? r.receivableBalanceUsd : tab === "suppliers" ? r.payableBalanceUsd : 0 }
     ];
-    exportToExcel(`cuentas-corrientes-${tab}`, filteredRows, columns);
+    void exportToExcel(`cuentas-corrientes-${tab}`, filteredRows, columns);
   };
 
   return (
