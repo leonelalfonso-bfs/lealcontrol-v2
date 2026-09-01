@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../api/client";
+import type { TenantInfo } from "../api/types";
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { applySession, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -12,6 +14,9 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [step, setStep] = useState<"credentials" | "tenant">("credentials");
+  const [tenantChoices, setTenantChoices] = useState<TenantInfo[]>([]);
+  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
 
   // Login Form State
   const [email, setEmail] = useState("");
@@ -27,13 +32,41 @@ export function LoginPage() {
     try {
       setLoading(true);
       setError(null);
-      await login(email.trim(), password);
+      const res = await api.login({ email: email.trim(), password });
+      if (res.availableTenants.length > 1) {
+        setTenantChoices(res.availableTenants);
+        setPendingCredentials({ email: email.trim(), password });
+        setStep("tenant");
+        return;
+      }
+      applySession(res);
       navigate(from, { replace: true });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Credenciales inválidas. Verificá tu usuario y contraseña.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTenantPick = async (tenantId: string) => {
+    if (!pendingCredentials) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await login(pendingCredentials.email, pendingCredentials.password, tenantId);
+      navigate(from, { replace: true });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "No se pudo ingresar a la empresa seleccionada.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetToCredentials = () => {
+    setStep("credentials");
+    setTenantChoices([]);
+    setPendingCredentials(null);
+    setError(null);
   };
 
   return (
@@ -170,10 +203,12 @@ export function LoginPage() {
         }}>
           <div style={{ marginBottom: 28 }}>
             <h2 style={{ fontSize: "1.6rem", fontWeight: 800, color: "#ffffff", marginBottom: 6 }}>
-              Ingreso al Sistema
+              {step === "tenant" ? "Elegí tu Empresa" : "Ingreso al Sistema"}
             </h2>
             <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: 0 }}>
-              Ingresá tus credenciales autorizadas para acceder al panel de tu empresa.
+              {step === "tenant"
+                ? "Tu usuario tiene acceso a varias empresas. Seleccioná con cuál querés trabajar."
+                : "Ingresá tus credenciales autorizadas para acceder al panel de tu empresa."}
             </p>
           </div>
 
@@ -210,6 +245,7 @@ export function LoginPage() {
           )}
 
           {/* Login Form */}
+          {step === "credentials" ? (
           <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
             <div>
               <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#cbd5e1", marginBottom: "6px" }}>
@@ -302,6 +338,52 @@ export function LoginPage() {
               {loading ? "Verificando credenciales..." : "🔐 Ingresar a LEAL Control ➔"}
             </button>
           </form>
+          ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {tenantChoices.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                disabled={loading}
+                onClick={() => handleTenantPick(t.id)}
+                style={{
+                  width: "100%",
+                  padding: "14px 16px",
+                  textAlign: "left",
+                  background: "rgba(30, 41, 59, 0.8)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  borderRadius: "10px",
+                  color: "#ffffff",
+                  cursor: loading ? "not-allowed" : "pointer"
+                }}
+              >
+                <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  🏢 {t.tradeName || t.legalName}
+                </div>
+                {t.documentNumber && (
+                  <div style={{ fontSize: "0.78rem", color: "#94a3b8", marginTop: 4 }}>
+                    CUIT {t.documentNumber}
+                  </div>
+                )}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={resetToCredentials}
+              disabled={loading}
+              style={{
+                marginTop: 8,
+                background: "none",
+                border: "none",
+                color: "#94a3b8",
+                cursor: "pointer",
+                fontSize: "0.82rem"
+              }}
+            >
+              ← Volver a credenciales
+            </button>
+          </div>
+          )}
 
           {/* Links Footer */}
           <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid rgba(255, 255, 255, 0.08)", textAlign: "center", fontSize: "0.82rem", color: "#64748b" }}>

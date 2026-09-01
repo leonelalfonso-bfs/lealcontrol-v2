@@ -15,9 +15,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Npgsql;
 
 namespace LealControl.Modules.Crm.Infrastructure.Http;
 
@@ -28,7 +28,7 @@ public static class AuthEndpoints
         var auth = endpoints.MapGroup("/api/v1/auth").WithTags("Authentication & Tenancy");
 
         // 1. Login
-        auth.MapPost("/login", async ([FromBody] LoginRequest req, CrmDbContext db, IServiceProvider sp, CancellationToken ct) =>
+        auth.MapPost("/login", async ([FromBody] LoginRequest req, CrmDbContext db, IConfiguration configuration, CancellationToken ct) =>
         {
             if (req == null || string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
             {
@@ -36,106 +36,39 @@ public static class AuthEndpoints
             }
 
             var email = req.Email.Trim().ToLowerInvariant();
-            var users = await db.TenantUsers.Where(u => u.Email.ToLower() == email && u.IsActive).ToListAsync(ct);
+            var masterConnStr = configuration.GetConnectionString("Database")
+                ?? db.Database.GetConnectionString()
+                ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
 
-            // If user found in local DB
-            if (users.Count > 0)
+            var memberships = await MultiTenantAuthResolver.FindAllAsync(masterConnStr, email, req.Password, ct);
+
+            if (memberships.Count > 0)
             {
-                TenantUser? matchingUser = null;
+                TenantMembership active;
                 if (req.TenantId.HasValue && req.TenantId.Value != Guid.Empty)
                 {
-                    var reqTid = new TenantId(req.TenantId.Value);
-                    matchingUser = users.FirstOrDefault(u => u.TenantId == reqTid && u.VerifyPassword(req.Password));
-                }
-
-                matchingUser ??= users.FirstOrDefault(u => u.VerifyPassword(req.Password));
-
-                if (matchingUser == null)
-                {
-                    return Results.BadRequest(new { message = "Contraseña incorrecta." });
-                }
-
-                matchingUser.RecordLogin();
-                await db.SaveChangesAsync(ct);
-
-                var tenantSettings = await db.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == matchingUser.TenantId, ct);
-                var tenantName = tenantSettings?.LegalName ?? tenantSettings?.TradeName ?? "LEAL CONTROL ERP S.A.";
-                var docNumber = tenantSettings?.DocumentNumber ?? "30715489629";
-
-                var token = SimpleJwt.CreateToken(matchingUser.Id, matchingUser.Email, matchingUser.FullName, matchingUser.Role, matchingUser.TenantId.Value, tenantName);
-
-                // Available tenants ONLY for this specific user (never leak other clients' companies!)
-                var userTenantIds = users.Where(u => u.VerifyPassword(req.Password)).Select(u => u.TenantId).Distinct().ToList();
-                var availableTenants = await db.CompanySettings
-                    .AsNoTracking()
-                    .Where(s => userTenantIds.Contains(s.TenantId))
-                    .Select(s => new TenantSummaryDto(s.TenantId.Value, s.LegalName, s.TradeName, s.DocumentNumber))
-                    .ToListAsync(ct);
-
-                return Results.Ok(new AuthResponse(
-                    token,
-                    new UserDto(matchingUser.Id, matchingUser.FullName, matchingUser.Email, matchingUser.Role, matchingUser.AllowedModulesJson),
-                    new TenantSummaryDto(matchingUser.TenantId.Value, tenantName, tenantSettings?.TradeName, docNumber),
-                    availableTenants
-                ));
-            }
-
-            // If not found in primary DB, check Master Catalog for dedicated tenant databases
-            try
-            {
-                var connStr = db.Database.GetConnectionString() ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
-                using var masterConn = new NpgsqlConnection(connStr);
-                await masterConn.OpenAsync(ct);
-
-                using var masterCmd = new NpgsqlCommand("SELECT \"Id\", \"Name\", \"DbName\", \"AdminFullName\" FROM public.master_tenants WHERE lower(\"AdminEmail\") = @email AND \"IsActive\" = true LIMIT 1", masterConn);
-                masterCmd.Parameters.AddWithValue("email", email);
-                using var reader = await masterCmd.ExecuteReaderAsync(ct);
-                if (await reader.ReadAsync(ct))
-                {
-                    var tenantId = reader.GetGuid(0);
-                    var tenantName = reader.GetString(1);
-                    var dbName = reader.GetString(2);
-                    var adminFullName = reader.IsDBNull(3) ? "Administrador" : reader.GetString(3);
-                    await reader.CloseAsync();
-
-                    // Check password in tenant's DB
-                    var tenantBuilder = new NpgsqlConnectionStringBuilder(connStr) { Database = dbName };
-                    using var tenantConn = new NpgsqlConnection(tenantBuilder.ConnectionString);
-                    await tenantConn.OpenAsync(ct);
-
-                        using var checkCmd = new NpgsqlCommand("SELECT \"Id\", \"PasswordHash\", \"Role\" FROM public.tenant_users WHERE lower(\"Email\") = @email AND \"IsActive\" = true LIMIT 1", tenantConn);
-                    checkCmd.Parameters.AddWithValue("email", email);
-                    using var userReader = await checkCmd.ExecuteReaderAsync(ct);
-                    if (await userReader.ReadAsync(ct))
+                    var selected = memberships.FirstOrDefault(m => m.TenantId == req.TenantId.Value);
+                    if (selected == null)
                     {
-                        var userId = userReader.GetGuid(0);
-                        var pwdHash = userReader.GetString(1);
-                        var role = userReader.IsDBNull(2) ? "Admin" : userReader.GetString(2);
-                        await userReader.CloseAsync();
-
-                        if (!PasswordSecurity.VerifyPassword(req.Password, pwdHash))
-                        {
-                            return Results.BadRequest(new { message = "Contraseña incorrecta." });
-                        }
-
-                        var token = SimpleJwt.CreateToken(userId, email, adminFullName, role, tenantId, tenantName);
-                        var singleTenantList = new List<TenantSummaryDto>
-                        {
-                            new(tenantId, tenantName, tenantName, "")
-                        };
-
-                        return Results.Ok(new AuthResponse(
-                            token,
-                            new UserDto(userId, adminFullName, email, role),
-                            new TenantSummaryDto(tenantId, tenantName, tenantName, ""),
-                            singleTenantList
-                        ));
+                        return Results.BadRequest(new { message = "No tenés acceso a la empresa seleccionada." });
                     }
+
+                    active = selected;
                 }
-            }
-            catch
-            {
-                // Fallthrough to not found
+                else
+                {
+                    active = memberships[0];
+                }
+
+                var sharedUser = await db.TenantUsers
+                    .FirstOrDefaultAsync(u => u.Id == active.UserId && u.TenantId == new TenantId(active.TenantId) && u.IsActive, ct);
+                if (sharedUser != null)
+                {
+                    sharedUser.RecordLogin();
+                    await db.SaveChangesAsync(ct);
+                }
+
+                return Results.Ok(MultiTenantAuthResolver.ToAuthResponse(active, memberships));
             }
 
             // Fallback for default development admin
@@ -223,19 +156,21 @@ public static class AuthEndpoints
         }).RequireRateLimiting("auth-policy").AllowAnonymous();
 
         // 3. Me
-        auth.MapGet("/me", async (HttpContext http, ITenantContext tenantContext, CrmDbContext db, CancellationToken ct) =>
+        auth.MapGet("/me", async (HttpContext http, ITenantContext tenantContext, CrmDbContext db, IConfiguration configuration, CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
-            var tenantSettings = await db.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
-            var tenantName = tenantSettings?.LegalName ?? tenantSettings?.TradeName ?? "LEAL CONTROL ERP S.A.";
+            var masterConnStr = configuration.GetConnectionString("Database")
+                ?? db.Database.GetConnectionString()
+                ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
 
-            // Resolve exact user from JWT Bearer token
+            string? emailFromToken = null;
             TenantUser? user = null;
             var authHeader = http.Request.Headers["Authorization"].ToString();
             if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
                 var token = authHeader.Substring(7).Trim();
                 var tokenUser = SimpleJwt.DecodeToken(token);
+                emailFromToken = tokenUser?.Email;
                 if (tokenUser?.UserId != null)
                 {
                     user = await db.TenantUsers.FirstOrDefaultAsync(u => u.Id == tokenUser.UserId.Value && u.TenantId == tenantId && u.IsActive, ct);
@@ -248,63 +183,83 @@ public static class AuthEndpoints
 
             user ??= await db.TenantUsers.FirstOrDefaultAsync(u => u.TenantId == tenantId && u.IsActive, ct);
 
-            // ONLY return the caller's tenant
-            var availableTenants = new List<TenantSummaryDto>
+            IReadOnlyList<TenantMembership> memberships = [];
+            if (!string.IsNullOrWhiteSpace(emailFromToken))
             {
-                new(tenantId.Value, tenantName, tenantSettings?.TradeName, tenantSettings?.DocumentNumber ?? "")
-            };
+                memberships = await MultiTenantAuthResolver.FindAllAsync(masterConnStr, emailFromToken, password: null, ct);
+            }
+
+            var activeMembership = memberships.FirstOrDefault(m => m.TenantId == tenantId.Value);
+            var tenantSettings = await db.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
+            var tenantName = activeMembership?.LegalName
+                ?? tenantSettings?.LegalName
+                ?? tenantSettings?.TradeName
+                ?? "LEAL CONTROL ERP S.A.";
+            var tradeName = activeMembership?.TradeName ?? tenantSettings?.TradeName;
+            var docNumber = activeMembership?.DocumentNumber ?? tenantSettings?.DocumentNumber ?? "";
+
+            UserDto? userDto = null;
+            if (user != null)
+            {
+                userDto = new UserDto(user.Id, user.FullName, user.Email, user.Role, user.AllowedModulesJson);
+            }
+            else if (activeMembership != null)
+            {
+                userDto = new UserDto(
+                    activeMembership.UserId,
+                    activeMembership.FullName,
+                    activeMembership.Email,
+                    activeMembership.Role,
+                    activeMembership.AllowedModulesJson);
+            }
+
+            var availableTenants = memberships.Count > 0
+                ? MultiTenantAuthResolver.ToSummaries(memberships)
+                : new List<TenantSummaryDto>
+                {
+                    new(tenantId.Value, tenantName, tradeName, docNumber)
+                };
 
             return Results.Ok(new
             {
-                User = user != null ? new UserDto(user.Id, user.FullName, user.Email, user.Role, user.AllowedModulesJson) : null,
-                Tenant = new TenantSummaryDto(tenantId.Value, tenantName, tenantSettings?.TradeName, tenantSettings?.DocumentNumber ?? ""),
+                User = userDto,
+                Tenant = new TenantSummaryDto(tenantId.Value, tenantName, tradeName, docNumber),
                 AvailableTenants = availableTenants
             });
         });
 
         // 4. Switch Tenant
-        auth.MapPost("/switch-tenant", async ([FromBody] SwitchTenantRequest req, HttpContext http, ITenantContext tenantContext, CrmDbContext db, CancellationToken ct) =>
+        auth.MapPost("/switch-tenant", async ([FromBody] SwitchTenantRequest req, HttpContext http, CrmDbContext db, IConfiguration configuration, CancellationToken ct) =>
         {
             if (req == null) return Results.BadRequest(new { message = "Petición inválida." });
 
-            var targetTenantId = new TenantId(req.TenantId);
-            var tenantSettings = await db.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == targetTenantId, ct);
-            if (tenantSettings == null)
-            {
-                return Results.BadRequest(new { message = "La empresa seleccionada no existe." });
-            }
+            var targetTenantId = req.TenantId;
+            var masterConnStr = configuration.GetConnectionString("Database")
+                ?? db.Database.GetConnectionString()
+                ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
 
-            // Look for matching user by email from current token if available
-            TenantUser? user = null;
+            string? email = null;
             var authHeader = http.Request.Headers["Authorization"].ToString();
             if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
                 var token = authHeader.Substring(7).Trim();
                 var tokenUser = SimpleJwt.DecodeToken(token);
-                if (!string.IsNullOrWhiteSpace(tokenUser?.Email))
-                {
-                    user = await db.TenantUsers.FirstOrDefaultAsync(u => u.Email.ToLower() == tokenUser.Email.ToLower() && u.TenantId == targetTenantId && u.IsActive, ct);
-                }
+                email = tokenUser?.Email;
             }
 
-            if (user == null)
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return Results.Json(new { message = "Sesión inválida." }, statusCode: StatusCodes.Status401Unauthorized);
+            }
+
+            var memberships = await MultiTenantAuthResolver.FindAllAsync(masterConnStr, email, password: null, ct);
+            var active = memberships.FirstOrDefault(m => m.TenantId == targetTenantId);
+            if (active == null)
             {
                 return Results.Json(new { message = "No tenés acceso a esa empresa." }, statusCode: StatusCodes.Status403Forbidden);
             }
 
-            var tokenOut = SimpleJwt.CreateToken(user.Id, user.Email, user.FullName, user.Role, targetTenantId.Value, tenantSettings.LegalName);
-
-            var availableTenants = new List<TenantSummaryDto>
-            {
-                new(targetTenantId.Value, tenantSettings.LegalName, tenantSettings.TradeName, tenantSettings.DocumentNumber)
-            };
-
-            return Results.Ok(new AuthResponse(
-                tokenOut,
-                new UserDto(user.Id, user.FullName, user.Email, user.Role, user.AllowedModulesJson),
-                new TenantSummaryDto(targetTenantId.Value, tenantSettings.LegalName, tenantSettings.TradeName, tenantSettings.DocumentNumber),
-                availableTenants
-            ));
+            return Results.Ok(MultiTenantAuthResolver.ToAuthResponse(active, memberships));
         }).RequireRateLimiting("auth-policy");
 
         // 5. List all registered Tenants
