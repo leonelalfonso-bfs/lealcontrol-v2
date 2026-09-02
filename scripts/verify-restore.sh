@@ -123,15 +123,25 @@ docker compose -f "$COMPOSE" exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres
 gzip -dc "$LATEST" | docker compose -f "$COMPOSE" exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
   psql -U "$POSTGRES_USER" -d "$TEMP_DB" -v ON_ERROR_STOP=1 >/dev/null
 
-echo "--- Conteo filas clave ---"
+echo "--- Conteo filas clave (tenant) ---"
 docker compose -f "$COMPOSE" exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
   psql -U "$POSTGRES_USER" -d "$TEMP_DB" -c "
     SELECT 'tenant_users' AS tabla, COUNT(*) FROM public.tenant_users
     UNION ALL SELECT 'invoices', COUNT(*) FROM sales.invoices
     UNION ALL SELECT 'financial_accounts', COUNT(*) FROM finance.\"FinancialAccounts\"
-    UNION ALL SELECT 'journal_entries', COUNT(*) FROM accounting.journal_entries
-    UNION ALL SELECT 'master_tenants', COUNT(*) FROM public.master_tenants;
+    UNION ALL SELECT 'journal_entries', COUNT(*) FROM accounting.journal_entries;
   "
+
+if docker compose -f "$COMPOSE" exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
+  psql -U "$POSTGRES_USER" -d "$TEMP_DB" -t -A -c \
+  "SELECT to_regclass('public.master_tenants') IS NOT NULL;" | grep -qx 't'; then
+  echo "--- Conteo master_tenants ---"
+  docker compose -f "$COMPOSE" exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
+    psql -U "$POSTGRES_USER" -d "$TEMP_DB" -c \
+    "SELECT 'master_tenants' AS tabla, COUNT(*) FROM public.master_tenants;"
+else
+  echo "master_tenants: N/A (dump de base tenant; verificar también dump de POSTGRES_DB)"
+fi
 
 docker compose -f "$COMPOSE" exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
   psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE \"${TEMP_DB}\";"

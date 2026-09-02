@@ -86,16 +86,29 @@ backup_stack() {
   databases="$(docker compose -f "$compose_file" exec -T \
     -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
     psql -U "$POSTGRES_USER" -d postgres -t -A -c \
-    "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT LIKE 'leal_restore_verify_%' AND datname NOT LIKE '%\_old' ESCAPE '\\' AND (datname LIKE 'leal%' OR datname = '$POSTGRES_DB') ORDER BY datname;")"
+    "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT IN ('postgres') AND datname NOT LIKE 'leal_restore_verify_%' AND datname NOT LIKE '%\_old' ESCAPE '\\' ORDER BY datname;")"
+
+  if [[ -n "$POSTGRES_DB" && "$POSTGRES_DB" != "postgres" ]] && ! grep -qx "$POSTGRES_DB" <<< "$databases"; then
+    log "AVISO: POSTGRES_DB=$POSTGRES_DB no listada en pg_database; se intentará igualmente."
+    databases="${POSTGRES_DB}"$'\n'"${databases}"
+  fi
+
+  log "Bases a respaldar:"
+  echo "$databases" | sed '/^$/d' | while read -r line; do log "  - $line"; done
 
   local count=0
   local failed=0
+  declare -A backed_up=()
   while IFS= read -r db; do
     db="$(echo "$db" | xargs)"
     [[ -z "$db" ]] && continue
     if [[ "$db" == "postgres" ]]; then
       continue
     fi
+    if [[ -n "${backed_up[$db]:-}" ]]; then
+      continue
+    fi
+    backed_up[$db]=1
 
     local file_name="${db}_${TIMESTAMP}.sql.gz"
     local file_path="$stack_dir/$file_name"
