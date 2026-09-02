@@ -362,6 +362,43 @@ export const DEVELOPMENT_ACCESS: AccessContext = {
   ])
 };
 
+export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: string | string[] | null): string[] {
+  if (userRole === "Admin" || userRole === "Administrador") {
+    return [
+      "inicio", "directorio", "crm", "comunicaciones", "ventas", "compras", "inventario",
+      "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "administracion"
+    ];
+  }
+
+  const moduleMap: Record<string, string[]> = {
+    sales: ["ventas"],
+    crm: ["crm", "directorio", "comunicaciones"],
+    communications: ["comunicaciones"],
+    purchases: ["compras"],
+    inventory: ["inventario", "produccion"],
+    finance: ["finanzas"],
+    fleet: ["flota"],
+    hr: ["rrhh"],
+    grains: ["cereales"],
+    accounting: ["contabilidad"],
+    metrology: ["metrologia"]
+  };
+
+  try {
+    const raw = typeof allowedModulesJson === "string"
+      ? JSON.parse(allowedModulesJson)
+      : allowedModulesJson || [];
+    const allowed = ["inicio"];
+    (Array.isArray(raw) ? raw : []).forEach((entry: string) => {
+      if (moduleMap[entry]) allowed.push(...moduleMap[entry]);
+      else allowed.push(entry);
+    });
+    return allowed;
+  } catch {
+    return ["inicio", "ventas", "crm", "comunicaciones"];
+  }
+}
+
 export function canAccessModule(module: ModuleDefinition, access: AccessContext): boolean {
   return planOrder[access.plan] >= planOrder[module.minimumPlan]
     && access.permissions.has(module.requiredPermission);

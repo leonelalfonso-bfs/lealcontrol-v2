@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Security;
 using LealControl.BuildingBlocks.Tenancy;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -21,7 +22,7 @@ public static class AccountingEndpoints
 
     public static IEndpointRouteBuilder MapAccountingModule(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/accounting").WithTags("Accounting & Finance Professional");
+        var group = endpoints.MapGroup("/api/v1/accounting").WithTags("Accounting & Finance Professional").RequirePolicyOnWrites("RequireAccounting");
 
         // ====================================================================
         // 1. Chart of Accounts (Plan de Cuentas Editable)

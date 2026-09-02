@@ -1,4 +1,5 @@
 using System;
+using LealControl.BuildingBlocks.Security;
 using LealControl.Modules.Sales.Application.Remitos;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -11,7 +12,7 @@ public static class RemitoEndpoints
 {
     public static IEndpointRouteBuilder MapRemitoEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/sales/remitos").WithTags("Remitos");
+        var group = endpoints.MapGroup("/api/v1/sales/remitos").WithTags("Remitos").RequirePolicyOnWrites("RequireSales");
 
         group.MapGet("/", async (string? search, string? status, ISender sender, CancellationToken cancellationToken) =>
         {

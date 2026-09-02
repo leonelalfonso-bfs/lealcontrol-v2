@@ -77,32 +77,32 @@ Estas cinco tareas son cambios chicos. Se hacen todas juntas en un solo commit y
 ## Bloque 1 — Cerrar agujeros de seguridad (esfuerzo total: 3 jornadas)
 
 ### 1.1 Webhook de MercadoPago accesible y firmado
-- [ ] `SuperAdminEndpoints.cs` — mover `POST /webhooks/mercadopago` fuera del grupo con filtro SuperAdmin, a `/api/v1/public/webhooks/mercadopago` con `.AllowAnonymous()` y rate limit.
-- [ ] Validar header `x-signature` según la doc de MP (HMAC-SHA256 de `id` + `request-id` + `ts` con el secreto de la app). Rechazar con 401 si no coincide.
-- [ ] Idempotencia: guardar `payment_id` procesados en `master_payments`; si se repite, responder 200 sin re-procesar.
+- [x] `SuperAdminEndpoints.cs` — mover `POST /webhooks/mercadopago` fuera del grupo con filtro SuperAdmin, a `/api/v1/public/webhooks/mercadopago` con `.AllowAnonymous()` y rate limit.
+- [x] Validar header `x-signature` según la doc de MP (HMAC-SHA256 de `id` + `request-id` + `ts` con el secreto de la app). Rechazar con 401 si no coincide.
+- [x] Idempotencia: guardar `payment_id` procesados en `master_payments`; si se repite, responder 200 sin re-procesar.
 
 ### 1.2 RBAC en el resto de los módulos
-- [ ] Definir matriz de roles × acciones (Admin, Contador, Tesorero, Comercial, Compras, Técnico, Lectura) en `docs/RBAC.md`.
-- [ ] Policies en `Program.cs`: `RequireAdmin`, `RequireFinance` (Admin, Tesorero, Contador), `RequireAccounting` (Admin, Contador), `RequireSales`, `RequirePurchases`.
-- [ ] Aplicar por grupo: `/api/v1/finance/*` → RequireFinance en escrituras; `/api/v1/accounting/*` → RequireAccounting; `/api/v1/automation/*` → RequireAdmin.
-- [ ] Frontend: `moduleRegistry.ts` oculta módulos según rol. El backend sigue siendo la última línea.
+- [x] Definir matriz de roles × acciones (Admin, Contador, Tesorero, Comercial, Compras, Técnico, Lectura) en `docs/RBAC.md`.
+- [x] Policies en `Program.cs`: `RequireAdmin`, `RequireFinance` (Admin, Tesorero, Contador), `RequireAccounting` (Admin, Contador), `RequireSales`, `RequirePurchases`.
+- [x] Aplicar por grupo: `/api/v1/finance/*` → RequireFinance en escrituras; `/api/v1/accounting/*` → RequireAccounting; `/api/v1/automation/*` → RequireAdmin.
+- [x] Frontend: `moduleRegistry.ts` oculta módulos según rol. El backend sigue siendo la última línea.
 
 ### 1.3 Enforcement del plan contratado (`AllowedModulesJson`)
-- [ ] Endpoint filter global que lee `allowed_modules` del JWT y devuelve 403 si la ruta pertenece a un módulo no contratado. Mapa ruta → módulo en un solo lugar.
-- [ ] `moduleRegistry.ts` lee `user.allowedModulesJson` y oculta lo no contratado.
+- [x] Endpoint filter global que lee `allowed_modules` del JWT y devuelve 403 si la ruta pertenece a un módulo no contratado. Mapa ruta → módulo en un solo lugar.
+- [x] `moduleRegistry.ts` lee `user.allowedModulesJson` y oculta lo no contratado.
 
 ### 1.4 Limpieza de credenciales y modos dev
-- [ ] `AuthEndpoints.cs:84-87` — el auto-alta de `admin@lealcontrol.com/admin123` se elimina; reemplazar por script `scripts/seed-dev-admin.sh` que sólo corre a mano.
-- [ ] `Program.cs:73` — eliminar la constante `retiredJwtFallback` (ya está bloqueada; no tiene por qué seguir en el código).
-- [ ] `appsettings.json` — connection string sin password; dev usa `appsettings.Development.json` o user-secrets.
+- [x] `AuthEndpoints.cs:84-87` — el auto-alta de `admin@lealcontrol.com/admin123` se elimina; reemplazar por script `scripts/seed-dev-admin.sh` que sólo corre a mano.
+- [x] `Program.cs:73` — eliminar la constante `retiredJwtFallback` (ya está bloqueada; no tiene por qué seguir en el código).
+- [x] `appsettings.json` — connection string sin password; dev usa `appsettings.Development.json` o user-secrets.
 
 ### 1.5 Hardening HTTP
-- [ ] `UseHttpsRedirection` + HSTS en Production. Nginx ya termina TLS, pero la API no debe aceptar HTTP plano si llega.
-- [ ] Rate limiting global (200 req/min/IP) además del de auth.
-- [ ] `UseExceptionHandler` con ProblemDetails: hoy no hay manejador global y las excepciones no controladas devuelven stack traces en dev y 500 vacíos en prod.
+- [x] `UseHttpsRedirection` + HSTS en Production. Nginx ya termina TLS, pero la API no debe aceptar HTTP plano si llega.
+- [x] Rate limiting global (200 req/min/IP) además del de auth.
+- [x] `UseExceptionHandler` con ProblemDetails: hoy no hay manejador global y las excepciones no controladas devuelven stack traces en dev y 500 vacíos en prod.
 
 ### 1.6 Unificar validación JWT
-- [ ] Eliminar los usos de `SimpleJwt.DecodeToken` como camino paralelo de autorización (`SuperAdminEndpoints.cs:52,680`, `AuthEndpoints.cs:181,255`). Todo pasa por `HttpContext.User`.
+- [x] Eliminar los usos de `SimpleJwt.DecodeToken` como camino paralelo de autorización (`SuperAdminEndpoints.cs:52,680`, `AuthEndpoints.cs:181,255`). Todo pasa por `HttpContext.User`.
 
 **Verificado bloque 1:** ____ / ____
 

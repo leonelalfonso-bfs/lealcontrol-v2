@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Security;
 using LealControl.Modules.Sales.Application.Orders;
 using LealControl.Modules.Sales.Application.Orders.Models;
 using LealControl.Modules.Sales.Application.Products;
@@ -63,7 +64,7 @@ public static class SalesEndpoints
         endpoints.MapRemitoEndpoints();
         endpoints.MapInvoiceEndpoints();
         endpoints.MapPurchaseEndpoints();
-        var sales = endpoints.MapGroup("/api/v1/sales");
+        var sales = endpoints.MapGroup("/api/v1/sales").RequirePolicyOnWrites("RequireSales");
 
         // Quotes Endpoints
         sales.MapGet("/quotes", async (

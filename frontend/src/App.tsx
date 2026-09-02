@@ -132,7 +132,7 @@ import { LealLogo } from "./components/LealLogo";
 import "./v1-theme.css";
 import "./brand-layout.css";
 import "./excel-tools.css";
-import { DEVELOPMENT_ACCESS, resolveActiveModule, visibleModules } from "./app/moduleRegistry";
+import { DEVELOPMENT_ACCESS, resolveActiveModule, resolveAllowedModuleIds, visibleModules } from "./app/moduleRegistry";
 
 export function App() {
   const location = useLocation();
@@ -158,34 +158,7 @@ export function App() {
   const activeCompanyName = tenant?.tradeName || tenant?.legalName || companyName;
 
   const userRole = user?.role || "Comercial";
-  let allowedModuleIds: string[] = [];
-  if (userRole === "Admin") {
-    allowedModuleIds = ["inicio", "directorio", "crm", "comunicaciones", "ventas", "compras", "inventario", "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "administracion"];
-  } else {
-    try {
-      const raw = typeof user?.allowedModulesJson === "string" ? JSON.parse(user.allowedModulesJson) : user?.allowedModulesJson || [];
-      const map: Record<string, string[]> = {
-        sales: ["ventas"],
-        crm: ["crm", "directorio", "comunicaciones"],
-        communications: ["comunicaciones"],
-        purchases: ["compras"],
-        inventory: ["inventario", "produccion"],
-        finance: ["finanzas"],
-        fleet: ["flota"],
-        hr: ["rrhh"],
-        grains: ["cereales"],
-        accounting: ["contabilidad"],
-        metrology: ["metrologia"]
-      };
-      allowedModuleIds = ["inicio"];
-      (Array.isArray(raw) ? raw : []).forEach((r: string) => {
-        if (map[r]) allowedModuleIds.push(...map[r]);
-        else allowedModuleIds.push(r);
-      });
-    } catch {
-      allowedModuleIds = ["inicio", "ventas", "crm", "comunicaciones"];
-    }
-  }
+  const allowedModuleIds = resolveAllowedModuleIds(userRole, user?.allowedModulesJson);
 
   const allMods = visibleModules(DEVELOPMENT_ACCESS);
   const modules = allMods.filter((m) => m.id === "inicio" || allowedModuleIds.includes(m.id));

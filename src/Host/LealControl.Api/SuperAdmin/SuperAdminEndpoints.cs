@@ -35,27 +35,11 @@ public static class SuperAdminEndpoints
                     return await next(invocationContext);
                 }
 
-                // 2. Verificar autenticacion
+                // 2. Verificar autenticacion (JWT Bearer via middleware)
                 var user = http.User;
-                string? role = null;
-
-                if (user?.Identity?.IsAuthenticated == true)
-                {
-                    role = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? user.FindFirst("role")?.Value;
-                }
-                else
-                {
-                    var authHeader = http.Request.Headers["Authorization"].ToString();
-                    if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var tokenStr = authHeader.Substring(7).Trim();
-                        var decoded = LealControl.Modules.Crm.Infrastructure.Http.SimpleJwt.DecodeToken(tokenStr);
-                        if (decoded != null)
-                        {
-                            role = decoded.Role;
-                        }
-                    }
-                }
+                var role = user?.Identity?.IsAuthenticated == true
+                    ? user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? user.FindFirst("role")?.Value
+                    : null;
 
                 if (string.IsNullOrWhiteSpace(role))
                 {
@@ -396,7 +380,7 @@ public static class SuperAdminEndpoints
                             pending = "https://erp.lealcontrol.com/superadmin/payment-pending"
                         },
                         auto_return = "approved",
-                        notification_url = "https://erp.lealcontrol.com/api/v1/superadmin/webhooks/mercadopago"
+                        notification_url = $"{ResolvePublicApiBaseUrl(config)}/api/v1/public/webhooks/mercadopago"
                     };
 
                     var res = await http.PostAsJsonAsync("https://api.mercadopago.com/checkout/preferences", preferenceBody, ct);
@@ -442,77 +426,6 @@ public static class SuperAdminEndpoints
                 amount = amount,
                 message = "Link de pago generado para " + tenant.Name
             });
-        });
-
-        // 11. MercadoPago Webhook / IPN Receiver
-        group.MapPost("/webhooks/mercadopago", async (
-            HttpRequest request,
-            MasterDbContext masterDb,
-            IConfiguration config,
-            ILoggerFactory loggerFactory,
-            CancellationToken ct) =>
-        {
-            var logger = loggerFactory.CreateLogger("MercadoPagoWebhook");
-            try
-            {
-                using var reader = new System.IO.StreamReader(request.Body);
-                var rawBody = await reader.ReadToEndAsync(ct);
-                logger.LogInformation("Received MercadoPago Webhook payload: {Payload}", rawBody);
-
-                // Check query params topic/id or json type/data.id
-                var paymentId = request.Query["data.id"].ToString();
-                if (string.IsNullOrWhiteSpace(paymentId)) paymentId = request.Query["id"].ToString();
-
-                var mpAccessToken = config["MercadoPago:AccessToken"] ?? Environment.GetEnvironmentVariable("MP_ACCESS_TOKEN");
-
-                if (!string.IsNullOrWhiteSpace(paymentId) && !string.IsNullOrWhiteSpace(mpAccessToken))
-                {
-                    using var http = new HttpClient();
-                    http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", mpAccessToken);
-
-                    var paymentRes = await http.GetAsync($"https://api.mercadopago.com/v1/payments/{paymentId}", ct);
-                    if (paymentRes.IsSuccessStatusCode)
-                    {
-                        var paymentJson = await paymentRes.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
-                        var status = paymentJson.GetProperty("status").GetString();
-                        var externalRef = paymentJson.TryGetProperty("external_reference", out var ext) ? ext.GetString() : null;
-
-                        if (status == "approved" && Guid.TryParse(externalRef, out var tenantId))
-                        {
-                            var tenant = await masterDb.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, ct);
-                            if (tenant != null)
-                            {
-                                tenant.Status = "Active";
-                                tenant.ExpiresAtUtc = (tenant.ExpiresAtUtc.HasValue && tenant.ExpiresAtUtc.Value > DateTime.UtcNow)
-                                    ? tenant.ExpiresAtUtc.Value.AddMonths(1)
-                                    : DateTime.UtcNow.AddMonths(1);
-
-                                masterDb.Payments.Add(new TenantPaymentRecord
-                                {
-                                    TenantId = tenant.Id,
-                                    ExternalPaymentId = paymentId,
-                                    Amount = tenant.MonthlyPriceArs,
-                                    Currency = "ARS",
-                                    Status = "Approved",
-                                    ApprovedAtUtc = DateTime.UtcNow,
-                                    PayerEmail = tenant.AdminEmail,
-                                    RawPayloadJson = paymentJson.ToString()
-                                });
-
-                                await masterDb.SaveChangesAsync(ct);
-                                logger.LogInformation("Subscription renewed for tenant {TenantName} until {Expiry}", tenant.Name, tenant.ExpiresAtUtc);
-                            }
-                        }
-                    }
-                }
-
-                return Results.Ok(new { received = true });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error processing MercadoPago webhook");
-                return Results.Ok(new { received = true, error = ex.Message });
-            }
         });
 
         // 12. Public Demo Request Intake
@@ -662,27 +575,16 @@ public static class SuperAdminEndpoints
             CancellationToken ct) =>
         {
             var user = http.User;
-            string? role = null;
+            var role = user?.Identity?.IsAuthenticated == true
+                ? user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? user.FindFirst("role")?.Value
+                : null;
             Guid? tokenTenantId = null;
-
             if (user?.Identity?.IsAuthenticated == true)
             {
-                role = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? user.FindFirst("role")?.Value;
                 var tid = user.FindFirst("tenant_id")?.Value;
-                if (Guid.TryParse(tid, out var parsedTid)) tokenTenantId = parsedTid;
-            }
-            else
-            {
-                var authHeader = http.Request.Headers["Authorization"].ToString();
-                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                if (Guid.TryParse(tid, out var parsedTid))
                 {
-                    var tokenStr = authHeader.Substring(7).Trim();
-                    var decoded = LealControl.Modules.Crm.Infrastructure.Http.SimpleJwt.DecodeToken(tokenStr);
-                    if (decoded != null)
-                    {
-                        role = decoded.Role;
-                        tokenTenantId = decoded.TenantId;
-                    }
+                    tokenTenantId = parsedTid;
                 }
             }
 
@@ -718,6 +620,18 @@ public static class SuperAdminEndpoints
         }).WithTags("Company Settings");
 
         return endpoints;
+    }
+
+    private static string ResolvePublicApiBaseUrl(IConfiguration config)
+    {
+        var configured = config["PublicBaseUrl"]
+            ?? Environment.GetEnvironmentVariable("PUBLIC_BASE_URL");
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            return configured.Trim().TrimEnd('/');
+        }
+
+        return "https://erp.lealcontrol.com";
     }
 }
 

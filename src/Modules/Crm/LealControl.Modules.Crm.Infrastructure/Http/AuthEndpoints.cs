@@ -28,7 +28,7 @@ public static class AuthEndpoints
         var auth = endpoints.MapGroup("/api/v1/auth").WithTags("Authentication & Tenancy");
 
         // 1. Login
-        auth.MapPost("/login", async ([FromBody] LoginRequest req, CrmDbContext db, IConfiguration configuration, IHostEnvironment env, CancellationToken ct) =>
+        auth.MapPost("/login", async ([FromBody] LoginRequest req, CrmDbContext db, IConfiguration configuration, CancellationToken ct) =>
         {
             if (req == null || string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.Password))
             {
@@ -38,7 +38,7 @@ public static class AuthEndpoints
             var email = req.Email.Trim().ToLowerInvariant();
             var masterConnStr = configuration.GetConnectionString("Database")
                 ?? db.Database.GetConnectionString()
-                ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
+                ?? throw new InvalidOperationException("ConnectionStrings:Database no configurada.");
 
             var memberships = await MultiTenantAuthResolver.FindAllAsync(masterConnStr, email, req.Password, ct);
 
@@ -78,25 +78,6 @@ public static class AuthEndpoints
                 }
 
                 return Results.Ok(MultiTenantAuthResolver.ToAuthResponse(active, memberships));
-            }
-
-            // Fallback for default development admin
-            if (env.IsDevelopment() && (email == "admin@lealcontrol.com" || email == "admin@leal.com" || email == "admin"))
-            {
-                var devTenantId = new TenantId(Guid.Parse("11111111-1111-1111-1111-111111111111"));
-                var newAdmin = TenantUser.Create(devTenantId, "Administrador Leal", email, "Admin", "admin123");
-                db.TenantUsers.Add(newAdmin);
-                await db.SaveChangesAsync(ct);
-
-                var devSettings = await db.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == devTenantId, ct);
-                var token = SimpleJwt.CreateToken(newAdmin.Id, newAdmin.Email, newAdmin.FullName, newAdmin.Role, devTenantId.Value, devSettings?.LegalName ?? "LEAL CONTROL ERP S.A.");
-
-                return Results.Ok(new AuthResponse(
-                    token,
-                    new UserDto(newAdmin.Id, newAdmin.FullName, newAdmin.Email, newAdmin.Role, newAdmin.AllowedModulesJson),
-                    new TenantSummaryDto(devTenantId.Value, devSettings?.LegalName ?? "LEAL CONTROL ERP S.A.", devSettings?.TradeName, devSettings?.DocumentNumber ?? "30715489629"),
-                    new List<TenantSummaryDto> { new(devTenantId.Value, devSettings?.LegalName ?? "LEAL CONTROL ERP S.A.", devSettings?.TradeName, devSettings?.DocumentNumber ?? "30715489629") }
-                ));
             }
 
             return Results.BadRequest(new { message = "Usuario no encontrado o inactivo." });
@@ -149,7 +130,14 @@ public static class AuthEndpoints
 
             await db.SaveChangesAsync(ct);
 
-            var token = SimpleJwt.CreateToken(adminUser.Id, adminUser.Email, adminUser.FullName, adminUser.Role, newTenantId.Value, companyName);
+            var token = SimpleJwt.CreateToken(
+                adminUser.Id,
+                adminUser.Email,
+                adminUser.FullName,
+                adminUser.Role,
+                newTenantId.Value,
+                companyName,
+                adminUser.AllowedModulesJson);
 
             var availableTenants = new List<TenantSummaryDto>
             {
@@ -170,24 +158,22 @@ public static class AuthEndpoints
             var tenantId = tenantContext.TenantId;
             var masterConnStr = configuration.GetConnectionString("Database")
                 ?? db.Database.GetConnectionString()
-                ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
+                ?? throw new InvalidOperationException("ConnectionStrings:Database no configurada.");
 
-            string? emailFromToken = null;
+            var emailFromToken = http.User.FindFirst("email")?.Value;
             TenantUser? user = null;
-            var authHeader = http.Request.Headers["Authorization"].ToString();
-            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            if (Guid.TryParse(http.User.FindFirst("sub")?.Value, out var userIdFromToken))
             {
-                var token = authHeader.Substring(7).Trim();
-                var tokenUser = SimpleJwt.DecodeToken(token);
-                emailFromToken = tokenUser?.Email;
-                if (tokenUser?.UserId != null)
-                {
-                    user = await db.TenantUsers.FirstOrDefaultAsync(u => u.Id == tokenUser.UserId.Value && u.TenantId == tenantId && u.IsActive, ct);
-                }
-                if (user == null && !string.IsNullOrWhiteSpace(tokenUser?.Email))
-                {
-                    user = await db.TenantUsers.FirstOrDefaultAsync(u => u.Email.ToLower() == tokenUser.Email.ToLower() && u.TenantId == tenantId && u.IsActive, ct);
-                }
+                user = await db.TenantUsers.FirstOrDefaultAsync(
+                    u => u.Id == userIdFromToken && u.TenantId == tenantId && u.IsActive,
+                    ct);
+            }
+
+            if (user == null && !string.IsNullOrWhiteSpace(emailFromToken))
+            {
+                user = await db.TenantUsers.FirstOrDefaultAsync(
+                    u => u.Email.ToLower() == emailFromToken.ToLower() && u.TenantId == tenantId && u.IsActive,
+                    ct);
             }
 
             IReadOnlyList<TenantMembership> memberships = [];
@@ -250,17 +236,9 @@ public static class AuthEndpoints
             var targetTenantId = req.TenantId;
             var masterConnStr = configuration.GetConnectionString("Database")
                 ?? db.Database.GetConnectionString()
-                ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
+                ?? throw new InvalidOperationException("ConnectionStrings:Database no configurada.");
 
-            string? email = null;
-            var authHeader = http.Request.Headers["Authorization"].ToString();
-            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-            {
-                var token = authHeader.Substring(7).Trim();
-                var tokenUser = SimpleJwt.DecodeToken(token);
-                email = tokenUser?.Email;
-            }
-
+            var email = http.User.FindFirst("email")?.Value;
             if (string.IsNullOrWhiteSpace(email))
             {
                 return Results.Json(new { message = "Sesión inválida." }, statusCode: StatusCodes.Status401Unauthorized);
@@ -309,23 +287,32 @@ public static class SimpleJwt
 
     public static byte[] GetSecretBytes() => Encoding.UTF8.GetBytes(SecretKey);
 
-    public static string CreateToken(Guid userId, string email, string fullName, string role, Guid tenantId, string tenantName)
+    public static string CreateToken(
+        Guid userId,
+        string email,
+        string fullName,
+        string role,
+        Guid tenantId,
+        string tenantName,
+        string? allowedModulesJson = null)
     {
         var now = DateTimeOffset.UtcNow;
         var header = new { alg = "HS256", typ = "JWT" };
-        var payload = new
+        var allowedModules = ParseAllowedModules(allowedModulesJson);
+        var payload = new Dictionary<string, object>
         {
-            iss = Issuer,
-            aud = Audience,
-            sub = userId.ToString(),
-            email = email,
-            name = fullName,
-            role = role,
-            tenant_id = tenantId.ToString(),
-            tenant_name = tenantName,
-            nbf = now.ToUnixTimeSeconds(),
-            iat = now.ToUnixTimeSeconds(),
-            exp = now.AddHours(LifetimeHours).ToUnixTimeSeconds()
+            ["iss"] = Issuer,
+            ["aud"] = Audience,
+            ["sub"] = userId.ToString(),
+            ["email"] = email,
+            ["name"] = fullName,
+            ["role"] = role,
+            ["tenant_id"] = tenantId.ToString(),
+            ["tenant_name"] = tenantName,
+            ["allowed_modules"] = allowedModules,
+            ["nbf"] = now.ToUnixTimeSeconds(),
+            ["iat"] = now.ToUnixTimeSeconds(),
+            ["exp"] = now.AddHours(LifetimeHours).ToUnixTimeSeconds()
         };
 
         string headerB64 = Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(header));
@@ -333,6 +320,26 @@ public static class SimpleJwt
         string signatureB64 = ComputeSignature($"{headerB64}.{payloadB64}");
 
         return $"{headerB64}.{payloadB64}.{signatureB64}";
+    }
+
+    private static string[] ParseAllowedModules(string? allowedModulesJson)
+    {
+        if (string.IsNullOrWhiteSpace(allowedModulesJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<string[]>(allowedModulesJson)?
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .ToArray()
+                ?? [];
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     public static DecodedToken? DecodeToken(string token)

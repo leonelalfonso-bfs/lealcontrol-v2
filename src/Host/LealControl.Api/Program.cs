@@ -20,6 +20,8 @@ using LealControl.Modules.Metrology.Infrastructure;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Api.SuperAdmin;
 using LealControl.Api.Automation;
+using LealControl.Api.Public;
+using LealControl.Api.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -47,7 +49,8 @@ try
     });
 
     var dbConnectionString = builder.Configuration.GetConnectionString("Database")
-        ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
+        ?? throw new InvalidOperationException(
+            "ConnectionStrings:Database es obligatorio. En desarrollo usá appsettings.Development.json o user-secrets.");
 
     builder.Services.AddDbContext<MasterDbContext>(options =>
         options.UseNpgsql(dbConnectionString));
@@ -70,12 +73,11 @@ try
     builder.Services.ConfigureHttpJsonOptions(options =>
         options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
-    const string retiredJwtFallback = "LealControl_Enterprise_JWT_Signing_Key_2026_Secret_Key_Super_Secure_!";
     var jwtSecret = builder.Configuration["Jwt:Secret"]
         ?? builder.Configuration["JWT_SECRET"]
         ?? Environment.GetEnvironmentVariable("JWT_SECRET");
 
-    if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret == retiredJwtFallback)
+    if (string.IsNullOrWhiteSpace(jwtSecret))
     {
         if (builder.Environment.IsProduction())
         {
@@ -131,10 +133,20 @@ try
     {
         options.AddPolicy("RequireAdmin", policy =>
             policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
+        options.AddPolicy("RequireFinance", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Tesorero", "Contador"));
+        options.AddPolicy("RequireAccounting", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Contador"));
+        options.AddPolicy("RequireSales", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Comercial", "Contador"));
+        options.AddPolicy("RequirePurchases", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Compras", "Contador"));
         options.FallbackPolicy = new AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
             .Build();
     });
+
+    builder.Services.AddProblemDetails();
 
     // Persistencia de Llaves Criptográficas (Data Protection)
     var keysFolder = builder.Configuration["DataProtection:KeysFolder"]
@@ -155,10 +167,21 @@ try
         Log.Warning(ex, "No se pudo inicializar la persistencia de DataProtection en {Folder}. Se utilizará el proveedor en memoria.", keysFolder);
     }
 
-    // Rate Limiting para protección contra fuerza bruta
+    // Rate Limiting: global + auth
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        {
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 200,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
+        });
         options.AddPolicy("auth-policy", httpContext =>
         {
             var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -237,10 +260,31 @@ try
 
     var app = builder.Build();
 
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseExceptionHandler(exceptionHandlerApp =>
+        {
+            exceptionHandlerApp.Run(async context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                context.Response.ContentType = "application/problem+json";
+                await context.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "Error interno del servidor",
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
+                });
+            });
+        });
+        app.UseHttpsRedirection();
+        app.UseHsts();
+    }
+
     app.UseSerilogRequestLogging();
     app.UseCors("web");
     app.UseRateLimiter();
     app.UseAuthentication();
+    app.UseMiddleware<ContractedModuleMiddleware>();
     app.UseAuthorization();
     app.Use(async (context, next) =>
     {
@@ -276,6 +320,7 @@ try
     app.MapAccountingModule();
     app.MapMetrologyModule();
     app.MapAutomationEndpoints();
+    app.MapPublicWebhookEndpoints();
     app.MapSuperAdminModule();
     app.MapTenantBackupSelfService();
 

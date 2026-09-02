@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Security;
 using LealControl.BuildingBlocks.Results;
 using LealControl.Modules.Sales.Application.Purchases;
 using LealControl.Modules.Sales.Domain.Purchases;
@@ -18,7 +19,7 @@ public static class PurchaseEndpoints
 {
     public static void MapPurchaseEndpoints(this IEndpointRouteBuilder app)
     {
-        var purchases = app.MapGroup("/api/v1/purchases").WithTags("Purchases");
+        var purchases = app.MapGroup("/api/v1/purchases").WithTags("Purchases").RequirePolicyOnWrites("RequirePurchases");
 
         // Purchase Orders
         purchases.MapGet("/orders", async (string? search, string? status, ISender sender, CancellationToken ct) =>

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -20,7 +21,7 @@ public static class FinanceImport
 {
     public static IEndpointRouteBuilder MapFinanceImportEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/finance/imports").WithTags("Finance Imports");
+        var group = endpoints.MapGroup("/api/v1/finance/imports").WithTags("Finance Imports").RequirePolicyOnWrites("RequireFinance");
         group.MapPost("/bank/preview", (BankImportRequest request) => Results.Ok(Parse(request.CsvContent)));
         group.MapPost("/bank/confirm", async (BankImportRequest request, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
         {
@@ -95,7 +96,7 @@ public static class FinanceImport
             });
         });
 
-        var finance = endpoints.MapGroup("/api/v1/finance").WithTags("Finance");
+        var finance = endpoints.MapGroup("/api/v1/finance").WithTags("Finance").RequirePolicyOnWrites("RequireFinance");
         finance.MapGet("/accounts/{accountId:guid}/movements", async (Guid accountId, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;

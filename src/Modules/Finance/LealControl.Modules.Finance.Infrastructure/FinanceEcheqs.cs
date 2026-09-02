@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Security;
 using System.Globalization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -16,7 +17,7 @@ public static class FinanceEcheqs
 {
     public static IEndpointRouteBuilder MapFinanceEcheqEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/finance/echeqs").WithTags("Finance eCheqs");
+        var group = endpoints.MapGroup("/api/v1/finance/echeqs").WithTags("Finance eCheqs").RequirePolicyOnWrites("RequireFinance");
         group.MapGet("", async (FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
             Results.Ok(await db.ReceivedCheques.AsNoTracking().Where(x => x.TenantId == tenant.TenantId.Value).OrderByDescending(x => x.DueDateUtc).ThenByDescending(x => x.CreatedAtUtc).ToListAsync(ct)));
         group.MapPost("", async (CreateReceivedChequeRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>

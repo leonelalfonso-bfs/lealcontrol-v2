@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Security;
 using LealControl.Modules.Sales.Application.Inventory;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -14,7 +15,7 @@ public static class InventoryEndpoints
 {
     public static IEndpointRouteBuilder MapInventoryEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/sales/inventory").WithTags("Inventory");
+        var group = endpoints.MapGroup("/api/v1/sales/inventory").WithTags("Inventory").RequirePolicyOnWrites("RequireSales");
 
         // Stock Matrix in 4 Dimensions
         group.MapGet("/", async (string? search, string? status, Guid? warehouseId, ISender sender, CancellationToken cancellationToken) =>

@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -117,7 +118,7 @@ public static class FinanceConcepts
 
     public static IEndpointRouteBuilder MapFinanceConceptEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/finance").WithTags("Finance Concepts");
+        var group = endpoints.MapGroup("/api/v1/finance").WithTags("Finance Concepts").RequirePolicyOnWrites("RequireFinance");
         group.MapGet("/concepts", async (FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value; await EnsureBaseConceptsAsync(db, tenantId, ct);

@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <FrameworkReference Include="Microsoft.AspNetCore.App" />
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />

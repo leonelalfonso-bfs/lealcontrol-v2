@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using LealControl.BuildingBlocks.Security;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -41,7 +42,7 @@ public static class FinancePayments
 {
     public static IEndpointRouteBuilder MapFinancePaymentEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/finance/payments").WithTags("Finance Payment Orders");
+        var group = endpoints.MapGroup("/api/v1/finance/payments").WithTags("Finance Payment Orders").RequirePolicyOnWrites("RequireFinance");
 
         // List payment orders
         group.MapGet("", async (FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>

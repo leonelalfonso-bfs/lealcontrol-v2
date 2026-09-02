@@ -66,7 +66,14 @@ public static class MultiTenantAuthResolver
 
     public static AuthResponse ToAuthResponse(TenantMembership active, IReadOnlyList<TenantMembership> all) =>
         new(
-            SimpleJwt.CreateToken(active.UserId, active.Email, active.FullName, active.Role, active.TenantId, active.LegalName),
+            SimpleJwt.CreateToken(
+                active.UserId,
+                active.Email,
+                active.FullName,
+                active.Role,
+                active.TenantId,
+                active.LegalName,
+                active.AllowedModulesJson),
             new UserDto(active.UserId, active.FullName, active.Email, active.Role, active.AllowedModulesJson),
             new TenantSummaryDto(active.TenantId, active.LegalName, active.TradeName, active.DocumentNumber),
             ToSummaries(all));
@@ -124,7 +131,7 @@ public static class MultiTenantAuthResolver
             await conn.OpenAsync(cancellationToken);
 
             const string sql = @"
-                SELECT u.""TenantId"", u.""Id"", u.""PasswordHash"", u.""Role"", u.""FullName""
+                SELECT u.""TenantId"", u.""Id"", u.""PasswordHash"", u.""Role"", u.""FullName"", u.""AllowedModulesJson""
                 FROM public.tenant_users u
                 WHERE lower(u.""Email"") = @email AND u.""IsActive"" = true";
 
@@ -139,6 +146,7 @@ public static class MultiTenantAuthResolver
                 var pwdHash = reader.IsDBNull(2) ? string.Empty : reader.GetString(2);
                 var role = reader.IsDBNull(3) ? "Admin" : reader.GetString(3);
                 var fullName = reader.GetString(4);
+                var allowedModulesJson = reader.IsDBNull(5) ? null : reader.GetString(5);
 
                 if (password != null && !PasswordSecurity.VerifyPassword(password, pwdHash))
                 {
@@ -157,7 +165,7 @@ public static class MultiTenantAuthResolver
                     fullName,
                     emailLower,
                     role,
-                    null));
+                    allowedModulesJson));
             }
         }
         catch

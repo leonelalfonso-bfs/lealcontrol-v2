@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -54,7 +55,7 @@ public static class FinanceReceipts
 {
     public static IEndpointRouteBuilder MapFinanceReceiptEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/finance/collections").WithTags("Finance Collections");
+        var group = endpoints.MapGroup("/api/v1/finance/collections").WithTags("Finance Collections").RequirePolicyOnWrites("RequireFinance");
 
         // List receipts
         group.MapGet("", async (FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
@@ -359,7 +360,7 @@ public static class FinanceReceipts
             return Results.Created($"/api/v1/finance/collections/{receiptId}", new { id = receiptId, receiptNumber = number, status = "Confirmed" });
         });
 
-        var detail = endpoints.MapGroup("/api/v1/finance").WithTags("Finance Detail");
+        var detail = endpoints.MapGroup("/api/v1/finance").WithTags("Finance Detail").RequirePolicyOnWrites("RequireFinance");
         detail.MapGet("/accounts/{accountId:guid}/movements-detail", async (Guid accountId, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;

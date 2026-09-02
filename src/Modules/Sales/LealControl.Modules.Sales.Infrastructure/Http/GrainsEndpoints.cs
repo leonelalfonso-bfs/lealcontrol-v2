@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Security;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Sales.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Builder;
@@ -17,7 +18,7 @@ public static class GrainsEndpoints
 {
     public static IEndpointRouteBuilder MapGrainsModule(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/grains").WithTags("Grains & Agriculture Brokerage");
+        var group = endpoints.MapGroup("/api/v1/grains").WithTags("Grains & Agriculture Brokerage").RequirePolicyOnWrites("RequireSales");
 
         // 1. Dashboard
         group.MapGet("/dashboard", async (ITenantContext tenantContext, SalesDbContext db, CancellationToken ct) =>
