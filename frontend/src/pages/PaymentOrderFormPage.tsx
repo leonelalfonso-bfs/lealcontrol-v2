@@ -20,6 +20,7 @@ type PaymentLine = {
   accountId?: string;
   bankMovementId?: string;
   chequeId?: string;
+  conceptId?: string;
   retentionType?: string;
   retentionCertificate?: string;
   notes?: string;
@@ -47,7 +48,7 @@ export function PaymentOrderFormPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [availableCheques, setAvailableCheques] = useState<any[]>([]);
   const [availableMovements, setAvailableMovements] = useState<any[]>([]);
-  const [movementConceptFilter, setMovementConceptFilter] = useState<string>("all");
+  const [movementConceptFilter, setMovementConceptFilter] = useState<string>("");
   const [concepts, setConcepts] = useState<any[]>([]);
   const [purchaseInvoices, setPurchaseInvoices] = useState<PurchaseInvoice[]>([]);
 
@@ -67,25 +68,39 @@ export function PaymentOrderFormPage() {
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadMovementsForAccount = async (accountId?: string) => {
+  const loadMovementsForAccount = async (accountId?: string, conceptId?: string) => {
     try {
-      const movs = await api.listPaymentAvailableMovements(accountId || undefined);
+      const movs = await api.listPaymentAvailableMovements(
+        accountId || undefined,
+        conceptId || movementConceptFilter || undefined
+      );
       setAvailableMovements(movs || []);
     } catch {
       setAvailableMovements([]);
     }
   };
 
+  const expenseConcepts = useMemo(
+    () => concepts.filter((c) => c.direction === "Expense" || c.direction === "Both"),
+    [concepts]
+  );
+
   const filteredAvailableMovements = useMemo(() => {
+    if (!movementConceptFilter) return availableMovements;
+    const target = String(movementConceptFilter).toLowerCase().trim();
     return availableMovements.filter((m) => {
-      if (!movementConceptFilter || movementConceptFilter === "all") return true;
-      if (movementConceptFilter === "unclassified") return !m.conceptId;
-      const target = String(movementConceptFilter).toLowerCase().trim();
       const movConceptId = m.conceptId ? String(m.conceptId).toLowerCase().trim() : "";
       const movConceptCode = m.conceptCode ? String(m.conceptCode).toLowerCase().trim() : "";
       return movConceptId === target || movConceptCode === target;
     });
   }, [availableMovements, movementConceptFilter]);
+
+  useEffect(() => {
+    const accountId = lines.find((l) => l.accountId)?.accountId || accounts[0]?.id;
+    if (accountId && movementConceptFilter) {
+      void loadMovementsForAccount(accountId, movementConceptFilter);
+    }
+  }, [movementConceptFilter]);
 
   // Load initial data
   useEffect(() => {
@@ -109,7 +124,13 @@ export function PaymentOrderFormPage() {
           )
         );
         setPurchaseInvoices(invRes || []);
-        setConcepts((concRes || []).filter((c: any) => c.isActive));
+        const activeConcepts = (concRes || []).filter((c: any) => c.isActive);
+        setConcepts(activeConcepts);
+        const defaultPago = activeConcepts.find((c: any) => c.code === "PAGO_PROVEEDOR")
+          || activeConcepts.find((c: any) => c.direction === "Expense");
+        if (defaultPago?.id) {
+          setMovementConceptFilter(defaultPago.id);
+        }
 
         // Initial default line: Bank Transfer with first active bank account or from query params
         if (initialMovementId) {
@@ -308,6 +329,7 @@ export function PaymentOrderFormPage() {
           accountId: l.accountId || null,
           bankMovementId: l.bankMovementId || null,
           chequeId: l.chequeId || null,
+          conceptId: l.conceptId || movementConceptFilter || null,
           retentionType: l.retentionType || null,
           retentionCertificate: l.retentionCertificate || null,
           notes: l.notes || null
@@ -625,6 +647,28 @@ export function PaymentOrderFormPage() {
 
                       {(line.method === "BankTransfer" || line.method === "Cash") && (
                         <label style={{ gridColumn: "span 2" }}>
+                          Concepto de Pago (cartera) *
+                          <select
+                            required
+                            value={line.conceptId || movementConceptFilter || ""}
+                            onChange={(e) => {
+                              const conceptId = e.target.value || undefined;
+                              updateLine(line.id, { conceptId, bankMovementId: undefined });
+                              if (conceptId) setMovementConceptFilter(conceptId);
+                            }}
+                          >
+                            <option value="" disabled>Elegí una cartera de egreso</option>
+                            {expenseConcepts.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name} ({c.code})
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+
+                      {(line.method === "BankTransfer" || line.method === "Cash") && (
+                        <label style={{ gridColumn: "span 2" }}>
                           Cuenta Financiera de Origen
                           <select
                             value={line.accountId || ""}
@@ -650,16 +694,17 @@ export function PaymentOrderFormPage() {
                               <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Filtrar Concepto:</span>
                               <select
                                 value={movementConceptFilter}
-                                onChange={(e) => setMovementConceptFilter(e.target.value)}
+                                onChange={(e) => {
+                                  setMovementConceptFilter(e.target.value);
+                                  updateLine(line.id, { bankMovementId: undefined, conceptId: e.target.value || undefined });
+                                }}
                                 style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
                               >
-                                <option value="all">Ver todas</option>
-                                {concepts.map((c) => (
+                                {expenseConcepts.map((c) => (
                                   <option key={c.id} value={c.id}>
                                     {c.name}
                                   </option>
                                 ))}
-                                <option value="unclassified">Sin clasificar</option>
                               </select>
                             </div>
                           </div>
@@ -668,12 +713,13 @@ export function PaymentOrderFormPage() {
                             value={line.bankMovementId || ""}
                             onChange={(e) => {
                               const movId = e.target.value;
-                              const mov = availableMovements.find((m) => m.id === movId);
+                              const mov = filteredAvailableMovements.find((m) => m.id === movId);
                               updateLine(line.id, {
                                 bankMovementId: movId || undefined,
                                 accountId: mov?.accountId || line.accountId,
                                 amount: mov ? Number(mov.amount) : line.amount,
-                                notes: mov ? mov.description : line.notes
+                                notes: mov ? mov.description : line.notes,
+                                conceptId: mov?.conceptId || line.conceptId || movementConceptFilter || undefined
                               });
                             }}
                             style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}

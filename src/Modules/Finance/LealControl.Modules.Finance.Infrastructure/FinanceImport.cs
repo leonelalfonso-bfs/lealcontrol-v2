@@ -123,6 +123,8 @@ public static class FinanceImport
                         where movement.TenantId == tenantId
                               && (accountId == null || movement.AccountId == accountId.Value)
                               && movement.Kind == FinancialMovementKind.Credit
+                              && movement.ClassificationStatus == FinancialClassificationStatus.Confirmed
+                              && movement.ConceptId != null
                               && movement.ReconciliationStatus != FinancialReconciliationStatus.Reconciled
                         select new
                         {
@@ -161,6 +163,8 @@ public static class FinanceImport
                         where movement.TenantId == tenantId
                               && (accountId == null || movement.AccountId == accountId.Value)
                               && movement.Kind == FinancialMovementKind.Debit
+                              && movement.ClassificationStatus == FinancialClassificationStatus.Confirmed
+                              && movement.ConceptId != null
                               && movement.ReconciliationStatus != FinancialReconciliationStatus.Reconciled
                         select new
                         {

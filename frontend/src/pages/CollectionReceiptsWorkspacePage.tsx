@@ -62,7 +62,7 @@ export function CollectionReceiptsWorkspacePage() {
   const [selectedReceiptDetail, setSelectedReceiptDetail] = useState<any | null>(null);
 
   // Filters for available bank movements
-  const [movementConceptFilter, setMovementConceptFilter] = useState<string>("all");
+  const [movementConceptFilter, setMovementConceptFilter] = useState<string>("");
 
   const [receiptDate, setReceiptDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
@@ -100,7 +100,13 @@ export function CollectionReceiptsWorkspacePage() {
       setAccounts(accRes || []);
       setInvoices(invRes || []);
       setReceipts(recRes || []);
-      setConcepts((concRes || []).filter((c: any) => c.isActive));
+      const activeConcepts = (concRes || []).filter((c: any) => c.isActive);
+      setConcepts(activeConcepts);
+      const defaultCobro = activeConcepts.find((c: any) => c.code === "COBRO_CLIENTE")
+        || activeConcepts.find((c: any) => c.direction === "Income");
+      if (defaultCobro?.id) {
+        setMovementConceptFilter(defaultCobro.id);
+      }
 
       // Available cheques in portfolio
       setAvailableCheques(
@@ -147,9 +153,12 @@ export function CollectionReceiptsWorkspacePage() {
     }
   };
 
-  const loadMovementsForAccount = async (accountId?: string) => {
+  const loadMovementsForAccount = async (accountId?: string, conceptId?: string) => {
     try {
-      const movs = await api.listCollectionAvailableMovements(accountId || undefined);
+      const movs = await api.listCollectionAvailableMovements(
+        accountId || undefined,
+        conceptId || movementConceptFilter || undefined
+      );
       setAvailableMovements(movs || []);
     } catch {
       setAvailableMovements([]);
@@ -231,17 +240,28 @@ export function CollectionReceiptsWorkspacePage() {
     [customers, selectedCustomerId]
   );
 
-  // Filter available movements by concept
+  // Filter available movements by concept (client-side backup; API already filters confirmed + concept)
+  const incomeConcepts = useMemo(
+    () => concepts.filter((c) => c.direction === "Income" || c.direction === "Both"),
+    [concepts]
+  );
+
   const filteredAvailableMovements = useMemo(() => {
+    if (!movementConceptFilter) return availableMovements;
+    const target = String(movementConceptFilter).toLowerCase().trim();
     return availableMovements.filter((m) => {
-      if (!movementConceptFilter || movementConceptFilter === "all") return true;
-      if (movementConceptFilter === "unclassified") return !m.conceptId;
-      const target = String(movementConceptFilter).toLowerCase().trim();
       const movConceptId = m.conceptId ? String(m.conceptId).toLowerCase().trim() : "";
       const movConceptCode = m.conceptCode ? String(m.conceptCode).toLowerCase().trim() : "";
       return movConceptId === target || movConceptCode === target;
     });
   }, [availableMovements, movementConceptFilter]);
+
+  useEffect(() => {
+    const accountId = lines.find((l) => l.accountId)?.accountId || accounts[0]?.id;
+    if (accountId && movementConceptFilter) {
+      void loadMovementsForAccount(accountId, movementConceptFilter);
+    }
+  }, [movementConceptFilter]);
 
   // Totals calculations in Receipt Currency
   const totalImputed = useMemo(() => {
@@ -872,14 +892,19 @@ export function CollectionReceiptsWorkspacePage() {
                       {/* Concept Selection for Line */}
                       {(line.method === "BankTransfer" || line.method === "Cash") && (
                         <label>
-                          Concepto de Cobro
+                          Concepto de Cobro (cartera) *
                           <select
-                            value={line.conceptId || ""}
-                            onChange={(e) => updateLine(line.id, { conceptId: e.target.value || undefined })}
+                            required
+                            value={line.conceptId || movementConceptFilter || ""}
+                            onChange={(e) => {
+                              const conceptId = e.target.value || undefined;
+                              updateLine(line.id, { conceptId, movementId: undefined });
+                              if (conceptId) setMovementConceptFilter(conceptId);
+                            }}
                             style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
                           >
-                            <option value="">-- Cobro a cliente (Predeterminado) --</option>
-                            {concepts.map((c) => (
+                            <option value="" disabled>Elegí una cartera de ingreso</option>
+                            {incomeConcepts.map((c) => (
                               <option key={c.id} value={c.id}>
                                 🏷️ {c.name} ({c.code})
                               </option>
@@ -899,16 +924,17 @@ export function CollectionReceiptsWorkspacePage() {
                               <span style={{ fontSize: "0.75rem", color: "var(--ink-soft)" }}>Filtrar Concepto:</span>
                               <select
                                 value={movementConceptFilter}
-                                onChange={(e) => setMovementConceptFilter(e.target.value)}
+                                onChange={(e) => {
+                                  setMovementConceptFilter(e.target.value);
+                                  updateLine(line.id, { movementId: undefined, conceptId: e.target.value || undefined });
+                                }}
                                 style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
                               >
-                                <option value="all">Ver todas</option>
-                                {concepts.map((c) => (
+                                {incomeConcepts.map((c) => (
                                   <option key={c.id} value={c.id}>
                                     🏷️ {c.name}
                                   </option>
                                 ))}
-                                <option value="unclassified">Sin clasificar</option>
                               </select>
                             </div>
                           </div>
@@ -917,12 +943,13 @@ export function CollectionReceiptsWorkspacePage() {
                             value={line.movementId || ""}
                             onChange={(e) => {
                               const movId = e.target.value;
-                              const mov = availableMovements.find((m) => m.id === movId);
+                              const mov = filteredAvailableMovements.find((m) => m.id === movId);
                               updateLine(line.id, {
                                 movementId: movId || undefined,
                                 accountId: mov?.accountId || line.accountId,
                                 amount: mov ? Number(mov.amount) : line.amount,
-                                notes: mov ? mov.description : line.notes
+                                notes: mov ? mov.description : line.notes,
+                                conceptId: mov?.conceptId || line.conceptId || movementConceptFilter || undefined
                               });
                             }}
                             style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}

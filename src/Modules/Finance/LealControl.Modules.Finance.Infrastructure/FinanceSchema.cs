@@ -52,6 +52,7 @@ public static class FinanceSchema
           ""AccountId"" uuid, ""BankMovementId"" uuid, ""ChequeId"" uuid,
           ""RetentionType"" varchar(80), ""RetentionCertificate"" varchar(120), ""Notes"" varchar(500), ""CreatedAtUtc"" timestamptz NOT NULL
         );
+        ALTER TABLE finance.""CollectionReceiptLines"" ADD COLUMN IF NOT EXISTS ""ConceptId"" uuid;
         CREATE INDEX IF NOT EXISTS ""IX_CollectionReceiptLines_Receipt"" ON finance.""CollectionReceiptLines"" (""ReceiptId"");
 
         CREATE TABLE IF NOT EXISTS finance.""CollectionReceiptImputations"" (
@@ -96,6 +97,7 @@ public static class FinanceSchema
           ""AccountId"" uuid, ""BankMovementId"" uuid, ""ChequeId"" uuid,
           ""RetentionType"" varchar(80), ""RetentionCertificate"" varchar(120), ""Notes"" varchar(500), ""CreatedAtUtc"" timestamptz NOT NULL
         );
+        ALTER TABLE finance.""PaymentOrderLines"" ADD COLUMN IF NOT EXISTS ""ConceptId"" uuid;
         CREATE INDEX IF NOT EXISTS ""IX_PaymentOrderLines_Order"" ON finance.""PaymentOrderLines"" (""PaymentOrderId"");
 
         CREATE TABLE IF NOT EXISTS finance.""PaymentOrderImputations"" (

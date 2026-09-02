@@ -12,6 +12,7 @@ public sealed record PaymentOrderLineInput(
     Guid? AccountId,
     Guid? BankMovementId,
     Guid? ChequeId,
+    Guid? ConceptId,
     string? RetentionType,
     string? RetentionCertificate,
     string? Notes
@@ -168,6 +169,7 @@ public static class FinancePayments
                     AccountId = line.AccountId,
                     BankMovementId = line.BankMovementId,
                     ChequeId = line.ChequeId,
+                    ConceptId = line.ConceptId,
                     RetentionType = line.RetentionType?.Trim(),
                     RetentionCertificate = line.RetentionCertificate?.Trim(),
                     Notes = line.Notes?.Trim(),
@@ -177,13 +179,16 @@ public static class FinancePayments
                                 // If it's a bank movement reconciliation
                 if (line.BankMovementId.HasValue)
                 {
-                    var movement = await db.Movements.SingleOrDefaultAsync(x => x.Id == line.BankMovementId.Value && x.TenantId == tenantId, ct);
-                    if (movement != null)
-                    {
-                        movement.ReconciliationStatus = FinancialReconciliationStatus.Reconciled;
-                        movement.LinkedEntityType = "PaymentOrder";
-                        movement.LinkedEntityId = orderId;
-                    }
+                    var (ok, linkError, movement) = await FinanceMovementLinkValidator.ValidateForPaymentAsync(
+                        db, tenantId, line.BankMovementId.Value, line.ConceptId, ct);
+                    if (!ok)
+                        return Results.BadRequest(linkError);
+
+                    movement!.ReconciliationStatus = FinancialReconciliationStatus.Reconciled;
+                    movement.LinkedEntityType = "PaymentOrder";
+                    movement.LinkedEntityId = orderId;
+                    if (line.ConceptId.HasValue && line.ConceptId != Guid.Empty)
+                        movement.ConceptId = line.ConceptId;
                 }
                 // Else if bank or cash without pre-existing movement: create debit movement
                 else if ((line.Method == "BankTransfer" || line.Method == "Cash") && line.AccountId.HasValue)

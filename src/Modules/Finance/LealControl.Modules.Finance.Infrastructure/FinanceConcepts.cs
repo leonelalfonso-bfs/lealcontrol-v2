@@ -184,6 +184,8 @@ public static class FinanceConcepts
         {
             var tenantId = tenant.TenantId.Value; var movement = await db.Movements.SingleOrDefaultAsync(x => x.Id == movementId && x.TenantId == tenantId, ct);
             if (movement is null) return Results.NotFound("Movimiento inexistente.");
+            if (movement.ReconciliationStatus == FinancialReconciliationStatus.Reconciled)
+                return Results.BadRequest("No se puede reclasificar un movimiento ya conciliado con un recibo u orden de pago.");
             if (body.FinancialConceptId is null || body.FinancialConceptId == Guid.Empty)
             {
                 movement.ConceptId = null; movement.ConceptRuleId = null; movement.ClassificationStatus = FinancialClassificationStatus.PendingIdentification; movement.ClassificationNote = body.Note?.Trim(); movement.ClassifiedAtUtc = DateTime.UtcNow;

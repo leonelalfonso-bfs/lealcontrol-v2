@@ -17,6 +17,7 @@ public sealed record CollectionReceiptLineInput(
     Guid? AccountId,
     Guid? MovementId,
     Guid? ChequeId,
+    Guid? ConceptId,
     string? RetentionType,
     string? RetentionCertificate,
     string? Notes
@@ -238,6 +239,7 @@ public static class FinanceReceipts
                         AccountId = line.AccountId,
                         BankMovementId = line.MovementId,
                         ChequeId = line.ChequeId,
+                        ConceptId = line.ConceptId,
                         RetentionType = line.RetentionType?.Trim(),
                         RetentionCertificate = line.RetentionCertificate?.Trim(),
                         Notes = line.Notes?.Trim(),
@@ -247,13 +249,16 @@ public static class FinanceReceipts
                     // If it's a bank movement reconciliation
                     if (line.MovementId.HasValue)
                     {
-                        var movement = await db.Movements.SingleOrDefaultAsync(x => x.Id == line.MovementId.Value && x.TenantId == tenantId, ct);
-                        if (movement != null)
-                        {
-                            movement.ReconciliationStatus = FinancialReconciliationStatus.Reconciled;
-                            movement.LinkedEntityType = "CollectionReceipt";
-                            movement.LinkedEntityId = receiptId;
-                        }
+                        var (ok, linkError, movement) = await FinanceMovementLinkValidator.ValidateForCollectionAsync(
+                            db, tenantId, line.MovementId.Value, line.ConceptId, ct);
+                        if (!ok)
+                            return Results.BadRequest(linkError);
+
+                        movement!.ReconciliationStatus = FinancialReconciliationStatus.Reconciled;
+                        movement.LinkedEntityType = "CollectionReceipt";
+                        movement.LinkedEntityId = receiptId;
+                        if (line.ConceptId.HasValue && line.ConceptId != Guid.Empty)
+                            movement.ConceptId = line.ConceptId;
                     }
                     // Else if bank or cash without pre-existing movement: create credit movement
                     else if ((lineMethod.Equals("BankTransfer", StringComparison.OrdinalIgnoreCase) || 
