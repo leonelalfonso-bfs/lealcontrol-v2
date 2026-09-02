@@ -16,8 +16,8 @@ Documentos relacionados:
 |--------|----------|:------:|:------:|:------------------:|--------|
 | 0 | Frenar corrupción de datos | 5 | 5/5 | 0/5 | ✅ Código en `fcd60ee` — validar staging |
 | 1 | Cerrar agujeros de seguridad | 6 | 6/6 | 0/6 | ✅ Código en `a364601` — validar staging |
-| 2 | Deploy y backups confiables | 6 | 6/6 | 0/6 | ✅ Código listo — redeploy con fix bootstrap |
-| 3 | Circuito financiero completo | 14 | 5/14 | 0/14 | 🔄 3.2 en código — validar staging tras API up |
+| 2 | Deploy y backups confiables | 6 | 6/6 | 6/6 | ✅ Verificado staging 02/09/2026 — smoke 10/10 Healthy |
+| 3 | Circuito financiero completo | 14 | 5/14 | 0/14 | 🔄 Bloque 3.1 — checklist Fases A+B en v2 |
 | 4 | Contabilidad desde asientos modelo | 9 | 0/9 | 0/9 | ☐ |
 | 5 | Red de tests del circuito del dinero | 6 | 0/6 | 0/6 | ☐ |
 | 6 | Deuda técnica | 8 | 0/8 | 0/8 | ☐ |
@@ -140,7 +140,7 @@ Estas cinco tareas son cambios chicos. Se hacen todas juntas en un solo commit y
 - [x] Serilog sink a archivo rotativo (`/var/log/lealcontrol/api-.log`, 14 días) vía `appsettings.Production.json` + volumen Docker.
 - [x] Enricher `TenantIdEnricher` en todos los logs.
 
-**Verificado bloque 2 (staging):** ____ / ____ — pendiente deploy + verify-restore
+**Verificado bloque 2 (staging):** 02/09/2026 — deploy OK, smoke 10/10 @ `89d1c0d`, verify-restore OK @ `f8d109d`.
 
 ---
 
@@ -299,6 +299,6 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 |-------|--------------|--------|----------|-------|
 | 02/09/2026 | 0.1–0.5 | `fcd60ee` | pendiente staging | Batch-post deshabilitado, backup dinámico, RBAC company, tenant routing, /me seguro |
 | 02/09/2026 | 1.1–1.6 | `a364601` | pendiente staging | Webhook MP público, RBAC módulos, allowed_modules, seed-dev-admin, HTTP hardening, JWT unificado |
-| 02/09/2026 | 2.1–2.6 | `afb57fa` + fix | pendiente staging | CI gate, health checks, backups; fix bootstrap legacy + `/health/live` tras fallo VPS |
-| 02/09/2026 | 3.2 | (pendiente commit) | pendiente staging | BankStatementImports, Origin/ImportId, dedup multiset, control saldo, hash duplicado |
-| | 3.1, 3.3–3.14 | — | — | **En curso:** validar Fases A+B y resto del circuito |
+| 02/09/2026 | 2.3 verify-restore | `f8d109d` | ✅ staging | restore tenant OK; master_tenants en dump catálogo aparte |
+| 02/09/2026 | 3.2 | `1f1d8d6` | pendiente staging | BankStatementImports — validar con import Galicia |
+| | 3.1, 3.3–3.14 | — | — | **En curso:** checklist Fases A+B (`CIRCUITO_DINERO_PROGRESO.md`) |

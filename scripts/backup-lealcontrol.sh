@@ -86,7 +86,8 @@ backup_stack() {
   databases="$(docker compose -f "$compose_file" exec -T \
     -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
     psql -U "$POSTGRES_USER" -d postgres -t -A -c \
-    "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT IN ('postgres') AND datname NOT LIKE 'leal_restore_verify_%' AND datname NOT LIKE '%\_old' ESCAPE '\\' ORDER BY datname;")"
+    "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT IN ('postgres') AND datname NOT LIKE 'leal_restore_verify_%' AND datname NOT LIKE '%\_old' ESCAPE '\\' ORDER BY datname;" \
+    | tr -d '\r' | sed '/^$/d')"
 
   if [[ -n "$POSTGRES_DB" && "$POSTGRES_DB" != "postgres" ]] && ! grep -qx "$POSTGRES_DB" <<< "$databases"; then
     log "AVISO: POSTGRES_DB=$POSTGRES_DB no listada en pg_database; se intentará igualmente."
@@ -99,7 +100,7 @@ backup_stack() {
   local count=0
   local failed=0
   declare -A backed_up=()
-  while IFS= read -r db; do
+  while IFS= read -r db || [[ -n "${db:-}" ]]; do
     db="$(echo "$db" | xargs)"
     [[ -z "$db" ]] && continue
     if [[ "$db" == "postgres" ]]; then
