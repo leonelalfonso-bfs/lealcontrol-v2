@@ -49,7 +49,14 @@ Mismo flujo sustituyendo `docker-compose.prod.yml` y puerto `5209`.
 
 ## Verificación sin tocar producción
 
+Usa el dump más reciente generado por `scripts/backup-lealcontrol.sh` en
+`/var/backups/lealcontrol/<timestamp>/staging-v2/` (o `prod-erp/`). **No** uses
+dumps legacy de `snapshots/` con sintaxis MySQL.
+
 ```bash
+# Generar dump pg_dump si no hay uno reciente
+bash scripts/backup-lealcontrol.sh staging
+
 ./scripts/verify-restore.sh staging
 # Cron mensual sugerido:
 # 0 4 1 * * /opt/lealcontrol-staging/scripts/verify-restore.sh staging >> /var/backups/lealcontrol/verify-restore.log 2>&1
