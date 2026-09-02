@@ -42,6 +42,11 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    if (builder.Environment.IsProduction())
+    {
+        Directory.CreateDirectory("/var/log/lealcontrol");
+    }
+
     builder.Services.AddHttpContextAccessor();
 
     builder.Host.UseSerilog((context, services, configuration) =>
@@ -322,9 +327,6 @@ try
         app.UseSwaggerUI();
     }
 
-    // Cada instancia debe crear/actualizar esquema en la base maestra y en cada BD de tenant.
-    await TenantDatabaseBootstrapper.InitializeAllAsync(app.Services, app.Configuration, app.Environment);
-
     app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
     app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
     app.MapHealthChecks("/health").AllowAnonymous();
@@ -340,6 +342,20 @@ try
     app.MapPublicWebhookEndpoints();
     app.MapSuperAdminModule();
     app.MapTenantBackupSelfService();
+
+    // El bootstrap de esquemas puede tardar; no bloquear Kestrel ni el liveness de Docker.
+    _ = TenantDatabaseBootstrapper.InitializeAllAsync(app.Services, app.Configuration, app.Environment)
+        .ContinueWith(task =>
+        {
+            if (task.IsFaulted)
+            {
+                Log.Fatal(task.Exception, "Bootstrap de bases de tenant falló; deteniendo la API.");
+                app.Lifetime.StopApplication();
+                return;
+            }
+
+            Log.Information("Bootstrap de bases de tenant completado.");
+        }, TaskScheduler.Default);
 
     await app.RunAsync();
 }
