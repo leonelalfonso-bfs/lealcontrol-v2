@@ -1,7 +1,7 @@
 # Leal Control ERP 2.0 — Plan maestro de mejoras
 
 **Origen:** auditoría de código del 02/09/2026 sobre `staging/metrology-2307` @ `78e64d3`.
-**Cómo usar este documento:** cada tarea tiene un checkbox. Se marca `[x]` cuando el criterio de aceptación está verificado **en staging**, no cuando el código está escrito. La columna "Verificado" lleva fecha y quién lo probó.
+**Cómo usar este documento:** cada tarea tiene un checkbox `[x]` = **código implementado** (commit en rama). La verificación en staging se anota en **Verificado** y en el registro de avances al final. No marcar `[x]` como “hecho en producción” hasta pasar el criterio de aceptación en staging.
 
 Documentos relacionados:
 - `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md` — análisis funcional y plan detallado de bancos, cheques, conceptos, cobros/pagos y asientos modelo (bloques 3 y 4 de este plan se detallan ahí).
@@ -12,17 +12,17 @@ Documentos relacionados:
 
 ## Tablero de estado
 
-| Bloque | Objetivo | Tareas | Hechas | Estado |
-|--------|----------|:------:|:------:|--------|
-| 0 | Frenar corrupción de datos (hoy) | 5 | 5 | ✅ Código listo (validar staging) |
-| 1 | Cerrar agujeros de seguridad | 6 | 1 | ◐ |
-| 2 | Que el deploy y los backups sean confiables | 6 | 0 | ☐ |
-| 3 | Circuito financiero completo y conciliado | 14 | 0 | ☐ |
-| 4 | Contabilidad real desde asientos modelo | 9 | 0 | ☐ |
-| 5 | Red de tests del circuito del dinero | 6 | 0 | ☐ |
-| 6 | Deuda técnica que frena la velocidad | 8 | 0 | ☐ |
+| Bloque | Objetivo | Tareas | Código | Verificado staging | Estado |
+|--------|----------|:------:|:------:|:------------------:|--------|
+| 0 | Frenar corrupción de datos | 5 | 5/5 | 0/5 | ✅ Código en `fcd60ee` — validar staging |
+| 1 | Cerrar agujeros de seguridad | 6 | 6/6 | 0/6 | ✅ Código en `a364601` — validar staging |
+| 2 | Deploy y backups confiables | 6 | 0/6 | 0/6 | ☐ **Siguiente** |
+| 3 | Circuito financiero completo | 14 | 0/14 | 0/14 | ☐ (detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`) |
+| 4 | Contabilidad desde asientos modelo | 9 | 0/9 | 0/9 | ☐ |
+| 5 | Red de tests del circuito del dinero | 6 | 0/6 | 0/6 | ☐ |
+| 6 | Deuda técnica | 8 | 0/8 | 0/8 | ☐ |
 
-Regla de orden: **no se empieza el bloque 3 sin terminar el bloque 0**, y no se empieza el bloque 4 sin las tareas 3.1 a 3.6.
+Regla de orden: **bloque 2 antes del 3** (CI y backups estables). **No empezar bloque 4** sin tareas 3.1–3.6 del bloque 3.
 
 ---
 
@@ -72,6 +72,8 @@ Estas cinco tareas son cambios chicos. Se hacen todas juntas en un solo commit y
 **Criterio de aceptación:** borrar un usuario mientras tiene sesión abierta → esa pestaña vuelve a login.
 **Verificado:** pendiente staging / ____
 
+**Verificado bloque 0 (staging):** ____ / ____ — pendiente deploy + checklist manual
+
 ---
 
 ## Bloque 1 — Cerrar agujeros de seguridad (esfuerzo total: 3 jornadas)
@@ -104,7 +106,7 @@ Estas cinco tareas son cambios chicos. Se hacen todas juntas en un solo commit y
 ### 1.6 Unificar validación JWT
 - [x] Eliminar los usos de `SimpleJwt.DecodeToken` como camino paralelo de autorización (`SuperAdminEndpoints.cs:52,680`, `AuthEndpoints.cs:181,255`). Todo pasa por `HttpContext.User`.
 
-**Verificado bloque 1:** ____ / ____
+**Verificado bloque 1 (staging):** ____ / ____ — pendiente deploy + checklist manual
 
 ---
 
@@ -293,4 +295,6 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 
 | Fecha | Bloque.Tarea | Commit | Verificó | Notas |
 |-------|--------------|--------|----------|-------|
-| 02/09/2026 | 0.1–0.5 | (sin commit aún) | código | Batch-post deshabilitado, backup dinámico, RBAC company, tenant routing, /me seguro |
+| 02/09/2026 | 0.1–0.5 | `fcd60ee` | pendiente staging | Batch-post deshabilitado, backup dinámico, RBAC company, tenant routing, /me seguro |
+| 02/09/2026 | 1.1–1.6 | `a364601` | pendiente staging | Webhook MP público, RBAC módulos, allowed_modules, seed-dev-admin, HTTP hardening, JWT unificado |
+| | 2.1–2.6 | — | — | **Próximo bloque:** CI gate, health checks, backups verificados, migraciones estrictas |
