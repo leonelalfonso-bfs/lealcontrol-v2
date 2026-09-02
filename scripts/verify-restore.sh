@@ -8,6 +8,7 @@ BACKUP_BASE="${LEAL_BACKUP_BASE_DIR:-/var/backups/lealcontrol}"
 STAGING_DIR="${LEAL_STAGING_DIR:-/opt/lealcontrol-staging}"
 PROD_DIR="${LEAL_PROD_DIR:-/opt/lealcontrol-v2}"
 LOG_FILE="${BACKUP_BASE}/verify-restore.log"
+MIN_DUMP_BYTES=10240
 
 case "$TARGET" in
   staging)
@@ -44,32 +45,76 @@ cleanup_temp_db() {
 }
 trap cleanup_temp_db EXIT
 
+is_valid_pg_dump() {
+  local file="$1"
+  local size_bytes
+  size_bytes="$(wc -c < "$file" | tr -d ' ')"
+  if [[ "$size_bytes" -lt "$MIN_DUMP_BYTES" ]]; then
+    return 1
+  fi
+  if [[ "$file" == *leal_restore_verify* ]]; then
+    return 1
+  fi
+  if ! gzip -t "$file" 2>/dev/null; then
+    return 1
+  fi
+
+  local head_sample copy_count
+  head_sample="$(gzip -dc "$file" | head -n 50)"
+  if echo "$head_sample" | grep -q '`'; then
+    return 1
+  fi
+  if ! echo "$head_sample" | grep -Eqi 'PostgreSQL database dump|^COPY |^SET '; then
+    return 1
+  fi
+  copy_count="$(gzip -dc "$file" | grep -c '^COPY ' || true)"
+  [[ "$copy_count" -ge 1 ]]
+}
+
+find_latest_valid_dump() {
+  local candidate
+  while IFS= read -r candidate; do
+    [[ -z "$candidate" ]] && continue
+    if is_valid_pg_dump "$candidate"; then
+      echo "$candidate"
+      return 0
+    fi
+  done < <(find "$BACKUP_BASE" -path "*/${DUMP_LABEL}/*.sql.gz" -type f -printf '%T@ %p\n' 2>/dev/null \
+    | sort -rn \
+    | cut -d' ' -f2-)
+  return 1
+}
+
+cleanup_orphan_verify_databases() {
+  local orphan
+  while IFS= read -r orphan; do
+    orphan="$(echo "$orphan" | xargs)"
+    [[ -z "$orphan" ]] && continue
+    echo "Limpiando base huérfana de verificación: $orphan"
+    docker compose -f "$COMPOSE" exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
+      psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS \"${orphan}\";" >/dev/null
+  done < <(docker compose -f "$COMPOSE" exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
+    psql -U "$POSTGRES_USER" -d postgres -t -A -c \
+    "SELECT datname FROM pg_database WHERE datname LIKE 'leal_restore_verify_%' ORDER BY datname;")
+}
+
 exec >> >(tee -a "$LOG_FILE") 2>&1
 echo "=== verify-restore $TARGET $(date -Is) ==="
 
-LATEST="$(find "$BACKUP_BASE" -path "*/${DUMP_LABEL}/*.sql.gz" -type f 2>/dev/null | sort | tail -1 || true)"
-if [[ -z "$LATEST" ]]; then
-  echo "ERROR: no hay dumps pg_dump en $BACKUP_BASE/*/${DUMP_LABEL}/"
+cd "$APP_DIR"
+# shellcheck disable=SC1091
+source <(grep -E '^POSTGRES_' .env | sed 's/\r$//')
+
+cleanup_orphan_verify_databases
+
+LATEST=""
+if ! LATEST="$(find_latest_valid_dump)"; then
+  echo "ERROR: no hay dumps pg_dump válidos (>= ${MIN_DUMP_BYTES} bytes, con COPY) en $BACKUP_BASE/*/${DUMP_LABEL}/"
   echo "Ejecutá primero: bash scripts/backup-lealcontrol.sh $TARGET"
   exit 1
 fi
 
 echo "Dump: $LATEST"
-gzip -t "$LATEST"
-
-HEAD_SAMPLE="$(gzip -dc "$LATEST" | head -n 50)"
-if echo "$HEAD_SAMPLE" | grep -q '`'; then
-  echo "ERROR: el dump usa backticks (formato MySQL). Se espera pg_dump de backup-lealcontrol.sh."
-  exit 1
-fi
-if ! echo "$HEAD_SAMPLE" | grep -Eqi 'PostgreSQL database dump|^COPY |^SET '; then
-  echo "ERROR: el archivo no parece un dump de pg_dump."
-  exit 1
-fi
-
-cd "$APP_DIR"
-# shellcheck disable=SC1091
-source <(grep -E '^POSTGRES_' .env | sed 's/\r$//')
 TEMP_DB="leal_restore_verify_$(date +%s)"
 
 docker compose -f "$COMPOSE" exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \

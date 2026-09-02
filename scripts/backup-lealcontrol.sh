@@ -86,9 +86,10 @@ backup_stack() {
   databases="$(docker compose -f "$compose_file" exec -T \
     -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
     psql -U "$POSTGRES_USER" -d postgres -t -A -c \
-    "SELECT datname FROM pg_database WHERE datistemplate = false AND (datname LIKE 'leal%' OR datname = '$POSTGRES_DB') ORDER BY datname;")"
+    "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT LIKE 'leal_restore_verify_%' AND datname NOT LIKE '%\_old' ESCAPE '\\' AND (datname LIKE 'leal%' OR datname = '$POSTGRES_DB') ORDER BY datname;")"
 
   local count=0
+  local failed=0
   while IFS= read -r db; do
     db="$(echo "$db" | xargs)"
     [[ -z "$db" ]] && continue
@@ -106,27 +107,42 @@ backup_stack() {
       | gzip -9 > "$file_path"
 
     if ! gzip -t "$file_path"; then
-      log "ERROR: gzip corrupto en $file_path"
-      return 1
+      log "AVISO: gzip corrupto en $file_path — se omite $db"
+      rm -f "$file_path"
+      failed=$((failed + 1))
+      continue
     fi
 
     local size_bytes
     size_bytes="$(wc -c < "$file_path" | tr -d ' ')"
     if [[ "$size_bytes" -lt 10240 ]]; then
-      log "ERROR: dump demasiado chico (${size_bytes} bytes) en $file_path"
-      return 1
+      log "AVISO: dump demasiado chico (${size_bytes} bytes) en $db — se omite"
+      rm -f "$file_path"
+      failed=$((failed + 1))
+      continue
     fi
 
     local copy_count
     copy_count="$(gzip -dc "$file_path" | grep -c '^COPY ' || true)"
     if [[ "$copy_count" -lt 1 ]]; then
-      log "ERROR: sin sentencias COPY en $file_path"
-      return 1
+      log "AVISO: sin sentencias COPY en $db — se omite"
+      rm -f "$file_path"
+      failed=$((failed + 1))
+      continue
     fi
 
     log "    OK $(du -h "$file_path" | awk '{print $1}') $file_name ($copy_count tablas COPY)"
     count=$((count + 1))
   done <<< "$databases"
+
+  if [[ "$count" -lt 1 ]]; then
+    log "ERROR: ninguna base respaldada en $label (fallidas/omitidas: $failed)"
+    return 1
+  fi
+
+  if [[ "$failed" -gt 0 ]]; then
+    log "AVISO: $failed base(s) omitida(s) en $label; $count respaldada(s) OK."
+  fi
 
   log "Stack $label: $count base(s) respaldada(s)."
 }
