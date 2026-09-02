@@ -80,40 +80,43 @@ public static class TenantDatabaseBootstrapper
 
         await using (var crm = CreateContext<CrmDbContext>(connectionString, CrmDbContext.Schema))
         {
-            await crm.Database.MigrateAsync(cancellationToken);
-            await crm.EnsureCrmTablesAsync();
+            await MigrateModuleAsync(crm, () => crm.EnsureCrmTablesAsync(), "CRM", "public.tenant_users", dbName, cancellationToken);
         }
 
         await using (var sales = CreateContext<SalesDbContext>(connectionString, SalesDbContext.Schema))
         {
-            await sales.Database.MigrateAsync(cancellationToken);
-            await sales.EnsureTablesCreatedAsync();
+            await MigrateModuleAsync(sales, () => sales.EnsureTablesCreatedAsync(cancellationToken), "Sales", "sales.invoices", dbName, cancellationToken);
         }
 
         await using (var communications = CreateContext<CommunicationsDbContext>(connectionString, CommunicationsDbContext.Schema))
         {
-            await communications.Database.MigrateAsync(cancellationToken);
-            await communications.EnsureTablesCreatedAsync();
+            await MigrateModuleAsync(
+                communications,
+                () => communications.EnsureTablesCreatedAsync(cancellationToken),
+                "Communications",
+                "communications.mail_accounts",
+                dbName,
+                cancellationToken);
         }
 
         await using (var finance = CreateContext<FinanceDbContext>(connectionString, FinanceDbContext.Schema))
         {
-            await finance.EnsureFinanceTablesAsync();
+            await finance.EnsureFinanceTablesAsync(cancellationToken);
         }
 
         await using (var hr = CreateContext<HumanResourcesDbContext>(connectionString, HumanResourcesDbContext.Schema))
         {
-            await hr.EnsureHrTablesAsync();
+            await hr.EnsureHrTablesAsync(cancellationToken);
         }
 
         await using (var fleet = CreateContext<FleetDbContext>(connectionString, FleetDbContext.Schema))
         {
-            await fleet.EnsureFleetTablesAsync();
+            await fleet.EnsureFleetTablesAsync(cancellationToken);
         }
 
         await using (var accounting = CreateContext<AccountingDbContext>(connectionString, "accounting"))
         {
-            await accounting.EnsureAccountingTablesAsync();
+            await accounting.EnsureAccountingTablesAsync(cancellationToken);
         }
 
         await using (var metrology = new MetrologyDbContext(
@@ -121,10 +124,66 @@ public static class TenantDatabaseBootstrapper
                 .UseNpgsql(connectionString, b => b.MigrationsAssembly(typeof(MetrologyDbContext).Assembly.FullName))
                 .Options))
         {
-            await metrology.EnsureMetrologyTablesAsync();
+            await metrology.EnsureMetrologyTablesAsync(cancellationToken);
         }
 
         Log.Information("Esquema verificado para base de datos {DbName}", dbName);
+    }
+
+    private static async Task MigrateModuleAsync<TContext>(
+        TContext db,
+        Func<Task> ensureTablesAsync,
+        string moduleName,
+        string legacyProbeTable,
+        string dbName,
+        CancellationToken cancellationToken)
+        where TContext : DbContext
+    {
+        var applied = (await db.Database.GetAppliedMigrationsAsync(cancellationToken)).ToList();
+        if (applied.Count == 0 && await LegacySchemaExistsAsync(db, legacyProbeTable, cancellationToken))
+        {
+            Log.Warning(
+                "Base {DbName}: módulo {Module} sin historial EF pero con tablas existentes ({Probe}). Se omite MigrateAsync; ejecutar baseline de migraciones cuando sea posible.",
+                dbName,
+                moduleName,
+                legacyProbeTable);
+            await ensureTablesAsync();
+            return;
+        }
+
+        try
+        {
+            var pending = await db.Database.GetPendingMigrationsAsync(cancellationToken);
+            if (pending.Any())
+            {
+                await db.Database.MigrateAsync(cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Fallo MigrateAsync del módulo {Module} en base {DbName}. Reconciliar __ef_migrations_history.", moduleName, dbName);
+            throw;
+        }
+
+        await ensureTablesAsync();
+    }
+
+    private static async Task<bool> LegacySchemaExistsAsync(DbContext db, string qualifiedTable, CancellationToken cancellationToken)
+    {
+        await using var command = db.Database.GetDbConnection().CreateCommand();
+        command.CommandText = "SELECT to_regclass(@qualified) IS NOT NULL";
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "qualified";
+        parameter.Value = qualifiedTable;
+        command.Parameters.Add(parameter);
+
+        if (command.Connection?.State != System.Data.ConnectionState.Open)
+        {
+            await command.Connection!.OpenAsync(cancellationToken);
+        }
+
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return result is bool exists && exists;
     }
 
     private static TContext CreateContext<TContext>(string connectionString, string migrationsHistorySchema)

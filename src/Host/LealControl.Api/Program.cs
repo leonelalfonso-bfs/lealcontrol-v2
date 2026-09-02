@@ -26,6 +26,7 @@ using LealControl.Api.Logging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -325,6 +326,7 @@ try
     await TenantDatabaseBootstrapper.InitializeAllAsync(app.Services, app.Configuration, app.Environment);
 
     app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
+    app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
     app.MapHealthChecks("/health").AllowAnonymous();
     app.MapCrmModule();
     app.MapSalesModule();

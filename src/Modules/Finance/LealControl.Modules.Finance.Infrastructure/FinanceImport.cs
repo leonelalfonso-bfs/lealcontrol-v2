@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Modules.Finance.Infrastructure;
 
-public sealed record BankImportRequest(Guid AccountId, string CsvContent);
+public sealed record BankImportRequest(Guid AccountId, string CsvContent, string? FileName = null);
 public sealed record BankImportRow(DateTime OperationDateUtc, decimal Amount, FinancialMovementKind Kind, string Description, string? ExternalReference, decimal? ReportedBalance, string? Error = null);
 public sealed record ReconcileMovementRequest(string EntityType, Guid EntityId);
 
@@ -23,37 +24,52 @@ public static class FinanceImport
     {
         var group = endpoints.MapGroup("/api/v1/finance/imports").WithTags("Finance Imports").RequirePolicyOnWrites("RequireFinance");
         group.MapPost("/bank/preview", (BankImportRequest request) => Results.Ok(Parse(request.CsvContent)));
-        group.MapPost("/bank/confirm", async (BankImportRequest request, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+        group.MapPost("/bank/confirm", async (BankImportRequest request, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, HttpContext http, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;
-            if (!await db.Accounts.AnyAsync(x => x.Id == request.AccountId && x.TenantId == tenantId && x.IsActive, ct))
+            var account = await db.Accounts.SingleOrDefaultAsync(x => x.Id == request.AccountId && x.TenantId == tenantId && x.IsActive, ct);
+            if (account is null)
                 return Results.NotFound("Cuenta financiera inexistente.");
+
+            var fileHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.CsvContent))).ToLowerInvariant();
+            var priorImport = await db.BankStatementImports.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.AccountId == request.AccountId && x.FileHash == fileHash)
+                .Select(x => new { x.CreatedAtUtc })
+                .FirstOrDefaultAsync(ct);
+            if (priorImport is not null)
+            {
+                return Results.Conflict(new
+                {
+                    Message = $"Este archivo ya fue importado el {priorImport.CreatedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm}."
+                });
+            }
 
             var parsed = Parse(request.CsvContent);
             var valid = parsed.Where(x => x.Error is null).ToList();
-
-            var existing = await db.Movements
-                .Where(x => x.TenantId == tenantId && x.AccountId == request.AccountId)
-                .ToListAsync(ct);
+            var rejected = parsed.Count(x => x.Error is not null);
 
             await FinanceConcepts.EnsureBaseConceptsAsync(db, tenantId, ct);
 
+            var importId = Guid.NewGuid();
+            var existing = await db.Movements
+                .Where(x => x.TenantId == tenantId && x.AccountId == request.AccountId)
+                .OrderBy(x => x.CreatedAtUtc)
+                .ToListAsync(ct);
+
+            var existingByFingerprint = existing
+                .GroupBy(MovementFingerprint)
+                .ToDictionary(g => g.Key, g => new Queue<FinancialMovement>(g));
+
             int updatedCount = 0;
             int freshCount = 0;
+            int duplicateCount = 0;
 
             foreach (var row in valid)
             {
-                // Match existing movement by date, amount and kind
-                var match = existing.FirstOrDefault(item =>
-                    item.OperationDateUtc.Date == row.OperationDateUtc.Date &&
-                    item.Amount == row.Amount &&
-                    item.Kind == row.Kind &&
-                    (string.IsNullOrWhiteSpace(row.ExternalReference) || item.ExternalReference == row.ExternalReference || string.IsNullOrWhiteSpace(item.ExternalReference))
-                );
-
-                if (match != null)
+                var fingerprint = RowFingerprint(request.AccountId, row);
+                if (existingByFingerprint.TryGetValue(fingerprint, out var queue) && queue.Count > 0)
                 {
-                    // If the existing movement has generic description but the new row has enriched titular/CUIT info, update it!
+                    var match = queue.Dequeue();
                     if (row.Description.Contains("Titular:") || !string.IsNullOrWhiteSpace(row.ExternalReference))
                     {
                         match.Description = row.Description;
@@ -62,37 +78,87 @@ public static class FinanceImport
                         await FinanceConcepts.ApplySuggestionAsync(db, tenantId, match, ct);
                         updatedCount++;
                     }
-                }
-                else
-                {
-                    var movement = new FinancialMovement
+                    else
                     {
-                        Id = Guid.NewGuid(),
-                        TenantId = tenantId,
-                        AccountId = request.AccountId,
-                        Kind = row.Kind,
-                        Amount = row.Amount,
-                        Currency = "ARS",
-                        OperationDateUtc = row.OperationDateUtc,
-                        Description = row.Description,
-                        ExternalReference = row.ExternalReference,
-                        ReportedBalance = row.ReportedBalance,
-                        CreatedAtUtc = DateTime.UtcNow
-                    };
-                    await FinanceConcepts.ApplySuggestionAsync(db, tenantId, movement, ct);
-                    db.Movements.Add(movement);
-                    existing.Add(movement);
-                    freshCount++;
+                        duplicateCount++;
+                    }
+
+                    continue;
                 }
+
+                var movement = new FinancialMovement
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenantId,
+                    AccountId = request.AccountId,
+                    Kind = row.Kind,
+                    Amount = row.Amount,
+                    Currency = account.Currency,
+                    OperationDateUtc = row.OperationDateUtc,
+                    Description = row.Description,
+                    ExternalReference = row.ExternalReference,
+                    ReportedBalance = row.ReportedBalance,
+                    Origin = FinancialMovementOrigin.Imported,
+                    ImportId = importId,
+                    CreatedAtUtc = DateTime.UtcNow
+                };
+                await FinanceConcepts.ApplySuggestionAsync(db, tenantId, movement, ct);
+                db.Movements.Add(movement);
+                existing.Add(movement);
+                freshCount++;
             }
+
+            var orderedValid = valid.OrderBy(x => x.OperationDateUtc).ToList();
+            var firstRow = orderedValid.FirstOrDefault();
+            var lastRow = orderedValid.LastOrDefault();
+            decimal? declaredOpening = null;
+            if (firstRow is not null && firstRow.ReportedBalance.HasValue)
+            {
+                declaredOpening = firstRow.Kind == FinancialMovementKind.Credit
+                    ? firstRow.ReportedBalance.Value - firstRow.Amount
+                    : firstRow.ReportedBalance.Value + firstRow.Amount;
+            }
+
+            var declaredClosing = lastRow?.ReportedBalance;
+            var creditTotal = existing.Where(x => x.Kind == FinancialMovementKind.Credit).Sum(x => x.Amount);
+            var debitTotal = existing.Where(x => x.Kind == FinancialMovementKind.Debit).Sum(x => x.Amount);
+            var computedClosing = account.OpeningBalance + creditTotal - debitTotal;
+
+            var balanced = !declaredClosing.HasValue || Math.Abs(declaredClosing.Value - computedClosing) <= 0.01m;
+            var importBatch = new BankStatementImport
+            {
+                Id = importId,
+                TenantId = tenantId,
+                AccountId = request.AccountId,
+                FileName = string.IsNullOrWhiteSpace(request.FileName) ? null : request.FileName.Trim(),
+                FileHash = fileHash,
+                PeriodStart = orderedValid.FirstOrDefault()?.OperationDateUtc,
+                PeriodEnd = orderedValid.LastOrDefault()?.OperationDateUtc,
+                DeclaredOpeningBalance = declaredOpening,
+                DeclaredClosingBalance = declaredClosing,
+                ComputedClosingBalance = computedClosing,
+                RowsTotal = parsed.Count,
+                RowsImported = freshCount,
+                RowsDuplicated = duplicateCount,
+                RowsRejected = rejected,
+                Status = balanced ? "Balanced" : "Unbalanced",
+                CreatedAtUtc = DateTime.UtcNow,
+                CreatedBy = http.User.Identity?.Name
+            };
+            db.BankStatementImports.Add(importBatch);
 
             await db.SaveChangesAsync(ct);
             return Results.Ok(new
             {
+                ImportId = importId,
                 Imported = freshCount,
                 Updated = updatedCount,
-                Duplicates = valid.Count - freshCount - updatedCount,
-                Rejected = parsed.Count(x => x.Error is not null)
+                Duplicates = duplicateCount,
+                Rejected = rejected,
+                Status = importBatch.Status,
+                DeclaredClosingBalance = declaredClosing,
+                ComputedClosingBalance = computedClosing,
+                BalanceDifference = declaredClosing.HasValue ? declaredClosing.Value - computedClosing : (decimal?)null
             });
         });
 
@@ -353,4 +419,26 @@ public static class FinanceImport
 
     private static decimal? ParseNullableDecimal(string raw) =>
         string.IsNullOrWhiteSpace(raw) ? null : ParseDecimal(raw);
+
+    private static string RowFingerprint(Guid accountId, BankImportRow row) =>
+        BuildFingerprint(accountId, row.OperationDateUtc.Date, row.Amount, row.Kind, row.ExternalReference, row.Description);
+
+    private static string MovementFingerprint(FinancialMovement movement) =>
+        BuildFingerprint(movement.AccountId, movement.OperationDateUtc.Date, movement.Amount, movement.Kind, movement.ExternalReference, movement.Description);
+
+    private static string BuildFingerprint(
+        Guid accountId,
+        DateTime date,
+        decimal amount,
+        FinancialMovementKind kind,
+        string? externalReference,
+        string description)
+    {
+        var reference = NormalizeReference(externalReference);
+        var descriptionHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(description.Trim().ToLowerInvariant())))[..16];
+        return $"{accountId:N}|{date:yyyy-MM-dd}|{amount}|{(int)kind}|{reference}|{descriptionHash}";
+    }
+
+    private static string NormalizeReference(string? reference) =>
+        string.IsNullOrWhiteSpace(reference) ? "" : reference.Trim().ToUpperInvariant();
 }

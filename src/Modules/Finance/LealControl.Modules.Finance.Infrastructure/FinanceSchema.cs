@@ -107,5 +107,21 @@ public static class FinanceSchema
           ""CreatedAtUtc"" timestamptz NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ""IX_PaymentOrderImputations_Order"" ON finance.""PaymentOrderImputations"" (""PaymentOrderId"");
+
+        CREATE TABLE IF NOT EXISTS finance.""BankStatementImports"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""AccountId"" uuid NOT NULL,
+          ""FileName"" varchar(260), ""FileHash"" varchar(64) NOT NULL,
+          ""PeriodStart"" timestamptz, ""PeriodEnd"" timestamptz,
+          ""DeclaredOpeningBalance"" numeric(18,2), ""DeclaredClosingBalance"" numeric(18,2),
+          ""ComputedClosingBalance"" numeric(18,2),
+          ""RowsTotal"" integer NOT NULL DEFAULT 0, ""RowsImported"" integer NOT NULL DEFAULT 0,
+          ""RowsDuplicated"" integer NOT NULL DEFAULT 0, ""RowsRejected"" integer NOT NULL DEFAULT 0,
+          ""Status"" varchar(20) NOT NULL DEFAULT 'Balanced', ""CreatedAtUtc"" timestamptz NOT NULL,
+          ""CreatedBy"" varchar(120)
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_BankStatementImports_Tenant_Account_Hash"" ON finance.""BankStatementImports"" (""TenantId"", ""AccountId"", ""FileHash"");
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""Origin"" integer NOT NULL DEFAULT 1;
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""ImportId"" uuid;
+        CREATE INDEX IF NOT EXISTS ""IX_FinancialMovements_ImportId"" ON finance.""FinancialMovements"" (""ImportId"");
         ", cancellationToken);
 }

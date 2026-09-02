@@ -16,8 +16,8 @@ Documentos relacionados:
 |--------|----------|:------:|:------:|:------------------:|--------|
 | 0 | Frenar corrupción de datos | 5 | 5/5 | 0/5 | ✅ Código en `fcd60ee` — validar staging |
 | 1 | Cerrar agujeros de seguridad | 6 | 6/6 | 0/6 | ✅ Código en `a364601` — validar staging |
-| 2 | Deploy y backups confiables | 6 | 6/6 | 0/6 | ✅ Código listo — validar staging |
-| 3 | Circuito financiero completo | 14 | 0/14 | 0/14 | ☐ (detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`) |
+| 2 | Deploy y backups confiables | 6 | 6/6 | 0/6 | ✅ Código listo — redeploy con fix bootstrap |
+| 3 | Circuito financiero completo | 14 | 5/14 | 0/14 | 🔄 3.2 en código — validar staging tras API up |
 | 4 | Contabilidad desde asientos modelo | 9 | 0/9 | 0/9 | ☐ |
 | 5 | Red de tests del circuito del dinero | 6 | 0/6 | 0/6 | ☐ |
 | 6 | Deuda técnica | 8 | 0/8 | 0/8 | ☐ |
@@ -120,6 +120,7 @@ Estas cinco tareas son cambios chicos. Se hacen todas juntas en un solo commit y
 - [x] `Program.cs` — `AddDbContextCheck` para Master, Finance, Accounting, HR, Fleet, Metrology (+ CRM, Sales, Communications).
 - [x] `docker-compose.staging.yml` / `prod` — healthcheck en `postgres` y `api`, `depends_on: service_healthy` en `api` y `web`.
 - [x] Límites de recursos (`mem_limit`, `cpus`) en api, postgres y web.
+- [x] `/health/live` (liveness, sin DB) para Docker; `/health` completo (9 DbContexts) para `smoke-health.sh`.
 
 ### 2.3 Backups verificados
 - [x] `backup-lealcontrol.sh` — si Postgres no responde, `exit 1`.
@@ -129,6 +130,7 @@ Estas cinco tareas son cambios chicos. Se hacen todas juntas en un solo commit y
 
 ### 2.4 Migraciones que fallan detienen el arranque
 - [x] `TenantDatabaseBootstrapper.cs` — sin `try/catch` que trague errores de `MigrateAsync` en CRM/Sales/Communications.
+- [x] Bypass controlado para bases legacy sin `__ef_migrations_history` pero con tablas existentes (warning + `EnsureTables`).
 - [ ] Antes de desplegar: reconciliar `__EFMigrationsHistory` en staging/prod/demo si hay drift (tarea operativa).
 
 ### 2.5 Scripts SQL destructivos fuera del repo o con guardas
@@ -150,11 +152,11 @@ El detalle funcional, las reglas de negocio y los cambios de esquema están en `
 - [ ] Recorrer el checklist A-V1…A-V9 y B-V1…B-V7 de `CIRCUITO_DINERO_PROGRESO.md` y marcarlo.
 
 ### 3.2 Extracto: lote de importación con control de saldo
-- [ ] Nueva tabla `finance."BankStatementImports"` (cuenta, período, saldo inicial/final declarado, hash del archivo, filas, estado).
-- [ ] `FinancialMovement.ImportId` y `FinancialMovement.Origin` (`Imported` | `System`).
-- [ ] Dedup por `(AccountId, fecha, importe, tipo, referencia, hash descripción)` que tolere N movimientos idénticos si el archivo trae N.
-- [ ] Al confirmar: comparar saldo final declarado vs saldo calculado; si difiere, el lote queda `Unbalanced` y se muestra la diferencia.
-- [ ] Rechazar importar dos veces el mismo archivo (hash).
+- [x] Nueva tabla `finance."BankStatementImports"` (cuenta, período, saldo inicial/final declarado, hash del archivo, filas, estado).
+- [x] `FinancialMovement.ImportId` y `FinancialMovement.Origin` (`Imported` | `System`).
+- [x] Dedup por `(AccountId, fecha, importe, tipo, referencia, hash descripción)` que tolere N movimientos idénticos si el archivo trae N.
+- [x] Al confirmar: comparar saldo final declarado vs saldo calculado; si difiere, el lote queda `Unbalanced` y se muestra la diferencia.
+- [x] Rechazar importar dos veces el mismo archivo (hash).
 
 ### 3.3 Matching movimiento del sistema ↔ movimiento del extracto
 - [ ] Recibos, OP y transferencias que crean movimientos los marcan `Origin = System`, `ReconciliationStatus = PendingBank`.
@@ -297,5 +299,6 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 |-------|--------------|--------|----------|-------|
 | 02/09/2026 | 0.1–0.5 | `fcd60ee` | pendiente staging | Batch-post deshabilitado, backup dinámico, RBAC company, tenant routing, /me seguro |
 | 02/09/2026 | 1.1–1.6 | `a364601` | pendiente staging | Webhook MP público, RBAC módulos, allowed_modules, seed-dev-admin, HTTP hardening, JWT unificado |
-| | 2.1–2.6 | `7dec4cf` | pendiente staging | CI gate, health checks, backups, migraciones estrictas, one-off SQL, Serilog file |
-| | 3.1–3.14 | — | — | **Próximo bloque:** circuito financiero |
+| 02/09/2026 | 2.1–2.6 | `afb57fa` + fix | pendiente staging | CI gate, health checks, backups; fix bootstrap legacy + `/health/live` tras fallo VPS |
+| 02/09/2026 | 3.2 | (pendiente commit) | pendiente staging | BankStatementImports, Origin/ImportId, dedup multiset, control saldo, hash duplicado |
+| | 3.1, 3.3–3.14 | — | — | **En curso:** validar Fases A+B y resto del circuito |
