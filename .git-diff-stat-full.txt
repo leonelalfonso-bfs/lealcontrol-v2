@@ -1,0 +1,260 @@
+﻿warning: in the working copy of 'docs/PLAN_MAESTRO_MEJORAS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/App.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/app/moduleRegistry.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/BuildingBlocks/LealControl.BuildingBlocks/LealControl.BuildingBlocks.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Host/LealControl.Api/Automation/AutomationEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Host/LealControl.Api/Program.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Host/LealControl.Api/SuperAdmin/SuperAdminEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Host/LealControl.Api/appsettings.Development.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Host/LealControl.Api/appsettings.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Crm/LealControl.Modules.Crm.Infrastructure/Http/AuthEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Crm/LealControl.Modules.Crm.Infrastructure/Http/MultiTenantAuthResolver.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Finance/LealControl.Modules.Finance.Infrastructure/FinanceConcepts.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Finance/LealControl.Modules.Finance.Infrastructure/FinanceEcheqs.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Sales/LealControl.Modules.Sales.Infrastructure/Http/GrainsEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Sales/LealControl.Modules.Sales.Infrastructure/Http/InventoryEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Sales/LealControl.Modules.Sales.Infrastructure/Http/InvoiceEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Sales/LealControl.Modules.Sales.Infrastructure/Http/PurchaseEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Sales/LealControl.Modules.Sales.Infrastructure/Http/RemitoEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Sales/LealControl.Modules.Sales.Infrastructure/Http/SalesEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'GEMINI.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docker-compose.staging.yml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/Contexto_revision_Metrologia_Legal_ISO17025.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/Propuesta_Modulo_Contable_Asientos_Modelos.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/metrology/NORMATIVA_METROLOGICA_ARGENTINA.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/production-module.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/purchases-migration-plan.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/excel-tools.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/brand-layout.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/components/EmailComposer.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/excel-tools.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ChannelsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/CollectionReceiptsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/CrmHelpPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/FinanceAccountsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/HumanResourcesDashboardPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/InboxPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/LandingPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/MailSettingsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/OpportunityDetailPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/OrgChartPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/OrganizationPositionFormPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/PaymentOrderFormPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/PaymentOrderPrintPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/PaymentOrdersPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/PositionJobDescriptionPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProcedureManualFormPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProcedureManualsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProductionCostsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProductionFlowPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProductionHelpPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProductionOrderDetailPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProductionOrdersPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProductionPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProductionReportsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProductionSetupPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/ProductionVariantsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/PurchaseHelpPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/PurchaseInvoicePrintPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/PurchaseReportsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/PurchasesDashboardPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/AccountFormPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/AccountingDashboardPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/AccountingStudyPortalPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/BankReconciliationPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/BatchPostingModal.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/ChartOfAccountsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/GeneralLedgerPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/JournalEntriesPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/JournalEntryFormPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/JournalTemplateFormPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/JournalTemplatesPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/accounting/TrialBalancePage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/metrology/CalibrationReportFormPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/metrology/CalibrationReportPrintPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/metrology/CalibrationReportsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/metrology/MetrologyDashboardPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/metrology/MetrologyEquipmentFormPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/metrology/MetrologyEquipmentPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/metrology/StandardWeightFormPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/metrology/StandardWeightsPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/pages/metrology/StandardWeightsPrintPage.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/production-flow.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/utils/certificateParser.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/src/v1-theme.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/backup-all-tenants-to-gdrive.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/backup-lealcontrol.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/install-backup-cron.sh', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Accounting/LealControl.Modules.Accounting.Infrastructure/AccountingDbContext.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Accounting/LealControl.Modules.Accounting.Infrastructure/AccountingDependencyInjection.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Accounting/LealControl.Modules.Accounting.Infrastructure/AccountingEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Accounting/LealControl.Modules.Accounting.Infrastructure/AccountingEntities.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Accounting/LealControl.Modules.Accounting.Infrastructure/LealControl.Modules.Accounting.Infrastructure.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/DependencyInjection.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/Domain/EmailMessage.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/Domain/MailAccount.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/Domain/MetaChannelConnection.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/Domain/WhatsAppConnection.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/Http/CommunicationsEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/LealControl.Modules.Communications.Infrastructure.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/Persistence/CommunicationsDbContext.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/Services/MailTransportService.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/Services/MetaGraphApiService.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/Services/WhatsAppGatewayService.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Finance/LealControl.Modules.Finance.Infrastructure/FinanceImport.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Finance/LealControl.Modules.Finance.Infrastructure/FinanceModule.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Finance/LealControl.Modules.Finance.Infrastructure/FinancePayments.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Finance/LealControl.Modules.Finance.Infrastructure/FinanceReceipts.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Finance/LealControl.Modules.Finance.Infrastructure/FinanceSchema.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Finance/LealControl.Modules.Finance.Infrastructure/LealControl.Modules.Finance.Infrastructure.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Metrology/LealControl.Modules.Metrology.Infrastructure/LealControl.Modules.Metrology.Infrastructure.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Metrology/LealControl.Modules.Metrology.Infrastructure/MetrologyDbContext.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Metrology/LealControl.Modules.Metrology.Infrastructure/MetrologyEndpoints.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Metrology/LealControl.Modules.Metrology.Infrastructure/MetrologyEntities.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Metrology/LealControl.Modules.Metrology.Infrastructure/MetrologyRuleEngine.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Sales/LealControl.Modules.Sales.Domain/ProductionBom.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Sales/LealControl.Modules.Sales.Domain/ProductionExecution.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Sales/LealControl.Modules.Sales.Domain/ProductionOrder.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Sales/LealControl.Modules.Sales.Domain/ProductionRouting.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/Modules/Sales/LealControl.Modules.Sales.Domain/ProductionVariant.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LealControl.QA/Auditors/SupplierAccountAuditor.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LealControl.QA/Scenarios/Purchases/QaPurchase001Scenario.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LealControl.QA/Scenarios/Purchases/QaPurchase002Scenario.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LealControl.QA/Scenarios/Purchases/QaPurchase003Scenario.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LealControl.QA/Scenarios/Sales/QaSale002Scenario.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LealControl.QA/Scenarios/Sales/QaSale003Scenario.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/LealControl.QA/Scenarios/Sales/QaSale004Scenario.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'website/app.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'website/index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'website/styles.css', LF will be replaced by CRLF the next time Git touches it
+ GEMINI.md                                          |   0
+ docker-compose.staging.yml                         |   0
+ .../Contexto_revision_Metrologia_Legal_ISO17025.md |   0
+ docs/PLAN_MAESTRO_MEJORAS.md                       |  32 ++---
+ docs/Propuesta_Modulo_Contable_Asientos_Modelos.md |   0
+ docs/metrology/NORMATIVA_METROLOGICA_ARGENTINA.md  |   0
+ docs/production-module.md                          |   0
+ docs/purchases-migration-plan.md                   |   0
+ frontend/excel-tools.css                           |   0
+ frontend/src/App.tsx                               |  31 +----
+ frontend/src/app/moduleRegistry.ts                 |  37 ++++++
+ frontend/src/brand-layout.css                      |   0
+ frontend/src/components/EmailComposer.tsx          |   0
+ frontend/src/excel-tools.css                       |   0
+ frontend/src/pages/ChannelsPage.tsx                |   0
+ frontend/src/pages/CollectionReceiptsPage.tsx      |   0
+ frontend/src/pages/CrmHelpPage.tsx                 |   0
+ frontend/src/pages/FinanceAccountsPage.tsx         |   0
+ frontend/src/pages/FinancePage.tsx                 |   0
+ frontend/src/pages/HumanResourcesDashboardPage.tsx |   0
+ frontend/src/pages/InboxPage.tsx                   |   0
+ frontend/src/pages/LandingPage.tsx                 |   0
+ frontend/src/pages/MailSettingsPage.tsx            |   0
+ frontend/src/pages/OpportunityDetailPage.tsx       |   0
+ frontend/src/pages/OrgChartPage.tsx                |   0
+ .../src/pages/OrganizationPositionFormPage.tsx     |   0
+ frontend/src/pages/PaymentOrderFormPage.tsx        |   0
+ frontend/src/pages/PaymentOrderPrintPage.tsx       |   0
+ frontend/src/pages/PaymentOrdersPage.tsx           |   0
+ frontend/src/pages/PositionJobDescriptionPage.tsx  |   0
+ frontend/src/pages/ProcedureManualFormPage.tsx     |   0
+ frontend/src/pages/ProcedureManualsPage.tsx        |   0
+ frontend/src/pages/ProductionCostsPage.tsx         |   0
+ frontend/src/pages/ProductionFlowPage.tsx          |   0
+ frontend/src/pages/ProductionHelpPage.tsx          |   0
+ frontend/src/pages/ProductionOrderDetailPage.tsx   |   0
+ frontend/src/pages/ProductionOrdersPage.tsx        |   0
+ frontend/src/pages/ProductionPage.tsx              |   0
+ frontend/src/pages/ProductionReportsPage.tsx       |   0
+ frontend/src/pages/ProductionSetupPage.tsx         |   0
+ frontend/src/pages/ProductionVariantsPage.tsx      |   0
+ frontend/src/pages/PurchaseHelpPage.tsx            |   0
+ frontend/src/pages/PurchaseInvoicePrintPage.tsx    |   0
+ frontend/src/pages/PurchaseReportsPage.tsx         |   0
+ frontend/src/pages/PurchasesDashboardPage.tsx      |   0
+ frontend/src/pages/accounting/AccountFormPage.tsx  |   0
+ .../pages/accounting/AccountingDashboardPage.tsx   |   0
+ .../pages/accounting/AccountingStudyPortalPage.tsx |   0
+ .../pages/accounting/BankReconciliationPage.tsx    |   0
+ .../src/pages/accounting/BatchPostingModal.tsx     |   0
+ .../src/pages/accounting/ChartOfAccountsPage.tsx   |   0
+ .../src/pages/accounting/GeneralLedgerPage.tsx     |   0
+ .../src/pages/accounting/JournalEntriesPage.tsx    |   0
+ .../src/pages/accounting/JournalEntryFormPage.tsx  |   0
+ .../pages/accounting/JournalTemplateFormPage.tsx   |   0
+ .../src/pages/accounting/JournalTemplatesPage.tsx  |   0
+ frontend/src/pages/accounting/TrialBalancePage.tsx |   0
+ .../pages/metrology/CalibrationReportFormPage.tsx  |   0
+ .../pages/metrology/CalibrationReportPrintPage.tsx |   0
+ .../src/pages/metrology/CalibrationReportsPage.tsx |   0
+ .../src/pages/metrology/MetrologyDashboardPage.tsx |   0
+ .../pages/metrology/MetrologyEquipmentFormPage.tsx |   0
+ .../src/pages/metrology/MetrologyEquipmentPage.tsx |   0
+ .../src/pages/metrology/StandardWeightFormPage.tsx |   0
+ .../src/pages/metrology/StandardWeightsPage.tsx    |   0
+ .../pages/metrology/StandardWeightsPrintPage.tsx   |   0
+ frontend/src/production-flow.css                   |   0
+ frontend/src/utils/certificateParser.ts            |   0
+ frontend/src/v1-theme.css                          |   0
+ scripts/backup-all-tenants-to-gdrive.sh            |   0
+ scripts/backup-lealcontrol.sh                      |   0
+ scripts/install-backup-cron.sh                     |   0
+ .../LealControl.BuildingBlocks.csproj              |   1 +
+ .../Automation/AutomationEndpoints.cs              |   4 +-
+ src/Host/LealControl.Api/Program.cs                |  53 ++++++++-
+ .../SuperAdmin/SuperAdminEndpoints.cs              | 130 ++++-----------------
+ .../LealControl.Api/appsettings.Development.json   |   3 +
+ src/Host/LealControl.Api/appsettings.json          |   2 +-
+ .../AccountingDbContext.cs                         |   0
+ .../AccountingDependencyInjection.cs               |   0
+ .../AccountingEndpoints.cs                         |   3 +-
+ .../AccountingEntities.cs                          |   0
+ ...ontrol.Modules.Accounting.Infrastructure.csproj |   0
+ .../DependencyInjection.cs                         |   0
+ .../Domain/EmailMessage.cs                         |   0
+ .../Domain/MailAccount.cs                          |   0
+ .../Domain/MetaChannelConnection.cs                |   0
+ .../Domain/WhatsAppConnection.cs                   |   0
+ .../Http/CommunicationsEndpoints.cs                |   0
+ ...ol.Modules.Communications.Infrastructure.csproj |   0
+ .../Persistence/CommunicationsDbContext.cs         |   0
+ .../Services/MailTransportService.cs               |   0
+ .../Services/MetaGraphApiService.cs                |   0
+ .../Services/WhatsAppGatewayService.cs             |   0
+ .../Http/AuthEndpoints.cs                          | 127 ++++++++++----------
+ .../Http/MultiTenantAuthResolver.cs                |  14 ++-
+ .../FinanceConcepts.cs                             |   3 +-
+ .../FinanceEcheqs.cs                               |   3 +-
+ .../FinanceImport.cs                               |   5 +-
+ .../FinanceModule.cs                               |   3 +-
+ .../FinancePayments.cs                             |   5 +-
+ .../FinanceReceipts.cs                             |   5 +-
+ .../FinanceSchema.cs                               |   0
+ ...alControl.Modules.Finance.Infrastructure.csproj |   0
+ ...Control.Modules.Metrology.Infrastructure.csproj |   0
+ .../MetrologyDbContext.cs                          |   0
+ .../MetrologyEndpoints.cs                          |   0
+ .../MetrologyEntities.cs                           |   0
+ .../MetrologyRuleEngine.cs                         |   0
+ .../ProductionBom.cs                               |   0
+ .../ProductionExecution.cs                         |   0
+ .../ProductionOrder.cs                             |   0
+ .../ProductionRouting.cs                           |   0
+ .../ProductionVariant.cs                           |   0
+ .../Http/GrainsEndpoints.cs                        |   3 +-
+ .../Http/InventoryEndpoints.cs                     |   3 +-
+ .../Http/InvoiceEndpoints.cs                       |   3 +-
+ .../Http/PurchaseEndpoints.cs                      |   3 +-
+ .../Http/RemitoEndpoints.cs                        |   3 +-
+ .../Http/SalesEndpoints.cs                         |   3 +-
+ .../Auditors/SupplierAccountAuditor.cs             |   0
+ .../Scenarios/Purchases/QaPurchase001Scenario.cs   |   0
+ .../Scenarios/Purchases/QaPurchase002Scenario.cs   |   0
+ .../Scenarios/Purchases/QaPurchase003Scenario.cs   |   0
+ .../Scenarios/Sales/QaSale002Scenario.cs           |   0
+ .../Scenarios/Sales/QaSale003Scenario.cs           |   0
+ .../Scenarios/Sales/QaSale004Scenario.cs           |   0
+ website/app.js                                     |   0
+ website/index.html                                 |   0
+ website/styles.css                                 |   0
+ 130 files changed, 241 insertions(+), 238 deletions(-)

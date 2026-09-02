@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Security;
 using LealControl.BuildingBlocks.Tenancy;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;

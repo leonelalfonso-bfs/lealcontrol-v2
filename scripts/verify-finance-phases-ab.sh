@@ -71,19 +71,28 @@ else
   echo "  SKIP filtro conceptId (sin movimientos confirmados)"
 fi
 
-check "reconciliation endpoint responde" \
-  ACCOUNT_ID="$(curl -sf "${auth[@]}" "${BASE}/api/v1/finance/accounts" | python3 -c "import json,sys; a=json.load(sys.stdin); print(a[0]['id'] if a else '')" 2>/dev/null || true)" && \
-  [[ -n "$ACCOUNT_ID" ]] && \
-  curl -sf "${auth[@]}" "${BASE}/api/v1/finance/reconciliation?accountId=${ACCOUNT_ID}" -o /tmp/fin-recon.json
+reconciliation_responds() {
+  local account_id
+  account_id="$(curl -sf "${auth[@]}" "${BASE}/api/v1/finance/accounts" \
+    | python3 -c "import json,sys; a=json.load(sys.stdin); print(a[0]['id'] if a else '')" 2>/dev/null || true)"
+  [[ -n "$account_id" ]] || return 1
+  curl -sf "${auth[@]}" "${BASE}/api/v1/finance/reconciliation?accountId=${account_id}" -o /tmp/fin-recon.json
+}
+check "reconciliation endpoint responde" reconciliation_responds
 
 check "concepts incluyen usableIn en seeds" \
   curl -sf "${auth[@]}" "${BASE}/api/v1/finance/concepts" -o /tmp/fin-concepts.json && \
   grep -q '"usableIn"[[:space:]]*:[[:space:]]*"MovementOnly"' /tmp/fin-concepts.json && \
   grep -q '"usableIn"[[:space:]]*:[[:space:]]*"Receipt"' /tmp/fin-concepts.json
 
-check "collections excluye conceptos MovementOnly" \
-  ! grep -qi '"conceptCode"[[:space:]]*:[[:space:]]*"COMISION"' /tmp/fin-coll-mov.json 2>/dev/null && \
+movement_only_excluded_from_collections() {
+  if [[ ! -f /tmp/fin-coll-mov.json ]]; then
+    return 0
+  fi
+  ! grep -qi '"conceptCode"[[:space:]]*:[[:space:]]*"COMISION"' /tmp/fin-coll-mov.json 2>/dev/null &&
   ! grep -qi '"conceptCode"[[:space:]]*:[[:space:]]*"GASTO_BANCARIO"' /tmp/fin-coll-mov.json 2>/dev/null
+}
+check "collections excluye conceptos MovementOnly" movement_only_excluded_from_collections
 
 echo "---"
 echo "Pasaron: $pass | Fallaron: $fail"

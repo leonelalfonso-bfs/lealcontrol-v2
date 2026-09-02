@@ -19,7 +19,7 @@ public sealed class RequirePolicyOnWriteFilter(string policyName) : IEndpointFil
         var result = await authorization.AuthorizeAsync(context.HttpContext.User, policyName);
         if (!result.Succeeded)
         {
-            return Results.Json(
+            return Microsoft.AspNetCore.Http.Results.Json(
                 new { message = "No tenés permisos para realizar esta operación." },
                 statusCode: StatusCodes.Status403Forbidden);
         }
