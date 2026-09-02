@@ -139,14 +139,20 @@ public static class TenantDatabaseBootstrapper
         CancellationToken cancellationToken)
         where TContext : DbContext
     {
-        var applied = (await db.Database.GetAppliedMigrationsAsync(cancellationToken)).ToList();
-        if (applied.Count == 0 && await LegacySchemaExistsAsync(db, legacyProbeTable, cancellationToken))
+        var legacyExists = await LegacySchemaExistsAsync(db, legacyProbeTable, cancellationToken);
+        if (legacyExists)
         {
-            Log.Warning(
-                "Base {DbName}: módulo {Module} sin historial EF pero con tablas existentes ({Probe}). Se omite MigrateAsync; ejecutar baseline de migraciones cuando sea posible.",
-                dbName,
-                moduleName,
-                legacyProbeTable);
+            var pending = (await db.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
+            if (pending.Count > 0)
+            {
+                Log.Warning(
+                    "Base {DbName}: módulo {Module} con esquema legacy ({Probe}) y {PendingCount} migración(es) pendiente(s). Se omite MigrateAsync; reconciliar __ef_migrations_history cuando sea posible.",
+                    dbName,
+                    moduleName,
+                    legacyProbeTable,
+                    pending.Count);
+            }
+
             await ensureTablesAsync();
             return;
         }
@@ -158,6 +164,14 @@ public static class TenantDatabaseBootstrapper
             {
                 await db.Database.MigrateAsync(cancellationToken);
             }
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.DuplicateTable)
+        {
+            Log.Warning(
+                ex,
+                "Base {DbName}: módulo {Module} — MigrateAsync chocó con tablas ya existentes. Continuando con EnsureTables.",
+                dbName,
+                moduleName);
         }
         catch (Exception ex)
         {
