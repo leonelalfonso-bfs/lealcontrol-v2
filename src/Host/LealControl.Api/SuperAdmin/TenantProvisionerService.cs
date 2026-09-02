@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -305,42 +306,66 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
     private async Task<string> GenerateSqlScriptDumpAsync(string dbName, CancellationToken cancellationToken)
     {
         var sb = new StringBuilder();
+        var tablesExported = 0;
+        var tablesFailed = 0;
+
         sb.AppendLine("-- LEAL Control ERP v2.0 - Copia de Seguridad Automatica");
         sb.AppendLine("-- Base de datos: " + dbName);
         sb.AppendLine("-- Fecha de exportacion: " + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss") + " UTC");
+        sb.AppendLine("-- Tablas exportadas: (pendiente)");
+        sb.AppendLine("-- Tablas fallidas: (pendiente)");
         sb.AppendLine();
 
         var tenantConn = BuildTenantConnectionString(dbName);
         using var conn = new NpgsqlConnection(tenantConn);
         await conn.OpenAsync(cancellationToken);
 
-        var tables = new[]
+        var schemas = new[]
         {
-            "public.tenant_settings", "public.tenant_users",
-            "crm.customers", "crm.contacts", "crm.locations", "crm.customer_equipments", "crm.customer_fiscal_rates", "crm.leads", "crm.opportunities", "crm.activities", "crm.suppliers",
-            "sales.quotes", "sales.quote_items", "sales.orders", "sales.order_items", "sales.deliveries", "sales.delivery_items", "sales.invoices", "sales.invoice_items", "sales.products", "sales.product_categories", "sales.price_lists",
-            "sales.GrainContracts", "sales.GrainPriceFixations", "sales.GrainDeliveries", "sales.GrainSettlements", "sales.GrainMarketPrices",
-            "finance.accounts", "finance.movements", "finance.echeqs", "finance.collections",
-            "fleet.vehicles", "fleet.vehicle_drivers", "fleet.vehicle_documents", "fleet.vehicle_maintenances", "fleet.vehicle_fuel_logs",
-            "hr.employees", "hr.attendance_logs", "hr.salary_settlements"
+            "public", "crm", "sales", "purchases", "finance", "fleet", "hr",
+            "accounting", "communications", "metrology"
         };
+
+        var tables = new List<string>();
+        foreach (var schema in schemas)
+        {
+            await using var listCmd = new NpgsqlCommand(
+                """
+                SELECT quote_ident(table_schema) || '.' || quote_ident(table_name)
+                FROM information_schema.tables
+                WHERE table_schema = @schema AND table_type = 'BASE TABLE'
+                ORDER BY table_name
+                """, conn);
+            listCmd.Parameters.AddWithValue("schema", schema);
+            await using var listReader = await listCmd.ExecuteReaderAsync(cancellationToken);
+            while (await listReader.ReadAsync(cancellationToken))
+            {
+                tables.Add(listReader.GetString(0));
+            }
+        }
 
         foreach (var table in tables)
         {
             try
             {
-                using var cmd = new NpgsqlCommand("SELECT * FROM " + table, conn);
-                using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                await using var cmd = new NpgsqlCommand("SELECT * FROM " + table, conn);
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
                 sb.AppendLine("-- Table: " + table);
+                var rowCount = 0;
                 while (await reader.ReadAsync(cancellationToken))
                 {
                     var cols = new StringBuilder();
                     var vals = new StringBuilder();
-                    for (int i = 0; i < reader.FieldCount; i++)
+                    for (var i = 0; i < reader.FieldCount; i++)
                     {
-                        if (i > 0) { cols.Append(", "); vals.Append(", "); }
-                        cols.Append("\"" + reader.GetName(i) + "\"");
+                        if (i > 0)
+                        {
+                            cols.Append(", ");
+                            vals.Append(", ");
+                        }
+
+                        cols.Append('"').Append(reader.GetName(i)).Append('"');
                         if (reader.IsDBNull(i))
                         {
                             vals.Append("NULL");
@@ -348,23 +373,38 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
                         else
                         {
                             var val = reader.GetValue(i);
-                            if (val is string s) vals.Append("'" + s.Replace("'", "''") + "'");
-                            else if (val is DateTime dt) vals.Append("'" + dt.ToString("yyyy-MM-dd HH:mm:ss.fffZ") + "'");
-                            else if (val is bool b) vals.Append(b ? "TRUE" : "FALSE");
-                            else vals.Append(val.ToString());
+                            vals.Append(val switch
+                            {
+                                string s => "'" + s.Replace("'", "''") + "'",
+                                DateTime dt => "'" + dt.ToString("yyyy-MM-dd HH:mm:ss.fffZ") + "'",
+                                bool b => b ? "TRUE" : "FALSE",
+                                _ => val.ToString()
+                            });
                         }
                     }
+
                     sb.AppendLine("INSERT INTO " + table + " (" + cols + ") VALUES (" + vals + ") ON CONFLICT DO NOTHING;");
+                    rowCount++;
                 }
+
+                sb.AppendLine("-- Rows: " + rowCount);
                 sb.AppendLine();
+                tablesExported++;
             }
-            catch
+            catch (Exception ex)
             {
-                // Table may not exist yet
+                tablesFailed++;
+                _logger.LogError(ex, "Error exportando tabla {Table} de {DbName}", table, dbName);
+                sb.AppendLine("-- ERROR exportando " + table + ": " + ex.Message.Replace('\n', ' '));
+                sb.AppendLine();
             }
         }
 
-        return sb.ToString();
+        var dump = sb.ToString()
+            .Replace("-- Tablas exportadas: (pendiente)", "-- Tablas exportadas: " + tablesExported, StringComparison.Ordinal)
+            .Replace("-- Tablas fallidas: (pendiente)", "-- Tablas fallidas: " + tablesFailed, StringComparison.Ordinal);
+
+        return dump;
     }
 
     private string BuildTenantConnectionString(string dbName)

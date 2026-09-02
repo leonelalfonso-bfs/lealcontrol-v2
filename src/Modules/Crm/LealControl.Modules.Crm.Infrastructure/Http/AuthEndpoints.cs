@@ -190,8 +190,6 @@ public static class AuthEndpoints
                 }
             }
 
-            user ??= await db.TenantUsers.FirstOrDefaultAsync(u => u.TenantId == tenantId && u.IsActive, ct);
-
             IReadOnlyList<TenantMembership> memberships = [];
             if (!string.IsNullOrWhiteSpace(emailFromToken))
             {
@@ -228,6 +226,13 @@ public static class AuthEndpoints
                 {
                     new(tenantId.Value, tenantName, tradeName, docNumber)
                 };
+
+            if (userDto is null)
+            {
+                return Results.Json(
+                    new { message = "Sesión inválida. Volvé a iniciar sesión." },
+                    statusCode: StatusCodes.Status401Unauthorized);
+            }
 
             return Results.Ok(new
             {

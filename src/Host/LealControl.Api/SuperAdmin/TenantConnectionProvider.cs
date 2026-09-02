@@ -14,10 +14,12 @@ namespace LealControl.Api.SuperAdmin;
 
 public sealed class TenantConnectionProvider : ITenantConnectionProvider
 {
+    private sealed record TenantRoute(string DbName, string Status);
+
     private readonly string _defaultConnectionString;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<TenantConnectionProvider> _logger;
-    private readonly ConcurrentDictionary<Guid, string> _dbNameCache = new();
+    private readonly ConcurrentDictionary<Guid, TenantRoute> _routeCache = new();
 
     public TenantConnectionProvider(
         IConfiguration configuration,
@@ -30,39 +32,8 @@ public sealed class TenantConnectionProvider : ITenantConnectionProvider
         _logger = logger;
     }
 
-    public string GetConnectionString(TenantId tenantId)
-    {
-        if (tenantId.Value == Guid.Empty)
-        {
-            return _defaultConnectionString;
-        }
-
-        if (_dbNameCache.TryGetValue(tenantId.Value, out var cachedDb))
-        {
-            return BuildConnectionString(cachedDb);
-        }
-
-        try
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var masterDb = scope.ServiceProvider.GetService<MasterDbContext>();
-            if (masterDb != null)
-            {
-                var tenant = masterDb.Tenants.AsNoTracking().FirstOrDefault(t => t.Id == tenantId.Value);
-                if (tenant != null && !string.IsNullOrWhiteSpace(tenant.DbName))
-                {
-                    _dbNameCache[tenantId.Value] = tenant.DbName;
-                    return BuildConnectionString(tenant.DbName);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error resolving DbName for tenant {TenantId}, falling back to default.", tenantId.Value);
-        }
-
-        return _defaultConnectionString;
-    }
+    public string GetConnectionString(TenantId tenantId) =>
+        GetConnectionStringAsync(tenantId).GetAwaiter().GetResult();
 
     public async Task<string> GetConnectionStringAsync(TenantId tenantId, CancellationToken cancellationToken = default)
     {
@@ -71,40 +42,68 @@ public sealed class TenantConnectionProvider : ITenantConnectionProvider
             return _defaultConnectionString;
         }
 
-        if (_dbNameCache.TryGetValue(tenantId.Value, out var cachedDb))
+        if (_routeCache.TryGetValue(tenantId.Value, out var cached))
         {
-            return BuildConnectionString(cachedDb);
+            EnsureTenantAccessible(tenantId.Value, cached.Status);
+            return BuildConnectionString(cached.DbName);
         }
 
-        try
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var masterDb = scope.ServiceProvider.GetService<MasterDbContext>();
-            if (masterDb != null)
-            {
-                var tenant = await masterDb.Tenants.AsNoTracking()
-                    .FirstOrDefaultAsync(t => t.Id == tenantId.Value, cancellationToken);
-
-                if (tenant != null && !string.IsNullOrWhiteSpace(tenant.DbName))
-                {
-                    _dbNameCache[tenantId.Value] = tenant.DbName;
-                    return BuildConnectionString(tenant.DbName);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error resolving DbName for tenant {TenantId} async, falling back to default.", tenantId.Value);
-        }
-
-        return _defaultConnectionString;
+        var route = await ResolveTenantRouteAsync(tenantId.Value, cancellationToken);
+        _routeCache[tenantId.Value] = route;
+        EnsureTenantAccessible(tenantId.Value, route.Status);
+        return BuildConnectionString(route.DbName);
     }
 
     public void InvalidateCache(TenantId tenantId)
     {
         if (tenantId.Value != Guid.Empty)
         {
-            _dbNameCache.TryRemove(tenantId.Value, out _);
+            _routeCache.TryRemove(tenantId.Value, out _);
+        }
+    }
+
+    private async Task<TenantRoute> ResolveTenantRouteAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var masterDb = scope.ServiceProvider.GetService<MasterDbContext>();
+            if (masterDb == null)
+            {
+                throw TenantNotFoundException.ForTenant(tenantId);
+            }
+
+            var tenant = await masterDb.Tenants.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+
+            if (tenant == null || string.IsNullOrWhiteSpace(tenant.DbName))
+            {
+                throw TenantNotFoundException.ForTenant(tenantId);
+            }
+
+            return new TenantRoute(tenant.DbName, tenant.Status);
+        }
+        catch (TenantNotFoundException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resolviendo la base de datos del tenant {TenantId}.", tenantId);
+            throw TenantNotFoundException.ForTenant(tenantId);
+        }
+    }
+
+    private static void EnsureTenantAccessible(Guid tenantId, string status)
+    {
+        if (string.Equals(status, "Suspended", StringComparison.OrdinalIgnoreCase))
+        {
+            throw TenantNotFoundException.Suspended(tenantId);
+        }
+
+        if (string.Equals(status, "Expired", StringComparison.OrdinalIgnoreCase))
+        {
+            throw TenantNotFoundException.Expired(tenantId);
         }
     }
 

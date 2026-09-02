@@ -129,6 +129,8 @@ try
     });
     builder.Services.AddAuthorization(options =>
     {
+        options.AddPolicy("RequireAdmin", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
         options.FallbackPolicy = new AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
             .Build();
@@ -240,6 +242,19 @@ try
     app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();
+    app.Use(async (context, next) =>
+    {
+        try
+        {
+            await next();
+        }
+        catch (TenantNotFoundException ex)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+        }
+    });
 
     if (app.Environment.IsDevelopment())
     {

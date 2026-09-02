@@ -1,6 +1,8 @@
 using System;
 using LealControl.Modules.Crm.Application.Settings;
 using MediatR;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -23,13 +25,13 @@ public static class CompanySettingsEndpoints
         {
             var res = await sender.Send(new UpdateCompanySettingsCommand(model), cancellationToken);
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
-        });
+        }).RequireAuthorization("RequireAdmin");
 
         group.MapPost("/settings/arca-certificate", async (UploadArcaCertificateCommand cmd, ISender sender, CancellationToken cancellationToken) =>
         {
             var res = await sender.Send(cmd, cancellationToken);
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
-        });
+        }).RequireAuthorization("RequireAdmin");
 
         group.MapGet("/users", async (ISender sender, CancellationToken cancellationToken) =>
         {
@@ -41,20 +43,20 @@ public static class CompanySettingsEndpoints
         {
             var res = await sender.Send(cmd, cancellationToken);
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
-        });
+        }).RequireAuthorization("RequireAdmin");
 
         group.MapPut("/users/{id:guid}", async (Guid id, UpdateTenantUserCommand cmd, ISender sender, CancellationToken cancellationToken) =>
         {
             if (id != cmd.Id) cmd = cmd with { Id = id };
             var res = await sender.Send(cmd, cancellationToken);
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
-        });
+        }).RequireAuthorization("RequireAdmin");
 
         group.MapDelete("/users/{id:guid}", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
         {
             var res = await sender.Send(new DeleteTenantUserCommand(id), cancellationToken);
             return res.IsSuccess ? Results.NoContent() : Results.BadRequest(res.Error);
-        });
+        }).RequireAuthorization("RequireAdmin");
 
         return endpoints;
     }

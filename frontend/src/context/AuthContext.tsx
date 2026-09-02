@@ -121,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .catch((err) => {
           if (err?.message?.includes("401") || err?.message?.includes("Unauthorized")) {
             logout();
+            window.location.href = "/login";
           }
         })
         .finally(() => setLoading(false));
