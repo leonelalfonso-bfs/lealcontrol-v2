@@ -23,6 +23,7 @@ using LealControl.Api.Automation;
 using LealControl.Api.Public;
 using LealControl.Api.Security;
 using LealControl.Api.Logging;
+using LealControl.Api.Health;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -328,8 +329,15 @@ try
     }
 
     app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
-    app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
-    app.MapHealthChecks("/health").AllowAnonymous();
+    app.MapHealthChecks("/health/live", new HealthCheckOptions
+    {
+        Predicate = _ => false,
+        ResponseWriter = HealthCheckJsonWriter.WriteDetailedResponse
+    }).AllowAnonymous();
+    app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        ResponseWriter = HealthCheckJsonWriter.WriteDetailedResponse
+    }).AllowAnonymous();
     app.MapCrmModule();
     app.MapSalesModule();
     app.MapCommunicationsModule();
