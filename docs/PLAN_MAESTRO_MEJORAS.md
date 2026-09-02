@@ -297,5 +297,5 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 |-------|--------------|--------|----------|-------|
 | 02/09/2026 | 0.1–0.5 | `fcd60ee` | pendiente staging | Batch-post deshabilitado, backup dinámico, RBAC company, tenant routing, /me seguro |
 | 02/09/2026 | 1.1–1.6 | `a364601` | pendiente staging | Webhook MP público, RBAC módulos, allowed_modules, seed-dev-admin, HTTP hardening, JWT unificado |
-| | 2.1–2.6 | (pendiente commit) | pendiente staging | CI gate, health checks, backups, migraciones estrictas, one-off SQL, Serilog file |
+| | 2.1–2.6 | `7dec4cf` | pendiente staging | CI gate, health checks, backups, migraciones estrictas, one-off SQL, Serilog file |
 | | 3.1–3.14 | — | — | **Próximo bloque:** circuito financiero |
