@@ -1,12 +1,18 @@
 name: Deploy staging
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [staging]
   workflow_dispatch:
 
 jobs:
   deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -27,3 +33,4 @@ jobs:
             git pull --ff-only origin staging
             docker compose -f docker-compose.staging.yml --env-file .env up -d --build
             docker compose -f docker-compose.staging.yml ps
+            bash scripts/smoke-health.sh 5210 9

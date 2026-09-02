@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,7 +20,7 @@ public sealed class RequirePolicyOnWriteFilter(string policyName) : IEndpointFil
         var result = await authorization.AuthorizeAsync(context.HttpContext.User, policyName);
         if (!result.Succeeded)
         {
-            return Results.Json(
+            return Microsoft.AspNetCore.Http.Results.Json(
                 new { message = "No tenés permisos para realizar esta operación." },
                 statusCode: StatusCodes.Status403Forbidden);
         }

@@ -80,22 +80,19 @@ public static class TenantDatabaseBootstrapper
 
         await using (var crm = CreateContext<CrmDbContext>(connectionString, CrmDbContext.Schema))
         {
-            try { await crm.Database.MigrateAsync(cancellationToken); }
-            catch (Exception ex) { Log.Warning(ex, "CRM migration skipped for {DbName}", dbName); }
+            await crm.Database.MigrateAsync(cancellationToken);
             await crm.EnsureCrmTablesAsync();
         }
 
         await using (var sales = CreateContext<SalesDbContext>(connectionString, SalesDbContext.Schema))
         {
-            try { await sales.Database.MigrateAsync(cancellationToken); }
-            catch (Exception ex) { Log.Warning(ex, "Sales migration skipped for {DbName}", dbName); }
+            await sales.Database.MigrateAsync(cancellationToken);
             await sales.EnsureTablesCreatedAsync();
         }
 
         await using (var communications = CreateContext<CommunicationsDbContext>(connectionString, CommunicationsDbContext.Schema))
         {
-            try { await communications.Database.MigrateAsync(cancellationToken); }
-            catch (Exception ex) { Log.Warning(ex, "Communications migration skipped for {DbName}", dbName); }
+            await communications.Database.MigrateAsync(cancellationToken);
             await communications.EnsureTablesCreatedAsync();
         }
 

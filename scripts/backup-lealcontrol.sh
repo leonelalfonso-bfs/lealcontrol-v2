@@ -78,8 +78,8 @@ backup_stack() {
   if ! docker compose -f "$compose_file" exec -T \
     -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
     pg_isready -U "$POSTGRES_USER" >/dev/null 2>&1; then
-    log "AVISO: postgres no responde en $label"
-    return 0
+    log "ERROR: postgres no responde en $label"
+    return 1
   fi
 
   local databases
@@ -105,7 +105,26 @@ backup_stack() {
       pg_dump -U "$POSTGRES_USER" -d "$db" --no-owner --no-privileges \
       | gzip -9 > "$file_path"
 
-    log "    OK $(du -h "$file_path" | awk '{print $1}') $file_name"
+    if ! gzip -t "$file_path"; then
+      log "ERROR: gzip corrupto en $file_path"
+      return 1
+    fi
+
+    local size_bytes
+    size_bytes="$(wc -c < "$file_path" | tr -d ' ')"
+    if [[ "$size_bytes" -lt 10240 ]]; then
+      log "ERROR: dump demasiado chico (${size_bytes} bytes) en $file_path"
+      return 1
+    fi
+
+    local copy_count
+    copy_count="$(gzip -dc "$file_path" | grep -c '^COPY ' || true)"
+    if [[ "$copy_count" -lt 1 ]]; then
+      log "ERROR: sin sentencias COPY en $file_path"
+      return 1
+    fi
+
+    log "    OK $(du -h "$file_path" | awk '{print $1}') $file_name ($copy_count tablas COPY)"
     count=$((count + 1))
   done <<< "$databases"
 

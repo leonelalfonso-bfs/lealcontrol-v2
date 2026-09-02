@@ -12,6 +12,14 @@ services:
     volumes:
       - lealcontrol_v2_pg:/var/lib/postgresql/data
     networks: [v2]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lealv2} -d ${POSTGRES_DB:-lealcontrol_v2}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 2048m
+    cpus: "2.0"
+
   api:
     build: { context: ., dockerfile: deploy/Dockerfile.api }
     restart: unless-stopped
@@ -32,22 +40,41 @@ services:
       META_APP_SECRET: ${META_APP_SECRET:-}
       SUPERADMIN_BOOTSTRAP_PASSWORD: ${SUPERADMIN_BOOTSTRAP_PASSWORD:-}
       SUPERADMIN_BOOTSTRAP_EMAIL: ${SUPERADMIN_BOOTSTRAP_EMAIL:-}
-    depends_on: [postgres]
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - lealcontrol_v2_dp_keys:/root/.aspnet/DataProtection-Keys
+      - lealcontrol_v2_logs:/var/log/lealcontrol
     ports: ["127.0.0.1:5209:8080"]
     networks: [v2, evolution_net]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    mem_limit: 3072m
+    cpus: "2.0"
+
   web:
     build: { context: ., dockerfile: deploy/Dockerfile.web }
     restart: unless-stopped
-    depends_on: [api]
+    depends_on:
+      api:
+        condition: service_healthy
     ports: ["127.0.0.1:5174:80"]
     networks: [v2]
+    mem_limit: 256m
+    cpus: "0.5"
+
 networks:
   v2: { name: lealcontrol-v2 }
   evolution_net:
     name: evolution-api_default
     external: true
+
 volumes:
   lealcontrol_v2_pg: { name: lealcontrol-v2-pg }
   lealcontrol_v2_dp_keys: { name: lealcontrol-v2-dp-keys }
+  lealcontrol_v2_logs: { name: lealcontrol-v2-logs }

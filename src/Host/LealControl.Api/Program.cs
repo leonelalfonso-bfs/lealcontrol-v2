@@ -22,6 +22,7 @@ using LealControl.Api.SuperAdmin;
 using LealControl.Api.Automation;
 using LealControl.Api.Public;
 using LealControl.Api.Security;
+using LealControl.Api.Logging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -40,8 +41,14 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    builder.Services.AddHttpContextAccessor();
+
     builder.Host.UseSerilog((context, services, configuration) =>
-        configuration.ReadFrom.Configuration(context.Configuration).WriteTo.Console());
+        configuration
+            .ReadFrom.Configuration(context.Configuration)
+            .Enrich.FromLogContext()
+            .Enrich.With(services.GetRequiredService<TenantIdEnricher>())
+            .WriteTo.Console());
 
     builder.WebHost.ConfigureKestrel(options =>
     {
@@ -51,6 +58,8 @@ try
     var dbConnectionString = builder.Configuration.GetConnectionString("Database")
         ?? throw new InvalidOperationException(
             "ConnectionStrings:Database es obligatorio. En desarrollo usá appsettings.Development.json o user-secrets.");
+
+    builder.Services.AddSingleton<TenantIdEnricher>();
 
     builder.Services.AddDbContext<MasterDbContext>(options =>
         options.UseNpgsql(dbConnectionString));
@@ -231,9 +240,15 @@ try
         });
     });
     builder.Services.AddHealthChecks()
+        .AddDbContextCheck<MasterDbContext>("master-db")
         .AddDbContextCheck<CrmDbContext>("crm-db")
         .AddDbContextCheck<SalesDbContext>("sales-db")
-        .AddDbContextCheck<CommunicationsDbContext>("communications-db");
+        .AddDbContextCheck<CommunicationsDbContext>("communications-db")
+        .AddDbContextCheck<FinanceDbContext>("finance-db")
+        .AddDbContextCheck<AccountingDbContext>("accounting-db")
+        .AddDbContextCheck<HumanResourcesDbContext>("hr-db")
+        .AddDbContextCheck<FleetDbContext>("fleet-db")
+        .AddDbContextCheck<MetrologyDbContext>("metrology-db");
     var configuredOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
         ?.Where(o => !string.IsNullOrWhiteSpace(o))
         .Distinct(StringComparer.OrdinalIgnoreCase)

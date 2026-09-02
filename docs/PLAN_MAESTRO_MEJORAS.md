@@ -16,7 +16,7 @@ Documentos relacionados:
 |--------|----------|:------:|:------:|:------------------:|--------|
 | 0 | Frenar corrupción de datos | 5 | 5/5 | 0/5 | ✅ Código en `fcd60ee` — validar staging |
 | 1 | Cerrar agujeros de seguridad | 6 | 6/6 | 0/6 | ✅ Código en `a364601` — validar staging |
-| 2 | Deploy y backups confiables | 6 | 0/6 | 0/6 | ☐ **Siguiente** |
+| 2 | Deploy y backups confiables | 6 | 6/6 | 0/6 | ✅ Código listo — validar staging |
 | 3 | Circuito financiero completo | 14 | 0/14 | 0/14 | ☐ (detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`) |
 | 4 | Contabilidad desde asientos modelo | 9 | 0/9 | 0/9 | ☐ |
 | 5 | Red de tests del circuito del dinero | 6 | 0/6 | 0/6 | ☐ |
@@ -113,32 +113,32 @@ Estas cinco tareas son cambios chicos. Se hacen todas juntas en un solo commit y
 ## Bloque 2 — Deploy y backups confiables (esfuerzo total: 2 jornadas)
 
 ### 2.1 Gate de CI antes del deploy
-- [ ] `deploy-staging.yml` y `deploy-prod.yml` — cambiar trigger a `workflow_run` del workflow CI con `conclusion == success`, o bien fusionar en un solo workflow con jobs `test → deploy` y `needs: test`.
-- [ ] Smoke test post-deploy: `curl /health` debe devolver 200 con los cinco DbContexts `Healthy`; si no, el job falla y avisa.
+- [x] `deploy-staging.yml` y `deploy-prod.yml` — trigger `workflow_run` del CI con `conclusion == success` (+ `workflow_dispatch` manual).
+- [x] Smoke test post-deploy: `scripts/smoke-health.sh` exige `/health` Healthy con 9 DbContexts.
 
 ### 2.2 Health checks completos y usados
-- [ ] `Program.cs:208-211` — agregar `AddDbContextCheck<FinanceDbContext>`, `AccountingDbContext`, `HumanResourcesDbContext`, `FleetDbContext`, `MetrologyDbContext`, `MasterDbContext`.
-- [ ] `docker-compose.staging.yml` / `prod` — `healthcheck` en `api` apuntando a `/health`, `depends_on: condition: service_healthy` en `web`.
-- [ ] Límites de recursos (`deploy.resources.limits`) en api y postgres.
+- [x] `Program.cs` — `AddDbContextCheck` para Master, Finance, Accounting, HR, Fleet, Metrology (+ CRM, Sales, Communications).
+- [x] `docker-compose.staging.yml` / `prod` — healthcheck en `postgres` y `api`, `depends_on: service_healthy` en `api` y `web`.
+- [x] Límites de recursos (`mem_limit`, `cpus`) en api, postgres y web.
 
 ### 2.3 Backups verificados
-- [ ] `backup-lealcontrol.sh:80-82` — si Postgres no responde, `exit 1`, no `return 0`.
-- [ ] Después de cada dump: `gzip -t` + verificar que el archivo pese más de 10 KB + contar `COPY` statements.
-- [ ] Script `scripts/verify-restore.sh`: crea base temporal, restaura el último dump, cuenta filas de 5 tablas clave, borra la base. Cron mensual. Resultado por mail o log.
-- [ ] Documentar en `docs/RUNBOOK_RESTORE.md` el procedimiento de restauración paso a paso.
+- [x] `backup-lealcontrol.sh` — si Postgres no responde, `exit 1`.
+- [x] Después de cada dump: `gzip -t` + tamaño > 10 KB + contar `COPY`.
+- [x] Script `scripts/verify-restore.sh`: base temporal, restaura último dump, cuenta 5 tablas clave.
+- [x] `docs/RUNBOOK_RESTORE.md` con procedimiento paso a paso.
 
 ### 2.4 Migraciones que fallan detienen el arranque
-- [ ] `TenantDatabaseBootstrapper.cs:83-99` — quitar los `try/catch` alrededor de `MigrateAsync`. Si una migración falla, la API no arranca y el log dice cuál.
-- [ ] Antes de eso: reconciliar el estado de las tres bases (staging, Leal Control, demo) para que `__EFMigrationsHistory` refleje la realidad. Generar migración de "baseline" si hace falta.
+- [x] `TenantDatabaseBootstrapper.cs` — sin `try/catch` que trague errores de `MigrateAsync` en CRM/Sales/Communications.
+- [ ] Antes de desplegar: reconciliar `__EFMigrationsHistory` en staging/prod/demo si hay drift (tarea operativa).
 
 ### 2.5 Scripts SQL destructivos fuera del repo o con guardas
-- [ ] `migrate-tenant-id.sql` y `migrate-tenant-id-safe.sql` — mover a `scripts/one-off/` con README que diga que ya se ejecutaron y no deben correrse de nuevo, o borrarlos.
+- [x] `migrate-tenant-id*.sql` movidos a `scripts/one-off/` con README de no re-ejecutar.
 
 ### 2.6 Observabilidad mínima
-- [ ] Serilog con sink a archivo rotativo (`/var/log/lealcontrol/api-.log`, 14 días) además de consola.
-- [ ] Log estructurado con `TenantId` en todos los eventos (enricher desde `ITenantContext`).
+- [x] Serilog sink a archivo rotativo (`/var/log/lealcontrol/api-.log`, 14 días) vía `appsettings.Production.json` + volumen Docker.
+- [x] Enricher `TenantIdEnricher` en todos los logs.
 
-**Verificado bloque 2:** ____ / ____
+**Verificado bloque 2 (staging):** ____ / ____ — pendiente deploy + verify-restore
 
 ---
 
@@ -297,4 +297,5 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 |-------|--------------|--------|----------|-------|
 | 02/09/2026 | 0.1–0.5 | `fcd60ee` | pendiente staging | Batch-post deshabilitado, backup dinámico, RBAC company, tenant routing, /me seguro |
 | 02/09/2026 | 1.1–1.6 | `a364601` | pendiente staging | Webhook MP público, RBAC módulos, allowed_modules, seed-dev-admin, HTTP hardening, JWT unificado |
-| | 2.1–2.6 | — | — | **Próximo bloque:** CI gate, health checks, backups verificados, migraciones estrictas |
+| | 2.1–2.6 | (pendiente commit) | pendiente staging | CI gate, health checks, backups, migraciones estrictas, one-off SQL, Serilog file |
+| | 3.1–3.14 | — | — | **Próximo bloque:** circuito financiero |
