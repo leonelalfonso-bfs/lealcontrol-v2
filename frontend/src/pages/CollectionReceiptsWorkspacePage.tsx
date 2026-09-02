@@ -472,7 +472,7 @@ export function CollectionReceiptsWorkspacePage() {
 
     const bankLineMissingWallet = lines.some(
       (l) =>
-        (l.method === "BankTransfer" || l.method === "Transferencia") &&
+        (l.method === "BankTransfer" || l.method === "Cash") &&
         l.movementId &&
         !(l.conceptId || movementConceptFilter)
     );

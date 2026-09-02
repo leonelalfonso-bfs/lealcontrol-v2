@@ -32,6 +32,102 @@ check() {
   fi
 }
 
+movements_only_confirmed() {
+  local file="$1"
+  python3 - "$file" <<'PY'
+import json, sys
+path = sys.argv[1]
+try:
+    rows = json.load(open(path))
+except Exception:
+    sys.exit(1)
+if not isinstance(rows, list):
+    sys.exit(1)
+bad = {"Suggested", "Imported", "PendingIdentification", "Identified", "Excluded"}
+for row in rows:
+    status = row.get("classificationStatus") or row.get("ClassificationStatus")
+    if status in bad:
+        sys.exit(1)
+sys.exit(0)
+PY
+}
+
+movements_no_system_origin() {
+  local file="$1"
+  python3 - "$file" <<'PY'
+import json, sys
+path = sys.argv[1]
+try:
+    rows = json.load(open(path))
+except Exception:
+    sys.exit(1)
+if not isinstance(rows, list):
+    sys.exit(1)
+for row in rows:
+    origin = row.get("origin", row.get("Origin"))
+    if origin is not None and str(origin).lower() == "system":
+        sys.exit(1)
+sys.exit(0)
+PY
+}
+
+movement_only_excluded_from_collections() {
+  local file="$1"
+  python3 - "$file" <<'PY'
+import json, sys
+path = sys.argv[1]
+try:
+    rows = json.load(open(path))
+except Exception:
+    sys.exit(1)
+blocked = {"COMISION", "GASTO_BANCARIO"}
+for row in rows:
+    code = row.get("conceptCode") or row.get("ConceptCode") or ""
+    if str(code).upper() in blocked:
+        sys.exit(1)
+sys.exit(0)
+PY
+}
+
+concepts_have_usable_in() {
+  python3 - /tmp/fin-concepts.json <<'PY'
+import json, sys
+rows = json.load(open(sys.argv[1]))
+usable = {
+    (r.get("usableIn") or r.get("UsableIn") or "")
+    for r in rows
+}
+needed = {"MovementOnly", "Receipt"}
+sys.exit(0 if needed.issubset(usable) else 1)
+PY
+}
+
+reconciliation_responds() {
+  local account_id http_code
+  account_id="$(curl -sf "${auth[@]}" "${BASE}/api/v1/finance/accounts" \
+    | python3 -c "import json,sys; a=json.load(sys.stdin); print(a[0].get('id') or a[0].get('Id') or '' if a else '')" 2>/dev/null || true)"
+  if [[ -z "$account_id" ]]; then
+    echo "    (sin cuentas financieras en /api/v1/finance/accounts)" >&2
+    return 1
+  fi
+  http_code="$(curl -s -o /tmp/fin-recon.json -w "%{http_code}" "${auth[@]}" \
+    "${BASE}/api/v1/finance/reconciliation?accountId=${account_id}")"
+  if [[ "$http_code" != "200" ]]; then
+    echo "    (reconciliation HTTP ${http_code} para cuenta ${account_id})" >&2
+    head -c 300 /tmp/fin-recon.json >&2 || true
+    echo >&2
+    return 1
+  fi
+  python3 - /tmp/fin-recon.json <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1]))
+for key in ("imported", "Imported", "system", "System"):
+    if key in data:
+        sys.exit(0)
+sys.exit(1)
+PY
+}
+
 echo "=== verify-finance-phases-ab @ ${BASE} ==="
 
 # A-V1 / A-V2: available-movements solo confirmados + importados
@@ -39,18 +135,16 @@ check "collections/available-movements responde" \
   curl -sf "${auth[@]}" "${BASE}/api/v1/finance/collections/available-movements" -o /tmp/fin-coll-mov.json
 
 check "collections sin movimientos no confirmados" \
-  ! grep -qi '"classificationStatus"[[:space:]]*:[[:space:]]*"Suggested"' /tmp/fin-coll-mov.json 2>/dev/null && \
-  ! grep -qi '"classificationStatus"[[:space:]]*:[[:space:]]*"Imported"' /tmp/fin-coll-mov.json 2>/dev/null
+  movements_only_confirmed /tmp/fin-coll-mov.json
 
 check "collections solo origen importado (si hay origin en respuesta)" \
-  ! grep -q '"origin"[[:space:]]*:[[:space:]]*"System"' /tmp/fin-coll-mov.json 2>/dev/null || \
-  ! grep -q '"origin"' /tmp/fin-coll-mov.json 2>/dev/null
+  movements_no_system_origin /tmp/fin-coll-mov.json
 
 check "payments/available-movements responde" \
   curl -sf "${auth[@]}" "${BASE}/api/v1/finance/payments/available-movements" -o /tmp/fin-pay-mov.json
 
 check "payments sin movimientos no confirmados" \
-  ! grep -qi '"classificationStatus"[[:space:]]*:[[:space:]]*"Suggested"' /tmp/fin-pay-mov.json 2>/dev/null
+  movements_only_confirmed /tmp/fin-pay-mov.json
 
 # A-V5: filtro conceptId
 FIRST_CONCEPT="$(python3 - <<'PY' 2>/dev/null || true
@@ -66,33 +160,19 @@ PY
 if [[ -n "$FIRST_CONCEPT" ]]; then
   check "filtro conceptId en collections" \
     curl -sf "${auth[@]}" "${BASE}/api/v1/finance/collections/available-movements?conceptId=${FIRST_CONCEPT}" \
-    | grep -q "$FIRST_CONCEPT"
+    | python3 -c "import json,sys; rows=json.load(sys.stdin); cid='${FIRST_CONCEPT}'; sys.exit(0 if rows and all(r.get('conceptId')==cid for r in rows) else 1)"
 else
   echo "  SKIP filtro conceptId (sin movimientos confirmados)"
 fi
 
-reconciliation_responds() {
-  local account_id
-  account_id="$(curl -sf "${auth[@]}" "${BASE}/api/v1/finance/accounts" \
-    | python3 -c "import json,sys; a=json.load(sys.stdin); print(a[0]['id'] if a else '')" 2>/dev/null || true)"
-  [[ -n "$account_id" ]] || return 1
-  curl -sf "${auth[@]}" "${BASE}/api/v1/finance/reconciliation?accountId=${account_id}" -o /tmp/fin-recon.json
-}
 check "reconciliation endpoint responde" reconciliation_responds
 
 check "concepts incluyen usableIn en seeds" \
   curl -sf "${auth[@]}" "${BASE}/api/v1/finance/concepts" -o /tmp/fin-concepts.json && \
-  grep -q '"usableIn"[[:space:]]*:[[:space:]]*"MovementOnly"' /tmp/fin-concepts.json && \
-  grep -q '"usableIn"[[:space:]]*:[[:space:]]*"Receipt"' /tmp/fin-concepts.json
+  concepts_have_usable_in
 
-movement_only_excluded_from_collections() {
-  if [[ ! -f /tmp/fin-coll-mov.json ]]; then
-    return 0
-  fi
-  ! grep -qi '"conceptCode"[[:space:]]*:[[:space:]]*"COMISION"' /tmp/fin-coll-mov.json 2>/dev/null &&
-  ! grep -qi '"conceptCode"[[:space:]]*:[[:space:]]*"GASTO_BANCARIO"' /tmp/fin-coll-mov.json 2>/dev/null
-}
-check "collections excluye conceptos MovementOnly" movement_only_excluded_from_collections
+check "collections excluye conceptos MovementOnly" \
+  movement_only_excluded_from_collections /tmp/fin-coll-mov.json
 
 echo "---"
 echo "Pasaron: $pass | Fallaron: $fail"
