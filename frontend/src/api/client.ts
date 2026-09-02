@@ -97,6 +97,22 @@ export const api = {
   },
   listFinanceMovementDetails: (accountId: string) => request<{ id: string; operationDateUtc: string; description: string; externalReference?: string; kind: string; amount: number; currency: string; reportedBalance?: number; systemBalance: number; difference?: number; reconciliationStatus: string; stage?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements-detail`),
   reconcileFinanceMovement: (movementId: string, body: { entityType: string; entityId: string }) => request(`/api/v1/finance/movements/${movementId}/reconcile`, { method: "POST", body: JSON.stringify(body) }),
+  getFinanceReconciliation: (accountId: string, from?: string, to?: string) => {
+    const params = new URLSearchParams({ accountId });
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    return request<{ imported: any[]; system: any[]; suggestedMatches: any[] }>(`/api/v1/finance/reconciliation?${params.toString()}`);
+  },
+  matchFinanceReconciliation: (importedMovementId: string, systemMovementId: string) =>
+    request("/api/v1/finance/reconciliation/match", {
+      method: "POST",
+      body: JSON.stringify({ importedMovementId, systemMovementId })
+    }),
+  unmatchFinanceReconciliation: (importedMovementId: string) =>
+    request("/api/v1/finance/reconciliation/unmatch", {
+      method: "POST",
+      body: JSON.stringify({ importedMovementId })
+    }),
   listReceivedCheques: () => request<any[]>("/api/v1/finance/echeqs"),
   importReceivedCheques: (csvContent: string) => request<{ imported: number; duplicates: number }>("/api/v1/finance/echeqs/import", { method: "POST", body: JSON.stringify({ csvContent }) }),
   importIssuedCheques: (csvContent: string) => request<{ imported: number; duplicates: number }>("/api/v1/finance/echeqs/import-issued", { method: "POST", body: JSON.stringify({ csvContent }) }),
@@ -126,6 +142,16 @@ export const api = {
   listPaymentOrders: () => request<import("./types").PaymentOrder[]>("/api/v1/finance/payments"),
   getPaymentOrder: (id: string) => request<import("./types").PaymentOrder>(`/api/v1/finance/payments/${id}`),
   createPaymentOrder: (body: import("./types").PaymentOrderWriteRequest) => request<{ id: string; orderNumber: string; status: string }>("/api/v1/finance/payments", { method: "POST", body: JSON.stringify(body) }),
+  voidCollectionReceipt: (id: string, reason: string) => request(`/api/v1/finance/collections/${id}/void`, { method: "POST", body: JSON.stringify({ reason }) }),
+  voidPaymentOrder: (id: string, reason: string) => request(`/api/v1/finance/payments/${id}/void`, { method: "POST", body: JSON.stringify({ reason }) }),
+  bulkClassifyFinanceMovements: (movementIds: string[]) => request<{ confirmed: number }>("/api/v1/finance/movements/classification/bulk", { method: "POST", body: JSON.stringify({ movementIds, confirm: true }) }),
+  createFinanceRuleFromMovement: (movementId: string, body: object) => request(`/api/v1/finance/movements/${movementId}/create-rule`, { method: "POST", body: JSON.stringify(body) }),
+  financeCashCount: (accountId: string, body: { countedAmount: number; countDateUtc: string; note?: string }) => request(`/api/v1/finance/accounts/${accountId}/cash-count`, { method: "POST", body: JSON.stringify(body) }),
+  financeTransfer: (body: { fromAccountId: string; toAccountId: string; amount: number; currency: string; operationDateUtc: string; description: string }) => request("/api/v1/finance/transfers", { method: "POST", body: JSON.stringify(body) }),
+  financeCashFlowProjection: (days = 30) => request<{ availableToday: number; horizonDays: number; flows: any[] }>(`/api/v1/finance/cash-flow/projection?days=${days}`),
+  depositCheque: (id: string, body: { bankAccountId: string; depositDateUtc: string }) => request(`/api/v1/finance/echeqs/${id}/deposit`, { method: "POST", body: JSON.stringify(body) }),
+  rejectCheque: (id: string, body: { rejectDateUtc: string; fees?: number; note?: string }) => request(`/api/v1/finance/echeqs/${id}/reject`, { method: "POST", body: JSON.stringify(body) }),
+  cancelCheque: (id: string, reason: string) => request(`/api/v1/finance/echeqs/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }),
   listCustomers: (search = "", role = "customer") =>
     request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=50&search=${encodeURIComponent(search)}${role ? `&role=${encodeURIComponent(role)}` : ""}`),
   getCustomer: (id: string) => request<CustomerDetail>(`/api/v1/crm/customers/${id}`),

@@ -67,6 +67,7 @@ import { ProductionCostsPage } from "./pages/ProductionCostsPage";
 import { ProductionReportsPage } from "./pages/ProductionReportsPage";
 import { FinancePage } from "./pages/FinancePage";
 import { FinanceAccountsPage } from "./pages/FinanceAccountsPage";
+import { FinanceReconciliationPage } from "./pages/FinanceReconciliationPage";
 import { FinanceConceptsPage } from "./pages/FinanceConceptsPage";
 import { ChequePortfolioPage } from "./pages/ChequePortfolioPage";
 import { CollectionReceiptsWorkspacePage } from "./pages/CollectionReceiptsWorkspacePage";
@@ -529,6 +530,7 @@ export function App() {
               <Route path="/produccion/ordenes/:id" element={<ProductionOrderDetailPage />} />
               <Route path="/finanzas" element={<FinancePage />} />
               <Route path="/finanzas/bancos" element={<FinanceAccountsPage />} />
+              <Route path="/finanzas/conciliacion" element={<FinanceReconciliationPage />} />
               <Route path="/finanzas/conceptos" element={<FinanceConceptsPage />} />
               <Route path="/finanzas/echeqs" element={<ChequePortfolioPage />} />
               <Route path="/finanzas/cobranzas" element={<CollectionReceiptsWorkspacePage />} />

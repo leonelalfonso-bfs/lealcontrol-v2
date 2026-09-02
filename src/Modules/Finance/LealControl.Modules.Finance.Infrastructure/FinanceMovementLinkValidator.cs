@@ -38,6 +38,9 @@ internal static class FinanceMovementLinkValidator
         if (concept.Direction is not FinancialConceptDirection.Income and not FinancialConceptDirection.Both)
             return (false, $"El concepto «{concept.Name}» no es válido para cobranzas (debe ser de ingreso).", null);
 
+        if (concept.UsableIn != FinancialConceptUsableIn.Receipt)
+            return (false, $"El concepto «{concept.Name}» no pertenece a la cartera de recibos.", null);
+
         return (true, null, movement);
     }
 
@@ -74,6 +77,9 @@ internal static class FinanceMovementLinkValidator
 
         if (concept.Direction is not FinancialConceptDirection.Expense and not FinancialConceptDirection.Both)
             return (false, $"El concepto «{concept.Name}» no es válido para pagos (debe ser de egreso).", null);
+
+        if (concept.UsableIn != FinancialConceptUsableIn.PaymentOrder)
+            return (false, $"El concepto «{concept.Name}» no pertenece a la cartera de órdenes de pago.", null);
 
         return (true, null, movement);
     }

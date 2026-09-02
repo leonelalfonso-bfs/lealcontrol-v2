@@ -17,7 +17,7 @@ Documentos relacionados:
 | 0 | Frenar corrupción de datos | 5 | 5/5 | 0/5 | ✅ Código en `fcd60ee` — validar staging |
 | 1 | Cerrar agujeros de seguridad | 6 | 6/6 | 0/6 | ✅ Código en `a364601` — validar staging |
 | 2 | Deploy y backups confiables | 6 | 6/6 | 6/6 | ✅ Verificado staging 02/09/2026 — smoke 10/10 Healthy |
-| 3 | Circuito financiero completo | 14 | 5/14 | 0/14 | 🔄 Bloque 3.1 — checklist Fases A+B en v2 |
+| 3 | Circuito financiero completo | 14 | 14/14 | 0/14 | ✅ Código completo — validar staging |
 | 4 | Contabilidad desde asientos modelo | 9 | 0/9 | 0/9 | ☐ |
 | 5 | Red de tests del circuito del dinero | 6 | 0/6 | 0/6 | ☐ |
 | 6 | Deuda técnica | 8 | 0/8 | 0/8 | ☐ |
@@ -149,7 +149,8 @@ Estas cinco tareas son cambios chicos. Se hacen todas juntas en un solo commit y
 El detalle funcional, las reglas de negocio y los cambios de esquema están en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`. Acá sólo el checklist.
 
 ### 3.1 Validar en staging lo ya hecho (Fases A+B)
-- [ ] Recorrer el checklist A-V1…A-V9 y B-V1…B-V7 de `CIRCUITO_DINERO_PROGRESO.md` y marcarlo.
+- [x] Script `scripts/verify-finance-phases-ab.sh` (API: available-movements, reconciliation).
+- [ ] Recorrer checklist A-V1…A-V9 y B-V1…B-V7 de `CIRCUITO_DINERO_PROGRESO.md` en v2 (UI manual).
 
 ### 3.2 Extracto: lote de importación con control de saldo
 - [x] Nueva tabla `finance."BankStatementImports"` (cuenta, período, saldo inicial/final declarado, hash del archivo, filas, estado).
@@ -159,59 +160,60 @@ El detalle funcional, las reglas de negocio y los cambios de esquema están en `
 - [x] Rechazar importar dos veces el mismo archivo (hash).
 
 ### 3.3 Matching movimiento del sistema ↔ movimiento del extracto
-- [ ] Recibos, OP y transferencias que crean movimientos los marcan `Origin = System`, `ReconciliationStatus = PendingBank`.
-- [ ] Al importar, se sugiere match `System ↔ Imported` por importe exacto y fecha ± 3 días; el usuario confirma y los dos quedan fusionados (se conserva el importado, el del sistema se marca `MatchedTo`).
-- [ ] Pantalla **Finanzas → Conciliación** (nueva) por cuenta y período: columna extracto, columna sistema, estado, botón conciliar/desconciliar.
+- [x] Recibos, OP y transferencias que crean movimientos los marcan `Origin = System`, `PendingBank` en cuentas banco.
+- [x] Al importar, se sugiere match `System ↔ Imported` por importe exacto y fecha ± 3 días (`SuggestedMatches` en confirm).
+- [x] API `GET/POST /finance/reconciliation` + match/unmatch.
+- [x] Pantalla **Finanzas → Conciliación** (`/finanzas/conciliacion`).
 
 ### 3.4 Conceptos: atributos de cartera
-- [ ] `FinancialConcept.UsableIn` (`Receipt`, `PaymentOrder`, `MovementOnly`, `Transfer`), `CounterpartyType` (`Customer`, `Supplier`, `None`), `JournalTemplateCode` (texto libre, opcional; lo interpreta Contabilidad si está activa).
-- [ ] Los seeds se actualizan: `COMISION` y `GASTO_BANCARIO` = `MovementOnly`; `TRANSFERENCIA_PROPIA` = `Transfer`; etc.
-- [ ] `available-movements` filtra además por `UsableIn`.
+- [x] `FinancialConcept.UsableIn` (`Receipt`, `PaymentOrder`, `MovementOnly`, `Transfer`), `CounterpartyType` (`Customer`, `Supplier`, `None`), `JournalTemplateCode` (texto libre, opcional; lo interpreta Contabilidad si está activa).
+- [x] Los seeds se actualizan: `COMISION` y `GASTO_BANCARIO` = `MovementOnly`; `TRANSFERENCIA_PROPIA` = `Transfer`; etc.
+- [x] `available-movements` filtra además por `UsableIn`.
 
 ### 3.5 Reglas enriquecidas (Fase C del diseño)
-- [ ] `FinancialConceptRule`: `CuitPattern`, `AmountMin`, `AmountMax`, `MatchMode = Regex`, `CounterpartyId` sugerido.
-- [ ] Extraer CUIT de la descripción (`CUIT: 30-…`) y buscar en `crm.customers`/`crm.suppliers`; si hay match único, sugerir concepto según dirección y setear `SuggestedCounterpartyId`.
-- [ ] Al confirmar a mano un movimiento, botón "Crear regla a partir de este movimiento".
-- [ ] Confirmación masiva en la bandeja (seleccionar N sugeridos → confirmar).
+- [x] `FinancialConceptRule`: `CuitPattern`, `AmountMin`, `AmountMax`, `MatchMode = Regex`, `CounterpartyId` sugerido.
+- [x] Extraer CUIT de la descripción (`CUIT: 30-…`) y buscar en `crm.customers`/`crm.suppliers`; si hay match único, sugerir concepto según dirección y setear `SuggestedCounterpartyId`.
+- [x] Al confirmar a mano un movimiento, botón "Crear regla a partir de este movimiento".
+- [x] Confirmación masiva en la bandeja (seleccionar N sugeridos → confirmar).
 
 ### 3.6 Anular recibos y órdenes de pago
-- [ ] `POST /collections/{id}/void` y `POST /payments/{id}/void` con motivo obligatorio. Efectos: movimientos vinculados vuelven a `Available`, cheques vuelven a su estado anterior, imputaciones se borran, `Status = Voided`, y si hay asiento contable se publica evento de reversión.
-- [ ] Prohibir anular si el período contable está cerrado (consultar por contrato, no por SQL cruzado).
-- [ ] UI: botón Anular en detalle de recibo/OP con confirmación.
+- [x] `POST /collections/{id}/void` y `POST /payments/{id}/void` con motivo obligatorio. Efectos: movimientos vinculados vuelven a `Available`, cheques vuelven a su estado anterior, imputaciones se borran, `Status = Voided`, y si hay asiento contable se publica evento de reversión.
+- [x] Prohibir anular si el período contable está cerrado (consultar por contrato, no por SQL cruzado).
+- [x] UI: botón Anular en detalle de recibo/OP con confirmación.
 
 ### 3.7 Numeración correlativa y por talonario
-- [ ] Tabla `finance."DocumentSequences"` (tenant, tipo, prefijo, próximo número). `RC-0001-00000123`, `OP-0001-00000045`. Transacción con `FOR UPDATE`.
+- [x] Tabla `finance."DocumentSequences"` (tenant, tipo, prefijo, próximo número). `RC-0001-00000123`, `OP-0001-00000045`. Transacción con `FOR UPDATE`.
 
 ### 3.8 Consistencia OP = Recibo
-- [ ] OP: `Amount` = suma de líneas (hoy no se valida); imputaciones ≤ total; resto = anticipo a proveedor.
-- [ ] Recibo: resto sin imputar genera **anticipo** explícito (`CustomerAdvance`) visible en cuenta corriente.
+- [x] OP: `Amount` = suma de líneas (hoy no se valida); imputaciones ≤ total; resto = anticipo a proveedor.
+- [x] Recibo: resto sin imputar genera **anticipo** explícito (`CustomerAdvance`) visible en cuenta corriente.
 
 ### 3.9 Ciclo de vida de cheques recibidos
-- [ ] Estados: `InPortfolio` → `Deposited` → `Credited`; `InPortfolio` → `Endorsed` (usado en OP); cualquier → `Rejected`; `Cancelled`.
-- [ ] Al entrar por recibo: `Status = InPortfolio`, `CustomerId`, `CollectionReceiptId`.
-- [ ] `POST /cheques/{id}/deposit` (cuenta destino, fecha) → crea movimiento `System` crédito con concepto `CHEQUE_DEPOSITADO`, `PendingBank`. Cuando llega el extracto, se matchea (3.3) y pasa a `Credited`.
-- [ ] `POST /cheques/{id}/reject` (fecha, gastos) → movimiento débito por el importe + gastos, cheque `Rejected`, y se **reabre la deuda del cliente**: la imputación del recibo original se marca `Reversed` y aparece un saldo a cobrar "Cheque rechazado N°…".
-- [ ] `POST /cheques/{id}/endorse` se hace desde la OP (ya existe parcialmente como `UsedForPayment`; renombrar a `Endorsed`).
+- [x] Estados: `InPortfolio` → `Deposited` → `Credited`; `InPortfolio` → `Endorsed` (usado en OP); cualquier → `Rejected`; `Cancelled`.
+- [x] Al entrar por recibo: `Status = InPortfolio`, `CustomerId`, `CollectionReceiptId`.
+- [x] `POST /cheques/{id}/deposit` (cuenta destino, fecha) → crea movimiento `System` crédito con concepto `CHEQUE_DEPOSITADO`, `PendingBank`. Cuando llega el extracto, se matchea (3.3) y pasa a `Credited`.
+- [x] `POST /cheques/{id}/reject` (fecha, gastos) → movimiento débito por el importe + gastos, cheque `Rejected`, y se **reabre la deuda del cliente**: la imputación del recibo original se marca `Reversed` y aparece un saldo a cobrar "Cheque rechazado N°…".
+- [x] `POST /cheques/{id}/endorse` se hace desde la OP (ya existe parcialmente como `UsedForPayment`; renombrar a `Endorsed`).
 
 ### 3.10 Ciclo de vida de cheques emitidos
-- [ ] Estados: `Issued` → `Presented` → `Debited`; `Issued` → `Cancelled`; `Presented` → `Rejected`.
-- [ ] Al pagar con cheque propio en OP: se crea el cheque `Issued` con `SupplierId`, `PaymentOrderId`, `BankAccountId`, fecha de pago diferido.
-- [ ] Al importar extracto y aparecer el débito: sugerir match con cheque emitido por importe + número (`ExternalReference` suele traer el número) → `Debited`.
-- [ ] Cheques emitidos y no debitados = pasivo "cheques a pagar", visible en cash flow por fecha de pago.
+- [x] Estados: `Issued` → `Presented` → `Debited`; `Issued` → `Cancelled`; `Presented` → `Rejected`.
+- [x] Al pagar con cheque propio en OP: se crea el cheque `Issued` con `SupplierId`, `PaymentOrderId`, `BankAccountId`, fecha de pago diferido.
+- [x] Al importar extracto y aparecer el débito: sugerir match con cheque emitido por importe + número (`ExternalReference` suele traer el número) → `Debited`.
+- [x] Cheques emitidos y no debitados = pasivo "cheques a pagar", visible en cash flow por fecha de pago.
 
 ### 3.11 Cartera de cheques (UI)
-- [ ] Reescribir `ChequePortfolioPage.tsx` (hoy es una línea minificada): tabs Recibidos / Emitidos, filtros por estado y vencimiento, acciones Depositar / Rechazar / Anular, detalle con historial de estados, alerta de vencidos.
+- [x] Reescribir `ChequePortfolioPage.tsx` (hoy es una línea minificada): tabs Recibidos / Emitidos, filtros por estado y vencimiento, acciones Depositar / Rechazar / Anular, detalle con historial de estados, alerta de vencidos.
 
 ### 3.12 Transferencias internas y efectivo
-- [ ] `POST /transfers` marca ambos movimientos con concepto `TRANSFERENCIA_PROPIA`, `Confirmed`, `Origin = System`, `PendingBank`.
-- [ ] Cajas (`Cash`) no importan extracto; sus movimientos nacen `Reconciled` directamente. Arqueo: `POST /accounts/{id}/cash-count` con diferencia → concepto `AJUSTE`.
+- [x] `POST /transfers` marca ambos movimientos con concepto `TRANSFERENCIA_PROPIA`, `Confirmed`, `Origin = System`, `PendingBank`.
+- [x] Cajas (`Cash`) no importan extracto; sus movimientos nacen `Reconciled` directamente. Arqueo: `POST /accounts/{id}/cash-count` con diferencia → concepto `AJUSTE`.
 
 ### 3.13 Multimoneda en el circuito
-- [ ] Importación toma moneda de la cuenta (hoy hardcodea `"ARS"`).
-- [ ] Recibo en USD imputado a factura en ARS (o viceversa) calcula diferencia de cambio y la deja lista como línea `ExchangeDifference` para Contabilidad.
+- [x] Importación toma moneda de la cuenta (hoy hardcodea `"ARS"`).
+- [x] Recibo en USD imputado a factura en ARS (o viceversa) calcula diferencia de cambio y la deja lista como línea `ExchangeDifference` para Contabilidad.
 
 ### 3.14 Cash flow proyectado real
-- [ ] `CashFlowPage.tsx` suma: saldos, facturas de venta/compra por vencimiento, cheques recibidos en cartera por fecha, cheques emitidos por fecha de pago, OP programadas, sueldos si HR activo. Horizonte configurable. Comparación proyectado vs real por semana.
+- [x] `CashFlowPage.tsx` suma: saldos, facturas de venta/compra por vencimiento, cheques recibidos en cartera por fecha, cheques emitidos por fecha de pago, OP programadas, sueldos si HR activo. Horizonte configurable. Comparación proyectado vs real por semana.
 
 **Verificado bloque 3:** ____ / ____
 

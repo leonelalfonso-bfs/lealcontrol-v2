@@ -1,7 +1,7 @@
 # Leal Control ERP 2.0
 ## Progreso de implementación — Circuito del dinero
 
-**Última actualización:** septiembre 2026  
+**Última actualización:** 02/09/2026 — Bloque 3 en curso (3.1–3.4 código, validación staging pendiente)
 **Diseño aprobado:** `CIRCUITO_DINERO_FINANZAS.md` + `SIMULACION_CIRCUITO_DINERO_COMPLETA.md`
 
 ---
@@ -10,8 +10,8 @@
 
 | Fase | Descripción | Estado |
 |------|-------------|--------|
-| **A** | Carteras estrictas (solo confirmados en recibos/OP) | 🔄 En implementación |
-| **B** | Persistir concepto en líneas + validación backend | 🔄 En implementación |
+| **A** | Carteras estrictas (solo confirmados en recibos/OP) | ✅ Código listo — validar UI staging |
+| **B** | Persistir concepto en líneas + validación backend | ✅ Código listo — validar UI staging |
 | **C** | Reglas enriquecidas (CUIT, monto, etc.) | ☐ Pendiente |
 | **D** | Mapeo concepto → plantilla contable | ☐ Pendiente |
 | **E** | Un solo extracto (Contabilidad lee Finanzas) | ☐ Pendiente |
@@ -52,6 +52,13 @@
 **Estado Fase B:** ☐ No iniciada · ◐ En curso · ☐ Completada en staging
 
 ---
+
+## Verificación API (staging)
+
+```bash
+export FINANCE_TEST_JWT="<token tras login en v2>"
+bash scripts/verify-finance-phases-ab.sh 5210
+```
 
 ## Prueba manual sugerida (staging)
 

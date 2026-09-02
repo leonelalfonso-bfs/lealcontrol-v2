@@ -81,7 +81,7 @@ export function PaymentOrderFormPage() {
   };
 
   const expenseConcepts = useMemo(
-    () => concepts.filter((c) => c.direction === "Expense" || c.direction === "Both"),
+    () => concepts.filter((c) => c.usableIn === "PaymentOrder" && (c.direction === "Expense" || c.direction === "Both")),
     [concepts]
   );
 
@@ -300,6 +300,17 @@ export function PaymentOrderFormPage() {
 
     if (totalOrderAmount <= 0) {
       setError("El importe total de la orden de pago debe ser mayor a cero.");
+      return;
+    }
+
+    const bankLineMissingWallet = lines.some(
+      (l) =>
+        l.method === "BankTransfer" &&
+        l.bankMovementId &&
+        !(l.conceptId || movementConceptFilter)
+    );
+    if (bankLineMissingWallet) {
+      setError("Elegí la cartera (concepto) para cada transferencia bancaria vinculada.");
       return;
     }
 

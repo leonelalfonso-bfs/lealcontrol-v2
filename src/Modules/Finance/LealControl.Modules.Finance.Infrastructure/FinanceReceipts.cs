@@ -187,7 +187,8 @@ public static class FinanceReceipts
             }
 
             var receiptId = Guid.NewGuid();
-            var number = $"RC-{DateTime.UtcNow:yyyyMMddHHmmss}";
+            var number = await FinanceDocumentSequences.NextNumberAsync(db, tenantId, "RC", "RC-0001", ct);
+            var advanceAmount = Math.Max(0, totalLinesAmount - totalImputedAmount);
 
             var mainAccountId = body.AccountId ?? lines.FirstOrDefault(l => l.AccountId.HasValue)?.AccountId ?? Guid.Empty;
 
@@ -200,6 +201,7 @@ public static class FinanceReceipts
                 InvoiceId = body.InvoiceId ?? imputations.FirstOrDefault()?.InvoiceId,
                 ReceiptNumber = number,
                 Amount = totalLinesAmount,
+                AdvanceAmount = advanceAmount,
                 Currency = currency,
                 InvoiceAmount = totalImputedAmount > 0 ? totalImputedAmount : body.InvoiceAmount,
                 InvoiceCurrency = body.InvoiceCurrency?.Trim().ToUpperInvariant(),
@@ -207,6 +209,7 @@ public static class FinanceReceipts
                 PaymentExchangeRate = body.PaymentExchangeRate,
                 SuggestedAdjustmentArs = body.SuggestedAdjustmentArs,
                 SuggestedAdjustmentType = body.SuggestedAdjustmentType?.Trim(),
+                ExchangeDifferenceAmount = body.SuggestedAdjustmentArs,
                 ReceiptDateUtc = body.ReceiptDateUtc,
                 Description = body.Description.Trim(),
                 Status = "Confirmed",
@@ -267,7 +270,11 @@ public static class FinanceReceipts
                              lineMethod.Equals("Transferencia", StringComparison.OrdinalIgnoreCase) || 
                              lineMethod.Equals("Efectivo", StringComparison.OrdinalIgnoreCase)) && line.AccountId.HasValue)
                     {
-                        db.Movements.Add(new FinancialMovement
+                        var account = await db.Accounts.SingleOrDefaultAsync(x => x.Id == line.AccountId.Value && x.TenantId == tenantId && x.IsActive, ct);
+                        if (account is null)
+                            return Results.BadRequest("Cuenta financiera inexistente o inactiva.");
+
+                        var movement = new FinancialMovement
                         {
                             Id = Guid.NewGuid(),
                             TenantId = tenantId,
@@ -278,14 +285,13 @@ public static class FinanceReceipts
                             OperationDateUtc = body.ReceiptDateUtc,
                             Description = $"Cobro a cliente ({number}) - {body.Description.Trim()}",
                             ExternalReference = number,
-                            ConceptId = conceptId,
-                            ClassificationStatus = FinancialClassificationStatus.Confirmed,
-                            ClassifiedAtUtc = DateTime.UtcNow,
+                            ConceptId = line.ConceptId ?? conceptId,
                             LinkedEntityType = "CollectionReceipt",
                             LinkedEntityId = receiptId,
-                            ReconciliationStatus = FinancialReconciliationStatus.Reconciled,
                             CreatedAtUtc = DateTime.UtcNow
-                        });
+                        };
+                        FinanceSystemMovementHelper.ApplySystemDefaults(movement, account);
+                        db.Movements.Add(movement);
                     }
 
                     // Cheque linking
@@ -295,6 +301,7 @@ public static class FinanceReceipts
                         if (cheque != null)
                         {
                             cheque.CollectionReceiptId = receiptId;
+                            cheque.CustomerId = body.CustomerId;
                             cheque.Notes = string.IsNullOrWhiteSpace(cheque.Notes)
                                 ? $"Aplicado en Recibo {number}"
                                 : $"{cheque.Notes} | Recibo {number}";
@@ -356,9 +363,27 @@ public static class FinanceReceipts
                 });
             }
 
+            if (advanceAmount > 0.01m && body.CustomerId.HasValue)
+            {
+                db.CustomerAdvances.Add(new CustomerAdvance
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenantId,
+                    CustomerId = body.CustomerId.Value,
+                    CollectionReceiptId = receiptId,
+                    Amount = advanceAmount,
+                    RemainingAmount = advanceAmount,
+                    Currency = currency,
+                    CreatedAtUtc = DateTime.UtcNow
+                });
+            }
+
             await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/finance/collections/{receiptId}", new { id = receiptId, receiptNumber = number, status = "Confirmed" });
+            return Results.Created($"/api/v1/finance/collections/{receiptId}", new { id = receiptId, receiptNumber = number, status = "Confirmed", advanceAmount });
         });
+
+        group.MapPost("/{id:guid}/void", async (Guid id, VoidFinanceDocumentRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+            await FinanceVoid.VoidCollectionReceiptAsync(id, body, db, tenant.TenantId.Value, ct));
 
         var detail = endpoints.MapGroup("/api/v1/finance").WithTags("Finance Detail").RequirePolicyOnWrites("RequireFinance");
         detail.MapGet("/accounts/{accountId:guid}/movements-detail", async (Guid accountId, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>

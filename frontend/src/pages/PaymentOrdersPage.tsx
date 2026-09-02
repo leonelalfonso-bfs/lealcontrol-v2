@@ -193,6 +193,24 @@ export function PaymentOrdersPage() {
                         >
                           🖨️ Imprimir OP
                         </Link>
+                        {o.status !== "Voided" && (
+                          <button
+                            className="btn btn-sm btn-outline"
+                            style={{ color: "#dc2626" }}
+                            onClick={async () => {
+                              const reason = window.prompt("Motivo de anulación de la OP:");
+                              if (!reason?.trim()) return;
+                              try {
+                                await api.voidPaymentOrder(o.id, reason.trim());
+                                await loadData();
+                              } catch (e) {
+                                alert(e instanceof Error ? e.message : "No se pudo anular la OP.");
+                              }
+                            }}
+                          >
+                            Anular
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

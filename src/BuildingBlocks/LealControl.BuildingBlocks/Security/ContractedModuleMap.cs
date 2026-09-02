@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 namespace LealControl.BuildingBlocks.Security;
 
 public static class ContractedModuleMap

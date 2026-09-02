@@ -127,12 +127,23 @@ public static class FinancePayments
             var tenantId = tenant.TenantId.Value;
             if (string.IsNullOrWhiteSpace(body.SupplierName))
                 return Results.BadRequest("El nombre del proveedor es obligatorio.");
-            if (body.Amount <= 0)
-                return Results.BadRequest("El importe total de la orden de pago debe ser mayor a cero.");
 
             var currency = string.IsNullOrWhiteSpace(body.Currency) ? "ARS" : body.Currency.Trim().ToUpperInvariant();
+            var lines = body.Lines ?? Array.Empty<PaymentOrderLineInput>();
+            var imputations = body.Imputations ?? Array.Empty<PaymentOrderImputationInput>();
+            var totalLinesAmount = lines.Count > 0 ? lines.Sum(x => x.Amount) : body.Amount;
+            if (totalLinesAmount <= 0)
+                return Results.BadRequest("El importe total de la orden de pago debe ser mayor a cero.");
+            if (lines.Count > 0 && Math.Abs(totalLinesAmount - body.Amount) > 0.01m)
+                return Results.BadRequest("El importe total debe coincidir con la suma de las líneas de pago.");
+
+            var totalImputedAmount = imputations.Sum(x => x.AmountImputed);
+            if (imputations.Count > 0 && totalImputedAmount > totalLinesAmount + 0.01m)
+                return Results.BadRequest($"El total imputado (${totalImputedAmount:N2}) supera el total pagado (${totalLinesAmount:N2}).");
+
+            var advanceAmount = Math.Max(0, totalLinesAmount - totalImputedAmount);
             var orderId = Guid.NewGuid();
-            var number = $"OP-{DateTime.UtcNow:yyyyMMddHHmmss}";
+            var number = await FinanceDocumentSequences.NextNumberAsync(db, tenantId, "OP", "OP-0001", ct);
 
             var order = new PaymentOrder
             {
@@ -142,7 +153,8 @@ public static class FinancePayments
                 SupplierName = body.SupplierName.Trim(),
                 SupplierTaxId = body.SupplierTaxId?.Trim(),
                 OrderNumber = number,
-                Amount = body.Amount,
+                Amount = totalLinesAmount,
+                AdvanceAmount = advanceAmount,
                 Currency = currency,
                 PaymentDateUtc = body.PaymentDateUtc,
                 Notes = body.Notes?.Trim(),
@@ -153,7 +165,6 @@ public static class FinancePayments
             db.PaymentOrders.Add(order);
 
             // Lines processing (Bank, Cash, Cheque, Retentions)
-            var lines = body.Lines ?? Array.Empty<PaymentOrderLineInput>();
             foreach (var line in lines)
             {
                 var lineId = Guid.NewGuid();
@@ -202,7 +213,7 @@ public static class FinancePayments
                             .Select(x => (Guid?)x.Id)
                             .SingleOrDefaultAsync(ct);
 
-                        db.Movements.Add(new FinancialMovement
+                        var paymentMovement = new FinancialMovement
                         {
                             Id = Guid.NewGuid(),
                             TenantId = tenantId,
@@ -213,33 +224,62 @@ public static class FinancePayments
                             OperationDateUtc = body.PaymentDateUtc,
                             Description = $"Pago a proveedor {body.SupplierName} ({number})",
                             ExternalReference = number,
-                            ConceptId = conceptId,
-                            ClassificationStatus = FinancialClassificationStatus.Confirmed,
-                            ClassifiedAtUtc = DateTime.UtcNow,
+                            ConceptId = line.ConceptId ?? conceptId,
                             LinkedEntityType = "PaymentOrder",
                             LinkedEntityId = orderId,
-                            ReconciliationStatus = FinancialReconciliationStatus.Reconciled,
                             CreatedAtUtc = DateTime.UtcNow
-                        });
+                        };
+                        FinanceSystemMovementHelper.ApplySystemDefaults(paymentMovement, account);
+                        db.Movements.Add(paymentMovement);
                     }
                 }
 
-                // Cheque delivery / endorsement
+                // Cheque delivery / endorsement / own cheque issued
                 if ((line.Method == "ChequeOwn" || line.Method == "ChequeThirdParty" || line.Method == "Cheque") && line.ChequeId.HasValue)
                 {
                     var cheque = await db.ReceivedCheques.SingleOrDefaultAsync(x => x.Id == line.ChequeId.Value && x.TenantId == tenantId, ct);
                     if (cheque != null)
                     {
-                        cheque.Status = ReceivedChequeStatus.UsedForPayment;
+                        if (line.Method == "ChequeOwn" || cheque.Direction == ChequeDirection.Issued)
+                        {
+                            cheque.Direction = ChequeDirection.Issued;
+                            cheque.Status = ReceivedChequeStatus.Issued;
+                            cheque.SupplierId = body.SupplierId;
+                            cheque.PaymentOrderId = orderId;
+                            cheque.BankAccountId = line.AccountId;
+                        }
+                        else
+                        {
+                            cheque.Status = ReceivedChequeStatus.UsedForPayment;
+                        }
                         cheque.Notes = string.IsNullOrWhiteSpace(cheque.Notes)
                             ? $"Entregado en OP {number} a {body.SupplierName}"
                             : $"{cheque.Notes} | Entregado en OP {number}";
                     }
                 }
+                else if (line.Method == "ChequeOwn" && !line.ChequeId.HasValue && line.AccountId.HasValue)
+                {
+                    var issued = new ReceivedCheque
+                    {
+                        Id = Guid.NewGuid(),
+                        TenantId = tenantId,
+                        CheckNumber = $"OP-{number}",
+                        Amount = line.Amount,
+                        Currency = lineCurrency,
+                        Direction = ChequeDirection.Issued,
+                        Status = ReceivedChequeStatus.Issued,
+                        SupplierId = body.SupplierId,
+                        PaymentOrderId = orderId,
+                        BankAccountId = line.AccountId,
+                        DueDateUtc = body.PaymentDateUtc,
+                        Notes = $"Emitido en OP {number} · {body.SupplierName}",
+                        CreatedAtUtc = DateTime.UtcNow
+                    };
+                    db.ReceivedCheques.Add(issued);
+                }
             }
 
             // Imputations
-            var imputations = body.Imputations ?? Array.Empty<PaymentOrderImputationInput>();
             foreach (var imp in imputations)
             {
                 db.PaymentOrderImputations.Add(new PaymentOrderImputation
@@ -256,8 +296,11 @@ public static class FinancePayments
             }
 
             await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/finance/payments/{orderId}", new { id = orderId, orderNumber = number, status = "Confirmed" });
+            return Results.Created($"/api/v1/finance/payments/{orderId}", new { id = orderId, orderNumber = number, status = "Confirmed", advanceAmount });
         });
+
+        group.MapPost("/{id:guid}/void", async (Guid id, VoidFinanceDocumentRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+            await FinanceVoid.VoidPaymentOrderAsync(id, body, db, tenant.TenantId.Value, ct));
 
         return endpoints;
     }

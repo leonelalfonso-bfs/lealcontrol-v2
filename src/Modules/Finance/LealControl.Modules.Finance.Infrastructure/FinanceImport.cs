@@ -148,6 +148,10 @@ public static class FinanceImport
             db.BankStatementImports.Add(importBatch);
 
             await db.SaveChangesAsync(ct);
+
+            var suggestedMatches = await FinanceReconciliationMatcher.FindSuggestionsAsync(
+                db, tenantId, request.AccountId, importId, ct);
+
             return Results.Ok(new
             {
                 ImportId = importId,
@@ -158,7 +162,8 @@ public static class FinanceImport
                 Status = importBatch.Status,
                 DeclaredClosingBalance = declaredClosing,
                 ComputedClosingBalance = computedClosing,
-                BalanceDifference = declaredClosing.HasValue ? declaredClosing.Value - computedClosing : (decimal?)null
+                BalanceDifference = declaredClosing.HasValue ? declaredClosing.Value - computedClosing : (decimal?)null,
+                SuggestedMatches = suggestedMatches
             });
         });
 
@@ -183,15 +188,16 @@ public static class FinanceImport
         {
             var tenantId = tenant.TenantId.Value;
             var query = from movement in db.Movements.AsNoTracking()
-                        join concept in db.FinancialConcepts.AsNoTracking() on movement.ConceptId equals concept.Id into concepts
-                        from concept in concepts.DefaultIfEmpty()
+                        join concept in db.FinancialConcepts.AsNoTracking() on movement.ConceptId equals concept.Id
                         join account in db.Accounts.AsNoTracking() on movement.AccountId equals account.Id into accounts
                         from account in accounts.DefaultIfEmpty()
                         where movement.TenantId == tenantId
                               && (accountId == null || movement.AccountId == accountId.Value)
                               && movement.Kind == FinancialMovementKind.Credit
+                              && movement.Origin == FinancialMovementOrigin.Imported
                               && movement.ClassificationStatus == FinancialClassificationStatus.Confirmed
                               && movement.ConceptId != null
+                              && concept.UsableIn == FinancialConceptUsableIn.Receipt
                               && movement.ReconciliationStatus != FinancialReconciliationStatus.Reconciled
                         select new
                         {
@@ -223,15 +229,16 @@ public static class FinanceImport
         {
             var tenantId = tenant.TenantId.Value;
             var query = from movement in db.Movements.AsNoTracking()
-                        join concept in db.FinancialConcepts.AsNoTracking() on movement.ConceptId equals concept.Id into concepts
-                        from concept in concepts.DefaultIfEmpty()
+                        join concept in db.FinancialConcepts.AsNoTracking() on movement.ConceptId equals concept.Id
                         join account in db.Accounts.AsNoTracking() on movement.AccountId equals account.Id into accounts
                         from account in accounts.DefaultIfEmpty()
                         where movement.TenantId == tenantId
                               && (accountId == null || movement.AccountId == accountId.Value)
                               && movement.Kind == FinancialMovementKind.Debit
+                              && movement.Origin == FinancialMovementOrigin.Imported
                               && movement.ClassificationStatus == FinancialClassificationStatus.Confirmed
                               && movement.ConceptId != null
+                              && concept.UsableIn == FinancialConceptUsableIn.PaymentOrder
                               && movement.ReconciliationStatus != FinancialReconciliationStatus.Reconciled
                         select new
                         {
@@ -277,6 +284,7 @@ public static class FinanceImport
         FinanceReceipts.MapFinanceReceiptEndpoints(endpoints);
         FinanceEcheqs.MapFinanceEcheqEndpoints(endpoints);
         FinancePayments.MapFinancePaymentEndpoints(endpoints);
+        FinanceExtras.MapFinanceExtrasEndpoints(endpoints);
         return endpoints;
     }
 

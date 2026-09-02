@@ -12,6 +12,9 @@ public sealed record ImportReceivedChequesRequest(string CsvContent);
 public sealed record ImportIssuedChequesRequest(string CsvContent);
 public sealed record LinkChequeMovementRequest(Guid AccountId, Guid MovementId, bool IsCredit);
 public sealed record UseChequeForPaymentRequest(string Reference);
+public sealed record DepositChequeRequest(Guid BankAccountId, DateTime DepositDateUtc);
+public sealed record RejectChequeRequest(DateTime RejectDateUtc, decimal? Fees, string? Note);
+public sealed record CancelChequeRequest(string Reason);
 
 public static class FinanceEcheqs
 {
@@ -47,7 +50,7 @@ public static class FinanceEcheqs
                 var c = raw.Split(';'); if (c.Length < 13) continue; var number = c[0].Trim(); var amount = ParseMoney(c[6]); if (string.IsNullOrWhiteSpace(number) || amount <= 0) continue;
                 var echeqId = c.Length > 10 ? c[10].Trim() : null;
                 if (await db.ReceivedCheques.AnyAsync(x => x.TenantId == tenantId && x.Direction == ChequeDirection.Issued && x.CheckNumber == number && x.Amount == amount && x.EcheqId == echeqId, ct)) { duplicates++; continue; }
-                db.ReceivedCheques.Add(new ReceivedCheque { Id = Guid.NewGuid(), TenantId = tenantId, CheckNumber = number, EcheqId = echeqId, Cmc7 = c.Length > 11 ? c[11].Trim() : null, Amount = amount, Currency = "ARS", DueDateUtc = ParseDate(c[4]), IssueDateUtc = ParseDate(c[5]), Direction = ChequeDirection.Issued, Status = ReceivedChequeStatus.Available, BankName = c.Length > 9 ? c[9].Trim() : null, ReceivedFrom = c.Length > 1 ? c[1].Trim() : null, IssuerTaxId = c.Length > 3 ? c[3].Trim() : null, IssuerName = c.Length > 17 ? c[17].Trim() : null, Notes = c.Length > 12 ? c[12].Trim() : null, CreatedAtUtc = DateTime.UtcNow });
+                db.ReceivedCheques.Add(new ReceivedCheque { Id = Guid.NewGuid(), TenantId = tenantId, CheckNumber = number, EcheqId = echeqId, Cmc7 = c.Length > 11 ? c[11].Trim() : null, Amount = amount, Currency = "ARS", DueDateUtc = ParseDate(c[4]), IssueDateUtc = ParseDate(c[5]), Direction = ChequeDirection.Issued, Status = ReceivedChequeStatus.Issued, BankName = c.Length > 9 ? c[9].Trim() : null, ReceivedFrom = c.Length > 1 ? c[1].Trim() : null, IssuerTaxId = c.Length > 3 ? c[3].Trim() : null, IssuerName = c.Length > 17 ? c[17].Trim() : null, Notes = c.Length > 12 ? c[12].Trim() : null, CreatedAtUtc = DateTime.UtcNow });
                 imported++;
             }
             await db.SaveChangesAsync(ct); return Results.Ok(new { imported, duplicates });
@@ -56,8 +59,98 @@ public static class FinanceEcheqs
         {
             var cheque = await db.ReceivedCheques.SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, ct); var movement = await db.Movements.SingleOrDefaultAsync(x => x.Id == body.MovementId && x.AccountId == body.AccountId && x.TenantId == tenant.TenantId.Value, ct);
             if (cheque is null || movement is null) return Results.NotFound("Cheque o movimiento inexistente.");
-            cheque.BankAccountId = body.AccountId; cheque.BankMovementId = movement.Id; if (body.IsCredit) { cheque.Status = ReceivedChequeStatus.Credited; cheque.CreditedAtUtc = movement.OperationDateUtc; } else { cheque.Status = ReceivedChequeStatus.Presented; cheque.DepositedAtUtc = movement.OperationDateUtc; }
+            cheque.BankAccountId = body.AccountId; cheque.BankMovementId = movement.Id;
+            if (body.IsCredit) { cheque.Status = ReceivedChequeStatus.Credited; cheque.CreditedAtUtc = movement.OperationDateUtc; }
+            else if (cheque.Direction == ChequeDirection.Issued) { cheque.Status = ReceivedChequeStatus.Debited; cheque.CreditedAtUtc = movement.OperationDateUtc; }
+            else { cheque.Status = ReceivedChequeStatus.Presented; cheque.DepositedAtUtc = movement.OperationDateUtc; }
             await db.SaveChangesAsync(ct); return Results.Ok(cheque);
+        });
+        group.MapPost("/{id:guid}/deposit", async (Guid id, DepositChequeRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var cheque = await db.ReceivedCheques.SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+            if (cheque is null) return Results.NotFound("Cheque inexistente.");
+            if (cheque.Direction != ChequeDirection.Received) return Results.BadRequest("Solo aplica a cheques recibidos.");
+            if (cheque.Status is not ReceivedChequeStatus.Available and not ReceivedChequeStatus.Deposited)
+                return Results.Conflict("El cheque no está en cartera para depositar.");
+
+            var account = await db.Accounts.SingleOrDefaultAsync(x => x.Id == body.BankAccountId && x.TenantId == tenantId && x.IsActive, ct);
+            if (account is null) return Results.NotFound("Cuenta bancaria inexistente.");
+            await FinanceConcepts.EnsureBaseConceptsAsync(db, tenantId, ct);
+            var conceptId = await db.FinancialConcepts.Where(x => x.TenantId == tenantId && x.Code == "CHEQUE_DEPOSITADO").Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct);
+
+            var movement = new FinancialMovement
+            {
+                Id = Guid.NewGuid(), TenantId = tenantId, AccountId = body.BankAccountId,
+                Kind = FinancialMovementKind.Credit, Amount = cheque.Amount, Currency = cheque.Currency,
+                OperationDateUtc = body.DepositDateUtc,
+                Description = $"Depósito cheque N° {cheque.CheckNumber}",
+                ExternalReference = cheque.CheckNumber,
+                ConceptId = conceptId,
+                LinkedEntityType = "ReceivedCheque", LinkedEntityId = cheque.Id,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            FinanceSystemMovementHelper.ApplySystemDefaults(movement, account);
+            db.Movements.Add(movement);
+            cheque.Status = ReceivedChequeStatus.Deposited;
+            cheque.BankAccountId = body.BankAccountId;
+            cheque.BankMovementId = movement.Id;
+            cheque.DepositedAtUtc = body.DepositDateUtc;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(cheque);
+        });
+        group.MapPost("/{id:guid}/reject", async (Guid id, RejectChequeRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var cheque = await db.ReceivedCheques.SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+            if (cheque is null) return Results.NotFound("Cheque inexistente.");
+            if (cheque.Direction != ChequeDirection.Received) return Results.BadRequest("Solo aplica a cheques recibidos.");
+
+            cheque.Status = ReceivedChequeStatus.Rejected;
+            cheque.Notes = string.IsNullOrWhiteSpace(body.Note) ? $"Rechazado {body.RejectDateUtc:dd/MM/yyyy}" : body.Note.Trim();
+
+            if (cheque.CollectionReceiptId.HasValue)
+            {
+                var imputations = await db.CollectionReceiptImputations
+                    .Where(x => x.ReceiptId == cheque.CollectionReceiptId && x.TenantId == tenantId && x.Status == "Active")
+                    .ToListAsync(ct);
+                foreach (var imp in imputations) imp.Status = "Reversed";
+            }
+
+            if (cheque.BankAccountId.HasValue)
+            {
+                var account = await db.Accounts.SingleOrDefaultAsync(x => x.Id == cheque.BankAccountId && x.TenantId == tenantId, ct);
+                if (account is not null)
+                {
+                    var total = cheque.Amount + (body.Fees ?? 0);
+                    var movement = new FinancialMovement
+                    {
+                        Id = Guid.NewGuid(), TenantId = tenantId, AccountId = cheque.BankAccountId.Value,
+                        Kind = FinancialMovementKind.Debit, Amount = total, Currency = cheque.Currency,
+                        OperationDateUtc = body.RejectDateUtc,
+                        Description = $"Cheque rechazado N° {cheque.CheckNumber}",
+                        ExternalReference = cheque.CheckNumber,
+                        LinkedEntityType = "ReceivedCheque", LinkedEntityId = cheque.Id,
+                        CreatedAtUtc = DateTime.UtcNow
+                    };
+                    FinanceSystemMovementHelper.ApplySystemDefaults(movement, account);
+                    db.Movements.Add(movement);
+                }
+            }
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(cheque);
+        });
+        group.MapPost("/{id:guid}/cancel", async (Guid id, CancelChequeRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(body.Reason)) return Results.BadRequest("Indicá el motivo de anulación.");
+            var cheque = await db.ReceivedCheques.SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, ct);
+            if (cheque is null) return Results.NotFound("Cheque inexistente.");
+            if (cheque.Status is ReceivedChequeStatus.UsedForPayment or ReceivedChequeStatus.Credited or ReceivedChequeStatus.Debited)
+                return Results.Conflict("No se puede anular un cheque ya aplicado o acreditado.");
+            cheque.Status = ReceivedChequeStatus.Cancelled;
+            cheque.Notes = body.Reason.Trim();
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(cheque);
         });
         group.MapPost("/{id:guid}/use-for-payment", async (Guid id, UseChequeForPaymentRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
         {

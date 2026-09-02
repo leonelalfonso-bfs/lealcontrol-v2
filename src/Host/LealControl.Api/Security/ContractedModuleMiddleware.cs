@@ -77,7 +77,7 @@ public sealed class ContractedModuleMiddleware(RequestDelegate next)
             return [];
         }
 
-        if (claimValues.Count == 1 && claimValues[0].StartsWith("[", StringComparison.Ordinal))
+        if (claimValues.Count == 1 && claimValues[0].StartsWith('[', StringComparison.Ordinal))
         {
             try
             {

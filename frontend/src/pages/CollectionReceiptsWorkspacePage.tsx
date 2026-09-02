@@ -242,7 +242,7 @@ export function CollectionReceiptsWorkspacePage() {
 
   // Filter available movements by concept (client-side backup; API already filters confirmed + concept)
   const incomeConcepts = useMemo(
-    () => concepts.filter((c) => c.direction === "Income" || c.direction === "Both"),
+    () => concepts.filter((c) => c.usableIn === "Receipt" && (c.direction === "Income" || c.direction === "Both")),
     [concepts]
   );
 
@@ -467,6 +467,17 @@ export function CollectionReceiptsWorkspacePage() {
 
     if (!description.trim()) {
       setError("Por favor indicá una descripción para el recibo.");
+      return;
+    }
+
+    const bankLineMissingWallet = lines.some(
+      (l) =>
+        (l.method === "BankTransfer" || l.method === "Transferencia") &&
+        l.movementId &&
+        !(l.conceptId || movementConceptFilter)
+    );
+    if (bankLineMissingWallet) {
+      setError("Elegí la cartera (concepto) para cada transferencia bancaria vinculada.");
       return;
     }
 
@@ -1276,11 +1287,32 @@ export function CollectionReceiptsWorkspacePage() {
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--surface-border)", paddingTop: 12 }}>
-              <span className="muted">Total del Recibo:</span>
-              <strong style={{ fontSize: "1.25rem", color: "#065f46" }}>
+              <strong>Total cobrado</strong>
+              <strong style={{ fontSize: "1.2rem" }}>
                 {money(selectedReceiptDetail.amount, selectedReceiptDetail.currency)}
               </strong>
             </div>
+            {selectedReceiptDetail.status !== "Voided" && (
+              <div className="toolbar" style={{ marginTop: 16, justifyContent: "flex-end" }}>
+                <button
+                  className="btn btn-outline"
+                  style={{ color: "#dc2626", borderColor: "#dc2626" }}
+                  onClick={async () => {
+                    const reason = window.prompt("Motivo de anulación del recibo:");
+                    if (!reason?.trim()) return;
+                    try {
+                      await api.voidCollectionReceipt(selectedReceiptDetail.id, reason.trim());
+                      setSelectedReceiptDetail(null);
+                      await loadData();
+                    } catch (e) {
+                      alert(e instanceof Error ? e.message : "No se pudo anular el recibo.");
+                    }
+                  }}
+                >
+                  Anular recibo
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
