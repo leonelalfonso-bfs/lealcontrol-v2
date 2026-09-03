@@ -55,7 +55,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     let message = `Error (${response.status})`;
     try {
       const parsed = JSON.parse(errorText);
-      message = parsed.detail || parsed.title || parsed.message || message;
+      if (typeof parsed === "string") {
+        message = parsed;
+      } else {
+        message = parsed.detail || parsed.title || parsed.message || message;
+      }
     } catch {
       message = errorText || message;
     }

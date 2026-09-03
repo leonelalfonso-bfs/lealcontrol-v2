@@ -144,6 +144,11 @@ export function FinanceAccountsPage() {
   };
 
   const handleClassifyInline = async (movementId: string) => {
+    const movement = movements.find((m) => m.id === movementId);
+    if (movement && (movement.reconciliationStatus === "Reconciled" || String(movement.reconciliationStatus) === "2")) {
+      setError("Este movimiento ya está conciliado con un recibo u orden de pago. No se puede reclasificar.");
+      return;
+    }
     const conceptId = inlineConcepts[movementId];
     if (!conceptId) {
       setError("Por favor seleccioná un concepto antes de confirmar.");
@@ -192,6 +197,10 @@ export function FinanceAccountsPage() {
 
   const handleSaveModalClassification = async () => {
     if (!modalMovement || !modalConceptId) return;
+    if (modalMovement.reconciliationStatus === "Reconciled" || String(modalMovement.reconciliationStatus) === "2") {
+      setError("Este movimiento ya está conciliado con un recibo u orden de pago. No se puede reclasificar.");
+      return;
+    }
 
     try {
       setActionBusy(modalMovement.id);
@@ -712,7 +721,8 @@ export function FinanceAccountsPage() {
                   filteredMovements.map((x) => {
                     const isConfirmed = x.classificationStatus === "Confirmed";
                     const isSuggested = x.classificationStatus === "Suggested";
-                    const isPending = !isConfirmed;
+                    const isReconciled = x.reconciliationStatus === "Reconciled" || String(x.reconciliationStatus) === "2";
+                    const isPending = !isConfirmed && !isReconciled;
                     const { mainDesc, titular, cuit, extra } = parseMovementDetails(x.description);
 
                     return (
