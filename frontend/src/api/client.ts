@@ -936,16 +936,16 @@ export const api = {
     request<any>("/api/v1/accounting/auto-post/receipt", { method: "POST", body: JSON.stringify(body) }),
 
   // Bank Reconciliation
-  listBankStatements: () =>
-    request<any[]>("/api/v1/accounting/bank-statements"),
-  getBankStatement: (id: string) =>
-    request<any>(`/api/v1/accounting/bank-statements/${id}`),
-  uploadBankStatement: (body: { bankName?: string; accountNumber?: string; currency?: string; periodStartDate?: string; periodEndDate?: string; initialBalance?: number; finalBalance?: number; lines: any[] }) =>
-    request<any>("/api/v1/accounting/bank-statements/upload", { method: "POST", body: JSON.stringify(body) }),
-  autoMatchBankStatement: (id: string) =>
-    request<{ message: string; totalReconciled: number; statementStatus: string }>(`/api/v1/accounting/bank-statements/${id}/auto-match`, { method: "POST" }),
-  quickPostBankFee: (lineId: string, feeType: "BankFee" | "TaxLey25413") =>
-    request<any>(`/api/v1/accounting/bank-statements/lines/${lineId}/quick-post`, { method: "POST", body: JSON.stringify({ feeType }) }),
+  getTreasuryReconciliation: () =>
+    request<{ message: string; financeReconciliationPath: string; rows: Array<{
+      code: string; name: string; accountType: string; currency: string;
+      ledgerDebit: number; ledgerCredit: number; ledgerBalance: number; role: string;
+    }> }>("/api/v1/accounting/treasury-reconciliation"),
+  listFinanceAccountMappings: () =>
+    request<{ financialAccountId: string; ledgerAccountCode: string; updatedAtUtc: string }[]>(
+      "/api/v1/accounting/finance-account-mappings"),
+  saveFinanceAccountMappings: (body: { financialAccountId: string; ledgerAccountCode: string }[]) =>
+    request("/api/v1/accounting/finance-account-mappings", { method: "PUT", body: JSON.stringify(body) }),
 
   // ==========================================
   // ASIENTOS MODELOS (PLANTILLAS CONFIGURABLES) & CONTABILIZACIÃ“N EN LOTE

@@ -25,7 +25,8 @@ public static class JournalTemplateEngine
         JournalTemplate template,
         PostableDocument document,
         TenantId tenantId,
-        IAccountingAccountResolver accounts)
+        IAccountingAccountResolver accounts,
+        IReadOnlyDictionary<string, string>? accountCodeByAmountSource = null)
     {
         if (template is null) throw new ArgumentNullException(nameof(template));
         if (document is null) throw new ArgumentNullException(nameof(document));
@@ -59,7 +60,16 @@ public static class JournalTemplateEngine
             if (amount == 0m && !string.Equals(line.Condition, "Always", StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            var resolvedAccount = accounts.Resolve(line.AccountCode, line.AccountName);
+            var accountCode = line.AccountCode;
+            if (accountCodeByAmountSource is not null
+                && !string.IsNullOrWhiteSpace(line.AmountSource)
+                && accountCodeByAmountSource.TryGetValue(line.AmountSource, out var mappedCode)
+                && !string.IsNullOrWhiteSpace(mappedCode))
+            {
+                accountCode = mappedCode;
+            }
+
+            var resolvedAccount = accounts.Resolve(accountCode, line.AccountName);
 
             var memo = RenderMemoTemplate(line.MemoTemplate, document);
 

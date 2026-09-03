@@ -39,6 +39,119 @@ public sealed class AccountingPostingGateway(
 
         var payload = JsonSerializer.Serialize(document, JsonOptions);
 
+        // 4.6 Auto-post: si está activo, renderizamos y grabamos en el momento.
+        var settings = await db.GetOrCreateTenantSettingsAsync(tenantId, cancellationToken);
+        if (settings.AutoPostOnConfirm)
+        {
+            // Idempotencia: si ya existe asiento real para este doc, sólo vinculamos pending.
+            var existingJournalEntry = await db.JournalEntries
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    j => j.TenantId == tenantId &&
+                         j.SourceModule == document.SourceModule &&
+                         j.SourceDocumentId == document.DocumentId,
+                    cancellationToken);
+
+            if (existing is not null && existing.Status == AccountingPendingDocumentStatuses.Posted)
+            {
+                // Ya estaba publicado.
+                return;
+            }
+
+            AccountingPendingDocument pendingRow = existing ?? new AccountingPendingDocument
+            {
+                TenantId = tenantId,
+                SourceModule = document.SourceModule.Trim(),
+                DocumentType = document.DocumentType.Trim(),
+                SourceDocumentId = document.DocumentId.Trim(),
+                DocumentNumber = document.DocumentNumber?.Trim() ?? document.DocumentId,
+                DocumentDateUtc = document.Date.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(document.Date, DateTimeKind.Utc)
+                    : document.Date.ToUniversalTime(),
+                PayloadJson = payload,
+                Status = AccountingPendingDocumentStatuses.Error,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            if (existing is null)
+            {
+                db.PendingDocuments.Add(pendingRow);
+            }
+            else
+            {
+                pendingRow.DocumentType = document.DocumentType;
+                pendingRow.DocumentNumber = document.DocumentNumber?.Trim() ?? document.DocumentId;
+                pendingRow.DocumentDateUtc = document.Date.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(document.Date, DateTimeKind.Utc)
+                    : document.Date.ToUniversalTime();
+                pendingRow.PayloadJson = payload;
+            }
+
+            try
+            {
+                if (existingJournalEntry is not null)
+                {
+                    pendingRow.Status = AccountingPendingDocumentStatuses.Posted;
+                    pendingRow.LastError = null;
+                    pendingRow.JournalEntryId = existingJournalEntry.Id;
+                    pendingRow.UpdatedAtUtc = DateTime.UtcNow;
+                    await db.SaveChangesAsync(cancellationToken);
+                    return;
+                }
+
+                var templates = await db.JournalTemplates
+                    .AsNoTracking()
+                    .Include(t => t.Lines)
+                    .Where(t => t.TenantId == tenantId && t.Status == "Active")
+                    .ToListAsync(cancellationToken);
+
+                var accounts = await db.Accounts
+                    .AsNoTracking()
+                    .Where(a => a.TenantId == tenantId)
+                    .ToListAsync(cancellationToken);
+
+                var resolver = new DbAccountResolver(accounts);
+                var selection = JournalTemplateSelector.Select(document, templates);
+
+                if (selection.Template is null)
+                {
+                    pendingRow.Status = AccountingPendingDocumentStatuses.Error;
+                    pendingRow.LastError = selection.Warning ?? "Sin asiento modelo disponible.";
+                    pendingRow.JournalEntryId = null;
+                    pendingRow.UpdatedAtUtc = DateTime.UtcNow;
+                    await db.SaveChangesAsync(cancellationToken);
+                    return;
+                }
+
+                var overrides = await FinanceAccountMappingHelper.ResolveAmountSourceAccountsAsync(document, tenantId, db, cancellationToken);
+                var entry = JournalTemplateEngine.Render(selection.Template, document, tenantId, resolver, overrides);
+                var maxNumber = await db.JournalEntries
+                    .Where(j => j.TenantId == tenantId)
+                    .MaxAsync(j => (int?)j.EntryNumber, cancellationToken) ?? 0;
+
+                entry.EntryNumber = maxNumber + 1;
+                db.JournalEntries.Add(entry);
+
+                pendingRow.Status = AccountingPendingDocumentStatuses.Posted;
+                pendingRow.LastError = null;
+                pendingRow.JournalEntryId = entry.Id;
+                pendingRow.UpdatedAtUtc = DateTime.UtcNow;
+
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                pendingRow.Status = AccountingPendingDocumentStatuses.Error;
+                pendingRow.LastError = ex.Message.Length > 990 ? ex.Message[..990] : ex.Message;
+                pendingRow.JournalEntryId = null;
+                pendingRow.UpdatedAtUtc = DateTime.UtcNow;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            return;
+        }
+
         if (existing is not null)
         {
             if (existing.Status == AccountingPendingDocumentStatuses.Posted)
@@ -111,8 +224,106 @@ public sealed class AccountingPostingGateway(
                     ? "Anulado antes de contabilizar."
                     : $"Anulado: {reason.Trim()}";
                 row.UpdatedAtUtc = DateTime.UtcNow;
+                continue;
             }
-            // Posted → la reversión de asiento se implementa en 4.9 (contra-asiento).
+
+            if (row.Status != AccountingPendingDocumentStatuses.Posted)
+                continue;
+
+            var original = row.JournalEntryId.HasValue
+                ? await db.JournalEntries.Include(e => e.Lines)
+                    .FirstOrDefaultAsync(e => e.Id == row.JournalEntryId.Value && e.TenantId == tenantId, cancellationToken)
+                : await db.JournalEntries.Include(e => e.Lines)
+                    .FirstOrDefaultAsync(
+                        e => e.TenantId == tenantId
+                             && e.SourceModule == sourceModule
+                             && e.SourceDocumentId == sourceDocumentId
+                             && e.EntryType != "Reversal",
+                        cancellationToken);
+
+            if (original is null)
+            {
+                row.Status = AccountingPendingDocumentStatuses.Skipped;
+                row.LastError = "Anulado: no se encontró el asiento original para revertir.";
+                row.UpdatedAtUtc = DateTime.UtcNow;
+                continue;
+            }
+
+            var isLocked = await db.Periods.AnyAsync(p =>
+                p.TenantId == tenantId
+                && p.Year == original.Date.Year
+                && p.Month == original.Date.Month
+                && p.Status == "Locked", cancellationToken);
+            if (isLocked)
+            {
+                logger.LogWarning(
+                    "No se revirtió {Module}/{DocId}: período {Month}/{Year} cerrado.",
+                    sourceModule, sourceDocumentId, original.Date.Month, original.Date.Year);
+                row.LastError = $"No se pudo revertir: período {original.Date.Month:D2}/{original.Date.Year} cerrado.";
+                row.UpdatedAtUtc = DateTime.UtcNow;
+                continue;
+            }
+
+            var alreadyReversed = await db.JournalEntries.AnyAsync(
+                e => e.TenantId == tenantId
+                     && e.EntryType == "Reversal"
+                     && e.SourceDocumentId == original.Id.ToString(),
+                cancellationToken);
+            if (alreadyReversed)
+            {
+                row.Status = AccountingPendingDocumentStatuses.Skipped;
+                row.LastError = "Ya existía contra-asiento.";
+                row.UpdatedAtUtc = DateTime.UtcNow;
+                continue;
+            }
+
+            var maxNumber = await db.JournalEntries
+                .Where(j => j.TenantId == tenantId)
+                .MaxAsync(j => (int?)j.EntryNumber, cancellationToken) ?? 0;
+
+            var reversal = new JournalEntry
+            {
+                TenantId = tenantId,
+                EntryNumber = maxNumber + 1,
+                Date = DateTime.UtcNow,
+                Concept = string.IsNullOrWhiteSpace(reason)
+                    ? $"Reversión asiento {original.EntryNumber}"
+                    : $"Reversión asiento {original.EntryNumber}: {reason.Trim()}",
+                EntryType = "Reversal",
+                SourceModule = sourceModule,
+                SourceDocumentId = original.Id.ToString(),
+                Status = "Posted",
+                CreatedBy = "Accounting.Reversal",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            foreach (var line in original.Lines)
+            {
+                reversal.Lines.Add(new JournalEntryLine
+                {
+                    JournalEntryId = reversal.Id,
+                    TenantId = tenantId,
+                    AccountId = line.AccountId,
+                    AccountCode = line.AccountCode,
+                    AccountName = line.AccountName,
+                    Debit = line.Credit,
+                    Credit = line.Debit,
+                    Currency = line.Currency,
+                    ExchangeRate = line.ExchangeRate,
+                    CostCenterId = line.CostCenterId,
+                    CostCenterCode = line.CostCenterCode,
+                    CostCenterName = line.CostCenterName,
+                    Memo = $"Rev. {line.Memo}"
+                });
+            }
+
+            reversal.TotalDebit = reversal.Lines.Sum(l => l.Debit);
+            reversal.TotalCredit = reversal.Lines.Sum(l => l.Credit);
+            db.JournalEntries.Add(reversal);
+
+            row.Status = AccountingPendingDocumentStatuses.Skipped;
+            row.LastError = $"Revertido con asiento {reversal.EntryNumber}.";
+            row.UpdatedAtUtc = DateTime.UtcNow;
         }
 
         await db.SaveChangesAsync(cancellationToken);

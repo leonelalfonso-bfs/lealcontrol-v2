@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Security;
 using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Accounting.Contracts.Posting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -17,9 +18,6 @@ namespace LealControl.Modules.Accounting.Infrastructure;
 
 public static class AccountingEndpoints
 {
-    private const string BatchPostingDisabledMessage =
-        "La contabilización en lote está en reconstrucción. No genera asientos hasta conectar documentos reales.";
-
     public static IEndpointRouteBuilder MapAccountingModule(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/v1/accounting").WithTags("Accounting & Finance Professional").RequirePolicyOnWrites("RequireAccounting");
@@ -181,6 +179,73 @@ public static class AccountingEndpoints
 
             await db.SaveChangesAsync(ct);
             return Results.Ok(mapping);
+        });
+
+        group.MapGet("/settings", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
+            var settings = await db.GetOrCreateTenantSettingsAsync(tenantId, ct);
+            return Results.Ok(new { settings.AutoPostOnConfirm });
+        });
+
+        group.MapGet("/finance-account-mappings", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
+            var rows = await db.FinanceAccountMappings.AsNoTracking()
+                .Where(x => x.TenantId == tenantId)
+                .OrderBy(x => x.LedgerAccountCode)
+                .Select(x => new { x.FinancialAccountId, x.LedgerAccountCode, x.UpdatedAtUtc })
+                .ToListAsync(ct);
+            return Results.Ok(rows);
+        });
+
+        group.MapPut("/finance-account-mappings", async (
+            List<FinanceAccountMappingItemRequest> req,
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
+            var existing = await db.FinanceAccountMappings.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+            db.FinanceAccountMappings.RemoveRange(existing);
+
+            foreach (var item in req ?? [])
+            {
+                if (item.FinancialAccountId == Guid.Empty || string.IsNullOrWhiteSpace(item.LedgerAccountCode))
+                    continue;
+                db.FinanceAccountMappings.Add(new AccountingFinanceAccountMapping
+                {
+                    TenantId = tenantId,
+                    FinancialAccountId = item.FinancialAccountId,
+                    LedgerAccountCode = item.LedgerAccountCode.Trim(),
+                    UpdatedAtUtc = DateTime.UtcNow
+                });
+            }
+
+            await db.SaveChangesAsync(ct);
+            var rows = await db.FinanceAccountMappings.AsNoTracking()
+                .Where(x => x.TenantId == tenantId)
+                .Select(x => new { x.FinancialAccountId, x.LedgerAccountCode, x.UpdatedAtUtc })
+                .ToListAsync(ct);
+            return Results.Ok(rows);
+        });
+
+        group.MapPut("/settings", async (
+            UpdateAccountingSettingsRequest req,
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
+            var settings = await db.GetOrCreateTenantSettingsAsync(tenantId, ct);
+            settings.AutoPostOnConfirm = req.AutoPostOnConfirm;
+            settings.UpdatedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { settings.AutoPostOnConfirm });
         });
 
         // ====================================================================
@@ -585,352 +650,111 @@ public static class AccountingEndpoints
         });
 
         // ====================================================================
-        // 7. Auto-Posting Automático Dinámico (Ventas, Compras, Cobranzas)
+        // 7. Auto-Posting de compatibilidad (pasa por gateway + plantillas)
         // ====================================================================
         group.MapPost("/auto-post/invoice", async (
             AutoPostInvoiceRequest req,
             ITenantContext tenantContext,
             AccountingDbContext db,
+            IAccountingPostingGateway gateway,
             CancellationToken ct) =>
         {
-            var tenantId = tenantContext.TenantId;
-            await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
-            var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
-
-            var existing = await db.JournalEntries.FirstOrDefaultAsync(e =>
-                e.TenantId == tenantId && e.SourceModule == "Sales" && e.SourceDocumentId == req.InvoiceId.ToString(), ct);
-            if (existing != null)
+            var isCreditNote = req.InvoiceNumber.Contains("NC", StringComparison.OrdinalIgnoreCase)
+                               || req.InvoiceNumber.StartsWith("NC", StringComparison.OrdinalIgnoreCase);
+            var docType = isCreditNote ? AccountingDocumentTypes.CreditNoteA : AccountingDocumentTypes.InvoiceA;
+            var amounts = AutoPostViaGateway.InvoiceAmounts(req.NetAmount, req.VatAmount, req.TotalAmount);
+            var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                return Results.Ok(new { message = "La factura ya fue contabilizada.", entryId = existing.Id });
-            }
-
-            var accounts = await db.Accounts.Where(a => a.TenantId == tenantId).ToListAsync(ct);
-            var deudores = accounts.FirstOrDefault(a => a.Code == mapping.AccountsReceivableAccountCode) ?? accounts.First(a => a.AccountType == "Asset");
-            var ventas = accounts.FirstOrDefault(a => a.Code == mapping.SalesRevenueAccountCode) ?? accounts.First(a => a.AccountType == "Income");
-            var ivaDebito = accounts.FirstOrDefault(a => a.Code == mapping.SalesVatDebitAccountCode) ?? accounts.First(a => a.AccountType == "Liability");
-
-            var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
-
-            var entry = new JournalEntry
-            {
-                TenantId = tenantId,
-                EntryNumber = maxNumber + 1,
-                Date = req.Date,
-                Concept = $"Venta Factura {req.InvoiceNumber} - {req.CustomerName}",
-                EntryType = "Automated",
-                SourceModule = "Sales",
-                SourceDocumentId = req.InvoiceId.ToString(),
-                Status = "Posted",
-                TotalDebit = req.TotalAmount,
-                TotalCredit = req.TotalAmount,
-                CreatedBy = "Sistema (Auto-Posting)",
-                CreatedAtUtc = DateTime.UtcNow
+                ["PaymentMethod"] = "Account"
             };
-
-            var isCreditNote = req.InvoiceNumber.Contains("NC") || req.InvoiceNumber.StartsWith("NC");
-            if (isCreditNote)
-            {
-                entry.Concept = $"Nota de Crédito {req.InvoiceNumber} - {req.CustomerName}";
-
-                // Debe: Ventas (reversión ingreso neto)
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    JournalEntryId = entry.Id,
-                    TenantId = tenantId,
-                    AccountId = ventas.Id,
-                    AccountCode = ventas.Code,
-                    AccountName = ventas.Name,
-                    Debit = req.NetAmount,
-                    Credit = 0,
-                    Memo = $"Reversión ventas netas s/{req.InvoiceNumber}"
-                });
-
-                // Debe: IVA Débito Fiscal (reversión débito fiscal)
-                if (req.VatAmount > 0)
-                {
-                    entry.Lines.Add(new JournalEntryLine
-                    {
-                        JournalEntryId = entry.Id,
-                        TenantId = tenantId,
-                        AccountId = ivaDebito.Id,
-                        AccountCode = ivaDebito.Code,
-                        AccountName = ivaDebito.Name,
-                        Debit = req.VatAmount,
-                        Credit = 0,
-                        Memo = $"Reversión IVA Débito Fiscal s/{req.InvoiceNumber}"
-                    });
-                }
-
-                // Haber: Deudores por Ventas (disminución saldo cliente)
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    JournalEntryId = entry.Id,
-                    TenantId = tenantId,
-                    AccountId = deudores.Id,
-                    AccountCode = deudores.Code,
-                    AccountName = deudores.Name,
-                    Debit = 0,
-                    Credit = req.TotalAmount,
-                    Memo = $"Disminución cuenta corriente {req.CustomerName}"
-                });
-            }
-            else
-            {
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    JournalEntryId = entry.Id,
-                    TenantId = tenantId,
-                    AccountId = deudores.Id,
-                    AccountCode = deudores.Code,
-                    AccountName = deudores.Name,
-                    Debit = req.TotalAmount,
-                    Credit = 0,
-                    Memo = $"Crédito cliente {req.CustomerName}"
-                });
-
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    JournalEntryId = entry.Id,
-                    TenantId = tenantId,
-                    AccountId = ventas.Id,
-                    AccountCode = ventas.Code,
-                    AccountName = ventas.Name,
-                    Debit = 0,
-                    Credit = req.NetAmount,
-                    Memo = $"Ingreso ventas netas {req.InvoiceNumber}"
-                });
-
-                if (req.VatAmount > 0)
-                {
-                    entry.Lines.Add(new JournalEntryLine
-                    {
-                        JournalEntryId = entry.Id,
-                        TenantId = tenantId,
-                        AccountId = ivaDebito.Id,
-                        AccountCode = ivaDebito.Code,
-                        AccountName = ivaDebito.Name,
-                        Debit = 0,
-                        Credit = req.VatAmount,
-                        Memo = $"IVA Débito Fiscal s/{req.InvoiceNumber}"
-                    });
-                }
-            }
-
-            db.JournalEntries.Add(entry);
-            await db.SaveChangesAsync(ct);
-
-            return Results.Created($"/api/v1/accounting/journal-entries/{entry.Id}", new { message = "Asiento automático generado con éxito.", entryId = entry.Id, entryNumber = entry.EntryNumber });
-        });
+            var doc = new PostableDocument(
+                AccountingSourceModules.Sales,
+                docType,
+                req.InvoiceId.ToString(),
+                req.InvoiceNumber,
+                req.Date,
+                "ARS",
+                1m,
+                "Customer",
+                null,
+                req.CustomerName,
+                null,
+                amounts,
+                tags);
+            return await AutoPostViaGateway.EnqueueAndReportAsync(gateway, db, tenantContext.TenantId, doc, ct);
+        }).WithDescription("Obsoleto: usar IAccountingPostingGateway. Queda por compatibilidad.");
 
         group.MapPost("/auto-post/purchase", async (
             AutoPostPurchaseRequest req,
             ITenantContext tenantContext,
             AccountingDbContext db,
+            IAccountingPostingGateway gateway,
             CancellationToken ct) =>
         {
-            var tenantId = tenantContext.TenantId;
-            await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
-            var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
-
-            var existing = await db.JournalEntries.FirstOrDefaultAsync(e =>
-                e.TenantId == tenantId && e.SourceModule == "Purchases" && e.SourceDocumentId == req.PurchaseId.ToString(), ct);
-            if (existing != null)
-            {
-                return Results.Ok(new { message = "La compra ya fue contabilizada.", entryId = existing.Id });
-            }
-
-            var accounts = await db.Accounts.Where(a => a.TenantId == tenantId).ToListAsync(ct);
-            var gasto = accounts.FirstOrDefault(a => a.Code == mapping.PurchaseExpenseAccountCode) ?? accounts.First(a => a.AccountType == "Expense");
-            var ivaCredito = accounts.FirstOrDefault(a => a.Code == mapping.PurchaseVatCreditAccountCode) ?? accounts.First(a => a.AccountType == "Asset");
-            var proveedores = accounts.FirstOrDefault(a => a.Code == mapping.AccountsPayableAccountCode) ?? accounts.First(a => a.AccountType == "Liability");
-
-            var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
-
-            var isCreditNote = req.InvoiceNumber.Contains("NC") || req.InvoiceNumber.StartsWith("NC");
-            var entry = new JournalEntry
-            {
-                TenantId = tenantId,
-                EntryNumber = maxNumber + 1,
-                Date = req.Date,
-                Concept = isCreditNote ? $"Nota de Crédito Compra {req.InvoiceNumber} - {req.SupplierName}" : $"Factura Compra {req.InvoiceNumber} - {req.SupplierName}",
-                EntryType = "Automated",
-                SourceModule = "Purchases",
-                SourceDocumentId = req.PurchaseId.ToString(),
-                Status = "Posted",
-                TotalDebit = req.TotalAmount,
-                TotalCredit = req.TotalAmount,
-                CreatedBy = "Sistema (Auto-Posting)",
-                CreatedAtUtc = DateTime.UtcNow
-            };
-
-            if (isCreditNote)
-            {
-                // Debe: Proveedores (disminuye deuda comercial)
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    JournalEntryId = entry.Id,
-                    TenantId = tenantId,
-                    AccountId = proveedores.Id,
-                    AccountCode = proveedores.Code,
-                    AccountName = proveedores.Name,
-                    Debit = req.TotalAmount,
-                    Credit = 0,
-                    Memo = $"Disminución deuda comercial {req.SupplierName}"
-                });
-
-                // Haber: Gasto/Mercaderías (reversión costo)
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    JournalEntryId = entry.Id,
-                    TenantId = tenantId,
-                    AccountId = gasto.Id,
-                    AccountCode = gasto.Code,
-                    AccountName = gasto.Name,
-                    Debit = 0,
-                    Credit = req.NetAmount,
-                    Memo = $"Reversión compra mercaderías {req.SupplierName}"
-                });
-
-                // Haber: IVA Crédito Fiscal (reversión crédito fiscal)
-                if (req.VatAmount > 0)
-                {
-                    entry.Lines.Add(new JournalEntryLine
-                    {
-                        JournalEntryId = entry.Id,
-                        TenantId = tenantId,
-                        AccountId = ivaCredito.Id,
-                        AccountCode = ivaCredito.Code,
-                        AccountName = ivaCredito.Name,
-                        Debit = 0,
-                        Credit = req.VatAmount,
-                        Memo = $"Reversión IVA Crédito Fiscal s/{req.InvoiceNumber}"
-                    });
-                }
-            }
-            else
-            {
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    JournalEntryId = entry.Id,
-                    TenantId = tenantId,
-                    AccountId = gasto.Id,
-                    AccountCode = gasto.Code,
-                    AccountName = gasto.Name,
-                    Debit = req.NetAmount,
-                    Credit = 0,
-                    Memo = $"Compra mercaderías {req.SupplierName}"
-                });
-
-                if (req.VatAmount > 0)
-                {
-                    entry.Lines.Add(new JournalEntryLine
-                    {
-                        JournalEntryId = entry.Id,
-                        TenantId = tenantId,
-                        AccountId = ivaCredito.Id,
-                        AccountCode = ivaCredito.Code,
-                        AccountName = ivaCredito.Name,
-                        Debit = req.VatAmount,
-                        Credit = 0,
-                        Memo = $"IVA Crédito Fiscal s/{req.InvoiceNumber}"
-                    });
-                }
-
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    JournalEntryId = entry.Id,
-                    TenantId = tenantId,
-                    AccountId = proveedores.Id,
-                    AccountCode = proveedores.Code,
-                    AccountName = proveedores.Name,
-                    Debit = 0,
-                    Credit = req.TotalAmount,
-                    Memo = $"Deuda comercial {req.SupplierName}"
-                });
-            }
-
-            db.JournalEntries.Add(entry);
-            await db.SaveChangesAsync(ct);
-
-            return Results.Created($"/api/v1/accounting/journal-entries/{entry.Id}", new { message = "Asiento de compra generado.", entryId = entry.Id, entryNumber = entry.EntryNumber });
-        });
+            var isCreditNote = req.InvoiceNumber.Contains("NC", StringComparison.OrdinalIgnoreCase)
+                               || req.InvoiceNumber.StartsWith("NC", StringComparison.OrdinalIgnoreCase);
+            var docType = isCreditNote ? AccountingDocumentTypes.CreditNoteA : AccountingDocumentTypes.InvoiceA;
+            var amounts = AutoPostViaGateway.InvoiceAmounts(req.NetAmount, req.VatAmount, req.TotalAmount);
+            var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var doc = new PostableDocument(
+                AccountingSourceModules.Purchases,
+                docType,
+                req.PurchaseId.ToString(),
+                req.InvoiceNumber,
+                req.Date,
+                "ARS",
+                1m,
+                "Supplier",
+                null,
+                req.SupplierName,
+                null,
+                amounts,
+                tags);
+            return await AutoPostViaGateway.EnqueueAndReportAsync(gateway, db, tenantContext.TenantId, doc, ct);
+        }).WithDescription("Obsoleto: usar IAccountingPostingGateway. Queda por compatibilidad.");
 
         group.MapPost("/auto-post/receipt", async (
             AutoPostReceiptRequest req,
             ITenantContext tenantContext,
             AccountingDbContext db,
+            IAccountingPostingGateway gateway,
             CancellationToken ct) =>
         {
-            var tenantId = tenantContext.TenantId;
-            await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
-            var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
-
-            var existing = await db.JournalEntries.FirstOrDefaultAsync(e =>
-                e.TenantId == tenantId && e.SourceModule == "Finance" && e.SourceDocumentId == req.ReceiptId.ToString(), ct);
-            if (existing != null)
+            var method = req.PaymentMethod ?? "Cash";
+            var isBank = method.Contains("transfer", StringComparison.OrdinalIgnoreCase)
+                         || method.Contains("banco", StringComparison.OrdinalIgnoreCase)
+                         || method.Contains("bank", StringComparison.OrdinalIgnoreCase);
+            var isCheque = method.Contains("check", StringComparison.OrdinalIgnoreCase)
+                           || method.Contains("cheque", StringComparison.OrdinalIgnoreCase)
+                           || method.Contains("echeq", StringComparison.OrdinalIgnoreCase);
+            var amounts = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
             {
-                return Results.Ok(new { message = "El recibo ya fue contabilizado.", entryId = existing.Id });
-            }
-
-            var accounts = await db.Accounts.Where(a => a.TenantId == tenantId).ToListAsync(ct);
-            var deudores = accounts.FirstOrDefault(a => a.Code == mapping.AccountsReceivableAccountCode) ?? accounts.First(a => a.AccountType == "Asset");
-            
-            var destCode = req.PaymentMethod?.ToLower() switch
-            {
-                "transfer" or "banco" or "bank" => mapping.BankAccountCode,
-                "check" or "cheque" or "echeq" => mapping.ChecksInHandAccountCode,
-                "mercadopago" or "mp" or "psp" => mapping.PspDigitalAccountCode,
-                _ => mapping.CashAccountCode
+                [AccountingAmountSources.Total] = req.Amount,
+                [AccountingAmountSources.PaymentAmount] = req.Amount,
+                [AccountingAmountSources.BankAmount] = isBank ? req.Amount : 0m,
+                [AccountingAmountSources.CashAmount] = (!isBank && !isCheque) ? req.Amount : 0m,
+                [AccountingAmountSources.ChequeAmount] = isCheque ? req.Amount : 0m
             };
-
-            var destAccount = accounts.FirstOrDefault(a => a.Code == destCode) ?? accounts.First(a => a.AccountType == "Asset");
-            var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
-
-            var entry = new JournalEntry
+            var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                TenantId = tenantId,
-                EntryNumber = maxNumber + 1,
-                Date = req.Date,
-                Concept = $"Cobranza Recibo {req.ReceiptNumber} - {req.CustomerName}",
-                EntryType = "Automated",
-                SourceModule = "Finance",
-                SourceDocumentId = req.ReceiptId.ToString(),
-                Status = "Posted",
-                TotalDebit = req.Amount,
-                TotalCredit = req.Amount,
-                CreatedBy = "Sistema (Auto-Posting)",
-                CreatedAtUtc = DateTime.UtcNow
+                ["PaymentMethod"] = method
             };
-
-            entry.Lines.Add(new JournalEntryLine
-            {
-                JournalEntryId = entry.Id,
-                TenantId = tenantId,
-                AccountId = destAccount.Id,
-                AccountCode = destAccount.Code,
-                AccountName = destAccount.Name,
-                Debit = req.Amount,
-                Credit = 0,
-                Memo = $"Cobranza {req.PaymentMethod ?? "Efectivo"} s/recibo {req.ReceiptNumber}"
-            });
-
-            entry.Lines.Add(new JournalEntryLine
-            {
-                JournalEntryId = entry.Id,
-                TenantId = tenantId,
-                AccountId = deudores.Id,
-                AccountCode = deudores.Code,
-                AccountName = deudores.Name,
-                Debit = 0,
-                Credit = req.Amount,
-                Memo = $"Cancelación saldo cliente {req.CustomerName}"
-            });
-
-            db.JournalEntries.Add(entry);
-            await db.SaveChangesAsync(ct);
-
-            return Results.Created($"/api/v1/accounting/journal-entries/{entry.Id}", new { message = "Asiento de cobranza generado.", entryId = entry.Id, entryNumber = entry.EntryNumber });
-        });
+            var doc = new PostableDocument(
+                AccountingSourceModules.Finance,
+                AccountingDocumentTypes.CollectionReceipt,
+                req.ReceiptId.ToString(),
+                req.ReceiptNumber,
+                req.Date,
+                "ARS",
+                1m,
+                "Customer",
+                null,
+                req.CustomerName,
+                null,
+                amounts,
+                tags);
+            return await AutoPostViaGateway.EnqueueAndReportAsync(gateway, db, tenantContext.TenantId, doc, ct);
+        }).WithDescription("Obsoleto: usar IAccountingPostingGateway. Queda por compatibilidad.");
 
         // ====================================================================
         // 8. Fase 2: Asistente de Cierre Anual & Refundición de Resultados
@@ -1235,161 +1059,98 @@ public static class AccountingEndpoints
         });
 
         // ====================================================================
-        // 11. Conciliación Bancaria Inteligente
+        // 11. Conciliación tesorería vs mayor (el extracto vive en Finanzas)
         // ====================================================================
-        group.MapGet("/bank-statements", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
-        {
-            var tenantId = tenantContext.TenantId;
-            var statements = await db.BankStatements
-                .AsNoTracking()
-                .Where(s => s.TenantId == tenantId)
-                .OrderByDescending(s => s.PeriodEndDate)
-                .ToListAsync(ct);
-            return Results.Ok(statements);
-        });
+        const string extractMovedToFinance =
+            "El extracto bancario se importa en Finanzas. Comisiones y gastos se confirman ahí (concepto COMISION) y se contabilizan por plantilla.";
 
-        group.MapGet("/bank-statements/{id:guid}", async (Guid id, ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
-        {
-            var tenantId = tenantContext.TenantId;
-            var statement = await db.BankStatements
-                .AsNoTracking()
-                .Include(s => s.Lines)
-                .FirstOrDefaultAsync(s => s.Id == id && s.TenantId == tenantId, ct);
-            if (statement == null) return Results.NotFound(new { message = "Extracto bancario no encontrado." });
-            return Results.Ok(statement);
-        });
-
-        group.MapPost("/bank-statements/upload", async (UploadBankStatementRequest req, ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
-        {
-            var tenantId = tenantContext.TenantId;
-            if (req.Lines == null || req.Lines.Count == 0)
-            {
-                return Results.BadRequest(new { message = "El extracto no contiene movimientos válidos." });
-            }
-
-            var statement = new BankStatement
-            {
-                TenantId = tenantId,
-                BankName = req.BankName ?? "Banco Galicia",
-                AccountNumber = req.AccountNumber ?? "",
-                Currency = req.Currency ?? "ARS",
-                PeriodStartDate = req.PeriodStartDate != default ? req.PeriodStartDate : req.Lines.Min(l => l.TransactionDate),
-                PeriodEndDate = req.PeriodEndDate != default ? req.PeriodEndDate : req.Lines.Max(l => l.TransactionDate),
-                InitialBalance = req.InitialBalance,
-                FinalBalance = req.FinalBalance,
-                TotalLines = req.Lines.Count,
-                ReconciledLines = 0,
-                Status = "Open",
-                CreatedAtUtc = DateTime.UtcNow
-            };
-
-            foreach (var lineReq in req.Lines)
-            {
-                statement.Lines.Add(new BankStatementLine
-                {
-                    BankStatementId = statement.Id,
-                    TenantId = tenantId,
-                    TransactionDate = lineReq.TransactionDate,
-                    Description = lineReq.Description.Trim(),
-                    ReferenceNumber = lineReq.ReferenceNumber?.Trim(),
-                    Debit = lineReq.Debit,
-                    Credit = lineReq.Credit,
-                    Balance = lineReq.Balance,
-                    IsReconciled = false
-                });
-            }
-
-            db.BankStatements.Add(statement);
-            await db.SaveChangesAsync(ct);
-
-            return Results.Created($"/api/v1/accounting/bank-statements/{statement.Id}", statement);
-        });
-
-        group.MapPost("/bank-statements/lines/{lineId:guid}/quick-post", async (
-            Guid lineId,
-            QuickPostBankFeeRequest req,
+        group.MapGet("/treasury-reconciliation", async (
             ITenantContext tenantContext,
             AccountingDbContext db,
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
+            await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
             var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
 
-            var line = await db.BankStatementLines.FirstOrDefaultAsync(l => l.Id == lineId && l.TenantId == tenantId, ct);
-            if (line == null) return Results.NotFound(new { message = "Línea no encontrada." });
-
-            var accounts = await db.Accounts.Where(a => a.TenantId == tenantId).ToListAsync(ct);
-            var banco = accounts.FirstOrDefault(a => a.Code == mapping.BankAccountCode) ?? accounts.First(a => a.AccountType == "Asset");
-            
-            var gastoAccountCode = req.FeeType switch
+            var codes = new[]
             {
-                "TaxLey25413" => mapping.BankTaxAccountCode,
-                _ => mapping.BankExpensesAccountCode
-            };
+                mapping.CashAccountCode,
+                mapping.BankAccountCode,
+                mapping.ChecksInHandAccountCode,
+                mapping.PspDigitalAccountCode
+            }.Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList();
 
-            var gastoAccount = accounts.FirstOrDefault(a => a.Code == gastoAccountCode) ?? accounts.First(a => a.AccountType == "Expense");
-            var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
-            var amount = line.Debit > 0 ? line.Debit : line.Credit;
+            var accounts = await db.Accounts.AsNoTracking()
+                .Where(a => a.TenantId == tenantId && codes.Contains(a.Code))
+                .ToListAsync(ct);
 
-            var entry = new JournalEntry
+            var lines = await db.JournalEntryLines.AsNoTracking()
+                .Where(l => l.TenantId == tenantId && codes.Contains(l.AccountCode))
+                .GroupBy(l => l.AccountCode)
+                .Select(g => new { Code = g.Key, Debit = g.Sum(x => x.Debit), Credit = g.Sum(x => x.Credit) })
+                .ToListAsync(ct);
+            var byCode = lines.ToDictionary(x => x.Code, StringComparer.OrdinalIgnoreCase);
+
+            var rows = accounts.Select(a =>
             {
-                TenantId = tenantId,
-                EntryNumber = maxNumber + 1,
-                Date = line.TransactionDate,
-                Concept = $"Gasto Bancario Extracto: {line.Description}",
-                EntryType = "Automated",
-                SourceModule = "Finance",
-                SourceDocumentId = line.Id.ToString(),
-                Status = "Posted",
-                TotalDebit = amount,
-                TotalCredit = amount,
-                CreatedBy = "Sistema (Conciliación)",
-                CreatedAtUtc = DateTime.UtcNow
-            };
+                byCode.TryGetValue(a.Code, out var mov);
+                var debit = mov?.Debit ?? 0;
+                var credit = mov?.Credit ?? 0;
+                var ledgerBalance = a.AccountType is "Asset" or "Expense" ? debit - credit : credit - debit;
+                return new
+                {
+                    a.Code,
+                    a.Name,
+                    a.AccountType,
+                    a.Currency,
+                    LedgerDebit = debit,
+                    LedgerCredit = credit,
+                    LedgerBalance = ledgerBalance,
+                    Role = a.Code == mapping.CashAccountCode ? "Cash"
+                        : a.Code == mapping.BankAccountCode ? "Bank"
+                        : a.Code == mapping.ChecksInHandAccountCode ? "ChecksInHand"
+                        : a.Code == mapping.PspDigitalAccountCode ? "Psp" : "Other"
+                };
+            }).OrderBy(r => r.Code).ToList();
 
-            entry.Lines.Add(new JournalEntryLine
+            return Results.Ok(new
             {
-                JournalEntryId = entry.Id,
-                TenantId = tenantId,
-                AccountId = gastoAccount.Id,
-                AccountCode = gastoAccount.Code,
-                AccountName = gastoAccount.Name,
-                Debit = amount,
-                Credit = 0,
-                Memo = line.Description
+                message = extractMovedToFinance,
+                financeReconciliationPath = "/finanzas/conciliacion",
+                rows
             });
+        });
 
-            entry.Lines.Add(new JournalEntryLine
-            {
-                JournalEntryId = entry.Id,
-                TenantId = tenantId,
-                AccountId = banco.Id,
-                AccountCode = banco.Code,
-                AccountName = banco.Name,
-                Debit = 0,
-                Credit = amount,
-                Memo = $"Débito bancario {line.Description}"
-            });
+        group.MapGet("/bank-statements", () =>
+            Results.Json(new { message = extractMovedToFinance }, statusCode: 410));
 
-            db.JournalEntries.Add(entry);
-            line.IsReconciled = true;
-            line.MatchedJournalEntryId = entry.Id;
-            line.MatchType = "AutoPosted";
-            line.MatchNotes = $"Asiento automático Nº {entry.EntryNumber}";
+        group.MapGet("/bank-statements/{id:guid}", (Guid id) =>
+        {
+            _ = id;
+            return Results.Json(new { message = extractMovedToFinance }, statusCode: 410);
+        });
 
-            var stmt = await db.BankStatements.FirstOrDefaultAsync(s => s.Id == line.BankStatementId, ct);
-            if (stmt != null)
-            {
-                stmt.ReconciledLines = await db.BankStatementLines.CountAsync(l => l.BankStatementId == stmt.Id && l.IsReconciled, ct) + 1;
-            }
+        group.MapPost("/bank-statements/upload", () =>
+            Results.Json(new { message = extractMovedToFinance }, statusCode: 410));
 
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(new { message = "Gasto registrado y conciliado con éxito.", entryId = entry.Id });
+        group.MapPost("/bank-statements/{id:guid}/auto-match", (Guid id) =>
+        {
+            _ = id;
+            return Results.Json(new { message = extractMovedToFinance }, statusCode: 410);
+        });
+
+        group.MapPost("/bank-statements/lines/{lineId:guid}/quick-post", (Guid lineId) =>
+        {
+            _ = lineId;
+            return Results.Json(new { message = extractMovedToFinance + " Confirmá el concepto COMISION en Finanzas." }, statusCode: 410);
         });
 
         // ====================================================================
         // 12. Period Lock & ARCA Digital VAT
         // ====================================================================
+
         group.MapGet("/periods", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
@@ -1863,38 +1624,30 @@ public static class AccountingEndpoints
             return Results.Ok(rows);
         });
 
-        group.MapPost("/batch-post/preview", (
+        group.MapPost("/batch-post/preview", async (
             BatchPostingPreviewRequest req,
-            ITenantContext tenantContext) =>
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            CancellationToken ct) =>
         {
-            _ = tenantContext;
-            _ = req;
-
-            return Results.Ok(new BatchPostingPreviewResponse(
-                0,
-                0,
-                0,
-                0,
-                0,
-                true,
-                [],
-                [],
-                [BatchPostingDisabledMessage],
-                []
-            ));
+            var tenantId = tenantContext.TenantId;
+            var result = await BatchPostProcessor.PreviewAsync(req, tenantId, db, ct);
+            return Results.Ok(result);
         });
 
-        group.MapPost("/batch-post/execute", (
+        group.MapPost("/batch-post/execute", async (
             BatchPostingExecuteRequest req,
-            ITenantContext tenantContext) =>
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
         {
-            _ = tenantContext;
-            _ = req;
-
-            return Results.Conflict(new
-            {
-                message = BatchPostingDisabledMessage
-            });
+            var tenantId = tenantContext.TenantId;
+            var logger = loggerFactory.CreateLogger("BatchPostExecute");
+            var result = await BatchPostProcessor.ExecuteAsync(req, tenantId, db, logger, ct);
+            if (result.Status == "Failed")
+                return Results.Conflict(result);
+            return Results.Ok(result);
         });
 
         group.MapGet("/batch-runs", async (
@@ -1922,18 +1675,7 @@ public static class AccountingEndpoints
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
-            var run = await db.BatchRuns.FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId, ct);
-            if (run == null) return Results.NotFound(new { message = "Lote de contabilización no encontrado." });
-
-            if (run.Status == "Reverted")
-            {
-                return Results.BadRequest(new { message = "Este lote ya ha sido revertido previamente." });
-            }
-
-            run.Status = "Reverted";
-            await db.SaveChangesAsync(ct);
-
-            return Results.Ok(new { message = $"Lote {run.BatchNumber} revertido correctamente." });
+            return await BatchPostProcessor.RevertAsync(id, tenantId, db, ct);
         });
 
         return endpoints;
@@ -1946,6 +1688,8 @@ public sealed record CreateJournalEntryRequest(DateTime Date, string Concept, st
 public sealed record JournalEntryLineRequest(Guid AccountId, string AccountCode, string AccountName, decimal Debit, decimal Credit, string? Currency, decimal ExchangeRate, Guid? CostCenterId, string? CostCenterCode, string? CostCenterName, string? Memo);
 public sealed record CreateCostCenterRequest(string Code, string Name, string? Category);
 public sealed record LockPeriodRequest(int Year, int Month, bool Lock, string? User);
+public sealed record UpdateAccountingSettingsRequest(bool AutoPostOnConfirm);
+public sealed record FinanceAccountMappingItemRequest(Guid FinancialAccountId, string LedgerAccountCode);
 public sealed record AutoPostInvoiceRequest(Guid InvoiceId, string InvoiceNumber, string CustomerName, DateTime Date, decimal NetAmount, decimal VatAmount, decimal TotalAmount);
 public sealed record AutoPostPurchaseRequest(Guid PurchaseId, string InvoiceNumber, string SupplierName, DateTime Date, decimal NetAmount, decimal VatAmount, decimal TotalAmount);
 public sealed record AutoPostReceiptRequest(Guid ReceiptId, string ReceiptNumber, string CustomerName, DateTime Date, decimal Amount, string? PaymentMethod);

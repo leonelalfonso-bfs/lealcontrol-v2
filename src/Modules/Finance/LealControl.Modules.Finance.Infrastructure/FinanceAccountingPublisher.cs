@@ -89,6 +89,9 @@ internal static class FinanceAccountingPublisher
             {
                 ["Currency"] = order.Currency
             };
+            var payAccountId = lines.FirstOrDefault(l => l.AccountId.HasValue && l.AccountId.Value != Guid.Empty)?.AccountId;
+            if (payAccountId.HasValue)
+                tags["FinancialAccountId"] = payAccountId.Value.ToString();
 
             string? templateHint = null;
             var conceptIds = lines.Where(l => l.ConceptId.HasValue).Select(l => l.ConceptId!.Value).Distinct().ToList();

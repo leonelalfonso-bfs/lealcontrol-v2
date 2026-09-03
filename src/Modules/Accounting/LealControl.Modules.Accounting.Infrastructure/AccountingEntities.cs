@@ -259,6 +259,38 @@ public static class AccountingPendingDocumentStatuses
 }
 
 /// <summary>
+/// Settings por tenant para el módulo Accounting.
+/// </summary>
+public sealed class AccountingTenantSettings : Entity<Guid>
+{
+    public TenantId TenantId { get; set; }
+
+    public bool AutoPostOnConfirm { get; set; } = false;
+
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public AccountingTenantSettings() : base(Guid.NewGuid()) { }
+    public AccountingTenantSettings(TenantId tenantId) : base(Guid.NewGuid())
+    {
+        TenantId = tenantId;
+        AutoPostOnConfirm = false;
+        CreatedAtUtc = DateTime.UtcNow;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+}
+
+public sealed class AccountingFinanceAccountMapping : Entity<Guid>
+{
+    public TenantId TenantId { get; set; }
+    public Guid FinancialAccountId { get; set; }
+    public string LedgerAccountCode { get; set; } = string.Empty;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public AccountingFinanceAccountMapping() : base(Guid.NewGuid()) { }
+}
+
+/// <summary>
 /// Cola de documentos publicados por Sales/Finance vía IAccountingPostingGateway.
 /// Contabilidad nunca lee sales.* / finance.* por SQL cruzado.
 /// </summary>

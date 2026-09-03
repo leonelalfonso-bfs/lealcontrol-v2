@@ -18,7 +18,7 @@ Documentos relacionados:
 | 1 | Cerrar agujeros de seguridad | 6 | 6/6 | 0/6 | ✅ Código en `a364601` — validar staging |
 | 2 | Deploy y backups confiables | 6 | 6/6 | 6/6 | ✅ Verificado staging 02/09/2026 — smoke 10/10 Healthy |
 | 3 | Circuito financiero completo | 14 | 14/14 | 1/14 | ◐ API A+B OK staging — UI manual + **F-T1** pendiente |
-| 4 | Contabilidad desde asientos modelo | 9 | 2/9 | 0/9 | ◐ 4.1+4.2 en curso |
+| 4 | Contabilidad desde asientos modelo | 9 | 9/9 | 0/9 | ◐ Código 4.1–4.9 listo — verificar staging |
 | 5 | Red de tests del circuito del dinero | 6 | 0/6 | 0/6 | ☐ |
 | 6 | Deuda técnica | 8 | 0/8 | 0/8 | ☐ |
 
@@ -261,28 +261,30 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 - [ ] Tests unitarios del motor con 10 casos (factura A, NC, recibo transferencia, recibo con cheque + retención, OP con cheque propio, comisión bancaria, transferencia interna, anticipo, diferencia de cambio, sueldos).
 
 ### 4.4 Selección de plantilla
-- [ ] Orden: (1) `FinancialConcept.JournalTemplateCode` si el documento lo trae; (2) plantilla con `SourceModule` + `DocumentType` exactos; (3) plantilla `SourceModule` + `All`. Si ninguna, documento queda `Pending` con warning "sin modelo".
+- [x] `JournalTemplateSelector.Select(PostableDocument, templates)` — prioridad: (1) `TemplateHint` (código exacto); (2) `SourceModule` + `DocumentType` exactos; (3) `SourceModule` + `All`. Sin match → warning "sin modelo".
+- [x] Variante async `SelectAsync(...)` que carga templates activos desde DB.
 - [ ] `JournalTemplate.DocumentType` amplía a `CollectionReceipt`, `PaymentOrder`, `BankMovement`, `ChequeDeposit`, `ChequeReject`, `InternalTransfer`.
 
 ### 4.5 Batch-post real
-- [ ] `POST /batch-post/preview` renderiza los pendientes del período con el motor y devuelve el asiento propuesto por documento, con warnings reales.
-- [ ] `POST /batch-post/execute` graba los asientos renderizados, marca `pending_documents.Posted`, crea `AccountingBatchRun` con el detalle. Respeta período cerrado.
-- [ ] `POST /batch-runs/{id}/revert` revierte los asientos y devuelve los documentos a `Pending`.
+- [x] `POST /batch-post/preview` — `BatchPostProcessor.PreviewAsync`: renderiza pendientes con motor + selector, devuelve asiento por documento, warnings y unmapped.
+- [x] `POST /batch-post/execute` — `BatchPostProcessor.ExecuteAsync`: graba asientos, marca `Posted`, crea `AccountingBatchRun`. Valida período cerrado. Errores → `Error` sin bloquear el lote.
+- [x] `POST /batch-runs/{id}/revert` — `BatchPostProcessor.RevertAsync`: elimina asientos del lote, devuelve documentos a `Pending`.
 
 ### 4.6 Auto-post opcional al confirmar
-- [ ] Setting por tenant `accounting.auto_post_on_confirm` (bool). Si está activo, el gateway renderiza y graba en el momento; si no, sólo encola para el lote.
-- [ ] `auto-post/invoice|purchase|receipt` se reescriben para pasar por el motor con plantilla, no por códigos fijos. Los endpoints quedan como compatibilidad y se marcan `[Obsolete]`.
+- [x] Setting por tenant `accounting.auto_post_on_confirm` (bool). Si está activo, el gateway renderiza y graba en el momento; si no, sólo encola para el lote. `GET/PUT /api/v1/accounting/settings`.
+- [x] `auto-post/invoice|purchase|receipt` publican vía `IAccountingPostingGateway` (plantillas). Compatibilidad; respuesta marca `obsolete`.
 
 ### 4.7 Un solo extracto
-- [ ] Eliminar `POST /accounting/bank-statements/upload` y las tablas `BankStatement`/`BankStatementLine` (migración con backup previo).
-- [ ] `BankReconciliationPage.tsx` pasa a ser **conciliación contable**: compara saldo mayor de la cuenta contable del banco vs saldo de la `FinancialAccount` (vía `PostableDocument` de tipo `BalanceSnapshot` o consulta al gateway inverso). Las comisiones y gastos ya vienen de Finanzas como movimientos `MovementOnly` con concepto.
-- [ ] `quick-post` de gastos bancarios se reemplaza por: confirmar concepto `COMISION` en Finanzas → encola documento `BankMovement` → plantilla de comisión.
+- [x] `POST /accounting/bank-statements/upload` y `quick-post` responden 410: el extracto vive en Finanzas. Tablas `BankStatement*` se conservan (sin writes) hasta backup operativo.
+- [x] `BankReconciliationPage.tsx` muestra saldo de mayor (caja/banco/cheques/PSP) vía `GET /treasury-reconciliation` y enlaza a `/finanzas/conciliacion`.
+- [x] Gastos bancarios: confirmar concepto `COMISION` en Finanzas → documento pendiente → plantilla (no quick-post en Contabilidad).
 
 ### 4.8 Mapeo cuenta financiera → cuenta contable
-- [ ] Tabla `accounting.finance_account_mapping` (tenant, `FinancialAccountId`, `LedgerAccountCode`). UI en Contabilidad → Configuración. Si falta un mapeo, el documento queda `Error` con mensaje claro.
+- [x] Tabla `accounting.finance_account_mapping` + `GET/PUT /finance-account-mappings`. UI en Plan de Cuentas.
+- [x] Al renderizar tesorería, si el documento trae `FinancialAccountId` y no hay mapeo → Error claro. Si hay mapeo, sustituye las líneas PaymentAmount/Bank/Caja/Cheque.
 
 ### 4.9 Revertir al anular
-- [ ] `IAccountingPostingGateway.ReverseAsync` genera contra-asiento con `EntryType = Reversal` y referencia al original. Lo llama Finance al anular recibo/OP y Sales al anular factura.
+- [x] `ReverseAsync`: pendientes/Error → Skipped. Posted → contra-asiento `EntryType=Reversal` (debe/haber invertidos). Respeta período cerrado. Idempotente si ya hay reversión.
 
 **Verificado bloque 4:** ____ / ____
 
