@@ -420,7 +420,7 @@ public sealed class AccountingDbContext : DbContext
                 ""SourceDocumentId"" character varying(128) NOT NULL,
                 ""DocumentNumber"" character varying(64) NOT NULL,
                 ""DocumentDateUtc"" timestamp with time zone NOT NULL,
-                ""PayloadJson"" text NOT NULL DEFAULT '{}',
+                ""PayloadJson"" text NOT NULL DEFAULT '{{}}',
                 ""Status"" character varying(32) NOT NULL DEFAULT 'Pending',
                 ""LastError"" character varying(1000),
                 ""JournalEntryId"" uuid,

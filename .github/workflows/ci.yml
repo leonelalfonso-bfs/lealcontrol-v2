@@ -3,12 +3,12 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [staging, main]
+    branches: [staging, main, "staging/**"]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -22,10 +22,21 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Restore and test
+      - name: Restore and test with coverage
         run: |
           dotnet restore
-          dotnet test --no-restore --configuration Release
+          dotnet test --no-restore --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results
+          path: TestResults/**/coverage.cobertura.xml
+          if-no-files-found: warn
 
       - name: Frontend build
         working-directory: frontend

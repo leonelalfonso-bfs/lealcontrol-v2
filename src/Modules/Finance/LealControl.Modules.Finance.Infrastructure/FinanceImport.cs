@@ -31,7 +31,7 @@ public static class FinanceImport
             if (account is null)
                 return Results.NotFound("Cuenta financiera inexistente.");
 
-            var fileHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.CsvContent))).ToLowerInvariant();
+            var fileHash = ComputeFileHash(request.CsvContent);
             var priorImport = await db.BankStatementImports.AsNoTracking()
                 .Where(x => x.TenantId == tenantId && x.AccountId == request.AccountId && x.FileHash == fileHash)
                 .Select(x => new { x.CreatedAtUtc })
@@ -438,7 +438,8 @@ public static class FinanceImport
     private static string MovementFingerprint(FinancialMovement movement) =>
         BuildFingerprint(movement.AccountId, movement.OperationDateUtc.Date, movement.Amount, movement.Kind, movement.ExternalReference, movement.Description);
 
-    private static string BuildFingerprint(
+    /// <summary>Huella estable para deduplicar filas de extracto (tests + importación).</summary>
+    public static string BuildFingerprint(
         Guid accountId,
         DateTime date,
         decimal amount,
@@ -450,6 +451,9 @@ public static class FinanceImport
         var descriptionHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(description.Trim().ToLowerInvariant())))[..16];
         return $"{accountId:N}|{date:yyyy-MM-dd}|{amount}|{(int)kind}|{reference}|{descriptionHash}";
     }
+
+    public static string ComputeFileHash(string csvContent) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(csvContent))).ToLowerInvariant();
 
     private static string NormalizeReference(string? reference) =>
         string.IsNullOrWhiteSpace(reference) ? "" : reference.Trim().ToUpperInvariant();

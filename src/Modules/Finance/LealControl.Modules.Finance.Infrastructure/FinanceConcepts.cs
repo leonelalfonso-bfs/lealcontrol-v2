@@ -154,7 +154,7 @@ public static class FinanceConcepts
                                  && (rule.MovementKind == null || rule.MovementKind == movement.Kind)
                            orderby rule.Priority, rule.CreatedAtUtc
                            select new { rule, concept }).ToListAsync(ct);
-        var match = rules.FirstOrDefault(x => RuleMatches(movement, x.rule));
+        var match = rules.FirstOrDefault(x => FinanceConceptMatching.RuleMatches(movement, x.rule));
         if (match is null)
         {
             movement.ClassificationStatus = FinancialClassificationStatus.PendingIdentification;
@@ -169,32 +169,6 @@ public static class FinanceConcepts
             movement.SuggestedCounterpartyId = match.rule.SuggestedCounterpartyId;
             movement.SuggestedCounterpartyType = match.rule.SuggestedCounterpartyType;
         }
-    }
-
-    private static bool RuleMatches(FinancialMovement movement, FinancialConceptRule rule)
-    {
-        if (rule.AmountMin.HasValue && movement.Amount < rule.AmountMin.Value) return false;
-        if (rule.AmountMax.HasValue && movement.Amount > rule.AmountMax.Value) return false;
-        if (!string.IsNullOrWhiteSpace(rule.CuitPattern))
-        {
-            var cuit = FinanceCounterpartyLookup.ExtractCuit(movement.Description);
-            if (cuit is null || !cuit.StartsWith(rule.CuitPattern.Trim().Replace("-", ""), StringComparison.Ordinal)) return false;
-        }
-        return Matches(movement.Description, rule.Pattern, rule.MatchMode);
-    }
-
-    private static bool Matches(string source, string pattern, string mode)
-    {
-        if (string.IsNullOrWhiteSpace(pattern)) return false;
-        var text = source.Trim(); var expected = pattern.Trim();
-        return mode.Trim().ToUpperInvariant() switch
-        {
-            "REGEX" => System.Text.RegularExpressions.Regex.IsMatch(text, expected, System.Text.RegularExpressions.RegexOptions.IgnoreCase),
-            "STARTSWITH" => text.StartsWith(expected, StringComparison.OrdinalIgnoreCase),
-            "ENDSWITH" => text.EndsWith(expected, StringComparison.OrdinalIgnoreCase),
-            "EXACT" => string.Equals(text, expected, StringComparison.OrdinalIgnoreCase),
-            _ => text.Contains(expected, StringComparison.OrdinalIgnoreCase)
-        };
     }
 
     public static IEndpointRouteBuilder MapFinanceConceptEndpoints(this IEndpointRouteBuilder endpoints)

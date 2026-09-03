@@ -127,7 +127,7 @@ public static class JournalTemplateEngine
 
         if (c.StartsWith("IfHas", StringComparison.OrdinalIgnoreCase))
         {
-            var key = c[4..]; // after "IfHas"
+            var key = c["IfHas".Length..];
             // Normalización de plural/singular
             if (string.Equals(key, "Withholding", StringComparison.OrdinalIgnoreCase))
                 key = AccountingAmountSources.Withholdings;

@@ -1,24 +1,24 @@
-﻿using System;
-using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Threading.Tasks;
-using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Crm.Infrastructure.Http;
+using LealControl.Modules.Finance.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Testcontainers.PostgreSql;
 using Xunit;
 
-namespace LealControl.QA.Infrastructure;
+namespace LealControl.Modules.Finance.Tests;
 
-public sealed class QaWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
+public sealed class FinanceWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public static readonly Guid DemoTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
         .WithImage("postgres:16-alpine")
-        .WithDatabase("lealcontrol_qa_test")
-        .WithUsername("leal_qa")
-        .WithPassword("leal_qa_pass")
+        .WithDatabase("lealcontrol_finance_tests")
+        .WithUsername("leal")
+        .WithPassword("leal")
         .Build();
 
     public string ConnectionString => _postgres.GetConnectionString();
@@ -26,15 +26,9 @@ public sealed class QaWebApplicationFactory : WebApplicationFactory<Program>, IA
     public async Task InitializeAsync()
     {
         await _postgres.StartAsync();
-
-        // Security Guard verification
-        QaSecurityGuard.AssertExecutionPermitted("Development", ConnectionString);
-
-        // Pre-create database schemas required by Leal Control modules
         await using var conn = new NpgsqlConnection(ConnectionString);
         await conn.OpenAsync();
-        var schemas = new[] { "crm", "sales", "purchases", "finance", "accounting", "metrology", "fleet", "hr", "directory" };
-        foreach (var schema in schemas)
+        foreach (var schema in new[] { "crm", "sales", "purchases", "finance", "accounting", "metrology", "fleet", "hr", "directory" })
         {
             await using var cmd = new NpgsqlCommand($"CREATE SCHEMA IF NOT EXISTS {schema};", conn);
             await cmd.ExecuteNonQueryAsync();
@@ -51,20 +45,36 @@ public sealed class QaWebApplicationFactory : WebApplicationFactory<Program>, IA
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("ConnectionStrings:Database", ConnectionString);
-        builder.UseSetting("QA_TEST_CENTER_ENABLED", "true");
         builder.UseSetting("Jwt:Secret", "DevOnly_LealControl_Local_JWT_Key_Not_For_Production_Use_32b!");
         builder.UseSetting("Jwt:Issuer", "lealcontrol");
         builder.UseSetting("Jwt:Audience", "lealcontrol-web");
         builder.UseSetting("Jwt:LifetimeHours", "8");
     }
 
-    public HttpClient CreateAuthenticatedClient(Guid tenantId, Guid userId, string role = "Admin", string name = "QA Admin")
+    public HttpClient CreateAuthenticatedClient(Guid? tenantId = null, string role = "Admin")
     {
         var client = CreateClient();
+        var tid = tenantId ?? DemoTenantId;
         var modules = """["sales","crm","purchases","inventory","finance","fleet","hr","grains","accounting"]""";
-        var token = SimpleJwt.CreateToken(userId, "qa@lealcontrol.com", name, role, tenantId, "Empresa QA S.A.", modules);
+        var token = SimpleJwt.CreateToken(Guid.NewGuid(), "finance-it@lealcontrol.com", "Finance IT", role, tid, "Empresa Test", modules);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId.ToString());
+        client.DefaultRequestHeaders.Add("X-Tenant-Id", tid.ToString());
         return client;
+    }
+
+    public async Task<T> WithDbAsync<T>(Func<FinanceDbContext, Task<T>> action)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
+        await db.EnsureFinanceTablesAsync();
+        return await action(db);
+    }
+
+    public async Task WithDbAsync(Func<FinanceDbContext, Task> action)
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
+        await db.EnsureFinanceTablesAsync();
+        await action(db);
     }
 }

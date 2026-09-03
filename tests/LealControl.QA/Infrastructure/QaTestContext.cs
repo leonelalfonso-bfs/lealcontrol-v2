@@ -20,7 +20,7 @@ public sealed class QaTestContext : IAsyncDisposable
         Guid? userId = null,
         QaRun? run = null)
     {
-        TenantId = tenantId ?? new TenantId(Guid.NewGuid());
+        TenantId = tenantId ?? new TenantId(Guid.Parse("11111111-1111-1111-1111-111111111111"));
         UserId = userId ?? Guid.NewGuid();
         Run = run ?? new QaRun();
         HttpClient = factory.CreateAuthenticatedClient(TenantId.Value, UserId);

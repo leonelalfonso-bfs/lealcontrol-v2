@@ -67,6 +67,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LealControl.QA", "tests\Lea
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LealControl.Modules.Accounting.Contracts", "src\Modules\Accounting\LealControl.Modules.Accounting.Contracts\LealControl.Modules.Accounting.Contracts.csproj", "{51FF071C-CEDA-47D8-B805-B208D4672689}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LealControl.Modules.Finance.Tests", "tests\LealControl.Modules.Finance.Tests\LealControl.Modules.Finance.Tests.csproj", "{44DAC486-A457-46E8-83ED-E6D85D16CDE9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LealControl.Modules.Accounting.Tests", "tests\LealControl.Modules.Accounting.Tests\LealControl.Modules.Accounting.Tests.csproj", "{00BDCEEE-633A-4FAB-86A2-3C3B15518484}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -153,6 +157,14 @@ Global
 		{51FF071C-CEDA-47D8-B805-B208D4672689}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{51FF071C-CEDA-47D8-B805-B208D4672689}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{51FF071C-CEDA-47D8-B805-B208D4672689}.Release|Any CPU.Build.0 = Release|Any CPU
+		{44DAC486-A457-46E8-83ED-E6D85D16CDE9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{44DAC486-A457-46E8-83ED-E6D85D16CDE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{44DAC486-A457-46E8-83ED-E6D85D16CDE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{44DAC486-A457-46E8-83ED-E6D85D16CDE9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{00BDCEEE-633A-4FAB-86A2-3C3B15518484}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{00BDCEEE-633A-4FAB-86A2-3C3B15518484}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00BDCEEE-633A-4FAB-86A2-3C3B15518484}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{00BDCEEE-633A-4FAB-86A2-3C3B15518484}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -188,5 +200,7 @@ Global
 		{6AC0145E-9CD7-48BA-B31D-3001DF0E5218} = {715FE001-22E0-4BDA-986F-18FA7763E4CA}
 		{9C158655-35B3-4EFF-A31D-172ACEB75388} = {A6666666-6666-6666-6666-666666666666}
 		{51FF071C-CEDA-47D8-B805-B208D4672689} = {6FB06DB8-5C6F-4271-B3AD-ED0E40C8FFFF}
+		{44DAC486-A457-46E8-83ED-E6D85D16CDE9} = {A6666666-6666-6666-6666-666666666666}
+		{00BDCEEE-633A-4FAB-86A2-3C3B15518484} = {A6666666-6666-6666-6666-666666666666}
 	EndGlobalSection
 EndGlobal

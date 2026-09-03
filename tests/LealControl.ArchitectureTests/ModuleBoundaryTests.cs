@@ -107,6 +107,53 @@ public sealed class ModuleBoundaryTests
         result.IsSuccessful.Should().BeTrue(Format(result));
     }
 
+    [Fact]
+    public void Finance_infrastructure_does_not_reference_Accounting_Infrastructure()
+    {
+        var result = Types.InAssembly(typeof(LealControl.Modules.Finance.Infrastructure.FinanceDbContext).Assembly)
+            .ShouldNot()
+            .HaveDependencyOn("LealControl.Modules.Accounting.Infrastructure")
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(Format(result));
+    }
+
+    [Fact]
+    public void Accounting_Infrastructure_does_not_reference_Finance_or_Sales()
+    {
+        var result = Types.InAssembly(typeof(LealControl.Modules.Accounting.Infrastructure.AccountingDbContext).Assembly)
+            .ShouldNot()
+            .HaveDependencyOnAny(
+                "LealControl.Modules.Finance.Infrastructure",
+                "LealControl.Modules.Sales.Infrastructure",
+                "LealControl.Modules.Sales.Application",
+                "LealControl.Modules.Sales.Domain")
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(Format(result));
+    }
+
+    [Fact]
+    public void Finance_and_Accounting_may_only_share_Accounting_Contracts()
+    {
+        var financeRefs = typeof(LealControl.Modules.Finance.Infrastructure.FinanceDbContext).Assembly
+            .GetReferencedAssemblies()
+            .Select(a => a.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        financeRefs.Should().Contain("LealControl.Modules.Accounting.Contracts");
+        financeRefs.Should().NotContain("LealControl.Modules.Accounting.Infrastructure");
+
+        var accountingRefs = typeof(LealControl.Modules.Accounting.Infrastructure.AccountingDbContext).Assembly
+            .GetReferencedAssemblies()
+            .Select(a => a.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        accountingRefs.Should().Contain("LealControl.Modules.Accounting.Contracts");
+        accountingRefs.Should().NotContain("LealControl.Modules.Finance.Infrastructure");
+        accountingRefs.Should().NotContain("LealControl.Modules.Sales.Infrastructure");
+    }
+
     private static string Format(TestResult result) =>
         result.IsSuccessful
             ? string.Empty

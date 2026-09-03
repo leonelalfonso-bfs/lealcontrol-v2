@@ -5,4 +5,7 @@
     <ProjectReference Include="..\..\..\BuildingBlocks\LealControl.BuildingBlocks\LealControl.BuildingBlocks.csproj" />
     <ProjectReference Include="..\..\Accounting\LealControl.Modules.Accounting.Contracts\LealControl.Modules.Accounting.Contracts.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="LealControl.Modules.Finance.Tests" />
+  </ItemGroup>
 </Project>

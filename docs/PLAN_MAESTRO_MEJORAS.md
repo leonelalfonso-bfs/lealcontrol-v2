@@ -292,14 +292,14 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 
 ## Bloque 5 — Red de tests del circuito del dinero
 
-- [ ] 5.1 Proyecto `tests/LealControl.Modules.Finance.Tests` con Testcontainers: importación (dedup, saldo, hash), reglas (cada `MatchMode`, CUIT, rango), validador de vínculo, anulación, ciclo de cheque recibido y emitido.
-- [ ] 5.2 Proyecto `tests/LealControl.Modules.Accounting.Tests`: motor de plantillas (los 10 casos de 4.3), selección de plantilla, batch-post real, revert.
-- [ ] 5.3 Escenario QA `QaFinance001_ExtractToReceiptToLedger`: importar extracto → confirmar → recibo → contabilizar → auditor verifica banco, deudores y partida doble.
-- [ ] 5.4 Escenario QA `QaFinance002_ChequeReceivedDepositedRejected`.
-- [ ] 5.5 `ArchitectureTests`: Finance no referencia Accounting.Infrastructure; Accounting.Infrastructure no referencia Finance ni Sales. Sólo `Contracts`.
-- [ ] 5.6 CI corre los nuevos proyectos y publica cobertura (coverlet ya está en `Directory.Packages.props`).
+- [x] 5.1 Proyecto `tests/LealControl.Modules.Finance.Tests` con Testcontainers: importación (dedup, saldo, hash), reglas (cada `MatchMode`, CUIT, rango), validador de vínculo, anulación, ciclo de cheque recibido y emitido.
+- [x] 5.2 Proyecto `tests/LealControl.Modules.Accounting.Tests`: motor de plantillas (los 10 casos de 4.3), selección de plantilla, batch-post real, revert.
+- [x] 5.3 Escenario QA `QaFinance001_ExtractToReceiptToLedger`: importar extracto → confirmar → recibo → contabilizar → auditor verifica banco, deudores y partida doble.
+- [x] 5.4 Escenario QA `QaFinance002_ChequeReceivedDepositedRejected`.
+- [x] 5.5 `ArchitectureTests`: Finance no referencia Accounting.Infrastructure; Accounting.Infrastructure no referencia Finance ni Sales. Sólo `Contracts`.
+- [x] 5.6 CI corre los nuevos proyectos y publica cobertura (coverlet ya está en `Directory.Packages.props`).
 
-**Verificado bloque 5:** ____ / ____
+**Verificado bloque 5:** 03/09/2026 — Finance.Tests 22/22, Accounting.Tests 15/15, Arch 3/3, QA-FIN-001/002 2/2.
 
 ---
 
@@ -332,3 +332,4 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 | 02/09/2026 | 3.1 UI A-V8 | `b1e7ea2` | ✅ staging | Movimiento conciliado: badge + no reclasificar |
 | 02/09/2026 | Deploy fixes | `cd217c6`–`e2dec51` | ✅ staging | Docker build OK, web+api healthy |
 | 02/09/2026 | 3.1, 3.3–3.14 | `fcb1e9b` | ◐ staging | Código completo; UI manual + **F-T1** pendiente |
+| 03/09/2026 | 5.1–5.6 red de tests | — | pendiente CI | Finance.Tests + Accounting.Tests + QA-FIN-001/002 + arch + coverlet |

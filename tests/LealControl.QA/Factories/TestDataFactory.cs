@@ -199,6 +199,7 @@ public static class TestDataFactory
     public static async Task<CreatedFinancialAccount> CreateCashAccountAsync(QaTestContext context, string? name = null)
     {
         var financeDb = context.GetService<FinanceDbContext>();
+        await financeDb.EnsureFinanceTablesAsync();
         var tenantId = context.TenantId.Value;
 
         var accName = name ?? "Caja Central QA Efectivo";
@@ -224,6 +225,33 @@ public static class TestDataFactory
         financeDb.Accounts.Add(account);
         await financeDb.SaveChangesAsync();
 
+        return new CreatedFinancialAccount(accId, accName, "ARS");
+    }
+
+    public static async Task<CreatedFinancialAccount> CreateBankAccountAsync(QaTestContext context, string? name = null)
+    {
+        var financeDb = context.GetService<FinanceDbContext>();
+        await financeDb.EnsureFinanceTablesAsync();
+        var tenantId = context.TenantId.Value;
+
+        var accName = name ?? "Banco Galicia QA";
+        var existing = await financeDb.Accounts.FirstOrDefaultAsync(a => a.TenantId == tenantId && a.Name == accName);
+        if (existing != null)
+            return new CreatedFinancialAccount(existing.Id, existing.Name, existing.Currency);
+
+        var accId = Guid.NewGuid();
+        financeDb.Accounts.Add(new FinancialAccount
+        {
+            Id = accId,
+            TenantId = tenantId,
+            Name = accName,
+            Currency = "ARS",
+            Type = FinancialAccountType.Bank,
+            OpeningBalance = 0m,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        await financeDb.SaveChangesAsync();
         return new CreatedFinancialAccount(accId, accName, "ARS");
     }
 
