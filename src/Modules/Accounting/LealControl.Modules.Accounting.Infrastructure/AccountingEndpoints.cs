@@ -1789,88 +1789,21 @@ public static class AccountingEndpoints
         group.MapGet("/batch-post/pending-summary", async (
             ITenantContext tenantContext,
             AccountingDbContext db,
-            ILogger<AccountingDbContext> logger,
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
             await db.EnsureAccountingTablesAsync(ct);
 
-            var postedDocIds = await db.JournalEntries
-                .AsNoTracking()
-                .Where(j => j.TenantId == tenantId && j.SourceDocumentId != null)
-                .Select(j => j.SourceDocumentId!)
+            var pending = await db.PendingDocuments.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.Status == AccountingPendingDocumentStatuses.Pending)
+                .GroupBy(x => x.SourceModule)
+                .Select(g => new { Module = g.Key, Count = g.Count() })
                 .ToListAsync(ct);
 
-            var postedSet = new HashSet<string>(postedDocIds, StringComparer.OrdinalIgnoreCase);
-
-            int salesPending = 0;
-            int purchasesPending = 0;
-            int financePending = 0;
-            const int inventoryPending = 0;
-
-            try
-            {
-                var conn = db.Database.GetDbConnection();
-                var closeWhenDone = false;
-                if (conn.State != System.Data.ConnectionState.Open)
-                {
-                    await conn.OpenAsync(ct);
-                    closeWhenDone = true;
-                }
-
-                try
-                {
-                    await using var cmd = conn.CreateCommand();
-                    cmd.CommandText = """
-                        SELECT 'Sales' as mod, COUNT(*)::int as cnt FROM sales.invoices
-                        WHERE "TenantId" = @tId AND "Status" NOT IN ('Cancelled', 'Draft')
-                        UNION ALL
-                        SELECT 'Purchases' as mod, COUNT(*)::int as cnt FROM purchases.purchase_invoices
-                        WHERE "TenantId" = @tId AND "Status" NOT IN ('Cancelled', 'Draft')
-                        UNION ALL
-                        SELECT 'Finance' as mod, COUNT(*)::int as cnt FROM finance."CollectionReceipts"
-                        WHERE "TenantId" = @tId AND "Status" <> 'Voided';
-                        """;
-                    var p = cmd.CreateParameter();
-                    p.ParameterName = "@tId";
-                    p.Value = tenantId.Value;
-                    cmd.Parameters.Add(p);
-
-                    await using var reader = await cmd.ExecuteReaderAsync(ct);
-                    while (await reader.ReadAsync(ct))
-                    {
-                        var mod = reader.GetString(0);
-                        var cnt = reader.GetInt32(1);
-                        if (mod == "Sales")
-                        {
-                            salesPending = Math.Max(0, cnt - postedSet.Count(x => x.StartsWith("VTA-", StringComparison.OrdinalIgnoreCase)));
-                        }
-                        else if (mod == "Purchases")
-                        {
-                            purchasesPending = Math.Max(0, cnt - postedSet.Count(x => x.StartsWith("CMP-", StringComparison.OrdinalIgnoreCase)));
-                        }
-                        else if (mod == "Finance")
-                        {
-                            financePending = Math.Max(0, cnt - postedSet.Count(x => x.StartsWith("REC-", StringComparison.OrdinalIgnoreCase)));
-                        }
-                    }
-                }
-                finally
-                {
-                    if (closeWhenDone && conn.State == System.Data.ConnectionState.Open)
-                    {
-                        await conn.CloseAsync();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "No se pudo calcular el resumen de documentos pendientes para el tenant {TenantId}.", tenantId.Value);
-                return Results.Problem(
-                    detail: "No se pudo consultar los documentos pendientes de contabilizar.",
-                    statusCode: StatusCodes.Status500InternalServerError);
-            }
-
+            int salesPending = pending.Where(x => x.Module == "Sales").Sum(x => x.Count);
+            int purchasesPending = pending.Where(x => x.Module == "Purchases").Sum(x => x.Count);
+            int financePending = pending.Where(x => x.Module == "Finance").Sum(x => x.Count);
+            int inventoryPending = pending.Where(x => x.Module == "Inventory" || x.Module == "Payroll").Sum(x => x.Count);
             var total = salesPending + purchasesPending + financePending + inventoryPending;
 
             return Results.Ok(new UnpostedDocumentsSummaryResponse(
@@ -1882,6 +1815,52 @@ public static class AccountingEndpoints
                 null,
                 null
             ));
+        });
+
+        group.MapGet("/pending-documents", async (
+            string? status,
+            string? sourceModule,
+            ITenantContext tenantContext,
+            AccountingDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureAccountingTablesAsync(ct);
+            var query = db.PendingDocuments.AsNoTracking().Where(x => x.TenantId == tenantId);
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(x => x.Status == status);
+            }
+            else
+            {
+                query = query.Where(x => x.Status == AccountingPendingDocumentStatuses.Pending
+                                        || x.Status == AccountingPendingDocumentStatuses.Error);
+            }
+
+            if (!string.IsNullOrWhiteSpace(sourceModule))
+            {
+                query = query.Where(x => x.SourceModule == sourceModule);
+            }
+
+            var rows = await query
+                .OrderByDescending(x => x.DocumentDateUtc)
+                .Take(200)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.SourceModule,
+                    x.DocumentType,
+                    x.SourceDocumentId,
+                    x.DocumentNumber,
+                    x.DocumentDateUtc,
+                    x.Status,
+                    x.LastError,
+                    x.JournalEntryId,
+                    x.CreatedAtUtc,
+                    x.UpdatedAtUtc
+                })
+                .ToListAsync(ct);
+            return Results.Ok(rows);
         });
 
         group.MapPost("/batch-post/preview", (

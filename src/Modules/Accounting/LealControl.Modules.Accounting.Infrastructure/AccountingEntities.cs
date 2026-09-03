@@ -250,6 +250,36 @@ public sealed class AccountingBatchRun : Entity<Guid>
     public AccountingBatchRun() : base(Guid.NewGuid()) { }
 }
 
+public static class AccountingPendingDocumentStatuses
+{
+    public const string Pending = "Pending";
+    public const string Posted = "Posted";
+    public const string Skipped = "Skipped";
+    public const string Error = "Error";
+}
+
+/// <summary>
+/// Cola de documentos publicados por Sales/Finance vía IAccountingPostingGateway.
+/// Contabilidad nunca lee sales.* / finance.* por SQL cruzado.
+/// </summary>
+public sealed class AccountingPendingDocument : Entity<Guid>
+{
+    public TenantId TenantId { get; set; }
+    public string SourceModule { get; set; } = "";
+    public string DocumentType { get; set; } = "";
+    public string SourceDocumentId { get; set; } = "";
+    public string DocumentNumber { get; set; } = "";
+    public DateTime DocumentDateUtc { get; set; }
+    public string PayloadJson { get; set; } = "{}";
+    public string Status { get; set; } = AccountingPendingDocumentStatuses.Pending;
+    public string? LastError { get; set; }
+    public Guid? JournalEntryId { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public AccountingPendingDocument() : base(Guid.NewGuid()) { }
+}
+
 // DTOs para Asientos Modelos y Contabilización en Lote
 public sealed record JournalTemplateDto(
     Guid Id,

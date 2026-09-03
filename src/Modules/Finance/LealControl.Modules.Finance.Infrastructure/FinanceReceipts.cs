@@ -147,7 +147,13 @@ public static class FinanceReceipts
         });
 
         // Create receipt
-        group.MapPost("", async (CreateCollectionReceiptRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+        group.MapPost("", async (
+            CreateCollectionReceiptRequest body,
+            FinanceDbContext db,
+            LealControl.BuildingBlocks.Tenancy.ITenantContext tenant,
+            LealControl.Modules.Accounting.Contracts.Posting.IAccountingPostingGateway accounting,
+            Microsoft.Extensions.Logging.ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;
             var currency = string.IsNullOrWhiteSpace(body.Currency) ? "ARS" : body.Currency.Trim().ToUpperInvariant();
@@ -379,11 +385,34 @@ public static class FinanceReceipts
             }
 
             await db.SaveChangesAsync(ct);
+
+            var savedLines = await db.CollectionReceiptLines.AsNoTracking()
+                .Where(x => x.ReceiptId == receiptId && x.TenantId == tenantId).ToListAsync(ct);
+            await FinanceAccountingPublisher.TryPostCollectionReceiptAsync(
+                accounting, db, receipt, savedLines, loggerFactory.CreateLogger("FinanceAccounting"), ct);
+
             return Results.Created($"/api/v1/finance/collections/{receiptId}", new { id = receiptId, receiptNumber = number, status = "Confirmed", advanceAmount });
         });
 
-        group.MapPost("/{id:guid}/void", async (Guid id, VoidFinanceDocumentRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
-            await FinanceVoid.VoidCollectionReceiptAsync(id, body, db, tenant.TenantId.Value, ct));
+        group.MapPost("/{id:guid}/void", async (
+            Guid id,
+            VoidFinanceDocumentRequest body,
+            FinanceDbContext db,
+            LealControl.BuildingBlocks.Tenancy.ITenantContext tenant,
+            LealControl.Modules.Accounting.Contracts.Posting.IAccountingPostingGateway accounting,
+            Microsoft.Extensions.Logging.ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
+        {
+            var result = await FinanceVoid.VoidCollectionReceiptAsync(id, body, db, tenant.TenantId.Value, ct);
+            var voided = await db.CollectionReceipts.AsNoTracking()
+                .AnyAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value && x.Status == "Voided", ct);
+            if (voided)
+            {
+                await FinanceAccountingPublisher.TryReverseAsync(
+                    accounting, id.ToString(), body.Reason ?? "", loggerFactory.CreateLogger("FinanceAccounting"), ct);
+            }
+            return result;
+        });
 
         var detail = endpoints.MapGroup("/api/v1/finance").WithTags("Finance Detail").RequirePolicyOnWrites("RequireFinance");
         detail.MapGet("/accounts/{accountId:guid}/movements-detail", async (Guid accountId, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>

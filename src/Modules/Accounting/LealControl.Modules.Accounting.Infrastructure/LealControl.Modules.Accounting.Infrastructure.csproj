@@ -11,5 +11,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\LealControl.BuildingBlocks\LealControl.BuildingBlocks.csproj" />
+    <ProjectReference Include="..\LealControl.Modules.Accounting.Contracts\LealControl.Modules.Accounting.Contracts.csproj" />
   </ItemGroup>
 </Project>

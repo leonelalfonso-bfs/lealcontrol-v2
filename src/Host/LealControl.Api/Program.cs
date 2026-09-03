@@ -84,6 +84,8 @@ try
     builder.Services.AddFinanceModule(builder.Configuration);
     builder.Services.AddHumanResourcesModule(builder.Configuration);
     builder.Services.AddFleetModule(builder.Configuration);
+    // NoOp por defecto; AddAccountingModule registra el gateway real que encola en pending_documents.
+    builder.Services.AddNoOpAccountingPostingGateway();
     builder.Services.AddAccountingModule(builder.Configuration);
     builder.Services.AddMetrologyModule(builder.Configuration);
     builder.Services.ConfigureHttpJsonOptions(options =>

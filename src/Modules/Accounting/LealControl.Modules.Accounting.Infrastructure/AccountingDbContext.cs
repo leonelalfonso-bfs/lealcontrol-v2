@@ -25,6 +25,7 @@ public sealed class AccountingDbContext : DbContext
     public DbSet<JournalTemplate> JournalTemplates => Set<JournalTemplate>();
     public DbSet<JournalTemplateLine> JournalTemplateLines => Set<JournalTemplateLine>();
     public DbSet<AccountingBatchRun> BatchRuns => Set<AccountingBatchRun>();
+    public DbSet<AccountingPendingDocument> PendingDocuments => Set<AccountingPendingDocument>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -170,6 +171,22 @@ public sealed class AccountingDbContext : DbContext
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.BatchNumber }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.ExecutedAtUtc });
+        });
+
+        modelBuilder.Entity<AccountingPendingDocument>(b =>
+        {
+            b.ToTable("pending_documents", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.SourceModule).HasMaxLength(32).IsRequired();
+            b.Property(x => x.DocumentType).HasMaxLength(64).IsRequired();
+            b.Property(x => x.SourceDocumentId).HasMaxLength(128).IsRequired();
+            b.Property(x => x.DocumentNumber).HasMaxLength(64).IsRequired();
+            b.Property(x => x.PayloadJson).IsRequired();
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue(AccountingPendingDocumentStatuses.Pending);
+            b.Property(x => x.LastError).HasMaxLength(1000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.SourceModule, x.SourceDocumentId });
+            b.HasIndex(x => new { x.TenantId, x.Status, x.DocumentDateUtc });
         });
     }
 
@@ -373,7 +390,26 @@ public sealed class AccountingDbContext : DbContext
             );",
 
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_batch_runs_Tenant_BatchNumber"" ON accounting.batch_runs (""TenantId"", ""BatchNumber"");",
-            @"CREATE INDEX IF NOT EXISTS ""IX_batch_runs_Tenant_ExecutedAt"" ON accounting.batch_runs (""TenantId"", ""ExecutedAtUtc"");"
+            @"CREATE INDEX IF NOT EXISTS ""IX_batch_runs_Tenant_ExecutedAt"" ON accounting.batch_runs (""TenantId"", ""ExecutedAtUtc"");",
+
+            @"CREATE TABLE IF NOT EXISTS accounting.pending_documents (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""SourceModule"" character varying(32) NOT NULL,
+                ""DocumentType"" character varying(64) NOT NULL,
+                ""SourceDocumentId"" character varying(128) NOT NULL,
+                ""DocumentNumber"" character varying(64) NOT NULL,
+                ""DocumentDateUtc"" timestamp with time zone NOT NULL,
+                ""PayloadJson"" text NOT NULL DEFAULT '{}',
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Pending',
+                ""LastError"" character varying(1000),
+                ""JournalEntryId"" uuid,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+
+            @"CREATE INDEX IF NOT EXISTS ""IX_pending_documents_Tenant_Module_Doc"" ON accounting.pending_documents (""TenantId"", ""SourceModule"", ""SourceDocumentId"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_pending_documents_Tenant_Status_Date"" ON accounting.pending_documents (""TenantId"", ""Status"", ""DocumentDateUtc"");"
         };
 
         foreach (var sql in statements)

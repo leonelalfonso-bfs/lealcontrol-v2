@@ -122,7 +122,13 @@ public static class FinancePayments
         });
 
         // Create payment order
-        group.MapPost("", async (CreatePaymentOrderRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+        group.MapPost("", async (
+            CreatePaymentOrderRequest body,
+            FinanceDbContext db,
+            LealControl.BuildingBlocks.Tenancy.ITenantContext tenant,
+            LealControl.Modules.Accounting.Contracts.Posting.IAccountingPostingGateway accounting,
+            Microsoft.Extensions.Logging.ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;
             if (string.IsNullOrWhiteSpace(body.SupplierName))
@@ -296,11 +302,34 @@ public static class FinancePayments
             }
 
             await db.SaveChangesAsync(ct);
+
+            var savedLines = await db.PaymentOrderLines.AsNoTracking()
+                .Where(x => x.PaymentOrderId == orderId && x.TenantId == tenantId).ToListAsync(ct);
+            await FinanceAccountingPublisher.TryPostPaymentOrderAsync(
+                accounting, db, order, savedLines, loggerFactory.CreateLogger("FinanceAccounting"), ct);
+
             return Results.Created($"/api/v1/finance/payments/{orderId}", new { id = orderId, orderNumber = number, status = "Confirmed", advanceAmount });
         });
 
-        group.MapPost("/{id:guid}/void", async (Guid id, VoidFinanceDocumentRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
-            await FinanceVoid.VoidPaymentOrderAsync(id, body, db, tenant.TenantId.Value, ct));
+        group.MapPost("/{id:guid}/void", async (
+            Guid id,
+            VoidFinanceDocumentRequest body,
+            FinanceDbContext db,
+            LealControl.BuildingBlocks.Tenancy.ITenantContext tenant,
+            LealControl.Modules.Accounting.Contracts.Posting.IAccountingPostingGateway accounting,
+            Microsoft.Extensions.Logging.ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
+        {
+            var result = await FinanceVoid.VoidPaymentOrderAsync(id, body, db, tenant.TenantId.Value, ct);
+            var voided = await db.PaymentOrders.AsNoTracking()
+                .AnyAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value && x.Status == "Voided", ct);
+            if (voided)
+            {
+                await FinanceAccountingPublisher.TryReverseAsync(
+                    accounting, id.ToString(), body.Reason ?? "", loggerFactory.CreateLogger("FinanceAccounting"), ct);
+            }
+            return result;
+        });
 
         return endpoints;
     }

@@ -18,7 +18,7 @@ Documentos relacionados:
 | 1 | Cerrar agujeros de seguridad | 6 | 6/6 | 0/6 | ✅ Código en `a364601` — validar staging |
 | 2 | Deploy y backups confiables | 6 | 6/6 | 6/6 | ✅ Verificado staging 02/09/2026 — smoke 10/10 Healthy |
 | 3 | Circuito financiero completo | 14 | 14/14 | 1/14 | ◐ API A+B OK staging — UI manual + **F-T1** pendiente |
-| 4 | Contabilidad desde asientos modelo | 9 | 0/9 | 0/9 | ☐ |
+| 4 | Contabilidad desde asientos modelo | 9 | 2/9 | 0/9 | ◐ 4.1+4.2 en curso |
 | 5 | Red de tests del circuito del dinero | 6 | 0/6 | 0/6 | ☐ |
 | 6 | Deuda técnica | 8 | 0/8 | 0/8 | ☐ |
 
@@ -243,13 +243,15 @@ El detalle funcional, las reglas de negocio y los cambios de esquema están en `
 Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 
 ### 4.1 Contrato de integración entre módulos
-- [ ] Nuevo proyecto `LealControl.Modules.Accounting.Contracts` con `IAccountingPostingGateway { Task PostAsync(PostableDocument doc, CancellationToken ct); Task ReverseAsync(string sourceModule, string sourceDocumentId, string reason, CancellationToken ct); }` y el DTO `PostableDocument` (módulo, tipo, id, número, fecha, contraparte, moneda, líneas de importe con clave `AmountSource`, metadatos).
-- [ ] Implementación nula `NoOpAccountingPostingGateway` registrada por defecto en el Host. Cuando el módulo Contabilidad está activo para el tenant, se registra la real. Sales y Finance sólo conocen la interfaz.
+- [x] Nuevo proyecto `LealControl.Modules.Accounting.Contracts` con `IAccountingPostingGateway` + `PostableDocument` / líneas / constantes AmountSource.
+- [x] Implementación nula `NoOpAccountingPostingGateway` (`TryAdd` en Host) + gateway real al activar módulo Contabilidad.
+- [x] Finance referencia sólo Contracts; publica recibo/OP al confirmar y `ReverseAsync` al anular (fallos de Contabilidad no bloquean tesorería).
 
 ### 4.2 Bandeja de documentos pendientes de contabilizar
-- [ ] Tabla `accounting.pending_documents` (tenant, módulo, tipo, id, número, fecha, JSON del `PostableDocument`, estado `Pending`/`Posted`/`Skipped`/`Error`, `JournalEntryId`).
-- [ ] El gateway real **encola** ahí. Nunca lee `sales.*` ni `finance.*` por SQL.
-- [ ] `GET /batch-post/pending-summary` cuenta esta tabla. Adiós al SQL cruzado y al fallback falso.
+- [x] Tabla `accounting.pending_documents` + entidad EF + EnsureTables.
+- [x] Gateway real **encola** ahí (nunca lee `sales.*` / `finance.*` por SQL).
+- [x] `GET /batch-post/pending-summary` cuenta esta tabla. `GET /pending-documents` lista Pending/Error.
+- [ ] Backfill / replay histórico desde Finance (opcional, más adelante).
 
 ### 4.3 Motor de plantillas
 - [ ] `JournalTemplateEngine.Render(JournalTemplate, PostableDocument) → JournalEntry` puro (sin DB), con resolución de `AmountSource` desde el documento y de cuenta desde `AccountSource`.
@@ -322,6 +324,7 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 | 02/09/2026 | 1.1–1.6 | `a364601` | pendiente staging | Webhook MP público, RBAC módulos, allowed_modules, seed-dev-admin, HTTP hardening, JWT unificado |
 | 02/09/2026 | 2.3 verify-restore | `f8d109d` | ✅ staging | restore tenant OK; master_tenants en dump catálogo aparte |
 | 02/09/2026 | 3.2 | `1f1d8d6` | pendiente staging | BankStatementImports — validar con import Galicia |
+| 03/09/2026 | 4.1–4.2 gateway + pending_documents | — | pendiente staging | Contracts + enqueue recibo/OP; summary sin SQL cruzado |
 | 03/09/2026 | 3.15 F-T1 picker | — | pendiente staging | Recibo/OP listan movimientos por cartera; backfill Origin |
 | 02/09/2026 | 3.1 verify API | `f573eba` | ✅ staging | 8 OK verify-finance-phases-ab; JWT + script Python |
 | 02/09/2026 | 3.1 UI A-V8 | `b1e7ea2` | ✅ staging | Movimiento conciliado: badge + no reclasificar |
