@@ -152,7 +152,7 @@ El detalle funcional, las reglas de negocio y los cambios de esquema están en `
 - [x] Script `scripts/verify-finance-phases-ab.sh` (API: available-movements, reconciliation).
 - [x] Verify API staging 02/09/2026: 8 OK, 0 FAIL (`verify-finance-phases-ab.sh @ :5210`).
 - [ ] Recorrer checklist A-V1…A-V9 y B-V1…B-V7 de `CIRCUITO_DINERO_PROGRESO.md` en v2 (UI manual).
-- [ ] **F-T1** — Picker de movimiento en recibo/OP: con N movimientos confirmados de la misma cartera, listarlos para elegir cuál vincular (hoy solo filtra concepto; desplegable vacío o incompleto). Ver `CIRCUITO_DINERO_PROGRESO.md` § F-T1.
+- [x] **F-T1** — Picker de movimiento en recibo/OP (código 03/09/2026): carga por cartera, filtro cuenta opcional, backfill Origin. **Validar en staging.**
 
 ### 3.2 Extracto: lote de importación con control de saldo
 - [x] Nueva tabla `finance."BankStatementImports"` (cuenta, período, saldo inicial/final declarado, hash del archivo, filas, estado).
@@ -226,14 +226,15 @@ El detalle funcional, las reglas de negocio y los cambios de esquema están en `
 **Problema:** En recibo/OP el usuario elige la cartera (concepto) pero, cuando hay varios movimientos del extracto con esa clasificación, no puede elegir **cuál** movimiento vincular.
 
 **Alcance:**
-- [ ] Recibos: al elegir concepto `UsableIn = Receipt`, cargar y mostrar todos los créditos confirmados no conciliados (`GET /collections/available-movements?accountId&conceptId`).
-- [ ] OP: idem con débitos y `/payments/available-movements`.
-- [ ] Recargar lista al cambiar cuenta bancaria o cartera; mensaje si lista vacía.
-- [ ] No listar movimientos `Reconciled` (correcto por diseño).
+- [x] Recibos: al elegir concepto `UsableIn = Receipt`, cargar y mostrar créditos confirmados no conciliados (`GET /collections/available-movements?conceptId=`), cuenta opcional («Todas»).
+- [x] OP: idem con débitos y `/payments/available-movements`.
+- [x] Recargar lista al cambiar cartera/cuenta; mensaje si lista vacía.
+- [x] No listar movimientos `Reconciled` / `MatchedToImport`.
+- [x] Backfill `Origin=Imported` para extractos con default System + API acepta `ImportId != null`.
 
-**Archivos:** `CollectionReceiptsWorkspacePage.tsx`, `PaymentOrderFormPage.tsx`, posiblemente `client.ts`.
+**Archivos:** `CollectionReceiptsWorkspacePage.tsx`, `PaymentOrderFormPage.tsx`, `FinanceImport.cs`, `FinanceSchema.cs`.
 
-**Criterio:** Con 3+ movimientos «Cobro de cliente» confirmados en Galicia, el desplegable del recibo muestra los 3 con fecha/importe/descripción.
+**Criterio:** Con 3+ movimientos «Cobro de cliente» confirmados, el desplegable del recibo muestra los N con fecha/importe/descripción. **Validar staging.**
 
 ---
 
@@ -321,6 +322,7 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 | 02/09/2026 | 1.1–1.6 | `a364601` | pendiente staging | Webhook MP público, RBAC módulos, allowed_modules, seed-dev-admin, HTTP hardening, JWT unificado |
 | 02/09/2026 | 2.3 verify-restore | `f8d109d` | ✅ staging | restore tenant OK; master_tenants en dump catálogo aparte |
 | 02/09/2026 | 3.2 | `1f1d8d6` | pendiente staging | BankStatementImports — validar con import Galicia |
+| 03/09/2026 | 3.15 F-T1 picker | — | pendiente staging | Recibo/OP listan movimientos por cartera; backfill Origin |
 | 02/09/2026 | 3.1 verify API | `f573eba` | ✅ staging | 8 OK verify-finance-phases-ab; JWT + script Python |
 | 02/09/2026 | 3.1 UI A-V8 | `b1e7ea2` | ✅ staging | Movimiento conciliado: badge + no reclasificar |
 | 02/09/2026 | Deploy fixes | `cd217c6`–`e2dec51` | ✅ staging | Docker build OK, web+api healthy |

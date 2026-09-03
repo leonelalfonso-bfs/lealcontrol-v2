@@ -128,6 +128,19 @@ public static class FinanceSchema
         ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""MatchedMovementId"" uuid;
         CREATE INDEX IF NOT EXISTS ""IX_FinancialMovements_ImportId"" ON finance.""FinancialMovements"" (""ImportId"");
         CREATE INDEX IF NOT EXISTS ""IX_FinancialMovements_MatchedMovementId"" ON finance.""FinancialMovements"" (""MatchedMovementId"");
+        -- Backfill: filas de extracto quedaron Origin=System (default 1) al agregar la columna.
+        UPDATE finance.""FinancialMovements""
+           SET ""Origin"" = 0
+         WHERE ""Origin"" = 1
+           AND ""ImportId"" IS NOT NULL;
+        UPDATE finance.""FinancialMovements""
+           SET ""Origin"" = 0
+         WHERE ""Origin"" = 1
+           AND ""ImportId"" IS NULL
+           AND ""TransferId"" IS NULL
+           AND ""LinkedEntityType"" IS NULL
+           AND ""ClassifiedAtUtc"" IS NOT NULL
+           AND ""ReconciliationStatus"" NOT IN (4, 5);
 
         ALTER TABLE finance.""FinancialConceptRules"" ADD COLUMN IF NOT EXISTS ""CuitPattern"" varchar(32);
         ALTER TABLE finance.""FinancialConceptRules"" ADD COLUMN IF NOT EXISTS ""AmountMin"" numeric(18,2);

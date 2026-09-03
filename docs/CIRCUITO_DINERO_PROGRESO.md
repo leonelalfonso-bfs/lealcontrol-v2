@@ -46,55 +46,34 @@
 
 ### Pendiente mañana (prioridad)
 
-1. **F-T1** — Selector de movimiento en recibo/OP cuando hay N créditos/débitos con la misma cartera (ver abajo).
+1. ~~**F-T1** — Selector de movimiento en recibo/OP~~ → **implementado 03/09/2026** (validar staging).
 2. Checklist UI **A-V6…A-V9** y **B-V5…B-V7** (recibo, OP, conciliación, void).
 3. Re-correr verify tras confirmar más movimientos en bandeja (debería pasar también **A-V5** filtro `conceptId`).
 4. Marcar Bloque 3 verificado en staging cuando A+B UI estén OK → desbloquear Bloque 4.
 
 ---
 
-## Tarea abierta — F-T1: Picker de movimiento en recibo y OP
+## Tarea F-T1: Picker de movimiento en recibo y OP — ✅ código 03/09/2026
 
-**Reportado:** 02/09/2026 — validación manual staging.
+**Reportado:** 02/09/2026 — validación manual staging.  
+**Fix:** commit pendiente de deploy.
 
-### Comportamiento esperado
+### Causas
 
-Al armar **recibo** u **orden de pago** con línea bancaria:
+1. UI filtraba `available-movements` por la cuenta de la línea → si los créditos estaban en otra cuenta, el desplegable quedaba vacío.
+2. Carrera al cargar: primer request sin `conceptId` podía sobrescribir el bueno.
+3. Columna `Origin` con default `System` → extractos viejos no cumplían `Origin == Imported`.
 
-1. El usuario elige **cartera / concepto** (ej. «Cobro de cliente») — ✅ funciona.
-2. Debe aparecer un **desplegable de movimientos** del extracto: fecha, importe, cuenta, descripción — para elegir **cuál** de los N movimientos confirmados vincular.
-3. Solo movimientos **Confirmados**, **Origin = Imported**, **no Reconciled**, con `UsableIn` correcto (`Receipt` / `PaymentOrder`).
+### Cambios
 
-### Comportamiento actual (bug)
+- Recibos/OP: carga por **cartera**; filtro de cuenta opcional («Todas las cuentas»); mensaje si lista vacía; al elegir movimiento completa cuenta/importe.
+- API: acepta `Origin == Imported || ImportId != null`; excluye `MatchedToImport`.
+- Schema: backfill `Origin = Imported` para filas de extracto.
 
-- Los **conceptos** se ven y filtran.
-- Si hay **varios movimientos** con la misma clasificación/cartera (ej. 10 cobros de clientes confirmados), **no aparecen** (o no todos) en el selector de movimiento del recibo/OP.
-- Los movimientos **ya conciliados** correctamente **no deben** listarse — eso no es bug.
+### Criterio de aceptación (staging)
 
-### Archivos a revisar
-
-| Archivo | Notas |
-|---------|--------|
-| `CollectionReceiptsWorkspacePage.tsx` | `loadMovementsForAccount`, `filteredAvailableMovements`, `movementConceptFilter`, bloque «Vincular transferencia» |
-| `PaymentOrderFormPage.tsx` | Paridad con recibos |
-| `FinanceImport.cs` | `GET .../collections|payments/available-movements` |
-| `frontend/src/api/client.ts` | `listCollectionAvailableMovements`, `listPaymentAvailableMovements` |
-
-### Criterio de aceptación
-
-- Con ≥ 3 movimientos confirmados no conciliados del mismo concepto en Galicia, al abrir recibo → transferencia → cartera «Cobro de cliente», el `<select>` lista **todos** con fecha + importe + descripción.
-- Igual para OP con «Pago a proveedor» y débitos.
-- Al elegir uno, completa importe/cuenta/concepto de la línea.
+- Con ≥ 3 movimientos confirmados no conciliados del mismo concepto, el `<select>` del recibo/OP lista todos con fecha + importe + descripción.
 - Movimientos `Reconciled` siguen sin aparecer.
-
-### Idea de fix (para mañana)
-
-- Verificar que `loadMovementsForAccount` se ejecute al cambiar **cuenta** y **concepto** (recibos hoy solo recarga en parte del flujo).
-- Evitar doble filtro cliente/API que deje lista vacía (`filteredAvailableMovements` vs query `?conceptId=`).
-- Mostrar mensaje explícito si `available-movements` devuelve `[]`: «No hay créditos confirmados disponibles para esta cartera».
-- Tests manuales con JWT + `curl` a `available-movements?conceptId=...` vs lo que muestra la UI.
-
----
 
 ## Fase A — Checklist de validación
 

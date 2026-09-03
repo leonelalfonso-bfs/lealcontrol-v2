@@ -61,8 +61,10 @@ export function CollectionReceiptsWorkspacePage() {
   const [receipts, setReceipts] = useState<any[]>([]);
   const [selectedReceiptDetail, setSelectedReceiptDetail] = useState<any | null>(null);
 
-  // Filters for available bank movements
+  // Filters for available bank movements (concept = cartera; account optional — empty = todas)
   const [movementConceptFilter, setMovementConceptFilter] = useState<string>("");
+  const [movementAccountFilter, setMovementAccountFilter] = useState<string>(""); // "" = todas las cuentas
+  const [loadingMovements, setLoadingMovements] = useState(false);
 
   const [receiptDate, setReceiptDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
@@ -104,8 +106,9 @@ export function CollectionReceiptsWorkspacePage() {
       setConcepts(activeConcepts);
       const defaultCobro = activeConcepts.find((c: any) => c.code === "COBRO_CLIENTE")
         || activeConcepts.find((c: any) => c.direction === "Income");
-      if (defaultCobro?.id) {
-        setMovementConceptFilter(defaultCobro.id);
+      const defaultConceptId = defaultCobro?.id || "";
+      if (defaultConceptId) {
+        setMovementConceptFilter(defaultConceptId);
       }
 
       // Available cheques in portfolio
@@ -126,10 +129,12 @@ export function CollectionReceiptsWorkspacePage() {
             currency,
             accountId: initialAccountId || undefined,
             movementId: initialMovementId,
+            conceptId: defaultConceptId || undefined,
             notes: ""
           }
         ]);
-        void loadMovementsForAccount(initialAccountId || undefined);
+        if (initialAccountId) setMovementAccountFilter(initialAccountId);
+        void loadAvailableMovements(initialAccountId || "", defaultConceptId);
       } else {
         const firstBank = (accRes || []).find((a) => a.isActive && (a.currency || "ARS") === currency) || (accRes || []).find((a) => a.isActive);
         if (firstBank && lines.length === 0) {
@@ -140,10 +145,12 @@ export function CollectionReceiptsWorkspacePage() {
               amount: 0,
               currency: firstBank.currency || currency,
               accountId: firstBank.id,
+              conceptId: defaultConceptId || undefined,
               notes: ""
             }
           ]);
-          void loadMovementsForAccount(firstBank.id);
+          // Cargar por cartera sin filtrar cuenta: muestra todos los créditos confirmados disponibles
+          void loadAvailableMovements("", defaultConceptId);
         }
       }
     } catch (e) {
@@ -153,15 +160,17 @@ export function CollectionReceiptsWorkspacePage() {
     }
   };
 
-  const loadMovementsForAccount = async (accountId?: string, conceptId?: string) => {
+  const loadAvailableMovements = async (accountId?: string, conceptId?: string) => {
+    setLoadingMovements(true);
     try {
-      const movs = await api.listCollectionAvailableMovements(
-        accountId || undefined,
-        conceptId || movementConceptFilter || undefined
-      );
-      setAvailableMovements(movs || []);
+      const account = accountId && accountId.trim() ? accountId : undefined;
+      const concept = conceptId && conceptId.trim() ? conceptId : undefined;
+      const movs = await api.listCollectionAvailableMovements(account, concept);
+      setAvailableMovements(Array.isArray(movs) ? movs : []);
     } catch {
       setAvailableMovements([]);
+    } finally {
+      setLoadingMovements(false);
     }
   };
 
@@ -246,22 +255,16 @@ export function CollectionReceiptsWorkspacePage() {
     [concepts]
   );
 
+  // API ya filtra por conceptId; no re-filtrar en cliente (evita lista vacía por desfase de IDs)
   const filteredAvailableMovements = useMemo(() => {
-    if (!movementConceptFilter) return availableMovements;
-    const target = String(movementConceptFilter).toLowerCase().trim();
-    return availableMovements.filter((m) => {
-      const movConceptId = m.conceptId ? String(m.conceptId).toLowerCase().trim() : "";
-      const movConceptCode = m.conceptCode ? String(m.conceptCode).toLowerCase().trim() : "";
-      return movConceptId === target || movConceptCode === target;
-    });
-  }, [availableMovements, movementConceptFilter]);
+    if (!movementAccountFilter) return availableMovements;
+    return availableMovements.filter((m) => String(m.accountId || "") === movementAccountFilter);
+  }, [availableMovements, movementAccountFilter]);
 
   useEffect(() => {
-    const accountId = lines.find((l) => l.accountId)?.accountId || accounts[0]?.id;
-    if (accountId && movementConceptFilter) {
-      void loadMovementsForAccount(accountId, movementConceptFilter);
-    }
-  }, [movementConceptFilter]);
+    if (!movementConceptFilter) return;
+    void loadAvailableMovements(movementAccountFilter || "", movementConceptFilter);
+  }, [movementConceptFilter, movementAccountFilter]);
 
   // Totals calculations in Receipt Currency
   const totalImputed = useMemo(() => {
@@ -423,7 +426,7 @@ export function CollectionReceiptsWorkspacePage() {
     ]);
 
     if (method === "BankTransfer") {
-      void loadMovementsForAccount(targetAccId);
+      void loadAvailableMovements(movementAccountFilter || "", movementConceptFilter || defaultConcept?.id || "");
     }
   };
 
@@ -436,8 +439,8 @@ export function CollectionReceiptsWorkspacePage() {
       prev.map((l) => {
         if (l.id === id) {
           const updated = { ...l, ...patch };
-          if (patch.accountId && (updated.method === "BankTransfer" || updated.method === "Cash")) {
-            void loadMovementsForAccount(patch.accountId);
+          if (patch.conceptId && updated.method === "BankTransfer") {
+            setMovementConceptFilter(patch.conceptId);
           }
           return updated;
         }
@@ -927,26 +930,45 @@ export function CollectionReceiptsWorkspacePage() {
                       {/* Bank Movement link */}
                       {line.method === "BankTransfer" && (
                         <div style={{ gridColumn: "1 / -1", background: "#f8fafc", padding: 12, borderRadius: 6, border: "1px solid #e2e8f0" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
                             <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f766e" }}>
                               🏦 Vincular Transferencia Bancaria Acreditada (Extracto Banco)
                             </span>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ fontSize: "0.75rem", color: "var(--ink-soft)" }}>Filtrar Concepto:</span>
-                              <select
-                                value={movementConceptFilter}
-                                onChange={(e) => {
-                                  setMovementConceptFilter(e.target.value);
-                                  updateLine(line.id, { movementId: undefined, conceptId: e.target.value || undefined });
-                                }}
-                                style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
-                              >
-                                {incomeConcepts.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    🏷️ {c.name}
-                                  </option>
-                                ))}
-                              </select>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <label style={{ fontSize: "0.75rem", color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 4 }}>
+                                Cartera
+                                <select
+                                  value={movementConceptFilter}
+                                  onChange={(e) => {
+                                    const conceptId = e.target.value;
+                                    setMovementConceptFilter(conceptId);
+                                    updateLine(line.id, { movementId: undefined, conceptId: conceptId || undefined });
+                                  }}
+                                  style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
+                                >
+                                  {incomeConcepts.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                      {c.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label style={{ fontSize: "0.75rem", color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 4 }}>
+                                Cuenta
+                                <select
+                                  value={movementAccountFilter}
+                                  onChange={(e) => {
+                                    setMovementAccountFilter(e.target.value);
+                                    updateLine(line.id, { movementId: undefined, accountId: e.target.value || line.accountId });
+                                  }}
+                                  style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
+                                >
+                                  <option value="">Todas las cuentas</option>
+                                  {accounts.filter((a) => a.isActive).map((a) => (
+                                    <option key={a.id} value={a.id}>{a.name}</option>
+                                  ))}
+                                </select>
+                              </label>
                             </div>
                           </div>
 
@@ -965,13 +987,25 @@ export function CollectionReceiptsWorkspacePage() {
                             }}
                             style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
                           >
-                            <option value="">-- Ingreso directo (sin vincular con extracto previo) --</option>
+                            <option value="">
+                              {loadingMovements
+                                ? "Cargando movimientos…"
+                                : filteredAvailableMovements.length === 0
+                                  ? "-- Sin movimientos confirmados disponibles --"
+                                  : `-- Elegí entre ${filteredAvailableMovements.length} movimiento(s) del extracto --`}
+                            </option>
                             {filteredAvailableMovements.map((m) => (
                               <option key={m.id} value={m.id}>
                                 {new Date(m.operationDateUtc).toLocaleDateString("es-AR")} · {money(m.amount, m.currency)} · [{m.conceptName || m.ConceptName || "Sin clasificar"}{m.accountName ? ` · ${m.accountName}` : ""}] · {m.description}
                               </option>
                             ))}
                           </select>
+                          {!loadingMovements && filteredAvailableMovements.length === 0 && (
+                            <p className="muted" style={{ margin: "8px 0 0", fontSize: "0.8rem" }}>
+                              No hay créditos confirmados y sin conciliar para esta cartera
+                              {movementAccountFilter ? " en la cuenta elegida" : ""}. Confirmá movimientos en Finanzas → Conceptos → Bandeja, o cambiá la cartera/cuenta.
+                            </p>
+                          )}
                         </div>
                       )}
 

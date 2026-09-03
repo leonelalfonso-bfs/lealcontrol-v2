@@ -194,11 +194,12 @@ public static class FinanceImport
                         where movement.TenantId == tenantId
                               && (accountId == null || movement.AccountId == accountId.Value)
                               && movement.Kind == FinancialMovementKind.Credit
-                              && movement.Origin == FinancialMovementOrigin.Imported
+                              && (movement.Origin == FinancialMovementOrigin.Imported || movement.ImportId != null)
                               && movement.ClassificationStatus == FinancialClassificationStatus.Confirmed
                               && movement.ConceptId != null
                               && concept.UsableIn == FinancialConceptUsableIn.Receipt
                               && movement.ReconciliationStatus != FinancialReconciliationStatus.Reconciled
+                              && movement.ReconciliationStatus != FinancialReconciliationStatus.MatchedToImport
                         select new
                         {
                             movement.Id,
@@ -213,7 +214,8 @@ public static class FinanceImport
                             movement.ConceptId,
                             ConceptName = concept != null ? concept.Name : "Sin clasificar",
                             ConceptCode = concept != null ? concept.Code : null,
-                            movement.ClassificationStatus
+                            movement.ClassificationStatus,
+                            Origin = movement.Origin.ToString()
                         };
 
             if (conceptId.HasValue && conceptId.Value != Guid.Empty)
@@ -235,11 +237,12 @@ public static class FinanceImport
                         where movement.TenantId == tenantId
                               && (accountId == null || movement.AccountId == accountId.Value)
                               && movement.Kind == FinancialMovementKind.Debit
-                              && movement.Origin == FinancialMovementOrigin.Imported
+                              && (movement.Origin == FinancialMovementOrigin.Imported || movement.ImportId != null)
                               && movement.ClassificationStatus == FinancialClassificationStatus.Confirmed
                               && movement.ConceptId != null
                               && concept.UsableIn == FinancialConceptUsableIn.PaymentOrder
                               && movement.ReconciliationStatus != FinancialReconciliationStatus.Reconciled
+                              && movement.ReconciliationStatus != FinancialReconciliationStatus.MatchedToImport
                         select new
                         {
                             movement.Id,
@@ -254,7 +257,8 @@ public static class FinanceImport
                             movement.ConceptId,
                             ConceptName = concept != null ? concept.Name : "Sin clasificar",
                             ConceptCode = concept != null ? concept.Code : null,
-                            movement.ClassificationStatus
+                            movement.ClassificationStatus,
+                            Origin = movement.Origin.ToString()
                         };
 
             if (conceptId.HasValue && conceptId.Value != Guid.Empty)
