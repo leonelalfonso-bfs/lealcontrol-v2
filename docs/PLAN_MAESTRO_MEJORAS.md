@@ -17,7 +17,7 @@ Documentos relacionados:
 | 0 | Frenar corrupción de datos | 5 | 5/5 | 0/5 | ✅ Código en `fcd60ee` — validar staging |
 | 1 | Cerrar agujeros de seguridad | 6 | 6/6 | 0/6 | ✅ Código en `a364601` — validar staging |
 | 2 | Deploy y backups confiables | 6 | 6/6 | 6/6 | ✅ Verificado staging 02/09/2026 — smoke 10/10 Healthy |
-| 3 | Circuito financiero completo | 14 | 14/14 | 0/14 | ✅ Código completo — validar staging |
+| 3 | Circuito financiero completo | 14 | 14/14 | 1/14 | ◐ API A+B OK staging — UI manual + **F-T1** pendiente |
 | 4 | Contabilidad desde asientos modelo | 9 | 0/9 | 0/9 | ☐ |
 | 5 | Red de tests del circuito del dinero | 6 | 0/6 | 0/6 | ☐ |
 | 6 | Deuda técnica | 8 | 0/8 | 0/8 | ☐ |
@@ -150,7 +150,9 @@ El detalle funcional, las reglas de negocio y los cambios de esquema están en `
 
 ### 3.1 Validar en staging lo ya hecho (Fases A+B)
 - [x] Script `scripts/verify-finance-phases-ab.sh` (API: available-movements, reconciliation).
+- [x] Verify API staging 02/09/2026: 8 OK, 0 FAIL (`verify-finance-phases-ab.sh @ :5210`).
 - [ ] Recorrer checklist A-V1…A-V9 y B-V1…B-V7 de `CIRCUITO_DINERO_PROGRESO.md` en v2 (UI manual).
+- [ ] **F-T1** — Picker de movimiento en recibo/OP: con N movimientos confirmados de la misma cartera, listarlos para elegir cuál vincular (hoy solo filtra concepto; desplegable vacío o incompleto). Ver `CIRCUITO_DINERO_PROGRESO.md` § F-T1.
 
 ### 3.2 Extracto: lote de importación con control de saldo
 - [x] Nueva tabla `finance."BankStatementImports"` (cuenta, período, saldo inicial/final declarado, hash del archivo, filas, estado).
@@ -215,7 +217,23 @@ El detalle funcional, las reglas de negocio y los cambios de esquema están en `
 ### 3.14 Cash flow proyectado real
 - [x] `CashFlowPage.tsx` suma: saldos, facturas de venta/compra por vencimiento, cheques recibidos en cartera por fecha, cheques emitidos por fecha de pago, OP programadas, sueldos si HR activo. Horizonte configurable. Comparación proyectado vs real por semana.
 
-**Verificado bloque 3:** ____ / ____
+**Verificado bloque 3:** 02/09/2026 — API Fases A+B OK (smoke 10/10, verify 8/8+1 skip). UI manual y **F-T1** pendientes.
+
+---
+
+### 3.15 (F-T1) — Selector de movimiento bancario en recibo y OP
+
+**Problema:** En recibo/OP el usuario elige la cartera (concepto) pero, cuando hay varios movimientos del extracto con esa clasificación, no puede elegir **cuál** movimiento vincular.
+
+**Alcance:**
+- [ ] Recibos: al elegir concepto `UsableIn = Receipt`, cargar y mostrar todos los créditos confirmados no conciliados (`GET /collections/available-movements?accountId&conceptId`).
+- [ ] OP: idem con débitos y `/payments/available-movements`.
+- [ ] Recargar lista al cambiar cuenta bancaria o cartera; mensaje si lista vacía.
+- [ ] No listar movimientos `Reconciled` (correcto por diseño).
+
+**Archivos:** `CollectionReceiptsWorkspacePage.tsx`, `PaymentOrderFormPage.tsx`, posiblemente `client.ts`.
+
+**Criterio:** Con 3+ movimientos «Cobro de cliente» confirmados en Galicia, el desplegable del recibo muestra los 3 con fecha/importe/descripción.
 
 ---
 
@@ -303,4 +321,7 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 | 02/09/2026 | 1.1–1.6 | `a364601` | pendiente staging | Webhook MP público, RBAC módulos, allowed_modules, seed-dev-admin, HTTP hardening, JWT unificado |
 | 02/09/2026 | 2.3 verify-restore | `f8d109d` | ✅ staging | restore tenant OK; master_tenants en dump catálogo aparte |
 | 02/09/2026 | 3.2 | `1f1d8d6` | pendiente staging | BankStatementImports — validar con import Galicia |
-| | 3.1, 3.3–3.14 | — | — | **En curso:** checklist Fases A+B (`CIRCUITO_DINERO_PROGRESO.md`) |
+| 02/09/2026 | 3.1 verify API | `f573eba` | ✅ staging | 8 OK verify-finance-phases-ab; JWT + script Python |
+| 02/09/2026 | 3.1 UI A-V8 | `b1e7ea2` | ✅ staging | Movimiento conciliado: badge + no reclasificar |
+| 02/09/2026 | Deploy fixes | `cd217c6`–`e2dec51` | ✅ staging | Docker build OK, web+api healthy |
+| 02/09/2026 | 3.1, 3.3–3.14 | `fcb1e9b` | ◐ staging | Código completo; UI manual + **F-T1** pendiente |
