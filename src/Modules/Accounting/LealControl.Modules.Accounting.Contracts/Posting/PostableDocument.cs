@@ -73,6 +73,9 @@ public static class AccountingAmountSources
     public const string Vat105 = "Vat105";
     public const string Vat27 = "Vat27";
     public const string TotalVat = "TotalVat";
+    // Usados por plantillas seed actuales del módulo Contabilidad (finance/sales).
+    public const string PaymentAmount = "PaymentAmount"; // Importe neto de cobro/pago
+    public const string Withholdings = "Withholdings"; // Retenciones/percepciones sufridas o practicadas
     public const string BankAmount = "BankAmount";
     public const string CashAmount = "CashAmount";
     public const string ChequeAmount = "ChequeAmount";

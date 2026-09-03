@@ -254,7 +254,7 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 - [ ] Backfill / replay histórico desde Finance (opcional, más adelante).
 
 ### 4.3 Motor de plantillas
-- [ ] `JournalTemplateEngine.Render(JournalTemplate, PostableDocument) → JournalEntry` puro (sin DB), con resolución de `AmountSource` desde el documento y de cuenta desde `AccountSource`.
+- [x] `JournalTemplateEngine.Render(...) → JournalEntry` puro (sin DB), con resolución de `AmountSource` desde el documento (incl. aliases `PaymentAmount`/`Withholdings`) y render de memo.
 - [ ] `JournalTemplateLine.AccountSource`: `Fixed` (código), `Role` (`AccountsReceivable`, `AccountsPayable`, `Bank`, `Cash`, `ChecksInHand`, `VatDebit`, …, resueltos desde `AccountingMapping`), `FinancialAccount` (resuelve por `accounting.finance_account_mapping`), `Counterparty` (deudores/proveedores).
 - [ ] Nuevos `AmountSource` para tesorería: `BankAmount`, `CashAmount`, `ChequeAmount`, `RetentionAmount`, `ImputedAmount`, `AdvanceAmount`, `ExchangeDifference`, `BankFee`, `MovementAmount`.
 - [ ] Validación: el asiento renderizado debe balancear; si no, el documento queda `Error` con el detalle y no se graba.

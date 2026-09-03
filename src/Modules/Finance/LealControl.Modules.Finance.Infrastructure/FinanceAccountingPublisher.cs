@@ -181,6 +181,8 @@ internal static class FinanceAccountingPublisher
         var amounts = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
         {
             [AccountingAmountSources.Total] = receipt.Amount,
+            [AccountingAmountSources.Withholdings] = retention,
+            [AccountingAmountSources.PaymentAmount] = Math.Max(0m, receipt.Amount - retention),
             [AccountingAmountSources.BankAmount] = bank,
             [AccountingAmountSources.CashAmount] = cash,
             [AccountingAmountSources.ChequeAmount] = cheque,
@@ -223,6 +225,8 @@ internal static class FinanceAccountingPublisher
         return new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
         {
             [AccountingAmountSources.Total] = order.Amount,
+            [AccountingAmountSources.Withholdings] = retention,
+            [AccountingAmountSources.PaymentAmount] = Math.Max(0m, order.Amount - retention),
             [AccountingAmountSources.BankAmount] = bank,
             [AccountingAmountSources.CashAmount] = cash,
             [AccountingAmountSources.OwnChequeAmount] = ownCheque,
