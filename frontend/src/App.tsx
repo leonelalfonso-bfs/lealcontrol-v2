@@ -1,139 +1,153 @@
 import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { api } from "./api/client";
 import { useAuth } from "./context/AuthContext";
-import { LoginPage } from "./pages/LoginPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AskLealAssistantModal } from "./components/AskLealAssistantModal";
-import { CustomerDetailPage } from "./pages/CustomerDetailPage";
-import { CustomerFormPage } from "./pages/CustomerFormPage";
-import { DirectoryPage } from "./pages/DirectoryPage";
-import { CustomersPage } from "./pages/CustomersPage";
-import { HoyPage } from "./pages/HoyPage";
-import { ExecutiveDashboardPage } from "./pages/ExecutiveDashboardPage";
-import { InventoryPage } from "./pages/InventoryPage";
-import { InventoryHelpPage } from "./pages/InventoryHelpPage";
-import { InvoiceFormPage } from "./pages/InvoiceFormPage";
-import { InvoicePrintPage } from "./pages/InvoicePrintPage";
-import { InvoicesPage } from "./pages/InvoicesPage";
-import { LeadsPage } from "./pages/LeadsPage";
-import { OpportunitiesPage } from "./pages/OpportunitiesPage";
-import { OpportunityDetailPage } from "./pages/OpportunityDetailPage";
-import { CrmHelpPage } from "./pages/CrmHelpPage";
-import { OrderDetailPage } from "./pages/OrderDetailPage";
-import { OrderFormPage } from "./pages/OrderFormPage";
-import { OrdersPage } from "./pages/OrdersPage";
-import { ProductFormPage } from "./pages/ProductFormPage";
-import { ProductsPage } from "./pages/ProductsPage";
-import { PurchaseArcaImportPage } from "./pages/PurchaseArcaImportPage";
-import { PurchaseInvoiceFormPage } from "./pages/PurchaseInvoiceFormPage";
-import { PurchaseInvoicesPage } from "./pages/PurchaseInvoicesPage";
-import { PurchaseInvoicePrintPage } from "./pages/PurchaseInvoicePrintPage";
-import { PurchaseOrderFormPage } from "./pages/PurchaseOrderFormPage";
-import { PurchaseOrderPrintPage } from "./pages/PurchaseOrderPrintPage";
-import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
-import { PurchaseReceptionFormPage } from "./pages/PurchaseReceptionFormPage";
-import { PurchaseReceptionsPage } from "./pages/PurchaseReceptionsPage";
-import { PurchaseRequestDetailPage } from "./pages/PurchaseRequestDetailPage";
-import { PurchaseRequestFormPage } from "./pages/PurchaseRequestFormPage";
-import { PurchaseRequestsPage } from "./pages/PurchaseRequestsPage";
-import { PurchasesDashboardPage } from "./pages/PurchasesDashboardPage";
-import { PurchaseReportsPage } from "./pages/PurchaseReportsPage";
-import { PurchaseHelpPage } from "./pages/PurchaseHelpPage";
-import { QuoteFormPage } from "./pages/QuoteFormPage";
-import { QuotePrintPage } from "./pages/QuotePrintPage";
-import { QuotesPage } from "./pages/QuotesPage";
-import { RemitoFormPage } from "./pages/RemitoFormPage";
-import { RemitoPrintPage } from "./pages/RemitoPrintPage";
-import { RemitosPage } from "./pages/RemitosPage";
-import { ReportsPage } from "./pages/ReportsPage";
-import { SettingsPage } from "./pages/SettingsPage";
-import { DocumentTemplatesPage } from "./pages/DocumentTemplatesPage";
-import { SuppliersPage } from "./pages/SuppliersPage";
-import { MailSettingsPage } from "./pages/MailSettingsPage";
-import { InboxPage } from "./pages/InboxPage";
-import { ChannelsPage } from "./pages/ChannelsPage";
-import { ReplyTemplatesPage } from "./pages/ReplyTemplatesPage";
 import { CommunicationsNotificationBell } from "./components/CommunicationsNotificationBell";
 import { useCommunicationsBrowserNotifications } from "./hooks/useCommunicationsBrowserNotifications";
-import { ProductionPage } from "./pages/ProductionPage";
-import { ProductionHelpPage } from "./pages/ProductionHelpPage";
-import { ProductionFlowPage } from "./pages/ProductionFlowPage";
-import { ProductionSetupPage } from "./pages/ProductionSetupPage";
-import { ProductionOrdersPage } from "./pages/ProductionOrdersPage";
-import { ProductionOrderDetailPage } from "./pages/ProductionOrderDetailPage";
-import { ProductionVariantsPage } from "./pages/ProductionVariantsPage";
-import { ProductionCostsPage } from "./pages/ProductionCostsPage";
-import { ProductionReportsPage } from "./pages/ProductionReportsPage";
-import { FinancePage } from "./pages/FinancePage";
-import { FinanceAccountsPage } from "./pages/FinanceAccountsPage";
-import { FinanceReconciliationPage } from "./pages/FinanceReconciliationPage";
-import { FinanceConceptsPage } from "./pages/FinanceConceptsPage";
-import { ChequePortfolioPage } from "./pages/ChequePortfolioPage";
-import { CollectionReceiptsWorkspacePage } from "./pages/CollectionReceiptsWorkspacePage";
-import { CurrentAccountsPage } from "./pages/CurrentAccountsPage";
-import { PaymentOrdersPage } from "./pages/PaymentOrdersPage";
-import { PaymentOrderFormPage } from "./pages/PaymentOrderFormPage";
-import { PaymentOrderPrintPage } from "./pages/PaymentOrderPrintPage";
-import { CashFlowPage } from "./pages/CashFlowPage";
-import { HumanResourcesDashboardPage } from "./pages/HumanResourcesDashboardPage";
-import { OrgChartPage } from "./pages/OrgChartPage";
-import { OrganizationPositionFormPage } from "./pages/OrganizationPositionFormPage";
-import { PositionJobDescriptionPage } from "./pages/PositionJobDescriptionPage";
-import { ProcedureManualsPage } from "./pages/ProcedureManualsPage";
-import { ProcedureManualFormPage } from "./pages/ProcedureManualFormPage";
-import { EmployeesListPage } from "./pages/EmployeesListPage";
-import { EmployeeFormPage } from "./pages/EmployeeFormPage";
-import { PayrollListPage } from "./pages/PayrollListPage";
-import { HumanResourcesHelpPage } from "./pages/HumanResourcesHelpPage";
-import { FleetVehiclesListPage } from "./pages/FleetVehiclesListPage";
-import { FleetVehicleFormPage } from "./pages/FleetVehicleFormPage";
-import { FleetFuelLogsPage } from "./pages/FleetFuelLogsPage";
-import { FleetHelpPage } from "./pages/FleetHelpPage";
-import { DirectoryHelpPage } from "./pages/DirectoryHelpPage";
-import { SalesHelpPage } from "./pages/SalesHelpPage";
-import { FinanceHelpPage } from "./pages/FinanceHelpPage";
-import { SettingsHelpPage } from "./pages/SettingsHelpPage";
-import { StyleShowcasePage } from "./pages/StyleShowcasePage";
-import { GrainsDashboardPage } from "./pages/GrainsDashboardPage";
-import { GrainContractsPage } from "./pages/GrainContractsPage";
-import { GrainContractFormPage } from "./pages/GrainContractFormPage";
-import { GrainContractDetailPage } from "./pages/GrainContractDetailPage";
-import { GrainFixationsPage } from "./pages/GrainFixationsPage";
-import { GrainDeliveriesPage } from "./pages/GrainDeliveriesPage";
-import { GrainPositionPage } from "./pages/GrainPositionPage";
-import { SuperAdminLoginPage } from "./pages/superadmin/SuperAdminLoginPage";
-import { SuperAdminDashboardPage } from "./pages/superadmin/SuperAdminDashboardPage";
-import { SuperAdminTenantsPage } from "./pages/superadmin/SuperAdminTenantsPage";
-import { SuperAdminPlansPage } from "./pages/superadmin/SuperAdminPlansPage";
-import { SuperAdminDemoRequestsPage } from "./pages/superadmin/SuperAdminDemoRequestsPage";
-import { AccountingDashboardPage } from "./pages/accounting/AccountingDashboardPage";
-import { JournalTemplatesPage } from "./pages/accounting/JournalTemplatesPage";
-import { JournalTemplateFormPage } from "./pages/accounting/JournalTemplateFormPage";
-import { ChartOfAccountsPage } from "./pages/accounting/ChartOfAccountsPage";
-import { AccountFormPage } from "./pages/accounting/AccountFormPage";
-import { JournalEntriesPage } from "./pages/accounting/JournalEntriesPage";
-import { JournalEntryFormPage } from "./pages/accounting/JournalEntryFormPage";
-import { GeneralLedgerPage } from "./pages/accounting/GeneralLedgerPage";
-import { TrialBalancePage } from "./pages/accounting/TrialBalancePage";
-import { BankReconciliationPage } from "./pages/accounting/BankReconciliationPage";
-import { AccountingStudyPortalPage } from "./pages/accounting/AccountingStudyPortalPage";
-import { MetrologyDashboardPage } from "./pages/metrology/MetrologyDashboardPage";
-import { MetrologyEquipmentPage } from "./pages/metrology/MetrologyEquipmentPage";
-import { MetrologyEquipmentFormPage } from "./pages/metrology/MetrologyEquipmentFormPage";
-import { StandardWeightsPage } from "./pages/metrology/StandardWeightsPage";
-import { StandardWeightFormPage } from "./pages/metrology/StandardWeightFormPage";
-import { StandardWeightsPrintPage } from "./pages/metrology/StandardWeightsPrintPage";
-import { CalibrationReportsPage } from "./pages/metrology/CalibrationReportsPage";
-import { CalibrationReportFormPage } from "./pages/metrology/CalibrationReportFormPage";
-import { CalibrationReportPrintPage } from "./pages/metrology/CalibrationReportPrintPage";
-import { LandingPage } from "./pages/LandingPage";
+import {
+  AccountFormPage,
+  AccountingDashboardPage,
+  AccountingStudyPortalPage,
+  BankReconciliationPage,
+  CalibrationReportFormPage,
+  CalibrationReportPrintPage,
+  CalibrationReportsPage,
+  CashFlowPage,
+  ChannelsPage,
+  ChartOfAccountsPage,
+  ChequePortfolioPage,
+  CollectionReceiptsWorkspacePage,
+  CrmHelpPage,
+  CurrentAccountsPage,
+  CustomerDetailPage,
+  CustomerFormPage,
+  CustomersPage,
+  DirectoryHelpPage,
+  DirectoryPage,
+  DocumentTemplatesPage,
+  EmployeeFormPage,
+  EmployeesListPage,
+  ExecutiveDashboardPage,
+  FinanceAccountsPage,
+  FinanceConceptsPage,
+  FinanceHelpPage,
+  FinancePage,
+  FinanceReconciliationPage,
+  FleetFuelLogsPage,
+  FleetHelpPage,
+  FleetVehicleFormPage,
+  FleetVehiclesListPage,
+  GeneralLedgerPage,
+  GrainContractDetailPage,
+  GrainContractFormPage,
+  GrainContractsPage,
+  GrainDeliveriesPage,
+  GrainFixationsPage,
+  GrainPositionPage,
+  GrainsDashboardPage,
+  HoyPage,
+  HumanResourcesDashboardPage,
+  HumanResourcesHelpPage,
+  InboxPage,
+  InventoryHelpPage,
+  InventoryPage,
+  InvoiceFormPage,
+  InvoicePrintPage,
+  InvoicesPage,
+  JournalEntriesPage,
+  JournalEntryFormPage,
+  JournalTemplateFormPage,
+  JournalTemplatesPage,
+  LandingPage,
+  LeadsPage,
+  LoginPage,
+  MailSettingsPage,
+  MetrologyDashboardPage,
+  MetrologyEquipmentFormPage,
+  MetrologyEquipmentPage,
+  OpportunitiesPage,
+  OpportunityDetailPage,
+  OrderDetailPage,
+  OrderFormPage,
+  OrdersPage,
+  OrgChartPage,
+  OrganizationPositionFormPage,
+  PaymentOrderFormPage,
+  PaymentOrderPrintPage,
+  PaymentOrdersPage,
+  PayrollListPage,
+  PositionJobDescriptionPage,
+  ProcedureManualFormPage,
+  ProcedureManualsPage,
+  ProductFormPage,
+  ProductionCostsPage,
+  ProductionFlowPage,
+  ProductionHelpPage,
+  ProductionOrderDetailPage,
+  ProductionOrdersPage,
+  ProductionPage,
+  ProductionReportsPage,
+  ProductionSetupPage,
+  ProductionVariantsPage,
+  ProductsPage,
+  PurchaseArcaImportPage,
+  PurchaseHelpPage,
+  PurchaseInvoiceFormPage,
+  PurchaseInvoicePrintPage,
+  PurchaseInvoicesPage,
+  PurchaseOrderFormPage,
+  PurchaseOrderPrintPage,
+  PurchaseOrdersPage,
+  PurchaseReceptionFormPage,
+  PurchaseReceptionsPage,
+  PurchaseReportsPage,
+  PurchaseRequestDetailPage,
+  PurchaseRequestFormPage,
+  PurchaseRequestsPage,
+  PurchasesDashboardPage,
+  QuoteFormPage,
+  QuotePrintPage,
+  QuotesPage,
+  RemitoFormPage,
+  RemitoPrintPage,
+  RemitosPage,
+  ReplyTemplatesPage,
+  ReportsPage,
+  SalesHelpPage,
+  SettingsHelpPage,
+  SettingsPage,
+  StandardWeightFormPage,
+  StandardWeightsPage,
+  StandardWeightsPrintPage,
+  StyleShowcasePage,
+  SuperAdminDashboardPage,
+  SuperAdminDemoRequestsPage,
+  SuperAdminLoginPage,
+  SuperAdminPlansPage,
+  SuperAdminTenantsPage,
+  SuppliersPage,
+  TrialBalancePage
+} from "./app/lazyPages";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
 import "./v1-theme.css";
 import "./brand-layout.css";
 import "./excel-tools.css";
 import { DEVELOPMENT_ACCESS, resolveActiveModule, resolveAllowedModuleIds, visibleModules } from "./app/moduleRegistry";
+
+function PageFallback() {
+  return (
+    <div style={{ padding: 40, textAlign: "center", color: "var(--ink-soft, #64748b)" }}>
+      Cargando…
+    </div>
+  );
+}
+
+function withPageSuspense(node: ReactNode) {
+  return <Suspense fallback={<PageFallback />}>{node}</Suspense>;
+}
 
 export function App() {
   const location = useLocation();
@@ -169,27 +183,27 @@ export function App() {
   useCommunicationsBrowserNotifications(hasCommunications);
 
   if (location.pathname === "/login") {
-    return <LoginPage />;
+    return withPageSuspense(<LoginPage />);
   }
 
   if (location.pathname === "/landing" || location.pathname === "/demo") {
-    return <LandingPage />;
+    return withPageSuspense(<LandingPage />);
   }
 
   if (location.pathname.startsWith("/superadmin")) {
     if (location.pathname === "/superadmin/login") {
-      return <SuperAdminLoginPage />;
+      return withPageSuspense(<SuperAdminLoginPage />);
     }
     if (location.pathname === "/superadmin/tenants") {
-      return <SuperAdminTenantsPage />;
+      return withPageSuspense(<SuperAdminTenantsPage />);
     }
     if (location.pathname === "/superadmin/planes") {
-      return <SuperAdminPlansPage />;
+      return withPageSuspense(<SuperAdminPlansPage />);
     }
     if (location.pathname === "/superadmin/demos") {
-      return <SuperAdminDemoRequestsPage />;
+      return withPageSuspense(<SuperAdminDemoRequestsPage />);
     }
-    return <SuperAdminDashboardPage />;
+    return withPageSuspense(<SuperAdminDashboardPage />);
   }
 
   return (
@@ -455,6 +469,7 @@ export function App() {
           )}
 
           <main className="main">
+            <Suspense fallback={<PageFallback />}>
             <Routes>
               {/* Style Showcase & Theme Preview */}
               <Route path="/estilos" element={<StyleShowcasePage />} />
@@ -612,6 +627,7 @@ export function App() {
               <Route path="/comunicaciones/canales" element={<ChannelsPage />} />
               <Route path="/comunicaciones/plantillas" element={<ReplyTemplatesPage />} />
             </Routes>
+            </Suspense>
           </main>
         </div>
 

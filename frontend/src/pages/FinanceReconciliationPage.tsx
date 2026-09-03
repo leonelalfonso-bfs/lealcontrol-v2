@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { DataTable } from "../components/ui/DataTable";
+import { FormField } from "../components/ui/FormField";
 
 type Account = { id: string; name: string; currency: string; type: string };
 type MovementRow = {
@@ -92,37 +94,36 @@ export function FinanceReconciliationPage() {
       {error && <div className="alert">{error}</div>}
 
       <section className="card pad" style={{ marginBottom: 16 }}>
-        <label>Cuenta bancaria
+        <FormField label="Cuenta bancaria">
           <select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
             ))}
           </select>
-        </label>
+        </FormField>
       </section>
 
       {suggestions.length > 0 && (
         <section className="card pad" style={{ marginBottom: 16 }}>
           <h2>Sugerencias de match</h2>
-          <table className="table">
-            <thead>
-              <tr><th>Extracto</th><th>Sistema</th><th>Importe</th><th></th></tr>
-            </thead>
-            <tbody>
-              {suggestions.map((s) => (
-                <tr key={`${s.importedMovementId}-${s.systemMovementId}`}>
-                  <td>{s.importedDescription}</td>
-                  <td>{s.systemDescription}</td>
-                  <td>{money(s.amount)}</td>
-                  <td>
-                    <button className="btn btn-sm" disabled={busy} onClick={() => void confirmMatch(s)}>
-                      Conciliar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            columns={[
+              { key: "imported", header: "Extracto", render: (s) => s.importedDescription },
+              { key: "system", header: "Sistema", render: (s) => s.systemDescription },
+              { key: "amount", header: "Importe", render: (s) => money(s.amount) },
+              {
+                key: "actions",
+                header: "",
+                render: (s) => (
+                  <button className="btn btn-sm" disabled={busy} onClick={() => void confirmMatch(s)}>
+                    Conciliar
+                  </button>
+                )
+              }
+            ]}
+            rows={suggestions}
+            rowKey={(s) => `${s.importedMovementId}-${s.systemMovementId}`}
+          />
         </section>
       )}
 

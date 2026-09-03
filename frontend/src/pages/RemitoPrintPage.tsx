@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import html2pdf from "html2pdf.js";
+import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
@@ -45,13 +45,14 @@ export function RemitoPrintPage() {
     loadRemitoData();
   }, [id]);
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     const element = document.getElementById("remito-pdf-sheet");
     if (!element || !remito) return;
 
     try {
       setDownloadingPdf(true);
       const filename = `Remito_${remito.remitoNumber}.pdf`;
+      const html2pdf = await loadHtml2Pdf();
 
       const opt = {
         margin: [5, 5, 5, 5] as [number, number, number, number],
@@ -62,17 +63,10 @@ export function RemitoPrintPage() {
         pagebreak: { mode: ["avoid-all", "css"] }
       };
 
-      html2pdf()
-        .set(opt)
-        .from(element)
-        .save()
-        .then(() => setDownloadingPdf(false))
-        .catch((err: unknown) => {
-          console.error(err);
-          setDownloadingPdf(false);
-        });
+      await html2pdf().set(opt).from(element).save();
     } catch (err: unknown) {
       console.error(err);
+    } finally {
       setDownloadingPdf(false);
     }
   };

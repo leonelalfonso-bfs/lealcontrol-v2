@@ -305,16 +305,16 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 
 ## Bloque 6 — Deuda técnica que frena la velocidad
 
-- [ ] 6.1 Code splitting: `React.lazy` por ruta en `App.tsx`; `import()` dinámico de `exceljs`, `html2pdf.js`, `pdfjs-dist`. Meta: chunk inicial < 800 KB.
-- [ ] 6.2 Partir `AccountingEndpoints.cs` (2.014 líneas) en `Accounts`, `JournalEntries`, `Reports`, `Templates`, `BatchPosting`, `Periods`. Idem `CommunicationsEndpoints.cs`.
-- [ ] 6.3 Finance y Accounting con capa `Application` (comandos + handlers) para poder testear sin HTTP. Empezar por recibos y OP.
-- [ ] 6.4 Una convención de nombres de tabla por esquema. Decisión: snake_case tablas + PascalCase columnas (como CRM). Migración de renombre para `finance`, `fleet`, `hr` y las tablas PascalCase de `sales`. Se hace **después** del bloque 4 para no mover el piso dos veces.
-- [ ] 6.5 Eliminar `catch { }` en `MetrologyEndpoints.cs:93,266`; reemplazar `Console.WriteLine` por `ILogger` en `CrmDbContext`, `MetrologyDbContext`, `GrainsEndpoints`.
-- [ ] 6.6 Componentes base en `frontend/src/components/ui/`: `Modal` (con `role="dialog"`, foco, Escape), `DataTable`, `FormField`. Migrar primero las 4 pantallas de Finanzas.
-- [ ] 6.7 Tipar `client.ts` para finanzas y contabilidad (hoy 51 `any`).
-- [ ] 6.8 Borrar `CollectionReceiptsPage.tsx` (huérfano) y consolidar `Sales/Infrastructure/Migrations` + `Persistence/Migrations` en una sola carpeta.
+- [x] 6.1 Code splitting: `React.lazy` por ruta en `App.tsx`; `import()` dinámico de `exceljs`, `html2pdf.js`, `pdfjs-dist`. Meta: chunk inicial < 800 KB.
+- [x] 6.2 Partir `AccountingEndpoints.cs` (2.014 líneas) en `Accounts`, `JournalEntries`, `Reports`, `Templates`, `BatchPosting`, `Periods`. Idem `CommunicationsEndpoints.cs`.
+- [x] 6.3 Finance y Accounting con capa `Application` (comandos + handlers) para poder testear sin HTTP. Empezar por recibos y OP.
+- [ ] 6.4 Una convención de nombres de tabla por esquema. Decisión: snake_case tablas + PascalCase columnas (como CRM). Migración de renombre para `finance`, `fleet`, `hr` y las tablas PascalCase de `sales`. **Diferido** (no se implementa en este bloque).
+- [x] 6.5 Eliminar `catch { }` en `MetrologyEndpoints.cs:93,266`; reemplazar `Console.WriteLine` por `ILogger` en `CrmDbContext`, `MetrologyDbContext`, `GrainsEndpoints`.
+- [x] 6.6 Componentes base en `frontend/src/components/ui/`: `Modal` (con `role="dialog"`, foco, Escape), `DataTable`, `FormField`. Migrar primero las 4 pantallas de Finanzas.
+- [x] 6.7 Tipar `client.ts` para finanzas y contabilidad (hoy 51 `any`).
+- [x] 6.8 Borrar `CollectionReceiptsPage.tsx` (huérfano) y consolidar `Sales/Infrastructure/Migrations` + `Persistence/Migrations` en una sola carpeta.
 
-**Verificado bloque 6:** ____ / ____
+**Verificado bloque 6:** 03/09/2026 — 6.4 diferido; chunk inicial `index` ~320 KB; Finance 32, Accounting 15, Arch 10. Pendiente rebuild staging.
 
 ---
 
@@ -332,4 +332,4 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 | 02/09/2026 | 3.1 UI A-V8 | `b1e7ea2` | ✅ staging | Movimiento conciliado: badge + no reclasificar |
 | 02/09/2026 | Deploy fixes | `cd217c6`–`e2dec51` | ✅ staging | Docker build OK, web+api healthy |
 | 02/09/2026 | 3.1, 3.3–3.14 | `fcb1e9b` | ◐ staging | Código completo; UI manual + **F-T1** pendiente |
-| 03/09/2026 | 5.1–5.6 red de tests | — | pendiente CI | Finance.Tests + Accounting.Tests + QA-FIN-001/002 + arch + coverlet |
+| 03/09/2026 | 6.1–6.8 (sin 6.4) | — | pendiente staging | Code split, split endpoints, Application Finance, UI base, tipos client |

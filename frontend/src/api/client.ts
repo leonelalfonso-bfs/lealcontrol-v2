@@ -16,6 +16,31 @@
   Quote,
   QuoteWrite
 } from "./types";
+import type {
+  AccountingMapping,
+  CostCenter,
+  FiscalPeriod,
+  GeneralLedgerRow,
+  JournalEntry,
+  JournalEntryLineWrite,
+  LedgerAccount,
+  PnlStatement,
+  TrialBalance
+} from "./types/accounting";
+import type {
+  BankImportPreviewRow,
+  CashFlowProjection,
+  CollectionReceiptDetail,
+  CollectionReceiptImputationWrite,
+  CollectionReceiptLineWrite,
+  FinanceAccount,
+  FinanceAvailableMovement,
+  FinanceConcept,
+  FinanceConceptRule,
+  FinanceMovementReview,
+  FinanceReconciliationResult,
+  ReceivedCheque
+} from "./types/finance";
 
 const API_BASE = "";
 
@@ -74,30 +99,30 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  listFinanceAccounts: () => request<{ id: string; name: string; currency: string; type: string; balance: number; isActive: boolean }[]>("/api/v1/finance/accounts"),
-  listFinanceConcepts: () => request<any[]>("/api/v1/finance/concepts"),
+  listFinanceAccounts: () => request<FinanceAccount[]>("/api/v1/finance/accounts"),
+  listFinanceConcepts: () => request<FinanceConcept[]>("/api/v1/finance/concepts"),
   createFinanceConcept: (body: object) => request("/api/v1/finance/concepts", { method: "POST", body: JSON.stringify(body) }),
   updateFinanceConcept: (id: string, body: object) => request(`/api/v1/finance/concepts/${id}`, { method: "PUT", body: JSON.stringify(body) }),
-  listFinanceConceptRules: () => request<any[]>("/api/v1/finance/concept-rules"),
+  listFinanceConceptRules: () => request<FinanceConceptRule[]>("/api/v1/finance/concept-rules"),
   createFinanceConceptRule: (body: object) => request("/api/v1/finance/concept-rules", { method: "POST", body: JSON.stringify(body) }),
   applyFinanceConceptRules: () => request<{ processed: number; suggested: number; pending: number }>("/api/v1/finance/concept-rules/apply", { method: "POST" }),
-  listFinanceMovementsForReview: () => request<any[]>("/api/v1/finance/movements/review"),
+  listFinanceMovementsForReview: () => request<FinanceMovementReview[]>("/api/v1/finance/movements/review"),
   classifyFinanceMovement: (id: string, body: object) => request(`/api/v1/finance/movements/${id}/classification`, { method: "POST", body: JSON.stringify(body) }),
   createFinanceAccount: (body: { name: string; currency: string; type: string; openingBalance: number }) => request("/api/v1/finance/accounts", { method: "POST", body: JSON.stringify(body) }),
-  previewFinanceBankImport: (accountId: string, csvContent: string) => request<{ operationDateUtc: string; amount: number; kind: string; description: string; externalReference?: string; error?: string }[]>("/api/v1/finance/imports/bank/preview", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
+  previewFinanceBankImport: (accountId: string, csvContent: string) => request<BankImportPreviewRow[]>("/api/v1/finance/imports/bank/preview", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
   confirmFinanceBankImport: (accountId: string, csvContent: string) => request<{ imported: number; updated?: number; duplicates: number; rejected: number }>("/api/v1/finance/imports/bank/confirm", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
   listFinanceMovements: (accountId: string) => request<{ id: string; operationDateUtc: string; kind: string; amount: number; currency: string; description: string; externalReference?: string; transferId?: string; reconciliationStatus: number; linkedEntityType?: string; linkedEntityId?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements`),
     listCollectionAvailableMovements: (accountId?: string, conceptId?: string) => {
     const params = new URLSearchParams();
     if (accountId) params.set("accountId", accountId);
     if (conceptId) params.set("conceptId", conceptId);
-    return request<any[]>(`/api/v1/finance/collections/available-movements?${params.toString()}`);
+    return request<FinanceAvailableMovement[]>(`/api/v1/finance/collections/available-movements?${params.toString()}`);
   },
   listPaymentAvailableMovements: (accountId?: string, conceptId?: string) => {
     const params = new URLSearchParams();
     if (accountId) params.set("accountId", accountId);
     if (conceptId) params.set("conceptId", conceptId);
-    return request<any[]>(`/api/v1/finance/payments/available-movements?${params.toString()}`);
+    return request<FinanceAvailableMovement[]>(`/api/v1/finance/payments/available-movements?${params.toString()}`);
   },
   listFinanceMovementDetails: (accountId: string) => request<{ id: string; operationDateUtc: string; description: string; externalReference?: string; kind: string; amount: number; currency: string; reportedBalance?: number; systemBalance: number; difference?: number; reconciliationStatus: string; stage?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements-detail`),
   reconcileFinanceMovement: (movementId: string, body: { entityType: string; entityId: string }) => request(`/api/v1/finance/movements/${movementId}/reconcile`, { method: "POST", body: JSON.stringify(body) }),
@@ -105,7 +130,7 @@ export const api = {
     const params = new URLSearchParams({ accountId });
     if (from) params.set("from", from);
     if (to) params.set("to", to);
-    return request<{ imported: any[]; system: any[]; suggestedMatches: any[] }>(`/api/v1/finance/reconciliation?${params.toString()}`);
+    return request<FinanceReconciliationResult>(`/api/v1/finance/reconciliation?${params.toString()}`);
   },
   matchFinanceReconciliation: (importedMovementId: string, systemMovementId: string) =>
     request("/api/v1/finance/reconciliation/match", {
@@ -117,13 +142,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ importedMovementId })
     }),
-  listReceivedCheques: () => request<any[]>("/api/v1/finance/echeqs"),
+  listReceivedCheques: () => request<ReceivedCheque[]>("/api/v1/finance/echeqs"),
   importReceivedCheques: (csvContent: string) => request<{ imported: number; duplicates: number }>("/api/v1/finance/echeqs/import", { method: "POST", body: JSON.stringify({ csvContent }) }),
   importIssuedCheques: (csvContent: string) => request<{ imported: number; duplicates: number }>("/api/v1/finance/echeqs/import-issued", { method: "POST", body: JSON.stringify({ csvContent }) }),
-  createReceivedCheque: (body: any) => request("/api/v1/finance/echeqs", { method: "POST", body: JSON.stringify(body) }),
+  createReceivedCheque: (body: object) => request("/api/v1/finance/echeqs", { method: "POST", body: JSON.stringify(body) }),
   useChequeForPayment: (id: string, reference: string) => request(`/api/v1/finance/echeqs/${id}/use-for-payment`, { method: "POST", body: JSON.stringify({ reference }) }),
   listCollectionReceipts: () => request<{ id: string; customerId?: string; accountId?: string; invoiceId?: string; receiptNumber: string; amount: number; currency: string; receiptDateUtc: string; description: string; status: string; linesCount?: number; invoicesCount?: number; invoicesSummary?: string }[]>("/api/v1/finance/collections"),
-  getCollectionReceipt: (id: string) => request<any>(`/api/v1/finance/collections/${id}`),
+  getCollectionReceipt: (id: string) => request<CollectionReceiptDetail>(`/api/v1/finance/collections/${id}`),
   createCollectionReceipt: (body: {
     accountId?: string;
     customerId?: string;
@@ -140,8 +165,8 @@ export const api = {
     suggestedAdjustmentType?: string;
     receiptDateUtc: string;
     description: string;
-    lines?: any[];
-    imputations?: any[];
+    lines?: CollectionReceiptLineWrite[];
+    imputations?: CollectionReceiptImputationWrite[];
   }) => request<{ id: string; receiptNumber: string; status: string }>("/api/v1/finance/collections", { method: "POST", body: JSON.stringify(body) }),
   listPaymentOrders: () => request<import("./types").PaymentOrder[]>("/api/v1/finance/payments"),
   getPaymentOrder: (id: string) => request<import("./types").PaymentOrder>(`/api/v1/finance/payments/${id}`),
@@ -152,7 +177,7 @@ export const api = {
   createFinanceRuleFromMovement: (movementId: string, body: object) => request(`/api/v1/finance/movements/${movementId}/create-rule`, { method: "POST", body: JSON.stringify(body) }),
   financeCashCount: (accountId: string, body: { countedAmount: number; countDateUtc: string; note?: string }) => request(`/api/v1/finance/accounts/${accountId}/cash-count`, { method: "POST", body: JSON.stringify(body) }),
   financeTransfer: (body: { fromAccountId: string; toAccountId: string; amount: number; currency: string; operationDateUtc: string; description: string }) => request("/api/v1/finance/transfers", { method: "POST", body: JSON.stringify(body) }),
-  financeCashFlowProjection: (days = 30) => request<{ availableToday: number; horizonDays: number; flows: any[] }>(`/api/v1/finance/cash-flow/projection?days=${days}`),
+  financeCashFlowProjection: (days = 30) => request<CashFlowProjection>(`/api/v1/finance/cash-flow/projection?days=${days}`),
   depositCheque: (id: string, body: { bankAccountId: string; depositDateUtc: string }) => request(`/api/v1/finance/echeqs/${id}/deposit`, { method: "POST", body: JSON.stringify(body) }),
   rejectCheque: (id: string, body: { rejectDateUtc: string; fees?: number; note?: string }) => request(`/api/v1/finance/echeqs/${id}/reject`, { method: "POST", body: JSON.stringify(body) }),
   cancelCheque: (id: string, reason: string) => request(`/api/v1/finance/echeqs/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }),
@@ -851,19 +876,19 @@ export const api = {
 
   // Accounting Module
   listAccounts: () =>
-    request<any[]>("/api/v1/accounting/accounts"),
+    request<LedgerAccount[]>("/api/v1/accounting/accounts"),
   createAccount: (body: { code: string; name: string; accountType?: string; level: number; parentCode?: string; isDirectPosting: boolean; currency?: string; adjustsForInflation?: boolean }) =>
-    request<any>("/api/v1/accounting/accounts", { method: "POST", body: JSON.stringify(body) }),
+    request<LedgerAccount>("/api/v1/accounting/accounts", { method: "POST", body: JSON.stringify(body) }),
   updateAccount: (id: string, body: { code?: string; name: string; accountType?: string; level?: number; parentCode?: string; isDirectPosting: boolean; currency?: string; adjustsForInflation: boolean; isActive: boolean }) =>
-    request<any>(`/api/v1/accounting/accounts/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    request<LedgerAccount>(`/api/v1/accounting/accounts/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteAccount: (id: string) =>
-    request<any>(`/api/v1/accounting/accounts/${id}`, { method: "DELETE" }),
+    request<void>(`/api/v1/accounting/accounts/${id}`, { method: "DELETE" }),
 
   // Accounting Mapping (Matriz de Enlace Contable)
   getAccountingMapping: () =>
-    request<any>("/api/v1/accounting/mapping"),
-  updateAccountingMapping: (body: any) =>
-    request<any>("/api/v1/accounting/mapping", { method: "PUT", body: JSON.stringify(body) }),
+    request<AccountingMapping>("/api/v1/accounting/mapping"),
+  updateAccountingMapping: (body: AccountingMapping) =>
+    request<AccountingMapping>("/api/v1/accounting/mapping", { method: "PUT", body: JSON.stringify(body) }),
 
   listJournalEntries: (params?: { startDate?: string; endDate?: string; sourceModule?: string }) => {
     const q = new URLSearchParams();
@@ -871,10 +896,10 @@ export const api = {
     if (params?.endDate) q.set("endDate", params.endDate);
     if (params?.sourceModule) q.set("sourceModule", params.sourceModule);
     const query = q.toString() ? `?${q.toString()}` : "";
-    return request<any[]>(`/api/v1/accounting/journal-entries${query}`);
+    return request<JournalEntry[]>(`/api/v1/accounting/journal-entries${query}`);
   },
-  createJournalEntry: (body: { date: string; concept: string; entryType?: string; sourceModule?: string; sourceDocumentId?: string; createdBy?: string; lines: any[] }) =>
-    request<any>("/api/v1/accounting/journal-entries", { method: "POST", body: JSON.stringify(body) }),
+  createJournalEntry: (body: { date: string; concept: string; entryType?: string; sourceModule?: string; sourceDocumentId?: string; createdBy?: string; lines: JournalEntryLineWrite[] }) =>
+    request<JournalEntry>("/api/v1/accounting/journal-entries", { method: "POST", body: JSON.stringify(body) }),
   getLedger: (accountCodeOrParams?: string | { accountCode?: string; startDate?: string; endDate?: string }, maybeParams?: { startDate?: string; endDate?: string }) => {
     const q = new URLSearchParams();
     if (typeof accountCodeOrParams === "string") {
@@ -887,53 +912,53 @@ export const api = {
       if (accountCodeOrParams.endDate) q.set("endDate", accountCodeOrParams.endDate);
     }
     const query = q.toString() ? `?${q.toString()}` : "";
-    return request<any[]>(`/api/v1/accounting/general-ledger${query}`);
+    return request<GeneralLedgerRow[]>(`/api/v1/accounting/general-ledger${query}`);
   },
   getTrialBalance: (params?: { startDate?: string; endDate?: string }) => {
     const q = new URLSearchParams();
     if (params?.startDate) q.set("startDate", params.startDate);
     if (params?.endDate) q.set("endDate", params.endDate);
     const query = q.toString() ? `?${q.toString()}` : "";
-    return request<any>(`/api/v1/accounting/trial-balance${query}`);
+    return request<TrialBalance>(`/api/v1/accounting/trial-balance${query}`);
   },
   getPnlStatement: (params?: { year?: number; month?: number }) => {
     const q = new URLSearchParams();
     if (params?.year) q.set("year", params.year.toString());
     if (params?.month) q.set("month", params.month.toString());
     const query = q.toString() ? `?${q.toString()}` : "";
-    return request<any>(`/api/v1/accounting/pnl-statement${query}`);
+    return request<PnlStatement>(`/api/v1/accounting/pnl-statement${query}`);
   },
   getIncomeStatement: (params?: { startDate?: string; endDate?: string; year?: number; month?: number }) => {
     const q = new URLSearchParams();
     if (params?.year) q.set("year", params.year.toString());
     if (params?.month) q.set("month", params.month.toString());
     const query = q.toString() ? `?${q.toString()}` : "";
-    return request<any>(`/api/v1/accounting/pnl-statement${query}`);
+    return request<PnlStatement>(`/api/v1/accounting/pnl-statement${query}`);
   },
   getCostCenterPnl: (year?: number) => {
     const q = year ? `?year=${year}` : "";
-    return request<any>(`/api/v1/accounting/reports/cost-center-pnl${q}`);
+    return request<Record<string, unknown>>(`/api/v1/accounting/reports/cost-center-pnl${q}`);
   },
   runYearEndClosing: (body: { year: number; closingDate?: string }) =>
-    request<any>("/api/v1/accounting/year-end-closing", { method: "POST", body: JSON.stringify(body) }),
+    request<JournalEntry>("/api/v1/accounting/year-end-closing", { method: "POST", body: JSON.stringify(body) }),
   autoPostPayroll: (body: { date: string; periodDescription: string; totalGrossSalaries: number; totalEmployerContributions: number; totalNetSalaries: number; totalSocialSecurityToPay: number; costCenterId?: string }) =>
-    request<any>("/api/v1/accounting/auto-post/payroll", { method: "POST", body: JSON.stringify(body) }),
+    request<JournalEntry>("/api/v1/accounting/auto-post/payroll", { method: "POST", body: JSON.stringify(body) }),
   listCostCenters: () =>
-    request<any[]>("/api/v1/accounting/cost-centers"),
+    request<CostCenter[]>("/api/v1/accounting/cost-centers"),
   createCostCenter: (body: { code: string; name: string; category?: string }) =>
-    request<any>("/api/v1/accounting/cost-centers", { method: "POST", body: JSON.stringify(body) }),
+    request<CostCenter>("/api/v1/accounting/cost-centers", { method: "POST", body: JSON.stringify(body) }),
   listFiscalPeriods: () =>
-    request<any[]>("/api/v1/accounting/periods"),
+    request<FiscalPeriod[]>("/api/v1/accounting/periods"),
   lockFiscalPeriod: (body: { year: number; month: number; lock: boolean; user?: string }) =>
-    request<any>("/api/v1/accounting/periods/lock", { method: "POST", body: JSON.stringify(body) }),
+    request<FiscalPeriod>("/api/v1/accounting/periods/lock", { method: "POST", body: JSON.stringify(body) }),
 
   // Auto-Posting Triggers
   autoPostInvoice: (body: { invoiceId: string; invoiceNumber: string; customerName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number }) =>
-    request<any>("/api/v1/accounting/auto-post/invoice", { method: "POST", body: JSON.stringify(body) }),
+    request<JournalEntry>("/api/v1/accounting/auto-post/invoice", { method: "POST", body: JSON.stringify(body) }),
   autoPostPurchase: (body: { purchaseId: string; invoiceNumber: string; supplierName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number }) =>
-    request<any>("/api/v1/accounting/auto-post/purchase", { method: "POST", body: JSON.stringify(body) }),
+    request<JournalEntry>("/api/v1/accounting/auto-post/purchase", { method: "POST", body: JSON.stringify(body) }),
   autoPostReceipt: (body: { receiptId: string; receiptNumber: string; customerName: string; date: string; amount: number; paymentMethod?: string }) =>
-    request<any>("/api/v1/accounting/auto-post/receipt", { method: "POST", body: JSON.stringify(body) }),
+    request<JournalEntry>("/api/v1/accounting/auto-post/receipt", { method: "POST", body: JSON.stringify(body) }),
 
   // Bank Reconciliation
   getTreasuryReconciliation: () =>

@@ -5,17 +5,28 @@ using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LealControl.Modules.Metrology.Infrastructure;
 
 public sealed class MetrologyDbContext : DbContext
 {
+    private readonly ILogger<MetrologyDbContext> _logger;
+
     public DbSet<MetrologyEquipment> Equipments => Set<MetrologyEquipment>();
     public DbSet<StandardWeight> StandardWeights => Set<StandardWeight>();
     public DbSet<CalibrationReport> CalibrationReports => Set<CalibrationReport>();
 
-    public MetrologyDbContext(DbContextOptions<MetrologyDbContext> options) : base(options)
+    public MetrologyDbContext(DbContextOptions<MetrologyDbContext> options)
+        : this(options, null)
     {
+    }
+
+    public MetrologyDbContext(DbContextOptions<MetrologyDbContext> options, ILogger<MetrologyDbContext>? logger)
+        : base(options)
+    {
+        _logger = logger ?? NullLogger<MetrologyDbContext>.Instance;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -289,7 +300,7 @@ public sealed class MetrologyDbContext : DbContext
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[MetrologyDbContext] Notice on executing DDL statement: {ex.Message}");
+                _logger.LogWarning(ex, "Notice on executing DDL statement");
             }
         }
     }

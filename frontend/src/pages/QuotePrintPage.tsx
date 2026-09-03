@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import html2pdf from "html2pdf.js";
+import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
@@ -114,6 +114,7 @@ export const QuotePrintPage: React.FC = () => {
         pagebreak: { mode: ["avoid-all", "css"] }
       };
 
+      const html2pdf = await loadHtml2Pdf();
       await html2pdf().set(opt).from(element).save();
     } catch (err: unknown) {
       console.error("Error al generar PDF:", err);

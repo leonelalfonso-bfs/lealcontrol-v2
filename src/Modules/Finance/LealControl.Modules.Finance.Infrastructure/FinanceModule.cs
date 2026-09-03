@@ -1,6 +1,7 @@
 using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Security;
 using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Finance.Application;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -57,6 +58,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddFinanceModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddFinanceApplication();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(FinanceDbContext).Assembly));
         services.AddTenantDbContext<FinanceDbContext>(FinanceDbContext.Schema);
         return services;
     }

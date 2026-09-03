@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Host\LealControl.Api\LealControl.Api.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Finance\LealControl.Modules.Finance.Application\LealControl.Modules.Finance.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Finance\LealControl.Modules.Finance.Infrastructure\LealControl.Modules.Finance.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

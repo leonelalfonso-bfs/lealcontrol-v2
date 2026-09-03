@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
+import { DataTable } from "../components/ui/DataTable";
 
 type Cheque = {
   id: string;
@@ -147,30 +148,30 @@ export function ChequePortfolioPage() {
           </div>
         </div>
         <div className="table-wrap" style={{ marginTop: 14 }}>
-          <table>
-            <thead>
-              <tr><th>Número</th><th>Titular</th><th>Banco</th><th>Vencimiento</th><th>Importe</th><th>Estado</th><th>Acciones</th></tr>
-            </thead>
-            <tbody>
-              {visible.length === 0 ? (
-                <tr><td colSpan={7} className="muted">No hay cheques con los filtros actuales.</td></tr>
-              ) : visible.map((x) => (
-                <tr key={x.id}>
-                  <td><strong>{x.checkNumber}</strong></td>
-                  <td>{x.issuerName || "—"}</td>
-                  <td>{x.bankName || "—"}</td>
-                  <td>{x.dueDateUtc ? new Date(x.dueDateUtc).toLocaleDateString("es-AR") : "—"}</td>
-                  <td>{money(x.amount, x.currency)}</td>
-                  <td><span className="badge">{labels[x.status] || x.status}</span></td>
-                  <td className="toolbar" style={{ gap: 4 }}>
+          <DataTable
+            empty="No hay cheques con los filtros actuales."
+            columns={[
+              { key: "checkNumber", header: "Número", render: (x) => <strong>{x.checkNumber}</strong> },
+              { key: "issuerName", header: "Titular", render: (x) => x.issuerName || "—" },
+              { key: "bankName", header: "Banco", render: (x) => x.bankName || "—" },
+              { key: "dueDateUtc", header: "Vencimiento", render: (x) => x.dueDateUtc ? new Date(x.dueDateUtc).toLocaleDateString("es-AR") : "—" },
+              { key: "amount", header: "Importe", render: (x) => money(x.amount, x.currency) },
+              { key: "status", header: "Estado", render: (x) => <span className="badge">{labels[x.status] || x.status}</span> },
+              {
+                key: "actions",
+                header: "Acciones",
+                render: (x) => (
+                  <div className="toolbar" style={{ gap: 4 }}>
                     {tab === "Received" && x.status === "Available" && <button className="btn btn-sm" disabled={busy} onClick={() => void deposit(x)}>Depositar</button>}
                     {tab === "Received" && ["Available", "Deposited", "Presented"].includes(x.status) && <button className="btn btn-sm btn-outline" disabled={busy} onClick={() => void reject(x)}>Rechazar</button>}
                     {!["UsedForPayment", "Credited", "Debited", "Cancelled"].includes(x.status) && <button className="btn btn-sm ghost" disabled={busy} onClick={() => void cancel(x)}>Anular</button>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                )
+              }
+            ]}
+            rows={visible}
+            rowKey={(x) => x.id}
+          />
         </div>
         <p className="muted" style={{ marginTop: 10 }}>El historial de estados queda registrado en las notas de cada cheque.</p>
       </section>

@@ -4,16 +4,25 @@ using LealControl.Modules.Crm.Domain.Customers;
 using LealControl.Modules.Crm.Domain.Leads;
 using LealControl.Modules.Crm.Domain.Opportunities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LealControl.Modules.Crm.Infrastructure.Persistence;
 
 public sealed class CrmDbContext : DbContext, IUnitOfWork
 {
     public const string Schema = "crm";
+    private readonly ILogger<CrmDbContext> _logger;
 
     public CrmDbContext(DbContextOptions<CrmDbContext> options)
+        : this(options, null)
+    {
+    }
+
+    public CrmDbContext(DbContextOptions<CrmDbContext> options, ILogger<CrmDbContext>? logger)
         : base(options)
     {
+        _logger = logger ?? NullLogger<CrmDbContext>.Instance;
     }
 
     public DbSet<Customer> Customers => Set<Customer>();
@@ -106,7 +115,7 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[CrmDbContext] Error en EnsureCrmTablesAsync: {ex.Message}");
+            _logger.LogError(ex, "Error en EnsureCrmTablesAsync");
         }
     }
 }

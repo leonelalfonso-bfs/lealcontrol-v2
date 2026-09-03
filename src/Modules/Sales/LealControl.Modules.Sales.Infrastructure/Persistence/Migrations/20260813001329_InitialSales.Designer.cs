@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace LealControl.Modules.Sales.Infrastructure.Migrations
+namespace LealControl.Modules.Sales.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SalesDbContext))]
     [Migration("20260813001329_InitialSales")]

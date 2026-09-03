@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import html2pdf from "html2pdf.js";
+import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { api } from "../api/client";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { type CompanySettings, type PurchaseOrder, type Supplier } from "../api/types";
@@ -43,7 +43,7 @@ export function PurchaseOrderPrintPage() {
     loadData();
   }, [id]);
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     const element = document.getElementById("purchase-order-pdf-sheet");
     if (!element || !order) return;
 
@@ -60,17 +60,11 @@ export function PurchaseOrderPrintPage() {
         pagebreak: { mode: ["avoid-all", "css"] }
       };
 
-      html2pdf()
-        .set(opt)
-        .from(element)
-        .save()
-        .then(() => setDownloadingPdf(false))
-        .catch((err: unknown) => {
-          console.error(err);
-          setDownloadingPdf(false);
-        });
+      const html2pdf = await loadHtml2Pdf();
+      await html2pdf().set(opt).from(element).save();
     } catch (err: unknown) {
       console.error(err);
+    } finally {
       setDownloadingPdf(false);
     }
   };

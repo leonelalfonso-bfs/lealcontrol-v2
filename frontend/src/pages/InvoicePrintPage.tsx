@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import html2pdf from "html2pdf.js";
 import QRCode from "qrcode";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { numberToWords } from "../utils/numberToWords";
+import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { type CompanySettings, type CustomerDetail, type Invoice } from "../api/types";
 
 export function InvoicePrintPage() {
@@ -67,13 +67,14 @@ export function InvoicePrintPage() {
     }
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     const element = document.getElementById("invoice-pdf-sheet");
     if (!element || !invoice) return;
 
     try {
       setDownloadingPdf(true);
       const filename = `Factura_${invoice.formattedNumber}.pdf`;
+      const html2pdf = await loadHtml2Pdf();
 
       const opt = {
         margin: [5, 5, 5, 5] as [number, number, number, number],
@@ -84,17 +85,13 @@ export function InvoicePrintPage() {
         pagebreak: { mode: ["avoid-all", "css"] }
       };
 
-      html2pdf()
+      await html2pdf()
         .set(opt)
         .from(element)
-        .save()
-        .then(() => setDownloadingPdf(false))
-        .catch((err: unknown) => {
-          console.error(err);
-          setDownloadingPdf(false);
-        });
+        .save();
     } catch (err: unknown) {
       console.error(err);
+    } finally {
       setDownloadingPdf(false);
     }
   };

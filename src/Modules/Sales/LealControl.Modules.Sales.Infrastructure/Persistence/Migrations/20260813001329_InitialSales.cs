@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace LealControl.Modules.Sales.Infrastructure.Migrations
+namespace LealControl.Modules.Sales.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
     public partial class InitialSales : Migration

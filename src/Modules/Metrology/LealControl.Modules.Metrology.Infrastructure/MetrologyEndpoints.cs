@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace LealControl.Modules.Metrology.Infrastructure;
 
@@ -33,7 +34,7 @@ public static class MetrologyEndpoints
         // ====================================================================
         // 1. Dashboard de Metrología
         // ====================================================================
-        group.MapGet("/dashboard", async (ITenantContext tenantContext, MetrologyDbContext db, CancellationToken ct) =>
+        group.MapGet("/dashboard", async (ITenantContext tenantContext, MetrologyDbContext db, ILoggerFactory loggerFactory, CancellationToken ct) =>
         {
             try
             {
@@ -90,7 +91,12 @@ public static class MetrologyEndpoints
             }
             catch (Exception ex)
             {
-                try { await db.EnsureMetrologyTablesAsync(ct); } catch { }
+                try { await db.EnsureMetrologyTablesAsync(ct); }
+                catch (Exception ensureEx)
+                {
+                    var logger = loggerFactory.CreateLogger("MetrologyEndpoints");
+                    logger.LogWarning(ensureEx, "EnsureMetrologyTablesAsync falló tras error en el handler.");
+                }
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
         });
@@ -192,6 +198,7 @@ public static class MetrologyEndpoints
             MetrologyEquipmentWriteDto req,
             ITenantContext tenantContext,
             MetrologyDbContext db,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             try
@@ -263,7 +270,12 @@ public static class MetrologyEndpoints
             }
             catch (Exception ex)
             {
-                try { await db.EnsureMetrologyTablesAsync(ct); } catch { }
+                try { await db.EnsureMetrologyTablesAsync(ct); }
+                catch (Exception ensureEx)
+                {
+                    var logger = loggerFactory.CreateLogger("MetrologyEndpoints");
+                    logger.LogWarning(ensureEx, "EnsureMetrologyTablesAsync falló tras error en el handler.");
+                }
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
         });
