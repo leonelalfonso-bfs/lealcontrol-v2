@@ -112,3 +112,34 @@ export interface QualityConfidentialityCommitment {
   createdAtUtc: string;
   updatedAtUtc: string;
 }
+
+export interface QualityIndicatorValue {
+  id: string;
+  indicatorId: string;
+  period: string;
+  value: number;
+  notes?: string;
+  recordedBy?: string;
+  recordedAtUtc: string;
+}
+
+export interface QualityIndicator {
+  id: string;
+  recordCode: string;
+  name: string;
+  objective?: string;
+  formula?: string;
+  targetValue?: number | null;
+  targetUnit?: string;
+  direction?: string;
+  responsible?: string;
+  frequency?: string;
+  notes?: string;
+  status: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+  latestPeriod?: string | null;
+  latestValue?: number | null;
+  compliance?: "Met" | "Below" | string | null;
+  values?: QualityIndicatorValue[];
+}

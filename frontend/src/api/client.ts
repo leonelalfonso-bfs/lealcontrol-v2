@@ -1235,6 +1235,70 @@ export const api = {
       { method: "DELETE" }
     ),
 
+  listQualityMc01R03: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      rows: import("./types/quality").QualityIndicator[];
+    }>("/api/v1/quality/records/mc01-r03"),
+
+  createQualityIndicator: (body: {
+    name: string;
+    objective?: string;
+    formula?: string;
+    targetValue?: number;
+    targetUnit?: string;
+    direction?: string;
+    responsible?: string;
+    frequency?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityIndicator>("/api/v1/quality/records/mc01-r03", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityIndicator: (
+    id: string,
+    body: {
+      name?: string;
+      objective?: string;
+      formula?: string;
+      targetValue?: number;
+      targetUnit?: string;
+      direction?: string;
+      responsible?: string;
+      frequency?: string;
+      notes?: string;
+      status?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityIndicator>(`/api/v1/quality/records/mc01-r03/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  deactivateQualityIndicator: (id: string) =>
+    request<import("./types/quality").QualityIndicator>(`/api/v1/quality/records/mc01-r03/${id}`, {
+      method: "DELETE"
+    }),
+
+  createQualityIndicatorValue: (
+    indicatorId: string,
+    body: { period: string; value: number; notes?: string; recordedBy?: string }
+  ) =>
+    request<import("./types/quality").QualityIndicatorValue>(
+      `/api/v1/quality/records/mc01-r03/${indicatorId}/values`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  deleteQualityIndicatorValue: (indicatorId: string, valueId: string) =>
+    request<void>(`/api/v1/quality/records/mc01-r03/${indicatorId}/values/${valueId}`, {
+      method: "DELETE"
+    }),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);

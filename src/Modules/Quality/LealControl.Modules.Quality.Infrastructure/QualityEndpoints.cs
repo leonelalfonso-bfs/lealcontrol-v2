@@ -389,6 +389,203 @@ public static class QualityEndpoints
             return Results.Ok(ToConfidentialityDto(entity));
         });
 
+        // MC01-R03 — Seguimiento de objetivos e indicadores
+        group.MapGet("/records/mc01-r03", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
+
+            var indicators = await db.Indicators.AsNoTracking()
+                .Where(i => i.TenantId == tenantId)
+                .OrderBy(i => i.Status == "Active" ? 0 : 1)
+                .ThenBy(i => i.Name)
+                .ToListAsync(ct);
+
+            var ids = indicators.Select(i => i.Id).ToList();
+            var values = await db.IndicatorValues.AsNoTracking()
+                .Where(v => v.TenantId == tenantId && ids.Contains(v.IndicatorId))
+                .OrderByDescending(v => v.Period)
+                .ThenByDescending(v => v.RecordedAtUtc)
+                .ToListAsync(ct);
+
+            var byIndicator = values.GroupBy(v => v.IndicatorId).ToDictionary(g => g.Key, g => g.ToList());
+
+            return Results.Ok(new
+            {
+                code = "MC01-R03",
+                title = "Seguimiento de objetivos e indicadores",
+                recordKind = QualityRecordKinds.Structured,
+                generatedAtUtc = DateTime.UtcNow,
+                rows = indicators.Select(i =>
+                {
+                    byIndicator.TryGetValue(i.Id, out var vals);
+                    vals ??= new List<QualityIndicatorValue>();
+                    var latest = vals.FirstOrDefault();
+                    return ToIndicatorDto(i, vals, latest);
+                })
+            });
+        });
+
+        group.MapPost("/records/mc01-r03", async (
+            CreateQualityIndicatorRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+
+            if (string.IsNullOrWhiteSpace(req.Name))
+            {
+                return Results.BadRequest(new { message = "El nombre del indicador es obligatorio." });
+            }
+
+            var entity = new QualityIndicator
+            {
+                TenantId = tenantId,
+                RecordCode = "MC01-R03",
+                Name = req.Name.Trim(),
+                Objective = req.Objective?.Trim() ?? string.Empty,
+                Formula = req.Formula?.Trim() ?? string.Empty,
+                TargetValue = req.TargetValue,
+                TargetUnit = req.TargetUnit?.Trim() ?? string.Empty,
+                Direction = string.IsNullOrWhiteSpace(req.Direction) ? "HigherIsBetter" : req.Direction.Trim(),
+                Responsible = req.Responsible?.Trim() ?? string.Empty,
+                Frequency = string.IsNullOrWhiteSpace(req.Frequency) ? "Monthly" : req.Frequency.Trim(),
+                Notes = req.Notes?.Trim() ?? string.Empty,
+                Status = "Active",
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            db.Indicators.Add(entity);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/quality/records/mc01-r03/{entity.Id}", ToIndicatorDto(entity, Array.Empty<QualityIndicatorValue>(), null));
+        });
+
+        group.MapPut("/records/mc01-r03/{id:guid}", async (
+            Guid id,
+            UpdateQualityIndicatorRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.Indicators.FirstOrDefaultAsync(i => i.Id == id && i.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+
+            if (req.Name is not null)
+            {
+                if (string.IsNullOrWhiteSpace(req.Name))
+                    return Results.BadRequest(new { message = "El nombre no puede quedar vacío." });
+                entity.Name = req.Name.Trim();
+            }
+            if (req.Objective is not null) entity.Objective = req.Objective.Trim();
+            if (req.Formula is not null) entity.Formula = req.Formula.Trim();
+            if (req.TargetValue.HasValue) entity.TargetValue = req.TargetValue;
+            if (req.TargetUnit is not null) entity.TargetUnit = req.TargetUnit.Trim();
+            if (req.Direction is not null) entity.Direction = req.Direction.Trim();
+            if (req.Responsible is not null) entity.Responsible = req.Responsible.Trim();
+            if (req.Frequency is not null) entity.Frequency = req.Frequency.Trim();
+            if (req.Notes is not null) entity.Notes = req.Notes.Trim();
+            if (req.Status is not null)
+            {
+                var st = req.Status.Trim();
+                if (st is not ("Active" or "Inactive"))
+                    return Results.BadRequest(new { message = "Status debe ser Active o Inactive." });
+                entity.Status = st;
+            }
+
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+
+            var vals = await db.IndicatorValues.AsNoTracking()
+                .Where(v => v.TenantId == tenantId && v.IndicatorId == entity.Id)
+                .OrderByDescending(v => v.Period)
+                .ToListAsync(ct);
+            return Results.Ok(ToIndicatorDto(entity, vals, vals.FirstOrDefault()));
+        });
+
+        group.MapDelete("/records/mc01-r03/{id:guid}", async (
+            Guid id,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.Indicators.FirstOrDefaultAsync(i => i.Id == id && i.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            entity.Status = "Inactive";
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToIndicatorDto(entity, Array.Empty<QualityIndicatorValue>(), null));
+        });
+
+        group.MapPost("/records/mc01-r03/{id:guid}/values", async (
+            Guid id,
+            CreateQualityIndicatorValueRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+
+            var indicator = await db.Indicators.AsNoTracking()
+                .FirstOrDefaultAsync(i => i.Id == id && i.TenantId == tenantId, ct);
+            if (indicator is null) return Results.NotFound(new { message = "Indicador no encontrado." });
+            if (indicator.Status != "Active")
+                return Results.BadRequest(new { message = "El indicador está inactivo." });
+
+            if (string.IsNullOrWhiteSpace(req.Period))
+                return Results.BadRequest(new { message = "El período es obligatorio (ej. 2026-09 o 2026-Q3)." });
+
+            var period = req.Period.Trim();
+            var existing = await db.IndicatorValues
+                .FirstOrDefaultAsync(v => v.TenantId == tenantId && v.IndicatorId == id && v.Period == period, ct);
+
+            if (existing is not null)
+            {
+                existing.Value = req.Value;
+                existing.Notes = req.Notes?.Trim() ?? string.Empty;
+                existing.RecordedBy = req.RecordedBy?.Trim() ?? existing.RecordedBy;
+                existing.RecordedAtUtc = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+                return Results.Ok(ToIndicatorValueDto(existing));
+            }
+
+            var entity = new QualityIndicatorValue
+            {
+                TenantId = tenantId,
+                IndicatorId = id,
+                Period = period,
+                Value = req.Value,
+                Notes = req.Notes?.Trim() ?? string.Empty,
+                RecordedBy = req.RecordedBy?.Trim() ?? string.Empty,
+                RecordedAtUtc = DateTime.UtcNow
+            };
+            db.IndicatorValues.Add(entity);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/quality/records/mc01-r03/{id}/values/{entity.Id}", ToIndicatorValueDto(entity));
+        });
+
+        group.MapDelete("/records/mc01-r03/{indicatorId:guid}/values/{valueId:guid}", async (
+            Guid indicatorId,
+            Guid valueId,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.IndicatorValues
+                .FirstOrDefaultAsync(v => v.Id == valueId && v.IndicatorId == indicatorId && v.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            db.IndicatorValues.Remove(entity);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        });
+
         group.MapGet("/documents/{code}", async (string code, ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
@@ -839,6 +1036,56 @@ public static class QualityEndpoints
         c.CreatedAtUtc,
         c.UpdatedAtUtc
     };
+
+    private static object ToIndicatorValueDto(QualityIndicatorValue v) => new
+    {
+        v.Id,
+        v.IndicatorId,
+        v.Period,
+        v.Value,
+        v.Notes,
+        v.RecordedBy,
+        v.RecordedAtUtc
+    };
+
+    private static object ToIndicatorDto(
+        QualityIndicator i,
+        IReadOnlyList<QualityIndicatorValue> values,
+        QualityIndicatorValue? latest)
+    {
+        string? compliance = null;
+        if (latest is not null && i.TargetValue.HasValue)
+        {
+            compliance = i.Direction switch
+            {
+                "LowerIsBetter" => latest.Value <= i.TargetValue.Value ? "Met" : "Below",
+                "Exact" => latest.Value == i.TargetValue.Value ? "Met" : "Below",
+                _ => latest.Value >= i.TargetValue.Value ? "Met" : "Below"
+            };
+        }
+
+        return new
+        {
+            i.Id,
+            i.RecordCode,
+            i.Name,
+            i.Objective,
+            i.Formula,
+            i.TargetValue,
+            i.TargetUnit,
+            i.Direction,
+            i.Responsible,
+            i.Frequency,
+            i.Notes,
+            i.Status,
+            i.CreatedAtUtc,
+            i.UpdatedAtUtc,
+            latestPeriod = latest?.Period,
+            latestValue = latest?.Value,
+            compliance,
+            values = values.Select(ToIndicatorValueDto)
+        };
+    }
 
     private static object ToVersionDto(QualityDocumentVersion v) => new
     {

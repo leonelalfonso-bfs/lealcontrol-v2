@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityDashboard, QualityDocumentTreeNode } from "../../api/types/quality";
+import { operationalRecordFor } from "./qualityRecordRoutes";
 
 function typeLabel(type: string): string {
   switch (type) {
@@ -175,7 +176,7 @@ export function QualityDocumentsPage() {
         <div className="card pad" style={{ maxHeight: "70vh", overflow: "auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
             <strong>Árbol documental</strong>
-            <Link to="/calidad/registros/pg01-r01" style={{ fontSize: 12 }}>PG01-R01</Link>
+            <Link to="/calidad/registros" style={{ fontSize: 12 }}>Registros</Link>
           </div>
           {tree.map((node) => (
             <TreeNode
@@ -204,9 +205,20 @@ export function QualityDocumentsPage() {
                     {selected.linkedModule && <span className="pill">→ {selected.linkedModule}</span>}
                   </div>
                 </div>
-                <Link className="btn btn-outline" to={`/calidad/documentos/${encodeURIComponent(selected.code)}`}>
-                  Ver detalle
-                </Link>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {(() => {
+                    const op = operationalRecordFor(selected.code);
+                    if (!op?.ready) return null;
+                    return (
+                      <Link className="btn btn-primary" to={op.path}>
+                        Abrir registro
+                      </Link>
+                    );
+                  })()}
+                  <Link className="btn btn-outline" to={`/calidad/documentos/${encodeURIComponent(selected.code)}`}>
+                    Ver detalle
+                  </Link>
+                </div>
               </div>
 
               <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>

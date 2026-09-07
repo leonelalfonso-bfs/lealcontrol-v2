@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityDocumentDetail } from "../../api/types/quality";
+import { operationalRecordFor } from "./qualityRecordRoutes";
 
 function parseApiError(err: unknown): string {
   if (!(err instanceof Error)) return String(err);
@@ -128,20 +129,17 @@ export function QualityDocumentDetailPage() {
             {d.recordKind ? ` · ${d.recordKind}` : ""}
             {d.iso17025Clauses ? ` · ISO ${d.iso17025Clauses}` : ""}
           </p>
-          {d.code === "MC01-R01" && (
-            <p style={{ marginTop: 8 }}>
-              <Link className="btn btn-outline" to="/calidad/registros/mc01-r01">
-                Abrir registro de instancias firmadas
-              </Link>
-            </p>
-          )}
-          {d.code === "MC01-R02" && (
-            <p style={{ marginTop: 8 }}>
-              <Link className="btn btn-outline" to="/calidad/registros/mc01-r02">
-                Abrir registro de instancias firmadas
-              </Link>
-            </p>
-          )}
+          {(() => {
+            const op = operationalRecordFor(d.code);
+            if (!op?.ready) return null;
+            return (
+              <p style={{ marginTop: 8 }}>
+                <Link className="btn btn-outline" to={op.path}>
+                  Abrir registro operativo
+                </Link>
+              </p>
+            );
+          })()}
         </div>
         {published?.publishedFileId && (
           <button

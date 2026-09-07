@@ -342,10 +342,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     items: [
       { path: "/calidad", label: "Tablero SGC", icon: "📊", end: true },
       { path: "/calidad/documentos", label: "Árbol documental", icon: "🌲" },
-      { path: "/calidad/registros/mc01-r01", label: "MC01-R01 Confidencialidad int.", icon: "🔏" },
-      { path: "/calidad/registros/mc01-r02", label: "MC01-R02 Confidencialidad ext.", icon: "🔏" },
-      { path: "/calidad/registros/pg01-r01", label: "PG01-R01 Lista documentos", icon: "📋" },
-      { path: "/calidad/registros/pg01-r02", label: "PG01-R02 Doc. externos", icon: "📑" }
+      { path: "/calidad/registros", label: "Registros operativos", icon: "📋", end: true }
     ]
   },
   {

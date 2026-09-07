@@ -207,3 +207,81 @@ public sealed record CreateConfidentialityCommitmentRequest(
     string? Organization = null,
     Guid? SignedFileId = null,
     string? Notes = null);
+
+/// <summary>Definición de indicador SGC (MC01-R03).</summary>
+public sealed class QualityIndicator : Entity<Guid>
+{
+    public QualityIndicator() : base(Guid.NewGuid())
+    {
+    }
+
+    public QualityIndicator(Guid id) : base(id)
+    {
+    }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "MC01-R03";
+    public string Name { get; set; } = string.Empty;
+    public string Objective { get; set; } = string.Empty;
+    public string Formula { get; set; } = string.Empty;
+    public decimal? TargetValue { get; set; }
+    public string TargetUnit { get; set; } = string.Empty;
+    /// <summary>HigherIsBetter | LowerIsBetter | Exact</summary>
+    public string Direction { get; set; } = "HigherIsBetter";
+    public string Responsible { get; set; } = string.Empty;
+    public string Frequency { get; set; } = "Monthly"; // Monthly | Quarterly | Yearly
+    public string Notes { get; set; } = string.Empty;
+    public string Status { get; set; } = "Active"; // Active | Inactive
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Valor medido de un indicador en un período (MC01-R03).</summary>
+public sealed class QualityIndicatorValue : Entity<Guid>
+{
+    public QualityIndicatorValue() : base(Guid.NewGuid())
+    {
+    }
+
+    public QualityIndicatorValue(Guid id) : base(id)
+    {
+    }
+
+    public TenantId TenantId { get; set; }
+    public Guid IndicatorId { get; set; }
+    /// <summary>Etiqueta de período, ej. 2026-01, 2026-Q1, 2026.</summary>
+    public string Period { get; set; } = string.Empty;
+    public decimal Value { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public string RecordedBy { get; set; } = string.Empty;
+    public DateTime RecordedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateQualityIndicatorRequest(
+    string Name,
+    string? Objective = null,
+    string? Formula = null,
+    decimal? TargetValue = null,
+    string? TargetUnit = null,
+    string? Direction = null,
+    string? Responsible = null,
+    string? Frequency = null,
+    string? Notes = null);
+
+public sealed record UpdateQualityIndicatorRequest(
+    string? Name = null,
+    string? Objective = null,
+    string? Formula = null,
+    decimal? TargetValue = null,
+    string? TargetUnit = null,
+    string? Direction = null,
+    string? Responsible = null,
+    string? Frequency = null,
+    string? Notes = null,
+    string? Status = null);
+
+public sealed record CreateQualityIndicatorValueRequest(
+    string Period,
+    decimal Value,
+    string? Notes = null,
+    string? RecordedBy = null);

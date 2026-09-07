@@ -272,17 +272,23 @@ Módulo `calidad` en `moduleRegistry.ts`, ruta base `/calidad`, claim `quality`.
 /calidad/documentos/:code        Detalle: encabezado (código, versión vigente, estado, próxima revisión), pestañas
                                  Versiones (historial + Elaboró/Revisó/Aprobó) · Archivo (visor/descarga) ·
                                  Registros asociados · Cláusulas 17025 · Distribución (acuses)
+/calidad/registros               Índice de registros operativos (no saturar el menú lateral)
 /calidad/registros/quejas        PG03-R01
-/calidad/registros/nc            PG07-R1 (NC / TNC / Riesgos / OM con filtro por tipo)
+/calidad/registros/nc            PG07-R1
 /calidad/registros/auditorias    PG04
-/calidad/registros/personal      PG06 (capacitaciones, autorizaciones, competencias, funciones)
+/calidad/registros/personal      PG06
 /calidad/registros/proveedores   PG05
-/calidad/registros/equipos       PG14 (hoja de vida, verificación intermedia, mantenimiento, auxiliares)
+/calidad/registros/equipos       PG14
 /calidad/registros/indicadores   MC01-R03
 /calidad/registros/revision-direccion  PG08-R01
 /calidad/registros/encuestas     PG09 R3
 /calidad/normas                  Documentos externos (PG01-R02): vigencia, relaciones, revisión anual
 ```
+
+Navegación acordada (07/09/2026):
+- **Menú lateral Calidad:** solo Tablero SGC · Árbol documental · Registros operativos (índice).
+- **Entrada principal a un registro:** desde el árbol/detalle del código (`Abrir registro`) o desde `/calidad/registros`.
+- No agregar un ítem de menú por cada `MC01-Rxx` / `PG0x-Rxx`.
 
 Detalles de UX que importan en auditoría:
 - Cada pantalla de registro muestra el **código SGC en el título** ("PG07-R1 · Registro y seguimiento de NC, R y OP") y un link al procedimiento padre con la versión vigente.
@@ -381,7 +387,7 @@ El script es idempotente por código+versión (si ya hay `PublishedFileId`, se o
 | **C2 — Enlace con Metrología** | `Quality.Contracts`, `MetrologyInstrument` (termómetro) y su referencia en el informe, snapshot de procedimiento/versión y normas en el informe, `ApprovedBy` restringido a DT, PG14-R4/R3 generados desde pesas + instrumentos + auxiliares, hoja de vida PG14-R1 con eventos de calibración, PG09 R2 enmienda, "Ver trazabilidad SGC" desde el informe, vista IT 0X R1/R2/R3 | Cadena Ensayo → Norma → Procedimiento → Patrón/Termómetro → Certificado → DT que aprobó, desde un informe |
 | **Estado C2 (07/09/2026):** | **EN CURSO — corte 2.** Corte 1 (snapshot + DT + trazabilidad) + `MetrologyInstrument` (termómetro) con CRUD `/metrologia/instrumentos`, vínculo `ThermometerInstrumentId` en el informe (valida certificado vigente), visible en impresión y trazabilidad SGC. Pendiente: PG14-R3/R4 generados, PG09 R2, hoja de vida, vistas Linked IT. | — |
 | **C3 — Registros de gestión** | PG07-R1 (NC/TNC/riesgos/OM), PG03-R01 quejas con plazos, PG04 auditorías, PG06 personal + autorizaciones firmadas por DT (validación de firma en Metrología), PG05 proveedores, MC01-R03 indicadores, PG08-R01 revisión por la dirección, PG09 R3 encuestas, PG14-R5/R6, `QualityEquipment` (camión/acoplado/autoelevador), MC01-R01/R02 | Todos los registros del listado de códigos existen en el sistema |
-| **Estado C3 (07/09/2026):** | **EN CURSO — orden MC → PG.** **MC01-R01** y **MC01-R02** instancias firmadas listos. Siguiente: MC01-R03 → MC01-R05 → PG01… | — |
+| **Estado C3 (07/09/2026):** | **EN CURSO — orden MC → PG.** **MC01-R01/R02** firmados + **MC01-R03** indicadores listos. Navegación: menú con índice `/calidad/registros` (sin un ítem por registro). Siguiente: MC01-R05 → PG01… | — |
 | **C4 — Tablero, auditoría de cambios y modo presentación** | Dashboard SGC, matriz cláusulas 17025, historial before/after por registro, **modo presentación** (toggle, bloqueo de escrituras en backend, salida con contraseña, log de sesiones), alertas (Google Calendar → notificaciones del sistema) | Simulacro de auditoría interna PG04 completo dentro del sistema, mostrado en modo presentación |
 
 Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor riesgo; C2 toca Metrología y conviene hacerla antes de emitir informes "en producción ISO"; C3 es volumen (muchos formularios pero todos del mismo patrón); C4 es pulido. El modo presentación podría adelantarse a C1 en versión mínima (solo ocultar botones) si la auditoría interna se programa antes de terminar C4.

@@ -17,6 +17,8 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityDocumentRelation> DocumentRelations => Set<QualityDocumentRelation>();
     public DbSet<QualityDistributionAck> DistributionAcks => Set<QualityDistributionAck>();
     public DbSet<QualityConfidentialityCommitment> ConfidentialityCommitments => Set<QualityConfidentialityCommitment>();
+    public DbSet<QualityIndicator> Indicators => Set<QualityIndicator>();
+    public DbSet<QualityIndicatorValue> IndicatorValues => Set<QualityIndicatorValue>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
         : this(options, null)
@@ -118,6 +120,39 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.Kind, x.SignedAt });
             b.HasIndex(x => new { x.TenantId, x.RecordCode });
+        });
+
+        modelBuilder.Entity<QualityIndicator>(b =>
+        {
+            b.ToTable("indicators", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            b.Property(x => x.Objective).HasMaxLength(1000);
+            b.Property(x => x.Formula).HasMaxLength(500);
+            b.Property(x => x.TargetValue).HasPrecision(18, 4);
+            b.Property(x => x.TargetUnit).HasMaxLength(40);
+            b.Property(x => x.Direction).HasMaxLength(32).HasDefaultValue("HigherIsBetter");
+            b.Property(x => x.Responsible).HasMaxLength(160);
+            b.Property(x => x.Frequency).HasMaxLength(32).HasDefaultValue("Monthly");
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Active");
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Status, x.Name });
+            b.HasIndex(x => new { x.TenantId, x.RecordCode });
+        });
+
+        modelBuilder.Entity<QualityIndicatorValue>(b =>
+        {
+            b.ToTable("indicator_values", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Period).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Value).HasPrecision(18, 4);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.RecordedBy).HasMaxLength(160);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.IndicatorId, x.Period }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.IndicatorId, x.RecordedAtUtc });
         });
     }
 
@@ -231,7 +266,40 @@ public sealed class QualityDbContext : DbContext
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_conf_Tenant_Kind_Signed"" ON quality.confidentiality_commitments (""TenantId"", ""Kind"", ""SignedAt"");",
-            @"CREATE INDEX IF NOT EXISTS ""IX_quality_conf_Tenant_Record"" ON quality.confidentiality_commitments (""TenantId"", ""RecordCode"");"
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_conf_Tenant_Record"" ON quality.confidentiality_commitments (""TenantId"", ""RecordCode"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.indicators (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'MC01-R03',
+                ""Name"" character varying(200) NOT NULL,
+                ""Objective"" character varying(1000) NOT NULL DEFAULT '',
+                ""Formula"" character varying(500) NOT NULL DEFAULT '',
+                ""TargetValue"" numeric(18,4),
+                ""TargetUnit"" character varying(40) NOT NULL DEFAULT '',
+                ""Direction"" character varying(32) NOT NULL DEFAULT 'HigherIsBetter',
+                ""Responsible"" character varying(160) NOT NULL DEFAULT '',
+                ""Frequency"" character varying(32) NOT NULL DEFAULT 'Monthly',
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Active',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_indicators_Tenant_Status_Name"" ON quality.indicators (""TenantId"", ""Status"", ""Name"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_indicators_Tenant_Record"" ON quality.indicators (""TenantId"", ""RecordCode"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.indicator_values (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""IndicatorId"" uuid NOT NULL,
+                ""Period"" character varying(32) NOT NULL,
+                ""Value"" numeric(18,4) NOT NULL,
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""RecordedBy"" character varying(160) NOT NULL DEFAULT '',
+                ""RecordedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_indval_Tenant_Ind_Period"" ON quality.indicator_values (""TenantId"", ""IndicatorId"", ""Period"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_indval_Tenant_Ind_Rec"" ON quality.indicator_values (""TenantId"", ""IndicatorId"", ""RecordedAtUtc"");"
         };
 
         foreach (var sql in statements)
