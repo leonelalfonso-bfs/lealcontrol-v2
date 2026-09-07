@@ -13,10 +13,11 @@ function statusOf(r: CalibrationReport): string {
 }
 
 function verdictOf(r: CalibrationReport): string {
-  const raw = r.result || (r as { verdict?: string }).verdict || "";
-  if (raw === "Approved") return "Apto";
-  if (raw === "Rejected") return "No Apto";
-  return String(raw || "—");
+  const raw = String((r as { verdict?: string }).verdict || r.result || "");
+  if (raw === "Approved" || raw === "Apto") return "Apto";
+  if (raw === "Rejected" || raw === "No Apto") return "No Apto";
+  if (raw === "Apto con Observaciones") return "Apto con Observaciones";
+  return raw || "—";
 }
 
 export function CalibrationReportsPage() {
