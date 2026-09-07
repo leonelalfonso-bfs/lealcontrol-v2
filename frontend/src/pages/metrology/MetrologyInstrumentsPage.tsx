@@ -209,7 +209,7 @@ export function MetrologyInstrumentFormPage() {
           Notas
           <textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3} style={{ width: "100%" }} />
         </label>
-        <div style={{ marginTop: 16, displayContent: "flex-end", display: "flex", gap: 8 }}>
+        <div style={{ marginTop: 16, justifyContent: "flex-end", display: "flex", gap: 8 }}>
           <button type="button" className="btn ghost" onClick={() => navigate("/metrologia/instrumentos")}>Cancelar</button>
           <button type="submit" className="btn" disabled={saving} style={{ background: "#0d9488", color: "#fff" }}>
             {saving ? "Guardando…" : "Guardar"}
