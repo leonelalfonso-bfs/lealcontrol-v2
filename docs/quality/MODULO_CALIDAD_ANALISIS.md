@@ -12,7 +12,7 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** *(PG03-R01 + audit trail parcial)*.  
+**Último commit de avance Calidad:** `4e097bd` (PG03-R01 + audit).  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
 ### Principio: los registros se generan en el sistema
