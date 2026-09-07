@@ -17,7 +17,8 @@ public sealed record TenantMembership(
     string FullName,
     string Email,
     string Role,
-    string? AllowedModulesJson);
+    string? AllowedModulesJson,
+    bool IsTechnicalDirector = false);
 
 public static class MultiTenantAuthResolver
 {
@@ -73,8 +74,9 @@ public static class MultiTenantAuthResolver
                 active.Role,
                 active.TenantId,
                 active.LegalName,
-                active.AllowedModulesJson),
-            new UserDto(active.UserId, active.FullName, active.Email, active.Role, active.AllowedModulesJson),
+                active.AllowedModulesJson,
+                active.IsTechnicalDirector),
+            new UserDto(active.UserId, active.FullName, active.Email, active.Role, active.AllowedModulesJson, active.IsTechnicalDirector),
             new TenantSummaryDto(active.TenantId, active.LegalName, active.TradeName, active.DocumentNumber),
             ToSummaries(all));
 
@@ -131,7 +133,8 @@ public static class MultiTenantAuthResolver
             await conn.OpenAsync(cancellationToken);
 
             const string sql = @"
-                SELECT u.""TenantId"", u.""Id"", u.""PasswordHash"", u.""Role"", u.""FullName"", u.""AllowedModulesJson""
+                SELECT u.""TenantId"", u.""Id"", u.""PasswordHash"", u.""Role"", u.""FullName"", u.""AllowedModulesJson"",
+                       COALESCE(u.""IsTechnicalDirector"", false)
                 FROM public.tenant_users u
                 WHERE lower(u.""Email"") = @email AND u.""IsActive"" = true";
 
@@ -147,6 +150,7 @@ public static class MultiTenantAuthResolver
                 var role = reader.IsDBNull(3) ? "Admin" : reader.GetString(3);
                 var fullName = reader.GetString(4);
                 var allowedModulesJson = reader.IsDBNull(5) ? null : reader.GetString(5);
+                var isTechnicalDirector = !reader.IsDBNull(6) && reader.GetBoolean(6);
 
                 if (password != null && !PasswordSecurity.VerifyPassword(password, pwdHash))
                 {
@@ -165,7 +169,8 @@ public static class MultiTenantAuthResolver
                     fullName,
                     emailLower,
                     role,
-                    allowedModulesJson));
+                    allowedModulesJson,
+                    isTechnicalDirector));
             }
         }
         catch

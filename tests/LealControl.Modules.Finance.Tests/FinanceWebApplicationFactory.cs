@@ -28,7 +28,7 @@ public sealed class FinanceWebApplicationFactory : WebApplicationFactory<Program
         await _postgres.StartAsync();
         await using var conn = new NpgsqlConnection(ConnectionString);
         await conn.OpenAsync();
-        foreach (var schema in new[] { "crm", "sales", "purchases", "finance", "accounting", "metrology", "fleet", "hr", "directory" })
+        foreach (var schema in new[] { "crm", "sales", "purchases", "finance", "accounting", "metrology", "quality", "fleet", "hr", "directory" })
         {
             await using var cmd = new NpgsqlCommand($"CREATE SCHEMA IF NOT EXISTS {schema};", conn);
             await cmd.ExecuteNonQueryAsync();

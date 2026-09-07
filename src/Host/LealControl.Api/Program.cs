@@ -17,6 +17,7 @@ using LealControl.Modules.HumanResources.Infrastructure;
 using LealControl.Modules.Fleet.Infrastructure;
 using LealControl.Modules.Accounting.Infrastructure;
 using LealControl.Modules.Metrology.Infrastructure;
+using LealControl.Modules.Quality.Infrastructure;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Api.SuperAdmin;
 using LealControl.Api.Automation;
@@ -88,6 +89,7 @@ try
     builder.Services.AddNoOpAccountingPostingGateway();
     builder.Services.AddAccountingModule(builder.Configuration);
     builder.Services.AddMetrologyModule(builder.Configuration);
+    builder.Services.AddQualityModule(builder.Configuration);
     builder.Services.ConfigureHttpJsonOptions(options =>
         options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
@@ -159,6 +161,15 @@ try
             policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Comercial", "Contador"));
         options.AddPolicy("RequirePurchases", policy =>
             policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Compras", "Contador"));
+        options.AddPolicy("RequireQuality", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Calidad", "DirectorTecnico", "Técnico"));
+        options.AddPolicy("RequireTechnicalDirector", policy =>
+            policy.RequireAssertion(ctx =>
+                ctx.User.IsInRole("Admin")
+                || ctx.User.IsInRole("Administrador")
+                || ctx.User.IsInRole("SuperAdmin")
+                || ctx.User.IsInRole("DirectorTecnico")
+                || string.Equals(ctx.User.FindFirst("technical_director")?.Value, "true", StringComparison.OrdinalIgnoreCase)));
         options.FallbackPolicy = new AuthorizationPolicyBuilder()
             .RequireAuthenticatedUser()
             .Build();
@@ -257,7 +268,8 @@ try
         .AddDbContextCheck<AccountingDbContext>("accounting-db")
         .AddDbContextCheck<HumanResourcesDbContext>("hr-db")
         .AddDbContextCheck<FleetDbContext>("fleet-db")
-        .AddDbContextCheck<MetrologyDbContext>("metrology-db");
+        .AddDbContextCheck<MetrologyDbContext>("metrology-db")
+        .AddDbContextCheck<QualityDbContext>("quality-db");
     var configuredOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
         ?.Where(o => !string.IsNullOrWhiteSpace(o))
         .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -348,6 +360,7 @@ try
     app.MapFleetModule();
     app.MapAccountingModule();
     app.MapMetrologyModule();
+    app.MapQualityModule();
     app.MapAutomationEndpoints();
     app.MapPublicWebhookEndpoints();
     app.MapSuperAdminModule();

@@ -5,6 +5,7 @@ using LealControl.Modules.Finance.Infrastructure;
 using LealControl.Modules.Fleet.Infrastructure;
 using LealControl.Modules.HumanResources.Infrastructure;
 using LealControl.Modules.Metrology.Infrastructure;
+using LealControl.Modules.Quality.Infrastructure;
 using LealControl.Modules.Sales.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -125,6 +126,11 @@ public static class TenantDatabaseBootstrapper
                 .Options))
         {
             await metrology.EnsureMetrologyTablesAsync(cancellationToken);
+        }
+
+        await using (var quality = CreateContext<QualityDbContext>(connectionString, QualityDbContext.Schema))
+        {
+            await quality.EnsureQualityTablesAsync(cancellationToken);
         }
 
         Log.Information("Esquema verificado para base de datos {DbName}", dbName);

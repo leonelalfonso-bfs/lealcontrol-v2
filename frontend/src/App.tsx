@@ -67,6 +67,11 @@ import {
   MetrologyDashboardPage,
   MetrologyEquipmentFormPage,
   MetrologyEquipmentPage,
+  QualityDashboardPage,
+  QualityDocumentDetailPage,
+  QualityDocumentsPage,
+  QualityPg01R01Page,
+  QualityPg01R02Page,
   OpportunitiesPage,
   OpportunityDetailPage,
   OrderDetailPage,
@@ -616,6 +621,12 @@ export function App() {
               <Route path="/metrologia/ensayos/nuevo" element={<CalibrationReportFormPage />} />
               <Route path="/metrologia/informes" element={<CalibrationReportsPage />} />
               <Route path="/metrologia/informes/:id/imprimir" element={<CalibrationReportPrintPage />} />
+
+              <Route path="/calidad" element={<QualityDashboardPage />} />
+              <Route path="/calidad/documentos" element={<QualityDocumentsPage />} />
+              <Route path="/calidad/documentos/:code" element={<QualityDocumentDetailPage />} />
+              <Route path="/calidad/registros/pg01-r01" element={<QualityPg01R01Page />} />
+              <Route path="/calidad/registros/pg01-r02" element={<QualityPg01R02Page />} />
 
               {/* Reports & Settings Routes */}
               <Route path="/reportes" element={<ReportsPage />} />

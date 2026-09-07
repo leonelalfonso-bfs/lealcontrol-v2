@@ -137,7 +137,8 @@ public static class AuthEndpoints
                 adminUser.Role,
                 newTenantId.Value,
                 companyName,
-                adminUser.AllowedModulesJson);
+                adminUser.AllowedModulesJson,
+                adminUser.IsTechnicalDirector);
 
             var availableTenants = new List<TenantSummaryDto>
             {
@@ -146,7 +147,7 @@ public static class AuthEndpoints
 
             return Results.Ok(new AuthResponse(
                 token,
-                new UserDto(adminUser.Id, adminUser.FullName, adminUser.Email, adminUser.Role, adminUser.AllowedModulesJson),
+                new UserDto(adminUser.Id, adminUser.FullName, adminUser.Email, adminUser.Role, adminUser.AllowedModulesJson, adminUser.IsTechnicalDirector),
                 new TenantSummaryDto(newTenantId.Value, companyName, companyName, docNumber),
                 availableTenants
             ));
@@ -194,7 +195,7 @@ public static class AuthEndpoints
             UserDto? userDto = null;
             if (user != null)
             {
-                userDto = new UserDto(user.Id, user.FullName, user.Email, user.Role, user.AllowedModulesJson);
+                userDto = new UserDto(user.Id, user.FullName, user.Email, user.Role, user.AllowedModulesJson, user.IsTechnicalDirector);
             }
             else if (activeMembership != null)
             {
@@ -203,7 +204,8 @@ public static class AuthEndpoints
                     activeMembership.FullName,
                     activeMembership.Email,
                     activeMembership.Role,
-                    activeMembership.AllowedModulesJson);
+                    activeMembership.AllowedModulesJson,
+                    activeMembership.IsTechnicalDirector);
             }
 
             var availableTenants = memberships.Count > 0
@@ -294,7 +296,8 @@ public static class SimpleJwt
         string role,
         Guid tenantId,
         string tenantName,
-        string? allowedModulesJson = null)
+        string? allowedModulesJson = null,
+        bool isTechnicalDirector = false)
     {
         var now = DateTimeOffset.UtcNow;
         var header = new { alg = "HS256", typ = "JWT" };
@@ -310,6 +313,7 @@ public static class SimpleJwt
             ["tenant_id"] = tenantId.ToString(),
             ["tenant_name"] = tenantName,
             ["allowed_modules"] = allowedModules,
+            ["technical_director"] = isTechnicalDirector ? "true" : "false",
             ["nbf"] = now.ToUnixTimeSeconds(),
             ["iat"] = now.ToUnixTimeSeconds(),
             ["exp"] = now.AddHours(LifetimeHours).ToUnixTimeSeconds()
@@ -413,6 +417,6 @@ public static class SimpleJwt
 public sealed record LoginRequest(string Email, string Password, Guid? TenantId);
 public sealed record RegisterTenantRequest(string CompanyName, string? Cuit, string? Phone, string? AdminFullName, string Email, string Password);
 public sealed record SwitchTenantRequest(Guid TenantId);
-public sealed record UserDto(Guid Id, string FullName, string Email, string Role, string? AllowedModulesJson = null);
+public sealed record UserDto(Guid Id, string FullName, string Email, string Role, string? AllowedModulesJson = null, bool IsTechnicalDirector = false);
 public sealed record TenantSummaryDto(Guid Id, string LegalName, string? TradeName, string DocumentNumber);
 public sealed record AuthResponse(string Token, UserDto User, TenantSummaryDto Tenant, IReadOnlyList<TenantSummaryDto> AvailableTenants);

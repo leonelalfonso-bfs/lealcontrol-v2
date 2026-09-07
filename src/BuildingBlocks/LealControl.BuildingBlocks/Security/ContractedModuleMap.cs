@@ -14,6 +14,7 @@ public static class ContractedModuleMap
         ("/api/v1/hr", "hr"),
         ("/api/v1/fleet", "fleet"),
         ("/api/v1/metrology", "metrology"),
+        ("/api/v1/quality", "quality"),
         ("/api/v1/automation", "automation")
     ];
 

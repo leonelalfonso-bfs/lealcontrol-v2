@@ -327,6 +327,25 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     ]
   },
   {
+    id: "calidad",
+    label: "Calidad",
+    icon: "📘",
+    gradient: "linear-gradient(135deg, #0369a1, #0e7490)",
+    glow: "rgba(3, 105, 161, 0.35)",
+    title: "SISTEMA DE GESTIÓN DE CALIDAD · ISO/IEC 17025",
+    defaultPath: "/calidad",
+    pathPrefixes: ["/calidad"],
+    minimumPlan: "base",
+    requiredPermission: "home.read",
+    dependencies: [],
+    items: [
+      { path: "/calidad", label: "Tablero SGC", icon: "📊", end: true },
+      { path: "/calidad/documentos", label: "Árbol documental", icon: "🌲" },
+      { path: "/calidad/registros/pg01-r01", label: "PG01-R01 Lista documentos", icon: "📋" },
+      { path: "/calidad/registros/pg01-r02", label: "PG01-R02 Doc. externos", icon: "📑" }
+    ]
+  },
+  {
     id: "administracion",
     label: "Configuración",
     icon: "🛠️",
@@ -366,7 +385,7 @@ export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: s
   if (userRole === "Admin" || userRole === "Administrador") {
     return [
       "inicio", "directorio", "crm", "comunicaciones", "ventas", "compras", "inventario",
-      "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "administracion"
+      "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "calidad", "administracion"
     ];
   }
 
@@ -381,7 +400,8 @@ export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: s
     hr: ["rrhh"],
     grains: ["cereales"],
     accounting: ["contabilidad"],
-    metrology: ["metrologia"]
+    metrology: ["metrologia"],
+    quality: ["calidad"]
   };
 
   try {

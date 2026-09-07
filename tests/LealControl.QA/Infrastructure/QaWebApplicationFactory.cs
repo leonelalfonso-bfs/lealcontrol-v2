@@ -33,7 +33,7 @@ public sealed class QaWebApplicationFactory : WebApplicationFactory<Program>, IA
         // Pre-create database schemas required by Leal Control modules
         await using var conn = new NpgsqlConnection(ConnectionString);
         await conn.OpenAsync();
-        var schemas = new[] { "crm", "sales", "purchases", "finance", "accounting", "metrology", "fleet", "hr", "directory" };
+        var schemas = new[] { "crm", "sales", "purchases", "finance", "accounting", "metrology", "quality", "fleet", "hr", "directory" };
         foreach (var schema in schemas)
         {
             await using var cmd = new NpgsqlCommand($"CREATE SCHEMA IF NOT EXISTS {schema};", conn);

@@ -118,7 +118,8 @@ public sealed class CompanySettingsQueryHandler :
             u.Role,
             u.IsActive,
             u.CreatedAtUtc,
-            u.AllowedModulesJson)).ToList();
+            u.AllowedModulesJson,
+            u.IsTechnicalDirector)).ToList();
 
         return Result<IReadOnlyList<TenantUserDto>>.Success(dtos);
     }
@@ -127,6 +128,11 @@ public sealed class CompanySettingsQueryHandler :
     {
         var tenantId = _tenantContext.TenantId;
         var user = TenantUser.Create(tenantId, request.FullName, request.Email, request.Role, initialPassword: request.Password, allowedModulesJson: request.AllowedModulesJson);
+        if (request.IsTechnicalDirector)
+        {
+            user.SetTechnicalDirector(true);
+        }
+
         _dbContext.TenantUsers.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -137,7 +143,8 @@ public sealed class CompanySettingsQueryHandler :
             user.Role,
             user.IsActive,
             user.CreatedAtUtc,
-            user.AllowedModulesJson));
+            user.AllowedModulesJson,
+            user.IsTechnicalDirector));
     }
 
     public async Task<Result<TenantUserDto>> Handle(UpdateTenantUserCommand request, CancellationToken cancellationToken)
@@ -149,7 +156,7 @@ public sealed class CompanySettingsQueryHandler :
             return Result<TenantUserDto>.Failure(new Error("UserNotFound", "Usuario no encontrado."));
         }
 
-        user.Update(request.FullName, request.Role, request.IsActive, request.AllowedModulesJson, request.Password);
+        user.Update(request.FullName, request.Role, request.IsActive, request.AllowedModulesJson, request.Password, request.IsTechnicalDirector);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Result<TenantUserDto>.Success(new TenantUserDto(
@@ -159,7 +166,8 @@ public sealed class CompanySettingsQueryHandler :
             user.Role,
             user.IsActive,
             user.CreatedAtUtc,
-            user.AllowedModulesJson));
+            user.AllowedModulesJson,
+            user.IsTechnicalDirector));
     }
 
     public async Task<Result<bool>> Handle(DeleteTenantUserCommand request, CancellationToken cancellationToken)

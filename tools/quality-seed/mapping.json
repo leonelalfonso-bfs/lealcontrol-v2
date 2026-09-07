@@ -1,0 +1,27 @@
+{
+  "driveFolderId": "1pYtGCTaJUtJ8CX2SS2TNYbX1vM4NKifw",
+  "notes": "Revisar a mano inconsistencias PG 14 / PG14-R1 / PG14-R01. Los IT 01-04 no están en Drive.",
+  "files": [
+    {
+      "driveFileId": "1r2uFuv730COwX5mbmqnwHDDlNjCHKIDm",
+      "fileName": "MC01 v1 Manual de calidad.docx",
+      "code": "MC01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "driveFileId": "1BDmc_FVdSYeFanHnVfJeoNyD--4DQNZH",
+      "fileName": "PG01 v1 Gestión de documentos.docx",
+      "code": "PG01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "driveFileId": "1CnXtoui38RnJ6HkN4JWR4EpD9dvqQCWN",
+      "fileName": "PG14 v1 - Equipamiento.docx",
+      "code": "PG14",
+      "version": 1,
+      "role": "Source"
+    }
+  ]
+}

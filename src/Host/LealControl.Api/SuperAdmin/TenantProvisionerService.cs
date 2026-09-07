@@ -323,7 +323,7 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
         var schemas = new[]
         {
             "public", "crm", "sales", "purchases", "finance", "fleet", "hr",
-            "accounting", "communications", "metrology"
+            "accounting", "communications", "metrology", "quality"
         };
 
         var tables = new List<string>();

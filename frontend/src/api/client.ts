@@ -1097,6 +1097,47 @@ export const api = {
       equipment?: import("./types").MetrologyEquipment;
     }>(`/api/v1/metrology/reports/${id}`),
   saveCalibrationReport: (body: Record<string, unknown>) =>
-    request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) })
+    request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) }),
+
+  // ==========================================
+  // Quality (ISO 17025)
+  // ==========================================
+  getQualityDashboard: () =>
+    request<import("./types/quality").QualityDashboard>("/api/v1/quality/dashboard"),
+
+  getQualityDocumentTree: () =>
+    request<import("./types/quality").QualityDocumentTreeNode[]>("/api/v1/quality/documents/tree"),
+
+  getQualityDocument: (code: string) =>
+    request<import("./types/quality").QualityDocumentDetail>(`/api/v1/quality/documents/${encodeURIComponent(code)}`),
+
+  getQualityDocumentListPg01R01: () =>
+    request<{ code: string; title: string; generatedAtUtc: string; rows: Array<Record<string, unknown>> }>(
+      "/api/v1/quality/records/pg01-r01"
+    ),
+
+  getQualityDocumentListPg01R02: () =>
+    request<{ code: string; title: string; generatedAtUtc: string; rows: Array<Record<string, unknown>> }>(
+      "/api/v1/quality/records/pg01-r02"
+    ),
+
+  uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("role", role);
+    const normalToken = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
+    const tenantId = typeof window !== "undefined" ? localStorage.getItem("leal_tenant_id") : null;
+    const headers: Record<string, string> = {};
+    if (normalToken) headers.Authorization = `Bearer ${normalToken}`;
+    if (tenantId) headers["X-Tenant-Id"] = tenantId;
+    const response = await fetch("/api/v1/quality/files", { method: "POST", headers, body: form });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Error (${response.status})`);
+    }
+    return response.json() as Promise<{ id: string; fileName: string; role: string; sha256: string }>;
+  },
+
+  downloadQualityFileUrl: (id: string) => `/api/v1/quality/files/${id}`
 };
 
