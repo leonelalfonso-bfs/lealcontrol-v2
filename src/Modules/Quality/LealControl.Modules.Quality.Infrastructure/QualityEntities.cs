@@ -163,3 +163,47 @@ public sealed class QualityDistributionAck : Entity<Guid>
     public string UserEmail { get; set; } = string.Empty;
     public DateTime AcknowledgedAtUtc { get; set; } = DateTime.UtcNow;
 }
+
+public static class QualityConfidentialityKinds
+{
+    public const string Internal = "Internal"; // MC01-R01
+    public const string External = "External"; // MC01-R02
+}
+
+/// <summary>Instancias firmadas de MC01-R01 / MC01-R02.</summary>
+public sealed class QualityConfidentialityCommitment : Entity<Guid>
+{
+    public QualityConfidentialityCommitment() : base(Guid.NewGuid())
+    {
+    }
+
+    public QualityConfidentialityCommitment(Guid id) : base(id)
+    {
+    }
+
+    public TenantId TenantId { get; set; }
+    /// <summary>Internal = MC01-R01, External = MC01-R02.</summary>
+    public string Kind { get; set; } = QualityConfidentialityKinds.Internal;
+    public string RecordCode { get; set; } = "MC01-R01";
+    public Guid? PersonUserId { get; set; }
+    public string PersonName { get; set; } = string.Empty;
+    public string PersonEmail { get; set; } = string.Empty;
+    public string PersonRole { get; set; } = string.Empty;
+    public string Organization { get; set; } = string.Empty; // útil para externos
+    public DateTime SignedAt { get; set; } = DateTime.UtcNow;
+    public Guid? SignedFileId { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public string Status { get; set; } = "Active"; // Active, Superseded, Cancelled
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateConfidentialityCommitmentRequest(
+    string PersonName,
+    DateTime? SignedAt = null,
+    Guid? PersonUserId = null,
+    string? PersonEmail = null,
+    string? PersonRole = null,
+    string? Organization = null,
+    Guid? SignedFileId = null,
+    string? Notes = null);

@@ -16,6 +16,7 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityFile> Files => Set<QualityFile>();
     public DbSet<QualityDocumentRelation> DocumentRelations => Set<QualityDocumentRelation>();
     public DbSet<QualityDistributionAck> DistributionAcks => Set<QualityDistributionAck>();
+    public DbSet<QualityConfidentialityCommitment> ConfidentialityCommitments => Set<QualityConfidentialityCommitment>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
         : this(options, null)
@@ -100,6 +101,23 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.UserEmail).HasMaxLength(200);
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.DocumentVersionId, x.UserId });
+        });
+
+        modelBuilder.Entity<QualityConfidentialityCommitment>(b =>
+        {
+            b.ToTable("confidentiality_commitments", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Kind).HasMaxLength(32).IsRequired();
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.PersonName).HasMaxLength(160).IsRequired();
+            b.Property(x => x.PersonEmail).HasMaxLength(200);
+            b.Property(x => x.PersonRole).HasMaxLength(120);
+            b.Property(x => x.Organization).HasMaxLength(200);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Active");
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Kind, x.SignedAt });
+            b.HasIndex(x => new { x.TenantId, x.RecordCode });
         });
     }
 
@@ -193,7 +211,27 @@ public sealed class QualityDbContext : DbContext
                 ""UserEmail"" character varying(200) NOT NULL DEFAULT '',
                 ""AcknowledgedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
-            @"CREATE INDEX IF NOT EXISTS ""IX_quality_acks_Tenant_Version"" ON quality.distribution_acks (""TenantId"", ""DocumentVersionId"", ""UserId"");"
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_acks_Tenant_Version"" ON quality.distribution_acks (""TenantId"", ""DocumentVersionId"", ""UserId"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.confidentiality_commitments (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Kind"" character varying(32) NOT NULL DEFAULT 'Internal',
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'MC01-R01',
+                ""PersonUserId"" uuid,
+                ""PersonName"" character varying(160) NOT NULL,
+                ""PersonEmail"" character varying(200) NOT NULL DEFAULT '',
+                ""PersonRole"" character varying(120) NOT NULL DEFAULT '',
+                ""Organization"" character varying(200) NOT NULL DEFAULT '',
+                ""SignedAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""SignedFileId"" uuid,
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Active',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_conf_Tenant_Kind_Signed"" ON quality.confidentiality_commitments (""TenantId"", ""Kind"", ""SignedAt"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_conf_Tenant_Record"" ON quality.confidentiality_commitments (""TenantId"", ""RecordCode"");"
         };
 
         foreach (var sql in statements)

@@ -128,6 +128,13 @@ export function QualityDocumentDetailPage() {
             {d.recordKind ? ` · ${d.recordKind}` : ""}
             {d.iso17025Clauses ? ` · ISO ${d.iso17025Clauses}` : ""}
           </p>
+          {d.code === "MC01-R01" && (
+            <p style={{ marginTop: 8 }}>
+              <Link className="btn btn-outline" to="/calidad/registros/mc01-r01">
+                Abrir registro de instancias firmadas
+              </Link>
+            </p>
+          )}
         </div>
         {published?.publishedFileId && (
           <button

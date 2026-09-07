@@ -32,6 +32,7 @@ export function QualityDashboardPage() {
 
       <div style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
         <Link className="btn btn-primary" to="/calidad/documentos">Abrir árbol documental</Link>
+        <Link className="btn btn-outline" to="/calidad/registros/mc01-r01">MC01-R01 Confidencialidad</Link>
         <Link className="btn btn-outline" to="/calidad/registros/pg01-r01">PG01-R01 Lista de documentos</Link>
         <Link className="btn btn-outline" to="/calidad/registros/pg01-r02">PG01-R02 Documentos externos</Link>
       </div>

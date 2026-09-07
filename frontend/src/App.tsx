@@ -72,6 +72,7 @@ import {
   QualityDashboardPage,
   QualityDocumentDetailPage,
   QualityDocumentsPage,
+  QualityMc01R01Page,
   QualityPg01R01Page,
   QualityPg01R02Page,
   OpportunitiesPage,
@@ -632,6 +633,7 @@ export function App() {
               <Route path="/calidad/documentos/:code" element={<QualityDocumentDetailPage />} />
               <Route path="/calidad/registros/pg01-r01" element={<QualityPg01R01Page />} />
               <Route path="/calidad/registros/pg01-r02" element={<QualityPg01R02Page />} />
+              <Route path="/calidad/registros/mc01-r01" element={<QualityMc01R01Page />} />
 
               {/* Reports & Settings Routes */}
               <Route path="/reportes" element={<ReportsPage />} />

@@ -95,3 +95,20 @@ export interface QualityDocumentDetail {
     recordKind?: string | null;
   }>;
 }
+
+export interface QualityConfidentialityCommitment {
+  id: string;
+  kind: "Internal" | "External" | string;
+  recordCode: string;
+  personUserId?: string | null;
+  personName: string;
+  personEmail?: string;
+  personRole?: string;
+  organization?: string;
+  signedAt: string;
+  signedFileId?: string | null;
+  notes?: string;
+  status: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}

@@ -217,6 +217,92 @@ public static class QualityEndpoints
             });
         });
 
+        // MC01-R01 — Compromisos de confidencialidad internos (instancias firmadas)
+        group.MapGet("/records/mc01-r01", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
+
+            var rows = await db.ConfidentialityCommitments.AsNoTracking()
+                .Where(c => c.TenantId == tenantId && c.Kind == QualityConfidentialityKinds.Internal)
+                .OrderByDescending(c => c.SignedAt)
+                .ThenBy(c => c.PersonName)
+                .ToListAsync(ct);
+
+            return Results.Ok(new
+            {
+                code = "MC01-R01",
+                title = "Compromiso de confidencialidad e imparcialidad interno",
+                recordKind = QualityRecordKinds.Attachment,
+                generatedAtUtc = DateTime.UtcNow,
+                rows = rows.Select(ToConfidentialityDto)
+            });
+        });
+
+        group.MapPost("/records/mc01-r01", async (
+            CreateConfidentialityCommitmentRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+
+            if (string.IsNullOrWhiteSpace(req.PersonName))
+            {
+                return Results.BadRequest(new { message = "El nombre de la persona es obligatorio." });
+            }
+
+            if (req.SignedFileId.HasValue)
+            {
+                var fileOk = await db.Files.AsNoTracking()
+                    .AnyAsync(f => f.TenantId == tenantId && f.Id == req.SignedFileId.Value, ct);
+                if (!fileOk)
+                {
+                    return Results.BadRequest(new { message = "El PDF firmado no existe. Subilo antes con POST /files." });
+                }
+            }
+
+            var entity = new QualityConfidentialityCommitment
+            {
+                TenantId = tenantId,
+                Kind = QualityConfidentialityKinds.Internal,
+                RecordCode = "MC01-R01",
+                PersonUserId = req.PersonUserId,
+                PersonName = req.PersonName.Trim(),
+                PersonEmail = req.PersonEmail?.Trim() ?? string.Empty,
+                PersonRole = req.PersonRole?.Trim() ?? string.Empty,
+                Organization = req.Organization?.Trim() ?? string.Empty,
+                SignedAt = req.SignedAt ?? DateTime.UtcNow,
+                SignedFileId = req.SignedFileId,
+                Notes = req.Notes?.Trim() ?? string.Empty,
+                Status = "Active",
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            db.ConfidentialityCommitments.Add(entity);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/quality/records/mc01-r01/{entity.Id}", ToConfidentialityDto(entity));
+        });
+
+        group.MapDelete("/records/mc01-r01/{id:guid}", async (
+            Guid id,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.ConfidentialityCommitments
+                .FirstOrDefaultAsync(c => c.Id == id && c.TenantId == tenantId && c.Kind == QualityConfidentialityKinds.Internal, ct);
+            if (entity is null) return Results.NotFound();
+            entity.Status = "Cancelled";
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToConfidentialityDto(entity));
+        });
+
         group.MapGet("/documents/{code}", async (string code, ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
@@ -648,6 +734,24 @@ public static class QualityEndpoints
         d.DeactivationReason,
         d.CreatedAtUtc,
         d.UpdatedAtUtc
+    };
+
+    private static object ToConfidentialityDto(QualityConfidentialityCommitment c) => new
+    {
+        c.Id,
+        c.Kind,
+        c.RecordCode,
+        c.PersonUserId,
+        c.PersonName,
+        c.PersonEmail,
+        c.PersonRole,
+        c.Organization,
+        c.SignedAt,
+        c.SignedFileId,
+        c.Notes,
+        c.Status,
+        c.CreatedAtUtc,
+        c.UpdatedAtUtc
     };
 
     private static object ToVersionDto(QualityDocumentVersion v) => new
