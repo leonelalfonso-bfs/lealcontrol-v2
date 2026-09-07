@@ -7,6 +7,7 @@ Documentos relacionados:
 - `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md` — análisis funcional y plan detallado de bancos, cheques, conceptos, cobros/pagos y asientos modelo (bloques 3 y 4 de este plan se detallan ahí).
 - `CIRCUITO_DINERO_FINANZAS.md` + `SIMULACION_CIRCUITO_DINERO_COMPLETA.md` — diseño aprobado por el área contable.
 - `CIRCUITO_DINERO_PROGRESO.md` — checklist de validación de Fases A+B (queda vigente, se referencia desde el bloque 3).
+- `quality/MODULO_CALIDAD_ANALISIS.md` — diseño y avance del módulo Calidad ISO 17025 (**Bloque Q** abajo; reanudar desde §0 de ese doc).
 
 ---
 
@@ -19,10 +20,12 @@ Documentos relacionados:
 | 2 | Deploy y backups confiables | 6 | 6/6 | 6/6 | ✅ Verificado staging 02/09/2026 — smoke 10/10 Healthy |
 | 3 | Circuito financiero completo | 14 | 14/14 | 1/14 | ◐ API A+B OK staging — UI manual + **F-T1** pendiente |
 | 4 | Contabilidad desde asientos modelo | 9 | 9/9 | 0/9 | ◐ Código 4.1–4.9 listo — verificar staging |
-| 5 | Red de tests del circuito del dinero | 6 | 0/6 | 0/6 | ☐ |
-| 6 | Deuda técnica | 8 | 0/8 | 0/8 | ☐ |
+| 5 | Red de tests del circuito del dinero | 6 | 6/6 | 0/6 | ✅ Código en `8fb4e17` — tests locales OK |
+| 6 | Deuda técnica | 8 | 7/8 | 7/8 | ✅ `53d1d5a` staging 03/09/2026 — smoke 10/10; **6.4 diferido** |
+| Q | Calidad ISO 17025 (SGC) | — | ◐ | ◐ | **C1✅ C2◐ C3 MC01✅** — siguiente PG03-R01; detalle en `docs/quality/…` §0 |
 
-Regla de orden: **bloque 2 antes del 3** (CI y backups estables). **No empezar bloque 4** sin tareas 3.1–3.6 del bloque 3.
+Regla de orden: **bloque 2 antes del 3** (CI y backups estables). **No empezar bloque 4** sin tareas 3.1–3.6 del bloque 3.  
+**Bloque Q** corre en paralelo en `staging/metrology-2307` (INMELA / auditoría OAA); no bloquea el circuito del dinero.
 
 ---
 
@@ -314,7 +317,30 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 - [x] 6.7 Tipar `client.ts` para finanzas y contabilidad (hoy 51 `any`).
 - [x] 6.8 Borrar `CollectionReceiptsPage.tsx` (huérfano) y consolidar `Sales/Infrastructure/Migrations` + `Persistence/Migrations` en una sola carpeta.
 
-**Verificado bloque 6:** 03/09/2026 — 6.4 diferido; chunk inicial `index` ~320 KB; Finance 32, Accounting 15, Arch 10. Pendiente rebuild staging.
+**Verificado bloque 6:** 03/09/2026 — staging smoke 10/10 Healthy (`:5210` / `:5175`). 6.4 diferido. Chunk inicial `index` ~320 KB. Finance 32, Accounting 15, Arch 10.
+
+---
+
+## Bloque Q — Módulo Calidad ISO/IEC 17025 (paralelo)
+
+Documento canónico (diseño + **punto de reanudación §0** + checklist C3):  
+`docs/quality/MODULO_CALIDAD_ANALISIS.md`
+
+Rama de trabajo: `staging/metrology-2307` · Staging: https://v2.lealcontrol.com
+
+### Estado por fase
+
+- [x] **Q.C1** Árbol documental, versiones, upload/approve DT, seed `tools/quality-seed`, PG01-R01/R02 Generated, descarga autenticada
+- [ ] **Q.C2** Enlace Metrología completo — **parcial:** snapshot SGC + approve DT + `MetrologyInstrument` (termómetro). Falta PG14-R3/R4, PG09 R2, hoja de vida, Linked IT
+- [ ] **Q.C3** Registros de gestión — **parcial (bloque MC01 cerrado):**
+  - [x] Hub `/calidad/registros` (menú sin un ítem por registro)
+  - [x] MC01-R01 / R02 / R03 / R05
+  - [x] PG01-R01 / R02 (desde C1)
+  - [ ] **Siguiente:** PG03-R01 Quejas
+  - [ ] PG07-R1 NC… · PG04 · PG06 · PG05 · PG08 · PG09-R3 · PG14-R5/R6 + QualityEquipment
+- [ ] **Q.C4** Dashboard SGC, auditoría before/after, modo presentación
+
+**Reanudar siempre desde:** `MODULO_CALIDAD_ANALISIS.md` §0.
 
 ---
 
@@ -332,4 +358,10 @@ Detalle en `CIRCUITO_FINANCIERO_ANALISIS_Y_PLAN.md`, sección 6.
 | 02/09/2026 | 3.1 UI A-V8 | `b1e7ea2` | ✅ staging | Movimiento conciliado: badge + no reclasificar |
 | 02/09/2026 | Deploy fixes | `cd217c6`–`e2dec51` | ✅ staging | Docker build OK, web+api healthy |
 | 02/09/2026 | 3.1, 3.3–3.14 | `fcb1e9b` | ◐ staging | Código completo; UI manual + **F-T1** pendiente |
-| 03/09/2026 | 6.1–6.8 (sin 6.4) | — | pendiente staging | Code split, split endpoints, Application Finance, UI base, tipos client |
+| 03/09/2026 | 6.1–6.8 (sin 6.4) | `53d1d5a` | ✅ staging | smoke 10/10 Healthy; 6.4 diferido |
+| 07/09/2026 | Q.C1 + Q.C2 cortes 1–2 | (rama metrology) | ◐ staging | Árbol calidad + snapshot/DT/termómetro |
+| 07/09/2026 | Q.C3 MC01-R01 | `9f5e5f4` | pendiente staging | Confidencialidad interno |
+| 07/09/2026 | Q.C3 MC01-R02 | `847b9ee` | pendiente staging | Confidencialidad externo |
+| 07/09/2026 | Q.C3 hub + MC01-R03 | `7fd1fba` | pendiente staging | Índice registros + indicadores |
+| 07/09/2026 | Q.C3 MC01-R05 | `97b7cec` | pendiente staging | Notas institucionales |
+| 07/09/2026 | Q docs/plan | *(docs)* | — | §0 reanudación; siguiente **PG03-R01** |
