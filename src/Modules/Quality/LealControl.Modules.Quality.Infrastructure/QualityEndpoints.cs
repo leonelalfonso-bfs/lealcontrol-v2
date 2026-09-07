@@ -527,6 +527,7 @@ public static class QualityEndpoints
             CreateQualityIndicatorValueRequest req,
             ITenantContext tenant,
             QualityDbContext db,
+            HttpContext http,
             CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
@@ -547,10 +548,12 @@ public static class QualityEndpoints
 
             if (existing is not null)
             {
+                var before = ToIndicatorValueDto(existing);
                 existing.Value = req.Value;
                 existing.Notes = req.Notes?.Trim() ?? string.Empty;
                 existing.RecordedBy = req.RecordedBy?.Trim() ?? existing.RecordedBy;
                 existing.RecordedAtUtc = DateTime.UtcNow;
+                QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.IndicatorValue, existing.Id, "ValueCorrected", $"Indicador {indicator.Name}, periodo {period}.", before, ToIndicatorValueDto(existing), http);
                 await db.SaveChangesAsync(ct);
                 return Results.Ok(ToIndicatorValueDto(existing));
             }
@@ -566,6 +569,7 @@ public static class QualityEndpoints
                 RecordedAtUtc = DateTime.UtcNow
             };
             db.IndicatorValues.Add(entity);
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.IndicatorValue, entity.Id, "ValueRecorded", $"Indicador {indicator.Name}, periodo {period}.", null, ToIndicatorValueDto(entity), http);
             await db.SaveChangesAsync(ct);
             return Results.Created($"/api/v1/quality/records/mc01-r03/{id}/values/{entity.Id}", ToIndicatorValueDto(entity));
         });
@@ -581,9 +585,7 @@ public static class QualityEndpoints
             var entity = await db.IndicatorValues
                 .FirstOrDefaultAsync(v => v.Id == valueId && v.IndicatorId == indicatorId && v.TenantId == tenantId, ct);
             if (entity is null) return Results.NotFound();
-            db.IndicatorValues.Remove(entity);
-            await db.SaveChangesAsync(ct);
-            return Results.NoContent();
+            return Results.BadRequest(new { message = "Un valor registrado no se elimina. Registre una correccion trazable." });
         });
 
         // MC01-R05 — Notas institucionales
@@ -668,6 +670,222 @@ public static class QualityEndpoints
             entity.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
             return Results.Ok(ToInstitutionalNoteDto(entity));
+        });
+
+        // PG03-R01 — Seguimiento de quejas (Structured: se genera en el sistema)
+        group.MapGet("/records/pg03-r01", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
+
+            var rows = await db.Complaints.AsNoTracking()
+                .Where(c => c.TenantId == tenantId)
+                .OrderByDescending(c => c.ReceivedAt)
+                .ThenByDescending(c => c.Number)
+                .ToListAsync(ct);
+
+            var overdueOpen = rows.Count(c => IsComplaintOverdue(c));
+
+            return Results.Ok(new
+            {
+                code = "PG03-R01",
+                title = "Seguimiento de quejas",
+                recordKind = QualityRecordKinds.Structured,
+                generatedAtUtc = DateTime.UtcNow,
+                overdueOpen,
+                rows = rows.Select(ToComplaintDto)
+            });
+        });
+
+        group.MapGet("/records/pg03-r01/{id:guid}", async (
+            Guid id,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.Complaints.AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == id && c.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            return Results.Ok(ToComplaintDto(entity));
+        });
+
+        group.MapPost("/records/pg03-r01", async (
+            CreateComplaintRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+
+            if (string.IsNullOrWhiteSpace(req.PartyName))
+                return Results.BadRequest(new { message = "El reclamante es obligatorio." });
+            if (string.IsNullOrWhiteSpace(req.Description))
+                return Results.BadRequest(new { message = "La descripción de la queja es obligatoria." });
+
+            if (req.EvidenceFileId.HasValue)
+            {
+                var fileOk = await db.Files.AsNoTracking()
+                    .AnyAsync(f => f.TenantId == tenantId && f.Id == req.EvidenceFileId.Value, ct);
+                if (!fileOk)
+                    return Results.BadRequest(new { message = "El archivo de evidencia no existe." });
+            }
+
+            var receivedAt = req.ReceivedAt ?? DateTime.UtcNow;
+            var year = receivedAt.Year;
+            var prefix = $"QJ-{year}-";
+            var lastNumber = await db.Complaints.AsNoTracking()
+                .Where(c => c.TenantId == tenantId && c.Number.StartsWith(prefix))
+                .OrderByDescending(c => c.Number)
+                .Select(c => c.Number)
+                .FirstOrDefaultAsync(ct);
+            var seq = 1;
+            if (!string.IsNullOrEmpty(lastNumber) && lastNumber.Length >= prefix.Length + 4
+                && int.TryParse(lastNumber.AsSpan(prefix.Length), out var parsed))
+            {
+                seq = parsed + 1;
+            }
+
+            var entity = new QualityComplaint
+            {
+                TenantId = tenantId,
+                RecordCode = "PG03-R01",
+                Number = $"{prefix}{seq:D4}",
+                ReceivedAt = receivedAt,
+                Channel = string.IsNullOrWhiteSpace(req.Channel) ? "Other" : req.Channel.Trim(),
+                PartyName = req.PartyName.Trim(),
+                PartyContact = req.PartyContact?.Trim() ?? string.Empty,
+                Description = req.Description.Trim(),
+                Responsible = req.Responsible?.Trim() ?? string.Empty,
+                EvidenceFileId = req.EvidenceFileId,
+                Notes = req.Notes?.Trim() ?? string.Empty,
+                Status = QualityComplaintStatuses.Open,
+                RegisterDueAt = receivedAt.AddDays(1),
+                ValidateDueAt = receivedAt.AddDays(1 + 2),
+                InvestigateDueAt = receivedAt.AddDays(1 + 2 + 5),
+                CloseDueAt = receivedAt.AddDays(1 + 2 + 5 + 2),
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            db.Complaints.Add(entity);
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.Complaint, entity.Id, "ComplaintCreated",
+                $"Queja {entity.Number} registrada.", null, ToComplaintDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/quality/records/pg03-r01/{entity.Id}", ToComplaintDto(entity));
+        });
+
+        group.MapPut("/records/pg03-r01/{id:guid}", async (
+            Guid id,
+            UpdateComplaintRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.Complaints.FirstOrDefaultAsync(c => c.Id == id && c.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            if (entity.Status is QualityComplaintStatuses.Cancelled or QualityComplaintStatuses.Closed or QualityComplaintStatuses.Invalid)
+                return Results.BadRequest(new { message = "La queja está cerrada; no se puede editar." });
+
+            var before = ToComplaintDto(entity);
+
+            if (req.Channel is not null) entity.Channel = req.Channel.Trim();
+            if (req.PartyName is not null)
+            {
+                if (string.IsNullOrWhiteSpace(req.PartyName))
+                    return Results.BadRequest(new { message = "El reclamante no puede quedar vacío." });
+                entity.PartyName = req.PartyName.Trim();
+            }
+            if (req.PartyContact is not null) entity.PartyContact = req.PartyContact.Trim();
+            if (req.Description is not null)
+            {
+                if (string.IsNullOrWhiteSpace(req.Description))
+                    return Results.BadRequest(new { message = "La descripción no puede quedar vacía." });
+                entity.Description = req.Description.Trim();
+            }
+            if (req.ValidationNotes is not null) entity.ValidationNotes = req.ValidationNotes.Trim();
+            if (req.Investigation is not null) entity.Investigation = req.Investigation.Trim();
+            if (req.Actions is not null) entity.Actions = req.Actions.Trim();
+            if (req.Responsible is not null) entity.Responsible = req.Responsible.Trim();
+            if (req.Notes is not null) entity.Notes = req.Notes.Trim();
+            if (req.EvidenceFileId.HasValue) entity.EvidenceFileId = req.EvidenceFileId;
+            if (req.LinkedNonConformityId.HasValue) entity.LinkedNonConformityId = req.LinkedNonConformityId;
+            if (req.CommunicatedAt.HasValue) entity.CommunicatedAt = req.CommunicatedAt;
+            if (req.ClosedAt.HasValue) entity.ClosedAt = req.ClosedAt;
+
+            if (req.IsValid.HasValue)
+            {
+                entity.IsValid = req.IsValid;
+                entity.ValidatedAt = req.ValidatedAt ?? DateTime.UtcNow;
+                if (req.IsValid == false)
+                {
+                    entity.Status = QualityComplaintStatuses.Invalid;
+                    entity.ClosedAt = entity.ClosedAt ?? DateTime.UtcNow;
+                }
+                else if (entity.Status is QualityComplaintStatuses.Open or QualityComplaintStatuses.UnderValidation)
+                {
+                    entity.Status = QualityComplaintStatuses.Investigating;
+                }
+            }
+
+            if (req.Status is not null)
+            {
+                var st = req.Status.Trim();
+                var allowed = new HashSet<string>(StringComparer.Ordinal)
+                {
+                    QualityComplaintStatuses.Open,
+                    QualityComplaintStatuses.UnderValidation,
+                    QualityComplaintStatuses.Investigating,
+                    QualityComplaintStatuses.PendingCommunication,
+                    QualityComplaintStatuses.Closed,
+                    QualityComplaintStatuses.Cancelled
+                };
+                if (!allowed.Contains(st) && st != QualityComplaintStatuses.Invalid)
+                    return Results.BadRequest(new { message = "Estado de queja no válido." });
+
+                entity.Status = st;
+                if (st == QualityComplaintStatuses.UnderValidation && entity.ValidatedAt is null)
+                {
+                    // waiting validation
+                }
+                if (st == QualityComplaintStatuses.Closed)
+                {
+                    entity.ClosedAt ??= DateTime.UtcNow;
+                    entity.CommunicatedAt ??= entity.ClosedAt;
+                }
+                if (st == QualityComplaintStatuses.PendingCommunication && string.IsNullOrWhiteSpace(entity.Actions))
+                    return Results.BadRequest(new { message = "Cargá las acciones antes de pasar a comunicación." });
+            }
+
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.Complaint, entity.Id, "ComplaintUpdated",
+                $"Queja {entity.Number} actualizada ({entity.Status}).", before, ToComplaintDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToComplaintDto(entity));
+        });
+
+        group.MapDelete("/records/pg03-r01/{id:guid}", async (
+            Guid id,
+            ITenantContext tenant,
+            QualityDbContext db,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.Complaints.FirstOrDefaultAsync(c => c.Id == id && c.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            var before = ToComplaintDto(entity);
+            entity.Status = QualityComplaintStatuses.Cancelled;
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.Complaint, entity.Id, "ComplaintCancelled",
+                $"Queja {entity.Number} anulada.", before, ToComplaintDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToComplaintDto(entity));
         });
 
         group.MapGet("/documents/{code}", async (string code, ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
@@ -772,6 +990,7 @@ public static class QualityEndpoints
             CreateVersionRequest req,
             ITenantContext tenant,
             QualityDbContext db,
+            HttpContext http,
             CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
@@ -803,11 +1022,15 @@ public static class QualityEndpoints
                 CreatedAtUtc = DateTime.UtcNow
             };
 
-            doc.CurrentVersionId = version.Id;
-            doc.Status = QualityDocumentStatuses.Draft;
+            if (!doc.CurrentVersionId.HasValue)
+            {
+                doc.CurrentVersionId = version.Id;
+                doc.Status = QualityDocumentStatuses.Draft;
+            }
             doc.UpdatedAtUtc = DateTime.UtcNow;
 
             db.DocumentVersions.Add(version);
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.DocumentVersion, version.Id, "VersionCreated", $"Borrador v{version.Version} creado.", null, ToVersionDto(version), http);
             await db.SaveChangesAsync(ct);
             return Results.Ok(ToVersionDto(version));
         });
@@ -838,12 +1061,18 @@ public static class QualityEndpoints
                 return Results.NotFound(new { message = $"Versión {version} no encontrada." });
             }
 
+            if (ver.Status is not (QualityDocumentStatuses.Draft or QualityDocumentStatuses.InReview))
+            {
+                return Results.BadRequest(new { message = "Solo se pueden aprobar versiones en borrador o revision." });
+            }
+
             if (doc.Type != QualityDocumentTypes.External && ver.PublishedFileId is null)
             {
                 return Results.BadRequest(new { message = "La versión vigente debe tener PDF publicado (PublishedFileId)." });
             }
 
             // Aplicar ReviewedBy del body ANTES de validar elaborador ≠ revisor (PG01).
+            var beforeApproval = ToVersionDto(ver);
             if (!string.IsNullOrWhiteSpace(req.ReviewedBy))
             {
                 ver.ReviewedBy = req.ReviewedBy.Trim();
@@ -881,6 +1110,7 @@ public static class QualityEndpoints
             doc.NextReviewDate = DateTime.UtcNow.AddMonths(doc.ReviewPeriodMonths);
             doc.UpdatedAtUtc = DateTime.UtcNow;
 
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.DocumentVersion, ver.Id, "VersionApproved", $"Version v{ver.Version} aprobada y vigente.", beforeApproval, ToVersionDto(ver), http);
             await db.SaveChangesAsync(ct);
             return Results.Ok(ToVersionDto(ver));
         }).RequireAuthorization("RequireTechnicalDirector");
@@ -987,6 +1217,7 @@ public static class QualityEndpoints
             AttachFileRequest req,
             ITenantContext tenant,
             QualityDbContext db,
+            HttpContext http,
             CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
@@ -998,6 +1229,12 @@ public static class QualityEndpoints
                 v => v.TenantId == tenantId && v.DocumentId == doc.Id && v.Version == version, ct);
             if (ver is null) return Results.NotFound();
 
+            if (ver.Status is not (QualityDocumentStatuses.Draft or QualityDocumentStatuses.InReview))
+            {
+                return Results.BadRequest(new { message = "La version aprobada o vigente no puede modificar sus archivos. Cree una nueva version." });
+            }
+
+            var beforeAttachment = ToVersionDto(ver);
             var file = await db.Files.AsNoTracking()
                 .FirstOrDefaultAsync(f => f.TenantId == tenantId && f.Id == req.FileId, ct);
             if (file is null) return Results.BadRequest(new { message = "Archivo inexistente." });
@@ -1025,6 +1262,7 @@ public static class QualityEndpoints
             }
 
             doc.UpdatedAtUtc = DateTime.UtcNow;
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.DocumentVersion, ver.Id, "VersionFileAttached", $"Archivo {file.FileName} asociado a v{ver.Version}.", beforeAttachment, ToVersionDto(ver), http);
             await db.SaveChangesAsync(ct);
             return Results.Ok(ToVersionDto(ver));
         });
@@ -1035,6 +1273,7 @@ public static class QualityEndpoints
             UpdateVersionRequest req,
             ITenantContext tenant,
             QualityDbContext db,
+            HttpContext http,
             CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
@@ -1054,6 +1293,12 @@ public static class QualityEndpoints
                 return Results.NotFound(new { message = $"Versión {version} no encontrada." });
             }
 
+            if (ver.Status is not (QualityDocumentStatuses.Draft or QualityDocumentStatuses.InReview))
+            {
+                return Results.BadRequest(new { message = "La version aprobada o vigente no puede editarse. Cree una nueva version." });
+            }
+
+            var beforeUpdate = ToVersionDto(ver);
             if (req.ChangeSummary is not null) ver.ChangeSummary = req.ChangeSummary;
             if (req.ElaboratedBy is not null) ver.ElaboratedBy = req.ElaboratedBy.Trim();
             if (req.ElaboratedAt.HasValue) ver.ElaboratedAt = req.ElaboratedAt;
@@ -1064,10 +1309,44 @@ public static class QualityEndpoints
             if (req.EffectiveFrom.HasValue) ver.EffectiveFrom = req.EffectiveFrom;
 
             doc.UpdatedAtUtc = DateTime.UtcNow;
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.DocumentVersion, ver.Id, "VersionMetadataUpdated", $"Metadatos de v{ver.Version} actualizados.", beforeUpdate, ToVersionDto(ver), http);
             await db.SaveChangesAsync(ct);
             return Results.Ok(ToVersionDto(ver));
         });
 
+        group.MapGet("/audit/{entityType}/{entityId:guid}", async (
+            string entityType,
+            Guid entityId,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            await db.EnsureQualityTablesAsync(ct);
+            var rows = await db.AuditEvents.AsNoTracking()
+                .Where(e => e.TenantId == tenant.TenantId
+                    && e.EntityType == entityType
+                    && e.EntityId == entityId)
+                .OrderByDescending(e => e.OccurredAtUtc)
+                .Take(250)
+                .ToListAsync(ct);
+
+            return Results.Ok(new
+            {
+                entityType,
+                entityId,
+                rows = rows.Select(e => new
+                {
+                    e.Id,
+                    e.EventType,
+                    e.Summary,
+                    e.BeforeJson,
+                    e.AfterJson,
+                    e.PerformedByUserId,
+                    e.PerformedByName,
+                    e.OccurredAtUtc
+                })
+            });
+        }).RequireAuthorization("RequireQuality");
         return endpoints;
     }
 
@@ -1136,6 +1415,66 @@ public static class QualityEndpoints
         n.CreatedAtUtc,
         n.UpdatedAtUtc
     };
+
+    private static bool IsComplaintOverdue(QualityComplaint c)
+    {
+        if (c.Status is QualityComplaintStatuses.Closed or QualityComplaintStatuses.Invalid or QualityComplaintStatuses.Cancelled)
+            return false;
+        var now = DateTime.UtcNow;
+        return c.Status switch
+        {
+            QualityComplaintStatuses.Open => now > c.RegisterDueAt,
+            QualityComplaintStatuses.UnderValidation => now > c.ValidateDueAt,
+            QualityComplaintStatuses.Investigating => now > c.InvestigateDueAt,
+            QualityComplaintStatuses.PendingCommunication => now > c.CloseDueAt,
+            _ => now > c.CloseDueAt
+        };
+    }
+
+    private static object ToComplaintDto(QualityComplaint c)
+    {
+        var overdue = IsComplaintOverdue(c);
+        DateTime? currentDue = c.Status switch
+        {
+            QualityComplaintStatuses.Open => c.RegisterDueAt,
+            QualityComplaintStatuses.UnderValidation => c.ValidateDueAt,
+            QualityComplaintStatuses.Investigating => c.InvestigateDueAt,
+            QualityComplaintStatuses.PendingCommunication => c.CloseDueAt,
+            _ => null
+        };
+
+        return new
+        {
+            c.Id,
+            c.RecordCode,
+            c.Number,
+            c.ReceivedAt,
+            c.Channel,
+            c.PartyName,
+            c.PartyContact,
+            c.Description,
+            c.IsValid,
+            c.ValidatedAt,
+            c.ValidationNotes,
+            c.Investigation,
+            c.Actions,
+            c.Responsible,
+            c.CommunicatedAt,
+            c.ClosedAt,
+            c.LinkedNonConformityId,
+            c.EvidenceFileId,
+            c.Notes,
+            c.Status,
+            c.RegisterDueAt,
+            c.ValidateDueAt,
+            c.InvestigateDueAt,
+            c.CloseDueAt,
+            currentDueAt = currentDue,
+            isOverdue = overdue,
+            c.CreatedAtUtc,
+            c.UpdatedAtUtc
+        };
+    }
 
     private static object ToIndicatorValueDto(QualityIndicatorValue v) => new
     {

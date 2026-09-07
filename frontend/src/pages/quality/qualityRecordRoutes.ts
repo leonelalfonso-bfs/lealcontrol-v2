@@ -42,6 +42,14 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "Comunicaciones formales de la dirección."
   },
   {
+    code: "PG03-R01",
+    title: "Seguimiento de quejas",
+    path: "/calidad/registros/quejas",
+    kind: "Structured",
+    ready: true,
+    blurb: "Quejas generadas en el sistema con workflow y plazos SLA."
+  },
+  {
     code: "PG01-R01",
     title: "Lista de documentos",
     path: "/calidad/registros/pg01-r01",

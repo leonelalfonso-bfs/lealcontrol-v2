@@ -12,8 +12,22 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** `97b7cec` (MC01-R05) sobre hub `7fd1fba` + MC01-R02 `847b9ee` + MC01-R01 `9f5e5f4`.  
+**Último commit de avance Calidad:** *(PG03-R01 + audit trail parcial)*.  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
+
+### Principio: los registros se generan en el sistema
+
+El Word/Excel del Drive es la **plantilla** del árbol documental (PDF publicado).  
+Las **instancias operativas** (cada queja, cada NC, cada valor de indicador, cada compromiso firmado) se **crean y viven en el ERP**: número propio, estados, plazos, historial.  
+Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.  
+`RecordKind`:
+
+| Kind | Qué hace el sistema |
+|---|---|
+| `Structured` | Formulario + entidad (quejas, NC, indicadores…) |
+| `Generated` | Vista calculada (PG01-R01/R02, futuros PG14-R3/R4) |
+| `Linked` | Deep-link a Metrología / otro módulo |
+| `Attachment` | Metadatos de instancia + PDF (compromisos, notas); igual se da de alta en UI, no “solo subir el Word” |
 
 ### Hecho
 
@@ -22,26 +36,27 @@
 | **C1** Árbol documental + seed + upload/approve + descarga JWT | ✅ Cerrado | Pendiente operativo: poblar `tools/quality-seed/input/` desde Drive |
 | **C2** Snapshot SGC + approve DT + termómetro `MetrologyInstrument` | ◐ Cortes 1–2 | Falta: PG14-R3/R4, PG09 R2, hoja de vida, vistas Linked IT |
 | **C3 nav** Menú sin un ítem por registro | ✅ | Lateral: Tablero · Árbol · Registros operativos (`/calidad/registros`) |
-| **MC01-R01** Confidencialidad interno | ✅ | Attachment, PDF firmado, anular |
-| **MC01-R02** Confidencialidad externo | ✅ | Mismo patrón + organización |
-| **MC01-R03** Indicadores | ✅ | Structured: Indicator + IndicatorValue por período |
-| **MC01-R05** Nota institucional | ✅ | Attachment: asunto, destinatarios, adjunto |
-| **PG01-R01 / R02** Listas generadas | ✅ (C1) | Generated; ya en hub |
+| **MC01-R01** Confidencialidad interno | ✅ | Attachment + metadatos de instancia |
+| **MC01-R02** Confidencialidad externo | ✅ | Idem + organización |
+| **MC01-R03** Indicadores | ✅ | Structured: Indicator + IndicatorValue |
+| **MC01-R05** Nota institucional | ✅ | Attachment + metadatos |
+| **PG01-R01 / R02** Listas generadas | ✅ (C1) | Generated |
+| **PG03-R01** Seguimiento de quejas | ✅ | Structured: número QJ-AAAA-NNNN, workflow, SLA 1/2/5/2 días, audit |
 
-### Siguiente sesión (orden acordado: MC → PG)
+### Siguiente sesión
 
-1. **C3 — PG03-R01** Seguimiento de quejas (Structured; plazos).
-2. Luego **PG07-R1** NC / TNC / riesgos / OM (Structured; el más gordo).
-3. Alternar con restos de **C2** si hace falta emitir informes “ISO” (PG14-R3/R4, Linked IT).
-4. Seguir C3: PG04 → PG06 (autorizaciones DT) → PG05 → PG08 → PG09-R3 → PG14-R5/R6 + `QualityEquipment`.
+1. **C3 — PG07-R1** NC / TNC / riesgos / OM (Structured; el más gordo; link desde queja `linkedNonConformityId`).
+2. Alternar restos **C2** si hace falta emitir informes ISO.
+3. Seguir C3: PG04 → PG06 → PG05 → PG08 → PG09-R3 → PG14-R5/R6 + `QualityEquipment`.
 
 ### Reglas de trabajo que ya aplican
 
-- **No** agregar registros al menú lateral: registrar en `frontend/src/pages/quality/qualityRecordRoutes.ts` (`ready: true`) + ruta en `App.tsx` + botón “Abrir registro” desde árbol/detalle.
-- Antes de push: verificar que no quede typo CSS `displayContent` (usar `justifyContent`; validar con `sed`/`od` si hace falta).
-- Commits solo de archivos del corte Calidad; no mezclar ruido CRLF de otros módulos.
+- **No** agregar registros al menú lateral: `qualityRecordRoutes.ts` (`ready: true`) + ruta + “Abrir registro” desde árbol.
+- Antes de push: sin typo CSS `displayContent` (usar `justifyContent`).
+- Commits solo del corte Calidad.
+- Todo registro operativo nuevo = entidad + API + UI de alta/edición (no “subir plantilla y listo”).
 
-Catálogo operativo UI: `qualityRecordRoutes.ts`. Endpoints: `QualityEndpoints.cs` bajo `/api/v1/quality/records/…`.
+Catálogo operativo UI: `qualityRecordRoutes.ts`. Endpoints: `/api/v1/quality/records/…`.
 
 ---
 
@@ -317,7 +332,7 @@ Módulo `calidad` en `moduleRegistry.ts`, ruta base `/calidad`, claim `quality`.
 /calidad/registros/mc01-r05      MC01-R05 nota institucional          [listo]
 /calidad/registros/pg01-r01      PG01-R01 lista documentos            [listo Generated]
 /calidad/registros/pg01-r02      PG01-R02 doc. externos               [listo Generated]
-/calidad/registros/quejas        PG03-R01                             [pendiente]
+/calidad/registros/quejas        PG03-R01                             [listo Structured]
 /calidad/registros/nc            PG07-R1                              [pendiente]
 /calidad/registros/auditorias    PG04                                 [pendiente]
 /calidad/registros/personal      PG06                                 [pendiente]
@@ -430,7 +445,7 @@ El script es idempotente por código+versión (si ya hay `PublishedFileId`, se o
 | **C2 — Enlace con Metrología** | `Quality.Contracts`, `MetrologyInstrument` (termómetro) y su referencia en el informe, snapshot de procedimiento/versión y normas en el informe, `ApprovedBy` restringido a DT, PG14-R4/R3 generados desde pesas + instrumentos + auxiliares, hoja de vida PG14-R1 con eventos de calibración, PG09 R2 enmienda, "Ver trazabilidad SGC" desde el informe, vista IT 0X R1/R2/R3 | Cadena Ensayo → Norma → Procedimiento → Patrón/Termómetro → Certificado → DT que aprobó, desde un informe |
 | **Estado C2 (07/09/2026):** | **EN CURSO — corte 2.** Corte 1 (snapshot + DT + trazabilidad) + `MetrologyInstrument` (termómetro) con CRUD `/metrologia/instrumentos`, vínculo `ThermometerInstrumentId` en el informe (valida certificado vigente), visible en impresión y trazabilidad SGC. Pendiente: PG14-R3/R4 generados, PG09 R2, hoja de vida, vistas Linked IT. | — |
 | **C3 — Registros de gestión** | PG07-R1 (NC/TNC/riesgos/OM), PG03-R01 quejas con plazos, PG04 auditorías, PG06 personal + autorizaciones firmadas por DT (validación de firma en Metrología), PG05 proveedores, MC01-R03 indicadores, PG08-R01 revisión por la dirección, PG09 R3 encuestas, PG14-R5/R6, `QualityEquipment` (camión/acoplado/autoelevador), MC01-R01/R02/R05 | Todos los registros del listado de códigos existen en el sistema |
-| **Estado C3 (07/09/2026):** | **EN CURSO.** Hecho: nav hub + **todo MC01** (R01, R02, R03, R05) + PG01-R01/R02 Generated. **Siguiente:** PG03-R01 quejas → PG07-R1 NC… (ver §0). Commits: `9f5e5f4` R01 · `847b9ee` R02 · `7fd1fba` hub+R03 · `97b7cec` R05. | — |
+| **Estado C3 (07/09/2026):** | **EN CURSO.** MC01 completo + PG03-R01 quejas (Structured + SLA). **Siguiente:** PG07-R1 NC… | — |
 | **C4 — Tablero, auditoría de cambios y modo presentación** | Dashboard SGC, matriz cláusulas 17025, historial before/after por registro, **modo presentación** (toggle, bloqueo de escrituras en backend, salida con contraseña, log de sesiones), alertas (Google Calendar → notificaciones del sistema) | Simulacro de auditoría interna PG04 completo dentro del sistema, mostrado en modo presentación |
 
 Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor riesgo; C2 toca Metrología y conviene hacerla antes de emitir informes "en producción ISO"; C3 es volumen (muchos formularios pero todos del mismo patrón); C4 es pulido. El modo presentación podría adelantarse a C1 en versión mínima (solo ocultar botones) si la auditoría interna se programa antes de terminar C4.
@@ -443,8 +458,8 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 - [x] MC01-R03 Indicadores / valores por período
 - [x] MC01-R05 Nota institucional
 - [x] PG01-R01 / PG01-R02 (Generated, desde C1)
-- [ ] PG03-R01 Quejas ← **siguiente**
-- [ ] PG07-R1 NC / TNC / Riesgos / OM
+- [x] PG03-R01 Quejas (Structured, generada en sistema)
+- [ ] PG07-R1 NC / TNC / Riesgos / OM ← **siguiente**
 - [ ] PG04 Auditorías (R01–R04)
 - [ ] PG06 Personal (R01–R04) + firma DT en autorizaciones
 - [ ] PG05 Proveedores
@@ -465,6 +480,7 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 | 5 | Auditor externo | **Modo presentación** desde la sesión de Calidad/DT: solo lectura, bloqueo de escrituras en backend, salida con contraseña, log de sesiones. Sin usuario propio para el auditor. | §5, §9 (C4) |
 | 6 | Seed de archivos | **Script** `tools/quality-seed`: descarga del Drive, conversión a PDF, mapeo de códigos, carga por API, reporte de discrepancias. Idempotente. | §6, §7, §9 (C1) |
 | 7 | Menú lateral | **No** un ítem por registro. Solo Tablero · Árbol · índice Registros. Entrada operativa desde árbol/detalle o hub. | §0, §4, §9 (C3) |
+| 8 | Instancias vs plantilla | Los registros operativos **se generan en el sistema** (entidad + workflow). El archivo del Drive es plantilla del árbol; el adjunto es evidencia, no el registro. | §0, §3.3 |
 
 ---
 
@@ -478,4 +494,5 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 | 07/09/2026 | C3 MC01-R02 | `847b9ee` | Compromisos externos |
 | 07/09/2026 | C3 hub + MC01-R03 | `7fd1fba` | Índice registros + indicadores |
 | 07/09/2026 | C3 MC01-R05 | `97b7cec` | Notas institucionales |
-| 07/09/2026 | Docs / plan | *(este doc + Bloque Q en plan maestro)* | Punto de reanudación §0 |
+| 07/09/2026 | Docs / plan | `f5109ff` | Punto de reanudación §0 |
+| 07/09/2026 | C3 PG03-R01 + audit | *(este corte)* | Quejas Structured + quality.audit_events |

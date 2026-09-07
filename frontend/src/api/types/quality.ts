@@ -158,3 +158,34 @@ export interface QualityInstitutionalNote {
   createdAtUtc: string;
   updatedAtUtc: string;
 }
+
+export interface QualityComplaint {
+  id: string;
+  recordCode: string;
+  number: string;
+  receivedAt: string;
+  channel: string;
+  partyName: string;
+  partyContact?: string;
+  description: string;
+  isValid?: boolean | null;
+  validatedAt?: string | null;
+  validationNotes?: string;
+  investigation?: string;
+  actions?: string;
+  responsible?: string;
+  communicatedAt?: string | null;
+  closedAt?: string | null;
+  linkedNonConformityId?: string | null;
+  evidenceFileId?: string | null;
+  notes?: string;
+  status: string;
+  registerDueAt: string;
+  validateDueAt: string;
+  investigateDueAt: string;
+  closeDueAt: string;
+  currentDueAt?: string | null;
+  isOverdue?: boolean;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}

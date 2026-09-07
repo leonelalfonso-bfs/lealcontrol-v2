@@ -20,6 +20,8 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityIndicator> Indicators => Set<QualityIndicator>();
     public DbSet<QualityIndicatorValue> IndicatorValues => Set<QualityIndicatorValue>();
     public DbSet<QualityInstitutionalNote> InstitutionalNotes => Set<QualityInstitutionalNote>();
+    public DbSet<QualityComplaint> Complaints => Set<QualityComplaint>();
+    public DbSet<QualityAuditEvent> AuditEvents => Set<QualityAuditEvent>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
         : this(options, null)
@@ -171,6 +173,43 @@ public sealed class QualityDbContext : DbContext
             b.HasIndex(x => new { x.TenantId, x.IssuedAt });
             b.HasIndex(x => new { x.TenantId, x.RecordCode, x.Status });
         });
+
+        modelBuilder.Entity<QualityComplaint>(b =>
+        {
+            b.ToTable("complaints", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Channel).HasMaxLength(40);
+            b.Property(x => x.PartyName).HasMaxLength(200).IsRequired();
+            b.Property(x => x.PartyContact).HasMaxLength(240);
+            b.Property(x => x.Description).HasMaxLength(4000).IsRequired();
+            b.Property(x => x.ValidationNotes).HasMaxLength(2000);
+            b.Property(x => x.Investigation).HasMaxLength(4000);
+            b.Property(x => x.Actions).HasMaxLength(4000);
+            b.Property(x => x.Responsible).HasMaxLength(160);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityComplaintStatuses.Open);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.Status, x.ReceivedAt });
+            b.HasIndex(x => new { x.TenantId, x.CloseDueAt });
+        });
+
+        modelBuilder.Entity<QualityAuditEvent>(b =>
+        {
+            b.ToTable("audit_events", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.EntityType).HasMaxLength(64).IsRequired();
+            b.Property(x => x.EventType).HasMaxLength(64).IsRequired();
+            b.Property(x => x.Summary).HasMaxLength(1000).IsRequired();
+            b.Property(x => x.BeforeJson).HasColumnType("text");
+            b.Property(x => x.AfterJson).HasColumnType("text");
+            b.Property(x => x.PerformedByName).HasMaxLength(160);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.EntityType, x.EntityId, x.OccurredAtUtc });
+        });
+
     }
 
     public async Task EnsureQualityTablesAsync(CancellationToken ct = default)
@@ -334,7 +373,55 @@ public sealed class QualityDbContext : DbContext
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_instnotes_Tenant_Issued"" ON quality.institutional_notes (""TenantId"", ""IssuedAt"");",
-            @"CREATE INDEX IF NOT EXISTS ""IX_quality_instnotes_Tenant_Record_Status"" ON quality.institutional_notes (""TenantId"", ""RecordCode"", ""Status"");"
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_instnotes_Tenant_Record_Status"" ON quality.institutional_notes (""TenantId"", ""RecordCode"", ""Status"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.complaints (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG03-R01',
+                ""Number"" character varying(32) NOT NULL,
+                ""ReceivedAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""Channel"" character varying(40) NOT NULL DEFAULT '',
+                ""PartyName"" character varying(200) NOT NULL,
+                ""PartyContact"" character varying(240) NOT NULL DEFAULT '',
+                ""Description"" character varying(4000) NOT NULL,
+                ""IsValid"" boolean,
+                ""ValidatedAt"" timestamp with time zone,
+                ""ValidationNotes"" character varying(2000) NOT NULL DEFAULT '',
+                ""Investigation"" character varying(4000) NOT NULL DEFAULT '',
+                ""Actions"" character varying(4000) NOT NULL DEFAULT '',
+                ""Responsible"" character varying(160) NOT NULL DEFAULT '',
+                ""CommunicatedAt"" timestamp with time zone,
+                ""ClosedAt"" timestamp with time zone,
+                ""LinkedNonConformityId"" uuid,
+                ""EvidenceFileId"" uuid,
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Open',
+                ""RegisterDueAt"" timestamp with time zone NOT NULL,
+                ""ValidateDueAt"" timestamp with time zone NOT NULL,
+                ""InvestigateDueAt"" timestamp with time zone NOT NULL,
+                ""CloseDueAt"" timestamp with time zone NOT NULL,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_complaints_Tenant_Number"" ON quality.complaints (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_complaints_Tenant_Status_Received"" ON quality.complaints (""TenantId"", ""Status"", ""ReceivedAt"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_complaints_Tenant_CloseDue"" ON quality.complaints (""TenantId"", ""CloseDueAt"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.audit_events (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""EntityType"" character varying(64) NOT NULL,
+                ""EntityId"" uuid NOT NULL,
+                ""EventType"" character varying(64) NOT NULL,
+                ""Summary"" character varying(1000) NOT NULL DEFAULT '',
+                ""BeforeJson"" text NOT NULL DEFAULT '',
+                ""AfterJson"" text NOT NULL DEFAULT '',
+                ""PerformedByUserId"" uuid,
+                ""PerformedByName"" character varying(160) NOT NULL DEFAULT '',
+                ""OccurredAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_audit_Tenant_Entity_Occurred"" ON quality.audit_events (""TenantId"", ""EntityType"", ""EntityId"", ""OccurredAtUtc"");"
         };
 
         foreach (var sql in statements)

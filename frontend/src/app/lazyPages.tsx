@@ -139,4 +139,5 @@ export const QualityMc01R01Page = named(() => import("../pages/quality/QualityMc
 export const QualityMc01R02Page = named(() => import("../pages/quality/QualityMc01R01Page"), "QualityMc01R02Page");
 export const QualityMc01R03Page = named(() => import("../pages/quality/QualityMc01R03Page"), "QualityMc01R03Page");
 export const QualityMc01R05Page = named(() => import("../pages/quality/QualityMc01R05Page"), "QualityMc01R05Page");
+export const QualityPg03R01Page = named(() => import("../pages/quality/QualityPg03R01Page"), "QualityPg03R01Page");
 export const QualityRecordsHubPage = named(() => import("../pages/quality/QualityRecordsHubPage"), "QualityRecordsHubPage");

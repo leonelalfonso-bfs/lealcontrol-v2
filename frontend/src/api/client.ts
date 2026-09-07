@@ -1328,6 +1328,62 @@ export const api = {
       { method: "DELETE" }
     ),
 
+  listQualityPg03R01: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      overdueOpen?: number;
+      rows: import("./types/quality").QualityComplaint[];
+    }>("/api/v1/quality/records/pg03-r01"),
+
+  createQualityComplaint: (body: {
+    partyName: string;
+    description: string;
+    receivedAt?: string;
+    channel?: string;
+    partyContact?: string;
+    responsible?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityComplaint>("/api/v1/quality/records/pg03-r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityComplaint: (
+    id: string,
+    body: {
+      channel?: string;
+      partyName?: string;
+      partyContact?: string;
+      description?: string;
+      isValid?: boolean;
+      validatedAt?: string;
+      validationNotes?: string;
+      investigation?: string;
+      actions?: string;
+      responsible?: string;
+      communicatedAt?: string;
+      closedAt?: string;
+      linkedNonConformityId?: string;
+      evidenceFileId?: string;
+      notes?: string;
+      status?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityComplaint>(`/api/v1/quality/records/pg03-r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityComplaint: (id: string) =>
+    request<import("./types/quality").QualityComplaint>(`/api/v1/quality/records/pg03-r01/${id}`, {
+      method: "DELETE"
+    }),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);

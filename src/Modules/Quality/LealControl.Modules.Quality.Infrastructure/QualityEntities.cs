@@ -319,3 +319,86 @@ public sealed record CreateInstitutionalNoteRequest(
     string? Audience = null,
     Guid? FileId = null,
     string? Notes = null);
+
+/// <summary>Estados del workflow PG03-R01 (quejas).</summary>
+public static class QualityComplaintStatuses
+{
+    public const string Open = "Open";                         // registrada
+    public const string UnderValidation = "UnderValidation";   // en validación
+    public const string Invalid = "Invalid";                   // no procede (cerrada)
+    public const string Investigating = "Investigating";
+    public const string PendingCommunication = "PendingCommunication";
+    public const string Closed = "Closed";
+    public const string Cancelled = "Cancelled";
+}
+
+/// <summary>Instancia operativa de queja PG03-R01 (Structured — se genera en el sistema).</summary>
+public sealed class QualityComplaint : Entity<Guid>
+{
+    public QualityComplaint() : base(Guid.NewGuid())
+    {
+    }
+
+    public QualityComplaint(Guid id) : base(id)
+    {
+    }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG03-R01";
+    /// <summary>Número legible, ej. QJ-2026-0007.</summary>
+    public string Number { get; set; } = string.Empty;
+    public DateTime ReceivedAt { get; set; } = DateTime.UtcNow;
+    public string Channel { get; set; } = string.Empty; // Email, Phone, InPerson, Web, Other
+    public string PartyName { get; set; } = string.Empty;
+    public string PartyContact { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool? IsValid { get; set; }
+    public DateTime? ValidatedAt { get; set; }
+    public string ValidationNotes { get; set; } = string.Empty;
+    public string Investigation { get; set; } = string.Empty;
+    public string Actions { get; set; } = string.Empty;
+    public string Responsible { get; set; } = string.Empty;
+    public DateTime? CommunicatedAt { get; set; }
+    public DateTime? ClosedAt { get; set; }
+    public Guid? LinkedNonConformityId { get; set; }
+    public Guid? EvidenceFileId { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public string Status { get; set; } = QualityComplaintStatuses.Open;
+
+    // SLA (calculados al crear; PG03: 1 / 2 / 5 / 2 días)
+    public DateTime RegisterDueAt { get; set; }
+    public DateTime ValidateDueAt { get; set; }
+    public DateTime InvestigateDueAt { get; set; }
+    public DateTime CloseDueAt { get; set; }
+
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateComplaintRequest(
+    string PartyName,
+    string Description,
+    DateTime? ReceivedAt = null,
+    string? Channel = null,
+    string? PartyContact = null,
+    string? Responsible = null,
+    Guid? EvidenceFileId = null,
+    string? Notes = null);
+
+public sealed record UpdateComplaintRequest(
+    string? Channel = null,
+    string? PartyName = null,
+    string? PartyContact = null,
+    string? Description = null,
+    bool? IsValid = null,
+    DateTime? ValidatedAt = null,
+    string? ValidationNotes = null,
+    string? Investigation = null,
+    string? Actions = null,
+    string? Responsible = null,
+    DateTime? CommunicatedAt = null,
+    DateTime? ClosedAt = null,
+    Guid? LinkedNonConformityId = null,
+    Guid? EvidenceFileId = null,
+    string? Notes = null,
+    string? Status = null);
