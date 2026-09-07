@@ -1205,6 +1205,36 @@ export const api = {
       { method: "DELETE" }
     ),
 
+  listQualityMc01R02: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      rows: import("./types/quality").QualityConfidentialityCommitment[];
+    }>("/api/v1/quality/records/mc01-r02"),
+
+  createQualityMc01R02: (body: {
+    personName: string;
+    personEmail?: string;
+    personRole?: string;
+    organization?: string;
+    signedAt?: string;
+    signedFileId?: string;
+    notes?: string;
+    personUserId?: string;
+  }) =>
+    request<import("./types/quality").QualityConfidentialityCommitment>("/api/v1/quality/records/mc01-r02", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityMc01R02: (id: string) =>
+    request<import("./types/quality").QualityConfidentialityCommitment>(
+      `/api/v1/quality/records/mc01-r02/${id}`,
+      { method: "DELETE" }
+    ),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);

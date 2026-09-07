@@ -135,6 +135,13 @@ export function QualityDocumentDetailPage() {
               </Link>
             </p>
           )}
+          {d.code === "MC01-R02" && (
+            <p style={{ marginTop: 8 }}>
+              <Link className="btn btn-outline" to="/calidad/registros/mc01-r02">
+                Abrir registro de instancias firmadas
+              </Link>
+            </p>
+          )}
         </div>
         {published?.publishedFileId && (
           <button
