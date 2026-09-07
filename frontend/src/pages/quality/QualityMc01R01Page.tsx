@@ -139,7 +139,7 @@ export function QualityMc01R01Page() {
             Notas
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
-          <div style={{ marginTop: 12, displayContent: "flex-end", display: "flex", gap: 8 }}>
+          <div style={{ marginTop: 12, justifyContent: "flex-end", display: "flex", gap: 8 }}>
             <button type="button" className="btn ghost" onClick={() => setShowForm(false)}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Guardando…" : "Guardar"}</button>
           </div>
