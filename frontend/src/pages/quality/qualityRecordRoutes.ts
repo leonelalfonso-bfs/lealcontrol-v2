@@ -34,6 +34,14 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "Indicadores con meta y valores por período."
   },
   {
+    code: "MC01-R05",
+    title: "Nota institucional",
+    path: "/calidad/registros/mc01-r05",
+    kind: "Attachment",
+    ready: true,
+    blurb: "Comunicaciones formales de la dirección."
+  },
+  {
     code: "PG01-R01",
     title: "Lista de documentos",
     path: "/calidad/registros/pg01-r01",

@@ -143,3 +143,18 @@ export interface QualityIndicator {
   compliance?: "Met" | "Below" | string | null;
   values?: QualityIndicatorValue[];
 }
+
+export interface QualityInstitutionalNote {
+  id: string;
+  recordCode: string;
+  subject: string;
+  body?: string;
+  issuedBy?: string;
+  audience?: string;
+  issuedAt: string;
+  fileId?: string | null;
+  notes?: string;
+  status: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}

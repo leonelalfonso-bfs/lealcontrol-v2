@@ -19,6 +19,7 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityConfidentialityCommitment> ConfidentialityCommitments => Set<QualityConfidentialityCommitment>();
     public DbSet<QualityIndicator> Indicators => Set<QualityIndicator>();
     public DbSet<QualityIndicatorValue> IndicatorValues => Set<QualityIndicatorValue>();
+    public DbSet<QualityInstitutionalNote> InstitutionalNotes => Set<QualityInstitutionalNote>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
         : this(options, null)
@@ -153,6 +154,22 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.IndicatorId, x.Period }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.IndicatorId, x.RecordedAtUtc });
+        });
+
+        modelBuilder.Entity<QualityInstitutionalNote>(b =>
+        {
+            b.ToTable("institutional_notes", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Subject).HasMaxLength(240).IsRequired();
+            b.Property(x => x.Body).HasMaxLength(4000);
+            b.Property(x => x.IssuedBy).HasMaxLength(160);
+            b.Property(x => x.Audience).HasMaxLength(240);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Active");
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.IssuedAt });
+            b.HasIndex(x => new { x.TenantId, x.RecordCode, x.Status });
         });
     }
 
@@ -299,7 +316,25 @@ public sealed class QualityDbContext : DbContext
                 ""RecordedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_indval_Tenant_Ind_Period"" ON quality.indicator_values (""TenantId"", ""IndicatorId"", ""Period"");",
-            @"CREATE INDEX IF NOT EXISTS ""IX_quality_indval_Tenant_Ind_Rec"" ON quality.indicator_values (""TenantId"", ""IndicatorId"", ""RecordedAtUtc"");"
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_indval_Tenant_Ind_Rec"" ON quality.indicator_values (""TenantId"", ""IndicatorId"", ""RecordedAtUtc"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.institutional_notes (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'MC01-R05',
+                ""Subject"" character varying(240) NOT NULL,
+                ""Body"" character varying(4000) NOT NULL DEFAULT '',
+                ""IssuedBy"" character varying(160) NOT NULL DEFAULT '',
+                ""Audience"" character varying(240) NOT NULL DEFAULT '',
+                ""IssuedAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""FileId"" uuid,
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Active',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_instnotes_Tenant_Issued"" ON quality.institutional_notes (""TenantId"", ""IssuedAt"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_instnotes_Tenant_Record_Status"" ON quality.institutional_notes (""TenantId"", ""RecordCode"", ""Status"");"
         };
 
         foreach (var sql in statements)

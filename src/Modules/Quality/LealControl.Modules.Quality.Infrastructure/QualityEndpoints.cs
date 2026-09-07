@@ -586,6 +586,90 @@ public static class QualityEndpoints
             return Results.NoContent();
         });
 
+        // MC01-R05 — Notas institucionales
+        group.MapGet("/records/mc01-r05", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
+
+            var rows = await db.InstitutionalNotes.AsNoTracking()
+                .Where(n => n.TenantId == tenantId)
+                .OrderByDescending(n => n.IssuedAt)
+                .ThenBy(n => n.Subject)
+                .ToListAsync(ct);
+
+            return Results.Ok(new
+            {
+                code = "MC01-R05",
+                title = "Nota institucional",
+                recordKind = QualityRecordKinds.Attachment,
+                generatedAtUtc = DateTime.UtcNow,
+                rows = rows.Select(ToInstitutionalNoteDto)
+            });
+        });
+
+        group.MapPost("/records/mc01-r05", async (
+            CreateInstitutionalNoteRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+
+            if (string.IsNullOrWhiteSpace(req.Subject))
+            {
+                return Results.BadRequest(new { message = "El asunto de la nota es obligatorio." });
+            }
+
+            if (req.FileId.HasValue)
+            {
+                var fileOk = await db.Files.AsNoTracking()
+                    .AnyAsync(f => f.TenantId == tenantId && f.Id == req.FileId.Value, ct);
+                if (!fileOk)
+                {
+                    return Results.BadRequest(new { message = "El archivo adjunto no existe. Subilo antes con POST /files." });
+                }
+            }
+
+            var entity = new QualityInstitutionalNote
+            {
+                TenantId = tenantId,
+                RecordCode = "MC01-R05",
+                Subject = req.Subject.Trim(),
+                Body = req.Body?.Trim() ?? string.Empty,
+                IssuedBy = req.IssuedBy?.Trim() ?? string.Empty,
+                Audience = req.Audience?.Trim() ?? string.Empty,
+                IssuedAt = req.IssuedAt ?? DateTime.UtcNow,
+                FileId = req.FileId,
+                Notes = req.Notes?.Trim() ?? string.Empty,
+                Status = "Active",
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            db.InstitutionalNotes.Add(entity);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/quality/records/mc01-r05/{entity.Id}", ToInstitutionalNoteDto(entity));
+        });
+
+        group.MapDelete("/records/mc01-r05/{id:guid}", async (
+            Guid id,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.InstitutionalNotes
+                .FirstOrDefaultAsync(n => n.Id == id && n.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            entity.Status = "Cancelled";
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToInstitutionalNoteDto(entity));
+        });
+
         group.MapGet("/documents/{code}", async (string code, ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
@@ -1035,6 +1119,22 @@ public static class QualityEndpoints
         c.Status,
         c.CreatedAtUtc,
         c.UpdatedAtUtc
+    };
+
+    private static object ToInstitutionalNoteDto(QualityInstitutionalNote n) => new
+    {
+        n.Id,
+        n.RecordCode,
+        n.Subject,
+        n.Body,
+        n.IssuedBy,
+        n.Audience,
+        n.IssuedAt,
+        n.FileId,
+        n.Notes,
+        n.Status,
+        n.CreatedAtUtc,
+        n.UpdatedAtUtc
     };
 
     private static object ToIndicatorValueDto(QualityIndicatorValue v) => new

@@ -285,3 +285,37 @@ public sealed record CreateQualityIndicatorValueRequest(
     decimal Value,
     string? Notes = null,
     string? RecordedBy = null);
+
+/// <summary>Instancias de notas institucionales (MC01-R05).</summary>
+public sealed class QualityInstitutionalNote : Entity<Guid>
+{
+    public QualityInstitutionalNote() : base(Guid.NewGuid())
+    {
+    }
+
+    public QualityInstitutionalNote(Guid id) : base(id)
+    {
+    }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "MC01-R05";
+    public string Subject { get; set; } = string.Empty;
+    public string Body { get; set; } = string.Empty;
+    public string IssuedBy { get; set; } = string.Empty;
+    public string Audience { get; set; } = string.Empty;
+    public DateTime IssuedAt { get; set; } = DateTime.UtcNow;
+    public Guid? FileId { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public string Status { get; set; } = "Active"; // Active, Superseded, Cancelled
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateInstitutionalNoteRequest(
+    string Subject,
+    DateTime? IssuedAt = null,
+    string? Body = null,
+    string? IssuedBy = null,
+    string? Audience = null,
+    Guid? FileId = null,
+    string? Notes = null);

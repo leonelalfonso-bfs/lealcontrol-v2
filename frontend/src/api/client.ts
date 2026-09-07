@@ -1299,6 +1299,35 @@ export const api = {
       method: "DELETE"
     }),
 
+  listQualityMc01R05: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      rows: import("./types/quality").QualityInstitutionalNote[];
+    }>("/api/v1/quality/records/mc01-r05"),
+
+  createQualityMc01R05: (body: {
+    subject: string;
+    body?: string;
+    issuedBy?: string;
+    audience?: string;
+    issuedAt?: string;
+    fileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityInstitutionalNote>("/api/v1/quality/records/mc01-r05", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityMc01R05: (id: string) =>
+    request<import("./types/quality").QualityInstitutionalNote>(
+      `/api/v1/quality/records/mc01-r05/${id}`,
+      { method: "DELETE" }
+    ),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);
