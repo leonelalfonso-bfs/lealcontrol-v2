@@ -1099,6 +1099,29 @@ export const api = {
   saveCalibrationReport: (body: Record<string, unknown>) =>
     request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) }),
 
+  approveCalibrationReport: (id: string) =>
+    request<import("./types").CalibrationReport>(`/api/v1/metrology/reports/${id}/approve`, { method: "POST", body: "{}" }),
+
+  getCalibrationReportSgcTraceability: (id: string) =>
+    request<{
+      reportId: string;
+      certificateNumber: string;
+      reportStatus: string;
+      instructionCode?: string;
+      standardApplied?: string;
+      performedBy?: string;
+      approvedBy?: string;
+      procedures: Array<{ code?: string; displayCode?: string; title?: string; version?: number }>;
+      externalDocumentCodes: string[];
+      weightsUsed: Array<{ code?: string; certificateNumber?: string; nominalValue?: number; unit?: string }>;
+      qualityLinks: {
+        tree: string;
+        instruction?: string | null;
+        procedurePg12: string;
+        procedurePg09: string;
+      };
+    }>(`/api/v1/metrology/reports/${id}/sgc-traceability`),
+
   // ==========================================
   // Quality (ISO 17025)
   // ==========================================

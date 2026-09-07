@@ -584,8 +584,8 @@ export function CalibrationReportPrintPage() {
       )}
 
       {/* Dictamen Final & Firmas */}
-      <div style={{ border: "2px solid #0d9488", borderRadius: 8, padding: 14, background: "#f4fbf9", marginBottom: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ border: "2px solid #0d9488", borderRadius: 8, padding: 14, background: "#f4fbf9", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: "0.85rem", color: "#555" }}>RESULTADO TÉCNICO DEL INFORME:</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 800, color: isApproved ? "#06574c" : "#dc2626" }}>
@@ -599,19 +599,148 @@ export function CalibrationReportPrintPage() {
                 <strong>Observaciones:</strong> {report.observations}
               </div>
             )}
+            <div style={{ fontSize: "0.78rem", marginTop: 8, color: "#0f766e" }}>
+              Estado: <strong>{(report as any).reportStatus || report.status || "—"}</strong>
+              {(report as any).instructionCode ? <> · Instructivo <strong>{(report as any).instructionCode}</strong></> : null}
+            </div>
           </div>
 
-          <div style={{ textAlign: "center", borderTop: "1px solid #444", paddingTop: 8, minWidth: 200 }}>
-            <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{report.performedBy || "Técnico responsable"}</div>
-            <div style={{ fontSize: "0.74rem", color: "#666" }}>Técnico / Responsable del informe</div>
-            <div style={{ fontSize: "0.74rem", color: "#666" }}>Servicios técnicos y metrológicos</div>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            <div style={{ textAlign: "center", borderTop: "1px solid #444", paddingTop: 8, minWidth: 180 }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{report.performedBy || "Técnico responsable"}</div>
+              <div style={{ fontSize: "0.74rem", color: "#666" }}>Elaboró / Técnico</div>
+            </div>
+            <div style={{ textAlign: "center", borderTop: "1px solid #444", paddingTop: 8, minWidth: 180 }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{(report as any).approvedBy || "Pendiente DT"}</div>
+              <div style={{ fontSize: "0.74rem", color: "#666" }}>Aprobó · Director Técnico</div>
+            </div>
           </div>
         </div>
       </div>
 
+      <SgcTraceabilityPanel reportId={report.id} report={report} />
+
       <div style={{ textAlign: "center", fontSize: "0.72rem", color: "#888" }}>
         Documento técnico emitido mediante el Sistema Modular de Metrología Legal — Leal Control ERP
       </div>
+    </div>
+  );
+}
+
+function SgcTraceabilityPanel({ reportId, report }: { reportId: string; report: CalibrationReport }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<Awaited<ReturnType<typeof api.getCalibrationReportSgcTraceability>> | null>(null);
+
+  const load = async () => {
+    setOpen(true);
+    if (data || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      setData(await api.getCalibrationReportSgcTraceability(reportId));
+    } catch (err) {
+      // Fallback local si el endpoint aún no está desplegado
+      let procedures: Array<{ code?: string; displayCode?: string; title?: string; version?: number }> = [];
+      let externals: string[] = [];
+      let weights: Array<{ code?: string; certificateNumber?: string }> = [];
+      try {
+        procedures = JSON.parse((report as any).procedureSnapshotJson || "[]");
+      } catch { /* ignore */ }
+      try {
+        externals = JSON.parse((report as any).externalDocumentCodesJson || "[]");
+      } catch { /* ignore */ }
+      try {
+        weights = JSON.parse(report.weightsUsedJson || "[]");
+      } catch { /* ignore */ }
+      if (procedures.length || externals.length) {
+        setData({
+          reportId,
+          certificateNumber: (report as any).certificateNumber || report.reportNumber,
+          reportStatus: (report as any).reportStatus || report.status,
+          instructionCode: (report as any).instructionCode,
+          standardApplied: (report as any).standardApplied,
+          performedBy: report.performedBy,
+          approvedBy: (report as any).approvedBy,
+          procedures,
+          externalDocumentCodes: externals,
+          weightsUsed: weights,
+          qualityLinks: {
+            tree: "/calidad/documentos",
+            instruction: (report as any).instructionCode
+              ? `/calidad/documentos/${(report as any).instructionCode}`
+              : null,
+            procedurePg12: "/calidad/documentos/PG12",
+            procedurePg09: "/calidad/documentos/PG09"
+          }
+        });
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="no-print" style={{ marginBottom: 24, border: "1px dashed #94a3b8", borderRadius: 8, padding: 12 }}>
+      <button type="button" className="btn ghost compact" onClick={() => void load()}>
+        {open ? "Ocultar trazabilidad SGC" : "Ver trazabilidad SGC"}
+      </button>
+      {open && (
+        <div style={{ marginTop: 12, fontSize: "0.85rem" }}>
+          {loading && <div className="muted">Cargando cadena SGC…</div>}
+          {error && <div style={{ color: "#b91c1c" }}>{error}</div>}
+          {data && (
+            <div style={{ display: "grid", gap: 10 }}>
+              <div>
+                <strong>Procedimientos / instructivos (snapshot):</strong>
+                <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                  {(data.procedures || []).map((p, i) => (
+                    <li key={`${p.code}-${i}`}>
+                      <Link to={`/calidad/documentos/${encodeURIComponent(p.code || "")}`}>
+                        {p.displayCode || p.code}
+                      </Link>
+                      {p.version ? ` v${p.version}` : ""}
+                      {p.title ? ` — ${p.title}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <strong>Documentos externos:</strong>{" "}
+                {(data.externalDocumentCodes || []).length
+                  ? data.externalDocumentCodes.join(", ")
+                  : "—"}
+              </div>
+              <div>
+                <strong>Pesas patrón usadas:</strong>
+                <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                  {(data.weightsUsed || []).map((w, i) => (
+                    <li key={`${w.code}-${i}`}>
+                      {w.code || "—"}
+                      {w.certificateNumber ? ` · cert. ${w.certificateNumber}` : ""}
+                      {w.nominalValue != null ? ` · ${w.nominalValue} ${w.unit || ""}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <strong>Firmas:</strong> Elaboró {data.performedBy || "—"} · Aprobó DT {data.approvedBy || "pendiente"}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Link to={data.qualityLinks.tree}>Árbol documental</Link>
+                {data.qualityLinks.instruction && (
+                  <Link to={data.qualityLinks.instruction}>Instructivo {data.instructionCode}</Link>
+                )}
+                <Link to={data.qualityLinks.procedurePg12}>PG12</Link>
+                <Link to={data.qualityLinks.procedurePg09}>PG09</Link>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -656,7 +656,7 @@ export function CalibrationReportFormPage() {
           ? "Régimen transitorio aplicado por uso en servicio / habilitación según marco normativo aplicable."
           : "",
         testPlanVersion: "MET-BASE-1",
-        reportStatus: "Issued",
+        reportStatus: "Draft",
         calibrationDate: new Date(calibrationDate).toISOString(),
         expirationDate: nextCalibrationDate ? new Date(nextCalibrationDate).toISOString() : undefined,
         performedBy: performedBy.trim(),

@@ -148,6 +148,16 @@ public sealed class CalibrationReport : Entity<Guid>
     
     public string? Observations { get; set; }
     public string? SealsPlaced { get; set; } // Precintos colocados
+
+    /// <summary>Snapshot SGC al emitir: PG12/IT0X/PG09 con versión vigente (JSON).</summary>
+    public string ProcedureSnapshotJson { get; set; } = "[]";
+
+    /// <summary>Códigos de documentos externos del catálogo Calidad (JSON array).</summary>
+    public string ExternalDocumentCodesJson { get; set; } = "[]";
+
+    /// <summary>Instructivo de trabajo vinculado (IT01..IT04).</summary>
+    public string InstructionCode { get; set; } = string.Empty;
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public CalibrationReport() : base(Guid.NewGuid()) { }

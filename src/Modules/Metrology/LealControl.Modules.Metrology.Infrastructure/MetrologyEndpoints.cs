@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Quality.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -829,6 +831,7 @@ public static class MetrologyEndpoints
             try
             {
                 var tenantId = tenantContext.TenantId;
+                await db.EnsureMetrologyTablesAsync(ct);
                 var report = await db.CalibrationReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId, ct);
                 if (report == null) return Results.NotFound(new { message = "Informe de calibración no encontrado." });
 
@@ -850,11 +853,13 @@ public static class MetrologyEndpoints
             CalibrationReportWriteDto req,
             ITenantContext tenantContext,
             MetrologyDbContext db,
+            IQualityDocumentSnapshotProvider snapshots,
             CancellationToken ct) =>
         {
             try
             {
                 var tenantId = tenantContext.TenantId;
+                await db.EnsureMetrologyTablesAsync(ct);
                 var equipment = await db.Equipments.FirstOrDefaultAsync(e => e.Id == req.EquipmentId && e.TenantId == tenantId, ct);
                 if (equipment == null) return Results.BadRequest(new { message = "El instrumento especificado no existe." });
 
@@ -882,6 +887,30 @@ public static class MetrologyEndpoints
                     ? "Informe de ensayo metrológico"
                     : req.DocumentTitle.Trim();
 
+                var instructionCode = MetrologySgcLinkage.ResolveInstructionCode(equipment);
+                var procedureCodes = MetrologySgcLinkage.ProcedureCodesFor(instructionCode);
+                var externalCodes = MetrologySgcLinkage.ExternalCodesFor(standard);
+                var asOf = req.CalibrationDate.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(req.CalibrationDate, DateTimeKind.Utc)
+                    : req.CalibrationDate.ToUniversalTime();
+
+                IReadOnlyList<QualityDocumentSnapshot> procedureSnapshots;
+                try
+                {
+                    procedureSnapshots = await snapshots.GetCurrentSnapshotsAsync(
+                        tenantId.Value, procedureCodes, asOf, ct);
+                }
+                catch
+                {
+                    procedureSnapshots = Array.Empty<QualityDocumentSnapshot>();
+                }
+
+                // Si el catálogo aún no tiene el documento, dejamos al menos el código pedido.
+                var missing = procedureCodes
+                    .Where(c => procedureSnapshots.All(s => !string.Equals(s.Code, c, StringComparison.OrdinalIgnoreCase)))
+                    .Select(c => new QualityDocumentSnapshot(c, c, "(pendiente de carga en Calidad)", 0, Guid.Empty, null));
+                var allSnapshots = procedureSnapshots.Concat(missing).ToList();
+
                 var report = new CalibrationReport
                 {
                     TenantId = tenantId,
@@ -902,14 +931,15 @@ public static class MetrologyEndpoints
                     TestPlanVersion = string.IsNullOrWhiteSpace(req.TestPlanVersion)
                         ? (profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "MET-2307-1" : "MET-25-1")
                         : req.TestPlanVersion.Trim(),
-                    ReportStatus = string.IsNullOrWhiteSpace(req.ReportStatus) ? "Issued" : req.ReportStatus.Trim(),
+                    // C2: el técnico genera borrador; el DT aprueba y firma.
+                    ReportStatus = string.IsNullOrWhiteSpace(req.ReportStatus) ? "Draft" : req.ReportStatus.Trim(),
                     CalibrationDate = req.CalibrationDate,
                     ExpirationDate = expirationDate,
                     TemperatureCelsius = req.TemperatureCelsius,
                     RelativeHumidityPercent = req.RelativeHumidityPercent,
                     AtmosphericPressureHpa = req.AtmosphericPressureHpa,
                     PerformedBy = req.PerformedBy?.Trim() ?? "Metrólogo Autorizado",
-                    ApprovedBy = req.ApprovedBy?.Trim() ?? "",
+                    ApprovedBy = string.Empty,
                     Verdict = req.Verdict ?? "Approved",
                     MaxObservedError = req.MaxObservedError,
                     MaxAllowedError = req.MaxAllowedError,
@@ -921,8 +951,17 @@ public static class MetrologyEndpoints
                     WeightsUsedJson = req.WeightsUsedJson ?? "[]",
                     Observations = req.Observations,
                     SealsPlaced = req.SealsPlaced,
+                    InstructionCode = instructionCode,
+                    ProcedureSnapshotJson = MetrologySgcLinkage.SerializeSnapshots(allSnapshots),
+                    ExternalDocumentCodesJson = MetrologySgcLinkage.SerializeCodes(externalCodes),
                     CreatedAtUtc = DateTime.UtcNow
                 };
+
+                if (string.Equals(report.ReportStatus, "Issued", StringComparison.OrdinalIgnoreCase))
+                {
+                    // No permitir emitir con firma DT vacía desde el alta: forzar Draft.
+                    report.ReportStatus = "Draft";
+                }
 
                 db.CalibrationReports.Add(report);
 
@@ -939,6 +978,84 @@ public static class MetrologyEndpoints
             {
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
+        });
+
+        group.MapPost("/reports/{id:guid}/approve", async (
+            Guid id,
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureMetrologyTablesAsync(ct);
+
+            var report = await db.CalibrationReports.FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId, ct);
+            if (report is null)
+            {
+                return Results.NotFound(new { message = "Informe de calibración no encontrado." });
+            }
+
+            if (string.Equals(report.ReportStatus, "Issued", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(report.ApprovedBy))
+            {
+                return Results.Ok(report);
+            }
+
+            var approver = http.User.FindFirst("name")?.Value
+                ?? http.User.FindFirst(ClaimTypes.Name)?.Value
+                ?? http.User.FindFirst("full_name")?.Value
+                ?? "Director Técnico";
+
+            report.ApprovedBy = approver;
+            report.ReportStatus = "Issued";
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(report);
+        }).RequireAuthorization("RequireTechnicalDirector");
+
+        group.MapGet("/reports/{id:guid}/sgc-traceability", async (
+            Guid id,
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            var report = await db.CalibrationReports.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId, ct);
+            if (report is null)
+            {
+                return Results.NotFound(new { message = "Informe de calibración no encontrado." });
+            }
+
+            object? procedures = Array.Empty<object>();
+            object? externals = Array.Empty<object>();
+            object? weights = Array.Empty<object>();
+            try { procedures = JsonSerializer.Deserialize<object>(report.ProcedureSnapshotJson) ?? Array.Empty<object>(); } catch { /* ignore */ }
+            try { externals = JsonSerializer.Deserialize<object>(report.ExternalDocumentCodesJson) ?? Array.Empty<object>(); } catch { /* ignore */ }
+            try { weights = JsonSerializer.Deserialize<object>(report.WeightsUsedJson) ?? Array.Empty<object>(); } catch { /* ignore */ }
+
+            return Results.Ok(new
+            {
+                reportId = report.Id,
+                certificateNumber = report.CertificateNumber,
+                reportStatus = report.ReportStatus,
+                instructionCode = report.InstructionCode,
+                standardApplied = report.StandardApplied,
+                performedBy = report.PerformedBy,
+                approvedBy = report.ApprovedBy,
+                procedures,
+                externalDocumentCodes = externals,
+                weightsUsed = weights,
+                qualityLinks = new
+                {
+                    tree = "/calidad/documentos",
+                    instruction = string.IsNullOrWhiteSpace(report.InstructionCode)
+                        ? null
+                        : $"/calidad/documentos/{report.InstructionCode}",
+                    procedurePg12 = "/calidad/documentos/PG12",
+                    procedurePg09 = "/calidad/documentos/PG09"
+                }
+            });
         });
 
         return endpoints;

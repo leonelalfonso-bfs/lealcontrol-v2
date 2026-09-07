@@ -115,6 +115,9 @@ public sealed class MetrologyDbContext : DbContext
             b.Property(x => x.PerformedBy).HasMaxLength(120);
             b.Property(x => x.ApprovedBy).HasMaxLength(120);
             b.Property(x => x.Verdict).HasMaxLength(32).HasDefaultValue("Approved");
+            b.Property(x => x.ProcedureSnapshotJson).HasColumnType("text").HasDefaultValue("[]");
+            b.Property(x => x.ExternalDocumentCodesJson).HasColumnType("text").HasDefaultValue("[]");
+            b.Property(x => x.InstructionCode).HasMaxLength(16).HasDefaultValue(string.Empty);
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.CertificateNumber }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.EquipmentId });
@@ -289,7 +292,10 @@ public sealed class MetrologyDbContext : DbContext
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""RegulatoryStatus"" character varying(80) NOT NULL DEFAULT 'Vigente';",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""RegulatoryNotice"" character varying(1200) NOT NULL DEFAULT '';",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""TestPlanVersion"" character varying(64) NOT NULL DEFAULT 'MET-BASE-1';",
-            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ReportStatus"" character varying(32) NOT NULL DEFAULT 'Issued';"
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ReportStatus"" character varying(32) NOT NULL DEFAULT 'Issued';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ProcedureSnapshotJson"" text NOT NULL DEFAULT '[]';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ExternalDocumentCodesJson"" text NOT NULL DEFAULT '[]';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""InstructionCode"" character varying(16) NOT NULL DEFAULT '';"
         };
 
         foreach (var sql in statements)

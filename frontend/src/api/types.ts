@@ -1461,6 +1461,7 @@ export type UserInfo = {
   email: string;
   role: string;
   allowedModulesJson?: string | null;
+  isTechnicalDirector?: boolean;
 };
 
 export type TenantInfo = {
@@ -1705,6 +1706,10 @@ export type CalibrationReport = {
   certificateNumber?: string | null;
   verdict?: string | null;
   expandedUncertaintyK2?: number | null;
+  approvedBy?: string | null;
+  procedureSnapshotJson?: string | null;
+  externalDocumentCodesJson?: string | null;
+  instructionCode?: string | null;
   createdAtUtc: string;
 };
 
