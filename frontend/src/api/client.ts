@@ -1338,6 +1338,9 @@ export const api = {
       rows: import("./types/quality").QualityComplaint[];
     }>("/api/v1/quality/records/pg03-r01"),
 
+  getQualityComplaint: (id: string) =>
+    request<import("./types/quality").QualityComplaint>(`/api/v1/quality/records/pg03-r01/${id}`),
+
   createQualityComplaint: (body: {
     partyName: string;
     description: string;

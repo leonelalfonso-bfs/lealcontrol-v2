@@ -1,7 +1,8 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityComplaint } from "../../api/types/quality";
+import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
 
 const STATUS_LABEL: Record<string, string> = {
   Open: "Registrada",
@@ -12,6 +13,11 @@ const STATUS_LABEL: Record<string, string> = {
   Closed: "Cerrada",
   Cancelled: "Anulada"
 };
+
+type StatusFilter = "all" | "open" | "closed" | "overdue" | string;
+
+const OPEN_STATUSES = new Set(["Open", "UnderValidation", "Investigating", "PendingCommunication"]);
+const CLOSED_STATUSES = new Set(["Closed", "Invalid", "Cancelled"]);
 
 function statusLabel(s: string) {
   return STATUS_LABEL[s] ?? s;
@@ -39,8 +45,19 @@ export function QualityPg03R01Page() {
   const [investigation, setInvestigation] = useState("");
   const [actions, setActions] = useState("");
   const [validationNotes, setValidationNotes] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const selected = rows.find((r) => r.id === selectedId) ?? null;
+
+  const filtered = useMemo(() => {
+    return rows.filter((r) => {
+      if (statusFilter === "all") return true;
+      if (statusFilter === "open") return OPEN_STATUSES.has(r.status);
+      if (statusFilter === "closed") return CLOSED_STATUSES.has(r.status);
+      if (statusFilter === "overdue") return !!r.isOverdue;
+      return r.status === statusFilter;
+    });
+  }, [rows, statusFilter]);
 
   const load = () => {
     setLoading(true);
@@ -144,6 +161,32 @@ export function QualityPg03R01Page() {
     && selected.status !== "Invalid"
     && selected.status !== "Cancelled";
 
+  const exportExcel = () => {
+    const columns: ExcelColumn<QualityComplaint>[] = [
+      { key: "number", header: "Número" },
+      { key: "receivedAt", header: "Recepción", value: (r) => excelDate(r.receivedAt) },
+      { key: "channel", header: "Canal" },
+      { key: "partyName", header: "Reclamante" },
+      { key: "partyContact", header: "Contacto" },
+      { key: "description", header: "Descripción" },
+      { key: "status", header: "Estado", value: (r) => statusLabel(r.status) },
+      { key: "isOverdue", header: "Fuera de plazo", value: (r) => (r.isOverdue ? "Sí" : "No") },
+      { key: "responsible", header: "Responsable" },
+      { key: "currentDueAt", header: "Plazo actual", value: (r) => (r.currentDueAt ? excelDate(r.currentDueAt) : "") },
+      { key: "validatedAt", header: "Validada", value: (r) => (r.validatedAt ? excelDate(r.validatedAt) : "") },
+      { key: "closedAt", header: "Cierre", value: (r) => (r.closedAt ? excelDate(r.closedAt) : "") },
+      { key: "investigation", header: "Investigación" },
+      { key: "actions", header: "Acciones" }
+    ];
+    const suffix =
+      statusFilter === "all" ? "todas"
+        : statusFilter === "open" ? "abiertas"
+          : statusFilter === "closed" ? "cerradas"
+            : statusFilter === "overdue" ? "vencidas"
+              : statusFilter.toLowerCase();
+    void exportToExcel(`PG03-R01_quejas_${suffix}`, filtered, columns);
+  };
+
   return (
     <div className="workspace-page pad">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
@@ -162,10 +205,37 @@ export function QualityPg03R01Page() {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link className="btn btn-outline" to="/calidad/registros">Índice registros</Link>
+          <button type="button" className="btn btn-outline" disabled={filtered.length === 0} onClick={exportExcel}>
+            Exportar Excel ({filtered.length})
+          </button>
           <button type="button" className="btn btn-primary" disabled={busy} onClick={() => setShowForm((v) => !v)}>
             {showForm ? "Cerrar alta" : "Nueva queja"}
           </button>
         </div>
+      </div>
+
+      <div className="card pad" style={{ marginTop: 12, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ fontSize: 13, fontWeight: 700 }}>Filtro:</span>
+        {(
+          [
+            ["all", "Todas"],
+            ["open", "Abiertas"],
+            ["closed", "Cerradas / no procede"],
+            ["overdue", "Fuera de plazo"],
+            ["Open", "Registradas"],
+            ["Investigating", "En investigación"],
+            ["Closed", "Cerradas"]
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            className={statusFilter === value ? "btn btn-primary compact" : "btn ghost compact"}
+            onClick={() => setStatusFilter(value)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {(error || msg) && (
@@ -229,11 +299,15 @@ export function QualityPg03R01Page() {
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 1fr) minmax(300px, 1fr)", gap: 16, marginTop: 16, alignItems: "start" }}>
         <div className="card pad">
-          <h3 style={{ marginTop: 0 }}>Quejas</h3>
+          <h3 style={{ marginTop: 0 }}>Quejas ({filtered.length})</h3>
           {loading ? (
             <div className="muted">Cargando…</div>
-          ) : rows.length === 0 ? (
-            <div className="muted">Todavía no hay quejas. Generá la primera desde el sistema.</div>
+          ) : filtered.length === 0 ? (
+            <div className="muted">
+              {rows.length === 0
+                ? "Todavía no hay quejas. Generá la primera desde el sistema."
+                : "Ninguna queja coincide con el filtro."}
+            </div>
           ) : (
             <div className="table-wrap">
               <table className="table">
@@ -246,7 +320,7 @@ export function QualityPg03R01Page() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {filtered.map((r) => (
                     <tr
                       key={r.id}
                       style={{
@@ -282,6 +356,11 @@ export function QualityPg03R01Page() {
               <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
                 {statusLabel(selected.status)} · {selected.channel} · {selected.partyName}
                 {selected.isOverdue ? <span style={{ color: "#b91c1c", fontWeight: 700 }}> · Fuera de plazo</span> : null}
+              </p>
+              <p style={{ marginBottom: 12 }}>
+                <Link className="btn btn-outline compact" to={`/calidad/registros/quejas/${selected.id}/pdf`}>
+                  Exportar PDF (formato planilla)
+                </Link>
               </p>
               <p style={{ whiteSpace: "pre-wrap" }}>{selected.description}</p>
 

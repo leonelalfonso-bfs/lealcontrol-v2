@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
+import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
 
 export function QualityPg01R01Page() {
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
@@ -16,11 +17,31 @@ export function QualityPg01R01Page() {
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, []);
 
+  const exportExcel = () => {
+    const columns: ExcelColumn<Record<string, unknown>>[] = [
+      { key: "codigo", header: "Código" },
+      { key: "nombre", header: "Nombre" },
+      { key: "tipo", header: "Tipo" },
+      { key: "versionActual", header: "Versión" },
+      { key: "fechaAprobacion", header: "Aprobación", value: (r) => (r.fechaAprobacion ? excelDate(r.fechaAprobacion) : "") },
+      { key: "fechaRevision", header: "Próxima revisión", value: (r) => (r.fechaRevision ? excelDate(r.fechaRevision) : "") },
+      { key: "estado", header: "Estado" }
+    ];
+    void exportToExcel("PG01-R01_lista_documentos", rows, columns);
+  };
+
   return (
     <div className="workspace-page pad">
-      <Link to="/calidad/documentos">← Documentos</Link>
-      <h1 style={{ marginTop: 8 }}>{title}</h1>
-      <p style={{ color: "#64748b" }}>Registro generado automáticamente desde el árbol documental (PG01).</p>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <div>
+          <Link to="/calidad/documentos">← Documentos</Link>
+          <h1 style={{ marginTop: 8 }}>{title}</h1>
+          <p style={{ color: "#64748b" }}>Registro generado automáticamente desde el árbol documental (PG01).</p>
+        </div>
+        <button type="button" className="btn btn-outline" disabled={rows.length === 0} onClick={exportExcel}>
+          Exportar Excel
+        </button>
+      </div>
       {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
       <div className="table-wrap card pad" style={{ marginTop: 12 }}>
         <table className="table">
@@ -68,10 +89,28 @@ export function QualityPg01R02Page() {
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, []);
 
+  const exportExcel = () => {
+    const columns: ExcelColumn<Record<string, unknown>>[] = [
+      { key: "nombre", header: "Nombre" },
+      { key: "organismo", header: "Organismo" },
+      { key: "url", header: "URL" },
+      { key: "proximaRevision", header: "Próxima revisión", value: (r) => (r.proximaRevision ? excelDate(r.proximaRevision) : "") },
+      { key: "estado", header: "Estado" }
+    ];
+    void exportToExcel("PG01-R02_documentos_externos", rows, columns);
+  };
+
   return (
     <div className="workspace-page pad">
-      <Link to="/calidad/documentos">← Documentos</Link>
-      <h1 style={{ marginTop: 8 }}>{title}</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <div>
+          <Link to="/calidad/documentos">← Documentos</Link>
+          <h1 style={{ marginTop: 8 }}>{title}</h1>
+        </div>
+        <button type="button" className="btn btn-outline" disabled={rows.length === 0} onClick={exportExcel}>
+          Exportar Excel
+        </button>
+      </div>
       {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
       <div className="table-wrap card pad" style={{ marginTop: 12 }}>
         <table className="table">
