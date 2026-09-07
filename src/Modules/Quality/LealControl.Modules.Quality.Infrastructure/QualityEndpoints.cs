@@ -390,6 +390,13 @@ public static class QualityEndpoints
                 return Results.BadRequest(new { message = "La versión vigente debe tener PDF publicado (PublishedFileId)." });
             }
 
+            // Aplicar ReviewedBy del body ANTES de validar elaborador ≠ revisor (PG01).
+            if (!string.IsNullOrWhiteSpace(req.ReviewedBy))
+            {
+                ver.ReviewedBy = req.ReviewedBy.Trim();
+                ver.ReviewedAt ??= DateTime.UtcNow;
+            }
+
             if (string.IsNullOrWhiteSpace(ver.ReviewedBy) || string.Equals(ver.ReviewedBy, ver.ElaboratedBy, StringComparison.OrdinalIgnoreCase))
             {
                 return Results.BadRequest(new { message = "Debe existir un revisor distinto del elaborador (PG01)." });
@@ -414,7 +421,6 @@ public static class QualityEndpoints
             ver.ApprovedBy = approver;
             ver.ApprovedAt = req.ApprovedAt ?? DateTime.UtcNow;
             ver.EffectiveFrom ??= ver.ApprovedAt;
-            ver.ReviewedBy = string.IsNullOrWhiteSpace(req.ReviewedBy) ? ver.ReviewedBy : req.ReviewedBy;
             ver.ReviewedAt ??= DateTime.UtcNow;
 
             doc.CurrentVersionId = ver.Id;
@@ -545,6 +551,7 @@ public static class QualityEndpoints
 
             if (string.Equals(req.Role, QualityFileRoles.Source, StringComparison.OrdinalIgnoreCase))
             {
+                // Idempotente: mismo fileId ya adjunto → OK; otro fileId reemplaza.
                 ver.SourceFileId = file.Id;
             }
             else
@@ -555,8 +562,53 @@ public static class QualityEndpoints
                     return Results.BadRequest(new { message = "PublishedFile debe ser PDF." });
                 }
 
+                // Idempotente: si ya hay PublishedFileId y es el mismo, no falla.
+                if (ver.PublishedFileId.HasValue && ver.PublishedFileId.Value == file.Id)
+                {
+                    return Results.Ok(ToVersionDto(ver));
+                }
+
                 ver.PublishedFileId = file.Id;
             }
+
+            doc.UpdatedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToVersionDto(ver));
+        });
+
+        group.MapMethods("/documents/{code}/versions/{version:int}", new[] { "PATCH" }, async (
+            string code,
+            int version,
+            UpdateVersionRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+            var normalized = NormalizeCode(code);
+
+            var doc = await db.Documents.FirstOrDefaultAsync(d => d.TenantId == tenantId && d.Code == normalized, ct);
+            if (doc is null)
+            {
+                return Results.NotFound(new { message = $"Documento {code} no encontrado." });
+            }
+
+            var ver = await db.DocumentVersions.FirstOrDefaultAsync(
+                v => v.TenantId == tenantId && v.DocumentId == doc.Id && v.Version == version, ct);
+            if (ver is null)
+            {
+                return Results.NotFound(new { message = $"Versión {version} no encontrada." });
+            }
+
+            if (req.ChangeSummary is not null) ver.ChangeSummary = req.ChangeSummary;
+            if (req.ElaboratedBy is not null) ver.ElaboratedBy = req.ElaboratedBy.Trim();
+            if (req.ElaboratedAt.HasValue) ver.ElaboratedAt = req.ElaboratedAt;
+            if (req.ReviewedBy is not null) ver.ReviewedBy = req.ReviewedBy.Trim();
+            if (req.ReviewedAt.HasValue) ver.ReviewedAt = req.ReviewedAt;
+            if (req.ApprovedBy is not null) ver.ApprovedBy = req.ApprovedBy.Trim();
+            if (req.ApprovedAt.HasValue) ver.ApprovedAt = req.ApprovedAt;
+            if (req.EffectiveFrom.HasValue) ver.EffectiveFrom = req.EffectiveFrom;
 
             doc.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
@@ -648,6 +700,16 @@ public sealed record ApproveVersionRequest(
     string? ApprovedBy = null,
     DateTime? ApprovedAt = null,
     string? ReviewedBy = null);
+
+public sealed record UpdateVersionRequest(
+    string? ChangeSummary = null,
+    string? ElaboratedBy = null,
+    DateTime? ElaboratedAt = null,
+    string? ReviewedBy = null,
+    DateTime? ReviewedAt = null,
+    string? ApprovedBy = null,
+    DateTime? ApprovedAt = null,
+    DateTime? EffectiveFrom = null);
 
 public sealed record AttachFileRequest(Guid FileId, string? Role = null);
 

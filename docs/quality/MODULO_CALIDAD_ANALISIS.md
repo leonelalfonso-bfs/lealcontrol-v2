@@ -350,14 +350,13 @@ El `Listado de códigos utilizados.xlsx` es la fuente del árbol inicial. Seed p
 
 **Carga de archivos (decisión): por script, al cierre de C1.** `tools/quality-seed/` hace:
 
-1. Descarga todos los archivos del Drive "INMELA - BFS" a `tools/quality-seed/input/` respetando la estructura de carpetas (una sola vez; se versiona el listado, no los binarios).
-2. Convierte cada .docx/.xlsx a PDF (LibreOffice headless en el VPS/WSL) → ese PDF es el `PublishedFileId`; el .docx/.xlsx original queda como `SourceFileId`.
-3. Parsea el nombre de archivo para resolver código, tipo y versión (`PG14 R3 v1 - Programa de calibraciones.xlsx` → `PG14-R03`, RecordTemplate, v1) contra un `mapping.json` revisado a mano, para absorber las inconsistencias de nomenclatura (`PG 14`, `PG14-`, `PG14 R1`, `PG14-R01`).
-4. Crea documento + versión 1 vía la API (`POST /api/v1/quality/documents`, `POST …/versions`, `POST …/files`) con Elaboró/Revisó/Aprobó y fecha 10/07/2026 cuando el pie del documento lo indica; los que no tienen firma quedan en `InReview`.
-5. Carga documentos externos (Normas + certificados de pesas al `StandardWeight` correspondiente en Metrología) y relaciones normativas.
-6. Emite un reporte de discrepancias (archivos sin código resoluble, códigos del listado sin archivo, R referenciados en el texto de un PG que no existen) que es la base para la conversación con ELEVAR (§8).
+1. Coloca los archivos del Drive "INMELA - BFS" en `tools/quality-seed/input/` (misma `fileName` que `mapping.json`; no versionar binarios).
+2. Convierte cada .docx/.xlsx a PDF (LibreOffice headless) → ese PDF es el `PublishedFileId`; el original queda como `SourceFileId`.
+3. Resuelve códigos con `mapping.json` (revisado a mano; `missing` / `generated` para huecos ELEVAR y registros generados).
+4. Sube vía API (`POST …/files`, `POST …/attach`, `PATCH` metadatos, opcional `--approve` DT) con Elaboró/Revisó/Aprobó 10/07/2026.
+5. Emite `discrepancies-report.md` (sin archivo local, missing Drive, huérfanos, catálogo sin mapping).
 
-El script es idempotente por código+versión, así se puede volver a correr cuando la consultoría suba PG05, PG09 R1/R2/R3 o nuevas versiones.
+El script es idempotente por código+versión (si ya hay `PublishedFileId`, se omite).
 
 ---
 
@@ -378,7 +377,7 @@ El script es idempotente por código+versión, así se puede volver a correr cua
 | Fase | Alcance | Resultado auditable |
 |---|---|---|
 | **C1 — Árbol documental** | `IFileStorage` (disco local), `QualityDocument/Version/File` con PDF publicado + fuente, árbol MC/PG/IT + externos, versiones con Elaboró/Revisó/Aprobó, estados, PG01-R01/R02 generados, descarga "copia no controlada", vencimiento de revisión, flag Director Técnico + policy `RequireTechnicalDirector`, **script de seed** `tools/quality-seed` (descarga Drive → PDF → carga) | El auditor navega todo el SGC con los códigos reales y los PDF vigentes |
-| **Estado C1 (07/09/2026):** | **EN CURSO — base lista.** Backend compilando: schema `quality`, seed de catálogo al primer GET, endpoints tree/dashboard/documents/files, policies, menú `/calidad`. Falta validar en runtime/staging, subir PDFs con `tools/quality-seed`, y pulir UX de upload/aprobación en UI. | — |
+| **Estado C1 (07/09/2026):** | **CERRADO.** Staging validado (dashboard + menú). API: upload/attach/PATCH versión/approve (ReviewedBy antes de validar). UI detalle: subir PDF/fuente, nueva versión, aprobar (DT). Script `tools/quality-seed` con `mapping.json` ampliado, conversión LibreOffice y reporte de discrepancias. Pendiente operativo: poblar `input/` desde Drive y correr el seed en el tenant INMELA (PDFs aún no cargados hasta eso). | — |
 | **C2 — Enlace con Metrología** | `Quality.Contracts`, `MetrologyInstrument` (termómetro) y su referencia en el informe, snapshot de procedimiento/versión y normas en el informe, `ApprovedBy` restringido a DT, PG14-R4/R3 generados desde pesas + instrumentos + auxiliares, hoja de vida PG14-R1 con eventos de calibración, PG09 R2 enmienda, "Ver trazabilidad SGC" desde el informe, vista IT 0X R1/R2/R3 | Cadena Ensayo → Norma → Procedimiento → Patrón/Termómetro → Certificado → DT que aprobó, desde un informe |
 | **C3 — Registros de gestión** | PG07-R1 (NC/TNC/riesgos/OM), PG03-R01 quejas con plazos, PG04 auditorías, PG06 personal + autorizaciones firmadas por DT (validación de firma en Metrología), PG05 proveedores, MC01-R03 indicadores, PG08-R01 revisión por la dirección, PG09 R3 encuestas, PG14-R5/R6, `QualityEquipment` (camión/acoplado/autoelevador), MC01-R01/R02 | Todos los registros del listado de códigos existen en el sistema |
 | **C4 — Tablero, auditoría de cambios y modo presentación** | Dashboard SGC, matriz cláusulas 17025, historial before/after por registro, **modo presentación** (toggle, bloqueo de escrituras en backend, salida con contraseña, log de sesiones), alertas (Google Calendar → notificaciones del sistema) | Simulacro de auditoría interna PG04 completo dentro del sistema, mostrado en modo presentación |

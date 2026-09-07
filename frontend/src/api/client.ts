@@ -1138,6 +1138,56 @@ export const api = {
     return response.json() as Promise<{ id: string; fileName: string; role: string; sha256: string }>;
   },
 
+  attachQualityFile: (code: string, version: number, body: { fileId: string; role?: "Published" | "Source" }) =>
+    request<import("./types/quality").QualityDocumentDetail["versions"][number]>(
+      `/api/v1/quality/documents/${encodeURIComponent(code)}/versions/${version}/attach`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  updateQualityVersion: (
+    code: string,
+    version: number,
+    body: {
+      changeSummary?: string;
+      elaboratedBy?: string;
+      elaboratedAt?: string;
+      reviewedBy?: string;
+      reviewedAt?: string;
+      approvedBy?: string;
+      approvedAt?: string;
+      effectiveFrom?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityDocumentDetail["versions"][number]>(
+      `/api/v1/quality/documents/${encodeURIComponent(code)}/versions/${version}`,
+      { method: "PATCH", body: JSON.stringify(body) }
+    ),
+
+  createQualityVersion: (
+    code: string,
+    body: {
+      changeSummary?: string;
+      elaboratedBy?: string;
+      elaboratedAt?: string;
+      publishedFileId?: string;
+      sourceFileId?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityDocumentDetail["versions"][number]>(
+      `/api/v1/quality/documents/${encodeURIComponent(code)}/versions`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  approveQualityVersion: (
+    code: string,
+    version: number,
+    body?: { approvedBy?: string; approvedAt?: string; reviewedBy?: string }
+  ) =>
+    request<import("./types/quality").QualityDocumentDetail["versions"][number]>(
+      `/api/v1/quality/documents/${encodeURIComponent(code)}/versions/${version}/approve`,
+      { method: "POST", body: JSON.stringify(body ?? {}) }
+    ),
+
   downloadQualityFileUrl: (id: string) => `/api/v1/quality/files/${id}`
 };
 
