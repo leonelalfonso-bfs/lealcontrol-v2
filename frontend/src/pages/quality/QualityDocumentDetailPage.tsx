@@ -63,6 +63,20 @@ export function QualityDocumentDetailPage() {
     }
   };
 
+  const openFile = async (fileId: string, mode: "open" | "download", okMsg: string) => {
+    setBusy(true);
+    setActionError(null);
+    setActionMsg(null);
+    try {
+      await api.openQualityFile(fileId, mode);
+      setActionMsg(okMsg);
+    } catch (err) {
+      setActionError(parseApiError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onUpload = async (file: File | null, role: "Published" | "Source") => {
     if (!file || !code || !selected) return;
     if (role === "Published" && !file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
@@ -116,9 +130,14 @@ export function QualityDocumentDetailPage() {
           </p>
         </div>
         {published?.publishedFileId && (
-          <a className="btn btn-primary" href={api.downloadQualityFileUrl(published.publishedFileId)} target="_blank" rel="noreferrer">
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={busy}
+            onClick={() => void openFile(published.publishedFileId!, "open", "PDF abierto.")}
+          >
             Descargar PDF (copia no controlada)
-          </a>
+          </button>
         )}
       </div>
 
@@ -263,14 +282,30 @@ export function QualityDocumentDetailPage() {
                   <td>{v.effectiveFrom ? new Date(v.effectiveFrom).toLocaleDateString("es-AR") : "—"}</td>
                   <td>
                     {v.publishedFileId ? (
-                      <a href={api.downloadQualityFileUrl(v.publishedFileId)} target="_blank" rel="noreferrer">PDF</a>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ padding: "2px 8px" }}
+                        disabled={busy}
+                        onClick={() => void openFile(v.publishedFileId!, "open", "PDF abierto.")}
+                      >
+                        PDF
+                      </button>
                     ) : (
                       <span style={{ color: "#94a3b8" }}>Sin publicar</span>
                     )}
                   </td>
                   <td>
                     {v.sourceFileId ? (
-                      <a href={api.downloadQualityFileUrl(v.sourceFileId)} target="_blank" rel="noreferrer">Fuente</a>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ padding: "2px 8px" }}
+                        disabled={busy}
+                        onClick={() => void openFile(v.sourceFileId!, "download", "Fuente descargada.")}
+                      >
+                        Fuente
+                      </button>
                     ) : (
                       <span style={{ color: "#94a3b8" }}>—</span>
                     )}

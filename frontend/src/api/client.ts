@@ -1188,6 +1188,42 @@ export const api = {
       { method: "POST", body: JSON.stringify(body ?? {}) }
     ),
 
-  downloadQualityFileUrl: (id: string) => `/api/v1/quality/files/${id}`
+  /** URL cruda (sin auth). Preferir downloadQualityFile para navegador. */
+  downloadQualityFileUrl: (id: string) => `/api/v1/quality/files/${id}`,
+
+  downloadQualityFile: async (id: string): Promise<{ blob: Blob; fileName: string }> => {
+    const normalToken = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
+    const tenantId = typeof window !== "undefined" ? localStorage.getItem("leal_tenant_id") : null;
+    const headers: Record<string, string> = {};
+    if (normalToken) headers.Authorization = `Bearer ${normalToken}`;
+    if (tenantId) headers["X-Tenant-Id"] = tenantId;
+    const response = await fetch(`/api/v1/quality/files/${id}`, { headers });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Error al descargar (${response.status})`);
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const match = /filename\*?=(?:UTF-8''|")?([^\";]+)/i.exec(disposition);
+    const fileName = match ? decodeURIComponent(match[1].replace(/"/g, "")) : `quality-${id}`;
+    return { blob, fileName };
+  },
+
+  openQualityFile: async (id: string, mode: "open" | "download" = "open") => {
+    const { blob, fileName } = await api.downloadQualityFile(id);
+    const url = URL.createObjectURL(blob);
+    if (mode === "download") {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
 };
 
