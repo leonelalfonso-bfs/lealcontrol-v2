@@ -322,6 +322,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/metrologia", label: "Tablero", icon: "📊", end: true },
       { path: "/metrologia/equipos", label: "Gestión de Equipos", icon: "🏢" },
       { path: "/metrologia/patrones", label: "Gestión de Pesas Patrón", icon: "⚖️" },
+      { path: "/metrologia/instrumentos", label: "Termómetros / Auxiliares", icon: "🌡️" },
       { path: "/metrologia/ensayos/nuevo", label: "Nuevo Ensayo", icon: "📝" },
       { path: "/metrologia/informes", label: "Informes de Ensayo", icon: "📋" }
     ]

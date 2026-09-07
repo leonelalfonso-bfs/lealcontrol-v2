@@ -1710,6 +1710,27 @@ export type CalibrationReport = {
   procedureSnapshotJson?: string | null;
   externalDocumentCodesJson?: string | null;
   instructionCode?: string | null;
+  thermometerInstrumentId?: string | null;
+  createdAtUtc: string;
+};
+
+export type MetrologyInstrument = {
+  id: string;
+  tenantId: string;
+  code: string;
+  kind: string;
+  description?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  serialNumber?: string | null;
+  measurementRange?: string | null;
+  resolution?: string | null;
+  certificateNumber?: string | null;
+  traceabilityLab?: string | null;
+  calibrationDate?: string | null;
+  expirationDate?: string | null;
+  status: string;
+  notes?: string | null;
   createdAtUtc: string;
 };
 

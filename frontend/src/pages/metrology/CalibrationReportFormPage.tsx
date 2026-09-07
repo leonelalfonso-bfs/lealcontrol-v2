@@ -1,7 +1,7 @@
 import { useEffect, useState, FormEvent, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../api/client";
-import type { MetrologyEquipment, StandardWeight, MetrologyTestPoint, EccentricityConfig } from "../../api/types";
+import type { MetrologyEquipment, StandardWeight, MetrologyInstrument, MetrologyTestPoint, EccentricityConfig } from "../../api/types";
 
 export type FidelityTrial = {
   initialZero: string;
@@ -94,6 +94,8 @@ export function CalibrationReportFormPage() {
   const [ambientTemperature, setAmbientTemperature] = useState("20.0");
   const [ambientHumidity, setAmbientHumidity] = useState("50.0");
   const [atmosphericPressure, setAtmosphericPressure] = useState("1013.0");
+  const [thermometers, setThermometers] = useState<MetrologyInstrument[]>([]);
+  const [thermometerId, setThermometerId] = useState("");
   const [observations, setObservations] = useState("");
 
   const operationLabels: Record<string, string> = {
@@ -183,11 +185,13 @@ export function CalibrationReportFormPage() {
   useEffect(() => {
     Promise.all([
       api.listMetrologyEquipment({ status: "Active" }),
-      api.listStandardWeights()
+      api.listStandardWeights(),
+      api.listMetrologyInstruments({ kind: "Thermometer", status: "Valid" }).catch(() => [])
     ])
-      .then(([eqs, wts]) => {
+      .then(([eqs, wts, ths]) => {
         setEquipments(eqs || []);
         setWeights(wts || []);
+        setThermometers(ths || []);
         const targetId = preselectedEquipmentId || (eqs && eqs.length > 0 ? eqs[0].id : "");
         if (targetId && eqs) {
           handleSelectEquipment(targetId, eqs);
@@ -663,6 +667,7 @@ export function CalibrationReportFormPage() {
         temperatureCelsius: parseFloat(ambientTemperature) || 20,
         relativeHumidityPercent: parseFloat(ambientHumidity) || 50,
         atmosphericPressureHpa: parseFloat(atmosphericPressure) || 1013,
+        thermometerInstrumentId: thermometerId || undefined,
         approvedBy: "",
         verdict: finalResult === "Apto" ? "Approved" : "Rejected",
         maxObservedError: Math.max(
@@ -1112,6 +1117,26 @@ export function CalibrationReportFormPage() {
 
               {/* Environmental Conditions */}
               <h4 style={{ margin: "14px 0 8px 0", fontSize: "0.95rem" }}>Condiciones Ambientales</h4>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14, marginBottom: 10 }}>
+                <label style={{ gridColumn: "1 / -1" }}>
+                  Termómetro (PG16)
+                  <select value={thermometerId} onChange={(e) => setThermometerId(e.target.value)}>
+                    <option value="">— Sin vincular —</option>
+                    {thermometers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.code} · {t.certificateNumber || "sin cert."}
+                        {t.expirationDate ? ` · vence ${new Date(t.expirationDate).toLocaleDateString("es-AR")}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {thermometers.length === 0 && (
+                    <small className="muted">
+                      No hay termómetros vigentes.{" "}
+                      <a href="/metrologia/instrumentos/nuevo">Cargar uno</a>
+                    </small>
+                  )}
+                </label>
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
                 <label>
                   Temperatura (°C)

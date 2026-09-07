@@ -16,6 +16,7 @@ public sealed class MetrologyDbContext : DbContext
 
     public DbSet<MetrologyEquipment> Equipments => Set<MetrologyEquipment>();
     public DbSet<StandardWeight> StandardWeights => Set<StandardWeight>();
+    public DbSet<MetrologyInstrument> Instruments => Set<MetrologyInstrument>();
     public DbSet<CalibrationReport> CalibrationReports => Set<CalibrationReport>();
 
     public MetrologyDbContext(DbContextOptions<MetrologyDbContext> options)
@@ -122,6 +123,26 @@ public sealed class MetrologyDbContext : DbContext
             b.HasIndex(x => new { x.TenantId, x.CertificateNumber }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.EquipmentId });
             b.HasIndex(x => new { x.TenantId, x.CalibrationDate });
+        });
+
+        modelBuilder.Entity<MetrologyInstrument>(b =>
+        {
+            b.ToTable("instruments", "metrology");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Kind).HasMaxLength(32).HasDefaultValue(MetrologyInstrumentKinds.Thermometer);
+            b.Property(x => x.Description).HasMaxLength(200);
+            b.Property(x => x.Brand).HasMaxLength(100);
+            b.Property(x => x.Model).HasMaxLength(100);
+            b.Property(x => x.SerialNumber).HasMaxLength(100);
+            b.Property(x => x.MeasurementRange).HasMaxLength(80);
+            b.Property(x => x.Resolution).HasMaxLength(40);
+            b.Property(x => x.CertificateNumber).HasMaxLength(120);
+            b.Property(x => x.TraceabilityLab).HasMaxLength(160);
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Valid");
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.Kind });
         });
     }
 
@@ -295,7 +316,30 @@ public sealed class MetrologyDbContext : DbContext
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ReportStatus"" character varying(32) NOT NULL DEFAULT 'Issued';",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ProcedureSnapshotJson"" text NOT NULL DEFAULT '[]';",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ExternalDocumentCodesJson"" text NOT NULL DEFAULT '[]';",
-            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""InstructionCode"" character varying(16) NOT NULL DEFAULT '';"
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""InstructionCode"" character varying(16) NOT NULL DEFAULT '';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ThermometerInstrumentId"" uuid;",
+
+            @"CREATE TABLE IF NOT EXISTS metrology.instruments (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Code"" character varying(32) NOT NULL,
+                ""Kind"" character varying(32) NOT NULL DEFAULT 'Thermometer',
+                ""Description"" character varying(200) NOT NULL DEFAULT '',
+                ""Brand"" character varying(100) NOT NULL DEFAULT '',
+                ""Model"" character varying(100) NOT NULL DEFAULT '',
+                ""SerialNumber"" character varying(100) NOT NULL DEFAULT '',
+                ""MeasurementRange"" character varying(80) NOT NULL DEFAULT '',
+                ""Resolution"" character varying(40) NOT NULL DEFAULT '',
+                ""CertificateNumber"" character varying(120) NOT NULL DEFAULT '',
+                ""TraceabilityLab"" character varying(160) NOT NULL DEFAULT '',
+                ""CalibrationDate"" timestamp with time zone,
+                ""ExpirationDate"" timestamp with time zone,
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Valid',
+                ""Notes"" text,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_instruments_Tenant_Code"" ON metrology.instruments (""TenantId"", ""Code"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_instruments_Tenant_Kind"" ON metrology.instruments (""TenantId"", ""Kind"");"
         };
 
         foreach (var sql in statements)

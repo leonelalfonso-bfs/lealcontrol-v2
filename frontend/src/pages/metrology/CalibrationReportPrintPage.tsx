@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../../api/client";
-import type { CalibrationReport, MetrologyEquipment, CompanySettings } from "../../api/types";
+import type { CalibrationReport, MetrologyEquipment, MetrologyInstrument, CompanySettings } from "../../api/types";
 
 export function CalibrationReportPrintPage() {
   const { id } = useParams<{ id: string }>();
   const [report, setReport] = useState<CalibrationReport | null>(null);
   const [equipment, setEquipment] = useState<MetrologyEquipment | null>(null);
+  const [thermometer, setThermometer] = useState<MetrologyInstrument | null>(null);
   const [company, setCompany] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +21,7 @@ export function CalibrationReportPrintPage() {
       .then(([res, comp]) => {
         setReport(res.report);
         setEquipment(res.equipment || null);
+        setThermometer(res.thermometer || null);
         if (comp) setCompany(comp);
       })
       .catch((err) => setError(err?.message || "Error al cargar certificado."))
@@ -305,6 +307,16 @@ export function CalibrationReportPrintPage() {
           <div><strong>Humedad Relativa:</strong> {humVal} %</div>
           <div><strong>Presión Atmosférica:</strong> {pressVal} hPa</div>
         </div>
+        {thermometer && (
+          <div style={{ marginBottom: 8 }}>
+            <strong>Termómetro:</strong> {thermometer.code}
+            {thermometer.certificateNumber ? ` · Cert. ${thermometer.certificateNumber}` : ""}
+            {thermometer.expirationDate
+              ? ` · vence ${new Date(thermometer.expirationDate).toLocaleDateString("es-AR")}`
+              : ""}
+            {thermometer.traceabilityLab ? ` · ${thermometer.traceabilityLab}` : ""}
+          </div>
+        )}
 
         {weightsUsed.length > 0 && (
           <div style={{ borderTop: "1px dashed #eee", paddingTop: 6 }}>
@@ -618,7 +630,7 @@ export function CalibrationReportPrintPage() {
         </div>
       </div>
 
-      <SgcTraceabilityPanel reportId={report.id} report={report} />
+      <SgcTraceabilityPanel reportId={report.id} report={report} thermometer={thermometer} />
 
       <div style={{ textAlign: "center", fontSize: "0.72rem", color: "#888" }}>
         Documento técnico emitido mediante el Sistema Modular de Metrología Legal — Leal Control ERP
@@ -627,7 +639,15 @@ export function CalibrationReportPrintPage() {
   );
 }
 
-function SgcTraceabilityPanel({ reportId, report }: { reportId: string; report: CalibrationReport }) {
+function SgcTraceabilityPanel({
+  reportId,
+  report,
+  thermometer
+}: {
+  reportId: string;
+  report: CalibrationReport;
+  thermometer: MetrologyInstrument | null;
+}) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -713,6 +733,15 @@ function SgcTraceabilityPanel({ reportId, report }: { reportId: string; report: 
                 {(data.externalDocumentCodes || []).length
                   ? data.externalDocumentCodes.join(", ")
                   : "—"}
+              </div>
+              <div>
+                <strong>Termómetro (PG16):</strong>{" "}
+                {data.thermometer
+                  ? `${data.thermometer.code}${data.thermometer.certificateNumber ? ` · Cert. ${data.thermometer.certificateNumber}` : ""}`
+                  : thermometer
+                    ? `${thermometer.code}${thermometer.certificateNumber ? ` · Cert. ${thermometer.certificateNumber}` : ""}`
+                    : "—"}
+                {data.temperatureCelsius != null ? ` · ${data.temperatureCelsius} °C` : ""}
               </div>
               <div>
                 <strong>Pesas patrón usadas:</strong>

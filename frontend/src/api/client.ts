@@ -1061,6 +1061,23 @@ export const api = {
   getStandardWeightHistory: (code: string) =>
     request<import("./types").StandardWeight[]>(`/api/v1/metrology/weights/history?code=${encodeURIComponent(code)}`),
 
+  listMetrologyInstruments: (params?: { kind?: string; status?: string; search?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.kind) q.set("kind", params.kind);
+    if (params?.status) q.set("status", params.status);
+    if (params?.search) q.set("search", params.search);
+    const qs = q.toString();
+    return request<import("./types").MetrologyInstrument[]>(`/api/v1/metrology/instruments${qs ? `?${qs}` : ""}`);
+  },
+  getMetrologyInstrument: (id: string) =>
+    request<import("./types").MetrologyInstrument>(`/api/v1/metrology/instruments/${id}`),
+  createMetrologyInstrument: (body: Partial<import("./types").MetrologyInstrument>) =>
+    request<import("./types").MetrologyInstrument>("/api/v1/metrology/instruments", { method: "POST", body: JSON.stringify(body) }),
+  updateMetrologyInstrument: (id: string, body: Partial<import("./types").MetrologyInstrument>) =>
+    request<import("./types").MetrologyInstrument>(`/api/v1/metrology/instruments/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteMetrologyInstrument: (id: string) =>
+    request<void>(`/api/v1/metrology/instruments/${id}`, { method: "DELETE" }),
+
   calculateMetrologyRules: (body: {
     maxCapacity: number;
     minCapacity: number;
@@ -1095,6 +1112,7 @@ export const api = {
     request<{
       report: import("./types").CalibrationReport;
       equipment?: import("./types").MetrologyEquipment;
+      thermometer?: import("./types").MetrologyInstrument | null;
     }>(`/api/v1/metrology/reports/${id}`),
   saveCalibrationReport: (body: Record<string, unknown>) =>
     request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) }),
@@ -1111,6 +1129,18 @@ export const api = {
       standardApplied?: string;
       performedBy?: string;
       approvedBy?: string;
+      temperatureCelsius?: number;
+      thermometer?: {
+        id: string;
+        code: string;
+        kind: string;
+        description?: string;
+        certificateNumber?: string;
+        traceabilityLab?: string;
+        calibrationDate?: string | null;
+        expirationDate?: string | null;
+        status?: string;
+      } | null;
       procedures: Array<{ code?: string; displayCode?: string; title?: string; version?: number }>;
       externalDocumentCodes: string[];
       weightsUsed: Array<{ code?: string; certificateNumber?: string; nominalValue?: number; unit?: string }>;
@@ -1119,6 +1149,7 @@ export const api = {
         instruction?: string | null;
         procedurePg12: string;
         procedurePg09: string;
+        procedurePg16?: string;
       };
     }>(`/api/v1/metrology/reports/${id}/sgc-traceability`),
 

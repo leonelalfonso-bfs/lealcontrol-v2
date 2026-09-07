@@ -793,6 +793,146 @@ public static class MetrologyEndpoints
         });
 
         // ====================================================================
+        // 4b. Instrumentos auxiliares (termómetro, etc.)
+        // ====================================================================
+        group.MapGet("/instruments", async (
+            [FromQuery] string? kind,
+            [FromQuery] string? status,
+            [FromQuery] string? search,
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
+        {
+            await db.EnsureMetrologyTablesAsync(ct);
+            var tenantId = tenantContext.TenantId;
+            var query = db.Instruments.AsNoTracking().Where(i => i.TenantId == tenantId);
+            if (!string.IsNullOrWhiteSpace(kind))
+            {
+                query = query.Where(i => i.Kind == kind.Trim());
+            }
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(i => i.Status == status.Trim());
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim().ToLowerInvariant();
+                query = query.Where(i =>
+                    i.Code.ToLower().Contains(term)
+                    || i.Description.ToLower().Contains(term)
+                    || i.SerialNumber.ToLower().Contains(term)
+                    || i.CertificateNumber.ToLower().Contains(term)
+                    || i.Brand.ToLower().Contains(term));
+            }
+
+            var items = await query.OrderBy(i => i.Code).ToListAsync(ct);
+            return Results.Ok(items);
+        });
+
+        group.MapGet("/instruments/{id:guid}", async (Guid id, ITenantContext tenantContext, MetrologyDbContext db, CancellationToken ct) =>
+        {
+            await db.EnsureMetrologyTablesAsync(ct);
+            var item = await db.Instruments.AsNoTracking()
+                .FirstOrDefaultAsync(i => i.Id == id && i.TenantId == tenantContext.TenantId, ct);
+            return item is null ? Results.NotFound() : Results.Ok(item);
+        });
+
+        group.MapPost("/instruments", async (
+            MetrologyInstrumentWriteDto req,
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
+        {
+            await db.EnsureMetrologyTablesAsync(ct);
+            if (string.IsNullOrWhiteSpace(req.Code))
+            {
+                return Results.BadRequest(new { message = "El código del instrumento es obligatorio." });
+            }
+
+            var tenantId = tenantContext.TenantId;
+            var code = req.Code.Trim();
+            var exists = await db.Instruments.AnyAsync(i => i.TenantId == tenantId && i.Code == code, ct);
+            if (exists)
+            {
+                return Results.Conflict(new { message = $"Ya existe el instrumento {code}." });
+            }
+
+            var entity = new MetrologyInstrument
+            {
+                TenantId = tenantId,
+                Code = code,
+                Kind = string.IsNullOrWhiteSpace(req.Kind) ? MetrologyInstrumentKinds.Thermometer : req.Kind.Trim(),
+                Description = req.Description?.Trim() ?? string.Empty,
+                Brand = req.Brand?.Trim() ?? string.Empty,
+                Model = req.Model?.Trim() ?? string.Empty,
+                SerialNumber = req.SerialNumber?.Trim() ?? string.Empty,
+                MeasurementRange = req.MeasurementRange?.Trim() ?? string.Empty,
+                Resolution = req.Resolution?.Trim() ?? string.Empty,
+                CertificateNumber = req.CertificateNumber?.Trim() ?? string.Empty,
+                TraceabilityLab = req.TraceabilityLab?.Trim() ?? string.Empty,
+                CalibrationDate = req.CalibrationDate,
+                ExpirationDate = req.ExpirationDate,
+                Status = string.IsNullOrWhiteSpace(req.Status) ? "Valid" : req.Status.Trim(),
+                Notes = req.Notes,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            db.Instruments.Add(entity);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/metrology/instruments/{entity.Id}", entity);
+        });
+
+        group.MapPut("/instruments/{id:guid}", async (
+            Guid id,
+            MetrologyInstrumentWriteDto req,
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
+        {
+            await db.EnsureMetrologyTablesAsync(ct);
+            var tenantId = tenantContext.TenantId;
+            var entity = await db.Instruments.FirstOrDefaultAsync(i => i.Id == id && i.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+
+            if (!string.IsNullOrWhiteSpace(req.Code) && !string.Equals(req.Code.Trim(), entity.Code, StringComparison.Ordinal))
+            {
+                var code = req.Code.Trim();
+                var clash = await db.Instruments.AnyAsync(i => i.TenantId == tenantId && i.Code == code && i.Id != id, ct);
+                if (clash) return Results.Conflict(new { message = $"Ya existe el instrumento {code}." });
+                entity.Code = code;
+            }
+
+            if (req.Kind is not null) entity.Kind = string.IsNullOrWhiteSpace(req.Kind) ? entity.Kind : req.Kind.Trim();
+            if (req.Description is not null) entity.Description = req.Description.Trim();
+            if (req.Brand is not null) entity.Brand = req.Brand.Trim();
+            if (req.Model is not null) entity.Model = req.Model.Trim();
+            if (req.SerialNumber is not null) entity.SerialNumber = req.SerialNumber.Trim();
+            if (req.MeasurementRange is not null) entity.MeasurementRange = req.MeasurementRange.Trim();
+            if (req.Resolution is not null) entity.Resolution = req.Resolution.Trim();
+            if (req.CertificateNumber is not null) entity.CertificateNumber = req.CertificateNumber.Trim();
+            if (req.TraceabilityLab is not null) entity.TraceabilityLab = req.TraceabilityLab.Trim();
+            if (req.CalibrationDate.HasValue) entity.CalibrationDate = req.CalibrationDate;
+            if (req.ExpirationDate.HasValue) entity.ExpirationDate = req.ExpirationDate;
+            if (req.Status is not null) entity.Status = string.IsNullOrWhiteSpace(req.Status) ? entity.Status : req.Status.Trim();
+            if (req.Notes is not null) entity.Notes = req.Notes;
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(entity);
+        });
+
+        group.MapDelete("/instruments/{id:guid}", async (Guid id, ITenantContext tenantContext, MetrologyDbContext db, CancellationToken ct) =>
+        {
+            await db.EnsureMetrologyTablesAsync(ct);
+            var entity = await db.Instruments.FirstOrDefaultAsync(i => i.Id == id && i.TenantId == tenantContext.TenantId, ct);
+            if (entity is null) return Results.NotFound();
+            db.Instruments.Remove(entity);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        });
+
+        // ====================================================================
         // 5. Certificados de Calibración & Ensayos Oficiales
         // ====================================================================
         group.MapGet("/reports", async (
@@ -836,11 +976,18 @@ public static class MetrologyEndpoints
                 if (report == null) return Results.NotFound(new { message = "Informe de calibración no encontrado." });
 
                 var equipment = await db.Equipments.AsNoTracking().FirstOrDefaultAsync(e => e.Id == report.EquipmentId && e.TenantId == tenantId, ct);
+                MetrologyInstrument? thermometer = null;
+                if (report.ThermometerInstrumentId.HasValue)
+                {
+                    thermometer = await db.Instruments.AsNoTracking()
+                        .FirstOrDefaultAsync(i => i.Id == report.ThermometerInstrumentId.Value && i.TenantId == tenantId, ct);
+                }
 
                 return Results.Ok(new
                 {
                     Report = report,
-                    Equipment = equipment
+                    Equipment = equipment,
+                    Thermometer = thermometer
                 });
             }
             catch (Exception ex)
@@ -893,6 +1040,23 @@ public static class MetrologyEndpoints
                 var asOf = req.CalibrationDate.Kind == DateTimeKind.Unspecified
                     ? DateTime.SpecifyKind(req.CalibrationDate, DateTimeKind.Utc)
                     : req.CalibrationDate.ToUniversalTime();
+
+                Guid? thermometerId = req.ThermometerInstrumentId;
+                MetrologyInstrument? thermometer = null;
+                if (thermometerId.HasValue && thermometerId.Value != Guid.Empty)
+                {
+                    thermometer = await db.Instruments.AsNoTracking()
+                        .FirstOrDefaultAsync(i => i.Id == thermometerId.Value && i.TenantId == tenantId, ct);
+                    if (thermometer is null)
+                    {
+                        return Results.BadRequest(new { message = "El termómetro indicado no existe." });
+                    }
+
+                    if (thermometer.ExpirationDate.HasValue && thermometer.ExpirationDate.Value.Date < asOf.Date)
+                    {
+                        return Results.BadRequest(new { message = $"El certificado del termómetro {thermometer.Code} está vencido." });
+                    }
+                }
 
                 IReadOnlyList<QualityDocumentSnapshot> procedureSnapshots;
                 try
@@ -952,6 +1116,7 @@ public static class MetrologyEndpoints
                     Observations = req.Observations,
                     SealsPlaced = req.SealsPlaced,
                     InstructionCode = instructionCode,
+                    ThermometerInstrumentId = thermometer?.Id,
                     ProcedureSnapshotJson = MetrologySgcLinkage.SerializeSnapshots(allSnapshots),
                     ExternalDocumentCodesJson = MetrologySgcLinkage.SerializeCodes(externalCodes),
                     CreatedAtUtc = DateTime.UtcNow
@@ -1034,6 +1199,13 @@ public static class MetrologyEndpoints
             try { externals = JsonSerializer.Deserialize<object>(report.ExternalDocumentCodesJson) ?? Array.Empty<object>(); } catch { /* ignore */ }
             try { weights = JsonSerializer.Deserialize<object>(report.WeightsUsedJson) ?? Array.Empty<object>(); } catch { /* ignore */ }
 
+            MetrologyInstrument? thermometer = null;
+            if (report.ThermometerInstrumentId.HasValue)
+            {
+                thermometer = await db.Instruments.AsNoTracking()
+                    .FirstOrDefaultAsync(i => i.Id == report.ThermometerInstrumentId.Value && i.TenantId == tenantId, ct);
+            }
+
             return Results.Ok(new
             {
                 reportId = report.Id,
@@ -1043,6 +1215,19 @@ public static class MetrologyEndpoints
                 standardApplied = report.StandardApplied,
                 performedBy = report.PerformedBy,
                 approvedBy = report.ApprovedBy,
+                temperatureCelsius = report.TemperatureCelsius,
+                thermometer = thermometer is null ? null : new
+                {
+                    thermometer.Id,
+                    thermometer.Code,
+                    thermometer.Kind,
+                    thermometer.Description,
+                    thermometer.CertificateNumber,
+                    thermometer.TraceabilityLab,
+                    thermometer.CalibrationDate,
+                    thermometer.ExpirationDate,
+                    thermometer.Status
+                },
                 procedures,
                 externalDocumentCodes = externals,
                 weightsUsed = weights,
@@ -1053,7 +1238,8 @@ public static class MetrologyEndpoints
                         ? null
                         : $"/calidad/documentos/{report.InstructionCode}",
                     procedurePg12 = "/calidad/documentos/PG12",
-                    procedurePg09 = "/calidad/documentos/PG09"
+                    procedurePg09 = "/calidad/documentos/PG09",
+                    procedurePg16 = "/calidad/documentos/PG16"
                 }
             });
         });

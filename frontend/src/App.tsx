@@ -67,6 +67,8 @@ import {
   MetrologyDashboardPage,
   MetrologyEquipmentFormPage,
   MetrologyEquipmentPage,
+  MetrologyInstrumentFormPage,
+  MetrologyInstrumentsPage,
   QualityDashboardPage,
   QualityDocumentDetailPage,
   QualityDocumentsPage,
@@ -618,6 +620,9 @@ export function App() {
               <Route path="/metrologia/patrones/nuevo" element={<StandardWeightFormPage />} />
               <Route path="/metrologia/patrones/imprimir" element={<StandardWeightsPrintPage />} />
               <Route path="/metrologia/patrones/:id" element={<StandardWeightFormPage />} />
+              <Route path="/metrologia/instrumentos" element={<MetrologyInstrumentsPage />} />
+              <Route path="/metrologia/instrumentos/nuevo" element={<MetrologyInstrumentFormPage />} />
+              <Route path="/metrologia/instrumentos/:id" element={<MetrologyInstrumentFormPage />} />
               <Route path="/metrologia/ensayos/nuevo" element={<CalibrationReportFormPage />} />
               <Route path="/metrologia/informes" element={<CalibrationReportsPage />} />
               <Route path="/metrologia/informes/:id/imprimir" element={<CalibrationReportPrintPage />} />
