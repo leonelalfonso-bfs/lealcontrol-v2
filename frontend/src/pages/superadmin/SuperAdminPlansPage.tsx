@@ -12,7 +12,8 @@ export const ALL_SYSTEM_MODULES = [
   { id: "hr", name: "RRHH & Sueldos", desc: "Legajos, asistencias y liquidación de haberes", icon: "👔" },
   { id: "grains", name: "Cereales & Agro", desc: "Contratos de granos, balanza CPE/CTG y fijaciones", icon: "🌾" },
   { id: "accounting", name: "Contabilidad & Balances", desc: "Plan de cuentas, asientos, libro diario y balances", icon: "📚" },
-  { id: "metrology", name: "Metrología Legal", desc: "Laboratorio de ensayos, pesas patrón e informes técnicos", icon: "⚖️" }
+  { id: "metrology", name: "Metrología Legal", desc: "Laboratorio de ensayos, pesas patrón e informes técnicos", icon: "⚖️" },
+  { id: "quality", name: "Calidad ISO 17025", desc: "Sistema de gestión de calidad, documentos SGC y registros", icon: "✅" }
 ];
 
 export function SuperAdminPlansPage() {

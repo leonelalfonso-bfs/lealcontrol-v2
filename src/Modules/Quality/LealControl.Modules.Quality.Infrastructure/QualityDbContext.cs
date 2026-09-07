@@ -38,7 +38,7 @@ public sealed class QualityDbContext : DbContext
             b.ToTable("documents", Schema);
             b.HasKey(x => x.Id);
             b.Property(x => x.Code).HasMaxLength(32).IsRequired();
-            b.Property(x => x.DisplayCode).HasMaxLength(48).IsRequired();
+            b.Property(x => x.DisplayCode).HasMaxLength(120).IsRequired();
             b.Property(x => x.Type).HasMaxLength(32).IsRequired();
             b.Property(x => x.Title).HasMaxLength(240).IsRequired();
             b.Property(x => x.Status).HasMaxLength(32).IsRequired();
@@ -113,7 +113,7 @@ public sealed class QualityDbContext : DbContext
                 ""Id"" uuid NOT NULL PRIMARY KEY,
                 ""TenantId"" uuid NOT NULL,
                 ""Code"" character varying(32) NOT NULL,
-                ""DisplayCode"" character varying(48) NOT NULL,
+                ""DisplayCode"" character varying(120) NOT NULL,
                 ""Type"" character varying(32) NOT NULL,
                 ""Title"" character varying(240) NOT NULL,
                 ""ParentId"" uuid,
@@ -135,6 +135,7 @@ public sealed class QualityDbContext : DbContext
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_documents_Tenant_Code"" ON quality.documents (""TenantId"", ""Code"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_documents_Tenant_Parent"" ON quality.documents (""TenantId"", ""ParentId"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_documents_Tenant_Type"" ON quality.documents (""TenantId"", ""Type"");",
+            @"ALTER TABLE quality.documents ALTER COLUMN ""DisplayCode"" TYPE character varying(120);",
 
             @"CREATE TABLE IF NOT EXISTS quality.document_versions (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

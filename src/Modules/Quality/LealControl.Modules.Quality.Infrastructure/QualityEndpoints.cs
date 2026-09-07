@@ -36,26 +36,36 @@ public static class QualityEndpoints
 
         group.MapGet("/dashboard", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
         {
-            var tenantId = tenant.TenantId;
-            await db.EnsureQualityTablesAsync(ct);
-            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
-            var docs = await db.Documents.AsNoTracking()
-                .Where(d => d.TenantId == tenantId)
-                .ToListAsync(ct);
-
-            var now = DateTime.UtcNow;
-            return Results.Ok(new
+            try
             {
-                totalDocuments = docs.Count,
-                byType = docs.GroupBy(d => d.Type).ToDictionary(g => g.Key, g => g.Count()),
-                current = docs.Count(d => d.Status == QualityDocumentStatuses.Current),
-                draft = docs.Count(d => d.Status == QualityDocumentStatuses.Draft),
-                reviewDue = docs.Count(d => d.NextReviewDate.HasValue && d.NextReviewDate.Value <= now.AddDays(60)
-                    && d.Status is QualityDocumentStatuses.Current or QualityDocumentStatuses.Approved),
-                overdueReview = docs.Count(d => d.NextReviewDate.HasValue && d.NextReviewDate.Value < now
-                    && d.Status is QualityDocumentStatuses.Current or QualityDocumentStatuses.Approved)
-            });
+                var tenantId = tenant.TenantId;
+                await db.EnsureQualityTablesAsync(ct);
+                await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
+
+                var docs = await db.Documents.AsNoTracking()
+                    .Where(d => d.TenantId == tenantId)
+                    .ToListAsync(ct);
+
+                var now = DateTime.UtcNow;
+                return Results.Ok(new
+                {
+                    totalDocuments = docs.Count,
+                    byType = docs.GroupBy(d => d.Type).ToDictionary(g => g.Key, g => g.Count()),
+                    current = docs.Count(d => d.Status == QualityDocumentStatuses.Current),
+                    draft = docs.Count(d => d.Status == QualityDocumentStatuses.Draft),
+                    reviewDue = docs.Count(d => d.NextReviewDate.HasValue && d.NextReviewDate.Value <= now.AddDays(60)
+                        && d.Status is QualityDocumentStatuses.Current or QualityDocumentStatuses.Approved),
+                    overdueReview = docs.Count(d => d.NextReviewDate.HasValue && d.NextReviewDate.Value < now
+                        && d.Status is QualityDocumentStatuses.Current or QualityDocumentStatuses.Approved)
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(
+                    detail: ex.InnerException?.Message ?? ex.Message,
+                    title: "Error al cargar el tablero de Calidad",
+                    statusCode: StatusCodes.Status500InternalServerError);
+            }
         });
 
         group.MapGet("/documents/tree", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>

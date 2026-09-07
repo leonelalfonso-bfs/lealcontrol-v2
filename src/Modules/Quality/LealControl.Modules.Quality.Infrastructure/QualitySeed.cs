@@ -197,7 +197,8 @@ public static class QualitySeed
 
         foreach (var (code, title, source) in externals)
         {
-            AddDoc(code, title, QualityDocumentTypes.External, title, null, order++,
+            // DisplayCode corto: el título completo va en Title (hasta 240).
+            AddDoc(code, code, QualityDocumentTypes.External, title, null, order++,
                 reviewMonths: 12, externalSource: source, status: QualityDocumentStatuses.Current);
         }
 
