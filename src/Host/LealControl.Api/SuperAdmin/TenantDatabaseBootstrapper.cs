@@ -81,7 +81,9 @@ public static class TenantDatabaseBootstrapper
 
         await using (var crm = CreateContext<CrmDbContext>(connectionString, CrmDbContext.Schema))
         {
-            await MigrateModuleAsync(crm, () => crm.EnsureCrmTablesAsync(), "CRM", "public.tenant_users", dbName, cancellationToken);
+            // Probe crm.customers (no public.tenant_users): al provisionar ya existe tenant_users
+            // y eso hacía saltar MigrateAsync → directorio CRM 500 en tenants nuevos.
+            await MigrateModuleAsync(crm, () => crm.EnsureCrmTablesAsync(), "CRM", "crm.customers", dbName, cancellationToken);
         }
 
         await using (var sales = CreateContext<SalesDbContext>(connectionString, SalesDbContext.Schema))
@@ -157,10 +159,42 @@ public static class TenantDatabaseBootstrapper
         CancellationToken cancellationToken)
         where TContext : DbContext
     {
+        var applied = (await db.Database.GetAppliedMigrationsAsync(cancellationToken)).ToList();
+        var pending = (await db.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
+
+        // Sin historial EF del módulo: siempre migrar (tenant nuevo / módulo recién añadido).
+        // Evita el falso "legacy" cuando existen tablas de otros módulos (p.ej. tenant_users).
+        if (pending.Count > 0 && applied.Count == 0)
+        {
+            try
+            {
+                await db.Database.MigrateAsync(cancellationToken);
+            }
+            catch (PostgresException ex) when (
+                ex.SqlState == PostgresErrorCodes.DuplicateTable
+                || ex.SqlState == PostgresErrorCodes.UniqueViolation
+                || ex.SqlState == PostgresErrorCodes.DuplicateObject)
+            {
+                Log.Warning(
+                    ex,
+                    "Base {DbName}: módulo {Module} — MigrateAsync inicial chocó con objetos ya existentes ({SqlState}). Continuando con EnsureTables.",
+                    dbName,
+                    moduleName,
+                    ex.SqlState);
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Fallo MigrateAsync inicial del módulo {Module} en base {DbName}.", moduleName, dbName);
+                throw;
+            }
+
+            await EnsureTablesResilientAsync(ensureTablesAsync, moduleName, dbName, cancellationToken);
+            return;
+        }
+
         var legacyExists = await LegacySchemaExistsAsync(db, legacyProbeTable, cancellationToken);
         if (legacyExists)
         {
-            var pending = (await db.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
             if (pending.Count > 0)
             {
                 Log.Warning(
@@ -177,8 +211,7 @@ public static class TenantDatabaseBootstrapper
 
         try
         {
-            var pending = await db.Database.GetPendingMigrationsAsync(cancellationToken);
-            if (pending.Any())
+            if (pending.Count > 0)
             {
                 await db.Database.MigrateAsync(cancellationToken);
             }

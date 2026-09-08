@@ -302,6 +302,8 @@ public static class SimpleJwt
         var now = DateTimeOffset.UtcNow;
         var header = new { alg = "HS256", typ = "JWT" };
         var allowedModules = ParseAllowedModules(allowedModulesJson);
+        // Guardar como string JSON (no array nativo) para que JwtBearer entregue un solo claim
+        // que ContractedModuleMiddleware pueda deserializar de forma fiable.
         var payload = new Dictionary<string, object>
         {
             ["iss"] = Issuer,
@@ -312,7 +314,7 @@ public static class SimpleJwt
             ["role"] = role,
             ["tenant_id"] = tenantId.ToString(),
             ["tenant_name"] = tenantName,
-            ["allowed_modules"] = allowedModules,
+            ["allowed_modules"] = JsonSerializer.Serialize(allowedModules),
             ["technical_director"] = isTechnicalDirector ? "true" : "false",
             ["nbf"] = now.ToUnixTimeSeconds(),
             ["iat"] = now.ToUnixTimeSeconds(),

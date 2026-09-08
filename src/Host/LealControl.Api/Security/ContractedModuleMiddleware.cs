@@ -40,7 +40,7 @@ public sealed class ContractedModuleMiddleware(RequestDelegate next)
             return;
         }
 
-        if (!allowedModules.Contains(moduleKey, StringComparer.OrdinalIgnoreCase))
+        if (!IsModuleAllowed(allowedModules, moduleKey))
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             context.Response.ContentType = "application/json";
@@ -52,6 +52,31 @@ public sealed class ContractedModuleMiddleware(RequestDelegate next)
         }
 
         await next(context);
+    }
+
+    /// <summary>
+    /// Communications se expone en el menú junto con CRM; aceptar cualquiera de las dos claves.
+    /// </summary>
+    private static bool IsModuleAllowed(HashSet<string> allowed, string moduleKey)
+    {
+        if (allowed.Contains(moduleKey))
+        {
+            return true;
+        }
+
+        if (moduleKey.Equals("communications", StringComparison.OrdinalIgnoreCase)
+            && allowed.Contains("crm"))
+        {
+            return true;
+        }
+
+        if (moduleKey.Equals("crm", StringComparison.OrdinalIgnoreCase)
+            && allowed.Contains("communications"))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private static bool IsExempt(PathString path)

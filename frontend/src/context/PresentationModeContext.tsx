@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "../api/client";
+import { resolveAllowedModuleIds } from "../app/moduleRegistry";
 import { useAuth } from "./AuthContext";
 
 const STORAGE_KEY = "leal_presentation_mode";
@@ -13,6 +14,12 @@ interface PresentationModeContextType {
 }
 
 const PresentationModeContext = createContext<PresentationModeContextType | undefined>(undefined);
+
+function userHasQualityModule(user: { role?: string; allowedModulesJson?: string | null } | null): boolean {
+  if (!user) return false;
+  const modules = resolveAllowedModuleIds(user.role ?? "", user.allowedModulesJson);
+  return modules.includes("calidad");
+}
 
 export function PresentationModeProvider({ children }: { children: ReactNode }) {
   const { user, tenant } = useAuth();
@@ -30,6 +37,11 @@ export function PresentationModeProvider({ children }: { children: ReactNode }) 
 
   const refresh = useCallback(async () => {
     if (!user || !tenant?.id) {
+      persist(false);
+      return;
+    }
+    // Evitar 403 en consola cuando el tenant no tiene calidad contratada.
+    if (!userHasQualityModule(user)) {
       persist(false);
       return;
     }
