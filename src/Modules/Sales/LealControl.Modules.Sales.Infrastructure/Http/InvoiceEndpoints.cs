@@ -1,4 +1,5 @@
 using System;
+using LealControl.BuildingBlocks.Security;
 using LealControl.Modules.Sales.Application.Invoices;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -11,7 +12,7 @@ public static class InvoiceEndpoints
 {
     public static IEndpointRouteBuilder MapInvoiceEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/sales/invoices").WithTags("Invoices");
+        var group = endpoints.MapGroup("/api/v1/sales/invoices").WithTags("Invoices").RequirePolicyOnWrites("RequireSales");
 
         group.MapGet("/", async (string? search, string? status, string? type, ISender sender, CancellationToken cancellationToken) =>
         {

@@ -25,6 +25,9 @@ public sealed class AccountingDbContext : DbContext
     public DbSet<JournalTemplate> JournalTemplates => Set<JournalTemplate>();
     public DbSet<JournalTemplateLine> JournalTemplateLines => Set<JournalTemplateLine>();
     public DbSet<AccountingBatchRun> BatchRuns => Set<AccountingBatchRun>();
+    public DbSet<AccountingPendingDocument> PendingDocuments => Set<AccountingPendingDocument>();
+    public DbSet<AccountingTenantSettings> TenantSettings => Set<AccountingTenantSettings>();
+    public DbSet<AccountingFinanceAccountMapping> FinanceAccountMappings => Set<AccountingFinanceAccountMapping>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -170,6 +173,40 @@ public sealed class AccountingDbContext : DbContext
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.BatchNumber }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.ExecutedAtUtc });
+        });
+
+        modelBuilder.Entity<AccountingPendingDocument>(b =>
+        {
+            b.ToTable("pending_documents", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.SourceModule).HasMaxLength(32).IsRequired();
+            b.Property(x => x.DocumentType).HasMaxLength(64).IsRequired();
+            b.Property(x => x.SourceDocumentId).HasMaxLength(128).IsRequired();
+            b.Property(x => x.DocumentNumber).HasMaxLength(64).IsRequired();
+            b.Property(x => x.PayloadJson).IsRequired();
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue(AccountingPendingDocumentStatuses.Pending);
+            b.Property(x => x.LastError).HasMaxLength(1000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.SourceModule, x.SourceDocumentId });
+            b.HasIndex(x => new { x.TenantId, x.Status, x.DocumentDateUtc });
+        });
+
+        modelBuilder.Entity<AccountingTenantSettings>(b =>
+        {
+            b.ToTable("tenant_settings", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.Property(x => x.AutoPostOnConfirm).HasDefaultValue(false);
+            b.HasIndex(x => x.TenantId).IsUnique();
+        });
+
+        modelBuilder.Entity<AccountingFinanceAccountMapping>(b =>
+        {
+            b.ToTable("finance_account_mapping", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.Property(x => x.LedgerAccountCode).HasMaxLength(32).IsRequired();
+            b.HasIndex(x => new { x.TenantId, x.FinancialAccountId }).IsUnique();
         });
     }
 
@@ -367,13 +404,52 @@ public sealed class AccountingDbContext : DbContext
                 ""ErrorsCount"" integer NOT NULL DEFAULT 0,
                 ""Status"" character varying(32) NOT NULL DEFAULT 'Completed',
                 ""DurationSeconds"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""SummaryJson"" text NOT NULL DEFAULT '{}',
+                ""SummaryJson"" text NOT NULL DEFAULT '{{}}',
                 ""LogDetailsJson"" text NOT NULL DEFAULT '[]',
-                ""FiltersAppliedJson"" text NOT NULL DEFAULT '{}'
+                ""FiltersAppliedJson"" text NOT NULL DEFAULT '{{}}'
             );",
 
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_batch_runs_Tenant_BatchNumber"" ON accounting.batch_runs (""TenantId"", ""BatchNumber"");",
-            @"CREATE INDEX IF NOT EXISTS ""IX_batch_runs_Tenant_ExecutedAt"" ON accounting.batch_runs (""TenantId"", ""ExecutedAtUtc"");"
+            @"CREATE INDEX IF NOT EXISTS ""IX_batch_runs_Tenant_ExecutedAt"" ON accounting.batch_runs (""TenantId"", ""ExecutedAtUtc"");",
+
+            @"CREATE TABLE IF NOT EXISTS accounting.pending_documents (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""SourceModule"" character varying(32) NOT NULL,
+                ""DocumentType"" character varying(64) NOT NULL,
+                ""SourceDocumentId"" character varying(128) NOT NULL,
+                ""DocumentNumber"" character varying(64) NOT NULL,
+                ""DocumentDateUtc"" timestamp with time zone NOT NULL,
+                ""PayloadJson"" text NOT NULL DEFAULT '{{}}',
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Pending',
+                ""LastError"" character varying(1000),
+                ""JournalEntryId"" uuid,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+
+            @"CREATE INDEX IF NOT EXISTS ""IX_pending_documents_Tenant_Module_Doc"" ON accounting.pending_documents (""TenantId"", ""SourceModule"", ""SourceDocumentId"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_pending_documents_Tenant_Status_Date"" ON accounting.pending_documents (""TenantId"", ""Status"", ""DocumentDateUtc"");",
+
+            @"CREATE TABLE IF NOT EXISTS accounting.tenant_settings (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""AutoPostOnConfirm"" boolean NOT NULL DEFAULT false,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_tenant_settings_Tenant"" ON accounting.tenant_settings (""TenantId"");",
+
+            @"CREATE TABLE IF NOT EXISTS accounting.finance_account_mapping (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""FinancialAccountId"" uuid NOT NULL,
+                ""LedgerAccountCode"" character varying(32) NOT NULL,
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_finance_account_mapping_Tenant_FinAcc"" ON accounting.finance_account_mapping (""TenantId"", ""FinancialAccountId"");"
         };
 
         foreach (var sql in statements)
@@ -519,6 +595,18 @@ public sealed class AccountingDbContext : DbContext
             await SaveChangesAsync(ct);
         }
         return mapping;
+    }
+
+    public async Task<AccountingTenantSettings> GetOrCreateTenantSettingsAsync(TenantId tenantId, CancellationToken ct = default)
+    {
+        var settings = await TenantSettings.FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
+        if (settings is null)
+        {
+            settings = new AccountingTenantSettings(tenantId);
+            TenantSettings.Add(settings);
+            await SaveChangesAsync(ct);
+        }
+        return settings;
     }
 
     public async Task SeedDefaultJournalTemplatesAsync(TenantId tenantId, CancellationToken ct = default)

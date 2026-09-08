@@ -17,11 +17,18 @@ using LealControl.Modules.HumanResources.Infrastructure;
 using LealControl.Modules.Fleet.Infrastructure;
 using LealControl.Modules.Accounting.Infrastructure;
 using LealControl.Modules.Metrology.Infrastructure;
+using LealControl.Modules.Quality.Infrastructure;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Api.SuperAdmin;
 using LealControl.Api.Automation;
+using LealControl.Api.Public;
+using LealControl.Api.Security;
+using LealControl.Api.Logging;
+using LealControl.Api.Health;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -37,8 +44,35 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    if (builder.Environment.IsProduction())
+    {
+        var preferredLogDir = "/var/log/lealcontrol";
+        var logDir = preferredLogDir;
+        try
+        {
+            Directory.CreateDirectory(logDir);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            logDir = Path.Combine(Path.GetTempPath(), "lealcontrol-logs");
+            Directory.CreateDirectory(logDir);
+            builder.Configuration["Serilog:WriteTo:1:Args:path"] = Path.Combine(logDir, "api-.log");
+            Log.Warning(
+                ex,
+                "No se pudo usar {PreferredLogDir}; logs de archivo en {FallbackLogDir}",
+                preferredLogDir,
+                logDir);
+        }
+    }
+
+    builder.Services.AddHttpContextAccessor();
+
     builder.Host.UseSerilog((context, services, configuration) =>
-        configuration.ReadFrom.Configuration(context.Configuration).WriteTo.Console());
+        configuration
+            .ReadFrom.Configuration(context.Configuration)
+            .Enrich.FromLogContext()
+            .Enrich.With(services.GetRequiredService<TenantIdEnricher>())
+            .WriteTo.Console());
 
     builder.WebHost.ConfigureKestrel(options =>
     {
@@ -46,7 +80,10 @@ try
     });
 
     var dbConnectionString = builder.Configuration.GetConnectionString("Database")
-        ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal";
+        ?? throw new InvalidOperationException(
+            "ConnectionStrings:Database es obligatorio. En desarrollo usá appsettings.Development.json o user-secrets.");
+
+    builder.Services.AddSingleton<TenantIdEnricher>();
 
     builder.Services.AddDbContext<MasterDbContext>(options =>
         options.UseNpgsql(dbConnectionString));
@@ -64,18 +101,44 @@ try
     builder.Services.AddFinanceModule(builder.Configuration);
     builder.Services.AddHumanResourcesModule(builder.Configuration);
     builder.Services.AddFleetModule(builder.Configuration);
+    // NoOp por defecto; AddAccountingModule registra el gateway real que encola en pending_documents.
+    builder.Services.AddNoOpAccountingPostingGateway();
     builder.Services.AddAccountingModule(builder.Configuration);
     builder.Services.AddMetrologyModule(builder.Configuration);
+    builder.Services.AddQualityModule(builder.Configuration);
     builder.Services.ConfigureHttpJsonOptions(options =>
         options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
-    // Configuración de Seguridad y Autenticación JWT Bearer
     var jwtSecret = builder.Configuration["Jwt:Secret"]
         ?? builder.Configuration["JWT_SECRET"]
-        ?? Environment.GetEnvironmentVariable("JWT_SECRET")
-        ?? "LealControl_Enterprise_JWT_Signing_Key_2026_Secret_Key_Super_Secure_!";
+        ?? Environment.GetEnvironmentVariable("JWT_SECRET");
 
-    LealControl.Modules.Crm.Infrastructure.Http.SimpleJwt.SecretKey = jwtSecret;
+    if (string.IsNullOrWhiteSpace(jwtSecret))
+    {
+        if (builder.Environment.IsProduction())
+        {
+            throw new InvalidOperationException(
+                "JWT_SECRET (o Jwt:Secret) es obligatorio en Production. No hay clave de respaldo en el código.");
+        }
+
+        jwtSecret = "DevOnly_LealControl_Local_JWT_Key_Not_For_Production_Use_32b!";
+        Log.Warning("Usando clave JWT local de desarrollo. Definí Jwt:Secret o JWT_SECRET para coincidir con los tests.");
+    }
+
+    var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "lealcontrol";
+    var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "lealcontrol-web";
+    var jwtLifetimeHours = 8;
+    if (int.TryParse(builder.Configuration["Jwt:LifetimeHours"], out var parsedHours) && parsedHours > 0)
+    {
+        jwtLifetimeHours = parsedHours;
+    }
+
+    var requireHttpsMetadata = builder.Configuration.GetValue("Jwt:RequireHttpsMetadata", false);
+
+    SimpleJwt.SecretKey = jwtSecret;
+    SimpleJwt.Issuer = jwtIssuer;
+    SimpleJwt.Audience = jwtAudience;
+    SimpleJwt.LifetimeHours = jwtLifetimeHours;
     var jwtKeyBytes = Encoding.UTF8.GetBytes(jwtSecret);
 
     builder.Services.AddAuthentication(options =>
@@ -85,19 +148,50 @@ try
     })
     .AddJwtBearer(options =>
     {
-        options.RequireHttpsMetadata = false;
+        options.RequireHttpsMetadata = requireHttpsMetadata;
         options.SaveToken = true;
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(jwtKeyBytes),
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(2)
+            ClockSkew = TimeSpan.FromMinutes(2),
+            RoleClaimType = "role",
+            NameClaimType = "sub"
         };
     });
-    builder.Services.AddAuthorization();
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("RequireAdmin", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
+        options.AddPolicy("RequireFinance", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Tesorero", "Contador"));
+        options.AddPolicy("RequireAccounting", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Contador"));
+        options.AddPolicy("RequireSales", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Comercial", "Contador"));
+        options.AddPolicy("RequirePurchases", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Compras", "Contador"));
+        options.AddPolicy("RequireQuality", policy =>
+            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Calidad", "DirectorTecnico", "Técnico"));
+        options.AddPolicy("RequireTechnicalDirector", policy =>
+            policy.RequireAssertion(ctx =>
+                ctx.User.IsInRole("Admin")
+                || ctx.User.IsInRole("Administrador")
+                || ctx.User.IsInRole("SuperAdmin")
+                || ctx.User.IsInRole("DirectorTecnico")
+                || string.Equals(ctx.User.FindFirst("technical_director")?.Value, "true", StringComparison.OrdinalIgnoreCase)));
+        options.FallbackPolicy = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .Build();
+    });
+
+    builder.Services.AddProblemDetails();
 
     // Persistencia de Llaves Criptográficas (Data Protection)
     var keysFolder = builder.Configuration["DataProtection:KeysFolder"]
@@ -118,10 +212,21 @@ try
         Log.Warning(ex, "No se pudo inicializar la persistencia de DataProtection en {Folder}. Se utilizará el proveedor en memoria.", keysFolder);
     }
 
-    // Rate Limiting para protección contra fuerza bruta
+    // Rate Limiting: global + auth
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        {
+            var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 200,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
+        });
         options.AddPolicy("auth-policy", httpContext =>
         {
             var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -171,28 +276,82 @@ try
         });
     });
     builder.Services.AddHealthChecks()
+        .AddDbContextCheck<MasterDbContext>("master-db")
         .AddDbContextCheck<CrmDbContext>("crm-db")
         .AddDbContextCheck<SalesDbContext>("sales-db")
-        .AddDbContextCheck<CommunicationsDbContext>("communications-db");
+        .AddDbContextCheck<CommunicationsDbContext>("communications-db")
+        .AddDbContextCheck<FinanceDbContext>("finance-db")
+        .AddDbContextCheck<AccountingDbContext>("accounting-db")
+        .AddDbContextCheck<HumanResourcesDbContext>("hr-db")
+        .AddDbContextCheck<FleetDbContext>("fleet-db")
+        .AddDbContextCheck<MetrologyDbContext>("metrology-db")
+        .AddDbContextCheck<QualityDbContext>("quality-db");
+    var configuredOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>()
+        ?.Where(o => !string.IsNullOrWhiteSpace(o))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray() ?? Array.Empty<string>();
+
+    if (configuredOrigins.Length == 0)
+    {
+        configuredOrigins =
+        [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5273",
+            "http://127.0.0.1:5273"
+        ];
+    }
+
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("web", policy =>
-            policy.WithOrigins(
-                    "http://localhost:5173",
-                    "http://127.0.0.1:5173",
-                    "http://localhost:5273",
-                    "http://127.0.0.1:5273")
+            policy.WithOrigins(configuredOrigins)
                 .AllowAnyHeader()
                 .AllowAnyMethod());
     });
 
     var app = builder.Build();
 
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseExceptionHandler(exceptionHandlerApp =>
+        {
+            exceptionHandlerApp.Run(async context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                context.Response.ContentType = "application/problem+json";
+                await context.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                {
+                    Status = StatusCodes.Status500InternalServerError,
+                    Title = "Error interno del servidor",
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
+                });
+            });
+        });
+        app.UseHttpsRedirection();
+        app.UseHsts();
+    }
+
     app.UseSerilogRequestLogging();
     app.UseCors("web");
     app.UseRateLimiter();
     app.UseAuthentication();
+    app.UseMiddleware<ContractedModuleMiddleware>();
+    app.UseMiddleware<LealControl.Modules.Quality.Infrastructure.PresentationModeMiddleware>();
     app.UseAuthorization();
+    app.Use(async (context, next) =>
+    {
+        try
+        {
+            await next();
+        }
+        catch (TenantNotFoundException ex)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsJsonAsync(new { message = ex.Message });
+        }
+    });
 
     if (app.Environment.IsDevelopment())
     {
@@ -200,43 +359,16 @@ try
         app.UseSwaggerUI();
     }
 
-    // Cada instancia, incluida la de pruebas/producción, debe crear y actualizar
-    // su esquema antes de atender solicitudes. EF registra las migraciones aplicadas.
-    await using (var scope = app.Services.CreateAsyncScope())
+    app.MapGet("/", () => Results.Redirect("/swagger")).AllowAnonymous();
+    app.MapHealthChecks("/health/live", new HealthCheckOptions
     {
-        var masterDb = scope.ServiceProvider.GetRequiredService<MasterDbContext>();
-        await masterDb.EnsureMasterTablesCreatedAsync();
-
-        var crm = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
-        try { await crm.Database.MigrateAsync(); } catch (Exception ex) { Log.Warning(ex, "CRM Migration skipped or already applied."); }
-        await crm.EnsureCrmTablesAsync();
-
-        var sales = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
-        try { await sales.Database.MigrateAsync(); } catch (Exception ex) { Log.Warning(ex, "Sales Migration skipped or already applied."); }
-        await sales.EnsureTablesCreatedAsync();
-
-        var communications = scope.ServiceProvider.GetRequiredService<CommunicationsDbContext>();
-        try { await communications.Database.MigrateAsync(); } catch (Exception ex) { Log.Warning(ex, "Communications Migration skipped or already applied."); }
-        await communications.EnsureTablesCreatedAsync();
-
-        var finance = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
-        await finance.EnsureFinanceTablesAsync();
-
-        var hr = scope.ServiceProvider.GetRequiredService<HumanResourcesDbContext>();
-        await hr.EnsureHrTablesAsync();
-
-        var fleet = scope.ServiceProvider.GetRequiredService<FleetDbContext>();
-        await fleet.EnsureFleetTablesAsync();
-
-        var accounting = scope.ServiceProvider.GetRequiredService<AccountingDbContext>();
-        await accounting.EnsureAccountingTablesAsync();
-
-        var metrology = scope.ServiceProvider.GetRequiredService<MetrologyDbContext>();
-        await metrology.EnsureMetrologyTablesAsync();
-    }
-
-    app.MapGet("/", () => Results.Redirect("/swagger"));
-    app.MapHealthChecks("/health");
+        Predicate = _ => false,
+        ResponseWriter = HealthCheckJsonWriter.WriteDetailedResponse
+    }).AllowAnonymous();
+    app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        ResponseWriter = HealthCheckJsonWriter.WriteDetailedResponse
+    }).AllowAnonymous();
     app.MapCrmModule();
     app.MapSalesModule();
     app.MapCommunicationsModule();
@@ -245,9 +377,33 @@ try
     app.MapFleetModule();
     app.MapAccountingModule();
     app.MapMetrologyModule();
+    app.MapQualityModule();
     app.MapAutomationEndpoints();
+    app.MapPublicWebhookEndpoints();
     app.MapSuperAdminModule();
     app.MapTenantBackupSelfService();
+
+    // El bootstrap de esquemas puede tardar; no bloquear Kestrel ni el liveness de Docker.
+    _ = TenantDatabaseBootstrapper.InitializeAllAsync(app.Services, app.Configuration, app.Environment)
+        .ContinueWith(task =>
+        {
+            if (task.IsFaulted)
+            {
+                // En Development/tests no tumbar el host: una carrera DDL (p.ej. 23505) no debe
+                // disponer el IServiceProvider a mitad del suite de integración.
+                if (app.Environment.IsDevelopment())
+                {
+                    Log.Error(task.Exception, "Bootstrap de bases de tenant falló en Development; la API sigue en pie.");
+                    return;
+                }
+
+                Log.Fatal(task.Exception, "Bootstrap de bases de tenant falló; deteniendo la API.");
+                app.Lifetime.StopApplication();
+                return;
+            }
+
+            Log.Information("Bootstrap de bases de tenant completado.");
+        }, TaskScheduler.Default);
 
     await app.RunAsync();
 }

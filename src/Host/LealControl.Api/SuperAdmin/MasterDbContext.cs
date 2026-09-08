@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Tenancy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace LealControl.Api.SuperAdmin;
 
@@ -90,7 +92,10 @@ public sealed class MasterDbContext : DbContext
         });
     }
 
-    public async Task EnsureMasterTablesCreatedAsync(CancellationToken cancellationToken = default)
+    public async Task EnsureMasterTablesCreatedAsync(
+        IHostEnvironment environment,
+        IConfiguration configuration,
+        CancellationToken cancellationToken = default)
     {
         var sql = @"
             CREATE TABLE IF NOT EXISTS public.master_tenants (
@@ -180,17 +185,28 @@ public sealed class MasterDbContext : DbContext
         var hasAdmin = await SuperAdmins.AnyAsync(cancellationToken);
         if (!hasAdmin)
         {
-            var defaultHash = HashPassword("admin123");
-            SuperAdmins.Add(new SuperAdminUser
+            var bootstrapPassword = configuration["SUPERADMIN_BOOTSTRAP_PASSWORD"]
+                ?? configuration["SuperAdmin:BootstrapPassword"];
+            if (!string.IsNullOrWhiteSpace(bootstrapPassword))
             {
-                Id = Guid.NewGuid(),
-                FullName = "Administrador Master LEAL",
-                Email = "admin@lealcontrol.com",
-                PasswordHash = defaultHash,
-                Role = "SuperAdmin",
-                IsActive = true,
-                CreatedAtUtc = DateTime.UtcNow
-            });
+                var email = configuration["SUPERADMIN_BOOTSTRAP_EMAIL"]
+                    ?? configuration["SuperAdmin:BootstrapEmail"]
+                    ?? "admin@lealcontrol.com";
+                SuperAdmins.Add(new SuperAdminUser
+                {
+                    Id = Guid.NewGuid(),
+                    FullName = "Administrador Master LEAL",
+                    Email = email.Trim().ToLowerInvariant(),
+                    PasswordHash = HashPassword(bootstrapPassword),
+                    Role = "SuperAdmin",
+                    IsActive = true,
+                    CreatedAtUtc = DateTime.UtcNow
+                });
+            }
+            else if (environment.IsDevelopment())
+            {
+                Console.WriteLine("SuperAdmin no sembrado: definí SUPERADMIN_BOOTSTRAP_PASSWORD para crear el usuario inicial.");
+            }
         }
 
         // Seed Default Plans
@@ -244,8 +260,11 @@ public sealed class MasterDbContext : DbContext
             );
         }
 
-        // Seed Primary Default Tenant
+        // Seed Primary Default Tenant (DbName = base de datos de esta instancia)
         var defaultTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var configuredDbName = new Npgsql.NpgsqlConnectionStringBuilder(
+            configuration.GetConnectionString("Database") ?? "Host=localhost;Port=5432;Database=lealcontrol;Username=leal;Password=leal").Database
+            ?? "lealcontrol";
         var hasDefaultTenant = await Tenants.AnyAsync(t => t.Id == defaultTenantId, cancellationToken);
         if (!hasDefaultTenant)
         {
@@ -254,7 +273,7 @@ public sealed class MasterDbContext : DbContext
                 Id = defaultTenantId,
                 Name = "Empresa Demostración",
                 Slug = "demo",
-                DbName = "lealcontrol",
+                DbName = configuredDbName,
                 PlanCode = "agro",
                 Status = "Active",
                 MonthlyPriceArs = 95000,

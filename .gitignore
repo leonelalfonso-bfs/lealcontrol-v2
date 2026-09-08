@@ -42,6 +42,8 @@ frontend/*.tsbuildinfo
 test_*.json
 post_*.json
 *.py
+!tools/quality-seed/seed.py
+!tools/quality-seed/**/*.py
 
 ## Docker
 get-docker.sh

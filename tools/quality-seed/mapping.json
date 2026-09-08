@@ -1,0 +1,346 @@
+{
+  "driveFolderId": "1pYtGCTaJUtJ8CX2SS2TNYbX1vM4NKifw",
+  "notes": "Inventario Drive INMELA-BFS. Colocar archivos en input/ con el mismo fileName. missing=true = no hay archivo en Drive aún. Generated = no subir (vista del sistema).",
+  "defaultSignatures": {
+    "elaboratedBy": "Laura Delissi",
+    "reviewedBy": "Leonel Alfonso",
+    "approvedBy": "Javier Coppini",
+    "signedAt": "2026-07-10T00:00:00Z"
+  },
+  "files": [
+    {
+      "fileName": "MC01 v1 Manual de calidad.docx",
+      "code": "MC01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "MC01 R1 Compromiso de confidencialidad e imparcialidad interno.docx",
+      "code": "MC01-R01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "MC01 R2 Compromiso de confidencialidad e imparcialidad externo.docx",
+      "code": "MC01-R02",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "MC01-R03 v1 Seguimiento de objetivos e indicadores.xlsx",
+      "code": "MC01-R03",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "MC01-R05 Nota institucional.docx",
+      "code": "MC01-R05",
+      "version": 1,
+      "role": "Source",
+      "missing": true
+    },
+    {
+      "fileName": "PG01 v1 Gestión de documentos.docx",
+      "code": "PG01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG01-R01 Lista de documentos.xlsx",
+      "code": "PG01-R01",
+      "version": 1,
+      "role": "Source",
+      "generated": true,
+      "notes": "Registro Generated — no subir archivo"
+    },
+    {
+      "fileName": "PG01-R02 Lista de documentos externos.xlsx",
+      "code": "PG01-R02",
+      "version": 1,
+      "role": "Source",
+      "generated": true
+    },
+    {
+      "fileName": "PG02 v1 Control de registros.docx",
+      "code": "PG02",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG03 v1 Gestión de quejas.docx",
+      "code": "PG03",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG03-R01 Seguimiento de quejas.xlsx",
+      "code": "PG03-R01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG04 v1 Auditorías internas.docx",
+      "code": "PG04",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG04-R01 Programa de auditorías.xlsx",
+      "code": "PG04-R01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG04-R02 Plan de auditoría.docx",
+      "code": "PG04-R02",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG04-R03 Informe de auditoría.docx",
+      "code": "PG04-R03",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG04-R04 Lista de verificación ISO IEC 17025.xlsx",
+      "code": "PG04-R04",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG05 v1 Compras.docx",
+      "code": "PG05",
+      "version": 1,
+      "role": "Source",
+      "missing": true
+    },
+    {
+      "fileName": "PG05-R01 Evaluación inicial de proveedores.xlsx",
+      "code": "PG05-R01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG05-R02 Listado de proveedores habilitados.xlsx",
+      "code": "PG05-R02",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG05-R03 Evaluación del desempeño de proveedores.xlsx",
+      "code": "PG05-R03",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG06 v1 Gestión de personal.docx",
+      "code": "PG06",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG06-R01 Programa de capacitaciones.xlsx",
+      "code": "PG06-R01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG06-R02 Entrenamiento y autorización del personal.xlsx",
+      "code": "PG06-R02",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG06-R03 Seguimiento de las competencias técnicas y personales.xlsx",
+      "code": "PG06-R03",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG06-R04 Asignación de funciones y reemplazos.xlsx",
+      "code": "PG06-R04",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG07 v1 Gestión de No Conformidades riesgos y oportunidades.docx",
+      "code": "PG07",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG07-R1 Registro y seguimiento de NC R y OP.xlsx",
+      "code": "PG07-R01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG08 v1 Revisión por la dirección.docx",
+      "code": "PG08",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG08-R01 Informe de revisión por la dirección.docx",
+      "code": "PG08-R01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG09 v1 Informes de Ensayo.docx",
+      "code": "PG09",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG09-R1 Informe de Ensayos.docx",
+      "code": "PG09-R01",
+      "version": 1,
+      "role": "Source",
+      "missing": true
+    },
+    {
+      "fileName": "PG09-R2 Modificación al Informe de Ensayos.docx",
+      "code": "PG09-R02",
+      "version": 1,
+      "role": "Source",
+      "missing": true
+    },
+    {
+      "fileName": "PG09-R3 Encuesta de satisfacción.xlsx",
+      "code": "PG09-R03",
+      "version": 1,
+      "role": "Source",
+      "missing": true
+    },
+    {
+      "fileName": "PG10 v1 Evaluación de la Incertidumbre.docx",
+      "code": "PG10",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG11 v1 Validación del método de ensayo.docx",
+      "code": "PG11",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG11 R1 Informe de validación del método.docx",
+      "code": "PG11-R01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG12 v1 Ensayos para la verificación de Instrumentos de Pesar.docx",
+      "code": "PG12",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG13 v1 Manipulación del ítem de ensayo.docx",
+      "code": "PG13",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG14 v1 - Equipamiento.docx",
+      "code": "PG14",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG14 R1 Hoja de vida del equipo.xlsx",
+      "code": "PG14-R01",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG14 R2 Etiqueta de equipo calibrado.docx",
+      "code": "PG14-R02",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG14 R3 v1 - Programa de calibraciones.xlsx",
+      "code": "PG14-R03",
+      "version": 1,
+      "role": "Source",
+      "generated": true,
+      "notes": "Generated desde Metrología (C2)"
+    },
+    {
+      "fileName": "PG14 R4 Listado de equipos.xlsx",
+      "code": "PG14-R04",
+      "version": 1,
+      "role": "Source",
+      "generated": true,
+      "notes": "Generated desde Metrología (C2)"
+    },
+    {
+      "fileName": "PG14 R5 Verificación intermedia.xlsx",
+      "code": "PG14-R05",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG14 R6 Programa de mantenimiento preventivo.xlsx",
+      "code": "PG14-R06",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG15 v1 Aseguramiento de la validez de los resultados.docx",
+      "code": "PG15",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG16 v1 Instalaciones y condiciones ambientales.docx",
+      "code": "PG16",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "PG17 v1 Trazabilidad Metrológica.docx",
+      "code": "PG17",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "IT-07 v1 Validación de planillas de cálculos.docx",
+      "code": "IT07",
+      "version": 1,
+      "role": "Source"
+    },
+    {
+      "fileName": "IT01 Balanzas de Alta Capacidad.docx",
+      "code": "IT01",
+      "version": 1,
+      "role": "Source",
+      "missing": true
+    },
+    {
+      "fileName": "IT02 Balanzas de Media Capacidad.docx",
+      "code": "IT02",
+      "version": 1,
+      "role": "Source",
+      "missing": true
+    },
+    {
+      "fileName": "IT03 Balanzas de Baja Capacidad.docx",
+      "code": "IT03",
+      "version": 1,
+      "role": "Source",
+      "missing": true
+    },
+    {
+      "fileName": "IT04 Balanzas tipo tolva.docx",
+      "code": "IT04",
+      "version": 1,
+      "role": "Source",
+      "missing": true
+    }
+  ]
+}

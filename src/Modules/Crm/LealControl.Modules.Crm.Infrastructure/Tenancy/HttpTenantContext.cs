@@ -37,36 +37,27 @@ public sealed class HttpTenantContext : ITenantContext
         get
         {
             var user = _http.HttpContext?.User;
+            if (user?.Identity?.IsAuthenticated != true)
+            {
+                return new TenantId(Guid.Empty);
+            }
+
             var headerValue = _http.HttpContext?.Request.Headers[HeaderName].ToString();
+            var role = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("role")?.Value;
+            var isSuperAdmin = string.Equals(role, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
 
-            // 1. Authenticated user
-            if (user?.Identity?.IsAuthenticated == true)
+            if (isSuperAdmin && Guid.TryParse(headerValue, out var superAdminTargetTenant) && superAdminTargetTenant != Guid.Empty)
             {
-                var role = user.FindFirst(ClaimTypes.Role)?.Value ?? user.FindFirst("role")?.Value;
-                var isSuperAdmin = string.Equals(role, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
-
-                // SuperAdmin is permitted to act on behalf of a specific tenant via header
-                if (isSuperAdmin && Guid.TryParse(headerValue, out var superAdminTargetTenant) && superAdminTargetTenant != Guid.Empty)
-                {
-                    return new TenantId(superAdminTargetTenant);
-                }
-
-                // Regular users are strictly locked to their verified JWT tenant claim
-                var claim = user.FindFirst("tenant_id")?.Value;
-                if (!string.IsNullOrWhiteSpace(claim) && Guid.TryParse(claim, out var fromClaim) && fromClaim != Guid.Empty)
-                {
-                    return new TenantId(fromClaim);
-                }
+                return new TenantId(superAdminTargetTenant);
             }
 
-            // 2. Unauthenticated request: accept header if explicitly provided
-            if (Guid.TryParse(headerValue, out var parsed) && parsed != Guid.Empty)
+            var claim = user.FindFirst("tenant_id")?.Value;
+            if (!string.IsNullOrWhiteSpace(claim) && Guid.TryParse(claim, out var fromClaim) && fromClaim != Guid.Empty)
             {
-                return new TenantId(parsed);
+                return new TenantId(fromClaim);
             }
 
-            // 3. Fallback only in local development
-            if (_env.IsDevelopment())
+            if (_env.IsDevelopment() && _options.DevelopmentTenantId != Guid.Empty)
             {
                 return new TenantId(_options.DevelopmentTenantId);
             }

@@ -24,12 +24,7 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddScoped<ITenantContext, HttpTenantContext>();
 
-        var connectionString = configuration.GetConnectionString("Database")
-            ?? throw new InvalidOperationException("Falta ConnectionStrings:Database.");
-
-        services.AddDbContext<CrmDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql =>
-                npgsql.MigrationsHistoryTable("__ef_migrations_history", CrmDbContext.Schema)));
+        services.AddTenantDbContext<CrmDbContext>(CrmDbContext.Schema);
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<CrmDbContext>());
         services.AddScoped<ICustomerRepository, CustomerRepository>();

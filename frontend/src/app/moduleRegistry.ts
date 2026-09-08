@@ -302,7 +302,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/contabilidad/asientos", label: "Libro Diario", icon: "📖" },
       { path: "/contabilidad/mayor", label: "Libro Mayor", icon: "🔍" },
       { path: "/contabilidad/sumas-saldos", label: "Sumas y Saldos", icon: "⚖️" },
-      { path: "/contabilidad/conciliacion", label: "Conciliación Bancaria", icon: "🏦" },
+      { path: "/contabilidad/conciliacion", label: "Conciliación tesorería", icon: "🏦" },
       { path: "/contabilidad/portal-estudio", label: "Cierres & IVA Digital", icon: "🏢" }
     ]
   },
@@ -322,8 +322,27 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/metrologia", label: "Tablero", icon: "📊", end: true },
       { path: "/metrologia/equipos", label: "Gestión de Equipos", icon: "🏢" },
       { path: "/metrologia/patrones", label: "Gestión de Pesas Patrón", icon: "⚖️" },
+      { path: "/metrologia/instrumentos", label: "Termómetros / Auxiliares", icon: "🌡️" },
       { path: "/metrologia/ensayos/nuevo", label: "Nuevo Ensayo", icon: "📝" },
       { path: "/metrologia/informes", label: "Informes de Ensayo", icon: "📋" }
+    ]
+  },
+  {
+    id: "calidad",
+    label: "Calidad",
+    icon: "📘",
+    gradient: "linear-gradient(135deg, #0369a1, #0e7490)",
+    glow: "rgba(3, 105, 161, 0.35)",
+    title: "SISTEMA DE GESTIÓN DE CALIDAD · ISO/IEC 17025",
+    defaultPath: "/calidad",
+    pathPrefixes: ["/calidad"],
+    minimumPlan: "base",
+    requiredPermission: "home.read",
+    dependencies: [],
+    items: [
+      { path: "/calidad", label: "Tablero SGC", icon: "📊", end: true },
+      { path: "/calidad/documentos", label: "Árbol documental", icon: "🌲" },
+      { path: "/calidad/registros", label: "Registros operativos", icon: "📋", end: true }
     ]
   },
   {
@@ -361,6 +380,44 @@ export const DEVELOPMENT_ACCESS: AccessContext = {
     "communications.read"
   ])
 };
+
+export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: string | string[] | null): string[] {
+  if (userRole === "Admin" || userRole === "Administrador") {
+    return [
+      "inicio", "directorio", "crm", "comunicaciones", "ventas", "compras", "inventario",
+      "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "calidad", "administracion"
+    ];
+  }
+
+  const moduleMap: Record<string, string[]> = {
+    sales: ["ventas"],
+    crm: ["crm", "directorio", "comunicaciones"],
+    communications: ["comunicaciones"],
+    purchases: ["compras"],
+    inventory: ["inventario", "produccion"],
+    finance: ["finanzas"],
+    fleet: ["flota"],
+    hr: ["rrhh"],
+    grains: ["cereales"],
+    accounting: ["contabilidad"],
+    metrology: ["metrologia"],
+    quality: ["calidad"]
+  };
+
+  try {
+    const raw = typeof allowedModulesJson === "string"
+      ? JSON.parse(allowedModulesJson)
+      : allowedModulesJson || [];
+    const allowed = ["inicio"];
+    (Array.isArray(raw) ? raw : []).forEach((entry: string) => {
+      if (moduleMap[entry]) allowed.push(...moduleMap[entry]);
+      else allowed.push(entry);
+    });
+    return allowed;
+  } catch {
+    return ["inicio", "ventas", "crm", "comunicaciones"];
+  }
+}
 
 export function canAccessModule(module: ModuleDefinition, access: AccessContext): boolean {
   return planOrder[access.plan] >= planOrder[module.minimumPlan]

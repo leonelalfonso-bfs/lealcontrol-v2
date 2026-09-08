@@ -1,9 +1,11 @@
 import { FormEvent, ChangeEvent, useEffect, useState } from "react";
 import { api } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import { provinces, type CompanySettings, type TenantUser } from "../api/types";
 import { ALL_SYSTEM_MODULES } from "./superadmin/SuperAdminPlansPage";
 
 export function SettingsPage() {
+  const { user: currentUser, tenant } = useAuth();
   const [tab, setTab] = useState<"general" | "arca" | "banks" | "users" | "backup">("general");
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [users, setUsers] = useState<TenantUser[]>([]);
@@ -147,6 +149,27 @@ export function SettingsPage() {
       setUserModules(["sales", "crm"]);
     }
     setShowUserModal(true);
+  };
+
+  const handleDeleteUser = async (u: TenantUser) => {
+    if (currentUser?.id === u.id) {
+      setError("No podés eliminar tu propio usuario mientras tenés la sesión abierta.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `¿Eliminar al usuario "${u.fullName}" (${u.email})?\n\nEsta acción no se puede deshacer.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setError(null);
+      await api.deleteTenantUser(u.id);
+      setUsers((prev) => prev.filter((item) => item.id !== u.id));
+      setSuccessMsg(`✓ Usuario ${u.fullName} eliminado.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo eliminar el usuario.");
+    }
   };
 
   const handleRoleChange = (newRole: string) => {
@@ -630,6 +653,8 @@ export function SettingsPage() {
               <h3>👥 Gestión de Usuarios & Control de Accesos</h3>
               <p className="muted" style={{ fontSize: "0.85rem", marginTop: 2 }}>
                 Asigná qué módulos y secciones específicas puede ver y operar cada empleado de tu empresa.
+                Los usuarios se crean solo en la empresa con la que estás conectado ahora
+                {tenant?.legalName ? ` (${tenant.legalName})` : ""}.
               </p>
             </div>
             <button type="button" className="btn" onClick={openNewUserModal}>
@@ -697,6 +722,7 @@ export function SettingsPage() {
                         </span>
                       </td>
                       <td style={{ textAlign: "right" }}>
+                        <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end", flexWrap: "wrap" }}>
                         <button
                           type="button"
                           className="btn ghost"
@@ -705,6 +731,17 @@ export function SettingsPage() {
                         >
                           ✏️ Editar Permisos
                         </button>
+                        <button
+                          type="button"
+                          className="btn ghost"
+                          style={{ fontSize: "0.78rem", padding: "4px 8px", color: "#f87171", borderColor: "rgba(248,113,113,0.35)" }}
+                          onClick={() => handleDeleteUser(u)}
+                          disabled={currentUser?.id === u.id}
+                          title={currentUser?.id === u.id ? "No podés eliminar tu propio usuario" : "Eliminar usuario"}
+                        >
+                          🗑️ Eliminar
+                        </button>
+                        </div>
                       </td>
                     </tr>
                   );

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { Modal } from "../components/ui/Modal";
 import { exportToExcel, type ExcelColumn } from "../components/ExcelTools";
 
 type Account = {
@@ -144,6 +145,11 @@ export function FinanceAccountsPage() {
   };
 
   const handleClassifyInline = async (movementId: string) => {
+    const movement = movements.find((m) => m.id === movementId);
+    if (movement && (movement.reconciliationStatus === "Reconciled" || String(movement.reconciliationStatus) === "2")) {
+      setError("Este movimiento ya está conciliado con un recibo u orden de pago. No se puede reclasificar.");
+      return;
+    }
     const conceptId = inlineConcepts[movementId];
     if (!conceptId) {
       setError("Por favor seleccioná un concepto antes de confirmar.");
@@ -192,6 +198,10 @@ export function FinanceAccountsPage() {
 
   const handleSaveModalClassification = async () => {
     if (!modalMovement || !modalConceptId) return;
+    if (modalMovement.reconciliationStatus === "Reconciled" || String(modalMovement.reconciliationStatus) === "2") {
+      setError("Este movimiento ya está conciliado con un recibo u orden de pago. No se puede reclasificar.");
+      return;
+    }
 
     try {
       setActionBusy(modalMovement.id);
@@ -427,7 +437,7 @@ export function FinanceAccountsPage() {
       }
     ];
 
-    exportToExcel(fileName, filteredMovements, columns);
+    void exportToExcel(fileName, filteredMovements, columns);
   };
 
   const setDatePreset = (preset: "thisMonth" | "lastMonth" | "last30Days" | "all") => {
@@ -712,7 +722,8 @@ export function FinanceAccountsPage() {
                   filteredMovements.map((x) => {
                     const isConfirmed = x.classificationStatus === "Confirmed";
                     const isSuggested = x.classificationStatus === "Suggested";
-                    const isPending = !isConfirmed;
+                    const isReconciled = x.reconciliationStatus === "Reconciled" || String(x.reconciliationStatus) === "2";
+                    const isPending = !isConfirmed && !isReconciled;
                     const { mainDesc, titular, cuit, extra } = parseMovementDetails(x.description);
 
                     return (
@@ -961,17 +972,28 @@ export function FinanceAccountsPage() {
           </div>
         </section>
 
-        {/* Modal de Importación / Actualización de Extracto CSV */}
-        {showImportModal && (
-          <div className="modal-backdrop">
-            <div className="modal-card card pad" style={{ maxWidth: 780, maxHeight: "90vh", overflowY: "auto" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <h3 style={{ margin: 0 }}>📤 Importar o Actualizar Extracto Bancario ({selectedAccount.name})</h3>
-                <button type="button" className="btn ghost compact" onClick={() => setShowImportModal(false)}>
-                  ✕
-                </button>
-              </div>
-
+        <Modal
+          open={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          title={`📤 Importar o Actualizar Extracto Bancario (${selectedAccount.name})`}
+          contentStyle={{ maxWidth: 780, maxHeight: "90vh", overflowY: "auto" }}
+          footer={(
+            <>
+              <button type="button" className="btn ghost" onClick={() => setShowImportModal(false)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={importLoading || !importCsv.trim()}
+                onClick={handleConfirmImport}
+                style={{ fontWeight: 700 }}
+              >
+                {importLoading ? "Procesando Extracto..." : "✓ Confirmar e Importar / Actualizar"}
+              </button>
+            </>
+          )}
+        >
               <p className="muted" style={{ fontSize: "0.85rem", marginTop: 0 }}>
                 Seleccioná el archivo <strong>CSV exportado de Banco Galicia / Santander / Macro / etc.</strong> o pegá el contenido. El sistema extraerá automáticamente los <strong>nombres de los titulares, CUITs y motivos</strong>, y actualizará los movimientos existentes.
               </p>
@@ -1053,39 +1075,32 @@ export function FinanceAccountsPage() {
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-                <button type="button" className="btn ghost" onClick={() => setShowImportModal(false)}>
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={importLoading || !importCsv.trim()}
-                  onClick={handleConfirmImport}
-                  style={{ fontWeight: 700 }}
-                >
-                  {importLoading ? "Procesando Extracto..." : "✓ Confirmar e Importar / Actualizar"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        </Modal>
 
-        {/* Modal de Clasificación Avanzada & Reglas */}
-        {modalMovement && (
-          <div className="modal-backdrop">
-            <div className="modal-card card pad" style={{ maxWidth: 500 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <h3 style={{ margin: 0 }}>🏷️ Clasificar Movimiento Bancario</h3>
-                <button
-                  type="button"
-                  className="btn ghost compact"
-                  onClick={() => setModalMovement(null)}
-                >
-                  ✕
-                </button>
-              </div>
-
+        <Modal
+          open={!!modalMovement}
+          onClose={() => setModalMovement(null)}
+          title="🏷️ Clasificar Movimiento Bancario"
+          contentStyle={{ maxWidth: 500 }}
+          footer={modalMovement ? (
+            <>
+              <button type="button" className="btn ghost" onClick={() => setModalMovement(null)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={actionBusy !== null || !modalConceptId}
+                onClick={handleSaveModalClassification}
+                style={{ fontWeight: 700 }}
+              >
+                {actionBusy === modalMovement.id ? "Guardando..." : "✓ Confirmar Clasificación"}
+              </button>
+            </>
+          ) : undefined}
+        >
+              {modalMovement ? (
+              <>
               <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.85rem" }}>
                 <div><strong>Fecha:</strong> {new Date(modalMovement.operationDateUtc).toLocaleDateString("es-AR")}</div>
                 <div><strong>Leyenda extracto:</strong> {modalMovement.description}</div>
@@ -1140,28 +1155,9 @@ export function FinanceAccountsPage() {
                   </div>
                 )}
               </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <button
-                  type="button"
-                  className="btn ghost"
-                  onClick={() => setModalMovement(null)}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={actionBusy !== null || !modalConceptId}
-                  onClick={handleSaveModalClassification}
-                  style={{ fontWeight: 700 }}
-                >
-                  {actionBusy === modalMovement.id ? "Guardando..." : "✓ Confirmar Clasificación"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+              </>
+              ) : null}
+        </Modal>
       </div>
     );
   }

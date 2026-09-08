@@ -1,149 +1,207 @@
 import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { api } from "./api/client";
 import { useAuth } from "./context/AuthContext";
-import { LoginPage } from "./pages/LoginPage";
+import { usePresentationMode } from "./context/PresentationModeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AskLealAssistantModal } from "./components/AskLealAssistantModal";
-import { CustomerDetailPage } from "./pages/CustomerDetailPage";
-import { CustomerFormPage } from "./pages/CustomerFormPage";
-import { DirectoryPage } from "./pages/DirectoryPage";
-import { CustomersPage } from "./pages/CustomersPage";
-import { HoyPage } from "./pages/HoyPage";
-import { ExecutiveDashboardPage } from "./pages/ExecutiveDashboardPage";
-import { InventoryPage } from "./pages/InventoryPage";
-import { InventoryHelpPage } from "./pages/InventoryHelpPage";
-import { InvoiceFormPage } from "./pages/InvoiceFormPage";
-import { InvoicePrintPage } from "./pages/InvoicePrintPage";
-import { InvoicesPage } from "./pages/InvoicesPage";
-import { LeadsPage } from "./pages/LeadsPage";
-import { OpportunitiesPage } from "./pages/OpportunitiesPage";
-import { OpportunityDetailPage } from "./pages/OpportunityDetailPage";
-import { CrmHelpPage } from "./pages/CrmHelpPage";
-import { OrderDetailPage } from "./pages/OrderDetailPage";
-import { OrderFormPage } from "./pages/OrderFormPage";
-import { OrdersPage } from "./pages/OrdersPage";
-import { ProductFormPage } from "./pages/ProductFormPage";
-import { ProductsPage } from "./pages/ProductsPage";
-import { PurchaseArcaImportPage } from "./pages/PurchaseArcaImportPage";
-import { PurchaseInvoiceFormPage } from "./pages/PurchaseInvoiceFormPage";
-import { PurchaseInvoicesPage } from "./pages/PurchaseInvoicesPage";
-import { PurchaseInvoicePrintPage } from "./pages/PurchaseInvoicePrintPage";
-import { PurchaseOrderFormPage } from "./pages/PurchaseOrderFormPage";
-import { PurchaseOrderPrintPage } from "./pages/PurchaseOrderPrintPage";
-import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
-import { PurchaseReceptionFormPage } from "./pages/PurchaseReceptionFormPage";
-import { PurchaseReceptionsPage } from "./pages/PurchaseReceptionsPage";
-import { PurchaseRequestDetailPage } from "./pages/PurchaseRequestDetailPage";
-import { PurchaseRequestFormPage } from "./pages/PurchaseRequestFormPage";
-import { PurchaseRequestsPage } from "./pages/PurchaseRequestsPage";
-import { PurchasesDashboardPage } from "./pages/PurchasesDashboardPage";
-import { PurchaseReportsPage } from "./pages/PurchaseReportsPage";
-import { PurchaseHelpPage } from "./pages/PurchaseHelpPage";
-import { QuoteFormPage } from "./pages/QuoteFormPage";
-import { QuotePrintPage } from "./pages/QuotePrintPage";
-import { QuotesPage } from "./pages/QuotesPage";
-import { RemitoFormPage } from "./pages/RemitoFormPage";
-import { RemitoPrintPage } from "./pages/RemitoPrintPage";
-import { RemitosPage } from "./pages/RemitosPage";
-import { ReportsPage } from "./pages/ReportsPage";
-import { SettingsPage } from "./pages/SettingsPage";
-import { DocumentTemplatesPage } from "./pages/DocumentTemplatesPage";
-import { SuppliersPage } from "./pages/SuppliersPage";
-import { MailSettingsPage } from "./pages/MailSettingsPage";
-import { InboxPage } from "./pages/InboxPage";
-import { ChannelsPage } from "./pages/ChannelsPage";
-import { ReplyTemplatesPage } from "./pages/ReplyTemplatesPage";
 import { CommunicationsNotificationBell } from "./components/CommunicationsNotificationBell";
 import { useCommunicationsBrowserNotifications } from "./hooks/useCommunicationsBrowserNotifications";
-import { ProductionPage } from "./pages/ProductionPage";
-import { ProductionHelpPage } from "./pages/ProductionHelpPage";
-import { ProductionFlowPage } from "./pages/ProductionFlowPage";
-import { ProductionSetupPage } from "./pages/ProductionSetupPage";
-import { ProductionOrdersPage } from "./pages/ProductionOrdersPage";
-import { ProductionOrderDetailPage } from "./pages/ProductionOrderDetailPage";
-import { ProductionVariantsPage } from "./pages/ProductionVariantsPage";
-import { ProductionCostsPage } from "./pages/ProductionCostsPage";
-import { ProductionReportsPage } from "./pages/ProductionReportsPage";
-import { FinancePage } from "./pages/FinancePage";
-import { FinanceAccountsPage } from "./pages/FinanceAccountsPage";
-import { FinanceConceptsPage } from "./pages/FinanceConceptsPage";
-import { ChequePortfolioPage } from "./pages/ChequePortfolioPage";
-import { CollectionReceiptsWorkspacePage } from "./pages/CollectionReceiptsWorkspacePage";
-import { CurrentAccountsPage } from "./pages/CurrentAccountsPage";
-import { PaymentOrdersPage } from "./pages/PaymentOrdersPage";
-import { PaymentOrderFormPage } from "./pages/PaymentOrderFormPage";
-import { PaymentOrderPrintPage } from "./pages/PaymentOrderPrintPage";
-import { CashFlowPage } from "./pages/CashFlowPage";
-import { HumanResourcesDashboardPage } from "./pages/HumanResourcesDashboardPage";
-import { OrgChartPage } from "./pages/OrgChartPage";
-import { OrganizationPositionFormPage } from "./pages/OrganizationPositionFormPage";
-import { PositionJobDescriptionPage } from "./pages/PositionJobDescriptionPage";
-import { ProcedureManualsPage } from "./pages/ProcedureManualsPage";
-import { ProcedureManualFormPage } from "./pages/ProcedureManualFormPage";
-import { EmployeesListPage } from "./pages/EmployeesListPage";
-import { EmployeeFormPage } from "./pages/EmployeeFormPage";
-import { PayrollListPage } from "./pages/PayrollListPage";
-import { HumanResourcesHelpPage } from "./pages/HumanResourcesHelpPage";
-import { FleetVehiclesListPage } from "./pages/FleetVehiclesListPage";
-import { FleetVehicleFormPage } from "./pages/FleetVehicleFormPage";
-import { FleetFuelLogsPage } from "./pages/FleetFuelLogsPage";
-import { FleetHelpPage } from "./pages/FleetHelpPage";
-import { DirectoryHelpPage } from "./pages/DirectoryHelpPage";
-import { SalesHelpPage } from "./pages/SalesHelpPage";
-import { FinanceHelpPage } from "./pages/FinanceHelpPage";
-import { SettingsHelpPage } from "./pages/SettingsHelpPage";
-import { StyleShowcasePage } from "./pages/StyleShowcasePage";
-import { GrainsDashboardPage } from "./pages/GrainsDashboardPage";
-import { GrainContractsPage } from "./pages/GrainContractsPage";
-import { GrainContractFormPage } from "./pages/GrainContractFormPage";
-import { GrainContractDetailPage } from "./pages/GrainContractDetailPage";
-import { GrainFixationsPage } from "./pages/GrainFixationsPage";
-import { GrainDeliveriesPage } from "./pages/GrainDeliveriesPage";
-import { GrainPositionPage } from "./pages/GrainPositionPage";
-import { SuperAdminLoginPage } from "./pages/superadmin/SuperAdminLoginPage";
-import { SuperAdminDashboardPage } from "./pages/superadmin/SuperAdminDashboardPage";
-import { SuperAdminTenantsPage } from "./pages/superadmin/SuperAdminTenantsPage";
-import { SuperAdminPlansPage } from "./pages/superadmin/SuperAdminPlansPage";
-import { AccountingDashboardPage } from "./pages/accounting/AccountingDashboardPage";
-import { JournalTemplatesPage } from "./pages/accounting/JournalTemplatesPage";
-import { JournalTemplateFormPage } from "./pages/accounting/JournalTemplateFormPage";
-import { ChartOfAccountsPage } from "./pages/accounting/ChartOfAccountsPage";
-import { AccountFormPage } from "./pages/accounting/AccountFormPage";
-import { JournalEntriesPage } from "./pages/accounting/JournalEntriesPage";
-import { JournalEntryFormPage } from "./pages/accounting/JournalEntryFormPage";
-import { GeneralLedgerPage } from "./pages/accounting/GeneralLedgerPage";
-import { TrialBalancePage } from "./pages/accounting/TrialBalancePage";
-import { BankReconciliationPage } from "./pages/accounting/BankReconciliationPage";
-import { AccountingStudyPortalPage } from "./pages/accounting/AccountingStudyPortalPage";
-import { MetrologyDashboardPage } from "./pages/metrology/MetrologyDashboardPage";
-import { MetrologyEquipmentPage } from "./pages/metrology/MetrologyEquipmentPage";
-import { MetrologyEquipmentFormPage } from "./pages/metrology/MetrologyEquipmentFormPage";
-import { StandardWeightsPage } from "./pages/metrology/StandardWeightsPage";
-import { StandardWeightFormPage } from "./pages/metrology/StandardWeightFormPage";
-import { StandardWeightsPrintPage } from "./pages/metrology/StandardWeightsPrintPage";
-import { CalibrationReportsPage } from "./pages/metrology/CalibrationReportsPage";
-import { CalibrationReportFormPage } from "./pages/metrology/CalibrationReportFormPage";
-import { CalibrationReportPrintPage } from "./pages/metrology/CalibrationReportPrintPage";
-import { LandingPage } from "./pages/LandingPage";
+import {
+  AccountFormPage,
+  AccountingDashboardPage,
+  AccountingStudyPortalPage,
+  BankReconciliationPage,
+  CalibrationReportFormPage,
+  CalibrationReportPrintPage,
+  CalibrationReportsPage,
+  CashFlowPage,
+  ChannelsPage,
+  ChartOfAccountsPage,
+  ChequePortfolioPage,
+  CollectionReceiptsWorkspacePage,
+  CrmHelpPage,
+  CurrentAccountsPage,
+  CustomerDetailPage,
+  CustomerFormPage,
+  CustomersPage,
+  DirectoryHelpPage,
+  DirectoryPage,
+  DocumentTemplatesPage,
+  EmployeeFormPage,
+  EmployeesListPage,
+  ExecutiveDashboardPage,
+  FinanceAccountsPage,
+  FinanceConceptsPage,
+  FinanceHelpPage,
+  FinancePage,
+  FinanceReconciliationPage,
+  FleetFuelLogsPage,
+  FleetHelpPage,
+  FleetVehicleFormPage,
+  FleetVehiclesListPage,
+  GeneralLedgerPage,
+  GrainContractDetailPage,
+  GrainContractFormPage,
+  GrainContractsPage,
+  GrainDeliveriesPage,
+  GrainFixationsPage,
+  GrainPositionPage,
+  GrainsDashboardPage,
+  HoyPage,
+  HumanResourcesDashboardPage,
+  HumanResourcesHelpPage,
+  InboxPage,
+  InventoryHelpPage,
+  InventoryPage,
+  InvoiceFormPage,
+  InvoicePrintPage,
+  InvoicesPage,
+  JournalEntriesPage,
+  JournalEntryFormPage,
+  JournalTemplateFormPage,
+  JournalTemplatesPage,
+  LandingPage,
+  LeadsPage,
+  LoginPage,
+  MailSettingsPage,
+  MetrologyDashboardPage,
+  MetrologyEquipmentFormPage,
+  MetrologyEquipmentPage,
+  MetrologyInstrumentFormPage,
+  MetrologyInstrumentsPage,
+  QualityDashboardPage,
+  QualityDocumentDetailPage,
+  QualityDocumentsPage,
+  QualityMc01R01Page,
+  QualityMc01R02Page,
+  QualityMc01R03Page,
+  QualityMc01R05Page,
+  QualityPg03R01Page,
+  QualityComplaintPrintPage,
+  QualityPg07R01Page,
+  QualityNonConformityPrintPage,
+  QualityPg04Page,
+  QualityInternalAuditPrintPage,
+  QualityPg05Page,
+  QualitySupplierEvaluationPrintPage,
+  QualityPg06Page,
+  QualityPersonnelAuthorizationPrintPage,
+  QualityPg08R01Page,
+  QualityManagementReviewPrintPage,
+  QualityPg09R03Page,
+  QualitySatisfactionSurveyPrintPage,
+  QualityPg14Page,
+  QualityIntermediateCheckPrintPage,
+  QualityMaintenancePlanPrintPage,
+  QualityEquipmentLogPrintPage,
+  QualityRecordsHubPage,
+  QualityLinkedItPage,
+  QualityPg01R01Page,
+  QualityPg01R02Page,
+  OpportunitiesPage,
+  OpportunityDetailPage,
+  OrderDetailPage,
+  OrderFormPage,
+  OrdersPage,
+  OrgChartPage,
+  OrganizationPositionFormPage,
+  PaymentOrderFormPage,
+  PaymentOrderPrintPage,
+  PaymentOrdersPage,
+  PayrollListPage,
+  PositionJobDescriptionPage,
+  ProcedureManualFormPage,
+  ProcedureManualsPage,
+  ProductFormPage,
+  ProductionCostsPage,
+  ProductionFlowPage,
+  ProductionHelpPage,
+  ProductionOrderDetailPage,
+  ProductionOrdersPage,
+  ProductionPage,
+  ProductionReportsPage,
+  ProductionSetupPage,
+  ProductionVariantsPage,
+  ProductsPage,
+  PurchaseArcaImportPage,
+  PurchaseHelpPage,
+  PurchaseInvoiceFormPage,
+  PurchaseInvoicePrintPage,
+  PurchaseInvoicesPage,
+  PurchaseOrderFormPage,
+  PurchaseOrderPrintPage,
+  PurchaseOrdersPage,
+  PurchaseReceptionFormPage,
+  PurchaseReceptionsPage,
+  PurchaseReportsPage,
+  PurchaseRequestDetailPage,
+  PurchaseRequestFormPage,
+  PurchaseRequestsPage,
+  PurchasesDashboardPage,
+  QuoteFormPage,
+  QuotePrintPage,
+  QuotesPage,
+  RemitoFormPage,
+  RemitoPrintPage,
+  RemitosPage,
+  ReplyTemplatesPage,
+  ReportsPage,
+  SalesHelpPage,
+  SettingsHelpPage,
+  SettingsPage,
+  StandardWeightFormPage,
+  StandardWeightsPage,
+  StandardWeightsPrintPage,
+  StyleShowcasePage,
+  SuperAdminDashboardPage,
+  SuperAdminDemoRequestsPage,
+  SuperAdminLoginPage,
+  SuperAdminPlansPage,
+  SuperAdminTenantsPage,
+  SuppliersPage,
+  TrialBalancePage
+} from "./app/lazyPages";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
 import "./v1-theme.css";
 import "./brand-layout.css";
 import "./excel-tools.css";
-import { DEVELOPMENT_ACCESS, resolveActiveModule, visibleModules } from "./app/moduleRegistry";
+import { DEVELOPMENT_ACCESS, resolveActiveModule, resolveAllowedModuleIds, visibleModules } from "./app/moduleRegistry";
+
+function PageFallback() {
+  return (
+    <div style={{ padding: 40, textAlign: "center", color: "var(--ink-soft, #64748b)" }}>
+      Cargando…
+    </div>
+  );
+}
+
+function withPageSuspense(node: ReactNode) {
+  return <Suspense fallback={<PageFallback />}>{node}</Suspense>;
+}
 
 export function App() {
   const location = useLocation();
   const { user, tenant, availableTenants, switchTenant, logout } = useAuth();
+  const {
+    active: presentationActive,
+    loading: presentationLoading,
+    start: startPresentation,
+    end: endPresentation
+  } = usePresentationMode();
 
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("Empresa");
   const [appsOpen, setAppsOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showAskLeal, setShowAskLeal] = useState(false);
+  const [exitPresentationOpen, setExitPresentationOpen] = useState(false);
+  const [exitPassword, setExitPassword] = useState("");
+  const [exitError, setExitError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user || !tenant?.id) return;
     void api
       .getCompanySettings()
       .then((settings) => {
@@ -151,66 +209,46 @@ export function App() {
         setCompanyName(settings.tradeName || settings.legalName || "Empresa");
       })
       .catch(() => undefined);
-  }, [tenant?.id]);
+  }, [user, tenant?.id]);
 
   const activeCompanyName = tenant?.tradeName || tenant?.legalName || companyName;
 
   const userRole = user?.role || "Comercial";
-  let allowedModuleIds: string[] = [];
-  if (userRole === "Admin") {
-    allowedModuleIds = ["inicio", "directorio", "crm", "comunicaciones", "ventas", "compras", "inventario", "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "administracion"];
-  } else {
-    try {
-      const raw = typeof user?.allowedModulesJson === "string" ? JSON.parse(user.allowedModulesJson) : user?.allowedModulesJson || [];
-      const map: Record<string, string[]> = {
-        sales: ["ventas"],
-        crm: ["crm", "directorio", "comunicaciones"],
-        communications: ["comunicaciones"],
-        purchases: ["compras"],
-        inventory: ["inventario", "produccion"],
-        finance: ["finanzas"],
-        fleet: ["flota"],
-        hr: ["rrhh"],
-        grains: ["cereales"],
-        accounting: ["contabilidad"],
-        metrology: ["metrologia"]
-      };
-      allowedModuleIds = ["inicio"];
-      (Array.isArray(raw) ? raw : []).forEach((r: string) => {
-        if (map[r]) allowedModuleIds.push(...map[r]);
-        else allowedModuleIds.push(r);
-      });
-    } catch {
-      allowedModuleIds = ["inicio", "ventas", "crm", "comunicaciones"];
-    }
-  }
+  const allowedModuleIds = resolveAllowedModuleIds(userRole, user?.allowedModulesJson);
 
   const allMods = visibleModules(DEVELOPMENT_ACCESS);
-  const modules = allMods.filter((m) => m.id === "inicio" || allowedModuleIds.includes(m.id));
+  const modules = allMods
+    .filter((m) => m.id === "inicio" || allowedModuleIds.includes(m.id))
+    .filter((m) => !presentationActive || m.id === "inicio" || m.id === "calidad" || m.id === "metrologia");
   const activeModule = resolveActiveModule(location.pathname, DEVELOPMENT_ACCESS);
   const activeModuleId = activeModule.id;
-  const hasCommunications = !!user && allowedModuleIds.includes("comunicaciones");
+  const hasCommunications = !!user && allowedModuleIds.includes("comunicaciones") && !presentationActive;
+  const canTogglePresentation =
+    !!user && (allowedModuleIds.includes("calidad") || activeModuleId === "calidad" || activeModuleId === "metrologia");
   useCommunicationsBrowserNotifications(hasCommunications);
 
   if (location.pathname === "/login") {
-    return <LoginPage />;
+    return withPageSuspense(<LoginPage />);
   }
 
   if (location.pathname === "/landing" || location.pathname === "/demo") {
-    return <LandingPage />;
+    return withPageSuspense(<LandingPage />);
   }
 
   if (location.pathname.startsWith("/superadmin")) {
     if (location.pathname === "/superadmin/login") {
-      return <SuperAdminLoginPage />;
+      return withPageSuspense(<SuperAdminLoginPage />);
     }
     if (location.pathname === "/superadmin/tenants") {
-      return <SuperAdminTenantsPage />;
+      return withPageSuspense(<SuperAdminTenantsPage />);
     }
     if (location.pathname === "/superadmin/planes") {
-      return <SuperAdminPlansPage />;
+      return withPageSuspense(<SuperAdminPlansPage />);
     }
-    return <SuperAdminDashboardPage />;
+    if (location.pathname === "/superadmin/demos") {
+      return withPageSuspense(<SuperAdminDemoRequestsPage />);
+    }
+    return withPageSuspense(<SuperAdminDashboardPage />);
   }
 
   return (
@@ -286,7 +324,7 @@ export function App() {
                   >
                     {availableTenants.map((t) => (
                       <option key={t.id} value={t.id}>
-                        🏢 {t.tradeName || t.legalName}
+                        🏢 {t.legalName}{t.documentNumber ? ` (${t.documentNumber})` : ""}
                       </option>
                     ))}
                   </select>
@@ -340,6 +378,34 @@ export function App() {
             <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid var(--surface-border)" }}>
               {hasCommunications && <CommunicationsNotificationBell />}
 
+              {canTogglePresentation && (
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  disabled={presentationLoading}
+                  onClick={() => {
+                    if (presentationActive) {
+                      setExitError(null);
+                      setExitPassword("");
+                      setExitPresentationOpen(true);
+                    } else {
+                      void startPresentation().catch((err) =>
+                        window.alert(err instanceof Error ? err.message : String(err))
+                      );
+                    }
+                  }}
+                  style={{
+                    fontSize: "0.75rem",
+                    borderColor: presentationActive ? "#b45309" : undefined,
+                    color: presentationActive ? "#b45309" : undefined,
+                    fontWeight: 700
+                  }}
+                  title={presentationActive ? "Salir del modo presentación (requiere contraseña)" : "Activar modo presentación para auditoría"}
+                >
+                  {presentationActive ? "Salir modo presentación" : "Modo presentación · Auditoría"}
+                </button>
+              )}
+
               {/* User Session Bar */}
               {user && (
                 <div style={{
@@ -348,16 +414,16 @@ export function App() {
                   justifyContent: "space-between",
                   padding: "6px 10px",
                   borderRadius: "8px",
-                  background: "var(--surface-muted)",
-                  border: "1px solid var(--surface-border)",
+                  background: presentationActive ? "#fff7ed" : "var(--surface-muted)",
+                  border: `1px solid ${presentationActive ? "#fdba74" : "var(--surface-border)"}`,
                   fontSize: "0.78rem"
                 }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       👤 {user.fullName}
                     </div>
-                    <div style={{ fontSize: "0.68rem", color: "var(--brand-accent)" }}>
-                      {user.role}
+                    <div style={{ fontSize: "0.68rem", color: presentationActive ? "#b45309" : "var(--brand-accent)" }}>
+                      {presentationActive ? "Presentación · solo lectura" : user.role}
                     </div>
                   </div>
                   <button
@@ -476,6 +542,7 @@ export function App() {
           )}
 
           <main className="main">
+            <Suspense fallback={<PageFallback />}>
             <Routes>
               {/* Style Showcase & Theme Preview */}
               <Route path="/estilos" element={<StyleShowcasePage />} />
@@ -551,6 +618,7 @@ export function App() {
               <Route path="/produccion/ordenes/:id" element={<ProductionOrderDetailPage />} />
               <Route path="/finanzas" element={<FinancePage />} />
               <Route path="/finanzas/bancos" element={<FinanceAccountsPage />} />
+              <Route path="/finanzas/conciliacion" element={<FinanceReconciliationPage />} />
               <Route path="/finanzas/conceptos" element={<FinanceConceptsPage />} />
               <Route path="/finanzas/echeqs" element={<ChequePortfolioPage />} />
               <Route path="/finanzas/cobranzas" element={<CollectionReceiptsWorkspacePage />} />
@@ -618,9 +686,51 @@ export function App() {
               <Route path="/metrologia/patrones/nuevo" element={<StandardWeightFormPage />} />
               <Route path="/metrologia/patrones/imprimir" element={<StandardWeightsPrintPage />} />
               <Route path="/metrologia/patrones/:id" element={<StandardWeightFormPage />} />
+              <Route path="/metrologia/instrumentos" element={<MetrologyInstrumentsPage />} />
+              <Route path="/metrologia/instrumentos/nuevo" element={<MetrologyInstrumentFormPage />} />
+              <Route path="/metrologia/instrumentos/:id" element={<MetrologyInstrumentFormPage />} />
               <Route path="/metrologia/ensayos/nuevo" element={<CalibrationReportFormPage />} />
               <Route path="/metrologia/informes" element={<CalibrationReportsPage />} />
               <Route path="/metrologia/informes/:id/imprimir" element={<CalibrationReportPrintPage />} />
+
+              <Route path="/calidad" element={<QualityDashboardPage />} />
+              <Route path="/calidad/documentos" element={<QualityDocumentsPage />} />
+              <Route path="/calidad/documentos/:code" element={<QualityDocumentDetailPage />} />
+              <Route path="/calidad/registros" element={<QualityRecordsHubPage />} />
+              <Route path="/calidad/registros/pg01-r01" element={<QualityPg01R01Page />} />
+              <Route path="/calidad/registros/pg01-r02" element={<QualityPg01R02Page />} />
+              <Route path="/calidad/registros/mc01-r01" element={<QualityMc01R01Page />} />
+              <Route path="/calidad/registros/mc01-r02" element={<QualityMc01R02Page />} />
+              <Route path="/calidad/registros/indicadores" element={<QualityMc01R03Page />} />
+              <Route path="/calidad/registros/mc01-r03" element={<QualityMc01R03Page />} />
+              <Route path="/calidad/registros/mc01-r05" element={<QualityMc01R05Page />} />
+              <Route path="/calidad/registros/quejas" element={<QualityPg03R01Page />} />
+              <Route path="/calidad/registros/pg03-r01" element={<QualityPg03R01Page />} />
+              <Route path="/calidad/registros/quejas/:id/pdf" element={<QualityComplaintPrintPage />} />
+              <Route path="/calidad/registros/nc" element={<QualityPg07R01Page />} />
+              <Route path="/calidad/registros/pg07-r01" element={<QualityPg07R01Page />} />
+              <Route path="/calidad/registros/nc/:id/pdf" element={<QualityNonConformityPrintPage />} />
+              <Route path="/calidad/registros/auditorias" element={<QualityPg04Page />} />
+              <Route path="/calidad/registros/pg04" element={<QualityPg04Page />} />
+              <Route path="/calidad/registros/auditorias/:id/pdf" element={<QualityInternalAuditPrintPage />} />
+              <Route path="/calidad/registros/proveedores" element={<QualityPg05Page />} />
+              <Route path="/calidad/registros/pg05" element={<QualityPg05Page />} />
+              <Route path="/calidad/registros/proveedores/:id/pdf" element={<QualitySupplierEvaluationPrintPage />} />
+              <Route path="/calidad/registros/personal" element={<QualityPg06Page />} />
+              <Route path="/calidad/registros/pg06" element={<QualityPg06Page />} />
+              <Route path="/calidad/registros/personal/autorizacion/:id/pdf" element={<QualityPersonnelAuthorizationPrintPage />} />
+              <Route path="/calidad/registros/revision-direccion" element={<QualityPg08R01Page />} />
+              <Route path="/calidad/registros/pg08-r01" element={<QualityPg08R01Page />} />
+              <Route path="/calidad/registros/revision-direccion/:id/pdf" element={<QualityManagementReviewPrintPage />} />
+              <Route path="/calidad/registros/encuestas" element={<QualityPg09R03Page />} />
+              <Route path="/calidad/registros/pg09-r03" element={<QualityPg09R03Page />} />
+              <Route path="/calidad/registros/encuestas/:id/pdf" element={<QualitySatisfactionSurveyPrintPage />} />
+              <Route path="/calidad/registros/equipos" element={<QualityPg14Page />} />
+              <Route path="/calidad/registros/pg14" element={<QualityPg14Page />} />
+              <Route path="/calidad/registros/equipos/verificacion/:id/pdf" element={<QualityIntermediateCheckPrintPage />} />
+              <Route path="/calidad/registros/equipos/mantenimiento/:id/pdf" element={<QualityMaintenancePlanPrintPage />} />
+              <Route path="/calidad/registros/equipos/hoja-vida/:source/:assetId/pdf" element={<QualityEquipmentLogPrintPage />} />
+              <Route path="/calidad/registros/it/:itCode/:record" element={<QualityLinkedItPage />} />
 
               {/* Reports & Settings Routes */}
               <Route path="/reportes" element={<ReportsPage />} />
@@ -632,10 +742,66 @@ export function App() {
               <Route path="/comunicaciones/canales" element={<ChannelsPage />} />
               <Route path="/comunicaciones/plantillas" element={<ReplyTemplatesPage />} />
             </Routes>
+            </Suspense>
           </main>
         </div>
 
         {/* Asistente Copiloto Modal */}
+        {exitPresentationOpen && (
+          <div className="modal-backdrop" role="presentation" onClick={() => setExitPresentationOpen(false)}>
+            <div
+              className="card pad"
+              role="dialog"
+              aria-modal="true"
+              style={{ maxWidth: 420, margin: "12vh auto", background: "var(--surface)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ marginTop: 0 }}>Salir del modo presentación</h3>
+              <p className="muted" style={{ fontSize: 13 }}>
+                Por seguridad, reingresá tu contraseña. Así el auditor no puede desactivar el modo solo.
+              </p>
+              <label style={{ display: "block", fontSize: 13, marginBottom: 4 }}>Contraseña</label>
+              <input
+                type="password"
+                value={exitPassword}
+                onChange={(e) => setExitPassword(e.target.value)}
+                autoFocus
+                style={{ width: "100%", marginBottom: 8 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    void endPresentation(exitPassword)
+                      .then(() => {
+                        setExitPresentationOpen(false);
+                        setExitPassword("");
+                      })
+                      .catch((err) => setExitError(err instanceof Error ? err.message : String(err)));
+                  }
+                }}
+              />
+              {exitError && <p style={{ color: "#b91c1c", fontSize: 13 }}>{exitError}</p>}
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+                <button type="button" className="btn ghost" onClick={() => setExitPresentationOpen(false)}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={presentationLoading || !exitPassword}
+                  onClick={() => {
+                    void endPresentation(exitPassword)
+                      .then(() => {
+                        setExitPresentationOpen(false);
+                        setExitPassword("");
+                      })
+                      .catch((err) => setExitError(err instanceof Error ? err.message : String(err)));
+                  }}
+                >
+                  Salir
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <AskLealAssistantModal isOpen={showAskLeal} onClose={() => setShowAskLeal(false)} />
       </div>
     </ProtectedRoute>

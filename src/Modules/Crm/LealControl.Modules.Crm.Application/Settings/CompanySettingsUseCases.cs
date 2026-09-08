@@ -49,13 +49,16 @@ public sealed record TenantUserDto(
     string Role,
     bool IsActive,
     DateTime CreatedAtUtc,
-    string? AllowedModulesJson = null);
+    string? AllowedModulesJson = null,
+    bool IsTechnicalDirector = false);
 
-public sealed record CreateTenantUserCommand(string FullName, string Email, string Role, string? Password = null, string? AllowedModulesJson = null)
+public sealed record CreateTenantUserCommand(string FullName, string Email, string Role, string? Password = null, string? AllowedModulesJson = null, bool IsTechnicalDirector = false)
     : IRequest<Result<TenantUserDto>>;
 
-public sealed record UpdateTenantUserCommand(Guid Id, string FullName, string Role, bool IsActive, string? Password = null, string? AllowedModulesJson = null)
+public sealed record UpdateTenantUserCommand(Guid Id, string FullName, string Role, bool IsActive, string? Password = null, string? AllowedModulesJson = null, bool? IsTechnicalDirector = null)
     : IRequest<Result<TenantUserDto>>;
+
+public sealed record DeleteTenantUserCommand(Guid Id) : IRequest<Result<bool>>;
 
 public sealed record GetCompanySettingsQuery : IRequest<Result<CompanySettingsDto>>;
 

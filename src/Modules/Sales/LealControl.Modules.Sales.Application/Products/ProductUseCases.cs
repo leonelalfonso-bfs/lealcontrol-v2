@@ -293,7 +293,14 @@ internal sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCateg
 
     public async Task<Result<ProductCategoryDto>> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
     {
-        CategoryId? parentId = request.Model.ParentCategoryId.HasValue ? new CategoryId(request.Model.ParentCategoryId.Value) : null;
+        if (request.Model is null || string.IsNullOrWhiteSpace(request.Model.Name))
+        {
+            return Result<ProductCategoryDto>.Failure(SalesErrors.CategoryNameRequired);
+        }
+
+        CategoryId? parentId = request.Model.ParentCategoryId.HasValue && request.Model.ParentCategoryId.Value != Guid.Empty
+            ? new CategoryId(request.Model.ParentCategoryId.Value)
+            : null;
         var result = ProductCategory.Create(
             _tenantContext.TenantId,
             request.Model.Name,

@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using LealControl.Modules.Sales.Application;
 using LealControl.Modules.Sales.Application.Abstractions;
 using LealControl.Modules.Sales.Domain.Orders;
@@ -19,12 +20,7 @@ public static class DependencyInjection
         services.AddSalesApplication();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
 
-        var connectionString = configuration.GetConnectionString("Database")
-            ?? throw new InvalidOperationException("Falta ConnectionStrings:Database.");
-
-        services.AddDbContext<SalesDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql =>
-                npgsql.MigrationsHistoryTable("__ef_migrations_history", SalesDbContext.Schema)));
+        services.AddTenantDbContext<SalesDbContext>(SalesDbContext.Schema);
 
         services.AddScoped<ISalesUnitOfWork>(sp => sp.GetRequiredService<SalesDbContext>());
         services.AddScoped<IQuoteRepository, QuoteRepository>();

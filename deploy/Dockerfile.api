@@ -4,6 +4,12 @@ COPY . .
 RUN dotnet restore src/Host/LealControl.Api/LealControl.Api.csproj && dotnet publish src/Host/LealControl.Api/LealControl.Api.csproj -c Release -o /app/publish --no-restore
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /var/log/lealcontrol
 COPY --from=build /app/publish .
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8080/health/live || exit 1
 ENTRYPOINT ["dotnet", "LealControl.Api.dll"]

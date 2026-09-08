@@ -1,11 +1,3 @@
-import * as pdfjsLib from "pdfjs-dist";
-
-// Configure worker for pdfjs-dist
-if (typeof window !== "undefined" && "Worker" in window) {
-  // Use CDN or bundled worker
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-}
-
 export interface ParsedWeightItem {
   identification: string;
   serialNumber: string;
@@ -39,6 +31,11 @@ export interface ParsedCertificateResult {
  * Reconstruct text from PDF pages with vertical baseline grouping tolerance
  */
 export async function extractTextFromPdf(file: File, onProgress?: (msg: string) => void): Promise<string> {
+  const pdfjsLib = await import("pdfjs-dist");
+  if (typeof window !== "undefined" && "Worker" in window) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  }
+
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   

@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Security;
+using LealControl.Modules.Finance.Application.Collections;
+using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -10,50 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Modules.Finance.Infrastructure;
 
-public sealed record CollectionReceiptLineInput(
-    string Method,
-    decimal Amount,
-    string Currency,
-    Guid? AccountId,
-    Guid? MovementId,
-    Guid? ChequeId,
-    string? RetentionType,
-    string? RetentionCertificate,
-    string? Notes
-);
-
-public sealed record CollectionReceiptImputationInput(
-    Guid InvoiceId,
-    string InvoiceNumber,
-    decimal InvoiceTotal,
-    decimal AmountImputed
-);
-
-public sealed record CreateCollectionReceiptRequest(
-    Guid? AccountId,
-    Guid? CustomerId,
-    Guid? InvoiceId,
-    Guid? MovementId,
-    Guid? ChequeId,
-    decimal Amount,
-    string Currency,
-    decimal? InvoiceAmount,
-    string? InvoiceCurrency,
-    decimal? InvoiceExchangeRate,
-    decimal? PaymentExchangeRate,
-    decimal? SuggestedAdjustmentArs,
-    string? SuggestedAdjustmentType,
-    DateTime ReceiptDateUtc,
-    string Description,
-    IReadOnlyList<CollectionReceiptLineInput>? Lines = null,
-    IReadOnlyList<CollectionReceiptImputationInput>? Imputations = null
-);
-
 public static class FinanceReceipts
 {
     public static IEndpointRouteBuilder MapFinanceReceiptEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/finance/collections").WithTags("Finance Collections");
+        var group = endpoints.MapGroup("/api/v1/finance/collections").WithTags("Finance Collections").RequirePolicyOnWrites("RequireFinance");
 
         // List receipts
         group.MapGet("", async (FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
@@ -144,217 +103,33 @@ public static class FinanceReceipts
             });
         });
 
-        // Create receipt
-        group.MapPost("", async (CreateCollectionReceiptRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+        group.MapPost("", async (CreateCollectionReceiptCommand body, ISender sender, CancellationToken ct) =>
         {
-            var tenantId = tenant.TenantId.Value;
-            var currency = string.IsNullOrWhiteSpace(body.Currency) ? "ARS" : body.Currency.Trim().ToUpperInvariant();
-            await FinanceConcepts.EnsureBaseConceptsAsync(db, tenantId, ct);
-
-            var lines = body.Lines ?? Array.Empty<CollectionReceiptLineInput>();
-            var imputations = body.Imputations ?? Array.Empty<CollectionReceiptImputationInput>();
-
-            // The true receipt amount is ALWAYS the sum of payment lines if provided, or body.Amount
-            var totalLinesAmount = lines.Count > 0 ? lines.Sum(x => x.Amount) : body.Amount;
-            if (totalLinesAmount <= 0)
-            {
-                return Results.BadRequest("El importe total de los medios de cobro debe ser mayor a cero.");
-            }
-
-            if (string.IsNullOrWhiteSpace(body.Description))
-            {
-                return Results.BadRequest("La descripción del recibo es obligatoria.");
-            }
-
-            // Calculate total imputed to invoices
-            var totalImputedAmount = imputations.Count > 0 
-                ? imputations.Sum(x => x.AmountImputed) 
-                : (body.InvoiceAmount ?? (body.InvoiceId.HasValue ? totalLinesAmount : 0));
-
-            // Strict consistency validation: cannot impute more than collected
-            if (imputations.Count > 0 && totalImputedAmount > totalLinesAmount + 0.01m)
-            {
-                return Results.BadRequest($"El total imputado a facturas (${totalImputedAmount:N2}) supera el total de cobro recibido (${totalLinesAmount:N2}). Ajuste los importes imputados.");
-            }
-
-            // Foreign invoice validation
-            if (body.InvoiceCurrency is not null && body.InvoiceCurrency.Trim().ToUpperInvariant() != currency && 
-                (!body.InvoiceAmount.HasValue || !body.InvoiceExchangeRate.HasValue || !body.PaymentExchangeRate.HasValue || body.InvoiceAmount <= 0 || body.InvoiceExchangeRate <= 0 || body.PaymentExchangeRate <= 0))
-            {
-                return Results.BadRequest("Para imputar un comprobante en otra moneda indicá importe y cotizaciones de emisión y cobro.");
-            }
-
-            var receiptId = Guid.NewGuid();
-            var number = $"RC-{DateTime.UtcNow:yyyyMMddHHmmss}";
-
-            var mainAccountId = body.AccountId ?? lines.FirstOrDefault(l => l.AccountId.HasValue)?.AccountId ?? Guid.Empty;
-
-            var receipt = new CollectionReceipt
-            {
-                Id = receiptId,
-                TenantId = tenantId,
-                AccountId = mainAccountId,
-                CustomerId = body.CustomerId,
-                InvoiceId = body.InvoiceId ?? imputations.FirstOrDefault()?.InvoiceId,
-                ReceiptNumber = number,
-                Amount = totalLinesAmount,
-                Currency = currency,
-                InvoiceAmount = totalImputedAmount > 0 ? totalImputedAmount : body.InvoiceAmount,
-                InvoiceCurrency = body.InvoiceCurrency?.Trim().ToUpperInvariant(),
-                InvoiceExchangeRate = body.InvoiceExchangeRate,
-                PaymentExchangeRate = body.PaymentExchangeRate,
-                SuggestedAdjustmentArs = body.SuggestedAdjustmentArs,
-                SuggestedAdjustmentType = body.SuggestedAdjustmentType?.Trim(),
-                ReceiptDateUtc = body.ReceiptDateUtc,
-                Description = body.Description.Trim(),
-                Status = "Confirmed",
-                CreatedAtUtc = DateTime.UtcNow
-            };
-
-            db.CollectionReceipts.Add(receipt);
-
-            // 1. Process payment lines (Medios de Cobro)
-            if (lines.Count > 0)
-            {
-                var conceptId = await db.FinancialConcepts
-                    .Where(x => x.TenantId == tenantId && (x.Code == "COBRO_CLIENTE" || x.Code == "COBRO_CLIENTES"))
-                    .Select(x => (Guid?)x.Id)
-                    .SingleOrDefaultAsync(ct);
-
-                foreach (var line in lines)
-                {
-                    var lineId = Guid.NewGuid();
-                    var lineCurrency = string.IsNullOrWhiteSpace(line.Currency) ? currency : line.Currency.Trim().ToUpperInvariant();
-                    var lineMethod = line.Method.Trim();
-
-                    db.CollectionReceiptLines.Add(new CollectionReceiptLine
-                    {
-                        Id = lineId,
-                        TenantId = tenantId,
-                        ReceiptId = receiptId,
-                        Method = lineMethod,
-                        Amount = line.Amount,
-                        Currency = lineCurrency,
-                        AccountId = line.AccountId,
-                        BankMovementId = line.MovementId,
-                        ChequeId = line.ChequeId,
-                        RetentionType = line.RetentionType?.Trim(),
-                        RetentionCertificate = line.RetentionCertificate?.Trim(),
-                        Notes = line.Notes?.Trim(),
-                        CreatedAtUtc = DateTime.UtcNow
-                    });
-
-                    // If it's a bank movement reconciliation
-                    if (line.MovementId.HasValue)
-                    {
-                        var movement = await db.Movements.SingleOrDefaultAsync(x => x.Id == line.MovementId.Value && x.TenantId == tenantId, ct);
-                        if (movement != null)
-                        {
-                            movement.ReconciliationStatus = FinancialReconciliationStatus.Reconciled;
-                            movement.LinkedEntityType = "CollectionReceipt";
-                            movement.LinkedEntityId = receiptId;
-                        }
-                    }
-                    // Else if bank or cash without pre-existing movement: create credit movement
-                    else if ((lineMethod.Equals("BankTransfer", StringComparison.OrdinalIgnoreCase) || 
-                             lineMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase) || 
-                             lineMethod.Equals("Transferencia", StringComparison.OrdinalIgnoreCase) || 
-                             lineMethod.Equals("Efectivo", StringComparison.OrdinalIgnoreCase)) && line.AccountId.HasValue)
-                    {
-                        db.Movements.Add(new FinancialMovement
-                        {
-                            Id = Guid.NewGuid(),
-                            TenantId = tenantId,
-                            AccountId = line.AccountId.Value,
-                            Kind = FinancialMovementKind.Credit,
-                            Amount = line.Amount,
-                            Currency = lineCurrency,
-                            OperationDateUtc = body.ReceiptDateUtc,
-                            Description = $"Cobro a cliente ({number}) - {body.Description.Trim()}",
-                            ExternalReference = number,
-                            ConceptId = conceptId,
-                            ClassificationStatus = FinancialClassificationStatus.Confirmed,
-                            ClassifiedAtUtc = DateTime.UtcNow,
-                            LinkedEntityType = "CollectionReceipt",
-                            LinkedEntityId = receiptId,
-                            ReconciliationStatus = FinancialReconciliationStatus.Reconciled,
-                            CreatedAtUtc = DateTime.UtcNow
-                        });
-                    }
-
-                    // Cheque linking
-                    if (line.ChequeId.HasValue)
-                    {
-                        var cheque = await db.ReceivedCheques.SingleOrDefaultAsync(x => x.Id == line.ChequeId.Value && x.TenantId == tenantId, ct);
-                        if (cheque != null)
-                        {
-                            cheque.CollectionReceiptId = receiptId;
-                            cheque.Notes = string.IsNullOrWhiteSpace(cheque.Notes)
-                                ? $"Aplicado en Recibo {number}"
-                                : $"{cheque.Notes} | Recibo {number}";
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // Fallback for legacy single-item call
-                var cheque = body.ChequeId is null ? null : await db.ReceivedCheques.SingleOrDefaultAsync(x => x.Id == body.ChequeId && x.TenantId == tenantId, ct);
-                if (cheque is not null) cheque.CollectionReceiptId = receiptId;
-
-                var movement = body.MovementId is null ? null : await db.Movements.SingleOrDefaultAsync(x => x.Id == body.MovementId && x.TenantId == tenantId, ct);
-                if (movement is not null)
-                {
-                    movement.ReconciliationStatus = FinancialReconciliationStatus.Reconciled;
-                    movement.LinkedEntityType = "CollectionReceipt";
-                    movement.LinkedEntityId = receiptId;
-                }
-                else if (body.AccountId.HasValue && cheque is null)
-                {
-                    var conceptId = await db.FinancialConcepts.Where(x => x.TenantId == tenantId && x.Code == "COBRO_CLIENTE").Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct);
-                    db.Movements.Add(new FinancialMovement
-                    {
-                        Id = Guid.NewGuid(),
-                        TenantId = tenantId,
-                        AccountId = body.AccountId.Value,
-                        Kind = FinancialMovementKind.Credit,
-                        Amount = totalLinesAmount,
-                        Currency = currency,
-                        OperationDateUtc = body.ReceiptDateUtc,
-                        Description = body.Description.Trim(),
-                        ExternalReference = number,
-                        ConceptId = conceptId,
-                        ClassificationStatus = FinancialClassificationStatus.Confirmed,
-                        ClassifiedAtUtc = DateTime.UtcNow,
-                        LinkedEntityType = "CollectionReceipt",
-                        LinkedEntityId = receiptId,
-                        ReconciliationStatus = FinancialReconciliationStatus.Reconciled,
-                        CreatedAtUtc = DateTime.UtcNow
-                    });
-                }
-            }
-
-            // 2. Process invoice imputations (Imputaciones de comprobantes)
-            foreach (var imp in imputations)
-            {
-                db.CollectionReceiptImputations.Add(new CollectionReceiptImputation
-                {
-                    Id = Guid.NewGuid(),
-                    TenantId = tenantId,
-                    ReceiptId = receiptId,
-                    InvoiceId = imp.InvoiceId,
-                    InvoiceNumber = imp.InvoiceNumber.Trim(),
-                    InvoiceTotal = imp.InvoiceTotal,
-                    AmountImputed = imp.AmountImputed,
-                    CreatedAtUtc = DateTime.UtcNow
-                });
-            }
-
-            await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/finance/collections/{receiptId}", new { id = receiptId, receiptNumber = number, status = "Confirmed" });
+            var result = await sender.Send(body, ct);
+            return result.ToCreatedOrBadRequest(x => $"/api/v1/finance/collections/{x.Id}");
         });
 
-        var detail = endpoints.MapGroup("/api/v1/finance").WithTags("Finance Detail");
+        group.MapPost("/{id:guid}/void", async (
+            Guid id,
+            VoidFinanceDocumentRequest body,
+            FinanceDbContext db,
+            LealControl.BuildingBlocks.Tenancy.ITenantContext tenant,
+            LealControl.Modules.Accounting.Contracts.Posting.IAccountingPostingGateway accounting,
+            Microsoft.Extensions.Logging.ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
+        {
+            var result = await FinanceVoid.VoidCollectionReceiptAsync(id, body, db, tenant.TenantId.Value, ct);
+            var voided = await db.CollectionReceipts.AsNoTracking()
+                .AnyAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value && x.Status == "Voided", ct);
+            if (voided)
+            {
+                await FinanceAccountingPublisher.TryReverseAsync(
+                    accounting, id.ToString(), body.Reason ?? "", loggerFactory.CreateLogger("FinanceAccounting"), ct);
+            }
+            return result;
+        });
+
+        var detail = endpoints.MapGroup("/api/v1/finance").WithTags("Finance Detail").RequirePolicyOnWrites("RequireFinance");
         detail.MapGet("/accounts/{accountId:guid}/movements-detail", async (Guid accountId, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;

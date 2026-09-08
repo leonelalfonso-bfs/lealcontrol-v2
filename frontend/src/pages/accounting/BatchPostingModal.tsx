@@ -7,6 +7,9 @@ import type {
   BatchPostingExecuteResponse
 } from "../../api/types";
 
+const BATCH_POSTING_DISABLED =
+  "La contabilización en lote está en reconstrucción y no generará asientos hasta conectar documentos reales.";
+
 interface BatchPostingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -215,6 +218,20 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
           {/* ============================================================ */}
           {step === 1 && (
             <div>
+              <div
+                className="alert"
+                style={{
+                  marginBottom: 16,
+                  background: "#fffbeb",
+                  color: "#92400e",
+                  border: "1px solid #fde68a",
+                  padding: "10px 14px",
+                  borderRadius: 6,
+                  fontSize: "0.85rem"
+                }}
+              >
+                ⚠️ {BATCH_POSTING_DISABLED}
+              </div>
               <p style={{ margin: "0 0 16px", fontSize: "0.88rem", color: "#475569" }}>
                 Seleccione el período de fechas y los módulos operativos que desea contabilizar en el Libro Diario.
               </p>
@@ -482,16 +499,17 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
               <button
                 type="button"
                 onClick={handleExecuteBatch}
-                disabled={!confirmed || executing}
+                disabled
+                title={BATCH_POSTING_DISABLED}
                 className="btn"
                 style={{
-                  background: confirmed ? "#dc2626" : "#cbd5e1",
+                  background: "#cbd5e1",
                   color: "#fff",
                   fontWeight: 800,
-                  cursor: confirmed ? "pointer" : "not-allowed"
+                  cursor: "not-allowed"
                 }}
               >
-                🔴 CONTABILIZAR AHORA
+                🔴 CONTABILIZAR AHORA (deshabilitado)
               </button>
             </>
           )}

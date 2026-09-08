@@ -4,16 +4,25 @@ using LealControl.Modules.Crm.Domain.Customers;
 using LealControl.Modules.Crm.Domain.Leads;
 using LealControl.Modules.Crm.Domain.Opportunities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LealControl.Modules.Crm.Infrastructure.Persistence;
 
 public sealed class CrmDbContext : DbContext, IUnitOfWork
 {
     public const string Schema = "crm";
+    private readonly ILogger<CrmDbContext> _logger;
 
     public CrmDbContext(DbContextOptions<CrmDbContext> options)
+        : this(options, null)
+    {
+    }
+
+    public CrmDbContext(DbContextOptions<CrmDbContext> options, ILogger<CrmDbContext>? logger)
         : base(options)
     {
+        _logger = logger ?? NullLogger<CrmDbContext>.Instance;
     }
 
     public DbSet<Customer> Customers => Set<Customer>();
@@ -96,17 +105,30 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""LastLoginUtc"" timestamp with time zone;
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""IsActive"" boolean DEFAULT true;
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""AllowedModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]';
-                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRating"" character varying(10);
-                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraWorstSituation"" integer;
-                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraTotalDebt"" numeric(18,2);
-                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraRejectedChequesCount"" integer;
-                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraLastCheckedAtUtc"" timestamp with time zone;
-                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRecommendation"" character varying(2000);
+                ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""IsTechnicalDirector"" boolean NOT NULL DEFAULT false;
             ");
+
+            // Separate batch: crm.customers may not exist yet on freshly provisioned DBs.
+            // Keep it out of the tenant_users ALTER batch so auth columns still apply.
+            try
+            {
+                await Database.ExecuteSqlRawAsync(@"
+                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRating"" character varying(10);
+                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraWorstSituation"" integer;
+                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraTotalDebt"" numeric(18,2);
+                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraRejectedChequesCount"" integer;
+                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraLastCheckedAtUtc"" timestamp with time zone;
+                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRecommendation"" character varying(2000);
+                ");
+            }
+            catch (Exception customersEx)
+            {
+                _logger.LogWarning(customersEx, "EnsureCrmTablesAsync: columnas BCRA en crm.customers omitidas (tabla ausente o esquema incompleto).");
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[CrmDbContext] Error en EnsureCrmTablesAsync: {ex.Message}");
+            _logger.LogError(ex, "Error en EnsureCrmTablesAsync");
         }
     }
 }

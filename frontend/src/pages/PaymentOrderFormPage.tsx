@@ -20,6 +20,7 @@ type PaymentLine = {
   accountId?: string;
   bankMovementId?: string;
   chequeId?: string;
+  conceptId?: string;
   retentionType?: string;
   retentionCertificate?: string;
   notes?: string;
@@ -47,7 +48,9 @@ export function PaymentOrderFormPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [availableCheques, setAvailableCheques] = useState<any[]>([]);
   const [availableMovements, setAvailableMovements] = useState<any[]>([]);
-  const [movementConceptFilter, setMovementConceptFilter] = useState<string>("all");
+  const [movementConceptFilter, setMovementConceptFilter] = useState<string>("");
+  const [movementAccountFilter, setMovementAccountFilter] = useState<string>("");
+  const [loadingMovements, setLoadingMovements] = useState(false);
   const [concepts, setConcepts] = useState<any[]>([]);
   const [purchaseInvoices, setPurchaseInvoices] = useState<PurchaseInvoice[]>([]);
 
@@ -67,25 +70,34 @@ export function PaymentOrderFormPage() {
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadMovementsForAccount = async (accountId?: string) => {
+  const loadAvailableMovements = async (accountId?: string, conceptId?: string) => {
+    setLoadingMovements(true);
     try {
-      const movs = await api.listPaymentAvailableMovements(accountId || undefined);
-      setAvailableMovements(movs || []);
+      const account = accountId && accountId.trim() ? accountId : undefined;
+      const concept = conceptId && conceptId.trim() ? conceptId : undefined;
+      const movs = await api.listPaymentAvailableMovements(account, concept);
+      setAvailableMovements(Array.isArray(movs) ? movs : []);
     } catch {
       setAvailableMovements([]);
+    } finally {
+      setLoadingMovements(false);
     }
   };
 
+  const expenseConcepts = useMemo(
+    () => concepts.filter((c) => c.usableIn === "PaymentOrder" && (c.direction === "Expense" || c.direction === "Both")),
+    [concepts]
+  );
+
   const filteredAvailableMovements = useMemo(() => {
-    return availableMovements.filter((m) => {
-      if (!movementConceptFilter || movementConceptFilter === "all") return true;
-      if (movementConceptFilter === "unclassified") return !m.conceptId;
-      const target = String(movementConceptFilter).toLowerCase().trim();
-      const movConceptId = m.conceptId ? String(m.conceptId).toLowerCase().trim() : "";
-      const movConceptCode = m.conceptCode ? String(m.conceptCode).toLowerCase().trim() : "";
-      return movConceptId === target || movConceptCode === target;
-    });
-  }, [availableMovements, movementConceptFilter]);
+    if (!movementAccountFilter) return availableMovements;
+    return availableMovements.filter((m) => String(m.accountId || "") === movementAccountFilter);
+  }, [availableMovements, movementAccountFilter]);
+
+  useEffect(() => {
+    if (!movementConceptFilter) return;
+    void loadAvailableMovements(movementAccountFilter || "", movementConceptFilter);
+  }, [movementConceptFilter, movementAccountFilter]);
 
   // Load initial data
   useEffect(() => {
@@ -109,7 +121,14 @@ export function PaymentOrderFormPage() {
           )
         );
         setPurchaseInvoices(invRes || []);
-        setConcepts((concRes || []).filter((c: any) => c.isActive));
+        const activeConcepts = (concRes || []).filter((c: any) => c.isActive);
+        setConcepts(activeConcepts);
+        const defaultPago = activeConcepts.find((c: any) => c.code === "PAGO_PROVEEDOR")
+          || activeConcepts.find((c: any) => c.direction === "Expense");
+        const defaultConceptId = defaultPago?.id || "";
+        if (defaultConceptId) {
+          setMovementConceptFilter(defaultConceptId);
+        }
 
         // Initial default line: Bank Transfer with first active bank account or from query params
         if (initialMovementId) {
@@ -122,10 +141,12 @@ export function PaymentOrderFormPage() {
               currency: "ARS",
               accountId: initialAccountId || undefined,
               bankMovementId: initialMovementId,
+              conceptId: defaultConceptId || undefined,
               notes: ""
             }
           ]);
-          void loadMovementsForAccount(initialAccountId || undefined);
+          if (initialAccountId) setMovementAccountFilter(initialAccountId);
+          void loadAvailableMovements(initialAccountId || "", defaultConceptId);
         } else {
           const firstBank = (accRes || []).find((a) => a.isActive);
           if (firstBank) {
@@ -136,10 +157,11 @@ export function PaymentOrderFormPage() {
                 amount: 0,
                 currency: firstBank.currency || "ARS",
                 accountId: firstBank.id,
+                conceptId: defaultConceptId || undefined,
                 notes: ""
               }
             ]);
-            void loadMovementsForAccount(firstBank.id);
+            void loadAvailableMovements("", defaultConceptId);
           }
         }
       } catch (e) {
@@ -234,6 +256,7 @@ export function PaymentOrderFormPage() {
   // Handlers for Payment Lines
   const addLine = (method: PaymentLine["method"] = "BankTransfer") => {
     const firstAcc = accounts.find((a) => a.isActive);
+    const defaultConcept = concepts.find((c) => c.code === "PAGO_PROVEEDOR") || expenseConcepts[0];
     setLines((prev) => [
       ...prev,
       {
@@ -242,12 +265,13 @@ export function PaymentOrderFormPage() {
         amount: Math.max(0, totalImputed - totalPaymentLines),
         currency: firstAcc?.currency || "ARS",
         accountId: firstAcc?.id,
+        conceptId: defaultConcept?.id,
         notes: ""
       }
     ]);
 
-    if (method === "BankTransfer" && firstAcc?.id) {
-      void loadMovementsForAccount(firstAcc.id);
+    if (method === "BankTransfer") {
+      void loadAvailableMovements(movementAccountFilter || "", movementConceptFilter || defaultConcept?.id || "");
     }
   };
 
@@ -260,8 +284,8 @@ export function PaymentOrderFormPage() {
       prev.map((l) => {
         if (l.id === id) {
           const updated = { ...l, ...patch };
-          if (patch.accountId && (updated.method === "BankTransfer" || updated.method === "Cash")) {
-            void loadMovementsForAccount(patch.accountId);
+          if (patch.conceptId && updated.method === "BankTransfer") {
+            setMovementConceptFilter(patch.conceptId);
           }
           return updated;
         }
@@ -279,6 +303,17 @@ export function PaymentOrderFormPage() {
 
     if (totalOrderAmount <= 0) {
       setError("El importe total de la orden de pago debe ser mayor a cero.");
+      return;
+    }
+
+    const bankLineMissingWallet = lines.some(
+      (l) =>
+        l.method === "BankTransfer" &&
+        l.bankMovementId &&
+        !(l.conceptId || movementConceptFilter)
+    );
+    if (bankLineMissingWallet) {
+      setError("Elegí la cartera (concepto) para cada transferencia bancaria vinculada.");
       return;
     }
 
@@ -308,6 +343,7 @@ export function PaymentOrderFormPage() {
           accountId: l.accountId || null,
           bankMovementId: l.bankMovementId || null,
           chequeId: l.chequeId || null,
+          conceptId: l.conceptId || movementConceptFilter || null,
           retentionType: l.retentionType || null,
           retentionCertificate: l.retentionCertificate || null,
           notes: l.notes || null
@@ -625,6 +661,28 @@ export function PaymentOrderFormPage() {
 
                       {(line.method === "BankTransfer" || line.method === "Cash") && (
                         <label style={{ gridColumn: "span 2" }}>
+                          Concepto de Pago (cartera) *
+                          <select
+                            required
+                            value={line.conceptId || movementConceptFilter || ""}
+                            onChange={(e) => {
+                              const conceptId = e.target.value || undefined;
+                              updateLine(line.id, { conceptId, bankMovementId: undefined });
+                              if (conceptId) setMovementConceptFilter(conceptId);
+                            }}
+                          >
+                            <option value="" disabled>Elegí una cartera de egreso</option>
+                            {expenseConcepts.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name} ({c.code})
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+
+                      {(line.method === "BankTransfer" || line.method === "Cash") && (
+                        <label style={{ gridColumn: "span 2" }}>
                           Cuenta Financiera de Origen
                           <select
                             value={line.accountId || ""}
@@ -642,25 +700,45 @@ export function PaymentOrderFormPage() {
 
                       {line.method === "BankTransfer" && (
                         <div style={{ gridColumn: "span 2", background: "#f8fafc", padding: 12, borderRadius: 6, border: "1px solid #e2e8f0", marginTop: 4 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
                             <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f766e" }}>
                               🏦 Vincular Transferencia Bancaria Emitida (Extracto Banco)
                             </span>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Filtrar Concepto:</span>
-                              <select
-                                value={movementConceptFilter}
-                                onChange={(e) => setMovementConceptFilter(e.target.value)}
-                                style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
-                              >
-                                <option value="all">Ver todas</option>
-                                {concepts.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.name}
-                                  </option>
-                                ))}
-                                <option value="unclassified">Sin clasificar</option>
-                              </select>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <label style={{ fontSize: "0.75rem", color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
+                                Cartera
+                                <select
+                                  value={movementConceptFilter}
+                                  onChange={(e) => {
+                                    const conceptId = e.target.value;
+                                    setMovementConceptFilter(conceptId);
+                                    updateLine(line.id, { bankMovementId: undefined, conceptId: conceptId || undefined });
+                                  }}
+                                  style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
+                                >
+                                  {expenseConcepts.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                      {c.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label style={{ fontSize: "0.75rem", color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
+                                Cuenta
+                                <select
+                                  value={movementAccountFilter}
+                                  onChange={(e) => {
+                                    setMovementAccountFilter(e.target.value);
+                                    updateLine(line.id, { bankMovementId: undefined, accountId: e.target.value || line.accountId });
+                                  }}
+                                  style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
+                                >
+                                  <option value="">Todas las cuentas</option>
+                                  {accounts.filter((a) => a.isActive).map((a) => (
+                                    <option key={a.id} value={a.id}>{a.name}</option>
+                                  ))}
+                                </select>
+                              </label>
                             </div>
                           </div>
 
@@ -668,23 +746,36 @@ export function PaymentOrderFormPage() {
                             value={line.bankMovementId || ""}
                             onChange={(e) => {
                               const movId = e.target.value;
-                              const mov = availableMovements.find((m) => m.id === movId);
+                              const mov = filteredAvailableMovements.find((m) => m.id === movId);
                               updateLine(line.id, {
                                 bankMovementId: movId || undefined,
                                 accountId: mov?.accountId || line.accountId,
                                 amount: mov ? Number(mov.amount) : line.amount,
-                                notes: mov ? mov.description : line.notes
+                                notes: mov ? mov.description : line.notes,
+                                conceptId: mov?.conceptId || line.conceptId || movementConceptFilter || undefined
                               });
                             }}
                             style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
                           >
-                            <option value="">-- Pago directo (sin vincular con extracto previo) --</option>
+                            <option value="">
+                              {loadingMovements
+                                ? "Cargando movimientos…"
+                                : filteredAvailableMovements.length === 0
+                                  ? "-- Sin movimientos confirmados disponibles --"
+                                  : `-- Elegí entre ${filteredAvailableMovements.length} movimiento(s) del extracto --`}
+                            </option>
                             {filteredAvailableMovements.map((m) => (
                               <option key={m.id} value={m.id}>
                                 {new Date(m.operationDateUtc).toLocaleDateString("es-AR")} · {money(m.amount, m.currency)} · [{m.conceptName || m.ConceptName || "Sin clasificar"}]{m.accountName ? ` · ${m.accountName}` : ""} · {m.description}
                               </option>
                             ))}
                           </select>
+                          {!loadingMovements && filteredAvailableMovements.length === 0 && (
+                            <p className="muted" style={{ margin: "8px 0 0", fontSize: "0.8rem" }}>
+                              No hay débitos confirmados y sin conciliar para esta cartera
+                              {movementAccountFilter ? " en la cuenta elegida" : ""}. Confirmá movimientos en Finanzas → Conceptos → Bandeja, o cambiá la cartera/cuenta.
+                            </p>
+                          )}
                         </div>
                       )}
 

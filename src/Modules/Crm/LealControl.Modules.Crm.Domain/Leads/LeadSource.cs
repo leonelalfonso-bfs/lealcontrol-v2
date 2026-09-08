@@ -10,5 +10,6 @@ public enum LeadSource
     Catalog = 6,
     Other = 7,
     Instagram = 8,
-    Facebook = 9
+    Facebook = 9,
+    Website = 10
 }

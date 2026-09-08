@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Security;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Sales.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Builder;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace LealControl.Modules.Sales.Infrastructure.Http;
 
@@ -17,13 +19,13 @@ public static class GrainsEndpoints
 {
     public static IEndpointRouteBuilder MapGrainsModule(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/v1/grains").WithTags("Grains & Agriculture Brokerage");
+        var group = endpoints.MapGroup("/api/v1/grains").WithTags("Grains & Agriculture Brokerage").RequirePolicyOnWrites("RequireSales");
 
         // 1. Dashboard
-        group.MapGet("/dashboard", async (ITenantContext tenantContext, SalesDbContext db, CancellationToken ct) =>
+        group.MapGet("/dashboard", async (ITenantContext tenantContext, SalesDbContext db, ILoggerFactory loggerFactory, CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId.Value;
-            await EnsureGrainsSeedAsync(tenantId, db, ct);
+            await EnsureGrainsSeedAsync(tenantId, db, loggerFactory.CreateLogger("GrainsEndpoints"), ct);
 
             var contracts = await db.Database.SqlQueryRaw<GrainContractRecord>(@"
                 SELECT ""Id"", ""TenantId"", ""ContractNumber"", ""ContractType"", ""GrainType"", ""Harvest"",
@@ -112,10 +114,11 @@ public static class GrainsEndpoints
             string? pricingMode,
             ITenantContext tenantContext,
             SalesDbContext db,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId.Value;
-            await EnsureGrainsSeedAsync(tenantId, db, ct);
+            await EnsureGrainsSeedAsync(tenantId, db, loggerFactory.CreateLogger("GrainsEndpoints"), ct);
 
             var contracts = await db.Database.SqlQueryRaw<GrainContractRecord>(@"
                 SELECT ""Id"", ""TenantId"", ""ContractNumber"", ""ContractType"", ""GrainType"", ""Harvest"",
@@ -351,7 +354,7 @@ public static class GrainsEndpoints
         return endpoints;
     }
 
-    private static async Task EnsureGrainsSeedAsync(Guid tenantId, SalesDbContext db, CancellationToken ct)
+    private static async Task EnsureGrainsSeedAsync(Guid tenantId, SalesDbContext db, ILogger logger, CancellationToken ct)
     {
         try
         {
@@ -404,7 +407,7 @@ public static class GrainsEndpoints
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[GrainsEndpoints] Seed error: {ex.Message}");
+            logger.LogWarning(ex, "Grains seed error");
         }
     }
 }

@@ -10,6 +10,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string, tenantId?: string) => Promise<AuthResponse>;
+  applySession: (res: AuthResponse) => void;
   registerTenant: (data: { companyName: string; cuit?: string; phone?: string; adminFullName?: string; email: string; password: string }) => Promise<AuthResponse>;
   switchTenant: (tenantId: string) => Promise<void>;
   logout: () => void;
@@ -18,6 +19,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos de inactividad
+const AVAILABLE_TENANTS_KEY = "leal_available_tenants";
+const PREFERRED_TENANT_KEY = "leal_preferred_tenant_id";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isSessionExpiredOnLoad = () => {
@@ -36,6 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem("leal_tenant");
       localStorage.removeItem("leal_tenant_id");
       localStorage.removeItem("leal_last_activity");
+      localStorage.removeItem(AVAILABLE_TENANTS_KEY);
       return null;
     }
     return localStorage.getItem("leal_token");
@@ -53,7 +57,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [availableTenants, setAvailableTenants] = useState<TenantInfo[]>([]);
+  const [availableTenants, setAvailableTenants] = useState<TenantInfo[]>(() => {
+    if (typeof window === "undefined" || isSessionExpiredOnLoad()) return [];
+    const saved = localStorage.getItem(AVAILABLE_TENANTS_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [loading, setLoading] = useState(true);
 
   // Inactivity tracking
@@ -107,11 +115,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           if (res.availableTenants) {
             setAvailableTenants(res.availableTenants);
+            localStorage.setItem(AVAILABLE_TENANTS_KEY, JSON.stringify(res.availableTenants));
           }
         })
         .catch((err) => {
           if (err?.message?.includes("401") || err?.message?.includes("Unauthorized")) {
             logout();
+            window.location.href = "/login";
           }
         })
         .finally(() => setLoading(false));
@@ -120,7 +130,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [token]);
 
-  const handleAuthSuccess = (res: AuthResponse) => {
+  const applySession = (res: AuthResponse) => {
+    if (!res.token || !res.user || !res.tenant) {
+      return;
+    }
+
     setToken(res.token);
     setUser(res.user);
     setTenant(res.tenant);
@@ -130,12 +144,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("leal_user", JSON.stringify(res.user));
     localStorage.setItem("leal_tenant", JSON.stringify(res.tenant));
     localStorage.setItem("leal_tenant_id", res.tenant.id);
+    localStorage.setItem(PREFERRED_TENANT_KEY, res.tenant.id);
+    localStorage.setItem(AVAILABLE_TENANTS_KEY, JSON.stringify(res.availableTenants || []));
     localStorage.setItem("leal_last_activity", Date.now().toString());
   };
 
+  const handleAuthSuccess = applySession;
+
   const login = async (email: string, password: string, tenantId?: string) => {
     const res = await api.login({ email, password, tenantId });
-    handleAuthSuccess(res);
+    if (!res.requiresTenantSelection && res.token) {
+      applySession(res);
+    }
     return res;
   };
 
@@ -161,6 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("leal_tenant");
     localStorage.removeItem("leal_tenant_id");
     localStorage.removeItem("leal_last_activity");
+    localStorage.removeItem(AVAILABLE_TENANTS_KEY);
   };
 
   return (
@@ -173,6 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: Boolean(token && user),
         loading,
         login,
+        applySession,
         registerTenant,
         switchTenant,
         logout

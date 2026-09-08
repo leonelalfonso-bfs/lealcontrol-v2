@@ -1,0 +1,49 @@
+{
+  "base_url": "http://127.0.0.1:5208",
+  "company_name": "Hermes E2E Empresa 220812",
+  "slug": "hermes-e2e-20260901220812",
+  "admin_email": "admin+20260901220812@hermes-e2e.local",
+  "checks": [
+    {
+      "name": "superadmin_login",
+      "status": 200
+    },
+    {
+      "name": "provision_tenant",
+      "status": 201,
+      "dbName": "leal_tenant_hermes_e2e_20260901220812"
+    },
+    {
+      "name": "tenant_list_readback",
+      "status": 200,
+      "tenantId": "2636d40c-c6e2-4f43-ac21-19dc8d14f72a"
+    },
+    {
+      "name": "tenant_admin_login",
+      "status": 200,
+      "tenantId": "2636d40c-c6e2-4f43-ac21-19dc8d14f72a"
+    },
+    {
+      "name": "auth_me",
+      "status": 200,
+      "tenant": {
+        "id": "2636d40c-c6e2-4f43-ac21-19dc8d14f72a",
+        "legalName": "LEAL CONTROL ERP",
+        "tradeName": "Hermes E2E Empresa 220812",
+        "documentNumber": ""
+      }
+    },
+    {
+      "name": "create_customer_in_new_tenant",
+      "status": 201,
+      "customerId": "04be8813-f601-438d-9f64-50497969add6"
+    },
+    {
+      "name": "read_customer_in_new_tenant",
+      "status": 200,
+      "customerId": "04be8813-f601-438d-9f64-50497969add6"
+    }
+  ],
+  "tenant_id": "2636d40c-c6e2-4f43-ac21-19dc8d14f72a",
+  "db_name": "leal_tenant_hermes_e2e_20260901220812"
+}

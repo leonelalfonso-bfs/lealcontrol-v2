@@ -85,8 +85,7 @@ npm run dev
 
 ## 🔑 Multi-Tenancy & Autenticación
 
-Todas las peticiones a la API utilizan el encabezado `X-Tenant-Id` para aislar los datos entre empresas. En entorno de desarrollo local, si no se envía el header, se asume por defecto el tenant de prueba:
-`X-Tenant-Id: 11111111-1111-1111-1111-111111111111`
+Todas las peticiones a la API (salvo login, health y webhooks firmados) requieren JWT Bearer. El tenant del usuario sale del claim `tenant_id` del token, no del header. SuperAdmin puede actuar sobre un tenant con `X-Tenant-Id`. En desarrollo local, si no se envía el header de SuperAdmin, el claim define el tenant.
 
 ---
 
@@ -105,15 +104,12 @@ Todas las peticiones a la API utilizan el encabezado `X-Tenant-Id` para aislar l
 
 ---
 
-## 🚢 Despliegue en Servidor de Producción (VPS)
+## 🚢 Ambientes
 
-El proyecto incluye configuración Docker lista para producción (`docker-compose.prod.yml` y `Dockerfile` multi-stage):
+- **Pruebas:** https://v2.lealcontrol.com — carpeta `/opt/lealcontrol-staging`, rama `staging`.
+- **Producción:** https://erp.lealcontrol.com — carpeta `/opt/lealcontrol-v2`, rama `main`.
 
-```bash
-cd /opt/lealcontrol-v2
-git pull origin main
-docker compose -f docker-compose.prod.yml up -d --build
-```
+Detalle de deploy: [Guía de desarrollo](docs/DEVELOPER_GUIDE.md).
 
 ---
 

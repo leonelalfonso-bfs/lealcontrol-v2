@@ -58,11 +58,24 @@ export async function fileToBase64(file: File): Promise<string> {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const normalToken = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
+  const superToken = typeof window !== "undefined" ? localStorage.getItem("leal_superadmin_token") : null;
+  const token = normalToken || superToken;
+  const tenantId = typeof window !== "undefined" ? localStorage.getItem("leal_tenant_id") : null;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers ? (options.headers as Record<string, string>) : {})
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  if (tenantId) {
+    headers["X-Tenant-Id"] = tenantId;
+  }
+
   const response = await fetch(path, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers || {})
-    },
+    headers,
     ...options
   });
 

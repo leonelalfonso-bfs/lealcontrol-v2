@@ -100,6 +100,35 @@ public sealed class StandardWeight : Entity<Guid>
     public StandardWeight() : base(Guid.NewGuid()) { }
 }
 
+/// <summary>Instrumento auxiliar de medición (termómetro, etc.) — PG14 / PG16.</summary>
+public sealed class MetrologyInstrument : Entity<Guid>
+{
+    public TenantId TenantId { get; set; }
+    public string Code { get; set; } = string.Empty; // e.g. EQ 001
+    public string Kind { get; set; } = MetrologyInstrumentKinds.Thermometer;
+    public string Description { get; set; } = string.Empty;
+    public string Brand { get; set; } = string.Empty;
+    public string Model { get; set; } = string.Empty;
+    public string SerialNumber { get; set; } = string.Empty;
+    public string MeasurementRange { get; set; } = string.Empty; // e.g. -20..60 °C
+    public string Resolution { get; set; } = string.Empty; // e.g. 0.1 °C
+    public string CertificateNumber { get; set; } = string.Empty;
+    public string TraceabilityLab { get; set; } = string.Empty;
+    public DateTime? CalibrationDate { get; set; }
+    public DateTime? ExpirationDate { get; set; }
+    public string Status { get; set; } = "Valid"; // Valid, Expired, Inactive
+    public string? Notes { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public MetrologyInstrument() : base(Guid.NewGuid()) { }
+}
+
+public static class MetrologyInstrumentKinds
+{
+    public const string Thermometer = "Thermometer";
+    public const string Other = "Other";
+}
+
 public sealed class CalibrationReport : Entity<Guid>
 {
     public TenantId TenantId { get; set; }
@@ -148,6 +177,25 @@ public sealed class CalibrationReport : Entity<Guid>
     
     public string? Observations { get; set; }
     public string? SealsPlaced { get; set; } // Precintos colocados
+
+    /// <summary>Snapshot SGC al emitir: PG12/IT0X/PG09 con versión vigente (JSON).</summary>
+    public string ProcedureSnapshotJson { get; set; } = "[]";
+
+    /// <summary>Códigos de documentos externos del catálogo Calidad (JSON array).</summary>
+    public string ExternalDocumentCodesJson { get; set; } = "[]";
+
+    /// <summary>Instructivo de trabajo vinculado (IT01..IT04).</summary>
+    public string InstructionCode { get; set; } = string.Empty;
+
+    /// <summary>Termómetro / instrumento ambiental usado en el ensayo (PG16).</summary>
+    public Guid? ThermometerInstrumentId { get; set; }
+
+    /// <summary>PG09 R2: Id del informe emitido que esta enmienda reemplaza.</summary>
+    public Guid? SupersedesReportId { get; set; }
+
+    /// <summary>PG09 R2: Motivo de la modificación/enmienda (obligatorio al enmendar).</summary>
+    public string? AmendmentReason { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public CalibrationReport() : base(Guid.NewGuid()) { }
@@ -353,7 +401,10 @@ public record CalibrationReportDto(
     string WeightsUsedJson,
     string? Observations,
     string? SealsPlaced,
-    DateTime CreatedAtUtc
+    DateTime CreatedAtUtc,
+    Guid? SupersedesReportId = null,
+    string? AmendmentReason = null,
+    string? ReportStatus = null
 );
 
 public record CalibrationReportWriteDto(
@@ -385,7 +436,50 @@ public record CalibrationReportWriteDto(
     string? RegulatoryStatus = null,
     string? RegulatoryNotice = null,
     string? TestPlanVersion = null,
-    string? ReportStatus = null
+    string? ReportStatus = null,
+    Guid? ThermometerInstrumentId = null,
+    Guid? SupersedesReportId = null,
+    string? AmendmentReason = null
+);
+
+/// <summary>PG09 R2 — cuerpo de enmienda. Motivo obligatorio; el resto son overrides opcionales del clon.</summary>
+public record CalibrationReportAmendDto(
+    string AmendmentReason,
+    string? Observations = null,
+    string? SealsPlaced = null,
+    string? Verdict = null,
+    decimal? MaxObservedError = null,
+    decimal? MaxAllowedError = null,
+    decimal? ExpandedUncertaintyK2 = null,
+    string? VisualInspectionJson = null,
+    string? RepeatabilityTestJson = null,
+    string? EccentricityTestJson = null,
+    string? LinearityTestJson = null,
+    string? WeightsUsedJson = null,
+    string? PerformedBy = null,
+    decimal? TemperatureCelsius = null,
+    decimal? RelativeHumidityPercent = null,
+    decimal? AtmosphericPressureHpa = null,
+    Guid? ThermometerInstrumentId = null,
+    DateTime? CalibrationDate = null,
+    DateTime? ExpirationDate = null
+);
+
+public record MetrologyInstrumentWriteDto(
+    string Code,
+    string? Kind = null,
+    string? Description = null,
+    string? Brand = null,
+    string? Model = null,
+    string? SerialNumber = null,
+    string? MeasurementRange = null,
+    string? Resolution = null,
+    string? CertificateNumber = null,
+    string? TraceabilityLab = null,
+    DateTime? CalibrationDate = null,
+    DateTime? ExpirationDate = null,
+    string? Status = null,
+    string? Notes = null
 );
 
 public record MetrologyTestPointDto(

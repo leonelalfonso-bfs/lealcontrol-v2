@@ -1461,6 +1461,7 @@ export type UserInfo = {
   email: string;
   role: string;
   allowedModulesJson?: string | null;
+  isTechnicalDirector?: boolean;
 };
 
 export type TenantInfo = {
@@ -1471,10 +1472,11 @@ export type TenantInfo = {
 };
 
 export type AuthResponse = {
-  token: string;
-  user: UserInfo;
-  tenant: TenantInfo;
+  token?: string;
+  user?: UserInfo;
+  tenant?: TenantInfo;
   availableTenants: TenantInfo[];
+  requiresTenantSelection?: boolean;
 };
 
 export type GrainContract = {
@@ -1690,7 +1692,7 @@ export type CalibrationReport = {
   expandedUncertainty: number;
   result: "Apto" | "Apto con Observaciones" | "No Apto";
   observations?: string | null;
-  status: "Draft" | "Issued" | "Cancelled";
+  status: "Draft" | "Issued" | "Cancelled" | "Superseded";
   sealsPlaced?: string | null;
   visualInspectionJson?: string | null;
   standardApplied?: string | null;
@@ -1704,6 +1706,35 @@ export type CalibrationReport = {
   certificateNumber?: string | null;
   verdict?: string | null;
   expandedUncertaintyK2?: number | null;
+  approvedBy?: string | null;
+  procedureSnapshotJson?: string | null;
+  externalDocumentCodesJson?: string | null;
+  instructionCode?: string | null;
+  thermometerInstrumentId?: string | null;
+  /** PG09 R2 — informe emitido que esta enmienda reemplaza */
+  supersedesReportId?: string | null;
+  /** PG09 R2 — motivo de la modificación */
+  amendmentReason?: string | null;
+  createdAtUtc: string;
+};
+
+export type MetrologyInstrument = {
+  id: string;
+  tenantId: string;
+  code: string;
+  kind: string;
+  description?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  serialNumber?: string | null;
+  measurementRange?: string | null;
+  resolution?: string | null;
+  certificateNumber?: string | null;
+  traceabilityLab?: string | null;
+  calibrationDate?: string | null;
+  expirationDate?: string | null;
+  status: string;
+  notes?: string | null;
   createdAtUtc: string;
 };
 

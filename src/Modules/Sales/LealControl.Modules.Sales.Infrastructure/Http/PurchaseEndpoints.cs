@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using LealControl.BuildingBlocks.Security;
 using LealControl.BuildingBlocks.Results;
 using LealControl.Modules.Sales.Application.Purchases;
 using LealControl.Modules.Sales.Domain.Purchases;
@@ -18,7 +19,7 @@ public static class PurchaseEndpoints
 {
     public static void MapPurchaseEndpoints(this IEndpointRouteBuilder app)
     {
-        var purchases = app.MapGroup("/api/v1/purchases").WithTags("Purchases");
+        var purchases = app.MapGroup("/api/v1/purchases").WithTags("Purchases").RequirePolicyOnWrites("RequirePurchases");
 
         // Purchase Orders
         purchases.MapGet("/orders", async (string? search, string? status, ISender sender, CancellationToken ct) =>
@@ -33,13 +34,15 @@ public static class PurchaseEndpoints
             return result.ToHttp();
         });
 
+        // RequireAuthorization runs in AuthorizationMiddleware (before body binding),
+        // so forbidden writers get 403 instead of 400 from invalid/partial JSON.
         purchases.MapPost("/orders", async (CreatePurchaseOrderCommand body, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(body, ct);
             return result.IsSuccess
                 ? Results.Created($"/api/v1/purchases/orders/{result.Value.Id}", result.Value)
                 : result.ToHttp();
-        });
+        }).RequireAuthorization("RequirePurchases");
 
         purchases.MapPut("/orders/{id:guid}/status", async (Guid id, UpdateStatusRequest body, ISender sender, CancellationToken ct) =>
         {

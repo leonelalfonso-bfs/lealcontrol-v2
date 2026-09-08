@@ -1,0 +1,36 @@
+name: Deploy staging
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [staging]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: 22
+          script: |
+            set -euo pipefail
+            APP_DIR="${{ secrets.STAGING_APP_DIR }}"
+            if [ -z "$APP_DIR" ]; then APP_DIR=/opt/lealcontrol-staging; fi
+            cd "$APP_DIR"
+            git fetch origin
+            git checkout staging
+            git pull --ff-only origin staging
+            docker compose -f docker-compose.staging.yml --env-file .env up -d --build
+            docker compose -f docker-compose.staging.yml ps
+            bash scripts/smoke-health.sh 5210 9

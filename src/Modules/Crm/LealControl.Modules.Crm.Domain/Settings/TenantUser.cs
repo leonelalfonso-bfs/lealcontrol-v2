@@ -19,7 +19,8 @@ public sealed class TenantUser : Entity<Guid>
         bool isActive,
         DateTime createdAtUtc,
         string? passwordHash = null,
-        string? allowedModulesJson = null)
+        string? allowedModulesJson = null,
+        bool isTechnicalDirector = false)
         : base(id)
     {
         TenantId = tenantId;
@@ -30,6 +31,7 @@ public sealed class TenantUser : Entity<Guid>
         CreatedAtUtc = createdAtUtc;
         PasswordHash = passwordHash ?? string.Empty;
         AllowedModulesJson = allowedModulesJson ?? @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]";
+        IsTechnicalDirector = isTechnicalDirector;
     }
 
     public TenantId TenantId { get; private set; }
@@ -43,6 +45,9 @@ public sealed class TenantUser : Entity<Guid>
     public string? PasswordHash { get; private set; }
 
     public bool IsActive { get; private set; } = true;
+
+    /// <summary>Director Técnico nominado (PG06). Firma autorizaciones e informes.</summary>
+    public bool IsTechnicalDirector { get; private set; }
 
     public DateTime CreatedAtUtc { get; private set; }
 
@@ -63,7 +68,9 @@ public sealed class TenantUser : Entity<Guid>
         AllowedModulesJson = string.IsNullOrWhiteSpace(json) ? "[]" : json;
     }
 
-    public void Update(string fullName, string role, bool isActive, string? allowedModulesJson = null, string? password = null)
+    public void SetTechnicalDirector(bool value) => IsTechnicalDirector = value;
+
+    public void Update(string fullName, string role, bool isActive, string? allowedModulesJson = null, string? password = null, bool? isTechnicalDirector = null)
     {
         FullName = fullName.Trim();
         Role = role;
@@ -71,6 +78,10 @@ public sealed class TenantUser : Entity<Guid>
         if (allowedModulesJson != null)
         {
             SetAllowedModules(allowedModulesJson);
+        }
+        if (isTechnicalDirector.HasValue)
+        {
+            SetTechnicalDirector(isTechnicalDirector.Value);
         }
         if (!string.IsNullOrWhiteSpace(password))
         {
@@ -82,7 +93,7 @@ public sealed class TenantUser : Entity<Guid>
     {
         if (string.IsNullOrEmpty(PasswordHash))
         {
-            return password == "admin123" || password == "leal123";
+            return false;
         }
 
         return PasswordSecurity.VerifyPassword(password, PasswordHash);
@@ -137,25 +148,43 @@ public static class PasswordSecurity
 
     public static bool VerifyPassword(string password, string storedHash)
     {
-        if (string.IsNullOrWhiteSpace(storedHash) || !storedHash.Contains('.'))
+        if (string.IsNullOrWhiteSpace(storedHash))
             return false;
 
-        var parts = storedHash.Split('.');
-        if (parts.Length != 2) return false;
+        if (storedHash.Contains('.'))
+        {
+            var parts = storedHash.Split('.');
+            if (parts.Length != 2) return false;
+
+            try
+            {
+                byte[] salt = Convert.FromBase64String(parts[0]);
+                byte[] expectedHash = Convert.FromBase64String(parts[1]);
+
+                byte[] actualHash = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
+                    password,
+                    salt,
+                    iterations: 100_000,
+                    hashAlgorithm: System.Security.Cryptography.HashAlgorithmName.SHA256,
+                    outputLength: 32);
+
+                return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         try
         {
-            byte[] salt = Convert.FromBase64String(parts[0]);
-            byte[] expectedHash = Convert.FromBase64String(parts[1]);
-
-            byte[] actualHash = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
-                password,
-                salt,
-                iterations: 100_000,
-                hashAlgorithm: System.Security.Cryptography.HashAlgorithmName.SHA256,
-                outputLength: 32);
-
-            return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var bytes = System.Text.Encoding.UTF8.GetBytes(password + "LealControlSalt2026");
+            var legacyHash = Convert.ToBase64String(sha256.ComputeHash(bytes));
+            var a = System.Text.Encoding.UTF8.GetBytes(legacyHash);
+            var b = System.Text.Encoding.UTF8.GetBytes(storedHash);
+            if (a.Length != b.Length) return false;
+            return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(a, b);
         }
         catch
         {

@@ -52,6 +52,7 @@ public static class FinanceSchema
           ""AccountId"" uuid, ""BankMovementId"" uuid, ""ChequeId"" uuid,
           ""RetentionType"" varchar(80), ""RetentionCertificate"" varchar(120), ""Notes"" varchar(500), ""CreatedAtUtc"" timestamptz NOT NULL
         );
+        ALTER TABLE finance.""CollectionReceiptLines"" ADD COLUMN IF NOT EXISTS ""ConceptId"" uuid;
         CREATE INDEX IF NOT EXISTS ""IX_CollectionReceiptLines_Receipt"" ON finance.""CollectionReceiptLines"" (""ReceiptId"");
 
         CREATE TABLE IF NOT EXISTS finance.""CollectionReceiptImputations"" (
@@ -69,6 +70,9 @@ public static class FinanceSchema
           ""RequiresInstrument"" boolean NOT NULL DEFAULT false, ""CashFlowCategory"" varchar(120), ""Notes"" varchar(800),
           ""CreatedAtUtc"" timestamptz NOT NULL, ""UpdatedAtUtc"" timestamptz
         );
+        ALTER TABLE finance.""FinancialConcepts"" ADD COLUMN IF NOT EXISTS ""UsableIn"" integer NOT NULL DEFAULT 0;
+        ALTER TABLE finance.""FinancialConcepts"" ADD COLUMN IF NOT EXISTS ""CounterpartyType"" integer NOT NULL DEFAULT 0;
+        ALTER TABLE finance.""FinancialConcepts"" ADD COLUMN IF NOT EXISTS ""JournalTemplateCode"" varchar(80);
         CREATE UNIQUE INDEX IF NOT EXISTS ""IX_FinancialConcepts_Tenant_Code"" ON finance.""FinancialConcepts"" (""TenantId"", ""Code"");
         CREATE TABLE IF NOT EXISTS finance.""FinancialConceptRules"" (
           ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""FinancialConceptId"" uuid NOT NULL, ""AccountId"" uuid,
@@ -96,6 +100,7 @@ public static class FinanceSchema
           ""AccountId"" uuid, ""BankMovementId"" uuid, ""ChequeId"" uuid,
           ""RetentionType"" varchar(80), ""RetentionCertificate"" varchar(120), ""Notes"" varchar(500), ""CreatedAtUtc"" timestamptz NOT NULL
         );
+        ALTER TABLE finance.""PaymentOrderLines"" ADD COLUMN IF NOT EXISTS ""ConceptId"" uuid;
         CREATE INDEX IF NOT EXISTS ""IX_PaymentOrderLines_Order"" ON finance.""PaymentOrderLines"" (""PaymentOrderId"");
 
         CREATE TABLE IF NOT EXISTS finance.""PaymentOrderImputations"" (
@@ -105,5 +110,73 @@ public static class FinanceSchema
           ""CreatedAtUtc"" timestamptz NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ""IX_PaymentOrderImputations_Order"" ON finance.""PaymentOrderImputations"" (""PaymentOrderId"");
+
+        CREATE TABLE IF NOT EXISTS finance.""BankStatementImports"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""AccountId"" uuid NOT NULL,
+          ""FileName"" varchar(260), ""FileHash"" varchar(64) NOT NULL,
+          ""PeriodStart"" timestamptz, ""PeriodEnd"" timestamptz,
+          ""DeclaredOpeningBalance"" numeric(18,2), ""DeclaredClosingBalance"" numeric(18,2),
+          ""ComputedClosingBalance"" numeric(18,2),
+          ""RowsTotal"" integer NOT NULL DEFAULT 0, ""RowsImported"" integer NOT NULL DEFAULT 0,
+          ""RowsDuplicated"" integer NOT NULL DEFAULT 0, ""RowsRejected"" integer NOT NULL DEFAULT 0,
+          ""Status"" varchar(20) NOT NULL DEFAULT 'Balanced', ""CreatedAtUtc"" timestamptz NOT NULL,
+          ""CreatedBy"" varchar(120)
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_BankStatementImports_Tenant_Account_Hash"" ON finance.""BankStatementImports"" (""TenantId"", ""AccountId"", ""FileHash"");
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""Origin"" integer NOT NULL DEFAULT 1;
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""ImportId"" uuid;
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""MatchedMovementId"" uuid;
+        CREATE INDEX IF NOT EXISTS ""IX_FinancialMovements_ImportId"" ON finance.""FinancialMovements"" (""ImportId"");
+        CREATE INDEX IF NOT EXISTS ""IX_FinancialMovements_MatchedMovementId"" ON finance.""FinancialMovements"" (""MatchedMovementId"");
+        -- Backfill: filas de extracto quedaron Origin=System (default 1) al agregar la columna.
+        UPDATE finance.""FinancialMovements""
+           SET ""Origin"" = 0
+         WHERE ""Origin"" = 1
+           AND ""ImportId"" IS NOT NULL;
+        UPDATE finance.""FinancialMovements""
+           SET ""Origin"" = 0
+         WHERE ""Origin"" = 1
+           AND ""ImportId"" IS NULL
+           AND ""TransferId"" IS NULL
+           AND ""LinkedEntityType"" IS NULL
+           AND ""ClassifiedAtUtc"" IS NOT NULL
+           AND ""ReconciliationStatus"" NOT IN (4, 5);
+
+        ALTER TABLE finance.""FinancialConceptRules"" ADD COLUMN IF NOT EXISTS ""CuitPattern"" varchar(32);
+        ALTER TABLE finance.""FinancialConceptRules"" ADD COLUMN IF NOT EXISTS ""AmountMin"" numeric(18,2);
+        ALTER TABLE finance.""FinancialConceptRules"" ADD COLUMN IF NOT EXISTS ""AmountMax"" numeric(18,2);
+        ALTER TABLE finance.""FinancialConceptRules"" ADD COLUMN IF NOT EXISTS ""SuggestedCounterpartyId"" uuid;
+        ALTER TABLE finance.""FinancialConceptRules"" ADD COLUMN IF NOT EXISTS ""SuggestedCounterpartyType"" varchar(16);
+
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""SuggestedCounterpartyId"" uuid;
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""SuggestedCounterpartyType"" varchar(16);
+
+        ALTER TABLE finance.""CollectionReceipts"" ADD COLUMN IF NOT EXISTS ""AdvanceAmount"" numeric(18,2) NOT NULL DEFAULT 0;
+        ALTER TABLE finance.""CollectionReceipts"" ADD COLUMN IF NOT EXISTS ""ExchangeDifferenceAmount"" numeric(18,2);
+        ALTER TABLE finance.""CollectionReceipts"" ADD COLUMN IF NOT EXISTS ""VoidReason"" varchar(500);
+        ALTER TABLE finance.""CollectionReceipts"" ADD COLUMN IF NOT EXISTS ""VoidedAtUtc"" timestamptz;
+        ALTER TABLE finance.""CollectionReceiptImputations"" ADD COLUMN IF NOT EXISTS ""Status"" varchar(20) NOT NULL DEFAULT 'Active';
+
+        ALTER TABLE finance.""PaymentOrders"" ADD COLUMN IF NOT EXISTS ""AdvanceAmount"" numeric(18,2) NOT NULL DEFAULT 0;
+        ALTER TABLE finance.""PaymentOrders"" ADD COLUMN IF NOT EXISTS ""VoidReason"" varchar(500);
+        ALTER TABLE finance.""PaymentOrders"" ADD COLUMN IF NOT EXISTS ""VoidedAtUtc"" timestamptz;
+
+        ALTER TABLE finance.""ReceivedCheques"" ADD COLUMN IF NOT EXISTS ""CustomerId"" uuid;
+        ALTER TABLE finance.""ReceivedCheques"" ADD COLUMN IF NOT EXISTS ""SupplierId"" uuid;
+        ALTER TABLE finance.""ReceivedCheques"" ADD COLUMN IF NOT EXISTS ""PaymentOrderId"" uuid;
+
+        CREATE TABLE IF NOT EXISTS finance.""DocumentSequences"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""DocumentType"" varchar(20) NOT NULL,
+          ""Prefix"" varchar(20) NOT NULL, ""NextNumber"" integer NOT NULL DEFAULT 1, ""UpdatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_DocumentSequences_Tenant_Type_Prefix"" ON finance.""DocumentSequences"" (""TenantId"", ""DocumentType"", ""Prefix"");
+
+        CREATE TABLE IF NOT EXISTS finance.""CustomerAdvances"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""CustomerId"" uuid NOT NULL,
+          ""CollectionReceiptId"" uuid NOT NULL, ""Amount"" numeric(18,2) NOT NULL,
+          ""RemainingAmount"" numeric(18,2) NOT NULL, ""Currency"" varchar(8) NOT NULL,
+          ""CreatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ""IX_CustomerAdvances_Tenant_Customer"" ON finance.""CustomerAdvances"" (""TenantId"", ""CustomerId"");
         ", cancellationToken);
 }

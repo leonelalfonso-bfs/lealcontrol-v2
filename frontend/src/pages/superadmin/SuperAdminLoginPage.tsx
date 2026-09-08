@@ -15,6 +15,9 @@ export function SuperAdminLoginPage() {
     setLoading(true);
     try {
       const res = await api.superAdminLogin({ email, password });
+      localStorage.removeItem("leal_token");
+      localStorage.removeItem("leal_user");
+      localStorage.removeItem("leal_tenant_id");
       localStorage.setItem("leal_superadmin_token", res.token);
       localStorage.setItem("leal_superadmin_user", JSON.stringify(res.user));
       navigate("/superadmin");

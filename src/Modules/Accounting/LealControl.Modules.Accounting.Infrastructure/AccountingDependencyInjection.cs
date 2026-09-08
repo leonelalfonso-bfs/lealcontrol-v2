@@ -1,7 +1,8 @@
-using System;
-using Microsoft.EntityFrameworkCore;
+using LealControl.BuildingBlocks.Persistence;
+using LealControl.Modules.Accounting.Contracts.Posting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LealControl.Modules.Accounting.Infrastructure;
 
@@ -9,17 +10,18 @@ public static class AccountingDependencyInjection
 {
     public static IServiceCollection AddAccountingModule(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Database")
-            ?? throw new InvalidOperationException("Falta ConnectionStrings:Database.");
+        services.AddTenantDbContext<AccountingDbContext>("accounting");
+        services.RemoveAll<IAccountingPostingGateway>();
+        services.AddScoped<IAccountingPostingGateway, AccountingPostingGateway>();
+        return services;
+    }
 
-        services.AddDbContext<AccountingDbContext>(options =>
-        {
-            options.UseNpgsql(connectionString, npgsql =>
-            {
-                npgsql.MigrationsHistoryTable("__ef_migrations_history", "accounting");
-            });
-        });
-
+    /// <summary>
+    /// Registra NoOp sólo si nadie registró un gateway todavía (Host sin módulo Contabilidad).
+    /// </summary>
+    public static IServiceCollection AddNoOpAccountingPostingGateway(this IServiceCollection services)
+    {
+        services.TryAddScoped<IAccountingPostingGateway, NoOpAccountingPostingGateway>();
         return services;
     }
 }

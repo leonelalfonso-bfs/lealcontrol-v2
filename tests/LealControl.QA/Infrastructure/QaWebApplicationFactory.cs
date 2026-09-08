@@ -33,7 +33,7 @@ public sealed class QaWebApplicationFactory : WebApplicationFactory<Program>, IA
         // Pre-create database schemas required by Leal Control modules
         await using var conn = new NpgsqlConnection(ConnectionString);
         await conn.OpenAsync();
-        var schemas = new[] { "crm", "sales", "purchases", "finance", "accounting", "metrology", "fleet", "hr", "directory" };
+        var schemas = new[] { "crm", "sales", "purchases", "finance", "accounting", "metrology", "quality", "fleet", "hr", "directory" };
         foreach (var schema in schemas)
         {
             await using var cmd = new NpgsqlCommand($"CREATE SCHEMA IF NOT EXISTS {schema};", conn);
@@ -52,12 +52,17 @@ public sealed class QaWebApplicationFactory : WebApplicationFactory<Program>, IA
         builder.UseEnvironment("Development");
         builder.UseSetting("ConnectionStrings:Database", ConnectionString);
         builder.UseSetting("QA_TEST_CENTER_ENABLED", "true");
+        builder.UseSetting("Jwt:Secret", "DevOnly_LealControl_Local_JWT_Key_Not_For_Production_Use_32b!");
+        builder.UseSetting("Jwt:Issuer", "lealcontrol");
+        builder.UseSetting("Jwt:Audience", "lealcontrol-web");
+        builder.UseSetting("Jwt:LifetimeHours", "8");
     }
 
     public HttpClient CreateAuthenticatedClient(Guid tenantId, Guid userId, string role = "Admin", string name = "QA Admin")
     {
         var client = CreateClient();
-        var token = SimpleJwt.CreateToken(userId, "qa@lealcontrol.com", name, role, tenantId, "Empresa QA S.A.");
+        var modules = """["sales","crm","purchases","inventory","finance","fleet","hr","grains","accounting"]""";
+        var token = SimpleJwt.CreateToken(userId, "qa@lealcontrol.com", name, role, tenantId, "Empresa QA S.A.", modules);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId.ToString());
         return client;

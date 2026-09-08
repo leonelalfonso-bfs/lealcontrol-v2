@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -14,7 +15,8 @@ public static class AutomationEndpoints
     public static IEndpointRouteBuilder MapAutomationEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/automation")
-                       .WithTags("Automation & AI");
+                       .WithTags("Automation & AI")
+                       .RequireAuthorization("RequireAdmin");
 
         group.MapGet("/status", async (GeminiApiClient client, CancellationToken ct) =>
         {

@@ -1,0 +1,14 @@
+# Fragmento nginx: www.lealcontrol.com → API pública de demo en erp
+# Incluir dentro del server { } de www (o copiar location al sitio existente).
+
+location /api/v1/public/ {
+    proxy_pass https://erp.lealcontrol.com;
+    proxy_http_version 1.1;
+    proxy_set_header Host erp.lealcontrol.com;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# Alternativa sin proxy: en website/index.html usar meta leal-api-base apuntando a erp
+# (el formulario llama directo a https://erp.lealcontrol.com/api/v1/public/demo-requests)

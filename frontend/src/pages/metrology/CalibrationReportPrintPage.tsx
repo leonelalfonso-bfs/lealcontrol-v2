@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../../api/client";
-import type { CalibrationReport, MetrologyEquipment, CompanySettings } from "../../api/types";
+import type { CalibrationReport, MetrologyEquipment, MetrologyInstrument, CompanySettings } from "../../api/types";
+import { labelOf, METROLOGY_OPERATION, METROLOGY_REPORT_STATUS, METROLOGY_VERDICT, INDICATOR_TYPE } from "../quality/qualityLabels";
 
 export function CalibrationReportPrintPage() {
   const { id } = useParams<{ id: string }>();
   const [report, setReport] = useState<CalibrationReport | null>(null);
   const [equipment, setEquipment] = useState<MetrologyEquipment | null>(null);
+  const [thermometer, setThermometer] = useState<MetrologyInstrument | null>(null);
   const [company, setCompany] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +22,7 @@ export function CalibrationReportPrintPage() {
       .then(([res, comp]) => {
         setReport(res.report);
         setEquipment(res.equipment || null);
+        setThermometer(res.thermometer || null);
         if (comp) setCompany(comp);
       })
       .catch((err) => setError(err?.message || "Error al cargar certificado."))
@@ -68,11 +71,19 @@ export function CalibrationReportPrintPage() {
   const stdApplied = (report as any).standardApplied || report.normativeApplied || "Resolución SIyC Nº 25/2025 (OIML R 76-1)";
   const profileStatus = (report as any).regulatoryStatus || (stdApplied.includes("2307") ? "Derogada — aplicación transitoria" : "Vigente");
   const regulatoryNotice = (report as any).regulatoryNotice;
-  const operationLabel = visualInspectionData?.checklist?.operationLabel || (report as any).operationType || "Calibración / determinación de errores";
+  const opFromChecklist = visualInspectionData?.checklist?.operationLabel;
+  const operationLabel =
+    opFromChecklist ||
+    labelOf(METROLOGY_OPERATION, (report as any).operationType, "Calibración / determinación de errores");
   const documentTitle = (report as any).documentTitle || "Informe de ensayo metrológico";
+  const supersedesReportId = report.supersedesReportId || (report as any).supersedesReportId || null;
+  const amendmentReason = report.amendmentReason || (report as any).amendmentReason || null;
+  const reportStatusRaw = (report.reportStatus || report.status || "").toString();
+  const reportStatusLabel = labelOf(METROLOGY_REPORT_STATUS, reportStatusRaw, reportStatusRaw || "—");
   const verdictRaw: any = report.result || (report as any).verdict || "Apto";
-  const verdictText = (verdictRaw === "Approved" || verdictRaw === "Apto") ? "APTO" : (verdictRaw === "Rejected" || verdictRaw === "No Apto") ? "NO APTO" : String(verdictRaw || "").toUpperCase();
-  const isApproved = verdictText === "APTO" || verdictText === "APPROVED";
+  const verdictLabelEs = labelOf(METROLOGY_VERDICT, String(verdictRaw), String(verdictRaw || "—"));
+  const verdictText = verdictLabelEs.toUpperCase();
+  const isApproved = verdictRaw === "Approved" || verdictRaw === "Apto" || verdictLabelEs === "Apto";
   const expUncertainty = (report as any).expandedUncertaintyK2 ?? report.expandedUncertainty ?? 0;
   const tempVal = (report as any).temperatureCelsius ?? report.ambientTemperature ?? 20;
   const humVal = (report as any).relativeHumidityPercent ?? report.ambientHumidity ?? 50;
@@ -222,6 +233,28 @@ export function CalibrationReportPrintPage() {
         </div>
       </div>
 
+      {(supersedesReportId || amendmentReason) && (
+        <div style={{ background: "#fff7ed", border: "1px solid #fdba74", padding: "10px 12px", borderRadius: 6, marginBottom: 16, fontSize: "0.84rem", color: "#9a3412" }}>
+          <strong>Enmienda PG09 R2</strong>
+          {amendmentReason && <> — Motivo: {amendmentReason}</>}
+          {supersedesReportId && (
+            <div style={{ marginTop: 4 }}>
+              Sustituye al informe original:{" "}
+              <Link to={`/metrologia/informes/${supersedesReportId}/imprimir`} className="no-print">
+                ver certificado sustituido
+              </Link>
+              <span className="print-only" style={{ display: "none" }}>{supersedesReportId}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {reportStatusRaw.toLowerCase() === "superseded" && (
+        <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", padding: "10px 12px", borderRadius: 6, marginBottom: 16, fontSize: "0.84rem", color: "#991b1b" }}>
+          <strong>Informe sustituido</strong> — este certificado fue reemplazado por una enmienda PG09 R2 y no debe usarse como versión vigente.
+        </div>
+      )}
+
       {/* Normativa */}
       <div style={{ textAlign: "center", background: "#f4fbf9", padding: "6px 12px", borderRadius: 6, border: "1px solid #ccede5", marginBottom: 16, fontSize: "0.84rem", fontWeight: 600, color: "#06574c" }}>
         Perfil aplicado: {stdApplied} • {profileStatus}
@@ -264,7 +297,7 @@ export function CalibrationReportPrintPage() {
                 )}
               </div>
               <div style={{ marginTop: 3 }}>
-                <strong>Indicador Principal:</strong> {(equipment as any).indicator1Brand || equipment.brand} {(equipment as any).indicator1Model || equipment.model} (S/N: {(equipment as any).indicator1SerialNumber || equipment.serialNumber || "—"}) [{(equipment as any).indicator1Type || "Digital"}]
+                <strong>Indicador Principal:</strong> {(equipment as any).indicator1Brand || equipment.brand} {(equipment as any).indicator1Model || equipment.model} (S/N: {(equipment as any).indicator1SerialNumber || equipment.serialNumber || "—"}) [{labelOf(INDICATOR_TYPE, (equipment as any).indicator1Type, (equipment as any).indicator1Type || "Digital")}]
                 {((equipment as any).indicator1ApprovalCode || (equipment as any).indicator1ApprovalNumber) && (
                   <div style={{ color: "#444", fontSize: "0.78rem" }}>
                     ↳ Aprob. Modelo: <strong>{(equipment as any).indicator1ApprovalCode || "—"}</strong>
@@ -305,6 +338,16 @@ export function CalibrationReportPrintPage() {
           <div><strong>Humedad Relativa:</strong> {humVal} %</div>
           <div><strong>Presión Atmosférica:</strong> {pressVal} hPa</div>
         </div>
+        {thermometer && (
+          <div style={{ marginBottom: 8 }}>
+            <strong>Termómetro:</strong> {thermometer.code}
+            {thermometer.certificateNumber ? ` · Cert. ${thermometer.certificateNumber}` : ""}
+            {thermometer.expirationDate
+              ? ` · vence ${new Date(thermometer.expirationDate).toLocaleDateString("es-AR")}`
+              : ""}
+            {thermometer.traceabilityLab ? ` · ${thermometer.traceabilityLab}` : ""}
+          </div>
+        )}
 
         {weightsUsed.length > 0 && (
           <div style={{ borderTop: "1px dashed #eee", paddingTop: 6 }}>
@@ -584,8 +627,8 @@ export function CalibrationReportPrintPage() {
       )}
 
       {/* Dictamen Final & Firmas */}
-      <div style={{ border: "2px solid #0d9488", borderRadius: 8, padding: 14, background: "#f4fbf9", marginBottom: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ border: "2px solid #0d9488", borderRadius: 8, padding: 14, background: "#f4fbf9", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: "0.85rem", color: "#555" }}>RESULTADO TÉCNICO DEL INFORME:</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 800, color: isApproved ? "#06574c" : "#dc2626" }}>
@@ -599,19 +642,165 @@ export function CalibrationReportPrintPage() {
                 <strong>Observaciones:</strong> {report.observations}
               </div>
             )}
+            <div style={{ fontSize: "0.78rem", marginTop: 8, color: "#0f766e" }}>
+              Estado: <strong>{reportStatusLabel}</strong>
+              {(report as any).instructionCode ? <> · Instructivo <strong>{(report as any).instructionCode}</strong></> : null}
+            </div>
           </div>
 
-          <div style={{ textAlign: "center", borderTop: "1px solid #444", paddingTop: 8, minWidth: 200 }}>
-            <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{report.performedBy || "Técnico responsable"}</div>
-            <div style={{ fontSize: "0.74rem", color: "#666" }}>Técnico / Responsable del informe</div>
-            <div style={{ fontSize: "0.74rem", color: "#666" }}>Servicios técnicos y metrológicos</div>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            <div style={{ textAlign: "center", borderTop: "1px solid #444", paddingTop: 8, minWidth: 180 }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{report.performedBy || "Técnico responsable"}</div>
+              <div style={{ fontSize: "0.74rem", color: "#666" }}>Elaboró / Técnico</div>
+            </div>
+            <div style={{ textAlign: "center", borderTop: "1px solid #444", paddingTop: 8, minWidth: 180 }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{(report as any).approvedBy || "Pendiente DT"}</div>
+              <div style={{ fontSize: "0.74rem", color: "#666" }}>Aprobó · Director Técnico</div>
+            </div>
           </div>
         </div>
       </div>
 
+      <SgcTraceabilityPanel reportId={report.id} report={report} thermometer={thermometer} />
+
       <div style={{ textAlign: "center", fontSize: "0.72rem", color: "#888" }}>
         Documento técnico emitido mediante el Sistema Modular de Metrología Legal — Leal Control ERP
       </div>
+    </div>
+  );
+}
+
+function SgcTraceabilityPanel({
+  reportId,
+  report,
+  thermometer
+}: {
+  reportId: string;
+  report: CalibrationReport;
+  thermometer: MetrologyInstrument | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<Awaited<ReturnType<typeof api.getCalibrationReportSgcTraceability>> | null>(null);
+
+  const load = async () => {
+    setOpen(true);
+    if (data || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      setData(await api.getCalibrationReportSgcTraceability(reportId));
+    } catch (err) {
+      // Fallback local si el endpoint aún no está desplegado
+      let procedures: Array<{ code?: string; displayCode?: string; title?: string; version?: number }> = [];
+      let externals: string[] = [];
+      let weights: Array<{ code?: string; certificateNumber?: string }> = [];
+      try {
+        procedures = JSON.parse((report as any).procedureSnapshotJson || "[]");
+      } catch { /* ignore */ }
+      try {
+        externals = JSON.parse((report as any).externalDocumentCodesJson || "[]");
+      } catch { /* ignore */ }
+      try {
+        weights = JSON.parse(report.weightsUsedJson || "[]");
+      } catch { /* ignore */ }
+      if (procedures.length || externals.length) {
+        setData({
+          reportId,
+          certificateNumber: (report as any).certificateNumber || report.reportNumber,
+          reportStatus: (report as any).reportStatus || report.status,
+          instructionCode: (report as any).instructionCode,
+          standardApplied: (report as any).standardApplied,
+          performedBy: report.performedBy,
+          approvedBy: (report as any).approvedBy,
+          procedures,
+          externalDocumentCodes: externals,
+          weightsUsed: weights,
+          qualityLinks: {
+            tree: "/calidad/documentos",
+            instruction: (report as any).instructionCode
+              ? `/calidad/documentos/${(report as any).instructionCode}`
+              : null,
+            procedurePg12: "/calidad/documentos/PG12",
+            procedurePg09: "/calidad/documentos/PG09"
+          }
+        });
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="no-print" style={{ marginBottom: 24, border: "1px dashed #94a3b8", borderRadius: 8, padding: 12 }}>
+      <button type="button" className="btn ghost compact" onClick={() => void load()}>
+        {open ? "Ocultar trazabilidad SGC" : "Ver trazabilidad SGC"}
+      </button>
+      {open && (
+        <div style={{ marginTop: 12, fontSize: "0.85rem" }}>
+          {loading && <div className="muted">Cargando cadena SGC…</div>}
+          {error && <div style={{ color: "#b91c1c" }}>{error}</div>}
+          {data && (
+            <div style={{ display: "grid", gap: 10 }}>
+              <div>
+                <strong>Procedimientos / instructivos (snapshot):</strong>
+                <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                  {(data.procedures || []).map((p, i) => (
+                    <li key={`${p.code}-${i}`}>
+                      <Link to={`/calidad/documentos/${encodeURIComponent(p.code || "")}`}>
+                        {p.displayCode || p.code}
+                      </Link>
+                      {p.version ? ` v${p.version}` : ""}
+                      {p.title ? ` — ${p.title}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <strong>Documentos externos:</strong>{" "}
+                {(data.externalDocumentCodes || []).length
+                  ? data.externalDocumentCodes.join(", ")
+                  : "—"}
+              </div>
+              <div>
+                <strong>Termómetro (PG16):</strong>{" "}
+                {data.thermometer
+                  ? `${data.thermometer.code}${data.thermometer.certificateNumber ? ` · Cert. ${data.thermometer.certificateNumber}` : ""}`
+                  : thermometer
+                    ? `${thermometer.code}${thermometer.certificateNumber ? ` · Cert. ${thermometer.certificateNumber}` : ""}`
+                    : "—"}
+                {data.temperatureCelsius != null ? ` · ${data.temperatureCelsius} °C` : ""}
+              </div>
+              <div>
+                <strong>Pesas patrón usadas:</strong>
+                <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                  {(data.weightsUsed || []).map((w, i) => (
+                    <li key={`${w.code}-${i}`}>
+                      {w.code || "—"}
+                      {w.certificateNumber ? ` · cert. ${w.certificateNumber}` : ""}
+                      {w.nominalValue != null ? ` · ${w.nominalValue} ${w.unit || ""}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <strong>Firmas:</strong> Elaboró {data.performedBy || "—"} · Aprobó DT {data.approvedBy || "pendiente"}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Link to={data.qualityLinks.tree}>Árbol documental</Link>
+                {data.qualityLinks.instruction && (
+                  <Link to={data.qualityLinks.instruction}>Instructivo {data.instructionCode}</Link>
+                )}
+                <Link to={data.qualityLinks.procedurePg12}>PG12</Link>
+                <Link to={data.qualityLinks.procedurePg09}>PG09</Link>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

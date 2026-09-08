@@ -18,10 +18,33 @@ public sealed class AccountingAuditor : IQaAuditor
         var accountingDb = context.GetService<AccountingDbContext>();
         var tenantId = context.TenantId;
 
-        // 1. Locate journal entry
+        // 1. Locate journal entry — match what AccountingPostingGateway / template engine write:
+        // SourceModule + SourceDocumentId (= PostableDocument.DocumentId). Fallback via pending_documents.
         var entry = await accountingDb.JournalEntries
             .Include(j => j.Lines)
-            .FirstOrDefaultAsync(j => j.TenantId == tenantId && j.SourceModule == sourceModule && j.SourceDocumentId == sourceDocumentId);
+            .FirstOrDefaultAsync(j =>
+                j.TenantId == tenantId
+                && j.SourceModule.ToLower() == sourceModule.ToLower()
+                && j.SourceDocumentId == sourceDocumentId);
+
+        if (entry is null)
+        {
+            var pending = await accountingDb.PendingDocuments.AsNoTracking()
+                .Where(p =>
+                    p.TenantId == tenantId
+                    && p.SourceModule.ToLower() == sourceModule.ToLower()
+                    && p.SourceDocumentId == sourceDocumentId
+                    && p.JournalEntryId != null)
+                .OrderByDescending(p => p.UpdatedAtUtc)
+                .FirstOrDefaultAsync();
+
+            if (pending?.JournalEntryId is Guid journalEntryId)
+            {
+                entry = await accountingDb.JournalEntries
+                    .Include(j => j.Lines)
+                    .FirstOrDefaultAsync(j => j.Id == journalEntryId && j.TenantId == tenantId);
+            }
+        }
 
         scenario.AddCheck(
             name: "Asiento contable generado para comprobante de origen",

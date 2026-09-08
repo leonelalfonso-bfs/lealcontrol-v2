@@ -16,7 +16,7 @@ export function SuperAdminDashboardPage() {
   const [planCode, setPlanCode] = useState("pyme");
   const [adminFullName, setAdminFullName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
-  const [adminPassword, setAdminPassword] = useState("admin123");
+  const [adminPassword, setAdminPassword] = useState("");
   const [monthlyPriceArs, setMonthlyPriceArs] = useState<number>(95000);
   const [selectedModules, setSelectedModules] = useState<string[]>([
     "sales", "crm", "purchases", "inventory", "finance", "fleet", "hr"
@@ -124,6 +124,9 @@ export function SuperAdminDashboardPage() {
         </div>
 
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <Link to="/superadmin/demos" style={{ color: "#cbd5e1", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid #334155" }}>
+            📩 Solicitudes Demo
+          </Link>
           <Link to="/superadmin/tenants" style={{ color: "#cbd5e1", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid #334155" }}>
             🏢 Clientes & Bases
           </Link>

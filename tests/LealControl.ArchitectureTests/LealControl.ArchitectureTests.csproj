@@ -18,6 +18,11 @@
     <ProjectReference Include="..\..\src\Modules\Crm\LealControl.Modules.Crm.Application\LealControl.Modules.Crm.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Crm\LealControl.Modules.Crm.Domain\LealControl.Modules.Crm.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Crm\LealControl.Modules.Crm.Infrastructure\LealControl.Modules.Crm.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\Modules\Crm\LealControl.Modules.Crm.Contracts\LealControl.Modules.Crm.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Sales\LealControl.Modules.Sales.Application\LealControl.Modules.Sales.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Sales\LealControl.Modules.Sales.Domain\LealControl.Modules.Sales.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Sales\LealControl.Modules.Sales.Infrastructure\LealControl.Modules.Sales.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Finance\LealControl.Modules.Finance.Infrastructure\LealControl.Modules.Finance.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Accounting\LealControl.Modules.Accounting.Infrastructure\LealControl.Modules.Accounting.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Accounting\LealControl.Modules.Accounting.Contracts\LealControl.Modules.Accounting.Contracts.csproj" />
   </ItemGroup>
 </Project>

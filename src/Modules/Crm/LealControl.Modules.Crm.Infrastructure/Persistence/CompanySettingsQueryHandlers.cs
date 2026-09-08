@@ -18,7 +18,8 @@ public sealed class CompanySettingsQueryHandler :
       IRequestHandler<UploadArcaCertificateCommand, Result<CompanySettingsDto>>,
       IRequestHandler<ListTenantUsersQuery, Result<IReadOnlyList<TenantUserDto>>>,
       IRequestHandler<CreateTenantUserCommand, Result<TenantUserDto>>,
-      IRequestHandler<UpdateTenantUserCommand, Result<TenantUserDto>>
+      IRequestHandler<UpdateTenantUserCommand, Result<TenantUserDto>>,
+      IRequestHandler<DeleteTenantUserCommand, Result<bool>>
 {
     private readonly CrmDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
@@ -117,7 +118,8 @@ public sealed class CompanySettingsQueryHandler :
             u.Role,
             u.IsActive,
             u.CreatedAtUtc,
-            u.AllowedModulesJson)).ToList();
+            u.AllowedModulesJson,
+            u.IsTechnicalDirector)).ToList();
 
         return Result<IReadOnlyList<TenantUserDto>>.Success(dtos);
     }
@@ -126,6 +128,11 @@ public sealed class CompanySettingsQueryHandler :
     {
         var tenantId = _tenantContext.TenantId;
         var user = TenantUser.Create(tenantId, request.FullName, request.Email, request.Role, initialPassword: request.Password, allowedModulesJson: request.AllowedModulesJson);
+        if (request.IsTechnicalDirector)
+        {
+            user.SetTechnicalDirector(true);
+        }
+
         _dbContext.TenantUsers.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -136,7 +143,8 @@ public sealed class CompanySettingsQueryHandler :
             user.Role,
             user.IsActive,
             user.CreatedAtUtc,
-            user.AllowedModulesJson));
+            user.AllowedModulesJson,
+            user.IsTechnicalDirector));
     }
 
     public async Task<Result<TenantUserDto>> Handle(UpdateTenantUserCommand request, CancellationToken cancellationToken)
@@ -148,7 +156,7 @@ public sealed class CompanySettingsQueryHandler :
             return Result<TenantUserDto>.Failure(new Error("UserNotFound", "Usuario no encontrado."));
         }
 
-        user.Update(request.FullName, request.Role, request.IsActive, request.AllowedModulesJson, request.Password);
+        user.Update(request.FullName, request.Role, request.IsActive, request.AllowedModulesJson, request.Password, request.IsTechnicalDirector);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Result<TenantUserDto>.Success(new TenantUserDto(
@@ -158,7 +166,44 @@ public sealed class CompanySettingsQueryHandler :
             user.Role,
             user.IsActive,
             user.CreatedAtUtc,
-            user.AllowedModulesJson));
+            user.AllowedModulesJson,
+            user.IsTechnicalDirector));
+    }
+
+    public async Task<Result<bool>> Handle(DeleteTenantUserCommand request, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantContext.TenantId;
+        var user = await _dbContext.TenantUsers
+            .FirstOrDefaultAsync(u => u.Id == request.Id && u.TenantId == tenantId, cancellationToken);
+
+        if (user == null)
+        {
+            return Result<bool>.Success(true);
+        }
+
+        var isAdminRole = string.Equals(user.Role, "Admin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(user.Role, "Administrador", StringComparison.OrdinalIgnoreCase);
+
+        if (isAdminRole)
+        {
+            var activeAdminCount = await _dbContext.TenantUsers.CountAsync(
+                u => u.TenantId == tenantId
+                    && u.IsActive
+                    && u.Id != user.Id
+                    && (u.Role == "Admin" || u.Role == "Administrador"),
+                cancellationToken);
+
+            if (activeAdminCount == 0)
+            {
+                return Result<bool>.Failure(new Error(
+                    "LastAdmin",
+                    "No podés eliminar el único administrador activo de la empresa."));
+            }
+        }
+
+        _dbContext.TenantUsers.Remove(user);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result<bool>.Success(true);
     }
 
     private async Task<CompanySettings> GetOrInitSettingsAsync(TenantId tenantId, CancellationToken cancellationToken)

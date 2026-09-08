@@ -37,7 +37,7 @@ export function AccountFormPage() {
           if (acc) {
             setCode(acc.code);
             setName(acc.name);
-            setAccountType(acc.accountType);
+            setAccountType(acc.accountType ?? "Asset");
             setLevel(acc.level || 4);
             setParentCode(acc.parentCode || "");
             setIsDirectPosting(acc.isDirectPosting !== false);
@@ -49,7 +49,7 @@ export function AccountFormPage() {
           const parent = list.find((a: any) => a.code === parentQuery);
           if (parent) {
             setParentCode(parent.code);
-            setAccountType(parent.accountType);
+            setAccountType(parent.accountType ?? "Asset");
             setLevel(parent.level + 1);
             setCode(`${parent.code}.`);
           }

@@ -237,6 +237,81 @@ export function ChartOfAccountsPage() {
           </div>
         )}
       </div>
+
+      <FinanceLedgerMappingPanel ledgerAccounts={accounts} />
+    </div>
+  );
+}
+
+function FinanceLedgerMappingPanel({ ledgerAccounts }: { ledgerAccounts: any[] }) {
+  const [financeAccounts, setFinanceAccounts] = useState<{ id: string; name: string; type: string }[]>([]);
+  const [mapById, setMapById] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    void Promise.all([api.listFinanceAccounts(), api.listFinanceAccountMappings()])
+      .then(([fin, maps]) => {
+        setFinanceAccounts((fin || []).filter((a: { isActive?: boolean }) => a.isActive !== false));
+        const next: Record<string, string> = {};
+        for (const m of maps || []) next[m.financialAccountId] = m.ledgerAccountCode;
+        setMapById(next);
+      })
+      .catch((err) => setMsg(err instanceof Error ? err.message : "No se pudo cargar el mapeo."));
+  }, []);
+
+  const imputable = ledgerAccounts.filter((a) => a.isDirectPosting);
+
+  const save = async () => {
+    try {
+      setSaving(true);
+      setMsg(null);
+      const body = Object.entries(mapById)
+        .filter(([, code]) => code)
+        .map(([financialAccountId, ledgerAccountCode]) => ({ financialAccountId, ledgerAccountCode }));
+      await api.saveFinanceAccountMappings(body);
+      setMsg("Mapeo guardado.");
+    } catch (err: unknown) {
+      setMsg(err instanceof Error ? err.message : "No se pudo guardar el mapeo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="card pad" style={{ marginTop: 8 }}>
+      <h2>Mapeo cuenta financiera → plan contable</h2>
+      <p className="muted">Si un recibo u OP trae cuenta financiera y no hay mapeo, el documento queda en Error al contabilizar.</p>
+      {msg && <p className="muted">{msg}</p>}
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Cuenta tesorería</th>
+            <th>Cuenta del plan</th>
+          </tr>
+        </thead>
+        <tbody>
+          {financeAccounts.map((fa) => (
+            <tr key={fa.id}>
+              <td>{fa.name} <span className="muted">({fa.type})</span></td>
+              <td>
+                <select
+                  value={mapById[fa.id] ?? ""}
+                  onChange={(e) => setMapById((prev) => ({ ...prev, [fa.id]: e.target.value }))}
+                >
+                  <option value="">— Sin mapear —</option>
+                  {imputable.map((a) => (
+                    <option key={a.id} value={a.code}>{a.code} {a.name}</option>
+                  ))}
+                </select>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button className="btn" disabled={saving} onClick={() => void save()} style={{ marginTop: 12 }}>
+        Guardar mapeo
+      </button>
     </div>
   );
 }

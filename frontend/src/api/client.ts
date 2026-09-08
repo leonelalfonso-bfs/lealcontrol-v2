@@ -16,13 +16,39 @@
   Quote,
   QuoteWrite
 } from "./types";
+import type {
+  AccountingMapping,
+  CostCenter,
+  FiscalPeriod,
+  GeneralLedgerRow,
+  JournalEntry,
+  JournalEntryLineWrite,
+  LedgerAccount,
+  PnlStatement,
+  TrialBalance
+} from "./types/accounting";
+import type {
+  BankImportPreviewRow,
+  CashFlowProjection,
+  CollectionReceiptDetail,
+  CollectionReceiptImputationWrite,
+  CollectionReceiptLineWrite,
+  FinanceAccount,
+  FinanceAvailableMovement,
+  FinanceConcept,
+  FinanceConceptRule,
+  FinanceMovementReview,
+  FinanceReconciliationResult,
+  ReceivedCheque
+} from "./types/finance";
 
 const API_BASE = "";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const normalToken = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
   const superToken = typeof window !== "undefined" ? localStorage.getItem("leal_superadmin_token") : null;
-  const token = normalToken || superToken;
+  const isSuperAdminApi = path.startsWith("/api/v1/superadmin");
+  const token = isSuperAdminApi ? superToken : (normalToken || superToken);
   const tenantId = typeof window !== "undefined" ? localStorage.getItem("leal_tenant_id") : null;
 
   const headers: Record<string, string> = {
@@ -35,6 +61,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
   if (tenantId) {
     headers["X-Tenant-Id"] = tenantId;
+  }
+  if (typeof window !== "undefined" && localStorage.getItem("leal_presentation_mode") === "1") {
+    headers["X-Presentation-Mode"] = "1";
   }
   const userStr = typeof window !== "undefined" ? localStorage.getItem("leal_user") : null;
   if (userStr) {
@@ -54,7 +83,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     let message = `Error (${response.status})`;
     try {
       const parsed = JSON.parse(errorText);
-      message = parsed.detail || parsed.title || parsed.message || message;
+      if (typeof parsed === "string") {
+        message = parsed;
+      } else {
+        message = parsed.detail || parsed.title || parsed.message || message;
+      }
     } catch {
       message = errorText || message;
     }
@@ -69,40 +102,56 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  listFinanceAccounts: () => request<{ id: string; name: string; currency: string; type: string; balance: number; isActive: boolean }[]>("/api/v1/finance/accounts"),
-  listFinanceConcepts: () => request<any[]>("/api/v1/finance/concepts"),
+  listFinanceAccounts: () => request<FinanceAccount[]>("/api/v1/finance/accounts"),
+  listFinanceConcepts: () => request<FinanceConcept[]>("/api/v1/finance/concepts"),
   createFinanceConcept: (body: object) => request("/api/v1/finance/concepts", { method: "POST", body: JSON.stringify(body) }),
   updateFinanceConcept: (id: string, body: object) => request(`/api/v1/finance/concepts/${id}`, { method: "PUT", body: JSON.stringify(body) }),
-  listFinanceConceptRules: () => request<any[]>("/api/v1/finance/concept-rules"),
+  listFinanceConceptRules: () => request<FinanceConceptRule[]>("/api/v1/finance/concept-rules"),
   createFinanceConceptRule: (body: object) => request("/api/v1/finance/concept-rules", { method: "POST", body: JSON.stringify(body) }),
   applyFinanceConceptRules: () => request<{ processed: number; suggested: number; pending: number }>("/api/v1/finance/concept-rules/apply", { method: "POST" }),
-  listFinanceMovementsForReview: () => request<any[]>("/api/v1/finance/movements/review"),
+  listFinanceMovementsForReview: () => request<FinanceMovementReview[]>("/api/v1/finance/movements/review"),
   classifyFinanceMovement: (id: string, body: object) => request(`/api/v1/finance/movements/${id}/classification`, { method: "POST", body: JSON.stringify(body) }),
   createFinanceAccount: (body: { name: string; currency: string; type: string; openingBalance: number }) => request("/api/v1/finance/accounts", { method: "POST", body: JSON.stringify(body) }),
-  previewFinanceBankImport: (accountId: string, csvContent: string) => request<{ operationDateUtc: string; amount: number; kind: string; description: string; externalReference?: string; error?: string }[]>("/api/v1/finance/imports/bank/preview", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
+  previewFinanceBankImport: (accountId: string, csvContent: string) => request<BankImportPreviewRow[]>("/api/v1/finance/imports/bank/preview", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
   confirmFinanceBankImport: (accountId: string, csvContent: string) => request<{ imported: number; updated?: number; duplicates: number; rejected: number }>("/api/v1/finance/imports/bank/confirm", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
   listFinanceMovements: (accountId: string) => request<{ id: string; operationDateUtc: string; kind: string; amount: number; currency: string; description: string; externalReference?: string; transferId?: string; reconciliationStatus: number; linkedEntityType?: string; linkedEntityId?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements`),
     listCollectionAvailableMovements: (accountId?: string, conceptId?: string) => {
     const params = new URLSearchParams();
     if (accountId) params.set("accountId", accountId);
     if (conceptId) params.set("conceptId", conceptId);
-    return request<any[]>(`/api/v1/finance/collections/available-movements?${params.toString()}`);
+    return request<FinanceAvailableMovement[]>(`/api/v1/finance/collections/available-movements?${params.toString()}`);
   },
   listPaymentAvailableMovements: (accountId?: string, conceptId?: string) => {
     const params = new URLSearchParams();
     if (accountId) params.set("accountId", accountId);
     if (conceptId) params.set("conceptId", conceptId);
-    return request<any[]>(`/api/v1/finance/payments/available-movements?${params.toString()}`);
+    return request<FinanceAvailableMovement[]>(`/api/v1/finance/payments/available-movements?${params.toString()}`);
   },
   listFinanceMovementDetails: (accountId: string) => request<{ id: string; operationDateUtc: string; description: string; externalReference?: string; kind: string; amount: number; currency: string; reportedBalance?: number; systemBalance: number; difference?: number; reconciliationStatus: string; stage?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements-detail`),
   reconcileFinanceMovement: (movementId: string, body: { entityType: string; entityId: string }) => request(`/api/v1/finance/movements/${movementId}/reconcile`, { method: "POST", body: JSON.stringify(body) }),
-  listReceivedCheques: () => request<any[]>("/api/v1/finance/echeqs"),
+  getFinanceReconciliation: (accountId: string, from?: string, to?: string) => {
+    const params = new URLSearchParams({ accountId });
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    return request<FinanceReconciliationResult>(`/api/v1/finance/reconciliation?${params.toString()}`);
+  },
+  matchFinanceReconciliation: (importedMovementId: string, systemMovementId: string) =>
+    request("/api/v1/finance/reconciliation/match", {
+      method: "POST",
+      body: JSON.stringify({ importedMovementId, systemMovementId })
+    }),
+  unmatchFinanceReconciliation: (importedMovementId: string) =>
+    request("/api/v1/finance/reconciliation/unmatch", {
+      method: "POST",
+      body: JSON.stringify({ importedMovementId })
+    }),
+  listReceivedCheques: () => request<ReceivedCheque[]>("/api/v1/finance/echeqs"),
   importReceivedCheques: (csvContent: string) => request<{ imported: number; duplicates: number }>("/api/v1/finance/echeqs/import", { method: "POST", body: JSON.stringify({ csvContent }) }),
   importIssuedCheques: (csvContent: string) => request<{ imported: number; duplicates: number }>("/api/v1/finance/echeqs/import-issued", { method: "POST", body: JSON.stringify({ csvContent }) }),
-  createReceivedCheque: (body: any) => request("/api/v1/finance/echeqs", { method: "POST", body: JSON.stringify(body) }),
+  createReceivedCheque: (body: object) => request("/api/v1/finance/echeqs", { method: "POST", body: JSON.stringify(body) }),
   useChequeForPayment: (id: string, reference: string) => request(`/api/v1/finance/echeqs/${id}/use-for-payment`, { method: "POST", body: JSON.stringify({ reference }) }),
   listCollectionReceipts: () => request<{ id: string; customerId?: string; accountId?: string; invoiceId?: string; receiptNumber: string; amount: number; currency: string; receiptDateUtc: string; description: string; status: string; linesCount?: number; invoicesCount?: number; invoicesSummary?: string }[]>("/api/v1/finance/collections"),
-  getCollectionReceipt: (id: string) => request<any>(`/api/v1/finance/collections/${id}`),
+  getCollectionReceipt: (id: string) => request<CollectionReceiptDetail>(`/api/v1/finance/collections/${id}`),
   createCollectionReceipt: (body: {
     accountId?: string;
     customerId?: string;
@@ -119,12 +168,22 @@ export const api = {
     suggestedAdjustmentType?: string;
     receiptDateUtc: string;
     description: string;
-    lines?: any[];
-    imputations?: any[];
+    lines?: CollectionReceiptLineWrite[];
+    imputations?: CollectionReceiptImputationWrite[];
   }) => request<{ id: string; receiptNumber: string; status: string }>("/api/v1/finance/collections", { method: "POST", body: JSON.stringify(body) }),
   listPaymentOrders: () => request<import("./types").PaymentOrder[]>("/api/v1/finance/payments"),
   getPaymentOrder: (id: string) => request<import("./types").PaymentOrder>(`/api/v1/finance/payments/${id}`),
   createPaymentOrder: (body: import("./types").PaymentOrderWriteRequest) => request<{ id: string; orderNumber: string; status: string }>("/api/v1/finance/payments", { method: "POST", body: JSON.stringify(body) }),
+  voidCollectionReceipt: (id: string, reason: string) => request(`/api/v1/finance/collections/${id}/void`, { method: "POST", body: JSON.stringify({ reason }) }),
+  voidPaymentOrder: (id: string, reason: string) => request(`/api/v1/finance/payments/${id}/void`, { method: "POST", body: JSON.stringify({ reason }) }),
+  bulkClassifyFinanceMovements: (movementIds: string[]) => request<{ confirmed: number }>("/api/v1/finance/movements/classification/bulk", { method: "POST", body: JSON.stringify({ movementIds, confirm: true }) }),
+  createFinanceRuleFromMovement: (movementId: string, body: object) => request(`/api/v1/finance/movements/${movementId}/create-rule`, { method: "POST", body: JSON.stringify(body) }),
+  financeCashCount: (accountId: string, body: { countedAmount: number; countDateUtc: string; note?: string }) => request(`/api/v1/finance/accounts/${accountId}/cash-count`, { method: "POST", body: JSON.stringify(body) }),
+  financeTransfer: (body: { fromAccountId: string; toAccountId: string; amount: number; currency: string; operationDateUtc: string; description: string }) => request("/api/v1/finance/transfers", { method: "POST", body: JSON.stringify(body) }),
+  financeCashFlowProjection: (days = 30) => request<CashFlowProjection>(`/api/v1/finance/cash-flow/projection?days=${days}`),
+  depositCheque: (id: string, body: { bankAccountId: string; depositDateUtc: string }) => request(`/api/v1/finance/echeqs/${id}/deposit`, { method: "POST", body: JSON.stringify(body) }),
+  rejectCheque: (id: string, body: { rejectDateUtc: string; fees?: number; note?: string }) => request(`/api/v1/finance/echeqs/${id}/reject`, { method: "POST", body: JSON.stringify(body) }),
+  cancelCheque: (id: string, reason: string) => request(`/api/v1/finance/echeqs/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }),
   listCustomers: (search = "", role = "customer") =>
     request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=50&search=${encodeURIComponent(search)}${role ? `&role=${encodeURIComponent(role)}` : ""}`),
   getCustomer: (id: string) => request<CustomerDetail>(`/api/v1/crm/customers/${id}`),
@@ -425,6 +484,8 @@ export const api = {
     request<import("./types").TenantUser>("/api/v1/company/users", { method: "POST", body: JSON.stringify(body) }),
   updateTenantUser: (id: string, body: { fullName: string; role: string; isActive: boolean; password?: string; allowedModulesJson?: string }) =>
     request<import("./types").TenantUser>(`/api/v1/company/users/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteTenantUser: (id: string) =>
+    request<void>(`/api/v1/company/users/${id}`, { method: "DELETE" }),
 
   // Suppliers Methods (Unified Directory)
   listSuppliers: async (search = ""): Promise<import("./types").Supplier[]> => {
@@ -809,22 +870,28 @@ export const api = {
     request<any>("/api/v1/superadmin/plans", { method: "POST", body: JSON.stringify(body) }),
   updateSuperAdminPlan: (id: string, body: any) =>
     request<any>(`/api/v1/superadmin/plans/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  listSuperAdminDemoRequests: () =>
+    request<any[]>("/api/v1/superadmin/demo-requests"),
+  updateSuperAdminDemoRequestStatus: (id: string, status: string) =>
+    request<any>(`/api/v1/superadmin/demo-requests/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
+  provisionSuperAdminDemoRequest: (id: string, body: { adminPassword: string; slug?: string; planCode?: string; adminFullName?: string; enabledModulesJson?: string; monthlyPriceArs?: number }) =>
+    request<{ success: boolean; dbName: string; message: string; adminEmail?: string; loginUrl?: string }>(`/api/v1/superadmin/demo-requests/${id}/provision`, { method: "POST", body: JSON.stringify(body) }),
 
   // Accounting Module
   listAccounts: () =>
-    request<any[]>("/api/v1/accounting/accounts"),
+    request<LedgerAccount[]>("/api/v1/accounting/accounts"),
   createAccount: (body: { code: string; name: string; accountType?: string; level: number; parentCode?: string; isDirectPosting: boolean; currency?: string; adjustsForInflation?: boolean }) =>
-    request<any>("/api/v1/accounting/accounts", { method: "POST", body: JSON.stringify(body) }),
+    request<LedgerAccount>("/api/v1/accounting/accounts", { method: "POST", body: JSON.stringify(body) }),
   updateAccount: (id: string, body: { code?: string; name: string; accountType?: string; level?: number; parentCode?: string; isDirectPosting: boolean; currency?: string; adjustsForInflation: boolean; isActive: boolean }) =>
-    request<any>(`/api/v1/accounting/accounts/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    request<LedgerAccount>(`/api/v1/accounting/accounts/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteAccount: (id: string) =>
-    request<any>(`/api/v1/accounting/accounts/${id}`, { method: "DELETE" }),
+    request<void>(`/api/v1/accounting/accounts/${id}`, { method: "DELETE" }),
 
   // Accounting Mapping (Matriz de Enlace Contable)
   getAccountingMapping: () =>
-    request<any>("/api/v1/accounting/mapping"),
-  updateAccountingMapping: (body: any) =>
-    request<any>("/api/v1/accounting/mapping", { method: "PUT", body: JSON.stringify(body) }),
+    request<AccountingMapping>("/api/v1/accounting/mapping"),
+  updateAccountingMapping: (body: AccountingMapping) =>
+    request<AccountingMapping>("/api/v1/accounting/mapping", { method: "PUT", body: JSON.stringify(body) }),
 
   listJournalEntries: (params?: { startDate?: string; endDate?: string; sourceModule?: string }) => {
     const q = new URLSearchParams();
@@ -832,10 +899,10 @@ export const api = {
     if (params?.endDate) q.set("endDate", params.endDate);
     if (params?.sourceModule) q.set("sourceModule", params.sourceModule);
     const query = q.toString() ? `?${q.toString()}` : "";
-    return request<any[]>(`/api/v1/accounting/journal-entries${query}`);
+    return request<JournalEntry[]>(`/api/v1/accounting/journal-entries${query}`);
   },
-  createJournalEntry: (body: { date: string; concept: string; entryType?: string; sourceModule?: string; sourceDocumentId?: string; createdBy?: string; lines: any[] }) =>
-    request<any>("/api/v1/accounting/journal-entries", { method: "POST", body: JSON.stringify(body) }),
+  createJournalEntry: (body: { date: string; concept: string; entryType?: string; sourceModule?: string; sourceDocumentId?: string; createdBy?: string; lines: JournalEntryLineWrite[] }) =>
+    request<JournalEntry>("/api/v1/accounting/journal-entries", { method: "POST", body: JSON.stringify(body) }),
   getLedger: (accountCodeOrParams?: string | { accountCode?: string; startDate?: string; endDate?: string }, maybeParams?: { startDate?: string; endDate?: string }) => {
     const q = new URLSearchParams();
     if (typeof accountCodeOrParams === "string") {
@@ -848,65 +915,65 @@ export const api = {
       if (accountCodeOrParams.endDate) q.set("endDate", accountCodeOrParams.endDate);
     }
     const query = q.toString() ? `?${q.toString()}` : "";
-    return request<any[]>(`/api/v1/accounting/general-ledger${query}`);
+    return request<GeneralLedgerRow[]>(`/api/v1/accounting/general-ledger${query}`);
   },
   getTrialBalance: (params?: { startDate?: string; endDate?: string }) => {
     const q = new URLSearchParams();
     if (params?.startDate) q.set("startDate", params.startDate);
     if (params?.endDate) q.set("endDate", params.endDate);
     const query = q.toString() ? `?${q.toString()}` : "";
-    return request<any>(`/api/v1/accounting/trial-balance${query}`);
+    return request<TrialBalance>(`/api/v1/accounting/trial-balance${query}`);
   },
   getPnlStatement: (params?: { year?: number; month?: number }) => {
     const q = new URLSearchParams();
     if (params?.year) q.set("year", params.year.toString());
     if (params?.month) q.set("month", params.month.toString());
     const query = q.toString() ? `?${q.toString()}` : "";
-    return request<any>(`/api/v1/accounting/pnl-statement${query}`);
+    return request<PnlStatement>(`/api/v1/accounting/pnl-statement${query}`);
   },
   getIncomeStatement: (params?: { startDate?: string; endDate?: string; year?: number; month?: number }) => {
     const q = new URLSearchParams();
     if (params?.year) q.set("year", params.year.toString());
     if (params?.month) q.set("month", params.month.toString());
     const query = q.toString() ? `?${q.toString()}` : "";
-    return request<any>(`/api/v1/accounting/pnl-statement${query}`);
+    return request<PnlStatement>(`/api/v1/accounting/pnl-statement${query}`);
   },
   getCostCenterPnl: (year?: number) => {
     const q = year ? `?year=${year}` : "";
-    return request<any>(`/api/v1/accounting/reports/cost-center-pnl${q}`);
+    return request<Record<string, unknown>>(`/api/v1/accounting/reports/cost-center-pnl${q}`);
   },
   runYearEndClosing: (body: { year: number; closingDate?: string }) =>
-    request<any>("/api/v1/accounting/year-end-closing", { method: "POST", body: JSON.stringify(body) }),
+    request<JournalEntry>("/api/v1/accounting/year-end-closing", { method: "POST", body: JSON.stringify(body) }),
   autoPostPayroll: (body: { date: string; periodDescription: string; totalGrossSalaries: number; totalEmployerContributions: number; totalNetSalaries: number; totalSocialSecurityToPay: number; costCenterId?: string }) =>
-    request<any>("/api/v1/accounting/auto-post/payroll", { method: "POST", body: JSON.stringify(body) }),
+    request<JournalEntry>("/api/v1/accounting/auto-post/payroll", { method: "POST", body: JSON.stringify(body) }),
   listCostCenters: () =>
-    request<any[]>("/api/v1/accounting/cost-centers"),
+    request<CostCenter[]>("/api/v1/accounting/cost-centers"),
   createCostCenter: (body: { code: string; name: string; category?: string }) =>
-    request<any>("/api/v1/accounting/cost-centers", { method: "POST", body: JSON.stringify(body) }),
+    request<CostCenter>("/api/v1/accounting/cost-centers", { method: "POST", body: JSON.stringify(body) }),
   listFiscalPeriods: () =>
-    request<any[]>("/api/v1/accounting/periods"),
+    request<FiscalPeriod[]>("/api/v1/accounting/periods"),
   lockFiscalPeriod: (body: { year: number; month: number; lock: boolean; user?: string }) =>
-    request<any>("/api/v1/accounting/periods/lock", { method: "POST", body: JSON.stringify(body) }),
+    request<FiscalPeriod>("/api/v1/accounting/periods/lock", { method: "POST", body: JSON.stringify(body) }),
 
   // Auto-Posting Triggers
   autoPostInvoice: (body: { invoiceId: string; invoiceNumber: string; customerName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number }) =>
-    request<any>("/api/v1/accounting/auto-post/invoice", { method: "POST", body: JSON.stringify(body) }),
+    request<JournalEntry>("/api/v1/accounting/auto-post/invoice", { method: "POST", body: JSON.stringify(body) }),
   autoPostPurchase: (body: { purchaseId: string; invoiceNumber: string; supplierName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number }) =>
-    request<any>("/api/v1/accounting/auto-post/purchase", { method: "POST", body: JSON.stringify(body) }),
+    request<JournalEntry>("/api/v1/accounting/auto-post/purchase", { method: "POST", body: JSON.stringify(body) }),
   autoPostReceipt: (body: { receiptId: string; receiptNumber: string; customerName: string; date: string; amount: number; paymentMethod?: string }) =>
-    request<any>("/api/v1/accounting/auto-post/receipt", { method: "POST", body: JSON.stringify(body) }),
+    request<JournalEntry>("/api/v1/accounting/auto-post/receipt", { method: "POST", body: JSON.stringify(body) }),
 
   // Bank Reconciliation
-  listBankStatements: () =>
-    request<any[]>("/api/v1/accounting/bank-statements"),
-  getBankStatement: (id: string) =>
-    request<any>(`/api/v1/accounting/bank-statements/${id}`),
-  uploadBankStatement: (body: { bankName?: string; accountNumber?: string; currency?: string; periodStartDate?: string; periodEndDate?: string; initialBalance?: number; finalBalance?: number; lines: any[] }) =>
-    request<any>("/api/v1/accounting/bank-statements/upload", { method: "POST", body: JSON.stringify(body) }),
-  autoMatchBankStatement: (id: string) =>
-    request<{ message: string; totalReconciled: number; statementStatus: string }>(`/api/v1/accounting/bank-statements/${id}/auto-match`, { method: "POST" }),
-  quickPostBankFee: (lineId: string, feeType: "BankFee" | "TaxLey25413") =>
-    request<any>(`/api/v1/accounting/bank-statements/lines/${lineId}/quick-post`, { method: "POST", body: JSON.stringify({ feeType }) }),
+  getTreasuryReconciliation: () =>
+    request<{ message: string; financeReconciliationPath: string; rows: Array<{
+      code: string; name: string; accountType: string; currency: string;
+      ledgerDebit: number; ledgerCredit: number; ledgerBalance: number; role: string;
+    }> }>("/api/v1/accounting/treasury-reconciliation"),
+  listFinanceAccountMappings: () =>
+    request<{ financialAccountId: string; ledgerAccountCode: string; updatedAtUtc: string }[]>(
+      "/api/v1/accounting/finance-account-mappings"),
+  saveFinanceAccountMappings: (body: { financialAccountId: string; ledgerAccountCode: string }[]) =>
+    request("/api/v1/accounting/finance-account-mappings", { method: "PUT", body: JSON.stringify(body) }),
 
   // ==========================================
   // ASIENTOS MODELOS (PLANTILLAS CONFIGURABLES) & CONTABILIZACIÃ“N EN LOTE
@@ -946,11 +1013,12 @@ export const api = {
       reports: { total: number; recent: import("./types").CalibrationReport[] };
     }>("/api/v1/metrology/dashboard"),
 
-  listMetrologyEquipment: (params?: { search?: string; customerId?: string; status?: string }) => {
+  listMetrologyEquipment: (params?: { search?: string; customerId?: string; status?: string; instructionCode?: string }) => {
     const q = new URLSearchParams();
     if (params?.search) q.set("search", params.search);
     if (params?.customerId) q.set("customerId", params.customerId);
     if (params?.status) q.set("status", params.status);
+    if (params?.instructionCode) q.set("instructionCode", params.instructionCode);
     const query = q.toString() ? `?${q.toString()}` : "";
     return request<import("./types").MetrologyEquipment[]>(`/api/v1/metrology/equipment${query}`);
   },
@@ -997,6 +1065,23 @@ export const api = {
   getStandardWeightHistory: (code: string) =>
     request<import("./types").StandardWeight[]>(`/api/v1/metrology/weights/history?code=${encodeURIComponent(code)}`),
 
+  listMetrologyInstruments: (params?: { kind?: string; status?: string; search?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.kind) q.set("kind", params.kind);
+    if (params?.status) q.set("status", params.status);
+    if (params?.search) q.set("search", params.search);
+    const qs = q.toString();
+    return request<import("./types").MetrologyInstrument[]>(`/api/v1/metrology/instruments${qs ? `?${qs}` : ""}`);
+  },
+  getMetrologyInstrument: (id: string) =>
+    request<import("./types").MetrologyInstrument>(`/api/v1/metrology/instruments/${id}`),
+  createMetrologyInstrument: (body: Partial<import("./types").MetrologyInstrument>) =>
+    request<import("./types").MetrologyInstrument>("/api/v1/metrology/instruments", { method: "POST", body: JSON.stringify(body) }),
+  updateMetrologyInstrument: (id: string, body: Partial<import("./types").MetrologyInstrument>) =>
+    request<import("./types").MetrologyInstrument>(`/api/v1/metrology/instruments/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteMetrologyInstrument: (id: string) =>
+    request<void>(`/api/v1/metrology/instruments/${id}`, { method: "DELETE" }),
+
   calculateMetrologyRules: (body: {
     maxCapacity: number;
     minCapacity: number;
@@ -1020,10 +1105,11 @@ export const api = {
       repeatabilityTerm?: string;
     }>("/api/v1/metrology/calculate-rules", { method: "POST", body: JSON.stringify(body) }),
 
-  listCalibrationReports: (params?: { equipmentId?: string; customerId?: string }) => {
+  listCalibrationReports: (params?: { equipmentId?: string; customerId?: string; instructionCode?: string }) => {
     const q = new URLSearchParams();
     if (params?.equipmentId) q.set("equipmentId", params.equipmentId);
     if (params?.customerId) q.set("customerId", params.customerId);
+    if (params?.instructionCode) q.set("instructionCode", params.instructionCode);
     const query = q.toString() ? `?${q.toString()}` : "";
     return request<import("./types").CalibrationReport[]>(`/api/v1/metrology/reports${query}`);
   },
@@ -1031,8 +1117,1229 @@ export const api = {
     request<{
       report: import("./types").CalibrationReport;
       equipment?: import("./types").MetrologyEquipment;
+      thermometer?: import("./types").MetrologyInstrument | null;
+      amendments?: Array<{
+        id: string;
+        certificateNumber: string;
+        reportStatus: string;
+        amendmentReason?: string | null;
+        createdAtUtc: string;
+      }>;
+      supersededReport?: { id: string; certificateNumber: string; reportStatus: string } | null;
     }>(`/api/v1/metrology/reports/${id}`),
   saveCalibrationReport: (body: Record<string, unknown>) =>
-    request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) })
+    request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) }),
+
+  approveCalibrationReport: (id: string) =>
+    request<import("./types").CalibrationReport>(`/api/v1/metrology/reports/${id}/approve`, { method: "POST", body: "{}" }),
+
+  /** PG09 R2 — clona informe Issued en borrador de enmienda y marca el original Superseded. */
+  amendCalibrationReport: (id: string, body: { amendmentReason: string } & Record<string, unknown>) =>
+    request<import("./types").CalibrationReport>(`/api/v1/metrology/reports/${id}/amend`, {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  getCalibrationReportSgcTraceability: (id: string) =>
+    request<{
+      reportId: string;
+      certificateNumber: string;
+      reportStatus: string;
+      instructionCode?: string;
+      standardApplied?: string;
+      performedBy?: string;
+      approvedBy?: string;
+      temperatureCelsius?: number;
+      thermometer?: {
+        id: string;
+        code: string;
+        kind: string;
+        description?: string;
+        certificateNumber?: string;
+        traceabilityLab?: string;
+        calibrationDate?: string | null;
+        expirationDate?: string | null;
+        status?: string;
+      } | null;
+      procedures: Array<{ code?: string; displayCode?: string; title?: string; version?: number }>;
+      externalDocumentCodes: string[];
+      weightsUsed: Array<{ code?: string; certificateNumber?: string; nominalValue?: number; unit?: string }>;
+      qualityLinks: {
+        tree: string;
+        instruction?: string | null;
+        procedurePg12: string;
+        procedurePg09: string;
+        procedurePg16?: string;
+      };
+    }>(`/api/v1/metrology/reports/${id}/sgc-traceability`),
+
+  // ==========================================
+  // Quality (ISO 17025)
+  // ==========================================
+  getQualityDashboard: () =>
+    request<import("./types/quality").QualityDashboard>("/api/v1/quality/dashboard"),
+
+  getQualityAuditTrail: (entityType: string, entityId: string) =>
+    request<{
+      entityType: string;
+      entityId: string;
+      rows: import("./types/quality").QualityAuditEventRow[];
+    }>(`/api/v1/quality/audit/${encodeURIComponent(entityType)}/${entityId}`),
+
+  getQualityPresentationStatus: () =>
+    request<{
+      active: boolean;
+      sessionId?: string;
+      startedAtUtc?: string;
+      startedByName?: string;
+    }>("/api/v1/quality/presentation/status"),
+
+  startQualityPresentation: () =>
+    request<{
+      active: boolean;
+      sessionId: string;
+      startedAtUtc: string;
+      startedByName: string;
+      resumed?: boolean;
+    }>("/api/v1/quality/presentation/start", { method: "POST", body: "{}" }),
+
+  endQualityPresentation: (password: string) =>
+    request<{ active: boolean; closed: number }>("/api/v1/quality/presentation/end", {
+      method: "POST",
+      body: JSON.stringify({ password })
+    }),
+
+  getQualityDocumentTree: () =>
+    request<import("./types/quality").QualityDocumentTreeNode[]>("/api/v1/quality/documents/tree"),
+
+  getQualityDocument: (code: string) =>
+    request<import("./types/quality").QualityDocumentDetail>(`/api/v1/quality/documents/${encodeURIComponent(code)}`),
+
+  getQualityDocumentListPg01R01: () =>
+    request<{ code: string; title: string; generatedAtUtc: string; rows: Array<Record<string, unknown>> }>(
+      "/api/v1/quality/records/pg01-r01"
+    ),
+
+  getQualityDocumentListPg01R02: () =>
+    request<{ code: string; title: string; generatedAtUtc: string; rows: Array<Record<string, unknown>> }>(
+      "/api/v1/quality/records/pg01-r02"
+    ),
+
+  listQualityMc01R01: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      rows: import("./types/quality").QualityConfidentialityCommitment[];
+    }>("/api/v1/quality/records/mc01-r01"),
+
+  createQualityMc01R01: (body: {
+    personName: string;
+    personEmail?: string;
+    personRole?: string;
+    organization?: string;
+    signedAt?: string;
+    signedFileId?: string;
+    notes?: string;
+    personUserId?: string;
+  }) =>
+    request<import("./types/quality").QualityConfidentialityCommitment>("/api/v1/quality/records/mc01-r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityMc01R01: (id: string) =>
+    request<import("./types/quality").QualityConfidentialityCommitment>(
+      `/api/v1/quality/records/mc01-r01/${id}`,
+      { method: "DELETE" }
+    ),
+
+  listQualityMc01R02: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      rows: import("./types/quality").QualityConfidentialityCommitment[];
+    }>("/api/v1/quality/records/mc01-r02"),
+
+  createQualityMc01R02: (body: {
+    personName: string;
+    personEmail?: string;
+    personRole?: string;
+    organization?: string;
+    signedAt?: string;
+    signedFileId?: string;
+    notes?: string;
+    personUserId?: string;
+  }) =>
+    request<import("./types/quality").QualityConfidentialityCommitment>("/api/v1/quality/records/mc01-r02", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityMc01R02: (id: string) =>
+    request<import("./types/quality").QualityConfidentialityCommitment>(
+      `/api/v1/quality/records/mc01-r02/${id}`,
+      { method: "DELETE" }
+    ),
+
+  listQualityMc01R03: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      rows: import("./types/quality").QualityIndicator[];
+    }>("/api/v1/quality/records/mc01-r03"),
+
+  createQualityIndicator: (body: {
+    name: string;
+    objective?: string;
+    formula?: string;
+    targetValue?: number;
+    targetUnit?: string;
+    direction?: string;
+    responsible?: string;
+    frequency?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityIndicator>("/api/v1/quality/records/mc01-r03", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityIndicator: (
+    id: string,
+    body: {
+      name?: string;
+      objective?: string;
+      formula?: string;
+      targetValue?: number;
+      targetUnit?: string;
+      direction?: string;
+      responsible?: string;
+      frequency?: string;
+      notes?: string;
+      status?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityIndicator>(`/api/v1/quality/records/mc01-r03/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  deactivateQualityIndicator: (id: string) =>
+    request<import("./types/quality").QualityIndicator>(`/api/v1/quality/records/mc01-r03/${id}`, {
+      method: "DELETE"
+    }),
+
+  createQualityIndicatorValue: (
+    indicatorId: string,
+    body: { period: string; value: number; notes?: string; recordedBy?: string }
+  ) =>
+    request<import("./types/quality").QualityIndicatorValue>(
+      `/api/v1/quality/records/mc01-r03/${indicatorId}/values`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  deleteQualityIndicatorValue: (indicatorId: string, valueId: string) =>
+    request<void>(`/api/v1/quality/records/mc01-r03/${indicatorId}/values/${valueId}`, {
+      method: "DELETE"
+    }),
+
+  listQualityMc01R05: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      rows: import("./types/quality").QualityInstitutionalNote[];
+    }>("/api/v1/quality/records/mc01-r05"),
+
+  createQualityMc01R05: (body: {
+    subject: string;
+    body?: string;
+    issuedBy?: string;
+    audience?: string;
+    issuedAt?: string;
+    fileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityInstitutionalNote>("/api/v1/quality/records/mc01-r05", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityMc01R05: (id: string) =>
+    request<import("./types/quality").QualityInstitutionalNote>(
+      `/api/v1/quality/records/mc01-r05/${id}`,
+      { method: "DELETE" }
+    ),
+
+  listQualityPg03R01: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      overdueOpen?: number;
+      rows: import("./types/quality").QualityComplaint[];
+    }>("/api/v1/quality/records/pg03-r01"),
+
+  getQualityComplaint: (id: string) =>
+    request<import("./types/quality").QualityComplaint>(`/api/v1/quality/records/pg03-r01/${id}`),
+
+  createQualityComplaint: (body: {
+    partyName: string;
+    description: string;
+    receivedAt?: string;
+    channel?: string;
+    partyContact?: string;
+    responsible?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityComplaint>("/api/v1/quality/records/pg03-r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityComplaint: (
+    id: string,
+    body: {
+      channel?: string;
+      partyName?: string;
+      partyContact?: string;
+      description?: string;
+      isValid?: boolean;
+      validatedAt?: string;
+      validationNotes?: string;
+      investigation?: string;
+      actions?: string;
+      responsible?: string;
+      communicatedAt?: string;
+      closedAt?: string;
+      linkedNonConformityId?: string;
+      evidenceFileId?: string;
+      notes?: string;
+      status?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityComplaint>(`/api/v1/quality/records/pg03-r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityComplaint: (id: string) =>
+    request<import("./types/quality").QualityComplaint>(`/api/v1/quality/records/pg03-r01/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg07R01: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      overdueOpen?: number;
+      rows: import("./types/quality").QualityNonConformity[];
+    }>("/api/v1/quality/records/pg07-r01"),
+
+  getQualityNonConformity: (id: string) =>
+    request<import("./types/quality").QualityNonConformity>(`/api/v1/quality/records/pg07-r01/${id}`),
+
+  createQualityNonConformity: (body: {
+    kind: string;
+    description: string;
+    detectedAt?: string;
+    origin?: string;
+    immediateAction?: string;
+    impactOnPreviousResults?: boolean;
+    customerNotified?: boolean;
+    responsible?: string;
+    dueDate?: string;
+    probability?: number;
+    impact?: number;
+    controls?: string;
+    sourceComplaintId?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityNonConformity>("/api/v1/quality/records/pg07-r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityNonConformity: (
+    id: string,
+    body: {
+      kind?: string;
+      origin?: string;
+      detectedAt?: string;
+      description?: string;
+      immediateAction?: string;
+      impactOnPreviousResults?: boolean;
+      customerNotified?: boolean;
+      rootCauseMethod?: string;
+      rootCause?: string;
+      correctiveAction?: string;
+      responsible?: string;
+      dueDate?: string;
+      newDueDate?: string;
+      effectivenessCheck?: string;
+      effectivenessResult?: string;
+      closedAt?: string;
+      status?: string;
+      probability?: number;
+      impact?: number;
+      controls?: string;
+      residualLevel?: number;
+      evidenceFileId?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityNonConformity>(`/api/v1/quality/records/pg07-r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityNonConformity: (id: string) =>
+    request<import("./types/quality").QualityNonConformity>(`/api/v1/quality/records/pg07-r01/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg04: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      openCount?: number;
+      rows: import("./types/quality").QualityInternalAudit[];
+    }>("/api/v1/quality/records/pg04"),
+
+  getQualityInternalAudit: (id: string) =>
+    request<import("./types/quality").QualityInternalAudit>(`/api/v1/quality/records/pg04/${id}`),
+
+  createQualityInternalAudit: (body: {
+    programYear: number;
+    plannedDate?: string;
+    scope: string;
+    clauses?: string;
+    auditor: string;
+    auditee?: string;
+    objectives?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityInternalAudit>("/api/v1/quality/records/pg04", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityInternalAudit: (
+    id: string,
+    body: {
+      programYear?: number;
+      plannedDate?: string;
+      executedDate?: string;
+      scope?: string;
+      clauses?: string;
+      auditor?: string;
+      auditee?: string;
+      objectives?: string;
+      findingsSummary?: string;
+      conclusions?: string;
+      recommendations?: string;
+      checklistNotes?: string;
+      planFileId?: string;
+      reportFileId?: string;
+      checklistFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityInternalAudit>(`/api/v1/quality/records/pg04/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityInternalAudit: (id: string) =>
+    request<import("./types/quality").QualityInternalAudit>(`/api/v1/quality/records/pg04/${id}`, {
+      method: "DELETE"
+    }),
+
+  getQualityPg06Summary: () =>
+    request<import("./types/quality").QualityPg06Summary>("/api/v1/quality/records/pg06"),
+
+  listQualityPg06R01: () =>
+    request<{
+      code: string;
+      title: string;
+      openCount?: number;
+      rows: import("./types/quality").QualityTrainingPlanItem[];
+    }>("/api/v1/quality/records/pg06/r01"),
+
+  createQualityTraining: (body: {
+    programYear: number;
+    topic: string;
+    plannedDate?: string;
+    targetRoles?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityTrainingPlanItem>("/api/v1/quality/records/pg06/r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityTraining: (
+    id: string,
+    body: {
+      programYear?: number;
+      topic?: string;
+      targetRoles?: string;
+      plannedDate?: string;
+      doneDate?: string;
+      effectivenessCheck?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityTrainingPlanItem>(`/api/v1/quality/records/pg06/r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityTraining: (id: string) =>
+    request<import("./types/quality").QualityTrainingPlanItem>(`/api/v1/quality/records/pg06/r01/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg06R02: () =>
+    request<{
+      code: string;
+      title: string;
+      rows: import("./types/quality").QualityPersonnelAuthorization[];
+    }>("/api/v1/quality/records/pg06/r02"),
+
+  getQualityPersonnelAuthorization: (id: string) =>
+    request<import("./types/quality").QualityPersonnelAuthorization>(`/api/v1/quality/records/pg06/r02/${id}`),
+
+  createQualityPersonnelAuthorization: (body: {
+    userId: string;
+    personName: string;
+    methodDocumentCode: string;
+    methodTitle?: string;
+    trainingEvidence?: string;
+    supervisedBy?: string;
+    validUntil?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityPersonnelAuthorization>("/api/v1/quality/records/pg06/r02", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityPersonnelAuthorization: (
+    id: string,
+    body: {
+      personName?: string;
+      methodDocumentCode?: string;
+      methodTitle?: string;
+      trainingEvidence?: string;
+      supervisedBy?: string;
+      validUntil?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityPersonnelAuthorization>(`/api/v1/quality/records/pg06/r02/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  authorizeQualityPersonnel: (
+    id: string,
+    body?: { authorizedAt?: string; validUntil?: string; notes?: string }
+  ) =>
+    request<import("./types/quality").QualityPersonnelAuthorization>(
+      `/api/v1/quality/records/pg06/r02/${id}/authorize`,
+      { method: "POST", body: JSON.stringify(body || {}) }
+    ),
+
+  cancelQualityPersonnelAuthorization: (id: string) =>
+    request<import("./types/quality").QualityPersonnelAuthorization>(`/api/v1/quality/records/pg06/r02/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg06R03: () =>
+    request<{
+      code: string;
+      title: string;
+      rows: import("./types/quality").QualityCompetenceReview[];
+    }>("/api/v1/quality/records/pg06/r03"),
+
+  createQualityCompetenceReview: (body: {
+    userId: string;
+    personName: string;
+    reviewYear: number;
+    evaluator?: string;
+    technicalScore?: number;
+    personalScore?: number;
+    conclusions?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityCompetenceReview>("/api/v1/quality/records/pg06/r03", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityCompetenceReview: (
+    id: string,
+    body: {
+      personName?: string;
+      reviewYear?: number;
+      evaluator?: string;
+      technicalScore?: number;
+      personalScore?: number;
+      conclusions?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityCompetenceReview>(`/api/v1/quality/records/pg06/r03/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityCompetenceReview: (id: string) =>
+    request<import("./types/quality").QualityCompetenceReview>(`/api/v1/quality/records/pg06/r03/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg06R04: () =>
+    request<{
+      code: string;
+      title: string;
+      rows: import("./types/quality").QualityRoleAssignment[];
+    }>("/api/v1/quality/records/pg06/r04"),
+
+  createQualityRoleAssignment: (body: {
+    role: string;
+    userId: string;
+    personName: string;
+    since?: string;
+    substituteUserId?: string;
+    substituteName?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityRoleAssignment>("/api/v1/quality/records/pg06/r04", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityRoleAssignment: (
+    id: string,
+    body: {
+      role?: string;
+      personName?: string;
+      substituteUserId?: string;
+      substituteName?: string;
+      since?: string;
+      until?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityRoleAssignment>(`/api/v1/quality/records/pg06/r04/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityRoleAssignment: (id: string) =>
+    request<import("./types/quality").QualityRoleAssignment>(`/api/v1/quality/records/pg06/r04/${id}`, {
+      method: "DELETE"
+    }),
+
+  getQualityPg05Summary: () =>
+    request<import("./types/quality").QualityPg05Summary>("/api/v1/quality/records/pg05"),
+
+  listQualityPg05R01: () =>
+    request<{
+      code: string;
+      title: string;
+      draftCount?: number;
+      approvedCount?: number;
+      rows: import("./types/quality").QualitySupplierEvaluation[];
+    }>("/api/v1/quality/records/pg05/r01"),
+
+  getQualitySupplierEvaluation: (id: string) =>
+    request<import("./types/quality").QualitySupplierEvaluation>(`/api/v1/quality/records/pg05/r01/${id}`),
+
+  createQualityPg05R01: (body: {
+    supplierId: string;
+    supplierName: string;
+    supplierDocument?: string;
+    serviceScope?: string;
+    evaluatedAt?: string;
+    score?: number;
+    criteriaNotes?: string;
+    strengths?: string;
+    weaknesses?: string;
+    validUntil?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualitySupplierEvaluation>("/api/v1/quality/records/pg05/r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityPg05R01: (
+    id: string,
+    body: {
+      supplierName?: string;
+      supplierDocument?: string;
+      serviceScope?: string;
+      evaluatedAt?: string;
+      score?: number;
+      criteriaNotes?: string;
+      strengths?: string;
+      weaknesses?: string;
+      approvedBy?: string;
+      approvedAt?: string;
+      validUntil?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualitySupplierEvaluation>(`/api/v1/quality/records/pg05/r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityPg05R01: (id: string) =>
+    request<import("./types/quality").QualitySupplierEvaluation>(`/api/v1/quality/records/pg05/r01/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg05R02: () =>
+    request<{
+      code: string;
+      title: string;
+      rows: import("./types/quality").QualityEnabledSupplierRow[];
+    }>("/api/v1/quality/records/pg05/r02"),
+
+  listQualityPg05R03: () =>
+    request<{
+      code: string;
+      title: string;
+      draftCount?: number;
+      rows: import("./types/quality").QualitySupplierPerformanceReview[];
+    }>("/api/v1/quality/records/pg05/r03"),
+
+  createQualityPg05R03: (body: {
+    supplierId: string;
+    supplierName: string;
+    evaluationId?: string;
+    period?: string;
+    reviewDate?: string;
+    score?: number;
+    qualityScore?: number;
+    deliveryScore?: number;
+    serviceScore?: number;
+    comments?: string;
+    reviewedBy?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualitySupplierPerformanceReview>("/api/v1/quality/records/pg05/r03", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityPg05R03: (
+    id: string,
+    body: {
+      supplierName?: string;
+      evaluationId?: string;
+      period?: string;
+      reviewDate?: string;
+      score?: number;
+      qualityScore?: number;
+      deliveryScore?: number;
+      serviceScore?: number;
+      comments?: string;
+      reviewedBy?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualitySupplierPerformanceReview>(`/api/v1/quality/records/pg05/r03/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityPg05R03: (id: string) =>
+    request<import("./types/quality").QualitySupplierPerformanceReview>(`/api/v1/quality/records/pg05/r03/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg08R01: () =>
+    request<{
+      code: string;
+      title: string;
+      draftCount?: number;
+      completedCount?: number;
+      rows: import("./types/quality").QualityManagementReview[];
+    }>("/api/v1/quality/records/pg08-r01"),
+
+  getQualityManagementReview: (id: string) =>
+    request<import("./types/quality").QualityManagementReview>(`/api/v1/quality/records/pg08-r01/${id}`),
+
+  createQualityManagementReview: (body: {
+    programYear: number;
+    reviewDate?: string;
+    attendees?: string;
+    inputsNotes?: string;
+    decisions?: string;
+    actions?: string;
+    followUp?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityManagementReview>("/api/v1/quality/records/pg08-r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityManagementReview: (
+    id: string,
+    body: {
+      programYear?: number;
+      reviewDate?: string;
+      attendees?: string;
+      inputsNotes?: string;
+      decisions?: string;
+      actions?: string;
+      followUp?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityManagementReview>(`/api/v1/quality/records/pg08-r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  refreshQualityManagementReviewInputs: (id: string) =>
+    request<import("./types/quality").QualityManagementReview>(
+      `/api/v1/quality/records/pg08-r01/${id}/refresh-inputs`,
+      { method: "POST" }
+    ),
+
+  cancelQualityManagementReview: (id: string) =>
+    request<import("./types/quality").QualityManagementReview>(`/api/v1/quality/records/pg08-r01/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg09R03: () =>
+    request<{
+      code: string;
+      title: string;
+      draftCount?: number;
+      receivedCount?: number;
+      averageOverall?: number | null;
+      rows: import("./types/quality").QualitySatisfactionSurvey[];
+    }>("/api/v1/quality/records/pg09-r03"),
+
+  getQualitySatisfactionSurvey: (id: string) =>
+    request<import("./types/quality").QualitySatisfactionSurvey>(`/api/v1/quality/records/pg09-r03/${id}`),
+
+  createQualitySatisfactionSurvey: (body: {
+    customerName: string;
+    surveyDate?: string;
+    calibrationReportId?: string;
+    certificateNumber?: string;
+    customerId?: string;
+    channel?: string;
+    scorePunctuality?: number | null;
+    scoreQuality?: number | null;
+    scoreCommunication?: number | null;
+    scoreOverall?: number | null;
+    comments?: string;
+    answersJson?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualitySatisfactionSurvey>("/api/v1/quality/records/pg09-r03", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualitySatisfactionSurvey: (
+    id: string,
+    body: {
+      customerName?: string;
+      surveyDate?: string;
+      calibrationReportId?: string | null;
+      certificateNumber?: string;
+      customerId?: string | null;
+      channel?: string;
+      scorePunctuality?: number | null;
+      scoreQuality?: number | null;
+      scoreCommunication?: number | null;
+      scoreOverall?: number | null;
+      comments?: string;
+      answersJson?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualitySatisfactionSurvey>(`/api/v1/quality/records/pg09-r03/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualitySatisfactionSurvey: (id: string) =>
+    request<import("./types/quality").QualitySatisfactionSurvey>(`/api/v1/quality/records/pg09-r03/${id}`, {
+      method: "DELETE"
+    }),
+
+  getQualityPg14Summary: () =>
+    request<import("./types/quality").QualityPg14Summary>("/api/v1/quality/records/pg14"),
+
+  listQualityPg14R04: () =>
+    request<import("./types/quality").QualityPg14R04Response>("/api/v1/quality/records/pg14-r04"),
+
+  listQualityPg14R03: () =>
+    request<import("./types/quality").QualityPg14R03Response>("/api/v1/quality/records/pg14-r03"),
+
+  listQualityEquipment: () =>
+    request<{
+      code: string;
+      title: string;
+      rows: import("./types/quality").QualityEquipment[];
+    }>("/api/v1/quality/records/pg14/equipment"),
+
+  getQualityEquipment: (id: string) =>
+    request<import("./types/quality").QualityEquipment>(`/api/v1/quality/records/pg14/equipment/${id}`),
+
+  createQualityEquipment: (body: {
+    kind: string;
+    code?: string;
+    description?: string;
+    brand?: string;
+    model?: string;
+    serialNumber?: string;
+    plate?: string;
+    parentEquipmentId?: string;
+    fleetVehicleId?: string;
+    location?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityEquipment>("/api/v1/quality/records/pg14/equipment", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityEquipment: (
+    id: string,
+    body: {
+      kind?: string;
+      description?: string;
+      brand?: string;
+      model?: string;
+      serialNumber?: string;
+      plate?: string;
+      parentEquipmentId?: string | null;
+      fleetVehicleId?: string | null;
+      location?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityEquipment>(`/api/v1/quality/records/pg14/equipment/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  retireQualityEquipment: (id: string) =>
+    request<import("./types/quality").QualityEquipment>(`/api/v1/quality/records/pg14/equipment/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg14R05: () =>
+    request<{
+      code: string;
+      title: string;
+      draftCount?: number;
+      completedCount?: number;
+      rows: import("./types/quality").QualityIntermediateCheck[];
+    }>("/api/v1/quality/records/pg14/r05"),
+
+  getQualityIntermediateCheck: (id: string) =>
+    request<import("./types/quality").QualityIntermediateCheck>(`/api/v1/quality/records/pg14/r05/${id}`),
+
+  createQualityIntermediateCheck: (body: {
+    checkDate?: string;
+    weightUsed?: string;
+    instrument?: string;
+    equipmentId?: string;
+    readings?: string;
+    result?: string;
+    responsible?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityIntermediateCheck>("/api/v1/quality/records/pg14/r05", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityIntermediateCheck: (
+    id: string,
+    body: {
+      checkDate?: string;
+      weightUsed?: string;
+      instrument?: string;
+      equipmentId?: string | null;
+      readings?: string;
+      result?: string;
+      responsible?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityIntermediateCheck>(`/api/v1/quality/records/pg14/r05/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityIntermediateCheck: (id: string) =>
+    request<import("./types/quality").QualityIntermediateCheck>(`/api/v1/quality/records/pg14/r05/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg14R06: () =>
+    request<{
+      code: string;
+      title: string;
+      activeCount?: number;
+      overdueCount?: number;
+      rows: import("./types/quality").QualityMaintenancePlanItem[];
+    }>("/api/v1/quality/records/pg14/r06"),
+
+  getQualityMaintenancePlanItem: (id: string) =>
+    request<import("./types/quality").QualityMaintenancePlanItem>(`/api/v1/quality/records/pg14/r06/${id}`),
+
+  createQualityMaintenancePlanItem: (body: {
+    equipmentId: string;
+    activity: string;
+    frequency?: string;
+    nextDue?: string;
+    responsible?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityMaintenancePlanItem>("/api/v1/quality/records/pg14/r06", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityMaintenancePlanItem: (
+    id: string,
+    body: {
+      activity?: string;
+      frequency?: string;
+      nextDue?: string | null;
+      lastDone?: string | null;
+      responsible?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityMaintenancePlanItem>(`/api/v1/quality/records/pg14/r06/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityMaintenancePlanItem: (id: string) =>
+    request<import("./types/quality").QualityMaintenancePlanItem>(`/api/v1/quality/records/pg14/r06/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityEquipmentLogEntries: (params?: { assetSource?: string; assetId?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.assetSource) q.set("assetSource", params.assetSource);
+    if (params?.assetId) q.set("assetId", params.assetId);
+    const qs = q.toString();
+    return request<import("./types/quality").QualityEquipmentLogListResponse>(
+      `/api/v1/quality/records/pg14/r01${qs ? `?${qs}` : ""}`
+    );
+  },
+
+  getQualityEquipmentLogEntry: (id: string) =>
+    request<import("./types/quality").QualityEquipmentLogEntry>(`/api/v1/quality/records/pg14/r01/${id}`),
+
+  createQualityEquipmentLogEntry: (body: {
+    assetSource: string;
+    assetId: string;
+    kind: string;
+    eventDate?: string;
+    assetCode?: string;
+    assetDescription?: string;
+    description?: string;
+    certificateNumber?: string;
+    verdict?: string;
+    approvedByTechnicalDirector?: boolean;
+    responsible?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityEquipmentLogEntry>("/api/v1/quality/records/pg14/r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityEquipmentLogEntry: (
+    id: string,
+    body: {
+      eventDate?: string;
+      kind?: string;
+      description?: string;
+      certificateNumber?: string;
+      verdict?: string;
+      approvedByTechnicalDirector?: boolean;
+      responsible?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityEquipmentLogEntry>(`/api/v1/quality/records/pg14/r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityEquipmentLogEntry: (id: string) =>
+    request<import("./types/quality").QualityEquipmentLogEntry>(`/api/v1/quality/records/pg14/r01/${id}`, {
+      method: "DELETE"
+    }),
+
+  syncQualityEquipmentLogCalibrations: () =>
+    request<{ created: number; skipped: number }>("/api/v1/quality/records/pg14/r01/sync-calibrations", {
+      method: "POST"
+    }),
+
+  uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("role", role);
+    const normalToken = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
+    const tenantId = typeof window !== "undefined" ? localStorage.getItem("leal_tenant_id") : null;
+    const headers: Record<string, string> = {};
+    if (normalToken) headers.Authorization = `Bearer ${normalToken}`;
+    if (tenantId) headers["X-Tenant-Id"] = tenantId;
+    const response = await fetch("/api/v1/quality/files", { method: "POST", headers, body: form });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Error (${response.status})`);
+    }
+    return response.json() as Promise<{ id: string; fileName: string; role: string; sha256: string }>;
+  },
+
+  attachQualityFile: (code: string, version: number, body: { fileId: string; role?: "Published" | "Source" }) =>
+    request<import("./types/quality").QualityDocumentDetail["versions"][number]>(
+      `/api/v1/quality/documents/${encodeURIComponent(code)}/versions/${version}/attach`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  updateQualityVersion: (
+    code: string,
+    version: number,
+    body: {
+      changeSummary?: string;
+      elaboratedBy?: string;
+      elaboratedAt?: string;
+      reviewedBy?: string;
+      reviewedAt?: string;
+      approvedBy?: string;
+      approvedAt?: string;
+      effectiveFrom?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityDocumentDetail["versions"][number]>(
+      `/api/v1/quality/documents/${encodeURIComponent(code)}/versions/${version}`,
+      { method: "PATCH", body: JSON.stringify(body) }
+    ),
+
+  createQualityVersion: (
+    code: string,
+    body: {
+      changeSummary?: string;
+      elaboratedBy?: string;
+      elaboratedAt?: string;
+      publishedFileId?: string;
+      sourceFileId?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityDocumentDetail["versions"][number]>(
+      `/api/v1/quality/documents/${encodeURIComponent(code)}/versions`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  approveQualityVersion: (
+    code: string,
+    version: number,
+    body?: { approvedBy?: string; approvedAt?: string; reviewedBy?: string }
+  ) =>
+    request<import("./types/quality").QualityDocumentDetail["versions"][number]>(
+      `/api/v1/quality/documents/${encodeURIComponent(code)}/versions/${version}/approve`,
+      { method: "POST", body: JSON.stringify(body ?? {}) }
+    ),
+
+  /** URL cruda (sin auth). Preferir downloadQualityFile para navegador. */
+  downloadQualityFileUrl: (id: string) => `/api/v1/quality/files/${id}`,
+
+  downloadQualityFile: async (id: string): Promise<{ blob: Blob; fileName: string }> => {
+    const normalToken = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
+    const tenantId = typeof window !== "undefined" ? localStorage.getItem("leal_tenant_id") : null;
+    const headers: Record<string, string> = {};
+    if (normalToken) headers.Authorization = `Bearer ${normalToken}`;
+    if (tenantId) headers["X-Tenant-Id"] = tenantId;
+    const response = await fetch(`/api/v1/quality/files/${id}`, { headers });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Error al descargar (${response.status})`);
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const match = /filename\*?=(?:UTF-8''|")?([^\";]+)/i.exec(disposition);
+    const fileName = match ? decodeURIComponent(match[1].replace(/"/g, "")) : `quality-${id}`;
+    return { blob, fileName };
+  },
+
+  openQualityFile: async (id: string, mode: "open" | "download" = "open") => {
+    const { blob, fileName } = await api.downloadQualityFile(id);
+    const url = URL.createObjectURL(blob);
+    if (mode === "download") {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
 };
 

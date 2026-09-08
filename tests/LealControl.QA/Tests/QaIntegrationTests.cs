@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using LealControl.QA.Infrastructure;
 using LealControl.QA.Models;
+using LealControl.QA.Scenarios.Finance;
 using LealControl.QA.Scenarios.Purchases;
 using LealControl.QA.Scenarios.Sales;
 using Xunit;
@@ -154,6 +155,38 @@ public sealed class QaIntegrationTests : IClassFixture<QaWebApplicationFactory>
         PrintReport(result);
 
         result.Issues.Should().BeEmpty("la nota de crédito de proveedor debe deducir la deuda comercial y balancear contabilidad");
+        result.Status.Should().Be(QaCheckStatus.Passed);
+    }
+
+    // ====================================================================
+    // FINANZAS
+    // ====================================================================
+
+    [Fact]
+    public async Task Run_QaFinance001_ExtractToReceiptToLedger_AllAuditsPass()
+    {
+        await using var context = new QaTestContext(_factory);
+        var scenario = new QaFinance001Scenario();
+
+        var result = await scenario.ExecuteAsync(context);
+        context.Run.Scenarios.Add(result);
+        PrintReport(result);
+
+        result.Issues.Should().BeEmpty("extracto→recibo→ledger debe balancear banco, deudores y partida doble");
+        result.Status.Should().Be(QaCheckStatus.Passed);
+    }
+
+    [Fact]
+    public async Task Run_QaFinance002_ChequeReceivedDepositedRejected_AllAuditsPass()
+    {
+        await using var context = new QaTestContext(_factory);
+        var scenario = new QaFinance002Scenario();
+
+        var result = await scenario.ExecuteAsync(context);
+        context.Run.Scenarios.Add(result);
+        PrintReport(result);
+
+        result.Issues.Should().BeEmpty("cheque recibido→depositado→rechazado debe generar crédito y débito con gastos");
         result.Status.Should().Be(QaCheckStatus.Passed);
     }
 }
