@@ -130,10 +130,10 @@ public static class QualitySeed
         AddRecord("PG01", "PG01-R01", "PG01-R01", "Lista de documentos", QualityRecordKinds.Generated);
         AddRecord("PG01", "PG01-R02", "PG01-R02", "Lista de documentos externos", QualityRecordKinds.Generated);
         AddRecord("PG03", "PG03-R01", "PG03-R01", "Seguimiento de quejas", QualityRecordKinds.Structured);
-        AddRecord("PG04", "PG04-R01", "PG04-R01", "Programa de auditorías", QualityRecordKinds.Attachment);
-        AddRecord("PG04", "PG04-R02", "PG04-R02", "Plan de auditoría", QualityRecordKinds.Attachment);
-        AddRecord("PG04", "PG04-R03", "PG04-R03", "Informe de auditoría", QualityRecordKinds.Attachment);
-        AddRecord("PG04", "PG04-R04", "PG04-R04", "Lista de verificación ISO/IEC 17025", QualityRecordKinds.Attachment);
+        AddRecord("PG04", "PG04-R01", "PG04-R01", "Programa de auditorías", QualityRecordKinds.Structured);
+        AddRecord("PG04", "PG04-R02", "PG04-R02", "Plan de auditoría", QualityRecordKinds.Structured);
+        AddRecord("PG04", "PG04-R03", "PG04-R03", "Informe de auditoría", QualityRecordKinds.Structured);
+        AddRecord("PG04", "PG04-R04", "PG04-R04", "Lista de verificación ISO/IEC 17025", QualityRecordKinds.Structured);
         AddRecord("PG05", "PG05-R01", "PG05-R01", "Evaluación inicial de proveedores", QualityRecordKinds.Structured, status: QualityDocumentStatuses.Draft);
         AddRecord("PG05", "PG05-R02", "PG05-R02", "Listado de proveedores habilitados", QualityRecordKinds.Structured, status: QualityDocumentStatuses.Draft);
         AddRecord("PG05", "PG05-R03", "PG05-R03", "Evaluación del desempeño de proveedores", QualityRecordKinds.Structured, status: QualityDocumentStatuses.Draft);

@@ -22,7 +22,7 @@ Documentos relacionados:
 | 4 | Contabilidad desde asientos modelo | 9 | 9/9 | 0/9 | ◐ Código 4.1–4.9 listo — verificar staging |
 | 5 | Red de tests del circuito del dinero | 6 | 6/6 | 0/6 | ✅ Código en `8fb4e17` — tests locales OK |
 | 6 | Deuda técnica | 8 | 7/8 | 7/8 | ✅ `53d1d5a` staging 03/09/2026 — smoke 10/10; **6.4 diferido** |
-| Q | Calidad ISO 17025 (SGC) | — | ◐ | ◐ | **C1✅ C2◐ C3 MC01+PG03+PG07✅** — siguiente PG04; detalle en `docs/quality/…` §0 |
+| Q | Calidad ISO 17025 (SGC) | — | ◐ | ◐ | **C1✅ C2◐ C3 MC01+PG03+PG07+PG04✅** — siguiente PG06; detalle en `docs/quality/…` §0 |
 
 Regla de orden: **bloque 2 antes del 3** (CI y backups estables). **No empezar bloque 4** sin tareas 3.1–3.6 del bloque 3.  
 **Bloque Q** corre en paralelo en `staging/metrology-2307` (INMELA / auditoría OAA); no bloquea el circuito del dinero.
@@ -338,8 +338,9 @@ Rama de trabajo: `staging/metrology-2307` · Staging: https://v2.lealcontrol.com
   - [x] PG01-R01 / R02 (desde C1)
   - [x] PG03-R01 Quejas (Structured + SLA)
   - [x] PG07-R1 NC / TNC / Riesgos / OM
-  - [ ] **Siguiente:** PG04 Auditorías
-  - [ ] PG06 · PG05 · PG08 · PG09-R3 · PG14-R5/R6 + QualityEquipment
+  - [x] PG04 Auditorías (AUD-AAAA-NNNN; R01–R04 unificados)
+  - [ ] **Siguiente:** PG06 Personal + firma DT
+  - [ ] PG05 · PG08 · PG09-R3 · PG14-R5/R6 + QualityEquipment
 - [ ] **Q.C4** Dashboard SGC, auditoría before/after, modo presentación
 
 **Reanudar siempre desde:** `MODULO_CALIDAD_ANALISIS.md` §0.

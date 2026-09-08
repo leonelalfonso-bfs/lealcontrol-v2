@@ -1460,6 +1460,66 @@ export const api = {
       method: "DELETE"
     }),
 
+  listQualityPg04: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      openCount?: number;
+      rows: import("./types/quality").QualityInternalAudit[];
+    }>("/api/v1/quality/records/pg04"),
+
+  getQualityInternalAudit: (id: string) =>
+    request<import("./types/quality").QualityInternalAudit>(`/api/v1/quality/records/pg04/${id}`),
+
+  createQualityInternalAudit: (body: {
+    programYear: number;
+    plannedDate?: string;
+    scope: string;
+    clauses?: string;
+    auditor: string;
+    auditee?: string;
+    objectives?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityInternalAudit>("/api/v1/quality/records/pg04", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityInternalAudit: (
+    id: string,
+    body: {
+      programYear?: number;
+      plannedDate?: string;
+      executedDate?: string;
+      scope?: string;
+      clauses?: string;
+      auditor?: string;
+      auditee?: string;
+      objectives?: string;
+      findingsSummary?: string;
+      conclusions?: string;
+      recommendations?: string;
+      checklistNotes?: string;
+      planFileId?: string;
+      reportFileId?: string;
+      checklistFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityInternalAudit>(`/api/v1/quality/records/pg04/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityInternalAudit: (id: string) =>
+    request<import("./types/quality").QualityInternalAudit>(`/api/v1/quality/records/pg04/${id}`, {
+      method: "DELETE"
+    }),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);

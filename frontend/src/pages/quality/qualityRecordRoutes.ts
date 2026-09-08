@@ -58,6 +58,38 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "NC / TNC / Riesgos / OM generados en el sistema."
   },
   {
+    code: "PG04-R01",
+    title: "Programa de auditorías",
+    path: "/calidad/registros/auditorias",
+    kind: "Structured",
+    ready: true,
+    blurb: "Auditorías internas AUD-AAAA-NNNN; el listado por año es el programa."
+  },
+  {
+    code: "PG04-R02",
+    title: "Plan de auditoría",
+    path: "/calidad/registros/auditorias",
+    kind: "Structured",
+    ready: true,
+    blurb: "Etapa plan / objetivos / adjunto del mismo flujo PG04."
+  },
+  {
+    code: "PG04-R03",
+    title: "Informe de auditoría",
+    path: "/calidad/registros/auditorias",
+    kind: "Structured",
+    ready: true,
+    blurb: "Hallazgos, conclusiones e informe PDF exportable."
+  },
+  {
+    code: "PG04-R04",
+    title: "Lista de verificación ISO/IEC 17025",
+    path: "/calidad/registros/auditorias",
+    kind: "Structured",
+    ready: true,
+    blurb: "Checklist y cláusulas dentro de la auditoría."
+  },
+  {
     code: "PG01-R01",
     title: "Lista de documentos",
     path: "/calidad/registros/pg01-r01",

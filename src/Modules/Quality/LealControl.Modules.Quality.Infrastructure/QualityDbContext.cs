@@ -22,6 +22,7 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityInstitutionalNote> InstitutionalNotes => Set<QualityInstitutionalNote>();
     public DbSet<QualityComplaint> Complaints => Set<QualityComplaint>();
     public DbSet<QualityNonConformity> NonConformities => Set<QualityNonConformity>();
+    public DbSet<QualityInternalAudit> InternalAudits => Set<QualityInternalAudit>();
     public DbSet<QualityAuditEvent> AuditEvents => Set<QualityAuditEvent>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
@@ -220,6 +221,29 @@ public sealed class QualityDbContext : DbContext
             b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.Kind, x.Status });
             b.HasIndex(x => new { x.TenantId, x.DueDate });
+        });
+
+        modelBuilder.Entity<QualityInternalAudit>(b =>
+        {
+            b.ToTable("internal_audits", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Scope).HasMaxLength(2000);
+            b.Property(x => x.Clauses).HasMaxLength(500);
+            b.Property(x => x.Auditor).HasMaxLength(160);
+            b.Property(x => x.Auditee).HasMaxLength(200);
+            b.Property(x => x.Objectives).HasMaxLength(2000);
+            b.Property(x => x.FindingsSummary).HasMaxLength(4000);
+            b.Property(x => x.Conclusions).HasMaxLength(4000);
+            b.Property(x => x.Recommendations).HasMaxLength(4000);
+            b.Property(x => x.ChecklistNotes).HasMaxLength(4000);
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityInternalAuditStatuses.Planned);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.ProgramYear, x.Status });
+            b.HasIndex(x => new { x.TenantId, x.PlannedDate });
         });
 
         modelBuilder.Entity<QualityAuditEvent>(b =>
@@ -470,6 +494,35 @@ public sealed class QualityDbContext : DbContext
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_nc_Tenant_Number"" ON quality.non_conformities (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_nc_Tenant_Kind_Status"" ON quality.non_conformities (""TenantId"", ""Kind"", ""Status"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_nc_Tenant_Due"" ON quality.non_conformities (""TenantId"", ""DueDate"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.internal_audits (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG04-R01',
+                ""Number"" character varying(32) NOT NULL,
+                ""ProgramYear"" integer NOT NULL,
+                ""PlannedDate"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""ExecutedDate"" timestamp with time zone,
+                ""Scope"" character varying(2000) NOT NULL DEFAULT '',
+                ""Clauses"" character varying(500) NOT NULL DEFAULT '',
+                ""Auditor"" character varying(160) NOT NULL DEFAULT '',
+                ""Auditee"" character varying(200) NOT NULL DEFAULT '',
+                ""Objectives"" character varying(2000) NOT NULL DEFAULT '',
+                ""FindingsSummary"" character varying(4000) NOT NULL DEFAULT '',
+                ""Conclusions"" character varying(4000) NOT NULL DEFAULT '',
+                ""Recommendations"" character varying(4000) NOT NULL DEFAULT '',
+                ""ChecklistNotes"" character varying(4000) NOT NULL DEFAULT '',
+                ""PlanFileId"" uuid,
+                ""ReportFileId"" uuid,
+                ""ChecklistFileId"" uuid,
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Planned',
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_audits_Tenant_Number"" ON quality.internal_audits (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_audits_Tenant_Year_Status"" ON quality.internal_audits (""TenantId"", ""ProgramYear"", ""Status"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_audits_Tenant_Planned"" ON quality.internal_audits (""TenantId"", ""PlannedDate"");",
 
             @"CREATE TABLE IF NOT EXISTS quality.audit_events (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

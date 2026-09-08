@@ -509,3 +509,76 @@ public sealed record UpdateNonConformityRequest(
     int? ResidualLevel = null,
     Guid? EvidenceFileId = null,
     string? Notes = null);
+
+public static class QualityInternalAuditStatuses
+{
+    public const string Planned = "Planned";
+    public const string InProgress = "InProgress";
+    public const string Reported = "Reported";
+    public const string Closed = "Closed";
+    public const string Cancelled = "Cancelled";
+}
+
+/// <summary>Instancia operativa de auditoría interna (PG04-R01..R04 unificados).</summary>
+public sealed class QualityInternalAudit : Entity<Guid>
+{
+    public QualityInternalAudit() : base(Guid.NewGuid())
+    {
+    }
+
+    public QualityInternalAudit(Guid id) : base(id)
+    {
+    }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG04-R01";
+    public string Number { get; set; } = string.Empty; // AUD-2026-0001
+    public int ProgramYear { get; set; }
+    public DateTime PlannedDate { get; set; } = DateTime.UtcNow;
+    public DateTime? ExecutedDate { get; set; }
+    public string Scope { get; set; } = string.Empty;
+    public string Clauses { get; set; } = string.Empty;
+    public string Auditor { get; set; } = string.Empty;
+    public string Auditee { get; set; } = string.Empty;
+    public string Objectives { get; set; } = string.Empty;
+    public string FindingsSummary { get; set; } = string.Empty;
+    public string Conclusions { get; set; } = string.Empty;
+    public string Recommendations { get; set; } = string.Empty;
+    public string ChecklistNotes { get; set; } = string.Empty;
+    public Guid? PlanFileId { get; set; }
+    public Guid? ReportFileId { get; set; }
+    public Guid? ChecklistFileId { get; set; }
+    public string Status { get; set; } = QualityInternalAuditStatuses.Planned;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateInternalAuditRequest(
+    int ProgramYear,
+    DateTime? PlannedDate = null,
+    string? Scope = null,
+    string? Clauses = null,
+    string? Auditor = null,
+    string? Auditee = null,
+    string? Objectives = null,
+    string? Notes = null);
+
+public sealed record UpdateInternalAuditRequest(
+    int? ProgramYear = null,
+    DateTime? PlannedDate = null,
+    DateTime? ExecutedDate = null,
+    string? Scope = null,
+    string? Clauses = null,
+    string? Auditor = null,
+    string? Auditee = null,
+    string? Objectives = null,
+    string? FindingsSummary = null,
+    string? Conclusions = null,
+    string? Recommendations = null,
+    string? ChecklistNotes = null,
+    Guid? PlanFileId = null,
+    Guid? ReportFileId = null,
+    Guid? ChecklistFileId = null,
+    string? Status = null,
+    string? Notes = null);

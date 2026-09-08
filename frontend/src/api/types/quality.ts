@@ -231,3 +231,36 @@ export interface QualityNonConformity {
   createdAtUtc: string;
   updatedAtUtc: string;
 }
+
+export type QualityInternalAuditStatus =
+  | "Planned"
+  | "InProgress"
+  | "Reported"
+  | "Closed"
+  | "Cancelled"
+  | string;
+
+export interface QualityInternalAudit {
+  id: string;
+  recordCode: string;
+  number: string;
+  programYear: number;
+  plannedDate: string;
+  executedDate?: string | null;
+  scope: string;
+  clauses?: string;
+  auditor: string;
+  auditee?: string;
+  objectives?: string;
+  findingsSummary?: string;
+  conclusions?: string;
+  recommendations?: string;
+  checklistNotes?: string;
+  planFileId?: string | null;
+  reportFileId?: string | null;
+  checklistFileId?: string | null;
+  status: QualityInternalAuditStatus;
+  notes?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}

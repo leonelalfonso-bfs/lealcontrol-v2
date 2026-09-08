@@ -1122,6 +1122,220 @@ public static class QualityEndpoints
             return Results.Ok(ToNonConformityDto(entity));
         });
 
+        // PG04 — Auditorías internas (programa / plan / informe / checklist unificados)
+        group.MapGet("/records/pg04", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+            var rows = await db.InternalAudits.AsNoTracking()
+                .Where(a => a.TenantId == tenantId)
+                .OrderByDescending(a => a.ProgramYear)
+                .ThenByDescending(a => a.PlannedDate)
+                .ThenByDescending(a => a.Number)
+                .ToListAsync(ct);
+            var openCount = rows.Count(a => a.Status is QualityInternalAuditStatuses.Planned
+                or QualityInternalAuditStatuses.InProgress
+                or QualityInternalAuditStatuses.Reported);
+            return Results.Ok(new
+            {
+                code = "PG04",
+                title = "Auditorías internas",
+                recordKind = "Structured",
+                generatedAtUtc = DateTime.UtcNow,
+                openCount,
+                rows = rows.Select(ToInternalAuditDto)
+            });
+        });
+
+        group.MapGet("/records/pg04/{id:guid}", async (Guid id, ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.InternalAudits.AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            return Results.Ok(ToInternalAuditDto(entity));
+        });
+
+        group.MapPost("/records/pg04", async (
+            CreateInternalAuditRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+
+            var year = req.ProgramYear > 2000 ? req.ProgramYear : DateTime.UtcNow.Year;
+            var planned = req.PlannedDate ?? DateTime.UtcNow;
+            if (string.IsNullOrWhiteSpace(req.Scope))
+                return Results.BadRequest(new { message = "El alcance es obligatorio." });
+            if (string.IsNullOrWhiteSpace(req.Auditor))
+                return Results.BadRequest(new { message = "El auditor es obligatorio." });
+
+            var prefix = $"AUD-{year}-";
+            var lastNumber = await db.InternalAudits.AsNoTracking()
+                .Where(a => a.TenantId == tenantId && a.Number.StartsWith(prefix))
+                .OrderByDescending(a => a.Number)
+                .Select(a => a.Number)
+                .FirstOrDefaultAsync(ct);
+            var seq = 1;
+            if (!string.IsNullOrEmpty(lastNumber) && lastNumber.Length >= prefix.Length + 4
+                && int.TryParse(lastNumber.AsSpan(prefix.Length), out var parsed))
+            {
+                seq = parsed + 1;
+            }
+
+            var entity = new QualityInternalAudit
+            {
+                TenantId = tenantId,
+                RecordCode = "PG04-R01",
+                Number = $"{prefix}{seq:D4}",
+                ProgramYear = year,
+                PlannedDate = planned,
+                Scope = req.Scope.Trim(),
+                Clauses = req.Clauses?.Trim() ?? string.Empty,
+                Auditor = req.Auditor.Trim(),
+                Auditee = req.Auditee?.Trim() ?? string.Empty,
+                Objectives = req.Objectives?.Trim() ?? string.Empty,
+                Notes = req.Notes?.Trim() ?? string.Empty,
+                Status = QualityInternalAuditStatuses.Planned,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            db.InternalAudits.Add(entity);
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.InternalAudit, entity.Id, "InternalAuditCreated",
+                $"Auditoría {entity.Number} programada.", null, ToInternalAuditDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/quality/records/pg04/{entity.Id}", ToInternalAuditDto(entity));
+        });
+
+        group.MapPut("/records/pg04/{id:guid}", async (
+            Guid id,
+            UpdateInternalAuditRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.InternalAudits.FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            if (entity.Status is QualityInternalAuditStatuses.Closed or QualityInternalAuditStatuses.Cancelled)
+                return Results.BadRequest(new { message = "La auditoría está cerrada; no se puede editar." });
+
+            var before = ToInternalAuditDto(entity);
+
+            if (req.ProgramYear.HasValue && req.ProgramYear.Value > 2000)
+                entity.ProgramYear = req.ProgramYear.Value;
+            if (req.PlannedDate.HasValue) entity.PlannedDate = req.PlannedDate.Value;
+            if (req.ExecutedDate.HasValue) entity.ExecutedDate = req.ExecutedDate;
+            if (req.Scope is not null)
+            {
+                if (string.IsNullOrWhiteSpace(req.Scope))
+                    return Results.BadRequest(new { message = "El alcance no puede quedar vacío." });
+                entity.Scope = req.Scope.Trim();
+            }
+            if (req.Clauses is not null) entity.Clauses = req.Clauses.Trim();
+            if (req.Auditor is not null)
+            {
+                if (string.IsNullOrWhiteSpace(req.Auditor))
+                    return Results.BadRequest(new { message = "El auditor no puede quedar vacío." });
+                entity.Auditor = req.Auditor.Trim();
+            }
+            if (req.Auditee is not null) entity.Auditee = req.Auditee.Trim();
+            if (req.Objectives is not null) entity.Objectives = req.Objectives.Trim();
+            if (req.FindingsSummary is not null) entity.FindingsSummary = req.FindingsSummary.Trim();
+            if (req.Conclusions is not null) entity.Conclusions = req.Conclusions.Trim();
+            if (req.Recommendations is not null) entity.Recommendations = req.Recommendations.Trim();
+            if (req.ChecklistNotes is not null) entity.ChecklistNotes = req.ChecklistNotes.Trim();
+            if (req.Notes is not null) entity.Notes = req.Notes.Trim();
+
+            async Task<IResult?> ValidateFileAsync(Guid? fileId)
+            {
+                if (!fileId.HasValue) return null;
+                var ok = await db.Files.AsNoTracking()
+                    .AnyAsync(f => f.TenantId == tenantId && f.Id == fileId.Value, ct);
+                return ok ? null : Results.BadRequest(new { message = "El archivo adjunto no existe." });
+            }
+
+            if (req.PlanFileId.HasValue)
+            {
+                var err = await ValidateFileAsync(req.PlanFileId);
+                if (err is not null) return err;
+                entity.PlanFileId = req.PlanFileId;
+            }
+            if (req.ReportFileId.HasValue)
+            {
+                var err = await ValidateFileAsync(req.ReportFileId);
+                if (err is not null) return err;
+                entity.ReportFileId = req.ReportFileId;
+            }
+            if (req.ChecklistFileId.HasValue)
+            {
+                var err = await ValidateFileAsync(req.ChecklistFileId);
+                if (err is not null) return err;
+                entity.ChecklistFileId = req.ChecklistFileId;
+            }
+
+            if (req.Status is not null)
+            {
+                var st = req.Status.Trim();
+                var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    QualityInternalAuditStatuses.Planned,
+                    QualityInternalAuditStatuses.InProgress,
+                    QualityInternalAuditStatuses.Reported,
+                    QualityInternalAuditStatuses.Closed,
+                    QualityInternalAuditStatuses.Cancelled
+                };
+                if (!allowed.Contains(st))
+                    return Results.BadRequest(new { message = "Estado inválido." });
+
+                if (st == QualityInternalAuditStatuses.Reported)
+                {
+                    entity.ExecutedDate ??= DateTime.UtcNow;
+                    if (string.IsNullOrWhiteSpace(entity.FindingsSummary) && string.IsNullOrWhiteSpace(req.FindingsSummary))
+                        return Results.BadRequest(new { message = "Indique el resumen de hallazgos antes de informar." });
+                }
+
+                if (st == QualityInternalAuditStatuses.Closed)
+                {
+                    entity.ExecutedDate ??= DateTime.UtcNow;
+                    if (string.IsNullOrWhiteSpace(entity.Conclusions) && string.IsNullOrWhiteSpace(req.Conclusions))
+                        return Results.BadRequest(new { message = "Indique las conclusiones antes de cerrar." });
+                }
+
+                entity.Status = st;
+            }
+
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.InternalAudit, entity.Id, "InternalAuditUpdated",
+                $"Auditoría {entity.Number} actualizada ({entity.Status}).", before, ToInternalAuditDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToInternalAuditDto(entity));
+        });
+
+        group.MapDelete("/records/pg04/{id:guid}", async (
+            Guid id,
+            ITenantContext tenant,
+            QualityDbContext db,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.InternalAudits.FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            var before = ToInternalAuditDto(entity);
+            entity.Status = QualityInternalAuditStatuses.Cancelled;
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.InternalAudit, entity.Id, "InternalAuditCancelled",
+                $"Auditoría {entity.Number} anulada.", before, ToInternalAuditDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToInternalAuditDto(entity));
+        });
+
         group.MapGet("/documents/{code}", async (string code, ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
@@ -1766,6 +1980,32 @@ public static class QualityEndpoints
         isOverdue = IsNonConformityOverdue(n),
         n.CreatedAtUtc,
         n.UpdatedAtUtc
+    };
+
+    private static object ToInternalAuditDto(QualityInternalAudit a) => new
+    {
+        a.Id,
+        a.RecordCode,
+        a.Number,
+        a.ProgramYear,
+        a.PlannedDate,
+        a.ExecutedDate,
+        a.Scope,
+        a.Clauses,
+        a.Auditor,
+        a.Auditee,
+        a.Objectives,
+        a.FindingsSummary,
+        a.Conclusions,
+        a.Recommendations,
+        a.ChecklistNotes,
+        a.PlanFileId,
+        a.ReportFileId,
+        a.ChecklistFileId,
+        a.Status,
+        a.Notes,
+        a.CreatedAtUtc,
+        a.UpdatedAtUtc
     };
 
     private static object ToIndicatorValueDto(QualityIndicatorValue v) => new

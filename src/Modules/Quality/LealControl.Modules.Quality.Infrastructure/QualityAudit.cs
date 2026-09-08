@@ -12,6 +12,7 @@ public static class QualityAuditEntityTypes
     public const string IndicatorValue = "IndicatorValue";
     public const string Complaint = "Complaint";
     public const string NonConformity = "NonConformity";
+    public const string InternalAudit = "InternalAudit";
 }
 
 public sealed class QualityAuditEvent : Entity<Guid>

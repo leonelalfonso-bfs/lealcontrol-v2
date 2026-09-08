@@ -35,6 +35,9 @@ function statusLabel(s: string) {
 export function QualityPg07R01Page() {
   const [searchParams] = useSearchParams();
   const fromComplaint = searchParams.get("fromComplaint") || undefined;
+  const fromAudit = searchParams.get("fromAudit") || undefined;
+  const originParam = searchParams.get("origin") || undefined;
+  const descParam = searchParams.get("desc") || undefined;
 
   const [rows, setRows] = useState<QualityNonConformity[]>([]);
   const [overdueOpen, setOverdueOpen] = useState(0);
@@ -42,13 +45,13 @@ export function QualityPg07R01Page() {
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [showForm, setShowForm] = useState(!!fromComplaint);
+  const [showForm, setShowForm] = useState(!!fromComplaint || !!fromAudit);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
 
   const [kind, setKind] = useState("NonConformity");
-  const [description, setDescription] = useState("");
-  const [origin, setOrigin] = useState(fromComplaint ? "Complaint" : "Internal");
+  const [description, setDescription] = useState(descParam || "");
+  const [origin, setOrigin] = useState(originParam || (fromComplaint ? "Complaint" : fromAudit ? "Audit" : "Internal"));
   const [immediateAction, setImmediateAction] = useState("");
   const [responsible, setResponsible] = useState("");
   const [detectedAt, setDetectedAt] = useState(new Date().toISOString().slice(0, 10));
@@ -56,7 +59,7 @@ export function QualityPg07R01Page() {
   const [probability, setProbability] = useState("3");
   const [impact, setImpact] = useState("3");
   const [controls, setControls] = useState("");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(fromAudit ? `Origen auditoría ${fromAudit}` : "");
 
   const [rootCauseMethod, setRootCauseMethod] = useState("");
   const [rootCause, setRootCause] = useState("");
