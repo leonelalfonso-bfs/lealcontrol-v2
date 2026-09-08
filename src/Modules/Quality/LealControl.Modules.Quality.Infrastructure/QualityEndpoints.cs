@@ -52,8 +52,6 @@ public static class QualityEndpoints
             {
                 var tenantId = tenant.TenantId;
                 await db.EnsureQualityTablesAsync(ct);
-                await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
                 var now = DateTime.UtcNow;
                 var horizon60 = now.AddDays(60);
                 var horizon30 = now.AddDays(30);
@@ -257,8 +255,6 @@ public static class QualityEndpoints
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
             var docs = await db.Documents.AsNoTracking()
                 .Where(d => d.TenantId == tenantId)
                 .OrderBy(d => d.SortOrder)
@@ -320,8 +316,6 @@ public static class QualityEndpoints
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
             var query = db.Documents.AsNoTracking().Where(d => d.TenantId == tenantId);
             if (!string.IsNullOrWhiteSpace(type))
             {
@@ -337,8 +331,6 @@ public static class QualityEndpoints
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
             var docs = await db.Documents.AsNoTracking()
                 .Where(d => d.TenantId == tenantId && d.Type != QualityDocumentTypes.External)
                 .OrderBy(d => d.Code)
@@ -379,8 +371,6 @@ public static class QualityEndpoints
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
             var docs = await db.Documents.AsNoTracking()
                 .Where(d => d.TenantId == tenantId && d.Type == QualityDocumentTypes.External)
                 .OrderBy(d => d.Title)
@@ -407,8 +397,6 @@ public static class QualityEndpoints
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
             var rows = await db.ConfidentialityCommitments.AsNoTracking()
                 .Where(c => c.TenantId == tenantId && c.Kind == QualityConfidentialityKinds.Internal)
                 .OrderByDescending(c => c.SignedAt)
@@ -493,8 +481,6 @@ public static class QualityEndpoints
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
             var rows = await db.ConfidentialityCommitments.AsNoTracking()
                 .Where(c => c.TenantId == tenantId && c.Kind == QualityConfidentialityKinds.External)
                 .OrderByDescending(c => c.SignedAt)
@@ -579,8 +565,6 @@ public static class QualityEndpoints
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
             var indicators = await db.Indicators.AsNoTracking()
                 .Where(i => i.TenantId == tenantId)
                 .OrderBy(i => i.Status == "Active" ? 0 : 1)
@@ -778,8 +762,6 @@ public static class QualityEndpoints
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
             var rows = await db.InstitutionalNotes.AsNoTracking()
                 .Where(n => n.TenantId == tenantId)
                 .OrderByDescending(n => n.IssuedAt)
@@ -862,8 +844,6 @@ public static class QualityEndpoints
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
             var rows = await db.Complaints.AsNoTracking()
                 .Where(c => c.TenantId == tenantId)
                 .OrderByDescending(c => c.ReceivedAt)
@@ -1078,8 +1058,6 @@ public static class QualityEndpoints
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-            await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
-
             var rows = await db.NonConformities.AsNoTracking()
                 .Where(n => n.TenantId == tenantId)
                 .OrderByDescending(n => n.DetectedAt)
@@ -1576,6 +1554,11 @@ public static class QualityEndpoints
 
             var id = Guid.NewGuid();
             var versionId = Guid.NewGuid();
+            var versionNumber = req.VersionNumber ?? 1;
+            var markCurrent = req.MarkCurrent || !string.IsNullOrWhiteSpace(req.ApprovedBy);
+            var status = markCurrent ? QualityDocumentStatuses.Current : QualityDocumentStatuses.Draft;
+            var reviewMonths = req.ReviewPeriodMonths ?? (req.Type == QualityDocumentTypes.External ? 12 : 24);
+
             var doc = new QualityDocument(id)
             {
                 TenantId = tenantId,
@@ -1585,10 +1568,10 @@ public static class QualityEndpoints
                 Title = req.Title.Trim(),
                 ParentId = req.ParentId,
                 SortOrder = req.SortOrder,
-                Status = QualityDocumentStatuses.Draft,
+                Status = status,
                 CurrentVersionId = versionId,
-                ReviewPeriodMonths = req.ReviewPeriodMonths ?? (req.Type == QualityDocumentTypes.External ? 12 : 24),
-                NextReviewDate = DateTime.UtcNow.AddMonths(req.ReviewPeriodMonths ?? 24),
+                ReviewPeriodMonths = reviewMonths,
+                NextReviewDate = DateTime.UtcNow.AddMonths(reviewMonths),
                 OwnerRole = req.OwnerRole ?? "Responsable de calidad",
                 Iso17025Clauses = req.Iso17025Clauses ?? string.Empty,
                 RecordKind = req.RecordKind,
@@ -1603,11 +1586,18 @@ public static class QualityEndpoints
             {
                 TenantId = tenantId,
                 DocumentId = id,
-                Version = 1,
-                Status = QualityDocumentStatuses.Draft,
+                Version = versionNumber,
+                Status = status,
                 ChangeSummary = req.ChangeSummary ?? "Alta inicial",
                 ElaboratedBy = req.ElaboratedBy ?? string.Empty,
                 ElaboratedAt = req.ElaboratedAt,
+                ReviewedBy = req.ReviewedBy,
+                ReviewedAt = req.ReviewedAt ?? (markCurrent && !string.IsNullOrWhiteSpace(req.ReviewedBy) ? DateTime.UtcNow : null),
+                ApprovedBy = req.ApprovedBy,
+                ApprovedAt = req.ApprovedAt ?? (markCurrent && !string.IsNullOrWhiteSpace(req.ApprovedBy) ? DateTime.UtcNow : null),
+                EffectiveFrom = req.EffectiveFrom ?? (markCurrent ? req.ApprovedAt ?? DateTime.UtcNow : null),
+                PublishedFileId = req.PublishedFileId,
+                SourceFileId = req.SourceFileId,
                 CreatedAtUtc = DateTime.UtcNow
             };
 
@@ -2282,7 +2272,16 @@ public sealed record CreateDocumentRequest(
     string? ExternalUrl = null,
     string? ChangeSummary = null,
     string? ElaboratedBy = null,
-    DateTime? ElaboratedAt = null);
+    DateTime? ElaboratedAt = null,
+    string? ReviewedBy = null,
+    DateTime? ReviewedAt = null,
+    string? ApprovedBy = null,
+    DateTime? ApprovedAt = null,
+    DateTime? EffectiveFrom = null,
+    Guid? PublishedFileId = null,
+    Guid? SourceFileId = null,
+    int? VersionNumber = null,
+    bool MarkCurrent = false);
 
 public sealed record CreateVersionRequest(
     string? ChangeSummary = null,
