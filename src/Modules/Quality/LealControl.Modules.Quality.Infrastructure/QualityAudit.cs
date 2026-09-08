@@ -21,6 +21,9 @@ public static class QualityAuditEntityTypes
     public const string SupplierPerformanceReview = "SupplierPerformanceReview";
     public const string ManagementReview = "ManagementReview";
     public const string SatisfactionSurvey = "SatisfactionSurvey";
+    public const string QualityEquipment = "QualityEquipment";
+    public const string IntermediateCheck = "IntermediateCheck";
+    public const string MaintenancePlanItem = "MaintenancePlanItem";
 }
 
 public sealed class QualityAuditEvent : Entity<Guid>

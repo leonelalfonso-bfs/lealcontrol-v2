@@ -13,7 +13,8 @@
 ## 0. Punto de reanudación (leer primero)
 
 **Último commit de avance Calidad:** `b26a351` (PG09-R3 encuesta de satisfacción Structured).  
-**Este corte (sin commit aún):** C3 PG14-R5/R6 + `QualityEquipment`.  
+**Este corte (sin commit aún):** C3 PG14-R5/R6 + `QualityEquipment` — **hecho en working tree**.  
+**Siguiente:** restos **C2** (PG14-R3/R4, hoja de vida, PG09 R2, Linked IT) o **C4**.  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
 ### Principio: los registros se generan en el sistema
@@ -49,11 +50,14 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | **PG05** Proveedores (R01–R03) | ✅ | EVA/DES + listado habilitados Generated; vínculo Directorio; PDF+Excel |
 | **PG08-R01** Revisión por la dirección | ✅ | Structured REV-AAAA-NNNN; inputs auto del SGC; refresh; PDF+Excel |
 | **PG09-R03** Encuesta de satisfacción | ✅ | Structured ENC-AAAA-NNNN; puntajes 1–5; vínculo informe; PDF+Excel |
+| **PG14-EQ** Equipos auxiliares | ✅ | `QualityEquipment` EQ 001…; Truck/Trailer/Forklift; padre opcional |
+| **PG14-R05** Verificación intermedia | ✅ | Structured VIC-AAAA-NNNN; pesa 1000 kg; PDF+Excel |
+| **PG14-R06** Mantenimiento preventivo | ✅ | Structured MP-AAAA-NNNN; marcar hecho avanza NextDue; PDF+Excel |
 
 ### Siguiente sesión
 
-1. **C3 — PG14-R5/R6** + `QualityEquipment`.
-2. Alternar restos **C2** si hace falta emitir informes ISO (validar firma vía PG06-R02).
+1. Restos **C2** (PG14-R3/R4 generados, hoja de vida PG14-R1, PG09 R2, Linked IT) si hace falta emitir informes ISO.
+2. Alternar **C4** (dashboard SGC, modo presentación) si C2 no bloquea.
 3. (Opcional) PG09 R2 enmienda de informe.
 ### Reglas de trabajo que ya aplican
 
@@ -344,7 +348,7 @@ Módulo `calidad` en `moduleRegistry.ts`, ruta base `/calidad`, claim `quality`.
 /calidad/registros/auditorias    PG04                                 [listo]
 /calidad/registros/personal      PG06                                 [listo]
 /calidad/registros/proveedores   PG05                                 [listo]
-/calidad/registros/equipos       PG14                                 [pendiente]
+/calidad/registros/equipos       PG14 EQ / R05 / R06                  [listo]
 /calidad/registros/revision-direccion  PG08-R01                       [listo]
 /calidad/registros/encuestas     PG09 R3                              [listo]
 /calidad/normas                  Documentos externos (PG01-R02): vigencia, relaciones, revisión anual
@@ -452,7 +456,7 @@ El script es idempotente por código+versión (si ya hay `PublishedFileId`, se o
 | **C2 — Enlace con Metrología** | `Quality.Contracts`, `MetrologyInstrument` (termómetro) y su referencia en el informe, snapshot de procedimiento/versión y normas en el informe, `ApprovedBy` restringido a DT, PG14-R4/R3 generados desde pesas + instrumentos + auxiliares, hoja de vida PG14-R1 con eventos de calibración, PG09 R2 enmienda, "Ver trazabilidad SGC" desde el informe, vista IT 0X R1/R2/R3 | Cadena Ensayo → Norma → Procedimiento → Patrón/Termómetro → Certificado → DT que aprobó, desde un informe |
 | **Estado C2 (07/09/2026):** | **EN CURSO — corte 2.** Corte 1 (snapshot + DT + trazabilidad) + `MetrologyInstrument` (termómetro) con CRUD `/metrologia/instrumentos`, vínculo `ThermometerInstrumentId` en el informe (valida certificado vigente), visible en impresión y trazabilidad SGC. Pendiente: PG14-R3/R4 generados, PG09 R2, hoja de vida, vistas Linked IT. | — |
 | **C3 — Registros de gestión** | PG07-R1 (NC/TNC/riesgos/OM), PG03-R01 quejas con plazos, PG04 auditorías, PG06 personal + autorizaciones firmadas por DT (validación de firma en Metrología), PG05 proveedores, MC01-R03 indicadores, PG08-R01 revisión por la dirección, PG09 R3 encuestas, PG14-R5/R6, `QualityEquipment` (camión/acoplado/autoelevador), MC01-R01/R02/R05 | Todos los registros del listado de códigos existen en el sistema |
-| **Estado C3 (07/09/2026):** | **EN CURSO.** MC01 completo + PG03-R01 quejas (Structured + SLA). **Siguiente:** PG07-R1 NC… | — |
+| **Estado C3 (07/09/2026):** | **CASI CERRADO** para registros listados (MC01…PG09 + PG14-R5/R6 + QualityEquipment). Restos C2 / C4. | — |
 | **C4 — Tablero, auditoría de cambios y modo presentación** | Dashboard SGC, matriz cláusulas 17025, historial before/after por registro, **modo presentación** (toggle, bloqueo de escrituras en backend, salida con contraseña, log de sesiones), alertas (Google Calendar → notificaciones del sistema) | Simulacro de auditoría interna PG04 completo dentro del sistema, mostrado en modo presentación |
 
 Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor riesgo; C2 toca Metrología y conviene hacerla antes de emitir informes "en producción ISO"; C3 es volumen (muchos formularios pero todos del mismo patrón); C4 es pulido. El modo presentación podría adelantarse a C1 en versión mínima (solo ocultar botones) si la auditoría interna se programa antes de terminar C4.
@@ -472,7 +476,7 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 - [x] PG05 Proveedores (R01–R03)
 - [x] PG08-R01 Revisión por la dirección
 - [x] PG09 R3 Encuestas
-- [ ] PG14-R5 / R6 + `QualityEquipment` (camión/acoplado/autoelevador) ← **siguiente**
+- [x] PG14-R5 / R6 + `QualityEquipment` (camión/acoplado/autoelevador)
 
 ---
 

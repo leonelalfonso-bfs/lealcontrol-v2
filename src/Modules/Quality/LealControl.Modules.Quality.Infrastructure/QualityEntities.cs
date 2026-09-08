@@ -1048,3 +1048,184 @@ public sealed record UpdateSatisfactionSurveyRequest(
     Guid? EvidenceFileId = null,
     string? Status = null,
     string? Notes = null);
+
+// ─── PG14 Equipamiento auxiliar + R5/R6 ───────────────────────────────────────
+
+public static class QualityEquipmentKinds
+{
+    public const string Truck = "Truck";
+    public const string Trailer = "Trailer";
+    public const string Forklift = "Forklift";
+    public const string Other = "Other";
+}
+
+public static class QualityEquipmentStatuses
+{
+    public const string Active = "Active";
+    public const string OutOfService = "OutOfService";
+    public const string Retired = "Retired";
+}
+
+/// <summary>Equipos auxiliares de Calidad (camión/acoplado/autoelevador) — no miden.</summary>
+public sealed class QualityEquipment : Entity<Guid>
+{
+    public QualityEquipment() : base(Guid.NewGuid()) { }
+    public QualityEquipment(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string Code { get; set; } = string.Empty; // EQ 001
+    public string Kind { get; set; } = QualityEquipmentKinds.Other;
+    public string Description { get; set; } = string.Empty;
+    public string Brand { get; set; } = string.Empty;
+    public string Model { get; set; } = string.Empty;
+    public string SerialNumber { get; set; } = string.Empty;
+    public string Plate { get; set; } = string.Empty;
+    public Guid? ParentEquipmentId { get; set; } // forklift → truck
+    public Guid? FleetVehicleId { get; set; } // optional Flota link
+    public string Location { get; set; } = string.Empty;
+    public string Status { get; set; } = QualityEquipmentStatuses.Active;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateQualityEquipmentRequest(
+    string Kind,
+    string? Code = null,
+    string? Description = null,
+    string? Brand = null,
+    string? Model = null,
+    string? SerialNumber = null,
+    string? Plate = null,
+    Guid? ParentEquipmentId = null,
+    Guid? FleetVehicleId = null,
+    string? Location = null,
+    string? Notes = null);
+
+public sealed record UpdateQualityEquipmentRequest(
+    string? Kind = null,
+    string? Description = null,
+    string? Brand = null,
+    string? Model = null,
+    string? SerialNumber = null,
+    string? Plate = null,
+    Guid? ParentEquipmentId = null,
+    Guid? FleetVehicleId = null,
+    string? Location = null,
+    string? Status = null,
+    string? Notes = null);
+
+public static class QualityIntermediateCheckStatuses
+{
+    public const string Draft = "Draft";
+    public const string Completed = "Completed";
+    public const string Cancelled = "Cancelled";
+}
+
+public static class QualityIntermediateCheckResults
+{
+    public const string Pass = "Pass";
+    public const string Fail = "Fail";
+    public const string Conditional = "Conditional";
+}
+
+/// <summary>PG14-R5 — verificación intermedia (típic. pesa 1000 kg).</summary>
+public sealed class QualityIntermediateCheck : Entity<Guid>
+{
+    public QualityIntermediateCheck() : base(Guid.NewGuid()) { }
+    public QualityIntermediateCheck(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG14-R05";
+    public string Number { get; set; } = string.Empty; // VIC-2026-0001
+    public DateTime CheckDate { get; set; } = DateTime.UtcNow;
+    public string WeightUsed { get; set; } = "1000 kg";
+    public string Instrument { get; set; } = string.Empty; // balanza / equipo verificado
+    public Guid? EquipmentId { get; set; } // optional QualityEquipment
+    public string Readings { get; set; } = string.Empty;
+    public string Result { get; set; } = string.Empty; // Pass|Fail|Conditional
+    public string Responsible { get; set; } = string.Empty;
+    public Guid? EvidenceFileId { get; set; }
+    public string Status { get; set; } = QualityIntermediateCheckStatuses.Draft;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateIntermediateCheckRequest(
+    DateTime? CheckDate = null,
+    string? WeightUsed = null,
+    string? Instrument = null,
+    Guid? EquipmentId = null,
+    string? Readings = null,
+    string? Result = null,
+    string? Responsible = null,
+    Guid? EvidenceFileId = null,
+    string? Notes = null);
+
+public sealed record UpdateIntermediateCheckRequest(
+    DateTime? CheckDate = null,
+    string? WeightUsed = null,
+    string? Instrument = null,
+    Guid? EquipmentId = null,
+    string? Readings = null,
+    string? Result = null,
+    string? Responsible = null,
+    Guid? EvidenceFileId = null,
+    string? Status = null,
+    string? Notes = null);
+
+public static class QualityMaintenanceFrequencies
+{
+    public const string Monthly = "Monthly";
+    public const string Quarterly = "Quarterly";
+    public const string Semiannual = "Semiannual";
+    public const string Annual = "Annual";
+}
+
+public static class QualityMaintenanceStatuses
+{
+    public const string Active = "Active";
+    public const string Done = "Done";
+    public const string Cancelled = "Cancelled";
+}
+
+/// <summary>PG14-R6 — ítem de programa de mantenimiento preventivo.</summary>
+public sealed class QualityMaintenancePlanItem : Entity<Guid>
+{
+    public QualityMaintenancePlanItem() : base(Guid.NewGuid()) { }
+    public QualityMaintenancePlanItem(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG14-R06";
+    public string Number { get; set; } = string.Empty; // MP-2026-0001
+    public Guid EquipmentId { get; set; }
+    public string EquipmentCode { get; set; } = string.Empty;
+    public string EquipmentDescription { get; set; } = string.Empty;
+    public string Activity { get; set; } = string.Empty;
+    public string Frequency { get; set; } = QualityMaintenanceFrequencies.Monthly;
+    public DateTime? NextDue { get; set; }
+    public DateTime? LastDone { get; set; }
+    public string Responsible { get; set; } = string.Empty;
+    public string Status { get; set; } = QualityMaintenanceStatuses.Active;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateMaintenancePlanItemRequest(
+    Guid EquipmentId,
+    string Activity,
+    string? Frequency = null,
+    DateTime? NextDue = null,
+    string? Responsible = null,
+    string? Notes = null);
+
+public sealed record UpdateMaintenancePlanItemRequest(
+    string? Activity = null,
+    string? Frequency = null,
+    DateTime? NextDue = null,
+    DateTime? LastDone = null,
+    string? Responsible = null,
+    string? Status = null,
+    string? Notes = null);

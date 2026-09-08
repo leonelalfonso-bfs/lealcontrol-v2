@@ -176,6 +176,30 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     kind: "Generated",
     ready: true,
     blurb: "Listado generado de normas y documentos externos."
+  },
+  {
+    code: "PG14-EQ",
+    title: "Equipos auxiliares",
+    path: "/calidad/registros/equipos?tab=equipos",
+    kind: "Structured",
+    ready: true,
+    blurb: "Camión, acoplado y autoelevador (EQ 001…); autoelevador hijo del camión."
+  },
+  {
+    code: "PG14-R05",
+    title: "Verificación intermedia",
+    path: "/calidad/registros/equipos?tab=r05",
+    kind: "Structured",
+    ready: true,
+    blurb: "Verificación intermedia VIC-AAAA-NNNN (típic. pesa 1000 kg)."
+  },
+  {
+    code: "PG14-R06",
+    title: "Programa de mantenimiento preventivo",
+    path: "/calidad/registros/equipos?tab=r06",
+    kind: "Structured",
+    ready: true,
+    blurb: "Ítems MP-AAAA-NNNN por equipo auxiliar; vencimientos y marca hecho."
   }
 ];
 

@@ -38,6 +38,7 @@ public static class QualityEndpoints
         group.MapPg05Records();
         group.MapPg08Records();
         group.MapPg09Records();
+        group.MapPg14Records();
 
         group.MapGet("/dashboard", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
         {

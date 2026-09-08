@@ -90,6 +90,9 @@ import {
   QualityManagementReviewPrintPage,
   QualityPg09R03Page,
   QualitySatisfactionSurveyPrintPage,
+  QualityPg14Page,
+  QualityIntermediateCheckPrintPage,
+  QualityMaintenancePlanPrintPage,
   QualityRecordsHubPage,
   QualityPg01R01Page,
   QualityPg01R02Page,
@@ -678,6 +681,10 @@ export function App() {
               <Route path="/calidad/registros/encuestas" element={<QualityPg09R03Page />} />
               <Route path="/calidad/registros/pg09-r03" element={<QualityPg09R03Page />} />
               <Route path="/calidad/registros/encuestas/:id/pdf" element={<QualitySatisfactionSurveyPrintPage />} />
+              <Route path="/calidad/registros/equipos" element={<QualityPg14Page />} />
+              <Route path="/calidad/registros/pg14" element={<QualityPg14Page />} />
+              <Route path="/calidad/registros/equipos/verificacion/:id/pdf" element={<QualityIntermediateCheckPrintPage />} />
+              <Route path="/calidad/registros/equipos/mantenimiento/:id/pdf" element={<QualityMaintenancePlanPrintPage />} />
 
               {/* Reports & Settings Routes */}
               <Route path="/reportes" element={<ReportsPage />} />

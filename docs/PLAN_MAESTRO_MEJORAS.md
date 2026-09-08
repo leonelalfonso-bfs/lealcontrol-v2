@@ -22,7 +22,7 @@ Documentos relacionados:
 | 4 | Contabilidad desde asientos modelo | 9 | 9/9 | 0/9 | ◐ Código 4.1–4.9 listo — verificar staging |
 | 5 | Red de tests del circuito del dinero | 6 | 6/6 | 0/6 | ✅ Código en `8fb4e17` — tests locales OK |
 | 6 | Deuda técnica | 8 | 7/8 | 7/8 | ✅ `53d1d5a` staging 03/09/2026 — smoke 10/10; **6.4 diferido** |
-| Q | Calidad ISO 17025 (SGC) | — | ◐ | ◐ | **C1✅ C2◐ C3 …+PG05+PG08+PG09✅** — siguiente PG14-R5/R6; detalle en `docs/quality/…` §0 |
+| Q | Calidad ISO 17025 (SGC) | — | ◐ | ◐ | **C1✅ C2◐ C3 casi cerrado (PG14-R5/R6+EQ✅)** — siguiente restos C2 o C4; detalle en `docs/quality/…` §0 |
 
 Regla de orden: **bloque 2 antes del 3** (CI y backups estables). **No empezar bloque 4** sin tareas 3.1–3.6 del bloque 3.  
 **Bloque Q** corre en paralelo en `staging/metrology-2307` (INMELA / auditoría OAA); no bloquea el circuito del dinero.
@@ -343,7 +343,8 @@ Rama de trabajo: `staging/metrology-2307` · Staging: https://v2.lealcontrol.com
   - [x] PG05 Proveedores (EVA/DES + habilitados Generated)
   - [x] PG08-R01 Revisión por la dirección (inputs auto)
   - [x] PG09-R3 Encuestas de satisfacción (ENC-AAAA-NNNN)
-  - [ ] **Siguiente:** PG14-R5/R6 + QualityEquipment
+  - [x] PG14-R5/R6 + QualityEquipment (EQ / VIC / MP)
+  - [ ] **Siguiente:** restos C2 (PG14-R3/R4, hoja de vida, PG09 R2) o C4
 - [ ] **Q.C4** Dashboard SGC, auditoría before/after, modo presentación
 
 **Reanudar siempre desde:** `MODULO_CALIDAD_ANALISIS.md` §0.

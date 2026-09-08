@@ -464,3 +464,68 @@ export interface QualitySatisfactionSurvey {
   createdAtUtc: string;
   updatedAtUtc: string;
 }
+
+export interface QualityEquipment {
+  id: string;
+  code: string;
+  kind: string;
+  description?: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  plate?: string;
+  parentEquipmentId?: string | null;
+  fleetVehicleId?: string | null;
+  location?: string;
+  status: string;
+  notes?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface QualityIntermediateCheck {
+  id: string;
+  recordCode: string;
+  number: string;
+  checkDate: string;
+  weightUsed?: string;
+  instrument?: string;
+  equipmentId?: string | null;
+  readings?: string;
+  result?: string;
+  responsible?: string;
+  evidenceFileId?: string | null;
+  status: string;
+  notes?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface QualityMaintenancePlanItem {
+  id: string;
+  recordCode: string;
+  number: string;
+  equipmentId: string;
+  equipmentCode?: string;
+  equipmentDescription?: string;
+  activity: string;
+  frequency: string;
+  nextDue?: string | null;
+  lastDone?: string | null;
+  responsible?: string;
+  status: string;
+  isOverdue?: boolean;
+  notes?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface QualityPg14Summary {
+  code: string;
+  title: string;
+  generatedAtUtc: string;
+  equipmentActive: number;
+  checksDraft: number;
+  maintenanceDue: number;
+  maintenanceOverdue: number;
+}

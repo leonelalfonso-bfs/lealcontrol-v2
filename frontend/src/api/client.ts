@@ -1961,6 +1961,163 @@ export const api = {
       method: "DELETE"
     }),
 
+  getQualityPg14Summary: () =>
+    request<import("./types/quality").QualityPg14Summary>("/api/v1/quality/records/pg14"),
+
+  listQualityEquipment: () =>
+    request<{
+      code: string;
+      title: string;
+      rows: import("./types/quality").QualityEquipment[];
+    }>("/api/v1/quality/records/pg14/equipment"),
+
+  getQualityEquipment: (id: string) =>
+    request<import("./types/quality").QualityEquipment>(`/api/v1/quality/records/pg14/equipment/${id}`),
+
+  createQualityEquipment: (body: {
+    kind: string;
+    code?: string;
+    description?: string;
+    brand?: string;
+    model?: string;
+    serialNumber?: string;
+    plate?: string;
+    parentEquipmentId?: string;
+    fleetVehicleId?: string;
+    location?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityEquipment>("/api/v1/quality/records/pg14/equipment", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityEquipment: (
+    id: string,
+    body: {
+      kind?: string;
+      description?: string;
+      brand?: string;
+      model?: string;
+      serialNumber?: string;
+      plate?: string;
+      parentEquipmentId?: string | null;
+      fleetVehicleId?: string | null;
+      location?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityEquipment>(`/api/v1/quality/records/pg14/equipment/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  retireQualityEquipment: (id: string) =>
+    request<import("./types/quality").QualityEquipment>(`/api/v1/quality/records/pg14/equipment/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg14R05: () =>
+    request<{
+      code: string;
+      title: string;
+      draftCount?: number;
+      completedCount?: number;
+      rows: import("./types/quality").QualityIntermediateCheck[];
+    }>("/api/v1/quality/records/pg14/r05"),
+
+  getQualityIntermediateCheck: (id: string) =>
+    request<import("./types/quality").QualityIntermediateCheck>(`/api/v1/quality/records/pg14/r05/${id}`),
+
+  createQualityIntermediateCheck: (body: {
+    checkDate?: string;
+    weightUsed?: string;
+    instrument?: string;
+    equipmentId?: string;
+    readings?: string;
+    result?: string;
+    responsible?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityIntermediateCheck>("/api/v1/quality/records/pg14/r05", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityIntermediateCheck: (
+    id: string,
+    body: {
+      checkDate?: string;
+      weightUsed?: string;
+      instrument?: string;
+      equipmentId?: string | null;
+      readings?: string;
+      result?: string;
+      responsible?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityIntermediateCheck>(`/api/v1/quality/records/pg14/r05/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityIntermediateCheck: (id: string) =>
+    request<import("./types/quality").QualityIntermediateCheck>(`/api/v1/quality/records/pg14/r05/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg14R06: () =>
+    request<{
+      code: string;
+      title: string;
+      activeCount?: number;
+      overdueCount?: number;
+      rows: import("./types/quality").QualityMaintenancePlanItem[];
+    }>("/api/v1/quality/records/pg14/r06"),
+
+  getQualityMaintenancePlanItem: (id: string) =>
+    request<import("./types/quality").QualityMaintenancePlanItem>(`/api/v1/quality/records/pg14/r06/${id}`),
+
+  createQualityMaintenancePlanItem: (body: {
+    equipmentId: string;
+    activity: string;
+    frequency?: string;
+    nextDue?: string;
+    responsible?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityMaintenancePlanItem>("/api/v1/quality/records/pg14/r06", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityMaintenancePlanItem: (
+    id: string,
+    body: {
+      activity?: string;
+      frequency?: string;
+      nextDue?: string | null;
+      lastDone?: string | null;
+      responsible?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityMaintenancePlanItem>(`/api/v1/quality/records/pg14/r06/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityMaintenancePlanItem: (id: string) =>
+    request<import("./types/quality").QualityMaintenancePlanItem>(`/api/v1/quality/records/pg14/r06/${id}`, {
+      method: "DELETE"
+    }),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);
