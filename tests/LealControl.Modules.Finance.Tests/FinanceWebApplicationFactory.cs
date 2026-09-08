@@ -21,6 +21,9 @@ public sealed class FinanceWebApplicationFactory : WebApplicationFactory<Program
         .WithPassword("leal")
         .Build();
 
+    private readonly SemaphoreSlim _ensureLock = new(1, 1);
+    private bool _tablesEnsured;
+
     public string ConnectionString => _postgres.GetConnectionString();
 
     public async Task InitializeAsync()
@@ -37,6 +40,7 @@ public sealed class FinanceWebApplicationFactory : WebApplicationFactory<Program
 
     public new async Task DisposeAsync()
     {
+        _ensureLock.Dispose();
         await _postgres.DisposeAsync();
         await base.DisposeAsync();
     }
@@ -66,7 +70,7 @@ public sealed class FinanceWebApplicationFactory : WebApplicationFactory<Program
     {
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
-        await db.EnsureFinanceTablesAsync();
+        await EnsureTablesOnceAsync(db);
         return await action(db);
     }
 
@@ -74,7 +78,35 @@ public sealed class FinanceWebApplicationFactory : WebApplicationFactory<Program
     {
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
-        await db.EnsureFinanceTablesAsync();
+        await EnsureTablesOnceAsync(db);
         await action(db);
+    }
+
+    private async Task EnsureTablesOnceAsync(FinanceDbContext db)
+    {
+        if (_tablesEnsured) return;
+
+        await _ensureLock.WaitAsync();
+        try
+        {
+            if (_tablesEnsured) return;
+            try
+            {
+                await db.EnsureFinanceTablesAsync();
+            }
+            catch (PostgresException ex) when (
+                ex.SqlState is PostgresErrorCodes.UniqueViolation
+                    or PostgresErrorCodes.DuplicateObject
+                    or PostgresErrorCodes.DuplicateTable)
+            {
+                // Carrera con el bootstrap del host: el esquema ya quedó creado.
+            }
+
+            _tablesEnsured = true;
+        }
+        finally
+        {
+            _ensureLock.Release();
+        }
     }
 }

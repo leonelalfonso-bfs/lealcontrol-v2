@@ -389,6 +389,14 @@ try
         {
             if (task.IsFaulted)
             {
+                // En Development/tests no tumbar el host: una carrera DDL (p.ej. 23505) no debe
+                // disponer el IServiceProvider a mitad del suite de integración.
+                if (app.Environment.IsDevelopment())
+                {
+                    Log.Error(task.Exception, "Bootstrap de bases de tenant falló en Development; la API sigue en pie.");
+                    return;
+                }
+
                 Log.Fatal(task.Exception, "Bootstrap de bases de tenant falló; deteniendo la API.");
                 app.Lifetime.StopApplication();
                 return;

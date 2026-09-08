@@ -102,7 +102,19 @@ public static class TenantDatabaseBootstrapper
 
         await using (var finance = CreateContext<FinanceDbContext>(connectionString, FinanceDbContext.Schema))
         {
-            await finance.EnsureFinanceTablesAsync(cancellationToken);
+            try
+            {
+                await finance.EnsureFinanceTablesAsync(cancellationToken);
+            }
+            catch (PostgresException ex) when (
+                ex.SqlState == PostgresErrorCodes.UniqueViolation
+                || ex.SqlState == PostgresErrorCodes.DuplicateObject
+                || ex.SqlState == PostgresErrorCodes.DuplicateTable)
+            {
+                Log.Warning(ex, "Base {DbName}: EnsureFinanceTables concurrente ({SqlState}); se reintenta.", dbName, ex.SqlState);
+                await Task.Delay(150, cancellationToken);
+                await finance.EnsureFinanceTablesAsync(cancellationToken);
+            }
         }
 
         await using (var hr = CreateContext<HumanResourcesDbContext>(connectionString, HumanResourcesDbContext.Schema))
@@ -159,7 +171,7 @@ public static class TenantDatabaseBootstrapper
                     pending.Count);
             }
 
-            await ensureTablesAsync();
+            await EnsureTablesResilientAsync(ensureTablesAsync, moduleName, dbName, cancellationToken);
             return;
         }
 
@@ -171,13 +183,17 @@ public static class TenantDatabaseBootstrapper
                 await db.Database.MigrateAsync(cancellationToken);
             }
         }
-        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.DuplicateTable)
+        catch (PostgresException ex) when (
+            ex.SqlState == PostgresErrorCodes.DuplicateTable
+            || ex.SqlState == PostgresErrorCodes.UniqueViolation
+            || ex.SqlState == PostgresErrorCodes.DuplicateObject)
         {
             Log.Warning(
                 ex,
-                "Base {DbName}: módulo {Module} — MigrateAsync chocó con tablas ya existentes. Continuando con EnsureTables.",
+                "Base {DbName}: módulo {Module} — MigrateAsync chocó con objetos ya existentes ({SqlState}). Continuando con EnsureTables.",
                 dbName,
-                moduleName);
+                moduleName,
+                ex.SqlState);
         }
         catch (Exception ex)
         {
@@ -185,7 +201,33 @@ public static class TenantDatabaseBootstrapper
             throw;
         }
 
-        await ensureTablesAsync();
+        await EnsureTablesResilientAsync(ensureTablesAsync, moduleName, dbName, cancellationToken);
+    }
+
+    private static async Task EnsureTablesResilientAsync(
+        Func<Task> ensureTablesAsync,
+        string moduleName,
+        string dbName,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ensureTablesAsync();
+        }
+        catch (PostgresException ex) when (
+            ex.SqlState == PostgresErrorCodes.UniqueViolation
+            || ex.SqlState == PostgresErrorCodes.DuplicateObject
+            || ex.SqlState == PostgresErrorCodes.DuplicateTable)
+        {
+            Log.Warning(
+                ex,
+                "Base {DbName}: módulo {Module} — EnsureTables concurrente ({SqlState}); se reintenta una vez.",
+                dbName,
+                moduleName,
+                ex.SqlState);
+            await Task.Delay(150, cancellationToken);
+            await ensureTablesAsync();
+        }
     }
 
     private static async Task<bool> LegacySchemaExistsAsync(DbContext db, string qualifiedTable, CancellationToken cancellationToken)
