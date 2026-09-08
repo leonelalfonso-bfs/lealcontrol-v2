@@ -369,7 +369,7 @@ Rama de trabajo: `staging/metrology-2307` · Staging: https://v2.lealcontrol.com
 | 03/09/2026 | 6.1–6.8 (sin 6.4) | `53d1d5a` | ✅ staging | smoke 10/10 Healthy; 6.4 diferido |
 | 07/09/2026 | Q.C1 + Q.C2 cortes 1–2 | (rama metrology) | ◐ staging | Árbol calidad + snapshot/DT/termómetro |
 | 08/09/2026 | Q.C2 corte 3 PG14-R3/R4 | *(sin commit)* | pendiente staging | Catalog + Generated R3/R4 |
-| 08/09/2026 | Q.C2 corte 4 PG14-R1 | *(sin commit)* | pendiente staging | Hoja de vida HV + sync calibraciones |
+| 08/09/2026 | Q.C2 corte 4 PG14-R1 | `102ab1b` | pendiente staging | Hoja de vida HV + sync calibraciones |
 | 07/09/2026 | Q.C3 MC01-R01 | `9f5e5f4` | pendiente staging | Confidencialidad interno |
 | 07/09/2026 | Q.C3 MC01-R02 | `847b9ee` | pendiente staging | Confidencialidad externo |
 | 07/09/2026 | Q.C3 hub + MC01-R03 | `7fd1fba` | pendiente staging | Índice registros + indicadores |

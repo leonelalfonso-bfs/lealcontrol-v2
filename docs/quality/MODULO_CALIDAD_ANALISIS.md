@@ -12,7 +12,7 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** `34f0ffd` (PG14-R3/R4 Generated unificado con Metrologia).  
+**Último commit de avance Calidad:** `102ab1b` (PG14-R1 hoja de vida EquipmentLogEntry).  
 **Siguiente:** restos **C2** = PG09 R2 + Linked IT (o **C4**).  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
@@ -506,7 +506,7 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 | 07/09/2026 | C1 cierre + fixes | (varios previos) | Árbol, seed, DisplayCode, descarga JWT |
 | 07/09/2026 | C2 cortes 1–2 | (varios previos) | Snapshot informe, DT, MetrologyInstrument |
 | 08/09/2026 | C2 corte 3 PG14-R3/R4 | `34f0ffd` | `IMetrologyAssetCatalog` + listado/programa Generated |
-| 08/09/2026 | C2 corte 4 PG14-R1 | *(sin commit)* | Hoja de vida HV + sync calibraciones + PDF por activo |
+| 08/09/2026 | C2 corte 4 PG14-R1 | `102ab1b` | Hoja de vida HV + sync calibraciones + PDF por activo |
 | 07/09/2026 | C3 MC01-R01 | `9f5e5f4` | Compromisos confidencialidad internos |
 | 07/09/2026 | C3 MC01-R02 | `847b9ee` | Compromisos externos |
 | 07/09/2026 | C3 hub + MC01-R03 | `7fd1fba` | Índice registros + indicadores |
