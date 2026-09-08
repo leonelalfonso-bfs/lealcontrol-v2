@@ -4,7 +4,6 @@ import { api } from "./api/client";
 import { useAuth } from "./context/AuthContext";
 import { usePresentationMode } from "./context/PresentationModeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { AskLealAssistantModal } from "./components/AskLealAssistantModal";
 import { CommunicationsNotificationBell } from "./components/CommunicationsNotificationBell";
 import { useCommunicationsBrowserNotifications } from "./hooks/useCommunicationsBrowserNotifications";
 import {
@@ -195,7 +194,6 @@ export function App() {
   const [companyName, setCompanyName] = useState("Empresa");
   const [appsOpen, setAppsOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [showAskLeal, setShowAskLeal] = useState(false);
   const [exitPresentationOpen, setExitPresentationOpen] = useState(false);
   const [exitPassword, setExitPassword] = useState("");
   const [exitError, setExitError] = useState<string | null>(null);
@@ -443,34 +441,6 @@ export function App() {
                   </button>
                 </div>
               )}
-
-              <button
-                type="button"
-                onClick={() => setShowAskLeal(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "8px 12px",
-                  borderRadius: "10px",
-                  background: "linear-gradient(135deg, #0f172a, #1e293b)",
-                  color: "#ffffff",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  fontWeight: 800,
-                  fontSize: "0.8rem",
-                  cursor: "pointer",
-                  width: "100%",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span>🤖</span>
-                  <span>Preguntale a LEAL</span>
-                </span>
-                <span style={{ fontSize: "0.65rem", background: "#0d9488", padding: "2px 6px", borderRadius: "8px", color: "#fff" }}>
-                  IA
-                </span>
-              </button>
 
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <ThemeToggle />
@@ -802,7 +772,6 @@ export function App() {
             </div>
           </div>
         )}
-        <AskLealAssistantModal isOpen={showAskLeal} onClose={() => setShowAskLeal(false)} />
       </div>
     </ProtectedRoute>
   );
