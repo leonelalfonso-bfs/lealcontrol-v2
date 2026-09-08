@@ -35,6 +35,7 @@ public static class QualityEndpoints
             .RequirePolicyOnWrites("RequireQuality");
 
         group.MapPg06Records();
+        group.MapPg05Records();
 
         group.MapGet("/dashboard", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
         {

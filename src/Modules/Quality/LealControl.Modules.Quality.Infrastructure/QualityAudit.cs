@@ -17,6 +17,8 @@ public static class QualityAuditEntityTypes
     public const string PersonnelAuthorization = "PersonnelAuthorization";
     public const string CompetenceReview = "CompetenceReview";
     public const string RoleAssignment = "RoleAssignment";
+    public const string SupplierEvaluation = "SupplierEvaluation";
+    public const string SupplierPerformanceReview = "SupplierPerformanceReview";
 }
 
 public sealed class QualityAuditEvent : Entity<Guid>

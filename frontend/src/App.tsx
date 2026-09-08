@@ -82,6 +82,8 @@ import {
   QualityNonConformityPrintPage,
   QualityPg04Page,
   QualityInternalAuditPrintPage,
+  QualityPg05Page,
+  QualitySupplierEvaluationPrintPage,
   QualityPg06Page,
   QualityPersonnelAuthorizationPrintPage,
   QualityRecordsHubPage,
@@ -660,6 +662,9 @@ export function App() {
               <Route path="/calidad/registros/auditorias" element={<QualityPg04Page />} />
               <Route path="/calidad/registros/pg04" element={<QualityPg04Page />} />
               <Route path="/calidad/registros/auditorias/:id/pdf" element={<QualityInternalAuditPrintPage />} />
+              <Route path="/calidad/registros/proveedores" element={<QualityPg05Page />} />
+              <Route path="/calidad/registros/pg05" element={<QualityPg05Page />} />
+              <Route path="/calidad/registros/proveedores/:id/pdf" element={<QualitySupplierEvaluationPrintPage />} />
               <Route path="/calidad/registros/personal" element={<QualityPg06Page />} />
               <Route path="/calidad/registros/pg06" element={<QualityPg06Page />} />
               <Route path="/calidad/registros/personal/autorizacion/:id/pdf" element={<QualityPersonnelAuthorizationPrintPage />} />

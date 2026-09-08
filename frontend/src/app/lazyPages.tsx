@@ -145,6 +145,8 @@ export const QualityPg07R01Page = named(() => import("../pages/quality/QualityPg
 export const QualityNonConformityPrintPage = named(() => import("../pages/quality/QualityNonConformityPrintPage"), "QualityNonConformityPrintPage");
 export const QualityPg04Page = named(() => import("../pages/quality/QualityPg04Page"), "QualityPg04Page");
 export const QualityInternalAuditPrintPage = named(() => import("../pages/quality/QualityInternalAuditPrintPage"), "QualityInternalAuditPrintPage");
+export const QualityPg05Page = named(() => import("../pages/quality/QualityPg05Page"), "QualityPg05Page");
+export const QualitySupplierEvaluationPrintPage = named(() => import("../pages/quality/QualitySupplierEvaluationPrintPage"), "QualitySupplierEvaluationPrintPage");
 export const QualityPg06Page = named(() => import("../pages/quality/QualityPg06Page"), "QualityPg06Page");
 export const QualityPersonnelAuthorizationPrintPage = named(() => import("../pages/quality/QualityPersonnelAuthorizationPrintPage"), "QualityPersonnelAuthorizationPrintPage");
 export const QualityRecordsHubPage = named(() => import("../pages/quality/QualityRecordsHubPage"), "QualityRecordsHubPage");

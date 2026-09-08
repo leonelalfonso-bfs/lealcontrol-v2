@@ -90,6 +90,30 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "Checklist y cláusulas dentro de la auditoría."
   },
   {
+    code: "PG05-R01",
+    title: "Evaluación inicial de proveedores",
+    path: "/calidad/registros/proveedores?tab=r01",
+    kind: "Structured",
+    ready: true,
+    blurb: "Evaluación y habilitación de proveedores con puntaje y vigencia."
+  },
+  {
+    code: "PG05-R02",
+    title: "Listado de proveedores habilitados",
+    path: "/calidad/registros/proveedores?tab=r02",
+    kind: "Generated",
+    ready: true,
+    blurb: "Proveedores con evaluación aprobada y vigente."
+  },
+  {
+    code: "PG05-R03",
+    title: "Evaluación del desempeño de proveedores",
+    path: "/calidad/registros/proveedores?tab=r03",
+    kind: "Structured",
+    ready: true,
+    blurb: "Revisión periódica de desempeño (calidad, entrega, servicio)."
+  },
+  {
     code: "PG06-R01",
     title: "Programa de capacitaciones",
     path: "/calidad/registros/personal?tab=r01",

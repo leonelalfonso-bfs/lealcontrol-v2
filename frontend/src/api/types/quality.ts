@@ -348,3 +348,75 @@ export interface QualityPg06Summary {
   roleActive?: number;
   counts?: { r01: number; r02: number; r03: number; r04: number };
 }
+
+export interface QualitySupplierEvaluation {
+  id: string;
+  recordCode: string;
+  number: string;
+  supplierId: string;
+  supplierName: string;
+  supplierDocument?: string;
+  serviceScope?: string;
+  evaluatedAt: string;
+  score?: number | null;
+  criteriaNotes?: string;
+  strengths?: string;
+  weaknesses?: string;
+  approvedBy?: string;
+  approvedAt?: string | null;
+  validUntil?: string | null;
+  evidenceFileId?: string | null;
+  status: string;
+  notes?: string;
+  isExpired?: boolean;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface QualitySupplierPerformanceReview {
+  id: string;
+  recordCode: string;
+  number: string;
+  supplierId: string;
+  supplierName: string;
+  evaluationId?: string | null;
+  period?: string;
+  reviewDate: string;
+  score?: number | null;
+  qualityScore?: number | null;
+  deliveryScore?: number | null;
+  serviceScore?: number | null;
+  comments?: string;
+  reviewedBy?: string;
+  evidenceFileId?: string | null;
+  status: string;
+  notes?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface QualityEnabledSupplierRow {
+  supplierId: string;
+  supplierName: string;
+  supplierDocument?: string;
+  evaluationId: string;
+  evaluationNumber: string;
+  score?: number | null;
+  approvedAt?: string | null;
+  validUntil?: string | null;
+  serviceScope?: string;
+  lastPerformanceScore?: number | null;
+  lastPerformancePeriod?: string | null;
+  lastPerformanceDate?: string | null;
+}
+
+export interface QualityPg05Summary {
+  code: string;
+  title: string;
+  evaluationsDraft?: number;
+  evaluationsApproved?: number;
+  performanceDraft?: number;
+  enabledSuppliers?: number;
+  generatedAtUtc: string;
+  counts?: { r01: number; r02: number; r03: number };
+}

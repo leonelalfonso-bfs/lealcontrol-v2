@@ -785,3 +785,136 @@ public sealed record UpdateRoleAssignmentRequest(
     DateTime? Until = null,
     string? Status = null,
     string? Notes = null);
+
+// ─── PG05 Proveedores ────────────────────────────────────────────────────────
+
+public static class QualitySupplierEvaluationStatuses
+{
+    public const string Draft = "Draft";
+    public const string Approved = "Approved";
+    public const string Rejected = "Rejected";
+    public const string Suspended = "Suspended";
+    public const string Cancelled = "Cancelled";
+}
+
+/// <summary>PG05-R01 — evaluación inicial de proveedor (Directorio).</summary>
+public sealed class QualitySupplierEvaluation : Entity<Guid>
+{
+    public QualitySupplierEvaluation() : base(Guid.NewGuid()) { }
+    public QualitySupplierEvaluation(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG05-R01";
+    public string Number { get; set; } = string.Empty; // EVA-2026-0001
+    public Guid SupplierId { get; set; }
+    public string SupplierName { get; set; } = string.Empty;
+    public string SupplierDocument { get; set; } = string.Empty;
+    public string ServiceScope { get; set; } = string.Empty;
+    public DateTime EvaluatedAt { get; set; } = DateTime.UtcNow;
+    public decimal? Score { get; set; } // 0-100
+    public string CriteriaNotes { get; set; } = string.Empty;
+    public string Strengths { get; set; } = string.Empty;
+    public string Weaknesses { get; set; } = string.Empty;
+    public string ApprovedBy { get; set; } = string.Empty;
+    public DateTime? ApprovedAt { get; set; }
+    public DateTime? ValidUntil { get; set; }
+    public Guid? EvidenceFileId { get; set; }
+    public string Status { get; set; } = QualitySupplierEvaluationStatuses.Draft;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateSupplierEvaluationRequest(
+    Guid SupplierId,
+    string SupplierName,
+    DateTime? EvaluatedAt = null,
+    string? SupplierDocument = null,
+    string? ServiceScope = null,
+    decimal? Score = null,
+    string? CriteriaNotes = null,
+    string? Strengths = null,
+    string? Weaknesses = null,
+    DateTime? ValidUntil = null,
+    Guid? EvidenceFileId = null,
+    string? Notes = null);
+
+public sealed record UpdateSupplierEvaluationRequest(
+    string? SupplierName = null,
+    string? SupplierDocument = null,
+    string? ServiceScope = null,
+    DateTime? EvaluatedAt = null,
+    decimal? Score = null,
+    string? CriteriaNotes = null,
+    string? Strengths = null,
+    string? Weaknesses = null,
+    string? ApprovedBy = null,
+    DateTime? ApprovedAt = null,
+    DateTime? ValidUntil = null,
+    Guid? EvidenceFileId = null,
+    string? Status = null,
+    string? Notes = null);
+
+public static class QualitySupplierPerformanceStatuses
+{
+    public const string Draft = "Draft";
+    public const string Completed = "Completed";
+    public const string Cancelled = "Cancelled";
+}
+
+/// <summary>PG05-R03 — evaluación de desempeño de proveedor habilitado.</summary>
+public sealed class QualitySupplierPerformanceReview : Entity<Guid>
+{
+    public QualitySupplierPerformanceReview() : base(Guid.NewGuid()) { }
+    public QualitySupplierPerformanceReview(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG05-R03";
+    public string Number { get; set; } = string.Empty; // DES-2026-0001
+    public Guid SupplierId { get; set; }
+    public string SupplierName { get; set; } = string.Empty;
+    public Guid? EvaluationId { get; set; }
+    public string Period { get; set; } = string.Empty; // 2026-Q1 / 2026
+    public DateTime ReviewDate { get; set; } = DateTime.UtcNow;
+    public decimal? Score { get; set; }
+    public decimal? QualityScore { get; set; }
+    public decimal? DeliveryScore { get; set; }
+    public decimal? ServiceScore { get; set; }
+    public string Comments { get; set; } = string.Empty;
+    public string ReviewedBy { get; set; } = string.Empty;
+    public Guid? EvidenceFileId { get; set; }
+    public string Status { get; set; } = QualitySupplierPerformanceStatuses.Draft;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateSupplierPerformanceRequest(
+    Guid SupplierId,
+    string SupplierName,
+    string? Period = null,
+    DateTime? ReviewDate = null,
+    Guid? EvaluationId = null,
+    decimal? Score = null,
+    decimal? QualityScore = null,
+    decimal? DeliveryScore = null,
+    decimal? ServiceScore = null,
+    string? Comments = null,
+    string? ReviewedBy = null,
+    Guid? EvidenceFileId = null,
+    string? Notes = null);
+
+public sealed record UpdateSupplierPerformanceRequest(
+    string? SupplierName = null,
+    string? Period = null,
+    DateTime? ReviewDate = null,
+    Guid? EvaluationId = null,
+    decimal? Score = null,
+    decimal? QualityScore = null,
+    decimal? DeliveryScore = null,
+    decimal? ServiceScore = null,
+    string? Comments = null,
+    string? ReviewedBy = null,
+    Guid? EvidenceFileId = null,
+    string? Status = null,
+    string? Notes = null);

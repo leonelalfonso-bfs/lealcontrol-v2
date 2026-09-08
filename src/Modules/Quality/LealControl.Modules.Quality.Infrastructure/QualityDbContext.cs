@@ -27,6 +27,8 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityPersonnelAuthorization> PersonnelAuthorizations => Set<QualityPersonnelAuthorization>();
     public DbSet<QualityCompetenceReview> CompetenceReviews => Set<QualityCompetenceReview>();
     public DbSet<QualityRoleAssignment> RoleAssignments => Set<QualityRoleAssignment>();
+    public DbSet<QualitySupplierEvaluation> SupplierEvaluations => Set<QualitySupplierEvaluation>();
+    public DbSet<QualitySupplierPerformanceReview> SupplierPerformanceReviews => Set<QualitySupplierPerformanceReview>();
     public DbSet<QualityAuditEvent> AuditEvents => Set<QualityAuditEvent>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
@@ -316,6 +318,48 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.Role, x.Status });
+        });
+
+        modelBuilder.Entity<QualitySupplierEvaluation>(b =>
+        {
+            b.ToTable("supplier_evaluations", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.SupplierName).HasMaxLength(240).IsRequired();
+            b.Property(x => x.SupplierDocument).HasMaxLength(64);
+            b.Property(x => x.ServiceScope).HasMaxLength(1000);
+            b.Property(x => x.Score).HasPrecision(8, 2);
+            b.Property(x => x.CriteriaNotes).HasMaxLength(4000);
+            b.Property(x => x.Strengths).HasMaxLength(2000);
+            b.Property(x => x.Weaknesses).HasMaxLength(2000);
+            b.Property(x => x.ApprovedBy).HasMaxLength(160);
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualitySupplierEvaluationStatuses.Draft);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.SupplierId, x.Status });
+        });
+
+        modelBuilder.Entity<QualitySupplierPerformanceReview>(b =>
+        {
+            b.ToTable("supplier_performance_reviews", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.SupplierName).HasMaxLength(240).IsRequired();
+            b.Property(x => x.Period).HasMaxLength(40);
+            b.Property(x => x.Score).HasPrecision(8, 2);
+            b.Property(x => x.QualityScore).HasPrecision(8, 2);
+            b.Property(x => x.DeliveryScore).HasPrecision(8, 2);
+            b.Property(x => x.ServiceScore).HasPrecision(8, 2);
+            b.Property(x => x.Comments).HasMaxLength(4000);
+            b.Property(x => x.ReviewedBy).HasMaxLength(160);
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualitySupplierPerformanceStatuses.Draft);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.SupplierId, x.ReviewDate });
         });
 
         modelBuilder.Entity<QualityAuditEvent>(b =>
@@ -679,6 +723,57 @@ public sealed class QualityDbContext : DbContext
             );",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_role_Tenant_Number"" ON quality.role_assignments (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_role_Tenant_Role_Status"" ON quality.role_assignments (""TenantId"", ""Role"", ""Status"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.supplier_evaluations (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG05-R01',
+                ""Number"" character varying(32) NOT NULL,
+                ""SupplierId"" uuid NOT NULL,
+                ""SupplierName"" character varying(240) NOT NULL,
+                ""SupplierDocument"" character varying(64) NOT NULL DEFAULT '',
+                ""ServiceScope"" character varying(1000) NOT NULL DEFAULT '',
+                ""EvaluatedAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""Score"" numeric(8,2),
+                ""CriteriaNotes"" character varying(4000) NOT NULL DEFAULT '',
+                ""Strengths"" character varying(2000) NOT NULL DEFAULT '',
+                ""Weaknesses"" character varying(2000) NOT NULL DEFAULT '',
+                ""ApprovedBy"" character varying(160) NOT NULL DEFAULT '',
+                ""ApprovedAt"" timestamp with time zone,
+                ""ValidUntil"" timestamp with time zone,
+                ""EvidenceFileId"" uuid,
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Draft',
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_suppev_Tenant_Number"" ON quality.supplier_evaluations (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_suppev_Tenant_Supplier_Status"" ON quality.supplier_evaluations (""TenantId"", ""SupplierId"", ""Status"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.supplier_performance_reviews (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG05-R03',
+                ""Number"" character varying(32) NOT NULL,
+                ""SupplierId"" uuid NOT NULL,
+                ""SupplierName"" character varying(240) NOT NULL,
+                ""EvaluationId"" uuid,
+                ""Period"" character varying(40) NOT NULL DEFAULT '',
+                ""ReviewDate"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""Score"" numeric(8,2),
+                ""QualityScore"" numeric(8,2),
+                ""DeliveryScore"" numeric(8,2),
+                ""ServiceScore"" numeric(8,2),
+                ""Comments"" character varying(4000) NOT NULL DEFAULT '',
+                ""ReviewedBy"" character varying(160) NOT NULL DEFAULT '',
+                ""EvidenceFileId"" uuid,
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Draft',
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_suppperf_Tenant_Number"" ON quality.supplier_performance_reviews (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_suppperf_Tenant_Supplier_Date"" ON quality.supplier_performance_reviews (""TenantId"", ""SupplierId"", ""ReviewDate"");",
 
             @"CREATE TABLE IF NOT EXISTS quality.audit_events (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

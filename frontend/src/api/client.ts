@@ -1714,6 +1714,132 @@ export const api = {
       method: "DELETE"
     }),
 
+  getQualityPg05Summary: () =>
+    request<import("./types/quality").QualityPg05Summary>("/api/v1/quality/records/pg05"),
+
+  listQualityPg05R01: () =>
+    request<{
+      code: string;
+      title: string;
+      draftCount?: number;
+      approvedCount?: number;
+      rows: import("./types/quality").QualitySupplierEvaluation[];
+    }>("/api/v1/quality/records/pg05/r01"),
+
+  getQualitySupplierEvaluation: (id: string) =>
+    request<import("./types/quality").QualitySupplierEvaluation>(`/api/v1/quality/records/pg05/r01/${id}`),
+
+  createQualityPg05R01: (body: {
+    supplierId: string;
+    supplierName: string;
+    supplierDocument?: string;
+    serviceScope?: string;
+    evaluatedAt?: string;
+    score?: number;
+    criteriaNotes?: string;
+    strengths?: string;
+    weaknesses?: string;
+    validUntil?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualitySupplierEvaluation>("/api/v1/quality/records/pg05/r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityPg05R01: (
+    id: string,
+    body: {
+      supplierName?: string;
+      supplierDocument?: string;
+      serviceScope?: string;
+      evaluatedAt?: string;
+      score?: number;
+      criteriaNotes?: string;
+      strengths?: string;
+      weaknesses?: string;
+      approvedBy?: string;
+      approvedAt?: string;
+      validUntil?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualitySupplierEvaluation>(`/api/v1/quality/records/pg05/r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityPg05R01: (id: string) =>
+    request<import("./types/quality").QualitySupplierEvaluation>(`/api/v1/quality/records/pg05/r01/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg05R02: () =>
+    request<{
+      code: string;
+      title: string;
+      rows: import("./types/quality").QualityEnabledSupplierRow[];
+    }>("/api/v1/quality/records/pg05/r02"),
+
+  listQualityPg05R03: () =>
+    request<{
+      code: string;
+      title: string;
+      draftCount?: number;
+      rows: import("./types/quality").QualitySupplierPerformanceReview[];
+    }>("/api/v1/quality/records/pg05/r03"),
+
+  createQualityPg05R03: (body: {
+    supplierId: string;
+    supplierName: string;
+    evaluationId?: string;
+    period?: string;
+    reviewDate?: string;
+    score?: number;
+    qualityScore?: number;
+    deliveryScore?: number;
+    serviceScore?: number;
+    comments?: string;
+    reviewedBy?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualitySupplierPerformanceReview>("/api/v1/quality/records/pg05/r03", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityPg05R03: (
+    id: string,
+    body: {
+      supplierName?: string;
+      evaluationId?: string;
+      period?: string;
+      reviewDate?: string;
+      score?: number;
+      qualityScore?: number;
+      deliveryScore?: number;
+      serviceScore?: number;
+      comments?: string;
+      reviewedBy?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualitySupplierPerformanceReview>(`/api/v1/quality/records/pg05/r03/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityPg05R03: (id: string) =>
+    request<import("./types/quality").QualitySupplierPerformanceReview>(`/api/v1/quality/records/pg05/r03/${id}`, {
+      method: "DELETE"
+    }),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);
