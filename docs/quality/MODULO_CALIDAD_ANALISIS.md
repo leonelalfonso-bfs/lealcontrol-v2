@@ -12,7 +12,7 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** *(PG04 — ver §11 tras push)*.  
+**Último commit de avance Calidad:** `7ba1322` (PG04 auditorías).  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
 ### Principio: los registros se generan en el sistema
@@ -500,4 +500,6 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 | 07/09/2026 | C3 hub + MC01-R03 | `7fd1fba` | Índice registros + indicadores |
 | 07/09/2026 | C3 MC01-R05 | `97b7cec` | Notas institucionales |
 | 07/09/2026 | Docs / plan | `f5109ff` | Punto de reanudación §0 |
-| 07/09/2026 | C3 PG03-R01 + audit | *(este corte)* | Quejas Structured + quality.audit_events |
+| 07/09/2026 | C3 PG03-R01 + audit | `4e097bd` | Quejas Structured + quality.audit_events |
+| 07/09/2026 | C3 PG07-R1 | `8992da6` | NC/TNC/Riesgos/OM |
+| 07/09/2026 | C3 PG04 | `7ba1322` | Auditorías internas AUD-AAAA-NNNN |
