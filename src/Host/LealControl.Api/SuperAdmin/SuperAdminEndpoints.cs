@@ -188,7 +188,7 @@ public static class SuperAdminEndpoints
             var plan = await masterDb.Plans.FirstOrDefaultAsync(p => p.Code == req.PlanCode, ct);
             var modules = !string.IsNullOrWhiteSpace(req.EnabledModulesJson) 
                 ? req.EnabledModulesJson 
-                : (plan?.EnabledModulesJson ?? @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]");
+                : (plan?.EnabledModulesJson ?? @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr""]");
 
             var result = await provisioner.ProvisionTenantAsync(
                 req.Name,
@@ -200,19 +200,12 @@ public static class SuperAdminEndpoints
                 req.AdminPhone,
                 req.MonthlyPriceArs,
                 req.MonthlyPriceUsd,
+                modules,
                 ct);
 
             if (!result.Success)
             {
                 return Results.BadRequest(new { success = false, message = result.Message });
-            }
-
-            // Update EnabledModulesJson in MasterTenant
-            var tenant = await masterDb.Tenants.FirstOrDefaultAsync(t => t.DbName == result.DbName, ct);
-            if (tenant != null)
-            {
-                tenant.EnabledModulesJson = modules;
-                await masterDb.SaveChangesAsync(ct);
             }
 
             return Results.Created($"/api/v1/superadmin/tenants/{result.DbName}", new
@@ -228,13 +221,17 @@ public static class SuperAdminEndpoints
             Guid id,
             UpdateTenantModulesRequest req,
             MasterDbContext masterDb,
+            ITenantProvisionerService provisioner,
             CancellationToken ct) =>
         {
             var tenant = await masterDb.Tenants.FirstOrDefaultAsync(t => t.Id == id, ct);
             if (tenant == null) return Results.NotFound(new { message = "Empresa no encontrada." });
 
             if (!string.IsNullOrWhiteSpace(req.EnabledModulesJson))
-                tenant.EnabledModulesJson = req.EnabledModulesJson;
+            {
+                tenant.EnabledModulesJson = TenantProvisionerService.NormalizeModulesJson(req.EnabledModulesJson);
+                await provisioner.SyncTenantUsersModulesAsync(tenant.DbName, tenant.EnabledModulesJson, ct);
+            }
 
             if (!string.IsNullOrWhiteSpace(req.PlanCode))
                 tenant.PlanCode = req.PlanCode;
@@ -243,7 +240,16 @@ public static class SuperAdminEndpoints
                 tenant.MonthlyPriceArs = req.MonthlyPriceArs.Value;
 
             await masterDb.SaveChangesAsync(ct);
-            return Results.Ok(tenant);
+            return Results.Ok(new
+            {
+                tenant.Id,
+                tenant.Name,
+                tenant.DbName,
+                tenant.PlanCode,
+                tenant.EnabledModulesJson,
+                tenant.MonthlyPriceArs,
+                message = "Módulos actualizados. Los usuarios deben volver a iniciar sesión para ver el cambio."
+            });
         });
 
         // 7. Update Tenant Status (Suspend / Activate / Notes)
@@ -531,6 +537,7 @@ public static class SuperAdminEndpoints
                 demo.Phone,
                 monthlyArs,
                 plan?.PriceUsd ?? 0m,
+                modules,
                 ct);
 
             if (!result.Success)
@@ -539,13 +546,10 @@ public static class SuperAdminEndpoints
             }
 
             var tenant = await masterDb.Tenants.FirstOrDefaultAsync(t => t.DbName == result.DbName, ct);
-            if (tenant != null)
+            if (tenant != null && !string.IsNullOrWhiteSpace(demo.Cuit))
             {
-                tenant.EnabledModulesJson = modules;
-                if (!string.IsNullOrWhiteSpace(demo.Cuit))
-                {
-                    tenant.Notes = $"CUIT demo: {demo.Cuit}";
-                }
+                tenant.Notes = $"CUIT demo: {demo.Cuit}";
+                await masterDb.SaveChangesAsync(ct);
             }
 
             demo.Status = "Provisioned";

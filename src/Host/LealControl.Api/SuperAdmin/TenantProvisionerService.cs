@@ -25,7 +25,10 @@ public interface ITenantProvisionerService
         string? adminPhone,
         decimal monthlyPriceArs,
         decimal monthlyPriceUsd,
+        string? enabledModulesJson = null,
         CancellationToken cancellationToken = default);
+
+    Task SyncTenantUsersModulesAsync(string dbName, string enabledModulesJson, CancellationToken cancellationToken = default);
 
     Task<byte[]> ExportDatabaseDumpGzipAsync(string dbName, CancellationToken cancellationToken = default);
     Task<decimal> GetDatabaseSizeMbAsync(string dbName, CancellationToken cancellationToken = default);
@@ -61,10 +64,12 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
         string? adminPhone,
         decimal monthlyPriceArs,
         decimal monthlyPriceUsd,
+        string? enabledModulesJson = null,
         CancellationToken cancellationToken = default)
     {
         var cleanSlug = SanitizeSlug(slug);
         var dbName = "leal_tenant_" + cleanSlug.Replace("-", "_");
+        var modulesJson = NormalizeModulesJson(enabledModulesJson);
 
         // Check if slug exists
         var exists = await _masterDb.Tenants.AnyAsync(t => t.Slug == cleanSlug, cancellationToken);
@@ -82,7 +87,7 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
 
             // 2. Initialize Tables and Schema inside the new database
             var tenantConnString = BuildTenantConnectionString(dbName);
-            await InitializeTenantSchemaAndAdmin(tenantConnString, tenantId, name, adminFullName, adminEmail, adminPassword, cancellationToken);
+            await InitializeTenantSchemaAndAdmin(tenantConnString, tenantId, name, adminFullName, adminEmail, adminPassword, modulesJson, cancellationToken);
             await TenantDatabaseBootstrapper.EnsureDatabaseSchemaAsync(_defaultConnectionString, dbName, cancellationToken);
 
             // 3. Register in Master DB
@@ -99,6 +104,7 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
                 AdminPhone = adminPhone,
                 MonthlyPriceArs = monthlyPriceArs,
                 MonthlyPriceUsd = monthlyPriceUsd,
+                EnabledModulesJson = modulesJson,
                 CreatedAtUtc = DateTime.UtcNow,
                 IsActive = true
             };
@@ -115,6 +121,52 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
         {
             _logger.LogError(ex, "Error provisioning database {DbName} for tenant {TenantName}", dbName, name);
             return (false, dbName, "Error al crear la base de datos: " + ex.Message);
+        }
+    }
+
+    public async Task SyncTenantUsersModulesAsync(string dbName, string enabledModulesJson, CancellationToken cancellationToken = default)
+    {
+        var modulesJson = NormalizeModulesJson(enabledModulesJson);
+        var tenantConn = BuildTenantConnectionString(dbName);
+        await using var conn = new NpgsqlConnection(tenantConn);
+        await conn.OpenAsync(cancellationToken);
+
+        await using var cmd = new NpgsqlCommand(
+            """
+            UPDATE public.tenant_users
+            SET "AllowedModulesJson" = @modules
+            WHERE "IsActive" = TRUE;
+            """, conn);
+        cmd.Parameters.AddWithValue("modules", modulesJson);
+        var updated = await cmd.ExecuteNonQueryAsync(cancellationToken);
+        _logger.LogInformation("Sincronizados módulos de {Count} usuario(s) en {DbName}", updated, dbName);
+    }
+
+    internal static string NormalizeModulesJson(string? enabledModulesJson)
+    {
+        const string fallback = """["sales","crm","purchases","inventory","finance","fleet","hr"]""";
+        if (string.IsNullOrWhiteSpace(enabledModulesJson))
+            return fallback;
+
+        try
+        {
+            var parsed = System.Text.Json.JsonSerializer.Deserialize<string[]>(enabledModulesJson);
+            if (parsed is null || parsed.Length == 0)
+                return fallback;
+
+            var cleaned = parsed
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .Select(m => m.Trim().ToLowerInvariant())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            return cleaned.Length == 0
+                ? fallback
+                : System.Text.Json.JsonSerializer.Serialize(cleaned);
+        }
+        catch
+        {
+            return fallback;
         }
     }
 
@@ -201,6 +253,7 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
         string adminFullName,
         string adminEmail,
         string adminPassword,
+        string enabledModulesJson,
         CancellationToken cancellationToken)
     {
         using var conn = new NpgsqlConnection(tenantConnString);
@@ -259,13 +312,13 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
                 ""Role"" character varying(64) NOT NULL DEFAULT 'Administrador',
                 ""PasswordHash"" character varying(256),
                 ""IsActive"" boolean NOT NULL DEFAULT true,
-                ""AllowedModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]',
+                ""AllowedModulesJson"" text DEFAULT '[]',
                 ""IsTechnicalDirector"" boolean NOT NULL DEFAULT false,
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""LastLoginUtc"" timestamp with time zone
             );
 
-            ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""AllowedModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]';
+            ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""AllowedModulesJson"" text DEFAULT '[]';
             ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""IsTechnicalDirector"" boolean NOT NULL DEFAULT false;
         ";
 
@@ -291,7 +344,7 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
 
         var insertUserSql = @"
             INSERT INTO public.tenant_users (""Id"", ""TenantId"", ""FullName"", ""Email"", ""Role"", ""PasswordHash"", ""AllowedModulesJson"")
-            VALUES (@id, @tenantId, @fullName, @email, 'Administrador', @pwdHash, '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]')
+            VALUES (@id, @tenantId, @fullName, @email, 'Administrador', @pwdHash, @modules)
             ON CONFLICT DO NOTHING;
         ";
         using (var cmd = new NpgsqlCommand(insertUserSql, conn))
@@ -301,6 +354,7 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
             cmd.Parameters.AddWithValue("fullName", adminFullName);
             cmd.Parameters.AddWithValue("email", adminEmail.Trim().ToLowerInvariant());
             cmd.Parameters.AddWithValue("pwdHash", MasterDbContext.HashPassword(adminPassword));
+            cmd.Parameters.AddWithValue("modules", enabledModulesJson);
             await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
     }
