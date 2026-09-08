@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Metrology.Contracts;
 using LealControl.Modules.Quality.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -25,6 +26,8 @@ public static class MetrologyEndpoints
     {
         services.AddTenantDbContext<MetrologyDbContext>(
             configureNpgsql: b => b.MigrationsAssembly(typeof(MetrologyDbContext).Assembly.FullName));
+
+        services.AddScoped<IMetrologyAssetCatalog, MetrologyAssetCatalog>();
 
         return services;
     }

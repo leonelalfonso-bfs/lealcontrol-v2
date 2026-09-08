@@ -5,13 +5,19 @@ import type {
   QualityEquipment,
   QualityIntermediateCheck,
   QualityMaintenancePlanItem,
-  QualityPg14Summary
+  QualityPg14CalibrationProgramRow,
+  QualityPg14R03Response,
+  QualityPg14R04Response,
+  QualityPg14Summary,
+  QualityPg14UnifiedAsset
 } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
 
-type Tab = "equipos" | "r05" | "r06";
+type Tab = "r04" | "r03" | "equipos" | "r05" | "r06";
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: "r04", label: "R04 Listado" },
+  { id: "r03", label: "R03 Programa" },
   { id: "equipos", label: "Equipos auxiliares" },
   { id: "r05", label: "R05 Verificación" },
   { id: "r06", label: "R06 Mantenimiento" }
@@ -21,7 +27,21 @@ const KIND_LABEL: Record<string, string> = {
   Truck: "Camión",
   Trailer: "Acoplado",
   Forklift: "Autoelevador",
-  Other: "Otro"
+  Other: "Otro",
+  Weight: "Pesa",
+  Thermometer: "Termómetro"
+};
+
+const SOURCE_LABEL: Record<string, string> = {
+  StandardWeight: "Pesa",
+  Instrument: "Instrumento",
+  QualityEquipment: "Auxiliar"
+};
+
+const SOURCE_BADGE: Record<string, { bg: string; color: string }> = {
+  StandardWeight: { bg: "#dbeafe", color: "#1e40af" },
+  Instrument: { bg: "#ccfbf1", color: "#0f766e" },
+  QualityEquipment: { bg: "#f1f5f9", color: "#475569" }
 };
 
 const EQ_STATUS: Record<string, string> = {
@@ -56,8 +76,8 @@ const MP_STATUS: Record<string, string> = {
 };
 
 function parseTab(v: string | null): Tab {
-  if (v === "r05" || v === "r06") return v;
-  return "equipos";
+  if (v === "r04" || v === "r03" || v === "equipos" || v === "r05" || v === "r06") return v;
+  return "r04";
 }
 
 function fmtDate(d?: string | null) {
@@ -70,6 +90,11 @@ export function QualityPg14Page() {
   const tab = parseTab(searchParams.get("tab"));
 
   const [summary, setSummary] = useState<QualityPg14Summary | null>(null);
+  const [inventory, setInventory] = useState<QualityPg14UnifiedAsset[]>([]);
+  const [inventoryCounts, setInventoryCounts] = useState<QualityPg14R04Response["counts"] | null>(null);
+  const [calProgram, setCalProgram] = useState<QualityPg14CalibrationProgramRow[]>([]);
+  const [calSummary, setCalSummary] = useState<QualityPg14R03Response["summary"] | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [equipment, setEquipment] = useState<QualityEquipment[]>([]);
   const [checks, setChecks] = useState<QualityIntermediateCheck[]>([]);
   const [plans, setPlans] = useState<QualityMaintenancePlanItem[]>([]);
@@ -122,6 +147,10 @@ export function QualityPg14Page() {
     () => equipment.filter((e) => e.status !== "Retired"),
     [equipment]
   );
+  const filteredInventory = useMemo(
+    () => (sourceFilter === "all" ? inventory : inventory.filter((r) => r.source === sourceFilter)),
+    [inventory, sourceFilter]
+  );
 
   const setTab = (next: Tab) => {
     setSearchParams({ tab: next });
@@ -135,12 +164,18 @@ export function QualityPg14Page() {
     setLoading(true);
     Promise.all([
       api.getQualityPg14Summary(),
+      api.listQualityPg14R04(),
+      api.listQualityPg14R03(),
       api.listQualityEquipment(),
       api.listQualityPg14R05(),
       api.listQualityPg14R06()
     ])
-      .then(([sum, eq, r05, r06]) => {
+      .then(([sum, r04, r03, eq, r05, r06]) => {
         setSummary(sum);
+        setInventory(r04.rows || []);
+        setInventoryCounts(r04.counts || null);
+        setCalProgram(r03.rows || []);
+        setCalSummary(r03.summary || null);
         setEquipment(eq.rows || []);
         setChecks(r05.rows || []);
         setPlans(r06.rows || []);
@@ -478,6 +513,44 @@ export function QualityPg14Page() {
     void exportToExcel("PG14_equipos_auxiliares", equipment, columns);
   };
 
+  const exportInventory = () => {
+    const columns: ExcelColumn<QualityPg14UnifiedAsset>[] = [
+      { key: "source", header: "Origen", value: (r) => SOURCE_LABEL[r.source] || r.source },
+      { key: "code", header: "Código" },
+      { key: "kind", header: "Tipo", value: (r) => KIND_LABEL[r.kind] || r.kind },
+      { key: "description", header: "Descripción", value: (r) => r.description || "" },
+      { key: "brandOrManufacturer", header: "Marca / Fabricante", value: (r) => r.brandOrManufacturer || "" },
+      { key: "model", header: "Modelo", value: (r) => r.model || "" },
+      { key: "serialNumber", header: "Serie", value: (r) => r.serialNumber || "" },
+      { key: "certificateNumber", header: "Certificado", value: (r) => r.certificateNumber || "" },
+      { key: "calibrationDate", header: "Calibración", value: (r) => excelDate(r.calibrationDate) },
+      { key: "expirationDate", header: "Vencimiento", value: (r) => excelDate(r.expirationDate) },
+      { key: "status", header: "Estado" },
+      { key: "extra", header: "Extra", value: (r) => r.extra || "" },
+      { key: "isExpired", header: "Vencido", value: (r) => (r.isExpired ? "Sí" : "No") },
+      { key: "deepLinkPath", header: "Enlace", value: (r) => r.deepLinkPath || "" }
+    ];
+    void exportToExcel("PG14-R04_listado_equipos", filteredInventory, columns);
+  };
+
+  const exportCalProgram = () => {
+    const columns: ExcelColumn<QualityPg14CalibrationProgramRow>[] = [
+      { key: "source", header: "Origen", value: (r) => SOURCE_LABEL[r.source] || r.source },
+      { key: "code", header: "Código" },
+      { key: "kind", header: "Tipo", value: (r) => KIND_LABEL[r.kind] || r.kind },
+      { key: "description", header: "Descripción", value: (r) => r.description || "" },
+      { key: "certificateNumber", header: "Certificado", value: (r) => r.certificateNumber || "" },
+      { key: "calibrationDate", header: "Calibración", value: (r) => excelDate(r.calibrationDate) },
+      { key: "expirationDate", header: "Vencimiento", value: (r) => excelDate(r.expirationDate) },
+      { key: "daysUntilExpiry", header: "Días", value: (r) => (r.daysUntilExpiry == null ? "" : String(r.daysUntilExpiry)) },
+      { key: "isExpired", header: "Vencido", value: (r) => (r.isExpired ? "Sí" : "No") },
+      { key: "isDueSoon", header: "Próximo (≤60d)", value: (r) => (r.isDueSoon ? "Sí" : "No") },
+      { key: "status", header: "Estado" },
+      { key: "deepLinkPath", header: "Enlace", value: (r) => r.deepLinkPath || "" }
+    ];
+    void exportToExcel("PG14-R03_programa_calibraciones", calProgram, columns);
+  };
+
   if (loading) return <div className="workspace-page pad">Cargando…</div>;
 
   return (
@@ -485,14 +558,16 @@ export function QualityPg14Page() {
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
         <div>
           <Link to="/calidad/registros">← Registros</Link>
-          <h1 style={{ margin: "8px 0 4px" }}>PG14 · Equipamiento auxiliar</h1>
+          <h1 style={{ margin: "8px 0 4px" }}>PG14 · Equipamiento y calibraciones</h1>
           <p style={{ margin: 0, color: "#64748b" }}>
-            Equipos · verificación intermedia (R05) · mantenimiento preventivo (R06)
+            Listado unificado (R04) · programa calibraciones (R03) · auxiliares · R05 · R06
           </p>
         </div>
         {summary && (
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 13 }}>
-            <span>Activos: <strong>{summary.equipmentActive}</strong></span>
+            {summary.weightsCount != null && <span>Pesas: <strong>{summary.weightsCount}</strong></span>}
+            {summary.instrumentsCount != null && <span>Instrumentos: <strong>{summary.instrumentsCount}</strong></span>}
+            <span>Aux. activos: <strong>{summary.equipmentActive}</strong></span>
             <span>Verif. borrador: <strong>{summary.checksDraft}</strong></span>
             <span>Mant. ≤30d: <strong>{summary.maintenanceDue}</strong></span>
             <span>Mant. vencidos: <strong style={{ color: summary.maintenanceOverdue ? "#b91c1c" : undefined }}>{summary.maintenanceOverdue}</strong></span>
@@ -515,6 +590,171 @@ export function QualityPg14Page() {
 
       {error && <div className="alert alert-error" style={{ marginBottom: 12 }}>{error}</div>}
       {msg && <div className="alert alert-success" style={{ marginBottom: 12 }}>{msg}</div>}
+
+      {tab === "r04" && (
+        <>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}>
+              Origen
+              <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
+                <option value="all">Todos</option>
+                <option value="StandardWeight">Pesas</option>
+                <option value="Instrument">Instrumentos</option>
+                <option value="QualityEquipment">Auxiliares</option>
+              </select>
+            </label>
+            <button type="button" className="btn btn-outline" onClick={exportInventory}>
+              Excel
+            </button>
+            {inventoryCounts && (
+              <span style={{ fontSize: 13, color: "#64748b" }}>
+                Pesas {inventoryCounts.weights} · Instrumentos {inventoryCounts.instruments} · Auxiliares {inventoryCounts.auxiliaries} · Total {inventoryCounts.total}
+              </span>
+            )}
+          </div>
+          <div className="card" style={{ overflowX: "auto" }}>
+            <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+              <thead>
+                <tr>
+                  <th>Origen</th>
+                  <th>Código</th>
+                  <th>Tipo</th>
+                  <th>Descripción</th>
+                  <th>Marca</th>
+                  <th>Serie</th>
+                  <th>Certificado</th>
+                  <th>Vencimiento</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInventory.map((r) => {
+                  const badge = SOURCE_BADGE[r.source] || SOURCE_BADGE.QualityEquipment;
+                  return (
+                    <tr key={`${r.source}-${r.id}`} style={r.isExpired ? { background: "#fef2f2" } : undefined}>
+                      <td>
+                        <span style={{
+                          display: "inline-block",
+                          padding: "2px 8px",
+                          borderRadius: 4,
+                          background: badge.bg,
+                          color: badge.color,
+                          fontSize: 12,
+                          fontWeight: 600
+                        }}>
+                          {SOURCE_LABEL[r.source] || r.source}
+                        </span>
+                      </td>
+                      <td><strong>{r.code}</strong></td>
+                      <td>{KIND_LABEL[r.kind] || r.kind}</td>
+                      <td>{r.description || "—"}{r.extra ? <div style={{ color: "#64748b", fontSize: 12 }}>{r.extra}</div> : null}</td>
+                      <td>{r.brandOrManufacturer || "—"}</td>
+                      <td>{r.serialNumber || "—"}</td>
+                      <td>{r.certificateNumber || "—"}</td>
+                      <td style={r.isExpired ? { color: "#b91c1c", fontWeight: 600 } : undefined}>
+                        {fmtDate(r.expirationDate)}
+                      </td>
+                      <td>{r.status}</td>
+                      <td>
+                        {r.deepLinkPath ? (
+                          <Link to={r.deepLinkPath} className="btn ghost compact">Abrir</Link>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredInventory.length === 0 && (
+                  <tr><td colSpan={10} style={{ textAlign: "center", color: "#64748b" }}>Sin equipos en el listado.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {tab === "r03" && (
+        <>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <button type="button" className="btn btn-outline" onClick={exportCalProgram}>
+              Excel
+            </button>
+            {calSummary && (
+              <span style={{ fontSize: 13, color: "#64748b" }}>
+                Vencidos <strong style={{ color: calSummary.expired ? "#b91c1c" : undefined }}>{calSummary.expired}</strong>
+                {" · "}Próximos ≤60d <strong style={{ color: calSummary.dueSoon ? "#b45309" : undefined }}>{calSummary.dueSoon}</strong>
+                {" · "}OK <strong>{calSummary.ok}</strong>
+                {" · "}Total {calSummary.total}
+              </span>
+            )}
+          </div>
+          <div className="card" style={{ overflowX: "auto" }}>
+            <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+              <thead>
+                <tr>
+                  <th>Origen</th>
+                  <th>Código</th>
+                  <th>Descripción</th>
+                  <th>Certificado</th>
+                  <th>Calibración</th>
+                  <th>Vencimiento</th>
+                  <th>Días</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {calProgram.map((r) => {
+                  const badge = SOURCE_BADGE[r.source] || SOURCE_BADGE.QualityEquipment;
+                  const rowBg = r.isExpired ? "#fef2f2" : r.isDueSoon ? "#fffbeb" : undefined;
+                  return (
+                    <tr key={`cal-${r.source}-${r.id}`} style={rowBg ? { background: rowBg } : undefined}>
+                      <td>
+                        <span style={{
+                          display: "inline-block",
+                          padding: "2px 8px",
+                          borderRadius: 4,
+                          background: badge.bg,
+                          color: badge.color,
+                          fontSize: 12,
+                          fontWeight: 600
+                        }}>
+                          {SOURCE_LABEL[r.source] || r.source}
+                        </span>
+                      </td>
+                      <td><strong>{r.code}</strong></td>
+                      <td>{r.description || "—"}</td>
+                      <td>{r.certificateNumber || "—"}</td>
+                      <td>{fmtDate(r.calibrationDate)}</td>
+                      <td style={r.isExpired ? { color: "#b91c1c", fontWeight: 600 } : r.isDueSoon ? { color: "#b45309", fontWeight: 600 } : undefined}>
+                        {fmtDate(r.expirationDate)}
+                      </td>
+                      <td>
+                        {r.daysUntilExpiry == null
+                          ? "—"
+                          : r.isExpired
+                            ? `${r.daysUntilExpiry} (vencido)`
+                            : r.daysUntilExpiry}
+                      </td>
+                      <td>
+                        {r.isExpired ? "Vencido" : r.isDueSoon ? "Próximo" : r.status}
+                      </td>
+                      <td>
+                        {r.deepLinkPath ? (
+                          <Link to={r.deepLinkPath} className="btn ghost compact">Abrir</Link>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {calProgram.length === 0 && (
+                  <tr><td colSpan={9} style={{ textAlign: "center", color: "#64748b" }}>Sin activos con fechas de calibración.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {tab === "equipos" && (
         <>

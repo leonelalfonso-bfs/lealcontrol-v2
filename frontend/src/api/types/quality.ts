@@ -528,4 +528,59 @@ export interface QualityPg14Summary {
   checksDraft: number;
   maintenanceDue: number;
   maintenanceOverdue: number;
+  weightsCount?: number;
+  instrumentsCount?: number;
+}
+
+/** PG14-R04 — listado unificado pesas + instrumentos + auxiliares */
+export interface QualityPg14UnifiedAsset {
+  id: string;
+  source: "StandardWeight" | "Instrument" | "QualityEquipment" | string;
+  code: string;
+  kind: string;
+  description: string;
+  brandOrManufacturer?: string;
+  model?: string;
+  serialNumber?: string;
+  certificateNumber?: string;
+  calibrationDate?: string | null;
+  expirationDate?: string | null;
+  status: string;
+  extra?: string | null;
+  deepLinkPath?: string | null;
+  isExpired?: boolean;
+}
+
+export interface QualityPg14R04Response {
+  code: string;
+  title: string;
+  recordKind?: string;
+  generatedAtUtc: string;
+  counts: {
+    weights: number;
+    instruments: number;
+    auxiliaries: number;
+    total: number;
+  };
+  rows: QualityPg14UnifiedAsset[];
+}
+
+/** PG14-R03 — programa de calibraciones */
+export interface QualityPg14CalibrationProgramRow extends QualityPg14UnifiedAsset {
+  daysUntilExpiry?: number | null;
+  isDueSoon?: boolean;
+}
+
+export interface QualityPg14R03Response {
+  code: string;
+  title: string;
+  recordKind?: string;
+  generatedAtUtc: string;
+  summary: {
+    expired: number;
+    dueSoon: number;
+    ok: number;
+    total: number;
+  };
+  rows: QualityPg14CalibrationProgramRow[];
 }

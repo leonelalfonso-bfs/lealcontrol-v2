@@ -178,6 +178,22 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "Listado generado de normas y documentos externos."
   },
   {
+    code: "PG14-R04",
+    title: "Listado de equipos",
+    path: "/calidad/registros/equipos?tab=r04",
+    kind: "Generated",
+    ready: true,
+    blurb: "Pesas patrón + instrumentos (Metrología) + auxiliares (Calidad)."
+  },
+  {
+    code: "PG14-R03",
+    title: "Programa de calibraciones",
+    path: "/calidad/registros/equipos?tab=r03",
+    kind: "Generated",
+    ready: true,
+    blurb: "Vencimientos de calibración de pesas e instrumentos, ordenados por fecha."
+  },
+  {
     code: "PG14-EQ",
     title: "Equipos auxiliares",
     path: "/calidad/registros/equipos?tab=equipos",

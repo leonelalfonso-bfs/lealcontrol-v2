@@ -1964,6 +1964,12 @@ export const api = {
   getQualityPg14Summary: () =>
     request<import("./types/quality").QualityPg14Summary>("/api/v1/quality/records/pg14"),
 
+  listQualityPg14R04: () =>
+    request<import("./types/quality").QualityPg14R04Response>("/api/v1/quality/records/pg14-r04"),
+
+  listQualityPg14R03: () =>
+    request<import("./types/quality").QualityPg14R03Response>("/api/v1/quality/records/pg14-r03"),
+
   listQualityEquipment: () =>
     request<{
       code: string;

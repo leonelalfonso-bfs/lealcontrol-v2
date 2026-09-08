@@ -1,4 +1,5 @@
 using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Metrology.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -54,7 +55,11 @@ internal static class QualityPg14Endpoints
 
     public static RouteGroupBuilder MapPg14Records(this RouteGroupBuilder group)
     {
-        group.MapGet("/records/pg14", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
+        group.MapGet("/records/pg14", async (
+            ITenantContext tenant,
+            QualityDbContext db,
+            IMetrologyAssetCatalog metrologyCatalog,
+            CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
@@ -77,24 +82,218 @@ internal static class QualityPg14Endpoints
                     && m.NextDue != null
                     && m.NextDue < now, ct);
 
+            var assets = await metrologyCatalog.ListCalibrationAssetsAsync(tenantId.Value, ct);
+            var weightsCount = assets.Count(a => a.Source == "StandardWeight");
+            var instrumentsCount = assets.Count(a => a.Source == "Instrument");
+
             return Results.Ok(new
             {
                 code = "PG14",
-                title = "Equipamiento auxiliar / R5–R6",
+                title = "Equipamiento / calibraciones / R5–R6",
                 generatedAtUtc = now,
                 equipmentActive,
                 checksDraft,
                 maintenanceDue,
-                maintenanceOverdue
+                maintenanceOverdue,
+                weightsCount,
+                instrumentsCount
             });
         });
 
+        MapR04(group);
+        MapR03(group);
         MapEquipment(group);
         MapR05(group);
         MapR06(group);
 
         return group;
     }
+
+    private static void MapR04(RouteGroupBuilder group)
+    {
+        group.MapGet("/records/pg14-r04", async (
+            ITenantContext tenant,
+            QualityDbContext db,
+            IMetrologyAssetCatalog metrologyCatalog,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+
+            var now = DateTime.UtcNow;
+            var metrologyAssets = await metrologyCatalog.ListCalibrationAssetsAsync(tenantId.Value, ct);
+
+            var auxiliaries = await db.Equipments.AsNoTracking()
+                .Where(e => e.TenantId == tenantId && e.Status != QualityEquipmentStatuses.Retired)
+                .OrderBy(e => e.Code)
+                .ToListAsync(ct);
+
+            var rows = metrologyAssets
+                .Select(a => ToUnifiedRow(a, now))
+                .Concat(auxiliaries.Select(e => ToUnifiedRow(e, now)))
+                .OrderBy(r => SourceSortKey(r.Source))
+                .ThenBy(r => r.Code, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var weights = rows.Count(r => r.Source == "StandardWeight");
+            var instruments = rows.Count(r => r.Source == "Instrument");
+            var auxCount = rows.Count(r => r.Source == "QualityEquipment");
+
+            return Results.Ok(new
+            {
+                code = "PG14-R04",
+                title = "Listado de equipos",
+                recordKind = QualityRecordKinds.Generated,
+                generatedAtUtc = now,
+                counts = new
+                {
+                    weights,
+                    instruments,
+                    auxiliaries = auxCount,
+                    total = rows.Count
+                },
+                rows
+            });
+        });
+    }
+
+    private static void MapR03(RouteGroupBuilder group)
+    {
+        group.MapGet("/records/pg14-r03", async (
+            ITenantContext tenant,
+            IMetrologyAssetCatalog metrologyCatalog,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var now = DateTime.UtcNow;
+            var dueSoonHorizon = now.AddDays(60);
+
+            // Auxiliares (QualityEquipment) no tienen fechas de calibración aún — solo pesas + instrumentos.
+            var assets = (await metrologyCatalog.ListCalibrationAssetsAsync(tenantId.Value, ct))
+                .Where(a => a.CalibrationDate.HasValue || a.ExpirationDate.HasValue)
+                .ToList();
+
+            var rows = assets
+                .Select(a =>
+                {
+                    var isExpired = a.ExpirationDate.HasValue && a.ExpirationDate.Value.Date < now.Date;
+                    var daysUntilExpiry = a.ExpirationDate.HasValue
+                        ? (int?)(a.ExpirationDate.Value.Date - now.Date).TotalDays
+                        : null;
+                    var isDueSoon = !isExpired
+                        && a.ExpirationDate.HasValue
+                        && a.ExpirationDate.Value.Date <= dueSoonHorizon.Date;
+
+                    return new
+                    {
+                        id = a.Id,
+                        source = a.Source,
+                        code = a.Code,
+                        kind = a.Kind,
+                        description = a.Description,
+                        brandOrManufacturer = a.BrandOrManufacturer,
+                        model = a.Model,
+                        serialNumber = a.SerialNumber,
+                        certificateNumber = a.CertificateNumber,
+                        calibrationDate = a.CalibrationDate,
+                        expirationDate = a.ExpirationDate,
+                        status = a.Status,
+                        extra = a.Extra,
+                        deepLinkPath = a.DeepLinkPath,
+                        daysUntilExpiry,
+                        isExpired,
+                        isDueSoon
+                    };
+                })
+                .OrderBy(r => r.expirationDate == null)
+                .ThenBy(r => r.expirationDate)
+                .ThenBy(r => r.code, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var expired = rows.Count(r => r.isExpired);
+            var dueSoon = rows.Count(r => r.isDueSoon);
+            var ok = rows.Count - expired - dueSoon;
+
+            return Results.Ok(new
+            {
+                code = "PG14-R03",
+                title = "Programa de calibraciones",
+                recordKind = QualityRecordKinds.Generated,
+                generatedAtUtc = now,
+                summary = new
+                {
+                    expired,
+                    dueSoon,
+                    ok,
+                    total = rows.Count
+                },
+                rows
+            });
+        });
+    }
+
+    private static int SourceSortKey(string source) => source switch
+    {
+        "StandardWeight" => 0,
+        "Instrument" => 1,
+        "QualityEquipment" => 2,
+        _ => 9
+    };
+
+    private static UnifiedInventoryRow ToUnifiedRow(MetrologyCatalogAsset a, DateTime now) => new(
+        a.Id,
+        a.Source,
+        a.Code,
+        a.Kind,
+        a.Description,
+        a.BrandOrManufacturer,
+        a.Model,
+        a.SerialNumber,
+        a.CertificateNumber,
+        a.CalibrationDate,
+        a.ExpirationDate,
+        a.Status,
+        a.Extra,
+        a.DeepLinkPath,
+        a.ExpirationDate.HasValue && a.ExpirationDate.Value.Date < now.Date
+    );
+
+    private static UnifiedInventoryRow ToUnifiedRow(QualityEquipment e, DateTime now) => new(
+        e.Id,
+        "QualityEquipment",
+        e.Code,
+        e.Kind,
+        string.IsNullOrWhiteSpace(e.Description)
+            ? $"{e.Kind} {e.Code}".Trim()
+            : e.Description,
+        e.Brand,
+        e.Model,
+        e.SerialNumber,
+        string.Empty,
+        null,
+        null,
+        e.Status,
+        string.IsNullOrWhiteSpace(e.Plate) ? e.Location : $"Patente {e.Plate}",
+        "/calidad/registros/equipos?tab=equipos",
+        false
+    );
+
+    private sealed record UnifiedInventoryRow(
+        Guid Id,
+        string Source,
+        string Code,
+        string Kind,
+        string Description,
+        string BrandOrManufacturer,
+        string Model,
+        string SerialNumber,
+        string CertificateNumber,
+        DateTime? CalibrationDate,
+        DateTime? ExpirationDate,
+        string Status,
+        string? Extra,
+        string? DeepLinkPath,
+        bool IsExpired);
 
     private static void MapEquipment(RouteGroupBuilder group)
     {
