@@ -382,25 +382,25 @@ export const DEVELOPMENT_ACCESS: AccessContext = {
 };
 
 export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: string | string[] | null): string[] {
-  // CRM / Comunicaciones / Directorio: ocultos en prod hasta estabilizar el módulo.
-  const temporarilyDisabledUiIds = new Set(["crm", "comunicaciones", "directorio"]);
+  // CRM / Comunicaciones: ocultos en prod hasta estabilizar el módulo.
+  const temporarilyDisabledUiIds = new Set(["crm", "comunicaciones"]);
 
   const allAdminModules = [
-    "inicio", "ventas", "compras", "inventario",
+    "inicio", "directorio", "ventas", "compras", "inventario",
     "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "calidad", "administracion"
   ];
 
   const moduleMap: Record<string, string[]> = {
-    sales: ["ventas"],
+    sales: ["directorio", "ventas"],
     // crm / communications: no expandir a UI mientras están deshabilitados
-    purchases: ["compras"],
-    inventory: ["inventario", "produccion"],
-    finance: ["finanzas"],
+    purchases: ["directorio", "compras"],
+    inventory: ["directorio", "inventario", "produccion"],
+    finance: ["directorio", "finanzas"],
     fleet: ["flota"],
     hr: ["rrhh"],
     grains: ["cereales"],
     accounting: ["contabilidad"],
-    metrology: ["metrologia"],
+    metrology: ["directorio", "metrologia"],
     quality: ["calidad"],
     administracion: ["administracion"]
   };
@@ -411,7 +411,7 @@ export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: s
         ? JSON.parse(allowedModulesJson)
         : allowedModulesJson;
       if (!Array.isArray(raw) || raw.length === 0) return null;
-      const allowed = ["inicio", "administracion"];
+      const allowed = ["inicio", "directorio", "administracion"];
       raw.forEach((entry: string) => {
         const key = String(entry).toLowerCase();
         if (key === "crm" || key === "communications") return;
@@ -431,7 +431,7 @@ export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: s
     return parsed ?? allAdminModules;
   }
 
-  return parsed ?? ["inicio", "ventas"];
+  return parsed ?? ["inicio", "directorio", "ventas"];
 }
 
 export function canAccessModule(module: ModuleDefinition, access: AccessContext): boolean {
