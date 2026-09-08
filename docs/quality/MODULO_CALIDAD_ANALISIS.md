@@ -12,7 +12,7 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** *(PG06 — pendiente de commit)*.  
+**Último commit de avance Calidad:** `0d7752e` (PG06 personal Structured + autorización DT).  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
 ### Principio: los registros se generan en el sistema
@@ -504,3 +504,4 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 | 07/09/2026 | C3 PG03-R01 + audit | `4e097bd` | Quejas Structured + quality.audit_events |
 | 07/09/2026 | C3 PG07-R1 | `8992da6` | NC/TNC/Riesgos/OM |
 | 07/09/2026 | C3 PG04 | `7ba1322` | Auditorías internas AUD-AAAA-NNNN |
+| 07/09/2026 | C3 PG06 | `0d7752e` | Personal Structured + autorización DT |
