@@ -71,7 +71,103 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     path: "/metrologia/informes",
     kind: "Linked",
     ready: true,
-    blurb: "Linked a Metrología: enmienda PG09 R2 (clon Draft, original Superseded, motivo obligatorio)."
+    blurb: "Vinculado a Metrología: enmienda PG09 R2 (clon borrador, original sustituido, motivo obligatorio)."
+  },
+  {
+    code: "IT01-R01",
+    title: "IT01 Identificación",
+    path: "/calidad/registros/it/IT01/r1",
+    kind: "Linked",
+    ready: true,
+    blurb: "Equipos de balanzas de alta capacidad (cargas rodantes) en Metrología."
+  },
+  {
+    code: "IT01-R02",
+    title: "IT01 Ensayos",
+    path: "/calidad/registros/it/IT01/r2",
+    kind: "Linked",
+    ready: true,
+    blurb: "Informes de ensayo asociados a IT01."
+  },
+  {
+    code: "IT01-R03",
+    title: "IT01 Precintos",
+    path: "/calidad/registros/it/IT01/r3",
+    kind: "Linked",
+    ready: true,
+    blurb: "Precintos colocados en informes IT01."
+  },
+  {
+    code: "IT02-R01",
+    title: "IT02 Identificación",
+    path: "/calidad/registros/it/IT02/r1",
+    kind: "Linked",
+    ready: true,
+    blurb: "Equipos de balanzas de media capacidad en Metrología."
+  },
+  {
+    code: "IT02-R02",
+    title: "IT02 Ensayos",
+    path: "/calidad/registros/it/IT02/r2",
+    kind: "Linked",
+    ready: true,
+    blurb: "Informes de ensayo asociados a IT02."
+  },
+  {
+    code: "IT02-R03",
+    title: "IT02 Precintos",
+    path: "/calidad/registros/it/IT02/r3",
+    kind: "Linked",
+    ready: true,
+    blurb: "Precintos colocados en informes IT02."
+  },
+  {
+    code: "IT03-R01",
+    title: "IT03 Identificación",
+    path: "/calidad/registros/it/IT03/r1",
+    kind: "Linked",
+    ready: true,
+    blurb: "Equipos de balanzas de baja capacidad / venta al público."
+  },
+  {
+    code: "IT03-R02",
+    title: "IT03 Ensayos",
+    path: "/calidad/registros/it/IT03/r2",
+    kind: "Linked",
+    ready: true,
+    blurb: "Informes de ensayo asociados a IT03."
+  },
+  {
+    code: "IT03-R03",
+    title: "IT03 Precintos",
+    path: "/calidad/registros/it/IT03/r3",
+    kind: "Linked",
+    ready: true,
+    blurb: "Precintos colocados en informes IT03."
+  },
+  {
+    code: "IT04-R01",
+    title: "IT04 Identificación",
+    path: "/calidad/registros/it/IT04/r1",
+    kind: "Linked",
+    ready: true,
+    blurb: "Equipos de balanzas tipo tolva en Metrología."
+  },
+  {
+    code: "IT04-R02",
+    title: "IT04 Ensayos",
+    path: "/calidad/registros/it/IT04/r2",
+    kind: "Linked",
+    ready: true,
+    blurb: "Informes de ensayo asociados a IT04."
+  },
+  {
+    code: "IT04-R03",
+    title: "IT04 Precintos",
+    path: "/calidad/registros/it/IT04/r3",
+    kind: "Linked",
+    ready: true,
+    blurb: "Precintos colocados en informes IT04."
   },
   {
     code: "PG09-R03",

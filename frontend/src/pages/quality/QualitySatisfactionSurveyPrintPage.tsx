@@ -12,7 +12,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const CHANNEL_LABEL: Record<string, string> = {
-  Email: "Email",
+  Email: "Correo",
   Phone: "Teléfono",
   InPerson: "Presencial",
   Other: "Otro"

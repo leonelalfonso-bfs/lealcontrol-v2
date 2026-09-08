@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityConfidentialityCommitment } from "../../api/types/quality";
+import { EQUIPMENT_STATUS, labelOf } from "./qualityLabels";
 
 type Variant = "MC01-R01" | "MC01-R02";
 
@@ -231,7 +232,7 @@ export function QualityConfidentialityRecordPage({ variant }: Props) {
                         <span className="muted">Sin archivo</span>
                       )}
                     </td>
-                    <td>{r.status}</td>
+                    <td>{labelOf(EQUIPMENT_STATUS, r.status)}</td>
                     <td style={{ textAlign: "right" }}>
                       {r.status === "Active" && (
                         <button

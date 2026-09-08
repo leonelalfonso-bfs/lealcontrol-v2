@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityManagementReview } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
+import { AUDIT_STATUS, labelOf, NC_KIND } from "./qualityLabels";
 
 const STATUS_LABEL: Record<string, string> = {
   Draft: "Borrador",
@@ -73,14 +74,14 @@ function SnapshotSummary({ snapshot }: { snapshot: SnapshotCounts | null }) {
       <dd style={{ margin: 0 }}>
         total {snapshot.nonConformities?.total ?? 0} · abiertas {snapshot.nonConformities?.open ?? 0}
         {kindEntries.length > 0
-          ? ` · por tipo: ${kindEntries.map(([k, v]) => `${k}=${v}`).join(", ")}`
+          ? ` · por tipo: ${kindEntries.map(([k, v]) => `${labelOf(NC_KIND, k)}=${v}`).join(", ")}`
           : ""}
       </dd>
       <dt>Auditorías</dt>
       <dd style={{ margin: 0 }}>
         total {snapshot.audits?.total ?? 0}
         {auditEntries.length > 0
-          ? ` · ${auditEntries.map(([k, v]) => `${statusLabel(k)}=${v}`).join(", ")}`
+          ? ` · ${auditEntries.map(([k, v]) => `${labelOf(AUDIT_STATUS, k)}=${v}`).join(", ")}`
           : ""}
       </dd>
       <dt>Capacitaciones</dt>

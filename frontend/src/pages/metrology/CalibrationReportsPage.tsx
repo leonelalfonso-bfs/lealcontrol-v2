@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import type { CalibrationReport } from "../../api/types";
+import { labelOf, METROLOGY_REPORT_STATUS, METROLOGY_VERDICT } from "../quality/qualityLabels";
 
 function certNumberOf(r: CalibrationReport): string {
   return (r as { certificateNumber?: string }).certificateNumber || r.reportNumber || "—";
@@ -14,10 +15,7 @@ function statusOf(r: CalibrationReport): string {
 
 function verdictOf(r: CalibrationReport): string {
   const raw = String((r as { verdict?: string }).verdict || r.result || "");
-  if (raw === "Approved" || raw === "Apto") return "Apto";
-  if (raw === "Rejected" || raw === "No Apto") return "No Apto";
-  if (raw === "Apto con Observaciones") return "Apto con Observaciones";
-  return raw || "—";
+  return labelOf(METROLOGY_VERDICT, raw, raw || "—");
 }
 
 function statusBadgeClass(status: string): string {
@@ -153,7 +151,6 @@ export function CalibrationReportsPage() {
                   const statusLower = status.toLowerCase();
                   const isDraft = statusLower === "draft";
                   const isIssued = statusLower === "issued";
-                  const isSuperseded = statusLower === "superseded";
                   const amendment = amendmentByOriginal.get(r.id);
                   const isAmendment = !!r.supersedesReportId;
 
@@ -198,13 +195,13 @@ export function CalibrationReportsPage() {
                       </td>
                       <td>
                         <span className={`badge ${statusBadgeClass(status)}`}>
-                          {isSuperseded ? "Superseded" : status}
+                          {labelOf(METROLOGY_REPORT_STATUS, status)}
                         </span>
                       </td>
                       <td>{r.performedBy}</td>
                       <td>{r.approvedBy || "—"}</td>
                       <td>
-                        <span className={`badge ${verdictOf(r) === "Apto" ? "ok" : verdictOf(r) === "No Apto" ? "prio-high" : "warn"}`}>
+                        <span className={`badge ${verdictOf(r) === "Apto" ? "ok" : verdictOf(r) === "No apto" || verdictOf(r) === "No Apto" ? "prio-high" : "warn"}`}>
                           {verdictOf(r)}
                         </span>
                       </td>
@@ -226,7 +223,7 @@ export function CalibrationReportsPage() {
                             className="btn ghost compact"
                             disabled={busyId === r.id}
                             onClick={() => void onAmend(r.id)}
-                            title="Crear enmienda PG09 R2 (el original queda Superseded)"
+                            title="Crear enmienda PG09 R2 (el original queda sustituido)"
                           >
                             {busyId === r.id ? "…" : "Enmendar (PG09 R2)"}
                           </button>

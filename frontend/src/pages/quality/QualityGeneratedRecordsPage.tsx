@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
+import { labelOf, QUALITY_DOC_STATUS, QUALITY_DOC_TYPE } from "./qualityLabels";
 
 export function QualityPg01R01Page() {
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
@@ -21,11 +22,11 @@ export function QualityPg01R01Page() {
     const columns: ExcelColumn<Record<string, unknown>>[] = [
       { key: "codigo", header: "Código" },
       { key: "nombre", header: "Nombre" },
-      { key: "tipo", header: "Tipo" },
+      { key: "tipo", header: "Tipo", value: (r) => labelOf(QUALITY_DOC_TYPE, String(r.tipo ?? "")) },
       { key: "versionActual", header: "Versión" },
       { key: "fechaAprobacion", header: "Aprobación", value: (r) => (r.fechaAprobacion ? excelDate(r.fechaAprobacion) : "") },
       { key: "fechaRevision", header: "Próxima revisión", value: (r) => (r.fechaRevision ? excelDate(r.fechaRevision) : "") },
-      { key: "estado", header: "Estado" }
+      { key: "estado", header: "Estado", value: (r) => labelOf(QUALITY_DOC_STATUS, String(r.estado ?? "")) }
     ];
     void exportToExcel("PG01-R01_lista_documentos", rows, columns);
   };
@@ -61,11 +62,11 @@ export function QualityPg01R01Page() {
               <tr key={idx}>
                 <td>{String(r.codigo ?? "")}</td>
                 <td>{String(r.nombre ?? "")}</td>
-                <td>{String(r.tipo ?? "")}</td>
+                <td>{labelOf(QUALITY_DOC_TYPE, String(r.tipo ?? ""))}</td>
                 <td>{r.versionActual != null ? String(r.versionActual) : "—"}</td>
                 <td>{r.fechaAprobacion ? new Date(String(r.fechaAprobacion)).toLocaleDateString("es-AR") : "—"}</td>
                 <td>{r.fechaRevision ? new Date(String(r.fechaRevision)).toLocaleDateString("es-AR") : "—"}</td>
-                <td>{String(r.estado ?? "")}</td>
+                <td>{labelOf(QUALITY_DOC_STATUS, String(r.estado ?? ""))}</td>
               </tr>
             ))}
           </tbody>
@@ -95,7 +96,7 @@ export function QualityPg01R02Page() {
       { key: "organismo", header: "Organismo" },
       { key: "url", header: "URL" },
       { key: "proximaRevision", header: "Próxima revisión", value: (r) => (r.proximaRevision ? excelDate(r.proximaRevision) : "") },
-      { key: "estado", header: "Estado" }
+      { key: "estado", header: "Estado", value: (r) => labelOf(QUALITY_DOC_STATUS, String(r.estado ?? "")) }
     ];
     void exportToExcel("PG01-R02_documentos_externos", rows, columns);
   };
@@ -130,7 +131,7 @@ export function QualityPg01R02Page() {
                 <td>{String(r.organismo ?? "—")}</td>
                 <td>{r.url ? <a href={String(r.url)} target="_blank" rel="noreferrer">fuente</a> : "—"}</td>
                 <td>{r.proximaRevision ? new Date(String(r.proximaRevision)).toLocaleDateString("es-AR") : "—"}</td>
-                <td>{String(r.estado ?? "")}</td>
+                <td>{labelOf(QUALITY_DOC_STATUS, String(r.estado ?? ""))}</td>
               </tr>
             ))}
           </tbody>

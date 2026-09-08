@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityInstitutionalNote } from "../../api/types/quality";
+import { EQUIPMENT_STATUS, labelOf } from "./qualityLabels";
 
 export function QualityMc01R05Page() {
   const [rows, setRows] = useState<QualityInstitutionalNote[]>([]);
@@ -198,7 +199,7 @@ export function QualityMc01R05Page() {
                         <span className="muted">Sin archivo</span>
                       )}
                     </td>
-                    <td>{r.status}</td>
+                    <td>{labelOf(EQUIPMENT_STATUS, r.status)}</td>
                     <td style={{ textAlign: "right" }}>
                       {r.status === "Active" && (
                         <button

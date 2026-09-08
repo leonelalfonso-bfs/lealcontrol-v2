@@ -14,6 +14,16 @@ import type {
   QualityPg14UnifiedAsset
 } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
+import {
+  CHECK_RESULT,
+  EQUIPMENT_KIND,
+  EQUIPMENT_STATUS,
+  FREQUENCY_LABEL,
+  GENERIC_RECORD_STATUS,
+  labelOf,
+  LOG_KIND_LABEL,
+  METROLOGY_VERDICT
+} from "./qualityLabels";
 
 type Tab = "r04" | "r03" | "r01" | "equipos" | "r05" | "r06";
 
@@ -26,14 +36,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "r06", label: "R06 Mantenimiento" }
 ];
 
-const KIND_LABEL: Record<string, string> = {
-  Truck: "Camión",
-  Trailer: "Acoplado",
-  Forklift: "Autoelevador",
-  Other: "Otro",
-  Weight: "Pesa",
-  Thermometer: "Termómetro"
-};
+const KIND_LABEL = EQUIPMENT_KIND;
 
 const SOURCE_LABEL: Record<string, string> = {
   StandardWeight: "Pesa",
@@ -47,51 +50,16 @@ const SOURCE_BADGE: Record<string, { bg: string; color: string }> = {
   QualityEquipment: { bg: "#f1f5f9", color: "#475569" }
 };
 
-const EQ_STATUS: Record<string, string> = {
-  Active: "Activo",
-  OutOfService: "Fuera de servicio",
-  Retired: "Baja"
-};
-
-const CHECK_STATUS: Record<string, string> = {
-  Draft: "Borrador",
-  Completed: "Completada",
-  Cancelled: "Anulada"
-};
-
-const RESULT_LABEL: Record<string, string> = {
-  Pass: "Apto",
-  Fail: "No apto",
-  Conditional: "Condicional"
-};
-
-const FREQ_LABEL: Record<string, string> = {
-  Monthly: "Mensual",
-  Quarterly: "Trimestral",
-  Semiannual: "Semestral",
-  Annual: "Anual"
-};
-
+const EQ_STATUS = EQUIPMENT_STATUS;
+const CHECK_STATUS = GENERIC_RECORD_STATUS;
+const RESULT_LABEL = CHECK_RESULT;
+const FREQ_LABEL = FREQUENCY_LABEL;
 const MP_STATUS: Record<string, string> = {
   Active: "Activo",
   Done: "Hecho",
   Cancelled: "Anulado"
 };
-
-const LOG_KIND_LABEL: Record<string, string> = {
-  C: "Calibración",
-  V: "Verificación",
-  MP: "Mant. preventivo",
-  MC: "Mant. correctivo",
-  Baja: "Baja"
-};
-
-const LOG_VERDICT_LABEL: Record<string, string> = {
-  Apto: "Apto",
-  NoApto: "No apto",
-  Condicional: "Condicional"
-};
-
+const LOG_VERDICT_LABEL = METROLOGY_VERDICT;
 const LOG_STATUS: Record<string, string> = {
   Active: "Activo",
   Cancelled: "Anulado"
@@ -688,7 +656,7 @@ export function QualityPg14Page() {
       { key: "certificateNumber", header: "Certificado", value: (r) => r.certificateNumber || "" },
       { key: "calibrationDate", header: "Calibración", value: (r) => excelDate(r.calibrationDate) },
       { key: "expirationDate", header: "Vencimiento", value: (r) => excelDate(r.expirationDate) },
-      { key: "status", header: "Estado" },
+      { key: "status", header: "Estado", value: (r) => labelOf(EQ_STATUS, r.status) },
       { key: "extra", header: "Extra", value: (r) => r.extra || "" },
       { key: "isExpired", header: "Vencido", value: (r) => (r.isExpired ? "Sí" : "No") },
       { key: "deepLinkPath", header: "Enlace", value: (r) => r.deepLinkPath || "" }
@@ -708,7 +676,7 @@ export function QualityPg14Page() {
       { key: "daysUntilExpiry", header: "Días", value: (r) => (r.daysUntilExpiry == null ? "" : String(r.daysUntilExpiry)) },
       { key: "isExpired", header: "Vencido", value: (r) => (r.isExpired ? "Sí" : "No") },
       { key: "isDueSoon", header: "Próximo (≤60d)", value: (r) => (r.isDueSoon ? "Sí" : "No") },
-      { key: "status", header: "Estado" },
+      { key: "status", header: "Estado", value: (r) => labelOf(EQ_STATUS, r.status) },
       { key: "deepLinkPath", header: "Enlace", value: (r) => r.deepLinkPath || "" }
     ];
     void exportToExcel("PG14-R03_programa_calibraciones", calProgram, columns);
@@ -837,7 +805,7 @@ export function QualityPg14Page() {
                       <td style={r.isExpired ? { color: "#b91c1c", fontWeight: 600 } : undefined}>
                         {fmtDate(r.expirationDate)}
                       </td>
-                      <td>{r.status}</td>
+                      <td>{labelOf(EQ_STATUS, r.status)}</td>
                       <td>
                         {r.deepLinkPath ? (
                           <Link to={r.deepLinkPath} className="btn ghost compact">Abrir</Link>
@@ -919,7 +887,7 @@ export function QualityPg14Page() {
                             : r.daysUntilExpiry}
                       </td>
                       <td>
-                        {r.isExpired ? "Vencido" : r.isDueSoon ? "Próximo" : r.status}
+                        {r.isExpired ? "Vencido" : r.isDueSoon ? "Próximo" : labelOf(EQ_STATUS, r.status)}
                       </td>
                       <td>
                         {r.deepLinkPath ? (

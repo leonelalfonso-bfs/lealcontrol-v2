@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityDocumentDetail } from "../../api/types/quality";
 import { operationalRecordFor } from "./qualityRecordRoutes";
+import { labelOf, QUALITY_DOC_STATUS } from "./qualityLabels";
 
 function parseApiError(err: unknown): string {
   if (!(err instanceof Error)) return String(err);
@@ -125,7 +126,7 @@ export function QualityDocumentDetailPage() {
           <Link to="/calidad/documentos" style={{ fontSize: 13 }}>← Árbol documental</Link>
           <h1 style={{ margin: "8px 0 0" }}>{d.displayCode} · {d.title}</h1>
           <p style={{ color: "#64748b", marginTop: 6 }}>
-            {d.type} · {d.status}
+            {d.type} · {labelOf(QUALITY_DOC_STATUS, d.status)}
             {d.recordKind ? ` · ${d.recordKind}` : ""}
             {d.iso17025Clauses ? ` · ISO ${d.iso17025Clauses}` : ""}
           </p>
@@ -178,7 +179,7 @@ export function QualityDocumentDetailPage() {
             >
               {data.versions.map((v) => (
                 <option key={v.id} value={v.version}>
-                  v{v.version} · {v.status}{v.publishedFileId ? " · PDF" : ""}
+                  v{v.version} · {labelOf(QUALITY_DOC_STATUS, v.status)}{v.publishedFileId ? " · PDF" : ""}
                 </option>
               ))}
             </select>
@@ -250,7 +251,7 @@ export function QualityDocumentDetailPage() {
 
         {selected && (
           <p style={{ marginTop: 12, fontSize: 13, color: "#64748b" }}>
-            Seleccionada: v{selected.version} · {selected.status}
+            Seleccionada: v{selected.version} · {labelOf(QUALITY_DOC_STATUS, selected.status)}
             {selected.publishedFileId ? " · tiene PDF" : " · sin PDF"}
             {selected.sourceFileId ? " · tiene fuente" : ""}
             {" · "}Elaboró {selected.elaboratedBy || "—"} / Revisó {selected.reviewedBy || "—"}
@@ -287,7 +288,7 @@ export function QualityDocumentDetailPage() {
                       v{v.version}
                     </button>
                   </td>
-                  <td>{v.status}</td>
+                  <td>{labelOf(QUALITY_DOC_STATUS, v.status)}</td>
                   <td>{v.elaboratedBy || "—"}{v.elaboratedAt ? ` (${new Date(v.elaboratedAt).toLocaleDateString("es-AR")})` : ""}</td>
                   <td>{v.reviewedBy || "—"}</td>
                   <td>{v.approvedBy || "—"}</td>

@@ -4,6 +4,7 @@ import { api } from "../../api/client";
 import type { CompanySettings } from "../../api/types";
 import type { QualityNonConformity } from "../../api/types/quality";
 import { loadHtml2Pdf } from "../../utils/loadHtml2Pdf";
+import { labelOf, NC_ORIGIN } from "./qualityLabels";
 
 const KIND_LABEL: Record<string, string> = {
   NonConformity: "No conformidad (NC)",
@@ -125,7 +126,7 @@ export function QualityNonConformityPrintPage() {
               <td style={label}>Detectado</td>
               <td style={cell}>{fmt(row.detectedAt)}</td>
               <td style={label}>Origen</td>
-              <td style={cell}>{row.origin || "—"}</td>
+              <td style={cell}>{labelOf(NC_ORIGIN, row.origin)}</td>
             </tr>
             <tr>
               <td style={label}>Responsable</td>

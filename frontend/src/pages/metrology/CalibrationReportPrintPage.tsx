@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { CalibrationReport, MetrologyEquipment, MetrologyInstrument, CompanySettings } from "../../api/types";
+import { labelOf, METROLOGY_OPERATION, METROLOGY_REPORT_STATUS, METROLOGY_VERDICT, INDICATOR_TYPE } from "../quality/qualityLabels";
 
 export function CalibrationReportPrintPage() {
   const { id } = useParams<{ id: string }>();
@@ -70,14 +71,19 @@ export function CalibrationReportPrintPage() {
   const stdApplied = (report as any).standardApplied || report.normativeApplied || "Resolución SIyC Nº 25/2025 (OIML R 76-1)";
   const profileStatus = (report as any).regulatoryStatus || (stdApplied.includes("2307") ? "Derogada — aplicación transitoria" : "Vigente");
   const regulatoryNotice = (report as any).regulatoryNotice;
-  const operationLabel = visualInspectionData?.checklist?.operationLabel || (report as any).operationType || "Calibración / determinación de errores";
+  const opFromChecklist = visualInspectionData?.checklist?.operationLabel;
+  const operationLabel =
+    opFromChecklist ||
+    labelOf(METROLOGY_OPERATION, (report as any).operationType, "Calibración / determinación de errores");
   const documentTitle = (report as any).documentTitle || "Informe de ensayo metrológico";
   const supersedesReportId = report.supersedesReportId || (report as any).supersedesReportId || null;
   const amendmentReason = report.amendmentReason || (report as any).amendmentReason || null;
-  const reportStatusLabel = (report.reportStatus || report.status || "").toString();
+  const reportStatusRaw = (report.reportStatus || report.status || "").toString();
+  const reportStatusLabel = labelOf(METROLOGY_REPORT_STATUS, reportStatusRaw, reportStatusRaw || "—");
   const verdictRaw: any = report.result || (report as any).verdict || "Apto";
-  const verdictText = (verdictRaw === "Approved" || verdictRaw === "Apto") ? "APTO" : (verdictRaw === "Rejected" || verdictRaw === "No Apto") ? "NO APTO" : String(verdictRaw || "").toUpperCase();
-  const isApproved = verdictText === "APTO" || verdictText === "APPROVED";
+  const verdictLabelEs = labelOf(METROLOGY_VERDICT, String(verdictRaw), String(verdictRaw || "—"));
+  const verdictText = verdictLabelEs.toUpperCase();
+  const isApproved = verdictRaw === "Approved" || verdictRaw === "Apto" || verdictLabelEs === "Apto";
   const expUncertainty = (report as any).expandedUncertaintyK2 ?? report.expandedUncertainty ?? 0;
   const tempVal = (report as any).temperatureCelsius ?? report.ambientTemperature ?? 20;
   const humVal = (report as any).relativeHumidityPercent ?? report.ambientHumidity ?? 50;
@@ -243,9 +249,9 @@ export function CalibrationReportPrintPage() {
         </div>
       )}
 
-      {reportStatusLabel.toLowerCase() === "superseded" && (
+      {reportStatusRaw.toLowerCase() === "superseded" && (
         <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", padding: "10px 12px", borderRadius: 6, marginBottom: 16, fontSize: "0.84rem", color: "#991b1b" }}>
-          <strong>Informe sustituido (Superseded)</strong> — este certificado fue reemplazado por una enmienda PG09 R2 y no debe usarse como versión vigente.
+          <strong>Informe sustituido</strong> — este certificado fue reemplazado por una enmienda PG09 R2 y no debe usarse como versión vigente.
         </div>
       )}
 
@@ -291,7 +297,7 @@ export function CalibrationReportPrintPage() {
                 )}
               </div>
               <div style={{ marginTop: 3 }}>
-                <strong>Indicador Principal:</strong> {(equipment as any).indicator1Brand || equipment.brand} {(equipment as any).indicator1Model || equipment.model} (S/N: {(equipment as any).indicator1SerialNumber || equipment.serialNumber || "—"}) [{(equipment as any).indicator1Type || "Digital"}]
+                <strong>Indicador Principal:</strong> {(equipment as any).indicator1Brand || equipment.brand} {(equipment as any).indicator1Model || equipment.model} (S/N: {(equipment as any).indicator1SerialNumber || equipment.serialNumber || "—"}) [{labelOf(INDICATOR_TYPE, (equipment as any).indicator1Type, (equipment as any).indicator1Type || "Digital")}]
                 {((equipment as any).indicator1ApprovalCode || (equipment as any).indicator1ApprovalNumber) && (
                   <div style={{ color: "#444", fontSize: "0.78rem" }}>
                     ↳ Aprob. Modelo: <strong>{(equipment as any).indicator1ApprovalCode || "—"}</strong>
@@ -637,7 +643,7 @@ export function CalibrationReportPrintPage() {
               </div>
             )}
             <div style={{ fontSize: "0.78rem", marginTop: 8, color: "#0f766e" }}>
-              Estado: <strong>{(report as any).reportStatus || report.status || "—"}</strong>
+              Estado: <strong>{reportStatusLabel}</strong>
               {(report as any).instructionCode ? <> · Instructivo <strong>{(report as any).instructionCode}</strong></> : null}
             </div>
           </div>

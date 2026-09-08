@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityDashboard, QualityDocumentTreeNode } from "../../api/types/quality";
 import { operationalRecordFor } from "./qualityRecordRoutes";
+import { labelOf, QUALITY_DOC_STATUS } from "./qualityLabels";
 
 function typeLabel(type: string): string {
   switch (type) {
@@ -88,7 +89,7 @@ function TreeNode({
         <span style={{ flex: 1, fontSize: 13 }}>
           <strong>{node.displayCode}</strong> · {node.title}
         </span>
-        <span style={{ fontSize: 11, color: statusColor(node.status) }}>{node.status}</span>
+        <span style={{ fontSize: 11, color: statusColor(node.status) }}>{labelOf(QUALITY_DOC_STATUS, node.status)}</span>
       </button>
       {open &&
         hasChildren &&
@@ -200,7 +201,7 @@ export function QualityDocumentsPage() {
                   <h2 style={{ margin: "4px 0 0" }}>{selected.title}</h2>
                   <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap", fontSize: 12 }}>
                     <span className="pill">{selected.type}</span>
-                    <span className="pill" style={{ color: statusColor(selected.status) }}>{selected.status}</span>
+                    <span className="pill" style={{ color: statusColor(selected.status) }}>{labelOf(QUALITY_DOC_STATUS, selected.status)}</span>
                     {selected.recordKind && <span className="pill">Registro: {selected.recordKind}</span>}
                     {selected.linkedModule && <span className="pill">→ {selected.linkedModule}</span>}
                   </div>

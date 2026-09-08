@@ -973,7 +973,7 @@ export function CalibrationReportFormPage() {
               <Link to={`/metrologia/informes/${supersedesReportIdParam}/imprimir`} target="_blank">
                 {supersedesReportIdParam}
               </Link>
-              . El original queda como Superseded y no se edita.
+              . El original queda como sustituido y no se edita.
             </div>
           )}
         </div>

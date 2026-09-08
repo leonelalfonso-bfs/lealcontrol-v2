@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityNonConformity } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
+import { EFFECTIVENESS_RESULT, labelOf } from "./qualityLabels";
 
 const KIND_LABEL: Record<string, string> = {
   NonConformity: "NC",
@@ -468,7 +469,7 @@ export function QualityPg07R01Page() {
                 <div style={{ fontSize: 13, color: "#64748b" }}>
                   <div><strong>Causa:</strong> {selected.rootCause || "—"}</div>
                   <div style={{ marginTop: 8 }}><strong>Acción:</strong> {selected.correctiveAction || "—"}</div>
-                  <div style={{ marginTop: 8 }}><strong>Eficacia:</strong> {selected.effectivenessResult || "—"} · {selected.effectivenessCheck || ""}</div>
+                  <div style={{ marginTop: 8 }}><strong>Eficacia:</strong> {labelOf(EFFECTIVENESS_RESULT, selected.effectivenessResult)} · {selected.effectivenessCheck || ""}</div>
                 </div>
               )}
             </>

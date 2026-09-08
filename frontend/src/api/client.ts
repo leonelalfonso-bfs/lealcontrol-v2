@@ -1010,11 +1010,12 @@ export const api = {
       reports: { total: number; recent: import("./types").CalibrationReport[] };
     }>("/api/v1/metrology/dashboard"),
 
-  listMetrologyEquipment: (params?: { search?: string; customerId?: string; status?: string }) => {
+  listMetrologyEquipment: (params?: { search?: string; customerId?: string; status?: string; instructionCode?: string }) => {
     const q = new URLSearchParams();
     if (params?.search) q.set("search", params.search);
     if (params?.customerId) q.set("customerId", params.customerId);
     if (params?.status) q.set("status", params.status);
+    if (params?.instructionCode) q.set("instructionCode", params.instructionCode);
     const query = q.toString() ? `?${q.toString()}` : "";
     return request<import("./types").MetrologyEquipment[]>(`/api/v1/metrology/equipment${query}`);
   },
@@ -1101,10 +1102,11 @@ export const api = {
       repeatabilityTerm?: string;
     }>("/api/v1/metrology/calculate-rules", { method: "POST", body: JSON.stringify(body) }),
 
-  listCalibrationReports: (params?: { equipmentId?: string; customerId?: string }) => {
+  listCalibrationReports: (params?: { equipmentId?: string; customerId?: string; instructionCode?: string }) => {
     const q = new URLSearchParams();
     if (params?.equipmentId) q.set("equipmentId", params.equipmentId);
     if (params?.customerId) q.set("customerId", params.customerId);
+    if (params?.instructionCode) q.set("instructionCode", params.instructionCode);
     const query = q.toString() ? `?${q.toString()}` : "";
     return request<import("./types").CalibrationReport[]>(`/api/v1/metrology/reports${query}`);
   },

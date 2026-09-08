@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { labelOf, RECORD_KIND } from "./qualityLabels";
 import { QUALITY_OPERATIONAL_RECORDS } from "./qualityRecordRoutes";
 
 export function QualityRecordsHubPage() {
@@ -32,7 +33,7 @@ export function QualityRecordsHubPage() {
                   <strong>{r.title}</strong>
                   <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{r.blurb}</div>
                 </div>
-                <span className="pill">{r.kind}</span>
+                <span className="pill">{labelOf(RECORD_KIND, r.kind)}</span>
               </div>
             </Link>
           ))}

@@ -113,6 +113,7 @@ public static class MetrologyEndpoints
             [FromQuery] string? search,
             [FromQuery] string? status,
             [FromQuery] Guid? customerId,
+            [FromQuery] string? instructionCode,
             ITenantContext tenantContext,
             MetrologyDbContext db,
             CancellationToken ct) =>
@@ -155,6 +156,15 @@ public static class MetrologyEndpoints
                 }
 
                 var items = await query.OrderBy(e => e.Code).ToListAsync(ct);
+                if (!string.IsNullOrWhiteSpace(instructionCode))
+                {
+                    var code = instructionCode.Trim();
+                    items = items
+                        .Where(e => MetrologySgcLinkage.ResolveInstructionCode(e)
+                            .Equals(code, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+
                 return Results.Ok(items);
             }
             catch (Exception ex)
@@ -164,6 +174,15 @@ public static class MetrologyEndpoints
                     await db.EnsureMetrologyTablesAsync(ct);
                     var tenantId = tenantContext.TenantId;
                     var items = await db.Equipments.AsNoTracking().Where(e => e.TenantId == tenantId).OrderBy(e => e.Code).ToListAsync(ct);
+                    if (!string.IsNullOrWhiteSpace(instructionCode))
+                    {
+                        var code = instructionCode.Trim();
+                        items = items
+                            .Where(e => MetrologySgcLinkage.ResolveInstructionCode(e)
+                                .Equals(code, StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+                    }
+
                     return Results.Ok(items);
                 }
                 catch
@@ -941,6 +960,7 @@ public static class MetrologyEndpoints
         group.MapGet("/reports", async (
             [FromQuery] Guid? equipmentId,
             [FromQuery] Guid? customerId,
+            [FromQuery] string? instructionCode,
             ITenantContext tenantContext,
             MetrologyDbContext db,
             CancellationToken ct) =>
@@ -961,6 +981,35 @@ public static class MetrologyEndpoints
                 }
 
                 var items = await query.OrderByDescending(r => r.CalibrationDate).ToListAsync(ct);
+
+                if (!string.IsNullOrWhiteSpace(instructionCode))
+                {
+                    var code = instructionCode.Trim();
+                    var needResolve = items
+                        .Where(r => string.IsNullOrWhiteSpace(r.InstructionCode))
+                        .Select(r => r.EquipmentId)
+                        .Distinct()
+                        .ToList();
+                    Dictionary<Guid, MetrologyEquipment> equipMap = new();
+                    if (needResolve.Count > 0)
+                    {
+                        var equip = await db.Equipments.AsNoTracking()
+                            .Where(e => e.TenantId == tenantId && needResolve.Contains(e.Id))
+                            .ToListAsync(ct);
+                        equipMap = equip.ToDictionary(e => e.Id);
+                    }
+
+                    items = items.Where(r =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(r.InstructionCode))
+                            return r.InstructionCode.Equals(code, StringComparison.OrdinalIgnoreCase);
+                        if (equipMap.TryGetValue(r.EquipmentId, out var eq))
+                            return MetrologySgcLinkage.ResolveInstructionCode(eq)
+                                .Equals(code, StringComparison.OrdinalIgnoreCase);
+                        return false;
+                    }).ToList();
+                }
+
                 return Results.Ok(items);
             }
             catch (Exception ex)

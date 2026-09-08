@@ -12,7 +12,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const CHANNEL_LABEL: Record<string, string> = {
-  Email: "Email",
+  Email: "Correo",
   Phone: "Teléfono",
   InPerson: "Presencial",
   Other: "Otro"
@@ -341,7 +341,7 @@ export function QualityPg09R03Page() {
             <label>
               Canal
               <select value={channel} onChange={(e) => setChannel(e.target.value)}>
-                <option value="Email">Email</option>
+                <option value="Email">Correo</option>
                 <option value="Phone">Teléfono</option>
                 <option value="InPerson">Presencial</option>
                 <option value="Other">Otro</option>
@@ -494,7 +494,7 @@ export function QualityPg09R03Page() {
                       <label>
                         Canal
                         <select value={editChannel} onChange={(e) => setEditChannel(e.target.value)}>
-                          <option value="Email">Email</option>
+                          <option value="Email">Correo</option>
                           <option value="Phone">Teléfono</option>
                           <option value="InPerson">Presencial</option>
                           <option value="Other">Otro</option>

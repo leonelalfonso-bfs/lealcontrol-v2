@@ -4,6 +4,7 @@ import { api } from "../../api/client";
 import type { CompanySettings } from "../../api/types";
 import type { QualityComplaint } from "../../api/types/quality";
 import { loadHtml2Pdf } from "../../utils/loadHtml2Pdf";
+import { COMPLAINT_CHANNEL, labelOf } from "./qualityLabels";
 
 const STATUS_LABEL: Record<string, string> = {
   Open: "Registrada",
@@ -163,7 +164,7 @@ export function QualityComplaintPrintPage() {
               <td style={label}>Fecha de recepción</td>
               <td style={cell}>{fmt(row.receivedAt)}</td>
               <td style={label}>Canal</td>
-              <td style={cell}>{row.channel}</td>
+              <td style={cell}>{labelOf(COMPLAINT_CHANNEL, row.channel)}</td>
             </tr>
             <tr>
               <td style={label}>Reclamante</td>

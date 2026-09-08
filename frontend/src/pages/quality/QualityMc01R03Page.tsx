@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityIndicator } from "../../api/types/quality";
+import { INDICATOR_STATUS, labelOf } from "./qualityLabels";
 
 function defaultPeriod(): string {
   const d = new Date();
@@ -268,7 +269,7 @@ export function QualityMc01R03Page() {
                         <td>
                           <strong>{r.name}</strong>
                           <div className="muted" style={{ fontSize: 12 }}>
-                            {r.responsible || "Sin responsable"} · {r.status}
+                            {r.responsible || "Sin responsable"} · {labelOf(INDICATOR_STATUS, r.status)}
                           </div>
                         </td>
                         <td>

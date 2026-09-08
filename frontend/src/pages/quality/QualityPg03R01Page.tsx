@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityComplaint } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
+import { COMPLAINT_CHANNEL, labelOf } from "./qualityLabels";
 
 const STATUS_LABEL: Record<string, string> = {
   Open: "Registrada",
@@ -165,7 +166,7 @@ export function QualityPg03R01Page() {
     const columns: ExcelColumn<QualityComplaint>[] = [
       { key: "number", header: "Número" },
       { key: "receivedAt", header: "Recepción", value: (r) => excelDate(r.receivedAt) },
-      { key: "channel", header: "Canal" },
+      { key: "channel", header: "Canal", value: (r) => labelOf(COMPLAINT_CHANNEL, r.channel) },
       { key: "partyName", header: "Reclamante" },
       { key: "partyContact", header: "Contacto" },
       { key: "description", header: "Descripción" },
@@ -262,11 +263,9 @@ export function QualityPg03R01Page() {
             <label>
               Canal
               <select value={channel} onChange={(e) => setChannel(e.target.value)}>
-                <option value="Email">Email</option>
-                <option value="Phone">Teléfono</option>
-                <option value="InPerson">Presencial</option>
-                <option value="Web">Web</option>
-                <option value="Other">Otro</option>
+                {Object.entries(COMPLAINT_CHANNEL).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
               </select>
             </label>
             <label>
@@ -354,7 +353,7 @@ export function QualityPg03R01Page() {
             <>
               <h3 style={{ marginTop: 0 }}>{selected.number}</h3>
               <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
-                {statusLabel(selected.status)} · {selected.channel} · {selected.partyName}
+                {statusLabel(selected.status)} · {labelOf(COMPLAINT_CHANNEL, selected.channel)} · {selected.partyName}
                 {selected.isOverdue ? <span style={{ color: "#b91c1c", fontWeight: 700 }}> · Fuera de plazo</span> : null}
               </p>
               <p style={{ marginBottom: 12 }}>
