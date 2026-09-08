@@ -520,6 +520,44 @@ export interface QualityMaintenancePlanItem {
   updatedAtUtc: string;
 }
 
+export interface QualityEquipmentLogEntry {
+  id: string;
+  recordCode: string;
+  number: string;
+  assetSource: string;
+  assetId: string;
+  assetCode: string;
+  assetDescription?: string;
+  eventDate: string;
+  kind: string;
+  description?: string;
+  certificateNumber?: string;
+  verdict?: string;
+  approvedByTechnicalDirector?: boolean;
+  responsible?: string;
+  evidenceFileId?: string | null;
+  status: string;
+  notes?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface QualityEquipmentLogListResponse {
+  code: string;
+  title: string;
+  recordKind?: string;
+  generatedAtUtc: string;
+  countsByKind: {
+    C: number;
+    V: number;
+    MP: number;
+    MC: number;
+    Baja: number;
+  };
+  totalActive: number;
+  rows: QualityEquipmentLogEntry[];
+}
+
 export interface QualityPg14Summary {
   code: string;
   title: string;
@@ -528,6 +566,7 @@ export interface QualityPg14Summary {
   checksDraft: number;
   maintenanceDue: number;
   maintenanceOverdue: number;
+  logEntries?: number;
   weightsCount?: number;
   instrumentsCount?: number;
 }

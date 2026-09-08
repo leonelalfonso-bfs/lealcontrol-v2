@@ -2124,6 +2124,69 @@ export const api = {
       method: "DELETE"
     }),
 
+  listQualityEquipmentLogEntries: (params?: { assetSource?: string; assetId?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.assetSource) q.set("assetSource", params.assetSource);
+    if (params?.assetId) q.set("assetId", params.assetId);
+    const qs = q.toString();
+    return request<import("./types/quality").QualityEquipmentLogListResponse>(
+      `/api/v1/quality/records/pg14/r01${qs ? `?${qs}` : ""}`
+    );
+  },
+
+  getQualityEquipmentLogEntry: (id: string) =>
+    request<import("./types/quality").QualityEquipmentLogEntry>(`/api/v1/quality/records/pg14/r01/${id}`),
+
+  createQualityEquipmentLogEntry: (body: {
+    assetSource: string;
+    assetId: string;
+    kind: string;
+    eventDate?: string;
+    assetCode?: string;
+    assetDescription?: string;
+    description?: string;
+    certificateNumber?: string;
+    verdict?: string;
+    approvedByTechnicalDirector?: boolean;
+    responsible?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityEquipmentLogEntry>("/api/v1/quality/records/pg14/r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityEquipmentLogEntry: (
+    id: string,
+    body: {
+      eventDate?: string;
+      kind?: string;
+      description?: string;
+      certificateNumber?: string;
+      verdict?: string;
+      approvedByTechnicalDirector?: boolean;
+      responsible?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityEquipmentLogEntry>(`/api/v1/quality/records/pg14/r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityEquipmentLogEntry: (id: string) =>
+    request<import("./types/quality").QualityEquipmentLogEntry>(`/api/v1/quality/records/pg14/r01/${id}`, {
+      method: "DELETE"
+    }),
+
+  syncQualityEquipmentLogCalibrations: () =>
+    request<{ created: number; skipped: number }>("/api/v1/quality/records/pg14/r01/sync-calibrations", {
+      method: "POST"
+    }),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);

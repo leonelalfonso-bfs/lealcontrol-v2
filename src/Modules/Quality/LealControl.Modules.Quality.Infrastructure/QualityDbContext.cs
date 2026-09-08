@@ -34,6 +34,7 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityEquipment> Equipments => Set<QualityEquipment>();
     public DbSet<QualityIntermediateCheck> IntermediateChecks => Set<QualityIntermediateCheck>();
     public DbSet<QualityMaintenancePlanItem> MaintenancePlanItems => Set<QualityMaintenancePlanItem>();
+    public DbSet<QualityEquipmentLogEntry> EquipmentLogEntries => Set<QualityEquipmentLogEntry>();
     public DbSet<QualityAuditEvent> AuditEvents => Set<QualityAuditEvent>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
@@ -463,6 +464,28 @@ public sealed class QualityDbContext : DbContext
             b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.EquipmentId });
             b.HasIndex(x => new { x.TenantId, x.Status, x.NextDue });
+        });
+
+        modelBuilder.Entity<QualityEquipmentLogEntry>(b =>
+        {
+            b.ToTable("equipment_log_entries", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.AssetSource).HasMaxLength(40).IsRequired();
+            b.Property(x => x.AssetCode).HasMaxLength(64);
+            b.Property(x => x.AssetDescription).HasMaxLength(300);
+            b.Property(x => x.Kind).HasMaxLength(16).IsRequired();
+            b.Property(x => x.Description).HasMaxLength(2000);
+            b.Property(x => x.CertificateNumber).HasMaxLength(120);
+            b.Property(x => x.Verdict).HasMaxLength(40);
+            b.Property(x => x.Responsible).HasMaxLength(160);
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityEquipmentLogStatuses.Active);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.AssetSource, x.AssetId, x.EventDate });
+            b.HasIndex(x => new { x.TenantId, x.Kind });
         });
 
         modelBuilder.Entity<QualityAuditEvent>(b =>
@@ -994,6 +1017,32 @@ public sealed class QualityDbContext : DbContext
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_mp_Tenant_Number"" ON quality.maintenance_plan_items (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_mp_Tenant_Equipment"" ON quality.maintenance_plan_items (""TenantId"", ""EquipmentId"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_mp_Tenant_Status_NextDue"" ON quality.maintenance_plan_items (""TenantId"", ""Status"", ""NextDue"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.equipment_log_entries (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG14-R01',
+                ""Number"" character varying(32) NOT NULL,
+                ""AssetSource"" character varying(40) NOT NULL,
+                ""AssetId"" uuid NOT NULL,
+                ""AssetCode"" character varying(64) NOT NULL DEFAULT '',
+                ""AssetDescription"" character varying(300) NOT NULL DEFAULT '',
+                ""EventDate"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""Kind"" character varying(16) NOT NULL,
+                ""Description"" character varying(2000) NOT NULL DEFAULT '',
+                ""CertificateNumber"" character varying(120) NOT NULL DEFAULT '',
+                ""Verdict"" character varying(40) NOT NULL DEFAULT '',
+                ""ApprovedByTechnicalDirector"" boolean NOT NULL DEFAULT false,
+                ""Responsible"" character varying(160) NOT NULL DEFAULT '',
+                ""EvidenceFileId"" uuid,
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Active',
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_hv_Tenant_Number"" ON quality.equipment_log_entries (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_hv_Tenant_Asset_EventDate"" ON quality.equipment_log_entries (""TenantId"", ""AssetSource"", ""AssetId"", ""EventDate"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_hv_Tenant_Kind"" ON quality.equipment_log_entries (""TenantId"", ""Kind"");",
 
             @"CREATE TABLE IF NOT EXISTS quality.audit_events (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

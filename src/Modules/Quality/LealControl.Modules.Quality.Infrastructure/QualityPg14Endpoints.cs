@@ -53,6 +53,29 @@ internal static class QualityPg14Endpoints
         QualityMaintenanceStatuses.Cancelled
     };
 
+    private static readonly HashSet<string> AllowedLogAssetSources = new(StringComparer.Ordinal)
+    {
+        QualityEquipmentLogAssetSources.StandardWeight,
+        QualityEquipmentLogAssetSources.Instrument,
+        QualityEquipmentLogAssetSources.QualityEquipment
+    };
+
+    private static readonly HashSet<string> AllowedLogKinds = new(StringComparer.Ordinal)
+    {
+        QualityEquipmentLogKinds.Calibration,
+        QualityEquipmentLogKinds.Verification,
+        QualityEquipmentLogKinds.PreventiveMaintenance,
+        QualityEquipmentLogKinds.CorrectiveMaintenance,
+        QualityEquipmentLogKinds.Decommission
+    };
+
+    private static readonly HashSet<string> AllowedLogVerdicts = new(StringComparer.Ordinal)
+    {
+        QualityEquipmentLogVerdicts.Fit,
+        QualityEquipmentLogVerdicts.Unfit,
+        QualityEquipmentLogVerdicts.Conditional
+    };
+
     public static RouteGroupBuilder MapPg14Records(this RouteGroupBuilder group)
     {
         group.MapGet("/records/pg14", async (
@@ -81,6 +104,8 @@ internal static class QualityPg14Endpoints
                     && m.Status == QualityMaintenanceStatuses.Active
                     && m.NextDue != null
                     && m.NextDue < now, ct);
+            var logEntries = await db.EquipmentLogEntries.AsNoTracking()
+                .CountAsync(e => e.TenantId == tenantId && e.Status == QualityEquipmentLogStatuses.Active, ct);
 
             var assets = await metrologyCatalog.ListCalibrationAssetsAsync(tenantId.Value, ct);
             var weightsCount = assets.Count(a => a.Source == "StandardWeight");
@@ -95,6 +120,7 @@ internal static class QualityPg14Endpoints
                 checksDraft,
                 maintenanceDue,
                 maintenanceOverdue,
+                logEntries,
                 weightsCount,
                 instrumentsCount
             });
@@ -103,6 +129,7 @@ internal static class QualityPg14Endpoints
         MapR04(group);
         MapR03(group);
         MapEquipment(group);
+        MapR01(group);
         MapR05(group);
         MapR06(group);
 
@@ -486,6 +513,337 @@ internal static class QualityPg14Endpoints
         });
     }
 
+    private static void MapR01(RouteGroupBuilder group)
+    {
+        group.MapGet("/records/pg14/r01", async (
+            string? assetSource,
+            Guid? assetId,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+
+            var query = db.EquipmentLogEntries.AsNoTracking().Where(r => r.TenantId == tenantId);
+            if (!string.IsNullOrWhiteSpace(assetSource))
+            {
+                var src = NormalizeAllowed(assetSource, AllowedLogAssetSources);
+                if (src is null)
+                    return Results.BadRequest(new { message = "assetSource inválido. Use StandardWeight, Instrument o QualityEquipment." });
+                query = query.Where(r => r.AssetSource == src);
+            }
+
+            if (assetId.HasValue)
+                query = query.Where(r => r.AssetId == assetId.Value);
+
+            var rows = await query
+                .OrderByDescending(r => r.EventDate)
+                .ThenByDescending(r => r.Number)
+                .ToListAsync(ct);
+
+            var active = rows.Where(r => r.Status == QualityEquipmentLogStatuses.Active).ToList();
+            return Results.Ok(new
+            {
+                code = "PG14-R01",
+                title = "Hoja de vida del equipo",
+                recordKind = QualityRecordKinds.Structured,
+                generatedAtUtc = DateTime.UtcNow,
+                countsByKind = new
+                {
+                    C = active.Count(r => r.Kind == QualityEquipmentLogKinds.Calibration),
+                    V = active.Count(r => r.Kind == QualityEquipmentLogKinds.Verification),
+                    MP = active.Count(r => r.Kind == QualityEquipmentLogKinds.PreventiveMaintenance),
+                    MC = active.Count(r => r.Kind == QualityEquipmentLogKinds.CorrectiveMaintenance),
+                    Baja = active.Count(r => r.Kind == QualityEquipmentLogKinds.Decommission)
+                },
+                totalActive = active.Count,
+                rows = rows.Select(ToLogDto)
+            });
+        });
+
+        group.MapGet("/records/pg14/r01/{id:guid}", async (
+            Guid id,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.EquipmentLogEntries.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            return Results.Ok(ToLogDto(entity));
+        });
+
+        group.MapPost("/records/pg14/r01", async (
+            CreateEquipmentLogEntryRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            IMetrologyAssetCatalog metrologyCatalog,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+
+            var source = NormalizeAllowed(req.AssetSource, AllowedLogAssetSources);
+            if (source is null)
+                return Results.BadRequest(new { message = "AssetSource inválido. Use StandardWeight, Instrument o QualityEquipment." });
+
+            var kind = NormalizeAllowed(req.Kind, AllowedLogKinds);
+            if (kind is null)
+                return Results.BadRequest(new { message = "Kind inválido. Use C, V, MP, MC o Baja." });
+
+            string? verdict = null;
+            if (!string.IsNullOrWhiteSpace(req.Verdict))
+            {
+                verdict = NormalizeAllowed(req.Verdict, AllowedLogVerdicts);
+                if (verdict is null)
+                    return Results.BadRequest(new { message = "Verdict inválido. Use Apto, NoApto, Condicional o vacío." });
+            }
+
+            if (req.EvidenceFileId.HasValue)
+            {
+                var fileOk = await db.Files.AsNoTracking()
+                    .AnyAsync(f => f.TenantId == tenantId && f.Id == req.EvidenceFileId.Value, ct);
+                if (!fileOk)
+                    return Results.BadRequest(new { message = "El archivo de evidencia no existe." });
+            }
+
+            var resolved = await ResolveAssetAsync(db, metrologyCatalog, tenantId, source, req.AssetId, req.AssetCode, req.AssetDescription, ct);
+            if (resolved is null)
+                return Results.BadRequest(new { message = "No se encontró el activo indicado (AssetSource + AssetId)." });
+
+            var eventDate = req.EventDate ?? DateTime.UtcNow;
+            var number = await NextNumberAsync(
+                db.EquipmentLogEntries.AsNoTracking()
+                    .Where(r => r.TenantId == tenantId)
+                    .Select(r => r.Number),
+                $"HV-{eventDate.Year}-",
+                ct);
+
+            var entity = new QualityEquipmentLogEntry
+            {
+                TenantId = tenantId,
+                RecordCode = "PG14-R01",
+                Number = number,
+                AssetSource = source,
+                AssetId = req.AssetId,
+                AssetCode = resolved.Value.Code,
+                AssetDescription = resolved.Value.Description,
+                EventDate = eventDate,
+                Kind = kind,
+                Description = req.Description?.Trim() ?? string.Empty,
+                CertificateNumber = req.CertificateNumber?.Trim() ?? string.Empty,
+                Verdict = verdict ?? string.Empty,
+                ApprovedByTechnicalDirector = req.ApprovedByTechnicalDirector ?? false,
+                Responsible = req.Responsible?.Trim() ?? string.Empty,
+                EvidenceFileId = req.EvidenceFileId,
+                Status = QualityEquipmentLogStatuses.Active,
+                Notes = req.Notes?.Trim() ?? string.Empty,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            db.EquipmentLogEntries.Add(entity);
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.EquipmentLogEntry, entity.Id, "EquipmentLogEntryCreated",
+                $"Evento {entity.Number} ({entity.Kind}) creado para {entity.AssetCode}.", null, ToLogDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/quality/records/pg14/r01/{entity.Id}", ToLogDto(entity));
+        });
+
+        group.MapPut("/records/pg14/r01/{id:guid}", async (
+            Guid id,
+            UpdateEquipmentLogEntryRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.EquipmentLogEntries.FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            if (entity.Status == QualityEquipmentLogStatuses.Cancelled)
+                return Results.BadRequest(new { message = "El evento está anulado; no se puede editar." });
+
+            var before = ToLogDto(entity);
+
+            if (req.EventDate.HasValue) entity.EventDate = req.EventDate.Value;
+            if (req.Description is not null) entity.Description = req.Description.Trim();
+            if (req.CertificateNumber is not null) entity.CertificateNumber = req.CertificateNumber.Trim();
+            if (req.Responsible is not null) entity.Responsible = req.Responsible.Trim();
+            if (req.Notes is not null) entity.Notes = req.Notes.Trim();
+            if (req.ApprovedByTechnicalDirector.HasValue) entity.ApprovedByTechnicalDirector = req.ApprovedByTechnicalDirector.Value;
+
+            if (req.Kind is not null)
+            {
+                var kind = NormalizeAllowed(req.Kind, AllowedLogKinds);
+                if (kind is null)
+                    return Results.BadRequest(new { message = "Kind inválido. Use C, V, MP, MC o Baja." });
+                entity.Kind = kind;
+            }
+
+            if (req.Verdict is not null)
+            {
+                if (string.IsNullOrWhiteSpace(req.Verdict))
+                {
+                    entity.Verdict = string.Empty;
+                }
+                else
+                {
+                    var verdict = NormalizeAllowed(req.Verdict, AllowedLogVerdicts);
+                    if (verdict is null)
+                        return Results.BadRequest(new { message = "Verdict inválido. Use Apto, NoApto, Condicional o vacío." });
+                    entity.Verdict = verdict;
+                }
+            }
+
+            if (req.EvidenceFileId.HasValue)
+            {
+                var fileOk = await db.Files.AsNoTracking()
+                    .AnyAsync(f => f.TenantId == tenantId && f.Id == req.EvidenceFileId.Value, ct);
+                if (!fileOk)
+                    return Results.BadRequest(new { message = "El archivo de evidencia no existe." });
+                entity.EvidenceFileId = req.EvidenceFileId;
+            }
+
+            if (req.Status is not null)
+            {
+                if (req.Status.Trim() == QualityEquipmentLogStatuses.Cancelled)
+                    entity.Status = QualityEquipmentLogStatuses.Cancelled;
+                else if (req.Status.Trim() == QualityEquipmentLogStatuses.Active)
+                    entity.Status = QualityEquipmentLogStatuses.Active;
+                else
+                    return Results.BadRequest(new { message = "Estado inválido. Use Active o Cancelled." });
+            }
+
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.EquipmentLogEntry, entity.Id, "EquipmentLogEntryUpdated",
+                $"Evento {entity.Number} actualizado ({entity.Status}).", before, ToLogDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToLogDto(entity));
+        });
+
+        group.MapDelete("/records/pg14/r01/{id:guid}", async (
+            Guid id,
+            ITenantContext tenant,
+            QualityDbContext db,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.EquipmentLogEntries.FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+
+            var before = ToLogDto(entity);
+            entity.Status = QualityEquipmentLogStatuses.Cancelled;
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.EquipmentLogEntry, entity.Id, "EquipmentLogEntryCancelled",
+                $"Evento {entity.Number} anulado.", before, ToLogDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToLogDto(entity));
+        });
+
+        group.MapPost("/records/pg14/r01/sync-calibrations", async (
+            ITenantContext tenant,
+            QualityDbContext db,
+            IMetrologyAssetCatalog metrologyCatalog,
+            HttpContext http,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+
+            var assets = (await metrologyCatalog.ListCalibrationAssetsAsync(tenantId.Value, ct))
+                .Where(a => a.CalibrationDate.HasValue)
+                .ToList();
+
+            var existing = await db.EquipmentLogEntries
+                .Where(r => r.TenantId == tenantId
+                    && r.Status == QualityEquipmentLogStatuses.Active
+                    && r.Kind == QualityEquipmentLogKinds.Calibration)
+                .ToListAsync(ct);
+
+            var created = 0;
+            var skipped = 0;
+            var yearCounters = new Dictionary<int, int>();
+
+            var existingNumbers = await db.EquipmentLogEntries.AsNoTracking()
+                .Where(r => r.TenantId == tenantId)
+                .Select(r => r.Number)
+                .ToListAsync(ct);
+
+            foreach (var asset in assets)
+            {
+                var calDate = asset.CalibrationDate!.Value;
+                var cert = asset.CertificateNumber ?? string.Empty;
+                var calDay = calDate.Date;
+
+                var duplicate = existing.Any(r =>
+                    r.AssetSource == asset.Source
+                    && r.AssetId == asset.Id
+                    && (
+                        (!string.IsNullOrWhiteSpace(cert) && string.Equals(r.CertificateNumber, cert, StringComparison.Ordinal))
+                        || r.EventDate.Date == calDay
+                    ));
+
+                if (duplicate)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                if (!yearCounters.TryGetValue(calDate.Year, out var seq))
+                {
+                    var prefix = $"HV-{calDate.Year}-";
+                    var max = 0;
+                    foreach (var n in existingNumbers.Where(x => x.StartsWith(prefix, StringComparison.Ordinal)))
+                    {
+                        if (n.Length >= prefix.Length + 4 && int.TryParse(n.AsSpan(^4), out var parsed) && parsed > max)
+                            max = parsed;
+                    }
+                    seq = max;
+                }
+
+                seq++;
+                yearCounters[calDate.Year] = seq;
+                var number = $"HV-{calDate.Year}-{seq:D4}";
+                existingNumbers.Add(number);
+
+                var entity = new QualityEquipmentLogEntry
+                {
+                    TenantId = tenantId,
+                    RecordCode = "PG14-R01",
+                    Number = number,
+                    AssetSource = asset.Source,
+                    AssetId = asset.Id,
+                    AssetCode = asset.Code,
+                    AssetDescription = asset.Description,
+                    EventDate = calDate,
+                    Kind = QualityEquipmentLogKinds.Calibration,
+                    Description = "Calibración registrada en Metrología",
+                    CertificateNumber = cert,
+                    Verdict = string.Equals(asset.Status, "Valid", StringComparison.Ordinal) ? QualityEquipmentLogVerdicts.Fit : string.Empty,
+                    ApprovedByTechnicalDirector = false,
+                    Responsible = string.Empty,
+                    Status = QualityEquipmentLogStatuses.Active,
+                    Notes = string.Empty,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
+                };
+
+                db.EquipmentLogEntries.Add(entity);
+                existing.Add(entity);
+                QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.EquipmentLogEntry, entity.Id, "EquipmentLogEntrySynced",
+                    $"Evento {entity.Number} sincronizado desde Metrología ({entity.AssetCode}).", null, ToLogDto(entity), http);
+                created++;
+            }
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { created, skipped });
+        });
+    }
+
     private static void MapR05(RouteGroupBuilder group)
     {
         group.MapGet("/records/pg14/r05", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
@@ -660,7 +1018,14 @@ internal static class QualityPg14Endpoints
                         return Results.BadRequest(new { message = "Para completar debe indicar Result: Pass, Fail o Conditional." });
                 }
 
+                var becomingCompleted = st == QualityIntermediateCheckStatuses.Completed
+                    && entity.Status != QualityIntermediateCheckStatuses.Completed;
                 entity.Status = st;
+
+                if (becomingCompleted && entity.EquipmentId.HasValue)
+                {
+                    await TryCreateVerificationLogFromCheckAsync(db, tenantId, entity, http, ct);
+                }
             }
 
             entity.UpdatedAtUtc = DateTime.UtcNow;
@@ -949,6 +1314,122 @@ internal static class QualityPg14Endpoints
         r.CreatedAtUtc,
         r.UpdatedAtUtc
     };
+
+    private static object ToLogDto(QualityEquipmentLogEntry r) => new
+    {
+        r.Id,
+        r.RecordCode,
+        r.Number,
+        r.AssetSource,
+        r.AssetId,
+        r.AssetCode,
+        r.AssetDescription,
+        r.EventDate,
+        r.Kind,
+        r.Description,
+        r.CertificateNumber,
+        r.Verdict,
+        r.ApprovedByTechnicalDirector,
+        r.Responsible,
+        r.EvidenceFileId,
+        r.Status,
+        r.Notes,
+        r.CreatedAtUtc,
+        r.UpdatedAtUtc
+    };
+
+    private static async Task<(string Code, string Description)?> ResolveAssetAsync(
+        QualityDbContext db,
+        IMetrologyAssetCatalog metrologyCatalog,
+        TenantId tenantId,
+        string source,
+        Guid assetId,
+        string? assetCode,
+        string? assetDescription,
+        CancellationToken ct)
+    {
+        if (source == QualityEquipmentLogAssetSources.QualityEquipment)
+        {
+            var eq = await db.Equipments.AsNoTracking()
+                .FirstOrDefaultAsync(e => e.Id == assetId && e.TenantId == tenantId, ct);
+            if (eq is null) return null;
+            return (
+                string.IsNullOrWhiteSpace(assetCode) ? eq.Code : assetCode.Trim(),
+                string.IsNullOrWhiteSpace(assetDescription) ? eq.Description : assetDescription.Trim());
+        }
+
+        var assets = await metrologyCatalog.ListCalibrationAssetsAsync(tenantId.Value, ct);
+        var match = assets.FirstOrDefault(a => a.Id == assetId && a.Source == source);
+        if (match is null) return null;
+        return (
+            string.IsNullOrWhiteSpace(assetCode) ? match.Code : assetCode.Trim(),
+            string.IsNullOrWhiteSpace(assetDescription) ? match.Description : assetDescription.Trim());
+    }
+
+    private static async Task TryCreateVerificationLogFromCheckAsync(
+        QualityDbContext db,
+        TenantId tenantId,
+        QualityIntermediateCheck check,
+        HttpContext http,
+        CancellationToken ct)
+    {
+        if (!check.EquipmentId.HasValue) return;
+
+        var eq = await db.Equipments.AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == check.EquipmentId.Value && e.TenantId == tenantId, ct);
+        if (eq is null) return;
+
+        var already = await db.EquipmentLogEntries.AsNoTracking()
+            .AnyAsync(r => r.TenantId == tenantId
+                && r.Status == QualityEquipmentLogStatuses.Active
+                && r.Kind == QualityEquipmentLogKinds.Verification
+                && r.AssetSource == QualityEquipmentLogAssetSources.QualityEquipment
+                && r.AssetId == eq.Id
+                && r.Notes.Contains(check.Number), ct);
+        if (already) return;
+
+        var verdict = check.Result switch
+        {
+            QualityIntermediateCheckResults.Pass => QualityEquipmentLogVerdicts.Fit,
+            QualityIntermediateCheckResults.Fail => QualityEquipmentLogVerdicts.Unfit,
+            QualityIntermediateCheckResults.Conditional => QualityEquipmentLogVerdicts.Conditional,
+            _ => string.Empty
+        };
+
+        var number = await NextNumberAsync(
+            db.EquipmentLogEntries.AsNoTracking()
+                .Where(r => r.TenantId == tenantId)
+                .Select(r => r.Number),
+            $"HV-{check.CheckDate.Year}-",
+            ct);
+
+        var log = new QualityEquipmentLogEntry
+        {
+            TenantId = tenantId,
+            RecordCode = "PG14-R01",
+            Number = number,
+            AssetSource = QualityEquipmentLogAssetSources.QualityEquipment,
+            AssetId = eq.Id,
+            AssetCode = eq.Code,
+            AssetDescription = eq.Description,
+            EventDate = check.CheckDate,
+            Kind = QualityEquipmentLogKinds.Verification,
+            Description = $"Verificación intermedia {check.Number}",
+            CertificateNumber = string.Empty,
+            Verdict = verdict,
+            ApprovedByTechnicalDirector = false,
+            Responsible = check.Responsible,
+            EvidenceFileId = check.EvidenceFileId,
+            Status = QualityEquipmentLogStatuses.Active,
+            Notes = $"Origen R05 {check.Number}",
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
+        };
+
+        db.EquipmentLogEntries.Add(log);
+        QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.EquipmentLogEntry, log.Id, "EquipmentLogEntryFromCheck",
+            $"Evento {log.Number} (V) desde verificación {check.Number}.", null, ToLogDto(log), http);
+    }
 
     private static async Task<string> NextEquipmentCodeAsync(QualityDbContext db, TenantId tenantId, CancellationToken ct)
     {

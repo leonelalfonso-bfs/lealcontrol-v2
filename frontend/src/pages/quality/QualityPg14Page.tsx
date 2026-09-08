@@ -3,6 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../../api/client";
 import type {
   QualityEquipment,
+  QualityEquipmentLogEntry,
+  QualityEquipmentLogListResponse,
   QualityIntermediateCheck,
   QualityMaintenancePlanItem,
   QualityPg14CalibrationProgramRow,
@@ -13,11 +15,12 @@ import type {
 } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
 
-type Tab = "r04" | "r03" | "equipos" | "r05" | "r06";
+type Tab = "r04" | "r03" | "r01" | "equipos" | "r05" | "r06";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "r04", label: "R04 Listado" },
   { id: "r03", label: "R03 Programa" },
+  { id: "r01", label: "R01 Hoja de vida" },
   { id: "equipos", label: "Equipos auxiliares" },
   { id: "r05", label: "R05 Verificación" },
   { id: "r06", label: "R06 Mantenimiento" }
@@ -75,8 +78,27 @@ const MP_STATUS: Record<string, string> = {
   Cancelled: "Anulado"
 };
 
+const LOG_KIND_LABEL: Record<string, string> = {
+  C: "Calibración",
+  V: "Verificación",
+  MP: "Mant. preventivo",
+  MC: "Mant. correctivo",
+  Baja: "Baja"
+};
+
+const LOG_VERDICT_LABEL: Record<string, string> = {
+  Apto: "Apto",
+  NoApto: "No apto",
+  Condicional: "Condicional"
+};
+
+const LOG_STATUS: Record<string, string> = {
+  Active: "Activo",
+  Cancelled: "Anulado"
+};
+
 function parseTab(v: string | null): Tab {
-  if (v === "r04" || v === "r03" || v === "equipos" || v === "r05" || v === "r06") return v;
+  if (v === "r04" || v === "r03" || v === "r01" || v === "equipos" || v === "r05" || v === "r06") return v;
   return "r04";
 }
 
@@ -98,6 +120,9 @@ export function QualityPg14Page() {
   const [equipment, setEquipment] = useState<QualityEquipment[]>([]);
   const [checks, setChecks] = useState<QualityIntermediateCheck[]>([]);
   const [plans, setPlans] = useState<QualityMaintenancePlanItem[]>([]);
+  const [logEntries, setLogEntries] = useState<QualityEquipmentLogEntry[]>([]);
+  const [logCounts, setLogCounts] = useState<QualityEquipmentLogListResponse["countsByKind"] | null>(null);
+  const [logAssetKey, setLogAssetKey] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -135,9 +160,22 @@ export function QualityPg14Page() {
   const [mResponsible, setMResponsible] = useState("");
   const [mNotes, setMNotes] = useState("");
 
+  // R01 form
+  const [lSource, setLSource] = useState("StandardWeight");
+  const [lAssetId, setLAssetId] = useState("");
+  const [lKind, setLKind] = useState("C");
+  const [lDate, setLDate] = useState(new Date().toISOString().slice(0, 10));
+  const [lCert, setLCert] = useState("");
+  const [lVerdict, setLVerdict] = useState("");
+  const [lDt, setLDt] = useState(false);
+  const [lResponsible, setLResponsible] = useState("");
+  const [lDescription, setLDescription] = useState("");
+  const [lNotes, setLNotes] = useState("");
+
   const selectedEq = equipment.find((r) => r.id === selectedId) ?? null;
   const selectedCheck = checks.find((r) => r.id === selectedId) ?? null;
   const selectedPlan = plans.find((r) => r.id === selectedId) ?? null;
+  const selectedLog = logEntries.find((r) => r.id === selectedId) ?? null;
 
   const parentOptions = useMemo(
     () => equipment.filter((e) => e.status !== "Retired" && (e.kind === "Truck" || e.kind === "Trailer")),
@@ -150,6 +188,15 @@ export function QualityPg14Page() {
   const filteredInventory = useMemo(
     () => (sourceFilter === "all" ? inventory : inventory.filter((r) => r.source === sourceFilter)),
     [inventory, sourceFilter]
+  );
+  const filteredLogs = useMemo(() => {
+    if (!logAssetKey) return logEntries;
+    const [src, id] = logAssetKey.split("|");
+    return logEntries.filter((r) => r.assetSource === src && r.assetId === id);
+  }, [logEntries, logAssetKey]);
+  const assetsForSource = useMemo(
+    () => inventory.filter((a) => a.source === lSource),
+    [inventory, lSource]
   );
 
   const setTab = (next: Tab) => {
@@ -168,9 +215,10 @@ export function QualityPg14Page() {
       api.listQualityPg14R03(),
       api.listQualityEquipment(),
       api.listQualityPg14R05(),
-      api.listQualityPg14R06()
+      api.listQualityPg14R06(),
+      api.listQualityEquipmentLogEntries()
     ])
-      .then(([sum, r04, r03, eq, r05, r06]) => {
+      .then(([sum, r04, r03, eq, r05, r06, r01]) => {
         setSummary(sum);
         setInventory(r04.rows || []);
         setInventoryCounts(r04.counts || null);
@@ -179,6 +227,8 @@ export function QualityPg14Page() {
         setEquipment(eq.rows || []);
         setChecks(r05.rows || []);
         setPlans(r06.rows || []);
+        setLogEntries(r01.rows || []);
+        setLogCounts(r01.countsByKind || null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
@@ -219,7 +269,19 @@ export function QualityPg14Page() {
       setMResponsible(selectedPlan.responsible || "");
       setMNotes(selectedPlan.notes || "");
     }
-  }, [tab, selectedId, selectedEq, selectedCheck, selectedPlan]);
+    if (tab === "r01" && selectedLog) {
+      setLSource(selectedLog.assetSource);
+      setLAssetId(selectedLog.assetId);
+      setLKind(selectedLog.kind);
+      setLDate(selectedLog.eventDate?.slice(0, 10) || "");
+      setLCert(selectedLog.certificateNumber || "");
+      setLVerdict(selectedLog.verdict || "");
+      setLDt(!!selectedLog.approvedByTechnicalDirector);
+      setLResponsible(selectedLog.responsible || "");
+      setLDescription(selectedLog.description || "");
+      setLNotes(selectedLog.notes || "");
+    }
+  }, [tab, selectedId, selectedEq, selectedCheck, selectedPlan, selectedLog]);
 
   const resetEqForm = () => {
     setEqKind("Truck");
@@ -252,6 +314,19 @@ export function QualityPg14Page() {
     setMNextDue("");
     setMResponsible("");
     setMNotes("");
+  };
+
+  const resetLogForm = () => {
+    setLSource("StandardWeight");
+    setLAssetId("");
+    setLKind("C");
+    setLDate(new Date().toISOString().slice(0, 10));
+    setLCert("");
+    setLVerdict("");
+    setLDt(false);
+    setLResponsible("");
+    setLDescription("");
+    setLNotes("");
   };
 
   const createEquipment = async (e: FormEvent) => {
@@ -468,6 +543,94 @@ export function QualityPg14Page() {
     }
   };
 
+  const createLog = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!lAssetId) {
+      setError("Seleccione un activo.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const asset = inventory.find((a) => a.id === lAssetId && a.source === lSource);
+      await api.createQualityEquipmentLogEntry({
+        assetSource: lSource,
+        assetId: lAssetId,
+        kind: lKind,
+        eventDate: lDate ? new Date(lDate).toISOString() : undefined,
+        assetCode: asset?.code,
+        assetDescription: asset?.description,
+        certificateNumber: lCert || undefined,
+        verdict: lVerdict || undefined,
+        approvedByTechnicalDirector: lDt,
+        responsible: lResponsible || undefined,
+        description: lDescription || undefined,
+        notes: lNotes || undefined
+      });
+      setMsg("Evento de hoja de vida creado.");
+      setShowForm(false);
+      resetLogForm();
+      loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveLog = async () => {
+    if (!selectedLog) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.updateQualityEquipmentLogEntry(selectedLog.id, {
+        eventDate: lDate ? new Date(lDate).toISOString() : undefined,
+        kind: lKind,
+        certificateNumber: lCert,
+        verdict: lVerdict,
+        approvedByTechnicalDirector: lDt,
+        responsible: lResponsible,
+        description: lDescription,
+        notes: lNotes
+      });
+      setMsg("Evento actualizado.");
+      loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cancelLog = async (id: string) => {
+    if (!confirm("¿Anular este evento de hoja de vida?")) return;
+    setBusy(true);
+    try {
+      await api.cancelQualityEquipmentLogEntry(id);
+      setMsg("Evento anulado.");
+      setSelectedId(null);
+      loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const syncCalibrations = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await api.syncQualityEquipmentLogCalibrations();
+      setMsg(`Sincronización: ${res.created} creados, ${res.skipped} omitidos.`);
+      loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const exportChecks = () => {
     const columns: ExcelColumn<QualityIntermediateCheck>[] = [
       { key: "number", header: "Número" },
@@ -551,6 +714,24 @@ export function QualityPg14Page() {
     void exportToExcel("PG14-R03_programa_calibraciones", calProgram, columns);
   };
 
+  const exportLogs = () => {
+    const columns: ExcelColumn<QualityEquipmentLogEntry>[] = [
+      { key: "number", header: "Número" },
+      { key: "eventDate", header: "Fecha", value: (r) => excelDate(r.eventDate) },
+      { key: "assetSource", header: "Origen", value: (r) => SOURCE_LABEL[r.assetSource] || r.assetSource },
+      { key: "assetCode", header: "Código activo" },
+      { key: "assetDescription", header: "Descripción", value: (r) => r.assetDescription || "" },
+      { key: "kind", header: "Tipo", value: (r) => LOG_KIND_LABEL[r.kind] || r.kind },
+      { key: "certificateNumber", header: "Certificado", value: (r) => r.certificateNumber || "" },
+      { key: "verdict", header: "Dictamen", value: (r) => LOG_VERDICT_LABEL[r.verdict || ""] || r.verdict || "" },
+      { key: "approvedByTechnicalDirector", header: "DT", value: (r) => (r.approvedByTechnicalDirector ? "Sí" : "No") },
+      { key: "responsible", header: "Responsable", value: (r) => r.responsible || "" },
+      { key: "description", header: "Descripción evento", value: (r) => r.description || "" },
+      { key: "status", header: "Estado", value: (r) => LOG_STATUS[r.status] || r.status }
+    ];
+    void exportToExcel("PG14-R01_hoja_de_vida", filteredLogs, columns);
+  };
+
   if (loading) return <div className="workspace-page pad">Cargando…</div>;
 
   return (
@@ -560,7 +741,7 @@ export function QualityPg14Page() {
           <Link to="/calidad/registros">← Registros</Link>
           <h1 style={{ margin: "8px 0 4px" }}>PG14 · Equipamiento y calibraciones</h1>
           <p style={{ margin: 0, color: "#64748b" }}>
-            Listado unificado (R04) · programa calibraciones (R03) · auxiliares · R05 · R06
+            Listado (R04) · programa (R03) · hoja de vida (R01) · auxiliares · R05 · R06
           </p>
         </div>
         {summary && (
@@ -568,6 +749,7 @@ export function QualityPg14Page() {
             {summary.weightsCount != null && <span>Pesas: <strong>{summary.weightsCount}</strong></span>}
             {summary.instrumentsCount != null && <span>Instrumentos: <strong>{summary.instrumentsCount}</strong></span>}
             <span>Aux. activos: <strong>{summary.equipmentActive}</strong></span>
+            {summary.logEntries != null && <span>HV activos: <strong>{summary.logEntries}</strong></span>}
             <span>Verif. borrador: <strong>{summary.checksDraft}</strong></span>
             <span>Mant. ≤30d: <strong>{summary.maintenanceDue}</strong></span>
             <span>Mant. vencidos: <strong style={{ color: summary.maintenanceOverdue ? "#b91c1c" : undefined }}>{summary.maintenanceOverdue}</strong></span>
@@ -752,6 +934,247 @@ export function QualityPg14Page() {
                 )}
               </tbody>
             </table>
+          </div>
+        </>
+      )}
+
+      {tab === "r01" && (
+        <>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}>
+              Activo
+              <select value={logAssetKey} onChange={(e) => setLogAssetKey(e.target.value)}>
+                <option value="">Todos</option>
+                {inventory.map((a) => (
+                  <option key={`${a.source}-${a.id}`} value={`${a.source}|${a.id}`}>
+                    {SOURCE_LABEL[a.source] || a.source} · {a.code} · {a.description || "—"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                setSelectedId(null);
+                resetLogForm();
+                if (logAssetKey) {
+                  const [src, id] = logAssetKey.split("|");
+                  setLSource(src);
+                  setLAssetId(id);
+                }
+                setShowForm(true);
+              }}
+            >
+              Nuevo evento
+            </button>
+            <button type="button" className="btn btn-outline" disabled={busy} onClick={() => void syncCalibrations()}>
+              Sincronizar calibraciones desde Metrología
+            </button>
+            <button type="button" className="btn btn-outline" onClick={exportLogs}>
+              Excel
+            </button>
+            {logAssetKey && (() => {
+              const [src, id] = logAssetKey.split("|");
+              return (
+                <Link
+                  to={`/calidad/registros/equipos/hoja-vida/${encodeURIComponent(src)}/${id}/pdf`}
+                  className="btn btn-outline"
+                >
+                  PDF hoja de vida
+                </Link>
+              );
+            })()}
+            {logCounts && (
+              <span style={{ fontSize: 13, color: "#64748b" }}>
+                C {logCounts.C} · V {logCounts.V} · MP {logCounts.MP} · MC {logCounts.MC} · Baja {logCounts.Baja}
+              </span>
+            )}
+          </div>
+
+          {showForm && !selectedId && (
+            <form onSubmit={createLog} className="card" style={{ padding: 16, marginBottom: 16 }}>
+              <h3 style={{ marginTop: 0 }}>PG14-R01 · Evento de hoja de vida</h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 12 }}>
+                <label>
+                  Origen
+                  <select
+                    value={lSource}
+                    onChange={(e) => {
+                      setLSource(e.target.value);
+                      setLAssetId("");
+                    }}
+                    required
+                  >
+                    <option value="StandardWeight">Pesa</option>
+                    <option value="Instrument">Instrumento</option>
+                    <option value="QualityEquipment">Auxiliar</option>
+                  </select>
+                </label>
+                <label>
+                  Activo
+                  <select value={lAssetId} onChange={(e) => setLAssetId(e.target.value)} required>
+                    <option value="">—</option>
+                    {assetsForSource.map((a) => (
+                      <option key={a.id} value={a.id}>{a.code} · {a.description || "—"}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Tipo
+                  <select value={lKind} onChange={(e) => setLKind(e.target.value)} required>
+                    {Object.entries(LOG_KIND_LABEL).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Fecha
+                  <input type="date" value={lDate} onChange={(e) => setLDate(e.target.value)} required />
+                </label>
+                <label>
+                  Certificado
+                  <input value={lCert} onChange={(e) => setLCert(e.target.value)} />
+                </label>
+                <label>
+                  Dictamen
+                  <select value={lVerdict} onChange={(e) => setLVerdict(e.target.value)}>
+                    <option value="">—</option>
+                    <option value="Apto">Apto</option>
+                    <option value="NoApto">No apto</option>
+                    <option value="Condicional">Condicional</option>
+                  </select>
+                </label>
+                <label>
+                  Responsable
+                  <input value={lResponsible} onChange={(e) => setLResponsible(e.target.value)} />
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 22 }}>
+                  <input type="checkbox" checked={lDt} onChange={(e) => setLDt(e.target.checked)} />
+                  Aprobado por DT
+                </label>
+              </div>
+              <label style={{ display: "block", marginTop: 12 }}>
+                Descripción
+                <textarea value={lDescription} onChange={(e) => setLDescription(e.target.value)} rows={2} style={{ width: "100%" }} />
+              </label>
+              <label style={{ display: "block", marginTop: 8 }}>
+                Notas
+                <textarea value={lNotes} onChange={(e) => setLNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
+              </label>
+              <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                <button type="submit" className="btn btn-primary" disabled={busy}>Crear evento</button>
+                <button type="button" className="btn btn-outline" onClick={() => setShowForm(false)}>Cancelar</button>
+              </div>
+            </form>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="card" style={{ padding: 0, overflow: "auto" }}>
+              <table className="table" style={{ width: "100%" }}>
+                <thead>
+                  <tr>
+                    <th>Número</th>
+                    <th>Fecha</th>
+                    <th>Activo</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLogs.map((r) => (
+                    <tr
+                      key={r.id}
+                      onClick={() => setSelectedId(r.id)}
+                      style={{
+                        cursor: "pointer",
+                        background: selectedId === r.id ? "#e0f2fe" : undefined,
+                        opacity: r.status === "Cancelled" ? 0.55 : 1
+                      }}
+                    >
+                      <td>{r.number}</td>
+                      <td>{fmtDate(r.eventDate)}</td>
+                      <td>{r.assetCode}</td>
+                      <td>{LOG_KIND_LABEL[r.kind] || r.kind}</td>
+                      <td>{LOG_STATUS[r.status] || r.status}</td>
+                    </tr>
+                  ))}
+                  {filteredLogs.length === 0 && (
+                    <tr><td colSpan={5} style={{ textAlign: "center", color: "#64748b" }}>Sin eventos.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {selectedLog && (
+              <div className="card" style={{ padding: 16 }}>
+                <h3 style={{ marginTop: 0 }}>{selectedLog.number}</h3>
+                <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
+                  {SOURCE_LABEL[selectedLog.assetSource] || selectedLog.assetSource} · {selectedLog.assetCode} · {selectedLog.assetDescription || "—"}
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <label>
+                    Tipo
+                    <select value={lKind} onChange={(e) => setLKind(e.target.value)} disabled={selectedLog.status === "Cancelled"}>
+                      {Object.entries(LOG_KIND_LABEL).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Fecha
+                    <input type="date" value={lDate} onChange={(e) => setLDate(e.target.value)} disabled={selectedLog.status === "Cancelled"} />
+                  </label>
+                  <label>
+                    Certificado
+                    <input value={lCert} onChange={(e) => setLCert(e.target.value)} disabled={selectedLog.status === "Cancelled"} />
+                  </label>
+                  <label>
+                    Dictamen
+                    <select value={lVerdict} onChange={(e) => setLVerdict(e.target.value)} disabled={selectedLog.status === "Cancelled"}>
+                      <option value="">—</option>
+                      <option value="Apto">Apto</option>
+                      <option value="NoApto">No apto</option>
+                      <option value="Condicional">Condicional</option>
+                    </select>
+                  </label>
+                  <label>
+                    Responsable
+                    <input value={lResponsible} onChange={(e) => setLResponsible(e.target.value)} disabled={selectedLog.status === "Cancelled"} />
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 22 }}>
+                    <input type="checkbox" checked={lDt} onChange={(e) => setLDt(e.target.checked)} disabled={selectedLog.status === "Cancelled"} />
+                    Aprobado por DT
+                  </label>
+                </div>
+                <label style={{ display: "block", marginTop: 12 }}>
+                  Descripción
+                  <textarea value={lDescription} onChange={(e) => setLDescription(e.target.value)} rows={2} style={{ width: "100%" }} disabled={selectedLog.status === "Cancelled"} />
+                </label>
+                <label style={{ display: "block", marginTop: 8 }}>
+                  Notas
+                  <textarea value={lNotes} onChange={(e) => setLNotes(e.target.value)} rows={2} style={{ width: "100%" }} disabled={selectedLog.status === "Cancelled"} />
+                </label>
+                <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {selectedLog.status !== "Cancelled" && (
+                    <>
+                      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void saveLog()}>
+                        Guardar
+                      </button>
+                      <button type="button" className="btn btn-outline" disabled={busy} onClick={() => void cancelLog(selectedLog.id)}>
+                        Anular
+                      </button>
+                    </>
+                  )}
+                  <Link
+                    to={`/calidad/registros/equipos/hoja-vida/${encodeURIComponent(selectedLog.assetSource)}/${selectedLog.assetId}/pdf`}
+                    className="btn btn-outline"
+                  >
+                    PDF del activo
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}

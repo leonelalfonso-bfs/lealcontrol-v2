@@ -168,4 +168,8 @@ export const QualityMaintenancePlanPrintPage = named(
   () => import("../pages/quality/QualityMaintenancePlanPrintPage"),
   "QualityMaintenancePlanPrintPage"
 );
+export const QualityEquipmentLogPrintPage = named(
+  () => import("../pages/quality/QualityEquipmentLogPrintPage"),
+  "QualityEquipmentLogPrintPage"
+);
 export const QualityRecordsHubPage = named(() => import("../pages/quality/QualityRecordsHubPage"), "QualityRecordsHubPage");

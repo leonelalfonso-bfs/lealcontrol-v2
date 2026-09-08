@@ -1229,3 +1229,88 @@ public sealed record UpdateMaintenancePlanItemRequest(
     string? Responsible = null,
     string? Status = null,
     string? Notes = null);
+
+// ─── PG14-R1 Hoja de vida ────────────────────────────────────────────────────
+
+public static class QualityEquipmentLogAssetSources
+{
+    public const string StandardWeight = "StandardWeight";
+    public const string Instrument = "Instrument";
+    public const string QualityEquipment = "QualityEquipment";
+}
+
+public static class QualityEquipmentLogKinds
+{
+    public const string Calibration = "C";
+    public const string Verification = "V";
+    public const string PreventiveMaintenance = "MP";
+    public const string CorrectiveMaintenance = "MC";
+    public const string Decommission = "Baja";
+}
+
+public static class QualityEquipmentLogVerdicts
+{
+    public const string Fit = "Apto";
+    public const string Unfit = "NoApto";
+    public const string Conditional = "Condicional";
+}
+
+public static class QualityEquipmentLogStatuses
+{
+    public const string Active = "Active";
+    public const string Cancelled = "Cancelled";
+}
+
+/// <summary>PG14-R1 — evento de hoja de vida (pesa / instrumento / auxiliar).</summary>
+public sealed class QualityEquipmentLogEntry : Entity<Guid>
+{
+    public QualityEquipmentLogEntry() : base(Guid.NewGuid()) { }
+    public QualityEquipmentLogEntry(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG14-R01";
+    public string Number { get; set; } = string.Empty; // HV-2026-0001
+    public string AssetSource { get; set; } = QualityEquipmentLogAssetSources.StandardWeight;
+    public Guid AssetId { get; set; }
+    public string AssetCode { get; set; } = string.Empty;
+    public string AssetDescription { get; set; } = string.Empty;
+    public DateTime EventDate { get; set; } = DateTime.UtcNow;
+    public string Kind { get; set; } = QualityEquipmentLogKinds.Calibration; // C|V|MP|MC|Baja
+    public string Description { get; set; } = string.Empty;
+    public string CertificateNumber { get; set; } = string.Empty;
+    public string Verdict { get; set; } = string.Empty; // Apto|NoApto|Condicional
+    public bool ApprovedByTechnicalDirector { get; set; }
+    public string Responsible { get; set; } = string.Empty;
+    public Guid? EvidenceFileId { get; set; }
+    public string Status { get; set; } = QualityEquipmentLogStatuses.Active;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateEquipmentLogEntryRequest(
+    string AssetSource,
+    Guid AssetId,
+    string Kind,
+    DateTime? EventDate = null,
+    string? AssetCode = null,
+    string? AssetDescription = null,
+    string? Description = null,
+    string? CertificateNumber = null,
+    string? Verdict = null,
+    bool? ApprovedByTechnicalDirector = null,
+    string? Responsible = null,
+    Guid? EvidenceFileId = null,
+    string? Notes = null);
+
+public sealed record UpdateEquipmentLogEntryRequest(
+    DateTime? EventDate = null,
+    string? Kind = null,
+    string? Description = null,
+    string? CertificateNumber = null,
+    string? Verdict = null,
+    bool? ApprovedByTechnicalDirector = null,
+    string? Responsible = null,
+    Guid? EvidenceFileId = null,
+    string? Status = null,
+    string? Notes = null);

@@ -194,6 +194,14 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "Vencimientos de calibración de pesas e instrumentos, ordenados por fecha."
   },
   {
+    code: "PG14-R01",
+    title: "Hoja de vida del equipo",
+    path: "/calidad/registros/equipos?tab=r01",
+    kind: "Structured",
+    ready: true,
+    blurb: "Historial HV-AAAA-NNNN: calibraciones, verificaciones, mantenimientos y bajas."
+  },
+  {
     code: "PG14-EQ",
     title: "Equipos auxiliares",
     path: "/calidad/registros/equipos?tab=equipos",
