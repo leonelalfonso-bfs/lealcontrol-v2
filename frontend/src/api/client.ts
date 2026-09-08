@@ -1840,6 +1840,64 @@ export const api = {
       method: "DELETE"
     }),
 
+  listQualityPg08R01: () =>
+    request<{
+      code: string;
+      title: string;
+      draftCount?: number;
+      completedCount?: number;
+      rows: import("./types/quality").QualityManagementReview[];
+    }>("/api/v1/quality/records/pg08-r01"),
+
+  getQualityManagementReview: (id: string) =>
+    request<import("./types/quality").QualityManagementReview>(`/api/v1/quality/records/pg08-r01/${id}`),
+
+  createQualityManagementReview: (body: {
+    programYear: number;
+    reviewDate?: string;
+    attendees?: string;
+    inputsNotes?: string;
+    decisions?: string;
+    actions?: string;
+    followUp?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityManagementReview>("/api/v1/quality/records/pg08-r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityManagementReview: (
+    id: string,
+    body: {
+      programYear?: number;
+      reviewDate?: string;
+      attendees?: string;
+      inputsNotes?: string;
+      decisions?: string;
+      actions?: string;
+      followUp?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityManagementReview>(`/api/v1/quality/records/pg08-r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  refreshQualityManagementReviewInputs: (id: string) =>
+    request<import("./types/quality").QualityManagementReview>(
+      `/api/v1/quality/records/pg08-r01/${id}/refresh-inputs`,
+      { method: "POST" }
+    ),
+
+  cancelQualityManagementReview: (id: string) =>
+    request<import("./types/quality").QualityManagementReview>(`/api/v1/quality/records/pg08-r01/${id}`, {
+      method: "DELETE"
+    }),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);

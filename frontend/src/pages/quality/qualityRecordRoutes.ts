@@ -58,6 +58,14 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "NC / TNC / Riesgos / OM generados en el sistema."
   },
   {
+    code: "PG08-R01",
+    title: "Informe de revisión por la dirección",
+    path: "/calidad/registros/revision-direccion",
+    kind: "Structured",
+    ready: true,
+    blurb: "Revisión anual; inputs del SGC (quejas, NC, auditorías, indicadores…) se arman solos."
+  },
+  {
     code: "PG04-R01",
     title: "Programa de auditorías",
     path: "/calidad/registros/auditorias",

@@ -918,3 +918,59 @@ public sealed record UpdateSupplierPerformanceRequest(
     Guid? EvidenceFileId = null,
     string? Status = null,
     string? Notes = null);
+
+// ─── PG08 Revisión por la dirección ──────────────────────────────────────────
+
+public static class QualityManagementReviewStatuses
+{
+    public const string Draft = "Draft";
+    public const string Completed = "Completed";
+    public const string Cancelled = "Cancelled";
+}
+
+/// <summary>PG08-R01 — informe de revisión por la dirección (inputs auto del SGC).</summary>
+public sealed class QualityManagementReview : Entity<Guid>
+{
+    public QualityManagementReview() : base(Guid.NewGuid()) { }
+    public QualityManagementReview(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG08-R01";
+    public string Number { get; set; } = string.Empty; // REV-2026-0001
+    public int ProgramYear { get; set; }
+    public DateTime ReviewDate { get; set; } = DateTime.UtcNow;
+    public string Attendees { get; set; } = string.Empty;
+    public string InputsSnapshotJson { get; set; } = string.Empty;
+    public string InputsNotes { get; set; } = string.Empty;
+    public string Decisions { get; set; } = string.Empty;
+    public string Actions { get; set; } = string.Empty;
+    public string FollowUp { get; set; } = string.Empty;
+    public Guid? EvidenceFileId { get; set; }
+    public string Status { get; set; } = QualityManagementReviewStatuses.Draft;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateManagementReviewRequest(
+    int ProgramYear,
+    DateTime? ReviewDate = null,
+    string? Attendees = null,
+    string? InputsNotes = null,
+    string? Decisions = null,
+    string? Actions = null,
+    string? FollowUp = null,
+    Guid? EvidenceFileId = null,
+    string? Notes = null);
+
+public sealed record UpdateManagementReviewRequest(
+    int? ProgramYear = null,
+    DateTime? ReviewDate = null,
+    string? Attendees = null,
+    string? InputsNotes = null,
+    string? Decisions = null,
+    string? Actions = null,
+    string? FollowUp = null,
+    Guid? EvidenceFileId = null,
+    string? Status = null,
+    string? Notes = null);

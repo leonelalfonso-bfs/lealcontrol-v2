@@ -420,3 +420,23 @@ export interface QualityPg05Summary {
   generatedAtUtc: string;
   counts?: { r01: number; r02: number; r03: number };
 }
+
+export interface QualityManagementReview {
+  id: string;
+  recordCode: string;
+  number: string;
+  programYear: number;
+  reviewDate: string;
+  attendees?: string;
+  inputsSnapshotJson?: string;
+  inputsSnapshot?: unknown;
+  inputsNotes?: string;
+  decisions?: string;
+  actions?: string;
+  followUp?: string;
+  evidenceFileId?: string | null;
+  status: string;
+  notes?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}

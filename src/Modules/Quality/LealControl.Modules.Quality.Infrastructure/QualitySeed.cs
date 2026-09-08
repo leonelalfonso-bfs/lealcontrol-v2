@@ -142,7 +142,7 @@ public static class QualitySeed
         AddRecord("PG06", "PG06-R03", "PG06-R03", "Seguimiento de las competencias técnicas y personales", QualityRecordKinds.Structured);
         AddRecord("PG06", "PG06-R04", "PG06-R04", "Asignación de funciones y reemplazos", QualityRecordKinds.Structured);
         AddRecord("PG07", "PG07-R01", "PG07-R1", "Registro y seguimiento de NC, R y OP", QualityRecordKinds.Structured);
-        AddRecord("PG08", "PG08-R01", "PG08-R01", "Informe de revisión por la dirección", QualityRecordKinds.Attachment);
+        AddRecord("PG08", "PG08-R01", "PG08-R01", "Informe de revisión por la dirección", QualityRecordKinds.Structured);
         AddRecord("PG09", "PG09-R01", "PG09 R1", "Informe de Ensayos", QualityRecordKinds.Linked, "metrology", QualityDocumentStatuses.Draft);
         AddRecord("PG09", "PG09-R02", "PG09 R2", "Modificación al Informe de Ensayos", QualityRecordKinds.Linked, "metrology", QualityDocumentStatuses.Draft);
         AddRecord("PG09", "PG09-R03", "PG09 R3", "Encuesta de satisfacción", QualityRecordKinds.Structured, status: QualityDocumentStatuses.Draft);

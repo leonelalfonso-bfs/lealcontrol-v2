@@ -29,6 +29,7 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityRoleAssignment> RoleAssignments => Set<QualityRoleAssignment>();
     public DbSet<QualitySupplierEvaluation> SupplierEvaluations => Set<QualitySupplierEvaluation>();
     public DbSet<QualitySupplierPerformanceReview> SupplierPerformanceReviews => Set<QualitySupplierPerformanceReview>();
+    public DbSet<QualityManagementReview> ManagementReviews => Set<QualityManagementReview>();
     public DbSet<QualityAuditEvent> AuditEvents => Set<QualityAuditEvent>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
@@ -360,6 +361,25 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.SupplierId, x.ReviewDate });
+        });
+
+        modelBuilder.Entity<QualityManagementReview>(b =>
+        {
+            b.ToTable("management_reviews", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Attendees).HasMaxLength(2000);
+            b.Property(x => x.InputsSnapshotJson).HasColumnType("text");
+            b.Property(x => x.InputsNotes).HasMaxLength(4000);
+            b.Property(x => x.Decisions).HasMaxLength(4000);
+            b.Property(x => x.Actions).HasMaxLength(4000);
+            b.Property(x => x.FollowUp).HasMaxLength(4000);
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityManagementReviewStatuses.Draft);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.ProgramYear, x.Status });
         });
 
         modelBuilder.Entity<QualityAuditEvent>(b =>
@@ -774,6 +794,28 @@ public sealed class QualityDbContext : DbContext
             );",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_suppperf_Tenant_Number"" ON quality.supplier_performance_reviews (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_suppperf_Tenant_Supplier_Date"" ON quality.supplier_performance_reviews (""TenantId"", ""SupplierId"", ""ReviewDate"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.management_reviews (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG08-R01',
+                ""Number"" character varying(32) NOT NULL,
+                ""ProgramYear"" integer NOT NULL,
+                ""ReviewDate"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""Attendees"" character varying(2000) NOT NULL DEFAULT '',
+                ""InputsSnapshotJson"" text NOT NULL DEFAULT '',
+                ""InputsNotes"" character varying(4000) NOT NULL DEFAULT '',
+                ""Decisions"" character varying(4000) NOT NULL DEFAULT '',
+                ""Actions"" character varying(4000) NOT NULL DEFAULT '',
+                ""FollowUp"" character varying(4000) NOT NULL DEFAULT '',
+                ""EvidenceFileId"" uuid,
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Draft',
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_mrev_Tenant_Number"" ON quality.management_reviews (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_mrev_Tenant_Year_Status"" ON quality.management_reviews (""TenantId"", ""ProgramYear"", ""Status"");",
 
             @"CREATE TABLE IF NOT EXISTS quality.audit_events (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

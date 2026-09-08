@@ -12,7 +12,7 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** `92926b6` (PG05 proveedores Structured + listado habilitados).  
+**Último commit de avance Calidad:** `92926b6` (PG05 proveedores Structured + listado habilitados). **Pendiente commit:** PG08-R01 revisión por la dirección (API + frontend + docs).  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
 ### Principio: los registros se generan en el sistema
@@ -46,11 +46,12 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | **PG04** Auditorías internas (R01–R04) | ✅ | Una entidad `AUD-AAAA-NNNN`; programa=filtro año; plan/informe/checklist=etapas; PDF+Excel; link a NC |
 | **PG06** Personal (R01–R04) | ✅ | CAP/AUT/COMP/ASG; autorización firmada por DT (`RequireTechnicalDirector`); gateway real para Metrología |
 | **PG05** Proveedores (R01–R03) | ✅ | EVA/DES + listado habilitados Generated; vínculo Directorio; PDF+Excel |
+| **PG08-R01** Revisión por la dirección | ✅ | Structured REV-AAAA-NNNN; inputs auto del SGC; refresh; PDF+Excel |
 
 ### Siguiente sesión
 
-1. **C3 — PG08** Revisión por la dirección.
-2. Seguir C3: PG09-R3 → PG14-R5/R6 + `QualityEquipment`.
+1. **C3 — PG09-R3** Encuestas.
+2. Seguir C3: PG14-R5/R6 + `QualityEquipment`.
 3. Alternar restos **C2** si hace falta emitir informes ISO (validar firma vía PG06-R02).
 
 ### Reglas de trabajo que ya aplican
@@ -343,7 +344,7 @@ Módulo `calidad` en `moduleRegistry.ts`, ruta base `/calidad`, claim `quality`.
 /calidad/registros/personal      PG06                                 [listo]
 /calidad/registros/proveedores   PG05                                 [listo]
 /calidad/registros/equipos       PG14                                 [pendiente]
-/calidad/registros/revision-direccion  PG08-R01                       [pendiente]
+/calidad/registros/revision-direccion  PG08-R01                       [listo]
 /calidad/registros/encuestas     PG09 R3                              [pendiente]
 /calidad/normas                  Documentos externos (PG01-R02): vigencia, relaciones, revisión anual
 ```
@@ -468,8 +469,8 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 - [x] PG04 Auditorías (R01–R04)
 - [x] PG06 Personal (R01–R04) + firma DT en autorizaciones
 - [x] PG05 Proveedores (R01–R03)
-- [ ] PG08-R01 Revisión por la dirección ← **siguiente**
-- [ ] PG09 R3 Encuestas
+- [x] PG08-R01 Revisión por la dirección
+- [ ] PG09 R3 Encuestas ← **siguiente**
 - [ ] PG14-R5 / R6 + `QualityEquipment` (camión/acoplado/autoelevador)
 
 ---
