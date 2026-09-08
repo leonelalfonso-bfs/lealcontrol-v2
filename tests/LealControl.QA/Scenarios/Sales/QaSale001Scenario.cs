@@ -43,7 +43,7 @@ public sealed class QaSale001Scenario : ITestScenario
                 costPrice: 6000m,
                 vatRate: 21m);
 
-            var cashAccount = await TestDataFactory.CreateCashAccountAsync(context);
+            var cashAccount = await TestDataFactory.CreateCashAccountAsync(context, "Caja QA-SALE-001 Efectivo");
 
             const decimal soldQuantity = 10m;
             const decimal expectedNet = 100000m;      // 10 x $10.000
@@ -186,7 +186,13 @@ public sealed class QaSale001Scenario : ITestScenario
 
             // 3.4 Auditoría de Tesorería (Movimiento de caja)
             var financeDb = context.GetService<FinanceDbContext>();
-            var cashMovement = await financeDb.Movements.AsNoTracking().FirstOrDefaultAsync(m => m.TenantId == context.TenantId.Value && m.AccountId == cashAccount.Id);
+            var cashMovement = await financeDb.Movements.AsNoTracking()
+                .Where(m => m.TenantId == context.TenantId.Value
+                    && m.AccountId == cashAccount.Id
+                    && m.Kind == FinancialMovementKind.Credit
+                    && m.Amount == expectedTotal)
+                .OrderByDescending(m => m.OperationDateUtc)
+                .FirstOrDefaultAsync();
 
             scenario.AddCheck(
                 name: "Movimiento de tesorería registrado en Caja Efectivo",

@@ -43,7 +43,7 @@ public sealed class QaPurchase001Scenario : ITestScenario
                 costPrice: 5000m,
                 vatRate: 21m);
 
-            var cashAccount = await TestDataFactory.CreateCashAccountAsync(context);
+            var cashAccount = await TestDataFactory.CreateCashAccountAsync(context, "Caja QA-PURCHASE-001 Efectivo");
 
             const decimal purchasedQuantity = 20m;
             const decimal unitCost = 5000m;
@@ -231,7 +231,12 @@ public sealed class QaPurchase001Scenario : ITestScenario
             // 3.3 Movimiento de egreso en caja
             var financeDb = context.GetService<FinanceDbContext>();
             var cashDebit = await financeDb.Movements.AsNoTracking()
-                .FirstOrDefaultAsync(m => m.TenantId == context.TenantId.Value && m.AccountId == cashAccount.Id && m.Kind == FinancialMovementKind.Debit);
+                .Where(m => m.TenantId == context.TenantId.Value
+                    && m.AccountId == cashAccount.Id
+                    && m.Kind == FinancialMovementKind.Debit
+                    && m.Amount == expectedTotal)
+                .OrderByDescending(m => m.OperationDateUtc)
+                .FirstOrDefaultAsync();
 
             scenario.AddCheck(
                 name: "Egreso de tesorería registrado en Caja Efectivo por $121.000",

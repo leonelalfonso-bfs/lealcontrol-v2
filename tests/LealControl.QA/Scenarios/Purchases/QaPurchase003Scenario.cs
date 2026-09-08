@@ -43,7 +43,7 @@ public sealed class QaPurchase003Scenario : ITestScenario
                 costPrice: 10000m,
                 vatRate: 21m);
 
-            var cashAccount = await TestDataFactory.CreateCashAccountAsync(context);
+            var cashAccount = await TestDataFactory.CreateCashAccountAsync(context, "Caja QA-PURCHASE-003 Efectivo");
 
             const decimal purchasedQuantity = 10m;
             const decimal returnedQuantity = 3m;
