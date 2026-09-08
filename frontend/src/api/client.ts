@@ -1212,6 +1212,38 @@ export const api = {
   getQualityDocumentTree: () =>
     request<import("./types/quality").QualityDocumentTreeNode[]>("/api/v1/quality/documents/tree"),
 
+  createQualityDocument: (body: {
+    code: string;
+    title: string;
+    displayCode?: string;
+    type?: "Manual" | "Procedure" | "Instruction" | "RecordTemplate" | "External";
+    parentId?: string;
+    sortOrder?: number;
+    reviewPeriodMonths?: number;
+    ownerRole?: string;
+    iso17025Clauses?: string;
+    recordKind?: string;
+    linkedModule?: string;
+    externalSource?: string;
+    externalUrl?: string;
+    changeSummary?: string;
+    elaboratedBy?: string;
+    elaboratedAt?: string;
+    reviewedBy?: string;
+    reviewedAt?: string;
+    approvedBy?: string;
+    approvedAt?: string;
+    effectiveFrom?: string;
+    publishedFileId?: string;
+    sourceFileId?: string;
+    versionNumber?: number;
+    markCurrent?: boolean;
+  }) =>
+    request<{ id: string; code: string; displayCode: string; title: string; type: string; status: string }>(
+      "/api/v1/quality/documents",
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
   getQualityDocument: (code: string) =>
     request<import("./types/quality").QualityDocumentDetail>(`/api/v1/quality/documents/${encodeURIComponent(code)}`),
 

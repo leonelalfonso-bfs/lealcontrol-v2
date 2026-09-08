@@ -5,6 +5,9 @@ namespace LealControl.Modules.Quality.Infrastructure;
 
 public static class QualitySeed
 {
+    /// <summary>
+    /// Bootstrap explícito del catálogo INMELA (herramientas / migración). No invocar desde endpoints en cada request.
+    /// </summary>
     public static async Task EnsureCatalogAsync(QualityDbContext db, TenantId tenantId, CancellationToken ct = default)
     {
         var existing = await db.Documents.AsNoTracking()
