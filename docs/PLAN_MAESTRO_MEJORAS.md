@@ -346,7 +346,7 @@ Rama de trabajo: `staging/metrology-2307` · Staging: https://v2.lealcontrol.com
   - [x] PG09 R2 Enmienda informe (`POST …/amend`, Superseded)
   - [x] PG14-R5/R6 + QualityEquipment (EQ / VIC / MP)
   - [x] PG14-R1 Hoja de vida (HV-AAAA-NNNN + sync Metrología)
-  - [x] **Siguiente:** **Q.C4** (implementado; hash en registro tras commit)
+  - [x] **Siguiente:** **Q.C4** (implementado `d7c38af`)
 - [x] **Q.C4** Dashboard SGC, auditoría before/after, modo presentación
 
 **Reanudar siempre desde:** `MODULO_CALIDAD_ANALISIS.md` §0.
@@ -372,7 +372,7 @@ Rama de trabajo: `staging/metrology-2307` · Staging: https://v2.lealcontrol.com
 | 08/09/2026 | Q.C2 corte 3 PG14-R3/R4 | *(sin commit)* | pendiente staging | Catalog + Generated R3/R4 |
 | 08/09/2026 | Q.C2 corte 4 PG14-R1 | `102ab1b` | pendiente staging | Hoja de vida HV + sync calibraciones |
 | 08/09/2026 | Q.C2 Linked IT + ES | `abf955b` | pendiente staging | IT01–IT04 Linked + etiquetas ES; C2 cerrado → siguiente C4 |
-| 08/09/2026 | Q.C4 tablero + historial + presentación | *(sin commit)* | pendiente staging | Dashboard SGC, before/after, modo presentación |
+| 08/09/2026 | Q.C4 tablero + historial + presentación | `d7c38af` | pendiente staging | Dashboard SGC, before/after, modo presentación |
 | 07/09/2026 | Q.C3 MC01-R01 | `9f5e5f4` | pendiente staging | Confidencialidad interno |
 | 07/09/2026 | Q.C3 MC01-R02 | `847b9ee` | pendiente staging | Confidencialidad externo |
 | 07/09/2026 | Q.C3 hub + MC01-R03 | `7fd1fba` | pendiente staging | Índice registros + indicadores |

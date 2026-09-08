@@ -12,8 +12,8 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** *(C4 implementado — tablero + historial + modo presentación; sin commit aún)*. Previo: `abf955b`.
-**Siguiente:** commit/push C4 → deploy staging; alertas Calendar diferidas.
+**Último commit de avance Calidad:** `d7c38af` (C4 — tablero + historial + modo presentación). Previo: `abf955b`.
+**Siguiente:** deploy staging; alertas Calendar diferidas.
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
 ### Principio: los registros se generan en el sistema
@@ -63,7 +63,7 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 
 1. Deploy staging del **C4** (tablero + historial UI + modo presentación) tras commit/push.
 2. Alertas Calendar → notificaciones (diferido).
-3. ~~C4 implementación~~ **implementado** (pendiente hash de commit en este §0).
+3. ~~C4 implementación~~ **implementado** en `d7c38af`.
 ### Reglas de trabajo que ya aplican
 
 - **No** agregar registros al menú lateral: `qualityRecordRoutes.ts` (`ready: true`) + ruta + “Abrir registro” desde árbol.
