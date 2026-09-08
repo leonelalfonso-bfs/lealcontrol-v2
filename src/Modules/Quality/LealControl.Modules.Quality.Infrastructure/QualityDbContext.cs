@@ -36,6 +36,7 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityMaintenancePlanItem> MaintenancePlanItems => Set<QualityMaintenancePlanItem>();
     public DbSet<QualityEquipmentLogEntry> EquipmentLogEntries => Set<QualityEquipmentLogEntry>();
     public DbSet<QualityAuditEvent> AuditEvents => Set<QualityAuditEvent>();
+    public DbSet<QualityPresentationSession> PresentationSessions => Set<QualityPresentationSession>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
         : this(options, null)
@@ -500,6 +501,17 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.PerformedByName).HasMaxLength(160);
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.EntityType, x.EntityId, x.OccurredAtUtc });
+        });
+
+        modelBuilder.Entity<QualityPresentationSession>(b =>
+        {
+            b.ToTable("presentation_sessions", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.StartedByName).HasMaxLength(160).IsRequired();
+            b.Property(x => x.ClientIp).HasMaxLength(64);
+            b.Property(x => x.UserAgent).HasMaxLength(400);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.StartedByUserId, x.EndedAtUtc });
         });
 
     }
@@ -1057,7 +1069,19 @@ public sealed class QualityDbContext : DbContext
                 ""PerformedByName"" character varying(160) NOT NULL DEFAULT '',
                 ""OccurredAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
-            @"CREATE INDEX IF NOT EXISTS ""IX_quality_audit_Tenant_Entity_Occurred"" ON quality.audit_events (""TenantId"", ""EntityType"", ""EntityId"", ""OccurredAtUtc"");"
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_audit_Tenant_Entity_Occurred"" ON quality.audit_events (""TenantId"", ""EntityType"", ""EntityId"", ""OccurredAtUtc"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.presentation_sessions (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""StartedByUserId"" uuid NOT NULL,
+                ""StartedByName"" character varying(160) NOT NULL DEFAULT '',
+                ""StartedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""EndedAtUtc"" timestamp with time zone,
+                ""ClientIp"" character varying(64) NOT NULL DEFAULT '',
+                ""UserAgent"" character varying(400) NOT NULL DEFAULT ''
+            );",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_presentation_Tenant_User_Ended"" ON quality.presentation_sessions (""TenantId"", ""StartedByUserId"", ""EndedAtUtc"");"
         };
 
         foreach (var sql in statements)

@@ -4,6 +4,8 @@ import { api } from "../../api/client";
 import type { QualityComplaint } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
 import { COMPLAINT_CHANNEL, labelOf } from "./qualityLabels";
+import { QualityAuditHistory } from "./QualityAuditHistory";
+import { usePresentationMode } from "../../context/PresentationModeContext";
 
 const STATUS_LABEL: Record<string, string> = {
   Open: "Registrada",
@@ -25,6 +27,7 @@ function statusLabel(s: string) {
 }
 
 export function QualityPg03R01Page() {
+  const { active: presentation } = usePresentationMode();
   const [rows, setRows] = useState<QualityComplaint[]>([]);
   const [overdueOpen, setOverdueOpen] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -157,7 +160,8 @@ export function QualityPg03R01Page() {
     }
   };
 
-  const editable = selected
+  const editable = !presentation
+    && selected
     && selected.status !== "Closed"
     && selected.status !== "Invalid"
     && selected.status !== "Cancelled";
@@ -209,7 +213,7 @@ export function QualityPg03R01Page() {
           <button type="button" className="btn btn-outline" disabled={filtered.length === 0} onClick={exportExcel}>
             Exportar Excel ({filtered.length})
           </button>
-          <button type="button" className="btn btn-primary" disabled={busy} onClick={() => setShowForm((v) => !v)}>
+          <button type="button" className="btn btn-primary" disabled={busy || presentation} onClick={() => setShowForm((v) => !v)}>
             {showForm ? "Cerrar alta" : "Nueva queja"}
           </button>
         </div>
@@ -471,6 +475,8 @@ export function QualityPg03R01Page() {
                 investigación {new Date(selected.investigateDueAt).toLocaleDateString("es-AR")} ·
                 cierre {new Date(selected.closeDueAt).toLocaleDateString("es-AR")}
               </div>
+
+              <QualityAuditHistory entityType="Complaint" entityId={selected.id} />
             </>
           )}
         </div>

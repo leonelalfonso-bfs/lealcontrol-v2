@@ -62,6 +62,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   if (tenantId) {
     headers["X-Tenant-Id"] = tenantId;
   }
+  if (typeof window !== "undefined" && localStorage.getItem("leal_presentation_mode") === "1") {
+    headers["X-Presentation-Mode"] = "1";
+  }
   const userStr = typeof window !== "undefined" ? localStorage.getItem("leal_user") : null;
   if (userStr) {
     try {
@@ -1175,6 +1178,36 @@ export const api = {
   // ==========================================
   getQualityDashboard: () =>
     request<import("./types/quality").QualityDashboard>("/api/v1/quality/dashboard"),
+
+  getQualityAuditTrail: (entityType: string, entityId: string) =>
+    request<{
+      entityType: string;
+      entityId: string;
+      rows: import("./types/quality").QualityAuditEventRow[];
+    }>(`/api/v1/quality/audit/${encodeURIComponent(entityType)}/${entityId}`),
+
+  getQualityPresentationStatus: () =>
+    request<{
+      active: boolean;
+      sessionId?: string;
+      startedAtUtc?: string;
+      startedByName?: string;
+    }>("/api/v1/quality/presentation/status"),
+
+  startQualityPresentation: () =>
+    request<{
+      active: boolean;
+      sessionId: string;
+      startedAtUtc: string;
+      startedByName: string;
+      resumed?: boolean;
+    }>("/api/v1/quality/presentation/start", { method: "POST", body: "{}" }),
+
+  endQualityPresentation: (password: string) =>
+    request<{ active: boolean; closed: number }>("/api/v1/quality/presentation/end", {
+      method: "POST",
+      body: JSON.stringify({ password })
+    }),
 
   getQualityDocumentTree: () =>
     request<import("./types/quality").QualityDocumentTreeNode[]>("/api/v1/quality/documents/tree"),

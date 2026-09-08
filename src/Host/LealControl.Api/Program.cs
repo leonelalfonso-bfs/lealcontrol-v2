@@ -337,6 +337,7 @@ try
     app.UseRateLimiter();
     app.UseAuthentication();
     app.UseMiddleware<ContractedModuleMiddleware>();
+    app.UseMiddleware<LealControl.Modules.Quality.Infrastructure.PresentationModeMiddleware>();
     app.UseAuthorization();
     app.Use(async (context, next) =>
     {

@@ -12,8 +12,8 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** `abf955b` (Linked IT + etiquetas ES). Fix CI: `85b8b24`.  
-**Siguiente:** **C4** (tablero SGC / modo presentación) o pulido.  
+**Último commit de avance Calidad:** *(C4 implementado — tablero + historial + modo presentación; sin commit aún)*. Previo: `abf955b`.
+**Siguiente:** commit/push C4 → deploy staging; alertas Calendar diferidas.
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
 ### Principio: los registros se generan en el sistema
@@ -37,6 +37,7 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | **C1** Árbol documental + seed + upload/approve + descarga JWT | ✅ Cerrado | Pendiente operativo: poblar `tools/quality-seed/input/` desde Drive |
 | **C2** Snapshot SGC + approve DT + termómetro + **PG14-R3/R4** + **PG14-R1** + **PG09 R2** + **Linked IT** | ✅ Cerrado (ítems listados) | ✅ PG14-R3/R4 + PG14-R1 + PG09 R2 + vistas Linked IT01–IT04 R1/R2/R3 + etiquetas ES |
 | **C3 nav** Menú sin un ítem por registro | ✅ | Lateral: Tablero · Árbol · Registros operativos (`/calidad/registros`) |
+| **C4** Tablero SGC + historial + modo presentación | ✅ Implementado | Alertas NC/quejas/calib/autorizaciones; matriz 17025; before/after PG03/PG07; PresentationModeMiddleware |
 | **MC01-R01** Confidencialidad interno | ✅ | Attachment + metadatos de instancia |
 | **MC01-R02** Confidencialidad externo | ✅ | Idem + organización |
 | **MC01-R03** Indicadores | ✅ | Structured: Indicator + IndicatorValue |
@@ -60,9 +61,9 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 
 ### Siguiente sesión
 
-1. **C4** (dashboard SGC, modo presentación) o pulido de etiquetas/UI.
-2. ~~Resto **C2** (**Linked IT**).~~ ✅ Hecho.
-3. ~~(Opcional) PG09 R2 enmienda de informe.~~ ✅ Hecho.
+1. Deploy staging del **C4** (tablero + historial UI + modo presentación) tras commit/push.
+2. Alertas Calendar → notificaciones (diferido).
+3. ~~C4 implementación~~ **implementado** (pendiente hash de commit en este §0).
 ### Reglas de trabajo que ya aplican
 
 - **No** agregar registros al menú lateral: `qualityRecordRoutes.ts` (`ready: true`) + ruta + “Abrir registro” desde árbol.

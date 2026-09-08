@@ -3,6 +3,7 @@ using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Security;
 using LealControl.BuildingBlocks.Storage;
 using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Metrology.Contracts;
 using LealControl.Modules.Quality.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -39,8 +40,13 @@ public static class QualityEndpoints
         group.MapPg08Records();
         group.MapPg09Records();
         group.MapPg14Records();
+        group.MapPresentationMode();
 
-        group.MapGet("/dashboard", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
+        group.MapGet("/dashboard", async (
+            ITenantContext tenant,
+            QualityDbContext db,
+            IMetrologyAssetCatalog metrologyCatalog,
+            CancellationToken ct) =>
         {
             try
             {
@@ -48,21 +54,194 @@ public static class QualityEndpoints
                 await db.EnsureQualityTablesAsync(ct);
                 await QualitySeed.EnsureCatalogAsync(db, tenantId, ct);
 
+                var now = DateTime.UtcNow;
+                var horizon60 = now.AddDays(60);
+                var horizon30 = now.AddDays(30);
+
                 var docs = await db.Documents.AsNoTracking()
                     .Where(d => d.TenantId == tenantId)
                     .ToListAsync(ct);
 
-                var now = DateTime.UtcNow;
+                var openNcStatuses = new[]
+                {
+                    QualityNonConformityStatuses.Open,
+                    QualityNonConformityStatuses.InAnalysis,
+                    QualityNonConformityStatuses.ActionPending,
+                    QualityNonConformityStatuses.EffectivenessCheck
+                };
+                var openNcQuery = db.NonConformities.AsNoTracking()
+                    .Where(n => n.TenantId == tenantId && openNcStatuses.Contains(n.Status));
+                var openNcCount = await openNcQuery.CountAsync(ct);
+                var openNcs = await openNcQuery
+                    .OrderBy(n => n.DueDate ?? n.DetectedAt)
+                    .Take(20)
+                    .ToListAsync(ct);
+
+                var openComplaints = await db.Complaints.AsNoTracking()
+                    .Where(c => c.TenantId == tenantId
+                        && c.Status != QualityComplaintStatuses.Closed
+                        && c.Status != QualityComplaintStatuses.Invalid
+                        && c.Status != QualityComplaintStatuses.Cancelled)
+                    .ToListAsync(ct);
+                var overdueComplaints = openComplaints.Where(IsComplaintOverdue).OrderBy(c => c.CloseDueAt).Take(20).ToList();
+
+                var authRows = await db.PersonnelAuthorizations.AsNoTracking()
+                    .Where(a => a.TenantId == tenantId
+                        && a.Status == QualityAuthorizationStatuses.Authorized
+                        && a.ValidUntil.HasValue
+                        && a.ValidUntil.Value <= horizon60)
+                    .OrderBy(a => a.ValidUntil)
+                    .Take(20)
+                    .ToListAsync(ct);
+
+                var maintOverdue = await db.MaintenancePlanItems.AsNoTracking()
+                    .Where(m => m.TenantId == tenantId
+                        && m.Status == "Active"
+                        && m.NextDue.HasValue
+                        && m.NextDue.Value < now)
+                    .OrderBy(m => m.NextDue)
+                    .Take(20)
+                    .ToListAsync(ct);
+
+                IReadOnlyList<MetrologyCatalogAsset> assets = Array.Empty<MetrologyCatalogAsset>();
+                try
+                {
+                    assets = await metrologyCatalog.ListCalibrationAssetsAsync(tenantId.Value, ct);
+                }
+                catch
+                {
+                    // Metrología puede no estar inicializada en el tenant; el tablero sigue con el resto.
+                }
+
+                var calibSoon = assets
+                    .Where(a => a.ExpirationDate.HasValue
+                        && a.ExpirationDate.Value >= now
+                        && a.ExpirationDate.Value <= horizon30
+                        && !string.Equals(a.Status, "Retired", StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(a.Status, "Obsolete", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(a => a.ExpirationDate)
+                    .Take(20)
+                    .ToList();
+                var calibOverdue = assets
+                    .Where(a => a.ExpirationDate.HasValue
+                        && a.ExpirationDate.Value < now
+                        && !string.Equals(a.Status, "Retired", StringComparison.OrdinalIgnoreCase)
+                        && !string.Equals(a.Status, "Obsolete", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(a => a.ExpirationDate)
+                    .Take(20)
+                    .ToList();
+
+                var docsDueReview = docs
+                    .Where(d => d.NextReviewDate.HasValue
+                        && d.NextReviewDate.Value <= horizon60
+                        && d.Status is QualityDocumentStatuses.Current or QualityDocumentStatuses.Approved)
+                    .OrderBy(d => d.NextReviewDate)
+                    .Take(20)
+                    .Select(d => new
+                    {
+                        d.Code,
+                        d.DisplayCode,
+                        d.Title,
+                        d.Status,
+                        nextReviewDate = d.NextReviewDate,
+                        overdue = d.NextReviewDate < now
+                    })
+                    .ToList();
+
+                // Matriz cláusulas ISO 17025: verde si hay al menos un doc Current/Approved que la cubre.
+                var clauseCoverage = new Dictionary<string, (bool Covered, List<string> Codes)>(StringComparer.Ordinal);
+                foreach (var doc in docs.Where(d => !string.IsNullOrWhiteSpace(d.Iso17025Clauses)))
+                {
+                    var covered = doc.Status is QualityDocumentStatuses.Current or QualityDocumentStatuses.Approved;
+                    foreach (var raw in doc.Iso17025Clauses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        if (!clauseCoverage.TryGetValue(raw, out var entry))
+                            entry = (false, new List<string>());
+                        if (covered) entry.Covered = true;
+                        if (!entry.Codes.Contains(doc.Code, StringComparer.OrdinalIgnoreCase))
+                            entry.Codes.Add(doc.Code);
+                        clauseCoverage[raw] = entry;
+                    }
+                }
+
+                var clauseMatrix = clauseCoverage
+                    .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                    .Select(kv => new
+                    {
+                        clause = kv.Key,
+                        status = kv.Value.Covered ? "ok" : "gap",
+                        documents = kv.Value.Codes
+                    })
+                    .ToList();
+
                 return Results.Ok(new
                 {
                     totalDocuments = docs.Count,
                     byType = docs.GroupBy(d => d.Type).ToDictionary(g => g.Key, g => g.Count()),
                     current = docs.Count(d => d.Status == QualityDocumentStatuses.Current),
                     draft = docs.Count(d => d.Status == QualityDocumentStatuses.Draft),
-                    reviewDue = docs.Count(d => d.NextReviewDate.HasValue && d.NextReviewDate.Value <= now.AddDays(60)
+                    reviewDue = docs.Count(d => d.NextReviewDate.HasValue && d.NextReviewDate.Value <= horizon60
                         && d.Status is QualityDocumentStatuses.Current or QualityDocumentStatuses.Approved),
                     overdueReview = docs.Count(d => d.NextReviewDate.HasValue && d.NextReviewDate.Value < now
-                        && d.Status is QualityDocumentStatuses.Current or QualityDocumentStatuses.Approved)
+                        && d.Status is QualityDocumentStatuses.Current or QualityDocumentStatuses.Approved),
+                    openNonConformities = openNcCount,
+                    overdueComplaints = overdueComplaints.Count,
+                    authorizationsExpiring = authRows.Count,
+                    calibrationsDueSoon = calibSoon.Count,
+                    calibrationsOverdue = calibOverdue.Count,
+                    maintenanceOverdue = maintOverdue.Count,
+                    alerts = new
+                    {
+                        documentsReview = docsDueReview,
+                        nonConformities = openNcs.Select(n => new
+                        {
+                            n.Id,
+                            n.Number,
+                            n.Kind,
+                            n.Status,
+                            n.Description,
+                            dueDate = n.NewDueDate ?? n.DueDate,
+                            href = "/calidad/registros/nc"
+                        }),
+                        complaints = overdueComplaints.Select(c => new
+                        {
+                            c.Id,
+                            c.Number,
+                            c.PartyName,
+                            c.Status,
+                            currentDueAt = ComplaintCurrentDue(c),
+                            href = "/calidad/registros/quejas"
+                        }),
+                        authorizations = authRows.Select(a => new
+                        {
+                            a.Id,
+                            a.Number,
+                            a.PersonName,
+                            a.MethodDocumentCode,
+                            a.ValidUntil,
+                            href = "/calidad/registros/personal"
+                        }),
+                        calibrations = calibOverdue.Concat(calibSoon).Select(a => new
+                        {
+                            a.Id,
+                            a.Code,
+                            a.Description,
+                            a.ExpirationDate,
+                            a.Status,
+                            overdue = a.ExpirationDate < now,
+                            href = a.DeepLinkPath ?? "/calidad/registros/equipos"
+                        }),
+                        maintenance = maintOverdue.Select(m => new
+                        {
+                            m.Id,
+                            m.Number,
+                            m.EquipmentCode,
+                            m.Activity,
+                            m.NextDue,
+                            href = "/calidad/registros/equipos"
+                        })
+                    },
+                    clauseMatrix
                 });
             }
             catch (Exception ex)
@@ -1885,17 +2064,19 @@ public static class QualityEndpoints
         };
     }
 
+    private static DateTime? ComplaintCurrentDue(QualityComplaint c) => c.Status switch
+    {
+        QualityComplaintStatuses.Open => c.RegisterDueAt,
+        QualityComplaintStatuses.UnderValidation => c.ValidateDueAt,
+        QualityComplaintStatuses.Investigating => c.InvestigateDueAt,
+        QualityComplaintStatuses.PendingCommunication => c.CloseDueAt,
+        _ => null
+    };
+
     private static object ToComplaintDto(QualityComplaint c)
     {
         var overdue = IsComplaintOverdue(c);
-        DateTime? currentDue = c.Status switch
-        {
-            QualityComplaintStatuses.Open => c.RegisterDueAt,
-            QualityComplaintStatuses.UnderValidation => c.ValidateDueAt,
-            QualityComplaintStatuses.Investigating => c.InvestigateDueAt,
-            QualityComplaintStatuses.PendingCommunication => c.CloseDueAt,
-            _ => null
-        };
+        DateTime? currentDue = ComplaintCurrentDue(c);
 
         return new
         {

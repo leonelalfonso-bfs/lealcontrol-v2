@@ -4,6 +4,8 @@ import { api } from "../../api/client";
 import type { QualityNonConformity } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
 import { EFFECTIVENESS_RESULT, labelOf } from "./qualityLabels";
+import { QualityAuditHistory } from "./QualityAuditHistory";
+import { usePresentationMode } from "../../context/PresentationModeContext";
 
 const KIND_LABEL: Record<string, string> = {
   NonConformity: "NC",
@@ -34,6 +36,7 @@ function statusLabel(s: string) {
 }
 
 export function QualityPg07R01Page() {
+  const { active: presentation } = usePresentationMode();
   const [searchParams] = useSearchParams();
   const fromComplaint = searchParams.get("fromComplaint") || undefined;
   const fromAudit = searchParams.get("fromAudit") || undefined;
@@ -177,7 +180,7 @@ export function QualityPg07R01Page() {
     }
   };
 
-  const editable = selected && selected.status !== "Closed" && selected.status !== "Cancelled";
+  const editable = !presentation && selected && selected.status !== "Closed" && selected.status !== "Cancelled";
 
   const exportExcel = () => {
     const columns: ExcelColumn<QualityNonConformity>[] = [
@@ -215,7 +218,7 @@ export function QualityPg07R01Page() {
           <button type="button" className="btn btn-outline" disabled={filtered.length === 0} onClick={exportExcel}>
             Exportar Excel ({filtered.length})
           </button>
-          <button type="button" className="btn btn-primary" disabled={busy} onClick={() => setShowForm((v) => !v)}>
+          <button type="button" className="btn btn-primary" disabled={busy || presentation} onClick={() => setShowForm((v) => !v)}>
             {showForm ? "Cerrar alta" : "Nuevo registro"}
           </button>
         </div>
@@ -472,6 +475,8 @@ export function QualityPg07R01Page() {
                   <div style={{ marginTop: 8 }}><strong>Eficacia:</strong> {labelOf(EFFECTIVENESS_RESULT, selected.effectivenessResult)} · {selected.effectivenessCheck || ""}</div>
                 </div>
               )}
+
+              <QualityAuditHistory entityType="NonConformity" entityId={selected.id} />
             </>
           )}
         </div>

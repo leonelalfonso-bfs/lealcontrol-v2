@@ -48,6 +48,80 @@ export interface QualityDashboard {
   draft: number;
   reviewDue: number;
   overdueReview: number;
+  openNonConformities?: number;
+  overdueComplaints?: number;
+  authorizationsExpiring?: number;
+  calibrationsDueSoon?: number;
+  calibrationsOverdue?: number;
+  maintenanceOverdue?: number;
+  alerts?: {
+    documentsReview?: Array<{
+      code: string;
+      displayCode?: string;
+      title: string;
+      status: string;
+      nextReviewDate?: string | null;
+      overdue?: boolean;
+    }>;
+    nonConformities?: Array<{
+      id: string;
+      number: string;
+      kind: string;
+      status: string;
+      description?: string;
+      dueDate?: string | null;
+      href?: string;
+    }>;
+    complaints?: Array<{
+      id: string;
+      number: string;
+      partyName: string;
+      status: string;
+      currentDueAt?: string | null;
+      href?: string;
+    }>;
+    authorizations?: Array<{
+      id: string;
+      number: string;
+      personName: string;
+      methodDocumentCode: string;
+      validUntil?: string | null;
+      href?: string;
+    }>;
+    calibrations?: Array<{
+      id: string;
+      code: string;
+      description?: string;
+      expirationDate?: string | null;
+      status?: string;
+      overdue?: boolean;
+      href?: string | null;
+    }>;
+    maintenance?: Array<{
+      id: string;
+      number: string;
+      equipmentCode?: string;
+      activity?: string;
+      nextDue?: string | null;
+      href?: string;
+    }>;
+  };
+  clauseMatrix?: Array<{
+    clause: string;
+    status: "ok" | "gap" | string;
+    documents: string[];
+  }>;
+}
+
+export interface QualityAuditEventRow {
+  id: string;
+  eventType: string;
+  summary: string;
+  beforeJson: string;
+  afterJson: string;
+  performedByUserId?: string | null;
+  performedByName?: string;
+  occurredAtUtc: string;
 }
 
 export interface QualityDocumentDetail {

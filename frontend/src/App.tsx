@@ -2,6 +2,7 @@ import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { api } from "./api/client";
 import { useAuth } from "./context/AuthContext";
+import { usePresentationMode } from "./context/PresentationModeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AskLealAssistantModal } from "./components/AskLealAssistantModal";
 import { CommunicationsNotificationBell } from "./components/CommunicationsNotificationBell";
@@ -183,12 +184,21 @@ function withPageSuspense(node: ReactNode) {
 export function App() {
   const location = useLocation();
   const { user, tenant, availableTenants, switchTenant, logout } = useAuth();
+  const {
+    active: presentationActive,
+    loading: presentationLoading,
+    start: startPresentation,
+    end: endPresentation
+  } = usePresentationMode();
 
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("Empresa");
   const [appsOpen, setAppsOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showAskLeal, setShowAskLeal] = useState(false);
+  const [exitPresentationOpen, setExitPresentationOpen] = useState(false);
+  const [exitPassword, setExitPassword] = useState("");
+  const [exitError, setExitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || !tenant?.id) return;
@@ -207,10 +217,14 @@ export function App() {
   const allowedModuleIds = resolveAllowedModuleIds(userRole, user?.allowedModulesJson);
 
   const allMods = visibleModules(DEVELOPMENT_ACCESS);
-  const modules = allMods.filter((m) => m.id === "inicio" || allowedModuleIds.includes(m.id));
+  const modules = allMods
+    .filter((m) => m.id === "inicio" || allowedModuleIds.includes(m.id))
+    .filter((m) => !presentationActive || m.id === "inicio" || m.id === "calidad" || m.id === "metrologia");
   const activeModule = resolveActiveModule(location.pathname, DEVELOPMENT_ACCESS);
   const activeModuleId = activeModule.id;
-  const hasCommunications = !!user && allowedModuleIds.includes("comunicaciones");
+  const hasCommunications = !!user && allowedModuleIds.includes("comunicaciones") && !presentationActive;
+  const canTogglePresentation =
+    !!user && (allowedModuleIds.includes("calidad") || activeModuleId === "calidad" || activeModuleId === "metrologia");
   useCommunicationsBrowserNotifications(hasCommunications);
 
   if (location.pathname === "/login") {
@@ -364,6 +378,34 @@ export function App() {
             <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid var(--surface-border)" }}>
               {hasCommunications && <CommunicationsNotificationBell />}
 
+              {canTogglePresentation && (
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  disabled={presentationLoading}
+                  onClick={() => {
+                    if (presentationActive) {
+                      setExitError(null);
+                      setExitPassword("");
+                      setExitPresentationOpen(true);
+                    } else {
+                      void startPresentation().catch((err) =>
+                        window.alert(err instanceof Error ? err.message : String(err))
+                      );
+                    }
+                  }}
+                  style={{
+                    fontSize: "0.75rem",
+                    borderColor: presentationActive ? "#b45309" : undefined,
+                    color: presentationActive ? "#b45309" : undefined,
+                    fontWeight: 700
+                  }}
+                  title={presentationActive ? "Salir del modo presentación (requiere contraseña)" : "Activar modo presentación para auditoría"}
+                >
+                  {presentationActive ? "Salir modo presentación" : "Modo presentación · Auditoría"}
+                </button>
+              )}
+
               {/* User Session Bar */}
               {user && (
                 <div style={{
@@ -372,16 +414,16 @@ export function App() {
                   justifyContent: "space-between",
                   padding: "6px 10px",
                   borderRadius: "8px",
-                  background: "var(--surface-muted)",
-                  border: "1px solid var(--surface-border)",
+                  background: presentationActive ? "#fff7ed" : "var(--surface-muted)",
+                  border: `1px solid ${presentationActive ? "#fdba74" : "var(--surface-border)"}`,
                   fontSize: "0.78rem"
                 }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       👤 {user.fullName}
                     </div>
-                    <div style={{ fontSize: "0.68rem", color: "var(--brand-accent)" }}>
-                      {user.role}
+                    <div style={{ fontSize: "0.68rem", color: presentationActive ? "#b45309" : "var(--brand-accent)" }}>
+                      {presentationActive ? "Presentación · solo lectura" : user.role}
                     </div>
                   </div>
                   <button
@@ -705,6 +747,61 @@ export function App() {
         </div>
 
         {/* Asistente Copiloto Modal */}
+        {exitPresentationOpen && (
+          <div className="modal-backdrop" role="presentation" onClick={() => setExitPresentationOpen(false)}>
+            <div
+              className="card pad"
+              role="dialog"
+              aria-modal="true"
+              style={{ maxWidth: 420, margin: "12vh auto", background: "var(--surface)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ marginTop: 0 }}>Salir del modo presentación</h3>
+              <p className="muted" style={{ fontSize: 13 }}>
+                Por seguridad, reingresá tu contraseña. Así el auditor no puede desactivar el modo solo.
+              </p>
+              <label style={{ display: "block", fontSize: 13, marginBottom: 4 }}>Contraseña</label>
+              <input
+                type="password"
+                value={exitPassword}
+                onChange={(e) => setExitPassword(e.target.value)}
+                autoFocus
+                style={{ width: "100%", marginBottom: 8 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    void endPresentation(exitPassword)
+                      .then(() => {
+                        setExitPresentationOpen(false);
+                        setExitPassword("");
+                      })
+                      .catch((err) => setExitError(err instanceof Error ? err.message : String(err)));
+                  }
+                }}
+              />
+              {exitError && <p style={{ color: "#b91c1c", fontSize: 13 }}>{exitError}</p>}
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+                <button type="button" className="btn ghost" onClick={() => setExitPresentationOpen(false)}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={presentationLoading || !exitPassword}
+                  onClick={() => {
+                    void endPresentation(exitPassword)
+                      .then(() => {
+                        setExitPresentationOpen(false);
+                        setExitPassword("");
+                      })
+                      .catch((err) => setExitError(err instanceof Error ? err.message : String(err)));
+                  }}
+                >
+                  Salir
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <AskLealAssistantModal isOpen={showAskLeal} onClose={() => setShowAskLeal(false)} />
       </div>
     </ProtectedRoute>
