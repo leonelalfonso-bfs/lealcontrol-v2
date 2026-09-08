@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityDocumentDetail } from "../../api/types/quality";
-import { operationalRecordFor } from "./qualityRecordRoutes";
+import {
+  displayCodeForRecord,
+  operationalRecordFor,
+  recordsForParentDocument
+} from "./qualityRecordRoutes";
 import { labelOf, QUALITY_DOC_STATUS } from "./qualityLabels";
 
 function parseApiError(err: unknown): string {
@@ -27,6 +31,7 @@ export function QualityDocumentDetailPage() {
   const [targetVersion, setTargetVersion] = useState<number | null>(null);
   const [changeSummary, setChangeSummary] = useState("");
   const [reviewedBy, setReviewedBy] = useState("Leonel Alfonso");
+  const [recordToAdd, setRecordToAdd] = useState("");
 
   const reload = useCallback(() => {
     if (!code) return;
@@ -49,6 +54,14 @@ export function QualityDocumentDetailPage() {
   const selected = data?.versions.find((v) => v.version === targetVersion)
     ?? data?.versions.find((v) => v.id === data.document.currentVersionId)
     ?? data?.versions[0];
+
+  const availableRecords = useMemo(() => {
+    if (!data) return [];
+    const existing = new Set(data.children.map((c) => c.code.toUpperCase()));
+    return recordsForParentDocument(data.document.code).filter(
+      (r) => r.ready && !existing.has(r.code.toUpperCase())
+    );
+  }, [data]);
 
   const run = async (label: string, fn: () => Promise<void>) => {
     setBusy(true);
@@ -112,12 +125,37 @@ export function QualityDocumentDetailPage() {
     });
   };
 
+  const onAddRecord = async () => {
+    if (!data || !recordToAdd) return;
+    const catalog = operationalRecordFor(recordToAdd);
+    if (!catalog) {
+      setActionError("Tipo de registro no reconocido.");
+      return;
+    }
+    await run(`Registro ${catalog.code} agregado al árbol.`, async () => {
+      await api.createQualityDocument({
+        code: catalog.code,
+        title: catalog.title,
+        displayCode: displayCodeForRecord(catalog.code),
+        type: "RecordTemplate",
+        parentId: data.document.id,
+        sortOrder: data.children.length + 1,
+        recordKind: catalog.kind,
+        linkedModule: catalog.kind === "Linked" ? "metrology" : undefined,
+        changeSummary: "Alta de registro en el árbol SGC",
+        markCurrent: true
+      });
+      setRecordToAdd("");
+    });
+  };
+
   if (loading && !data) return <div className="workspace-page pad">Cargando {code}…</div>;
   if (error) return <div className="workspace-page pad" style={{ color: "#b91c1c" }}>{error}</div>;
   if (!data) return null;
 
   const d = data.document;
   const published = data.versions.find((v) => v.id === d.currentVersionId);
+  const canAttachRecords = d.type === "Manual" || d.type === "Procedure" || d.type === "Instruction";
 
   return (
     <div className="workspace-page pad">
@@ -164,6 +202,73 @@ export function QualityDocumentDetailPage() {
           }}
         >
           {actionError || actionMsg}
+        </div>
+      )}
+
+      {canAttachRecords && (
+        <div className="card pad" style={{ marginTop: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Registros asociados</h3>
+          <p style={{ margin: "0 0 12px", color: "#64748b", fontSize: 13 }}>
+            Elegí un registro del sistema (formato ya existente) para colgarlo de este documento.
+            No se inventan pantallas nuevas: solo se arma el árbol.
+          </p>
+
+          {data.children.length > 0 ? (
+            <ul style={{ margin: "0 0 16px", paddingLeft: 18 }}>
+              {data.children.map((c) => {
+                const op = operationalRecordFor(c.code);
+                return (
+                  <li key={c.id} style={{ marginBottom: 6 }}>
+                    <Link to={`/calidad/documentos/${encodeURIComponent(c.code)}`}>
+                      {c.displayCode} — {c.title}
+                    </Link>
+                    {op?.ready && (
+                      <>
+                        {" · "}
+                        <Link to={op.path}>Abrir</Link>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p style={{ color: "#94a3b8", fontSize: 13 }}>Todavía no hay registros bajo este documento.</p>
+          )}
+
+          {availableRecords.length > 0 ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13, flex: 1, minWidth: 260 }}>
+                Agregar registro
+                <select
+                  value={recordToAdd}
+                  onChange={(e) => setRecordToAdd(e.target.value)}
+                  disabled={busy}
+                >
+                  <option value="">Seleccioná…</option>
+                  {availableRecords.map((r) => (
+                    <option key={r.code} value={r.code}>
+                      {r.code} — {r.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={busy || !recordToAdd}
+                onClick={() => void onAddRecord()}
+              >
+                Agregar al árbol
+              </button>
+            </div>
+          ) : (
+            <p style={{ margin: 0, fontSize: 13, color: "#64748b" }}>
+              {recordsForParentDocument(d.code).length === 0
+                ? "No hay tipos de registro del sistema definidos para este código todavía."
+                : "Ya están agregados todos los registros disponibles para este documento."}
+            </p>
+          )}
         </div>
       )}
 
@@ -329,21 +434,6 @@ export function QualityDocumentDetailPage() {
           </table>
         </div>
       </div>
-
-      {data.children.length > 0 && (
-        <div className="card pad" style={{ marginTop: 16 }}>
-          <h3>Registros asociados</h3>
-          <ul>
-            {data.children.map((c) => (
-              <li key={c.id}>
-                <Link to={`/calidad/documentos/${encodeURIComponent(c.code)}`}>
-                  {c.displayCode} — {c.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }
