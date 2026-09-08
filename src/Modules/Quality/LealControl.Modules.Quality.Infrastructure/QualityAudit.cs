@@ -13,6 +13,10 @@ public static class QualityAuditEntityTypes
     public const string Complaint = "Complaint";
     public const string NonConformity = "NonConformity";
     public const string InternalAudit = "InternalAudit";
+    public const string TrainingPlanItem = "TrainingPlanItem";
+    public const string PersonnelAuthorization = "PersonnelAuthorization";
+    public const string CompetenceReview = "CompetenceReview";
+    public const string RoleAssignment = "RoleAssignment";
 }
 
 public sealed class QualityAuditEvent : Entity<Guid>

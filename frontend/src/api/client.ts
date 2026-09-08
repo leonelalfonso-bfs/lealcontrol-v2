@@ -1520,6 +1520,200 @@ export const api = {
       method: "DELETE"
     }),
 
+  getQualityPg06Summary: () =>
+    request<import("./types/quality").QualityPg06Summary>("/api/v1/quality/records/pg06"),
+
+  listQualityPg06R01: () =>
+    request<{
+      code: string;
+      title: string;
+      openCount?: number;
+      rows: import("./types/quality").QualityTrainingPlanItem[];
+    }>("/api/v1/quality/records/pg06/r01"),
+
+  createQualityTraining: (body: {
+    programYear: number;
+    topic: string;
+    plannedDate?: string;
+    targetRoles?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityTrainingPlanItem>("/api/v1/quality/records/pg06/r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityTraining: (
+    id: string,
+    body: {
+      programYear?: number;
+      topic?: string;
+      targetRoles?: string;
+      plannedDate?: string;
+      doneDate?: string;
+      effectivenessCheck?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityTrainingPlanItem>(`/api/v1/quality/records/pg06/r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityTraining: (id: string) =>
+    request<import("./types/quality").QualityTrainingPlanItem>(`/api/v1/quality/records/pg06/r01/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg06R02: () =>
+    request<{
+      code: string;
+      title: string;
+      rows: import("./types/quality").QualityPersonnelAuthorization[];
+    }>("/api/v1/quality/records/pg06/r02"),
+
+  getQualityPersonnelAuthorization: (id: string) =>
+    request<import("./types/quality").QualityPersonnelAuthorization>(`/api/v1/quality/records/pg06/r02/${id}`),
+
+  createQualityPersonnelAuthorization: (body: {
+    userId: string;
+    personName: string;
+    methodDocumentCode: string;
+    methodTitle?: string;
+    trainingEvidence?: string;
+    supervisedBy?: string;
+    validUntil?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityPersonnelAuthorization>("/api/v1/quality/records/pg06/r02", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityPersonnelAuthorization: (
+    id: string,
+    body: {
+      personName?: string;
+      methodDocumentCode?: string;
+      methodTitle?: string;
+      trainingEvidence?: string;
+      supervisedBy?: string;
+      validUntil?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityPersonnelAuthorization>(`/api/v1/quality/records/pg06/r02/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  authorizeQualityPersonnel: (
+    id: string,
+    body?: { authorizedAt?: string; validUntil?: string; notes?: string }
+  ) =>
+    request<import("./types/quality").QualityPersonnelAuthorization>(
+      `/api/v1/quality/records/pg06/r02/${id}/authorize`,
+      { method: "POST", body: JSON.stringify(body || {}) }
+    ),
+
+  cancelQualityPersonnelAuthorization: (id: string) =>
+    request<import("./types/quality").QualityPersonnelAuthorization>(`/api/v1/quality/records/pg06/r02/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg06R03: () =>
+    request<{
+      code: string;
+      title: string;
+      rows: import("./types/quality").QualityCompetenceReview[];
+    }>("/api/v1/quality/records/pg06/r03"),
+
+  createQualityCompetenceReview: (body: {
+    userId: string;
+    personName: string;
+    reviewYear: number;
+    evaluator?: string;
+    technicalScore?: number;
+    personalScore?: number;
+    conclusions?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityCompetenceReview>("/api/v1/quality/records/pg06/r03", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityCompetenceReview: (
+    id: string,
+    body: {
+      personName?: string;
+      reviewYear?: number;
+      evaluator?: string;
+      technicalScore?: number;
+      personalScore?: number;
+      conclusions?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityCompetenceReview>(`/api/v1/quality/records/pg06/r03/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityCompetenceReview: (id: string) =>
+    request<import("./types/quality").QualityCompetenceReview>(`/api/v1/quality/records/pg06/r03/${id}`, {
+      method: "DELETE"
+    }),
+
+  listQualityPg06R04: () =>
+    request<{
+      code: string;
+      title: string;
+      rows: import("./types/quality").QualityRoleAssignment[];
+    }>("/api/v1/quality/records/pg06/r04"),
+
+  createQualityRoleAssignment: (body: {
+    role: string;
+    userId: string;
+    personName: string;
+    since?: string;
+    substituteUserId?: string;
+    substituteName?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityRoleAssignment>("/api/v1/quality/records/pg06/r04", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityRoleAssignment: (
+    id: string,
+    body: {
+      role?: string;
+      personName?: string;
+      substituteUserId?: string;
+      substituteName?: string;
+      since?: string;
+      until?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityRoleAssignment>(`/api/v1/quality/records/pg06/r04/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityRoleAssignment: (id: string) =>
+    request<import("./types/quality").QualityRoleAssignment>(`/api/v1/quality/records/pg06/r04/${id}`, {
+      method: "DELETE"
+    }),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);

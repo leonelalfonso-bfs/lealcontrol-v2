@@ -22,7 +22,7 @@ public static class QualityEndpoints
             configureNpgsql: b => b.MigrationsAssembly(typeof(QualityDbContext).Assembly.FullName));
 
         services.AddSingleton<IFileStorage, LocalDiskFileStorage>();
-        services.AddScoped<IQualityAuthorizationGateway, QualityAuthorizationGatewayStub>();
+        services.AddScoped<IQualityAuthorizationGateway, QualityAuthorizationGateway>();
         services.AddScoped<IQualityDocumentSnapshotProvider, QualityDocumentSnapshotProvider>();
 
         return services;
@@ -33,6 +33,8 @@ public static class QualityEndpoints
         var group = endpoints.MapGroup("/api/v1/quality")
             .WithTags("Quality ISO 17025")
             .RequirePolicyOnWrites("RequireQuality");
+
+        group.MapPg06Records();
 
         group.MapGet("/dashboard", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
         {
@@ -2121,14 +2123,54 @@ public sealed record UpdateVersionRequest(
 
 public sealed record AttachFileRequest(Guid FileId, string? Role = null);
 
-/// <summary>Stub C1: autorizaciones reales en C3. Snapshot sí funciona.</summary>
-public sealed class QualityAuthorizationGatewayStub : IQualityAuthorizationGateway
+/// <summary>Autorizaciones PG06-R02 reales; DT se valida por claim JWT (policy RequireTechnicalDirector).</summary>
+public sealed class QualityAuthorizationGateway(QualityDbContext db) : IQualityAuthorizationGateway
 {
-    public Task<bool> IsAuthorizedAsync(Guid tenantId, Guid userId, string methodDocumentCode, DateTime asOfUtc, CancellationToken cancellationToken = default)
-        => Task.FromResult(true);
+    public async Task<bool> IsAuthorizedAsync(
+        Guid tenantId,
+        Guid userId,
+        string methodDocumentCode,
+        DateTime asOfUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var tid = new TenantId(tenantId);
+        var code = NormalizeMethod(methodDocumentCode);
+        if (string.IsNullOrEmpty(code))
+            return false;
 
-    public Task<bool> IsTechnicalDirectorAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken = default)
+        await db.EnsureQualityTablesAsync(cancellationToken);
+
+        var rows = await db.PersonnelAuthorizations.AsNoTracking()
+            .Where(a => a.TenantId == tid
+                        && a.UserId == userId
+                        && a.Status == QualityAuthorizationStatuses.Authorized)
+            .ToListAsync(cancellationToken);
+
+        return rows.Any(a =>
+        {
+            var method = NormalizeMethod(a.MethodDocumentCode);
+            if (!string.Equals(method, code, StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (a.AuthorizedAt.HasValue && a.AuthorizedAt.Value > asOfUtc)
+                return false;
+            if (a.ValidUntil.HasValue && a.ValidUntil.Value < asOfUtc)
+                return false;
+            return true;
+        });
+    }
+
+    public Task<bool> IsTechnicalDirectorAsync(
+        Guid tenantId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+        // El flag vive en CRM (JWT claim technical_director). Esta consulta no cruza módulos.
         => Task.FromResult(false);
+
+    private static string NormalizeMethod(string code) =>
+        string.IsNullOrWhiteSpace(code)
+            ? string.Empty
+            : new string(code.Trim().ToUpperInvariant().Where(ch => !char.IsWhiteSpace(ch)).ToArray())
+                .Replace('_', '-');
 }
 
 public sealed class QualityDocumentSnapshotProvider(QualityDbContext db) : IQualityDocumentSnapshotProvider

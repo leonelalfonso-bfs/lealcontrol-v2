@@ -90,6 +90,38 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "Checklist y cláusulas dentro de la auditoría."
   },
   {
+    code: "PG06-R01",
+    title: "Programa de capacitaciones",
+    path: "/calidad/registros/personal?tab=r01",
+    kind: "Structured",
+    ready: true,
+    blurb: "Capacitaciones del año con seguimiento de eficacia."
+  },
+  {
+    code: "PG06-R02",
+    title: "Entrenamiento y autorización del personal",
+    path: "/calidad/registros/personal?tab=r02",
+    kind: "Structured",
+    ready: true,
+    blurb: "Autorización por método/IT firmada por Director Técnico."
+  },
+  {
+    code: "PG06-R03",
+    title: "Seguimiento de competencias",
+    path: "/calidad/registros/personal?tab=r03",
+    kind: "Structured",
+    ready: true,
+    blurb: "Evaluación técnica y personal por persona/año."
+  },
+  {
+    code: "PG06-R04",
+    title: "Asignación de funciones y reemplazos",
+    path: "/calidad/registros/personal?tab=r04",
+    kind: "Structured",
+    ready: true,
+    blurb: "Roles SGC con titular y reemplazo."
+  },
+  {
     code: "PG01-R01",
     title: "Lista de documentos",
     path: "/calidad/registros/pg01-r01",

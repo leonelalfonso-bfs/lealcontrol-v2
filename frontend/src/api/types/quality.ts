@@ -264,3 +264,87 @@ export interface QualityInternalAudit {
   createdAtUtc: string;
   updatedAtUtc: string;
 }
+
+export interface QualityTrainingPlanItem {
+  id: string;
+  recordCode: string;
+  number: string;
+  programYear: number;
+  topic: string;
+  targetRoles?: string;
+  plannedDate: string;
+  doneDate?: string | null;
+  effectivenessCheck?: string;
+  status: string;
+  notes?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface QualityPersonnelAuthorization {
+  id: string;
+  recordCode: string;
+  number: string;
+  userId: string;
+  personName: string;
+  methodDocumentCode: string;
+  methodTitle?: string;
+  trainingEvidence?: string;
+  supervisedBy?: string;
+  authorizedByUserId?: string | null;
+  authorizedByName?: string;
+  authorizedAt?: string | null;
+  validUntil?: string | null;
+  evidenceFileId?: string | null;
+  status: string;
+  notes?: string;
+  isExpired?: boolean;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface QualityCompetenceReview {
+  id: string;
+  recordCode: string;
+  number: string;
+  userId: string;
+  personName: string;
+  reviewYear: number;
+  evaluator?: string;
+  technicalScore?: number | null;
+  personalScore?: number | null;
+  conclusions?: string;
+  status: string;
+  notes?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface QualityRoleAssignment {
+  id: string;
+  recordCode: string;
+  number: string;
+  role: string;
+  userId: string;
+  personName: string;
+  substituteUserId?: string | null;
+  substituteName?: string;
+  since: string;
+  until?: string | null;
+  status: string;
+  notes?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface QualityPg06Summary {
+  code: string;
+  title: string;
+  recordKind?: string;
+  generatedAtUtc: string;
+  trainingOpen?: number;
+  authorizationsExpiringSoon?: number;
+  competenceDraft?: number;
+  roleActive?: number;
+  counts?: { r01: number; r02: number; r03: number; r04: number };
+}

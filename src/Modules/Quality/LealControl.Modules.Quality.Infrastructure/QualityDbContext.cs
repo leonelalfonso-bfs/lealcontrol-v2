@@ -23,6 +23,10 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityComplaint> Complaints => Set<QualityComplaint>();
     public DbSet<QualityNonConformity> NonConformities => Set<QualityNonConformity>();
     public DbSet<QualityInternalAudit> InternalAudits => Set<QualityInternalAudit>();
+    public DbSet<QualityTrainingPlanItem> TrainingPlanItems => Set<QualityTrainingPlanItem>();
+    public DbSet<QualityPersonnelAuthorization> PersonnelAuthorizations => Set<QualityPersonnelAuthorization>();
+    public DbSet<QualityCompetenceReview> CompetenceReviews => Set<QualityCompetenceReview>();
+    public DbSet<QualityRoleAssignment> RoleAssignments => Set<QualityRoleAssignment>();
     public DbSet<QualityAuditEvent> AuditEvents => Set<QualityAuditEvent>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
@@ -244,6 +248,74 @@ public sealed class QualityDbContext : DbContext
             b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.ProgramYear, x.Status });
             b.HasIndex(x => new { x.TenantId, x.PlannedDate });
+        });
+
+        modelBuilder.Entity<QualityTrainingPlanItem>(b =>
+        {
+            b.ToTable("training_plan_items", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Topic).HasMaxLength(500).IsRequired();
+            b.Property(x => x.TargetRoles).HasMaxLength(500);
+            b.Property(x => x.EffectivenessCheck).HasMaxLength(4000);
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityTrainingStatuses.Planned);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.ProgramYear, x.Status });
+        });
+
+        modelBuilder.Entity<QualityPersonnelAuthorization>(b =>
+        {
+            b.ToTable("personnel_authorizations", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.PersonName).HasMaxLength(160).IsRequired();
+            b.Property(x => x.MethodDocumentCode).HasMaxLength(64).IsRequired();
+            b.Property(x => x.MethodTitle).HasMaxLength(240);
+            b.Property(x => x.TrainingEvidence).HasMaxLength(4000);
+            b.Property(x => x.SupervisedBy).HasMaxLength(160);
+            b.Property(x => x.AuthorizedByName).HasMaxLength(160);
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityAuthorizationStatuses.Draft);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.UserId, x.MethodDocumentCode, x.Status });
+            b.HasIndex(x => new { x.TenantId, x.ValidUntil });
+        });
+
+        modelBuilder.Entity<QualityCompetenceReview>(b =>
+        {
+            b.ToTable("competence_reviews", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.PersonName).HasMaxLength(160).IsRequired();
+            b.Property(x => x.Evaluator).HasMaxLength(160);
+            b.Property(x => x.Conclusions).HasMaxLength(4000);
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityCompetenceStatuses.Draft);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.UserId, x.ReviewYear });
+        });
+
+        modelBuilder.Entity<QualityRoleAssignment>(b =>
+        {
+            b.ToTable("role_assignments", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Role).HasMaxLength(160).IsRequired();
+            b.Property(x => x.PersonName).HasMaxLength(160).IsRequired();
+            b.Property(x => x.SubstituteName).HasMaxLength(160);
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityRoleAssignmentStatuses.Active);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.Role, x.Status });
         });
 
         modelBuilder.Entity<QualityAuditEvent>(b =>
@@ -523,6 +595,90 @@ public sealed class QualityDbContext : DbContext
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_audits_Tenant_Number"" ON quality.internal_audits (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_audits_Tenant_Year_Status"" ON quality.internal_audits (""TenantId"", ""ProgramYear"", ""Status"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_audits_Tenant_Planned"" ON quality.internal_audits (""TenantId"", ""PlannedDate"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.training_plan_items (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG06-R01',
+                ""Number"" character varying(32) NOT NULL,
+                ""ProgramYear"" integer NOT NULL,
+                ""Topic"" character varying(500) NOT NULL,
+                ""TargetRoles"" character varying(500) NOT NULL DEFAULT '',
+                ""PlannedDate"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""DoneDate"" timestamp with time zone,
+                ""EffectivenessCheck"" character varying(4000) NOT NULL DEFAULT '',
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Planned',
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_train_Tenant_Number"" ON quality.training_plan_items (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_train_Tenant_Year_Status"" ON quality.training_plan_items (""TenantId"", ""ProgramYear"", ""Status"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.personnel_authorizations (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG06-R02',
+                ""Number"" character varying(32) NOT NULL,
+                ""UserId"" uuid NOT NULL,
+                ""PersonName"" character varying(160) NOT NULL,
+                ""MethodDocumentCode"" character varying(64) NOT NULL,
+                ""MethodTitle"" character varying(240) NOT NULL DEFAULT '',
+                ""TrainingEvidence"" character varying(4000) NOT NULL DEFAULT '',
+                ""SupervisedBy"" character varying(160) NOT NULL DEFAULT '',
+                ""AuthorizedByUserId"" uuid,
+                ""AuthorizedByName"" character varying(160) NOT NULL DEFAULT '',
+                ""AuthorizedAt"" timestamp with time zone,
+                ""ValidUntil"" timestamp with time zone,
+                ""EvidenceFileId"" uuid,
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Draft',
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_auth_Tenant_Number"" ON quality.personnel_authorizations (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_auth_Tenant_User_Method_Status"" ON quality.personnel_authorizations (""TenantId"", ""UserId"", ""MethodDocumentCode"", ""Status"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_auth_Tenant_ValidUntil"" ON quality.personnel_authorizations (""TenantId"", ""ValidUntil"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.competence_reviews (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG06-R03',
+                ""Number"" character varying(32) NOT NULL,
+                ""UserId"" uuid NOT NULL,
+                ""PersonName"" character varying(160) NOT NULL,
+                ""ReviewYear"" integer NOT NULL,
+                ""Evaluator"" character varying(160) NOT NULL DEFAULT '',
+                ""TechnicalScore"" integer,
+                ""PersonalScore"" integer,
+                ""Conclusions"" character varying(4000) NOT NULL DEFAULT '',
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Draft',
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_comp_Tenant_Number"" ON quality.competence_reviews (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_comp_Tenant_User_Year"" ON quality.competence_reviews (""TenantId"", ""UserId"", ""ReviewYear"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.role_assignments (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG06-R04',
+                ""Number"" character varying(32) NOT NULL,
+                ""Role"" character varying(160) NOT NULL,
+                ""UserId"" uuid NOT NULL,
+                ""PersonName"" character varying(160) NOT NULL,
+                ""SubstituteUserId"" uuid,
+                ""SubstituteName"" character varying(160) NOT NULL DEFAULT '',
+                ""Since"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""Until"" timestamp with time zone,
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Active',
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_role_Tenant_Number"" ON quality.role_assignments (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_role_Tenant_Role_Status"" ON quality.role_assignments (""TenantId"", ""Role"", ""Status"");",
 
             @"CREATE TABLE IF NOT EXISTS quality.audit_events (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

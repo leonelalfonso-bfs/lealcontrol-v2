@@ -582,3 +582,206 @@ public sealed record UpdateInternalAuditRequest(
     Guid? ChecklistFileId = null,
     string? Status = null,
     string? Notes = null);
+
+// ─── PG06 Personal ───────────────────────────────────────────────────────────
+
+public static class QualityTrainingStatuses
+{
+    public const string Planned = "Planned";
+    public const string Done = "Done";
+    public const string Cancelled = "Cancelled";
+}
+
+public sealed class QualityTrainingPlanItem : Entity<Guid>
+{
+    public QualityTrainingPlanItem() : base(Guid.NewGuid()) { }
+    public QualityTrainingPlanItem(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG06-R01";
+    public string Number { get; set; } = string.Empty;
+    public int ProgramYear { get; set; }
+    public string Topic { get; set; } = string.Empty;
+    public string TargetRoles { get; set; } = string.Empty;
+    public DateTime PlannedDate { get; set; } = DateTime.UtcNow;
+    public DateTime? DoneDate { get; set; }
+    public string EffectivenessCheck { get; set; } = string.Empty;
+    public string Status { get; set; } = QualityTrainingStatuses.Planned;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateTrainingPlanItemRequest(
+    int ProgramYear,
+    string Topic,
+    DateTime? PlannedDate = null,
+    string? TargetRoles = null,
+    string? Notes = null);
+
+public sealed record UpdateTrainingPlanItemRequest(
+    int? ProgramYear = null,
+    string? Topic = null,
+    string? TargetRoles = null,
+    DateTime? PlannedDate = null,
+    DateTime? DoneDate = null,
+    string? EffectivenessCheck = null,
+    string? Status = null,
+    string? Notes = null);
+
+public static class QualityAuthorizationStatuses
+{
+    public const string Draft = "Draft";
+    public const string Authorized = "Authorized";
+    public const string Suspended = "Suspended";
+    public const string Expired = "Expired";
+    public const string Cancelled = "Cancelled";
+}
+
+/// <summary>PG06-R02 — autorización por método/IT; firma exclusiva del Director Técnico.</summary>
+public sealed class QualityPersonnelAuthorization : Entity<Guid>
+{
+    public QualityPersonnelAuthorization() : base(Guid.NewGuid()) { }
+    public QualityPersonnelAuthorization(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG06-R02";
+    public string Number { get; set; } = string.Empty;
+    public Guid UserId { get; set; }
+    public string PersonName { get; set; } = string.Empty;
+    public string MethodDocumentCode { get; set; } = string.Empty; // IT-01, IT 02…
+    public string MethodTitle { get; set; } = string.Empty;
+    public string TrainingEvidence { get; set; } = string.Empty;
+    public string SupervisedBy { get; set; } = string.Empty;
+    public Guid? AuthorizedByUserId { get; set; }
+    public string AuthorizedByName { get; set; } = string.Empty;
+    public DateTime? AuthorizedAt { get; set; }
+    public DateTime? ValidUntil { get; set; }
+    public Guid? EvidenceFileId { get; set; }
+    public string Status { get; set; } = QualityAuthorizationStatuses.Draft;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreatePersonnelAuthorizationRequest(
+    Guid UserId,
+    string PersonName,
+    string MethodDocumentCode,
+    string? MethodTitle = null,
+    string? TrainingEvidence = null,
+    string? SupervisedBy = null,
+    DateTime? ValidUntil = null,
+    Guid? EvidenceFileId = null,
+    string? Notes = null);
+
+public sealed record UpdatePersonnelAuthorizationRequest(
+    string? PersonName = null,
+    string? MethodDocumentCode = null,
+    string? MethodTitle = null,
+    string? TrainingEvidence = null,
+    string? SupervisedBy = null,
+    DateTime? ValidUntil = null,
+    Guid? EvidenceFileId = null,
+    string? Status = null,
+    string? Notes = null);
+
+public sealed record AuthorizePersonnelRequest(
+    DateTime? AuthorizedAt = null,
+    DateTime? ValidUntil = null,
+    string? Notes = null);
+
+public static class QualityCompetenceStatuses
+{
+    public const string Draft = "Draft";
+    public const string Completed = "Completed";
+    public const string Cancelled = "Cancelled";
+}
+
+public sealed class QualityCompetenceReview : Entity<Guid>
+{
+    public QualityCompetenceReview() : base(Guid.NewGuid()) { }
+    public QualityCompetenceReview(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG06-R03";
+    public string Number { get; set; } = string.Empty;
+    public Guid UserId { get; set; }
+    public string PersonName { get; set; } = string.Empty;
+    public int ReviewYear { get; set; }
+    public string Evaluator { get; set; } = string.Empty;
+    public int? TechnicalScore { get; set; } // 1-5
+    public int? PersonalScore { get; set; } // 1-5
+    public string Conclusions { get; set; } = string.Empty;
+    public string Status { get; set; } = QualityCompetenceStatuses.Draft;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateCompetenceReviewRequest(
+    Guid UserId,
+    string PersonName,
+    int ReviewYear,
+    string? Evaluator = null,
+    int? TechnicalScore = null,
+    int? PersonalScore = null,
+    string? Conclusions = null,
+    string? Notes = null);
+
+public sealed record UpdateCompetenceReviewRequest(
+    string? PersonName = null,
+    int? ReviewYear = null,
+    string? Evaluator = null,
+    int? TechnicalScore = null,
+    int? PersonalScore = null,
+    string? Conclusions = null,
+    string? Status = null,
+    string? Notes = null);
+
+public static class QualityRoleAssignmentStatuses
+{
+    public const string Active = "Active";
+    public const string Ended = "Ended";
+    public const string Cancelled = "Cancelled";
+}
+
+public sealed class QualityRoleAssignment : Entity<Guid>
+{
+    public QualityRoleAssignment() : base(Guid.NewGuid()) { }
+    public QualityRoleAssignment(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG06-R04";
+    public string Number { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public Guid UserId { get; set; }
+    public string PersonName { get; set; } = string.Empty;
+    public Guid? SubstituteUserId { get; set; }
+    public string SubstituteName { get; set; } = string.Empty;
+    public DateTime Since { get; set; } = DateTime.UtcNow;
+    public DateTime? Until { get; set; }
+    public string Status { get; set; } = QualityRoleAssignmentStatuses.Active;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateRoleAssignmentRequest(
+    string Role,
+    Guid UserId,
+    string PersonName,
+    DateTime? Since = null,
+    Guid? SubstituteUserId = null,
+    string? SubstituteName = null,
+    string? Notes = null);
+
+public sealed record UpdateRoleAssignmentRequest(
+    string? Role = null,
+    string? PersonName = null,
+    Guid? SubstituteUserId = null,
+    string? SubstituteName = null,
+    DateTime? Since = null,
+    DateTime? Until = null,
+    string? Status = null,
+    string? Notes = null);
