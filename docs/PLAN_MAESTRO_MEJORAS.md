@@ -22,7 +22,7 @@ Documentos relacionados:
 | 4 | Contabilidad desde asientos modelo | 9 | 9/9 | 0/9 | ◐ Código 4.1–4.9 listo — verificar staging |
 | 5 | Red de tests del circuito del dinero | 6 | 6/6 | 0/6 | ✅ Código en `8fb4e17` — tests locales OK |
 | 6 | Deuda técnica | 8 | 7/8 | 7/8 | ✅ `53d1d5a` staging 03/09/2026 — smoke 10/10; **6.4 diferido** |
-| Q | Calidad ISO 17025 (SGC) | — | 🔄 | 🔄 | **C1✅ C2✅ (Linked IT cerrado) C3 casi cerrado C4✅** — siguiente: deploy staging + alertas Calendar; detalle en `docs/quality/…` §0 |
+| Q | Calidad ISO 17025 (SGC) | — | 🔄 | 🔄 | **C1–C4✅ · C5 base✅** — mañana: validar tenant vacío + alta MC/registros; detalle en `docs/quality/…` §0 |
 
 Regla de orden: **bloque 2 antes del 3** (CI y backups estables). **No empezar bloque 4** sin tareas 3.1–3.6 del bloque 3.  
 **Bloque Q** corre en paralelo en `staging/metrology-2307` (INMELA / auditoría OAA); no bloquea el circuito del dinero.
@@ -348,8 +348,11 @@ Rama de trabajo: `staging/metrology-2307` · Staging: https://v2.lealcontrol.com
   - [x] PG14-R1 Hoja de vida (HV-AAAA-NNNN + sync Metrología)
   - [x] **Siguiente:** **Q.C4** (implementado `d7c38af`)
 - [x] **Q.C4** Dashboard SGC, auditoría before/after, modo presentación
+- [x] **Q.C5** Onboarding multi-tenant del árbol — vacío + Nuevo documento + Agregar registro (catálogo fijo); sin seed INMELA en API
+  - [ ] **Q.C5b** (opcional) Sugerir encabezado desde Word/PDF con confirmación manual
+  - [ ] Validar en prod con tenant de prueba (flujo completo)
 
-**Reanudar siempre desde:** `MODULO_CALIDAD_ANALISIS.md` §0.
+**Reanudar siempre desde:** `MODULO_CALIDAD_ANALISIS.md` §0 (actualizado 08/09/2026 noche).
 
 ---
 
@@ -373,6 +376,7 @@ Rama de trabajo: `staging/metrology-2307` · Staging: https://v2.lealcontrol.com
 | 08/09/2026 | Q.C2 corte 4 PG14-R1 | `102ab1b` | pendiente staging | Hoja de vida HV + sync calibraciones |
 | 08/09/2026 | Q.C2 Linked IT + ES | `abf955b` | pendiente staging | IT01–IT04 Linked + etiquetas ES; C2 cerrado → siguiente C4 |
 | 08/09/2026 | Q.C4 tablero + historial + presentación | `d7c38af` | pendiente staging | Dashboard SGC, before/after, modo presentación |
+| 08/09/2026 | Q.C5 onboarding árbol multi-tenant | `56abd81`…`f260fe8` | ◐ prod | Árbol vacío, Nuevo documento, Agregar registro; ver §0 calidad |
 | 07/09/2026 | Q.C3 MC01-R01 | `9f5e5f4` | pendiente staging | Confidencialidad interno |
 | 07/09/2026 | Q.C3 MC01-R02 | `847b9ee` | pendiente staging | Confidencialidad externo |
 | 07/09/2026 | Q.C3 hub + MC01-R03 | `7fd1fba` | pendiente staging | Índice registros + indicadores |
