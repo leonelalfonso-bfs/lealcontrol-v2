@@ -19,7 +19,7 @@ export function SuperAdminDashboardPage() {
   const [adminPassword, setAdminPassword] = useState("");
   const [monthlyPriceArs, setMonthlyPriceArs] = useState<number>(95000);
   const [selectedModules, setSelectedModules] = useState<string[]>([
-    "sales", "crm", "purchases", "inventory", "finance", "fleet", "hr"
+    "sales", "purchases", "inventory", "finance", "fleet", "hr"
   ]);
   const [creating, setCreating] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -49,7 +49,8 @@ export function SuperAdminDashboardPage() {
       try {
         const mods = typeof plan.enabledModulesJson === "string" ? JSON.parse(plan.enabledModulesJson) : plan.enabledModulesJson || [];
         if (Array.isArray(mods) && mods.length > 0) {
-          setSelectedModules(mods);
+          const selectable = new Set(ALL_SYSTEM_MODULES.map((m) => m.id));
+          setSelectedModules(mods.filter((m: string) => selectable.has(m)));
         }
       } catch {
         // keep

@@ -328,6 +328,12 @@ public static class SimpleJwt
         return $"{headerB64}.{payloadB64}.{signatureB64}";
     }
 
+    private static readonly HashSet<string> TemporarilyDisabledModules = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "crm",
+        "communications"
+    };
+
     private static string[] ParseAllowedModules(string? allowedModulesJson)
     {
         if (string.IsNullOrWhiteSpace(allowedModulesJson))
@@ -338,7 +344,7 @@ public static class SimpleJwt
         try
         {
             return JsonSerializer.Deserialize<string[]>(allowedModulesJson)?
-                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .Where(m => !string.IsNullOrWhiteSpace(m) && !TemporarilyDisabledModules.Contains(m))
                 .ToArray()
                 ?? [];
         }

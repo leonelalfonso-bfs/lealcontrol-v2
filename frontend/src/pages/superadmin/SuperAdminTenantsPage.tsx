@@ -52,9 +52,11 @@ export function SuperAdminTenantsPage() {
     setEditTenant(tenant);
     try {
       const mods = typeof tenant.enabledModulesJson === "string" ? JSON.parse(tenant.enabledModulesJson) : tenant.enabledModulesJson || [];
-      setTenantModules(Array.isArray(mods) && mods.length > 0 ? mods : ["sales", "crm"]);
+      const selectable = new Set(ALL_SYSTEM_MODULES.map((m) => m.id));
+      const cleaned = Array.isArray(mods) ? mods.filter((m: string) => selectable.has(m)) : [];
+      setTenantModules(cleaned.length > 0 ? cleaned : ["sales", "purchases", "inventory", "finance"]);
     } catch {
-      setTenantModules(["sales", "crm"]);
+      setTenantModules(["sales", "purchases", "inventory", "finance"]);
     }
   };
 

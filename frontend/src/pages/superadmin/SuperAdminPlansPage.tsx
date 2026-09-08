@@ -2,9 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 
+/** Módulos contratables en SuperAdmin. CRM/Comunicaciones fuera hasta estabilizar (se reactivan luego en staging). */
 export const ALL_SYSTEM_MODULES = [
   { id: "sales", name: "Facturación & Ventas", desc: "Facturación ARCA, presupuestos, remitos y precios", icon: "🧾" },
-  { id: "crm", name: "CRM & Clientes", desc: "Clientes, leads, oportunidades Kanban y seguimiento", icon: "👥" },
   { id: "purchases", name: "Compras & Proveedores", desc: "Órdenes de compra y facturas proveedor", icon: "🛒" },
   { id: "inventory", name: "Stock & Producción", desc: "Inventario 4D, depósitos y producción", icon: "📦" },
   { id: "finance", name: "Finanzas & Echeqs", desc: "Bancos, cheques/echeqs, cobranzas y cashflow", icon: "💰" },
@@ -15,6 +15,9 @@ export const ALL_SYSTEM_MODULES = [
   { id: "metrology", name: "Metrología Legal", desc: "Laboratorio de ensayos, pesas patrón e informes técnicos", icon: "⚖️" },
   { id: "quality", name: "Calidad ISO 17025", desc: "Sistema de gestión de calidad, documentos SGC y registros", icon: "✅" }
 ];
+
+/** No ofrecer ni persistir hasta nuevo aviso. */
+export const TEMPORARILY_DISABLED_MODULES = ["crm", "communications"] as const;
 
 export function SuperAdminPlansPage() {
   const navigate = useNavigate();
@@ -34,7 +37,7 @@ export function SuperAdminPlansPage() {
   const [priceUsd, setPriceUsd] = useState(95);
   const [maxUsers, setMaxUsers] = useState(10);
   const [selectedModules, setSelectedModules] = useState<string[]>([
-    "sales", "crm", "purchases", "inventory", "finance", "fleet", "hr", "grains"
+    "sales", "purchases", "inventory", "finance", "fleet", "hr", "grains"
   ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +63,7 @@ export function SuperAdminPlansPage() {
     setPriceArs(95000);
     setPriceUsd(95);
     setMaxUsers(10);
-    setSelectedModules(["sales", "crm"]);
+    setSelectedModules(["sales", "purchases", "inventory", "finance"]);
     setError(null);
     setShowModal(true);
   };
@@ -76,9 +79,11 @@ export function SuperAdminPlansPage() {
     setMaxUsers(p.maxUsers || 10);
     try {
       const mods = typeof p.enabledModulesJson === "string" ? JSON.parse(p.enabledModulesJson) : p.enabledModulesJson || [];
-      setSelectedModules(Array.isArray(mods) && mods.length > 0 ? mods : ["sales", "crm"]);
+      const selectable = new Set(ALL_SYSTEM_MODULES.map((m) => m.id));
+      const cleaned = Array.isArray(mods) ? mods.filter((m: string) => selectable.has(m)) : [];
+      setSelectedModules(cleaned.length > 0 ? cleaned : ["sales", "purchases", "inventory", "finance"]);
     } catch {
-      setSelectedModules(["sales", "crm"]);
+      setSelectedModules(["sales", "purchases", "inventory", "finance"]);
     }
     setError(null);
     setShowModal(true);

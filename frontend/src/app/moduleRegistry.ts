@@ -382,15 +382,17 @@ export const DEVELOPMENT_ACCESS: AccessContext = {
 };
 
 export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: string | string[] | null): string[] {
+  // CRM / Comunicaciones / Directorio: ocultos en prod hasta estabilizar el módulo.
+  const temporarilyDisabledUiIds = new Set(["crm", "comunicaciones", "directorio"]);
+
   const allAdminModules = [
-    "inicio", "directorio", "crm", "comunicaciones", "ventas", "compras", "inventario",
+    "inicio", "ventas", "compras", "inventario",
     "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "calidad", "administracion"
   ];
 
   const moduleMap: Record<string, string[]> = {
     sales: ["ventas"],
-    crm: ["crm", "directorio", "comunicaciones"],
-    communications: ["comunicaciones"],
+    // crm / communications: no expandir a UI mientras están deshabilitados
     purchases: ["compras"],
     inventory: ["inventario", "produccion"],
     finance: ["finanzas"],
@@ -411,10 +413,12 @@ export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: s
       if (!Array.isArray(raw) || raw.length === 0) return null;
       const allowed = ["inicio", "administracion"];
       raw.forEach((entry: string) => {
-        if (moduleMap[entry]) allowed.push(...moduleMap[entry]);
-        else allowed.push(entry);
+        const key = String(entry).toLowerCase();
+        if (key === "crm" || key === "communications") return;
+        if (moduleMap[key]) allowed.push(...moduleMap[key]);
+        else if (!temporarilyDisabledUiIds.has(entry)) allowed.push(entry);
       });
-      return Array.from(new Set(allowed));
+      return Array.from(new Set(allowed)).filter((id) => !temporarilyDisabledUiIds.has(id));
     } catch {
       return null;
     }
@@ -427,7 +431,7 @@ export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: s
     return parsed ?? allAdminModules;
   }
 
-  return parsed ?? ["inicio", "ventas", "crm", "comunicaciones"];
+  return parsed ?? ["inicio", "ventas"];
 }
 
 export function canAccessModule(module: ModuleDefinition, access: AccessContext): boolean {
