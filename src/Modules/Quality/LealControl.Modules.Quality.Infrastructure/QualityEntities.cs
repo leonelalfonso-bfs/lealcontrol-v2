@@ -402,3 +402,110 @@ public sealed record UpdateComplaintRequest(
     Guid? EvidenceFileId = null,
     string? Notes = null,
     string? Status = null);
+
+/// <summary>Tipos de PG07-R1.</summary>
+public static class QualityNonConformityKinds
+{
+    public const string NonConformity = "NonConformity";       // NC
+    public const string NonConformingWork = "NonConformingWork"; // TNC
+    public const string Risk = "Risk";                           // R
+    public const string Opportunity = "Opportunity";             // OM
+}
+
+public static class QualityNonConformityStatuses
+{
+    public const string Open = "Open";
+    public const string InAnalysis = "InAnalysis";
+    public const string ActionPending = "ActionPending";
+    public const string EffectivenessCheck = "EffectivenessCheck";
+    public const string Closed = "Closed";
+    public const string Cancelled = "Cancelled";
+}
+
+/// <summary>Instancia operativa PG07-R1 (NC / TNC / Riesgo / OM).</summary>
+public sealed class QualityNonConformity : Entity<Guid>
+{
+    public QualityNonConformity() : base(Guid.NewGuid())
+    {
+    }
+
+    public QualityNonConformity(Guid id) : base(id)
+    {
+    }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG07-R01";
+    public string Number { get; set; } = string.Empty;
+    public string Kind { get; set; } = QualityNonConformityKinds.NonConformity;
+    public string Origin { get; set; } = string.Empty; // Complaint, Audit, Internal, Customer, Other
+    public DateTime DetectedAt { get; set; } = DateTime.UtcNow;
+    public string Description { get; set; } = string.Empty;
+    public string ImmediateAction { get; set; } = string.Empty;
+    public bool ImpactOnPreviousResults { get; set; }
+    public bool CustomerNotified { get; set; }
+    public string RootCauseMethod { get; set; } = string.Empty;
+    public string RootCause { get; set; } = string.Empty;
+    public string CorrectiveAction { get; set; } = string.Empty;
+    public string Responsible { get; set; } = string.Empty;
+    public DateTime? DueDate { get; set; }
+    public DateTime? NewDueDate { get; set; }
+    public string EffectivenessCheck { get; set; } = string.Empty;
+    public string EffectivenessResult { get; set; } = string.Empty; // Effective | NotEffective | Pending
+    public DateTime? ClosedAt { get; set; }
+    public string Status { get; set; } = QualityNonConformityStatuses.Open;
+
+    // Riesgo (Kind = Risk)
+    public int? Probability { get; set; } // 1-5
+    public int? Impact { get; set; } // 1-5
+    public int? Level { get; set; } // probability * impact
+    public string Controls { get; set; } = string.Empty;
+    public int? ResidualLevel { get; set; }
+
+    public Guid? SourceComplaintId { get; set; }
+    public Guid? EvidenceFileId { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateNonConformityRequest(
+    string Kind,
+    string Description,
+    DateTime? DetectedAt = null,
+    string? Origin = null,
+    string? ImmediateAction = null,
+    bool? ImpactOnPreviousResults = null,
+    bool? CustomerNotified = null,
+    string? Responsible = null,
+    DateTime? DueDate = null,
+    int? Probability = null,
+    int? Impact = null,
+    string? Controls = null,
+    Guid? SourceComplaintId = null,
+    Guid? EvidenceFileId = null,
+    string? Notes = null);
+
+public sealed record UpdateNonConformityRequest(
+    string? Kind = null,
+    string? Origin = null,
+    DateTime? DetectedAt = null,
+    string? Description = null,
+    string? ImmediateAction = null,
+    bool? ImpactOnPreviousResults = null,
+    bool? CustomerNotified = null,
+    string? RootCauseMethod = null,
+    string? RootCause = null,
+    string? CorrectiveAction = null,
+    string? Responsible = null,
+    DateTime? DueDate = null,
+    DateTime? NewDueDate = null,
+    string? EffectivenessCheck = null,
+    string? EffectivenessResult = null,
+    DateTime? ClosedAt = null,
+    string? Status = null,
+    int? Probability = null,
+    int? Impact = null,
+    string? Controls = null,
+    int? ResidualLevel = null,
+    Guid? EvidenceFileId = null,
+    string? Notes = null);

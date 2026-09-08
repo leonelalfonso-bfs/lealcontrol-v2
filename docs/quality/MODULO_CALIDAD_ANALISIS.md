@@ -12,7 +12,7 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** `4e097bd` (PG03-R01 + audit).  
+**Último commit de avance Calidad:** *(PG07-R1)*.  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
 ### Principio: los registros se generan en el sistema
@@ -42,12 +42,13 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | **MC01-R05** Nota institucional | ✅ | Attachment + metadatos |
 | **PG01-R01 / R02** Listas generadas | ✅ (C1) | Generated |
 | **PG03-R01** Seguimiento de quejas | ✅ | Structured + SLA + **PDF instancia** + **Excel listado con filtros** |
+| **PG07-R1** NC / TNC / Riesgos / OM | ✅ | Structured + workflow + PDF logo + Excel filtros; vínculo desde queja |
 
 ### Siguiente sesión
 
-1. **C3 — PG07-R1** NC / TNC / riesgos / OM (Structured; el más gordo; link desde queja `linkedNonConformityId`).
+1. **C3 — PG04** Auditorías (programa / plan / informe / checklist).
 2. Alternar restos **C2** si hace falta emitir informes ISO.
-3. Seguir C3: PG04 → PG06 → PG05 → PG08 → PG09-R3 → PG14-R5/R6 + `QualityEquipment`.
+3. Seguir C3: PG06 → PG05 → PG08 → PG09-R3 → PG14-R5/R6 + `QualityEquipment`.
 
 ### Reglas de trabajo que ya aplican
 
@@ -334,7 +335,7 @@ Módulo `calidad` en `moduleRegistry.ts`, ruta base `/calidad`, claim `quality`.
 /calidad/registros/pg01-r01      PG01-R01 lista documentos            [listo Generated]
 /calidad/registros/pg01-r02      PG01-R02 doc. externos               [listo Generated]
 /calidad/registros/quejas        PG03-R01                             [listo Structured]
-/calidad/registros/nc            PG07-R1                              [pendiente]
+/calidad/registros/nc            PG07-R1                              [listo Structured]
 /calidad/registros/auditorias    PG04                                 [pendiente]
 /calidad/registros/personal      PG06                                 [pendiente]
 /calidad/registros/proveedores   PG05                                 [pendiente]
@@ -460,8 +461,8 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 - [x] MC01-R05 Nota institucional
 - [x] PG01-R01 / PG01-R02 (Generated, desde C1)
 - [x] PG03-R01 Quejas (Structured, generada en sistema)
-- [ ] PG07-R1 NC / TNC / Riesgos / OM ← **siguiente**
-- [ ] PG04 Auditorías (R01–R04)
+- [x] PG07-R1 NC / TNC / Riesgos / OM
+- [ ] PG04 Auditorías (R01–R04) ← **siguiente**
 - [ ] PG06 Personal (R01–R04) + firma DT en autorizaciones
 - [ ] PG05 Proveedores
 - [ ] PG08-R01 Revisión por la dirección

@@ -189,3 +189,45 @@ export interface QualityComplaint {
   createdAtUtc: string;
   updatedAtUtc: string;
 }
+
+export type QualityNonConformityKind =
+  | "NonConformity"
+  | "NonConformingWork"
+  | "Risk"
+  | "Opportunity"
+  | string;
+
+export interface QualityNonConformity {
+  id: string;
+  recordCode: string;
+  number: string;
+  kind: QualityNonConformityKind;
+  origin?: string;
+  detectedAt: string;
+  description: string;
+  immediateAction?: string;
+  impactOnPreviousResults?: boolean;
+  customerNotified?: boolean;
+  rootCauseMethod?: string;
+  rootCause?: string;
+  correctiveAction?: string;
+  responsible?: string;
+  dueDate?: string | null;
+  newDueDate?: string | null;
+  effectivenessCheck?: string;
+  effectivenessResult?: string;
+  closedAt?: string | null;
+  status: string;
+  probability?: number | null;
+  impact?: number | null;
+  level?: number | null;
+  controls?: string;
+  residualLevel?: number | null;
+  sourceComplaintId?: string | null;
+  evidenceFileId?: string | null;
+  notes?: string;
+  effectiveDueAt?: string | null;
+  isOverdue?: boolean;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}

@@ -1387,6 +1387,79 @@ export const api = {
       method: "DELETE"
     }),
 
+  listQualityPg07R01: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      overdueOpen?: number;
+      rows: import("./types/quality").QualityNonConformity[];
+    }>("/api/v1/quality/records/pg07-r01"),
+
+  getQualityNonConformity: (id: string) =>
+    request<import("./types/quality").QualityNonConformity>(`/api/v1/quality/records/pg07-r01/${id}`),
+
+  createQualityNonConformity: (body: {
+    kind: string;
+    description: string;
+    detectedAt?: string;
+    origin?: string;
+    immediateAction?: string;
+    impactOnPreviousResults?: boolean;
+    customerNotified?: boolean;
+    responsible?: string;
+    dueDate?: string;
+    probability?: number;
+    impact?: number;
+    controls?: string;
+    sourceComplaintId?: string;
+    evidenceFileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityNonConformity>("/api/v1/quality/records/pg07-r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualityNonConformity: (
+    id: string,
+    body: {
+      kind?: string;
+      origin?: string;
+      detectedAt?: string;
+      description?: string;
+      immediateAction?: string;
+      impactOnPreviousResults?: boolean;
+      customerNotified?: boolean;
+      rootCauseMethod?: string;
+      rootCause?: string;
+      correctiveAction?: string;
+      responsible?: string;
+      dueDate?: string;
+      newDueDate?: string;
+      effectivenessCheck?: string;
+      effectivenessResult?: string;
+      closedAt?: string;
+      status?: string;
+      probability?: number;
+      impact?: number;
+      controls?: string;
+      residualLevel?: number;
+      evidenceFileId?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualityNonConformity>(`/api/v1/quality/records/pg07-r01/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityNonConformity: (id: string) =>
+    request<import("./types/quality").QualityNonConformity>(`/api/v1/quality/records/pg07-r01/${id}`, {
+      method: "DELETE"
+    }),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);

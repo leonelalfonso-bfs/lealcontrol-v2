@@ -21,6 +21,7 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityIndicatorValue> IndicatorValues => Set<QualityIndicatorValue>();
     public DbSet<QualityInstitutionalNote> InstitutionalNotes => Set<QualityInstitutionalNote>();
     public DbSet<QualityComplaint> Complaints => Set<QualityComplaint>();
+    public DbSet<QualityNonConformity> NonConformities => Set<QualityNonConformity>();
     public DbSet<QualityAuditEvent> AuditEvents => Set<QualityAuditEvent>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
@@ -194,6 +195,31 @@ public sealed class QualityDbContext : DbContext
             b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.Status, x.ReceivedAt });
             b.HasIndex(x => new { x.TenantId, x.CloseDueAt });
+        });
+
+        modelBuilder.Entity<QualityNonConformity>(b =>
+        {
+            b.ToTable("non_conformities", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Kind).HasMaxLength(40).IsRequired();
+            b.Property(x => x.Origin).HasMaxLength(80);
+            b.Property(x => x.Description).HasMaxLength(4000).IsRequired();
+            b.Property(x => x.ImmediateAction).HasMaxLength(4000);
+            b.Property(x => x.RootCauseMethod).HasMaxLength(120);
+            b.Property(x => x.RootCause).HasMaxLength(4000);
+            b.Property(x => x.CorrectiveAction).HasMaxLength(4000);
+            b.Property(x => x.Responsible).HasMaxLength(160);
+            b.Property(x => x.EffectivenessCheck).HasMaxLength(4000);
+            b.Property(x => x.EffectivenessResult).HasMaxLength(40);
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityNonConformityStatuses.Open);
+            b.Property(x => x.Controls).HasMaxLength(4000);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.Kind, x.Status });
+            b.HasIndex(x => new { x.TenantId, x.DueDate });
         });
 
         modelBuilder.Entity<QualityAuditEvent>(b =>
@@ -407,6 +433,43 @@ public sealed class QualityDbContext : DbContext
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_complaints_Tenant_Number"" ON quality.complaints (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_complaints_Tenant_Status_Received"" ON quality.complaints (""TenantId"", ""Status"", ""ReceivedAt"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_complaints_Tenant_CloseDue"" ON quality.complaints (""TenantId"", ""CloseDueAt"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.non_conformities (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG07-R01',
+                ""Number"" character varying(32) NOT NULL,
+                ""Kind"" character varying(40) NOT NULL DEFAULT 'NonConformity',
+                ""Origin"" character varying(80) NOT NULL DEFAULT '',
+                ""DetectedAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""Description"" character varying(4000) NOT NULL,
+                ""ImmediateAction"" character varying(4000) NOT NULL DEFAULT '',
+                ""ImpactOnPreviousResults"" boolean NOT NULL DEFAULT false,
+                ""CustomerNotified"" boolean NOT NULL DEFAULT false,
+                ""RootCauseMethod"" character varying(120) NOT NULL DEFAULT '',
+                ""RootCause"" character varying(4000) NOT NULL DEFAULT '',
+                ""CorrectiveAction"" character varying(4000) NOT NULL DEFAULT '',
+                ""Responsible"" character varying(160) NOT NULL DEFAULT '',
+                ""DueDate"" timestamp with time zone,
+                ""NewDueDate"" timestamp with time zone,
+                ""EffectivenessCheck"" character varying(4000) NOT NULL DEFAULT '',
+                ""EffectivenessResult"" character varying(40) NOT NULL DEFAULT '',
+                ""ClosedAt"" timestamp with time zone,
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Open',
+                ""Probability"" integer,
+                ""Impact"" integer,
+                ""Level"" integer,
+                ""Controls"" character varying(4000) NOT NULL DEFAULT '',
+                ""ResidualLevel"" integer,
+                ""SourceComplaintId"" uuid,
+                ""EvidenceFileId"" uuid,
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_nc_Tenant_Number"" ON quality.non_conformities (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_nc_Tenant_Kind_Status"" ON quality.non_conformities (""TenantId"", ""Kind"", ""Status"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_nc_Tenant_Due"" ON quality.non_conformities (""TenantId"", ""DueDate"");",
 
             @"CREATE TABLE IF NOT EXISTS quality.audit_events (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

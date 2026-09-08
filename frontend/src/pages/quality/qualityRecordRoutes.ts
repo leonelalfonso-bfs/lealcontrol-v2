@@ -50,6 +50,14 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "Quejas generadas en el sistema con workflow y plazos SLA."
   },
   {
+    code: "PG07-R01",
+    title: "Registro y seguimiento de NC, R y OP",
+    path: "/calidad/registros/nc",
+    kind: "Structured",
+    ready: true,
+    blurb: "NC / TNC / Riesgos / OM generados en el sistema."
+  },
+  {
     code: "PG01-R01",
     title: "Lista de documentos",
     path: "/calidad/registros/pg01-r01",

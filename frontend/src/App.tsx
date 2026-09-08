@@ -78,6 +78,8 @@ import {
   QualityMc01R05Page,
   QualityPg03R01Page,
   QualityComplaintPrintPage,
+  QualityPg07R01Page,
+  QualityNonConformityPrintPage,
   QualityRecordsHubPage,
   QualityPg01R01Page,
   QualityPg01R02Page,
@@ -648,6 +650,9 @@ export function App() {
               <Route path="/calidad/registros/quejas" element={<QualityPg03R01Page />} />
               <Route path="/calidad/registros/pg03-r01" element={<QualityPg03R01Page />} />
               <Route path="/calidad/registros/quejas/:id/pdf" element={<QualityComplaintPrintPage />} />
+              <Route path="/calidad/registros/nc" element={<QualityPg07R01Page />} />
+              <Route path="/calidad/registros/pg07-r01" element={<QualityPg07R01Page />} />
+              <Route path="/calidad/registros/nc/:id/pdf" element={<QualityNonConformityPrintPage />} />
 
               {/* Reports & Settings Routes */}
               <Route path="/reportes" element={<ReportsPage />} />

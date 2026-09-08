@@ -361,6 +361,24 @@ export function QualityPg03R01Page() {
                 <Link className="btn btn-outline compact" to={`/calidad/registros/quejas/${selected.id}/pdf`}>
                   Exportar PDF (formato planilla)
                 </Link>
+                {!selected.linkedNonConformityId && selected.status !== "Cancelled" && (
+                  <Link
+                    className="btn btn-outline compact"
+                    style={{ marginLeft: 8 }}
+                    to={`/calidad/registros/nc?fromComplaint=${selected.id}`}
+                  >
+                    Generar NC / TNC / R / OM
+                  </Link>
+                )}
+                {selected.linkedNonConformityId && (
+                  <Link
+                    className="btn ghost compact"
+                    style={{ marginLeft: 8 }}
+                    to={`/calidad/registros/nc`}
+                  >
+                    Ver registros PG07
+                  </Link>
+                )}
               </p>
               <p style={{ whiteSpace: "pre-wrap" }}>{selected.description}</p>
 
