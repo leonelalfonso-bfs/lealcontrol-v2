@@ -12,8 +12,7 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** `b26a351` (PG09-R3 encuesta de satisfacción Structured).  
-**Este corte (sin commit aún):** C3 PG14-R5/R6 + `QualityEquipment` — **hecho en working tree**.  
+**Último commit de avance Calidad:** `872dbf6` (PG14-R5/R6 + QualityEquipment auxiliares).  
 **Siguiente:** restos **C2** (PG14-R3/R4, hoja de vida, PG09 R2, Linked IT) o **C4**.  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
@@ -515,3 +514,4 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 | 07/09/2026 | C3 PG05 | `92926b6` | Proveedores Structured + listado habilitados |
 | 07/09/2026 | C3 PG08 | `2322303` | Revisión por la dirección Structured |
 | 07/09/2026 | C3 PG09-R3 | `b26a351` | Encuesta de satisfacción Structured |
+| 08/09/2026 | C3 PG14-R5/R6 + EQ | `872dbf6` | Catalogo EQ, VIC, MP, Excel/PDF |
