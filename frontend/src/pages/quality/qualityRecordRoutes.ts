@@ -334,3 +334,16 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
 export function operationalRecordFor(code: string): QualityOperationalRecord | undefined {
   return QUALITY_OPERATIONAL_RECORDS.find((r) => r.code === code);
 }
+
+/** Registros del sistema que pueden colgarse de un MC/PG/IT (catálogo fijo). */
+export function recordsForParentDocument(parentCode: string): QualityOperationalRecord[] {
+  const normalized = parentCode.toUpperCase().replace(/\s+/g, "");
+  return QUALITY_OPERATIONAL_RECORDS.filter((r) => {
+    const c = r.code.toUpperCase();
+    return c === `${normalized}-EQ` || c.startsWith(`${normalized}-`);
+  });
+}
+
+export function displayCodeForRecord(code: string): string {
+  return code.replace(/-R0?/i, " R").replace(/-EQ$/i, " EQ");
+}
