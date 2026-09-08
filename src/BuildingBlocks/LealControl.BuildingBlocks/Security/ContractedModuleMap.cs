@@ -2,6 +2,7 @@ namespace LealControl.BuildingBlocks.Security;
 
 public static class ContractedModuleMap
 {
+    // Prefijos más específicos primero (customers/suppliers = directorio, no CRM pipeline).
     private static readonly (string Prefix, string ModuleKey)[] RoutePrefixes =
     [
         ("/api/v1/accounting", "accounting"),
@@ -9,6 +10,8 @@ public static class ContractedModuleMap
         ("/api/v1/purchases", "purchases"),
         ("/api/v1/sales", "sales"),
         ("/api/v1/grains", "grains"),
+        ("/api/v1/crm/customers", "directory"),
+        ("/api/v1/crm/suppliers", "directory"),
         ("/api/v1/crm", "crm"),
         ("/api/v1/communications", "communications"),
         ("/api/v1/hr", "hr"),

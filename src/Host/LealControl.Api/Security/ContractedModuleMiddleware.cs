@@ -55,10 +55,15 @@ public sealed class ContractedModuleMiddleware(RequestDelegate next)
     }
 
     /// <summary>
-    /// Communications se expone en el menú junto con CRM; aceptar cualquiera de las dos claves.
+    /// Directorio (clientes/proveedores) es base del ERP; CRM pipeline y Communications siguen bloqueados si no están contratados.
     /// </summary>
     private static bool IsModuleAllowed(HashSet<string> allowed, string moduleKey)
     {
+        if (moduleKey.Equals("directory", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         if (allowed.Contains(moduleKey))
         {
             return true;
