@@ -132,9 +132,10 @@ public static class MultiTenantAuthResolver
             await using var conn = new NpgsqlConnection(connectionString);
             await conn.OpenAsync(cancellationToken);
 
+            // Avoid depending on optional columns (IsTechnicalDirector) so login works on
+            // freshly provisioned tenant DBs whose EnsureCrmTables batch may have failed mid-way.
             const string sql = @"
-                SELECT u.""TenantId"", u.""Id"", u.""PasswordHash"", u.""Role"", u.""FullName"", u.""AllowedModulesJson"",
-                       COALESCE(u.""IsTechnicalDirector"", false)
+                SELECT u.""TenantId"", u.""Id"", u.""PasswordHash"", u.""Role"", u.""FullName"", u.""AllowedModulesJson""
                 FROM public.tenant_users u
                 WHERE lower(u.""Email"") = @email AND u.""IsActive"" = true";
 
@@ -150,7 +151,7 @@ public static class MultiTenantAuthResolver
                 var role = reader.IsDBNull(3) ? "Admin" : reader.GetString(3);
                 var fullName = reader.GetString(4);
                 var allowedModulesJson = reader.IsDBNull(5) ? null : reader.GetString(5);
-                var isTechnicalDirector = !reader.IsDBNull(6) && reader.GetBoolean(6);
+                var isTechnicalDirector = false;
 
                 if (password != null && !PasswordSecurity.VerifyPassword(password, pwdHash))
                 {

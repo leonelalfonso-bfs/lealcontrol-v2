@@ -46,7 +46,23 @@ try
 
     if (builder.Environment.IsProduction())
     {
-        Directory.CreateDirectory("/var/log/lealcontrol");
+        var preferredLogDir = "/var/log/lealcontrol";
+        var logDir = preferredLogDir;
+        try
+        {
+            Directory.CreateDirectory(logDir);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            logDir = Path.Combine(Path.GetTempPath(), "lealcontrol-logs");
+            Directory.CreateDirectory(logDir);
+            builder.Configuration["Serilog:WriteTo:1:Args:path"] = Path.Combine(logDir, "api-.log");
+            Log.Warning(
+                ex,
+                "No se pudo usar {PreferredLogDir}; logs de archivo en {FallbackLogDir}",
+                preferredLogDir,
+                logDir);
+        }
     }
 
     builder.Services.AddHttpContextAccessor();

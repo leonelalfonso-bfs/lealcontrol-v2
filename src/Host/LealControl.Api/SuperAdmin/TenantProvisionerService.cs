@@ -260,11 +260,13 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
                 ""PasswordHash"" character varying(256),
                 ""IsActive"" boolean NOT NULL DEFAULT true,
                 ""AllowedModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]',
+                ""IsTechnicalDirector"" boolean NOT NULL DEFAULT false,
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""LastLoginUtc"" timestamp with time zone
             );
 
             ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""AllowedModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]';
+            ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""IsTechnicalDirector"" boolean NOT NULL DEFAULT false;
         ";
 
         using (var cmd = new NpgsqlCommand(initSql, conn))
@@ -297,7 +299,7 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
             cmd.Parameters.AddWithValue("id", Guid.NewGuid());
             cmd.Parameters.AddWithValue("tenantId", tenantId);
             cmd.Parameters.AddWithValue("fullName", adminFullName);
-            cmd.Parameters.AddWithValue("email", adminEmail);
+            cmd.Parameters.AddWithValue("email", adminEmail.Trim().ToLowerInvariant());
             cmd.Parameters.AddWithValue("pwdHash", MasterDbContext.HashPassword(adminPassword));
             await cmd.ExecuteNonQueryAsync(cancellationToken);
         }

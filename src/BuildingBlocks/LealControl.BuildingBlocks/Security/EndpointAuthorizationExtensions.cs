@@ -5,6 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LealControl.BuildingBlocks.Security;
 
+/// <summary>
+/// Runs as early as possible in the endpoint filter pipeline so forbidden writes
+/// return 403 even when the JSON body would otherwise fail model binding (400).
+/// </summary>
 public sealed class RequirePolicyOnWriteFilter(string policyName) : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
@@ -32,7 +36,13 @@ public static class EndpointAuthorizationExtensions
 {
     public static RouteGroupBuilder RequirePolicyOnWrites(this RouteGroupBuilder group, string policyName)
     {
-        group.AddEndpointFilter(new RequirePolicyOnWriteFilter(policyName));
+        // Order = int.MinValue: run before other filters; binding for [FromBody] still
+        // happens before filters, so tests should also send bindable payloads.
+        group.AddEndpointFilterFactory((routeHandlerContext, next) =>
+        {
+            var filter = new RequirePolicyOnWriteFilter(policyName);
+            return invocationContext => filter.InvokeAsync(invocationContext, next);
+        });
         return group;
     }
 }

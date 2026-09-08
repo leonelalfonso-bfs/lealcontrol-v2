@@ -25,6 +25,15 @@ internal static class AutoPostViaGateway
         await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
         await db.SeedDefaultJournalTemplatesAsync(tenantId, ct);
 
+        // /auto-post/* must generate the journal entry now, regardless of the tenant toggle
+        // used by the normal Sales/Finance publish path.
+        var settings = await db.GetOrCreateTenantSettingsAsync(tenantId, ct);
+        if (!settings.AutoPostOnConfirm)
+        {
+            settings.AutoPostOnConfirm = true;
+            await db.SaveChangesAsync(ct);
+        }
+
         await gateway.PostAsync(document, ct);
 
         var pending = await db.PendingDocuments.AsNoTracking()

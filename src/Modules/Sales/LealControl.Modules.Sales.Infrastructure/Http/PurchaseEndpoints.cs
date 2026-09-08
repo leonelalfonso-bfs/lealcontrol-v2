@@ -34,13 +34,15 @@ public static class PurchaseEndpoints
             return result.ToHttp();
         });
 
+        // RequireAuthorization runs in AuthorizationMiddleware (before body binding),
+        // so forbidden writers get 403 instead of 400 from invalid/partial JSON.
         purchases.MapPost("/orders", async (CreatePurchaseOrderCommand body, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(body, ct);
             return result.IsSuccess
                 ? Results.Created($"/api/v1/purchases/orders/{result.Value.Id}", result.Value)
                 : result.ToHttp();
-        });
+        }).RequireAuthorization("RequirePurchases");
 
         purchases.MapPut("/orders/{id:guid}/status", async (Guid id, UpdateStatusRequest body, ISender sender, CancellationToken ct) =>
         {
