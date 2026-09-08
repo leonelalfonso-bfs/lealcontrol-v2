@@ -1,7 +1,7 @@
 # Módulo de Calidad (SGC ISO/IEC 17025) — Análisis de estructura
 
-**Fecha:** 08/09/2026 (actualizado Linked IT + etiquetas ES)  
-**Rama:** `staging/metrology-2307`  
+**Fecha:** 08/09/2026 (actualizado onboarding multi-tenant: árbol vacío + alta guiada)  
+**Rama:** `staging/metrology-2307` (prod = `main`)  
 **Fuente:** carpeta Drive "INMELA - BFS" preparada por la consultoría ELEVAR (Laura Delissi) + documentos técnicos de Germán, relevada completa el 07/09/2026.  
 **Referencia interna:** `docs/Contexto_revision_Metrologia_Legal_ISO17025.md`, módulo `src/Modules/Metrology`.  
 **Plan maestro (enlace):** `docs/PLAN_MAESTRO_MEJORAS.md` → Bloque Q.
@@ -12,9 +12,10 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** `d7c38af` (C4 — tablero + historial + modo presentación). Previo: `abf955b`.
-**Siguiente:** deploy staging; alertas Calendar diferidas.
-**Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
+**Último avance Calidad (08/09 noche):** onboarding multi-tenant del árbol documental.  
+**Commits clave (main):** `56abd81` / `c524ea9` (árbol vacío + alta documento), `f260fe8` (agregar registros al árbol).  
+**Prod:** https://erp.lealcontrol.com — `/opt/lealcontrol-v2`  
+**Staging:** https://v2.lealcontrol.com — `/opt/lealcontrol-staging`
 
 ### Principio: los registros se generan en el sistema
 
@@ -30,14 +31,24 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | `Linked` | Deep-link a Metrología / otro módulo |
 | `Attachment` | Metadatos de instancia + PDF (compromisos, notas); igual se da de alta en UI, no “solo subir el Word” |
 
+### Principio (nuevo): cada tenant arma su propio árbol
+
+- **No** se auto-copia el catálogo INMELA a empresas nuevas (`EnsureCatalogAsync` ya no corre en endpoints).
+- Tenant nuevo → **árbol vacío**.
+- Alta de **MC / PG / IT / Externo** con encabezado manual + PDF publicado + Word/Excel fuente.
+- Bajo un MC/PG/IT → **Agregar registro** desde lista fija (`qualityRecordRoutes.ts`): se crea el nodo hijo y se enlaza a la pantalla operativa ya existente.
+- Misma consultora ≠ mismos archivos: estructura similar, contenido y firmas de **cada** lab.
+- Seed INMELA (`QualitySeed` / `tools/quality-seed`) queda solo para bootstrap **explícito** de INMELA, no para altas SaaS.
+
 ### Hecho
 
 | Ítem | Estado | Notas |
 |---|---|---|
-| **C1** Árbol documental + seed + upload/approve + descarga JWT | ✅ Cerrado | Pendiente operativo: poblar `tools/quality-seed/input/` desde Drive |
+| **C1** Árbol documental + upload/approve + descarga JWT | ✅ Cerrado | Seed automático **desactivado** para tenants nuevos (ver C5) |
 | **C2** Snapshot SGC + approve DT + termómetro + **PG14-R3/R4** + **PG14-R1** + **PG09 R2** + **Linked IT** | ✅ Cerrado (ítems listados) | ✅ PG14-R3/R4 + PG14-R1 + PG09 R2 + vistas Linked IT01–IT04 R1/R2/R3 + etiquetas ES |
 | **C3 nav** Menú sin un ítem por registro | ✅ | Lateral: Tablero · Árbol · Registros operativos (`/calidad/registros`) |
 | **C4** Tablero SGC + historial + modo presentación | ✅ Implementado | Alertas NC/quejas/calib/autorizaciones; matriz 17025; before/after PG03/PG07; PresentationModeMiddleware |
+| **C5** Onboarding multi-tenant del árbol | ✅ Base lista | Árbol vacío; Nuevo documento; Agregar registro desde catálogo; sin seed INMELA en API |
 | **MC01-R01** Confidencialidad interno | ✅ | Attachment + metadatos de instancia |
 | **MC01-R02** Confidencialidad externo | ✅ | Idem + organización |
 | **MC01-R03** Indicadores | ✅ | Structured: Indicator + IndicatorValue |
@@ -59,20 +70,41 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | **PG14-R05** Verificación intermedia | ✅ | Structured VIC-AAAA-NNNN; pesa 1000 kg; PDF+Excel |
 | **PG14-R06** Mantenimiento preventivo | ✅ | Structured MP-AAAA-NNNN; marcar hecho avanza NextDue; PDF+Excel |
 
-### Siguiente sesión
+### Siguiente sesión (09/09/2026)
 
-1. Deploy staging del **C4** (tablero + historial UI + modo presentación) tras commit/push.
-2. Alertas Calendar → notificaciones (diferido).
-3. ~~C4 implementación~~ **implementado** en `d7c38af`.
+1. **Validar en prod** el flujo completo en un tenant de prueba (árbol vacío → MC01 → R01/R02/R03…).
+2. Si el tenant de prueba ya tenía seed viejo: limpiar catálogo de ese tenant o crear uno nuevo.
+3. **C5b (opcional):** sugerir campos del encabezado leyendo Word/PDF (siempre con confirmación manual).
+4. Completar catálogo de tipos faltantes en el selector si aparece un código real sin opción (ej. PG09-R01 Informe si hace falta en árbol).
+5. Alertas Calendar → notificaciones (sigue diferido).
+6. Carga operativa INMELA: PDFs vía UI o `tools/quality-seed` **solo** en tenant INMELA.
+
+### Flujo operativo acordado (C5)
+
+```
+Tenant nuevo (Calidad habilitada)
+  → /calidad/documentos  (vacío)
+  → Nuevo documento (MC | PG | IT | EXT)
+      · Código, título
+      · Encabezado manual (versión, elaboró, revisó, aprobó, fechas)
+      · PDF publicado + Word/Excel fuente
+      · Marcar vigente (opcional)
+  → Detalle del documento
+      · Agregar registro (lista fija del sistema)
+      · Nodo hijo RecordTemplate + link “Abrir” a la pantalla existente
+  → Instancias operativas siguen en /calidad/registros/…
+```
+
 ### Reglas de trabajo que ya aplican
 
-- **No** agregar registros al menú lateral: `qualityRecordRoutes.ts` (`ready: true`) + ruta + “Abrir registro” desde árbol.
+- **No** agregar registros al menú lateral: `qualityRecordRoutes.ts` (`ready: true`) + ruta + “Abrir registro” desde árbol/detalle.
 - Antes de push: sin typo CSS `displayContent` (usar `justifyContent`).
-- Commits solo del corte Calidad.
+- Commits solo del corte Calidad (salvo fixes de deploy).
 - Todo registro operativo nuevo = entidad + API + UI de alta/edición (no “subir plantilla y listo”).
 - **Export obligatorio en cada registro:** PDF de la instancia (formato planilla + **logo de Configuración**) + Excel del listado filtrable.
+- **No** volver a llamar `EnsureCatalogAsync` desde endpoints de lectura/escritura del módulo.
 
-Catálogo operativo UI: `qualityRecordRoutes.ts`. Endpoints: `/api/v1/quality/records/…`.
+Catálogo operativo UI: `qualityRecordRoutes.ts`. Endpoints: `/api/v1/quality/records/…` y `POST /api/v1/quality/documents`.
 
 ---
 
@@ -420,7 +452,18 @@ Ganchos: `Program.cs` (Add/Map/HealthCheck), `TenantDatabaseBootstrapper` (despu
 
 ## 7. Datos iniciales (seed)
 
-El `Listado de códigos utilizados.xlsx` es la fuente del árbol inicial. Seed por tenant INMELA:
+### 7.1 Tenants SaaS (decisión 08/09/2026)
+
+**Árbol vacío** al habilitar Calidad. El catálogo se arma a mano:
+
+1. `POST /api/v1/quality/documents` (UI “Nuevo documento”) — MC/PG/IT/External + metadatos de versión + archivos.
+2. En detalle del padre — “Agregar registro” desde `QUALITY_OPERATIONAL_RECORDS` (nodo `RecordTemplate` hijo).
+
+`QualitySeed.EnsureCatalogAsync` **no** se invoca desde la API en runtime.
+
+### 7.2 Tenant INMELA (histórico / opcional)
+
+El `Listado de códigos utilizados.xlsx` sigue siendo la referencia del árbol INMELA. Seed explícito (script o llamada manual a `EnsureCatalogAsync`):
 
 - `MC01` Manual de calidad (v1, aprobado 10/07/2026, Elaboró Laura Delissi / Revisó Leonel Alfonso / Aprobó Javier Coppini) + R01, R02, R03, R05.
 - `PG01`…`PG17` con los títulos exactos del listado y sus registros R (ver §1.3). PG05 y PG09 se crean sin archivo (estado `Draft`) hasta que la consultoría los suba.
@@ -428,7 +471,7 @@ El `Listado de códigos utilizados.xlsx` es la fuente del árbol inicial. Seed p
 - Documentos externos de "Normas de referencia" con relaciones (25/2025 deroga 2307/80 con régimen transitorio; 276/2024 y 67/2025 modifican 611/2019).
 - Cláusulas ISO 17025 → documento, tomadas de la `Planilla_Seguimiento_ISO_17025` (4.1/4.2 → MC01; 6.2 → PG06; 6.3 → PG16; 6.4 → PG14; 6.5 → PG17; 6.6 → PG05; 7.2 → PG11/PG12; 7.4 → PG13; 7.5 → PG02; 7.6 → PG10; 7.7 → PG15; 7.8 → PG09; 7.9 → PG03; 7.10 → PG07; 8.3 → PG01; 8.4 → PG02; 8.5/8.7 → PG07; 8.8 → PG04; 8.9 → PG08).
 
-**Carga de archivos (decisión): por script, al cierre de C1.** `tools/quality-seed/` hace:
+**Carga de archivos INMELA:** `tools/quality-seed/` hace:
 
 1. Coloca los archivos del Drive "INMELA - BFS" en `tools/quality-seed/input/` (misma `fileName` que `mapping.json`; no versionar binarios).
 2. Convierte cada .docx/.xlsx a PDF (LibreOffice headless) → ese PDF es el `PublishedFileId`; el original queda como `SourceFileId`.
@@ -436,7 +479,7 @@ El `Listado de códigos utilizados.xlsx` es la fuente del árbol inicial. Seed p
 4. Sube vía API (`POST …/files`, `POST …/attach`, `PATCH` metadatos, opcional `--approve` DT) con Elaboró/Revisó/Aprobó 10/07/2026.
 5. Emite `discrepancies-report.md` (sin archivo local, missing Drive, huérfanos, catálogo sin mapping).
 
-El script es idempotente por código+versión (si ya hay `PublishedFileId`, se omite).
+El script es idempotente por código+versión (si ya hay `PublishedFileId`, se omite). Preferible: cargar PDFs de INMELA también por la UI de alta/detalle una vez estabilizado C5.
 
 ---
 
@@ -464,7 +507,11 @@ El script es idempotente por código+versión (si ya hay `PublishedFileId`, se o
 | **Estado C3 (07/09/2026):** | **CASI CERRADO** para registros listados (MC01…PG09 + PG14-R5/R6 + QualityEquipment). Restos C2 / C4. | — |
 | **C4 — Tablero, auditoría de cambios y modo presentación** | Dashboard SGC, matriz cláusulas 17025, historial before/after por registro, **modo presentación** (toggle, bloqueo de escrituras en backend, salida con contraseña, log de sesiones), alertas (Google Calendar → notificaciones del sistema) | Simulacro de auditoría interna PG04 completo dentro del sistema, mostrado en modo presentación |
 
-Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor riesgo; C2 toca Metrología y conviene hacerla antes de emitir informes "en producción ISO"; C3 es volumen (muchos formularios pero todos del mismo patrón); C4 es pulido. El modo presentación podría adelantarse a C1 en versión mínima (solo ocultar botones) si la auditoría interna se programa antes de terminar C4.
+| **Estado C4 (08/09/2026):** | **CERRADO** para tablero + historial + modo presentación. Alertas Calendar diferidas. | — |
+| **C5 — Onboarding multi-tenant** | Árbol vacío por tenant; sin `EnsureCatalogAsync` en API; UI Nuevo documento (MC/PG/IT/EXT + encabezado + archivos); Agregar registro desde catálogo fijo al árbol; formatos operativos reutilizados | Cada lab arma su SGC sin heredar documentos/firmas INMELA |
+| **Estado C5 (08/09/2026):** | **BASE LISTA** en main (`56abd81`, `f260fe8`). Pendiente validación prod + C5b parseo encabezado opcional. | — |
+
+Estimación gruesa: C1–C4 cerrados funcionalmente; **C5** es el corte SaaS del árbol. C5b (OCR/parse encabezado) es mejora de ergonomía, no bloquea altas.
 
 ### Checklist C3 (marcar al cerrar cada registro)
 
@@ -494,10 +541,13 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 | 3 | Formato publicado | **PDF obligatorio** para la versión vigente; .docx/.xlsx se conserva como fuente editable no visible al auditor. | §3.2, §7 |
 | 4 | Autorizaciones / firmas | Las autorizaciones PG06-R02 y las aprobaciones las firman los **Directores Técnicos (Javier y Leonel)**. Se crea un **flag `IsTechnicalDirector` sobre el usuario** y la policy `RequireTechnicalDirector`. Las personas autorizadas son usuarios del sistema. | §3.3, §3.4, §5 |
 | 5 | Auditor externo | **Modo presentación** desde la sesión de Calidad/DT: solo lectura, bloqueo de escrituras en backend, salida con contraseña, log de sesiones. Sin usuario propio para el auditor. | §5, §9 (C4) |
-| 6 | Seed de archivos | **Script** `tools/quality-seed`: descarga del Drive, conversión a PDF, mapeo de códigos, carga por API, reporte de discrepancias. Idempotente. | §6, §7, §9 (C1) |
+| 6 | Seed de archivos | **Script** `tools/quality-seed` solo para bootstrap **explícito INMELA**. Tenants SaaS: árbol vacío + UI. | §6, §7, §9 (C1/C5) |
 | 7 | Menú lateral | **No** un ítem por registro. Solo Tablero · Árbol · índice Registros. Entrada operativa desde árbol/detalle o hub. | §0, §4, §9 (C3) |
 | 8 | Instancias vs plantilla | Los registros operativos **se generan en el sistema** (entidad + workflow). El archivo del Drive es plantilla del árbol; el adjunto es evidencia, no el registro. | §0, §3.3 |
 | 9 | Exportaciones por registro | **PDF** de cada instancia con formato tipo planilla SGC (como Drive), **con logo y razón social de Configuración** (`CompanySettings.logoUrl`). **Excel** del listado con filtros. Patrón a replicar en todos los registros Structured/Generated. | §0, §4, PG03-R01 |
+| 10 | Multi-tenant / otra empresa | **Tenant propio** + módulos Calidad (y Metrología si aplica). **No** compartir BD, storage ni seed INMELA. | §0, §7.1, C5 |
+| 11 | Armado del árbol | Manual: Nuevo documento + Agregar registro (lista fija). Parseo de encabezado = sugerencia futura con confirmación. | §0, C5 |
+| 12 | CRM / Comunicaciones | Deshabilitados del catálogo SuperAdmin y menú hasta estabilizar (Directorio sí). Fuera del alcance Calidad pero afecta demos ERP. | SuperAdmin / moduleRegistry |
 
 
 ---
@@ -526,3 +576,7 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 | 07/09/2026 | C3 PG08 | `2322303` | Revisión por la dirección Structured |
 | 07/09/2026 | C3 PG09-R3 | `b26a351` | Encuesta de satisfacción Structured |
 | 08/09/2026 | C3 PG14-R5/R6 + EQ | `872dbf6` | Catalogo EQ, VIC, MP, Excel/PDF |
+| 08/09/2026 | C4 tablero + presentación | `d7c38af` | Dashboard SGC, historial, PresentationMode |
+| 08/09/2026 | C5 árbol vacío + alta | `56abd81` / `c524ea9` | Sin EnsureCatalog en API; Nuevo documento; fix nullables |
+| 08/09/2026 | C5 agregar registros | `f260fe8` | Selector de tipos existentes en detalle MC/PG/IT |
+| 08/09/2026 | Docs C5 / plan | (este doc) | §0 reanudación 09/09; decisiones 10–12; §7.1 |
