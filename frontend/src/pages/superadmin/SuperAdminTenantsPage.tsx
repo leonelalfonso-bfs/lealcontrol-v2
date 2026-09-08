@@ -71,11 +71,12 @@ export function SuperAdminTenantsPage() {
     if (!editTenant) return;
     setSavingModules(true);
     try {
-      await api.updateSuperAdminTenantModules(editTenant.id, {
+      const res = await api.updateSuperAdminTenantModules(editTenant.id, {
         enabledModulesJson: JSON.stringify(tenantModules)
       });
       setEditTenant(null);
       load();
+      alert((res as any)?.message || "Módulos guardados. Pedile a los usuarios que vuelvan a iniciar sesión.");
     } catch (err: any) {
       alert("Error al actualizar módulos: " + err.message);
     } finally {
@@ -183,14 +184,23 @@ export function SuperAdminTenantsPage() {
                         <code style={{ background: "#0b1120", padding: "4px 8px", borderRadius: "6px", color: "#a855f7", fontSize: "12px", fontWeight: "700" }}>{t.dbName}</code>
                       </td>
                       <td style={{ padding: "16px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
                           <span style={{ textTransform: "uppercase", fontWeight: "700", color: "#eab308", fontSize: "12px" }}>{t.planCode}</span>
                           <button
+                            type="button"
                             onClick={() => openModulesModal(t)}
-                            style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", cursor: "pointer", fontWeight: "700" }}
+                            style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontWeight: "700" }}
                           >
-                            ⚙️ {mods.length} Módulos
+                            ✏️ Editar módulos ({mods.length})
                           </button>
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                          {mods.slice(0, 8).map((m: string) => (
+                            <span key={m} style={{ fontSize: "10px", background: "#0b1120", border: "1px solid #334155", borderRadius: "4px", padding: "1px 6px", color: "#94a3b8" }}>
+                              {m}
+                            </span>
+                          ))}
+                          {mods.length > 8 && <span style={{ fontSize: "10px", color: "#64748b" }}>+{mods.length - 8}</span>}
                         </div>
                       </td>
                       <td style={{ padding: "16px" }}>
@@ -207,6 +217,14 @@ export function SuperAdminTenantsPage() {
                       </td>
                       <td style={{ padding: "16px", textAlign: "right" }}>
                         <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end", flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            onClick={() => openModulesModal(t)}
+                            title="Agregar o quitar módulos contratados"
+                            style={{ background: "#1d4ed8", border: "none", color: "#fff", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "700" }}
+                          >
+                            ✏️ Módulos
+                          </button>
                           <button
                             onClick={() => handleGeneratePaymentLink(t)}
                             title="Generar Link de Pago MercadoPago"
@@ -250,7 +268,8 @@ export function SuperAdminTenantsPage() {
               </div>
 
               <p style={{ fontSize: "13px", color: "#cbd5e1", marginBottom: "16px" }}>
-                Seleccioná qué módulos tiene contratados esta empresa. Solo los módulos tildados aparecerán en el ERP de sus usuarios:
+                Seleccioná qué módulos tiene contratados esta empresa. Al guardar se sincroniza con los usuarios activos.
+                <strong style={{ color: "#fbbf24" }}> Deben volver a iniciar sesión</strong> para ver el menú actualizado.
               </p>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "24px" }}>

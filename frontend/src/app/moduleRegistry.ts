@@ -382,12 +382,10 @@ export const DEVELOPMENT_ACCESS: AccessContext = {
 };
 
 export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: string | string[] | null): string[] {
-  if (userRole === "Admin" || userRole === "Administrador") {
-    return [
-      "inicio", "directorio", "crm", "comunicaciones", "ventas", "compras", "inventario",
-      "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "calidad", "administracion"
-    ];
-  }
+  const allAdminModules = [
+    "inicio", "directorio", "crm", "comunicaciones", "ventas", "compras", "inventario",
+    "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "calidad", "administracion"
+  ];
 
   const moduleMap: Record<string, string[]> = {
     sales: ["ventas"],
@@ -401,22 +399,35 @@ export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: s
     grains: ["cereales"],
     accounting: ["contabilidad"],
     metrology: ["metrologia"],
-    quality: ["calidad"]
+    quality: ["calidad"],
+    administracion: ["administracion"]
   };
 
-  try {
-    const raw = typeof allowedModulesJson === "string"
-      ? JSON.parse(allowedModulesJson)
-      : allowedModulesJson || [];
-    const allowed = ["inicio"];
-    (Array.isArray(raw) ? raw : []).forEach((entry: string) => {
-      if (moduleMap[entry]) allowed.push(...moduleMap[entry]);
-      else allowed.push(entry);
-    });
-    return allowed;
-  } catch {
-    return ["inicio", "ventas", "crm", "comunicaciones"];
+  const fromJson = (): string[] | null => {
+    try {
+      const raw = typeof allowedModulesJson === "string"
+        ? JSON.parse(allowedModulesJson)
+        : allowedModulesJson;
+      if (!Array.isArray(raw) || raw.length === 0) return null;
+      const allowed = ["inicio", "administracion"];
+      raw.forEach((entry: string) => {
+        if (moduleMap[entry]) allowed.push(...moduleMap[entry]);
+        else allowed.push(entry);
+      });
+      return Array.from(new Set(allowed));
+    } catch {
+      return null;
+    }
+  };
+
+  const parsed = fromJson();
+  // Admin/Administrador: si hay módulos contratados en el perfil, respetarlos.
+  // Solo si no hay lista (usuarios legacy) se muestran todos.
+  if (userRole === "Admin" || userRole === "Administrador") {
+    return parsed ?? allAdminModules;
   }
+
+  return parsed ?? ["inicio", "ventas", "crm", "comunicaciones"];
 }
 
 export function canAccessModule(module: ModuleDefinition, access: AccessContext): boolean {

@@ -7,7 +7,7 @@ public sealed class ContractedModuleMiddleware(RequestDelegate next)
 {
     private static readonly HashSet<string> BypassRoles = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Admin", "Administrador", "SuperAdmin"
+        "SuperAdmin"
     };
 
     public async Task InvokeAsync(HttpContext context)
