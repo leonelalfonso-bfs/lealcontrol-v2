@@ -168,47 +168,66 @@ public static class TenantDatabaseBootstrapper
     {
         var applied = (await db.Database.GetAppliedMigrationsAsync(cancellationToken)).ToList();
         var pending = (await db.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
-        var legacyExists = await LegacySchemaExistsAsync(db, legacyProbeTable, cancellationToken);
 
-        // Solo omitir Migrate cuando hay tablas legacy y CERO historial EF (chocaría al recrear).
-        // Si ya hay migraciones aplicadas y quedan pendientes, SIEMPRE aplicarlas
-        // (antes se saltaban por existir crm.customers → opportunities/activities incompletas).
-        var skipMigrate = pending.Count > 0 && applied.Count == 0 && legacyExists;
-        if (skipMigrate)
+        // Base nueva (sin historial EF): migrar siempre, salvo esquema legacy real.
+        // Si el sondeo falla, se asume "no legacy" y se migra (un throw acá dejaba CRM vacío → POST /customers 500).
+        if (pending.Count > 0 && applied.Count == 0)
         {
-            Log.Warning(
-                "Base {DbName}: módulo {Module} legacy ({Probe}) sin historial EF y {PendingCount} pendiente(s). Se omite MigrateAsync; EnsureTables completa huecos.",
-                dbName,
-                moduleName,
-                legacyProbeTable,
-                pending.Count);
-        }
-        else if (pending.Count > 0)
-        {
-            try
-            {
-                await db.Database.MigrateAsync(cancellationToken);
-            }
-            catch (PostgresException ex) when (
-                ex.SqlState == PostgresErrorCodes.DuplicateTable
-                || ex.SqlState == PostgresErrorCodes.UniqueViolation
-                || ex.SqlState == PostgresErrorCodes.DuplicateObject)
+            var legacyExists = await LegacySchemaExistsAsync(db, legacyProbeTable, cancellationToken);
+            if (legacyExists)
             {
                 Log.Warning(
-                    ex,
-                    "Base {DbName}: módulo {Module} — MigrateAsync chocó con objetos ya existentes ({SqlState}). Continuando con EnsureTables.",
+                    "Base {DbName}: módulo {Module} legacy ({Probe}) sin historial EF y {PendingCount} pendiente(s). Se omite MigrateAsync; EnsureTables completa huecos.",
                     dbName,
                     moduleName,
-                    ex.SqlState);
+                    legacyProbeTable,
+                    pending.Count);
             }
-            catch (Exception ex)
+            else
             {
-                Log.Fatal(ex, "Fallo MigrateAsync del módulo {Module} en base {DbName}. Reconciliar __ef_migrations_history.", moduleName, dbName);
-                throw;
+                await MigrateResilientAsync(db, moduleName, dbName, cancellationToken);
             }
+
+            await EnsureTablesResilientAsync(ensureTablesAsync, moduleName, dbName, cancellationToken);
+            return;
+        }
+
+        // Ya hay historial: aplicar pendientes aunque existan tablas (opportunities/activities incompletas).
+        if (pending.Count > 0)
+        {
+            await MigrateResilientAsync(db, moduleName, dbName, cancellationToken);
         }
 
         await EnsureTablesResilientAsync(ensureTablesAsync, moduleName, dbName, cancellationToken);
+    }
+
+    private static async Task MigrateResilientAsync(
+        DbContext db,
+        string moduleName,
+        string dbName,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.Database.MigrateAsync(cancellationToken);
+        }
+        catch (PostgresException ex) when (
+            ex.SqlState == PostgresErrorCodes.DuplicateTable
+            || ex.SqlState == PostgresErrorCodes.UniqueViolation
+            || ex.SqlState == PostgresErrorCodes.DuplicateObject)
+        {
+            Log.Warning(
+                ex,
+                "Base {DbName}: módulo {Module} — MigrateAsync chocó con objetos ya existentes ({SqlState}). Continuando con EnsureTables.",
+                dbName,
+                moduleName,
+                ex.SqlState);
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Fallo MigrateAsync del módulo {Module} en base {DbName}. Reconciliar __ef_migrations_history.", moduleName, dbName);
+            throw;
+        }
     }
 
     private static async Task EnsureTablesResilientAsync(
@@ -239,26 +258,53 @@ public static class TenantDatabaseBootstrapper
 
     private static async Task<bool> LegacySchemaExistsAsync(DbContext db, string qualifiedTable, CancellationToken cancellationToken)
     {
-        await using var command = db.Database.GetDbConnection().CreateCommand();
-        command.CommandText = "SELECT to_regclass(@qualified) IS NOT NULL";
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "qualified";
-        parameter.Value = qualifiedTable;
-        command.Parameters.Add(parameter);
-
-        if (command.Connection?.State != System.Data.ConnectionState.Open)
+        var parts = qualifiedTable.Split('.', 2);
+        if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
         {
-            await command.Connection!.OpenAsync(cancellationToken);
+            return false;
         }
 
-        var result = await command.ExecuteScalarAsync(cancellationToken);
-        return result is bool exists && exists;
+        try
+        {
+            var connection = db.Database.GetDbConnection();
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.tables
+                    WHERE table_schema = @schema AND table_name = @table
+                )
+                """;
+
+            var schema = command.CreateParameter();
+            schema.ParameterName = "schema";
+            schema.Value = parts[0];
+            command.Parameters.Add(schema);
+
+            var table = command.CreateParameter();
+            table.ParameterName = "table";
+            table.Value = parts[1];
+            command.Parameters.Add(table);
+
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync(cancellationToken);
+            }
+
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            return result is true || result is bool flag && flag;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "No se pudo sondear {Probe}; se asume que no hay esquema legacy y se migrará.", qualifiedTable);
+            return false;
+        }
     }
 
     private static TContext CreateContext<TContext>(string connectionString, string migrationsHistorySchema)
         where TContext : DbContext
     {
-        var assemblyName = typeof(TContext).Assembly.FullName
+        var assemblyName = typeof(TContext).Assembly.GetName().Name
             ?? throw new InvalidOperationException($"No se pudo resolver el assembly de {typeof(TContext).Name}.");
         var options = new DbContextOptionsBuilder<TContext>()
             .UseNpgsql(connectionString, npgsql =>
