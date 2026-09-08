@@ -12,8 +12,8 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** `102ab1b` (PG14-R1 hoja de vida EquipmentLogEntry).  
-**Siguiente:** resto **C2** = **Linked IT** (o **C4**). **PG09 R2** ✅ enmienda de informe.  
+**Último commit de avance Calidad:** `82056b4` (PG09 R2). Fix CI: `85b8b24`.  
+**Siguiente:** resto **C2** = **Linked IT** (o **C4**).  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
 ### Principio: los registros se generan en el sistema
@@ -508,6 +508,8 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 | 07/09/2026 | C2 cortes 1–2 | (varios previos) | Snapshot informe, DT, MetrologyInstrument |
 | 08/09/2026 | C2 corte 3 PG14-R3/R4 | `34f0ffd` | `IMetrologyAssetCatalog` + listado/programa Generated |
 | 08/09/2026 | C2 corte 4 PG14-R1 | `102ab1b` | Hoja de vida HV + sync calibraciones + PDF por activo |
+| 08/09/2026 | C2 PG09 R2 | `82056b4` | Enmienda informe: SupersedesReportId + AmendmentReason |
+| 08/09/2026 | Fix CI | `85b8b24` | AuthSecurity, RBAC y auditoría contable QA |
 | 07/09/2026 | C3 MC01-R01 | `9f5e5f4` | Compromisos confidencialidad internos |
 | 07/09/2026 | C3 MC01-R02 | `847b9ee` | Compromisos externos |
 | 07/09/2026 | C3 hub + MC01-R03 | `7fd1fba` | Índice registros + indicadores |
