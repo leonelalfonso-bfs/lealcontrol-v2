@@ -32,7 +32,7 @@ export function SettingsPage() {
   const [userRole, setUserRole] = useState("Comercial");
   const [userIsActive, setUserIsActive] = useState(true);
   const [userModules, setUserModules] = useState<string[]>([
-    "sales", "crm", "purchases", "inventory", "finance", "fleet", "hr", "grains"
+    "sales", "purchases", "inventory", "finance", "fleet", "hr", "grains"
   ]);
   const [savingUser, setSavingUser] = useState(false);
 
@@ -130,7 +130,7 @@ export function SettingsPage() {
     setShowPassword(false);
     setUserRole("Comercial");
     setUserIsActive(true);
-    setUserModules(["sales", "crm"]);
+    setUserModules(["sales", "purchases"]);
     setShowUserModal(true);
   };
 
@@ -144,9 +144,11 @@ export function SettingsPage() {
     setUserIsActive(u.isActive);
     try {
       const mods = typeof u.allowedModulesJson === "string" ? JSON.parse(u.allowedModulesJson) : u.allowedModulesJson || [];
-      setUserModules(Array.isArray(mods) && mods.length > 0 ? mods : ["sales", "crm"]);
+      const selectable = new Set(ALL_SYSTEM_MODULES.map((m) => m.id));
+      const cleaned = Array.isArray(mods) ? mods.filter((m: string) => selectable.has(m)) : [];
+      setUserModules(cleaned.length > 0 ? cleaned : ["sales", "purchases"]);
     } catch {
-      setUserModules(["sales", "crm"]);
+      setUserModules(["sales", "purchases"]);
     }
     setShowUserModal(true);
   };
@@ -177,7 +179,7 @@ export function SettingsPage() {
     if (newRole === "Admin") {
       setUserModules(ALL_SYSTEM_MODULES.map((m) => m.id));
     } else if (newRole === "Comercial") {
-      setUserModules(["sales", "crm", "inventory"]);
+      setUserModules(["sales", "inventory"]);
     } else if (newRole === "Técnico") {
       setUserModules(["fleet", "inventory"]);
     } else if (newRole === "Facturación") {

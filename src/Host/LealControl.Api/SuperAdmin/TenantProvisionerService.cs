@@ -144,7 +144,9 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
 
     internal static string NormalizeModulesJson(string? enabledModulesJson)
     {
-        const string fallback = """["sales","crm","purchases","inventory","finance","fleet","hr"]""";
+        // CRM/Comunicaciones fuera del catálogo hasta estabilizar (se reactivan en staging luego).
+        var disabled = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "crm", "communications" };
+        const string fallback = """["sales","purchases","inventory","finance","fleet","hr"]""";
         if (string.IsNullOrWhiteSpace(enabledModulesJson))
             return fallback;
 
@@ -157,6 +159,7 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
             var cleaned = parsed
                 .Where(m => !string.IsNullOrWhiteSpace(m))
                 .Select(m => m.Trim().ToLowerInvariant())
+                .Where(m => !disabled.Contains(m))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 

@@ -32,7 +32,7 @@ export function SuperAdminDemoRequestsPage() {
   const [planCode, setPlanCode] = useState("pyme");
   const [adminPassword, setAdminPassword] = useState("");
   const [monthlyPriceArs, setMonthlyPriceArs] = useState(95000);
-  const [selectedModules, setSelectedModules] = useState<string[]>(["sales", "crm", "finance"]);
+  const [selectedModules, setSelectedModules] = useState<string[]>(["sales", "purchases", "finance"]);
   const [provisioning, setProvisioning] = useState(false);
   const [provisionResult, setProvisionResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +78,10 @@ export function SuperAdminDemoRequestsPage() {
       setMonthlyPriceArs(plan.priceArs);
       try {
         const mods = typeof plan.enabledModulesJson === "string" ? JSON.parse(plan.enabledModulesJson) : [];
-        if (Array.isArray(mods) && mods.length > 0) setSelectedModules(mods);
+        if (Array.isArray(mods) && mods.length > 0) {
+          const selectable = new Set(ALL_SYSTEM_MODULES.map((m) => m.id));
+          setSelectedModules(mods.filter((m: string) => selectable.has(m)));
+        }
       } catch {
         // keep
       }
