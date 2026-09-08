@@ -66,6 +66,14 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "Revisión anual; inputs del SGC (quejas, NC, auditorías, indicadores…) se arman solos."
   },
   {
+    code: "PG09-R02",
+    title: "Modificación al informe de ensayos",
+    path: "/metrologia/informes",
+    kind: "Linked",
+    ready: true,
+    blurb: "Linked a Metrología: enmienda PG09 R2 (clon Draft, original Superseded, motivo obligatorio)."
+  },
+  {
     code: "PG09-R03",
     title: "Encuesta de satisfacción",
     path: "/calidad/registros/encuestas",

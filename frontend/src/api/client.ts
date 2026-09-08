@@ -1113,12 +1113,27 @@ export const api = {
       report: import("./types").CalibrationReport;
       equipment?: import("./types").MetrologyEquipment;
       thermometer?: import("./types").MetrologyInstrument | null;
+      amendments?: Array<{
+        id: string;
+        certificateNumber: string;
+        reportStatus: string;
+        amendmentReason?: string | null;
+        createdAtUtc: string;
+      }>;
+      supersededReport?: { id: string; certificateNumber: string; reportStatus: string } | null;
     }>(`/api/v1/metrology/reports/${id}`),
   saveCalibrationReport: (body: Record<string, unknown>) =>
     request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) }),
 
   approveCalibrationReport: (id: string) =>
     request<import("./types").CalibrationReport>(`/api/v1/metrology/reports/${id}/approve`, { method: "POST", body: "{}" }),
+
+  /** PG09 R2 — clona informe Issued en borrador de enmienda y marca el original Superseded. */
+  amendCalibrationReport: (id: string, body: { amendmentReason: string } & Record<string, unknown>) =>
+    request<import("./types").CalibrationReport>(`/api/v1/metrology/reports/${id}/amend`, {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
 
   getCalibrationReportSgcTraceability: (id: string) =>
     request<{

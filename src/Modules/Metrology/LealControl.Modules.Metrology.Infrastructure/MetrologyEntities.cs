@@ -190,6 +190,12 @@ public sealed class CalibrationReport : Entity<Guid>
     /// <summary>Termómetro / instrumento ambiental usado en el ensayo (PG16).</summary>
     public Guid? ThermometerInstrumentId { get; set; }
 
+    /// <summary>PG09 R2: Id del informe emitido que esta enmienda reemplaza.</summary>
+    public Guid? SupersedesReportId { get; set; }
+
+    /// <summary>PG09 R2: Motivo de la modificación/enmienda (obligatorio al enmendar).</summary>
+    public string? AmendmentReason { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public CalibrationReport() : base(Guid.NewGuid()) { }
@@ -395,7 +401,10 @@ public record CalibrationReportDto(
     string WeightsUsedJson,
     string? Observations,
     string? SealsPlaced,
-    DateTime CreatedAtUtc
+    DateTime CreatedAtUtc,
+    Guid? SupersedesReportId = null,
+    string? AmendmentReason = null,
+    string? ReportStatus = null
 );
 
 public record CalibrationReportWriteDto(
@@ -428,7 +437,32 @@ public record CalibrationReportWriteDto(
     string? RegulatoryNotice = null,
     string? TestPlanVersion = null,
     string? ReportStatus = null,
-    Guid? ThermometerInstrumentId = null
+    Guid? ThermometerInstrumentId = null,
+    Guid? SupersedesReportId = null,
+    string? AmendmentReason = null
+);
+
+/// <summary>PG09 R2 — cuerpo de enmienda. Motivo obligatorio; el resto son overrides opcionales del clon.</summary>
+public record CalibrationReportAmendDto(
+    string AmendmentReason,
+    string? Observations = null,
+    string? SealsPlaced = null,
+    string? Verdict = null,
+    decimal? MaxObservedError = null,
+    decimal? MaxAllowedError = null,
+    decimal? ExpandedUncertaintyK2 = null,
+    string? VisualInspectionJson = null,
+    string? RepeatabilityTestJson = null,
+    string? EccentricityTestJson = null,
+    string? LinearityTestJson = null,
+    string? WeightsUsedJson = null,
+    string? PerformedBy = null,
+    decimal? TemperatureCelsius = null,
+    decimal? RelativeHumidityPercent = null,
+    decimal? AtmosphericPressureHpa = null,
+    Guid? ThermometerInstrumentId = null,
+    DateTime? CalibrationDate = null,
+    DateTime? ExpirationDate = null
 );
 
 public record MetrologyInstrumentWriteDto(

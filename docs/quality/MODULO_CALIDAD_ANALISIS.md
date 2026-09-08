@@ -13,7 +13,7 @@
 ## 0. Punto de reanudación (leer primero)
 
 **Último commit de avance Calidad:** `102ab1b` (PG14-R1 hoja de vida EquipmentLogEntry).  
-**Siguiente:** restos **C2** = PG09 R2 + Linked IT (o **C4**).  
+**Siguiente:** resto **C2** = **Linked IT** (o **C4**). **PG09 R2** ✅ enmienda de informe.  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
 ### Principio: los registros se generan en el sistema
@@ -35,7 +35,7 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | Ítem | Estado | Notas |
 |---|---|---|
 | **C1** Árbol documental + seed + upload/approve + descarga JWT | ✅ Cerrado | Pendiente operativo: poblar `tools/quality-seed/input/` desde Drive |
-| **C2** Snapshot SGC + approve DT + termómetro + **PG14-R3/R4** + **PG14-R1** | ◐ Cortes 1–4 | ✅ PG14-R3/R4 Generated + **PG14-R1 hoja de vida** (HV + sync calibraciones). Falta: PG09 R2, Linked IT |
+| **C2** Snapshot SGC + approve DT + termómetro + **PG14-R3/R4** + **PG14-R1** + **PG09 R2** | ◐ Cortes 1–5 | ✅ PG14-R3/R4 Generated + **PG14-R1** + **PG09 R2 enmienda**. Falta: Linked IT |
 | **C3 nav** Menú sin un ítem por registro | ✅ | Lateral: Tablero · Árbol · Registros operativos (`/calidad/registros`) |
 | **MC01-R01** Confidencialidad interno | ✅ | Attachment + metadatos de instancia |
 | **MC01-R02** Confidencialidad externo | ✅ | Idem + organización |
@@ -49,6 +49,7 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | **PG05** Proveedores (R01–R03) | ✅ | EVA/DES + listado habilitados Generated; vínculo Directorio; PDF+Excel |
 | **PG08-R01** Revisión por la dirección | ✅ | Structured REV-AAAA-NNNN; inputs auto del SGC; refresh; PDF+Excel |
 | **PG09-R03** Encuesta de satisfacción | ✅ | Structured ENC-AAAA-NNNN; puntajes 1–5; vínculo informe; PDF+Excel |
+| **PG09 R2** Enmienda al informe de ensayo | ✅ | `SupersedesReportId` + `AmendmentReason`; POST `/reports/{id}/amend`; original `Superseded` |
 | **PG14-R04** Listado de equipos | ✅ | Generated: pesas + instrumentos (Metrología) + auxiliares (Calidad); Excel |
 | **PG14-R03** Programa de calibraciones | ✅ | Generated: vencimientos pesas/instrumentos; Excel |
 | **PG14-R01** Hoja de vida del equipo | ✅ | Structured HV-AAAA-NNNN; sync calibraciones Metrología; PDF por activo + Excel |
@@ -58,9 +59,9 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 
 ### Siguiente sesión
 
-1. Restos **C2** (**PG09 R2** + **Linked IT**) si hace falta emitir informes ISO.
+1. Resto **C2** (**Linked IT**) si hace falta emitir informes ISO.
 2. Alternar **C4** (dashboard SGC, modo presentación) si C2 no bloquea.
-3. (Opcional) PG09 R2 enmienda de informe.
+3. ~~(Opcional) PG09 R2 enmienda de informe.~~ ✅ Hecho.
 ### Reglas de trabajo que ya aplican
 
 - **No** agregar registros al menú lateral: `qualityRecordRoutes.ts` (`ready: true`) + ruta + “Abrir registro” desde árbol.
@@ -151,7 +152,7 @@ Esto es lo que define **qué pantallas** necesita el módulo. Hay tres clases de
 | `IT 01..04 R2` | Ensayos | `metrology.calibration_reports` (JSON de repetibilidad, excentricidad, linealidad, pesas usadas) |
 | `IT 01..04 R3` | Precintos | `CalibrationReport.SealsPlaced` |
 | `PG09 R1` | Informe de ensayo | `CalibrationReport` emitido (impresión actual) |
-| `PG09 R2` | Modificación al informe de ensayo | Hoy no existe (hay que agregar versionado/enmienda del informe) |
+| `PG09 R2` | Modificación al informe de ensayo | ✅ Enmienda: clon Draft con `SupersedesReportId` + `AmendmentReason`; original `Superseded` |
 | `PG09 R3` | Encuesta de satisfacción | `QualitySatisfactionSurvey` / `/calidad/registros/encuestas` |
 
 **(B) Registros de gestión del SGC** — son propios del módulo de Calidad (hoy son planillas Excel/Word en el Drive):
@@ -302,7 +303,7 @@ InstitutionalNote     (MC01-R05)  subject, body, issuedBy, audience, issuedAt, f
 
 - `CalibrationReport.ProcedureSnapshotJson` = `{ "PG12": 1, "IT 02": 1, "PG09": 1 }` y `ExternalDocumentCodes`.
 - `CalibrationReport.PerformedByAuthorizationId / ApprovedByAuthorizationId` (FK lógico a `quality.personnel_authorizations`); al emitir, validar vía `IQualityAuthorizationGateway` (en `Quality.Contracts`).
-- Enmienda: `CalibrationReport.SupersedesReportId` + `AmendmentReason` para el `PG09 R2 Modificación al informe`; el original queda `ReportStatus = Superseded`, nunca se edita.
+- Enmienda: `CalibrationReport.SupersedesReportId` + `AmendmentReason` para el `PG09 R2 Modificación al informe`; el original queda `ReportStatus = Superseded`, nunca se edita. ✅ Implementado (`POST /api/v1/metrology/reports/{id}/amend`).
 - `StandardWeight` publica evento de dominio `WeightCalibrated` para que Calidad cree la fila en `EquipmentLogEntry` (hoja de vida) sin acoplar módulos.
 - Nueva entidad `MetrologyInstrument` (termómetro y otros instrumentos de medición auxiliares): `Code "EQ 0xx"`, `Kind Thermometer|Other`, marca/modelo/serie, rango, resolución, `CertificateNumber`, `TraceabilityLab`, `CalibrationDate`, `ExpirationDate`, `Status`. Mismo evento `InstrumentCalibrated` que las pesas. El `CalibrationReport` pasa a referenciar el termómetro usado (`ThermometerInstrumentId`) junto con la temperatura registrada, para que la condición ambiental del PG16 sea trazable al instrumento.
 - Flag **Director Técnico** a nivel usuario (ver §5): solo un DT puede `ApprovedBy` en un informe, aprobar MC/IT y firmar autorizaciones PG06-R02.
@@ -456,7 +457,7 @@ El script es idempotente por código+versión (si ya hay `PublishedFileId`, se o
 | **C1 — Árbol documental** | `IFileStorage` (disco local), `QualityDocument/Version/File` con PDF publicado + fuente, árbol MC/PG/IT + externos, versiones con Elaboró/Revisó/Aprobó, estados, PG01-R01/R02 generados, descarga "copia no controlada", vencimiento de revisión, flag Director Técnico + policy `RequireTechnicalDirector`, **script de seed** `tools/quality-seed` (descarga Drive → PDF → carga) | El auditor navega todo el SGC con los códigos reales y los PDF vigentes |
 | **Estado C1 (07/09/2026):** | **CERRADO.** Staging validado (dashboard + menú). API: upload/attach/PATCH versión/approve (ReviewedBy antes de validar). UI detalle: subir PDF/fuente, nueva versión, aprobar (DT). Script `tools/quality-seed` con `mapping.json` ampliado, conversión LibreOffice y reporte de discrepancias. Pendiente operativo: poblar `input/` desde Drive y correr el seed en el tenant INMELA (PDFs aún no cargados hasta eso). | — |
 | **C2 — Enlace con Metrología** | `Quality.Contracts`, `MetrologyInstrument` (termómetro) y su referencia en el informe, snapshot de procedimiento/versión y normas en el informe, `ApprovedBy` restringido a DT, PG14-R4/R3 generados desde pesas + instrumentos + auxiliares, hoja de vida PG14-R1 con eventos de calibración, PG09 R2 enmienda, "Ver trazabilidad SGC" desde el informe, vista IT 0X R1/R2/R3 | Cadena Ensayo → Norma → Procedimiento → Patrón/Termómetro → Certificado → DT que aprobó, desde un informe |
-| **Estado C2 (08/09/2026):** | **EN CURSO — corte 4.** Cortes 1–3 + **PG14-R1 Hoja de vida** (`equipment_log_entries`, sync calibraciones Metrología, PDF por activo). Pendiente: PG09 R2, vistas Linked IT. | — |
+| **Estado C2 (08/09/2026):** | **EN CURSO — corte 5.** Cortes 1–4 + **PG09 R2 enmienda** (`SupersedesReportId` / `AmendmentReason`, POST amend, UI listado/impresión). Pendiente: vistas Linked IT. | — |
 | **C3 — Registros de gestión** | PG07-R1 (NC/TNC/riesgos/OM), PG03-R01 quejas con plazos, PG04 auditorías, PG06 personal + autorizaciones firmadas por DT (validación de firma en Metrología), PG05 proveedores, MC01-R03 indicadores, PG08-R01 revisión por la dirección, PG09 R3 encuestas, PG14-R5/R6, `QualityEquipment` (camión/acoplado/autoelevador), MC01-R01/R02/R05 | Todos los registros del listado de códigos existen en el sistema |
 | **Estado C3 (07/09/2026):** | **CASI CERRADO** para registros listados (MC01…PG09 + PG14-R5/R6 + QualityEquipment). Restos C2 / C4. | — |
 | **C4 — Tablero, auditoría de cambios y modo presentación** | Dashboard SGC, matriz cláusulas 17025, historial before/after por registro, **modo presentación** (toggle, bloqueo de escrituras en backend, salida con contraseña, log de sesiones), alertas (Google Calendar → notificaciones del sistema) | Simulacro de auditoría interna PG04 completo dentro del sistema, mostrado en modo presentación |

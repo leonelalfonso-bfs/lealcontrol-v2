@@ -119,10 +119,12 @@ public sealed class MetrologyDbContext : DbContext
             b.Property(x => x.ProcedureSnapshotJson).HasColumnType("text").HasDefaultValue("[]");
             b.Property(x => x.ExternalDocumentCodesJson).HasColumnType("text").HasDefaultValue("[]");
             b.Property(x => x.InstructionCode).HasMaxLength(16).HasDefaultValue(string.Empty);
+            b.Property(x => x.AmendmentReason).HasMaxLength(2000);
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.CertificateNumber }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.EquipmentId });
             b.HasIndex(x => new { x.TenantId, x.CalibrationDate });
+            b.HasIndex(x => new { x.TenantId, x.SupersedesReportId });
         });
 
         modelBuilder.Entity<MetrologyInstrument>(b =>
@@ -318,6 +320,9 @@ public sealed class MetrologyDbContext : DbContext
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ExternalDocumentCodesJson"" text NOT NULL DEFAULT '[]';",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""InstructionCode"" character varying(16) NOT NULL DEFAULT '';",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ThermometerInstrumentId"" uuid;",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""SupersedesReportId"" uuid;",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""AmendmentReason"" character varying(2000);",
+            @"CREATE INDEX IF NOT EXISTS ""IX_reports_Tenant_Supersedes"" ON metrology.calibration_reports (""TenantId"", ""SupersedesReportId"");",
 
             @"CREATE TABLE IF NOT EXISTS metrology.instruments (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

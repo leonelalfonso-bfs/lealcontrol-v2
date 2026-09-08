@@ -1692,7 +1692,7 @@ export type CalibrationReport = {
   expandedUncertainty: number;
   result: "Apto" | "Apto con Observaciones" | "No Apto";
   observations?: string | null;
-  status: "Draft" | "Issued" | "Cancelled";
+  status: "Draft" | "Issued" | "Cancelled" | "Superseded";
   sealsPlaced?: string | null;
   visualInspectionJson?: string | null;
   standardApplied?: string | null;
@@ -1711,6 +1711,10 @@ export type CalibrationReport = {
   externalDocumentCodesJson?: string | null;
   instructionCode?: string | null;
   thermometerInstrumentId?: string | null;
+  /** PG09 R2 — informe emitido que esta enmienda reemplaza */
+  supersedesReportId?: string | null;
+  /** PG09 R2 — motivo de la modificación */
+  amendmentReason?: string | null;
   createdAtUtc: string;
 };
 

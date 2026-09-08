@@ -1,5 +1,5 @@
 import { useEffect, useState, FormEvent, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { MetrologyEquipment, StandardWeight, MetrologyInstrument, MetrologyTestPoint, EccentricityConfig } from "../../api/types";
 
@@ -62,6 +62,8 @@ export function CalibrationReportFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preselectedEquipmentId = searchParams.get("equipmentId");
+  const amendmentReasonParam = searchParams.get("amendmentReason");
+  const supersedesReportIdParam = searchParams.get("supersedesReportId");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -957,6 +959,25 @@ export function CalibrationReportFormPage() {
           </p>
         </div>
       </div>
+
+      {(supersedesReportIdParam || amendmentReasonParam) && (
+        <div
+          className="card pad"
+          style={{ marginBottom: 16, background: "#fff7ed", border: "1px solid #fdba74", color: "#9a3412" }}
+        >
+          <strong>Enmienda PG09 R2</strong>
+          {amendmentReasonParam && <> — Motivo: {amendmentReasonParam}</>}
+          {supersedesReportIdParam && (
+            <div style={{ marginTop: 4, fontSize: "0.88rem" }}>
+              Sustituye al informe{" "}
+              <Link to={`/metrologia/informes/${supersedesReportIdParam}/imprimir`} target="_blank">
+                {supersedesReportIdParam}
+              </Link>
+              . El original queda como Superseded y no se edita.
+            </div>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="alert" style={{ marginBottom: 16 }}>

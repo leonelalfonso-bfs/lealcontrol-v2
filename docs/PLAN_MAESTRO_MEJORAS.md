@@ -22,7 +22,7 @@ Documentos relacionados:
 | 4 | Contabilidad desde asientos modelo | 9 | 9/9 | 0/9 | ◐ Código 4.1–4.9 listo — verificar staging |
 | 5 | Red de tests del circuito del dinero | 6 | 6/6 | 0/6 | ✅ Código en `8fb4e17` — tests locales OK |
 | 6 | Deuda técnica | 8 | 7/8 | 7/8 | ✅ `53d1d5a` staging 03/09/2026 — smoke 10/10; **6.4 diferido** |
-| Q | Calidad ISO 17025 (SGC) | — | ◐ | ◐ | **C1✅ C2◐ (PG14-R3/R4✅ R1✅) C3 casi cerrado** — siguiente PG09 R2 / Linked IT o C4; detalle en `docs/quality/…` §0 |
+| Q | Calidad ISO 17025 (SGC) | — | ◐ | ◐ | **C1✅ C2◐ (PG14-R3/R4✅ R1✅ PG09 R2✅) C3 casi cerrado** — siguiente Linked IT o C4; detalle en `docs/quality/…` §0 |
 
 Regla de orden: **bloque 2 antes del 3** (CI y backups estables). **No empezar bloque 4** sin tareas 3.1–3.6 del bloque 3.  
 **Bloque Q** corre en paralelo en `staging/metrology-2307` (INMELA / auditoría OAA); no bloquea el circuito del dinero.
@@ -331,7 +331,7 @@ Rama de trabajo: `staging/metrology-2307` · Staging: https://v2.lealcontrol.com
 ### Estado por fase
 
 - [x] **Q.C1** Árbol documental, versiones, upload/approve DT, seed `tools/quality-seed`, PG01-R01/R02 Generated, descarga autenticada
-- [ ] **Q.C2** Enlace Metrología completo — **parcial:** snapshot SGC + approve DT + `MetrologyInstrument` + **PG14-R3/R4 Generated** + **PG14-R1 hoja de vida**. Falta PG09 R2, Linked IT
+- [ ] **Q.C2** Enlace Metrología completo — **parcial:** snapshot SGC + approve DT + `MetrologyInstrument` + **PG14-R3/R4 Generated** + **PG14-R1 hoja de vida** + **PG09 R2 enmienda**. Falta Linked IT
 - [ ] **Q.C3** Registros de gestión — **parcial (bloque MC01 cerrado):**
   - [x] Hub `/calidad/registros` (menú sin un ítem por registro)
   - [x] MC01-R01 / R02 / R03 / R05
@@ -343,9 +343,10 @@ Rama de trabajo: `staging/metrology-2307` · Staging: https://v2.lealcontrol.com
   - [x] PG05 Proveedores (EVA/DES + habilitados Generated)
   - [x] PG08-R01 Revisión por la dirección (inputs auto)
   - [x] PG09-R3 Encuestas de satisfacción (ENC-AAAA-NNNN)
+  - [x] PG09 R2 Enmienda informe (`POST …/amend`, Superseded)
   - [x] PG14-R5/R6 + QualityEquipment (EQ / VIC / MP)
   - [x] PG14-R1 Hoja de vida (HV-AAAA-NNNN + sync Metrología)
-  - [ ] **Siguiente:** restos C2 (PG09 R2, Linked IT) o C4
+  - [ ] **Siguiente:** resto C2 (Linked IT) o C4
 - [ ] **Q.C4** Dashboard SGC, auditoría before/after, modo presentación
 
 **Reanudar siempre desde:** `MODULO_CALIDAD_ANALISIS.md` §0.

@@ -72,6 +72,9 @@ export function CalibrationReportPrintPage() {
   const regulatoryNotice = (report as any).regulatoryNotice;
   const operationLabel = visualInspectionData?.checklist?.operationLabel || (report as any).operationType || "Calibración / determinación de errores";
   const documentTitle = (report as any).documentTitle || "Informe de ensayo metrológico";
+  const supersedesReportId = report.supersedesReportId || (report as any).supersedesReportId || null;
+  const amendmentReason = report.amendmentReason || (report as any).amendmentReason || null;
+  const reportStatusLabel = (report.reportStatus || report.status || "").toString();
   const verdictRaw: any = report.result || (report as any).verdict || "Apto";
   const verdictText = (verdictRaw === "Approved" || verdictRaw === "Apto") ? "APTO" : (verdictRaw === "Rejected" || verdictRaw === "No Apto") ? "NO APTO" : String(verdictRaw || "").toUpperCase();
   const isApproved = verdictText === "APTO" || verdictText === "APPROVED";
@@ -223,6 +226,28 @@ export function CalibrationReportPrintPage() {
           </div>
         </div>
       </div>
+
+      {(supersedesReportId || amendmentReason) && (
+        <div style={{ background: "#fff7ed", border: "1px solid #fdba74", padding: "10px 12px", borderRadius: 6, marginBottom: 16, fontSize: "0.84rem", color: "#9a3412" }}>
+          <strong>Enmienda PG09 R2</strong>
+          {amendmentReason && <> — Motivo: {amendmentReason}</>}
+          {supersedesReportId && (
+            <div style={{ marginTop: 4 }}>
+              Sustituye al informe original:{" "}
+              <Link to={`/metrologia/informes/${supersedesReportId}/imprimir`} className="no-print">
+                ver certificado sustituido
+              </Link>
+              <span className="print-only" style={{ display: "none" }}>{supersedesReportId}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {reportStatusLabel.toLowerCase() === "superseded" && (
+        <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", padding: "10px 12px", borderRadius: 6, marginBottom: 16, fontSize: "0.84rem", color: "#991b1b" }}>
+          <strong>Informe sustituido (Superseded)</strong> — este certificado fue reemplazado por una enmienda PG09 R2 y no debe usarse como versión vigente.
+        </div>
+      )}
 
       {/* Normativa */}
       <div style={{ textAlign: "center", background: "#f4fbf9", padding: "6px 12px", borderRadius: 6, border: "1px solid #ccede5", marginBottom: 16, fontSize: "0.84rem", fontWeight: 600, color: "#06574c" }}>

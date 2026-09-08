@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
@@ -18,6 +18,13 @@ function verdictOf(r: CalibrationReport): string {
   if (raw === "Rejected" || raw === "No Apto") return "No Apto";
   if (raw === "Apto con Observaciones") return "Apto con Observaciones";
   return raw || "—";
+}
+
+function statusBadgeClass(status: string): string {
+  const s = status.toLowerCase();
+  if (s === "draft") return "warn";
+  if (s === "superseded") return "prio-high";
+  return "ok";
 }
 
 export function CalibrationReportsPage() {
@@ -44,11 +51,47 @@ export function CalibrationReportsPage() {
     loadReports();
   }, []);
 
+  /** Mapa originalId → enmienda más reciente (no supersedida si hay varias). */
+  const amendmentByOriginal = useMemo(() => {
+    const map = new Map<string, CalibrationReport>();
+    for (const r of reports) {
+      const parentId = r.supersedesReportId;
+      if (!parentId) continue;
+      const prev = map.get(parentId);
+      if (!prev || new Date(r.createdAtUtc) > new Date(prev.createdAtUtc)) {
+        map.set(parentId, r);
+      }
+    }
+    return map;
+  }, [reports]);
+
   const onApprove = async (id: string) => {
     setBusyId(id);
     setError(null);
     try {
       await api.approveCalibrationReport(id);
+      loadReports();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const onAmend = async (id: string) => {
+    const reason = window.prompt(
+      "Motivo de la enmienda (PG09 R2) — obligatorio:\nSe creará un borrador que sustituye el informe emitido."
+    );
+    if (reason === null) return;
+    if (!reason.trim()) {
+      setError("El motivo de enmienda es obligatorio.");
+      return;
+    }
+
+    setBusyId(id);
+    setError(null);
+    try {
+      await api.amendCalibrationReport(id, { amendmentReason: reason.trim() });
       loadReports();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -68,7 +111,7 @@ export function CalibrationReportsPage() {
             Informes de Ensayo
           </h1>
           <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-            Historial de protocolos e informes técnicos · aprobación por Director Técnico (C2)
+            Historial de protocolos e informes técnicos · aprobación y enmienda PG09 R2 por Director Técnico
           </p>
         </div>
 
@@ -107,7 +150,13 @@ export function CalibrationReportsPage() {
               <tbody>
                 {reports.map((r) => {
                   const status = statusOf(r);
-                  const isDraft = status.toLowerCase() === "draft";
+                  const statusLower = status.toLowerCase();
+                  const isDraft = statusLower === "draft";
+                  const isIssued = statusLower === "issued";
+                  const isSuperseded = statusLower === "superseded";
+                  const amendment = amendmentByOriginal.get(r.id);
+                  const isAmendment = !!r.supersedesReportId;
+
                   return (
                     <tr key={r.id}>
                       <td>
@@ -115,6 +164,26 @@ export function CalibrationReportsPage() {
                         {(r as { instructionCode?: string }).instructionCode && (
                           <div className="muted" style={{ fontSize: "0.74rem" }}>
                             {(r as { instructionCode?: string }).instructionCode}
+                          </div>
+                        )}
+                        {isAmendment && (
+                          <div className="muted" style={{ fontSize: "0.72rem", marginTop: 2 }}>
+                            Enmienda PG09 R2
+                            {r.supersedesReportId && (
+                              <>
+                                {" · "}
+                                <Link to={`/metrologia/informes/${r.supersedesReportId}/imprimir`} target="_blank">
+                                  ver original
+                                </Link>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        {amendment && (
+                          <div style={{ fontSize: "0.72rem", marginTop: 2 }}>
+                            <Link to={`/metrologia/informes/${amendment.id}/imprimir`} target="_blank">
+                              Enmienda: {certNumberOf(amendment)}
+                            </Link>
                           </div>
                         )}
                       </td>
@@ -128,7 +197,9 @@ export function CalibrationReportsPage() {
                         <div className="muted" style={{ fontSize: "0.74rem" }}>{r.location || "—"}</div>
                       </td>
                       <td>
-                        <span className={`badge ${isDraft ? "warn" : "ok"}`}>{status}</span>
+                        <span className={`badge ${statusBadgeClass(status)}`}>
+                          {isSuperseded ? "Superseded" : status}
+                        </span>
                       </td>
                       <td>{r.performedBy}</td>
                       <td>{r.approvedBy || "—"}</td>
@@ -147,6 +218,17 @@ export function CalibrationReportsPage() {
                             title="Aprobar como Director Técnico"
                           >
                             {busyId === r.id ? "…" : "Aprobar DT"}
+                          </button>
+                        )}
+                        {isIssued && canApprove && (
+                          <button
+                            type="button"
+                            className="btn ghost compact"
+                            disabled={busyId === r.id}
+                            onClick={() => void onAmend(r.id)}
+                            title="Crear enmienda PG09 R2 (el original queda Superseded)"
+                          >
+                            {busyId === r.id ? "…" : "Enmendar (PG09 R2)"}
                           </button>
                         )}
                         <Link to={`/metrologia/informes/${r.id}/imprimir`} className="btn ghost compact" target="_blank" title="Imprimir / trazabilidad">
