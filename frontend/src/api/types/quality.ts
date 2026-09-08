@@ -440,3 +440,27 @@ export interface QualityManagementReview {
   createdAtUtc: string;
   updatedAtUtc: string;
 }
+
+export interface QualitySatisfactionSurvey {
+  id: string;
+  recordCode: string;
+  number: string;
+  calibrationReportId?: string | null;
+  certificateNumber?: string;
+  customerId?: string | null;
+  customerName: string;
+  surveyDate: string;
+  channel?: string;
+  scorePunctuality?: number | null;
+  scoreQuality?: number | null;
+  scoreCommunication?: number | null;
+  scoreOverall?: number | null;
+  averageScore?: number | null;
+  comments?: string;
+  answersJson?: string;
+  evidenceFileId?: string | null;
+  status: string;
+  notes?: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}

@@ -259,6 +259,12 @@ internal static class QualityPg08Endpoints
                 && p.ReviewDate >= from
                 && p.ReviewDate <= to, ct);
 
+        var satisfactionSurveysReceived = await db.SatisfactionSurveys.AsNoTracking()
+            .CountAsync(s => s.TenantId == tenantId
+                && s.Status == QualitySatisfactionSurveyStatuses.Received
+                && s.SurveyDate >= from
+                && s.SurveyDate <= to, ct);
+
         var indicators = await db.Indicators.AsNoTracking()
             .Where(i => i.TenantId == tenantId)
             .Select(i => new { i.Id, i.Name, i.Status, i.TargetValue, i.Direction })
@@ -333,6 +339,10 @@ internal static class QualityPg08Endpoints
             performanceReviews = new
             {
                 completed = performanceReviewsCompleted
+            },
+            satisfactionSurveys = new
+            {
+                received = satisfactionSurveysReceived
             },
             indicators = new
             {

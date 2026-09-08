@@ -88,6 +88,8 @@ import {
   QualityPersonnelAuthorizationPrintPage,
   QualityPg08R01Page,
   QualityManagementReviewPrintPage,
+  QualityPg09R03Page,
+  QualitySatisfactionSurveyPrintPage,
   QualityRecordsHubPage,
   QualityPg01R01Page,
   QualityPg01R02Page,
@@ -673,6 +675,9 @@ export function App() {
               <Route path="/calidad/registros/revision-direccion" element={<QualityPg08R01Page />} />
               <Route path="/calidad/registros/pg08-r01" element={<QualityPg08R01Page />} />
               <Route path="/calidad/registros/revision-direccion/:id/pdf" element={<QualityManagementReviewPrintPage />} />
+              <Route path="/calidad/registros/encuestas" element={<QualityPg09R03Page />} />
+              <Route path="/calidad/registros/pg09-r03" element={<QualityPg09R03Page />} />
+              <Route path="/calidad/registros/encuestas/:id/pdf" element={<QualitySatisfactionSurveyPrintPage />} />
 
               {/* Reports & Settings Routes */}
               <Route path="/reportes" element={<ReportsPage />} />

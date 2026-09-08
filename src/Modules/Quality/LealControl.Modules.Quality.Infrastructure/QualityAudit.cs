@@ -20,6 +20,7 @@ public static class QualityAuditEntityTypes
     public const string SupplierEvaluation = "SupplierEvaluation";
     public const string SupplierPerformanceReview = "SupplierPerformanceReview";
     public const string ManagementReview = "ManagementReview";
+    public const string SatisfactionSurvey = "SatisfactionSurvey";
 }
 
 public sealed class QualityAuditEvent : Entity<Guid>

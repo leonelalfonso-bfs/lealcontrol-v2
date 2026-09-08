@@ -1898,6 +1898,69 @@ export const api = {
       method: "DELETE"
     }),
 
+  listQualityPg09R03: () =>
+    request<{
+      code: string;
+      title: string;
+      draftCount?: number;
+      receivedCount?: number;
+      averageOverall?: number | null;
+      rows: import("./types/quality").QualitySatisfactionSurvey[];
+    }>("/api/v1/quality/records/pg09-r03"),
+
+  getQualitySatisfactionSurvey: (id: string) =>
+    request<import("./types/quality").QualitySatisfactionSurvey>(`/api/v1/quality/records/pg09-r03/${id}`),
+
+  createQualitySatisfactionSurvey: (body: {
+    customerName: string;
+    surveyDate?: string;
+    calibrationReportId?: string;
+    certificateNumber?: string;
+    customerId?: string;
+    channel?: string;
+    scorePunctuality?: number | null;
+    scoreQuality?: number | null;
+    scoreCommunication?: number | null;
+    scoreOverall?: number | null;
+    comments?: string;
+    answersJson?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualitySatisfactionSurvey>("/api/v1/quality/records/pg09-r03", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateQualitySatisfactionSurvey: (
+    id: string,
+    body: {
+      customerName?: string;
+      surveyDate?: string;
+      calibrationReportId?: string | null;
+      certificateNumber?: string;
+      customerId?: string | null;
+      channel?: string;
+      scorePunctuality?: number | null;
+      scoreQuality?: number | null;
+      scoreCommunication?: number | null;
+      scoreOverall?: number | null;
+      comments?: string;
+      answersJson?: string;
+      evidenceFileId?: string;
+      status?: string;
+      notes?: string;
+    }
+  ) =>
+    request<import("./types/quality").QualitySatisfactionSurvey>(`/api/v1/quality/records/pg09-r03/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualitySatisfactionSurvey: (id: string) =>
+    request<import("./types/quality").QualitySatisfactionSurvey>(`/api/v1/quality/records/pg09-r03/${id}`, {
+      method: "DELETE"
+    }),
+
   uploadQualityFile: async (file: File, role: "Published" | "Source" = "Published") => {
     const form = new FormData();
     form.append("file", file);

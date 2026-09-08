@@ -12,7 +12,8 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último commit de avance Calidad:** `2322303` (PG08-R01 revisión por la dirección Structured).
+**Último commit de avance Calidad:** `2322303` (PG08-R01 revisión por la dirección Structured).  
+**Este corte (sin commit aún):** PG09-R3 Encuesta de satisfacción Structured (ENC-AAAA-NNNN).  
 **Staging:** https://v2.lealcontrol.com — deploy con `git pull` + `docker compose … up -d --build api web` en `/opt/lealcontrol-staging`.
 
 ### Principio: los registros se generan en el sistema
@@ -47,13 +48,13 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | **PG06** Personal (R01–R04) | ✅ | CAP/AUT/COMP/ASG; autorización firmada por DT (`RequireTechnicalDirector`); gateway real para Metrología |
 | **PG05** Proveedores (R01–R03) | ✅ | EVA/DES + listado habilitados Generated; vínculo Directorio; PDF+Excel |
 | **PG08-R01** Revisión por la dirección | ✅ | Structured REV-AAAA-NNNN; inputs auto del SGC; refresh; PDF+Excel |
+| **PG09-R03** Encuesta de satisfacción | ✅ | Structured ENC-AAAA-NNNN; puntajes 1–5; vínculo informe; PDF+Excel |
 
 ### Siguiente sesión
 
-1. **C3 — PG09-R3** Encuestas.
-2. Seguir C3: PG14-R5/R6 + `QualityEquipment`.
-3. Alternar restos **C2** si hace falta emitir informes ISO (validar firma vía PG06-R02).
-
+1. **C3 — PG14-R5/R6** + `QualityEquipment`.
+2. Alternar restos **C2** si hace falta emitir informes ISO (validar firma vía PG06-R02).
+3. (Opcional) PG09 R2 enmienda de informe.
 ### Reglas de trabajo que ya aplican
 
 - **No** agregar registros al menú lateral: `qualityRecordRoutes.ts` (`ready: true`) + ruta + “Abrir registro” desde árbol.
@@ -145,7 +146,7 @@ Esto es lo que define **qué pantallas** necesita el módulo. Hay tres clases de
 | `IT 01..04 R3` | Precintos | `CalibrationReport.SealsPlaced` |
 | `PG09 R1` | Informe de ensayo | `CalibrationReport` emitido (impresión actual) |
 | `PG09 R2` | Modificación al informe de ensayo | Hoy no existe (hay que agregar versionado/enmienda del informe) |
-| `PG09 R3` | Encuesta de satisfacción | Hoy no existe |
+| `PG09 R3` | Encuesta de satisfacción | `QualitySatisfactionSurvey` / `/calidad/registros/encuestas` |
 
 **(B) Registros de gestión del SGC** — son propios del módulo de Calidad (hoy son planillas Excel/Word en el Drive):
 
@@ -345,7 +346,7 @@ Módulo `calidad` en `moduleRegistry.ts`, ruta base `/calidad`, claim `quality`.
 /calidad/registros/proveedores   PG05                                 [listo]
 /calidad/registros/equipos       PG14                                 [pendiente]
 /calidad/registros/revision-direccion  PG08-R01                       [listo]
-/calidad/registros/encuestas     PG09 R3                              [pendiente]
+/calidad/registros/encuestas     PG09 R3                              [listo]
 /calidad/normas                  Documentos externos (PG01-R02): vigencia, relaciones, revisión anual
 ```
 
@@ -470,8 +471,8 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 - [x] PG06 Personal (R01–R04) + firma DT en autorizaciones
 - [x] PG05 Proveedores (R01–R03)
 - [x] PG08-R01 Revisión por la dirección
-- [ ] PG09 R3 Encuestas ← **siguiente**
-- [ ] PG14-R5 / R6 + `QualityEquipment` (camión/acoplado/autoelevador)
+- [x] PG09 R3 Encuestas
+- [ ] PG14-R5 / R6 + `QualityEquipment` (camión/acoplado/autoelevador) ← **siguiente**
 
 ---
 

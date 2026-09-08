@@ -19,6 +19,7 @@ type SnapshotCounts = {
   authorizations?: { authorized?: number; expiringSoon?: number };
   supplierEvaluations?: { approved?: number; suspended?: number };
   performanceReviews?: { completed?: number };
+  satisfactionSurveys?: { received?: number };
   indicators?: { active?: number; belowTarget?: string[] };
   generatedAtUtc?: string;
 };
@@ -222,6 +223,7 @@ export function QualityManagementReviewPrintPage() {
                       {snapshot.supplierEvaluations?.suspended ?? 0}; desempeños{" "}
                       {snapshot.performanceReviews?.completed ?? 0}
                     </div>
+                    <div>Encuestas recibidas: {snapshot.satisfactionSurveys?.received ?? 0}</div>
                     <div>
                       Indicadores activos: {snapshot.indicators?.active ?? 0}
                       {below.length > 0 ? `; bajo meta: ${below.join(", ")}` : ""}

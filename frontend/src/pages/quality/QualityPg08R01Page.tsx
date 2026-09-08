@@ -19,7 +19,8 @@ type SnapshotCounts = {
   trainings?: { planned?: number; done?: number };
   authorizations?: { authorized?: number; expiringSoon?: number };
   supplierEvaluations?: { approved?: number; suspended?: number };
-  performanceReviews?: { completed?: number };
+      performanceReviews?: { completed?: number };
+  satisfactionSurveys?: { received?: number };
   indicators?: { active?: number; belowTarget?: string[] };
   generatedAtUtc?: string;
 };
@@ -97,6 +98,8 @@ function SnapshotSummary({ snapshot }: { snapshot: SnapshotCounts | null }) {
         {snapshot.supplierEvaluations?.suspended ?? 0} · desempeños{" "}
         {snapshot.performanceReviews?.completed ?? 0}
       </dd>
+      <dt>Encuestas</dt>
+      <dd style={{ margin: 0 }}>recibidas {snapshot.satisfactionSurveys?.received ?? 0}</dd>
       <dt>Indicadores</dt>
       <dd style={{ margin: 0 }}>
         activos {snapshot.indicators?.active ?? 0}

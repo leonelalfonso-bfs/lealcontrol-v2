@@ -30,6 +30,7 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualitySupplierEvaluation> SupplierEvaluations => Set<QualitySupplierEvaluation>();
     public DbSet<QualitySupplierPerformanceReview> SupplierPerformanceReviews => Set<QualitySupplierPerformanceReview>();
     public DbSet<QualityManagementReview> ManagementReviews => Set<QualityManagementReview>();
+    public DbSet<QualitySatisfactionSurvey> SatisfactionSurveys => Set<QualitySatisfactionSurvey>();
     public DbSet<QualityAuditEvent> AuditEvents => Set<QualityAuditEvent>();
 
     public QualityDbContext(DbContextOptions<QualityDbContext> options)
@@ -380,6 +381,25 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.ProgramYear, x.Status });
+        });
+
+        modelBuilder.Entity<QualitySatisfactionSurvey>(b =>
+        {
+            b.ToTable("satisfaction_surveys", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Number).HasMaxLength(32).IsRequired();
+            b.Property(x => x.CustomerName).HasMaxLength(300).IsRequired();
+            b.Property(x => x.CertificateNumber).HasMaxLength(80);
+            b.Property(x => x.Channel).HasMaxLength(40).HasDefaultValue("Other");
+            b.Property(x => x.Comments).HasMaxLength(4000);
+            b.Property(x => x.AnswersJson).HasColumnType("text");
+            b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualitySatisfactionSurveyStatuses.Draft);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.SurveyDate });
+            b.HasIndex(x => new { x.TenantId, x.CalibrationReportId });
         });
 
         modelBuilder.Entity<QualityAuditEvent>(b =>
@@ -816,6 +836,33 @@ public sealed class QualityDbContext : DbContext
             );",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_mrev_Tenant_Number"" ON quality.management_reviews (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_mrev_Tenant_Year_Status"" ON quality.management_reviews (""TenantId"", ""ProgramYear"", ""Status"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.satisfaction_surveys (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG09-R03',
+                ""Number"" character varying(32) NOT NULL,
+                ""CalibrationReportId"" uuid,
+                ""CertificateNumber"" character varying(80) NOT NULL DEFAULT '',
+                ""CustomerId"" uuid,
+                ""CustomerName"" character varying(300) NOT NULL DEFAULT '',
+                ""SurveyDate"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""Channel"" character varying(40) NOT NULL DEFAULT 'Other',
+                ""ScorePunctuality"" integer,
+                ""ScoreQuality"" integer,
+                ""ScoreCommunication"" integer,
+                ""ScoreOverall"" integer,
+                ""Comments"" character varying(4000) NOT NULL DEFAULT '',
+                ""AnswersJson"" text NOT NULL DEFAULT '',
+                ""EvidenceFileId"" uuid,
+                ""Status"" character varying(40) NOT NULL DEFAULT 'Draft',
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_surv_Tenant_Number"" ON quality.satisfaction_surveys (""TenantId"", ""Number"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_surv_Tenant_SurveyDate"" ON quality.satisfaction_surveys (""TenantId"", ""SurveyDate"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_surv_Tenant_CalibrationReport"" ON quality.satisfaction_surveys (""TenantId"", ""CalibrationReportId"");",
 
             @"CREATE TABLE IF NOT EXISTS quality.audit_events (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

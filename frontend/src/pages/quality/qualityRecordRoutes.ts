@@ -66,6 +66,14 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "Revisión anual; inputs del SGC (quejas, NC, auditorías, indicadores…) se arman solos."
   },
   {
+    code: "PG09-R03",
+    title: "Encuesta de satisfacción",
+    path: "/calidad/registros/encuestas",
+    kind: "Structured",
+    ready: true,
+    blurb: "Encuestas ENC-AAAA-NNNN; puntajes 1–5 y vínculo opcional al informe de ensayo."
+  },
+  {
     code: "PG04-R01",
     title: "Programa de auditorías",
     path: "/calidad/registros/auditorias",

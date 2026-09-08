@@ -974,3 +974,77 @@ public sealed record UpdateManagementReviewRequest(
     Guid? EvidenceFileId = null,
     string? Status = null,
     string? Notes = null);
+
+// ─── PG09-R3 Encuesta de satisfacción ────────────────────────────────────────
+
+public static class QualitySatisfactionSurveyStatuses
+{
+    public const string Draft = "Draft";
+    public const string Received = "Received";
+    public const string Cancelled = "Cancelled";
+}
+
+/// <summary>PG09-R3 — encuesta de satisfacción (opcionalmente ligada a informe de ensayo).</summary>
+public sealed class QualitySatisfactionSurvey : Entity<Guid>
+{
+    public QualitySatisfactionSurvey() : base(Guid.NewGuid()) { }
+    public QualitySatisfactionSurvey(Guid id) : base(id) { }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG09-R03";
+    public string Number { get; set; } = string.Empty; // ENC-2026-0001
+    public Guid? CalibrationReportId { get; set; }
+    public string CertificateNumber { get; set; } = string.Empty;
+    public Guid? CustomerId { get; set; }
+    public string CustomerName { get; set; } = string.Empty;
+    public DateTime SurveyDate { get; set; } = DateTime.UtcNow;
+    public string Channel { get; set; } = "Other"; // Email, Phone, InPerson, Other
+    /// <summary>Puntualidad 1-5.</summary>
+    public int? ScorePunctuality { get; set; }
+    /// <summary>Calidad técnica 1-5.</summary>
+    public int? ScoreQuality { get; set; }
+    /// <summary>Comunicación / trato 1-5.</summary>
+    public int? ScoreCommunication { get; set; }
+    /// <summary>Satisfacción general 1-5.</summary>
+    public int? ScoreOverall { get; set; }
+    public string Comments { get; set; } = string.Empty;
+    public string AnswersJson { get; set; } = string.Empty; // extras libres
+    public Guid? EvidenceFileId { get; set; }
+    public string Status { get; set; } = QualitySatisfactionSurveyStatuses.Draft;
+    public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateSatisfactionSurveyRequest(
+    string CustomerName,
+    DateTime? SurveyDate = null,
+    Guid? CalibrationReportId = null,
+    string? CertificateNumber = null,
+    Guid? CustomerId = null,
+    string? Channel = null,
+    int? ScorePunctuality = null,
+    int? ScoreQuality = null,
+    int? ScoreCommunication = null,
+    int? ScoreOverall = null,
+    string? Comments = null,
+    string? AnswersJson = null,
+    Guid? EvidenceFileId = null,
+    string? Notes = null);
+
+public sealed record UpdateSatisfactionSurveyRequest(
+    string? CustomerName = null,
+    DateTime? SurveyDate = null,
+    Guid? CalibrationReportId = null,
+    string? CertificateNumber = null,
+    Guid? CustomerId = null,
+    string? Channel = null,
+    int? ScorePunctuality = null,
+    int? ScoreQuality = null,
+    int? ScoreCommunication = null,
+    int? ScoreOverall = null,
+    string? Comments = null,
+    string? AnswersJson = null,
+    Guid? EvidenceFileId = null,
+    string? Status = null,
+    string? Notes = null);
