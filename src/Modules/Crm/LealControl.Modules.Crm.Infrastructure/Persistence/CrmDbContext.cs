@@ -108,23 +108,108 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""IsTechnicalDirector"" boolean NOT NULL DEFAULT false;
             ");
 
-            // Separate batch: crm.customers may not exist yet on freshly provisioned DBs.
-            // Keep it out of the tenant_users ALTER batch so auth columns still apply.
-            try
-            {
-                await Database.ExecuteSqlRawAsync(@"
-                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRating"" character varying(10);
-                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraWorstSituation"" integer;
-                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraTotalDebt"" numeric(18,2);
-                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraRejectedChequesCount"" integer;
-                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraLastCheckedAtUtc"" timestamp with time zone;
-                    ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRecommendation"" character varying(2000);
-                ");
-            }
-            catch (Exception customersEx)
-            {
-                _logger.LogWarning(customersEx, "EnsureCrmTablesAsync: columnas BCRA en crm.customers omitidas (tabla ausente o esquema incompleto).");
-            }
+            // Red de seguridad: tenants nuevos donde MigrateAsync se omitió o chocó a medias.
+            await Database.ExecuteSqlRawAsync(@"
+                CREATE SCHEMA IF NOT EXISTS crm;
+
+                CREATE TABLE IF NOT EXISTS crm.customers (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""TenantId"" uuid NOT NULL,
+                    ""LegalName"" character varying(200) NOT NULL,
+                    ""TradeName"" character varying(200),
+                    document_type character varying(20) NOT NULL,
+                    document_number character varying(20) NOT NULL,
+                    ""TaxCondition"" character varying(40) NOT NULL,
+                    ""IibbRegime"" character varying(40) NOT NULL,
+                    ""Status"" character varying(20) NOT NULL,
+                    ""IsCustomer"" boolean NOT NULL,
+                    ""IsSupplier"" boolean NOT NULL,
+                    email character varying(200),
+                    phone character varying(20),
+                    whatsapp character varying(20),
+                    fiscal_street character varying(200),
+                    fiscal_city character varying(120),
+                    fiscal_province character varying(40),
+                    fiscal_postal_code character varying(12),
+                    ""CreditLimit"" numeric(18,2),
+                    ""PaymentTermsDays"" integer,
+                    ""SellerId"" uuid,
+                    ""Notes"" character varying(4000),
+                    ""IsLargeCompany"" boolean NOT NULL DEFAULT false,
+                    ""FceThreshold"" numeric(18,2),
+                    ""FceCheckedAtUtc"" timestamp with time zone,
+                    ""CreatedAtUtc"" timestamp with time zone NOT NULL,
+                    ""UpdatedAtUtc"" timestamp with time zone NOT NULL,
+                    deleted_at_utc timestamp with time zone
+                );
+
+                CREATE TABLE IF NOT EXISTS crm.leads (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""TenantId"" uuid NOT NULL,
+                    ""Name"" character varying(200) NOT NULL,
+                    ""ContactName"" character varying(160),
+                    email character varying(200),
+                    phone character varying(20),
+                    ""Description"" character varying(4000),
+                    ""Source"" character varying(30) NOT NULL,
+                    ""Status"" character varying(20) NOT NULL,
+                    ""AssignedTo"" uuid,
+                    ""ConvertedCustomerId"" uuid,
+                    ""ConvertedAtUtc"" timestamp with time zone,
+                    ""CreatedAtUtc"" timestamp with time zone NOT NULL,
+                    ""UpdatedAtUtc"" timestamp with time zone NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS crm.opportunities (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""TenantId"" uuid NOT NULL,
+                    ""Title"" character varying(200) NOT NULL,
+                    ""CustomerId"" uuid,
+                    ""LeadId"" uuid,
+                    ""Stage"" character varying(30) NOT NULL,
+                    ""Amount"" numeric(18,2),
+                    ""Currency"" character varying(3),
+                    ""OwnerId"" uuid,
+                    ""LostReason"" character varying(400),
+                    ""CreatedAtUtc"" timestamp with time zone NOT NULL,
+                    ""UpdatedAtUtc"" timestamp with time zone NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS crm.activities (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""TenantId"" uuid NOT NULL,
+                    ""Type"" character varying(30) NOT NULL,
+                    ""Description"" character varying(4000) NOT NULL,
+                    ""CustomerId"" uuid,
+                    ""LeadId"" uuid,
+                    ""OpportunityId"" uuid,
+                    ""AuthorId"" uuid,
+                    ""NextFollowUpOn"" timestamp with time zone,
+                    ""OccurredAtUtc"" timestamp with time zone NOT NULL,
+                    ""CreatedAtUtc"" timestamp with time zone NOT NULL
+                );
+            ");
+
+            await Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRating"" character varying(10);
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraWorstSituation"" integer;
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraTotalDebt"" numeric(18,2);
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraRejectedChequesCount"" integer;
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraLastCheckedAtUtc"" timestamp with time zone;
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRecommendation"" character varying(2000);
+
+                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""OwnerName"" character varying(120);
+                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""Priority"" character varying(20);
+                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""Probability"" integer NOT NULL DEFAULT 10;
+                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""RottingDays"" integer;
+                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""ExpectedCloseDate"" timestamp with time zone;
+                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""CustomFields"" jsonb NOT NULL DEFAULT '{}'::jsonb;
+                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS tags text[];
+
+                ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""DueDate"" timestamp with time zone;
+                ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""IsDone"" boolean NOT NULL DEFAULT false;
+                ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""CompletedAtUtc"" timestamp with time zone;
+            ");
         }
         catch (Exception ex)
         {

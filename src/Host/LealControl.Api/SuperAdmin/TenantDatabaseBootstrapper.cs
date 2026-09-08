@@ -51,7 +51,14 @@ public static class TenantDatabaseBootstrapper
 
         foreach (var dbName in databaseNames.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            await EnsureDatabaseSchemaAsync(defaultConnectionString, dbName, cancellationToken);
+            try
+            {
+                await EnsureDatabaseSchemaAsync(defaultConnectionString, dbName, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Fallo EnsureDatabaseSchemaAsync en base {DbName}; se continúa con el resto de tenants.", dbName);
+            }
         }
     }
 
@@ -161,10 +168,22 @@ public static class TenantDatabaseBootstrapper
     {
         var applied = (await db.Database.GetAppliedMigrationsAsync(cancellationToken)).ToList();
         var pending = (await db.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
+        var legacyExists = await LegacySchemaExistsAsync(db, legacyProbeTable, cancellationToken);
 
-        // Sin historial EF del módulo: siempre migrar (tenant nuevo / módulo recién añadido).
-        // Evita el falso "legacy" cuando existen tablas de otros módulos (p.ej. tenant_users).
-        if (pending.Count > 0 && applied.Count == 0)
+        // Solo omitir Migrate cuando hay tablas legacy y CERO historial EF (chocaría al recrear).
+        // Si ya hay migraciones aplicadas y quedan pendientes, SIEMPRE aplicarlas
+        // (antes se saltaban por existir crm.customers → opportunities/activities incompletas).
+        var skipMigrate = pending.Count > 0 && applied.Count == 0 && legacyExists;
+        if (skipMigrate)
+        {
+            Log.Warning(
+                "Base {DbName}: módulo {Module} legacy ({Probe}) sin historial EF y {PendingCount} pendiente(s). Se omite MigrateAsync; EnsureTables completa huecos.",
+                dbName,
+                moduleName,
+                legacyProbeTable,
+                pending.Count);
+        }
+        else if (pending.Count > 0)
         {
             try
             {
@@ -177,61 +196,16 @@ public static class TenantDatabaseBootstrapper
             {
                 Log.Warning(
                     ex,
-                    "Base {DbName}: módulo {Module} — MigrateAsync inicial chocó con objetos ya existentes ({SqlState}). Continuando con EnsureTables.",
+                    "Base {DbName}: módulo {Module} — MigrateAsync chocó con objetos ya existentes ({SqlState}). Continuando con EnsureTables.",
                     dbName,
                     moduleName,
                     ex.SqlState);
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "Fallo MigrateAsync inicial del módulo {Module} en base {DbName}.", moduleName, dbName);
+                Log.Fatal(ex, "Fallo MigrateAsync del módulo {Module} en base {DbName}. Reconciliar __ef_migrations_history.", moduleName, dbName);
                 throw;
             }
-
-            await EnsureTablesResilientAsync(ensureTablesAsync, moduleName, dbName, cancellationToken);
-            return;
-        }
-
-        var legacyExists = await LegacySchemaExistsAsync(db, legacyProbeTable, cancellationToken);
-        if (legacyExists)
-        {
-            if (pending.Count > 0)
-            {
-                Log.Warning(
-                    "Base {DbName}: módulo {Module} con esquema legacy ({Probe}) y {PendingCount} migración(es) pendiente(s). Se omite MigrateAsync; reconciliar __ef_migrations_history cuando sea posible.",
-                    dbName,
-                    moduleName,
-                    legacyProbeTable,
-                    pending.Count);
-            }
-
-            await EnsureTablesResilientAsync(ensureTablesAsync, moduleName, dbName, cancellationToken);
-            return;
-        }
-
-        try
-        {
-            if (pending.Count > 0)
-            {
-                await db.Database.MigrateAsync(cancellationToken);
-            }
-        }
-        catch (PostgresException ex) when (
-            ex.SqlState == PostgresErrorCodes.DuplicateTable
-            || ex.SqlState == PostgresErrorCodes.UniqueViolation
-            || ex.SqlState == PostgresErrorCodes.DuplicateObject)
-        {
-            Log.Warning(
-                ex,
-                "Base {DbName}: módulo {Module} — MigrateAsync chocó con objetos ya existentes ({SqlState}). Continuando con EnsureTables.",
-                dbName,
-                moduleName,
-                ex.SqlState);
-        }
-        catch (Exception ex)
-        {
-            Log.Fatal(ex, "Fallo MigrateAsync del módulo {Module} en base {DbName}. Reconciliar __ef_migrations_history.", moduleName, dbName);
-            throw;
         }
 
         await EnsureTablesResilientAsync(ensureTablesAsync, moduleName, dbName, cancellationToken);
@@ -284,9 +258,14 @@ public static class TenantDatabaseBootstrapper
     private static TContext CreateContext<TContext>(string connectionString, string migrationsHistorySchema)
         where TContext : DbContext
     {
+        var assemblyName = typeof(TContext).Assembly.FullName
+            ?? throw new InvalidOperationException($"No se pudo resolver el assembly de {typeof(TContext).Name}.");
         var options = new DbContextOptionsBuilder<TContext>()
             .UseNpgsql(connectionString, npgsql =>
-                npgsql.MigrationsHistoryTable("__ef_migrations_history", migrationsHistorySchema))
+            {
+                npgsql.MigrationsHistoryTable("__ef_migrations_history", migrationsHistorySchema);
+                npgsql.MigrationsAssembly(assemblyName);
+            })
             .Options;
 
         return (TContext)Activator.CreateInstance(typeof(TContext), options)!;
