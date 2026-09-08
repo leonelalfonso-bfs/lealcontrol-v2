@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api/client";
+import type { CompanySettings } from "../../api/types";
 import type { QualityComplaint } from "../../api/types/quality";
 import { loadHtml2Pdf } from "../../utils/loadHtml2Pdf";
 
@@ -24,6 +25,7 @@ export function QualityComplaintPrintPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const [row, setRow] = useState<QualityComplaint | null>(null);
+  const [company, setCompany] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -31,8 +33,14 @@ export function QualityComplaintPrintPage() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    api.getQualityComplaint(id)
-      .then(setRow)
+    Promise.all([
+      api.getQualityComplaint(id),
+      api.getCompanySettings().catch(() => null)
+    ])
+      .then(([complaint, settings]) => {
+        setRow(complaint);
+        setCompany(settings);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
   }, [id]);
@@ -48,7 +56,7 @@ export function QualityComplaintPrintPage() {
           margin: [10, 10, 10, 10],
           filename: `PG03-R01_${row.number}.pdf`,
           image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
+          html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
           pagebreak: { mode: ["avoid-all", "css"] }
         })
@@ -78,6 +86,7 @@ export function QualityComplaintPrintPage() {
     verticalAlign: "top"
   };
   const label: CSSProperties = { ...cell, background: "#f1f5f9", fontWeight: 700, width: "28%" };
+  const companyName = company?.legalName || company?.tradeName || "Empresa";
 
   return (
     <div style={{ background: "#e2e8f0", minHeight: "100vh", padding: 20 }}>
@@ -121,7 +130,20 @@ export function QualityComplaintPrintPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}>
           <tbody>
             <tr>
-              <td style={{ ...cell, width: "22%", textAlign: "center", fontWeight: 800 }}>INMELA</td>
+              <td style={{ ...cell, width: "26%", textAlign: "center", verticalAlign: "middle" }}>
+                {company?.logoUrl ? (
+                  <img
+                    src={company.logoUrl}
+                    alt={companyName}
+                    crossOrigin="anonymous"
+                    style={{ maxHeight: 52, maxWidth: 140, objectFit: "contain", display: "block", margin: "0 auto 4px" }}
+                  />
+                ) : null}
+                <div style={{ fontSize: 11, fontWeight: 800, lineHeight: 1.2 }}>{companyName}</div>
+                {company?.documentNumber ? (
+                  <div style={{ fontSize: 9, color: "#475569", marginTop: 2 }}>CUIT {company.documentNumber}</div>
+                ) : null}
+              </td>
               <td style={{ ...cell, textAlign: "center" }}>
                 <div style={{ fontSize: 11, letterSpacing: 0.04 }}>SISTEMA DE GESTIÓN DE CALIDAD · ISO/IEC 17025</div>
                 <div style={{ fontSize: 16, fontWeight: 800, marginTop: 4 }}>PG03-R01 · Seguimiento de quejas</div>

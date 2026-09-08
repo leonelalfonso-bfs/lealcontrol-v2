@@ -55,7 +55,7 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 - Antes de push: sin typo CSS `displayContent` (usar `justifyContent`).
 - Commits solo del corte Calidad.
 - Todo registro operativo nuevo = entidad + API + UI de alta/edición (no “subir plantilla y listo”).
-- **Export obligatorio en cada registro:** PDF de la instancia (formato planilla) + Excel del listado filtrable.
+- **Export obligatorio en cada registro:** PDF de la instancia (formato planilla + **logo de Configuración**) + Excel del listado filtrable.
 
 Catálogo operativo UI: `qualityRecordRoutes.ts`. Endpoints: `/api/v1/quality/records/…`.
 
@@ -482,7 +482,8 @@ Estimación gruesa: C1 es la que desbloquea todo lo demás y es la de menor ries
 | 6 | Seed de archivos | **Script** `tools/quality-seed`: descarga del Drive, conversión a PDF, mapeo de códigos, carga por API, reporte de discrepancias. Idempotente. | §6, §7, §9 (C1) |
 | 7 | Menú lateral | **No** un ítem por registro. Solo Tablero · Árbol · índice Registros. Entrada operativa desde árbol/detalle o hub. | §0, §4, §9 (C3) |
 | 8 | Instancias vs plantilla | Los registros operativos **se generan en el sistema** (entidad + workflow). El archivo del Drive es plantilla del árbol; el adjunto es evidencia, no el registro. | §0, §3.3 |
-| 9 | Exportaciones por registro | **PDF** de cada instancia con formato tipo planilla SGC (como Drive). **Excel** del listado con filtros (ej. quejas abiertas/cerradas/vencidas). Patrón a replicar en todos los registros Structured/Generated. | §0, §4, PG03-R01 |
+| 9 | Exportaciones por registro | **PDF** de cada instancia con formato tipo planilla SGC (como Drive), **con logo y razón social de Configuración** (`CompanySettings.logoUrl`). **Excel** del listado con filtros. Patrón a replicar en todos los registros Structured/Generated. | §0, §4, PG03-R01 |
+
 
 ---
 
