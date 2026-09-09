@@ -1,6 +1,6 @@
 # Módulo de Calidad (SGC ISO/IEC 17025) — Análisis de estructura
 
-**Fecha:** 08/09/2026 (actualizado onboarding multi-tenant: árbol vacío + alta guiada)  
+**Fecha:** 09/09/2026 (pre-demo Calidad: PG09-R01, PG11-R01, PG14-R02)  
 **Rama:** `staging/metrology-2307` (prod = `main`)  
 **Fuente:** carpeta Drive "INMELA - BFS" preparada por la consultoría ELEVAR (Laura Delissi) + documentos técnicos de Germán, relevada completa el 07/09/2026.  
 **Referencia interna:** `docs/Contexto_revision_Metrologia_Legal_ISO17025.md`, módulo `src/Modules/Metrology`.  
@@ -12,8 +12,9 @@
 
 ## 0. Punto de reanudación (leer primero)
 
-**Último avance Calidad (08/09 noche):** onboarding multi-tenant del árbol documental.  
-**Commits clave (main):** `56abd81` / `c524ea9` (árbol vacío + alta documento), `f260fe8` (agregar registros al árbol).  
+**Último avance Calidad (09/09 mañana):** cierre P0 para demo con gente de calidad.  
+**Cierre P0 demo:** PG09-R01 (Linked Metrología informes), PG11-R01 (Attachment + UI), PG14-R02 (impresión etiqueta).  
+**C5b:** **cancelado** — encabezado manual alcanza; no parsear Word/PDF.  
 **Prod:** https://erp.lealcontrol.com — `/opt/lealcontrol-v2`  
 **Staging:** https://v2.lealcontrol.com — `/opt/lealcontrol-staging`
 
@@ -27,11 +28,11 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | Kind | Qué hace el sistema |
 |---|---|
 | `Structured` | Formulario + entidad (quejas, NC, indicadores…) |
-| `Generated` | Vista calculada (PG01-R01/R02, **PG14-R3/R4** ✅) |
-| `Linked` | Deep-link a Metrología / otro módulo |
-| `Attachment` | Metadatos de instancia + PDF (compromisos, notas); igual se da de alta en UI, no “solo subir el Word” |
+| `Generated` | Vista calculada (PG01-R01/R02, **PG14-R3/R4**, **PG14-R02** etiqueta) |
+| `Linked` | Deep-link a Metrología / otro módulo (**PG09-R01/R02**, IT01–IT04) |
+| `Attachment` | Metadatos de instancia + PDF (compromisos, notas, **PG11-R01**); igual se da de alta en UI |
 
-### Principio (nuevo): cada tenant arma su propio árbol
+### Principio: cada tenant arma su propio árbol
 
 - **No** se auto-copia el catálogo INMELA a empresas nuevas (`EnsureCatalogAsync` ya no corre en endpoints).
 - Tenant nuevo → **árbol vacío**.
@@ -49,6 +50,7 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | **C3 nav** Menú sin un ítem por registro | ✅ | Lateral: Tablero · Árbol · Registros operativos (`/calidad/registros`) |
 | **C4** Tablero SGC + historial + modo presentación | ✅ Implementado | Alertas NC/quejas/calib/autorizaciones; matriz 17025; before/after PG03/PG07; PresentationModeMiddleware |
 | **C5** Onboarding multi-tenant del árbol | ✅ Base lista | Árbol vacío; Nuevo documento; Agregar registro desde catálogo; sin seed INMELA en API |
+| **C5b** Parseo encabezado Word/PDF | ❌ Cancelado | Manual OK para demo y operación |
 | **MC01-R01** Confidencialidad interno | ✅ | Attachment + metadatos de instancia |
 | **MC01-R02** Confidencialidad externo | ✅ | Idem + organización |
 | **MC01-R03** Indicadores | ✅ | Structured: Indicator + IndicatorValue |
@@ -60,24 +62,25 @@ Un adjunto PDF es evidencia opcional, **no** reemplaza al registro.
 | **PG06** Personal (R01–R04) | ✅ | CAP/AUT/COMP/ASG; autorización firmada por DT (`RequireTechnicalDirector`); gateway real para Metrología |
 | **PG05** Proveedores (R01–R03) | ✅ | EVA/DES + listado habilitados Generated; vínculo Directorio; PDF+Excel |
 | **PG08-R01** Revisión por la dirección | ✅ | Structured REV-AAAA-NNNN; inputs auto del SGC; refresh; PDF+Excel |
+| **PG09-R01** Informe de ensayos | ✅ | Linked → `/metrologia/informes` |
 | **PG09-R03** Encuesta de satisfacción | ✅ | Structured ENC-AAAA-NNNN; puntajes 1–5; vínculo informe; PDF+Excel |
 | **PG09 R2** Enmienda al informe de ensayo | ✅ | `SupersedesReportId` + `AmendmentReason`; POST `/reports/{id}/amend`; original `Superseded` |
+| **PG11-R01** Validación del método | ✅ | Attachment: método/IT + resultado + PDF evidencia |
 | **Linked IT** IT01–IT04 R1/R2/R3 | ✅ | `/calidad/registros/it/:itCode/:record`; filtro `instructionCode` en equipos/informes Metrología; Excel |
 | **PG14-R04** Listado de equipos | ✅ | Generated: pesas + instrumentos (Metrología) + auxiliares (Calidad); Excel |
 | **PG14-R03** Programa de calibraciones | ✅ | Generated: vencimientos pesas/instrumentos; Excel |
+| **PG14-R02** Etiqueta calibrado | ✅ | Impresión desde listado pesas/instrumentos (`?tab=r02`) |
 | **PG14-R01** Hoja de vida del equipo | ✅ | Structured HV-AAAA-NNNN; sync calibraciones Metrología; PDF por activo + Excel |
 | **PG14-EQ** Equipos auxiliares | ✅ | `QualityEquipment` EQ 001…; Truck/Trailer/Forklift; padre opcional |
 | **PG14-R05** Verificación intermedia | ✅ | Structured VIC-AAAA-NNNN; pesa 1000 kg; PDF+Excel |
 | **PG14-R06** Mantenimiento preventivo | ✅ | Structured MP-AAAA-NNNN; marcar hecho avanza NextDue; PDF+Excel |
 
-### Siguiente sesión (09/09/2026)
+### Siguiente sesión (post-demo 09/09)
 
-1. **Validar en prod** el flujo completo en un tenant de prueba (árbol vacío → MC01 → R01/R02/R03…).
-2. Si el tenant de prueba ya tenía seed viejo: limpiar catálogo de ese tenant o crear uno nuevo.
-3. **C5b (opcional):** sugerir campos del encabezado leyendo Word/PDF (siempre con confirmación manual).
-4. Completar catálogo de tipos faltantes en el selector si aparece un código real sin opción (ej. PG09-R01 Informe si hace falta en árbol).
-5. Alertas Calendar → notificaciones (sigue diferido).
-6. Carga operativa INMELA: PDFs vía UI o `tools/quality-seed` **solo** en tenant INMELA.
+1. **Deploy prod** del corte P0 si aún no está en `erp.lealcontrol.com`.
+2. Alertas Calendar → notificaciones (sigue diferido).
+3. Carga operativa INMELA: PDFs vía UI o `tools/quality-seed` **solo** en tenant INMELA.
+4. Historial before/after más allá de PG03/PG07; UI normas/relaciones si el auditor lo pide.
 
 ### Flujo operativo acordado (C5)
 

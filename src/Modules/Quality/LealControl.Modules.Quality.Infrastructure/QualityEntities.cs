@@ -320,6 +320,44 @@ public sealed record CreateInstitutionalNoteRequest(
     Guid? FileId = null,
     string? Notes = null);
 
+/// <summary>Instancias de informe de validación del método (PG11-R01).</summary>
+public sealed class QualityMethodValidation : Entity<Guid>
+{
+    public QualityMethodValidation() : base(Guid.NewGuid())
+    {
+    }
+
+    public QualityMethodValidation(Guid id) : base(id)
+    {
+    }
+
+    public TenantId TenantId { get; set; }
+    public string RecordCode { get; set; } = "PG11-R01";
+    /// <summary>Código IT / método, ej. IT01, IT02.</summary>
+    public string MethodCode { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Summary { get; set; } = string.Empty;
+    public string ValidatedBy { get; set; } = string.Empty;
+    public DateTime ValidatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>Valid | Conditional | NotValid</summary>
+    public string Result { get; set; } = "Valid";
+    public Guid? FileId { get; set; }
+    public string Notes { get; set; } = string.Empty;
+    public string Status { get; set; } = "Active"; // Active, Superseded, Cancelled
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed record CreateMethodValidationRequest(
+    string MethodCode,
+    string Title,
+    DateTime? ValidatedAt = null,
+    string? Summary = null,
+    string? ValidatedBy = null,
+    string? Result = null,
+    Guid? FileId = null,
+    string? Notes = null);
+
 /// <summary>Estados del workflow PG03-R01 (quejas).</summary>
 public static class QualityComplaintStatuses
 {

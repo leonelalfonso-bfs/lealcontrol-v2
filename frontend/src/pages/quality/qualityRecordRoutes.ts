@@ -66,6 +66,22 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     blurb: "Revisión anual; inputs del SGC (quejas, NC, auditorías, indicadores…) se arman solos."
   },
   {
+    code: "PG11-R01",
+    title: "Informe de validación del método",
+    path: "/calidad/registros/pg11-r01",
+    kind: "Attachment",
+    ready: true,
+    blurb: "Instancias de validación por método/IT con PDF de evidencia."
+  },
+  {
+    code: "PG09-R01",
+    title: "Informe de ensayos",
+    path: "/metrologia/informes",
+    kind: "Linked",
+    ready: true,
+    blurb: "Vinculado a Metrología: emisión e impresión del informe de ensayo (PG09 R1)."
+  },
+  {
     code: "PG09-R02",
     title: "Modificación al informe de ensayos",
     path: "/metrologia/informes",
@@ -288,6 +304,14 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     kind: "Generated",
     ready: true,
     blurb: "Pesas patrón + instrumentos (Metrología) + auxiliares (Calidad)."
+  },
+  {
+    code: "PG14-R02",
+    title: "Etiqueta de equipo calibrado",
+    path: "/calidad/registros/equipos?tab=r02",
+    kind: "Generated",
+    ready: true,
+    blurb: "Impresión de etiqueta PG14-R02 desde pesas e instrumentos con calibración."
   },
   {
     code: "PG14-R03",

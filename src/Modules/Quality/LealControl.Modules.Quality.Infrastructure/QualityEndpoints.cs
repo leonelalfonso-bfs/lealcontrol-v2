@@ -839,6 +839,100 @@ public static class QualityEndpoints
             return Results.Ok(ToInstitutionalNoteDto(entity));
         });
 
+        // PG11-R01 — Informe de validación del método
+        group.MapGet("/records/pg11-r01", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+            var rows = await db.MethodValidations.AsNoTracking()
+                .Where(n => n.TenantId == tenantId)
+                .OrderByDescending(n => n.ValidatedAt)
+                .ThenBy(n => n.MethodCode)
+                .ToListAsync(ct);
+
+            return Results.Ok(new
+            {
+                code = "PG11-R01",
+                title = "Informe de validación del método",
+                recordKind = QualityRecordKinds.Attachment,
+                generatedAtUtc = DateTime.UtcNow,
+                rows = rows.Select(ToMethodValidationDto)
+            });
+        });
+
+        group.MapPost("/records/pg11-r01", async (
+            CreateMethodValidationRequest req,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            await db.EnsureQualityTablesAsync(ct);
+
+            if (string.IsNullOrWhiteSpace(req.MethodCode))
+            {
+                return Results.BadRequest(new { message = "El código del método / IT es obligatorio." });
+            }
+
+            if (string.IsNullOrWhiteSpace(req.Title))
+            {
+                return Results.BadRequest(new { message = "El título del informe es obligatorio." });
+            }
+
+            var result = string.IsNullOrWhiteSpace(req.Result) ? "Valid" : req.Result.Trim();
+            if (result is not ("Valid" or "Conditional" or "NotValid"))
+            {
+                return Results.BadRequest(new { message = "Resultado inválido. Usá Valid, Conditional o NotValid." });
+            }
+
+            if (req.FileId.HasValue)
+            {
+                var fileOk = await db.Files.AsNoTracking()
+                    .AnyAsync(f => f.TenantId == tenantId && f.Id == req.FileId.Value, ct);
+                if (!fileOk)
+                {
+                    return Results.BadRequest(new { message = "El archivo adjunto no existe. Subilo antes con POST /files." });
+                }
+            }
+
+            var entity = new QualityMethodValidation
+            {
+                TenantId = tenantId,
+                RecordCode = "PG11-R01",
+                MethodCode = req.MethodCode.Trim().ToUpperInvariant(),
+                Title = req.Title.Trim(),
+                Summary = req.Summary?.Trim() ?? string.Empty,
+                ValidatedBy = req.ValidatedBy?.Trim() ?? string.Empty,
+                ValidatedAt = req.ValidatedAt ?? DateTime.UtcNow,
+                Result = result,
+                FileId = req.FileId,
+                Notes = req.Notes?.Trim() ?? string.Empty,
+                Status = "Active",
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+
+            db.MethodValidations.Add(entity);
+            await db.SaveChangesAsync(ct);
+            return Results.Created($"/api/v1/quality/records/pg11-r01/{entity.Id}", ToMethodValidationDto(entity));
+        });
+
+        group.MapDelete("/records/pg11-r01/{id:guid}", async (
+            Guid id,
+            ITenantContext tenant,
+            QualityDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId;
+            var entity = await db.MethodValidations
+                .FirstOrDefaultAsync(n => n.Id == id && n.TenantId == tenantId, ct);
+            if (entity is null) return Results.NotFound();
+            entity.Status = "Cancelled";
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToMethodValidationDto(entity));
+        });
+
         // PG03-R01 — Seguimiento de quejas (Structured: se genera en el sistema)
         group.MapGet("/records/pg03-r01", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
         {
@@ -2032,6 +2126,23 @@ public static class QualityEndpoints
         n.IssuedBy,
         n.Audience,
         n.IssuedAt,
+        n.FileId,
+        n.Notes,
+        n.Status,
+        n.CreatedAtUtc,
+        n.UpdatedAtUtc
+    };
+
+    private static object ToMethodValidationDto(QualityMethodValidation n) => new
+    {
+        n.Id,
+        n.RecordCode,
+        n.MethodCode,
+        n.Title,
+        n.Summary,
+        n.ValidatedBy,
+        n.ValidatedAt,
+        n.Result,
         n.FileId,
         n.Notes,
         n.Status,

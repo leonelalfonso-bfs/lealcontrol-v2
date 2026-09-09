@@ -1410,6 +1410,36 @@ export const api = {
       { method: "DELETE" }
     ),
 
+  listQualityPg11R01: () =>
+    request<{
+      code: string;
+      title: string;
+      recordKind?: string;
+      generatedAtUtc: string;
+      rows: import("./types/quality").QualityMethodValidation[];
+    }>("/api/v1/quality/records/pg11-r01"),
+
+  createQualityPg11R01: (body: {
+    methodCode: string;
+    title: string;
+    summary?: string;
+    validatedBy?: string;
+    validatedAt?: string;
+    result?: string;
+    fileId?: string;
+    notes?: string;
+  }) =>
+    request<import("./types/quality").QualityMethodValidation>("/api/v1/quality/records/pg11-r01", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  cancelQualityPg11R01: (id: string) =>
+    request<import("./types/quality").QualityMethodValidation>(
+      `/api/v1/quality/records/pg11-r01/${id}`,
+      { method: "DELETE" }
+    ),
+
   listQualityPg03R01: () =>
     request<{
       code: string;

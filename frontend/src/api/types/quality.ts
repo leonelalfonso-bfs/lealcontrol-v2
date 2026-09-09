@@ -233,6 +233,22 @@ export interface QualityInstitutionalNote {
   updatedAtUtc: string;
 }
 
+export interface QualityMethodValidation {
+  id: string;
+  recordCode: string;
+  methodCode: string;
+  title: string;
+  summary?: string;
+  validatedBy?: string;
+  validatedAt: string;
+  result: "Valid" | "Conditional" | "NotValid" | string;
+  fileId?: string | null;
+  notes?: string;
+  status: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
 export interface QualityComplaint {
   id: string;
   recordCode: string;

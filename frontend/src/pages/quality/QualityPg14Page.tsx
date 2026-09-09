@@ -25,11 +25,12 @@ import {
   METROLOGY_VERDICT
 } from "./qualityLabels";
 
-type Tab = "r04" | "r03" | "r01" | "equipos" | "r05" | "r06";
+type Tab = "r04" | "r03" | "r02" | "r01" | "equipos" | "r05" | "r06";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "r04", label: "R04 Listado" },
   { id: "r03", label: "R03 Programa" },
+  { id: "r02", label: "R02 Etiqueta" },
   { id: "r01", label: "R01 Hoja de vida" },
   { id: "equipos", label: "Equipos auxiliares" },
   { id: "r05", label: "R05 Verificación" },
@@ -66,8 +67,38 @@ const LOG_STATUS: Record<string, string> = {
 };
 
 function parseTab(v: string | null): Tab {
-  if (v === "r04" || v === "r03" || v === "r01" || v === "equipos" || v === "r05" || v === "r06") return v;
+  if (v === "r04" || v === "r03" || v === "r02" || v === "r01" || v === "equipos" || v === "r05" || v === "r06") return v;
   return "r04";
+}
+
+function printCalibrationLabel(asset: QualityPg14UnifiedAsset) {
+  const w = window.open("", "_blank", "width=420,height=560");
+  if (!w) return;
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/><title>PG14-R02 ${esc(asset.code)}</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;margin:12px;color:#000}
+  .label{border:2px solid #000;padding:14px;width:340px}
+  h1{font-size:14px;margin:0 0 10px;text-align:center;letter-spacing:.04em}
+  .code{font-size:22px;font-weight:800;text-align:center;margin:8px 0}
+  .row{font-size:12px;margin:5px 0;line-height:1.35}
+  .muted{color:#333;font-size:11px;margin-top:10px;text-align:center}
+  @media print{body{margin:0}.label{border-width:2px}}
+</style></head><body>
+<div class="label">
+  <h1>EQUIPO CALIBRADO · PG14-R02</h1>
+  <div class="code">${esc(asset.code)}</div>
+  <div class="row"><strong>Descripción:</strong> ${esc(asset.description || "—")}</div>
+  <div class="row"><strong>Serie:</strong> ${esc(asset.serialNumber || "—")}</div>
+  <div class="row"><strong>Certificado:</strong> ${esc(asset.certificateNumber || "—")}</div>
+  <div class="row"><strong>Calibración:</strong> ${esc(asset.calibrationDate ? new Date(asset.calibrationDate).toLocaleDateString("es-AR") : "—")}</div>
+  <div class="row"><strong>Vence:</strong> ${esc(asset.expirationDate ? new Date(asset.expirationDate).toLocaleDateString("es-AR") : "—")}</div>
+  <div class="muted">Copia no controlada · Sistema de Gestión de Calidad</div>
+</div>
+<script>window.onload=function(){window.print();}</script>
+</body></html>`);
+  w.document.close();
 }
 
 function fmtDate(d?: string | null) {
@@ -816,6 +847,51 @@ export function QualityPg14Page() {
                 })}
                 {filteredInventory.length === 0 && (
                   <tr><td colSpan={10} style={{ textAlign: "center", color: "#64748b" }}>Sin equipos en el listado.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {tab === "r02" && (
+        <>
+          <p style={{ margin: "0 0 12px", color: "#64748b", fontSize: 13 }}>
+            PG14-R02 · Imprimí la etiqueta de equipo calibrado para pesas e instrumentos con datos de calibración.
+          </p>
+          <div className="card" style={{ overflowX: "auto" }}>
+            <table className="data-table" style={{ width: "100%", fontSize: 13 }}>
+              <thead>
+                <tr>
+                  <th>Origen</th>
+                  <th>Código</th>
+                  <th>Descripción</th>
+                  <th>Certificado</th>
+                  <th>Calibración</th>
+                  <th>Vence</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventory
+                  .filter((r) => r.source === "StandardWeight" || r.source === "Instrument")
+                  .map((r) => (
+                    <tr key={`label-${r.source}-${r.id}`} style={r.isExpired ? { background: "#fef2f2" } : undefined}>
+                      <td>{SOURCE_LABEL[r.source] || r.source}</td>
+                      <td><strong>{r.code}</strong></td>
+                      <td>{r.description || "—"}</td>
+                      <td>{r.certificateNumber || "—"}</td>
+                      <td>{fmtDate(r.calibrationDate)}</td>
+                      <td style={r.isExpired ? { color: "#b91c1c", fontWeight: 600 } : undefined}>{fmtDate(r.expirationDate)}</td>
+                      <td>
+                        <button type="button" className="btn btn-primary compact" onClick={() => printCalibrationLabel(r)}>
+                          Imprimir etiqueta
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                {inventory.filter((r) => r.source === "StandardWeight" || r.source === "Instrument").length === 0 && (
+                  <tr><td colSpan={7} style={{ textAlign: "center", color: "#64748b" }}>No hay pesas ni instrumentos para etiquetar. Cargalos en Metrología.</td></tr>
                 )}
               </tbody>
             </table>

@@ -20,6 +20,7 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityIndicator> Indicators => Set<QualityIndicator>();
     public DbSet<QualityIndicatorValue> IndicatorValues => Set<QualityIndicatorValue>();
     public DbSet<QualityInstitutionalNote> InstitutionalNotes => Set<QualityInstitutionalNote>();
+    public DbSet<QualityMethodValidation> MethodValidations => Set<QualityMethodValidation>();
     public DbSet<QualityComplaint> Complaints => Set<QualityComplaint>();
     public DbSet<QualityNonConformity> NonConformities => Set<QualityNonConformity>();
     public DbSet<QualityInternalAudit> InternalAudits => Set<QualityInternalAudit>();
@@ -186,6 +187,24 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Active");
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.IssuedAt });
+            b.HasIndex(x => new { x.TenantId, x.RecordCode, x.Status });
+        });
+
+        modelBuilder.Entity<QualityMethodValidation>(b =>
+        {
+            b.ToTable("method_validations", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.MethodCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Title).HasMaxLength(240).IsRequired();
+            b.Property(x => x.Summary).HasMaxLength(4000);
+            b.Property(x => x.ValidatedBy).HasMaxLength(160);
+            b.Property(x => x.Result).HasMaxLength(32).HasDefaultValue("Valid");
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Active");
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => new { x.TenantId, x.ValidatedAt });
+            b.HasIndex(x => new { x.TenantId, x.MethodCode, x.Status });
             b.HasIndex(x => new { x.TenantId, x.RecordCode, x.Status });
         });
 
@@ -678,6 +697,26 @@ public sealed class QualityDbContext : DbContext
             );",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_instnotes_Tenant_Issued"" ON quality.institutional_notes (""TenantId"", ""IssuedAt"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_instnotes_Tenant_Record_Status"" ON quality.institutional_notes (""TenantId"", ""RecordCode"", ""Status"");",
+
+            @"CREATE TABLE IF NOT EXISTS quality.method_validations (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RecordCode"" character varying(32) NOT NULL DEFAULT 'PG11-R01',
+                ""MethodCode"" character varying(32) NOT NULL,
+                ""Title"" character varying(240) NOT NULL,
+                ""Summary"" character varying(4000) NOT NULL DEFAULT '',
+                ""ValidatedBy"" character varying(160) NOT NULL DEFAULT '',
+                ""ValidatedAt"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""Result"" character varying(32) NOT NULL DEFAULT 'Valid',
+                ""FileId"" uuid,
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""Status"" character varying(32) NOT NULL DEFAULT 'Active',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_methval_Tenant_Validated"" ON quality.method_validations (""TenantId"", ""ValidatedAt"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_methval_Tenant_Method_Status"" ON quality.method_validations (""TenantId"", ""MethodCode"", ""Status"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_methval_Tenant_Record_Status"" ON quality.method_validations (""TenantId"", ""RecordCode"", ""Status"");",
 
             @"CREATE TABLE IF NOT EXISTS quality.complaints (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
