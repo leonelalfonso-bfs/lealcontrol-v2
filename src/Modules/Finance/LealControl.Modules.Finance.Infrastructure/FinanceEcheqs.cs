@@ -26,7 +26,24 @@ public static class FinanceEcheqs
         group.MapPost("", async (CreateReceivedChequeRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(body.CheckNumber) || body.Amount <= 0) return Results.BadRequest("Número e importe son obligatorios.");
-            var item = new ReceivedCheque { Id = Guid.NewGuid(), TenantId = tenant.TenantId.Value, CheckNumber = body.CheckNumber.Trim(), Amount = body.Amount, Currency = string.IsNullOrWhiteSpace(body.Currency) ? "ARS" : body.Currency.Trim().ToUpperInvariant(), IssueDateUtc = body.IssueDateUtc, DueDateUtc = body.DueDateUtc, IssuerName = body.IssuerName?.Trim(), IssuerTaxId = body.IssuerTaxId?.Trim(), BankName = body.BankName?.Trim(), Notes = body.Notes?.Trim(), Direction = body.Direction, Status = ReceivedChequeStatus.Available, CreatedAtUtc = DateTime.UtcNow };
+            var direction = body.Direction;
+            var item = new ReceivedCheque
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenant.TenantId.Value,
+                CheckNumber = body.CheckNumber.Trim(),
+                Amount = body.Amount,
+                Currency = string.IsNullOrWhiteSpace(body.Currency) ? "ARS" : body.Currency.Trim().ToUpperInvariant(),
+                IssueDateUtc = body.IssueDateUtc,
+                DueDateUtc = body.DueDateUtc,
+                IssuerName = body.IssuerName?.Trim(),
+                IssuerTaxId = body.IssuerTaxId?.Trim(),
+                BankName = body.BankName?.Trim(),
+                Notes = body.Notes?.Trim(),
+                Direction = direction,
+                Status = direction == ChequeDirection.Issued ? ReceivedChequeStatus.Issued : ReceivedChequeStatus.Available,
+                CreatedAtUtc = DateTime.UtcNow
+            };
             db.ReceivedCheques.Add(item); await db.SaveChangesAsync(ct); return Results.Created($"/api/v1/finance/echeqs/{item.Id}", item);
         });
         group.MapPost("/import", async (ImportReceivedChequesRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>

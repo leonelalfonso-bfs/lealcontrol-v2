@@ -54,6 +54,8 @@ public static class FinancePayments
                 o.PaymentDateUtc,
                 o.Notes,
                 o.Status,
+                o.VoidReason,
+                o.VoidedAtUtc,
                 o.CreatedAtUtc,
                 LinesCount = linesSummary.TryGetValue(o.Id, out var lc) ? lc : 0,
                 InvoicesCount = imputationsSummary.TryGetValue(o.Id, out var imp) ? imp.Count : 0,

@@ -22,6 +22,9 @@ type Receipt = {
   receiptDateUtc: string;
   description?: string;
   invoicesSummary?: string;
+  status?: string;
+  voidReason?: string | null;
+  voidedAtUtc?: string | null;
 };
 
 type PaymentOrder = {
@@ -33,6 +36,9 @@ type PaymentOrder = {
   exchangeRate?: number;
   paymentDateUtc: string;
   notes?: string;
+  status?: string;
+  voidReason?: string | null;
+  voidedAtUtc?: string | null;
 };
 
 type LedgerItem = {
@@ -44,8 +50,12 @@ type LedgerItem = {
   debit: number;
   credit: number;
   balance: number;
-  source: "sale" | "purchase" | "collection" | "payment" | "adjustment";
+  source: "sale" | "purchase" | "collection" | "payment" | "adjustment" | "void";
+  muted?: boolean;
 };
+
+const isActiveDoc = (status?: string | null) =>
+  (status || "").toLowerCase() !== "voided";
 
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
@@ -99,9 +109,9 @@ export function CurrentAccountsPage() {
       const isCust = entity.isCustomer;
       const isSupp = entity.isSupplier;
 
-      // Customer calculations (Receivables)
+      // Customer calculations (Receivables) — excluir anulados (igual que facturas Cancelled)
       const custInvoices = salesInvoices.filter((i) => i.customerId === entity.id && i.status !== "Cancelled");
-      const custReceipts = receipts.filter((r) => r.customerId === entity.id);
+      const custReceipts = receipts.filter((r) => r.customerId === entity.id && isActiveDoc(r.status));
 
       // Billed sales in ARS (converting USD at invoice issuance rate)
       const billedSalesArs = custInvoices.reduce((s, i) => {
@@ -133,9 +143,9 @@ export function CurrentAccountsPage() {
       const receivableBalanceUsd = Math.max(0, billedSalesUsd - collectedSalesUsd);
       const receivableBalanceArs = billedSalesArs - (collectedSalesArs - (custReceipts.reduce((sum, r) => sum + (r.suggestedAdjustmentArs || 0), 0)));
 
-      // Supplier calculations (Payables)
+      // Supplier calculations (Payables) — excluir OP anuladas
       const suppInvoices = purchaseInvoices.filter((p) => p.supplierId === entity.id && p.status !== "Cancelled");
-      const suppPayments = paymentOrders.filter((po) => po.supplierId === entity.id);
+      const suppPayments = paymentOrders.filter((po) => po.supplierId === entity.id && isActiveDoc(po.status));
 
       const billedPurchasesArs = suppInvoices.reduce((s, p) => {
         const rate = p.exchangeRate && p.exchangeRate > 0 ? p.exchangeRate : 1;
@@ -251,7 +261,8 @@ export function CurrentAccountsPage() {
       originalAmount?: string;
       debit: number;
       credit: number;
-      source: "sale" | "purchase" | "collection" | "payment" | "adjustment";
+      source: LedgerItem["source"];
+      muted?: boolean;
     }> = [];
 
     // Sales invoices (Debit to customer: + Deuda del cliente)
@@ -274,27 +285,42 @@ export function CurrentAccountsPage() {
         });
       });
 
-    // Collection receipts (Credit to customer: - Deuda del cliente)
+    // Collection receipts: activos impactan saldo; anulados se muestran + contra-asiento
     receipts
       .filter((r) => r.customerId === ledgerEntity.id)
       .forEach((r) => {
         const isUsd = r.currency === "USD";
         const rate = r.invoiceExchangeRate || r.paymentExchangeRate || 1;
         const creditArs = isUsd ? (r.amount || 0) * rate : (r.amount || 0);
+        const voided = !isActiveDoc(r.status);
 
         history.push({
           date: r.receiptDateUtc,
-          type: `Recibo de Cobro (${r.currency})`,
+          type: voided ? `Recibo de Cobro ANULADO (${r.currency})` : `Recibo de Cobro (${r.currency})`,
           number: r.receiptNumber,
-          description: r.description || "Cobranza recibida",
+          description: voided
+            ? `Anulado${r.voidReason ? `: ${r.voidReason}` : ""}`
+            : r.description || "Cobranza recibida",
           originalAmount: isUsd ? money(r.amount, "USD") : undefined,
           debit: 0,
           credit: creditArs,
-          source: "collection"
+          source: "collection",
+          muted: voided
         });
 
-        // If there was a difference of exchange adjustment, show it in the ledger to balance
-        if (r.suggestedAdjustmentArs && r.suggestedAdjustmentArs > 0.01) {
+        if (voided) {
+          history.push({
+            date: r.voidedAtUtc || r.receiptDateUtc,
+            type: "Anulación de cobro",
+            number: r.receiptNumber,
+            description: r.voidReason || "Reversa por anulación del recibo",
+            originalAmount: isUsd ? money(r.amount, "USD") : undefined,
+            debit: creditArs,
+            credit: 0,
+            source: "void",
+            muted: true
+          });
+        } else if (r.suggestedAdjustmentArs && r.suggestedAdjustmentArs > 0.01) {
           history.push({
             date: r.receiptDateUtc,
             type: "Diferencia de Cambio (ND)",
@@ -327,24 +353,42 @@ export function CurrentAccountsPage() {
         });
       });
 
-    // Payment orders (Debit to supplier: - Deuda nuestra con el proveedor)
+    // Payment orders: activos impactan; anulados + contra-asiento
     paymentOrders
       .filter((po) => po.supplierId === ledgerEntity.id)
       .forEach((po) => {
         const isUsd = po.currency === "USD";
         const rate = po.exchangeRate && po.exchangeRate > 0 ? po.exchangeRate : 1;
         const debitArs = isUsd ? (po.amount || 0) * rate : (po.amount || 0);
+        const voided = !isActiveDoc(po.status);
 
         history.push({
           date: po.paymentDateUtc,
-          type: `Orden de Pago (${po.currency || "ARS"})`,
+          type: voided ? `Orden de Pago ANULADA (${po.currency || "ARS"})` : `Orden de Pago (${po.currency || "ARS"})`,
           number: po.orderNumber,
-          description: po.notes || "Pago emitido a proveedor",
+          description: voided
+            ? `Anulada${po.voidReason ? `: ${po.voidReason}` : ""}`
+            : po.notes || "Pago emitido a proveedor",
           originalAmount: isUsd ? money(po.amount, "USD") : undefined,
           debit: debitArs,
           credit: 0,
-          source: "payment"
+          source: "payment",
+          muted: voided
         });
+
+        if (voided) {
+          history.push({
+            date: po.voidedAtUtc || po.paymentDateUtc,
+            type: "Anulación de pago",
+            number: po.orderNumber,
+            description: po.voidReason || "Reversa por anulación de la OP",
+            originalAmount: isUsd ? money(po.amount, "USD") : undefined,
+            debit: 0,
+            credit: debitArs,
+            source: "void",
+            muted: true
+          });
+        }
       });
 
     // Sort by date ascending
@@ -359,6 +403,11 @@ export function CurrentAccountsPage() {
       else if (item.source === "collection") running -= item.credit;
       else if (item.source === "purchase") running -= item.credit;
       else if (item.source === "payment") running += item.debit;
+      else if (item.source === "void") {
+        // Reversa: débito reabre deuda cliente; crédito reabre deuda proveedor
+        running += item.debit;
+        running -= item.credit;
+      }
 
       computed.push({
         ...item,
@@ -892,13 +941,13 @@ export function CurrentAccountsPage() {
                     </tr>
                   ) : (
                     ledgerHistory.map((item, idx) => (
-                      <tr key={idx}>
+                      <tr key={idx} style={item.muted ? { opacity: 0.65 } : undefined}>
                         <td>{new Date(item.date).toLocaleDateString("es-AR")}</td>
                         <td>
                           <strong>{item.type}</strong>
                         </td>
                         <td>
-                          <code>{item.number}</code>
+                          <code style={item.muted ? { textDecoration: "line-through" } : undefined}>{item.number}</code>
                         </td>
                         <td>
                           {item.description}

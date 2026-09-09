@@ -47,7 +47,7 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CrmDbContext).Assembly);
     }
 
-    public async Task EnsureCrmTablesAsync()
+    public async Task EnsureCrmTablesAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -106,7 +106,7 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""IsActive"" boolean DEFAULT true;
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""AllowedModulesJson"" text DEFAULT '[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]';
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""IsTechnicalDirector"" boolean NOT NULL DEFAULT false;
-            ");
+            ", cancellationToken);
 
             // Red de seguridad: tenants nuevos donde MigrateAsync se omitió o chocó a medias.
             await Database.ExecuteSqlRawAsync(@"
@@ -188,7 +188,64 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                     ""OccurredAtUtc"" timestamp with time zone NOT NULL,
                     ""CreatedAtUtc"" timestamp with time zone NOT NULL
                 );
-            ");
+
+                CREATE TABLE IF NOT EXISTS crm.customer_locations (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""Name"" character varying(160) NOT NULL,
+                    street character varying(200) NOT NULL,
+                    city character varying(120) NOT NULL,
+                    province character varying(40) NOT NULL,
+                    postal_code character varying(12) NOT NULL,
+                    phone character varying(20),
+                    ""Notes"" character varying(2000),
+                    customer_id uuid
+                );
+
+                CREATE TABLE IF NOT EXISTS crm.customer_contacts (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""Name"" character varying(160) NOT NULL,
+                    ""Role"" character varying(30) NOT NULL,
+                    ""LocationId"" uuid,
+                    email character varying(200),
+                    phone character varying(20),
+                    whatsapp character varying(20),
+                    ""IsPrimary"" boolean NOT NULL DEFAULT false,
+                    ""Notes"" character varying(2000),
+                    customer_id uuid
+                );
+
+                CREATE TABLE IF NOT EXISTS crm.customer_fiscal_rates (
+                    id uuid NOT NULL PRIMARY KEY,
+                    ""Jurisdiction"" character varying(40) NOT NULL,
+                    ""PerceptionRate"" numeric(8,4) NOT NULL,
+                    ""RetentionRate"" numeric(8,4) NOT NULL,
+                    ""HasPerceptionExclusion"" boolean NOT NULL DEFAULT false,
+                    ""PerceptionExclusionExpiresOn"" date,
+                    ""HasRetentionExclusion"" boolean NOT NULL DEFAULT false,
+                    ""RetentionExclusionExpiresOn"" date,
+                    ""ExclusionCertificateNumber"" character varying(80),
+                    customer_id uuid NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS crm.customer_equipments (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""InternalCode"" character varying(80) NOT NULL,
+                    ""EquipmentType"" character varying(120) NOT NULL,
+                    ""Brand"" character varying(120),
+                    ""Model"" character varying(120),
+                    ""SerialNumber"" character varying(120),
+                    ""MaxCapacity"" character varying(80),
+                    ""DivisionScale"" character varying(80),
+                    ""LocationId"" uuid,
+                    ""Status"" character varying(40),
+                    ""LastCalibrationDate"" timestamp with time zone,
+                    ""CalibrationIntervalMonths"" integer,
+                    ""NextCalibrationDueDate"" timestamp with time zone,
+                    ""Notes"" character varying(2000),
+                    ""CustomAttributes"" jsonb,
+                    customer_id uuid NOT NULL
+                );
+            ", cancellationToken);
 
             await Database.ExecuteSqlRawAsync(@"
                 ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRating"" character varying(10);
@@ -197,6 +254,10 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraRejectedChequesCount"" integer;
                 ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraLastCheckedAtUtc"" timestamp with time zone;
                 ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRecommendation"" character varying(2000);
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS deleted_at_utc timestamp with time zone;
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""IsLargeCompany"" boolean NOT NULL DEFAULT false;
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""FceThreshold"" numeric(18,2);
+                ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""FceCheckedAtUtc"" timestamp with time zone;
 
                 ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""OwnerName"" character varying(120);
                 ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""Priority"" character varying(20);
@@ -209,7 +270,12 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""DueDate"" timestamp with time zone;
                 ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""IsDone"" boolean NOT NULL DEFAULT false;
                 ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""CompletedAtUtc"" timestamp with time zone;
-            ");
+
+                UPDATE crm.opportunities SET ""Priority"" = 'Normal' WHERE ""Priority"" IS NULL OR btrim(""Priority"") = '';
+                UPDATE crm.opportunities SET ""CustomFields"" = '{}'::jsonb WHERE ""CustomFields"" IS NULL;
+                UPDATE crm.opportunities SET tags = '{}'::text[] WHERE tags IS NULL;
+                UPDATE crm.activities SET ""IsDone"" = false WHERE ""IsDone"" IS NULL;
+            ", cancellationToken);
         }
         catch (Exception ex)
         {

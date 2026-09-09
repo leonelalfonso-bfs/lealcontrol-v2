@@ -8,10 +8,12 @@ using LealControl.Modules.Crm.Application.Leads;
 using LealControl.Modules.Crm.Application.Pipeline;
 using LealControl.Modules.Crm.Domain.Opportunities;
 using LealControl.Modules.Crm.Domain.Shared;
+using LealControl.Modules.Crm.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LealControl.Modules.Crm.Infrastructure.Http;
 
@@ -19,7 +21,9 @@ public static class CrmEndpoints
 {
     public static IEndpointRouteBuilder MapCrmModule(this IEndpointRouteBuilder endpoints)
     {
-        var crm = endpoints.MapGroup("/api/v1/crm").WithTags("CRM");
+        var crm = endpoints.MapGroup("/api/v1/crm")
+            .WithTags("CRM")
+            .AddEndpointFilter(EnsureCrmSchemaFilter);
 
         MapCustomers(crm);
         MapLeads(crm);
@@ -28,6 +32,19 @@ public static class CrmEndpoints
         endpoints.MapSupplierEndpoints();
         endpoints.MapAuthEndpoints();
         return endpoints;
+    }
+
+    /// <summary>
+    /// Completa columnas/tablas CRM faltantes (tenants legacy o Migrate omitido),
+    /// igual que Quality/Metrology hacen en cada request.
+    /// </summary>
+    private static async ValueTask<object?> EnsureCrmSchemaFilter(
+        EndpointFilterInvocationContext context,
+        EndpointFilterDelegate next)
+    {
+        var db = context.HttpContext.RequestServices.GetRequiredService<CrmDbContext>();
+        await db.EnsureCrmTablesAsync(context.HttpContext.RequestAborted);
+        return await next(context);
     }
 
     private static void MapCustomers(RouteGroupBuilder crm)

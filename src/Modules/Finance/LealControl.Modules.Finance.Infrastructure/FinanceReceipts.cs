@@ -60,6 +60,8 @@ public static class FinanceReceipts
                 r.ReceiptDateUtc,
                 r.Description,
                 r.Status,
+                r.VoidReason,
+                r.VoidedAtUtc,
                 r.CreatedAtUtc,
                 LinesCount = linesSummary.TryGetValue(r.Id, out var lc) ? lc : 0,
                 InvoicesCount = imputationsSummary.TryGetValue(r.Id, out var imp) ? imp.Count : (r.InvoiceId.HasValue ? 1 : 0),

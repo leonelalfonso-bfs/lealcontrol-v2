@@ -1926,6 +1926,8 @@ export type PaymentOrder = {
   paymentDateUtc: string;
   notes?: string | null;
   status: string;
+  voidReason?: string | null;
+  voidedAtUtc?: string | null;
   createdAtUtc: string;
   linesCount?: number;
   invoicesCount?: number;

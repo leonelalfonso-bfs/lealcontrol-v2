@@ -30,7 +30,7 @@ public sealed class SupplierAccountAuditor : IQaAuditor
 
         // 2. Sum payments (PaymentOrders not cancelled)
         var payments = await financeDb.PaymentOrders.AsNoTracking()
-            .Where(p => p.TenantId == tenantId.Value && p.SupplierId == supplierId && p.Status != "Cancelled")
+            .Where(p => p.TenantId == tenantId.Value && p.SupplierId == supplierId && p.Status != "Voided")
             .ToListAsync();
 
         var totalPaid = payments.Sum(p => p.Amount);

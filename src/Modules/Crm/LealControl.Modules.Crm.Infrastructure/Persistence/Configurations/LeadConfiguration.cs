@@ -55,7 +55,11 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
         builder.Property(x => x.Currency).HasMaxLength(3);
         builder.Property(x => x.LostReason).HasMaxLength(400);
         builder.Property(x => x.OwnerName).HasMaxLength(120);
-        builder.Property(x => x.Priority).HasConversion<string>().HasMaxLength(20);
+        builder.Property(x => x.Priority)
+            .HasConversion(
+                v => v.ToString(),
+                v => ParsePriority(v))
+            .HasMaxLength(20);
         builder.Property(x => x.Probability).HasColumnName("Probability");
         builder.Property(x => x.RottingDays).HasColumnName("RottingDays");
         builder.Property(x => x.ExpectedCloseDate).HasColumnName("ExpectedCloseDate");
@@ -83,16 +87,31 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
                 id => id.HasValue ? id.Value.Value : (Guid?)null,
                 value => value.HasValue ? new LeadId(value.Value) : null);
 
+        var tagsComparer = new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<string>>(
+            (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+            c => c == null ? 0 : c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c == null ? new List<string>() : c.ToList());
+
         builder.Property<List<string>>("_tags")
             .HasField("_tags")
             .HasColumnName("tags")
-            .HasColumnType("text[]");
+            .HasColumnType("text[]")
+            .HasConversion(
+                v => v ?? new List<string>(),
+                v => v ?? new List<string>())
+            .Metadata.SetValueComparer(tagsComparer);
 
         builder.Ignore(x => x.Tags);
         builder.Ignore(x => x.IsClosed);
         builder.HasIndex(x => new { x.TenantId, x.Stage });
         builder.HasIndex(x => new { x.TenantId, x.Priority });
     }
+
+    private static OpportunityPriority ParsePriority(string? value) =>
+        !string.IsNullOrWhiteSpace(value)
+        && Enum.TryParse<OpportunityPriority>(value, true, out var parsed)
+            ? parsed
+            : OpportunityPriority.Normal;
 }
 
 internal sealed class ActivityConfiguration : IEntityTypeConfiguration<Activity>
@@ -106,7 +125,9 @@ internal sealed class ActivityConfiguration : IEntityTypeConfiguration<Activity>
         builder.Property(x => x.Type).HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.Description).HasMaxLength(4000).IsRequired();
         builder.Property(x => x.DueDate).HasColumnName("DueDate");
-        builder.Property(x => x.IsDone).HasColumnName("IsDone");
+        builder.Property(x => x.IsDone)
+            .HasColumnName("IsDone")
+            .HasDefaultValue(false);
         builder.Property(x => x.CompletedAtUtc).HasColumnName("CompletedAtUtc");
         builder.Property(x => x.CustomerId)
             .HasConversion(

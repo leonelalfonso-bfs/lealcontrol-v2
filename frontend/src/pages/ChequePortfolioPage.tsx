@@ -39,6 +39,16 @@ export function ChequePortfolioPage() {
   const [onlyOverdue, setOnlyOverdue] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({
+    checkNumber: "",
+    amount: "",
+    currency: "ARS",
+    issuerName: "",
+    bankName: "",
+    dueDate: "",
+    notes: ""
+  });
   const received = useRef<HTMLInputElement>(null);
   const issued = useRef<HTMLInputElement>(null);
 
@@ -49,6 +59,35 @@ export function ChequePortfolioPage() {
   };
 
   useEffect(() => { void load().catch((e) => setError(e.message)); }, []);
+
+  const createManual = async () => {
+    const amount = Number(form.amount.replace(",", "."));
+    if (!form.checkNumber.trim() || !(amount > 0)) {
+      setError("Número e importe son obligatorios.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await api.createReceivedCheque({
+        checkNumber: form.checkNumber.trim(),
+        amount,
+        currency: form.currency || "ARS",
+        issuerName: form.issuerName.trim() || null,
+        bankName: form.bankName.trim() || null,
+        dueDateUtc: form.dueDate ? new Date(`${form.dueDate}T12:00:00Z`).toISOString() : null,
+        notes: form.notes.trim() || null,
+        direction: tab
+      });
+      setShowCreate(false);
+      setForm({ checkNumber: "", amount: "", currency: "ARS", issuerName: "", bankName: "", dueDate: "", notes: "" });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo crear el cheque.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const importFile = async (file: File, direction: "received" | "issued") => {
     setBusy(true);
@@ -125,13 +164,55 @@ export function ChequePortfolioPage() {
           <p className="muted">Recibidos y emitidos con acciones de depósito, rechazo y anulación.</p>
         </div>
         <div className="toolbar">
+          <button className="btn" disabled={busy} onClick={() => setShowCreate((v) => !v)}>
+            {showCreate ? "Cerrar alta" : "＋ Nuevo cheque"}
+          </button>
           <button className="btn btn-outline" disabled={busy} onClick={() => received.current?.click()}>⇧ Importar recibidos</button>
-          <button className="btn" disabled={busy} onClick={() => issued.current?.click()}>⇧ Importar emitidos</button>
+          <button className="btn btn-outline" disabled={busy} onClick={() => issued.current?.click()}>⇧ Importar emitidos</button>
           <input ref={received} type="file" accept=".csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void importFile(f, "received"); }} />
           <input ref={issued} type="file" accept=".csv" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void importFile(f, "issued"); }} />
         </div>
       </div>
       {error && <div className="alert">{error}</div>}
+      {showCreate && (
+        <section className="card pad" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0 }}>Alta manual — cheque {tab === "Received" ? "recibido" : "emitido"}</h3>
+          <div className="toolbar" style={{ flexWrap: "wrap", gap: 10, alignItems: "flex-end" }}>
+            <label>
+              Número
+              <input value={form.checkNumber} onChange={(e) => setForm((f) => ({ ...f, checkNumber: e.target.value }))} />
+            </label>
+            <label>
+              Importe
+              <input value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} inputMode="decimal" />
+            </label>
+            <label>
+              Moneda
+              <select value={form.currency} onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}>
+                <option value="ARS">ARS</option>
+                <option value="USD">USD</option>
+              </select>
+            </label>
+            <label>
+              Titular / librador
+              <input value={form.issuerName} onChange={(e) => setForm((f) => ({ ...f, issuerName: e.target.value }))} />
+            </label>
+            <label>
+              Banco
+              <input value={form.bankName} onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))} />
+            </label>
+            <label>
+              Vencimiento
+              <input type="date" value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} />
+            </label>
+            <label>
+              Notas
+              <input value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+            </label>
+            <button className="btn" disabled={busy} onClick={() => void createManual()}>Guardar</button>
+          </div>
+        </section>
+      )}
       {overdueCount > 0 && <div className="alert" style={{ background: "rgba(245,158,11,0.15)" }}>⚠ {overdueCount} cheque(s) vencido(s) en cartera.</div>}
       <section className="card pad">
         <div className="toolbar" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
