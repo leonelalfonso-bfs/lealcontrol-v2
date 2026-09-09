@@ -27,15 +27,25 @@ export interface ParsedCertificateResult {
   warnings: string[];
 }
 
-// Worker local (Vite empaqueta el asset). Evita CDN (CSP / red / cdnjs bloqueado).
-import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+// Worker inlined por Vite (blob URL). Evita fetch a /assets/*.mjs que falla
+// con nosniff + MIME incorrecto o fallback SPA a index.html.
+import PdfJsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker&inline";
+
+let pdfWorkerReady = false;
+
+function ensurePdfWorker(pdfjsLib: typeof import("pdfjs-dist")) {
+  if (pdfWorkerReady) return;
+  // workerPort tiene prioridad sobre workerSrc; no hace falta CDN ni asset público.
+  pdfjsLib.GlobalWorkerOptions.workerPort = new PdfJsWorker();
+  pdfWorkerReady = true;
+}
 
 /**
  * Reconstruct text from PDF pages with vertical baseline grouping tolerance
  */
 export async function extractTextFromPdf(file: File, onProgress?: (msg: string) => void): Promise<string> {
   const pdfjsLib = await import("pdfjs-dist");
-  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
+  ensurePdfWorker(pdfjsLib);
 
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -115,16 +125,21 @@ export function parseCertificateText(rawText: string, filename: string = ""): Pa
   if (m) {
     certNum = m[1].trim();
   } else {
-    m = text.match(/Certificado.*?N.?\s{1,10}(\d{4,6}[\-\/]\w+[\-\/]?\w*)/i);
+    m = text.match(/(\d{4,6}-[A-Z]-\d{4})/i); // SIPEL: 00834-S-0526
     if (m) {
       certNum = m[1].trim();
     } else {
-      m = text.match(/(?:CERTIFICADO|Certificado\s+N.?[:]?)\s{0,5}(OAA\d+|\d+)/i);
+      m = text.match(/Certificado.*?N.?\s{1,10}(\d{4,6}[\-\/]\w+[\-\/]?\w*)/i);
       if (m) {
         certNum = m[1].trim();
       } else {
-        m = text.match(/OAA\d{4,}/i);
-        if (m) certNum = m[0].trim();
+        m = text.match(/(?:CERTIFICADO|Certificado\s+N.?[:]?)\s{0,5}(OAA\d+|\d+)/i);
+        if (m) {
+          certNum = m[1].trim();
+        } else {
+          m = text.match(/OAA\d{4,}/i);
+          if (m) certNum = m[0].trim();
+        }
       }
     }
   }
@@ -174,28 +189,53 @@ export function parseCertificateText(rawText: string, filename: string = ""): Pa
 
   const toFloat = (s: string) => parseFloat(s.replace(",", ".").trim());
 
-  // Parse SIPEL / INTI
+  // Parse SIPEL / INTI (tabla Identificación / Fabricante / VN / Ec / U / Clase)
   const parseSipel = (): ParsedWeightItem[] => {
-    const headerPat = /Identificaci.n\s{1,15}Fabricante\s*\/\s*Marca\s{1,15}VN\s{1,15}Ec\s{1,15}U\s{1,15}Clase/i;
-    const parts = text.split(headerPat);
-    if (parts.length < 2) return [];
+    const headerPat = /Identificaci.n\s+Fabricante\s*\/\s*Marca\s+VN\s+Ec\s+U\s+Clase/i;
+    if (!headerPat.test(text)) return [];
 
-    const rowPat = /([\w\-\*\.\s]+?)\s{2,}(.+?)\s{2,}(\d+(?:[,\.]\d+)?)\s*(kg|g)\s{2,}([+\-]?\d+(?:[,\.]\d+)?)\s*(mg|g|kg)\s{2,}[±]?(\d+(?:[,\.]\d+)?)\s*(mg|g|kg)\s{2,}(M[1-3]|F[1-2]|E[1-2]|N\d*|Fuera\s+de\s+clase)/gi;
+    // Preferir bloque "Calibración final" (as-left); si no hay, usar todo el texto.
+    const finalSplit = text.split(/Calibraci.n\s+final\s*:?/i);
+    const scopes = finalSplit.length > 1 ? finalSplit.slice(1) : [text];
+
+    // id + fabricante + VN + Ec + U + clase opcional (clase puede venir en línea anterior: "Fuera de clase")
+    const rowPat =
+      /^([A-Za-z0-9][\w\-\*]*)\s+(.+?)\s+(\d+(?:[,\.]\d+)?)\s*(kg|g)\s+([+\-]?\d+(?:[,\.]\d+)?)\s*(mg|g|kg)\s+[±]?(\d+(?:[,\.]\d+)?)\s*(mg|g|kg)(?:\s+(M[1-3]|F[1-2]|E[1-2]|N\d+|Fuera\s+de\s+clase))?$/i;
 
     let pesero = "";
-    const peseroMatch = text.match(/Pertenecen\s+al\s+pesero\s+(?:Nro\.?\s+de\s+serie\s+)?([A-Z]{1,3}\s*\-?\s*\d{1,5})/i);
+    const peseroMatch =
+      text.match(/Pertenecen\s+al\s+pesero\s+(?:Nro\.?\s+de\s+serie\s+)?([A-Z]{1,3}\s*\-?\s*\d{1,5})/i) ||
+      text.match(/pesero\s+(AB\-?\d{3,5})/i) ||
+      filename.match(/PESERO\s+(AB\-?\d{3,5})/i);
     if (peseroMatch) {
-      pesero = peseroMatch[1].trim();
+      pesero = peseroMatch[1].replace(/\s+/g, "").trim();
     }
 
     const byId: { [key: string]: ParsedWeightItem } = {};
 
-    for (let idx = 1; idx < parts.length; idx++) {
-      let chunk = parts[idx].split(/Los resultados contenidos|Condiciones ambientales/i)[0];
-      let match;
-      while ((match = rowPat.exec(chunk)) !== null) {
+    for (const scope of scopes) {
+      const lines = scope
+        .split(/\n+/)
+        .map((l) => l.replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+
+      let pendingClass: string | null = null;
+      for (const line of lines) {
+        if (/^Fuera\s+de\s+clase$/i.test(line)) {
+          pendingClass = "Fuera de clase";
+          continue;
+        }
+        if (/^Identificaci/i.test(line) || /^Condiciones\s+ambientales/i.test(line)) {
+          pendingClass = null;
+          continue;
+        }
+
+        const match = line.match(rowPat);
+        if (!match) continue;
+
         const id = match[1].trim();
-        const clase = match[9].trim();
+        const clase = (match[9] || pendingClass || "M1").trim();
+        pendingClass = null;
         const isFuera = /fuera/i.test(clase);
 
         let massNominal = toFloat(match[3]);
@@ -205,10 +245,12 @@ export function parseCertificateText(rawText: string, filename: string = ""): Pa
         let ec = toFloat(match[5]);
         const unitEc = match[6].toLowerCase().trim();
         if (unitEc === "mg") ec /= 1000.0;
+        else if (unitEc === "kg") ec *= 1000.0;
 
         let u = toFloat(match[7]);
         const unitU = match[8].toLowerCase().trim();
         if (unitU === "mg") u /= 1000.0;
+        else if (unitU === "kg") u *= 1000.0;
 
         let finalId = id;
         if (pesero !== "" && !id.toLowerCase().includes(pesero.toLowerCase())) {
@@ -219,11 +261,18 @@ export function parseCertificateText(rawText: string, filename: string = ""): Pa
         const lotName = pesero !== "" ? `Pesero ${pesero}` : "";
 
         if (byId[finalId]) {
-          if (!isFuera && /fuera/i.test(byId[finalId].accuracyClass)) {
+          if (!isFuera && /fuera/i.test(byId[finalId].accuracyClass || "")) {
             byId[finalId].errorAsFound = byId[finalId].conventionalMassCorrection;
             byId[finalId].conventionalMassCorrection = ec;
             byId[finalId].uncertainty = u;
             byId[finalId].accuracyClass = clase;
+          } else if (!isFuera) {
+            // Segunda aparición = calibración final gana
+            byId[finalId].conventionalMassCorrection = ec;
+            byId[finalId].uncertainty = u;
+            byId[finalId].accuracyClass = clase;
+          } else if (byId[finalId].errorAsFound == null) {
+            byId[finalId].errorAsFound = ec;
           }
         } else {
           byId[finalId] = {
@@ -234,8 +283,8 @@ export function parseCertificateText(rawText: string, filename: string = ""): Pa
             nominalValue: Math.round(massNominal * 10000) / 10000,
             unit: "kg",
             accuracyClass: clase,
-            errorAsFound: null,
-            conventionalMassCorrection: ec,
+            errorAsFound: isFuera ? ec : null,
+            conventionalMassCorrection: isFuera ? null : ec,
             uncertainty: u,
             unitEc: "g",
             factorK
@@ -312,7 +361,15 @@ export function parseCertificateText(rawText: string, filename: string = ""): Pa
   }
 
   if (weights.length === 0) {
-    warnings.push("No se detectaron pesas en la tabla. Verificá que el archivo PDF contenga texto seleccionable (no imagen escaneada).");
+    if (/IRAM|DC-M-1602|conformidad/i.test(text) && !/Identificaci.n\s+Fabricante/i.test(text)) {
+      warnings.push(
+        "Este PDF parece un certificado de conformidad IRAM (sin tabla VN/Ec/U). Usá el certificado de calibración SIPEL (p. ej. 00834-S-… / 00865-S-…)."
+      );
+    } else {
+      warnings.push(
+        "No se detectaron pesas en la tabla. Verificá que el archivo PDF contenga texto seleccionable (no imagen escaneada)."
+      );
+    }
   }
 
   return {
