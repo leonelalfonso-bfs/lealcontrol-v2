@@ -194,11 +194,17 @@ export function parseCertificateText(rawText: string, filename: string = ""): Pa
     const headerPat = /Identificaci.n\s+Fabricante\s*\/\s*Marca\s+VN\s+Ec\s+U\s+Clase/i;
     if (!headerPat.test(text)) return [];
 
-    // Preferir bloque "Calibración final" (as-left); si no hay, usar todo el texto.
+    // "Previo al ajuste" = error inicial (as-found); "Calibración final" = Ec (as-left).
     const finalSplit = text.split(/Calibraci.n\s+final\s*:?/i);
-    const scopes = finalSplit.length > 1 ? finalSplit.slice(1) : [text];
+    const hasBothPhases = finalSplit.length > 1;
+    const phases: { scope: string; phase: "asFound" | "asLeft" }[] = hasBothPhases
+      ? [
+          { scope: finalSplit[0], phase: "asFound" },
+          ...finalSplit.slice(1).map((scope) => ({ scope, phase: "asLeft" as const }))
+        ]
+      : [{ scope: text, phase: "asLeft" }];
 
-    // id + fabricante + VN + Ec + U + clase opcional (clase puede venir en línea anterior: "Fuera de clase")
+    // id + fabricante + VN + Ec + U + clase opcional (en as-found la clase suele ir en la línea anterior)
     const rowPat =
       /^([A-Za-z0-9][\w\-\*]*)\s+(.+?)\s+(\d+(?:[,\.]\d+)?)\s*(kg|g)\s+([+\-]?\d+(?:[,\.]\d+)?)\s*(mg|g|kg)\s+[±]?(\d+(?:[,\.]\d+)?)\s*(mg|g|kg)(?:\s+(M[1-3]|F[1-2]|E[1-2]|N\d+|Fuera\s+de\s+clase))?$/i;
 
@@ -213,8 +219,67 @@ export function parseCertificateText(rawText: string, filename: string = ""): Pa
 
     const byId: { [key: string]: ParsedWeightItem } = {};
 
-    for (const scope of scopes) {
-      const lines = scope
+    const ingestRow = (
+      phase: "asFound" | "asLeft",
+      idRaw: string,
+      manufacturer: string,
+      massNominalKg: number,
+      ecG: number,
+      uG: number,
+      clase: string
+    ) => {
+      let finalId = idRaw;
+      if (pesero !== "" && !idRaw.toLowerCase().includes(pesero.toLowerCase())) {
+        finalId = `${pesero} - ${idRaw}`;
+      }
+      const serial = pesero !== "" ? pesero : idRaw;
+      const lotName = pesero !== "" ? `Pesero ${pesero}` : "";
+      const existing = byId[finalId];
+
+      if (!existing) {
+        byId[finalId] = {
+          identification: finalId,
+          serialNumber: serial,
+          manufacturer,
+          lotName,
+          nominalValue: Math.round(massNominalKg * 10000) / 10000,
+          unit: "kg",
+          accuracyClass: clase,
+          errorAsFound: phase === "asFound" ? ecG : null,
+          conventionalMassCorrection: phase === "asLeft" ? ecG : null,
+          uncertainty: uG,
+          unitEc: "g",
+          factorK
+        };
+        return;
+      }
+
+      if (phase === "asFound") {
+        existing.errorAsFound = ecG;
+        if (/fuera/i.test(clase) && !existing.accuracyClass) {
+          existing.accuracyClass = clase;
+        }
+      } else {
+        // as-left: conservar error inicial ya cargado; actualizar Ec / U / clase final
+        if (existing.errorAsFound == null && existing.conventionalMassCorrection != null) {
+          // No debería pasar si parseamos as-found primero; red de seguridad
+        }
+        existing.conventionalMassCorrection = ecG;
+        existing.uncertainty = uG;
+        existing.accuracyClass = clase;
+        existing.manufacturer = manufacturer || existing.manufacturer;
+      }
+    };
+
+    for (const { scope, phase } of phases) {
+      // En as-found, acotar al bloque "Previo al ajuste" si existe (evita basura del encabezado del PDF).
+      let usable = scope;
+      if (phase === "asFound") {
+        const previo = scope.split(/Previo\s+al\s+ajuste\s*:?/i);
+        if (previo.length > 1) usable = previo.slice(1).join("\n");
+      }
+
+      const lines = usable
         .split(/\n+/)
         .map((l) => l.replace(/\s+/g, " ").trim())
         .filter(Boolean);
@@ -225,7 +290,7 @@ export function parseCertificateText(rawText: string, filename: string = ""): Pa
           pendingClass = "Fuera de clase";
           continue;
         }
-        if (/^Identificaci/i.test(line) || /^Condiciones\s+ambientales/i.test(line)) {
+        if (/^Identificaci/i.test(line) || /^Condiciones\s+ambientales/i.test(line) || /^Los\s+resultados/i.test(line)) {
           pendingClass = null;
           continue;
         }
@@ -234,9 +299,9 @@ export function parseCertificateText(rawText: string, filename: string = ""): Pa
         if (!match) continue;
 
         const id = match[1].trim();
-        const clase = (match[9] || pendingClass || "M1").trim();
+        const defaultClass = phase === "asFound" ? "Fuera de clase" : "M1";
+        const clase = (match[9] || pendingClass || defaultClass).trim();
         pendingClass = null;
-        const isFuera = /fuera/i.test(clase);
 
         let massNominal = toFloat(match[3]);
         const unitNominal = match[4].toLowerCase().trim();
@@ -252,44 +317,7 @@ export function parseCertificateText(rawText: string, filename: string = ""): Pa
         if (unitU === "mg") u /= 1000.0;
         else if (unitU === "kg") u *= 1000.0;
 
-        let finalId = id;
-        if (pesero !== "" && !id.toLowerCase().includes(pesero.toLowerCase())) {
-          finalId = `${pesero} - ${id}`;
-        }
-
-        const serial = pesero !== "" ? pesero : id;
-        const lotName = pesero !== "" ? `Pesero ${pesero}` : "";
-
-        if (byId[finalId]) {
-          if (!isFuera && /fuera/i.test(byId[finalId].accuracyClass || "")) {
-            byId[finalId].errorAsFound = byId[finalId].conventionalMassCorrection;
-            byId[finalId].conventionalMassCorrection = ec;
-            byId[finalId].uncertainty = u;
-            byId[finalId].accuracyClass = clase;
-          } else if (!isFuera) {
-            // Segunda aparición = calibración final gana
-            byId[finalId].conventionalMassCorrection = ec;
-            byId[finalId].uncertainty = u;
-            byId[finalId].accuracyClass = clase;
-          } else if (byId[finalId].errorAsFound == null) {
-            byId[finalId].errorAsFound = ec;
-          }
-        } else {
-          byId[finalId] = {
-            identification: finalId,
-            serialNumber: serial,
-            manufacturer: match[2].trim(),
-            lotName,
-            nominalValue: Math.round(massNominal * 10000) / 10000,
-            unit: "kg",
-            accuracyClass: clase,
-            errorAsFound: isFuera ? ec : null,
-            conventionalMassCorrection: isFuera ? null : ec,
-            uncertainty: u,
-            unitEc: "g",
-            factorK
-          };
-        }
+        ingestRow(phase, id, match[2].trim(), massNominal, ec, u, clase);
       }
     }
 
