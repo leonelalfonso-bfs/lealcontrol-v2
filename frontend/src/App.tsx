@@ -602,6 +602,8 @@ export function App() {
               <Route path="/finanzas/cobranzas" element={<CollectionReceiptsWorkspacePage />} />
               <Route path="/finanzas/pagos" element={<PaymentOrdersPage />} />
               <Route path="/finanzas/pagos/nueva" element={<PaymentOrderFormPage />} />
+              <Route path="/finanzas/ordenes-pago/nuevo" element={<PaymentOrderFormPage />} />
+              <Route path="/finanzas/ordenes-pago/nueva" element={<PaymentOrderFormPage />} />
               <Route path="/finanzas/pagos/:id/imprimir" element={<PaymentOrderPrintPage />} />
 
               <Route path="/finanzas/cuenta-corriente" element={<CurrentAccountsPage />} />

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { Modal } from "../components/ui/Modal";
 import { exportToExcel, type ExcelColumn } from "../components/ExcelTools";
@@ -18,6 +18,7 @@ type Concept = {
   code: string;
   name: string;
   direction: string;
+  usableIn?: string;
   isActive: boolean;
 };
 
@@ -34,8 +35,8 @@ type Movement = {
   difference?: number;
   conceptId?: string;
   conceptName?: string;
-  classificationStatus?: string;
-  reconciliationStatus?: string;
+  classificationStatus?: string | number;
+  reconciliationStatus?: string | number;
 };
 
 const money = (n: number, c = "ARS") =>
@@ -49,6 +50,17 @@ const statusLabel: Record<string, string> = {
   Imported: "Pendiente",
   Excluded: "Excluido"
 };
+
+const isConfirmedStatus = (s?: string | number) =>
+  s === "Confirmed" || s === 4 || String(s) === "4";
+const isSuggestedStatus = (s?: string | number) =>
+  s === "Suggested" || s === 1 || String(s) === "1";
+const isReconciledStatus = (s?: string | number) =>
+  s === "Reconciled" || s === 2 || String(s) === "2";
+const isExcludedStatus = (s?: string | number) =>
+  s === "Excluded" || s === 3 || String(s) === "3";
+const isCreditKind = (k?: string | number) =>
+  k === "Credit" || k === 0 || String(k) === "0";
 
 function parseMovementDetails(description: string) {
   if (!description) return { mainDesc: "Movimiento", titular: "", cuit: "", extra: "" };
@@ -75,6 +87,7 @@ function parseMovementDetails(description: string) {
 }
 
 export function FinanceAccountsPage() {
+  const navigate = useNavigate();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [concepts, setConcepts] = useState<Concept[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
@@ -146,7 +159,7 @@ export function FinanceAccountsPage() {
 
   const handleClassifyInline = async (movementId: string) => {
     const movement = movements.find((m) => m.id === movementId);
-    if (movement && (movement.reconciliationStatus === "Reconciled" || String(movement.reconciliationStatus) === "2")) {
+    if (movement && isReconciledStatus(movement.reconciliationStatus)) {
       setError("Este movimiento ya está conciliado con un recibo u orden de pago. No se puede reclasificar.");
       return;
     }
@@ -165,6 +178,23 @@ export function FinanceAccountsPage() {
       });
 
       const selectedConceptObj = concepts.find((c) => c.id === conceptId);
+      const usable = selectedConceptObj?.usableIn || "";
+
+      // Recibo / OP: abrir el formulario con el movimiento precargado.
+      if (usable === "Receipt" && selectedAccount) {
+        navigate(
+          `/finanzas/cobranzas?movementId=${movementId}&accountId=${selectedAccount.id}&amount=${movement?.amount ?? ""}`
+        );
+        return;
+      }
+      if (usable === "PaymentOrder" && selectedAccount) {
+        navigate(
+          `/finanzas/pagos/nueva?movementId=${movementId}&accountId=${selectedAccount.id}&amount=${movement?.amount ?? ""}`
+        );
+        return;
+      }
+
+      // Solo movimiento (comisión, gastos bancarios, etc.): queda confirmado + excluido de cobro/OP.
       setMovements((prev) =>
         prev.map((m) =>
           m.id === movementId
@@ -172,13 +202,19 @@ export function FinanceAccountsPage() {
                 ...m,
                 conceptId,
                 conceptName: selectedConceptObj?.name || m.conceptName,
-                classificationStatus: "Confirmed"
+                classificationStatus: "Confirmed",
+                reconciliationStatus: usable === "MovementOnly" || usable === "Transfer" ? "Excluded" : m.reconciliationStatus
               }
             : m
         )
       );
-      setSuccessMsg("Movimiento clasificado y confirmado correctamente.");
+      setSuccessMsg(
+        usable === "MovementOnly" || usable === "Transfer"
+          ? "Movimiento confirmado (concepto de solo tesorería; no requiere recibo ni OP)."
+          : "Movimiento clasificado y confirmado correctamente."
+      );
       setTimeout(() => setSuccessMsg(null), 4000);
+      if (selectedAccount) await openAccount(selectedAccount);
     } catch (e: any) {
       setError(e instanceof Error ? e.message : "Error al clasificar el movimiento.");
     } finally {
@@ -198,7 +234,7 @@ export function FinanceAccountsPage() {
 
   const handleSaveModalClassification = async () => {
     if (!modalMovement || !modalConceptId) return;
-    if (modalMovement.reconciliationStatus === "Reconciled" || String(modalMovement.reconciliationStatus) === "2") {
+    if (isReconciledStatus(modalMovement.reconciliationStatus)) {
       setError("Este movimiento ya está conciliado con un recibo u orden de pago. No se puede reclasificar.");
       return;
     }
@@ -207,13 +243,11 @@ export function FinanceAccountsPage() {
       setActionBusy(modalMovement.id);
       setError(null);
 
-      // Classify movement
       await api.classifyFinanceMovement(modalMovement.id, {
         financialConceptId: modalConceptId,
         confirm: true
       });
 
-      // Optionally create rule
       if (modalCreateRule && modalPattern.trim()) {
         try {
           await api.createFinanceConceptRule({
@@ -230,22 +264,27 @@ export function FinanceAccountsPage() {
       }
 
       const selectedConceptObj = concepts.find((c) => c.id === modalConceptId);
-      setMovements((prev) =>
-        prev.map((m) =>
-          m.id === modalMovement.id
-            ? {
-                ...m,
-                conceptId: modalConceptId,
-                conceptName: selectedConceptObj?.name || m.conceptName,
-                classificationStatus: "Confirmed"
-              }
-            : m
-        )
-      );
-
+      const usable = selectedConceptObj?.usableIn || "";
+      const movementId = modalMovement.id;
+      const amount = modalMovement.amount;
       setModalMovement(null);
-      setSuccessMsg("Movimiento confirmado y regla registrada para futuros extractos.");
+
+      if (usable === "Receipt" && selectedAccount) {
+        navigate(`/finanzas/cobranzas?movementId=${movementId}&accountId=${selectedAccount.id}&amount=${amount}`);
+        return;
+      }
+      if (usable === "PaymentOrder" && selectedAccount) {
+        navigate(`/finanzas/pagos/nueva?movementId=${movementId}&accountId=${selectedAccount.id}&amount=${amount}`);
+        return;
+      }
+
+      setSuccessMsg(
+        usable === "MovementOnly" || usable === "Transfer"
+          ? "Movimiento confirmado (concepto de solo tesorería; no requiere recibo ni OP)."
+          : "Movimiento confirmado y regla registrada para futuros extractos."
+      );
       setTimeout(() => setSuccessMsg(null), 4000);
+      if (selectedAccount) await openAccount(selectedAccount);
     } catch (e: any) {
       setError(e instanceof Error ? e.message : "Error al guardar clasificación.");
     } finally {
@@ -332,9 +371,9 @@ export function FinanceAccountsPage() {
   const filteredMovements = useMemo(() => {
     return movements.filter((m) => {
       // Classification filter
-      if (statusFilter === "Pending" && m.classificationStatus === "Confirmed") return false;
-      if (statusFilter === "Suggested" && m.classificationStatus !== "Suggested") return false;
-      if (statusFilter === "Confirmed" && m.classificationStatus !== "Confirmed") return false;
+      if (statusFilter === "Pending" && (isConfirmedStatus(m.classificationStatus) || isExcludedStatus(m.reconciliationStatus))) return false;
+      if (statusFilter === "Suggested" && !isSuggestedStatus(m.classificationStatus)) return false;
+      if (statusFilter === "Confirmed" && !(isConfirmedStatus(m.classificationStatus) || isExcludedStatus(m.reconciliationStatus))) return false;
 
       // Concept filter
       if (conceptFilter !== "all" && m.conceptName !== conceptFilter) return false;
@@ -463,8 +502,10 @@ export function FinanceAccountsPage() {
   };
 
   if (selectedAccount) {
-    const totalConfirmed = movements.filter((m) => m.classificationStatus === "Confirmed").length;
-    const totalSuggested = movements.filter((m) => m.classificationStatus === "Suggested").length;
+    const totalConfirmed = movements.filter(
+      (m) => isConfirmedStatus(m.classificationStatus) || isExcludedStatus(m.reconciliationStatus)
+    ).length;
+    const totalSuggested = movements.filter((m) => isSuggestedStatus(m.classificationStatus)).length;
     const totalPending = movements.length - totalConfirmed - totalSuggested;
 
     return (
@@ -720,18 +761,26 @@ export function FinanceAccountsPage() {
                   </tr>
                 ) : (
                   filteredMovements.map((x) => {
-                    const isConfirmed = x.classificationStatus === "Confirmed";
-                    const isSuggested = x.classificationStatus === "Suggested";
-                    const isReconciled = x.reconciliationStatus === "Reconciled" || String(x.reconciliationStatus) === "2";
-                    const isPending = !isConfirmed && !isReconciled;
+                    const isConfirmed = isConfirmedStatus(x.classificationStatus);
+                    const isSuggested = isSuggestedStatus(x.classificationStatus);
+                    const isReconciled = isReconciledStatus(x.reconciliationStatus);
+                    const isExcluded = isExcludedStatus(x.reconciliationStatus);
+                    const isDone = isConfirmed || isReconciled || isExcluded;
+                    const isPending = !isDone;
                     const { mainDesc, titular, cuit, extra } = parseMovementDetails(x.description);
+                    const conceptMeta = concepts.find((c) => c.id === (inlineConcepts[x.id] || x.conceptId));
+                    const usable = conceptMeta?.usableIn || "";
 
                     return (
                       <tr
                         key={x.id}
                         style={{
-                          background: isConfirmed ? "rgba(16, 185, 129, 0.05)" : undefined,
-                          borderLeft: isConfirmed ? "3px solid #10b981" : isSuggested ? "3px solid #f59e0b" : "3px solid #cbd5e1"
+                          background: isDone ? "rgba(16, 185, 129, 0.05)" : undefined,
+                          borderLeft: isDone
+                            ? "3px solid #10b981"
+                            : isSuggested
+                              ? "3px solid #f59e0b"
+                              : "3px solid #cbd5e1"
                         }}
                       >
                         <td>{new Date(x.operationDateUtc).toLocaleDateString("es-AR")}</td>
@@ -758,7 +807,7 @@ export function FinanceAccountsPage() {
                           )}
                         </td>
                         <td>
-                          {isConfirmed ? (
+                          {isDone ? (
                             <span style={{ fontWeight: 600, color: "#065f46" }}>
                               🏷️ {x.conceptName || "Identificado"}
                             </span>
@@ -789,7 +838,35 @@ export function FinanceAccountsPage() {
                           )}
                         </td>
                         <td>
-                          {isConfirmed ? (
+                          {isReconciled ? (
+                            <span
+                              className="badge ok"
+                              style={{
+                                background: "rgba(14, 165, 233, 0.15)",
+                                color: "#0369a1",
+                                fontWeight: 700,
+                                padding: "2px 8px",
+                                borderRadius: 12,
+                                fontSize: "0.78rem"
+                              }}
+                            >
+                              🔗 Conciliado
+                            </span>
+                          ) : isExcluded || (isConfirmed && (usable === "MovementOnly" || usable === "Transfer")) ? (
+                            <span
+                              className="badge ok"
+                              style={{
+                                background: "rgba(16, 185, 129, 0.15)",
+                                color: "#065f46",
+                                fontWeight: 700,
+                                padding: "2px 8px",
+                                borderRadius: 12,
+                                fontSize: "0.78rem"
+                              }}
+                            >
+                              ✓ Confirmado
+                            </span>
+                          ) : isConfirmed ? (
                             <span
                               className="badge ok"
                               style={{
@@ -900,13 +977,27 @@ export function FinanceAccountsPage() {
                                 ⚙
                               </button>
                             </div>
-                          ) : (x.reconciliationStatus === "Reconciled" || String(x.reconciliationStatus) === "2") ? (
+                          ) : isReconciled ? (
                             <span style={{ fontSize: "0.75rem", color: "#059669", fontWeight: 700, background: "rgba(16, 185, 129, 0.1)", padding: "3px 8px", borderRadius: "6px" }}>
                               ✓ Conciliado
                             </span>
+                          ) : isExcluded || usable === "MovementOnly" || usable === "Transfer" ? (
+                            <span
+                              style={{
+                                fontSize: "0.75rem",
+                                color: "#065f46",
+                                fontWeight: 700,
+                                background: "rgba(16, 185, 129, 0.1)",
+                                padding: "3px 8px",
+                                borderRadius: "6px"
+                              }}
+                              title="Concepto de solo movimiento: no genera recibo ni orden de pago"
+                            >
+                              ✓ Cerrado
+                            </span>
                           ) : (
                             <div style={{ display: "flex", gap: "4px", justifyContent: "center", alignItems: "center" }}>
-                              {x.kind === "Credit" || String(x.kind) === "0" ? (
+                              {isCreditKind(x.kind) ? (
                                 <Link
                                   to={`/finanzas/cobranzas?movementId=${x.id}&accountId=${selectedAccount.id}&amount=${x.amount}`}
                                   className="btn compact"
@@ -928,7 +1019,7 @@ export function FinanceAccountsPage() {
                                 </Link>
                               ) : (
                                 <Link
-                                  to={`/finanzas/ordenes-pago/nuevo?movementId=${x.id}&accountId=${selectedAccount.id}&amount=${x.amount}`}
+                                  to={`/finanzas/pagos/nueva?movementId=${x.id}&accountId=${selectedAccount.id}&amount=${x.amount}`}
                                   className="btn compact"
                                   style={{
                                     fontSize: "0.75rem",
