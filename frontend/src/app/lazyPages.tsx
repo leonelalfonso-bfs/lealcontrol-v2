@@ -1,10 +1,106 @@
-import { lazy, type ComponentType } from "react";
+import { Component, lazy, type ComponentType, type ErrorInfo, type ReactNode } from "react";
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const CHUNK_RELOAD_KEY = "lc:chunk-reload";
+
+function isChunkLoadError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  return /Failed to fetch dynamically imported module|Loading chunk \d+ failed|Importing a module script failed|error loading dynamically imported module|502|503|504/i.test(
+    msg
+  );
+}
+
+async function loadWithRetry<T>(loader: () => Promise<T>, attempts = 3): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await loader();
+    } catch (err) {
+      last = err;
+      if (i < attempts - 1) {
+        await sleep(250 * (i + 1));
+      }
+    }
+  }
+  throw last;
+}
+
+/**
+ * Lazy named export con reintento ante 502/red y un reload automático
+ * (index.html viejo tras deploy que apunta a chunks que ya no existen / proxy caído).
+ */
 const named = <T extends Record<string, unknown>, K extends keyof T>(loader: () => Promise<T>, key: K) =>
   lazy(async () => {
-    const mod = await loader();
-    return { default: mod[key] as ComponentType<object> };
+    try {
+      const mod = await loadWithRetry(loader);
+      try {
+        sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+      } catch {
+        /* ignore */
+      }
+      return { default: mod[key] as ComponentType<object> };
+    } catch (err) {
+      if (typeof window !== "undefined" && isChunkLoadError(err)) {
+        try {
+          const already = sessionStorage.getItem(CHUNK_RELOAD_KEY);
+          if (!already) {
+            sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+            window.location.reload();
+            // Mantener Suspense pendiente hasta que recargue el documento.
+            return await new Promise<{ default: ComponentType<object> }>(() => undefined);
+          }
+        } catch {
+          /* sessionStorage bloqueado */
+        }
+      }
+      throw err;
+    }
   });
+
+/** UI de recuperación si el chunk sigue fallando tras el reload automático. */
+export class ChunkLoadErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; message: string }
+> {
+  state = { hasError: false, message: "" };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, message: error?.message || "Error de carga" };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("ChunkLoadErrorBoundary", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 48, textAlign: "center", maxWidth: 480, margin: "0 auto" }}>
+          <h2 style={{ marginTop: 0 }}>No se pudo cargar el módulo</h2>
+          <p style={{ color: "#64748b" }}>
+            Suele pasar si hubo un deploy o un corte de red. Actualizá la página para recuperar la sesión.
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              try {
+                sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+              } catch {
+                /* ignore */
+              }
+              window.location.reload();
+            }}
+          >
+            Reintentar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export const LoginPage = named(() => import("../pages/LoginPage"), "LoginPage");
 export const LandingPage = named(() => import("../pages/LandingPage"), "LandingPage");

@@ -160,7 +160,8 @@ import {
   SuperAdminPlansPage,
   SuperAdminTenantsPage,
   SuppliersPage,
-  TrialBalancePage
+  TrialBalancePage,
+  ChunkLoadErrorBoundary
 } from "./app/lazyPages";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LealLogo } from "./components/LealLogo";
@@ -178,7 +179,11 @@ function PageFallback() {
 }
 
 function withPageSuspense(node: ReactNode) {
-  return <Suspense fallback={<PageFallback />}>{node}</Suspense>;
+  return (
+    <ChunkLoadErrorBoundary>
+      <Suspense fallback={<PageFallback />}>{node}</Suspense>
+    </ChunkLoadErrorBoundary>
+  );
 }
 
 export function App() {
@@ -513,6 +518,7 @@ export function App() {
           )}
 
           <main className="main">
+            <ChunkLoadErrorBoundary>
             <Suspense fallback={<PageFallback />}>
             <Routes>
               {/* Style Showcase & Theme Preview */}
@@ -715,6 +721,7 @@ export function App() {
               <Route path="/comunicaciones/plantillas" element={<ReplyTemplatesPage />} />
             </Routes>
             </Suspense>
+            </ChunkLoadErrorBoundary>
           </main>
         </div>
 
