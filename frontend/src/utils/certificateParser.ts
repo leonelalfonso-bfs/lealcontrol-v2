@@ -27,14 +27,15 @@ export interface ParsedCertificateResult {
   warnings: string[];
 }
 
+// Worker local (Vite empaqueta el asset). Evita CDN (CSP / red / cdnjs bloqueado).
+import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
 /**
  * Reconstruct text from PDF pages with vertical baseline grouping tolerance
  */
 export async function extractTextFromPdf(file: File, onProgress?: (msg: string) => void): Promise<string> {
   const pdfjsLib = await import("pdfjs-dist");
-  if (typeof window !== "undefined" && "Worker" in window) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
