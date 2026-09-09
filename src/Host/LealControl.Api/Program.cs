@@ -383,27 +383,35 @@ try
     app.MapSuperAdminModule();
     app.MapTenantBackupSelfService();
 
-    // El bootstrap de esquemas puede tardar; no bloquear Kestrel ni el liveness de Docker.
-    _ = TenantDatabaseBootstrapper.InitializeAllAsync(app.Services, app.Configuration, app.Environment)
-        .ContinueWith(task =>
+    // En Development/tests el host no debe aceptar requests hasta tener esquema CRM/Sales.
+    // El fire-and-forget dejaba POST /api/v1/crm/customers en 500 (Testcontainers).
+    if (app.Environment.IsDevelopment())
+    {
+        try
         {
-            if (task.IsFaulted)
+            await TenantDatabaseBootstrapper.InitializeAllAsync(app.Services, app.Configuration, app.Environment);
+            Log.Information("Bootstrap de bases de tenant completado.");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Bootstrap de bases de tenant falló en Development; la API sigue en pie.");
+        }
+    }
+    else
+    {
+        _ = TenantDatabaseBootstrapper.InitializeAllAsync(app.Services, app.Configuration, app.Environment)
+            .ContinueWith(task =>
             {
-                // En Development/tests no tumbar el host: una carrera DDL (p.ej. 23505) no debe
-                // disponer el IServiceProvider a mitad del suite de integración.
-                if (app.Environment.IsDevelopment())
+                if (task.IsFaulted)
                 {
-                    Log.Error(task.Exception, "Bootstrap de bases de tenant falló en Development; la API sigue en pie.");
+                    Log.Fatal(task.Exception, "Bootstrap de bases de tenant falló; deteniendo la API.");
+                    app.Lifetime.StopApplication();
                     return;
                 }
 
-                Log.Fatal(task.Exception, "Bootstrap de bases de tenant falló; deteniendo la API.");
-                app.Lifetime.StopApplication();
-                return;
-            }
-
-            Log.Information("Bootstrap de bases de tenant completado.");
-        }, TaskScheduler.Default);
+                Log.Information("Bootstrap de bases de tenant completado.");
+            }, TaskScheduler.Default);
+    }
 
     await app.RunAsync();
 }
