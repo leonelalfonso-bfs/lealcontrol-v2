@@ -227,6 +227,7 @@ export const CalibrationReportPrintPage = named(() => import("../pages/metrology
 export const MetrologyInstrumentsPage = named(() => import("../pages/metrology/MetrologyInstrumentsPage"), "MetrologyInstrumentsPage");
 export const MetrologyInstrumentFormPage = named(() => import("../pages/metrology/MetrologyInstrumentsPage"), "MetrologyInstrumentFormPage");
 export const QualityDashboardPage = named(() => import("../pages/quality/QualityDashboardPage"), "QualityDashboardPage");
+export const QualityHelpPage = named(() => import("../pages/quality/QualityHelpPage"), "QualityHelpPage");
 export const QualityDocumentsPage = named(() => import("../pages/quality/QualityDocumentsPage"), "QualityDocumentsPage");
 export const QualityDocumentDetailPage = named(() => import("../pages/quality/QualityDocumentDetailPage"), "QualityDocumentDetailPage");
 export const QualityPg01R01Page = named(() => import("../pages/quality/QualityGeneratedRecordsPage"), "QualityPg01R01Page");

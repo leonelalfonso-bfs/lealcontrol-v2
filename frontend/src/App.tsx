@@ -70,6 +70,7 @@ import {
   MetrologyInstrumentFormPage,
   MetrologyInstrumentsPage,
   QualityDashboardPage,
+  QualityHelpPage,
   QualityDocumentDetailPage,
   QualityDocumentsPage,
   QualityMc01R01Page,
@@ -671,6 +672,7 @@ export function App() {
               <Route path="/metrologia/informes/:id/imprimir" element={<CalibrationReportPrintPage />} />
 
               <Route path="/calidad" element={<QualityDashboardPage />} />
+              <Route path="/calidad/ayuda" element={<QualityHelpPage />} />
               <Route path="/calidad/documentos" element={<QualityDocumentsPage />} />
               <Route path="/calidad/documentos/:code" element={<QualityDocumentDetailPage />} />
               <Route path="/calidad/registros" element={<QualityRecordsHubPage />} />

@@ -342,7 +342,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     items: [
       { path: "/calidad", label: "Tablero SGC", icon: "📊", end: true },
       { path: "/calidad/documentos", label: "Árbol documental", icon: "🌲" },
-      { path: "/calidad/registros", label: "Registros operativos", icon: "📋", end: true }
+      { path: "/calidad/registros", label: "Registros operativos", icon: "📋", end: true },
+      { path: "/calidad/ayuda", label: "Ayuda Calidad", icon: "💡" }
     ]
   },
   {
