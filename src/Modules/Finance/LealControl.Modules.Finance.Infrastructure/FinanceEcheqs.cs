@@ -26,6 +26,10 @@ public static class FinanceEcheqs
         group.MapPost("", async (CreateReceivedChequeRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(body.CheckNumber) || body.Amount <= 0) return Results.BadRequest("Número e importe son obligatorios.");
+            if (body.IssueDateUtc is null) return Results.BadRequest("La fecha de emisión es obligatoria.");
+            if (body.DueDateUtc is null) return Results.BadRequest("La fecha de vencimiento (pago) es obligatoria.");
+            if (body.DueDateUtc.Value.Date < body.IssueDateUtc.Value.Date)
+                return Results.BadRequest("El vencimiento no puede ser anterior a la fecha de emisión.");
             var direction = body.Direction;
             var item = new ReceivedCheque
             {

@@ -46,6 +46,7 @@ export function ChequePortfolioPage() {
     currency: "ARS",
     issuerName: "",
     bankName: "",
+    issueDate: new Date().toISOString().slice(0, 10),
     dueDate: "",
     notes: ""
   });
@@ -66,6 +67,14 @@ export function ChequePortfolioPage() {
       setError("Número e importe son obligatorios.");
       return;
     }
+    if (!form.issueDate || !form.dueDate) {
+      setError("Fecha de emisión y fecha de vencimiento (pago) son obligatorias.");
+      return;
+    }
+    if (form.dueDate < form.issueDate) {
+      setError("El vencimiento no puede ser anterior a la fecha de emisión.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -75,12 +84,22 @@ export function ChequePortfolioPage() {
         currency: form.currency || "ARS",
         issuerName: form.issuerName.trim() || null,
         bankName: form.bankName.trim() || null,
-        dueDateUtc: form.dueDate ? new Date(`${form.dueDate}T12:00:00Z`).toISOString() : null,
+        issueDateUtc: new Date(`${form.issueDate}T12:00:00Z`).toISOString(),
+        dueDateUtc: new Date(`${form.dueDate}T12:00:00Z`).toISOString(),
         notes: form.notes.trim() || null,
         direction: tab
       });
       setShowCreate(false);
-      setForm({ checkNumber: "", amount: "", currency: "ARS", issuerName: "", bankName: "", dueDate: "", notes: "" });
+      setForm({
+        checkNumber: "",
+        amount: "",
+        currency: "ARS",
+        issuerName: "",
+        bankName: "",
+        issueDate: new Date().toISOString().slice(0, 10),
+        dueDate: "",
+        notes: ""
+      });
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo crear el cheque.");
@@ -202,8 +221,22 @@ export function ChequePortfolioPage() {
               <input value={form.bankName} onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))} />
             </label>
             <label>
-              Vencimiento
-              <input type="date" value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} />
+              Emisión *
+              <input
+                type="date"
+                required
+                value={form.issueDate}
+                onChange={(e) => setForm((f) => ({ ...f, issueDate: e.target.value }))}
+              />
+            </label>
+            <label>
+              Vencimiento (pago) *
+              <input
+                type="date"
+                required
+                value={form.dueDate}
+                onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
+              />
             </label>
             <label>
               Notas

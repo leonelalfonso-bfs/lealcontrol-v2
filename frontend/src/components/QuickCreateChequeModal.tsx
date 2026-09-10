@@ -11,6 +11,7 @@ export type QuickCreatedCheque = {
   bankName?: string;
   issuerName?: string;
   dueDateUtc?: string;
+  issueDateUtc?: string;
   status: string;
   direction: string;
 };
@@ -30,9 +31,12 @@ type FormState = {
   currency: string;
   issuerName: string;
   bankName: string;
+  issueDate: string;
   dueDate: string;
   notes: string;
 };
+
+const todayIsoDate = () => new Date().toISOString().slice(0, 10);
 
 /**
  * Alta rápida de cheque en cartera sin salir del formulario (OP / Recibo).
@@ -51,6 +55,7 @@ export function QuickCreateChequeModal({
     currency: defaultCurrency || "ARS",
     issuerName: "",
     bankName: "",
+    issueDate: todayIsoDate(),
     dueDate: "",
     notes: ""
   });
@@ -66,6 +71,7 @@ export function QuickCreateChequeModal({
       currency: defaultCurrency || "ARS",
       issuerName: "",
       bankName: "",
+      issueDate: todayIsoDate(),
       dueDate: "",
       notes: ""
     });
@@ -82,6 +88,14 @@ export function QuickCreateChequeModal({
       setError("Número e importe son obligatorios.");
       return;
     }
+    if (!form.issueDate || !form.dueDate) {
+      setError("Fecha de emisión y fecha de vencimiento (pago) son obligatorias.");
+      return;
+    }
+    if (form.dueDate < form.issueDate) {
+      setError("El vencimiento no puede ser anterior a la fecha de emisión.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -91,7 +105,8 @@ export function QuickCreateChequeModal({
         currency: form.currency || "ARS",
         issuerName: form.issuerName.trim() || null,
         bankName: form.bankName.trim() || null,
-        dueDateUtc: form.dueDate ? new Date(`${form.dueDate}T12:00:00Z`).toISOString() : null,
+        issueDateUtc: new Date(`${form.issueDate}T12:00:00Z`).toISOString(),
+        dueDateUtc: new Date(`${form.dueDate}T12:00:00Z`).toISOString(),
         notes: form.notes.trim() || null,
         direction
       })) as QuickCreatedCheque;
@@ -172,8 +187,12 @@ export function QuickCreateChequeModal({
             <input value={form.bankName} onChange={(e) => set("bankName", e.target.value)} />
           </label>
           <label>
-            Vencimiento
-            <input type="date" value={form.dueDate} onChange={(e) => set("dueDate", e.target.value)} />
+            Emisión *
+            <input type="date" required value={form.issueDate} onChange={(e) => set("issueDate", e.target.value)} />
+          </label>
+          <label>
+            Vencimiento (pago) *
+            <input type="date" required value={form.dueDate} onChange={(e) => set("dueDate", e.target.value)} />
           </label>
           <label style={{ flex: "1 1 100%" }}>
             Notas
