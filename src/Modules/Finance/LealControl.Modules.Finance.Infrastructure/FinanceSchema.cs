@@ -11,6 +11,7 @@ public static class FinanceSchema
           ""Currency"" varchar(8) NOT NULL, ""Type"" integer NOT NULL, ""OpeningBalance"" numeric(18,2) NOT NULL DEFAULT 0,
           ""IsActive"" boolean NOT NULL DEFAULT true, ""CreatedAtUtc"" timestamptz NOT NULL
         );
+        ALTER TABLE finance.""FinancialAccounts"" ADD COLUMN IF NOT EXISTS ""BookingMode"" integer NOT NULL DEFAULT 0;
         CREATE TABLE IF NOT EXISTS finance.""FinancialMovements"" (
           ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""AccountId"" uuid NOT NULL,
           ""Kind"" integer NOT NULL, ""Amount"" numeric(18,2) NOT NULL, ""Currency"" varchar(8) NOT NULL,

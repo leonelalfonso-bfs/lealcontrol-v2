@@ -111,7 +111,9 @@ export const api = {
   applyFinanceConceptRules: () => request<{ processed: number; suggested: number; pending: number }>("/api/v1/finance/concept-rules/apply", { method: "POST" }),
   listFinanceMovementsForReview: () => request<FinanceMovementReview[]>("/api/v1/finance/movements/review"),
   classifyFinanceMovement: (id: string, body: object) => request(`/api/v1/finance/movements/${id}/classification`, { method: "POST", body: JSON.stringify(body) }),
-  createFinanceAccount: (body: { name: string; currency: string; type: string; openingBalance: number }) => request("/api/v1/finance/accounts", { method: "POST", body: JSON.stringify(body) }),
+  createFinanceAccount: (body: { name: string; currency: string; type: string; openingBalance: number; bookingMode?: "Statement" | "Manual" }) => request("/api/v1/finance/accounts", { method: "POST", body: JSON.stringify(body) }),
+  createFinanceMovement: (body: { accountId: string; kind: "Credit" | "Debit"; amount: number; currency: string; operationDateUtc: string; description: string; externalReference?: string | null }) =>
+    request("/api/v1/finance/movements", { method: "POST", body: JSON.stringify(body) }),
   previewFinanceBankImport: (accountId: string, csvContent: string) => request<BankImportPreviewRow[]>("/api/v1/finance/imports/bank/preview", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
   confirmFinanceBankImport: (accountId: string, csvContent: string) => request<{ imported: number; updated?: number; duplicates: number; rejected: number }>("/api/v1/finance/imports/bank/confirm", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
   listFinanceMovements: (accountId: string) => request<{ id: string; operationDateUtc: string; kind: string; amount: number; currency: string; description: string; externalReference?: string; transferId?: string; reconciliationStatus: number; linkedEntityType?: string; linkedEntityId?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements`),

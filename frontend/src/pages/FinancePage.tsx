@@ -1,18 +1,312 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 
-type Account = { id: string; name: string; currency: string; type: string; balance: number; isActive: boolean };
-type ImportRow = { operationDateUtc: string; amount: number; kind: string; description: string; externalReference?: string; error?: string };
-const money = (n: number, currency: string) => new Intl.NumberFormat("es-AR", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
+type Account = {
+  id: string;
+  name: string;
+  currency: string;
+  type: string;
+  balance: number;
+  isActive: boolean;
+  bookingMode?: string;
+};
+
+type ImportRow = {
+  operationDateUtc: string;
+  amount: number;
+  kind: string;
+  description: string;
+  externalReference?: string;
+  error?: string;
+};
+
+const money = (n: number, currency: string) =>
+  new Intl.NumberFormat("es-AR", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
+
+const isManual = (a: Account) => (a.bookingMode || "Statement") === "Manual";
 
 export function FinancePage() {
-  const [accounts, setAccounts] = useState<Account[]>([]); const [error, setError] = useState<string | null>(null); const [accountId, setAccountId] = useState(""); const [csv, setCsv] = useState(""); const [preview, setPreview] = useState<ImportRow[]>([]); const [busy, setBusy] = useState(false); const [showAccountForm, setShowAccountForm] = useState(false); const [accountForm, setAccountForm] = useState({ name: "", currency: "ARS", type: "Bank", openingBalance: "0" }); const fileRef = useRef<HTMLInputElement>(null);
-  const load = () => api.listFinanceAccounts().then(setAccounts).catch(e => setError(e instanceof Error ? e.message : "No se pudieron cargar las cuentas."));
-  useEffect(() => { void load(); }, []);
-  const readFile = async (file: File) => setCsv(await file.text());
-  const doPreview = async () => { if (!accountId || !csv.trim()) return setError("Elegí una cuenta y cargá un CSV."); setBusy(true); setError(null); try { setPreview(await api.previewFinanceBankImport(accountId, csv)); } catch (e) { setError(e instanceof Error ? e.message : "No se pudo procesar el extracto."); } finally { setBusy(false); } };
-  const confirm = async () => { setBusy(true); try { const result = await api.confirmFinanceBankImport(accountId, csv); setPreview([]); setCsv(""); await load(); alert(`Importados: ${result.imported}. Duplicados omitidos: ${result.duplicates}. Filas rechazadas: ${result.rejected}.`); } catch (e) { setError(e instanceof Error ? e.message : "No se pudo confirmar la importación."); } finally { setBusy(false); } };
-  const createAccount = async () => { if (!accountForm.name.trim()) return setError("Ingresá un nombre para la cuenta."); setBusy(true); try { await api.createFinanceAccount({ ...accountForm, openingBalance: Number(accountForm.openingBalance) || 0 }); setAccountForm({ name: "", currency: "ARS", type: "Bank", openingBalance: "0" }); setShowAccountForm(false); await load(); } catch (e) { setError(e instanceof Error ? e.message : "No se pudo crear la cuenta."); } finally { setBusy(false); } };
-  return <div className="page-wide"><div className="page-head"><div><span className="eyebrow">FINANZAS · TESORERÍA</span><h1>Disponibilidad financiera</h1><p className="muted">Bancos, cajas, billeteras e inversiones en un solo lugar.</p></div><div className="toolbar"><button className="btn btn-outline" onClick={() => setShowAccountForm(value => !value)}>+ Nueva cuenta</button><button className="btn" onClick={() => void load()}>↻ Actualizar</button></div></div>{error && <div className="alert">{error}</div>}{showAccountForm && <section className="card pad" style={{ marginBottom: 22 }}><h2>Nueva cuenta financiera</h2><div className="grid-2"><label>Nombre<input value={accountForm.name} onChange={e => setAccountForm({ ...accountForm, name: e.target.value })} placeholder="Banco Galicia - Cuenta corriente" /></label><label>Tipo<select value={accountForm.type} onChange={e => setAccountForm({ ...accountForm, type: e.target.value })}><option value="Bank">Banco</option><option value="Cash">Caja</option><option value="Wallet">Billetera virtual</option><option value="Investment">Inversión</option></select></label><label>Moneda<select value={accountForm.currency} onChange={e => setAccountForm({ ...accountForm, currency: e.target.value })}><option>ARS</option><option>USD</option><option>EUR</option></select></label><label>Saldo inicial<input type="number" value={accountForm.openingBalance} onChange={e => setAccountForm({ ...accountForm, openingBalance: e.target.value })} /></label></div><div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 14 }}><button className="btn ghost" onClick={() => setShowAccountForm(false)}>Cancelar</button><button className="btn" disabled={busy} onClick={() => void createAccount()}>Guardar cuenta</button></div></section>}<div className="kpi kpi-4">{accounts.map(account => <div className="card pad" key={account.id}><span className="muted">{account.name}</span><strong style={{ display: "block", marginTop: 10, fontSize: "1.55rem" }}>{money(account.balance, account.currency)}</strong><small className="muted">{account.type} · {account.currency}</small></div>)}</div><section className="card pad" style={{ marginTop: 22 }}><div className="page-head" style={{ marginBottom: 12 }}><div><h2>Importar extracto bancario</h2><p className="muted">Formato inicial: Fecha;Importe;Descripción;Referencia. Los importes positivos ingresan y los negativos egresan.</p></div></div><div className="grid-2"><label>Cuenta<select value={accountId} onChange={e => setAccountId(e.target.value)}><option value="">Seleccionar cuenta</option>{accounts.map(a => <option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</select></label><label>Archivo CSV<input ref={fileRef} type="file" accept=".csv,.txt" onChange={e => { const file = e.target.files?.[0]; if (file) void readFile(file); }} /></label></div><textarea value={csv} onChange={e => setCsv(e.target.value)} rows={5} placeholder="Fecha;Importe;Descripción;Referencia\n15/08/2026;125000;Transferencia recibida;TRX-001" style={{ width: "100%", marginTop: 14 }} /><div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 14 }}><button className="btn btn-outline" disabled={busy || !csv.trim()} onClick={() => void doPreview()}>Vista previa</button>{preview.length > 0 && <button className="btn" disabled={busy} onClick={() => void confirm()}>Confirmar importación</button>}</div>{preview.length > 0 && <div className="table-wrap" style={{ marginTop: 18 }}><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Importe</th><th>Descripción</th><th>Estado</th></tr></thead><tbody>{preview.map((row, i) => <tr key={i}><td>{new Date(row.operationDateUtc).toLocaleDateString("es-AR")}</td><td>{row.kind === "Credit" ? "Ingreso" : "Egreso"}</td><td>{row.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td><td>{row.description}</td><td>{row.error ? <span className="badge danger">{row.error}</span> : <span className="badge success">Válida</span>}</td></tr>)}</tbody></table></div>}</section></div>;
-}
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [accountId, setAccountId] = useState("");
+  const [csv, setCsv] = useState("");
+  const [preview, setPreview] = useState<ImportRow[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [showAccountForm, setShowAccountForm] = useState(false);
+  const [accountForm, setAccountForm] = useState({
+    name: "",
+    currency: "ARS",
+    type: "Bank",
+    openingBalance: "0",
+    bookingMode: "Statement" as "Statement" | "Manual"
+  });
+  const fileRef = useRef<HTMLInputElement>(null);
 
+  const statementAccounts = useMemo(
+    () => accounts.filter((a) => !isManual(a)),
+    [accounts]
+  );
+
+  const load = () =>
+    api
+      .listFinanceAccounts()
+      .then(setAccounts)
+      .catch((e) => setError(e instanceof Error ? e.message : "No se pudieron cargar las cuentas."));
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const readFile = async (file: File) => setCsv(await file.text());
+
+  const doPreview = async () => {
+    if (!accountId || !csv.trim()) return setError("Elegí una cuenta y cargá un CSV.");
+    setBusy(true);
+    setError(null);
+    try {
+      setPreview(await api.previewFinanceBankImport(accountId, csv));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo procesar el extracto.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirm = async () => {
+    setBusy(true);
+    try {
+      const result = await api.confirmFinanceBankImport(accountId, csv);
+      setPreview([]);
+      setCsv("");
+      await load();
+      alert(
+        `Importados: ${result.imported}. Duplicados omitidos: ${result.duplicates}. Filas rechazadas: ${result.rejected}.`
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo confirmar la importación.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createAccount = async () => {
+    if (!accountForm.name.trim()) return setError("Ingresá un nombre para la cuenta.");
+    setBusy(true);
+    try {
+      await api.createFinanceAccount({
+        ...accountForm,
+        openingBalance: Number(accountForm.openingBalance) || 0,
+        bookingMode: accountForm.bookingMode
+      });
+      setAccountForm({
+        name: "",
+        currency: "ARS",
+        type: "Bank",
+        openingBalance: "0",
+        bookingMode: "Statement"
+      });
+      setShowAccountForm(false);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo crear la cuenta.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="page-wide">
+      <div className="page-head">
+        <div>
+          <span className="eyebrow">FINANZAS · TESORERÍA</span>
+          <h1>Disponibilidad financiera</h1>
+          <p className="muted">Bancos, cajas, billeteras e inversiones en un solo lugar.</p>
+        </div>
+        <div className="toolbar">
+          <button className="btn btn-outline" onClick={() => setShowAccountForm((value) => !value)}>
+            + Nueva cuenta
+          </button>
+          <button className="btn" onClick={() => void load()}>
+            ↻ Actualizar
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="alert">{error}</div>}
+
+      {showAccountForm && (
+        <section className="card pad" style={{ marginBottom: 22 }}>
+          <h2>Nueva cuenta financiera</h2>
+          <div className="grid-2">
+            <label>
+              Nombre
+              <input
+                value={accountForm.name}
+                onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
+                placeholder="Banco Galicia - Cuenta corriente"
+              />
+            </label>
+            <label>
+              Tipo
+              <select
+                value={accountForm.type}
+                onChange={(e) => setAccountForm({ ...accountForm, type: e.target.value })}
+              >
+                <option value="Bank">Banco</option>
+                <option value="Cash">Caja</option>
+                <option value="Wallet">Billetera virtual</option>
+                <option value="Investment">Inversión</option>
+              </select>
+            </label>
+            <label>
+              Moneda
+              <select
+                value={accountForm.currency}
+                onChange={(e) => setAccountForm({ ...accountForm, currency: e.target.value })}
+              >
+                <option>ARS</option>
+                <option>USD</option>
+                <option>EUR</option>
+              </select>
+            </label>
+            <label>
+              Saldo inicial
+              <input
+                type="number"
+                value={accountForm.openingBalance}
+                onChange={(e) => setAccountForm({ ...accountForm, openingBalance: e.target.value })}
+              />
+            </label>
+            <label style={{ gridColumn: "1 / -1" }}>
+              Modo de carga
+              <select
+                value={accountForm.bookingMode}
+                onChange={(e) =>
+                  setAccountForm({
+                    ...accountForm,
+                    bookingMode: e.target.value as "Statement" | "Manual"
+                  })
+                }
+              >
+                <option value="Statement">Con extracto bancario (CSV)</option>
+                <option value="Manual">Manual (movimientos uno a uno)</option>
+              </select>
+              <small className="muted" style={{ display: "block", marginTop: 4 }}>
+                {accountForm.bookingMode === "Manual"
+                  ? "No se podrá importar CSV en esta cuenta. Los movimientos se cargan uno a uno."
+                  : "No se podrán cargar movimientos manuales. Solo importación de extracto."}
+              </small>
+            </label>
+          </div>
+          <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 14 }}>
+            <button className="btn ghost" onClick={() => setShowAccountForm(false)}>
+              Cancelar
+            </button>
+            <button className="btn" disabled={busy} onClick={() => void createAccount()}>
+              Guardar cuenta
+            </button>
+          </div>
+        </section>
+      )}
+
+      <div className="kpi kpi-4">
+        {accounts.map((account) => (
+          <div className="card pad" key={account.id}>
+            <span className="muted">{account.name}</span>
+            <strong style={{ display: "block", marginTop: 10, fontSize: "1.55rem" }}>
+              {money(account.balance, account.currency)}
+            </strong>
+            <small className="muted">
+              {account.type} · {account.currency} · {isManual(account) ? "Manual" : "Extracto"}
+            </small>
+          </div>
+        ))}
+      </div>
+
+      <section className="card pad" style={{ marginTop: 22 }}>
+        <div className="page-head" style={{ marginBottom: 12 }}>
+          <div>
+            <h2>Importar extracto bancario</h2>
+            <p className="muted">
+              Solo cuentas en modo extracto. Formato: Fecha;Importe;Descripción;Referencia.
+            </p>
+          </div>
+        </div>
+        <div className="grid-2">
+          <label>
+            Cuenta
+            <select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+              <option value="">Seleccionar cuenta</option>
+              {statementAccounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} · {a.currency}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Archivo CSV
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,.txt"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void readFile(file);
+              }}
+            />
+          </label>
+        </div>
+        <textarea
+          value={csv}
+          onChange={(e) => setCsv(e.target.value)}
+          rows={5}
+          placeholder={"Fecha;Importe;Descripción;Referencia\n15/08/2026;125000;Transferencia recibida;TRX-001"}
+          style={{ width: "100%", marginTop: 14 }}
+        />
+        <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 14 }}>
+          <button className="btn btn-outline" disabled={busy || !csv.trim()} onClick={() => void doPreview()}>
+            Vista previa
+          </button>
+          {preview.length > 0 && (
+            <button className="btn" disabled={busy} onClick={() => void confirm()}>
+              Confirmar importación
+            </button>
+          )}
+        </div>
+        {preview.length > 0 && (
+          <div className="table-wrap" style={{ marginTop: 18 }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Importe</th>
+                  <th>Descripción</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.map((row, i) => (
+                  <tr key={i}>
+                    <td>{new Date(row.operationDateUtc).toLocaleDateString("es-AR")}</td>
+                    <td>{row.kind === "Credit" ? "Ingreso" : "Egreso"}</td>
+                    <td>{row.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td>
+                    <td>{row.description}</td>
+                    <td>
+                      {row.error ? (
+                        <span className="badge danger">{row.error}</span>
+                      ) : (
+                        <span className="badge success">Válida</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

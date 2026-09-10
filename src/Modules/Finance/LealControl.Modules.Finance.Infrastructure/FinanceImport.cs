@@ -30,6 +30,8 @@ public static class FinanceImport
             var account = await db.Accounts.SingleOrDefaultAsync(x => x.Id == request.AccountId && x.TenantId == tenantId && x.IsActive, ct);
             if (account is null)
                 return Results.NotFound("Cuenta financiera inexistente.");
+            if (account.BookingMode == FinancialAccountBookingMode.Manual)
+                return Results.BadRequest("Esta cuenta es de carga manual. No admite importación de extractos.");
 
             var fileHash = ComputeFileHash(request.CsvContent);
             var priorImport = await db.BankStatementImports.AsNoTracking()

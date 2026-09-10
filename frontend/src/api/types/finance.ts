@@ -3,6 +3,8 @@ export type FinanceAccount = {
   name: string;
   currency: string;
   type: string;
+  /** Statement = extracto CSV; Manual = carga uno a uno */
+  bookingMode?: "Statement" | "Manual" | string;
   balance: number;
   isActive: boolean;
 };

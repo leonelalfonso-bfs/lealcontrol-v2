@@ -9,6 +9,7 @@ type Account = {
   name: string;
   currency: string;
   type: string;
+  bookingMode?: string;
   balance: number;
   isActive: boolean;
 };
@@ -112,6 +113,26 @@ export function FinanceAccountsPage() {
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [importLoading, setImportLoading] = useState(false);
 
+  const [showAccountForm, setShowAccountForm] = useState(false);
+  const [accountBusy, setAccountBusy] = useState(false);
+  const [accountForm, setAccountForm] = useState({
+    name: "",
+    currency: "ARS",
+    type: "Bank",
+    openingBalance: "0",
+    bookingMode: "Statement" as "Statement" | "Manual"
+  });
+
+  const [showManualMovement, setShowManualMovement] = useState(false);
+  const [manualBusy, setManualBusy] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    kind: "Credit" as "Credit" | "Debit",
+    amount: "",
+    operationDate: new Date().toISOString().slice(0, 10),
+    description: "",
+    externalReference: ""
+  });
+
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
@@ -130,6 +151,84 @@ export function FinanceAccountsPage() {
       })
       .catch((e) => setError(e.message));
   }, []);
+
+  const isManualAccount = (a?: Account | null) =>
+    (a?.bookingMode || "Statement") === "Manual";
+
+  const reloadAccounts = async () => {
+    const accs = await api.listFinanceAccounts();
+    setAccounts(accs);
+    return accs;
+  };
+
+  const createAccount = async () => {
+    if (!accountForm.name.trim()) {
+      setError("Ingresá un nombre para la cuenta.");
+      return;
+    }
+    setAccountBusy(true);
+    setError(null);
+    try {
+      const mode = accountForm.bookingMode;
+      await api.createFinanceAccount({
+        name: accountForm.name.trim(),
+        currency: accountForm.currency,
+        type: accountForm.type,
+        openingBalance: Number(accountForm.openingBalance) || 0,
+        bookingMode: mode
+      });
+      setAccountForm({ name: "", currency: "ARS", type: "Bank", openingBalance: "0", bookingMode: "Statement" });
+      setShowAccountForm(false);
+      await reloadAccounts();
+      setSuccessMsg(
+        mode === "Manual"
+          ? "Cuenta creada en modo manual (movimientos uno a uno)."
+          : "Cuenta creada en modo extracto bancario."
+      );
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo crear la cuenta.");
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  const createManualMovement = async () => {
+    if (!selectedAccount) return;
+    const amount = Number(String(manualForm.amount).replace(",", "."));
+    if (!(amount > 0) || !manualForm.description.trim()) {
+      setError("Importe y descripción son obligatorios.");
+      return;
+    }
+    setManualBusy(true);
+    setError(null);
+    try {
+      await api.createFinanceMovement({
+        accountId: selectedAccount.id,
+        kind: manualForm.kind,
+        amount,
+        currency: selectedAccount.currency,
+        operationDateUtc: new Date(`${manualForm.operationDate}T12:00:00Z`).toISOString(),
+        description: manualForm.description.trim(),
+        externalReference: manualForm.externalReference.trim() || null
+      });
+      setShowManualMovement(false);
+      setManualForm({
+        kind: "Credit",
+        amount: "",
+        operationDate: new Date().toISOString().slice(0, 10),
+        description: "",
+        externalReference: ""
+      });
+      setSuccessMsg("Movimiento cargado. Clasificalo cuando corresponda.");
+      setTimeout(() => setSuccessMsg(null), 4000);
+      await openAccount(selectedAccount);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo cargar el movimiento.");
+    } finally {
+      setManualBusy(false);
+    }
+  };
 
   const openAccount = async (account: Account) => {
     setSelectedAccount(account);
@@ -516,25 +615,40 @@ export function FinanceAccountsPage() {
             <span className="eyebrow">FINANZAS · TESORERÍA & EXTRACTOS</span>
             <h1>{selectedAccount.name}</h1>
             <p className="muted">
-              Detalle bancario · identificación de titulares/CUITs, clasificación progresiva y conciliación.
+              {isManualAccount(selectedAccount)
+                ? "Cuenta manual · carga de movimientos uno a uno y clasificación."
+                : "Detalle bancario · identificación de titulares/CUITs, clasificación progresiva y conciliación."}
+              {" · "}
+              <strong>{isManualAccount(selectedAccount) ? "Modo manual" : "Modo extracto"}</strong>
             </p>
           </div>
           <div className="toolbar" style={{ gap: 10 }}>
             <button className="btn btn-outline" onClick={() => setSelectedAccount(null)}>
               ← Volver a Cuentas
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                setShowImportModal(true);
-                setImportCsv("");
-                setImportPreview([]);
-              }}
-              style={{ fontWeight: 700 }}
-            >
-              📤 Importar / Actualizar Extracto CSV
-            </button>
+            {isManualAccount(selectedAccount) ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowManualMovement(true)}
+                style={{ fontWeight: 700 }}
+              >
+                + Cargar movimiento
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setShowImportModal(true);
+                  setImportCsv("");
+                  setImportPreview([]);
+                }}
+                style={{ fontWeight: 700 }}
+              >
+                📤 Importar / Actualizar Extracto CSV
+              </button>
+            )}
             <button
               type="button"
               className="btn btn-outline"
@@ -1249,6 +1363,77 @@ export function FinanceAccountsPage() {
               </>
               ) : null}
         </Modal>
+
+        <Modal
+          open={showManualMovement}
+          onClose={() => setShowManualMovement(false)}
+          title={`+ Cargar movimiento (${selectedAccount.name})`}
+          footer={(
+            <>
+              <button type="button" className="btn ghost" onClick={() => setShowManualMovement(false)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={manualBusy}
+                onClick={() => void createManualMovement()}
+              >
+                {manualBusy ? "Guardando…" : "Guardar movimiento"}
+              </button>
+            </>
+          )}
+        >
+          <p className="muted" style={{ marginTop: 0 }}>
+            Cuenta en modo manual: cada movimiento se carga acá y luego se clasifica como en el extracto.
+          </p>
+          <div className="grid-2" style={{ gap: 12 }}>
+            <label>
+              Tipo
+              <select
+                value={manualForm.kind}
+                onChange={(e) =>
+                  setManualForm({ ...manualForm, kind: e.target.value as "Credit" | "Debit" })
+                }
+              >
+                <option value="Credit">Ingreso (crédito)</option>
+                <option value="Debit">Egreso (débito)</option>
+              </select>
+            </label>
+            <label>
+              Importe
+              <input
+                value={manualForm.amount}
+                onChange={(e) => setManualForm({ ...manualForm, amount: e.target.value })}
+                inputMode="decimal"
+              />
+            </label>
+            <label>
+              Fecha
+              <input
+                type="date"
+                value={manualForm.operationDate}
+                onChange={(e) => setManualForm({ ...manualForm, operationDate: e.target.value })}
+              />
+            </label>
+            <label>
+              Referencia
+              <input
+                value={manualForm.externalReference}
+                onChange={(e) => setManualForm({ ...manualForm, externalReference: e.target.value })}
+                placeholder="Opcional"
+              />
+            </label>
+            <label style={{ gridColumn: "1 / -1" }}>
+              Descripción *
+              <input
+                value={manualForm.description}
+                onChange={(e) => setManualForm({ ...manualForm, description: e.target.value })}
+                placeholder="Ej.: Transferencia cobro cliente / Pago sueldos"
+              />
+            </label>
+          </div>
+        </Modal>
       </div>
     );
   }
@@ -1259,10 +1444,92 @@ export function FinanceAccountsPage() {
         <div>
           <span className="eyebrow">FINANZAS · TESORERÍA</span>
           <h1>Bancos y Cajas</h1>
-          <p className="muted">Seleccioná una cuenta para ver el detalle, importar extractos y clasificar movimientos.</p>
+          <p className="muted">
+            Creá cuentas en modo extracto o manual. El modo se elige al alta y no se mezcla.
+          </p>
+        </div>
+        <div className="toolbar">
+          <button className="btn" onClick={() => setShowAccountForm((v) => !v)}>
+            {showAccountForm ? "Cerrar" : "+ Nueva cuenta"}
+          </button>
         </div>
       </div>
       {error && <div className="alert">{error}</div>}
+      {successMsg && <div className="alert" style={{ background: "rgba(16,185,129,0.12)", color: "#065f46" }}>{successMsg}</div>}
+      {showAccountForm && (
+        <section className="card pad" style={{ marginBottom: 22 }}>
+          <h2 style={{ marginTop: 0 }}>Nueva cuenta financiera</h2>
+          <div className="grid-2">
+            <label>
+              Nombre
+              <input
+                value={accountForm.name}
+                onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
+                placeholder="Banco Galicia - Cuenta corriente"
+              />
+            </label>
+            <label>
+              Tipo
+              <select
+                value={accountForm.type}
+                onChange={(e) => setAccountForm({ ...accountForm, type: e.target.value })}
+              >
+                <option value="Bank">Banco</option>
+                <option value="Cash">Caja</option>
+                <option value="Wallet">Billetera virtual</option>
+                <option value="Investment">Inversión</option>
+              </select>
+            </label>
+            <label>
+              Moneda
+              <select
+                value={accountForm.currency}
+                onChange={(e) => setAccountForm({ ...accountForm, currency: e.target.value })}
+              >
+                <option>ARS</option>
+                <option>USD</option>
+                <option>EUR</option>
+              </select>
+            </label>
+            <label>
+              Saldo inicial
+              <input
+                type="number"
+                value={accountForm.openingBalance}
+                onChange={(e) => setAccountForm({ ...accountForm, openingBalance: e.target.value })}
+              />
+            </label>
+            <label style={{ gridColumn: "1 / -1" }}>
+              Cómo vas a cargar movimientos *
+              <select
+                value={accountForm.bookingMode}
+                onChange={(e) =>
+                  setAccountForm({
+                    ...accountForm,
+                    bookingMode: e.target.value as "Statement" | "Manual"
+                  })
+                }
+              >
+                <option value="Statement">Con extracto bancario (CSV / importación)</option>
+                <option value="Manual">Manual (movimientos uno a uno)</option>
+              </select>
+            </label>
+          </div>
+          <p className="muted" style={{ marginTop: 10, fontSize: "0.85rem" }}>
+            {accountForm.bookingMode === "Manual"
+              ? "No podrás importar extractos en esta cuenta. Solo carga manual."
+              : "No podrás cargar movimientos sueltos: solo importación de extracto."}
+          </p>
+          <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 14 }}>
+            <button className="btn btn-outline" onClick={() => setShowAccountForm(false)}>
+              Cancelar
+            </button>
+            <button className="btn" disabled={accountBusy} onClick={() => void createAccount()}>
+              Guardar cuenta
+            </button>
+          </div>
+        </section>
+      )}
       <div className="account-cards">
         {accounts.map((x) => (
           <button className="account-card" key={x.id} onClick={() => void openAccount(x)}>
@@ -1271,7 +1538,7 @@ export function FinanceAccountsPage() {
               <strong>{x.name}</strong>
             </div>
             <span className="muted">
-              {x.type} · {x.currency}
+              {x.type} · {x.currency} · {isManualAccount(x) ? "Manual" : "Extracto"}
             </span>
             <div className="account-card-footer">
               <strong className={x.balance < 0 ? "negative" : ""}>{money(x.balance, x.currency)}</strong>
