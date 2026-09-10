@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { CustomerSummary, PurchaseInvoice } from "../api/types";
+import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
 
 type Account = {
   id: string;
@@ -47,12 +48,15 @@ export function PaymentOrderFormPage() {
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>(initialSupplierId || "");
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [availableCheques, setAvailableCheques] = useState<any[]>([]);
+  const [ownCheques, setOwnCheques] = useState<any[]>([]);
   const [availableMovements, setAvailableMovements] = useState<any[]>([]);
   const [movementConceptFilter, setMovementConceptFilter] = useState<string>("");
   const [movementAccountFilter, setMovementAccountFilter] = useState<string>("");
   const [loadingMovements, setLoadingMovements] = useState(false);
   const [concepts, setConcepts] = useState<any[]>([]);
   const [purchaseInvoices, setPurchaseInvoices] = useState<PurchaseInvoice[]>([]);
+  const [createChequeLineId, setCreateChequeLineId] = useState<string | null>(null);
+  const [createChequeDirection, setCreateChequeDirection] = useState<"Received" | "Issued">("Received");
 
   const [paymentDate, setPaymentDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
@@ -115,9 +119,19 @@ export function PaymentOrderFormPage() {
         const supps = (dirRes.items || []).filter((d) => d.isSupplier);
         setSuppliers(supps);
         setAccounts(accRes || []);
+        const allCheques = chqRes || [];
         setAvailableCheques(
-          (chqRes || []).filter(
-            (c) => c.status === 0 || c.status === "Available" || c.status === "En cartera"
+          allCheques.filter(
+            (c) =>
+              (c.status === 0 || c.status === "Available" || c.status === "En cartera") &&
+              (c.direction == null || c.direction === "Received")
+          )
+        );
+        setOwnCheques(
+          allCheques.filter(
+            (c) =>
+              c.direction === "Issued" &&
+              (c.status === "Issued" || c.status === "Available" || c.status === "Emitido")
           )
         );
         setPurchaseInvoices(invRes || []);
@@ -780,31 +794,89 @@ export function PaymentOrderFormPage() {
                       )}
 
                       {line.method === "ChequeThirdParty" && (
-                        <label style={{ gridColumn: "span 2" }}>
-                          Seleccionar Cheque de Cartera
-                          <select
-                            value={line.chequeId || ""}
-                            onChange={(e) => {
-                              const chq = availableCheques.find((c) => c.id === e.target.value);
-                              updateLine(line.id, {
-                                chequeId: e.target.value,
-                                amount: chq ? chq.amount : line.amount,
-                                notes: chq
-                                  ? `Cheque N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${new Date(chq.dueDateUtc).toLocaleDateString("es-AR")}`
-                                  : ""
-                              });
-                            }}
-                          >
-                            <option value="">-- Elegir cheque disponible en cartera --</option>
-                            {availableCheques.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                N° {c.checkNumber} | {c.bankName || "Banco"} | Venc:{" "}
-                                {new Date(c.dueDateUtc).toLocaleDateString("es-AR")} |{" "}
-                                {money(c.amount, c.currency)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                        <div style={{ gridColumn: "span 2" }}>
+                          <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+                            <label style={{ margin: 0, flex: 1 }}>
+                              Seleccionar Cheque de Cartera
+                              <select
+                                value={line.chequeId || ""}
+                                onChange={(e) => {
+                                  const chq = availableCheques.find((c) => c.id === e.target.value);
+                                  updateLine(line.id, {
+                                    chequeId: e.target.value,
+                                    amount: chq ? chq.amount : line.amount,
+                                    notes: chq
+                                      ? `Cheque N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+                                      : ""
+                                  });
+                                }}
+                              >
+                                <option value="">-- Elegir cheque disponible en cartera --</option>
+                                {availableCheques.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    N° {c.checkNumber} | {c.bankName || "Banco"} | Venc:{" "}
+                                    {c.dueDateUtc ? new Date(c.dueDateUtc).toLocaleDateString("es-AR") : "s/d"} |{" "}
+                                    {money(c.amount, c.currency)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <button
+                              type="button"
+                              className="btn btn-outline compact"
+                              style={{ alignSelf: "flex-end" }}
+                              onClick={() => {
+                                setCreateChequeDirection("Received");
+                                setCreateChequeLineId(line.id);
+                              }}
+                            >
+                              + Nuevo cheque
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {line.method === "ChequeOwn" && (
+                        <div style={{ gridColumn: "span 2" }}>
+                          <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+                            <label style={{ margin: 0, flex: 1 }}>
+                              Cheque propio emitido (cartera)
+                              <select
+                                value={line.chequeId || ""}
+                                onChange={(e) => {
+                                  const chq = ownCheques.find((c) => c.id === e.target.value);
+                                  updateLine(line.id, {
+                                    chequeId: e.target.value || undefined,
+                                    amount: chq ? chq.amount : line.amount,
+                                    notes: chq
+                                      ? `Cheque propio N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+                                      : line.notes
+                                  });
+                                }}
+                              >
+                                <option value="">-- Elegir cheque emitido o crear uno nuevo --</option>
+                                {ownCheques.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    N° {c.checkNumber} | {c.bankName || "Banco"} | Venc:{" "}
+                                    {c.dueDateUtc ? new Date(c.dueDateUtc).toLocaleDateString("es-AR") : "s/d"} |{" "}
+                                    {money(c.amount, c.currency)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <button
+                              type="button"
+                              className="btn btn-outline compact"
+                              style={{ alignSelf: "flex-end" }}
+                              onClick={() => {
+                                setCreateChequeDirection("Issued");
+                                setCreateChequeLineId(line.id);
+                              }}
+                            >
+                              + Nuevo cheque
+                            </button>
+                          </div>
+                        </div>
                       )}
 
                       {line.method === "Retention" && (
@@ -933,6 +1005,36 @@ export function PaymentOrderFormPage() {
           </section>
         </div>
       </div>
+
+      <QuickCreateChequeModal
+        open={!!createChequeLineId}
+        direction={createChequeDirection}
+        defaultAmount={
+          createChequeLineId
+            ? lines.find((l) => l.id === createChequeLineId)?.amount
+            : undefined
+        }
+        defaultCurrency="ARS"
+        onClose={() => setCreateChequeLineId(null)}
+        onCreated={(ch) => {
+          if (createChequeDirection === "Issued") {
+            setOwnCheques((prev) => (prev.some((c) => c.id === ch.id) ? prev : [ch, ...prev]));
+          } else {
+            setAvailableCheques((prev) => (prev.some((c) => c.id === ch.id) ? prev : [ch, ...prev]));
+          }
+          if (createChequeLineId) {
+            updateLine(createChequeLineId, {
+              chequeId: ch.id,
+              amount: Number(ch.amount),
+              notes:
+                createChequeDirection === "Issued"
+                  ? `Cheque propio N° ${ch.checkNumber} - ${ch.bankName || "Banco"} - Vto: ${ch.dueDateUtc ? new Date(ch.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+                  : `Cheque N° ${ch.checkNumber} - ${ch.bankName || "Banco"} - Vto: ${ch.dueDateUtc ? new Date(ch.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+            });
+          }
+          setCreateChequeLineId(null);
+        }}
+      />
     </div>
   );
 }

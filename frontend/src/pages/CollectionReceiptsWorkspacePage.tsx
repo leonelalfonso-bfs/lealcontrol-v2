@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { CustomerSummary, Invoice } from "../api/types";
+import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
 
 type Account = {
   id: string;
@@ -60,6 +61,7 @@ export function CollectionReceiptsWorkspacePage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [receipts, setReceipts] = useState<any[]>([]);
   const [selectedReceiptDetail, setSelectedReceiptDetail] = useState<any | null>(null);
+  const [createChequeLineId, setCreateChequeLineId] = useState<string | null>(null);
 
   // Filters for available bank movements (concept = cartera; account optional — empty = todas)
   const [movementConceptFilter, setMovementConceptFilter] = useState<string>("");
@@ -1011,29 +1013,46 @@ export function CollectionReceiptsWorkspacePage() {
 
                       {/* Cheques */}
                       {line.method === "Cheque" && (
-                        <label style={{ gridColumn: "1 / -1" }}>
-                          Cheque en Cartera *
-                          <select
-                            value={line.chequeId || ""}
-                            onChange={(e) => {
-                              const chId = e.target.value;
-                              const ch = availableCheques.find((c) => c.id === chId);
-                              updateLine(line.id, {
-                                chequeId: chId || undefined,
-                                amount: ch ? Number(ch.amount) : line.amount,
-                                notes: ch ? `Cheque N° ${ch.checkNumber} (${ch.bankName || "Banco"} - Librador: ${ch.issuerName || "s/d"})` : line.notes
-                              });
-                            }}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
-                          >
-                            <option value="">-- Seleccioná un cheque disponible --</option>
-                            {availableCheques.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                N° {c.checkNumber} · {money(c.amount, c.currency)} · {c.bankName || "Banco"} · Librador: {c.issuerName || "Sin datos"}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+                            <label style={{ margin: 0, flex: 1 }}>
+                              Cheque en Cartera *
+                              <select
+                                value={line.chequeId || ""}
+                                onChange={(e) => {
+                                  const chId = e.target.value;
+                                  const ch = availableCheques.find((c) => c.id === chId);
+                                  updateLine(line.id, {
+                                    chequeId: chId || undefined,
+                                    amount: ch ? Number(ch.amount) : line.amount,
+                                    notes: ch ? `Cheque N° ${ch.checkNumber} (${ch.bankName || "Banco"} - Librador: ${ch.issuerName || "s/d"})` : line.notes
+                                  });
+                                }}
+                                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                              >
+                                <option value="">-- Seleccioná un cheque disponible --</option>
+                                {availableCheques.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    N° {c.checkNumber} · {money(c.amount, c.currency)} · {c.bankName || "Banco"} · Librador: {c.issuerName || "Sin datos"}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <button
+                              type="button"
+                              className="btn btn-outline compact"
+                              style={{ alignSelf: "flex-end" }}
+                              onClick={() => setCreateChequeLineId(line.id)}
+                            >
+                              + Nuevo cheque
+                            </button>
+                          </div>
+                          {availableCheques.length === 0 && (
+                            <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+                              No hay cheques recibidos en cartera. Creá uno acá sin salir del recibo.
+                            </p>
+                          )}
+                        </div>
                       )}
 
                       {/* Retention fields */}
@@ -1350,6 +1369,31 @@ export function CollectionReceiptsWorkspacePage() {
           </div>
         </div>
       )}
+
+      <QuickCreateChequeModal
+        open={!!createChequeLineId}
+        direction="Received"
+        defaultAmount={
+          createChequeLineId
+            ? lines.find((l) => l.id === createChequeLineId)?.amount
+            : undefined
+        }
+        defaultCurrency={currency}
+        onClose={() => setCreateChequeLineId(null)}
+        onCreated={(ch) => {
+          setAvailableCheques((prev) =>
+            prev.some((c) => c.id === ch.id) ? prev : [ch, ...prev]
+          );
+          if (createChequeLineId) {
+            updateLine(createChequeLineId, {
+              chequeId: ch.id,
+              amount: Number(ch.amount),
+              notes: `Cheque N° ${ch.checkNumber} (${ch.bankName || "Banco"} - Librador: ${ch.issuerName || "s/d"})`
+            });
+          }
+          setCreateChequeLineId(null);
+        }}
+      />
     </div>
   );
 }
