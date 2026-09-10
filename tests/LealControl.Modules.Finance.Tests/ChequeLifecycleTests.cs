@@ -42,6 +42,8 @@ public sealed class ChequeLifecycleTests : IClassFixture<FinanceWebApplicationFa
             amount = 25000m,
             currency = "ARS",
             issuerName = "Cliente SA",
+            issueDateUtc = DateTime.UtcNow.Date,
+            dueDateUtc = DateTime.UtcNow.Date.AddDays(30),
             direction = 0
         });
         createRes.EnsureSuccessStatusCode();
