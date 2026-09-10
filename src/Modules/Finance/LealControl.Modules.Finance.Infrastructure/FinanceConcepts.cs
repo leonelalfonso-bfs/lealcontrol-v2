@@ -78,7 +78,7 @@ public static class FinanceConcepts
         new("INTERES_PAGADO", "Intereses pagados", FinancialConceptDirection.Expense, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Resultados financieros", "AM-FIN-33"),
         new("INVERSION_SUSCRIPCION", "Suscripción de inversión", FinancialConceptDirection.Internal, FinancialConceptUsableIn.Transfer, FinancialConceptCounterpartyType.None, false, false, "Inversiones", "AM-FIN-20"),
         new("INVERSION_RESCATE", "Rescate de inversión", FinancialConceptDirection.Internal, FinancialConceptUsableIn.Transfer, FinancialConceptCounterpartyType.None, false, false, "Inversiones", "AM-FIN-20"),
-        new("SUELDOS", "Sueldos y cargas sociales", FinancialConceptDirection.Expense, FinancialConceptUsableIn.PaymentOrder, FinancialConceptCounterpartyType.None, false, false, "Personal", "AM-FIN-40"),
+        new("SUELDOS", "Sueldos y cargas sociales", FinancialConceptDirection.Expense, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Personal", "AM-FIN-40"),
         new("PRESTAMO_RECIBIDO", "Préstamo recibido", FinancialConceptDirection.Income, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Financiación"),
         new("PAGO_PRESTAMO", "Pago de préstamo", FinancialConceptDirection.Expense, FinancialConceptUsableIn.PaymentOrder, FinancialConceptCounterpartyType.None, false, false, "Financiación", "AM-FIN-10"),
         new("AJUSTE", "Ajuste o diferencia", FinancialConceptDirection.Both, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Ajustes", "AM-FIN-90")
