@@ -71,6 +71,7 @@ export function PaymentOrderFormPage() {
   const [lineEditorOpen, setLineEditorOpen] = useState(false);
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [draftLine, setDraftLine] = useState<PaymentLine | null>(null);
+  const [draftAmountText, setDraftAmountText] = useState("");
   const [lineEditorError, setLineEditorError] = useState<string | null>(null);
 
   const [paymentDate, setPaymentDate] = useState<string>(
@@ -287,6 +288,7 @@ export function PaymentOrderFormPage() {
     setLineEditorOpen(false);
     setEditingLineId(null);
     setDraftLine(null);
+    setDraftAmountText("");
     setLineEditorError(null);
   };
 
@@ -297,6 +299,7 @@ export function PaymentOrderFormPage() {
     if (existing) {
       setEditingLineId(existing.id);
       setDraftLine({ ...existing });
+      setDraftAmountText(existing.amount > 0 ? String(existing.amount) : "");
       if (existing.method === "BankTransfer") {
         void loadAvailableMovements(
           existing.accountId || movementAccountFilter || "",
@@ -316,6 +319,7 @@ export function PaymentOrderFormPage() {
         retentionType: method === "Retention" ? "Ganancias" : undefined,
         notes: ""
       });
+      setDraftAmountText(remaining > 0 ? String(remaining) : "");
       if (method === "BankTransfer") {
         void loadAvailableMovements(
           movementAccountFilter || "",
@@ -328,7 +332,8 @@ export function PaymentOrderFormPage() {
 
   const saveLineEditor = () => {
     if (!draftLine) return;
-    if (!(Number(draftLine.amount) > 0)) {
+    const parsedAmount = Number(String(draftAmountText).replace(",", "."));
+    if (!(parsedAmount > 0)) {
       setLineEditorError("Indicá un importe mayor a cero.");
       return;
     }
@@ -346,7 +351,7 @@ export function PaymentOrderFormPage() {
 
     const toSave: PaymentLine = {
       ...draftLine,
-      amount: Number(draftLine.amount) || 0,
+      amount: parsedAmount,
       conceptId: draftLine.conceptId || movementConceptFilter || undefined
     };
 
@@ -879,11 +884,16 @@ export function PaymentOrderFormPage() {
             <label>
               Importe Abonado
               <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={draftLine.amount}
-                onChange={(e) => patchDraft({ amount: parseFloat(e.target.value) || 0 })}
+                type="text"
+                inputMode="decimal"
+                value={draftAmountText}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(",", ".");
+                  if (raw !== "" && !/^\d*\.?\d*$/.test(raw)) return;
+                  setDraftAmountText(raw);
+                  const n = Number(raw);
+                  patchDraft({ amount: raw === "" || Number.isNaN(n) ? 0 : n });
+                }}
               />
             </label>
 
@@ -1010,6 +1020,7 @@ export function PaymentOrderFormPage() {
                       notes: mov ? mov.description : draftLine.notes,
                       conceptId: mov?.conceptId || draftLine.conceptId || movementConceptFilter || undefined
                     });
+                    if (mov) setDraftAmountText(String(Number(mov.amount)));
                   }}
                   style={{
                     width: "100%",
@@ -1053,6 +1064,7 @@ export function PaymentOrderFormPage() {
                             ? `Cheque N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
                             : ""
                         });
+                        if (chq) setDraftAmountText(String(chq.amount));
                       }}
                     >
                       <option value="">-- Elegir cheque disponible en cartera --</option>
@@ -1096,6 +1108,7 @@ export function PaymentOrderFormPage() {
                             ? `Cheque propio N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
                             : draftLine.notes
                         });
+                        if (chq) setDraftAmountText(String(chq.amount));
                       }}
                     >
                       <option value="">-- Elegir cheque emitido o crear uno nuevo --</option>
@@ -1188,6 +1201,7 @@ export function PaymentOrderFormPage() {
           };
           if (draftLine && createChequeLineId === draftLine.id) {
             patchDraft(chequePatch);
+            setDraftAmountText(String(Number(ch.amount)));
           } else if (createChequeLineId) {
             updateLine(createChequeLineId, chequePatch);
           }
