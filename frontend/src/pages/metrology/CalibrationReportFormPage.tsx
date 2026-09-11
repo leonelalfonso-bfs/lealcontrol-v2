@@ -260,7 +260,6 @@ export function CalibrationReportFormPage() {
     setZeroInRangeOk(true);
     setZeroOverLimitLoad(Math.round(zeroLimit4Pct * 1.2).toString());
     setZeroOverLimitBlocked(true);
-    setZeroErrorDeltaL((eInt / 2).toString());
 
     // Mobility default setup (1.4 * d overload)
     const overload14d = Math.round(dVal * 1.4 * 100) / 100;
