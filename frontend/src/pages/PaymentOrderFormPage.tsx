@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { CustomerSummary, PurchaseInvoice } from "../api/types";
 import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
+import { Modal } from "../components/ui/Modal";
 
 type Account = {
   id: string;
@@ -36,6 +37,16 @@ type ImputationRow = {
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n);
 
+const METHOD_LABELS: Record<PaymentLine["method"], string> = {
+  BankTransfer: "Transferencia",
+  Cash: "Efectivo",
+  ChequeThirdParty: "Cheque cartera",
+  ChequeOwn: "Cheque propio",
+  Retention: "Retención"
+};
+
+const newLineId = () => Math.random().toString(36).substring(2, 9);
+
 export function PaymentOrderFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -57,6 +68,10 @@ export function PaymentOrderFormPage() {
   const [purchaseInvoices, setPurchaseInvoices] = useState<PurchaseInvoice[]>([]);
   const [createChequeLineId, setCreateChequeLineId] = useState<string | null>(null);
   const [createChequeDirection, setCreateChequeDirection] = useState<"Received" | "Issued">("Received");
+  const [lineEditorOpen, setLineEditorOpen] = useState(false);
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
+  const [draftLine, setDraftLine] = useState<PaymentLine | null>(null);
+  const [lineEditorError, setLineEditorError] = useState<string | null>(null);
 
   const [paymentDate, setPaymentDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
@@ -149,7 +164,7 @@ export function PaymentOrderFormPage() {
           const parsedAmount = initialAmount ? parseFloat(initialAmount) || 0 : 0;
           setLines([
             {
-              id: Math.random().toString(36).substring(2, 9),
+              id: newLineId(),
               method: "BankTransfer",
               amount: parsedAmount,
               currency: "ARS",
@@ -162,19 +177,8 @@ export function PaymentOrderFormPage() {
           if (initialAccountId) setMovementAccountFilter(initialAccountId);
           void loadAvailableMovements(initialAccountId || "", defaultConceptId);
         } else {
-          const firstBank = (accRes || []).find((a) => a.isActive);
-          if (firstBank) {
-            setLines([
-              {
-                id: Math.random().toString(36).substring(2, 9),
-                method: String(firstBank.type) === "Cash" || String(firstBank.type) === "1" ? "Cash" : "BankTransfer",
-                amount: 0,
-                currency: firstBank.currency || "ARS",
-                accountId: firstBank.id,
-                conceptId: defaultConceptId || undefined,
-                notes: ""
-              }
-            ]);
+          setLines([]);
+          if (defaultConceptId) {
             void loadAvailableMovements("", defaultConceptId);
           }
         }
@@ -268,25 +272,90 @@ export function PaymentOrderFormPage() {
   };
 
   // Handlers for Payment Lines
-  const addLine = (method: PaymentLine["method"] = "BankTransfer") => {
+  const patchDraft = (patch: Partial<PaymentLine>) => {
+    setDraftLine((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...patch };
+      if (patch.conceptId && updated.method === "BankTransfer") {
+        setMovementConceptFilter(patch.conceptId);
+      }
+      return updated;
+    });
+  };
+
+  const closeLineEditor = () => {
+    setLineEditorOpen(false);
+    setEditingLineId(null);
+    setDraftLine(null);
+    setLineEditorError(null);
+  };
+
+  const openLineEditor = (method: PaymentLine["method"], existing?: PaymentLine) => {
     const firstAcc = accounts.find((a) => a.isActive);
     const defaultConcept = concepts.find((c) => c.code === "PAGO_PROVEEDOR") || expenseConcepts[0];
-    setLines((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(36).substring(2, 9),
+    setLineEditorError(null);
+    if (existing) {
+      setEditingLineId(existing.id);
+      setDraftLine({ ...existing });
+      if (existing.method === "BankTransfer") {
+        void loadAvailableMovements(
+          existing.accountId || movementAccountFilter || "",
+          existing.conceptId || movementConceptFilter || defaultConcept?.id || ""
+        );
+      }
+    } else {
+      const remaining = Math.max(0, totalImputed - totalPaymentLines);
+      setEditingLineId(null);
+      setDraftLine({
+        id: newLineId(),
         method,
-        amount: Math.max(0, totalImputed - totalPaymentLines),
+        amount: remaining,
         currency: firstAcc?.currency || "ARS",
         accountId: firstAcc?.id,
         conceptId: defaultConcept?.id,
+        retentionType: method === "Retention" ? "Ganancias" : undefined,
         notes: ""
+      });
+      if (method === "BankTransfer") {
+        void loadAvailableMovements(
+          movementAccountFilter || "",
+          movementConceptFilter || defaultConcept?.id || ""
+        );
       }
-    ]);
-
-    if (method === "BankTransfer") {
-      void loadAvailableMovements(movementAccountFilter || "", movementConceptFilter || defaultConcept?.id || "");
     }
+    setLineEditorOpen(true);
+  };
+
+  const saveLineEditor = () => {
+    if (!draftLine) return;
+    if (!(Number(draftLine.amount) > 0)) {
+      setLineEditorError("Indicá un importe mayor a cero.");
+      return;
+    }
+    if (
+      (draftLine.method === "ChequeThirdParty" || draftLine.method === "ChequeOwn") &&
+      !draftLine.chequeId
+    ) {
+      setLineEditorError("Seleccioná o creá un cheque.");
+      return;
+    }
+    if (draftLine.method === "BankTransfer" && draftLine.bankMovementId && !(draftLine.conceptId || movementConceptFilter)) {
+      setLineEditorError("Elegí la cartera (concepto) para la transferencia vinculada.");
+      return;
+    }
+
+    const toSave: PaymentLine = {
+      ...draftLine,
+      amount: Number(draftLine.amount) || 0,
+      conceptId: draftLine.conceptId || movementConceptFilter || undefined
+    };
+
+    if (editingLineId) {
+      setLines((prev) => prev.map((l) => (l.id === editingLineId ? { ...toSave, id: editingLineId } : l)));
+    } else {
+      setLines((prev) => [...prev, toSave]);
+    }
+    closeLineEditor();
   };
 
   const removeLine = (id: string) => {
@@ -306,6 +375,18 @@ export function PaymentOrderFormPage() {
         return l;
       })
     );
+  };
+
+  const lineDetail = (line: PaymentLine) => {
+    if (line.method === "Retention") {
+      return [line.retentionType, line.retentionCertificate].filter(Boolean).join(" · ") || "Sin certificado";
+    }
+    if (line.method === "ChequeThirdParty" || line.method === "ChequeOwn") {
+      return line.notes || "Cheque seleccionado";
+    }
+    const account = accounts.find((a) => a.id === line.accountId);
+    const parts = [account?.name, line.notes].filter(Boolean);
+    return parts.join(" · ") || "Sin detalle";
   };
 
   // Submit Handler
@@ -575,33 +656,27 @@ export function PaymentOrderFormPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Payment Methods Card */}
           <section className="card pad">
-            <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 14 }}>
+            <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: "1.1rem" }}>3. Medios de Pago y Valores</h2>
                 <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-                  Efectivo, transferencias, cheques y certificados de retención.
+                  Lista de lo cargado. Cada medio se edita en el mismo modal.
                 </p>
               </div>
-              <div className="toolbar" style={{ gap: 6 }}>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  onClick={() => addLine("BankTransfer")}
-                >
+              <div className="toolbar" style={{ gap: 6, flexWrap: "wrap" }}>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => openLineEditor("BankTransfer")}>
                   + Transferencia
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  onClick={() => addLine("ChequeThirdParty")}
-                >
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => openLineEditor("Cash")}>
+                  + Efectivo
+                </button>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => openLineEditor("ChequeThirdParty")}>
                   + Cheque Cartera
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  onClick={() => addLine("Retention")}
-                >
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => openLineEditor("ChequeOwn")}>
+                  + Cheque Propio
+                </button>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => openLineEditor("Retention")}>
                   + Retención
                 </button>
               </div>
@@ -609,317 +684,60 @@ export function PaymentOrderFormPage() {
 
             {lines.length === 0 ? (
               <p className="muted" style={{ textAlign: "center", padding: 20 }}>
-                No ha añadido medios de pago. Haga clic en los botones superiores para agregar uno.
+                Todavía no hay medios de pago. Usá los botones de arriba para agregar el primero.
               </p>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {lines.map((line) => (
-                  <div
-                    key={line.id}
-                    className="card pad"
-                    style={{
-                      border: "1px solid var(--border, #e2e8f0)",
-                      background: "var(--surface-soft, #f8fafc)",
-                      position: "relative"
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => removeLine(line.id)}
-                      style={{
-                        position: "absolute",
-                        top: 8,
-                        right: 8,
-                        background: "none",
-                        border: "none",
-                        color: "#ef4444",
-                        cursor: "pointer",
-                        fontSize: "1rem"
-                      }}
-                      title="Eliminar este medio de pago"
-                    >
-                      ✕
-                    </button>
-
-                    <div className="grid-2" style={{ gap: 10 }}>
-                      <label>
-                        Medio de Pago
-                        <select
-                          value={line.method}
-                          onChange={(e) =>
-                            updateLine(line.id, {
-                              method: e.target.value as PaymentLine["method"]
-                            })
-                          }
-                        >
-                          <option value="BankTransfer">🏦 Transferencia Bancaria</option>
-                          <option value="Cash">💵 Efectivo (Caja)</option>
-                          <option value="ChequeThirdParty">📜 Cheque de Terceros (Endoso)</option>
-                          <option value="ChequeOwn">✍️ Cheque Propio Emitido</option>
-                          <option value="Retention">🏛️ Retención Practicada</option>
-                        </select>
-                      </label>
-
-                      <label>
-                        Importe Abonado
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={line.amount}
-                          onChange={(e) =>
-                            updateLine(line.id, { amount: parseFloat(e.target.value) || 0 })
-                          }
-                        />
-                      </label>
-
-                      {(line.method === "BankTransfer" || line.method === "Cash") && (
-                        <label style={{ gridColumn: "span 2" }}>
-                          Concepto de Pago (cartera) *
-                          <select
-                            required
-                            value={line.conceptId || movementConceptFilter || ""}
-                            onChange={(e) => {
-                              const conceptId = e.target.value || undefined;
-                              updateLine(line.id, { conceptId, bankMovementId: undefined });
-                              if (conceptId) setMovementConceptFilter(conceptId);
-                            }}
-                          >
-                            <option value="" disabled>Elegí una cartera de egreso</option>
-                            {expenseConcepts.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name} ({c.code})
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
-
-                      {(line.method === "BankTransfer" || line.method === "Cash") && (
-                        <label style={{ gridColumn: "span 2" }}>
-                          Cuenta Financiera de Origen
-                          <select
-                            value={line.accountId || ""}
-                            onChange={(e) => updateLine(line.id, { accountId: e.target.value, bankMovementId: undefined })}
-                          >
-                            <option value="">-- Seleccionar cuenta bancaria / caja --</option>
-                            {accounts.map((a) => (
-                              <option key={a.id} value={a.id}>
-                                {a.name} ({a.currency}) - Saldo: {money(a.balance, a.currency)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
-
-                      {line.method === "BankTransfer" && (
-                        <div style={{ gridColumn: "span 2", background: "#f8fafc", padding: 12, borderRadius: 6, border: "1px solid #e2e8f0", marginTop: 4 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
-                            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f766e" }}>
-                              🏦 Vincular Transferencia Bancaria Emitida (Extracto Banco)
-                            </span>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                              <label style={{ fontSize: "0.75rem", color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
-                                Cartera
-                                <select
-                                  value={movementConceptFilter}
-                                  onChange={(e) => {
-                                    const conceptId = e.target.value;
-                                    setMovementConceptFilter(conceptId);
-                                    updateLine(line.id, { bankMovementId: undefined, conceptId: conceptId || undefined });
-                                  }}
-                                  style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
-                                >
-                                  {expenseConcepts.map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                      {c.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <label style={{ fontSize: "0.75rem", color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
-                                Cuenta
-                                <select
-                                  value={movementAccountFilter}
-                                  onChange={(e) => {
-                                    setMovementAccountFilter(e.target.value);
-                                    updateLine(line.id, { bankMovementId: undefined, accountId: e.target.value || line.accountId });
-                                  }}
-                                  style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
-                                >
-                                  <option value="">Todas las cuentas</option>
-                                  {accounts.filter((a) => a.isActive).map((a) => (
-                                    <option key={a.id} value={a.id}>{a.name}</option>
-                                  ))}
-                                </select>
-                              </label>
-                            </div>
-                          </div>
-
-                          <select
-                            value={line.bankMovementId || ""}
-                            onChange={(e) => {
-                              const movId = e.target.value;
-                              const mov = filteredAvailableMovements.find((m) => m.id === movId);
-                              updateLine(line.id, {
-                                bankMovementId: movId || undefined,
-                                accountId: mov?.accountId || line.accountId,
-                                amount: mov ? Number(mov.amount) : line.amount,
-                                notes: mov ? mov.description : line.notes,
-                                conceptId: mov?.conceptId || line.conceptId || movementConceptFilter || undefined
-                              });
-                            }}
-                            style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
-                          >
-                            <option value="">
-                              {loadingMovements
-                                ? "Cargando movimientos…"
-                                : filteredAvailableMovements.length === 0
-                                  ? "-- Sin movimientos confirmados disponibles --"
-                                  : `-- Elegí entre ${filteredAvailableMovements.length} movimiento(s) del extracto --`}
-                            </option>
-                            {filteredAvailableMovements.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {new Date(m.operationDateUtc).toLocaleDateString("es-AR")} · {money(m.amount, m.currency)} · [{m.conceptName || m.ConceptName || "Sin clasificar"}]{m.accountName ? ` · ${m.accountName}` : ""} · {m.description}
-                              </option>
-                            ))}
-                          </select>
-                          {!loadingMovements && filteredAvailableMovements.length === 0 && (
-                            <p className="muted" style={{ margin: "8px 0 0", fontSize: "0.8rem" }}>
-                              No hay débitos confirmados y sin conciliar para esta cartera
-                              {movementAccountFilter ? " en la cuenta elegida" : ""}. Confirmá movimientos en Finanzas → Conceptos → Bandeja, o cambiá la cartera/cuenta.
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {line.method === "ChequeThirdParty" && (
-                        <div style={{ gridColumn: "span 2" }}>
-                          <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
-                            <label style={{ margin: 0, flex: 1 }}>
-                              Seleccionar Cheque de Cartera
-                              <select
-                                value={line.chequeId || ""}
-                                onChange={(e) => {
-                                  const chq = availableCheques.find((c) => c.id === e.target.value);
-                                  updateLine(line.id, {
-                                    chequeId: e.target.value,
-                                    amount: chq ? chq.amount : line.amount,
-                                    notes: chq
-                                      ? `Cheque N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
-                                      : ""
-                                  });
-                                }}
-                              >
-                                <option value="">-- Elegir cheque disponible en cartera --</option>
-                                {availableCheques.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    N° {c.checkNumber} | {c.bankName || "Banco"} | Venc:{" "}
-                                    {c.dueDateUtc ? new Date(c.dueDateUtc).toLocaleDateString("es-AR") : "s/d"} |{" "}
-                                    {money(c.amount, c.currency)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Medio</th>
+                      <th>Detalle</th>
+                      <th style={{ textAlign: "right" }}>Importe</th>
+                      <th style={{ width: 120 }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lines.map((line) => (
+                      <tr key={line.id}>
+                        <td>
+                          <strong>{METHOD_LABELS[line.method]}</strong>
+                        </td>
+                        <td style={{ fontSize: "0.86rem" }}>{lineDetail(line)}</td>
+                        <td style={{ textAlign: "right", fontWeight: 700 }}>{money(line.amount, line.currency)}</td>
+                        <td>
+                          <div className="toolbar" style={{ gap: 4, justifyContent: "flex-end" }}>
                             <button
                               type="button"
-                              className="btn btn-outline compact"
-                              style={{ alignSelf: "flex-end" }}
-                              onClick={() => {
-                                setCreateChequeDirection("Received");
-                                setCreateChequeLineId(line.id);
-                              }}
+                              className="btn btn-outline btn-sm"
+                              onClick={() => openLineEditor(line.method, line)}
                             >
-                              + Nuevo cheque
+                              Editar
                             </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {line.method === "ChequeOwn" && (
-                        <div style={{ gridColumn: "span 2" }}>
-                          <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
-                            <label style={{ margin: 0, flex: 1 }}>
-                              Cheque propio emitido (cartera)
-                              <select
-                                value={line.chequeId || ""}
-                                onChange={(e) => {
-                                  const chq = ownCheques.find((c) => c.id === e.target.value);
-                                  updateLine(line.id, {
-                                    chequeId: e.target.value || undefined,
-                                    amount: chq ? chq.amount : line.amount,
-                                    notes: chq
-                                      ? `Cheque propio N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
-                                      : line.notes
-                                  });
-                                }}
-                              >
-                                <option value="">-- Elegir cheque emitido o crear uno nuevo --</option>
-                                {ownCheques.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    N° {c.checkNumber} | {c.bankName || "Banco"} | Venc:{" "}
-                                    {c.dueDateUtc ? new Date(c.dueDateUtc).toLocaleDateString("es-AR") : "s/d"} |{" "}
-                                    {money(c.amount, c.currency)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
                             <button
                               type="button"
-                              className="btn btn-outline compact"
-                              style={{ alignSelf: "flex-end" }}
-                              onClick={() => {
-                                setCreateChequeDirection("Issued");
-                                setCreateChequeLineId(line.id);
-                              }}
+                              className="btn ghost btn-sm"
+                              style={{ color: "#ef4444" }}
+                              onClick={() => removeLine(line.id)}
+                              title="Eliminar"
                             >
-                              + Nuevo cheque
+                              ✕
                             </button>
                           </div>
-                        </div>
-                      )}
-
-                      {line.method === "Retention" && (
-                        <>
-                          <label>
-                            Tipo de Retención
-                            <select
-                              value={line.retentionType || "Ganancias"}
-                              onChange={(e) =>
-                                updateLine(line.id, { retentionType: e.target.value })
-                              }
-                            >
-                              <option value="Ganancias">Ganancias (RG 830)</option>
-                              <option value="IIBB">Ingresos Brutos (IIBB)</option>
-                              <option value="IVA">IVA (RG 2854)</option>
-                              <option value="SUSS">Seguridad Social (SUSS)</option>
-                            </select>
-                          </label>
-
-                          <label>
-                            N° Certificado Retención
-                            <input
-                              value={line.retentionCertificate || ""}
-                              onChange={(e) =>
-                                updateLine(line.id, { retentionCertificate: e.target.value })
-                              }
-                              placeholder="Ej.: RET-2026-00014"
-                            />
-                          </label>
-                        </>
-                      )}
-
-                      <label style={{ gridColumn: "span 2" }}>
-                        Referencia / Detalle
-                        <input
-                          value={line.notes || ""}
-                          onChange={(e) => updateLine(line.id, { notes: e.target.value })}
-                          placeholder="N° de transferencia, banco o nota..."
-                        />
-                      </label>
-                    </div>
-                  </div>
-                ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th colSpan={2} style={{ textAlign: "right" }}>
+                        Total medios:
+                      </th>
+                      <th style={{ textAlign: "right", color: "#059669" }}>{money(totalPaymentLines)}</th>
+                      <th />
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             )}
           </section>
@@ -1006,13 +824,351 @@ export function PaymentOrderFormPage() {
         </div>
       </div>
 
+      <Modal
+        open={lineEditorOpen && !!draftLine}
+        onClose={closeLineEditor}
+        title={editingLineId ? "Editar medio de pago" : "Agregar medio de pago"}
+        contentStyle={{ maxWidth: 720, width: "100%" }}
+        footer={(
+          <>
+            <button type="button" className="btn ghost" onClick={closeLineEditor}>
+              Cancelar
+            </button>
+            <button type="button" className="btn btn-primary" onClick={saveLineEditor}>
+              {editingLineId ? "Guardar cambios" : "Agregar a la lista"}
+            </button>
+          </>
+        )}
+      >
+        {draftLine && (
+          <div className="grid-2" style={{ gap: 10 }}>
+            {lineEditorError && (
+              <div className="alert" style={{ gridColumn: "span 2" }}>
+                {lineEditorError}
+              </div>
+            )}
+
+            <label>
+              Medio de Pago
+              <select
+                value={draftLine.method}
+                onChange={(e) => {
+                  const method = e.target.value as PaymentLine["method"];
+                  patchDraft({
+                    method,
+                    bankMovementId: undefined,
+                    chequeId: undefined,
+                    retentionType: method === "Retention" ? draftLine.retentionType || "Ganancias" : undefined
+                  });
+                  if (method === "BankTransfer") {
+                    void loadAvailableMovements(
+                      draftLine.accountId || movementAccountFilter || "",
+                      draftLine.conceptId || movementConceptFilter || ""
+                    );
+                  }
+                }}
+              >
+                <option value="BankTransfer">Transferencia Bancaria</option>
+                <option value="Cash">Efectivo (Caja)</option>
+                <option value="ChequeThirdParty">Cheque de Terceros (Endoso)</option>
+                <option value="ChequeOwn">Cheque Propio Emitido</option>
+                <option value="Retention">Retención Practicada</option>
+              </select>
+            </label>
+
+            <label>
+              Importe Abonado
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={draftLine.amount}
+                onChange={(e) => patchDraft({ amount: parseFloat(e.target.value) || 0 })}
+              />
+            </label>
+
+            {(draftLine.method === "BankTransfer" || draftLine.method === "Cash") && (
+              <label style={{ gridColumn: "span 2" }}>
+                Concepto de Pago (cartera) *
+                <select
+                  required
+                  value={draftLine.conceptId || movementConceptFilter || ""}
+                  onChange={(e) => {
+                    const conceptId = e.target.value || undefined;
+                    patchDraft({ conceptId, bankMovementId: undefined });
+                    if (conceptId) setMovementConceptFilter(conceptId);
+                  }}
+                >
+                  <option value="" disabled>
+                    Elegí una cartera de egreso
+                  </option>
+                  {expenseConcepts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {(draftLine.method === "BankTransfer" || draftLine.method === "Cash") && (
+              <label style={{ gridColumn: "span 2" }}>
+                Cuenta Financiera de Origen
+                <select
+                  value={draftLine.accountId || ""}
+                  onChange={(e) =>
+                    patchDraft({ accountId: e.target.value || undefined, bankMovementId: undefined })
+                  }
+                >
+                  <option value="">-- Seleccionar cuenta bancaria / caja --</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} ({a.currency}) - Saldo: {money(a.balance, a.currency)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {draftLine.method === "BankTransfer" && (
+              <div
+                style={{
+                  gridColumn: "span 2",
+                  background: "#f8fafc",
+                  padding: 12,
+                  borderRadius: 6,
+                  border: "1px solid #e2e8f0"
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 6,
+                    flexWrap: "wrap",
+                    gap: 8
+                  }}
+                >
+                  <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f766e" }}>
+                    Vincular transferencia del extracto (opcional)
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <label style={{ fontSize: "0.75rem", color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
+                      Cartera
+                      <select
+                        value={movementConceptFilter}
+                        onChange={(e) => {
+                          const conceptId = e.target.value;
+                          setMovementConceptFilter(conceptId);
+                          patchDraft({ bankMovementId: undefined, conceptId: conceptId || undefined });
+                        }}
+                        style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
+                      >
+                        {expenseConcepts.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label style={{ fontSize: "0.75rem", color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
+                      Cuenta
+                      <select
+                        value={movementAccountFilter}
+                        onChange={(e) => {
+                          setMovementAccountFilter(e.target.value);
+                          patchDraft({
+                            bankMovementId: undefined,
+                            accountId: e.target.value || draftLine.accountId
+                          });
+                        }}
+                        style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
+                      >
+                        <option value="">Todas las cuentas</option>
+                        {accounts
+                          .filter((a) => a.isActive)
+                          .map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+
+                <select
+                  value={draftLine.bankMovementId || ""}
+                  onChange={(e) => {
+                    const movId = e.target.value;
+                    const mov = filteredAvailableMovements.find((m) => m.id === movId);
+                    patchDraft({
+                      bankMovementId: movId || undefined,
+                      accountId: mov?.accountId || draftLine.accountId,
+                      amount: mov ? Number(mov.amount) : draftLine.amount,
+                      notes: mov ? mov.description : draftLine.notes,
+                      conceptId: mov?.conceptId || draftLine.conceptId || movementConceptFilter || undefined
+                    });
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    borderRadius: 6,
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.85rem"
+                  }}
+                >
+                  <option value="">
+                    {loadingMovements
+                      ? "Cargando movimientos…"
+                      : filteredAvailableMovements.length === 0
+                        ? "-- Sin movimientos confirmados disponibles --"
+                        : `-- Elegí entre ${filteredAvailableMovements.length} movimiento(s) --`}
+                  </option>
+                  {filteredAvailableMovements.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {new Date(m.operationDateUtc).toLocaleDateString("es-AR")} · {money(m.amount, m.currency)} · [
+                      {m.conceptName || m.ConceptName || "Sin clasificar"}]
+                      {m.accountName ? ` · ${m.accountName}` : ""} · {m.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {draftLine.method === "ChequeThirdParty" && (
+              <div style={{ gridColumn: "span 2" }}>
+                <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+                  <label style={{ margin: 0, flex: 1 }}>
+                    Seleccionar Cheque de Cartera
+                    <select
+                      value={draftLine.chequeId || ""}
+                      onChange={(e) => {
+                        const chq = availableCheques.find((c) => c.id === e.target.value);
+                        patchDraft({
+                          chequeId: e.target.value || undefined,
+                          amount: chq ? chq.amount : draftLine.amount,
+                          notes: chq
+                            ? `Cheque N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+                            : ""
+                        });
+                      }}
+                    >
+                      <option value="">-- Elegir cheque disponible en cartera --</option>
+                      {availableCheques.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          N° {c.checkNumber} | {c.bankName || "Banco"} | Venc:{" "}
+                          {c.dueDateUtc ? new Date(c.dueDateUtc).toLocaleDateString("es-AR") : "s/d"} |{" "}
+                          {money(c.amount, c.currency)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-outline compact"
+                    style={{ alignSelf: "flex-end" }}
+                    onClick={() => {
+                      setCreateChequeDirection("Received");
+                      setCreateChequeLineId(draftLine.id);
+                    }}
+                  >
+                    + Nuevo cheque
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {draftLine.method === "ChequeOwn" && (
+              <div style={{ gridColumn: "span 2" }}>
+                <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+                  <label style={{ margin: 0, flex: 1 }}>
+                    Cheque propio emitido (cartera)
+                    <select
+                      value={draftLine.chequeId || ""}
+                      onChange={(e) => {
+                        const chq = ownCheques.find((c) => c.id === e.target.value);
+                        patchDraft({
+                          chequeId: e.target.value || undefined,
+                          amount: chq ? chq.amount : draftLine.amount,
+                          notes: chq
+                            ? `Cheque propio N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+                            : draftLine.notes
+                        });
+                      }}
+                    >
+                      <option value="">-- Elegir cheque emitido o crear uno nuevo --</option>
+                      {ownCheques.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          N° {c.checkNumber} | {c.bankName || "Banco"} | Venc:{" "}
+                          {c.dueDateUtc ? new Date(c.dueDateUtc).toLocaleDateString("es-AR") : "s/d"} |{" "}
+                          {money(c.amount, c.currency)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-outline compact"
+                    style={{ alignSelf: "flex-end" }}
+                    onClick={() => {
+                      setCreateChequeDirection("Issued");
+                      setCreateChequeLineId(draftLine.id);
+                    }}
+                  >
+                    + Nuevo cheque
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {draftLine.method === "Retention" && (
+              <>
+                <label>
+                  Tipo de Retención
+                  <select
+                    value={draftLine.retentionType || "Ganancias"}
+                    onChange={(e) => patchDraft({ retentionType: e.target.value })}
+                  >
+                    <option value="Ganancias">Ganancias (RG 830)</option>
+                    <option value="IIBB">Ingresos Brutos (IIBB)</option>
+                    <option value="IVA">IVA (RG 2854)</option>
+                    <option value="SUSS">Seguridad Social (SUSS)</option>
+                  </select>
+                </label>
+                <label>
+                  N° Certificado Retención
+                  <input
+                    value={draftLine.retentionCertificate || ""}
+                    onChange={(e) => patchDraft({ retentionCertificate: e.target.value })}
+                    placeholder="Ej.: RET-2026-00014"
+                  />
+                </label>
+              </>
+            )}
+
+            <label style={{ gridColumn: "span 2" }}>
+              Referencia / Detalle
+              <input
+                value={draftLine.notes || ""}
+                onChange={(e) => patchDraft({ notes: e.target.value })}
+                placeholder="N° de transferencia, banco o nota..."
+              />
+            </label>
+          </div>
+        )}
+      </Modal>
+
       <QuickCreateChequeModal
         open={!!createChequeLineId}
         direction={createChequeDirection}
         defaultAmount={
-          createChequeLineId
-            ? lines.find((l) => l.id === createChequeLineId)?.amount
-            : undefined
+          createChequeLineId && draftLine && draftLine.id === createChequeLineId
+            ? draftLine.amount
+            : createChequeLineId
+              ? lines.find((l) => l.id === createChequeLineId)?.amount
+              : undefined
         }
         defaultCurrency="ARS"
         onClose={() => setCreateChequeLineId(null)}
@@ -1022,15 +1178,18 @@ export function PaymentOrderFormPage() {
           } else {
             setAvailableCheques((prev) => (prev.some((c) => c.id === ch.id) ? prev : [ch, ...prev]));
           }
-          if (createChequeLineId) {
-            updateLine(createChequeLineId, {
-              chequeId: ch.id,
-              amount: Number(ch.amount),
-              notes:
-                createChequeDirection === "Issued"
-                  ? `Cheque propio N° ${ch.checkNumber} - ${ch.bankName || "Banco"} - Vto: ${ch.dueDateUtc ? new Date(ch.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
-                  : `Cheque N° ${ch.checkNumber} - ${ch.bankName || "Banco"} - Vto: ${ch.dueDateUtc ? new Date(ch.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
-            });
+          const chequePatch = {
+            chequeId: ch.id,
+            amount: Number(ch.amount),
+            notes:
+              createChequeDirection === "Issued"
+                ? `Cheque propio N° ${ch.checkNumber} - ${ch.bankName || "Banco"} - Vto: ${ch.dueDateUtc ? new Date(ch.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+                : `Cheque N° ${ch.checkNumber} - ${ch.bankName || "Banco"} - Vto: ${ch.dueDateUtc ? new Date(ch.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+          };
+          if (draftLine && createChequeLineId === draftLine.id) {
+            patchDraft(chequePatch);
+          } else if (createChequeLineId) {
+            updateLine(createChequeLineId, chequePatch);
           }
           setCreateChequeLineId(null);
         }}

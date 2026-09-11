@@ -130,7 +130,7 @@ export function QuickCreateChequeModal({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 80,
+        zIndex: 120,
         padding: 16
       }}
       onClick={onClose}
