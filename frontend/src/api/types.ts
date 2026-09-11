@@ -1711,11 +1711,21 @@ export type CalibrationReport = {
   externalDocumentCodesJson?: string | null;
   instructionCode?: string | null;
   thermometerInstrumentId?: string | null;
+  /** Temperatura final al cierre del dictamen (°C) */
+  finalTemperatureCelsius?: number | null;
+  /** Hora final local del dictamen (HH:mm) */
+  finalTimeLocal?: string | null;
   /** PG09 R2 — informe emitido que esta enmienda reemplaza */
   supersedesReportId?: string | null;
   /** PG09 R2 — motivo de la modificación */
   amendmentReason?: string | null;
   createdAtUtc: string;
+};
+
+export type MetrologyActivityMode = "Laboratory" | "Repairer";
+
+export type MetrologyTenantSettings = {
+  activityMode: MetrologyActivityMode;
 };
 
 export type MetrologyInstrument = {

@@ -139,7 +139,7 @@ export function CalibrationReportsPage() {
                   <th>Instrumento</th>
                   <th>Cliente</th>
                   <th>Estado</th>
-                  <th>Técnico</th>
+                  <th>Verificador</th>
                   <th>DT</th>
                   <th>Dictamen</th>
                   <th style={{ textAlign: "right" }}>Acciones</th>

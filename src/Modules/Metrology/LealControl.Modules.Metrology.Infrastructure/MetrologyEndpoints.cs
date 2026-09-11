@@ -760,7 +760,7 @@ public static class MetrologyEndpoints
         group.MapGet("/test-plan", ([FromQuery] string? profileCode, [FromQuery] string? operationType) =>
         {
             var profile = MetrologyRegulatoryProfiles.Resolve(profileCode);
-            var operation = string.IsNullOrWhiteSpace(operationType) ? "Calibration" : operationType.Trim();
+            var operation = MetrologyRegulatoryProfiles.NormalizeOperationType(operationType);
             return Results.Ok(new
             {
                 profile.Code,
@@ -771,6 +771,54 @@ public static class MetrologyEndpoints
                 testPlanVersion = profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "MET-2307-1" : "MET-25-1",
                 items = MetrologyRegulatoryProfiles.GetTestPlan(profile, operation)
             });
+        });
+
+        // ====================================================================
+        // 4b. Configuración de actividad del tenant (Laboratorio / Reparador)
+        // ====================================================================
+        group.MapGet("/settings", async (
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureMetrologyTablesAsync(ct);
+            var settings = await db.TenantSettings.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
+            return Results.Ok(new { activityMode = settings?.ActivityMode ?? "Repairer" });
+        });
+
+        group.MapPut("/settings", async (
+            MetrologyTenantSettingsWriteDto req,
+            ITenantContext tenantContext,
+            MetrologyDbContext db,
+            CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureMetrologyTablesAsync(ct);
+
+            var mode = string.IsNullOrWhiteSpace(req.ActivityMode) ? "Repairer" : req.ActivityMode.Trim();
+            if (!string.Equals(mode, "Laboratory", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(mode, "Repairer", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.BadRequest(new { message = "activityMode debe ser Laboratory o Repairer." });
+            }
+
+            mode = string.Equals(mode, "Laboratory", StringComparison.OrdinalIgnoreCase) ? "Laboratory" : "Repairer";
+
+            var settings = await db.TenantSettings.FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
+            if (settings is null)
+            {
+                settings = new MetrologyTenantSettings { TenantId = tenantId, ActivityMode = mode };
+                db.TenantSettings.Add(settings);
+            }
+            else
+            {
+                settings.ActivityMode = mode;
+            }
+
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { activityMode = settings.ActivityMode });
         });
 
         group.MapPost("/calculate-rules", (MetrologyRulesCalculationRequest req) =>
@@ -1089,13 +1137,9 @@ public static class MetrologyEndpoints
                 var equipment = await db.Equipments.FirstOrDefaultAsync(e => e.Id == req.EquipmentId && e.TenantId == tenantId, ct);
                 if (equipment == null) return Results.BadRequest(new { message = "El instrumento especificado no existe." });
 
-                // Generate report number if not provided
-                var maxReportNum = await db.CalibrationReports
-                    .Where(r => r.TenantId == tenantId && r.CalibrationDate.Year == req.CalibrationDate.Year)
-                    .CountAsync(ct) + 1;
-
+                // Generate report number if not provided: {OP}-{yyyy}-{MM}-{nnnn}
                 var profile = MetrologyRegulatoryProfiles.Resolve(req.RegulatoryProfile, equipment.ApplicableStandard);
-                var operationType = string.IsNullOrWhiteSpace(req.OperationType) ? "Calibration" : req.OperationType.Trim();
+                var operationType = MetrologyRegulatoryProfiles.NormalizeOperationType(req.OperationType);
                 if (!profile.Operations.ContainsKey(operationType))
                 {
                     return Results.BadRequest(new { message = "La operación seleccionada no corresponde al perfil reglamentario." });
@@ -1104,7 +1148,7 @@ public static class MetrologyEndpoints
                 var standard = profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "Res2307_80" : "Res25_2025";
                 var certNumber = !string.IsNullOrWhiteSpace(req.CertificateNumber)
                     ? req.CertificateNumber.Trim()
-                    : $"CERT-{req.CalibrationDate.Year}-{maxReportNum:D4}";
+                    : await NextOperationReportNumberAsync(db, tenantId, operationType, req.CalibrationDate, ct);
 
                 var expirationDate = req.ExpirationDate ?? (profile.DefaultValidityMonths.HasValue
                     ? req.CalibrationDate.AddMonths(profile.DefaultValidityMonths.Value)
@@ -1154,6 +1198,8 @@ public static class MetrologyEndpoints
                     .Select(c => new QualityDocumentSnapshot(c, c, "(pendiente de carga en Calidad)", 0, Guid.Empty, null));
                 var allSnapshots = procedureSnapshots.Concat(missing).ToList();
 
+                var finalTime = string.IsNullOrWhiteSpace(req.FinalTimeLocal) ? null : req.FinalTimeLocal.Trim();
+
                 var report = new CalibrationReport
                 {
                     TenantId = tenantId,
@@ -1181,12 +1227,14 @@ public static class MetrologyEndpoints
                     TemperatureCelsius = req.TemperatureCelsius,
                     RelativeHumidityPercent = req.RelativeHumidityPercent,
                     AtmosphericPressureHpa = req.AtmosphericPressureHpa,
-                    PerformedBy = req.PerformedBy?.Trim() ?? "Metrólogo Autorizado",
+                    PerformedBy = req.PerformedBy?.Trim() ?? "Verificador Autorizado",
                     ApprovedBy = string.Empty,
                     Verdict = req.Verdict ?? "Approved",
                     MaxObservedError = req.MaxObservedError,
                     MaxAllowedError = req.MaxAllowedError,
                     ExpandedUncertaintyK2 = req.ExpandedUncertaintyK2,
+                    FinalTemperatureCelsius = req.FinalTemperatureCelsius,
+                    FinalTimeLocal = finalTime,
                     VisualInspectionJson = req.VisualInspectionJson ?? "{}",
                     RepeatabilityTestJson = req.RepeatabilityTestJson ?? "[]",
                     EccentricityTestJson = req.EccentricityTestJson ?? "[]",
@@ -1336,6 +1384,8 @@ public static class MetrologyEndpoints
                     MaxObservedError = req.MaxObservedError ?? original.MaxObservedError,
                     MaxAllowedError = req.MaxAllowedError ?? original.MaxAllowedError,
                     ExpandedUncertaintyK2 = req.ExpandedUncertaintyK2 ?? original.ExpandedUncertaintyK2,
+                    FinalTemperatureCelsius = req.FinalTemperatureCelsius ?? original.FinalTemperatureCelsius,
+                    FinalTimeLocal = string.IsNullOrWhiteSpace(req.FinalTimeLocal) ? original.FinalTimeLocal : req.FinalTimeLocal.Trim(),
                     VisualInspectionJson = req.VisualInspectionJson ?? original.VisualInspectionJson,
                     RepeatabilityTestJson = req.RepeatabilityTestJson ?? original.RepeatabilityTestJson,
                     EccentricityTestJson = req.EccentricityTestJson ?? original.EccentricityTestJson,
@@ -1435,7 +1485,61 @@ public static class MetrologyEndpoints
     }
 
     /// <summary>
-    /// Genera el siguiente número de certificado de enmienda: CERT-YYYY-NNNN-A01, -A02, …
+    /// Genera el siguiente número de informe: {OP}-{yyyy}-{MM}-{nnnn}
+    /// contando informes del tenant con el mismo prefijo año-mes.
+    /// </summary>
+    private static async Task<string> NextOperationReportNumberAsync(
+        MetrologyDbContext db,
+        TenantId tenantId,
+        string operationType,
+        DateTime calibrationDate,
+        CancellationToken ct)
+    {
+        var op = MetrologyRegulatoryProfiles.NormalizeOperationType(operationType);
+        var year = calibrationDate.Year;
+        var month = calibrationDate.Month;
+        var prefix = $"{op}-{year:D4}-{month:D2}-";
+
+        var siblings = await db.CalibrationReports.AsNoTracking()
+            .Where(r => r.TenantId == tenantId && r.CertificateNumber.StartsWith(prefix))
+            .Select(r => r.CertificateNumber)
+            .ToListAsync(ct);
+
+        var maxSeq = 0;
+        foreach (var cert in siblings)
+        {
+            // Ignore amendment suffixes when counting base sequence: VPE-2026-09-0003-A01
+            var basePart = cert;
+            var amendIdx = basePart.LastIndexOf("-A", StringComparison.OrdinalIgnoreCase);
+            if (amendIdx > prefix.Length - 1)
+            {
+                var maybeAmend = basePart[(amendIdx + 2)..];
+                if (maybeAmend.Length >= 2 && maybeAmend.All(char.IsDigit))
+                    basePart = basePart[..amendIdx];
+            }
+
+            if (!basePart.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var seqPart = basePart[prefix.Length..];
+            if (int.TryParse(seqPart, out var n) && n > maxSeq)
+                maxSeq = n;
+        }
+
+        for (var attempt = maxSeq + 1; attempt < maxSeq + 1000; attempt++)
+        {
+            var candidate = $"{prefix}{attempt:D4}";
+            var exists = await db.CalibrationReports.AsNoTracking()
+                .AnyAsync(r => r.TenantId == tenantId && r.CertificateNumber == candidate, ct);
+            if (!exists)
+                return candidate;
+        }
+
+        return $"{prefix}{DateTime.UtcNow:HHmmss}";
+    }
+
+    /// <summary>
+    /// Genera el siguiente número de certificado de enmienda: BASE-A01, -A02, …
     /// </summary>
     private static async Task<string> NextAmendmentCertificateNumberAsync(
         MetrologyDbContext db,

@@ -88,24 +88,37 @@ export function CalibrationReportFormPage() {
   // General Report Info
   const [reportNumber, setReportNumber] = useState("");
   const [regulatoryProfile, setRegulatoryProfile] = useState("REGIMEN_TRANSITORIO_R2307_80");
-  const [operationType, setOperationType] = useState("Calibration");
+  const [operationType, setOperationType] = useState("VPE");
   const [documentTitle, setDocumentTitle] = useState("Informe de ensayo metrológico");
   const [calibrationDate, setCalibrationDate] = useState(new Date().toISOString().split("T")[0]);
   const [nextCalibrationDate, setNextCalibrationDate] = useState("");
-  const [performedBy, setPerformedBy] = useState("Metrólogo Autorizado");
+  const [performedBy, setPerformedBy] = useState("Verificador Autorizado");
   const [ambientTemperature, setAmbientTemperature] = useState("20.0");
-  const [ambientHumidity, setAmbientHumidity] = useState("50.0");
-  const [atmosphericPressure, setAtmosphericPressure] = useState("1013.0");
+  const [ambientHumidity] = useState("50.0");
+  const [atmosphericPressure] = useState("1013.25");
   const [thermometers, setThermometers] = useState<MetrologyInstrument[]>([]);
   const [thermometerId, setThermometerId] = useState("");
   const [observations, setObservations] = useState("");
+  const [finalTemperature, setFinalTemperature] = useState("");
+  const [finalTimeLocal, setFinalTimeLocal] = useState("");
+  const [activityMode, setActivityMode] = useState<"Laboratory" | "Repairer">("Repairer");
 
-  const operationLabels: Record<string, string> = {
-    Calibration: "Calibración / determinación de errores",
-    PostRepair: "Ensayo posterior a reparación",
-    PeriodicVerification: "Verificación periódica",
-    InitialVerification: "Verificación primitiva"
+  const allOperationLabels: Record<string, string> = {
+    CAL: "Calibración",
+    VPE: "Verificación periódica",
+    VPR: "Verificación primitiva",
+    VPO: "Verificación posterior a la reparación"
   };
+
+  const operationLabels = useMemo(() => {
+    if (activityMode === "Laboratory") {
+      return {
+        VPE: allOperationLabels.VPE,
+        VPR: allOperationLabels.VPR
+      };
+    }
+    return allOperationLabels;
+  }, [activityMode]);
 
   const is2307 = regulatoryProfile === "REGIMEN_TRANSITORIO_R2307_80";
   const testPlanItems = [
@@ -118,8 +131,8 @@ export function CalibrationReportFormPage() {
     "Precintos, intervención y cierre del informe"
   ];
 
-  if (operationType === "PostRepair") testPlanItems.splice(2, 0, "Descripción de la intervención posterior a reparación");
-  if (operationType === "PeriodicVerification" || operationType === "InitialVerification")
+  if (operationType === "VPO") testPlanItems.splice(2, 0, "Descripción de la intervención posterior a reparación");
+  if (operationType === "VPE" || operationType === "VPR")
     testPlanItems.push("Control de habilitación aplicable a la operación");
 
   // Selected Standard Weights (IDs)
@@ -134,12 +147,11 @@ export function CalibrationReportFormPage() {
   const [inspSeals, setInspSeals] = useState(true);
   const [inspNotes, setInspNotes] = useState("Instrumento en correctas condiciones mecánicas y estructurales.");
 
-  // Assay 2: Puesta a Cero (Rango 4% Max y Exactitud de Cero)
+  // Assay 2: Puesta a Cero (Rango 4% Max)
   const [zeroInRangeLoad, setZeroInRangeLoad] = useState("1600");
   const [zeroInRangeOk, setZeroInRangeOk] = useState(true);
   const [zeroOverLimitLoad, setZeroOverLimitLoad] = useState("3500");
   const [zeroOverLimitBlocked, setZeroOverLimitBlocked] = useState(true);
-  const [zeroErrorDeltaL, setZeroErrorDeltaL] = useState("10");
 
   // Assay 3: Movilidad / Discriminación (Sobrecarga de 1.4d)
   const [mobilityPoints, setMobilityPoints] = useState<Array<{ loadName: string; load: string; overload: string; initialIndication: string; finalIndication: string }>>([
@@ -150,6 +162,8 @@ export function CalibrationReportFormPage() {
 
   // Assay 4: Fidelity / Repeatability with Dual Load (Baja Carga y Alta Carga)
   const [fidelityTab, setFidelityTab] = useState<"low" | "high" | "both">("both");
+  const [fidelitySingleDirection, setFidelitySingleDirection] = useState(false);
+  const [fidelityActiveSense, setFidelityActiveSense] = useState<"inbound" | "outbound">("inbound");
 
   // Baja Carga (Low Load)
   const [fidelityLowInbound, setFidelityLowInbound] = useState<FidelityTrial[]>(() => createDefaultTrials(3, "12500"));
@@ -188,12 +202,18 @@ export function CalibrationReportFormPage() {
     Promise.all([
       api.listMetrologyEquipment({ status: "Active" }),
       api.listStandardWeights(),
-      api.listMetrologyInstruments({ kind: "Thermometer", status: "Valid" }).catch(() => [])
+      api.listMetrologyInstruments({ kind: "Thermometer", status: "Valid" }).catch(() => []),
+      api.getMetrologySettings().catch(() => ({ activityMode: "Repairer" as const }))
     ])
-      .then(([eqs, wts, ths]) => {
+      .then(([eqs, wts, ths, settings]) => {
         setEquipments(eqs || []);
         setWeights(wts || []);
         setThermometers(ths || []);
+        const mode = settings?.activityMode === "Laboratory" ? "Laboratory" : "Repairer";
+        setActivityMode(mode);
+        if (mode === "Laboratory") {
+          setOperationType((prev) => (prev === "CAL" || prev === "VPO" ? "VPE" : prev));
+        }
         const targetId = preselectedEquipmentId || (eqs && eqs.length > 0 ? eqs[0].id : "");
         if (targetId && eqs) {
           handleSelectEquipment(targetId, eqs);
@@ -202,6 +222,12 @@ export function CalibrationReportFormPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (activityMode === "Laboratory" && (operationType === "CAL" || operationType === "VPO")) {
+      setOperationType("VPE");
+    }
+  }, [activityMode, operationType]);
 
   const handleSelectEquipment = async (eqId: string, availableEqs?: MetrologyEquipment[]) => {
     setSelectedEquipmentId(eqId);
@@ -478,21 +504,42 @@ export function CalibrationReportFormPage() {
     [fidelityHighPlatform, eInterval, truckFidelity, selectedEquipment?.accuracyClass]
   );
 
-  const lowOk = truckFidelity ? lowInboundBlock.conform && lowOutboundBlock.conform : lowPlatformBlock.conform;
-  const highOk = truckFidelity ? highInboundBlock.conform && highOutboundBlock.conform : highPlatformBlock.conform;
+  const lowOk = truckFidelity
+    ? (fidelitySingleDirection
+        ? (fidelityActiveSense === "inbound" ? lowInboundBlock.conform : lowOutboundBlock.conform)
+        : lowInboundBlock.conform && lowOutboundBlock.conform)
+    : lowPlatformBlock.conform;
+  const highOk = truckFidelity
+    ? (fidelitySingleDirection
+        ? (fidelityActiveSense === "inbound" ? highInboundBlock.conform : highOutboundBlock.conform)
+        : highInboundBlock.conform && highOutboundBlock.conform)
+    : highPlatformBlock.conform;
   const fidelityAllOk = lowOk && highOk;
 
-  const lowAppliedLoad = truckFidelity ? lowInboundBlock.refLoad || lowOutboundBlock.refLoad : lowPlatformBlock.refLoad;
-  const highAppliedLoad = truckFidelity ? highInboundBlock.refLoad || highOutboundBlock.refLoad : highPlatformBlock.refLoad;
-  const lowEmt = truckFidelity ? lowInboundBlock.targetEmt : lowPlatformBlock.targetEmt;
-  const highEmt = truckFidelity ? highInboundBlock.targetEmt : highPlatformBlock.targetEmt;
+  const lowAppliedLoad = truckFidelity
+    ? (fidelitySingleDirection
+        ? (fidelityActiveSense === "inbound" ? lowInboundBlock.refLoad : lowOutboundBlock.refLoad)
+        : lowInboundBlock.refLoad || lowOutboundBlock.refLoad)
+    : lowPlatformBlock.refLoad;
+  const highAppliedLoad = truckFidelity
+    ? (fidelitySingleDirection
+        ? (fidelityActiveSense === "inbound" ? highInboundBlock.refLoad : highOutboundBlock.refLoad)
+        : highInboundBlock.refLoad || highOutboundBlock.refLoad)
+    : highPlatformBlock.refLoad;
+  const lowEmt = truckFidelity
+    ? (fidelitySingleDirection
+        ? (fidelityActiveSense === "inbound" ? lowInboundBlock.targetEmt : lowOutboundBlock.targetEmt)
+        : lowInboundBlock.targetEmt)
+    : lowPlatformBlock.targetEmt;
+  const highEmt = truckFidelity
+    ? (fidelitySingleDirection
+        ? (fidelityActiveSense === "inbound" ? highInboundBlock.targetEmt : highOutboundBlock.targetEmt)
+        : highInboundBlock.targetEmt)
+    : highPlatformBlock.targetEmt;
 
-  // Zero Setting calculation (4% Max Capacity)
+  // Zero Setting calculation (4% Max Capacity) — solo ensayos A/B de rango
   const zero4PctLimit = Math.round((selectedEquipment?.maxCapacity || 80000) * 0.04);
-  const zeroErrorCorrected = eInterval / 2 - (parseFloat(zeroErrorDeltaL) || 0);
-  const zeroErrorEmt = 0.25 * eInterval;
-  const zeroErrorOk = Math.abs(zeroErrorCorrected) <= zeroErrorEmt;
-  const zeroSettingOk = zeroInRangeOk && zeroOverLimitBlocked && zeroErrorOk;
+  const zeroSettingOk = zeroInRangeOk && zeroOverLimitBlocked;
 
   // Mobility calculation (1.4 * d overload)
   const mobilityComputed = mobilityPoints.map((p) => {
@@ -562,31 +609,44 @@ export function CalibrationReportFormPage() {
     setError(null);
 
     try {
+      const showInbound = !truckFidelity || !fidelitySingleDirection || fidelityActiveSense === "inbound";
+      const showOutbound = !truckFidelity || !fidelitySingleDirection || fidelityActiveSense === "outbound";
+
       const repeatabilityData = {
         hasDualLoad: true,
         method: "Primera pasada como referencia",
+        singleDirection: truckFidelity ? fidelitySingleDirection : false,
+        activeSense: truckFidelity && fidelitySingleDirection ? fidelityActiveSense : null,
         lowLoad: {
           load: lowAppliedLoad,
           emt: lowEmt,
-          inbound: truckFidelity ? lowInboundBlock : null,
-          outbound: truckFidelity ? lowOutboundBlock : null,
+          inbound: truckFidelity && showInbound ? lowInboundBlock : null,
+          outbound: truckFidelity && showOutbound ? lowOutboundBlock : null,
           platform: !truckFidelity ? lowPlatformBlock : null,
           conform: lowOk
         },
         highLoad: {
           load: highAppliedLoad,
           emt: highEmt,
-          inbound: truckFidelity ? highInboundBlock : null,
-          outbound: truckFidelity ? highOutboundBlock : null,
+          inbound: truckFidelity && showInbound ? highInboundBlock : null,
+          outbound: truckFidelity && showOutbound ? highOutboundBlock : null,
           platform: !truckFidelity ? highPlatformBlock : null,
           conform: highOk
         },
         readings: truckFidelity
           ? [
-              ...lowInboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Entrada (Baja)", indication: parseFloat(r.indication as any) || 0 })),
-              ...lowOutboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Salida (Baja)", indication: parseFloat(r.indication as any) || 0 })),
-              ...highInboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Entrada (Alta)", indication: parseFloat(r.indication as any) || 0 })),
-              ...highOutboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Salida (Alta)", indication: parseFloat(r.indication as any) || 0 }))
+              ...(showInbound
+                ? lowInboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Entrada (Baja)", indication: parseFloat(r.indication as any) || 0 }))
+                : []),
+              ...(showOutbound
+                ? lowOutboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Salida (Baja)", indication: parseFloat(r.indication as any) || 0 }))
+                : []),
+              ...(showInbound
+                ? highInboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Entrada (Alta)", indication: parseFloat(r.indication as any) || 0 }))
+                : []),
+              ...(showOutbound
+                ? highOutboundBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Salida (Alta)", indication: parseFloat(r.indication as any) || 0 }))
+                : [])
             ]
           : [
               ...lowPlatformBlock.computedRows.filter((r) => r.hasValue).map((r) => ({ pass: r.index, direction: "Baja Carga", indication: parseFloat(r.indication as any) || 0 })),
@@ -668,16 +728,16 @@ export function CalibrationReportFormPage() {
         performedBy: performedBy.trim(),
         temperatureCelsius: parseFloat(ambientTemperature) || 20,
         relativeHumidityPercent: parseFloat(ambientHumidity) || 50,
-        atmosphericPressureHpa: parseFloat(atmosphericPressure) || 1013,
+        atmosphericPressureHpa: parseFloat(atmosphericPressure) || 1013.25,
         thermometerInstrumentId: thermometerId || undefined,
         approvedBy: "",
         verdict: finalResult === "Apto" ? "Approved" : "Rejected",
+        finalTemperatureCelsius: finalTemperature.trim() ? parseFloat(finalTemperature) : undefined,
+        finalTimeLocal: finalTimeLocal.trim() || undefined,
         maxObservedError: Math.max(
           eccMaxError,
-          lowInboundBlock.maxDiff,
-          lowOutboundBlock.maxDiff,
-          highInboundBlock.maxDiff,
-          highOutboundBlock.maxDiff,
+          ...(showInbound ? [lowInboundBlock.maxDiff, highInboundBlock.maxDiff] : []),
+          ...(showOutbound ? [lowOutboundBlock.maxDiff, highOutboundBlock.maxDiff] : []),
           lowPlatformBlock.maxDiff,
           highPlatformBlock.maxDiff,
           ...(activeLinRows.length > 0 ? activeLinRows.flatMap((x) => [Math.abs(x.ascError ?? 0), Math.abs(x.descError ?? 0)]) : [0])
@@ -693,7 +753,7 @@ export function CalibrationReportFormPage() {
           checklist: {
             profile: regulatoryProfile,
             operationType,
-            operationLabel: operationLabels[operationType] || operationType,
+            operationLabel: operationLabels[operationType] || allOperationLabels[operationType] || operationType,
             normativeApplied: is2307 ? "Resolución SCyNEI Nº 2307/1980 (régimen transitorio)" : "Resolución SIyC Nº 25/2025 (OIML R 76-1)",
             regulatoryStatus: is2307 ? "Derogada — aplicación transitoria" : "Vigente",
             testPlanItems
@@ -706,11 +766,11 @@ export function CalibrationReportFormPage() {
             positiveZeroOk: zeroInRangeOk,
             overLimitTestLoad: parseFloat(zeroOverLimitLoad) || 0,
             overLimitBlockedOk: zeroOverLimitBlocked,
-            zeroErrorDeltaL: parseFloat(zeroErrorDeltaL) || 0,
-            zeroErrorCorrected,
-            zeroErrorEmt,
-            zeroErrorOk,
             conform: zeroSettingOk
+          },
+          repeatability: {
+            singleDirection: truckFidelity ? fidelitySingleDirection : false,
+            activeSense: truckFidelity && fidelitySingleDirection ? fidelityActiveSense : null
           },
           mobility: {
             overloadFormula: "1.4 × d",
@@ -738,7 +798,7 @@ export function CalibrationReportFormPage() {
 
       navigate(`/metrologia/certificados/${created.id}`);
     } catch (err: any) {
-      setError(err.message || "Error al emitir el certificado metrológico.");
+      setError(err.message || "Error al emitir el informe metrológico.");
     } finally {
       setSaving(false);
     }
@@ -953,9 +1013,9 @@ export function CalibrationReportFormPage() {
           <button type="button" onClick={() => navigate(-1)} className="btn ghost" style={{ marginBottom: 6 }}>
             ← Cancelar / Volver
           </button>
-          <h1>Nuevo Certificado de Calibración Metrológica</h1>
+          <h1>Nuevo Informe de Ensayo Metrológico</h1>
           <p className="muted">
-            Protocolo de calibración oficial y ensayos normativos (OIML R 76-1 / Res. 2307/80)
+            Protocolo de ensayo oficial y ensayos normativos (OIML R 76-1 / Res. 2307/80)
           </p>
         </div>
       </div>
@@ -1072,10 +1132,10 @@ export function CalibrationReportFormPage() {
                 </label>
 
                 <label>
-                  N° de Informe / Certificado
+                  N° de Informe
                   <input
                     type="text"
-                    placeholder="Ej. CERT-2026-001 (Auto si está vacío)"
+                    placeholder="Ej. VPE-2026-09-0001 (Auto si está vacío)"
                     value={reportNumber}
                     onChange={(e) => setReportNumber(e.target.value)}
                   />
@@ -1086,7 +1146,7 @@ export function CalibrationReportFormPage() {
                   <select value={operationType} onChange={(e) => setOperationType(e.target.value)}>
                     {Object.entries(operationLabels).map(([k, v]) => (
                       <option key={k} value={k}>
-                        {v}
+                        {k} — {v}
                       </option>
                     ))}
                   </select>
@@ -1103,7 +1163,7 @@ export function CalibrationReportFormPage() {
                 </label>
 
                 <label>
-                  Metrólogo Responsable
+                  Verificador
                   <input
                     type="text"
                     value={performedBy}
@@ -1158,7 +1218,7 @@ export function CalibrationReportFormPage() {
                   )}
                 </label>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
                 <label>
                   Temperatura (°C)
                   <input
@@ -1166,24 +1226,6 @@ export function CalibrationReportFormPage() {
                     step="0.1"
                     value={ambientTemperature}
                     onChange={(e) => setAmbientTemperature(e.target.value)}
-                  />
-                </label>
-                <label>
-                  Humedad Relativa (%)
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={ambientHumidity}
-                    onChange={(e) => setAmbientHumidity(e.target.value)}
-                  />
-                </label>
-                <label>
-                  Presión Atmosférica (hPa)
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={atmosphericPressure}
-                    onChange={(e) => setAtmosphericPressure(e.target.value)}
                   />
                 </label>
               </div>
@@ -1298,29 +1340,6 @@ export function CalibrationReportFormPage() {
                     <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>Puesta a cero rechazada / bloqueada fuera de rango</span>
                   </label>
                 </div>
-
-                {/* Test 3: Exactitud de Puesta a Cero */}
-                <div style={{ background: "rgba(0,0,0,0.02)", padding: 12, borderRadius: 8, border: "1px solid var(--surface-border)" }}>
-                  <strong style={{ fontSize: "0.85rem", color: "#0f766e" }}>C. Exactitud de Puesta a Cero (E₀)</strong>
-                  <p className="muted" style={{ fontSize: "0.74rem", margin: "4px 0 8px" }}>
-                    Determinación del error en cero mediante pesitas de redondeo $\Delta L_0$ ($E_0 = 0.5e - \Delta L_0 \le \pm 0.25e$).
-                  </p>
-                  <label style={{ fontSize: "0.8rem" }}>
-                    ΔL hasta cambio de indicación ({selectedEquipment?.unit})
-                    <input
-                      type="number"
-                      step="1"
-                      value={zeroErrorDeltaL}
-                      onChange={(e) => setZeroErrorDeltaL(e.target.value)}
-                    />
-                  </label>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: "0.8rem" }}>
-                    <span>Error E₀: <strong>{zeroErrorCorrected >= 0 ? `+${zeroErrorCorrected.toFixed(1)}` : zeroErrorCorrected.toFixed(1)} {selectedEquipment?.unit}</strong></span>
-                    <span className={`badge ${zeroErrorOk ? "ok" : "prio-high"}`}>
-                      {zeroErrorOk ? `✓ Cumple (EMT ±${zeroErrorEmt})` : `✗ Supera ±${zeroErrorEmt}`}
-                    </span>
-                  </div>
-                </div>
               </div>
 
               <div
@@ -1335,7 +1354,7 @@ export function CalibrationReportFormPage() {
               >
                 <div>
                   <strong>Estado del Ensayo de Puesta a Cero:</strong>{" "}
-                  <span className="muted">(Rango 4%: {zeroInRangeOk && zeroOverLimitBlocked ? "✓ Correcto" : "✗ Falló"} · Error E₀: {zeroErrorOk ? "✓ Correcto" : "✗ Falló"})</span>
+                  <span className="muted">(Rango 4%: {zeroInRangeOk && zeroOverLimitBlocked ? "✓ Correcto" : "✗ Falló"})</span>
                 </div>
                 <span className={`badge ${zeroSettingOk ? "ok" : "prio-high"}`} style={{ fontWeight: 800 }}>
                   {zeroSettingOk ? "✓ PUESTA A CERO CONFORME" : "✗ NO CONFORME"}
@@ -1473,7 +1492,7 @@ export function CalibrationReportFormPage() {
         {/* TAB 3: FIDELIDAD */}
         {activeTab === "fidelity" && (
           <div className="card pad">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: "1.15rem" }}>
                   4. {is2307 ? "Ensayo de Fidelidad" : "Ensayo de Repetibilidad"}
@@ -1482,7 +1501,29 @@ export function CalibrationReportFormPage() {
                   Baja Carga: {lowAppliedLoad.toFixed(0)} {selectedEquipment?.unit} (EMT: ±{lowEmt}) · Alta Carga: {highAppliedLoad.toFixed(0)} {selectedEquipment?.unit} (EMT: ±{highEmt})
                 </p>
               </div>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                {truckFidelity && (
+                  <>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", fontWeight: 600, margin: 0, cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={fidelitySingleDirection}
+                        onChange={(e) => setFidelitySingleDirection(e.target.checked)}
+                      />
+                      Sentido único de circulación
+                    </label>
+                    {fidelitySingleDirection && (
+                      <select
+                        value={fidelityActiveSense}
+                        onChange={(e) => setFidelityActiveSense(e.target.value as "inbound" | "outbound")}
+                        style={{ fontSize: "0.8rem" }}
+                      >
+                        <option value="inbound">Ingreso (entrada)</option>
+                        <option value="outbound">Egreso (salida)</option>
+                      </select>
+                    )}
+                  </>
+                )}
                 <button
                   type="button"
                   className={`btn ${fidelityTab === "both" ? "btn-primary" : "btn-outline"} compact`}
@@ -1515,18 +1556,20 @@ export function CalibrationReportFormPage() {
                 </h4>
                 {truckFidelity ? (
                   <>
-                    {renderTrialTable(
-                      "→ Sentido Entrada (Carga) · 3 pasadas",
-                      fidelityLowInbound,
-                      setFidelityLowInbound,
-                      lowInboundBlock
-                    )}
-                    {renderTrialTable(
-                      "← Sentido Salida (Descarga) · 3 pasadas",
-                      fidelityLowOutbound,
-                      setFidelityLowOutbound,
-                      lowOutboundBlock
-                    )}
+                    {(!fidelitySingleDirection || fidelityActiveSense === "inbound") &&
+                      renderTrialTable(
+                        "→ Sentido Entrada (Carga) · 3 pasadas",
+                        fidelityLowInbound,
+                        setFidelityLowInbound,
+                        lowInboundBlock
+                      )}
+                    {(!fidelitySingleDirection || fidelityActiveSense === "outbound") &&
+                      renderTrialTable(
+                        "← Sentido Salida (Descarga) · 3 pasadas",
+                        fidelityLowOutbound,
+                        setFidelityLowOutbound,
+                        lowOutboundBlock
+                      )}
                   </>
                 ) : (
                   renderTrialTable(
@@ -1547,18 +1590,20 @@ export function CalibrationReportFormPage() {
                 </h4>
                 {truckFidelity ? (
                   <>
-                    {renderTrialTable(
-                      "→ Sentido Entrada (Carga) · 3 pasadas",
-                      fidelityHighInbound,
-                      setFidelityHighInbound,
-                      highInboundBlock
-                    )}
-                    {renderTrialTable(
-                      "← Sentido Salida (Descarga) · 3 pasadas",
-                      fidelityHighOutbound,
-                      setFidelityHighOutbound,
-                      highOutboundBlock
-                    )}
+                    {(!fidelitySingleDirection || fidelityActiveSense === "inbound") &&
+                      renderTrialTable(
+                        "→ Sentido Entrada (Carga) · 3 pasadas",
+                        fidelityHighInbound,
+                        setFidelityHighInbound,
+                        highInboundBlock
+                      )}
+                    {(!fidelitySingleDirection || fidelityActiveSense === "outbound") &&
+                      renderTrialTable(
+                        "← Sentido Salida (Descarga) · 3 pasadas",
+                        fidelityHighOutbound,
+                        setFidelityHighOutbound,
+                        highOutboundBlock
+                      )}
                   </>
                 ) : (
                   renderTrialTable(
@@ -2053,8 +2098,29 @@ export function CalibrationReportFormPage() {
                 </div>
               </div>
 
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 14 }}>
+                <label>
+                  Temperatura final (°C)
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={finalTemperature}
+                    onChange={(e) => setFinalTemperature(e.target.value)}
+                    placeholder="Ej. 21.5"
+                  />
+                </label>
+                <label>
+                  Hora final
+                  <input
+                    type="time"
+                    value={finalTimeLocal}
+                    onChange={(e) => setFinalTimeLocal(e.target.value)}
+                  />
+                </label>
+              </div>
+
               <label>
-                Observaciones del Certificado
+                Observaciones del Informe
                 <textarea
                   rows={3}
                   value={observations}
@@ -2107,7 +2173,7 @@ export function CalibrationReportFormPage() {
               disabled={saving || !selectedEquipment}
               style={{ fontWeight: 800, padding: "10px 28px", fontSize: "1rem" }}
             >
-              {saving ? "Emitiendo Informe..." : "💾 Guardar y Emitir Certificado"}
+              {saving ? "Emitiendo Informe..." : "💾 Emitir Informe"}
             </button>
           )}
         </div>

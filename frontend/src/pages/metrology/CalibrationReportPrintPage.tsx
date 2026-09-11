@@ -25,18 +25,18 @@ export function CalibrationReportPrintPage() {
         setThermometer(res.thermometer || null);
         if (comp) setCompany(comp);
       })
-      .catch((err) => setError(err?.message || "Error al cargar certificado."))
+      .catch((err) => setError(err?.message || "Error al cargar el informe."))
       .finally(() => setLoading(false));
   }, [id]);
 
   if (loading) {
-    return <div className="page-wide muted" style={{ padding: 40, textAlign: "center" }}>Cargando certificado metrológico...</div>;
+    return <div className="page-wide muted" style={{ padding: 40, textAlign: "center" }}>Cargando informe metrológico...</div>;
   }
 
   if (error || !report) {
     return (
       <div className="page-wide" style={{ padding: 40, textAlign: "center" }}>
-        <div className="alert">{error || "No se encontró el certificado solicitado."}</div>
+        <div className="alert">{error || "No se encontró el informe solicitado."}</div>
         <Link to="/metrologia/informes" className="btn ghost">← Volver al listado</Link>
       </div>
     );
@@ -74,7 +74,7 @@ export function CalibrationReportPrintPage() {
   const opFromChecklist = visualInspectionData?.checklist?.operationLabel;
   const operationLabel =
     opFromChecklist ||
-    labelOf(METROLOGY_OPERATION, (report as any).operationType, "Calibración / determinación de errores");
+    labelOf(METROLOGY_OPERATION, (report as any).operationType, "Verificación periódica");
   const documentTitle = (report as any).documentTitle || "Informe de ensayo metrológico";
   const supersedesReportId = report.supersedesReportId || (report as any).supersedesReportId || null;
   const amendmentReason = report.amendmentReason || (report as any).amendmentReason || null;
@@ -86,8 +86,6 @@ export function CalibrationReportPrintPage() {
   const isApproved = verdictRaw === "Approved" || verdictRaw === "Apto" || verdictLabelEs === "Apto";
   const expUncertainty = (report as any).expandedUncertaintyK2 ?? report.expandedUncertainty ?? 0;
   const tempVal = (report as any).temperatureCelsius ?? report.ambientTemperature ?? 20;
-  const humVal = (report as any).relativeHumidityPercent ?? report.ambientHumidity ?? 50;
-  const pressVal = (report as any).atmosphericPressureHpa ?? report.atmosphericPressure ?? 1013;
 
   const handlePrint = () => {
     window.print();
@@ -96,6 +94,8 @@ export function CalibrationReportPrintPage() {
   const renderPrintFidelityBlock = (blockTitle: string, blockData: any) => {
     if (!blockData) return null;
     const isTruck = blockData.inbound || blockData.outbound;
+    const singleDirection = Boolean(repeatabilityData?.singleDirection || visualInspectionData?.repeatability?.singleDirection);
+    const activeSense = (repeatabilityData?.activeSense || visualInspectionData?.repeatability?.activeSense || "inbound") as string;
 
     const renderSingleTable = (subTitle: string, subBlock: any) => {
       if (!subBlock || !subBlock.computedRows) return null;
@@ -176,8 +176,10 @@ export function CalibrationReportPrintPage() {
         </div>
         {isTruck ? (
           <>
-            {renderSingleTable("→ Sentido Entrada (Carga) · 3 pasadas", blockData.inbound)}
-            {renderSingleTable("← Sentido Salida (Descarga) · 3 pasadas", blockData.outbound)}
+            {(!singleDirection || activeSense !== "outbound") &&
+              renderSingleTable("→ Sentido Entrada (Carga) · 3 pasadas", blockData.inbound)}
+            {(!singleDirection || activeSense === "outbound") &&
+              renderSingleTable("← Sentido Salida (Descarga) · 3 pasadas", blockData.outbound)}
           </>
         ) : (
           renderSingleTable("5 Repeticiones de Ensayo", blockData.platform)
@@ -241,7 +243,7 @@ export function CalibrationReportPrintPage() {
             <div style={{ marginTop: 4 }}>
               Sustituye al informe original:{" "}
               <Link to={`/metrologia/informes/${supersedesReportId}/imprimir`} className="no-print">
-                ver certificado sustituido
+                ver informe sustituido
               </Link>
               <span className="print-only" style={{ display: "none" }}>{supersedesReportId}</span>
             </div>
@@ -251,7 +253,7 @@ export function CalibrationReportPrintPage() {
 
       {reportStatusRaw.toLowerCase() === "superseded" && (
         <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", padding: "10px 12px", borderRadius: 6, marginBottom: 16, fontSize: "0.84rem", color: "#991b1b" }}>
-          <strong>Informe sustituido</strong> — este certificado fue reemplazado por una enmienda PG09 R2 y no debe usarse como versión vigente.
+          <strong>Informe sustituido</strong> — este informe fue reemplazado por una enmienda PG09 R2 y no debe usarse como versión vigente.
         </div>
       )}
 
@@ -275,7 +277,7 @@ export function CalibrationReportPrintPage() {
           </div>
           <div><strong>Razón Social:</strong> {report.customerName || "—"}</div>
           <div><strong>Ubicación en Planta:</strong> {report.location || "—"}</div>
-          <div><strong>Metrólogo / Técnico:</strong> {report.performedBy || "—"}</div>
+          <div><strong>Verificador:</strong> {report.performedBy || "—"}</div>
         </div>
 
         <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, fontSize: "0.84rem" }}>
@@ -333,10 +335,8 @@ export function CalibrationReportPrintPage() {
         <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 6, color: "#0d9488" }}>
           🛡️ CONDICIONES AMBIENTALES & TRAZABILIDAD METROLÓGICA
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10, marginBottom: 8 }}>
           <div><strong>Temperatura:</strong> {tempVal} ºC</div>
-          <div><strong>Humedad Relativa:</strong> {humVal} %</div>
-          <div><strong>Presión Atmosférica:</strong> {pressVal} hPa</div>
         </div>
         {thermometer && (
           <div style={{ marginBottom: 8 }}>
@@ -371,7 +371,18 @@ export function CalibrationReportPrintPage() {
                   <div>Límite 4% Max: <strong>{visualInspectionData.zeroSetting.maxAllowedRange?.toLocaleString("es-AR")} {equipment?.unit || "kg"}</strong></div>
                   <div>Puesta a cero en rango ({visualInspectionData.zeroSetting.positiveTestLoad} {equipment?.unit || "kg"}): <strong>{visualInspectionData.zeroSetting.positiveZeroOk ? "✓ Correcto" : "✗ Falló"}</strong></div>
                   <div>Bloqueo fuera de rango ({visualInspectionData.zeroSetting.overLimitTestLoad} {equipment?.unit || "kg"}): <strong>{visualInspectionData.zeroSetting.overLimitBlockedOk ? "✓ Bloqueado" : "✗ Falló"}</strong></div>
-                  <div>Error a cero E₀: <strong>{visualInspectionData.zeroSetting.zeroErrorCorrected >= 0 ? `+${visualInspectionData.zeroSetting.zeroErrorCorrected}` : visualInspectionData.zeroSetting.zeroErrorCorrected} {equipment?.unit || "kg"}</strong> (EMT: ±{visualInspectionData.zeroSetting.zeroErrorLimit})</div>
+                  {(visualInspectionData.zeroSetting.zeroErrorCorrected != null || visualInspectionData.zeroSetting.zeroErrorEmt != null || visualInspectionData.zeroSetting.zeroErrorLimit != null) && (
+                    <div>
+                      Error a cero E₀:{" "}
+                      <strong>
+                        {visualInspectionData.zeroSetting.zeroErrorCorrected >= 0
+                          ? `+${visualInspectionData.zeroSetting.zeroErrorCorrected}`
+                          : visualInspectionData.zeroSetting.zeroErrorCorrected}{" "}
+                        {equipment?.unit || "kg"}
+                      </strong>{" "}
+                      (EMT: ±{visualInspectionData.zeroSetting.zeroErrorEmt ?? visualInspectionData.zeroSetting.zeroErrorLimit})
+                    </div>
+                  )}
                 </div>
                 <div style={{ color: visualInspectionData.zeroSetting.conform ? "#0d9488" : "#dc2626", fontWeight: 700, marginTop: 4, fontSize: "0.76rem" }}>
                   Resultado: {visualInspectionData.zeroSetting.conform ? "✓ Conforme" : "✗ No Conforme"}
@@ -637,6 +648,17 @@ export function CalibrationReportPrintPage() {
             <div style={{ fontSize: "0.8rem", color: "#555", marginTop: 4 }}>
               Incertidumbre expandida informada: <strong>U = ±{expUncertainty} {equipment?.unit || "kg"}</strong> (k = 2)
             </div>
+            {((report as any).finalTemperatureCelsius != null || (report as any).finalTimeLocal) && (
+              <div style={{ fontSize: "0.8rem", color: "#555", marginTop: 4 }}>
+                {(report as any).finalTemperatureCelsius != null && (
+                  <>Temperatura final: <strong>{(report as any).finalTemperatureCelsius} °C</strong></>
+                )}
+                {(report as any).finalTemperatureCelsius != null && (report as any).finalTimeLocal ? " · " : null}
+                {(report as any).finalTimeLocal && (
+                  <>Hora final: <strong>{(report as any).finalTimeLocal}</strong></>
+                )}
+              </div>
+            )}
             {report.observations && (
               <div style={{ fontSize: "0.8rem", marginTop: 6, color: "#333" }}>
                 <strong>Observaciones:</strong> {report.observations}
@@ -650,8 +672,8 @@ export function CalibrationReportPrintPage() {
 
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
             <div style={{ textAlign: "center", borderTop: "1px solid #444", paddingTop: 8, minWidth: 180 }}>
-              <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{report.performedBy || "Técnico responsable"}</div>
-              <div style={{ fontSize: "0.74rem", color: "#666" }}>Elaboró / Técnico</div>
+              <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{report.performedBy || "Verificador"}</div>
+              <div style={{ fontSize: "0.74rem", color: "#666" }}>Elaboró / Verificador</div>
             </div>
             <div style={{ textAlign: "center", borderTop: "1px solid #444", paddingTop: 8, minWidth: 180 }}>
               <div style={{ fontSize: "0.82rem", fontWeight: 700 }}>{(report as any).approvedBy || "Pendiente DT"}</div>

@@ -7,11 +7,20 @@ export function MetrologyDashboardPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+  const [activityMode, setActivityMode] = useState<"Laboratory" | "Repairer">("Repairer");
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
 
   const loadData = () => {
     setLoading(true);
-    api.getMetrologyDashboard()
-      .then(setData)
+    Promise.all([
+      api.getMetrologyDashboard(),
+      api.getMetrologySettings().catch(() => ({ activityMode: "Repairer" as const }))
+    ])
+      .then(([dash, settings]) => {
+        setData(dash);
+        setActivityMode(settings?.activityMode === "Laboratory" ? "Laboratory" : "Repairer");
+      })
       .catch((err) => console.error("Error al cargar dashboard metrología:", err))
       .finally(() => setLoading(false));
   };
@@ -19,6 +28,20 @@ export function MetrologyDashboardPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const saveActivityMode = async (mode: "Laboratory" | "Repairer") => {
+    setSavingSettings(true);
+    setSettingsMsg(null);
+    try {
+      const res = await api.updateMetrologySettings({ activityMode: mode });
+      setActivityMode(res.activityMode === "Laboratory" ? "Laboratory" : "Repairer");
+      setSettingsMsg("Modo de actividad actualizado.");
+    } catch (err) {
+      setSettingsMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const totalEquipments = data?.equipments?.total ?? data?.stats?.totalEquipments ?? data?.Stats?.TotalEquipments ?? 0;
   const activeEquipments = data?.equipments?.active ?? data?.stats?.activeEquipments ?? data?.Stats?.ActiveEquipments ?? 0;
@@ -94,6 +117,28 @@ export function MetrologyDashboardPage() {
 
       {/* Accesos Rápidos Operativos */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14, marginBottom: 28 }}>
+        <div className="card pad" style={{ gridColumn: "1 / -1" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <strong style={{ fontSize: "0.95rem" }}>Modo de actividad</strong>
+              <div className="muted" style={{ fontSize: "0.78rem", marginTop: 2 }}>
+                Laboratorio: solo VPE / VPR · Reparador: CAL / VPE / VPR / VPO
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <select
+                value={activityMode}
+                disabled={savingSettings}
+                onChange={(e) => saveActivityMode(e.target.value as "Laboratory" | "Repairer")}
+                style={{ minWidth: 180 }}
+              >
+                <option value="Repairer">Reparador</option>
+                <option value="Laboratory">Laboratorio</option>
+              </select>
+              {settingsMsg && <span className="muted" style={{ fontSize: "0.78rem" }}>{settingsMsg}</span>}
+            </div>
+          </div>
+        </div>
         <div className="card pad" style={{ cursor: "pointer", transition: "transform 0.15s ease" }} onClick={() => navigate("/metrologia/equipos")}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: "1.8rem" }}>🏢</span>
@@ -159,7 +204,7 @@ export function MetrologyDashboardPage() {
                   <th>Fecha</th>
                   <th>Instrumento</th>
                   <th>Cliente</th>
-                  <th>Metrólogo</th>
+                  <th>Verificador</th>
                   <th>Dictamen</th>
                   <th style={{ textAlign: "right" }}>Acciones</th>
                 </tr>

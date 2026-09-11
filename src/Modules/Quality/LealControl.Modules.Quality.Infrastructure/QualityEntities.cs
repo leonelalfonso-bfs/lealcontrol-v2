@@ -230,7 +230,10 @@ public sealed class QualityIndicator : Entity<Guid>
     public string Direction { get; set; } = "HigherIsBetter";
     public string Responsible { get; set; } = string.Empty;
     public string Frequency { get; set; } = "Monthly"; // Monthly | Quarterly | Yearly
+    /// <summary>Kept for backward compatibility; prefer <see cref="FollowUp"/>.</summary>
     public string Notes { get; set; } = string.Empty;
+    public string Actions { get; set; } = string.Empty;
+    public string FollowUp { get; set; } = string.Empty;
     public string Status { get; set; } = "Active"; // Active | Inactive
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
@@ -266,6 +269,8 @@ public sealed record CreateQualityIndicatorRequest(
     string? Direction = null,
     string? Responsible = null,
     string? Frequency = null,
+    string? Actions = null,
+    string? FollowUp = null,
     string? Notes = null);
 
 public sealed record UpdateQualityIndicatorRequest(
@@ -277,6 +282,8 @@ public sealed record UpdateQualityIndicatorRequest(
     string? Direction = null,
     string? Responsible = null,
     string? Frequency = null,
+    string? Actions = null,
+    string? FollowUp = null,
     string? Notes = null,
     string? Status = null);
 

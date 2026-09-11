@@ -155,6 +155,8 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.Responsible).HasMaxLength(160);
             b.Property(x => x.Frequency).HasMaxLength(32).HasDefaultValue("Monthly");
             b.Property(x => x.Notes).HasMaxLength(2000);
+            b.Property(x => x.Actions).HasMaxLength(4000);
+            b.Property(x => x.FollowUp).HasMaxLength(4000);
             b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Active");
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.Status, x.Name });
@@ -660,10 +662,15 @@ public sealed class QualityDbContext : DbContext
                 ""Responsible"" character varying(160) NOT NULL DEFAULT '',
                 ""Frequency"" character varying(32) NOT NULL DEFAULT 'Monthly',
                 ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""Actions"" character varying(4000) NOT NULL DEFAULT '',
+                ""FollowUp"" character varying(4000) NOT NULL DEFAULT '',
                 ""Status"" character varying(32) NOT NULL DEFAULT 'Active',
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
+            @"ALTER TABLE quality.indicators ADD COLUMN IF NOT EXISTS ""Actions"" character varying(4000) NOT NULL DEFAULT '';",
+            @"ALTER TABLE quality.indicators ADD COLUMN IF NOT EXISTS ""FollowUp"" character varying(4000) NOT NULL DEFAULT '';",
+            @"UPDATE quality.indicators SET ""FollowUp"" = ""Notes"" WHERE COALESCE(""FollowUp"", '') = '' AND COALESCE(""Notes"", '') <> '';",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_indicators_Tenant_Status_Name"" ON quality.indicators (""TenantId"", ""Status"", ""Name"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_indicators_Tenant_Record"" ON quality.indicators (""TenantId"", ""RecordCode"");",
 

@@ -23,13 +23,18 @@ public static class MetrologyRegulatoryProfiles
     public const string Transitional2307 = "REGIMEN_TRANSITORIO_R2307_80";
     public const string Ipna25 = "IPNA_R25_2025";
 
+    public const string OpCalibration = "CAL";
+    public const string OpPeriodicVerification = "VPE";
+    public const string OpInitialVerification = "VPR";
+    public const string OpPostRepair = "VPO";
+
     private static readonly IReadOnlyDictionary<string, string> CommonOperations =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["Calibration"] = "Calibración / determinación de errores",
-            ["PostRepair"] = "Ensayo posterior a reparación",
-            ["PeriodicVerification"] = "Verificación periódica",
-            ["InitialVerification"] = "Verificación primitiva"
+            [OpCalibration] = "Calibración",
+            [OpPeriodicVerification] = "Verificación periódica",
+            [OpInitialVerification] = "Verificación primitiva",
+            [OpPostRepair] = "Verificación posterior a la reparación"
         };
 
     public static readonly MetrologyRegulatoryProfile Legacy2307 = new(
@@ -62,14 +67,42 @@ public static class MetrologyRegulatoryProfiles
         return Current25;
     }
 
+    /// <summary>
+    /// Normaliza códigos legacy y alias a CAL / VPE / VPR / VPO.
+    /// </summary>
+    public static string NormalizeOperationType(string? operationType)
+    {
+        if (string.IsNullOrWhiteSpace(operationType))
+            return OpPeriodicVerification;
+
+        var key = operationType.Trim();
+        if (string.Equals(key, "Calibration", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(key, OpCalibration, StringComparison.OrdinalIgnoreCase))
+            return OpCalibration;
+        if (string.Equals(key, "PeriodicVerification", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(key, OpPeriodicVerification, StringComparison.OrdinalIgnoreCase))
+            return OpPeriodicVerification;
+        if (string.Equals(key, "InitialVerification", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(key, OpInitialVerification, StringComparison.OrdinalIgnoreCase))
+            return OpInitialVerification;
+        if (string.Equals(key, "PostRepair", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(key, OpPostRepair, StringComparison.OrdinalIgnoreCase))
+            return OpPostRepair;
+
+        return key.ToUpperInvariant();
+    }
+
     public static string ResolveOperationLabel(MetrologyRegulatoryProfile profile, string? operationType)
     {
-        var key = string.IsNullOrWhiteSpace(operationType) ? "Calibration" : operationType.Trim();
-        return profile.Operations.TryGetValue(key, out var label) ? label : profile.Operations["Calibration"];
+        var key = NormalizeOperationType(operationType);
+        return profile.Operations.TryGetValue(key, out var label)
+            ? label
+            : profile.Operations[OpPeriodicVerification];
     }
 
     public static IReadOnlyList<MetrologyTestPlanItem> GetTestPlan(MetrologyRegulatoryProfile profile, string? operationType)
     {
+        var op = NormalizeOperationType(operationType);
         var plan = new List<MetrologyTestPlanItem>
         {
             new("IDENTIFICATION", "Identificación e inscripciones", "Contrastar identificación, características metrológicas y datos del instrumento con el expediente disponible.", true),
@@ -80,9 +113,10 @@ public static class MetrologyRegulatoryProfiles
             new("ERRORS", "Errores de indicación", "Registrar cargas crecientes y decrecientes y evaluar con el criterio técnico aplicable.", true),
             new("SEALS", "Precintos y cierre", "Documentar estado, intervención o colocación de precintos cuando corresponda.", true)
         };
-        if (string.Equals(operationType, "PostRepair", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(op, OpPostRepair, StringComparison.OrdinalIgnoreCase))
             plan.Insert(2, new("REPAIR", "Intervención posterior a reparación", "Describir la reparación efectuada y los elementos intervenidos antes del ensayo.", true));
-        if (string.Equals(operationType, "PeriodicVerification", StringComparison.OrdinalIgnoreCase) || string.Equals(operationType, "InitialVerification", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(op, OpPeriodicVerification, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(op, OpInitialVerification, StringComparison.OrdinalIgnoreCase))
             plan.Add(new("AUTHORIZATION", "Control de habilitación", "Confirmar que la operación y el documento se emiten dentro del alcance habilitado por la autoridad competente.", true));
         return plan;
     }

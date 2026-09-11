@@ -1175,6 +1175,14 @@ export const api = {
       };
     }>(`/api/v1/metrology/reports/${id}/sgc-traceability`),
 
+  getMetrologySettings: () =>
+    request<import("./types").MetrologyTenantSettings>("/api/v1/metrology/settings"),
+  updateMetrologySettings: (body: { activityMode: import("./types").MetrologyActivityMode }) =>
+    request<import("./types").MetrologyTenantSettings>("/api/v1/metrology/settings", {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
+
   // ==========================================
   // Quality (ISO 17025)
   // ==========================================
@@ -1337,6 +1345,8 @@ export const api = {
     direction?: string;
     responsible?: string;
     frequency?: string;
+    actions?: string;
+    followUp?: string;
     notes?: string;
   }) =>
     request<import("./types/quality").QualityIndicator>("/api/v1/quality/records/mc01-r03", {
@@ -1355,6 +1365,8 @@ export const api = {
       direction?: string;
       responsible?: string;
       frequency?: string;
+      actions?: string;
+      followUp?: string;
       notes?: string;
       status?: string;
     }

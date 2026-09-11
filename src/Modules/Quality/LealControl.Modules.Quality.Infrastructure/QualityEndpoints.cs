@@ -622,6 +622,8 @@ public static class QualityEndpoints
                 Direction = string.IsNullOrWhiteSpace(req.Direction) ? "HigherIsBetter" : req.Direction.Trim(),
                 Responsible = req.Responsible?.Trim() ?? string.Empty,
                 Frequency = string.IsNullOrWhiteSpace(req.Frequency) ? "Monthly" : req.Frequency.Trim(),
+                Actions = req.Actions?.Trim() ?? string.Empty,
+                FollowUp = ResolveIndicatorFollowUp(req.FollowUp, req.Notes),
                 Notes = req.Notes?.Trim() ?? string.Empty,
                 Status = "Active",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -657,6 +659,11 @@ public static class QualityEndpoints
             if (req.Direction is not null) entity.Direction = req.Direction.Trim();
             if (req.Responsible is not null) entity.Responsible = req.Responsible.Trim();
             if (req.Frequency is not null) entity.Frequency = req.Frequency.Trim();
+            if (req.Actions is not null) entity.Actions = req.Actions.Trim();
+            if (req.FollowUp is not null)
+                entity.FollowUp = ResolveIndicatorFollowUp(req.FollowUp, req.Notes);
+            else if (req.Notes is not null && string.IsNullOrWhiteSpace(entity.FollowUp))
+                entity.FollowUp = req.Notes.Trim();
             if (req.Notes is not null) entity.Notes = req.Notes.Trim();
             if (req.Status is not null)
             {
@@ -2296,30 +2303,74 @@ public static class QualityEndpoints
         a.UpdatedAtUtc
     };
 
-    private static object ToIndicatorValueDto(QualityIndicatorValue v) => new
+    private static bool IsYearMonthPeriod(string period) =>
+        period.Length == 7
+        && period[4] == '-'
+        && char.IsDigit(period[0]) && char.IsDigit(period[1]) && char.IsDigit(period[2]) && char.IsDigit(period[3])
+        && char.IsDigit(period[5]) && char.IsDigit(period[6]);
+
+    private static string ResolveIndicatorFollowUp(string? followUp, string? notes) =>
+        !string.IsNullOrWhiteSpace(followUp)
+            ? followUp.Trim()
+            : (notes?.Trim() ?? string.Empty);
+
+    private static Dictionary<Guid, decimal> BuildCumulativeYtdByValueId(IReadOnlyList<QualityIndicatorValue> values)
+    {
+        var result = new Dictionary<Guid, decimal>();
+        foreach (var yearGroup in values
+                     .Where(v => IsYearMonthPeriod(v.Period))
+                     .GroupBy(v => v.Period[..4]))
+        {
+            decimal running = 0;
+            foreach (var v in yearGroup.OrderBy(x => x.Period, StringComparer.Ordinal))
+            {
+                running += v.Value;
+                result[v.Id] = running;
+            }
+        }
+
+        return result;
+    }
+
+    private static decimal GetCumulativeYtd(QualityIndicatorValue v, IReadOnlyDictionary<Guid, decimal> byId) =>
+        byId.TryGetValue(v.Id, out var cum) ? cum : v.Value;
+
+    private static object ToIndicatorValueDto(QualityIndicatorValue v, decimal cumulativeYtd) => new
     {
         v.Id,
         v.IndicatorId,
         v.Period,
         v.Value,
+        cumulativeYtd,
         v.Notes,
         v.RecordedBy,
         v.RecordedAtUtc
     };
+
+    private static object ToIndicatorValueDto(QualityIndicatorValue v) =>
+        ToIndicatorValueDto(v, v.Value);
 
     private static object ToIndicatorDto(
         QualityIndicator i,
         IReadOnlyList<QualityIndicatorValue> values,
         QualityIndicatorValue? latest)
     {
+        var cumulativeById = BuildCumulativeYtdByValueId(values);
+
         string? compliance = null;
         if (latest is not null && i.TargetValue.HasValue)
         {
+            var useCumulative = string.Equals(i.Frequency, "Monthly", StringComparison.OrdinalIgnoreCase)
+                && IsYearMonthPeriod(latest.Period);
+            var compareValue = useCumulative
+                ? GetCumulativeYtd(latest, cumulativeById)
+                : latest.Value;
+
             compliance = i.Direction switch
             {
-                "LowerIsBetter" => latest.Value <= i.TargetValue.Value ? "Met" : "Below",
-                "Exact" => latest.Value == i.TargetValue.Value ? "Met" : "Below",
-                _ => latest.Value >= i.TargetValue.Value ? "Met" : "Below"
+                "LowerIsBetter" => compareValue <= i.TargetValue.Value ? "Met" : "Below",
+                "Exact" => compareValue == i.TargetValue.Value ? "Met" : "Below",
+                _ => compareValue >= i.TargetValue.Value ? "Met" : "Below"
             };
         }
 
@@ -2335,6 +2386,8 @@ public static class QualityEndpoints
             i.Direction,
             i.Responsible,
             i.Frequency,
+            i.Actions,
+            i.FollowUp,
             i.Notes,
             i.Status,
             i.CreatedAtUtc,
@@ -2342,7 +2395,7 @@ public static class QualityEndpoints
             latestPeriod = latest?.Period,
             latestValue = latest?.Value,
             compliance,
-            values = values.Select(ToIndicatorValueDto)
+            values = values.Select(v => ToIndicatorValueDto(v, GetCumulativeYtd(v, cumulativeById)))
         };
     }
 

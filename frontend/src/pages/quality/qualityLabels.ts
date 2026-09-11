@@ -92,8 +92,13 @@ export const INDICATOR_DIRECTION: Record<string, string> = {
 };
 
 export const METROLOGY_OPERATION: Record<string, string> = {
-  Calibration: "Calibración / determinación de errores",
-  PostRepair: "Ensayo posterior a reparación",
+  CAL: "Calibración",
+  VPE: "Verificación periódica",
+  VPR: "Verificación primitiva",
+  VPO: "Verificación posterior a la reparación",
+  // Legacy aliases
+  Calibration: "Calibración",
+  PostRepair: "Verificación posterior a la reparación",
   PeriodicVerification: "Verificación periódica",
   InitialVerification: "Verificación primitiva"
 };

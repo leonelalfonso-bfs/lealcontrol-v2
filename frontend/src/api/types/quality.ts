@@ -192,6 +192,8 @@ export interface QualityIndicatorValue {
   indicatorId: string;
   period: string;
   value: number;
+  /** Acumulado YTD (mensual YYYY-MM) o el propio valor (trimestral/anual). */
+  cumulativeYtd?: number;
   notes?: string;
   recordedBy?: string;
   recordedAtUtc: string;
@@ -208,6 +210,9 @@ export interface QualityIndicator {
   direction?: string;
   responsible?: string;
   frequency?: string;
+  actions?: string;
+  followUp?: string;
+  /** @deprecated Prefer followUp; kept for backward compatibility. */
   notes?: string;
   status: string;
   createdAtUtc: string;

@@ -144,7 +144,7 @@ public sealed class CalibrationReport : Entity<Guid>
     public string StandardApplied { get; set; } = "Res25_2025"; // Res25_2025, Res2307_80
     public string CalibrationType { get; set; } = "InService"; // InitialVerification, InService, PostRepair
     public string RegulatoryProfile { get; set; } = MetrologyRegulatoryProfiles.Ipna25;
-    public string OperationType { get; set; } = "Calibration";
+    public string OperationType { get; set; } = MetrologyRegulatoryProfiles.OpPeriodicVerification;
     public string DocumentTitle { get; set; } = "Informe de ensayo metrológico";
     public string RegulatoryStatus { get; set; } = "Vigente";
     public string RegulatoryNotice { get; set; } = string.Empty;
@@ -158,7 +158,7 @@ public sealed class CalibrationReport : Entity<Guid>
     public decimal RelativeHumidityPercent { get; set; } = 50.0m;
     public decimal AtmosphericPressureHpa { get; set; } = 1013.25m;
     
-    // Metrólogo / Operador
+    // Verificador / Operador
     public string PerformedBy { get; set; } = string.Empty;
     public string ApprovedBy { get; set; } = string.Empty;
     
@@ -167,6 +167,12 @@ public sealed class CalibrationReport : Entity<Guid>
     public decimal MaxObservedError { get; set; }
     public decimal MaxAllowedError { get; set; }
     public decimal ExpandedUncertaintyK2 { get; set; }
+
+    /// <summary>Temperatura final al cierre del dictamen (°C).</summary>
+    public decimal? FinalTemperatureCelsius { get; set; }
+
+    /// <summary>Hora final local del dictamen (HH:mm).</summary>
+    public string? FinalTimeLocal { get; set; }
     
     // Ensayos JSON estructurados
     public string VisualInspectionJson { get; set; } = "{}";
@@ -404,7 +410,9 @@ public record CalibrationReportDto(
     DateTime CreatedAtUtc,
     Guid? SupersedesReportId = null,
     string? AmendmentReason = null,
-    string? ReportStatus = null
+    string? ReportStatus = null,
+    decimal? FinalTemperatureCelsius = null,
+    string? FinalTimeLocal = null
 );
 
 public record CalibrationReportWriteDto(
@@ -439,7 +447,9 @@ public record CalibrationReportWriteDto(
     string? ReportStatus = null,
     Guid? ThermometerInstrumentId = null,
     Guid? SupersedesReportId = null,
-    string? AmendmentReason = null
+    string? AmendmentReason = null,
+    decimal? FinalTemperatureCelsius = null,
+    string? FinalTimeLocal = null
 );
 
 /// <summary>PG09 R2 — cuerpo de enmienda. Motivo obligatorio; el resto son overrides opcionales del clon.</summary>
@@ -462,8 +472,24 @@ public record CalibrationReportAmendDto(
     decimal? AtmosphericPressureHpa = null,
     Guid? ThermometerInstrumentId = null,
     DateTime? CalibrationDate = null,
-    DateTime? ExpirationDate = null
+    DateTime? ExpirationDate = null,
+    decimal? FinalTemperatureCelsius = null,
+    string? FinalTimeLocal = null
 );
+
+/// <summary>Modo de actividad del tenant: Laboratory (solo VPE/VPR) o Repairer (CAL/VPE/VPR/VPO).</summary>
+public sealed class MetrologyTenantSettings : Entity<Guid>
+{
+    public TenantId TenantId { get; set; }
+    /// <summary>Laboratory | Repairer</summary>
+    public string ActivityMode { get; set; } = "Repairer";
+
+    public MetrologyTenantSettings() : base(Guid.NewGuid()) { }
+}
+
+public record MetrologyTenantSettingsDto(string ActivityMode);
+
+public record MetrologyTenantSettingsWriteDto(string ActivityMode);
 
 public record MetrologyInstrumentWriteDto(
     string Code,

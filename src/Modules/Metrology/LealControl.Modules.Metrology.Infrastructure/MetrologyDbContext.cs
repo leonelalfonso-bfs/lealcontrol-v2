@@ -18,6 +18,7 @@ public sealed class MetrologyDbContext : DbContext
     public DbSet<StandardWeight> StandardWeights => Set<StandardWeight>();
     public DbSet<MetrologyInstrument> Instruments => Set<MetrologyInstrument>();
     public DbSet<CalibrationReport> CalibrationReports => Set<CalibrationReport>();
+    public DbSet<MetrologyTenantSettings> TenantSettings => Set<MetrologyTenantSettings>();
 
     public MetrologyDbContext(DbContextOptions<MetrologyDbContext> options)
         : this(options, null)
@@ -107,7 +108,7 @@ public sealed class MetrologyDbContext : DbContext
             b.Property(x => x.StandardApplied).HasMaxLength(64).HasDefaultValue("Res25_2025");
             b.Property(x => x.CalibrationType).HasMaxLength(32).HasDefaultValue("InService");
             b.Property(x => x.RegulatoryProfile).HasMaxLength(80).HasDefaultValue(MetrologyRegulatoryProfiles.Ipna25);
-            b.Property(x => x.OperationType).HasMaxLength(48).HasDefaultValue("Calibration");
+            b.Property(x => x.OperationType).HasMaxLength(48).HasDefaultValue(MetrologyRegulatoryProfiles.OpPeriodicVerification);
             b.Property(x => x.DocumentTitle).HasMaxLength(160).HasDefaultValue("Informe de ensayo metrológico");
             b.Property(x => x.RegulatoryStatus).HasMaxLength(80).HasDefaultValue("Vigente");
             b.Property(x => x.RegulatoryNotice).HasMaxLength(1200).HasDefaultValue(string.Empty);
@@ -116,6 +117,7 @@ public sealed class MetrologyDbContext : DbContext
             b.Property(x => x.PerformedBy).HasMaxLength(120);
             b.Property(x => x.ApprovedBy).HasMaxLength(120);
             b.Property(x => x.Verdict).HasMaxLength(32).HasDefaultValue("Approved");
+            b.Property(x => x.FinalTimeLocal).HasMaxLength(16);
             b.Property(x => x.ProcedureSnapshotJson).HasColumnType("text").HasDefaultValue("[]");
             b.Property(x => x.ExternalDocumentCodesJson).HasColumnType("text").HasDefaultValue("[]");
             b.Property(x => x.InstructionCode).HasMaxLength(16).HasDefaultValue(string.Empty);
@@ -125,6 +127,15 @@ public sealed class MetrologyDbContext : DbContext
             b.HasIndex(x => new { x.TenantId, x.EquipmentId });
             b.HasIndex(x => new { x.TenantId, x.CalibrationDate });
             b.HasIndex(x => new { x.TenantId, x.SupersedesReportId });
+        });
+
+        modelBuilder.Entity<MetrologyTenantSettings>(b =>
+        {
+            b.ToTable("tenant_settings", "metrology");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.ActivityMode).HasMaxLength(32).HasDefaultValue("Repairer");
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.HasIndex(x => x.TenantId).IsUnique();
         });
 
         modelBuilder.Entity<MetrologyInstrument>(b =>
@@ -280,7 +291,7 @@ public sealed class MetrologyDbContext : DbContext
                 ""StandardApplied"" character varying(64) NOT NULL DEFAULT 'Res25_2025',
                 ""CalibrationType"" character varying(32) NOT NULL DEFAULT 'InService',
                 ""RegulatoryProfile"" character varying(80) NOT NULL DEFAULT 'IPNA_R25_2025',
-                ""OperationType"" character varying(48) NOT NULL DEFAULT 'Calibration',
+                ""OperationType"" character varying(48) NOT NULL DEFAULT 'VPE',
                 ""DocumentTitle"" character varying(160) NOT NULL DEFAULT 'Informe de ensayo metrológico',
                 ""RegulatoryStatus"" character varying(80) NOT NULL DEFAULT 'Vigente',
                 ""RegulatoryNotice"" character varying(1200) NOT NULL DEFAULT '',
@@ -310,7 +321,7 @@ public sealed class MetrologyDbContext : DbContext
             @"CREATE INDEX IF NOT EXISTS ""IX_reports_Tenant_Equipment"" ON metrology.calibration_reports (""TenantId"", ""EquipmentId"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_reports_Tenant_Date"" ON metrology.calibration_reports (""TenantId"", ""CalibrationDate"");",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""RegulatoryProfile"" character varying(80) NOT NULL DEFAULT 'IPNA_R25_2025';",
-            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""OperationType"" character varying(48) NOT NULL DEFAULT 'Calibration';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""OperationType"" character varying(48) NOT NULL DEFAULT 'VPE';",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""DocumentTitle"" character varying(160) NOT NULL DEFAULT 'Informe de ensayo metrológico';",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""RegulatoryStatus"" character varying(80) NOT NULL DEFAULT 'Vigente';",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""RegulatoryNotice"" character varying(1200) NOT NULL DEFAULT '';",
@@ -322,7 +333,16 @@ public sealed class MetrologyDbContext : DbContext
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ThermometerInstrumentId"" uuid;",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""SupersedesReportId"" uuid;",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""AmendmentReason"" character varying(2000);",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""FinalTemperatureCelsius"" numeric(18,2);",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""FinalTimeLocal"" character varying(16);",
             @"CREATE INDEX IF NOT EXISTS ""IX_reports_Tenant_Supersedes"" ON metrology.calibration_reports (""TenantId"", ""SupersedesReportId"");",
+
+            @"CREATE TABLE IF NOT EXISTS metrology.tenant_settings (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ActivityMode"" character varying(32) NOT NULL DEFAULT 'Repairer'
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_tenant_settings_Tenant"" ON metrology.tenant_settings (""TenantId"");",
 
             @"CREATE TABLE IF NOT EXISTS metrology.instruments (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

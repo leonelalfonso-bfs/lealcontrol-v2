@@ -1,8 +1,11 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
-import type { QualityIndicator } from "../../api/types/quality";
+import type { QualityIndicator, QualityIndicatorValue } from "../../api/types/quality";
 import { INDICATOR_STATUS, labelOf } from "./qualityLabels";
+
+const FORMULA_PLACEHOLDER =
+  "(Número de verificaciones concretadas en el período) / (Número total verificaciones planificadas en el período) x 100";
 
 function defaultPeriod(): string {
   const d = new Date();
@@ -13,6 +16,36 @@ function complianceLabel(c?: string | null) {
   if (c === "Met") return { text: "Cumple", color: "#166534" };
   if (c === "Below") return { text: "No cumple", color: "#991b1b" };
   return { text: "Sin meta", color: "#64748b" };
+}
+
+function isYearMonth(period: string): boolean {
+  return /^\d{4}-\d{2}$/.test(period);
+}
+
+/** Fallback client-side if API omits cumulativeYtd. */
+function withCumulativeYtd(values: QualityIndicatorValue[]): Array<QualityIndicatorValue & { cumulativeYtd: number }> {
+  const byYear = new Map<string, QualityIndicatorValue[]>();
+  for (const v of values) {
+    if (!isYearMonth(v.period)) continue;
+    const year = v.period.slice(0, 4);
+    const list = byYear.get(year) ?? [];
+    list.push(v);
+    byYear.set(year, list);
+  }
+
+  const cumById = new Map<string, number>();
+  for (const list of byYear.values()) {
+    let running = 0;
+    for (const v of [...list].sort((a, b) => a.period.localeCompare(b.period))) {
+      running += v.value;
+      cumById.set(v.id, running);
+    }
+  }
+
+  return values.map((v) => ({
+    ...v,
+    cumulativeYtd: v.cumulativeYtd ?? cumById.get(v.id) ?? v.value
+  }));
 }
 
 export function QualityMc01R03Page() {
@@ -32,13 +65,18 @@ export function QualityMc01R03Page() {
   const [direction, setDirection] = useState("HigherIsBetter");
   const [responsible, setResponsible] = useState("");
   const [frequency, setFrequency] = useState("Monthly");
-  const [notes, setNotes] = useState("");
+  const [actions, setActions] = useState("");
+  const [followUp, setFollowUp] = useState("");
 
   const [period, setPeriod] = useState(defaultPeriod());
   const [value, setValue] = useState("");
   const [valueNotes, setValueNotes] = useState("");
 
   const selected = rows.find((r) => r.id === selectedId) ?? null;
+  const selectedValues = useMemo(
+    () => withCumulativeYtd(selected?.values ?? []),
+    [selected?.values]
+  );
 
   const load = () => {
     setLoading(true);
@@ -77,7 +115,8 @@ export function QualityMc01R03Page() {
         direction,
         responsible: responsible.trim() || undefined,
         frequency,
-        notes: notes.trim() || undefined
+        actions: actions.trim() || undefined,
+        followUp: followUp.trim() || undefined
       });
       setMsg("Indicador creado.");
       setShowForm(false);
@@ -86,7 +125,8 @@ export function QualityMc01R03Page() {
       setFormula("");
       setTargetValue("");
       setResponsible("");
-      setNotes("");
+      setActions("");
+      setFollowUp("");
       setSelectedId(created.id);
       load();
     } catch (err) {
@@ -222,11 +262,20 @@ export function QualityMc01R03Page() {
           </label>
           <label style={{ display: "block", marginTop: 12 }}>
             Fórmula / fuente
-            <input value={formula} onChange={(e) => setFormula(e.target.value)} style={{ width: "100%" }} placeholder="Cómo se calcula" />
+            <input
+              value={formula}
+              onChange={(e) => setFormula(e.target.value)}
+              style={{ width: "100%" }}
+              placeholder={FORMULA_PLACEHOLDER}
+            />
           </label>
           <label style={{ display: "block", marginTop: 12 }}>
-            Notas
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
+            Acciones
+            <textarea value={actions} onChange={(e) => setActions(e.target.value)} rows={2} style={{ width: "100%" }} />
+          </label>
+          <label style={{ display: "block", marginTop: 12 }}>
+            Seguimiento
+            <textarea value={followUp} onChange={(e) => setFollowUp(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
           <div style={{ marginTop: 12, justifyContent: "flex-end", display: "flex", gap: 8 }}>
             <button type="button" className="btn ghost" onClick={() => setShowForm(false)}>Cancelar</button>
@@ -320,6 +369,14 @@ export function QualityMc01R03Page() {
                 {selected.objective || "Sin objetivo descripto."}
                 {selected.formula ? ` · Fórmula: ${selected.formula}` : ""}
               </p>
+              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 12 }}>
+                <div>
+                  <strong>Acciones:</strong> {selected.actions || "—"}
+                </div>
+                <div style={{ marginTop: 6 }}>
+                  <strong>Seguimiento:</strong> {selected.followUp || selected.notes || "—"}
+                </div>
+              </div>
 
               {selected.status === "Active" && (
                 <form onSubmit={(e) => void onAddValue(e)} style={{ marginBottom: 16 }}>
@@ -334,7 +391,7 @@ export function QualityMc01R03Page() {
                     </label>
                   </div>
                   <label style={{ display: "block", marginTop: 8 }}>
-                    Notas del período
+                    Seguimiento
                     <input value={valueNotes} onChange={(e) => setValueNotes(e.target.value)} style={{ width: "100%" }} />
                   </label>
                   <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
@@ -345,7 +402,7 @@ export function QualityMc01R03Page() {
                 </form>
               )}
 
-              {(selected.values?.length ?? 0) === 0 ? (
+              {selectedValues.length === 0 ? (
                 <div className="muted">Sin valores cargados.</div>
               ) : (
                 <table className="table">
@@ -353,15 +410,17 @@ export function QualityMc01R03Page() {
                     <tr>
                       <th>Período</th>
                       <th>Valor</th>
-                      <th>Notas</th>
+                      <th>Acumulado</th>
+                      <th>Seguimiento</th>
                       <th />
                     </tr>
                   </thead>
                   <tbody>
-                    {selected.values!.map((v) => (
+                    {selectedValues.map((v) => (
                       <tr key={v.id}>
                         <td>{v.period}</td>
                         <td>{v.value}{selected.targetUnit ? ` ${selected.targetUnit}` : ""}</td>
+                        <td>{v.cumulativeYtd}{selected.targetUnit ? ` ${selected.targetUnit}` : ""}</td>
                         <td>{v.notes || "—"}</td>
                         <td style={{ textAlign: "right" }}>
                           <button
