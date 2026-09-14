@@ -1796,6 +1796,8 @@ export function CalibrationReportFormPage() {
                     <th style={{ padding: "8px 6px", width: 100 }}>Redondeo Descendente</th>
                     <th style={{ padding: "8px 6px", width: 115, textAlign: "right" }}>Lectura Corregida Descendente</th>
                     <th style={{ padding: "8px 6px", width: 90, textAlign: "right" }}>Error Descendente</th>
+                    <th style={{ padding: "8px 6px", width: 70, textAlign: "center" }}>EMT</th>
+                    <th style={{ padding: "8px 6px", width: 90, textAlign: "center" }}>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1807,7 +1809,7 @@ export function CalibrationReportFormPage() {
                     const descOk = comp.descError !== null ? Math.abs(comp.descError) <= comp.emt : true;
 
                     return (
-                      <tr key={r.step} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                      <tr key={r.step} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)", background: !comp.hasAnyData ? undefined : comp.conform ? "rgba(16, 185, 129, 0.04)" : "rgba(239, 68, 68, 0.05)" }}>
                         <td style={{ padding: "4px 6px" }}>
                           <input
                             type="number"
@@ -1904,11 +1906,48 @@ export function CalibrationReportFormPage() {
                         <td style={{ padding: "4px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: 700, color: comp.descError === null ? "inherit" : descOk ? "#047857" : "#b91c1c" }}>
                           {descErrStr}
                         </td>
+                        <td style={{ padding: "4px 6px", textAlign: "center", fontFamily: "monospace", fontWeight: 700, color: "#0f766e" }}>
+                          {comp.hasAnyData || comp.totalLoad > 0 ? `±${comp.emt}` : "—"}
+                        </td>
+                        <td style={{ padding: "4px 6px", textAlign: "center" }}>
+                          {!comp.hasAnyData ? (
+                            <span className="muted">—</span>
+                          ) : (
+                            <span className={`badge ${comp.conform ? "ok" : "prio-high"}`} style={{ fontWeight: 800 }}>
+                              {comp.conform ? "✓ Cumple" : "✗ No cumple"}
+                            </span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: 14,
+                padding: "10px 14px",
+                background: linAllOk ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                borderRadius: 8
+              }}
+            >
+              <div>
+                <strong>Estado del Ensayo de Linealidad:</strong>{" "}
+                <span className="muted">
+                  (EMT por punto según escalón e · {activeLinRows.length} punto(s) con datos)
+                </span>
+              </div>
+              <span
+                className={`badge ${linAllOk ? "ok" : "prio-high"}`}
+                style={{ fontWeight: 800, fontSize: "0.85rem", padding: "4px 12px", borderRadius: 12 }}
+              >
+                {linAllOk ? "✓ LINEALIDAD CONFORME" : "✗ SUPERA EMT"}
+              </span>
             </div>
           </div>
         )}
