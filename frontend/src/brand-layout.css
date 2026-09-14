@@ -633,3 +633,36 @@
   }
 }
 
+/* Impresión: sin chrome de la app (el header móvil suele aparecer porque el ancho de impresión < 960px) */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  .mobile-header,
+  .mobile-sidebar-backdrop,
+  .sidebar,
+  .apps-overlay,
+  .apps-modal,
+  .applications-launcher,
+  .no-print {
+    display: none !important;
+  }
+
+  .app-shell,
+  .app,
+  .main {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .print-only {
+    display: inline !important;
+  }
+}
+

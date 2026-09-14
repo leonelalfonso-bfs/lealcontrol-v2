@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { CalibrationReport, MetrologyEquipment, MetrologyInstrument, CompanySettings } from "../../api/types";
+import { loadHtml2Pdf } from "../../utils/loadHtml2Pdf";
 import { labelOf, METROLOGY_OPERATION, METROLOGY_REPORT_STATUS, METROLOGY_VERDICT, INDICATOR_TYPE } from "../quality/qualityLabels";
 
 export function CalibrationReportPrintPage() {
@@ -12,6 +13,7 @@ export function CalibrationReportPrintPage() {
   const [company, setCompany] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -105,7 +107,38 @@ export function CalibrationReportPrintPage() {
   const tempVal = (report as any).temperatureCelsius ?? report.ambientTemperature ?? 20;
 
   const handlePrint = () => {
+    const prevTitle = document.title;
+    // Evita que el encabezado del navegador muestre "Leal Control ERP Cloud".
+    document.title = certNumber || "\u00A0";
+    const restore = () => {
+      document.title = prevTitle;
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
     window.print();
+    window.setTimeout(restore, 1500);
+  };
+
+  const handleDownloadPdf = async () => {
+    const el = document.getElementById("metrology-report-sheet");
+    if (!el) return;
+    setDownloadingPdf(true);
+    try {
+      const html2pdf = await loadHtml2Pdf();
+      await html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename: `${certNumber || "informe-metrologico"}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["avoid-all", "css", "legacy"] }
+        })
+        .from(el)
+        .save();
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const renderPrintFidelityBlock = (blockTitle: string, blockData: any) => {
@@ -208,15 +241,33 @@ export function CalibrationReportPrintPage() {
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 24px", background: "#fff", color: "#111", minHeight: "100vh" }}>
       {/* Action Bar (No Print) */}
-      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 12, borderBottom: "1px solid #ddd" }}>
+      <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 12, borderBottom: "1px solid #ddd", flexWrap: "wrap", gap: 10 }}>
         <Link to="/metrologia/informes" className="btn ghost compact">
           ← Volver a Informes de Ensayo
         </Link>
-        <button type="button" onClick={handlePrint} className="btn" style={{ background: "#0d9488", color: "#fff" }}>
-          🖨️ Imprimir / Guardar como PDF
-        </button>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <button type="button" onClick={handlePrint} className="btn ghost">
+              🖨️ Imprimir
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDownloadPdf()}
+              disabled={downloadingPdf}
+              className="btn"
+              style={{ background: "#0d9488", color: "#fff" }}
+            >
+              {downloadingPdf ? "Generando PDF…" : "📥 Descargar PDF"}
+            </button>
+          </div>
+          <small className="muted" style={{ maxWidth: 420, textAlign: "right" }}>
+            Preferí <strong>Descargar PDF</strong> para un archivo limpio (sin fecha, título ni URL del navegador).
+            Si usás Imprimir, desactivá “Encabezados y pies de página” en el diálogo.
+          </small>
+        </div>
       </div>
 
+      <div id="metrology-report-sheet" className="print-container" style={{ background: "#fff", color: "#111" }}>
       {/* Header Membrete */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #0d9488", paddingBottom: 14, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -697,11 +748,12 @@ export function CalibrationReportPrintPage() {
         </div>
       </div>
 
-      <SgcTraceabilityPanel reportId={report.id} report={report} thermometer={thermometer} />
-
       <div style={{ textAlign: "center", fontSize: "0.72rem", color: "#888" }}>
         Documento técnico emitido mediante el Sistema Modular de Metrología Legal — Leal Control ERP
       </div>
+      </div>
+
+      <SgcTraceabilityPanel reportId={report.id} report={report} thermometer={thermometer} />
     </div>
   );
 }
