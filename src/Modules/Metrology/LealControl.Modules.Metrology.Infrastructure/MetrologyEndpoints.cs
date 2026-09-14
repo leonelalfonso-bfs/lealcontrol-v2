@@ -1347,8 +1347,9 @@ public static class MetrologyEndpoints
                 }
 
                 var existingAmendment = await db.CalibrationReports.AsNoTracking()
-                    .AnyAsync(r => r.TenantId == tenantId && r.SupersedesReportId == id
-                        && !string.Equals(r.ReportStatus, "Superseded", StringComparison.OrdinalIgnoreCase), ct);
+                    .AnyAsync(r => r.TenantId == tenantId
+                        && r.SupersedesReportId == id
+                        && r.ReportStatus.ToLower() != "superseded", ct);
                 if (existingAmendment)
                 {
                     return Results.BadRequest(new { message = "Ya existe una enmienda activa para este informe." });
