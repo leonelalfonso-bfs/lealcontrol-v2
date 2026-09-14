@@ -795,7 +795,7 @@ export function CalibrationReportFormPage() {
         sealsPlaced: sealsSummary || (inspSeals ? "Precintos reglamentarios colocados en indicador y caja de unión." : "Sin precintos reglamentarios.")
       });
 
-      navigate(`/metrologia/certificados/${created.id}`);
+      navigate(`/metrologia/informes/${created.id}/imprimir`);
     } catch (err: any) {
       setError(err.message || "Error al emitir el informe metrológico.");
     } finally {
