@@ -105,37 +105,118 @@ export function CalibrationReportPrintPage() {
   const verdictText = verdictLabelEs.toUpperCase();
   const isApproved = verdictRaw === "Approved" || verdictRaw === "Apto" || verdictLabelEs === "Apto";
   const tempVal = (report as any).temperatureCelsius ?? report.ambientTemperature ?? 20;
+  const companyName = company?.legalName || company?.tradeName || "LEAL CONTROL ERP";
+  const assayDateLabel = report.calibrationDate
+    ? new Date(report.calibrationDate).toLocaleDateString("es-AR")
+    : "—";
 
-  const handlePrint = () => {
-    const prevTitle = document.title;
-    // Evita que el encabezado del navegador muestre "Leal Control ERP Cloud".
-    document.title = certNumber || "\u00A0";
-    const restore = () => {
-      document.title = prevTitle;
-      window.removeEventListener("afterprint", restore);
-    };
-    window.addEventListener("afterprint", restore);
-    window.print();
-    window.setTimeout(restore, 1500);
+  const stampPdfChrome = (pdf: any) => {
+    const total = pdf.internal.getNumberOfPages();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    for (let i = 1; i <= total; i++) {
+      pdf.setPage(i);
+
+      // Encabezado compacto en páginas 2..N (la 1 ya trae el membrete completo del HTML).
+      if (i > 1) {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(9);
+        pdf.setTextColor(13, 148, 136);
+        pdf.text(companyName, 10, 8);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(70, 70, 70);
+        pdf.text(documentTitle, 10, 12);
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(9);
+        pdf.setTextColor(13, 148, 136);
+        pdf.text(String(certNumber), pageWidth - 10, 8, { align: "right" });
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(70, 70, 70);
+        pdf.text(`Fecha de ensayo: ${assayDateLabel}`, pageWidth - 10, 12, { align: "right" });
+
+        pdf.setDrawColor(13, 148, 136);
+        pdf.setLineWidth(0.35);
+        pdf.line(10, 14.5, pageWidth - 10, 14.5);
+      }
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`Página ${i} de ${total}`, pageWidth / 2, pageHeight - 6, { align: "center" });
+    }
+
+    return pdf;
+  };
+
+  const buildReportPdf = async () => {
+    const el = document.getElementById("metrology-report-sheet");
+    if (!el) throw new Error("No se encontró el contenido del informe.");
+    const html2pdf = await loadHtml2Pdf();
+    const worker = html2pdf()
+      .set({
+        // Margen superior extra para el encabezado de páginas siguientes.
+        margin: [18, 10, 14, 10],
+        filename: `${certNumber || "informe-metrologico"}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["avoid-all", "css", "legacy"] }
+      })
+      .from(el);
+    const pdf = await worker.toPdf().get("pdf");
+    return stampPdfChrome(pdf);
+  };
+
+  const handlePrint = async () => {
+    setDownloadingPdf(true);
+    try {
+      const pdf = await buildReportPdf();
+      const blobUrl = pdf.output("bloburl");
+      const w = window.open(blobUrl, "_blank", "noopener,noreferrer");
+      if (!w) {
+        // Si el popup está bloqueado, al menos descarga el PDF limpio.
+        pdf.save(`${certNumber || "informe-metrologico"}.pdf`);
+        return;
+      }
+      // Esperar a que el visor cargue antes de abrir el diálogo de impresión.
+      window.setTimeout(() => {
+        try {
+          w.focus();
+          w.print();
+        } catch {
+          /* el usuario puede imprimir desde el visor */
+        }
+      }, 600);
+    } catch (err) {
+      console.error(err);
+      // Fallback: impresión del DOM (sin numeración fiable del navegador).
+      const prevTitle = document.title;
+      document.title = certNumber || "\u00A0";
+      const restore = () => {
+        document.title = prevTitle;
+        window.removeEventListener("afterprint", restore);
+      };
+      window.addEventListener("afterprint", restore);
+      window.print();
+      window.setTimeout(restore, 1500);
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const handleDownloadPdf = async () => {
-    const el = document.getElementById("metrology-report-sheet");
-    if (!el) return;
     setDownloadingPdf(true);
     try {
-      const html2pdf = await loadHtml2Pdf();
-      await html2pdf()
-        .set({
-          margin: [10, 10, 10, 10],
-          filename: `${certNumber || "informe-metrologico"}.pdf`,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-          pagebreak: { mode: ["avoid-all", "css", "legacy"] }
-        })
-        .from(el)
-        .save();
+      const pdf = await buildReportPdf();
+      pdf.save(`${certNumber || "informe-metrologico"}.pdf`);
+    } catch (err) {
+      console.error(err);
     } finally {
       setDownloadingPdf(false);
     }
@@ -247,7 +328,7 @@ export function CalibrationReportPrintPage() {
         </Link>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <button type="button" onClick={handlePrint} className="btn ghost">
+            <button type="button" onClick={() => void handlePrint()} className="btn ghost" disabled={downloadingPdf}>
               🖨️ Imprimir
             </button>
             <button
@@ -260,9 +341,8 @@ export function CalibrationReportPrintPage() {
               {downloadingPdf ? "Generando PDF…" : "📥 Descargar PDF"}
             </button>
           </div>
-          <small className="muted" style={{ maxWidth: 420, textAlign: "right" }}>
-            Preferí <strong>Descargar PDF</strong> para un archivo limpio (sin fecha, título ni URL del navegador).
-            Si usás Imprimir, desactivá “Encabezados y pies de página” en el diálogo.
+          <small className="muted" style={{ maxWidth: 460, textAlign: "right" }}>
+            Imprimir y Descargar PDF usan el mismo archivo: encabezado en todas las páginas, numeración «Página N de X» y cierre «Fin del informe».
           </small>
         </div>
       </div>
@@ -748,8 +828,24 @@ export function CalibrationReportPrintPage() {
         </div>
       </div>
 
-      <div style={{ textAlign: "center", fontSize: "0.72rem", color: "#888" }}>
+      <div style={{ textAlign: "center", fontSize: "0.72rem", color: "#888", marginBottom: 18 }}>
         Documento técnico emitido mediante el Sistema Modular de Metrología Legal — Leal Control ERP
+      </div>
+
+      <div
+        style={{
+          marginTop: 8,
+          padding: "14px 12px",
+          borderTop: "2px solid #0d9488",
+          textAlign: "center",
+          fontWeight: 800,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "#06574c",
+          fontSize: "0.92rem"
+        }}
+      >
+        — Fin del informe —
       </div>
       </div>
 
