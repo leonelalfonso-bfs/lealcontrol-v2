@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { CalibrationReport, MetrologyEquipment, MetrologyInstrument, CompanySettings } from "../../api/types";
@@ -682,74 +682,115 @@ export function CalibrationReportPrintPage() {
         </div>
       )}
 
-      {/* Ensayo de Linealidad */}
+      {/* Ensayo de Linealidad — dos tablas para que entren en A4 */}
       <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
         <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
           3. ENSAYO DE EXACTITUD Y LINEALIDAD (Cargas Crecientes y Decrecientes)
         </div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.76rem" }}>
-          <thead>
-            <tr style={{ background: "#f0fdfa", borderBottom: "1px solid #ccc" }}>
-              <th style={{ padding: "4px 4px", textAlign: "left" }}>#</th>
-              <th style={{ padding: "4px 4px", textAlign: "right" }}>Pesas</th>
-              {linearityData.some((r: any) => (r.auxLoad || 0) > 0) && (
-                <th style={{ padding: "4px 4px", textAlign: "right" }}>Carga Aux.</th>
-              )}
-              <th style={{ padding: "4px 4px", textAlign: "right" }}>Carga Total</th>
-              <th style={{ padding: "4px 4px", textAlign: "right" }}>EMT</th>
-              <th style={{ padding: "4px 4px", textAlign: "right" }}>Lectura (↗)</th>
-              <th style={{ padding: "4px 4px", textAlign: "right" }}>Redondeo (↗)</th>
-              <th style={{ padding: "4px 4px", textAlign: "right" }}>Lect. Corregida (↗)</th>
-              <th style={{ padding: "4px 4px", textAlign: "right" }}>Error (↗)</th>
-              <th style={{ padding: "4px 4px", textAlign: "right" }}>Lectura (↘)</th>
-              <th style={{ padding: "4px 4px", textAlign: "right" }}>Redondeo (↘)</th>
-              <th style={{ padding: "4px 4px", textAlign: "right" }}>Lect. Corregida (↘)</th>
-              <th style={{ padding: "4px 4px", textAlign: "right" }}>Error (↘)</th>
-              <th style={{ padding: "4px 4px", textAlign: "center" }}>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {linearityData.map((r: any) => {
-              const hasAuxCol = linearityData.some((x: any) => (x.auxLoad || 0) > 0);
-              const targetL = r.targetLoad ?? (r.pesas || 0) + (r.auxLoad || 0);
-              const ascErr = r.ascError !== undefined ? r.ascError : (r.ascIndication ?? 0) - targetL;
-              const descErr = r.descError !== undefined ? r.descError : (r.descIndication ?? 0) - targetL;
+        {(() => {
+          const hasAuxCol = linearityData.some((x: any) => (x.auxLoad || 0) > 0);
+          const unit = equipment?.unit || "kg";
+          const th: CSSProperties = {
+            padding: "3px 3px",
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.02em",
+            whiteSpace: "nowrap",
+            background: "#f0fdfa",
+            borderBottom: "1px solid #ccc"
+          };
+          const td: CSSProperties = { padding: "3px 3px", fontSize: "0.72rem", whiteSpace: "nowrap" };
 
-              return (
-                <tr key={r.step} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={{ padding: "4px 4px" }}>#{r.step}</td>
-                  <td style={{ padding: "4px 4px", textAlign: "right" }}>
-                    {r.pesas !== undefined ? r.pesas?.toLocaleString("es-AR") : targetL?.toLocaleString("es-AR")} {equipment?.unit || "kg"}
-                  </td>
-                  {hasAuxCol && (
-                    <td style={{ padding: "4px 4px", textAlign: "right" }}>
-                      {(r.auxLoad || 0) > 0 ? `${r.auxLoad?.toLocaleString("es-AR")} ${equipment?.unit || "kg"}` : "—"}
-                    </td>
-                  )}
-                  <td style={{ padding: "4px 4px", textAlign: "right", fontWeight: 700 }}>
-                    {targetL?.toLocaleString("es-AR")} {equipment?.unit || "kg"}
-                  </td>
-                  <td style={{ padding: "4px 4px", textAlign: "right" }}>±{r.emt}</td>
-                  <td style={{ padding: "4px 4px", textAlign: "right" }}>{r.ascIndication}</td>
-                  <td style={{ padding: "4px 4px", textAlign: "right", color: "#64748b" }}>{r.ascDeltaL !== undefined && r.ascDeltaL !== 0 ? r.ascDeltaL : "—"}</td>
-                  <td style={{ padding: "4px 4px", textAlign: "right", fontWeight: 600 }}>{r.ascCorrected !== undefined ? r.ascCorrected?.toLocaleString("es-AR") : r.ascIndication}</td>
-                  <td style={{ padding: "4px 4px", textAlign: "right", color: Math.abs(ascErr) <= r.emt ? "inherit" : "#dc2626", fontWeight: 700 }}>
-                    {ascErr >= 0 ? `+${ascErr}` : ascErr}
-                  </td>
-                  <td style={{ padding: "4px 4px", textAlign: "right" }}>{r.descIndication}</td>
-                  <td style={{ padding: "4px 4px", textAlign: "right", color: "#64748b" }}>{r.descDeltaL !== undefined && r.descDeltaL !== 0 ? r.descDeltaL : "—"}</td>
-                  <td style={{ padding: "4px 4px", textAlign: "right", fontWeight: 600 }}>{r.descCorrected !== undefined ? r.descCorrected?.toLocaleString("es-AR") : r.descIndication}</td>
-                  <td style={{ padding: "4px 4px", textAlign: "right", color: Math.abs(descErr) <= r.emt ? "inherit" : "#dc2626", fontWeight: 700 }}>
-                    {descErr >= 0 ? `+${descErr}` : descErr}
-                  </td>
-                  <td style={{ padding: "4px 4px", textAlign: "center", color: r.conform ? "#0d9488" : "#dc2626", fontWeight: 700 }}>
-                    {r.conform ? "✓ Apto" : "✗ Fuera"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+          const renderLinTable = (sense: "asc" | "desc", title: string) => (
+            <div style={{ marginBottom: sense === "asc" ? 12 : 0 }}>
+              <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#334155", marginBottom: 4 }}>{title}</div>
+              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...th, width: "6%", textAlign: "left" }}>#</th>
+                    <th style={{ ...th, width: hasAuxCol ? "14%" : "18%", textAlign: "right" }}>Carga</th>
+                    {hasAuxCol && <th style={{ ...th, width: "12%", textAlign: "right" }}>Aux.</th>}
+                    <th style={{ ...th, width: "10%", textAlign: "right" }}>EMT</th>
+                    <th style={{ ...th, width: "12%", textAlign: "right" }}>Lectura</th>
+                    <th style={{ ...th, width: "10%", textAlign: "right" }}>ΔL</th>
+                    <th style={{ ...th, width: "14%", textAlign: "right" }}>Corregida</th>
+                    <th style={{ ...th, width: "12%", textAlign: "right" }}>Error</th>
+                    <th style={{ ...th, width: "12%", textAlign: "center" }}>Cumple</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {linearityData.map((r: any) => {
+                    const targetL = r.targetLoad ?? (r.pesas || 0) + (r.auxLoad || 0);
+                    const indication = sense === "asc" ? r.ascIndication : r.descIndication;
+                    const deltaL = sense === "asc" ? r.ascDeltaL : r.descDeltaL;
+                    const corrected = sense === "asc" ? r.ascCorrected : r.descCorrected;
+                    const err =
+                      sense === "asc"
+                        ? (r.ascError !== undefined ? r.ascError : (indication ?? 0) - targetL)
+                        : (r.descError !== undefined ? r.descError : (indication ?? 0) - targetL);
+                    const ok = Math.abs(err) <= (r.emt ?? 0);
+
+                    return (
+                      <tr key={`${sense}-${r.step}`} style={{ borderBottom: "1px solid #eee" }}>
+                        <td style={{ ...td, textAlign: "left" }}>#{r.step}</td>
+                        <td style={{ ...td, textAlign: "right", fontWeight: 700 }}>
+                          {targetL?.toLocaleString("es-AR")} {unit}
+                        </td>
+                        {hasAuxCol && (
+                          <td style={{ ...td, textAlign: "right" }}>
+                            {(r.auxLoad || 0) > 0 ? `${Number(r.auxLoad).toLocaleString("es-AR")}` : "—"}
+                          </td>
+                        )}
+                        <td style={{ ...td, textAlign: "right" }}>±{r.emt}</td>
+                        <td style={{ ...td, textAlign: "right" }}>{indication ?? "—"}</td>
+                        <td style={{ ...td, textAlign: "right", color: "#64748b" }}>
+                          {deltaL !== undefined && deltaL !== 0 && deltaL !== null ? deltaL : "—"}
+                        </td>
+                        <td style={{ ...td, textAlign: "right", fontWeight: 600 }}>
+                          {corrected !== undefined && corrected !== null
+                            ? Number(corrected).toLocaleString("es-AR")
+                            : indication ?? "—"}
+                        </td>
+                        <td
+                          style={{
+                            ...td,
+                            textAlign: "right",
+                            fontWeight: 700,
+                            color: ok ? "#047857" : "#dc2626"
+                          }}
+                        >
+                          {err >= 0 ? `+${err}` : err}
+                        </td>
+                        <td
+                          style={{
+                            ...td,
+                            textAlign: "center",
+                            fontWeight: 700,
+                            color: ok ? "#0d9488" : "#dc2626"
+                          }}
+                        >
+                          {ok ? "Sí" : "No"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+
+          if (!linearityData.length) {
+            return <div className="muted" style={{ fontSize: "0.78rem" }}>Sin puntos de linealidad registrados.</div>;
+          }
+
+          return (
+            <>
+              {renderLinTable("asc", "↗ Cargas crecientes")}
+              {renderLinTable("desc", "↘ Cargas decrecientes")}
+            </>
+          );
+        })()}
       </div>
 
       {/* Control y Registro de Precintos Metrológicos */}
