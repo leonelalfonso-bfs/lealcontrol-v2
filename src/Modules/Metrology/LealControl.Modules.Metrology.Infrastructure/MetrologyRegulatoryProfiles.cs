@@ -40,8 +40,8 @@ public static class MetrologyRegulatoryProfiles
     public static readonly MetrologyRegulatoryProfile Legacy2307 = new(
         Transitional2307,
         "Régimen transitorio — Res. SCyNEI Nº 2307/1980",
-        "Derogada — aplicación transitoria",
-        "La Res. 2307/80 fue derogada por la Res. 25/2025. Este expediente debe utilizarse únicamente cuando el instrumento y la operación estén comprendidos en el régimen transitorio aplicable.",
+        "Régimen transitorio",
+        "",
         "Resolución SCyNEI Nº 2307/1980 (régimen transitorio)",
         null,
         CommonOperations);
@@ -50,19 +50,26 @@ public static class MetrologyRegulatoryProfiles
         Ipna25,
         "Instrumentos no automáticos — Res. SIyC Nº 25/2025",
         "Vigente",
-        "La verificación periódica prevista para este perfil se programa a VEINTICUATRO (24) meses. La emisión del documento no reemplaza la habilitación que exija la autoridad competente.",
+        "",
         "Resolución SIyC Nº 25/2025 — Instrumentos de pesar de funcionamiento no automático",
-        24,
+        null,
         CommonOperations);
+
+    public static bool IsLegacy2307(string? profileOrStandard)
+    {
+        if (string.IsNullOrWhiteSpace(profileOrStandard)) return false;
+        var v = profileOrStandard.Trim();
+        if (string.Equals(v, Transitional2307, StringComparison.OrdinalIgnoreCase)) return true;
+        if (string.Equals(v, "Res2307_80", StringComparison.OrdinalIgnoreCase)) return true;
+        if (string.Equals(v, "Res2307_1980", StringComparison.OrdinalIgnoreCase)) return true;
+        if (v.Contains("2307", StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
 
     public static MetrologyRegulatoryProfile Resolve(string? profileCode, string? legacyStandard = null)
     {
-        if (string.Equals(profileCode, Transitional2307, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(profileCode, "Res2307_80", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(legacyStandard, "Res2307_80", StringComparison.OrdinalIgnoreCase))
-        {
+        if (IsLegacy2307(profileCode) || IsLegacy2307(legacyStandard))
             return Legacy2307;
-        }
 
         return Current25;
     }

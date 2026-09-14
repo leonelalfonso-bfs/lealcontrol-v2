@@ -68,9 +68,27 @@ export function CalibrationReportPrintPage() {
   const fidelityFull = repeatabilityData?.fullOperationalLoad || repeatabilityData?.fullMax;
 
   const certNumber = (report as any).certificateNumber || report.reportNumber || "CERT-2026";
-  const stdApplied = (report as any).standardApplied || report.normativeApplied || "Resolución SIyC Nº 25/2025 (OIML R 76-1)";
-  const profileStatus = (report as any).regulatoryStatus || (stdApplied.includes("2307") ? "Derogada — aplicación transitoria" : "Vigente");
-  const regulatoryNotice = (report as any).regulatoryNotice;
+  const stdAppliedRaw = String(
+    (report as any).standardApplied ||
+    (report as any).regulatoryProfile ||
+    visualInspectionData?.checklist?.normativeApplied ||
+    report.normativeApplied ||
+    ""
+  );
+  const isReport2307 =
+    /2307/i.test(stdAppliedRaw) ||
+    /REGIMEN_TRANSITORIO/i.test(String((report as any).regulatoryProfile || "")) ||
+    /2307/i.test(String((equipment as any)?.applicableStandard || ""));
+  const stdApplied = isReport2307
+    ? "Resolución SCyNEI Nº 2307/1980 (régimen transitorio)"
+    : "Resolución SIyC Nº 25/2025";
+  const profileStatus = isReport2307
+    ? ((report as any).regulatoryStatus && /transitor/i.test(String((report as any).regulatoryStatus))
+        ? (report as any).regulatoryStatus
+        : "Régimen transitorio")
+    : ((report as any).regulatoryStatus || "Vigente");
+  // No mostrar alcance/vencimiento aunque el informe viejo lo tenga guardado.
+  const regulatoryNotice = "";
   const opFromChecklist = visualInspectionData?.checklist?.operationLabel;
   const operationLabel =
     opFromChecklist ||
@@ -84,7 +102,6 @@ export function CalibrationReportPrintPage() {
   const verdictLabelEs = labelOf(METROLOGY_VERDICT, String(verdictRaw), String(verdictRaw || "—"));
   const verdictText = verdictLabelEs.toUpperCase();
   const isApproved = verdictRaw === "Approved" || verdictRaw === "Apto" || verdictLabelEs === "Apto";
-  const expUncertainty = (report as any).expandedUncertaintyK2 ?? report.expandedUncertainty ?? 0;
   const tempVal = (report as any).temperatureCelsius ?? report.ambientTemperature ?? 20;
 
   const handlePrint = () => {
@@ -299,7 +316,7 @@ export function CalibrationReportPrintPage() {
                 )}
               </div>
               <div style={{ marginTop: 3 }}>
-                <strong>Indicador Principal:</strong> {(equipment as any).indicator1Brand || equipment.brand} {(equipment as any).indicator1Model || equipment.model} (S/N: {(equipment as any).indicator1SerialNumber || equipment.serialNumber || "—"}) [{labelOf(INDICATOR_TYPE, (equipment as any).indicator1Type, (equipment as any).indicator1Type || "Digital")}]
+                <strong>Indicador Principal:</strong> {(equipment as any).indicator1Brand || "—"} {(equipment as any).indicator1Model || ""} (S/N: {(equipment as any).indicator1SerialNumber || "—"}) [{labelOf(INDICATOR_TYPE, (equipment as any).indicator1Type, (equipment as any).indicator1Type || "Digital")}]
                 {((equipment as any).indicator1ApprovalCode || (equipment as any).indicator1ApprovalNumber) && (
                   <div style={{ color: "#444", fontSize: "0.78rem" }}>
                     ↳ Aprob. Modelo: <strong>{(equipment as any).indicator1ApprovalCode || "—"}</strong>
@@ -431,7 +448,7 @@ export function CalibrationReportPrintPage() {
       {/* Ensayo de Repetibilidad / Fidelidad */}
       <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 10, marginBottom: 16, fontSize: "0.82rem" }}>
         <div style={{ fontWeight: 700, borderBottom: "1px solid #eee", paddingBottom: 4, marginBottom: 8, color: "#0d9488" }}>
-          2. ENSAYO DE {stdApplied.includes("2307") ? "FIDELIDAD" : "REPETIBILIDAD"}
+          2. ENSAYO DE {isReport2307 ? "FIDELIDAD" : "REPETIBILIDAD"}
         </div>
         {hasDualLoad ? (
           <div>
@@ -644,9 +661,6 @@ export function CalibrationReportPrintPage() {
             <div style={{ fontSize: "0.85rem", color: "#555" }}>RESULTADO TÉCNICO DEL INFORME:</div>
             <div style={{ fontSize: "1.5rem", fontWeight: 800, color: isApproved ? "#06574c" : "#dc2626" }}>
               {verdictText}
-            </div>
-            <div style={{ fontSize: "0.8rem", color: "#555", marginTop: 4 }}>
-              Incertidumbre expandida informada: <strong>U = ±{expUncertainty} {equipment?.unit || "kg"}</strong> (k = 2)
             </div>
             {((report as any).finalTemperatureCelsius != null || (report as any).finalTimeLocal) && (
               <div style={{ fontSize: "0.8rem", color: "#555", marginTop: 4 }}>

@@ -1150,9 +1150,7 @@ public static class MetrologyEndpoints
                     ? req.CertificateNumber.Trim()
                     : await NextOperationReportNumberAsync(db, tenantId, operationType, req.CalibrationDate, ct);
 
-                var expirationDate = req.ExpirationDate ?? (profile.DefaultValidityMonths.HasValue
-                    ? req.CalibrationDate.AddMonths(profile.DefaultValidityMonths.Value)
-                    : null);
+                var expirationDate = req.ExpirationDate; // Sin vencimiento automático en el informe.
                 var documentTitle = string.IsNullOrWhiteSpace(req.DocumentTitle)
                     ? "Informe de ensayo metrológico"
                     : req.DocumentTitle.Trim();
@@ -1215,8 +1213,12 @@ public static class MetrologyEndpoints
                     RegulatoryProfile = profile.Code,
                     OperationType = operationType,
                     DocumentTitle = documentTitle,
-                    RegulatoryStatus = profile.RegulatoryStatus,
-                    RegulatoryNotice = profile.Notice,
+                    RegulatoryStatus = string.IsNullOrWhiteSpace(req.RegulatoryStatus)
+                        ? profile.RegulatoryStatus
+                        : req.RegulatoryStatus.Trim(),
+                    RegulatoryNotice = string.IsNullOrWhiteSpace(req.RegulatoryNotice)
+                        ? string.Empty
+                        : req.RegulatoryNotice.Trim(),
                     TestPlanVersion = string.IsNullOrWhiteSpace(req.TestPlanVersion)
                         ? (profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "MET-2307-1" : "MET-25-1")
                         : req.TestPlanVersion.Trim(),

@@ -269,7 +269,7 @@ export function CalibrationReportFormPage() {
       { loadName: "Carga Máxima (100% Max)", load: maxCap.toString(), overload: overload14d.toString(), initialIndication: maxCap.toString(), finalIndication: (maxCap + dVal).toString() }
     ]);
 
-    const std = eq.applicableStandard === "Res2307_80" ? "Res2307_80" : "Res25_2025";
+    const std = /2307/i.test(String(eq.applicableStandard || "")) ? "Res2307_80" : "Res25_2025";
     if (std === "Res2307_80") {
       setRegulatoryProfile("REGIMEN_TRANSITORIO_R2307_80");
       setDocumentTitle("Informe de ensayo metrológico");
@@ -277,7 +277,7 @@ export function CalibrationReportFormPage() {
     } else {
       setRegulatoryProfile("IPNA_R25_2025");
       setDocumentTitle("Informe de ensayo metrológico");
-      setNextCalibrationDate(new Date(Date.now() + 730 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
+      setNextCalibrationDate("");
     }
 
     // Generate Rules via backend engine
@@ -566,9 +566,6 @@ export function CalibrationReportFormPage() {
   const allAssaysPass = inspOk && zeroSettingOk && mobilityOk && fidelityAllOk && eccOk && linAllOk;
   const finalResult = allAssaysPass ? "Apto" : "No Apto";
 
-  // Estimated Uncertainty U (k=2)
-  const expandedUncertainty = Math.round((dInterval * 0.58 + eccMaxError * 0.3) * 100) / 100;
-
   // Tab Navigation Helpers
   const tabOrder: FormTab[] = ["general", "zero_mobility", "fidelity", "eccentricity", "linearity", "summary"];
   const tabLabels: Record<FormTab, string> = {
@@ -711,19 +708,17 @@ export function CalibrationReportFormPage() {
       const created = await api.saveCalibrationReport({
         certificateNumber: reportNumber.trim() || undefined,
         equipmentId: selectedEquipment.id,
-        standardApplied: regulatoryProfile === "REGIMEN_TRANSITORIO_R2307_80" ? "Res2307_80" : "Res25_2025",
+        standardApplied: /2307/i.test(regulatoryProfile) || is2307 ? "Res2307_80" : "Res25_2025",
         calibrationType: "InService",
         regulatoryProfile,
         operationType,
         documentTitle,
-        regulatoryStatus: is2307 ? "Derogada — aplicación transitoria" : "Vigente",
-        regulatoryNotice: is2307
-          ? "Régimen transitorio aplicado por uso en servicio / habilitación según marco normativo aplicable."
-          : "",
-        testPlanVersion: "MET-BASE-1",
+        regulatoryStatus: is2307 ? "Régimen transitorio" : "Vigente",
+        regulatoryNotice: "",
+        testPlanVersion: is2307 ? "MET-2307-1" : "MET-25-1",
         reportStatus: "Draft",
         calibrationDate: new Date(calibrationDate).toISOString(),
-        expirationDate: nextCalibrationDate ? new Date(nextCalibrationDate).toISOString() : undefined,
+        expirationDate: undefined,
         performedBy: performedBy.trim(),
         temperatureCelsius: parseFloat(ambientTemperature) || 20,
         relativeHumidityPercent: parseFloat(ambientHumidity) || 50,
@@ -742,7 +737,7 @@ export function CalibrationReportFormPage() {
           ...(activeLinRows.length > 0 ? activeLinRows.flatMap((x) => [Math.abs(x.ascError ?? 0), Math.abs(x.descError ?? 0)]) : [0])
         ),
         maxAllowedError: Math.max(highEmt, eccentricityConfig?.emt || 0, ...(activeLinRows.length > 0 ? activeLinRows.map((x) => x.emt) : [0])),
-        expandedUncertaintyK2: expandedUncertainty,
+        expandedUncertaintyK2: 0,
         visualInspectionJson: JSON.stringify({
           level: inspLevel,
           tare: inspTare,
@@ -754,7 +749,7 @@ export function CalibrationReportFormPage() {
             operationType,
             operationLabel: operationLabels[operationType] || allOperationLabels[operationType] || operationType,
             normativeApplied: is2307 ? "Resolución SCyNEI Nº 2307/1980 (régimen transitorio)" : "Resolución SIyC Nº 25/2025 (OIML R 76-1)",
-            regulatoryStatus: is2307 ? "Derogada — aplicación transitoria" : "Vigente",
+            regulatoryStatus: is2307 ? "Régimen transitorio" : "Vigente",
             testPlanItems
           },
           zeroSetting: {
@@ -2130,9 +2125,6 @@ export function CalibrationReportFormPage() {
                   <div style={{ fontSize: "1.3rem", fontWeight: 800, color: allAssaysPass ? "#047857" : "#b91c1c" }}>
                     Dictamen Técnico: {finalResult.toUpperCase()}
                   </div>
-                  <small className="muted">
-                    Incertidumbre expandida estimada U (k=2): <strong>{expandedUncertainty} {selectedEquipment?.unit}</strong>
-                  </small>
                 </div>
               </div>
 
