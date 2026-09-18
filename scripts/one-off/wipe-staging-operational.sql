@@ -15,13 +15,16 @@ CREATE OR REPLACE FUNCTION pg_temp.wipe_table(p_schema text, p_table text)
 RETURNS void
 LANGUAGE plpgsql
 AS $$
+DECLARE
+  deleted_count bigint;
 BEGIN
   IF to_regclass(format('%I.%I', p_schema, p_table)) IS NULL THEN
     RAISE NOTICE 'skip (no existe): %.%', p_schema, p_table;
     RETURN;
   END IF;
   EXECUTE format('DELETE FROM %I.%I', p_schema, p_table);
-  RAISE NOTICE 'wiped: %.% (% rows)', p_schema, p_table, ROW_COUNT;
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  RAISE NOTICE 'wiped: %.% (% rows)', p_schema, p_table, deleted_count;
 EXCEPTION
   WHEN undefined_table THEN
     RAISE NOTICE 'skip (undefined): %.%', p_schema, p_table;
