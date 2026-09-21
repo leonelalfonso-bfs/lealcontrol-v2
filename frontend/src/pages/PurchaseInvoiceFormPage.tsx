@@ -31,8 +31,8 @@ export function PurchaseInvoiceFormPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [invoiceType, setInvoiceType] = useState("A");
-  const [pointOfSale, setPointOfSale] = useState(1);
-  const [invoiceNumber, setInvoiceNumber] = useState(1);
+  const [pointOfSale, setPointOfSale] = useState<number | "">("");
+  const [invoiceNumber, setInvoiceNumber] = useState<number | "">("");
   const [selectedSupplierId, setSelectedSupplierId] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [supplierDocument, setSupplierDocument] = useState("");
@@ -209,6 +209,12 @@ export function PurchaseInvoiceFormPage() {
       setError("Por favor indique el proveedor y su CUIT.");
       return;
     }
+    const pos = Number(pointOfSale);
+    const invNum = Number(invoiceNumber);
+    if (!Number.isFinite(pos) || pos < 1 || !Number.isFinite(invNum) || invNum < 1) {
+      setError("Indicá el punto de venta y el número de factura del comprobante (sin valores por defecto).");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -216,8 +222,8 @@ export function PurchaseInvoiceFormPage() {
 
       const payload = {
         invoiceType,
-        pointOfSale: Number(pointOfSale),
-        invoiceNumber: Number(invoiceNumber),
+        pointOfSale: pos,
+        invoiceNumber: invNum,
         purchaseOrderId: purchaseOrderId || null,
         purchaseReceptionId: null,
         supplierId: selectedSupplierId || "00000000-0000-0000-0000-000000000000",
@@ -358,8 +364,12 @@ export function PurchaseInvoiceFormPage() {
                   type="number"
                   min="1"
                   required
+                  placeholder="Ej: 4"
                   value={pointOfSale}
-                  onChange={(e) => setPointOfSale(parseInt(e.target.value) || 1)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setPointOfSale(v === "" ? "" : parseInt(v, 10) || "");
+                  }}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", textAlign: "center", fontFamily: "monospace" }}
                 />
               </div>
@@ -372,8 +382,12 @@ export function PurchaseInvoiceFormPage() {
                   type="number"
                   min="1"
                   required
+                  placeholder="Ej: 12345"
                   value={invoiceNumber}
-                  onChange={(e) => setInvoiceNumber(parseInt(e.target.value) || 1)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setInvoiceNumber(v === "" ? "" : parseInt(v, 10) || "");
+                  }}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontFamily: "monospace" }}
                 />
               </div>
