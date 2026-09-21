@@ -242,6 +242,10 @@ public sealed record CancelPurchaseInvoiceCommand(
     Guid Id,
     string? Reason) : IRequest<Result<PurchaseInvoiceDto>>;
 
+public sealed record LinkPurchaseInvoiceReceptionCommand(
+    Guid InvoiceId,
+    Guid ReceptionId) : IRequest<Result<PurchaseInvoiceDto>>;
+
 // ARCA Import Commands
 public sealed record ImportArcaCsvCommand(
     string CsvContent) : IRequest<Result<ImportArcaCsvResult>>;

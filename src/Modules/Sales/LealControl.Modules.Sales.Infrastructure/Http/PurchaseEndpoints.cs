@@ -104,6 +104,12 @@ public static class PurchaseEndpoints
             return result.ToHttp();
         }).RequireAuthorization("RequirePurchases");
 
+        purchases.MapPost("/invoices/{id:guid}/link-reception", async (Guid id, LinkReceptionBody body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new LinkPurchaseInvoiceReceptionCommand(id, body.ReceptionId), ct);
+            return result.ToHttp();
+        }).RequireAuthorization("RequirePurchases");
+
         // ARCA Mis Comprobantes Recibidos
         purchases.MapGet("/arca/vouchers", async (string? status, string? search, ISender sender, CancellationToken ct) =>
         {
@@ -193,4 +199,5 @@ public static class PurchaseEndpoints
     public sealed record ImportArcaRequest(string CsvContent);
     public sealed record RejectRequest(string Reason);
     public sealed record CancelPurchaseBody(string? Reason);
+    public sealed record LinkReceptionBody(Guid ReceptionId);
 }

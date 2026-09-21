@@ -6,6 +6,7 @@ import { ExcelToolbar } from "../components/ExcelTools";
 
 export function PurchaseReceptionsPage() {
   const [receptions, setReceptions] = useState<PurchaseReception[]>([]);
+  const [linkedReceptionIds, setLinkedReceptionIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -15,8 +16,18 @@ export function PurchaseReceptionsPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await api.listPurchaseReceptions(search);
+      const [data, invs] = await Promise.all([
+        api.listPurchaseReceptions(search),
+        api.listPurchaseInvoices().catch(() => [])
+      ]);
       setReceptions(data);
+      setLinkedReceptionIds(
+        new Set(
+          (invs || [])
+            .filter((i) => i.status !== "Cancelled" && i.purchaseReceptionId)
+            .map((i) => i.purchaseReceptionId as string)
+        )
+      );
     } catch (err: any) {
       console.error(err);
       setError(err.message || "No se pudieron cargar las recepciones.");
@@ -114,6 +125,7 @@ export function PurchaseReceptionsPage() {
               {receptions.map((r) => {
                 const hasRemito = r.supplierRemitoNumber && r.supplierRemitoNumber.trim() !== "" && r.supplierRemitoNumber !== "S/R" && r.supplierRemitoNumber !== "null";
                 const cancelled = r.status === "Cancelled";
+                const alreadyInvoiced = linkedReceptionIds.has(r.id);
 
                 return (
                   <tr
@@ -157,22 +169,44 @@ export function PurchaseReceptionsPage() {
                     <td style={{ padding: "12px 8px", textAlign: "center" }}>
                       {cancelled ? (
                         <span className="badge off" style={{ color: "#991b1b", background: "rgba(239,68,68,0.12)" }}>Anulada</span>
+                      ) : alreadyInvoiced ? (
+                        <span className="badge ok" style={{ color: "#065f46", background: "rgba(16,185,129,0.12)" }}>Facturada</span>
                       ) : (
-                        <span className="badge ok" style={{ color: "#065f46", background: "rgba(16,185,129,0.12)" }}>Recibida</span>
+                        <span className="badge warn" style={{ color: "#92400e", background: "rgba(245,158,11,0.15)" }}>Sin factura</span>
                       )}
                     </td>
                     <td style={{ padding: "12px 8px", textAlign: "center" }}>
-                      {!cancelled && (
-                        <button
-                          type="button"
-                          className="btn btn-outline compact"
-                          disabled={busyId === r.id}
-                          style={{ fontSize: "0.78rem", color: "#991b1b", borderColor: "#fecaca" }}
-                          onClick={() => void cancelReception(r)}
-                        >
-                          Anular
-                        </button>
-                      )}
+                      <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
+                        {!cancelled && !alreadyInvoiced && (
+                          <Link
+                            to={`/compras/facturas/nueva?reception_id=${r.id}`}
+                            className="btn compact"
+                            style={{
+                              fontSize: "0.78rem",
+                              padding: "4px 10px",
+                              background: "#0284c7",
+                              color: "#fff",
+                              fontWeight: 700,
+                              textDecoration: "none",
+                              borderRadius: 6
+                            }}
+                            title="Cargar la factura vinculada a esta recepción (sin volver a ingresar stock)"
+                          >
+                            🧾 Facturar
+                          </Link>
+                        )}
+                        {!cancelled && (
+                          <button
+                            type="button"
+                            className="btn btn-outline compact"
+                            disabled={busyId === r.id}
+                            style={{ fontSize: "0.78rem", color: "#991b1b", borderColor: "#fecaca" }}
+                            onClick={() => void cancelReception(r)}
+                          >
+                            Anular
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

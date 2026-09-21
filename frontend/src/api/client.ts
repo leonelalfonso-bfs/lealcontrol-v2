@@ -679,6 +679,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ reason: reason || null })
     }),
+  linkPurchaseInvoiceReception: (invoiceId: string, receptionId: string) =>
+    request<import("./types").PurchaseInvoice>(`/api/v1/purchases/invoices/${invoiceId}/link-reception`, {
+      method: "POST",
+      body: JSON.stringify({ receptionId })
+    }),
 
   // ARCA Mis Comprobantes Recibidos Methods
   listArcaVouchers: (status = "Pending", search = "") => {

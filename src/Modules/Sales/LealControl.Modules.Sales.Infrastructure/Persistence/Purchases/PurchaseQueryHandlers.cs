@@ -135,6 +135,7 @@ public sealed class PurchaseQueryHandlers :
     IRequestHandler<GetPurchaseInvoiceQuery, Result<PurchaseInvoiceDto>>,
     IRequestHandler<CreatePurchaseInvoiceCommand, Result<PurchaseInvoiceDto>>,
     IRequestHandler<CancelPurchaseInvoiceCommand, Result<PurchaseInvoiceDto>>,
+    IRequestHandler<LinkPurchaseInvoiceReceptionCommand, Result<PurchaseInvoiceDto>>,
     IRequestHandler<ListArcaVouchersQuery, Result<IReadOnlyList<PurchaseArcaVoucherDto>>>,
     IRequestHandler<ImportArcaCsvCommand, Result<ImportArcaCsvResult>>,
     IRequestHandler<IgnoreArcaVoucherCommand, Result<bool>>,
@@ -649,23 +650,53 @@ public sealed class PurchaseQueryHandlers :
             return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.InvalidLines", "La factura debe contener líneas válidas."));
         var duplicate = await _dbContext.Set<PurchaseInvoice>().AnyAsync(x => x.TenantId == tenantId && x.SupplierId == request.SupplierId && x.PointOfSale == request.PointOfSale && x.InvoiceNumber == request.InvoiceNumber && x.InvoiceType == request.InvoiceType, cancellationToken);
         if (duplicate) return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.Duplicate", "Ya existe una factura con el mismo tipo, punto de venta y número para este proveedor."));
-        
+
+        var purchaseOrderId = request.PurchaseOrderId;
         var receptionId = request.PurchaseReceptionId;
-        if (request.PurchaseOrderId.HasValue)
+
+        if (receptionId.HasValue)
         {
-            var order = await _dbContext.Set<PurchaseOrder>().FirstOrDefaultAsync(x => x.Id == request.PurchaseOrderId.Value && x.TenantId == tenantId, cancellationToken);
+            var reception = await _dbContext.Set<PurchaseReception>()
+                .FirstOrDefaultAsync(r => r.Id == receptionId.Value && r.TenantId == tenantId, cancellationToken);
+            if (reception == null)
+                return Result<PurchaseInvoiceDto>.Failure(Error.NotFound("Purchases.Reception.NotFound", "La recepción a vincular no existe."));
+            if (string.Equals(reception.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+                return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.ReceptionCancelled", "No se puede vincular una recepción anulada."));
+            if (reception.SupplierId != request.SupplierId)
+                return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.ReceptionSupplierMismatch", "El proveedor de la factura no coincide con el de la recepción."));
+
+            var receptionAlreadyUsed = await _dbContext.Set<PurchaseInvoice>().AnyAsync(
+                i => i.TenantId == tenantId
+                     && i.PurchaseReceptionId == receptionId.Value
+                     && i.Status != "Cancelled",
+                cancellationToken);
+            if (receptionAlreadyUsed)
+                return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.ReceptionAlreadyLinked", "Esa recepción ya está vinculada a otra factura."));
+
+            // Heredar OC de la recepción si la factura no trae una
+            if (!purchaseOrderId.HasValue && reception.PurchaseOrderId.HasValue)
+                purchaseOrderId = reception.PurchaseOrderId;
+        }
+
+        if (purchaseOrderId.HasValue)
+        {
+            var order = await _dbContext.Set<PurchaseOrder>().FirstOrDefaultAsync(x => x.Id == purchaseOrderId.Value && x.TenantId == tenantId, cancellationToken);
             if (order == null) return Result<PurchaseInvoiceDto>.Failure(Error.NotFound("Purchases.Order.NotFound", "La orden vinculada no existe."));
             if (order.SupplierId != request.SupplierId) return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.SupplierMismatch", "El proveedor de la factura no coincide con la orden."));
 
             if (!receptionId.HasValue)
             {
                 var existingRec = await _dbContext.Set<PurchaseReception>()
-                    .FirstOrDefaultAsync(r => r.PurchaseOrderId == request.PurchaseOrderId.Value
+                    .FirstOrDefaultAsync(r => r.PurchaseOrderId == purchaseOrderId.Value
                         && r.TenantId == tenantId
                         && r.Status != "Cancelled", cancellationToken);
                 if (existingRec != null)
                 {
-                    receptionId = existingRec.Id;
+                    var used = await _dbContext.Set<PurchaseInvoice>().AnyAsync(
+                        i => i.TenantId == tenantId && i.PurchaseReceptionId == existingRec.Id && i.Status != "Cancelled",
+                        cancellationToken);
+                    if (!used)
+                        receptionId = existingRec.Id;
                 }
             }
         }
@@ -675,7 +706,7 @@ public sealed class PurchaseQueryHandlers :
             request.InvoiceType,
             request.PointOfSale,
             request.InvoiceNumber,
-            request.PurchaseOrderId,
+            purchaseOrderId,
             receptionId,
             request.SupplierId,
             request.SupplierName,
@@ -730,6 +761,41 @@ public sealed class PurchaseQueryHandlers :
             return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.AlreadyCancelled", "La factura ya está anulada."));
 
         inv.Cancel(request.Reason);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result<PurchaseInvoiceDto>.Success(MapInvoiceToDto(inv));
+    }
+
+    public async Task<Result<PurchaseInvoiceDto>> Handle(LinkPurchaseInvoiceReceptionCommand request, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantContext.TenantId;
+        var inv = await _dbContext.Set<PurchaseInvoice>()
+            .Include(i => i.Items)
+            .FirstOrDefaultAsync(i => i.Id == request.InvoiceId && i.TenantId == tenantId, cancellationToken);
+        if (inv == null)
+            return Result<PurchaseInvoiceDto>.Failure(Error.NotFound("Purchases.Invoice.NotFound", $"Factura {request.InvoiceId} no encontrada."));
+        if (string.Equals(inv.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.Cancelled", "No se puede vincular una factura anulada."));
+        if (inv.PurchaseReceptionId.HasValue)
+            return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.AlreadyLinked", "La factura ya tiene una recepción vinculada."));
+
+        var reception = await _dbContext.Set<PurchaseReception>()
+            .FirstOrDefaultAsync(r => r.Id == request.ReceptionId && r.TenantId == tenantId, cancellationToken);
+        if (reception == null)
+            return Result<PurchaseInvoiceDto>.Failure(Error.NotFound("Purchases.Reception.NotFound", "La recepción no existe."));
+        if (string.Equals(reception.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.ReceptionCancelled", "No se puede vincular una recepción anulada."));
+        if (reception.SupplierId != inv.SupplierId)
+            return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.ReceptionSupplierMismatch", "El proveedor de la factura no coincide con el de la recepción."));
+
+        var receptionAlreadyUsed = await _dbContext.Set<PurchaseInvoice>().AnyAsync(
+            i => i.TenantId == tenantId
+                 && i.PurchaseReceptionId == request.ReceptionId
+                 && i.Status != "Cancelled",
+            cancellationToken);
+        if (receptionAlreadyUsed)
+            return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.ReceptionAlreadyLinked", "Esa recepción ya está vinculada a otra factura."));
+
+        inv.LinkReception(reception.Id);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Result<PurchaseInvoiceDto>.Success(MapInvoiceToDto(inv));
     }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { type PurchaseInvoice } from "../api/types";
+import { type PurchaseReception } from "../api/types";
 import { InvoiceOcrUploadModal } from "../components/InvoiceOcrUploadModal";
 
 const money = (n: number, c = "ARS") =>
@@ -10,6 +11,7 @@ const money = (n: number, c = "ARS") =>
 export function PurchaseInvoicesPage() {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
+  const [receptions, setReceptions] = useState<PurchaseReception[]>([]);
   const [paymentOrders, setPaymentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,12 +27,14 @@ export function PurchaseInvoicesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [invData, poData] = await Promise.all([
+      const [invData, poData, recData] = await Promise.all([
         api.listPurchaseInvoices(),
-        api.listPaymentOrders().catch(() => [] as any[])
+        api.listPaymentOrders().catch(() => [] as any[]),
+        api.listPurchaseReceptions().catch(() => [] as PurchaseReception[])
       ]);
       setInvoices(invData || []);
       setPaymentOrders(poData || []);
+      setReceptions(recData || []);
     } catch (err: any) {
       setError(err.message || "Error al cargar las facturas de compra.");
     } finally {
@@ -254,6 +258,17 @@ export function PurchaseInvoicesPage() {
                 {filteredInvoices.map((inv) => {
                   const hasInventoryItems = inv.items && inv.items.some((i) => !!i.productId);
                   const isReceived = !!inv.purchaseReceptionId;
+                  const linkedRecIds = new Set(
+                    invoices
+                      .filter((i) => i.status !== "Cancelled" && i.purchaseReceptionId)
+                      .map((i) => i.purchaseReceptionId as string)
+                  );
+                  const openRecsForSupplier = receptions.filter(
+                    (r) =>
+                      r.status !== "Cancelled" &&
+                      r.supplierId === inv.supplierId &&
+                      !linkedRecIds.has(r.id)
+                  );
 
                   return (
                     <tr
@@ -413,21 +428,52 @@ export function PurchaseInvoicesPage() {
                             >
                               📥 Recepción Pendiente
                             </span>
+                            {openRecsForSupplier.length > 0 && (
+                              <select
+                                defaultValue=""
+                                style={{ fontSize: "0.75rem", maxWidth: 180, padding: "4px 6px" }}
+                                title="Vincular una recepción ya cargada (sin duplicar stock)"
+                                onChange={(e) => {
+                                  const recId = e.target.value;
+                                  if (!recId) return;
+                                  void (async () => {
+                                    try {
+                                      await api.linkPurchaseInvoiceReception(inv.id, recId);
+                                      await loadData();
+                                    } catch (err: any) {
+                                      setError(err.message || "No se pudo vincular la recepción.");
+                                    }
+                                  })();
+                                }}
+                              >
+                                <option value="">Vincular recepción…</option>
+                                {openRecsForSupplier.map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.receptionNumber}
+                                    {r.supplierRemitoNumber ? ` · ${r.supplierRemitoNumber}` : ""}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
                             <Link
                               to={`/compras/recepciones/nueva?invoice_id=${inv.id}`}
                               className="btn compact"
                               style={{
                                 fontSize: "0.75rem",
                                 padding: "4px 8px",
-                                background: "#0284c7",
+                                background: openRecsForSupplier.length > 0 ? "#64748b" : "#0284c7",
                                 color: "#ffffff",
                                 fontWeight: 700,
                                 borderRadius: "6px",
                                 textDecoration: "none"
                               }}
-                              title="Registrar remito del proveedor y dar ingreso físico al stock"
+                              title={
+                                openRecsForSupplier.length > 0
+                                  ? "Solo si todavía no recibiste: crea una recepción nueva"
+                                  : "Registrar remito del proveedor y dar ingreso físico al stock"
+                              }
                             >
-                              📦 Recibir Mercadería
+                              {openRecsForSupplier.length > 0 ? "Nueva recepción" : "📦 Recibir Mercadería"}
                             </Link>
                           </div>
                         ) : (

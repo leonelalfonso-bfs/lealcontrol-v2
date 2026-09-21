@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { InvoiceOcrUploadModal } from "../components/InvoiceOcrUploadModal";
 import { type InvoiceOcrResult } from "../api/automationApi";
-import { type Product, type PurchaseArcaVoucher, type PurchaseOrder, type Supplier } from "../api/types";
+import { type Product, type PurchaseArcaVoucher, type PurchaseOrder, type PurchaseReception, type Supplier } from "../api/types";
 
 interface InvoiceRow {
   productId?: string;
@@ -22,10 +22,12 @@ export function PurchaseInvoiceFormPage() {
   const [searchParams] = useSearchParams();
   const arcaIdParam = searchParams.get("arca_id");
   const orderIdParam = searchParams.get("order_id");
+  const receptionIdParam = searchParams.get("reception_id");
 
   const [showOcrModal, setShowOcrModal] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [availableReceptions, setAvailableReceptions] = useState<PurchaseReception[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,7 @@ export function PurchaseInvoiceFormPage() {
   const [notes, setNotes] = useState("");
   const [arcaVoucherId, setArcaVoucherId] = useState<string | null>(arcaIdParam);
   const [purchaseOrderId, setPurchaseOrderId] = useState<string | null>(orderIdParam);
+  const [purchaseReceptionId, setPurchaseReceptionId] = useState<string | null>(receptionIdParam);
 
   const [items, setItems] = useState<InvoiceRow[]>([
     { code: "COMPRA", description: "Insumos / Servicios Generales", quantity: 1, unitPrice: 0, vatRate: 21 }
@@ -60,12 +63,24 @@ export function PurchaseInvoiceFormPage() {
     async function loadData() {
       try {
         setLoading(true);
-        const [sups, prods] = await Promise.all([
+        const [sups, prods, receptions, invoices] = await Promise.all([
           api.listSuppliers().catch(() => []),
-          api.listProducts().catch(() => [])
+          api.listProducts().catch(() => []),
+          api.listPurchaseReceptions().catch(() => []),
+          api.listPurchaseInvoices().catch(() => [])
         ]);
         setSuppliers(sups);
         setProducts(prods);
+
+        const linkedReceptionIds = new Set(
+          invoices
+            .filter((inv) => inv.status !== "Cancelled" && inv.purchaseReceptionId)
+            .map((inv) => inv.purchaseReceptionId as string)
+        );
+        const openReceptions = receptions.filter(
+          (r) => r.status !== "Cancelled" && !linkedReceptionIds.has(r.id)
+        );
+        setAvailableReceptions(openReceptions);
 
         // Pre-fill from ARCA Voucher
         if (arcaIdParam) {
@@ -108,6 +123,33 @@ export function PurchaseInvoiceFormPage() {
           } catch {
             // ignore
           }
+        } else if (receptionIdParam) {
+          const rec =
+            openReceptions.find((r) => r.id === receptionIdParam) ||
+            receptions.find((r) => r.id === receptionIdParam);
+          if (rec) {
+            setPurchaseReceptionId(rec.id);
+            setSelectedSupplierId(rec.supplierId);
+            setSupplierName(rec.supplierName);
+            const matchedSup = sups.find((s) => s.id === rec.supplierId);
+            if (matchedSup) {
+              setSupplierDocument(matchedSup.documentNumber || "");
+              setSupplierTaxCondition(matchedSup.taxCondition || "ResponsableInscripto");
+            }
+            if (rec.purchaseOrderId) setPurchaseOrderId(rec.purchaseOrderId);
+            if (rec.items && rec.items.length > 0) {
+              setItems(
+                rec.items.map((it) => ({
+                  productId: it.productId || undefined,
+                  code: it.code,
+                  description: it.description,
+                  quantity: it.quantity,
+                  unitPrice: 0,
+                  vatRate: 21
+                }))
+              );
+            }
+          }
         } else if (orderIdParam) {
           try {
             const ord = await api.getPurchaseOrder(orderIdParam);
@@ -129,6 +171,8 @@ export function PurchaseInvoiceFormPage() {
                 }))
               );
             }
+            const openForOrder = openReceptions.find((r) => r.purchaseOrderId === orderIdParam);
+            if (openForOrder) setPurchaseReceptionId(openForOrder.id);
           } catch {
             // ignore
           }
@@ -141,7 +185,45 @@ export function PurchaseInvoiceFormPage() {
     }
 
     loadData();
-  }, [arcaIdParam, orderIdParam]);
+  }, [arcaIdParam, orderIdParam, receptionIdParam]);
+
+  const receptionsForSupplier = availableReceptions.filter(
+    (r) => !selectedSupplierId || r.supplierId === selectedSupplierId
+  );
+
+  const handleReceptionChange = (recId: string) => {
+    if (!recId) {
+      setPurchaseReceptionId(null);
+      return;
+    }
+    const rec = availableReceptions.find((r) => r.id === recId);
+    if (!rec) return;
+    setPurchaseReceptionId(rec.id);
+    setSelectedSupplierId(rec.supplierId);
+    setSupplierName(rec.supplierName);
+    const matchedSup = suppliers.find((s) => s.id === rec.supplierId);
+    if (matchedSup) {
+      setSupplierDocument(matchedSup.documentNumber || "");
+      setSupplierTaxCondition(matchedSup.taxCondition || "ResponsableInscripto");
+    }
+    if (rec.purchaseOrderId) setPurchaseOrderId(rec.purchaseOrderId);
+    const isDefaultCompraRow =
+      items.length === 1 &&
+      items[0].code === "COMPRA" &&
+      Number(items[0].unitPrice) === 0;
+    if (isDefaultCompraRow && rec.items && rec.items.length > 0) {
+      setItems(
+        rec.items.map((it) => ({
+          productId: it.productId || undefined,
+          code: it.code,
+          description: it.description,
+          quantity: it.quantity,
+          unitPrice: 0,
+          vatRate: 21
+        }))
+      );
+    }
+  };
 
   const handleSupplierChange = (supId: string) => {
     setSelectedSupplierId(supId);
@@ -150,6 +232,12 @@ export function PurchaseInvoiceFormPage() {
       setSupplierName(sup.legalName || sup.tradeName || "");
       setSupplierDocument(sup.documentNumber || "");
       setSupplierTaxCondition(sup.taxCondition || "ResponsableInscripto");
+    }
+    if (purchaseReceptionId) {
+      const rec = availableReceptions.find((r) => r.id === purchaseReceptionId);
+      if (rec && rec.supplierId !== supId) {
+        setPurchaseReceptionId(null);
+      }
     }
   };
 
@@ -225,7 +313,7 @@ export function PurchaseInvoiceFormPage() {
         pointOfSale: pos,
         invoiceNumber: invNum,
         purchaseOrderId: purchaseOrderId || null,
-        purchaseReceptionId: null,
+        purchaseReceptionId: purchaseReceptionId || null,
         supplierId: selectedSupplierId || "00000000-0000-0000-0000-000000000000",
         supplierName,
         supplierDocument,
@@ -424,6 +512,29 @@ export function PurchaseInvoiceFormPage() {
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
                 />
               </div>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                Recepción ya ingresada (evita duplicar stock)
+              </label>
+              <select
+                value={purchaseReceptionId || ""}
+                onChange={(e) => handleReceptionChange(e.target.value)}
+                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+              >
+                <option value="">— Sin vincular —</option>
+                {receptionsForSupplier.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.receptionNumber}
+                    {r.supplierRemitoNumber ? ` · Remito ${r.supplierRemitoNumber}` : ""}
+                    {` · ${new Date(r.receptionDate).toLocaleDateString("es-AR")}`}
+                  </option>
+                ))}
+              </select>
+              <p className="muted" style={{ fontSize: "0.8rem", marginTop: "4px", marginBottom: 0 }}>
+                Si la mercadería ya entró por remito, vinculá esa recepción. No vuelvas a recibir.
+              </p>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px", marginBottom: "16px" }}>
@@ -656,6 +767,23 @@ export function PurchaseInvoiceFormPage() {
                   $ {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </span>
               </div>
+
+              {purchaseReceptionId && (
+                <div
+                  style={{
+                    marginBottom: "12px",
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    background: "rgba(16, 185, 129, 0.12)",
+                    border: "1px solid #6ee7b7",
+                    color: "#065f46",
+                    fontSize: "0.85rem",
+                    fontWeight: 600
+                  }}
+                >
+                  Stock ya vinculado a recepción — no se pedirá recibir de nuevo
+                </div>
+              )}
 
               {/* CAE Field */}
               <div style={{ marginBottom: "12px", background: "#f8fafc", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
