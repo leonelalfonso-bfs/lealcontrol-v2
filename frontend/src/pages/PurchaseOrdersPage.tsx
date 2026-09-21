@@ -41,7 +41,7 @@ export function PurchaseOrdersPage() {
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
           <ExcelToolbar fileName="ordenes-de-compra" rows={orders} columns={[
-            { header: "Número", key: "number" }, { header: "Proveedor", key: "supplierName" },
+            { header: "Número", key: "orderNumber" }, { header: "Proveedor", key: "supplierName" },
             { header: "Fecha", key: "issueDate" }, { header: "Estado", key: "status" },
             { header: "Moneda", key: "currency" }, { header: "Total", key: "total" },
           ]} />
@@ -224,7 +224,7 @@ export function PurchaseOrdersPage() {
                             style={{ padding: "4px 8px", fontSize: "0.82rem", color: "#991b1b", borderColor: "#fecaca" }}
                             title="Anular orden de compra"
                             onClick={() => {
-                              if (!window.confirm(`¿Anular la orden ${o.number}?`)) return;
+                              if (!window.confirm(`¿Anular la orden ${o.orderNumber}?`)) return;
                               void (async () => {
                                 try {
                                   await api.updatePurchaseOrderStatus(o.id, "Cancelled");
