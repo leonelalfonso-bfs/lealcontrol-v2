@@ -386,6 +386,15 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
                 ) THEN 
                     ALTER TABLE purchases.purchase_receptions ALTER COLUMN ""SupplierRemitoNumber"" DROP NOT NULL;
                 END IF;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = 'purchases' AND table_name = 'purchase_receptions'
+                      AND (column_name = 'Status' OR column_name = 'status')
+                ) THEN
+                    ALTER TABLE purchases.purchase_receptions
+                        ADD COLUMN ""Status"" character varying(32) NOT NULL DEFAULT 'Received';
+                END IF;
             END $$;
         ";
 

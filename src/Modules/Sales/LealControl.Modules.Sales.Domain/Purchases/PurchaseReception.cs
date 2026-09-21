@@ -25,6 +25,7 @@ public sealed class PurchaseReception : Entity<Guid>
         string warehouseLocation,
         string? receivedBy,
         string? notes,
+        string status,
         DateTime createdAtUtc)
         : base(id)
     {
@@ -38,6 +39,7 @@ public sealed class PurchaseReception : Entity<Guid>
         WarehouseLocation = warehouseLocation;
         ReceivedBy = receivedBy;
         Notes = notes;
+        Status = status;
         CreatedAtUtc = createdAtUtc;
     }
 
@@ -51,6 +53,7 @@ public sealed class PurchaseReception : Entity<Guid>
     public string WarehouseLocation { get; private set; } = "Depósito Central";
     public string? ReceivedBy { get; private set; }
     public string? Notes { get; private set; }
+    public string Status { get; private set; } = "Received"; // Received, Cancelled
     public DateTime CreatedAtUtc { get; private set; }
 
     public IReadOnlyList<PurchaseReceptionItem> Items => _items.AsReadOnly();
@@ -83,6 +86,7 @@ public sealed class PurchaseReception : Entity<Guid>
             string.IsNullOrWhiteSpace(warehouseLocation) ? "Depósito Central" : warehouseLocation,
             receivedBy,
             notes,
+            "Received",
             DateTime.UtcNow);
     }
 
@@ -105,6 +109,19 @@ public sealed class PurchaseReception : Entity<Guid>
             serialNumber);
 
         _items.Add(item);
+    }
+
+    public void Cancel(string? reason = null)
+    {
+        if (string.Equals(Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        Status = "Cancelled";
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            var tag = $"Anulada: {reason.Trim()}";
+            Notes = string.IsNullOrWhiteSpace(Notes) ? tag : $"{Notes}\n{tag}";
+        }
     }
 }
 

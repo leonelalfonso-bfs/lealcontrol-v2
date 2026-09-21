@@ -130,9 +130,11 @@ public sealed class PurchaseQueryHandlers :
     IRequestHandler<ListPurchaseReceptionsQuery, Result<IReadOnlyList<PurchaseReceptionDto>>>,
     IRequestHandler<GetPurchaseReceptionQuery, Result<PurchaseReceptionDto>>,
     IRequestHandler<CreatePurchaseReceptionCommand, Result<PurchaseReceptionDto>>,
+    IRequestHandler<CancelPurchaseReceptionCommand, Result<PurchaseReceptionDto>>,
     IRequestHandler<ListPurchaseInvoicesQuery, Result<IReadOnlyList<PurchaseInvoiceDto>>>,
     IRequestHandler<GetPurchaseInvoiceQuery, Result<PurchaseInvoiceDto>>,
     IRequestHandler<CreatePurchaseInvoiceCommand, Result<PurchaseInvoiceDto>>,
+    IRequestHandler<CancelPurchaseInvoiceCommand, Result<PurchaseInvoiceDto>>,
     IRequestHandler<ListArcaVouchersQuery, Result<IReadOnlyList<PurchaseArcaVoucherDto>>>,
     IRequestHandler<ImportArcaCsvCommand, Result<ImportArcaCsvResult>>,
     IRequestHandler<IgnoreArcaVoucherCommand, Result<bool>>,
@@ -283,6 +285,39 @@ public sealed class PurchaseQueryHandlers :
         var tenantId = _tenantContext.TenantId;
         if (!request.Items.Any() || request.Items.Any(x => x.Quantity <= 0))
             return Result<PurchaseReceptionDto>.Failure(Error.Validation("Purchases.Reception.InvalidQuantity", "La recepción debe contener cantidades mayores a cero."));
+
+        // Resolver productos antes de grabar: sin producto no hay impacto de inventario.
+        var unresolved = new List<string>();
+        foreach (var it in request.Items)
+        {
+            Product? resolved = null;
+            if (it.ProductId.HasValue && it.ProductId.Value != Guid.Empty)
+            {
+                resolved = await _dbContext.Products.AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Id == new ProductId(it.ProductId.Value) && p.TenantId == tenantId, cancellationToken);
+            }
+            else if (!string.IsNullOrWhiteSpace(it.Code))
+            {
+                var normCode = it.Code.Trim().ToLower();
+                resolved = await _dbContext.Products.AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Code.ToLower() == normCode, cancellationToken);
+            }
+
+            if (resolved == null)
+            {
+                unresolved.Add(string.IsNullOrWhiteSpace(it.Code) ? (string.IsNullOrWhiteSpace(it.Description) ? "(sin código)" : it.Description) : it.Code);
+            }
+        }
+
+        if (unresolved.Count > 0)
+        {
+            return Result<PurchaseReceptionDto>.Failure(Error.Validation(
+                "Purchases.Reception.ProductRequired",
+                "Toda línea de recepción debe tener un producto del catálogo (código o productId). Sin producto no se genera inventario. Revisá: "
+                + string.Join(", ", unresolved.Take(8))
+                + (unresolved.Count > 8 ? "…" : "")));
+        }
+
         PurchaseOrder? order = null;
         if (request.PurchaseOrderId.HasValue)
         {
@@ -448,6 +483,94 @@ public sealed class PurchaseQueryHandlers :
         return Result<PurchaseReceptionDto>.Success(MapReceptionToDto(reception));
     }
 
+    public async Task<Result<PurchaseReceptionDto>> Handle(CancelPurchaseReceptionCommand request, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantContext.TenantId;
+        var reception = await _dbContext.Set<PurchaseReception>()
+            .Include(r => r.Items)
+            .FirstOrDefaultAsync(r => r.Id == request.Id && r.TenantId == tenantId, cancellationToken);
+        if (reception == null)
+            return Result<PurchaseReceptionDto>.Failure(Error.NotFound("Purchases.Reception.NotFound", $"Recepción {request.Id} no encontrada."));
+        if (string.Equals(reception.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            return Result<PurchaseReceptionDto>.Failure(Error.Validation("Purchases.Reception.AlreadyCancelled", "La recepción ya está anulada."));
+
+        // Revertir stock generado por esta recepción
+        var movements = await _dbContext.StockMovements
+            .Where(m => m.TenantId == tenantId
+                && m.ReferenceId == reception.Id
+                && m.MovementType == "PurchaseReception")
+            .ToListAsync(cancellationToken);
+
+        foreach (var mov in movements)
+        {
+            var product = await _dbContext.Products
+                .FirstOrDefaultAsync(p => p.Id == new ProductId(mov.ProductId) && p.TenantId == tenantId, cancellationToken);
+            var stock = await _dbContext.StockItems
+                .FirstOrDefaultAsync(s => s.TenantId == tenantId && s.ProductId == mov.ProductId
+                    && (mov.WarehouseId == null || s.WarehouseId == mov.WarehouseId), cancellationToken);
+
+            var qty = Math.Abs(mov.Quantity);
+            var before = stock?.PhysicalStock ?? 0;
+            var after = Math.Max(0, before - qty);
+            if (stock != null)
+            {
+                stock.AdjustStock(after, stock.MinimumStock, stock.WarehouseLocation, stock.WarehouseId, stock.WarehouseName);
+            }
+            if (product != null && product.TrackStock)
+            {
+                product.AdjustStock(-qty);
+            }
+
+            var reverse = StockMovement.Create(
+                tenantId,
+                mov.ProductId,
+                "PurchaseReceptionVoid",
+                -qty,
+                before,
+                after,
+                mov.WarehouseId,
+                mov.WarehouseName,
+                mov.UnitCostArs,
+                mov.UnitCostUsd,
+                mov.SerialNumbers,
+                mov.LotNumber,
+                reception.Id,
+                "PurchaseReception",
+                reception.ReceptionNumber,
+                "Sistema",
+                $"Anulación recepción #{reception.ReceptionNumber}");
+            _dbContext.StockMovements.Add(reverse);
+        }
+
+        // Si estaba vinculada a OC, restar cantidades recibidas
+        if (reception.PurchaseOrderId.HasValue)
+        {
+            var order = await _dbContext.Set<PurchaseOrder>()
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.Id == reception.PurchaseOrderId.Value && o.TenantId == tenantId, cancellationToken);
+            if (order != null)
+            {
+                foreach (var item in reception.Items)
+                {
+                    var ordItem = order.Items.FirstOrDefault(i =>
+                        (item.ProductId.HasValue && i.ProductId == item.ProductId.Value)
+                        || (!string.IsNullOrWhiteSpace(item.Code) && i.Code.ToLower() == item.Code.Trim().ToLower()));
+                    if (ordItem != null)
+                        ordItem.RecordReceived(-Math.Min(item.Quantity, ordItem.ReceivedQuantity));
+                }
+
+                var totalOrdered = order.Items.Sum(i => i.Quantity);
+                var totalReceived = order.Items.Sum(i => i.ReceivedQuantity);
+                if (totalReceived <= 0) order.ChangeStatus(order.Status == "Cancelled" ? "Cancelled" : "Sent");
+                else if (totalReceived < totalOrdered) order.ChangeStatus("PartiallyReceived");
+            }
+        }
+
+        reception.Cancel(request.Reason);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result<PurchaseReceptionDto>.Success(MapReceptionToDto(reception));
+    }
+
     // Purchase Invoices Handlers
     public async Task<Result<IReadOnlyList<PurchaseInvoiceDto>>> Handle(ListPurchaseInvoicesQuery request, CancellationToken cancellationToken)
     {
@@ -478,7 +601,10 @@ public sealed class PurchaseQueryHandlers :
         if (orderIds.Any())
         {
             var recs = await _dbContext.Set<PurchaseReception>()
-                .Where(r => r.TenantId == tenantId && r.PurchaseOrderId != null && orderIds.Contains(r.PurchaseOrderId.Value))
+                .Where(r => r.TenantId == tenantId
+                    && r.PurchaseOrderId != null
+                    && orderIds.Contains(r.PurchaseOrderId.Value)
+                    && r.Status != "Cancelled")
                 .Select(r => new { OrderId = r.PurchaseOrderId!.Value, ReceptionId = r.Id })
                 .ToListAsync(cancellationToken);
 
@@ -534,7 +660,9 @@ public sealed class PurchaseQueryHandlers :
             if (!receptionId.HasValue)
             {
                 var existingRec = await _dbContext.Set<PurchaseReception>()
-                    .FirstOrDefaultAsync(r => r.PurchaseOrderId == request.PurchaseOrderId.Value && r.TenantId == tenantId, cancellationToken);
+                    .FirstOrDefaultAsync(r => r.PurchaseOrderId == request.PurchaseOrderId.Value
+                        && r.TenantId == tenantId
+                        && r.Status != "Cancelled", cancellationToken);
                 if (existingRec != null)
                 {
                     receptionId = existingRec.Id;
@@ -588,6 +716,22 @@ public sealed class PurchaseQueryHandlers :
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Result<PurchaseInvoiceDto>.Success(MapInvoiceToDto(invoice));
+    }
+
+    public async Task<Result<PurchaseInvoiceDto>> Handle(CancelPurchaseInvoiceCommand request, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantContext.TenantId;
+        var inv = await _dbContext.Set<PurchaseInvoice>()
+            .Include(i => i.Items)
+            .FirstOrDefaultAsync(i => i.Id == request.Id && i.TenantId == tenantId, cancellationToken);
+        if (inv == null)
+            return Result<PurchaseInvoiceDto>.Failure(Error.NotFound("Purchases.Invoice.NotFound", $"Factura {request.Id} no encontrada."));
+        if (string.Equals(inv.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.AlreadyCancelled", "La factura ya está anulada."));
+
+        inv.Cancel(request.Reason);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result<PurchaseInvoiceDto>.Success(MapInvoiceToDto(inv));
     }
 
     // ARCA Mis Comprobantes Handlers
@@ -945,6 +1089,7 @@ public sealed class PurchaseQueryHandlers :
             r.WarehouseLocation,
             r.ReceivedBy,
             r.Notes,
+            r.Status,
             r.CreatedAtUtc,
             r.Items.Select(i => new PurchaseReceptionItemDto(
                 i.Id,

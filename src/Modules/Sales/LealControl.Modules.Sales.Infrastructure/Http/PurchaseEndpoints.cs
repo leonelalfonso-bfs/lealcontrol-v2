@@ -71,6 +71,12 @@ public static class PurchaseEndpoints
                 : result.ToHttp();
         });
 
+        purchases.MapPost("/receptions/{id:guid}/cancel", async (Guid id, CancelPurchaseBody? body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new CancelPurchaseReceptionCommand(id, body?.Reason), ct);
+            return result.ToHttp();
+        }).RequireAuthorization("RequirePurchases");
+
         // Purchase Invoices (Facturas de Proveedor)
         purchases.MapGet("/invoices", async (string? search, string? status, ISender sender, CancellationToken ct) =>
         {
@@ -91,6 +97,12 @@ public static class PurchaseEndpoints
                 ? Results.Created($"/api/v1/purchases/invoices/{result.Value.Id}", result.Value)
                 : result.ToHttp();
         });
+
+        purchases.MapPost("/invoices/{id:guid}/cancel", async (Guid id, CancelPurchaseBody? body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new CancelPurchaseInvoiceCommand(id, body?.Reason), ct);
+            return result.ToHttp();
+        }).RequireAuthorization("RequirePurchases");
 
         // ARCA Mis Comprobantes Recibidos
         purchases.MapGet("/arca/vouchers", async (string? status, string? search, ISender sender, CancellationToken ct) =>
@@ -168,8 +180,10 @@ public static class PurchaseEndpoints
         {
             var order = await db.Set<PurchaseOrder>().Include(x => x.Items).AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId, ct);
             if (order is null) return Results.NotFound(new { detail = "Orden de compra no encontrada." });
-            var receptions = await db.Set<PurchaseReception>().Include(x => x.Items).AsNoTracking().Where(x => x.PurchaseOrderId == id && x.TenantId == tenant.TenantId).ToListAsync(ct);
-            var invoices = await db.Set<PurchaseInvoice>().Include(x => x.Items).AsNoTracking().Where(x => x.PurchaseOrderId == id && x.TenantId == tenant.TenantId).ToListAsync(ct);
+            var receptions = await db.Set<PurchaseReception>().Include(x => x.Items).AsNoTracking()
+                .Where(x => x.PurchaseOrderId == id && x.TenantId == tenant.TenantId && x.Status != "Cancelled").ToListAsync(ct);
+            var invoices = await db.Set<PurchaseInvoice>().Include(x => x.Items).AsNoTracking()
+                .Where(x => x.PurchaseOrderId == id && x.TenantId == tenant.TenantId && x.Status != "Cancelled").ToListAsync(ct);
             var rows = order.Items.Select(item => new { productId = item.ProductId, code = item.Code, ordered = item.Quantity, received = receptions.SelectMany(x => x.Items).Where(x => x.ProductId == item.ProductId).Sum(x => x.Quantity), invoiced = invoices.SelectMany(x => x.Items).Where(x => x.ProductId == item.ProductId).Sum(x => x.Quantity), orderedAmount = item.Total, invoicedAmount = invoices.SelectMany(x => x.Items).Where(x => x.ProductId == item.ProductId).Sum(x => x.Total) }).ToList();
             return Results.Ok(new { orderId = id, status = rows.Any(x => x.received > x.ordered || x.invoicedAmount > x.orderedAmount) ? "WithDifferences" : "Matched", rows });
         });
@@ -178,4 +192,5 @@ public static class PurchaseEndpoints
     public sealed record UpdateStatusRequest(string Status);
     public sealed record ImportArcaRequest(string CsvContent);
     public sealed record RejectRequest(string Reason);
+    public sealed record CancelPurchaseBody(string? Reason);
 }

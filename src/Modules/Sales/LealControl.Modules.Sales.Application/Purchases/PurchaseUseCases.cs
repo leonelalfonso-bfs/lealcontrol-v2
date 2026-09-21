@@ -60,6 +60,7 @@ public sealed record PurchaseReceptionDto(
     string WarehouseLocation,
     string? ReceivedBy,
     string? Notes,
+    string Status,
     DateTime CreatedAtUtc,
     IReadOnlyList<PurchaseReceptionItemDto> Items);
 
@@ -194,6 +195,10 @@ public sealed record ListPurchaseReceptionsQuery(
 public sealed record GetPurchaseReceptionQuery(
     Guid Id) : IRequest<Result<PurchaseReceptionDto>>;
 
+public sealed record CancelPurchaseReceptionCommand(
+    Guid Id,
+    string? Reason) : IRequest<Result<PurchaseReceptionDto>>;
+
 // Invoices Write Models
 public sealed record PurchaseInvoiceItemWrite(
     Guid? ProductId,
@@ -232,6 +237,10 @@ public sealed record ListPurchaseInvoicesQuery(
 
 public sealed record GetPurchaseInvoiceQuery(
     Guid Id) : IRequest<Result<PurchaseInvoiceDto>>;
+
+public sealed record CancelPurchaseInvoiceCommand(
+    Guid Id,
+    string? Reason) : IRequest<Result<PurchaseInvoiceDto>>;
 
 // ARCA Import Commands
 public sealed record ImportArcaCsvCommand(

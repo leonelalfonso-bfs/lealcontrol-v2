@@ -657,6 +657,11 @@ export const api = {
   getPurchaseReception: (id: string) => request<import("./types").PurchaseReception>(`/api/v1/purchases/receptions/${id}`),
   createPurchaseReception: (body: import("./types").PurchaseReceptionWrite) =>
     request<import("./types").PurchaseReception>("/api/v1/purchases/receptions", { method: "POST", body: JSON.stringify(body) }),
+  cancelPurchaseReception: (id: string, reason?: string) =>
+    request<import("./types").PurchaseReception>(`/api/v1/purchases/receptions/${id}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason: reason || null })
+    }),
 
   // Purchase Invoices Methods
   listPurchaseInvoices: (search = "", status = "") => {
@@ -669,6 +674,11 @@ export const api = {
   getPurchaseInvoice: (id: string) => request<import("./types").PurchaseInvoice>(`/api/v1/purchases/invoices/${id}`),
   createPurchaseInvoice: (body: import("./types").PurchaseInvoiceWrite) =>
     request<import("./types").PurchaseInvoice>("/api/v1/purchases/invoices", { method: "POST", body: JSON.stringify(body) }),
+  cancelPurchaseInvoice: (id: string, reason?: string) =>
+    request<import("./types").PurchaseInvoice>(`/api/v1/purchases/invoices/${id}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason: reason || null })
+    }),
 
   // ARCA Mis Comprobantes Recibidos Methods
   listArcaVouchers: (status = "Pending", search = "") => {
@@ -958,9 +968,9 @@ export const api = {
     request<FiscalPeriod>("/api/v1/accounting/periods/lock", { method: "POST", body: JSON.stringify(body) }),
 
   // Auto-Posting Triggers
-  autoPostInvoice: (body: { invoiceId: string; invoiceNumber: string; customerName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number }) =>
+  autoPostInvoice: (body: { invoiceId: string; invoiceNumber: string; customerName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number; invoiceType?: string | null }) =>
     request<JournalEntry>("/api/v1/accounting/auto-post/invoice", { method: "POST", body: JSON.stringify(body) }),
-  autoPostPurchase: (body: { purchaseId: string; invoiceNumber: string; supplierName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number }) =>
+  autoPostPurchase: (body: { purchaseId: string; invoiceNumber: string; supplierName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number; invoiceType?: string | null }) =>
     request<JournalEntry>("/api/v1/accounting/auto-post/purchase", { method: "POST", body: JSON.stringify(body) }),
   autoPostReceipt: (body: { receiptId: string; receiptNumber: string; customerName: string; date: string; amount: number; paymentMethod?: string }) =>
     request<JournalEntry>("/api/v1/accounting/auto-post/receipt", { method: "POST", body: JSON.stringify(body) }),

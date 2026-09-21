@@ -930,6 +930,7 @@ export type PurchaseReception = {
   warehouseLocation: string;
   receivedBy?: string | null;
   notes?: string | null;
+  status: string;
   createdAtUtc: string;
   items: PurchaseReceptionItem[];
 };

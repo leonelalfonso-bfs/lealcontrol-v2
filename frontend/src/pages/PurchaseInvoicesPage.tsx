@@ -102,16 +102,17 @@ export function PurchaseInvoicesPage() {
     });
   }, [enrichedInvoices, searchTerm, selectedType, selectedStatus, paymentFilter]);
 
-  // Totals calculations
-  const totalArs = invoices.filter((i) => i.currency === "ARS").reduce((acc, curr) => acc + curr.total, 0);
-  const totalUsd = invoices.filter((i) => i.currency === "USD").reduce((acc, curr) => acc + curr.total, 0);
+  // Totals calculations — excluir anuladas del volumen
+  const activeInvoices = invoices.filter((i) => i.status !== "Cancelled");
+  const totalArs = activeInvoices.filter((i) => i.currency === "ARS").reduce((acc, curr) => acc + curr.total, 0);
+  const totalUsd = activeInvoices.filter((i) => i.currency === "USD").reduce((acc, curr) => acc + curr.total, 0);
   
   const pendingArs = enrichedInvoices
-    .filter((i) => i.currency === "ARS" && !i.isPaid)
+    .filter((i) => i.currency === "ARS" && !i.isPaid && i.status !== "Cancelled")
     .reduce((s, i) => s + i.saldoPendiente, 0);
 
   const pendingUsd = enrichedInvoices
-    .filter((i) => i.currency === "USD" && !i.isPaid)
+    .filter((i) => i.currency === "USD" && !i.isPaid && i.status !== "Cancelled")
     .reduce((s, i) => s + i.saldoPendiente, 0);
 
   return (
@@ -380,7 +381,9 @@ export function PurchaseInvoicesPage() {
 
                       {/* Stock Status */}
                       <td style={{ padding: "12px 8px", textAlign: "center" }}>
-                        {isReceived ? (
+                        {inv.status === "Cancelled" ? (
+                          <span className="muted" style={{ fontSize: "0.8rem" }}>—</span>
+                        ) : isReceived ? (
                           <span
                             className="badge ok"
                             style={{
@@ -436,8 +439,8 @@ export function PurchaseInvoicesPage() {
 
                       {/* Actions */}
                       <td style={{ padding: "12px 8px", textAlign: "center" }}>
-                        <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-                          {!inv.isPaid && (
+                        <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
+                          {inv.status !== "Cancelled" && !inv.isPaid && (
                             <Link
                               to={`/finanzas/pagos/nueva?supplierId=${inv.supplierId}`}
                               className="btn compact"
@@ -469,6 +472,39 @@ export function PurchaseInvoicesPage() {
                           >
                             👁️ Ver
                           </Link>
+                          {inv.status !== "Cancelled" && (
+                            <button
+                              type="button"
+                              className="btn btn-outline compact"
+                              style={{
+                                fontSize: "0.78rem",
+                                padding: "4px 10px",
+                                fontWeight: 600,
+                                color: "#991b1b",
+                                borderColor: "#fecaca"
+                              }}
+                              title="Anular factura (deja de impactar cuenta corriente)"
+                              onClick={() => {
+                                const reason = window.prompt(`¿Anular factura ${inv.formattedNumber}? Motivo (opcional):`, "") ?? undefined;
+                                if (reason === undefined) return;
+                                void (async () => {
+                                  try {
+                                    await api.cancelPurchaseInvoice(inv.id, reason || undefined);
+                                    await loadData();
+                                  } catch (err: any) {
+                                    setError(err.message || "No se pudo anular la factura.");
+                                  }
+                                })();
+                              }}
+                            >
+                              Anular
+                            </button>
+                          )}
+                          {inv.status === "Cancelled" && (
+                            <span className="badge off" style={{ fontSize: "0.75rem", color: "#991b1b" }}>
+                              Anulada
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>

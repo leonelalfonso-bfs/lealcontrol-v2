@@ -1621,8 +1621,12 @@ namespace LealControl.Modules.Sales.Infrastructure.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("SupplierRemitoNumber")
-                        .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");

@@ -170,6 +170,22 @@ export function PurchaseReceptionFormPage() {
       return;
     }
 
+    const missingProduct = items.filter((it) => !it.productId && !(it.code || "").trim());
+    if (missingProduct.length > 0) {
+      setError(
+        "Cada línea debe tener un producto del catálogo (seleccioná producto o código válido). Sin producto no se genera inventario."
+      );
+      return;
+    }
+
+    const withoutProductId = items.filter((it) => !it.productId);
+    if (withoutProductId.length > 0) {
+      const ok = window.confirm(
+        `${withoutProductId.length} línea(s) no tienen producto seleccionado (solo código). El sistema intentará resolverlo por código. Si el código no existe en el catálogo, la recepción será rechazada. ¿Continuar?`
+      );
+      if (!ok) return;
+    }
+
     try {
       setSubmitting(true);
       setError(null);
@@ -422,7 +438,7 @@ export function PurchaseReceptionFormPage() {
 
         {/* Section 2: Items */}
         <div className="card pad" style={{ marginBottom: "20px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
             <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
               2. Ítems a Ingresar al Stock
             </h3>
@@ -434,6 +450,9 @@ export function PurchaseReceptionFormPage() {
               + Agregar Ítem
             </button>
           </div>
+          <p className="muted" style={{ fontSize: "0.85rem", marginBottom: 12 }}>
+            Cada línea debe vincularse a un producto del catálogo. Sin producto no se genera movimiento de inventario y la recepción será rechazada.
+          </p>
 
           <div className="table-wrap">
             <table className="table" style={{ width: "100%", borderCollapse: "collapse" }}>

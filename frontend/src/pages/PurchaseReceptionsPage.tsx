@@ -8,21 +8,43 @@ export function PurchaseReceptionsPage() {
   const [receptions, setReceptions] = useState<PurchaseReception[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await api.listPurchaseReceptions(search);
+      setReceptions(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "No se pudieron cargar las recepciones.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true);
-        const data = await api.listPurchaseReceptions(search);
-        setReceptions(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
+    void loadData();
   }, [search]);
+
+  const cancelReception = async (r: PurchaseReception) => {
+    const reason = window.prompt(
+      `¿Anular recepción ${r.receptionNumber}? Esto revierte el stock ingresado. Motivo (opcional):`,
+      ""
+    );
+    if (reason === null) return;
+    try {
+      setBusyId(r.id);
+      await api.cancelPurchaseReception(r.id, reason || undefined);
+      await loadData();
+    } catch (err: any) {
+      setError(err.message || "No se pudo anular la recepción.");
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <div>
@@ -40,7 +62,8 @@ export function PurchaseReceptionsPage() {
               { key: "supplierName", header: "Proveedor" },
               { key: "supplierRemitoNumber", header: "Remito Proveedor" },
               { key: "receptionDate", header: "Fecha" },
-              { key: "warehouseLocation", header: "Depósito" }
+              { key: "warehouseLocation", header: "Depósito" },
+              { key: "status", header: "Estado" }
             ]}
           />
           <Link to="/compras/recepciones/nueva" className="btn btn-primary">
@@ -48,6 +71,12 @@ export function PurchaseReceptionsPage() {
           </Link>
         </div>
       </div>
+
+      {error && (
+        <div className="alert" style={{ background: "#fee2e2", color: "#991b1b", marginBottom: 12 }}>
+          {error}
+        </div>
+      )}
 
       <div className="card filters">
         <input
@@ -77,14 +106,23 @@ export function PurchaseReceptionsPage() {
                 <th style={{ padding: "10px 8px" }}>Depósito Destino</th>
                 <th style={{ padding: "10px 8px" }}>Recibido Por</th>
                 <th style={{ padding: "10px 8px", textAlign: "center" }}>Cant. Ítems</th>
+                <th style={{ padding: "10px 8px", textAlign: "center" }}>Estado</th>
+                <th style={{ padding: "10px 8px", textAlign: "center" }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {receptions.map((r) => {
                 const hasRemito = r.supplierRemitoNumber && r.supplierRemitoNumber.trim() !== "" && r.supplierRemitoNumber !== "S/R" && r.supplierRemitoNumber !== "null";
+                const cancelled = r.status === "Cancelled";
 
                 return (
-                  <tr key={r.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                  <tr
+                    key={r.id}
+                    style={{
+                      borderBottom: "1px solid rgba(0,0,0,0.04)",
+                      opacity: cancelled ? 0.65 : 1
+                    }}
+                  >
                     <td style={{ padding: "12px 8px", fontWeight: "bold", fontFamily: "monospace" }}>
                       📦 {r.receptionNumber}
                     </td>
@@ -115,6 +153,26 @@ export function PurchaseReceptionsPage() {
                     </td>
                     <td style={{ padding: "12px 8px", textAlign: "center", fontWeight: "bold" }}>
                       {r.items.length}
+                    </td>
+                    <td style={{ padding: "12px 8px", textAlign: "center" }}>
+                      {cancelled ? (
+                        <span className="badge off" style={{ color: "#991b1b", background: "rgba(239,68,68,0.12)" }}>Anulada</span>
+                      ) : (
+                        <span className="badge ok" style={{ color: "#065f46", background: "rgba(16,185,129,0.12)" }}>Recibida</span>
+                      )}
+                    </td>
+                    <td style={{ padding: "12px 8px", textAlign: "center" }}>
+                      {!cancelled && (
+                        <button
+                          type="button"
+                          className="btn btn-outline compact"
+                          disabled={busyId === r.id}
+                          style={{ fontSize: "0.78rem", color: "#991b1b", borderColor: "#fecaca" }}
+                          onClick={() => void cancelReception(r)}
+                        >
+                          Anular
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

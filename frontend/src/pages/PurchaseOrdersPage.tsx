@@ -217,6 +217,28 @@ export function PurchaseOrdersPage() {
                             🧾 Facturar
                           </Link>
                         )}
+                        {o.status !== "Cancelled" && o.status !== "Received" && (
+                          <button
+                            type="button"
+                            className="btn btn-outline"
+                            style={{ padding: "4px 8px", fontSize: "0.82rem", color: "#991b1b", borderColor: "#fecaca" }}
+                            title="Anular orden de compra"
+                            onClick={() => {
+                              if (!window.confirm(`¿Anular la orden ${o.number}?`)) return;
+                              void (async () => {
+                                try {
+                                  await api.updatePurchaseOrderStatus(o.id, "Cancelled");
+                                  await loadData();
+                                } catch (err) {
+                                  console.error(err);
+                                  window.alert(err instanceof Error ? err.message : "No se pudo anular la orden.");
+                                }
+                              })();
+                            }}
+                          >
+                            Anular
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

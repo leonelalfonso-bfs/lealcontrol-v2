@@ -227,6 +227,6 @@ public sealed class PurchaseOrderItem : Entity<Guid>
 
     public void RecordReceived(decimal qty)
     {
-        ReceivedQuantity += qty;
+        ReceivedQuantity = Math.Max(0, ReceivedQuantity + qty);
     }
 }

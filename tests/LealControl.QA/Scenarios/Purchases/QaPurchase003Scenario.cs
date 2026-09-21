@@ -133,7 +133,8 @@ public sealed class QaPurchase003Scenario : ITestScenario
                 Date: invoice.IssueDate,
                 NetAmount: invoice.Subtotal,
                 VatAmount: invoice.Iva21 + invoice.Iva105 + invoice.Iva27,
-                TotalAmount: invoice.Total));
+                TotalAmount: invoice.Total,
+                InvoiceType: invoice.InvoiceType));
 
             // Saldo adeudado inicial = $121.000
             await supplierAuditor.AuditSupplierBalanceAsync(context, scenario, supplier.Id, expectedBalance: invoiceTotal);
@@ -202,7 +203,8 @@ public sealed class QaPurchase003Scenario : ITestScenario
                 Date: nc.IssueDate,
                 NetAmount: nc.Subtotal,
                 VatAmount: nc.Iva21 + nc.Iva105 + nc.Iva27,
-                TotalAmount: nc.Total));
+                TotalAmount: nc.Total,
+                InvoiceType: nc.InvoiceType));
 
             scenario.AddCheck(
                 name: "Contabilización de Nota de Crédito de proveedor responde 200/201",

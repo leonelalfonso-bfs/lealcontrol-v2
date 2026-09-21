@@ -214,6 +214,19 @@ public sealed class PurchaseInvoice : Entity<Guid>
         PurchaseReceptionId = receptionId;
     }
 
+    public void Cancel(string? reason = null)
+    {
+        if (string.Equals(Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        Status = "Cancelled";
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            var tag = $"Anulada: {reason.Trim()}";
+            Notes = string.IsNullOrWhiteSpace(Notes) ? tag : $"{Notes}\n{tag}";
+        }
+    }
+
     public void RecalculateTotals()
     {
         Subtotal = _items.Sum(i => i.NetSubtotal);

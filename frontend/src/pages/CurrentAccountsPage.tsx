@@ -6,6 +6,18 @@ import type { CustomerSummary, Invoice, PurchaseInvoice } from "../api/types";
 
 type TabMode = "customers" | "suppliers" | "dual";
 
+/** NC = reduce deuda; ND = aumenta; factura normal = aumenta. */
+function isCreditNoteType(invoiceType?: string | null) {
+  return /^NC/i.test(String(invoiceType || ""));
+}
+function isDebitNoteType(invoiceType?: string | null) {
+  return /^ND/i.test(String(invoiceType || ""));
+}
+/** Signo para saldos: factura/ND = +, NC = − */
+function signedDocTotal(invoiceType: string | undefined | null, total: number) {
+  return isCreditNoteType(invoiceType) ? -Math.abs(total || 0) : Math.abs(total || 0);
+}
+
 type Receipt = {
   id: string;
   customerId?: string;
@@ -113,14 +125,17 @@ export function CurrentAccountsPage() {
       const custInvoices = salesInvoices.filter((i) => i.customerId === entity.id && i.status !== "Cancelled");
       const custReceipts = receipts.filter((r) => r.customerId === entity.id && isActiveDoc(r.status));
 
-      // Billed sales in ARS (converting USD at invoice issuance rate)
+      // Billed sales in ARS (converting USD at invoice issuance rate); NC resta
       const billedSalesArs = custInvoices.reduce((s, i) => {
         const rate = i.exchangeRate && i.exchangeRate > 0 ? i.exchangeRate : 1;
-        return s + (i.currency === "USD" ? (i.total || 0) * rate : (i.total || 0));
+        const signed = signedDocTotal(i.invoiceType, i.total || 0);
+        return s + (i.currency === "USD" ? signed * rate : signed);
       }, 0);
 
-      // Billed sales in USD
-      const billedSalesUsd = custInvoices.filter((i) => i.currency === "USD").reduce((s, i) => s + (i.total || 0), 0);
+      // Billed sales in USD (NC resta)
+      const billedSalesUsd = custInvoices
+        .filter((i) => i.currency === "USD")
+        .reduce((s, i) => s + signedDocTotal(i.invoiceType, i.total || 0), 0);
 
       // Collected sales in ARS
       const collectedSalesArs = custReceipts.reduce((s, r) => {
@@ -149,10 +164,13 @@ export function CurrentAccountsPage() {
 
       const billedPurchasesArs = suppInvoices.reduce((s, p) => {
         const rate = p.exchangeRate && p.exchangeRate > 0 ? p.exchangeRate : 1;
-        return s + (p.currency === "USD" ? (p.total || 0) * rate : (p.total || 0));
+        const signed = signedDocTotal(p.invoiceType, p.total || 0);
+        return s + (p.currency === "USD" ? signed * rate : signed);
       }, 0);
 
-      const billedPurchasesUsd = suppInvoices.filter((p) => p.currency === "USD").reduce((s, p) => s + (p.total || 0), 0);
+      const billedPurchasesUsd = suppInvoices
+        .filter((p) => p.currency === "USD")
+        .reduce((s, p) => s + signedDocTotal(p.invoiceType, p.total || 0), 0);
 
       const paidPurchasesArs = suppPayments.reduce((s, po) => {
         const rate = po.exchangeRate && po.exchangeRate > 0 ? po.exchangeRate : 1;
@@ -265,22 +283,31 @@ export function CurrentAccountsPage() {
       muted?: boolean;
     }> = [];
 
-    // Sales invoices (Debit to customer: + Deuda del cliente)
+    // Sales invoices / NC / ND
     salesInvoices
       .filter((i) => i.customerId === ledgerEntity.id && i.status !== "Cancelled")
       .forEach((i) => {
         const isUsd = i.currency === "USD";
         const rate = i.exchangeRate && i.exchangeRate > 0 ? i.exchangeRate : 1;
-        const debitArs = isUsd ? (i.total || 0) * rate : (i.total || 0);
+        const amountArs = isUsd ? (i.total || 0) * rate : (i.total || 0);
+        const nc = isCreditNoteType(i.invoiceType);
+        const label = nc
+          ? `Nota de Crédito Venta (${i.invoiceType}${isUsd ? " USD" : ""})`
+          : isDebitNoteType(i.invoiceType)
+            ? `Nota de Débito Venta (${i.invoiceType}${isUsd ? " USD" : ""})`
+            : `Factura Venta (${i.invoiceType || "B"}${isUsd ? " USD" : ""})`;
 
         history.push({
           date: i.issueDate,
-          type: `Factura Venta (${i.invoiceType || "B"}${isUsd ? " USD" : ""})`,
+          type: label,
           number: `${String(i.pointOfSale).padStart(4, "0")}-${String(i.invoiceNumber).padStart(8, "0")}`,
-          description: isUsd ? `Factura en USD @ TC $${rate.toLocaleString("es-AR")}` : i.notes || "Facturación de venta",
+          description: isUsd
+            ? `${nc ? "NC" : "Factura"} en USD @ TC $${rate.toLocaleString("es-AR")}`
+            : i.notes || (nc ? "Nota de crédito de venta" : "Facturación de venta"),
           originalAmount: isUsd ? money(i.total, "USD") : undefined,
-          debit: debitArs,
-          credit: 0,
+          // NC baja deuda del cliente → crédito; factura/ND → débito
+          debit: nc ? 0 : amountArs,
+          credit: nc ? amountArs : 0,
           source: "sale"
         });
       });
@@ -333,22 +360,31 @@ export function CurrentAccountsPage() {
         }
       });
 
-    // Purchase invoices (Credit to supplier: + Deuda nuestra con el proveedor)
+    // Purchase invoices / NC / ND
     purchaseInvoices
       .filter((p) => p.supplierId === ledgerEntity.id && p.status !== "Cancelled")
       .forEach((p) => {
         const isUsd = p.currency === "USD";
         const rate = p.exchangeRate && p.exchangeRate > 0 ? p.exchangeRate : 1;
-        const creditArs = isUsd ? (p.total || 0) * rate : (p.total || 0);
+        const amountArs = isUsd ? (p.total || 0) * rate : (p.total || 0);
+        const nc = isCreditNoteType(p.invoiceType);
+        const label = nc
+          ? `Nota de Crédito Compra (${p.invoiceType}${isUsd ? " USD" : ""})`
+          : isDebitNoteType(p.invoiceType)
+            ? `Nota de Débito Compra (${p.invoiceType}${isUsd ? " USD" : ""})`
+            : `Factura Compra (${p.invoiceType || "A"}${isUsd ? " USD" : ""})`;
 
         history.push({
           date: p.issueDate,
-          type: `Factura Compra (${p.invoiceType || "A"}${isUsd ? " USD" : ""})`,
+          type: label,
           number: `${String(p.pointOfSale).padStart(4, "0")}-${String(p.invoiceNumber).padStart(8, "0")}`,
-          description: isUsd ? `Factura Proveedor USD @ TC $${rate.toLocaleString("es-AR")}` : p.notes || "Factura de proveedor",
+          description: isUsd
+            ? `${nc ? "NC" : "Factura"} Proveedor USD @ TC $${rate.toLocaleString("es-AR")}`
+            : p.notes || (nc ? "Nota de crédito de proveedor" : "Factura de proveedor"),
           originalAmount: isUsd ? money(p.total, "USD") : undefined,
-          debit: 0,
-          credit: creditArs,
+          // NC baja nuestra deuda → débito; factura/ND → crédito
+          debit: nc ? amountArs : 0,
+          credit: nc ? 0 : amountArs,
           source: "purchase"
         });
       });
@@ -399,10 +435,14 @@ export function CurrentAccountsPage() {
     const computed: LedgerItem[] = [];
 
     for (const item of history) {
-      if (item.source === "sale" || item.source === "adjustment") running += item.debit;
-      else if (item.source === "collection") running -= item.credit;
-      else if (item.source === "purchase") running -= item.credit;
-      else if (item.source === "payment") running += item.debit;
+      if (item.source === "sale" || item.source === "adjustment") {
+        running += item.debit;
+        running -= item.credit; // NC venta
+      } else if (item.source === "collection") running -= item.credit;
+      else if (item.source === "purchase") {
+        running -= item.credit; // factura compra ↑ deuda
+        running += item.debit; // NC compra ↓ deuda
+      } else if (item.source === "payment") running += item.debit;
       else if (item.source === "void") {
         // Reversa: débito reabre deuda cliente; crédito reabre deuda proveedor
         running += item.debit;
