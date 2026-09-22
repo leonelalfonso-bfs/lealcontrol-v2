@@ -143,11 +143,16 @@ internal sealed class OpportunityRepository : IOpportunityRepository
     public async Task<IReadOnlyList<Opportunity>> ListByCustomerAsync(
         TenantId tenantId,
         CustomerId customerId,
-        CancellationToken cancellationToken = default) =>
-        await _db.Opportunities.AsNoTracking()
-            .Where(x => x.TenantId == tenantId && x.CustomerId == customerId)
+        CancellationToken cancellationToken = default)
+    {
+        var customerGuid = customerId.Value;
+        // EF.Property evita fallos de traducción con CustomerId? (value object nullable).
+        return await _db.Opportunities.AsNoTracking()
+            .Where(x => x.TenantId == tenantId
+                        && EF.Property<Guid?>(x, nameof(Opportunity.CustomerId)) == customerGuid)
             .OrderByDescending(x => x.CreatedAtUtc)
             .ToListAsync(cancellationToken);
+    }
 
     public async Task<IReadOnlyList<Opportunity>> ListAsync(
         TenantId tenantId,
@@ -170,12 +175,16 @@ internal sealed class ActivityRepository : IActivityRepository
         TenantId tenantId,
         CustomerId customerId,
         int take,
-        CancellationToken cancellationToken = default) =>
-        await _db.Activities.AsNoTracking()
-            .Where(x => x.TenantId == tenantId && x.CustomerId == customerId)
+        CancellationToken cancellationToken = default)
+    {
+        var customerGuid = customerId.Value;
+        return await _db.Activities.AsNoTracking()
+            .Where(x => x.TenantId == tenantId
+                        && EF.Property<Guid?>(x, nameof(Activity.CustomerId)) == customerGuid)
             .OrderByDescending(x => x.OccurredAtUtc)
             .Take(take)
             .ToListAsync(cancellationToken);
+    }
 
     public async Task<IReadOnlyList<Activity>> ListWithFollowUpAsync(
         TenantId tenantId,
@@ -191,12 +200,16 @@ internal sealed class ActivityRepository : IActivityRepository
         TenantId tenantId,
         OpportunityId opportunityId,
         int take,
-        CancellationToken cancellationToken = default) =>
-        await _db.Activities.AsNoTracking()
-            .Where(x => x.TenantId == tenantId && x.OpportunityId == opportunityId)
+        CancellationToken cancellationToken = default)
+    {
+        var opportunityGuid = opportunityId.Value;
+        return await _db.Activities.AsNoTracking()
+            .Where(x => x.TenantId == tenantId
+                        && EF.Property<Guid?>(x, nameof(Activity.OpportunityId)) == opportunityGuid)
             .OrderByDescending(x => x.OccurredAtUtc)
             .Take(take)
             .ToListAsync(cancellationToken);
+    }
 
     public void Add(Activity activity) => _db.Activities.Add(activity);
 }
