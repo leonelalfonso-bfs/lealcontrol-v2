@@ -588,6 +588,8 @@ export type CompanySettings = {
   fiscalPostalCode?: string | null;
   logoUrl?: string | null;
   hasArcaCertificate: boolean;
+  arcaCertificateCrt?: string | null;
+  arcaCertificateKey?: string | null;
   arcaEnvironment: string;
   arcaSignerCuit?: string | null;
   bankName?: string | null;

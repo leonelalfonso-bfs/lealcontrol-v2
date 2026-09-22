@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Results;
@@ -16,6 +19,7 @@ public sealed class CompanySettingsQueryHandler :
       IRequestHandler<GetCompanySettingsQuery, Result<CompanySettingsDto>>,
       IRequestHandler<UpdateCompanySettingsCommand, Result<CompanySettingsDto>>,
       IRequestHandler<UploadArcaCertificateCommand, Result<CompanySettingsDto>>,
+      IRequestHandler<GenerateArcaCsrCommand, Result<ArcaCsrResultDto>>,
       IRequestHandler<ListTenantUsersQuery, Result<IReadOnlyList<TenantUserDto>>>,
       IRequestHandler<CreateTenantUserCommand, Result<TenantUserDto>>,
       IRequestHandler<UpdateTenantUserCommand, Result<TenantUserDto>>,
@@ -88,6 +92,113 @@ public sealed class CompanySettingsQueryHandler :
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Result<CompanySettingsDto>.Success(MapToDto(settings));
+    }
+
+    public async Task<Result<ArcaCsrResultDto>> Handle(GenerateArcaCsrCommand request, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantContext.TenantId;
+        var settings = await GetOrInitSettingsAsync(tenantId, cancellationToken);
+
+        var cuitDigits = new string((request.SignerCuit ?? string.Empty).Where(char.IsDigit).ToArray());
+        if (cuitDigits.Length != 11)
+        {
+            return Result<ArcaCsrResultDto>.Failure(
+                Error.Validation("Crm.Arca.InvalidCuit", "El CUIT del firmante debe contener exactamente 11 dígitos."));
+        }
+
+        var organization = SanitizeDnValue(
+            string.IsNullOrWhiteSpace(request.OrganizationName)
+                ? (settings.LegalName ?? "Empresa")
+                : request.OrganizationName);
+        var commonName = SanitizeDnValue(
+            string.IsNullOrWhiteSpace(request.CommonName)
+                ? "LealControl"
+                : request.CommonName);
+
+        if (string.IsNullOrWhiteSpace(organization) || string.IsNullOrWhiteSpace(commonName))
+        {
+            return Result<ArcaCsrResultDto>.Failure(
+                Error.Validation("Crm.Arca.InvalidSubject", "La organización y el alias (CN) del certificado son obligatorios."));
+        }
+
+        string privateKeyPem;
+        string csrPem;
+        try
+        {
+            using var rsa = RSA.Create(2048);
+            // DN oficial ARCA/AFIP: /C=AR/O=…/CN=…/serialNumber=CUIT ###########
+            var dn = new X500DistinguishedName(
+                $"C=AR, O={QuoteDn(organization)}, CN={QuoteDn(commonName)}, SERIALNUMBER=\"CUIT {cuitDigits}\"");
+            var certificateRequest = new CertificateRequest(
+                dn,
+                rsa,
+                HashAlgorithmName.SHA256,
+                RSASignaturePadding.Pkcs1);
+
+            var csrDer = certificateRequest.CreateSigningRequest();
+            csrPem = ToPem("CERTIFICATE REQUEST", csrDer);
+            privateKeyPem = rsa.ExportRSAPrivateKeyPem();
+        }
+        catch (Exception ex)
+        {
+            return Result<ArcaCsrResultDto>.Failure(
+                Error.Failure("Crm.Arca.CsrGenerationFailed", $"No se pudo generar el archivo de consulta: {ex.Message}"));
+        }
+
+        var environment = string.IsNullOrWhiteSpace(request.Environment)
+            ? settings.ArcaEnvironment
+            : request.Environment.Trim();
+
+        // Nueva clave ⇒ el CRT anterior ya no corresponde.
+        settings.ArcaCertificateKey = privateKeyPem;
+        settings.ArcaCertificateCrt = null;
+        settings.ArcaSignerCuit = cuitDigits;
+        settings.ArcaEnvironment = environment;
+        settings.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var fileBase = $"pedido_arca_{cuitDigits}";
+        return Result<ArcaCsrResultDto>.Success(new ArcaCsrResultDto(
+            csrPem,
+            privateKeyPem,
+            $"{fileBase}.csr",
+            $"privada_arca_{cuitDigits}.key",
+            MapToDto(settings)));
+    }
+
+    private static string SanitizeDnValue(string value)
+    {
+        var trimmed = value.Trim();
+        // Evitar caracteres que rompen el DN o el alta en ARCA.
+        var cleaned = new StringBuilder(trimmed.Length);
+        foreach (var ch in trimmed)
+        {
+            if (ch is '<' or '>' or '\0' or '\r' or '\n')
+                continue;
+            cleaned.Append(ch);
+        }
+        return cleaned.ToString().Trim();
+    }
+
+    private static string QuoteDn(string value)
+    {
+        var escaped = value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+        return $"\"{escaped}\"";
+    }
+
+    private static string ToPem(string label, byte[] der)
+    {
+        var base64 = Convert.ToBase64String(der);
+        var sb = new StringBuilder();
+        sb.Append("-----BEGIN ").Append(label).AppendLine("-----");
+        for (var i = 0; i < base64.Length; i += 64)
+        {
+            var len = Math.Min(64, base64.Length - i);
+            sb.AppendLine(base64.Substring(i, len));
+        }
+        sb.Append("-----END ").Append(label).AppendLine("-----");
+        return sb.ToString();
     }
 
     public async Task<Result<IReadOnlyList<TenantUserDto>>> Handle(ListTenantUsersQuery request, CancellationToken cancellationToken)

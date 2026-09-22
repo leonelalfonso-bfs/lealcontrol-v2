@@ -20,7 +20,10 @@ export function SettingsPage() {
   const [keyText, setKeyText] = useState("");
   const [certEnv, setCertEnv] = useState("Homologacion");
   const [certCuit, setCertCuit] = useState("");
+  const [certAlias, setCertAlias] = useState("LealControl");
   const [uploadingCert, setUploadingCert] = useState(false);
+  const [generatingCsr, setGeneratingCsr] = useState(false);
+  const [csrReady, setCsrReady] = useState(false);
 
   // User Modal State (Create & Edit)
   const [showUserModal, setShowUserModal] = useState(false);
@@ -43,6 +46,13 @@ export function SettingsPage() {
         setUsers(u);
         setCertEnv(s.arcaEnvironment || "Homologacion");
         setCertCuit(s.arcaSignerCuit || s.documentNumber || "");
+        if (s.arcaCertificateKey) {
+          setKeyText(s.arcaCertificateKey);
+          setCsrReady(true);
+        }
+        if (s.arcaCertificateCrt) {
+          setCrtText(s.arcaCertificateCrt);
+        }
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -97,10 +107,59 @@ export function SettingsPage() {
     }
   };
 
+  const downloadTextFile = (content: string, fileName: string) => {
+    const blob = new Blob([content], { type: "application/pkcs10;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleGenerateCsr = async () => {
+    const cuitDigits = (certCuit || "").replace(/\D/g, "");
+    if (cuitDigits.length !== 11) {
+      setError("Ingresá el CUIT del firmante (11 dígitos) para generar el archivo de consulta.");
+      return;
+    }
+    try {
+      setGeneratingCsr(true);
+      setError(null);
+      setSuccessMsg(null);
+      const result = await api.generateArcaCsr({
+        signerCuit: cuitDigits,
+        environment: certEnv,
+        organizationName: settings?.legalName || undefined,
+        commonName: certAlias.trim() || "LealControl"
+      });
+      setSettings(result.settings);
+      setKeyText(result.privateKeyPem);
+      setCrtText("");
+      setCsrReady(true);
+      downloadTextFile(result.csrPem, result.csrFileName);
+      // La clave privada se guarda en el servidor; también se descarga como respaldo local.
+      downloadTextFile(result.privateKeyPem, result.privateKeyFileName);
+      setSuccessMsg(
+        "✓ Archivo de consulta (.csr) generado. Subilo en ARCA → Administrador de Certificados Digitales. Cuando ARCA te entregue el .crt, cargalo abajo (la clave privada ya quedó guardada)."
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al generar el archivo de consulta");
+    } finally {
+      setGeneratingCsr(false);
+    }
+  };
+
   const handleUploadCertificate = async (e: FormEvent) => {
     e.preventDefault();
-    if (!crtText || !keyText) {
-      setError("Por favor seleccioná los archivos de Certificado (.crt) y Clave Privada (.key).");
+    if (!crtText) {
+      setError("Seleccioná el archivo de Certificado (.crt) emitido por ARCA.");
+      return;
+    }
+    if (!keyText) {
+      setError("Falta la clave privada (.key). Generá primero el archivo de consulta o cargá el .key manualmente.");
       return;
     }
     try {
@@ -484,7 +543,8 @@ export function SettingsPage() {
           <div className="card pad">
             <h3>Certificado Digital ARCA / AFIP (WebServices)</h3>
             <p className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
-              Cargá el certificado X.509 (.crt) y la clave privada (.key) para emitir Facturación Electrónica oficial (WSFE).
+              Primero generá el archivo de consulta (.csr) para tramitarlo en ARCA. Después cargá el certificado (.crt)
+              que te devolván junto con la clave privada (.key).
             </p>
 
             <div className="grid-form" style={{ marginTop: 16 }}>
@@ -504,13 +564,51 @@ export function SettingsPage() {
                   placeholder="CUIT asociado al certificado"
                 />
               </label>
+
+              <label>
+                Alias del certificado (CN)
+                <input
+                  value={certAlias}
+                  onChange={(e) => setCertAlias(e.target.value)}
+                  placeholder="Ej. LealControl"
+                />
+              </label>
+            </div>
+
+            <div
+              className="card pad"
+              style={{
+                marginTop: 20,
+                border: "1px solid rgba(13, 148, 136, 0.35)",
+                background: "rgba(13, 148, 136, 0.06)"
+              }}
+            >
+              <h4 style={{ margin: 0 }}>Paso 1 — Archivo de consulta (.CSR)</h4>
+              <p className="muted" style={{ fontSize: "0.8rem", margin: "8px 0 12px" }}>
+                Generá el pedido PKCS#10 con el formato exigido por ARCA
+                (<code>serialNumber=CUIT …</code>). Subí el <strong>.csr</strong> en el portal ARCA
+                (Administrador de Certificados Digitales / WSASS) y descargá el <strong>.crt</strong> firmado.
+              </p>
+              <div className="row" style={{ gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={generatingCsr}
+                  onClick={() => void handleGenerateCsr()}
+                >
+                  {generatingCsr ? "Generando…" : "📥 Generar y descargar archivo de consulta"}
+                </button>
+                {csrReady && (
+                  <span className="badge ok">✓ CSR y clave privada listos (clave guardada en el servidor)</span>
+                )}
+              </div>
             </div>
 
             <div className="grid-2" style={{ gap: 16, marginTop: 20 }}>
               <div className="card pad" style={{ border: "1px dashed var(--line)", background: "rgba(0,0,0,0.02)" }}>
-                <h4>1. Certificado Digital (.CRT)</h4>
+                <h4>Paso 2 — Certificado Digital (.CRT)</h4>
                 <p className="muted" style={{ fontSize: "0.8rem", marginBottom: 12 }}>
-                  Archivo emitido por AFIP/ARCA tras delegar el servicio WebService.
+                  Archivo emitido por AFIP/ARCA tras aprobar tu archivo de consulta.
                 </p>
                 <label className="btn ghost" style={{ cursor: "pointer", width: "fit-content" }}>
                   📄 Seleccionar archivo .CRT
@@ -524,9 +622,9 @@ export function SettingsPage() {
               </div>
 
               <div className="card pad" style={{ border: "1px dashed var(--line)", background: "rgba(0,0,0,0.02)" }}>
-                <h4>2. Clave Privada (.KEY)</h4>
+                <h4>Paso 2b — Clave Privada (.KEY)</h4>
                 <p className="muted" style={{ fontSize: "0.8rem", marginBottom: 12 }}>
-                  Clave privada generada con OpenSSL utilizada para firmar el CSR.
+                  Se genera automáticamente con el archivo de consulta. Solo cargala manualmente si ya la tenías de OpenSSL.
                 </p>
                 <label className="btn ghost" style={{ cursor: "pointer", width: "fit-content" }}>
                   🔑 Seleccionar archivo .KEY
@@ -534,7 +632,7 @@ export function SettingsPage() {
                 </label>
                 {keyText && (
                   <span className="badge ok" style={{ marginTop: 10, display: "inline-block" }}>
-                    ✓ Clave privada cargada ({keyText.length} bytes)
+                    ✓ Clave privada lista ({keyText.length} bytes)
                   </span>
                 )}
               </div>
@@ -544,6 +642,7 @@ export function SettingsPage() {
               <div style={{ fontWeight: 600, color: "#d97706", fontSize: "0.88rem" }}>🔒 Almacenamiento Seguro</div>
               <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)", marginTop: 4 }}>
                 Los certificados y claves privadas se resguardan de forma segura e independiente en la base de datos de tu empresa.
+                Si regenerás el archivo de consulta, la clave anterior deja de valer y deberás tramitar un certificado nuevo en ARCA.
               </div>
             </div>
           </div>

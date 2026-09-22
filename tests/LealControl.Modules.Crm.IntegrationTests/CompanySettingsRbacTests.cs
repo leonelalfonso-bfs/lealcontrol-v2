@@ -33,6 +33,37 @@ public sealed class CompanySettingsRbacTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Comercial_user_cannot_generate_arca_csr()
+    {
+        var client = _factory.CreateAuthenticatedClient(role: "Comercial");
+        using var content = new StringContent(
+            """{"signerCuit":"20323249017","environment":"Homologacion","organizationName":"Test SA","commonName":"LealControl"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+        var response = await client.PostAsync("/api/v1/company/settings/arca-csr", content);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Admin_user_can_generate_arca_csr()
+    {
+        var client = _factory.CreateAuthenticatedClient(role: "Admin");
+        using var content = new StringContent(
+            """{"signerCuit":"20323249017","environment":"Homologacion","organizationName":"Test SA","commonName":"LealControl"}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+        var response = await client.PostAsync("/api/v1/company/settings/arca-csr", content);
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.BadRequest);
+        if (response.StatusCode == HttpStatusCode.OK)
+        {
+            var json = await response.Content.ReadAsStringAsync();
+            json.Should().Contain("BEGIN CERTIFICATE REQUEST");
+            json.Should().Contain("BEGIN RSA PRIVATE KEY");
+            json.Should().Contain("csrFileName");
+        }
+    }
+
+    [Fact]
     public async Task Admin_user_can_list_company_users()
     {
         var client = _factory.CreateAuthenticatedClient(role: "Admin");

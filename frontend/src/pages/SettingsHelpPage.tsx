@@ -40,8 +40,9 @@ export function SettingsHelpPage() {
             Habilitación de la facturación electrónica oficial:
           </p>
           <ul>
-            <li><strong>Certificado Digital (.CRT):</strong> Emitido desde el portal de AFIP (Administrador de Relaciones de Clave Fiscal).</li>
-            <li><strong>Clave Privada (.KEY):</strong> Generada con OpenSSL para firmar las solicitudes de CAE ante los servidores de ARCA.</li>
+            <li><strong>Archivo de consulta (.CSR):</strong> Se genera desde Configuración → Certificado ARCA. Es el pedido PKCS#10 que se sube al portal ARCA (Administrador de Certificados Digitales) para obtener el .CRT.</li>
+            <li><strong>Certificado Digital (.CRT):</strong> Emitido por ARCA/AFIP tras aprobar el archivo de consulta.</li>
+            <li><strong>Clave Privada (.KEY):</strong> Se crea junto con el CSR (también podés usar una generada con OpenSSL). Firma las solicitudes de CAE ante los servidores de ARCA.</li>
             <li><strong>Ambientes Homologación / Producción:</strong> Permite realizar pruebas en el entorno de testing de AFIP antes de emitir comprobantes reales.</li>
           </ul>
         </section>
