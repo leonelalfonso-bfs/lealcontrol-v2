@@ -216,21 +216,33 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                     ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""FceCheckedAtUtc"" timestamp with time zone;
                 ", cancellationToken);
 
-        // Crítico para GET timeline / opportunities: columnas del modelo EF actual.
-        await TryEnsureAsync("opportunities/activities columns", @"
-                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""OwnerName"" character varying(120);
-                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""Priority"" character varying(20) DEFAULT 'Normal';
-                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""Probability"" integer NOT NULL DEFAULT 10;
-                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""RottingDays"" integer;
-                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""ExpectedCloseDate"" timestamp with time zone;
-                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""CustomFields"" jsonb NOT NULL DEFAULT '{}'::jsonb;
-                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}'::text[];
+        // Crítico para GET timeline / opportunities: cada ALTER es independiente
+        // (si uno falla, el resto igual se aplica — evita 500 por columna faltante).
+        await TryEnsureAsync("opp.OwnerName",
+            @"ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""OwnerName"" character varying(120);", cancellationToken);
+        await TryEnsureAsync("opp.Priority",
+            @"ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""Priority"" character varying(20) DEFAULT 'Normal';", cancellationToken);
+        await TryEnsureAsync("opp.Probability",
+            @"ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""Probability"" integer DEFAULT 10;", cancellationToken);
+        await TryEnsureAsync("opp.RottingDays",
+            @"ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""RottingDays"" integer;", cancellationToken);
+        await TryEnsureAsync("opp.ExpectedCloseDate",
+            @"ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""ExpectedCloseDate"" timestamp with time zone;", cancellationToken);
+        await TryEnsureAsync("opp.CustomFields",
+            @"ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""CustomFields"" jsonb DEFAULT '{}'::jsonb;", cancellationToken);
+        await TryEnsureAsync("opp.tags",
+            @"ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}'::text[];", cancellationToken);
 
-                ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""DueDate"" timestamp with time zone;
-                ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""IsDone"" boolean NOT NULL DEFAULT false;
-                ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""CompletedAtUtc"" timestamp with time zone;
+        await TryEnsureAsync("act.DueDate",
+            @"ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""DueDate"" timestamp with time zone;", cancellationToken);
+        await TryEnsureAsync("act.IsDone",
+            @"ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""IsDone"" boolean DEFAULT false;", cancellationToken);
+        await TryEnsureAsync("act.CompletedAtUtc",
+            @"ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""CompletedAtUtc"" timestamp with time zone;", cancellationToken);
 
+        await TryEnsureAsync("opp/act backfill", @"
                 UPDATE crm.opportunities SET ""Priority"" = 'Normal' WHERE ""Priority"" IS NULL OR btrim(""Priority"") = '';
+                UPDATE crm.opportunities SET ""Probability"" = 10 WHERE ""Probability"" IS NULL;
                 UPDATE crm.opportunities SET ""CustomFields"" = '{}'::jsonb WHERE ""CustomFields"" IS NULL;
                 UPDATE crm.opportunities SET tags = '{}'::text[] WHERE tags IS NULL;
                 UPDATE crm.activities SET ""IsDone"" = false WHERE ""IsDone"" IS NULL;

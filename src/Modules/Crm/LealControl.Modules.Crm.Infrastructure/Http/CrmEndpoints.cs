@@ -42,8 +42,16 @@ public static class CrmEndpoints
         EndpointFilterInvocationContext context,
         EndpointFilterDelegate next)
     {
-        var db = context.HttpContext.RequestServices.GetRequiredService<CrmDbContext>();
-        await db.EnsureCrmTablesAsync(context.HttpContext.RequestAborted);
+        try
+        {
+            var db = context.HttpContext.RequestServices.GetRequiredService<CrmDbContext>();
+            await db.EnsureCrmTablesAsync(context.HttpContext.RequestAborted);
+        }
+        catch
+        {
+            // No bloquear el request: Ensure ya loguea por paso; el repo reintenta/degrada.
+        }
+
         return await next(context);
     }
 

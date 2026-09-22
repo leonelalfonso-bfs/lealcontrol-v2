@@ -76,7 +76,7 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
                 v => string.IsNullOrWhiteSpace(v) ? new Dictionary<string, string>() : JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, string>())
             .Metadata.SetValueComparer(dictComparer);
 
-        builder.Property<uint>("xmin").HasColumnName("xmin").HasColumnType("xid").IsRowVersion();
+        // No mapear xmin: en tenants legacy chocaba system xid vs columna usuario y rompía listados.
 
         builder.Property(x => x.CustomerId)
             .HasConversion(

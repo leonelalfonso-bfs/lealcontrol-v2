@@ -6,6 +6,7 @@ using LealControl.Modules.Crm.Domain.Leads;
 using LealControl.Modules.Crm.Domain.Opportunities;
 using LealControl.Modules.Crm.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace LealControl.Modules.Crm.Infrastructure.Persistence.Repositories;
 
@@ -134,8 +135,13 @@ internal sealed class LeadRepository : ILeadRepository
 internal sealed class OpportunityRepository : IOpportunityRepository
 {
     private readonly CrmDbContext _db;
+    private readonly ILogger<OpportunityRepository> _logger;
 
-    public OpportunityRepository(CrmDbContext db) => _db = db;
+    public OpportunityRepository(CrmDbContext db, ILogger<OpportunityRepository>? logger = null)
+    {
+        _db = db;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<OpportunityRepository>.Instance;
+    }
 
     public Task<Opportunity?> GetByIdAsync(OpportunityId id, CancellationToken cancellationToken = default) =>
         _db.Opportunities.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -146,21 +152,69 @@ internal sealed class OpportunityRepository : IOpportunityRepository
         CancellationToken cancellationToken = default)
     {
         var customerGuid = customerId.Value;
-        // EF.Property evita fallos de traducción con CustomerId? (value object nullable).
-        return await _db.Opportunities.AsNoTracking()
+        return await QueryWithSchemaRetryAsync(
+            () => QueryByCustomer(tenantId, customerGuid).ToListAsync(cancellationToken),
+            "ListByCustomerAsync opportunities",
+            cancellationToken);
+    }
+
+    private IQueryable<Opportunity> QueryByCustomer(TenantId tenantId, Guid customerGuid) =>
+        _db.Opportunities.AsNoTracking()
             .Where(x => x.TenantId == tenantId
                         && EF.Property<Guid?>(x, nameof(Opportunity.CustomerId)) == customerGuid)
-            .OrderByDescending(x => x.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
-    }
+            .OrderByDescending(x => x.CreatedAtUtc);
 
     public async Task<IReadOnlyList<Opportunity>> ListAsync(
         TenantId tenantId,
         CancellationToken cancellationToken = default) =>
-        await _db.Opportunities.AsNoTracking()
-            .Where(x => x.TenantId == tenantId)
-            .OrderByDescending(x => x.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
+        await QueryWithSchemaRetryAsync(
+            () => _db.Opportunities.AsNoTracking()
+                .Where(x => x.TenantId == tenantId)
+                .OrderByDescending(x => x.CreatedAtUtc)
+                .ToListAsync(cancellationToken),
+            "ListAsync opportunities",
+            cancellationToken);
+
+    private async Task<IReadOnlyList<Opportunity>> QueryWithSchemaRetryAsync(
+        Func<Task<List<Opportunity>>> query,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await query();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "{Operation} falló; reintentando tras EnsureCrmTablesAsync.", operation);
+            await ResetAndEnsureAsync(cancellationToken);
+            try
+            {
+                return await query();
+            }
+            catch (Exception retryEx)
+            {
+                _logger.LogError(retryEx, "{Operation} sigue fallando; se devuelve lista vacía.", operation);
+                return Array.Empty<Opportunity>();
+            }
+        }
+    }
+
+    private async Task ResetAndEnsureAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Tras error SQL, Npgsql deja la conexión en "transaction aborted".
+            await _db.Database.CloseConnectionAsync();
+        }
+        catch (Exception closeEx)
+        {
+            _logger.LogDebug(closeEx, "CloseConnection tras fallo de opportunities omitido.");
+        }
+
+        _db.ChangeTracker.Clear();
+        await _db.EnsureCrmTablesAsync(cancellationToken);
+    }
 
     public void Add(Opportunity opportunity) => _db.Opportunities.Add(opportunity);
 }
@@ -168,8 +222,13 @@ internal sealed class OpportunityRepository : IOpportunityRepository
 internal sealed class ActivityRepository : IActivityRepository
 {
     private readonly CrmDbContext _db;
+    private readonly ILogger<ActivityRepository> _logger;
 
-    public ActivityRepository(CrmDbContext db) => _db = db;
+    public ActivityRepository(CrmDbContext db, ILogger<ActivityRepository>? logger = null)
+    {
+        _db = db;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ActivityRepository>.Instance;
+    }
 
     public async Task<IReadOnlyList<Activity>> ListByCustomerAsync(
         TenantId tenantId,
@@ -178,23 +237,31 @@ internal sealed class ActivityRepository : IActivityRepository
         CancellationToken cancellationToken = default)
     {
         var customerGuid = customerId.Value;
-        return await _db.Activities.AsNoTracking()
+        return await QueryWithSchemaRetryAsync(
+            () => QueryByCustomer(tenantId, customerGuid, take).ToListAsync(cancellationToken),
+            "ListByCustomerAsync activities",
+            cancellationToken);
+    }
+
+    private IQueryable<Activity> QueryByCustomer(TenantId tenantId, Guid customerGuid, int take) =>
+        _db.Activities.AsNoTracking()
             .Where(x => x.TenantId == tenantId
                         && EF.Property<Guid?>(x, nameof(Activity.CustomerId)) == customerGuid)
             .OrderByDescending(x => x.OccurredAtUtc)
-            .Take(take)
-            .ToListAsync(cancellationToken);
-    }
+            .Take(take);
 
     public async Task<IReadOnlyList<Activity>> ListWithFollowUpAsync(
         TenantId tenantId,
         int take,
         CancellationToken cancellationToken = default) =>
-        await _db.Activities.AsNoTracking()
-            .Where(x => x.TenantId == tenantId && x.NextFollowUpOn != null)
-            .OrderBy(x => x.NextFollowUpOn)
-            .Take(take)
-            .ToListAsync(cancellationToken);
+        await QueryWithSchemaRetryAsync(
+            () => _db.Activities.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.NextFollowUpOn != null)
+                .OrderBy(x => x.NextFollowUpOn)
+                .Take(take)
+                .ToListAsync(cancellationToken),
+            "ListWithFollowUpAsync activities",
+            cancellationToken);
 
     public async Task<IReadOnlyList<Activity>> ListByOpportunityAsync(
         TenantId tenantId,
@@ -203,12 +270,55 @@ internal sealed class ActivityRepository : IActivityRepository
         CancellationToken cancellationToken = default)
     {
         var opportunityGuid = opportunityId.Value;
-        return await _db.Activities.AsNoTracking()
-            .Where(x => x.TenantId == tenantId
-                        && EF.Property<Guid?>(x, nameof(Activity.OpportunityId)) == opportunityGuid)
-            .OrderByDescending(x => x.OccurredAtUtc)
-            .Take(take)
-            .ToListAsync(cancellationToken);
+        return await QueryWithSchemaRetryAsync(
+            () => _db.Activities.AsNoTracking()
+                .Where(x => x.TenantId == tenantId
+                            && EF.Property<Guid?>(x, nameof(Activity.OpportunityId)) == opportunityGuid)
+                .OrderByDescending(x => x.OccurredAtUtc)
+                .Take(take)
+                .ToListAsync(cancellationToken),
+            "ListByOpportunityAsync activities",
+            cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<Activity>> QueryWithSchemaRetryAsync(
+        Func<Task<List<Activity>>> query,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await query();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "{Operation} falló; reintentando tras EnsureCrmTablesAsync.", operation);
+            await ResetAndEnsureAsync(cancellationToken);
+            try
+            {
+                return await query();
+            }
+            catch (Exception retryEx)
+            {
+                _logger.LogError(retryEx, "{Operation} sigue fallando; se devuelve lista vacía.", operation);
+                return Array.Empty<Activity>();
+            }
+        }
+    }
+
+    private async Task ResetAndEnsureAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _db.Database.CloseConnectionAsync();
+        }
+        catch (Exception closeEx)
+        {
+            _logger.LogDebug(closeEx, "CloseConnection tras fallo de activities omitido.");
+        }
+
+        _db.ChangeTracker.Clear();
+        await _db.EnsureCrmTablesAsync(cancellationToken);
     }
 
     public void Add(Activity activity) => _db.Activities.Add(activity);
