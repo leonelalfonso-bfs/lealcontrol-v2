@@ -110,8 +110,23 @@ export function FinanceAccountsPage() {
   // Modal for Bank CSV Import / Update
   const [showImportModal, setShowImportModal] = useState(false);
   const [importCsv, setImportCsv] = useState("");
+  const [importFileName, setImportFileName] = useState("");
   const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [importSummary, setImportSummary] = useState<any | null>(null);
+  const [importRequiresMapping, setImportRequiresMapping] = useState(false);
+  const [importHeaders, setImportHeaders] = useState<string[]>([]);
   const [importLoading, setImportLoading] = useState(false);
+  const [columnMap, setColumnMap] = useState({
+    date: "",
+    debit: "",
+    credit: "",
+    amount: "",
+    tipo: "",
+    description: "",
+    reference: "",
+    balance: ""
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
 
   const [showAccountForm, setShowAccountForm] = useState(false);
   const [accountBusy, setAccountBusy] = useState(false);
@@ -220,13 +235,84 @@ export function FinanceAccountsPage() {
         description: "",
         externalReference: ""
       });
-      setSuccessMsg("Movimiento cargado. Clasificalo cuando corresponda.");
+      setSuccessMsg("Expectativa registrada. Se matcheará al importar el extracto.");
       setTimeout(() => setSuccessMsg(null), 4000);
       await openAccount(selectedAccount);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cargar el movimiento.");
     } finally {
       setManualBusy(false);
+    }
+  };
+
+  const applyPreviewResult = (preview: any) => {
+    if (Array.isArray(preview)) {
+      setImportRequiresMapping(false);
+      setImportHeaders([]);
+      setImportPreview(preview);
+      setImportSummary(null);
+      return;
+    }
+    setImportRequiresMapping(!!preview.requiresMapping);
+    setImportHeaders(preview.headers || []);
+    setImportPreview(preview.rows || []);
+    setImportSummary(preview.summary || null);
+    if (preview.requiresMapping && (preview.headers || []).length) {
+      const headers: string[] = preview.headers;
+      const guess = (names: string[]) => {
+        const idx = headers.findIndex((h) => names.some((n) => h.toLowerCase().includes(n)));
+        return idx >= 0 ? String(idx) : "";
+      };
+      setColumnMap({
+        date: guess(["fecha", "date"]),
+        debit: guess(["débito", "debito", "egreso"]),
+        credit: guess(["crédito", "credito", "ingreso"]),
+        amount: guess(["importe", "monto", "amount"]),
+        tipo: guess(["tipo"]),
+        description: guess(["descrip", "detalle", "concepto", "leyenda"]),
+        reference: guess(["referen", "comprob", "operacion"]),
+        balance: guess(["saldo", "balance"])
+      });
+    }
+  };
+
+  const saveColumnProfileAndPreview = async () => {
+    if (!selectedAccount || !importCsv.trim()) return;
+    if (columnMap.date === "") {
+      setError("Indicá la columna de Fecha.");
+      return;
+    }
+    if (columnMap.amount === "" && columnMap.debit === "" && columnMap.credit === "") {
+      setError("Indicá Importe, Débito o Crédito.");
+      return;
+    }
+    setProfileSaving(true);
+    setError(null);
+    try {
+      const toIdx = (v: string) => (v === "" ? null : Number(v));
+      await api.saveFinanceBankImportProfile({
+        accountId: selectedAccount.id,
+        name: `Perfil ${selectedAccount.name}`,
+        delimiter: importCsv.includes(";") ? ";" : ",",
+        columnMap: {
+          date: toIdx(columnMap.date),
+          debit: toIdx(columnMap.debit),
+          credit: toIdx(columnMap.credit),
+          amount: toIdx(columnMap.amount),
+          tipo: toIdx(columnMap.tipo),
+          description: toIdx(columnMap.description),
+          reference: toIdx(columnMap.reference),
+          balance: toIdx(columnMap.balance)
+        }
+      });
+      const preview = await api.previewFinanceBankImport(selectedAccount.id, importCsv);
+      applyPreviewResult(preview);
+      setSuccessMsg("Perfil de columnas guardado. Los próximos extractos usarán este mapeo.");
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo guardar el perfil.");
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -420,6 +506,7 @@ export function FinanceAccountsPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setImportFileName(file.name);
     const reader = new FileReader();
     reader.onload = async (event) => {
       const text = event.target?.result as string;
@@ -428,7 +515,7 @@ export function FinanceAccountsPage() {
         try {
           setImportLoading(true);
           const preview = await api.previewFinanceBankImport(selectedAccount.id, text);
-          setImportPreview(preview);
+          applyPreviewResult(preview);
         } catch (err: any) {
           setError(err.message || "Error al previsualizar extracto.");
         } finally {
@@ -441,14 +528,26 @@ export function FinanceAccountsPage() {
 
   const handleConfirmImport = async () => {
     if (!selectedAccount || !importCsv.trim()) return;
+    if (importRequiresMapping) {
+      setError("Primero mapeá las columnas del CSV y guardá el perfil.");
+      return;
+    }
     setImportLoading(true);
     setError(null);
     try {
-      const res = await api.confirmFinanceBankImport(selectedAccount.id, importCsv);
+      const res = await api.confirmFinanceBankImport(selectedAccount.id, importCsv, importFileName || undefined);
       setShowImportModal(false);
       setImportCsv("");
+      setImportFileName("");
       setImportPreview([]);
-      setSuccessMsg(`¡Extracto procesado! Nuevos importados: ${res.imported}. Movimientos actualizados con Titular/CUIT: ${res.updated || 0}. Duplicados: ${res.duplicates}.`);
+      setImportSummary(null);
+      setImportRequiresMapping(false);
+      const matched = res.matchedSystem || 0;
+      setSuccessMsg(
+        `Extracto procesado: ${res.imported} nuevos, ${res.updated || 0} actualizados, ${res.duplicates} duplicados` +
+          (matched ? `, ${matched} matcheados con expectativas del sistema` : "") +
+          "."
+      );
       await openAccount(selectedAccount);
     } catch (err: any) {
       setError(err.message || "Error al importar extracto.");
@@ -636,18 +735,31 @@ export function FinanceAccountsPage() {
                 + Cargar movimiento
               </button>
             ) : (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  setShowImportModal(true);
-                  setImportCsv("");
-                  setImportPreview([]);
-                }}
-                style={{ fontWeight: 700 }}
-              >
-                📤 Importar / Actualizar Extracto CSV
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setShowManualMovement(true)}
+                  title="Expectativa del sistema (PendingBank) hasta que llegue el extracto"
+                >
+                  + Expectativa manual
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setShowImportModal(true);
+                    setImportCsv("");
+                    setImportFileName("");
+                    setImportPreview([]);
+                    setImportSummary(null);
+                    setImportRequiresMapping(false);
+                  }}
+                  style={{ fontWeight: 700 }}
+                >
+                  Importar extracto CSV
+                </button>
+              </>
             )}
             <button
               type="button"
@@ -1180,8 +1292,8 @@ export function FinanceAccountsPage() {
         <Modal
           open={showImportModal}
           onClose={() => setShowImportModal(false)}
-          title={`📤 Importar o Actualizar Extracto Bancario (${selectedAccount.name})`}
-          contentStyle={{ maxWidth: 780, maxHeight: "90vh", overflowY: "auto" }}
+          title={`Importar extracto bancario (${selectedAccount.name})`}
+          contentStyle={{ maxWidth: 820, maxHeight: "90vh", overflowY: "auto" }}
           footer={(
             <>
               <button type="button" className="btn ghost" onClick={() => setShowImportModal(false)}>
@@ -1190,18 +1302,29 @@ export function FinanceAccountsPage() {
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={importLoading || !importCsv.trim()}
+                disabled={importLoading || !importCsv.trim() || importRequiresMapping}
                 onClick={handleConfirmImport}
                 style={{ fontWeight: 700 }}
               >
-                {importLoading ? "Procesando Extracto..." : "✓ Confirmar e Importar / Actualizar"}
+                {importLoading ? "Procesando…" : "Confirmar importación"}
               </button>
             </>
           )}
         >
               <p className="muted" style={{ fontSize: "0.85rem", marginTop: 0 }}>
-                Seleccioná el archivo <strong>CSV exportado de Banco Galicia / Santander / Macro / etc.</strong> o pegá el contenido. El sistema extraerá automáticamente los <strong>nombres de los titulares, CUITs y motivos</strong>, y actualizará los movimientos existentes.
+                Subí el CSV del banco. Si el formato no se reconoce, mapeás las columnas una sola vez.
+                También podés descargar la <strong>plantilla LealControl</strong> (Fecha;Tipo;Importe;Descripcion;Referencia;Saldo).
               </p>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => void api.downloadFinanceBankTemplate().catch((e) => setError(e.message))}
+                >
+                  Descargar plantilla CSV
+                </button>
+              </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
                 <label>
@@ -1225,9 +1348,10 @@ export function FinanceAccountsPage() {
                       if (text.trim()) {
                         try {
                           const preview = await api.previewFinanceBankImport(selectedAccount.id, text);
-                          setImportPreview(preview);
+                          applyPreviewResult(preview);
                         } catch {
                           setImportPreview([]);
+                          setImportSummary(null);
                         }
                       }
                     }}
@@ -1237,24 +1361,86 @@ export function FinanceAccountsPage() {
                 </label>
               </div>
 
-              {/* Preview Table */}
-              {importPreview.length > 0 && (
+              {importRequiresMapping && (
+                <div style={{ marginBottom: 16, padding: 12, border: "1px solid #fde68a", background: "#fffbeb", borderRadius: 8 }}>
+                  <h4 style={{ margin: "0 0 8px 0" }}>Mapear columnas (se guarda para esta cuenta)</h4>
+                  <p className="muted" style={{ marginTop: 0, fontSize: "0.82rem" }}>
+                    Encabezados detectados: {(importHeaders || []).join(" · ") || "—"}
+                  </p>
+                  <div className="grid-2" style={{ gap: 10 }}>
+                    {(
+                      [
+                        ["date", "Fecha *"],
+                        ["description", "Descripción / detalle"],
+                        ["debit", "Débito / egreso"],
+                        ["credit", "Crédito / ingreso"],
+                        ["amount", "Importe único"],
+                        ["tipo", "Tipo (Credito/Debito)"],
+                        ["reference", "Referencia / nro operación"],
+                        ["balance", "Saldo (opcional)"]
+                      ] as const
+                    ).map(([key, label]) => (
+                      <label key={key}>
+                        {label}
+                        <select
+                          value={(columnMap as any)[key]}
+                          onChange={(e) => setColumnMap({ ...columnMap, [key]: e.target.value })}
+                        >
+                          <option value="">—</option>
+                          {importHeaders.map((h, idx) => (
+                            <option key={`${h}-${idx}`} value={String(idx)}>
+                              {idx}: {h || `(columna ${idx})`}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={profileSaving}
+                      onClick={() => void saveColumnProfileAndPreview()}
+                    >
+                      {profileSaving ? "Guardando…" : "Guardar perfil y previsualizar"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {importSummary && !importRequiresMapping && (
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12, fontSize: "0.85rem" }}>
+                  <span>Nuevas: <strong>{(importSummary.valid || 0) - (importSummary.duplicates || 0) - (importSummary.systemMatches || 0) - (importSummary.ambiguousMatches || 0)}</strong></span>
+                  <span>Duplicadas: <strong>{importSummary.duplicates || 0}</strong></span>
+                  <span>Match sistema: <strong>{importSummary.systemMatches || 0}</strong></span>
+                  {(importSummary.ambiguousMatches || 0) > 0 && (
+                    <span style={{ color: "#b45309" }}>Ambiguas: <strong>{importSummary.ambiguousMatches}</strong></span>
+                  )}
+                  {(importSummary.rejected || 0) > 0 && (
+                    <span style={{ color: "#dc2626" }}>Rechazadas: <strong>{importSummary.rejected}</strong></span>
+                  )}
+                </div>
+              )}
+
+              {importPreview.length > 0 && !importRequiresMapping && (
                 <div style={{ marginBottom: 16 }}>
-                  <h4 style={{ margin: "0 0 8px 0" }}>Vista Previa ({importPreview.length} filas detectadas):</h4>
-                  <div className="table-wrap" style={{ maxHeight: 220, overflowY: "auto" }}>
+                  <h4 style={{ margin: "0 0 8px 0" }}>Vista previa ({importPreview.length} filas):</h4>
+                  <div className="table-wrap" style={{ maxHeight: 260, overflowY: "auto" }}>
                     <table>
                       <thead>
                         <tr>
                           <th>Fecha</th>
-                          <th>Movimiento & Titular / CUIT</th>
+                          <th>Movimiento</th>
+                          <th>Estado</th>
                           <th>Tipo</th>
                           <th style={{ textAlign: "right" }}>Importe</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {importPreview.slice(0, 15).map((row, idx) => (
+                        {importPreview.slice(0, 20).map((row, idx) => (
                           <tr key={idx}>
-                            <td>{new Date(row.operationDateUtc).toLocaleDateString("es-AR")}</td>
+                            <td>{row.operationDateUtc ? new Date(row.operationDateUtc).toLocaleDateString("es-AR") : "—"}</td>
                             <td>
                               <strong>{row.description}</strong>
                               {row.externalReference && (
@@ -1262,19 +1448,47 @@ export function FinanceAccountsPage() {
                                   Ref: {row.externalReference}
                                 </small>
                               )}
+                              {row.status === "match" && row.matchedSystemDateUtc && (
+                                <small style={{ display: "block", fontSize: "0.72rem", color: "#0369a1", marginTop: 2 }}>
+                                  Matchea con movimiento del sistema del{" "}
+                                  {new Date(row.matchedSystemDateUtc).toLocaleDateString("es-AR")}
+                                  {row.matchedSystemDescription ? ` · ${row.matchedSystemDescription}` : ""}
+                                </small>
+                              )}
+                              {row.error && (
+                                <small style={{ display: "block", color: "#dc2626" }}>{row.error}</small>
+                              )}
+                            </td>
+                            <td>
+                              <span style={{
+                                fontSize: "0.72rem",
+                                fontWeight: 700,
+                                color:
+                                  row.status === "match" ? "#0369a1"
+                                    : row.status === "duplicate" ? "#64748b"
+                                      : row.status === "ambiguous" ? "#b45309"
+                                        : row.status === "error" ? "#dc2626"
+                                          : "#059669"
+                              }}>
+                                {row.status === "match" ? "Match sistema"
+                                  : row.status === "duplicate" ? "Duplicada"
+                                    : row.status === "ambiguous" ? "Ambiguo"
+                                      : row.status === "error" ? "Error"
+                                        : "Nueva"}
+                              </span>
                             </td>
                             <td>{row.kind === 0 || row.kind === "Credit" ? "Ingreso" : "Egreso"}</td>
                             <td style={{ textAlign: "right", fontWeight: 700, color: row.kind === 0 || row.kind === "Credit" ? "#059669" : "#dc2626" }}>
-                              {money(row.amount, selectedAccount.currency)}
+                              {money(row.amount || 0, selectedAccount.currency)}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                  {importPreview.length > 15 && (
+                  {importPreview.length > 20 && (
                     <small className="muted" style={{ display: "block", marginTop: 4 }}>
-                      ... y {importPreview.length - 15} filas más.
+                      … y {importPreview.length - 20} filas más.
                     </small>
                   )}
                 </div>
@@ -1367,7 +1581,11 @@ export function FinanceAccountsPage() {
         <Modal
           open={showManualMovement}
           onClose={() => setShowManualMovement(false)}
-          title={`+ Cargar movimiento (${selectedAccount.name})`}
+          title={
+            isManualAccount(selectedAccount)
+              ? `+ Cargar movimiento (${selectedAccount.name})`
+              : `+ Expectativa bancaria (${selectedAccount.name})`
+          }
           footer={(
             <>
               <button type="button" className="btn ghost" onClick={() => setShowManualMovement(false)}>
@@ -1379,13 +1597,15 @@ export function FinanceAccountsPage() {
                 disabled={manualBusy}
                 onClick={() => void createManualMovement()}
               >
-                {manualBusy ? "Guardando…" : "Guardar movimiento"}
+                {manualBusy ? "Guardando…" : "Guardar"}
               </button>
             </>
           )}
         >
           <p className="muted" style={{ marginTop: 0 }}>
-            Cuenta en modo manual: cada movimiento se carga acá y luego se clasifica como en el extracto.
+            {isManualAccount(selectedAccount)
+              ? "Cuenta en modo manual: cada movimiento se carga acá y luego se clasifica."
+              : "Se registra como expectativa del sistema (PendingBank). Al importar el extracto se matchea por importe, fecha ±2 días y referencia — no se duplica."}
           </p>
           <div className="grid-2" style={{ gap: 12 }}>
             <label>
@@ -1417,11 +1637,11 @@ export function FinanceAccountsPage() {
               />
             </label>
             <label>
-              Referencia
+              Referencia externa {!isManualAccount(selectedAccount) ? "(recomendada)" : ""}
               <input
                 value={manualForm.externalReference}
                 onChange={(e) => setManualForm({ ...manualForm, externalReference: e.target.value })}
-                placeholder="Opcional"
+                placeholder="Nro de operación / transferencia"
               />
             </label>
             <label style={{ gridColumn: "1 / -1" }}>
@@ -1517,8 +1737,8 @@ export function FinanceAccountsPage() {
           </div>
           <p className="muted" style={{ marginTop: 10, fontSize: "0.85rem" }}>
             {accountForm.bookingMode === "Manual"
-              ? "No podrás importar extractos en esta cuenta. Solo carga manual."
-              : "No podrás cargar movimientos sueltos: solo importación de extracto."}
+              ? "No podrás importar extractos. Solo carga manual de movimientos."
+              : "Importás extractos CSV. También podés cargar expectativas manuales que se matchean al importar."}
           </p>
           <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 14 }}>
             <button className="btn btn-outline" onClick={() => setShowAccountForm(false)}>

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Guía rápida — Registros SGC en LealControl</title>
+<style>
+  :root {
+    --teal: #0369a1;
+    --teal-soft: #e0f2fe;
+    --ink: #0f172a;
+    --muted: #475569;
+    --line: #cbd5e1;
+    --bg: #f8fafc;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.45;
+    font-size: 11pt;
+  }
+  .page {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 14mm 16mm 18mm;
+    background: #fff;
+  }
+  header.doc {
+    border-bottom: 3px solid var(--teal);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+  header.doc .brand {
+    color: var(--teal);
+    font-weight: 700;
+    font-size: 11pt;
+    letter-spacing: 0.02em;
+  }
+  header.doc h1 {
+    margin: 6px 0 4px;
+    font-size: 18pt;
+    color: var(--ink);
+    font-weight: 700;
+  }
+  header.doc .sub {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11pt;
+  }
+  header.doc .meta {
+    margin-top: 8px;
+    font-size: 9.5pt;
+    color: var(--muted);
+  }
+  .intro {
+    background: var(--teal-soft);
+    border-left: 4px solid var(--teal);
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    font-size: 10pt;
+  }
+  .intro ul { margin: 6px 0 0; padding-left: 1.2em; }
+  .intro li { margin: 3px 0; }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 0 0 10px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .card-h {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .code {
+    background: var(--teal);
+    color: #fff;
+    font-weight: 700;
+    font-size: 9pt;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .card h2 {
+    margin: 0;
+    font-size: 11.5pt;
+    font-weight: 700;
+  }
+  dl { margin: 0; }
+  dl > div {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 6px 10px;
+    margin: 4px 0;
+  }
+  dt {
+    font-weight: 700;
+    color: var(--teal);
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  dd { margin: 0; font-size: 10pt; color: var(--ink); }
+  footer.tips {
+    margin-top: 18px;
+    border-top: 2px solid var(--teal);
+    padding-top: 12px;
+  }
+  footer.tips h3 {
+    margin: 0 0 8px;
+    color: var(--teal);
+    font-size: 12pt;
+  }
+  footer.tips ul { margin: 0; padding-left: 1.2em; font-size: 10pt; }
+  footer.tips li { margin: 4px 0; }
+  .print-note {
+    margin-top: 14px;
+    font-size: 8.5pt;
+    color: var(--muted);
+    text-align: center;
+  }
+  @media print {
+    body { background: #fff; }
+    .page { max-width: none; padding: 10mm 12mm; }
+    .card { break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="doc">
+      <div class="brand">LealControl · Módulo Calidad</div>
+      <h1>Guía rápida — Registros SGC en LealControl</h1>
+      <p class="sub">Dónde encontrarlos y cómo probarlos</p>
+      <p class="meta">septiembre 2026</p>
+    </header>
+
+    <section class="intro">
+      <strong>Orientación para el equipo de Calidad</strong>
+      <ul>
+        <li><strong>Menú Calidad:</strong> Tablero SGC | Árbol documental | Registros operativos</li>
+        <li><strong>Entrada general:</strong> Calidad → Registros operativos</li>
+        <li><strong>Excel no es el maestro:</strong> el registro vive en el sistema; Excel solo sirve para exportar o como adjunto</li>
+      </ul>
+    </section>
+
+    <main>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG01-R01</span>
+        <h2>Lista de documentos</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Se genera automáticamente desde el árbol documental del sistema. No se carga a mano: refleja los documentos vigentes cargados en el SGC.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → PG01-R01 (o /calidad/registros/pg01-r01). También desde Árbol documental.</dd></div>
+        <div><dt>Qué probar</dt><dd>Abrir la lista, verificar que aparecen documentos del árbol y exportar a Excel si está disponible.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG01-R02</span>
+        <h2>Lista de documentos externos</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Lista generada de documentos de origen externo registrados en el sistema, alineada al control documental.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → PG01-R02 (o /calidad/registros/pg01-r02).</dd></div>
+        <div><dt>Qué probar</dt><dd>Abrir la lista, confirmar documentos externos visibles y exportar Excel si aplica.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG03-R01</span>
+        <h2>Seguimiento de quejas</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Flujo estructurado de quejas: alta, seguimiento por estados y cierre. El registro vive en el sistema.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Quejas (/calidad/registros/quejas).</dd></div>
+        <div><dt>Qué probar</dt><dd>Crear una queja de prueba, avanzar estados y generar/imprimir PDF.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG04-R01</span>
+        <h2>Programa de auditorías</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Registro estructurado: el listado anual de auditorías constituye el programa. Incluye etapas de plan e informe.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Auditorías (/calidad/registros/auditorias).</dd></div>
+        <div><dt>Qué probar</dt><dd>Crear una auditoría y completar etapas de plan e informe.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG05-R01</span>
+        <h2>Evaluación inicial de proveedores</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Evaluación estructurada del proveedor antes de habilitarlo. Base para el listado de habilitados.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Proveedores (pestaña R01).</dd></div>
+        <div><dt>Qué probar</dt><dd>Crear una evaluación inicial y guardar; revisar que quede asociada al proveedor.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG05-R02</span>
+        <h2>Listado de proveedores habilitados</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Lista generada a partir de evaluaciones aprobadas. No es un Excel maestro: se deriva del sistema.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Proveedores (pestaña R02).</dd></div>
+        <div><dt>Qué probar</dt><dd>Aprobar una evaluación y verificar que el proveedor aparezca en R02.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG05-R03</span>
+        <h2>Desempeño de proveedores</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Seguimiento del desempeño de proveedores habilitados con criterios definidos en el módulo.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Proveedores (pestaña R03).</dd></div>
+        <div><dt>Qué probar</dt><dd>Registrar o consultar una evaluación de desempeño y revisar el resultado.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG06-R01</span>
+        <h2>Capacitaciones</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Registro de capacitaciones del personal: planificación, asistencia y evidencia asociada.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Personal (pestaña R01).</dd></div>
+        <div><dt>Qué probar</dt><dd>Crear una capacitación y vincular participantes; verificar que quede listada.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG06-R02</span>
+        <h2>Autorización de personal</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Autorización formal del personal para funciones, con firma de DT cuando corresponda.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Personal (pestaña R02).</dd></div>
+        <div><dt>Qué probar</dt><dd>Crear una autorización y probar el flujo de firma DT.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG06-R03</span>
+        <h2>Competencias</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Registro de competencias del personal frente a los requisitos del puesto o proceso.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Personal (pestaña R03).</dd></div>
+        <div><dt>Qué probar</dt><dd>Abrir competencias de un colaborador y verificar datos / actualización.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG06-R04</span>
+        <h2>Funciones y reemplazos</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Define funciones y reemplazos del personal para cobertura operativa.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Personal (pestaña R04).</dd></div>
+        <div><dt>Qué probar</dt><dd>Cargar o editar una función/reemplazo y confirmar que se visualiza correctamente.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG07-R1</span>
+        <h2>No conformidad / Reclamo / Oportunidad (NC/R/OP)</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Flujo estructurado para no conformidades, reclamos y oportunidades de mejora, con seguimiento hasta cierre.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → NC (/calidad/registros/nc).</dd></div>
+        <div><dt>Qué probar</dt><dd>Crear un NC/R/OP de prueba, avanzar estados y revisar impresión/exportación.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG08-R01</span>
+        <h2>Revisión por la dirección</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Registro de la revisión por la dirección: entradas, salidas y acuerdos documentados en el sistema.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Revisión por la dirección (/calidad/registros/revision-direccion).</dd></div>
+        <div><dt>Qué probar</dt><dd>Abrir o crear una revisión, completar campos clave y guardar.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG14-R1</span>
+        <h2>Hoja de vida de equipos</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Ficha histórica del equipo: identificación, estado y antecedentes de metrología/mantenimiento.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Equipos (pestaña R01).</dd></div>
+        <div><dt>Qué probar</dt><dd>Abrir la hoja de vida de un equipo y verificar datos e historial.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG14-R2</span>
+        <h2>Etiqueta de calibrado</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Generación/impresión de etiqueta de calibrado asociada al equipo.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Equipos (pestaña R02).</dd></div>
+        <div><dt>Qué probar</dt><dd>Seleccionar un equipo y probar impresión de etiqueta.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG14-R3</span>
+        <h2>Programa de calibraciones</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Programa generado a partir de los equipos y sus frecuencias de calibración.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Equipos (pestaña R03).</dd></div>
+        <div><dt>Qué probar</dt><dd>Abrir el programa y verificar que refleje equipos/fechas esperadas.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG14-R4</span>
+        <h2>Listado de equipos</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Listado generado del parque de equipos controlados en el SGC.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Equipos (pestaña R04).</dd></div>
+        <div><dt>Qué probar</dt><dd>Abrir el listado, filtrar si aplica y exportar Excel si está disponible.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG14-R5</span>
+        <h2>Verificación intermedia</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Registro de verificaciones intermedias entre calibraciones.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Equipos (pestaña R05).</dd></div>
+        <div><dt>Qué probar</dt><dd>Registrar una verificación intermedia de prueba y guardar.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">PG14-R06</span>
+        <h2>Mantenimiento preventivo</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Plan/registro de mantenimiento preventivo de equipos.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Equipos (pestaña R06).</dd></div>
+        <div><dt>Qué probar</dt><dd>Crear o consultar un mantenimiento preventivo y verificar fechas/estado.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">MC01-R03</span>
+        <h2>Objetivos e indicadores</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Seguimiento de objetivos e indicadores de calidad en el módulo.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → Indicadores (/calidad/registros/indicadores).</dd></div>
+        <div><dt>Qué probar</dt><dd>Abrir indicadores, cargar o consultar un valor y verificar visualización.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">MC01-R01</span>
+        <h2>Confidencialidad — personal interno</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Instancias del compromiso de confidencialidad interno, usualmente con adjuntos firmados.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → MC01-R01 (/calidad/registros/mc01-r01).</dd></div>
+        <div><dt>Qué probar</dt><dd>Crear una instancia, adjuntar archivo de prueba y verificar que se conserve.</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <header class="card-h">
+        <span class="code">MC01-R02</span>
+        <h2>Confidencialidad — personal externo</h2>
+      </header>
+      <dl>
+        <div><dt>Cómo funciona</dt><dd>Instancias del compromiso de confidencialidad para personal externo, con adjuntos.</dd></div>
+        <div><dt>Dónde verlo</dt><dd>Calidad → Registros → MC01-R02 (/calidad/registros/mc01-r02).</dd></div>
+        <div><dt>Qué probar</dt><dd>Crear una instancia externa, adjuntar evidencia y confirmar listado.</dd></div>
+      </dl>
+    </article>
+    </main>
+
+    <footer class="tips">
+      <h3>Consejos prácticos</h3>
+      <ul>
+        <li>Preferir el hub <strong>Calidad → Registros operativos</strong> para ubicar y probar cada registro.</li>
+        <li>También se puede abrir el documento padre en el <strong>Árbol documental</strong> y usar <strong>«Agregar registro»</strong>.</li>
+        <li>Ayuda del módulo: <strong>Calidad → Ayuda</strong>.</li>
+        <li>Entorno de pruebas (staging): <strong>v2.lealcontrol.com</strong>.</li>
+      </ul>
+      <p class="print-note">Documento interno de apoyo a pruebas · LealControl · septiembre 2026</p>
+    </footer>
+  </div>
+</body>
+</html>

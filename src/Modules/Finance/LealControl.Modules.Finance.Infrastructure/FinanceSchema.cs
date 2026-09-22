@@ -179,5 +179,13 @@ public static class FinanceSchema
           ""CreatedAtUtc"" timestamptz NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ""IX_CustomerAdvances_Tenant_Customer"" ON finance.""CustomerAdvances"" (""TenantId"", ""CustomerId"");
+
+        CREATE TABLE IF NOT EXISTS finance.""BankImportProfiles"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""AccountId"" uuid NOT NULL,
+          ""Name"" varchar(120) NOT NULL, ""ColumnMapJson"" varchar(4000) NOT NULL,
+          ""Delimiter"" varchar(4) NOT NULL DEFAULT ';', ""DateFormat"" varchar(40),
+          ""CreatedAtUtc"" timestamptz NOT NULL, ""UpdatedAtUtc"" timestamptz
+        );
+        CREATE INDEX IF NOT EXISTS ""IX_BankImportProfiles_Tenant_Account"" ON finance.""BankImportProfiles"" (""TenantId"", ""AccountId"");
         ", cancellationToken);
 }

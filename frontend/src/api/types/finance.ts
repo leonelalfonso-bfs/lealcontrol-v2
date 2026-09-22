@@ -71,6 +71,47 @@ export type BankImportPreviewRow = {
   externalReference?: string;
   reportedBalance?: number;
   error?: string;
+  status?: "new" | "duplicate" | "match" | "ambiguous" | "error" | string;
+  matchedSystemMovementId?: string;
+  matchedSystemDescription?: string;
+  matchedSystemDateUtc?: string;
+  matchedSystemExternalReference?: string;
+};
+
+export type BankImportPreviewResult = {
+  requiresMapping?: boolean;
+  headers?: string[];
+  hasProfile?: boolean;
+  profileId?: string;
+  rows: BankImportPreviewRow[];
+  summary?: {
+    total: number;
+    valid: number;
+    rejected: number;
+    duplicates: number;
+    systemMatches: number;
+    ambiguousMatches: number;
+  };
+};
+
+export type BankColumnMap = {
+  date?: number | null;
+  debit?: number | null;
+  credit?: number | null;
+  amount?: number | null;
+  tipo?: number | null;
+  description?: number | null;
+  reference?: number | null;
+  balance?: number | null;
+};
+
+export type BankImportProfile = {
+  id: string;
+  accountId: string;
+  name: string;
+  delimiter: string;
+  dateFormat?: string;
+  columnMap: BankColumnMap;
 };
 
 export type ReceivedCheque = {

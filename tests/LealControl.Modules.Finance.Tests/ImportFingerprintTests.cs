@@ -40,4 +40,66 @@ public sealed class ImportFingerprintTests
         FinanceImport.ComputeFileHash(csv).Should().Be(FinanceImport.ComputeFileHash(csv));
         FinanceImport.ComputeFileHash(csv).Should().NotBe(FinanceImport.ComputeFileHash(csv + "\n"));
     }
+
+    [Fact]
+    public void CountsTowardBankBalance_excludes_pending_and_matched_system()
+    {
+        var pending = new FinancialMovement
+        {
+            Origin = FinancialMovementOrigin.System,
+            ReconciliationStatus = FinancialReconciliationStatus.PendingBank
+        };
+        var matched = new FinancialMovement
+        {
+            Origin = FinancialMovementOrigin.System,
+            ReconciliationStatus = FinancialReconciliationStatus.MatchedToImport
+        };
+        var imported = new FinancialMovement
+        {
+            Origin = FinancialMovementOrigin.Imported,
+            ReconciliationStatus = FinancialReconciliationStatus.Available
+        };
+
+        FinanceImport.CountsTowardBankBalance(pending).Should().BeFalse();
+        FinanceImport.CountsTowardBankBalance(matched).Should().BeFalse();
+        FinanceImport.CountsTowardBankBalance(imported).Should().BeTrue();
+    }
+
+    [Fact]
+    public void FindSystemCandidates_prioritizes_external_reference()
+    {
+        var accountId = Guid.NewGuid();
+        var date = new DateTime(2026, 3, 15, 12, 0, 0, DateTimeKind.Utc);
+        var pending = new List<FinancialMovement>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                AccountId = accountId,
+                Kind = FinancialMovementKind.Credit,
+                Amount = 1000m,
+                OperationDateUtc = date,
+                ExternalReference = "OTRA",
+                Origin = FinancialMovementOrigin.System,
+                ReconciliationStatus = FinancialReconciliationStatus.PendingBank
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                AccountId = accountId,
+                Kind = FinancialMovementKind.Credit,
+                Amount = 1000m,
+                OperationDateUtc = date.AddDays(1),
+                ExternalReference = "OP-1",
+                Origin = FinancialMovementOrigin.System,
+                ReconciliationStatus = FinancialReconciliationStatus.PendingBank
+            }
+        };
+
+        var hits = FinanceImport.FindSystemCandidates(
+            pending, FinancialMovementKind.Credit, 1000m, date, "op-1", new HashSet<Guid>());
+
+        hits.Should().ContainSingle();
+        hits[0].ExternalReference.Should().Be("OP-1");
+    }
 }

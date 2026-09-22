@@ -15,7 +15,7 @@ internal sealed record ReconciliationMatchSuggestion(
 
 internal static class FinanceReconciliationMatcher
 {
-    private static readonly TimeSpan DateTolerance = TimeSpan.FromDays(3);
+    private static readonly TimeSpan DateTolerance = TimeSpan.FromDays(2);
 
     public static async Task<List<ReconciliationMatchSuggestion>> FindSuggestionsAsync(
         FinanceDbContext db,
@@ -54,18 +54,14 @@ internal static class FinanceReconciliationMatcher
 
         foreach (var imp in imported.OrderBy(x => x.OperationDateUtc))
         {
-            var match = system
-                .Where(s => !usedSystem.Contains(s.Id))
-                .Where(s => s.Kind == imp.Kind && s.Amount == imp.Amount)
-                .Where(s => Math.Abs((s.OperationDateUtc.Date - imp.OperationDateUtc.Date).TotalDays) <= DateTolerance.TotalDays)
-                .OrderBy(s => Math.Abs((s.OperationDateUtc - imp.OperationDateUtc).TotalHours))
-                .FirstOrDefault();
-
-            if (match is null)
+            var candidates = FinanceImport.FindSystemCandidates(system, imp, usedSystem);
+            // Solo sugerir cuando hay un candidato claro; si hay varios, el preview ya lo marcó ambiguo.
+            if (candidates.Count != 1)
             {
                 continue;
             }
 
+            var match = candidates[0];
             usedSystem.Add(match.Id);
             suggestions.Add(new ReconciliationMatchSuggestion(
                 imp.Id,
@@ -119,14 +115,19 @@ internal static class FinanceReconciliationMatcher
             return (false, "Los movimientos no coinciden en cuenta, tipo o importe.");
         }
 
-        imported.ConceptId ??= system.ConceptId;
-        imported.LinkedEntityType = system.LinkedEntityType;
-        imported.LinkedEntityId = system.LinkedEntityId;
-        imported.ReconciliationStatus = FinancialReconciliationStatus.Reconciled;
+        var impRef = FinanceImport.NormalizeReference(imported.ExternalReference);
+        var sysRef = FinanceImport.NormalizeReference(system.ExternalReference);
+        if (!string.IsNullOrEmpty(impRef) && !string.IsNullOrEmpty(sysRef) && impRef != sysRef)
+        {
+            return (false, "Las referencias externas no coinciden.");
+        }
 
-        system.ReconciliationStatus = FinancialReconciliationStatus.MatchedToImport;
-        system.MatchedMovementId = imported.Id;
+        if (Math.Abs((imported.OperationDateUtc.Date - system.OperationDateUtc.Date).TotalDays) > DateTolerance.TotalDays)
+        {
+            return (false, "Las fechas están fuera de la tolerancia de match (±2 días).");
+        }
 
+        FinanceImport.ApplyMatchInMemory(imported, system);
         await db.SaveChangesAsync(ct);
         return (true, null);
     }

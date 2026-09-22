@@ -143,7 +143,8 @@ public static class FinanceReceipts
             var running = account.OpeningBalance;
             var result = rows.Select(x =>
             {
-                running += x.Kind == FinancialMovementKind.Credit ? x.Amount : -x.Amount;
+                if (FinanceImport.CountsTowardBankBalance(x))
+                    running += x.Kind == FinancialMovementKind.Credit ? x.Amount : -x.Amount;
                 return new
                 {
                     x.Id,
@@ -157,6 +158,7 @@ public static class FinanceReceipts
                     SystemBalance = running,
                     Difference = x.ReportedBalance.HasValue ? running - x.ReportedBalance.Value : (decimal?)null,
                     x.ReconciliationStatus,
+                    Origin = x.Origin.ToString(),
                     x.ConceptId,
                     ConceptName = x.ConceptId.HasValue && concepts.TryGetValue(x.ConceptId.Value, out var name) ? name : null,
                     x.ClassificationStatus

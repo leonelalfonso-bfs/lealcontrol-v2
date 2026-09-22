@@ -42,9 +42,15 @@ public sealed class ChequeLifecycleTests : IClassFixture<FinanceWebApplicationFa
             amount = 25000m,
             currency = "ARS",
             issuerName = "Cliente SA",
-            direction = 0
+            issueDateUtc = DateTime.UtcNow.Date,
+            dueDateUtc = DateTime.UtcNow.Date.AddDays(30),
+            direction = "Received"
         });
-        createRes.EnsureSuccessStatusCode();
+        if (!createRes.IsSuccessStatusCode)
+        {
+            var body = await createRes.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"HTTP {(int)createRes.StatusCode}: {body}");
+        }
         using var createDoc = JsonDocument.Parse(await createRes.Content.ReadAsStringAsync());
         var chequeId = createDoc.RootElement.GetProperty("id").GetGuid();
 

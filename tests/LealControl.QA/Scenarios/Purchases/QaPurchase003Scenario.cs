@@ -206,12 +206,16 @@ public sealed class QaPurchase003Scenario : ITestScenario
                 TotalAmount: nc.Total,
                 InvoiceType: nc.InvoiceType));
 
+            var postNcBody = await postNcRes.Content.ReadAsStringAsync();
             scenario.AddCheck(
                 name: "Contabilización de Nota de Crédito de proveedor responde 200/201",
                 module: "Accounting",
                 condition: postNcRes.IsSuccessStatusCode,
                 expected: "200/201 OK",
-                actual: $"{(int)postNcRes.StatusCode} {postNcRes.StatusCode}");
+                actual: $"{(int)postNcRes.StatusCode} {postNcRes.StatusCode}: {postNcBody}");
+
+            if (!postNcRes.IsSuccessStatusCode)
+                return scenario;
 
             // 2.3 Auditoría de Cuenta Corriente: Saldo disminuido automáticamente en $36.300 ($84.700 pendiente)
             await supplierAuditor.AuditSupplierBalanceAsync(context, scenario, supplier.Id, expectedBalance: expectedRemainingPayable);

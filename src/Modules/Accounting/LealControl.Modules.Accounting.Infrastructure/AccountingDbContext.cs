@@ -612,7 +612,11 @@ public sealed class AccountingDbContext : DbContext
     public async Task SeedDefaultJournalTemplatesAsync(TenantId tenantId, CancellationToken ct = default)
     {
         var hasTemplates = await JournalTemplates.AnyAsync(t => t.TenantId == tenantId, ct);
-        if (hasTemplates) return;
+        if (hasTemplates)
+        {
+            await EnsurePurchaseCreditNoteTemplateAsync(tenantId, ct);
+            return;
+        }
 
         var t1 = new JournalTemplate
         {
@@ -709,7 +713,44 @@ public sealed class AccountingDbContext : DbContext
         t6.Lines.Add(new JournalTemplateLine { TemplateId = t6.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.01.002", AccountName = "Banco Galicia C/C", DebitCredit = "Credit", AmountSource = "PaymentAmount", Condition = "Always" });
         t6.Lines.Add(new JournalTemplateLine { TemplateId = t6.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "2.1.02.006", AccountName = "Retenciones Impositivas Practicadas a Pagar", DebitCredit = "Credit", AmountSource = "Withholdings", Condition = "IfHasWithholding" });
 
-        JournalTemplates.AddRange(t1, t2, t3, t4, t5, t6);
+        var t7 = BuildPurchaseCreditNoteTemplate(tenantId);
+
+        JournalTemplates.AddRange(t1, t2, t3, t4, t5, t6, t7);
         await SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Garantiza el asiento modelo de NC de proveedor aunque el tenant ya tenga plantillas seedadas
+    /// (versiones anteriores no incluían AM-CMP-02 → auto-post NC devolvía 400).
+    /// </summary>
+    public async Task EnsurePurchaseCreditNoteTemplateAsync(TenantId tenantId, CancellationToken ct = default)
+    {
+        var exists = await JournalTemplates.AnyAsync(
+            t => t.TenantId == tenantId && t.Code == "AM-CMP-02", ct);
+        if (exists) return;
+
+        var template = BuildPurchaseCreditNoteTemplate(tenantId);
+        JournalTemplates.Add(template);
+        await SaveChangesAsync(ct);
+    }
+
+    private static JournalTemplate BuildPurchaseCreditNoteTemplate(TenantId tenantId)
+    {
+        var t = new JournalTemplate
+        {
+            TenantId = tenantId,
+            Code = "AM-CMP-02",
+            Name = "Nota de Crédito de Compra a Proveedores",
+            SourceModule = "Purchases",
+            DocumentType = "CreditNoteA",
+            EntrySeries = "Compras",
+            Description = "Modelo para Notas de Crédito de proveedores (NC_A/NC-A): invierte el asiento de la factura de compra.",
+            Status = "Active"
+        };
+        // Invertido respecto de AM-CMP-01: crédito en gasto/IVA, débito en proveedores.
+        t.Lines.Add(new JournalTemplateLine { TemplateId = t.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "5.1.01", AccountName = "Costo de Mercaderías Vendidas (CMV)", DebitCredit = "Credit", AmountSource = "Net21", Condition = "Always" });
+        t.Lines.Add(new JournalTemplateLine { TemplateId = t.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.03.001", AccountName = "IVA Crédito Fiscal (Compras)", DebitCredit = "Credit", AmountSource = "Vat21", Condition = "IfHasVat21" });
+        t.Lines.Add(new JournalTemplateLine { TemplateId = t.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "2.1.01.001", AccountName = "Proveedores de Mercaderías & Servicios", DebitCredit = "Debit", AmountSource = "Total", Condition = "Always" });
+        return t;
     }
 }
