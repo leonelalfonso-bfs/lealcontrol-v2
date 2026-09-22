@@ -7,6 +7,8 @@ import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { numberToWords } from "../utils/numberToWords";
 import {
   currencyMeta,
+  label,
+  type CompanySettings,
   type Contact,
   type CustomerDetail,
   type Location,
@@ -26,12 +28,26 @@ function hexToRgba(hex: string, alpha: number): string {
   return hex;
 }
 
+function companyInitials(name?: string | null): string {
+  const parts = (name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "EM";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+}
+
+function formatCuitDisplay(raw?: string | null): string {
+  const digits = (raw || "").replace(/\D/g, "");
+  if (digits.length !== 11) return raw || "—";
+  return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
+}
+
 export const QuotePrintPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { settings } = useDocumentTemplate();
 
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [company, setCompany] = useState<CompanySettings | null>(null);
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [deliveryLocation, setDeliveryLocation] = useState<Location | null>(null);
   const [assignedContact, setAssignedContact] = useState<Contact | null>(null);
@@ -48,12 +64,14 @@ export const QuotePrintPage: React.FC = () => {
     const loadQuoteData = async () => {
       try {
         setLoading(true);
-        const [q, prods] = await Promise.all([
+        const [q, prods, companySettings] = await Promise.all([
           api.getQuote(id),
-          api.listProducts().catch(() => [] as Product[])
+          api.listProducts().catch(() => [] as Product[]),
+          api.getCompanySettings().catch(() => null)
         ]);
 
         setQuote(q);
+        setCompany(companySettings);
 
         // Build products lookup dictionary
         const pMap: Record<string, Product> = {};
@@ -151,11 +169,37 @@ export const QuotePrintPage: React.FC = () => {
   const primaryLightBg = hexToRgba(primaryCol, 0.1);
   const primaryBorderLight = hexToRgba(primaryCol, 0.25);
 
+  const companyName = company?.legalName || company?.tradeName || "Empresa";
+  const companyTagline = company?.tradeName && company.tradeName !== company.legalName
+    ? company.tradeName
+    : [company?.fiscalCity, company?.fiscalProvince].filter(Boolean).join(", ") || "Documento comercial";
+  const companyCuit = formatCuitDisplay(company?.documentNumber);
+  const companyTax = label(company?.taxCondition) || company?.taxCondition || "—";
+  const companyAddress = [
+    company?.fiscalStreet,
+    company?.fiscalCity,
+    company?.fiscalProvince,
+    company?.fiscalPostalCode ? `CP ${company.fiscalPostalCode}` : null
+  ].filter(Boolean).join(", ");
+
   // Identify lines that have technical info or images
   const technicalItems = quote.lines.map((line) => {
     const prod = (line.productId ? productsMap[line.productId] : null) || (line.description ? productsMap[line.description.toUpperCase()] : null);
     return { line, prod };
   }).filter((item) => item.prod && (item.prod.imagePath || item.prod.detailedDescription));
+
+  const logoBlock = company?.logoUrl ? (
+    <img
+      src={company.logoUrl}
+      alt={companyName}
+      crossOrigin="anonymous"
+      style={{ maxHeight: 56, maxWidth: 160, objectFit: "contain", display: "block" }}
+    />
+  ) : (
+    <div style={{ width: "50px", height: "50px", borderRadius: "12px", background: primaryCol, color: "#ffffff", display: "grid", placeItems: "center", fontSize: "1.1rem", fontWeight: 900 }}>
+      {companyInitials(companyName)}
+    </div>
+  );
 
   return (
     <div style={{ background: "#525659", minHeight: "100vh", padding: "20px" }}>
@@ -257,32 +301,49 @@ export const QuotePrintPage: React.FC = () => {
               HEADER BLOCK: Adaptable to configured template style
               ========================================================================= */}
           {settings.templateStyle === "classic" ? (
-            <div style={{ background: primaryCol, color: "#ffffff", padding: "14px 18px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: "1.3rem", fontWeight: 900, color: "#ffffff" }}>LEAL CONTROL ERP</h2>
-                <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>Soluciones Industriales & Pesaje Comercial</div>
+            <div style={{ background: primaryCol, color: "#ffffff", padding: "14px 18px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {company?.logoUrl ? (
+                  <img
+                    src={company.logoUrl}
+                    alt={companyName}
+                    crossOrigin="anonymous"
+                    style={{ maxHeight: 48, maxWidth: 140, objectFit: "contain", background: "#fff", borderRadius: 6, padding: 4 }}
+                  />
+                ) : null}
+                <div>
+                  <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 900, color: "#ffffff" }}>{companyName}</h2>
+                  <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>{companyTagline}</div>
+                  <div style={{ fontSize: "0.72rem", opacity: 0.9 }}>CUIT: {companyCuit} | {companyTax}</div>
+                </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "1.1rem", fontWeight: 900 }}>PRESUPUESTO COMERCIAL</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 900 }}>{settings.quote.headerTitle || "PRESUPUESTO COMERCIAL"}</div>
                 <div style={{ fontSize: "0.85rem", opacity: 0.95 }}>N° {quote.quoteNumber} (Rev. {quote.revision})</div>
               </div>
             </div>
           ) : (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: `2px solid ${primaryCol}`, marginBottom: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div style={{ width: "50px", height: "50px", borderRadius: "12px", background: primaryCol, color: "#ffffff", display: "grid", placeItems: "center", fontSize: "1.4rem", fontWeight: 900 }}>
-                  LC
-                </div>
+                {logoBlock}
                 <div>
-                  <h1 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 900, color: "#0f172a" }}>LEAL CONTROL ERP</h1>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Soluciones Industriales & Automatización</div>
-                  <div style={{ fontSize: "0.72rem", color: "#64748b" }}>CUIT: 30-71234567-9 | IVA Responsable Inscripto</div>
+                  <h1 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 900, color: "#0f172a" }}>{companyName}</h1>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{companyTagline}</div>
+                  <div style={{ fontSize: "0.72rem", color: "#64748b" }}>CUIT: {companyCuit} | {companyTax}</div>
+                  {companyAddress ? (
+                    <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{companyAddress}</div>
+                  ) : null}
+                  {(company?.phone || company?.email) ? (
+                    <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                      {[company?.phone, company?.email].filter(Boolean).join(" · ")}
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
               <div style={{ textAlign: "right" }}>
                 <div style={{ display: "inline-block", padding: "3px 12px", borderRadius: "6px", background: primaryLightBg, color: primaryCol, fontWeight: 800, fontSize: "0.9rem" }}>
-                  PRESUPUESTO COMERCIAL
+                  {settings.quote.headerTitle || "PRESUPUESTO COMERCIAL"}
                 </div>
                 <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#0f172a", marginTop: "4px" }}>
                   N° {quote.quoteNumber} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>(Rev. {quote.revision})</span>
