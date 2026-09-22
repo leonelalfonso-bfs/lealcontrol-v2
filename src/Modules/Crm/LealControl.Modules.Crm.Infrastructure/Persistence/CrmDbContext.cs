@@ -49,9 +49,9 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
 
     public async Task EnsureCrmTablesAsync(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await Database.ExecuteSqlRawAsync(@"
+        // Cada bloque es independiente: un fallo en equipos/fiscal no debe impedir
+        // columnas de opportunities/activities (causaba 500 en timeline y oportunidades).
+        await TryEnsureAsync("tenant_settings/users", @"
                 CREATE TABLE IF NOT EXISTS public.tenant_settings (
                     ""TenantId"" uuid NOT NULL PRIMARY KEY,
                     ""LegalName"" character varying(256) NOT NULL,
@@ -108,9 +108,8 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""IsTechnicalDirector"" boolean NOT NULL DEFAULT false;
             ", cancellationToken);
 
-            // Huecos de producción: opportunities/activities/hijos. No crear crm.customers a mano:
-            // un stub incompleto hace saltar MigrateAsync y el INSERT de clientes explota (500).
-            await Database.ExecuteSqlRawAsync(@"
+        // Huecos de producción: opportunities/activities. No crear crm.customers a mano.
+        await TryEnsureAsync("opportunities/activities base", @"
                 CREATE SCHEMA IF NOT EXISTS crm;
 
                 CREATE TABLE IF NOT EXISTS crm.opportunities (
@@ -141,6 +140,10 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                     ""OccurredAtUtc"" timestamp with time zone NOT NULL,
                     ""CreatedAtUtc"" timestamp with time zone NOT NULL
                 );
+            ", cancellationToken);
+
+        await TryEnsureAsync("customer child tables", @"
+                CREATE SCHEMA IF NOT EXISTS crm;
 
                 CREATE TABLE IF NOT EXISTS crm.customer_locations (
                     ""Id"" uuid NOT NULL PRIMARY KEY,
@@ -200,9 +203,7 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 );
             ", cancellationToken);
 
-            try
-            {
-                await Database.ExecuteSqlRawAsync(@"
+        await TryEnsureAsync("customers BCRA columns", @"
                     ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRating"" character varying(10);
                     ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraWorstSituation"" integer;
                     ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraTotalDebt"" numeric(18,2);
@@ -214,20 +215,16 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                     ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""FceThreshold"" numeric(18,2);
                     ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""FceCheckedAtUtc"" timestamp with time zone;
                 ", cancellationToken);
-            }
-            catch (Exception customersEx)
-            {
-                _logger.LogWarning(customersEx, "EnsureCrmTablesAsync: columnas BCRA en crm.customers omitidas (tabla ausente o esquema incompleto).");
-            }
 
-            await Database.ExecuteSqlRawAsync(@"
+        // Crítico para GET timeline / opportunities: columnas del modelo EF actual.
+        await TryEnsureAsync("opportunities/activities columns", @"
                 ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""OwnerName"" character varying(120);
-                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""Priority"" character varying(20);
+                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""Priority"" character varying(20) DEFAULT 'Normal';
                 ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""Probability"" integer NOT NULL DEFAULT 10;
                 ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""RottingDays"" integer;
                 ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""ExpectedCloseDate"" timestamp with time zone;
                 ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS ""CustomFields"" jsonb NOT NULL DEFAULT '{}'::jsonb;
-                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS tags text[];
+                ALTER TABLE crm.opportunities ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}'::text[];
 
                 ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""DueDate"" timestamp with time zone;
                 ALTER TABLE crm.activities ADD COLUMN IF NOT EXISTS ""IsDone"" boolean NOT NULL DEFAULT false;
@@ -238,10 +235,17 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 UPDATE crm.opportunities SET tags = '{}'::text[] WHERE tags IS NULL;
                 UPDATE crm.activities SET ""IsDone"" = false WHERE ""IsDone"" IS NULL;
             ", cancellationToken);
+    }
+
+    private async Task TryEnsureAsync(string step, string sql, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Database.ExecuteSqlRawAsync(sql, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error en EnsureCrmTablesAsync");
+            _logger.LogWarning(ex, "EnsureCrmTablesAsync: paso '{Step}' omitido.", step);
         }
     }
 }

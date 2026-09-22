@@ -25,16 +25,37 @@ export function CustomerDetailPage() {
 
   const refresh = () => {
     if (!id) return;
-    Promise.all([api.getCustomer(id), api.timeline(id), api.opportunities(id), api.listQuotes()])
+    // La ficha no debe caerse si timeline/oportunidades fallan (p.ej. esquema legacy).
+    Promise.allSettled([
+      api.getCustomer(id),
+      api.timeline(id),
+      api.opportunities(id),
+      api.listQuotes()
+    ])
       .then(([c, t, o, q]) => {
-        setCustomer(c);
-        setTimeline(t);
-        setOpps(o);
-        setQuotes(q.filter((quote) => quote.customerId === id));
-        setEditingLocation(null);
-        setEditingContact(null);
-      })
-      .catch((e: Error) => setError(e.message));
+        if (c.status === "fulfilled") {
+          setCustomer(c.value);
+          setEditingLocation(null);
+          setEditingContact(null);
+        } else {
+          setError(c.reason instanceof Error ? c.reason.message : "No se pudo cargar el cliente");
+        }
+        if (t.status === "fulfilled") setTimeline(t.value);
+        else setTimeline([]);
+        if (o.status === "fulfilled") setOpps(o.value);
+        else setOpps([]);
+        if (q.status === "fulfilled") {
+          setQuotes(q.value.filter((quote) => quote.customerId === id));
+        }
+        const secondaryErrors = [t, o]
+          .filter((r) => r.status === "rejected")
+          .map((r) => (r as PromiseRejectedResult).reason instanceof Error
+            ? (r as PromiseRejectedResult).reason.message
+            : "Error secundario");
+        if (secondaryErrors.length > 0 && c.status === "fulfilled") {
+          setError(`Ficha cargada. Aviso: ${secondaryErrors[0]}`);
+        }
+      });
   };
 
   useEffect(() => { refresh(); }, [id]);

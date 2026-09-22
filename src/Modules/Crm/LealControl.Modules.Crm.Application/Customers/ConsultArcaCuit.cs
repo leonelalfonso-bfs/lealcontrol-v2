@@ -105,17 +105,24 @@ internal sealed class ConsultArcaCuitQueryHandler : IRequestHandler<ConsultArcaC
                 true));
         }
 
-        // Intento de consulta en vivo vía API pública de Padrón AFIP / ARCA
+        // Intento de consulta en vivo vía APIs públicas de padrón (best-effort).
         try
         {
-            var response = await HttpClient.GetAsync($"https://afip.padron.ar/api/v1/cuit/{cleanCuit}", cancellationToken);
-            if (response.IsSuccessStatusCode)
+            var urls = new[]
             {
-                var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
-                if (json.TryGetProperty("denominacion", out var denProp) || json.TryGetProperty("razonSocial", out denProp))
+                $"https://afip.padron.ar/api/v1/cuit/{cleanCuit}",
+                $"https://www.padron.gob.ar/api/cuit/{cleanCuit}"
+            };
+
+            foreach (var url in urls)
+            {
+                try
                 {
-                    var legalName = denProp.GetString();
-                    if (!string.IsNullOrWhiteSpace(legalName))
+                    using var response = await HttpClient.GetAsync(url, cancellationToken);
+                    if (!response.IsSuccessStatusCode) continue;
+
+                    var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                    if (TryReadLegalName(json, out var legalName) && !string.IsNullOrWhiteSpace(legalName))
                     {
                         var isRi = cleanCuit.StartsWith("30") || cleanCuit.StartsWith("33");
                         return Result<ArcaCuitLookupResult>.Success(new ArcaCuitLookupResult(
@@ -130,6 +137,10 @@ internal sealed class ConsultArcaCuitQueryHandler : IRequestHandler<ConsultArcaC
                             true));
                     }
                 }
+                catch
+                {
+                    // Probar siguiente fuente
+                }
             }
         }
         catch
@@ -139,6 +150,28 @@ internal sealed class ConsultArcaCuitQueryHandler : IRequestHandler<ConsultArcaC
 
         // Si no se encuentra en el padrón real online ni registrado, RETORNAR ERROR EN LUGAR DE INVENTAR DATOS
         return Result<ArcaCuitLookupResult>.Failure(
-            Error.NotFound("Crm.Arca.NotFound", $"No se registraron datos en el padrón ARCA para el CUIT {cleanCuit}. Verificá los números ingresados."));
+            Error.NotFound(
+                "Crm.Arca.NotFound",
+                $"No se encontraron datos automáticos para el CUIT {cleanCuit}. Completá razón social y condición IVA a mano (el alta del cliente no depende de esta consulta)."));
+    }
+
+    private static bool TryReadLegalName(JsonElement json, out string? legalName)
+    {
+        legalName = null;
+        foreach (var prop in new[] { "denominacion", "razonSocial", "razon_social", "nombre", "name", "legalName" })
+        {
+            if (json.TryGetProperty(prop, out var denProp))
+            {
+                legalName = denProp.GetString();
+                if (!string.IsNullOrWhiteSpace(legalName)) return true;
+            }
+        }
+
+        if (json.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object)
+        {
+            return TryReadLegalName(data, out legalName);
+        }
+
+        return false;
     }
 }
