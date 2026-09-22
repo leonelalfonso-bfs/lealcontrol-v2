@@ -64,7 +64,13 @@ export function FinancePage() {
     setBusy(true);
     setError(null);
     try {
-      setPreview(await api.previewFinanceBankImport(accountId, csv));
+      const result = await api.previewFinanceBankImport(accountId, csv);
+      if (result.requiresMapping) {
+        setPreview([]);
+        setError("No se reconocieron las columnas. Abrí la cuenta y usá el asistente de mapeo, o descargá la plantilla LealControl.");
+        return;
+      }
+      setPreview(result.rows || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo procesar el extracto.");
     } finally {
@@ -80,7 +86,9 @@ export function FinancePage() {
       setCsv("");
       await load();
       alert(
-        `Importados: ${result.imported}. Duplicados omitidos: ${result.duplicates}. Filas rechazadas: ${result.rejected}.`
+        `Importados: ${result.imported}. Duplicados: ${result.duplicates}. Rechazadas: ${result.rejected}` +
+          (result.matchedSystem ? `. Matcheados con sistema: ${result.matchedSystem}` : "") +
+          "."
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo confirmar la importación.");

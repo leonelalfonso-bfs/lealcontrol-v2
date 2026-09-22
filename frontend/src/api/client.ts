@@ -28,7 +28,9 @@ import type {
   TrialBalance
 } from "./types/accounting";
 import type {
-  BankImportPreviewRow,
+  BankImportPreviewResult,
+  BankImportProfile,
+  BankColumnMap,
   CashFlowProjection,
   CollectionReceiptDetail,
   CollectionReceiptImputationWrite,
@@ -101,6 +103,21 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function requestBlob(path: string): Promise<Blob> {
+  const normalToken = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
+  const superToken = typeof window !== "undefined" ? localStorage.getItem("leal_superadmin_token") : null;
+  const token = normalToken || superToken;
+  const tenantId = typeof window !== "undefined" ? localStorage.getItem("leal_tenant_id") : null;
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (tenantId) headers["X-Tenant-Id"] = tenantId;
+  const response = await fetch(`${API_BASE}${path}`, { headers });
+  if (!response.ok) {
+    throw new Error(`Error al descargar (${response.status})`);
+  }
+  return response.blob();
+}
+
 export const api = {
   listFinanceAccounts: () => request<FinanceAccount[]>("/api/v1/finance/accounts"),
   listFinanceConcepts: () => request<FinanceConcept[]>("/api/v1/finance/concepts"),
@@ -114,8 +131,41 @@ export const api = {
   createFinanceAccount: (body: { name: string; currency: string; type: string; openingBalance: number; bookingMode?: "Statement" | "Manual" }) => request("/api/v1/finance/accounts", { method: "POST", body: JSON.stringify(body) }),
   createFinanceMovement: (body: { accountId: string; kind: "Credit" | "Debit"; amount: number; currency: string; operationDateUtc: string; description: string; externalReference?: string | null }) =>
     request("/api/v1/finance/movements", { method: "POST", body: JSON.stringify(body) }),
-  previewFinanceBankImport: (accountId: string, csvContent: string) => request<BankImportPreviewRow[]>("/api/v1/finance/imports/bank/preview", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
-  confirmFinanceBankImport: (accountId: string, csvContent: string) => request<{ imported: number; updated?: number; duplicates: number; rejected: number }>("/api/v1/finance/imports/bank/confirm", { method: "POST", body: JSON.stringify({ accountId, csvContent }) }),
+  downloadFinanceBankTemplate: () =>
+    requestBlob("/api/v1/finance/imports/bank/template").then(async (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "lealcontrol-extracto-plantilla.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }),
+  getFinanceBankImportProfile: (accountId: string) =>
+    request<BankImportProfile>(`/api/v1/finance/imports/bank/profiles/${accountId}`),
+  saveFinanceBankImportProfile: (body: {
+    accountId: string;
+    name?: string;
+    columnMap: BankColumnMap;
+    delimiter?: string;
+    dateFormat?: string;
+  }) => request<BankImportProfile>("/api/v1/finance/imports/bank/profiles", { method: "PUT", body: JSON.stringify(body) }),
+  previewFinanceBankImport: (accountId: string, csvContent: string, profileId?: string) =>
+    request<BankImportPreviewResult>("/api/v1/finance/imports/bank/preview", {
+      method: "POST",
+      body: JSON.stringify({ accountId, csvContent, profileId: profileId || null })
+    }),
+  confirmFinanceBankImport: (accountId: string, csvContent: string, fileName?: string, profileId?: string) =>
+    request<{
+      imported: number;
+      updated?: number;
+      duplicates: number;
+      rejected: number;
+      matchedSystem?: number;
+      suggestedMatches?: unknown[];
+    }>("/api/v1/finance/imports/bank/confirm", {
+      method: "POST",
+      body: JSON.stringify({ accountId, csvContent, fileName: fileName || null, profileId: profileId || null })
+    }),
   listFinanceMovements: (accountId: string) => request<{ id: string; operationDateUtc: string; kind: string; amount: number; currency: string; description: string; externalReference?: string; transferId?: string; reconciliationStatus: number; linkedEntityType?: string; linkedEntityId?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements`),
     listCollectionAvailableMovements: (accountId?: string, conceptId?: string) => {
     const params = new URLSearchParams();
