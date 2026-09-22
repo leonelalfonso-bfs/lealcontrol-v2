@@ -76,7 +76,7 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
                 v => string.IsNullOrWhiteSpace(v) ? new Dictionary<string, string>() : JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, string>())
             .Metadata.SetValueComparer(dictComparer);
 
-        builder.Property<uint>("xmin").HasColumnName("xmin").HasColumnType("xid").IsRowVersion();
+        // No mapear xmin: en tenants legacy chocaba system xid vs columna usuario y rompía listados.
 
         builder.Property(x => x.CustomerId)
             .HasConversion(
@@ -87,6 +87,7 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
                 id => id.HasValue ? id.Value.Value : (Guid?)null,
                 value => value.HasValue ? new LeadId(value.Value) : null);
 
+        // Npgsql mapea List<string> ↔ text[] nativo; un HasConversion rompía el SELECT (500).
         var tagsComparer = new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<string>>(
             (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
             c => c == null ? 0 : c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -96,9 +97,7 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
             .HasField("_tags")
             .HasColumnName("tags")
             .HasColumnType("text[]")
-            .HasConversion(
-                v => v ?? new List<string>(),
-                v => v ?? new List<string>())
+            .HasDefaultValueSql("'{}'::text[]")
             .Metadata.SetValueComparer(tagsComparer);
 
         builder.Ignore(x => x.Tags);
