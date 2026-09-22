@@ -33,6 +33,12 @@ public static class CompanySettingsEndpoints
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
         }).RequireAuthorization("RequireAdmin");
 
+        group.MapPost("/settings/arca-csr", async (GenerateArcaCsrCommand cmd, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var res = await sender.Send(cmd, cancellationToken);
+            return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
+        }).RequireAuthorization("RequireAdmin");
+
         group.MapGet("/users", async (ISender sender, CancellationToken cancellationToken) =>
         {
             var res = await sender.Send(new ListTenantUsersQuery(), cancellationToken);

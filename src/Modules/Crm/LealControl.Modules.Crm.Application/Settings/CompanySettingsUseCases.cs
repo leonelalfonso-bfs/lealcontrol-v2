@@ -42,6 +42,24 @@ public sealed record UpdateCompanySettingsCommand(CompanySettingsDto Model)
 public sealed record UploadArcaCertificateCommand(string CertificateCrt, string CertificateKey, string Environment, string SignerCuit)
     : IRequest<Result<CompanySettingsDto>>;
 
+/// <summary>
+/// Genera clave RSA 2048 + CSR (archivo de consulta / pedido) con el DN que exige ARCA/AFIP:
+/// C=AR, O=…, CN=…, SERIALNUMBER="CUIT ###########"
+/// </summary>
+public sealed record GenerateArcaCsrCommand(
+    string SignerCuit,
+    string Environment,
+    string? OrganizationName = null,
+    string? CommonName = null)
+    : IRequest<Result<ArcaCsrResultDto>>;
+
+public sealed record ArcaCsrResultDto(
+    string CsrPem,
+    string PrivateKeyPem,
+    string CsrFileName,
+    string PrivateKeyFileName,
+    CompanySettingsDto Settings);
+
 public sealed record TenantUserDto(
     Guid Id,
     string FullName,
