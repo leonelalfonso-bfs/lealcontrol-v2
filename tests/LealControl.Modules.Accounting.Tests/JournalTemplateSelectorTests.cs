@@ -52,11 +52,18 @@ public sealed class JournalTemplateSelectorTests
     }
 
     [Fact]
-    public void Select_returns_warning_when_no_match()
+    public void Select_matches_purchase_credit_note_template()
     {
-        var result = JournalTemplateSelector.Select(Doc("Payroll", "Payroll"), [T("AM-VTA-01", "Sales", "InvoiceA")]);
-        result.Template.Should().BeNull();
-        result.MatchReason.Should().Be("NoMatch");
-        result.Warning.Should().NotBeNullOrWhiteSpace();
+        var templates = new[]
+        {
+            T("AM-CMP-01", "Purchases", AccountingDocumentTypes.InvoiceA),
+            T("AM-CMP-02", "Purchases", AccountingDocumentTypes.CreditNoteA)
+        };
+        var doc = Doc("Purchases", AccountingDocumentTypes.CreditNoteA);
+
+        var result = JournalTemplateSelector.Select(doc, templates);
+        result.Template!.Code.Should().Be("AM-CMP-02");
+        result.MatchReason.Should().Be("ModuleAndType");
+        result.Warning.Should().BeNull();
     }
 }

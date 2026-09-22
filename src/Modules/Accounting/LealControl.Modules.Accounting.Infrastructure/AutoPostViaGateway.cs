@@ -59,7 +59,11 @@ internal static class AutoPostViaGateway
             return Results.BadRequest(new
             {
                 obsolete = true,
+                title = "Unsupported or unmatched purchase document type",
                 message = pending.LastError ?? "No se pudo contabilizar el documento.",
+                detail = pending.LastError ?? "No se pudo contabilizar el documento.",
+                documentType = document.DocumentType,
+                sourceModule = document.SourceModule,
                 status = pending.Status,
                 pendingDocumentId = pending.Id
             });
