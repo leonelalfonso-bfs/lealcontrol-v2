@@ -373,12 +373,14 @@ export function OpportunitiesPage() {
                     <article
                       className="opp-card"
                       key={opportunity.id}
-                      draggable={!busy}
+                      draggable={!busy && !closed}
                       onDragStart={(event: DragEvent) => {
+                        if (closed) return;
                         setDragId(opportunity.id);
                         event.dataTransfer.setData("text/opportunity-id", opportunity.id);
                       }}
                       onDragEnd={() => setDragId(null)}
+                      style={closed ? { opacity: 0.92 } : undefined}
                     >
                       <Link className="opp-card-title" to={`/oportunidades/${opportunity.id}`}>
                         {opportunity.title}
@@ -391,7 +393,10 @@ export function OpportunitiesPage() {
                         {opportunity.ownerName && <span className="tag">👤 {opportunity.ownerName}</span>}
                       </div>
                       {quote && (
-                        <Link className="proposal-chip" to={`/presupuestos/${quote.id}/editar`}>
+                        <Link
+                          className="proposal-chip"
+                          to={closed ? `/presupuestos/${quote.id}/imprimir` : `/presupuestos/${quote.id}/editar`}
+                        >
                           Presupuesto {quote.quoteNumber} · {label(quote.status)}
                         </Link>
                       )}
@@ -503,7 +508,7 @@ function TransitionDialog({
         opportunityId: opportunity.id,
         nextFollowUpOn: followUp ? new Date(`${followUp}T12:00:00`).toISOString() : null
       });
-      await api.moveOpportunity(opportunity.id, target, target === "Lost" ? detail : undefined);
+      await api.moveOpportunity(opportunity.id, target, target === "Lost" || isReversion ? detail : undefined);
       await onDone();
     } catch (e) {
       setError((e as Error).message);

@@ -209,6 +209,34 @@ public sealed class Opportunity : AggregateRoot<OpportunityId>
         return Result.Success();
     }
 
+    /// <summary>
+    /// Reabre una oportunidad cerrada (Ganada/Perdida) hacia una etapa abierta.
+    /// Requiere motivo de auditoría (validado en la aplicación vía actividad).
+    /// </summary>
+    public Result Reopen(OpportunityStage stage, string? reason, DateTime utcNow)
+    {
+        if (!IsClosed)
+        {
+            return Result.Failure(CrmErrors.OpportunityInvalidTransition);
+        }
+
+        if (stage is OpportunityStage.Won or OpportunityStage.Lost)
+        {
+            return Result.Failure(CrmErrors.OpportunityInvalidTransition);
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return Result.Failure(CrmErrors.OpportunityLostReasonRequired);
+        }
+
+        Stage = stage;
+        Probability = GetDefaultProbability(stage);
+        LostReason = null;
+        UpdatedAtUtc = utcNow;
+        return Result.Success();
+    }
+
     public void AttachCustomer(CustomerId customerId, DateTime utcNow)
     {
         CustomerId = customerId;

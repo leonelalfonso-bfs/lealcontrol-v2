@@ -16,7 +16,9 @@ namespace LealControl.Modules.Sales.Application.Orders;
 public sealed record CreateOrderCommand(OrderWriteModel Model)
     : IRequest<Result<OrderDto>>;
 
-public sealed record CreateOrderFromQuoteCommand(Guid QuoteId)
+public sealed record CreateOrderFromQuoteCommand(
+    Guid QuoteId,
+    IReadOnlyList<Guid>? IncludeOptionalLineIds = null)
     : IRequest<Result<OrderDto>>;
 
 public sealed record UpdateOrderCommand(Guid Id, OrderWriteModel Model)
@@ -186,6 +188,18 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
         var orderNumber = $"PED-{(count + 1):D4}";
         var now = DateTime.UtcNow;
 
+        var includeOptional = new HashSet<Guid>(request.IncludeOptionalLineIds ?? Array.Empty<Guid>());
+        var linesToAdd = quote.Lines
+            .Where(line => !line.IsOptional || includeOptional.Contains(line.Id.Value))
+            .ToList();
+
+        if (linesToAdd.Count == 0)
+        {
+            return Result.Failure<OrderDto>(Error.Validation(
+                "Sales.Order.NoLinesSelected",
+                "Seleccioná al menos un renglón del presupuesto para generar el pedido."));
+        }
+
         var order = Order.Create(
             _tenantContext.TenantId,
             orderNumber,
@@ -209,7 +223,7 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
             quote.OwnerName,
             OrderStatus.Confirmed);
 
-        foreach (var line in quote.Lines)
+        foreach (var line in linesToAdd)
         {
             order.AddLine(
                 line.ProductId,
@@ -219,7 +233,7 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
                 line.CurrencyCode,
                 line.DiscountPercent,
                 line.TaxRate,
-                line.IsOptional);
+                isOptional: false);
         }
 
         // Marcar la cotización como Ordered

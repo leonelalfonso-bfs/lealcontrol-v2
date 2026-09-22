@@ -13,6 +13,9 @@ export function QuotesPage() {
   const [currencyFilter, setCurrencyFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [convertQuote, setConvertQuote] = useState<Quote | null>(null);
+  const [selectedOptionalIds, setSelectedOptionalIds] = useState<string[]>([]);
+  const [converting, setConverting] = useState(false);
 
   const fetchQuotes = async () => {
     try {
@@ -101,6 +104,46 @@ export function QuotesPage() {
         alert(err instanceof Error ? err.message : "Error al aceptar presupuesto");
       }
     }
+  };
+
+  const openConvertModal = async (e: React.MouseEvent, quoteId: string) => {
+    e.stopPropagation();
+    try {
+      setConverting(true);
+      const full = await api.getQuote(quoteId);
+      const optionalLines = (full.lines || []).filter((l) => l.isOptional);
+      if (optionalLines.length === 0) {
+        const order = await api.createOrderFromQuote(full.id, []);
+        navigate(`/pedidos/${order.id}`);
+        return;
+      }
+      setConvertQuote(full);
+      setSelectedOptionalIds([]);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error al preparar la conversión");
+    } finally {
+      setConverting(false);
+    }
+  };
+
+  const confirmConvertToOrder = async () => {
+    if (!convertQuote) return;
+    try {
+      setConverting(true);
+      const order = await api.createOrderFromQuote(convertQuote.id, selectedOptionalIds);
+      setConvertQuote(null);
+      navigate(`/pedidos/${order.id}`);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error al convertir a pedido");
+    } finally {
+      setConverting(false);
+    }
+  };
+
+  const toggleOptional = (lineId: string) => {
+    setSelectedOptionalIds((prev) =>
+      prev.includes(lineId) ? prev.filter((id) => id !== lineId) : [...prev, lineId]
+    );
   };
 
   return (
@@ -218,16 +261,9 @@ export function QuotesPage() {
                           {q.status === "Accepted" && (
                             <button
                               type="button"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                try {
-                                  const order = await api.createOrderFromQuote(q.id);
-                                  navigate(`/pedidos/${order.id}`);
-                                } catch (err) {
-                                  alert(err instanceof Error ? err.message : "Error al convertir a pedido");
-                                }
-                              }}
+                              onClick={(e) => void openConvertModal(e, q.id)}
                               className="btn"
+                              disabled={converting}
                               style={{ padding: "4px 10px", fontSize: "0.75rem", background: "linear-gradient(180deg, #0284c7, #0369a1)" }}
                             >
                               📦 Convertir a Pedido
@@ -281,6 +317,61 @@ export function QuotesPage() {
           </div>
         )}
       </section>
+
+      {convertQuote && (
+        <div className="modal-backdrop" onClick={() => !converting && setConvertQuote(null)}>
+          <div className="modal-card" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+            <div className="section-head">
+              <div>
+                <span className="eyebrow">PEDIDO DE VENTA</span>
+                <h2>Ítems opcionales del presupuesto {convertQuote.quoteNumber}</h2>
+              </div>
+              <button type="button" className="icon-button" onClick={() => setConvertQuote(null)} disabled={converting}>
+                ×
+              </button>
+            </div>
+            <p className="muted" style={{ fontSize: "0.88rem" }}>
+              Los renglones obligatorios se incluyen siempre. Marcá cuáles opcionales querés pasar al pedido.
+            </p>
+            <div className="stack" style={{ gap: 8, marginTop: 12, maxHeight: 320, overflow: "auto" }}>
+              {(convertQuote.lines || [])
+                .filter((l) => !l.isOptional)
+                .map((l) => (
+                  <label key={l.id} className="card pad" style={{ opacity: 0.85, cursor: "default" }}>
+                    <input type="checkbox" checked disabled />{" "}
+                    <strong>{l.description}</strong>
+                    <span className="muted" style={{ marginLeft: 8 }}>
+                      (obligatorio) · cant. {l.quantity}
+                    </span>
+                  </label>
+                ))}
+              {(convertQuote.lines || [])
+                .filter((l) => l.isOptional)
+                .map((l) => (
+                  <label key={l.id} className="card pad" style={{ cursor: "pointer", borderColor: selectedOptionalIds.includes(l.id) ? "#0284c7" : undefined }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedOptionalIds.includes(l.id)}
+                      onChange={() => toggleOptional(l.id)}
+                    />{" "}
+                    <strong>{l.description}</strong>
+                    <span className="muted" style={{ marginLeft: 8 }}>
+                      (opcional) · cant. {l.quantity}
+                    </span>
+                  </label>
+                ))}
+            </div>
+            <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+              <button type="button" className="btn btn-outline" onClick={() => setConvertQuote(null)} disabled={converting}>
+                Cancelar
+              </button>
+              <button type="button" className="btn" onClick={() => void confirmConvertToOrder()} disabled={converting}>
+                {converting ? "Generando…" : "Confirmar pedido"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
