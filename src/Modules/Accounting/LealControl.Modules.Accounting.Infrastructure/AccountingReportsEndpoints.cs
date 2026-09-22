@@ -327,7 +327,7 @@ internal static class AccountingReportsEndpoints
             IAccountingPostingGateway gateway,
             CancellationToken ct) =>
         {
-            var docType = ResolveFiscalDocumentType(req.InvoiceType, req.InvoiceNumber);
+            var docType = FiscalDocumentTypeResolver.Resolve(req.InvoiceType, req.InvoiceNumber);
             var amounts = AutoPostViaGateway.InvoiceAmounts(req.NetAmount, req.VatAmount, req.TotalAmount);
             var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -359,7 +359,7 @@ internal static class AccountingReportsEndpoints
             IAccountingPostingGateway gateway,
             CancellationToken ct) =>
         {
-            var docType = ResolveFiscalDocumentType(req.InvoiceType, req.InvoiceNumber);
+            var docType = FiscalDocumentTypeResolver.Resolve(req.InvoiceType, req.InvoiceNumber);
             var amounts = AutoPostViaGateway.InvoiceAmounts(req.NetAmount, req.VatAmount, req.TotalAmount);
             var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (!string.IsNullOrWhiteSpace(req.InvoiceType))
@@ -785,33 +785,5 @@ internal static class AccountingReportsEndpoints
         });
 
         return group;
-    }
-
-    /// <summary>
-    /// Determina el tipo contable por InvoiceType (NC_A, ND_B, A, B…) y solo como fallback por el número.
-    /// </summary>
-    private static string ResolveFiscalDocumentType(string? invoiceType, string? invoiceNumber)
-    {
-        var type = (invoiceType ?? string.Empty).Trim();
-        if (type.StartsWith("NC", StringComparison.OrdinalIgnoreCase))
-        {
-            if (type.Contains('B', StringComparison.OrdinalIgnoreCase)) return AccountingDocumentTypes.CreditNoteB;
-            if (type.Contains('C', StringComparison.OrdinalIgnoreCase)) return AccountingDocumentTypes.CreditNoteC;
-            return AccountingDocumentTypes.CreditNoteA;
-        }
-
-        if (type.StartsWith("ND", StringComparison.OrdinalIgnoreCase))
-            return AccountingDocumentTypes.DebitNote;
-
-        if (type.Contains('B', StringComparison.OrdinalIgnoreCase)) return AccountingDocumentTypes.InvoiceB;
-        if (type.Contains('C', StringComparison.OrdinalIgnoreCase)) return AccountingDocumentTypes.InvoiceC;
-        if (!string.IsNullOrEmpty(type)) return AccountingDocumentTypes.InvoiceA;
-
-        // Legacy: algunos clientes solo envían el número formateado.
-        var number = invoiceNumber ?? string.Empty;
-        if (number.Contains("NC", StringComparison.OrdinalIgnoreCase))
-            return AccountingDocumentTypes.CreditNoteA;
-
-        return AccountingDocumentTypes.InvoiceA;
     }
 }
