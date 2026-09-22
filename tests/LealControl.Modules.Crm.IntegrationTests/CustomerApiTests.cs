@@ -44,6 +44,11 @@ public sealed class CustomerApiTests : IClassFixture<CrmWebApplicationFactory>
         };
 
         var created = await client.PostAsJsonAsync("/api/v1/crm/customers", payload);
+        if (!created.IsSuccessStatusCode)
+        {
+            var err = await created.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Expected Created, got {(int)created.StatusCode}: {err}");
+        }
         created.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var body = await created.Content.ReadFromJsonAsync<CustomerResponse>();

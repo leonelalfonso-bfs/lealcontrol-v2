@@ -34,12 +34,26 @@ public sealed class QaFinance002Scenario : ITestScenario
                 amount,
                 currency = "ARS",
                 issuerName = "Cliente Cheque QA",
-                direction = 0
+                issueDateUtc = DateTime.UtcNow.Date,
+                dueDateUtc = DateTime.UtcNow.Date.AddDays(30),
+                direction = "Received"
             });
+            if (!createRes.IsSuccessStatusCode)
+            {
+                var error = await createRes.Content.ReadAsStringAsync();
+                scenario.AddCheck(
+                    "Alta de cheque recibido",
+                    Module,
+                    false,
+                    "2xx",
+                    $"{(int)createRes.StatusCode}: {error}");
+                return scenario;
+            }
+
             scenario.AddCheck(
                 "Alta de cheque recibido",
                 Module,
-                createRes.IsSuccessStatusCode,
+                true,
                 "2xx",
                 $"{(int)createRes.StatusCode}");
 

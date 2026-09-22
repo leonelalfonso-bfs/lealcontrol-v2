@@ -42,6 +42,16 @@ public static class TestDataFactory
         return baseDigits + check;
     }
 
+    public static async Task EnsureSuccessAsync(HttpResponseMessage response)
+    {
+        if (response.IsSuccessStatusCode)
+            return;
+
+        var body = await response.Content.ReadAsStringAsync();
+        throw new HttpRequestException(
+            $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}: {body}");
+    }
+
     public static async Task<CreatedCustomer> CreateCustomerAsync(QaTestContext context, string? prefix = null)
     {
         var num = Interlocked.Increment(ref _customerCounter);
@@ -67,10 +77,10 @@ public static class TestDataFactory
         };
 
         var res = await context.HttpClient.PostAsJsonAsync("/api/v1/crm/customers", payload);
-        res.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(res);
 
         var body = await res.Content.ReadFromJsonAsync<CreatedCustomer>();
-        return body!;
+        return body ?? throw new InvalidOperationException("CRM customer endpoint returned an empty response.");
     }
 
     public static async Task<CreatedCustomer> CreateSupplierAsync(QaTestContext context, string? prefix = null)
@@ -98,10 +108,10 @@ public static class TestDataFactory
         };
 
         var res = await context.HttpClient.PostAsJsonAsync("/api/v1/crm/customers", payload);
-        res.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(res);
 
         var body = await res.Content.ReadFromJsonAsync<CreatedCustomer>();
-        return body!;
+        return body ?? throw new InvalidOperationException("CRM supplier endpoint returned an empty response.");
     }
 
     public static async Task<CreatedProduct> CreateProductAsync(
