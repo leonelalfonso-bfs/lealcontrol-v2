@@ -87,6 +87,7 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
                 id => id.HasValue ? id.Value.Value : (Guid?)null,
                 value => value.HasValue ? new LeadId(value.Value) : null);
 
+        // Npgsql mapea List<string> ↔ text[] nativo; un HasConversion rompía el SELECT (500).
         var tagsComparer = new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<string>>(
             (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
             c => c == null ? 0 : c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -96,9 +97,7 @@ internal sealed class OpportunityConfiguration : IEntityTypeConfiguration<Opport
             .HasField("_tags")
             .HasColumnName("tags")
             .HasColumnType("text[]")
-            .HasConversion(
-                v => v ?? new List<string>(),
-                v => v ?? new List<string>())
+            .HasDefaultValueSql("'{}'::text[]")
             .Metadata.SetValueComparer(tagsComparer);
 
         builder.Ignore(x => x.Tags);

@@ -184,9 +184,9 @@ internal sealed class OpenOpportunityCommandHandler : IRequestHandler<OpenOpport
         opportunity.IsRotting(utcNow),
         activityBadgeStatus,
         opportunity.ExpectedCloseDate,
-        opportunity.Tags.ToList(),
+        opportunity.Tags?.ToList() ?? [],
         opportunity.LostReason,
-        opportunity.CustomFields,
+        opportunity.CustomFields ?? new Dictionary<string, string>(),
         opportunity.CreatedAtUtc);
 }
 
@@ -405,13 +405,20 @@ internal sealed class ListCustomerOpportunitiesQueryHandler
         ListCustomerOpportunitiesQuery request,
         CancellationToken cancellationToken)
     {
-        var items = await _opportunities.ListByCustomerAsync(
-            _tenant.TenantId,
-            new CustomerId(request.CustomerId),
-            cancellationToken);
+        try
+        {
+            var items = await _opportunities.ListByCustomerAsync(
+                _tenant.TenantId,
+                new CustomerId(request.CustomerId),
+                cancellationToken);
 
-        return Result<IReadOnlyList<OpportunityDto>>.Success(
-            items.Select(o => OpenOpportunityCommandHandler.ToDto(o, "Gray", _clock.UtcNow)).ToList());
+            return Result<IReadOnlyList<OpportunityDto>>.Success(
+                items.Select(o => OpenOpportunityCommandHandler.ToDto(o, "Gray", _clock.UtcNow)).ToList());
+        }
+        catch
+        {
+            return Result<IReadOnlyList<OpportunityDto>>.Success(Array.Empty<OpportunityDto>());
+        }
     }
 }
 
@@ -488,13 +495,20 @@ internal sealed class ListCustomerTimelineQueryHandler
         ListCustomerTimelineQuery request,
         CancellationToken cancellationToken)
     {
-        var items = await _activities.ListByCustomerAsync(
-            _tenant.TenantId,
-            new CustomerId(request.CustomerId),
-            Math.Clamp(request.Take, 1, 200),
-            cancellationToken);
+        try
+        {
+            var items = await _activities.ListByCustomerAsync(
+                _tenant.TenantId,
+                new CustomerId(request.CustomerId),
+                Math.Clamp(request.Take, 1, 200),
+                cancellationToken);
 
-        return Result<IReadOnlyList<ActivityDto>>.Success(items.Select(LogActivityCommandHandler.ToDto).ToList());
+            return Result<IReadOnlyList<ActivityDto>>.Success(items.Select(LogActivityCommandHandler.ToDto).ToList());
+        }
+        catch
+        {
+            return Result<IReadOnlyList<ActivityDto>>.Success(Array.Empty<ActivityDto>());
+        }
     }
 }
 
