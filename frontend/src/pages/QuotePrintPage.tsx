@@ -169,10 +169,11 @@ export const QuotePrintPage: React.FC = () => {
   const primaryLightBg = hexToRgba(primaryCol, 0.1);
   const primaryBorderLight = hexToRgba(primaryCol, 0.25);
 
-  const companyName = company?.legalName || company?.tradeName || "Empresa";
-  const companyTagline = company?.tradeName && company.tradeName !== company.legalName
-    ? company.tradeName
-    : [company?.fiscalCity, company?.fiscalProvince].filter(Boolean).join(", ") || "Documento comercial";
+  const companyDisplayName = company?.tradeName?.trim() || company?.legalName || "Empresa";
+  const companyLegalName =
+    company?.legalName && company.legalName.trim() !== companyDisplayName.trim()
+      ? company.legalName
+      : null;
   const companyCuit = formatCuitDisplay(company?.documentNumber);
   const companyTax = label(company?.taxCondition) || company?.taxCondition || "—";
   const companyAddress = [
@@ -191,13 +192,13 @@ export const QuotePrintPage: React.FC = () => {
   const logoBlock = company?.logoUrl ? (
     <img
       src={company.logoUrl}
-      alt={companyName}
+      alt={companyDisplayName}
       crossOrigin="anonymous"
-      style={{ maxHeight: 56, maxWidth: 160, objectFit: "contain", display: "block" }}
+      style={{ maxHeight: 96, maxWidth: 240, objectFit: "contain", display: "block", background: "#000", borderRadius: 8, padding: 4 }}
     />
   ) : (
-    <div style={{ width: "50px", height: "50px", borderRadius: "12px", background: primaryCol, color: "#ffffff", display: "grid", placeItems: "center", fontSize: "1.1rem", fontWeight: 900 }}>
-      {companyInitials(companyName)}
+    <div style={{ width: "64px", height: "64px", borderRadius: "12px", background: primaryCol, color: "#ffffff", display: "grid", placeItems: "center", fontSize: "1.25rem", fontWeight: 900 }}>
+      {companyInitials(companyDisplayName)}
     </div>
   );
 
@@ -302,18 +303,20 @@ export const QuotePrintPage: React.FC = () => {
               ========================================================================= */}
           {settings.templateStyle === "classic" ? (
             <div style={{ background: primaryCol, color: "#ffffff", padding: "14px 18px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", gap: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                 {company?.logoUrl ? (
                   <img
                     src={company.logoUrl}
-                    alt={companyName}
+                    alt={companyDisplayName}
                     crossOrigin="anonymous"
-                    style={{ maxHeight: 48, maxWidth: 140, objectFit: "contain", background: "#fff", borderRadius: 6, padding: 4 }}
+                    style={{ maxHeight: 88, maxWidth: 220, objectFit: "contain", background: "#000", borderRadius: 6, padding: 4 }}
                   />
                 ) : null}
                 <div>
-                  <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 900, color: "#ffffff" }}>{companyName}</h2>
-                  <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>{companyTagline}</div>
+                  <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 900, color: "#ffffff" }}>{companyDisplayName}</h2>
+                  {companyLegalName ? (
+                    <div style={{ fontSize: "0.78rem", opacity: 0.92, fontWeight: 600 }}>{companyLegalName}</div>
+                  ) : null}
                   <div style={{ fontSize: "0.72rem", opacity: 0.9 }}>CUIT: {companyCuit} | {companyTax}</div>
                 </div>
               </div>
@@ -323,13 +326,19 @@ export const QuotePrintPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: `2px solid ${primaryCol}`, marginBottom: "16px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: `2px solid ${primaryCol}`, marginBottom: "16px", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
                 {logoBlock}
                 <div>
-                  <h1 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 900, color: "#0f172a" }}>{companyName}</h1>
-                  <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{companyTagline}</div>
-                  <div style={{ fontSize: "0.72rem", color: "#64748b" }}>CUIT: {companyCuit} | {companyTax}</div>
+                  <h1 style={{ margin: 0, fontSize: "1.45rem", fontWeight: 900, color: "#0f172a", letterSpacing: "0.01em" }}>
+                    {companyDisplayName}
+                  </h1>
+                  {companyLegalName ? (
+                    <div style={{ fontSize: "0.82rem", color: "#475569", fontWeight: 600, marginTop: 2 }}>
+                      {companyLegalName}
+                    </div>
+                  ) : null}
+                  <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>CUIT: {companyCuit} | {companyTax}</div>
                   {companyAddress ? (
                     <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{companyAddress}</div>
                   ) : null}

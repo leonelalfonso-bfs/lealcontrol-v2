@@ -127,7 +127,11 @@ export function OpportunityDetailPage() {
         opportunityId: opportunity.id,
         nextFollowUpOn: null
       });
-      await api.moveOpportunity(opportunity.id, targetStage, targetStage === "Lost" ? revertReason.trim() : undefined);
+      await api.moveOpportunity(
+        opportunity.id,
+        targetStage,
+        revertReason.trim()
+      );
       setShowStageModal(false);
       setRevertReason("");
       await load();
@@ -140,6 +144,7 @@ export function OpportunityDetailPage() {
 
   if (!opportunity) return <div className="card pad">{error ?? "Cargando oportunidad…"}</div>;
   const customerName = opportunity.customerName || (opportunity.customerId ? customers[opportunity.customerId] : null);
+  const isClosed = opportunity.stage === "Won" || opportunity.stage === "Lost";
 
   return (
     <div className="opportunity-workspace page-wide">
@@ -158,7 +163,7 @@ export function OpportunityDetailPage() {
           </p>
         </div>
         <div className="toolbar">
-          <button type="button" className="btn" onClick={() => setShowEmail(true)}>
+          <button type="button" className="btn" onClick={() => setShowEmail(true)} disabled={isClosed}>
             ✉ Enviar email
           </button>
           {showEmail && (
@@ -172,17 +177,31 @@ export function OpportunityDetailPage() {
               onClose={() => setShowEmail(false)}
             />
           )}
-          <button
-            type="button"
-            className="btn btn-outline"
-            style={{ color: "#d97706", borderColor: "#f59e0b" }}
-            onClick={() => {
-              setTargetStage(opportunity.stage === "Won" || opportunity.stage === "Lost" ? "Negotiation" : "Discovery");
-              setShowStageModal(true);
-            }}
-          >
-            🔄 Revertir / Cambiar Etapa
-          </button>
+          {isClosed ? (
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ color: "#d97706", borderColor: "#f59e0b" }}
+              onClick={() => {
+                setTargetStage("Negotiation");
+                setShowStageModal(true);
+              }}
+            >
+              🔄 Reabrir oportunidad
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ color: "#d97706", borderColor: "#f59e0b" }}
+              onClick={() => {
+                setTargetStage("Discovery");
+                setShowStageModal(true);
+              }}
+            >
+              🔄 Cambiar Etapa
+            </button>
+          )}
           <Link className="btn btn-outline" to="/oportunidades">
             Volver al embudo
           </Link>
@@ -193,6 +212,13 @@ export function OpportunityDetailPage() {
       </div>
 
       {error && <div className="alert">{error}</div>}
+
+      {isClosed && (
+        <div className="hint" style={{ background: "#ecfdf5", color: "#065f46", border: "1px solid #34d399", marginBottom: 12 }}>
+          Esta oportunidad está <strong>{label(opportunity.stage)}</strong> y quedó bloqueada para edición comercial.
+          Podés consultar el historial; para volver a editar usá <strong>Reabrir oportunidad</strong> con un motivo.
+        </div>
+      )}
 
       <div className="opportunity-summary card pad">
         <div>
@@ -278,11 +304,16 @@ export function OpportunityDetailPage() {
                 <h2>Propuesta comercial</h2>
                 <p className="muted">Presupuestos vinculados a esta negociación.</p>
               </div>
-              <button className="btn" type="button" onClick={createQuote} disabled={busy || !opportunity.customerId}>
+              <button className="btn" type="button" onClick={createQuote} disabled={busy || !opportunity.customerId || isClosed}>
                 + Crear presupuesto
               </button>
             </div>
-            {!opportunity.customerId && (
+            {isClosed && (
+              <div className="hint" style={{ background: "#f8fafc", color: "#475569", border: "1px solid #cbd5e1" }}>
+                No se pueden crear ni editar presupuestos mientras la oportunidad esté cerrada.
+              </div>
+            )}
+            {!opportunity.customerId && !isClosed && (
               <div className="hint" style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #f59e0b" }}>
                 ⚠️ Vinculá un cliente antes de preparar la propuesta formal.
               </div>
@@ -299,7 +330,9 @@ export function OpportunityDetailPage() {
                       Revisión {quote.revision} · {label(quote.status)}
                     </span>
                   </div>
-                  <Link to={`/presupuestos/${quote.id}/editar`}>Abrir</Link>
+                  <Link to={isClosed ? `/presupuestos/${quote.id}/imprimir` : `/presupuestos/${quote.id}/editar`}>
+                    {isClosed ? "Ver" : "Abrir"}
+                  </Link>
                 </div>
               ))
             )}
@@ -322,7 +355,14 @@ export function OpportunityDetailPage() {
         </div>
         <aside className="card pad activity-composer">
           <h2>Registrar interacción</h2>
-          <p className="muted">Cada llamada, reunión o mensaje explica qué ocurrió y cuál es el próximo paso.</p>
+          <p className="muted">
+            {isClosed
+              ? "La oportunidad está cerrada. El historial queda solo en lectura."
+              : "Cada llamada, reunión o mensaje explica qué ocurrió y cuál es el próximo paso."}
+          </p>
+          {isClosed ? (
+            <div className="empty-state">Edición bloqueada en oportunidad ganada/perdida.</div>
+          ) : (
           <form onSubmit={logActivity} className="stack">
             <label>
               Tipo
@@ -352,6 +392,7 @@ export function OpportunityDetailPage() {
               Guardar en historial
             </button>
           </form>
+          )}
         </aside>
       </div>
     </div>

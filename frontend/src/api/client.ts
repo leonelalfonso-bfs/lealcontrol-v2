@@ -378,8 +378,11 @@ export const api = {
   getOrder: (id: string) => request<Order>(`/api/v1/sales/orders/${id}`),
   createOrder: (body: OrderWrite) =>
     request<Order>("/api/v1/sales/orders", { method: "POST", body: JSON.stringify(body) }),
-  createOrderFromQuote: (quoteId: string) =>
-    request<Order>(`/api/v1/sales/orders/from-quote/${quoteId}`, { method: "POST" }),
+  createOrderFromQuote: (quoteId: string, includeOptionalLineIds: string[] = []) =>
+    request<Order>(`/api/v1/sales/orders/from-quote/${quoteId}`, {
+      method: "POST",
+      body: JSON.stringify({ includeOptionalLineIds })
+    }),
   updateOrder: (id: string, body: OrderWrite) =>
     request<Order>(`/api/v1/sales/orders/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   updateOrderStatus: (id: string, status: OrderStatus) =>

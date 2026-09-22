@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Routing;
 namespace LealControl.Modules.Sales.Infrastructure.Http;
 
 public record UpdateOrderStatusRequest(OrderStatus Status);
+public sealed record CreateOrderFromQuoteRequest(IReadOnlyList<Guid>? IncludeOptionalLineIds);
 public sealed record ProductionBomLineRequest(Guid ComponentProductId, decimal Quantity, string Unit, decimal ScrapPercent, string? AppliesToVariant, bool IsOptional, int SortOrder, Guid? SubstituteProductId);
 public sealed record ProductionBomRequest(Guid ProductId, string Version, string Name, string? Description, decimal OutputQuantity, string OutputUnit, bool IsActive, DateTime? ValidFromUtc, DateTime? ValidToUtc, IReadOnlyList<ProductionBomLineRequest> Lines);
 public sealed record ProductionOrderRequest(string Number, Guid ProductId, Guid? BomId, decimal PlannedQuantity, string Unit, DateTime? PlannedStartUtc, DateTime? PlannedEndUtc, string? Notes);
@@ -157,10 +158,13 @@ public static class SalesEndpoints
 
         sales.MapPost("/orders/from-quote/{quoteId:guid}", async (
             Guid quoteId,
+            CreateOrderFromQuoteRequest? body,
             ISender sender,
             CancellationToken cancellationToken) =>
         {
-            var result = await sender.Send(new CreateOrderFromQuoteCommand(quoteId), cancellationToken);
+            var result = await sender.Send(
+                new CreateOrderFromQuoteCommand(quoteId, body?.IncludeOptionalLineIds),
+                cancellationToken);
             return result.IsSuccess
                 ? result.ToCreated($"/api/v1/sales/orders/{result.Value.Id}")
                 : result.ToHttp();

@@ -260,12 +260,23 @@ internal sealed class MoveOpportunityCommandHandler : IRequestHandler<MoveOpport
             return Result<OpportunityDto>.Failure(CrmErrors.OpportunityNotFound);
         }
 
-        var moved = opportunity.MoveTo(
-            request.Stage,
-            request.LostReason,
-            _clock.UtcNow,
-            request.Probability,
-            request.CustomFields);
+        Result moved;
+        if (opportunity.IsClosed
+            && request.Stage is not OpportunityStage.Won
+            && request.Stage is not OpportunityStage.Lost)
+        {
+            // Reapertura controlada: solo desde Ganada/Perdida hacia etapa abierta, con motivo.
+            moved = opportunity.Reopen(request.Stage, request.LostReason, _clock.UtcNow);
+        }
+        else
+        {
+            moved = opportunity.MoveTo(
+                request.Stage,
+                request.LostReason,
+                _clock.UtcNow,
+                request.Probability,
+                request.CustomFields);
+        }
 
         if (moved.IsFailure)
         {
