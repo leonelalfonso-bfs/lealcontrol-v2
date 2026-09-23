@@ -400,6 +400,34 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
             END $$;
         ";
 
-        await Database.ExecuteSqlRawAsync(sql, cancellationToken);
+        Exception? schemaError = null;
+        try
+        {
+            await Database.ExecuteSqlRawAsync(sql, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            schemaError = ex;
+        }
+
+        // Aparte del script grande: sin esta columna, guardar un presupuesto responde 500.
+        await Database.ExecuteSqlRawAsync(
+            """
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.tables
+                    WHERE table_schema = 'sales' AND table_name = 'quote_lines'
+                ) THEN
+                    ALTER TABLE sales.quote_lines ADD COLUMN IF NOT EXISTS "TechnicalDetail" text;
+                END IF;
+            END $$;
+            """,
+            cancellationToken);
+
+        if (schemaError is not null)
+        {
+            throw schemaError;
+        }
     }
 }
