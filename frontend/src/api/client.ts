@@ -542,6 +542,19 @@ export const api = {
       privateKeyFileName: string;
       settings: import("./types").CompanySettings;
     }>("/api/v1/company/settings/arca-csr", { method: "POST", body: JSON.stringify(body) }),
+  diagnoseArca: () =>
+    request<{
+      readyForInvoicing: boolean;
+      readyForCuitLookup: boolean;
+      environment: string;
+      signerCuit?: string | null;
+      certificateSubject?: string | null;
+      certificateThumbprint?: string | null;
+      certificateNotBeforeUtc?: string | null;
+      certificateNotAfterUtc?: string | null;
+      checks: Array<{ code: string; label: string; ok: boolean; detail: string }>;
+      summary: string;
+    }>("/api/v1/company/settings/arca-diagnostics"),
   listTenantUsers: () => request<import("./types").TenantUser[]>("/api/v1/company/users"),
   createTenantUser: (body: { fullName: string; email: string; role: string; password?: string; allowedModulesJson?: string }) =>
     request<import("./types").TenantUser>("/api/v1/company/users", { method: "POST", body: JSON.stringify(body) }),

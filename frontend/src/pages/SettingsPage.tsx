@@ -24,6 +24,17 @@ export function SettingsPage() {
   const [uploadingCert, setUploadingCert] = useState(false);
   const [generatingCsr, setGeneratingCsr] = useState(false);
   const [csrReady, setCsrReady] = useState(false);
+  const [diagnosingArca, setDiagnosingArca] = useState(false);
+  const [arcaDiagnostics, setArcaDiagnostics] = useState<{
+    readyForInvoicing: boolean;
+    readyForCuitLookup: boolean;
+    environment: string;
+    signerCuit?: string | null;
+    certificateSubject?: string | null;
+    certificateThumbprint?: string | null;
+    checks: Array<{ code: string; label: string; ok: boolean; detail: string }>;
+    summary: string;
+  } | null>(null);
 
   // User Modal State (Create & Edit)
   const [showUserModal, setShowUserModal] = useState(false);
@@ -178,6 +189,25 @@ export function SettingsPage() {
       setError(err instanceof Error ? err.message : "Error al cargar certificado");
     } finally {
       setUploadingCert(false);
+    }
+  };
+
+  const handleDiagnoseArca = async () => {
+    try {
+      setDiagnosingArca(true);
+      setError(null);
+      setSuccessMsg(null);
+      const result = await api.diagnoseArca();
+      setArcaDiagnostics(result);
+      if (result.readyForInvoicing && result.readyForCuitLookup) {
+        setSuccessMsg("✓ " + result.summary);
+      } else {
+        setError(result.summary);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo diagnosticar ARCA");
+    } finally {
+      setDiagnosingArca(false);
     }
   };
 
@@ -644,6 +674,45 @@ export function SettingsPage() {
                 Los certificados y claves privadas se resguardan de forma segura e independiente en la base de datos de tu empresa.
                 Si regenerás el archivo de consulta, la clave anterior deja de valer y deberás tramitar un certificado nuevo en ARCA.
               </div>
+            </div>
+
+            <div className="card pad" style={{ marginTop: 20, border: "1px solid var(--line)" }}>
+              <h4 style={{ marginTop: 0 }}>Paso 3 — Probar conexión ARCA</h4>
+              <p className="muted" style={{ fontSize: "0.85rem" }}>
+                Verifica certificado, clave, vigencia y tickets WSAA para <strong>facturación (wsfe)</strong> y
+                <strong> consulta CUIT / padrón A5</strong>. Corré esto antes de que el cliente empiece a operar.
+              </p>
+              <button
+                type="button"
+                className="btn ghost"
+                disabled={diagnosingArca}
+                onClick={() => void handleDiagnoseArca()}
+              >
+                {diagnosingArca ? "Probando con ARCA…" : "🔎 Probar certificado y servicios ARCA"}
+              </button>
+              {arcaDiagnostics && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 8 }}>{arcaDiagnostics.summary}</div>
+                  <div className="muted" style={{ fontSize: "0.8rem", marginBottom: 8 }}>
+                    Ambiente: {arcaDiagnostics.environment}
+                    {arcaDiagnostics.signerCuit ? ` · CUIT ${arcaDiagnostics.signerCuit}` : ""}
+                    {arcaDiagnostics.certificateThumbprint ? ` · Thumbprint ${arcaDiagnostics.certificateThumbprint}` : ""}
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.85rem" }}>
+                    {arcaDiagnostics.checks.map((c) => (
+                      <li key={c.code} style={{ marginBottom: 6, color: c.ok ? "var(--ok, #15803d)" : "var(--danger, #b91c1c)" }}>
+                        {c.ok ? "✓" : "✗"} <strong>{c.label}</strong> — {c.detail}
+                      </li>
+                    ))}
+                  </ul>
+                  {!arcaDiagnostics.readyForCuitLookup && (
+                    <p className="muted" style={{ fontSize: "0.8rem", marginTop: 10 }}>
+                      Si falla solo el padrón: en ARCA → Administrador de Relaciones asociá el certificado al
+                      web service «Consulta a Padrón Alcance 5» (<code>ws_sr_padron_a5</code>).
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
