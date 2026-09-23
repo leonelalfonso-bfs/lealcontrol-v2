@@ -463,7 +463,7 @@ export const ProductFormPage: React.FC = () => {
                 Descripción Técnica Detallada (Ficha técnica para Presupuestos y Ofertas Técnicas)
               </label>
               <textarea
-                rows={3}
+                rows={16}
                 value={detailedDescription}
                 onChange={(e) => setDetailedDescription(e.target.value)}
                 placeholder="Especificaciones técnicas completas, capacidad, dimensiones, tolerancias, certificaciones INTI..."

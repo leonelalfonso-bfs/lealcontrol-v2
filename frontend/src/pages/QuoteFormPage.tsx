@@ -17,6 +17,7 @@ import { QuickProductModal } from "../components/QuickProductModal";
 interface FormQuoteLine extends QuoteLineWrite {
   nativeCurrency: string;
   nativeUnitPrice: number;
+  technicalDetail?: string | null;
 }
 
 export const QuoteFormPage: React.FC = () => {
@@ -62,6 +63,7 @@ export const QuoteFormPage: React.FC = () => {
       discountPercent: 0,
       taxRate: 21,
       isOptional: false,
+      technicalDetail: "",
       nativeCurrency: "ARS",
       nativeUnitPrice: 0
     }
@@ -71,6 +73,8 @@ export const QuoteFormPage: React.FC = () => {
   const [showQuickCustomerModal, setShowQuickCustomerModal] = useState(false);
   const [showQuickProductModal, setShowQuickProductModal] = useState(false);
   const [quickProductLineIndex, setQuickProductLineIndex] = useState<number | null>(null);
+  const [technicalLineIndex, setTechnicalLineIndex] = useState<number | null>(null);
+  const [technicalDraft, setTechnicalDraft] = useState("");
 
   // Secondary Mini Modals for existing customer (Plant/Contact)
   const [showNewLocationModal, setShowNewLocationModal] = useState(false);
@@ -165,6 +169,7 @@ export const QuoteFormPage: React.FC = () => {
                 discountPercent: l.discountPercent,
                 taxRate: l.taxRate,
                 isOptional: l.isOptional,
+                technicalDetail: l.technicalDetail ?? "",
                 nativeCurrency: q.currency,
                 nativeUnitPrice: l.unitPrice
               }))
@@ -405,7 +410,10 @@ export const QuoteFormPage: React.FC = () => {
         nativeCurrency: prodNativeCurrency,
         nativeUnitPrice: prodNativePrice,
         unitPrice: convertedUnitPrice,
-        taxRate: prod.taxRate
+        taxRate: prod.taxRate,
+        technicalDetail: copy[index].technicalDetail?.trim()
+          ? copy[index].technicalDetail
+          : (prod.detailedDescription ?? "")
       };
       return copy;
     });
@@ -462,7 +470,8 @@ export const QuoteFormPage: React.FC = () => {
           unitPrice: l.unitPrice,
           discountPercent: l.discountPercent,
           taxRate: l.taxRate,
-          isOptional: l.isOptional
+          isOptional: l.isOptional,
+          technicalDetail: l.technicalDetail?.trim() ? l.technicalDetail.trim() : null
         }))
       };
 
@@ -859,10 +868,29 @@ export const QuoteFormPage: React.FC = () => {
                         <input
                           type="text"
                           required
-                          placeholder="Descripción detallada del artículo o servicio..."
+                          placeholder="Descripción comercial del ítem..."
                           value={line.description}
                           onChange={(e) => handleLineChange(idx, "description", e.target.value)}
                         />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTechnicalLineIndex(idx);
+                            setTechnicalDraft(line.technicalDetail ?? "");
+                          }}
+                          style={{
+                            alignSelf: "flex-start",
+                            background: "none",
+                            border: "none",
+                            color: "#2563eb",
+                            fontWeight: 700,
+                            fontSize: "0.78rem",
+                            cursor: "pointer",
+                            padding: 0
+                          }}
+                        >
+                          {line.technicalDetail?.trim() ? "Editar detalle técnico (cargado)" : "Editar detalle técnico"}
+                        </button>
                       </div>
                     </td>
                     <td>
@@ -1086,6 +1114,44 @@ export const QuoteFormPage: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {technicalLineIndex !== null && (
+        <div className="modal-backdrop" onClick={() => setTechnicalLineIndex(null)}>
+          <div className="modal-card" style={{ maxWidth: 760, width: "100%" }} onClick={(e) => e.stopPropagation()}>
+            <div className="section-head">
+              <div>
+                <span className="eyebrow">OFERTA TÉCNICA</span>
+                <h2>Detalle técnico del ítem</h2>
+              </div>
+              <button type="button" className="icon-button" onClick={() => setTechnicalLineIndex(null)}>×</button>
+            </div>
+            <p className="muted" style={{ fontSize: "0.88rem" }}>
+              Este texto sale en la primera hoja, como oferta técnica. La hoja siguiente es la oferta comercial, con precios.
+              Podés escribir todo el alcance, las especificaciones y las condiciones técnicas.
+            </p>
+            <textarea
+              rows={18}
+              value={technicalDraft}
+              onChange={(e) => setTechnicalDraft(e.target.value)}
+              placeholder="Alcance de obra, especificaciones, materiales, exclusiones, plazos técnicos..."
+              style={{ width: "100%", minHeight: 320, marginTop: 12 }}
+            />
+            <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+              <button type="button" className="btn ghost" onClick={() => setTechnicalLineIndex(null)}>Cerrar</button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  handleLineChange(technicalLineIndex, "technicalDetail", technicalDraft);
+                  setTechnicalLineIndex(null);
+                }}
+              >
+                Guardar detalle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* QUICK CUSTOMER MODAL */}
       <QuickCustomerModal

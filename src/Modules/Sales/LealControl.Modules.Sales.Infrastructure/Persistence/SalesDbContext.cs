@@ -156,6 +156,8 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
                 ""LotNumber"" character varying(200)
             );
 
+            ALTER TABLE sales.quote_lines ADD COLUMN IF NOT EXISTS ""TechnicalDetail"" text;
+
             ALTER TABLE sales.""StockItems"" ADD COLUMN IF NOT EXISTS ""WarehouseId"" uuid;
             ALTER TABLE sales.""StockItems"" ADD COLUMN IF NOT EXISTS ""WarehouseName"" character varying(200);
             ALTER TABLE sales.""StockItems"" ADD COLUMN IF NOT EXISTS ""IncomingStock"" numeric(18,4) NOT NULL DEFAULT 0;
