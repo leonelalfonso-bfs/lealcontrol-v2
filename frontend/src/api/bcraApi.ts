@@ -26,7 +26,14 @@ export interface BcraCreditReport {
 export const bcraApi = {
   async getReport(cuit: string): Promise<BcraCreditReport> {
     const cleanCuit = cuit.replace(/\D/g, "");
-    const res = await fetch(`/api/v1/automation/bcra/${cleanCuit}`);
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("leal_token") || localStorage.getItem("leal_superadmin_token");
+      const tenantId = localStorage.getItem("leal_tenant_id");
+      if (token) headers.Authorization = `Bearer ${token}`;
+      if (tenantId) headers["X-Tenant-Id"] = tenantId;
+    }
+    const res = await fetch(`/api/v1/automation/bcra/${cleanCuit}`, { headers });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: `Error ${res.status}` }));
       throw new Error(err.error || "No se pudo obtener el informe crediticio del BCRA.");

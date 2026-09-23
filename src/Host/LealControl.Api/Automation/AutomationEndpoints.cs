@@ -56,19 +56,6 @@ public static class AutomationEndpoints
             return Results.Ok(result);
         });
 
-        group.MapGet("/bcra/{cuit}", async (string cuit, BcraApiClient client, CancellationToken ct) =>
-        {
-            try
-            {
-                var report = await client.GetCreditReportAsync(cuit, ct);
-                return Results.Ok(report);
-            }
-            catch (Exception ex)
-            {
-                return Results.BadRequest(new { error = ex.Message });
-            }
-        });
-
         group.MapGet("/diagnostic", async (LealDiagnosticService service, CancellationToken ct) =>
         {
             var report = await service.GenerateDiagnosticAsync(ct);
@@ -85,6 +72,20 @@ public static class AutomationEndpoints
             var response = await service.AskAsync(request, ct);
             return Results.Ok(response);
         });
+
+        // Informe BCRA lo usa Comercial al dar de alta un cliente: alcanza con estar logueado.
+        app.MapGet("/api/v1/automation/bcra/{cuit}", async (string cuit, BcraApiClient client, CancellationToken ct) =>
+        {
+            try
+            {
+                var report = await client.GetCreditReportAsync(cuit, ct);
+                return Results.Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).RequireAuthorization();
 
         return app;
     }
