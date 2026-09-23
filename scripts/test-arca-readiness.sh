@@ -124,9 +124,18 @@ check_api() {
     -H "Authorization: Bearer $token" \
     -H 'Accept: application/json')
 
-  printf '%s' "$diag" | python3 -c '
-import json,sys
-d=json.loads(sys.stdin.read())
+  local py
+  py=$(mktemp)
+  cat >"$py" <<'PY'
+import json, sys
+raw = sys.stdin.read()
+try:
+    d = json.loads(raw)
+except json.JSONDecodeError:
+    print("Respuesta no-JSON del diagnóstico:")
+    print(raw)
+    raise SystemExit(1)
+
 print("Resumen:", d.get("summary"))
 print("Ambiente:", d.get("environment"), "| CUIT:", d.get("signerCuit"))
 print("Listo facturación:", d.get("readyForInvoicing"))
@@ -134,9 +143,16 @@ print("Listo consulta CUIT:", d.get("readyForCuitLookup"))
 for c in d.get("checks") or []:
     mark = "OK" if c.get("ok") else "FAIL"
     print("  [%s] %s: %s" % (mark, c.get("label"), c.get("detail")))
+
 ok = bool(d.get("readyForInvoicing")) and bool(d.get("readyForCuitLookup"))
 raise SystemExit(0 if ok else 2)
-'
+PY
+  set +e
+  printf '%s' "$diag" | python3 "$py"
+  local py_code=$?
+  set -e
+  rm -f "$py"
+  return "$py_code"
 }
 
 header "LealControl — test ARCA readiness"
