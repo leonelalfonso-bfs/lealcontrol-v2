@@ -68,8 +68,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (saved === "light" || saved === "dark") {
       return saved;
     }
-    // Default to dark (Nordic Slate) or user preference
-    return "dark";
+    return "light";
   });
 
   const setMode = (newMode: ColorMode) => {

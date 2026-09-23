@@ -13,6 +13,7 @@ import "./v1-theme.css";
 import "./excel-tools.css";
 import "./themes.css";
 import "./brand-layout.css";
+import "./sober-shell.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
