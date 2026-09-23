@@ -4,6 +4,7 @@ using LealControl.Modules.Crm.Application;
 using LealControl.Modules.Crm.Application.Abstractions;
 using LealControl.Modules.Directory.Contracts.Customers;
 using LealControl.Modules.Crm.Contracts.Opportunities;
+using LealControl.Modules.Crm.Infrastructure.Arca;
 using LealControl.Modules.Crm.Infrastructure.Directory;
 using LealControl.Modules.Crm.Infrastructure.Persistence;
 using LealControl.Modules.Crm.Infrastructure.Persistence.Repositories;
@@ -33,6 +34,14 @@ public static class DependencyInjection
         services.AddScoped<IActivityRepository, ActivityRepository>();
         services.AddScoped<ICustomerDirectory, CustomerDirectory>();
         services.AddScoped<IOpportunityLookup, OpportunityLookup>();
+
+        services.AddHttpClient("arca", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddScoped<ArcaWsaaClient>();
+        services.AddScoped<ArcaPadronClient>();
+        services.AddScoped<IArcaIntegration, ArcaIntegrationService>();
         return services;
     }
 }
