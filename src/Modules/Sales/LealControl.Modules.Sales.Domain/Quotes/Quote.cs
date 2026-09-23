@@ -203,7 +203,8 @@ public sealed class Quote : AggregateRoot<QuoteId>
         decimal discountPercent = 0m,
         decimal taxRate = 21m,
         bool isOptional = false,
-        Guid? productId = null)
+        Guid? productId = null,
+        string? technicalDetail = null)
     {
         if (!IsEditable)
         {
@@ -218,7 +219,8 @@ public sealed class Quote : AggregateRoot<QuoteId>
             taxRate,
             isOptional,
             Currency,
-            productId);
+            productId,
+            technicalDetail);
 
         if (line.IsFailure)
         {

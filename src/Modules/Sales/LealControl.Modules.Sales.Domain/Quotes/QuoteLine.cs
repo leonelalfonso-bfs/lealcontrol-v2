@@ -16,7 +16,8 @@ public sealed class QuoteLine
         decimal discountPercent,
         decimal taxRate,
         bool isOptional,
-        string currencyCode)
+        string currencyCode,
+        string? technicalDetail)
     {
         Id = id;
         Description = description;
@@ -26,6 +27,7 @@ public sealed class QuoteLine
         TaxRate = taxRate;
         IsOptional = isOptional;
         CurrencyCode = currencyCode;
+        TechnicalDetail = string.IsNullOrWhiteSpace(technicalDetail) ? null : technicalDetail.Trim();
     }
 
     public QuoteLineId Id { get; private set; }
@@ -46,6 +48,8 @@ public sealed class QuoteLine
 
     public string CurrencyCode { get; private set; } = "ARS";
 
+    public string? TechnicalDetail { get; private set; }
+
     public decimal LineSubtotal
     {
         get
@@ -64,7 +68,8 @@ public sealed class QuoteLine
         decimal taxRate = 21m,
         bool isOptional = false,
         string? currencyCode = null,
-        Guid? productId = null)
+        Guid? productId = null,
+        string? technicalDetail = null)
     {
         if (string.IsNullOrWhiteSpace(description))
         {
@@ -84,7 +89,8 @@ public sealed class QuoteLine
             Math.Clamp(discountPercent, 0, 100),
             Math.Clamp(taxRate, 0, 100),
             isOptional,
-            string.IsNullOrWhiteSpace(currencyCode) ? "ARS" : currencyCode.Trim().ToUpperInvariant())
+            string.IsNullOrWhiteSpace(currencyCode) ? "ARS" : currencyCode.Trim().ToUpperInvariant(),
+            technicalDetail)
         {
             ProductId = productId
         };

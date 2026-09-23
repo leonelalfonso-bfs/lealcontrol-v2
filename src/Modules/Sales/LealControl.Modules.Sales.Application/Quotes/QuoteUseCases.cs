@@ -52,7 +52,8 @@ public sealed record QuoteLineWriteModel(
     decimal TaxRate = 21m,
     bool IsOptional = false,
     string CurrencyCode = "ARS",
-    Guid? ProductId = null);
+    Guid? ProductId = null,
+    string? TechnicalDetail = null);
 
 public sealed record QuoteWriteModel(
     Guid CustomerId,
@@ -83,7 +84,8 @@ public sealed record QuoteLineDto(
     decimal TaxRate,
     bool IsOptional,
     string CurrencyCode,
-    decimal LineSubtotal);
+    decimal LineSubtotal,
+    string? TechnicalDetail);
 
 public sealed record QuoteDto(
     Guid Id,
@@ -149,7 +151,8 @@ internal static class QuoteMappings
             l.TaxRate,
             l.IsOptional,
             l.CurrencyCode,
-            l.LineSubtotal)).ToList());
+            l.LineSubtotal,
+            l.TechnicalDetail)).ToList());
 }
 
 internal sealed class CreateQuoteCommandHandler : IRequestHandler<CreateQuoteCommand, Result<QuoteDto>>
@@ -213,7 +216,8 @@ internal sealed class CreateQuoteCommandHandler : IRequestHandler<CreateQuoteCom
                 lineModel.DiscountPercent,
                 lineModel.TaxRate,
                 lineModel.IsOptional,
-                lineModel.ProductId);
+                lineModel.ProductId,
+                lineModel.TechnicalDetail);
 
             if (lineAdd.IsFailure)
             {
@@ -285,7 +289,8 @@ internal sealed class UpdateQuoteCommandHandler : IRequestHandler<UpdateQuoteCom
                 lineModel.DiscountPercent,
                 lineModel.TaxRate,
                 lineModel.IsOptional,
-                lineModel.ProductId);
+                lineModel.ProductId,
+                lineModel.TechnicalDetail);
 
             if (lineAdd.IsFailure)
             {

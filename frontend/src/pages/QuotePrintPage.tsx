@@ -129,7 +129,7 @@ export const QuotePrintPage: React.FC = () => {
           }
         },
         jsPDF: { unit: "mm" as const, format: "a4", orientation: "portrait" as const },
-        pagebreak: { mode: ["avoid-all", "css"] }
+        pagebreak: { mode: ["css", "legacy"], before: ".html2pdf__page-break" }
       };
 
       const html2pdf = await loadHtml2Pdf();
@@ -205,11 +205,12 @@ export const QuotePrintPage: React.FC = () => {
     company?.fiscalPostalCode ? `CP ${company.fiscalPostalCode}` : null
   ].filter(Boolean).join(", ");
 
-  // Identify lines that have technical info or images
-  const technicalItems = quote.lines.map((line) => {
+  const technicalItems = quote.lines.map((line, idx) => {
     const prod = (line.productId ? productsMap[line.productId] : null) || (line.description ? productsMap[line.description.toUpperCase()] : null);
-    return { line, prod };
-  }).filter((item) => item.prod && (item.prod.imagePath || item.prod.detailedDescription));
+    const text = (line.technicalDetail || prod?.detailedDescription || "").trim();
+    return { line, prod, text, idx };
+  }).filter((item) => item.text.length > 0 || Boolean(item.prod?.imagePath));
+  const showTechnicalOffer = includeTechnicalOffer && technicalItems.length > 0;
 
   const logoBlock = company?.logoUrl ? (
     <img
@@ -252,7 +253,7 @@ export const QuotePrintPage: React.FC = () => {
               cursor: "pointer"
             }}
           >
-            {includeTechnicalOffer ? "🖼️ Oferta Técnica con Fotos: ACTIVADA" : "📄 Solo Tabla Comercial"}
+            {includeTechnicalOffer ? "Oferta técnica en la primera hoja" : "Solo oferta comercial"}
           </button>
 
           {quote.status !== "Cancelled" && (
@@ -367,7 +368,7 @@ export const QuotePrintPage: React.FC = () => {
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "1.1rem", fontWeight: 900 }}>{settings.quote.headerTitle || "PRESUPUESTO COMERCIAL"}</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 900 }}>{showTechnicalOffer ? "OFERTA TÉCNICA" : (settings.quote.headerTitle || "PRESUPUESTO COMERCIAL")}</div>
                 <div style={{ fontSize: "0.85rem", opacity: 0.95 }}>N° {quote.quoteNumber} (Rev. {quote.revision})</div>
               </div>
             </div>
@@ -398,7 +399,7 @@ export const QuotePrintPage: React.FC = () => {
 
               <div style={{ textAlign: "right" }}>
                 <div style={{ display: "inline-block", padding: "3px 12px", borderRadius: "6px", background: primaryLightBg, color: primaryCol, fontWeight: 800, fontSize: "0.9rem" }}>
-                  {settings.quote.headerTitle || "PRESUPUESTO COMERCIAL"}
+                  {showTechnicalOffer ? "OFERTA TÉCNICA" : (settings.quote.headerTitle || "PRESUPUESTO COMERCIAL")}
                 </div>
                 <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#0f172a", marginTop: "4px" }}>
                   N° {quote.quoteNumber} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>(Rev. {quote.revision})</span>
@@ -408,6 +409,44 @@ export const QuotePrintPage: React.FC = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          {showTechnicalOffer && (
+            <section>
+              <p style={{ margin: "0 0 12px", fontSize: "0.82rem", color: "#475569" }}>
+                Especificaciones y alcance. La oferta comercial, con precios, continúa en la hoja siguiente.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {technicalItems.map(({ line, prod, text, idx }) => (
+                  <article key={line.id || idx} style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+                    <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#0f172a", marginBottom: 6 }}>
+                      {idx + 1}. {line.description}
+                    </div>
+                    {prod?.imagePath && (
+                      <img
+                        src={prod.imagePath}
+                        alt={line.description}
+                        crossOrigin="anonymous"
+                        style={{ maxWidth: 220, maxHeight: 160, objectFit: "contain", marginBottom: 8 }}
+                      />
+                    )}
+                    {text && (
+                      <div style={{ whiteSpace: "pre-wrap", fontSize: "0.84rem", lineHeight: 1.45, color: "#1e293b" }}>
+                        {text}
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+              <div className="html2pdf__page-break" style={{ breakAfter: "page", pageBreakAfter: "always" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: `2px solid ${primaryCol}`, paddingBottom: 8, margin: "8px 0 14px" }}>
+                <div>
+                  <div style={{ fontWeight: 900, color: primaryCol, letterSpacing: "0.04em" }}>OFERTA COMERCIAL</div>
+                  <div style={{ fontSize: "0.78rem", color: "#64748b" }}>N° {quote.quoteNumber} · Rev. {quote.revision}</div>
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "#64748b" }}>{companyDisplayName}</div>
+              </div>
+            </section>
           )}
 
           {/* Customer & Commercial Details */}
@@ -503,72 +542,6 @@ export const QuotePrintPage: React.FC = () => {
               {numberToWords(grandTotal, quote.currency)}
             </span>
           </div>
-
-          {/* =========================================================================
-              SECTION: ANEXO DE OFERTA TÉCNICA CON IMÁGENES
-              ========================================================================= */}
-          {includeTechnicalOffer && technicalItems.length > 0 && (
-            <div style={{ marginTop: "14px", paddingTop: "14px", borderTop: `2px solid ${primaryCol}` }}>
-              <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: "6px", background: primaryCol, color: "#ffffff", fontWeight: 800, fontSize: "0.85rem", textTransform: "uppercase", marginBottom: "12px" }}>
-                📑 ANEXO: OFERTA TÉCNICA & ESPECIFICACIONES DE EQUIPAMIENTO
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {technicalItems.map(({ line, prod }, idx) => (
-                  <div
-                    key={line.id || idx}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: prod?.imagePath ? "130px 1fr" : "1fr",
-                      gap: "14px",
-                      padding: "12px",
-                      borderRadius: "8px",
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0"
-                    }}
-                  >
-                    {prod?.imagePath && (
-                      <div style={{ width: "120px", height: "120px", borderRadius: "8px", overflow: "hidden", background: "#ffffff", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <img
-                          src={prod.imagePath}
-                          alt={prod.name}
-                          crossOrigin="anonymous"
-                          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-                        />
-                      </div>
-                    )}
-
-                    <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <div>
-                          <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>{prod?.name || line.description}</strong>
-                          {prod?.code && (
-                            <span style={{ marginLeft: "8px", fontSize: "0.75rem", color: "#64748b", fontFamily: "monospace" }}>
-                              SKU: {prod.code}
-                            </span>
-                          )}
-                        </div>
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: "6px", background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0" }}>Ítem {idx + 1}</span>
-                      </div>
-
-                      {prod?.description && (
-                        <p style={{ margin: "4px 0", fontSize: "0.8rem", color: "#475569" }}>
-                          {prod.description}
-                        </p>
-                      )}
-
-                      {prod?.detailedDescription && (
-                        <div style={{ marginTop: "6px", padding: "8px 10px", background: "#ffffff", borderRadius: "6px", border: "1px solid #e2e8f0", fontSize: "0.76rem", color: "#334155", lineHeight: 1.4 }}>
-                          <strong style={{ color: primaryCol, display: "block", marginBottom: "2px" }}>Especificaciones Técnicas & Alcance:</strong>
-                          <div style={{ whiteSpace: "pre-line" }}>{prod.detailedDescription}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Commercial Conditions Table */}
           <div style={{ marginTop: "14px", borderTop: `1px solid ${primaryBorderLight}`, paddingTop: "8px", fontSize: "0.76rem" }}>

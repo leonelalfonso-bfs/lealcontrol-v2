@@ -213,6 +213,7 @@ export type QuoteLine = {
   taxRate: number;
   isOptional: boolean;
   lineSubtotal: number;
+  technicalDetail?: string | null;
 };
 
 export type Quote = {
@@ -251,6 +252,7 @@ export type QuoteLineWrite = {
   discountPercent: number;
   taxRate: number;
   isOptional: boolean;
+  technicalDetail?: string | null;
 };
 
 export type QuoteWrite = {

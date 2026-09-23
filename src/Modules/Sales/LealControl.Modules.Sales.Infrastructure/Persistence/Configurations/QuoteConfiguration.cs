@@ -46,6 +46,7 @@ internal sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
             line.Property(x => x.DiscountPercent).HasPrecision(8, 4);
             line.Property(x => x.TaxRate).HasPrecision(8, 4);
             line.Property(x => x.CurrencyCode).HasMaxLength(20);
+            line.Property(x => x.TechnicalDetail).HasColumnType("text");
             line.Ignore(x => x.LineSubtotal);
         });
 
