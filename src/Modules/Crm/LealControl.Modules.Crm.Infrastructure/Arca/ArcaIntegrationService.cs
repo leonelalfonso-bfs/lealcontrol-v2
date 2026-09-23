@@ -97,8 +97,8 @@ internal sealed class ArcaIntegrationService : IArcaIntegration
             checks.Add(Check("wsaa.wsfe", "WSAA → Facturación (wsfe)", wsfe.Ok, wsfe.Detail));
             readyInvoice = wsfe.Ok;
 
-            var padron = await _wsaa.LoginAsync(cert, crtPem, keyPem, "ws_sr_padron_a5", production, cancellationToken);
-            checks.Add(Check("wsaa.padron", "WSAA → Consulta CUIT (ws_sr_padron_a5)", padron.Ok, padron.Detail));
+            var padron = await _wsaa.LoginAsync(cert, crtPem, keyPem, "ws_sr_constancia_inscripcion", production, cancellationToken);
+            checks.Add(Check("wsaa.padron", "WSAA → Constancia de inscripción", padron.Ok, padron.Detail));
             readyLookup = padron.Ok;
 
             return Build(readyInvoice, readyLookup, envLabel, signerCuit, subject, thumbprint, notBefore, notAfter, checks);
@@ -147,18 +147,19 @@ internal sealed class ArcaIntegrationService : IArcaIntegration
                 cert,
                 settings.ArcaCertificateCrt!,
                 settings.ArcaCertificateKey!,
-                "ws_sr_padron_a5",
+                "ws_sr_constancia_inscripcion",
                 production,
                 cancellationToken);
             if (!login.Ok || login.Token is null || login.Sign is null)
             {
-                _logger.LogWarning("Padron A5 no autorizado: {Detail}", login.Detail);
+                _logger.LogWarning("Constancia de inscripción no autorizada: {Detail}", login.Detail);
                 return Result<ArcaCuitLookupResult>.Failure(
                     Error.Failure(
                         "Crm.Arca.PadronUnauthorized",
-                        "El certificado está cargado, pero ARCA no autorizó el padrón (ws_sr_padron_a5). "
-                        + "En ARCA → Administrador de Relaciones asociá el certificado al web service "
-                        + "«Consulta a Padrón Alcance 5». Detalle: " + login.Detail));
+                        "El certificado está cargado, pero ARCA no autorizó la consulta de CUIT "
+                        + "(ws_sr_constancia_inscripcion). En Administrador de Relaciones asociá el certificado a "
+                        + "«Constancia de Inscripción». El padrón Alcance 5 (ws_sr_padron_a5) está deprecado. "
+                        + "Detalle: " + login.Detail));
             }
 
             return await _padron.GetPersonaAsync(
@@ -209,7 +210,7 @@ internal sealed class ArcaIntegrationService : IArcaIntegration
         if (invoice && lookup)
             return "ARCA listo: facturación electrónica y consulta de CUIT OK.";
         if (invoice && !lookup)
-            return "Certificado OK para facturar (wsfe), pero falta habilitar padrón A5 para el botón ARCA de clientes.";
+            return "Certificado OK para facturar (wsfe), pero falta autorizar Constancia de Inscripción para el botón ARCA de clientes.";
         if (!invoice && lookup)
             return "Consulta CUIT OK, pero falta habilitar wsfe para facturación electrónica.";
         var firstFail = checks.FirstOrDefault(c => !c.Ok);

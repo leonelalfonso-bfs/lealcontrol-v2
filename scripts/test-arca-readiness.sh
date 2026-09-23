@@ -228,6 +228,6 @@ code=$?
 if [[ $code -eq 0 ]]; then
   green "Todo OK para operar (facturación + botón ARCA de clientes)."
 else
-  yellow "Revisá los ítems en rojo. Si solo falla padrón A5, asociá ws_sr_padron_a5 en Administrador de Relaciones ARCA."
+  yellow "Revisá los ítems en rojo. Si falla la consulta de CUIT, asociá ws_sr_constancia_inscripcion (Constancia de Inscripción) en Administrador de Relaciones ARCA."
 fi
 exit "$code"
