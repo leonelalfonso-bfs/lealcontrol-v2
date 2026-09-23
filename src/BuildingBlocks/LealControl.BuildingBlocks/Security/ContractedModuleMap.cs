@@ -18,6 +18,8 @@ public static class ContractedModuleMap
         ("/api/v1/fleet", "fleet"),
         ("/api/v1/metrology", "metrology"),
         ("/api/v1/quality", "quality"),
+        // Informe crediticio del alta de clientes: no es el módulo de automatización (Gemini).
+        ("/api/v1/automation/bcra", "directory"),
         ("/api/v1/automation", "automation")
     ];
 
