@@ -35,8 +35,8 @@ export const bcraApi = {
     }
     const res = await fetch(`/api/v1/automation/bcra/${cleanCuit}`, { headers });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: `Error ${res.status}` }));
-      throw new Error(err.error || "No se pudo obtener el informe crediticio del BCRA.");
+      const err = await res.json().catch(() => ({ error: `Error ${res.status}` })) as { error?: string; message?: string };
+      throw new Error(err.error || err.message || "No se pudo obtener el informe crediticio del BCRA.");
     }
     return res.json();
   }
