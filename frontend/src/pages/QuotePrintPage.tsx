@@ -255,7 +255,7 @@ export const QuotePrintPage: React.FC = () => {
             {includeTechnicalOffer ? "🖼️ Oferta Técnica con Fotos: ACTIVADA" : "📄 Solo Tabla Comercial"}
           </button>
 
-          {quote.status !== "Ordered" && quote.status !== "Cancelled" && (
+          {quote.status !== "Cancelled" && (
             <button
               type="button"
               onClick={() => void handleCancelQuote()}
@@ -264,7 +264,7 @@ export const QuotePrintPage: React.FC = () => {
               Anular
             </button>
           )}
-          {quote.status !== "Ordered" && (
+          {quote.status !== "Cancelled" && (
             <button
               type="button"
               onClick={() => void handleDeleteQuote()}

@@ -466,19 +466,22 @@ export const QuoteFormPage: React.FC = () => {
         }))
       };
 
-      if (isEditing && id) {
-        await api.updateQuote(id, payload);
-        if (acceptImmediately) {
-          await api.acceptQuote(id);
+      const saved = isEditing && id
+        ? await api.updateQuote(id, payload)
+        : await api.createQuote(payload);
+
+      if (acceptImmediately) {
+        const hasOptional = (saved.lines || []).some((line) => line.isOptional);
+        if (hasOptional && !confirm("Hay ítems opcionales. El pedido se arma con los obligatorios. Si preferís elegirlos, cancelá y usá Convertir a Pedido en el listado.")) {
+          navigate("/presupuestos");
+          return;
         }
-        navigate(`/presupuestos/${id}`);
-      } else {
-        const created = await api.createQuote(payload);
-        if (acceptImmediately) {
-          await api.acceptQuote(created.id);
-        }
-        navigate(`/presupuestos/${created.id}`);
+        const order = await api.createOrderFromQuote(saved.id, []);
+        navigate(`/pedidos/${order.id}`);
+        return;
       }
+
+      navigate(isEditing && id ? `/presupuestos/${id}` : `/presupuestos/${saved.id}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al guardar presupuesto");
     } finally {
@@ -501,7 +504,7 @@ export const QuoteFormPage: React.FC = () => {
           </div>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
-          {isEditing && id && quoteStatus !== "Ordered" && quoteStatus !== "Cancelled" && (
+          {isEditing && id && quoteStatus !== "Cancelled" && (
             <button
               type="button"
               className="btn ghost"
@@ -515,7 +518,7 @@ export const QuoteFormPage: React.FC = () => {
               Anular
             </button>
           )}
-          {isEditing && id && quoteStatus !== "Ordered" && (
+          {isEditing && id && quoteStatus !== "Cancelled" && (
             <button
               type="button"
               className="btn ghost"
@@ -544,7 +547,7 @@ export const QuoteFormPage: React.FC = () => {
         <div className="alert">Este presupuesto está anulado. Podés eliminarlo si ya no lo necesitás en el listado.</div>
       )}
       {quoteStatus === "Ordered" && (
-        <div className="alert">Este presupuesto ya generó un pedido de venta. Para anularlo o eliminarlo, primero hay que resolver ese pedido.</div>
+        <div className="alert">Este presupuesto ya es un pedido de venta. Si ese pedido se cancela, el presupuesto vuelve a poder editarse.</div>
       )}
 
       {error && <div className="alert">{error}</div>}
@@ -1079,7 +1082,7 @@ export const QuoteFormPage: React.FC = () => {
             className="btn"
             style={{ background: "linear-gradient(180deg, #1aaa97, #128c7e)" }}
           >
-            ✓ Aceptar Presupuesto & Ganar Oportunidad
+            Guardar y convertir a pedido
           </button>
         </div>
       </form>

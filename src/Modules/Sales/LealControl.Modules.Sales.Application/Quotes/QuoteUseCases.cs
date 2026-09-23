@@ -559,7 +559,7 @@ internal sealed class CancelQuoteCommandHandler : IRequestHandler<CancelQuoteCom
             return Result<QuoteDto>.Failure(SalesErrors.QuoteNotFound);
         }
 
-        var order = await _orders.GetByQuoteIdAsync(_tenant.TenantId, quote.Id.Value, cancellationToken);
+        var order = await _orders.GetOpenByQuoteIdAsync(_tenant.TenantId, quote.Id.Value, cancellationToken);
         if (order is not null)
         {
             return Result<QuoteDto>.Failure(SalesErrors.QuoteHasSalesOrder);
@@ -603,12 +603,7 @@ internal sealed class DeleteQuoteCommandHandler : IRequestHandler<DeleteQuoteCom
             return Result.Failure(SalesErrors.QuoteNotFound);
         }
 
-        if (quote.Status == QuoteStatus.Ordered)
-        {
-            return Result.Failure(SalesErrors.QuoteHasSalesOrder);
-        }
-
-        var order = await _orders.GetByQuoteIdAsync(_tenant.TenantId, quote.Id.Value, cancellationToken);
+        var order = await _orders.GetOpenByQuoteIdAsync(_tenant.TenantId, quote.Id.Value, cancellationToken);
         if (order is not null)
         {
             return Result.Failure(SalesErrors.QuoteHasSalesOrder);

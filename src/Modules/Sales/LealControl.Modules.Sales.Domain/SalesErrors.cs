@@ -22,7 +22,7 @@ public static class SalesErrors
 
     public static readonly Error QuoteHasSalesOrder = Error.Conflict(
         "Sales.Quote.ConflictHasOrder",
-        "Este presupuesto ya generó un pedido de venta. No se puede anular ni eliminar mientras ese pedido exista.");
+        "Este presupuesto tiene un pedido de venta vigente. Cancelá ese pedido para poder anular o eliminar el presupuesto.");
 
     public static readonly Error OpportunityNotFound = Error.NotFound(
         "Sales.Quote.OpportunityNotFound",

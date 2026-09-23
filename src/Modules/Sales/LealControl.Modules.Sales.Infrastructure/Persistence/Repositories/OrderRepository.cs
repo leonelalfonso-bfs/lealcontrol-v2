@@ -39,6 +39,15 @@ internal sealed class OrderRepository : IOrderRepository
             .FirstOrDefaultAsync(o => o.TenantId == tenantId && o.QuoteId == quoteId, cancellationToken);
     }
 
+    public async Task<Order?> GetOpenByQuoteIdAsync(TenantId tenantId, Guid quoteId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Orders
+            .Include(o => o.Lines)
+            .Where(o => o.TenantId == tenantId && o.QuoteId == quoteId && o.Status != OrderStatus.Cancelled)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Order>> ListAsync(TenantId tenantId, string? search = null, OrderStatus? status = null, CancellationToken cancellationToken = default)
     {
         var query = _dbContext.Orders
