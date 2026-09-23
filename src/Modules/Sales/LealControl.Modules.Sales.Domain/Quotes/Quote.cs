@@ -38,6 +38,14 @@ public sealed class Quote : AggregateRoot<QuoteId>
 
     public string QuoteNumber { get; private set; } = string.Empty;
 
+    public void AssignNumber(string quoteNumber)
+    {
+        if (!string.IsNullOrWhiteSpace(quoteNumber))
+        {
+            QuoteNumber = quoteNumber.Trim();
+        }
+    }
+
     public int Revision { get; private set; }
 
     public Guid CustomerId { get; private set; }

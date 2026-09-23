@@ -158,26 +158,28 @@ internal static class QuoteMappings
 internal sealed class CreateQuoteCommandHandler : IRequestHandler<CreateQuoteCommand, Result<QuoteDto>>
 {
     private readonly IQuoteRepository _quotes;
-    private readonly ISalesUnitOfWork _unitOfWork;
     private readonly ITenantContext _tenant;
     private readonly IClock _clock;
 
     public CreateQuoteCommandHandler(
         IQuoteRepository quotes,
-        ISalesUnitOfWork unitOfWork,
         ITenantContext tenant,
         IClock clock)
     {
         _quotes = quotes;
-        _unitOfWork = unitOfWork;
         _tenant = tenant;
         _clock = clock;
     }
 
     public async Task<Result<QuoteDto>> Handle(CreateQuoteCommand request, CancellationToken cancellationToken)
     {
-        var count = await _quotes.CountAsync(_tenant.TenantId, cancellationToken);
-        var number = $"P-{_clock.UtcNow:yyyy}-{(count + 1):D4}";
+        await _quotes.EnsureTechnicalDetailColumnAsync(cancellationToken);
+        var number = await _quotes.NextNumberAsync(_tenant.TenantId, _clock.UtcNow.Year, cancellationToken);
+
+        if (request.Model.Lines is null)
+        {
+            return Result<QuoteDto>.Failure(SalesErrors.LineDescriptionRequired);
+        }
 
         var quoteResult = Quote.Draft(
             _tenant.TenantId,
@@ -226,33 +228,65 @@ internal sealed class CreateQuoteCommandHandler : IRequestHandler<CreateQuoteCom
         }
 
         _quotes.Add(quote);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));
+        var persisted = await PersistQuoteAsync(quote, renumberOnCollision: true, cancellationToken);
+        return persisted ?? Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));
+    }
+
+    private async Task<Result<QuoteDto>?> PersistQuoteAsync(
+        Quote quote,
+        bool renumberOnCollision,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _quotes.SaveAsync(cancellationToken);
+            return null;
+        }
+        catch (QuotePersistenceException ex) when (renumberOnCollision && ex.IsNumberCollision)
+        {
+            quote.AssignNumber(await _quotes.NextNumberAsync(_tenant.TenantId, _clock.UtcNow.Year, cancellationToken));
+            try
+            {
+                await _quotes.SaveAsync(cancellationToken);
+                return null;
+            }
+            catch (QuotePersistenceException retry)
+            {
+                return Result<QuoteDto>.Failure(Error.Validation("Sales.Quote.SaveFailed", retry.Message));
+            }
+        }
+        catch (QuotePersistenceException ex)
+        {
+            return Result<QuoteDto>.Failure(Error.Validation("Sales.Quote.SaveFailed", ex.Message));
+        }
     }
 }
 
 internal sealed class UpdateQuoteCommandHandler : IRequestHandler<UpdateQuoteCommand, Result<QuoteDto>>
 {
     private readonly IQuoteRepository _quotes;
-    private readonly ISalesUnitOfWork _unitOfWork;
     private readonly IClock _clock;
 
     public UpdateQuoteCommandHandler(
         IQuoteRepository quotes,
-        ISalesUnitOfWork unitOfWork,
         IClock clock)
     {
         _quotes = quotes;
-        _unitOfWork = unitOfWork;
         _clock = clock;
     }
 
     public async Task<Result<QuoteDto>> Handle(UpdateQuoteCommand request, CancellationToken cancellationToken)
     {
+        await _quotes.EnsureTechnicalDetailColumnAsync(cancellationToken);
         var quote = await _quotes.GetByIdAsync(new QuoteId(request.Id), cancellationToken);
         if (quote is null)
         {
             return Result<QuoteDto>.Failure(SalesErrors.QuoteNotFound);
+        }
+
+        if (request.Model.Lines is null)
+        {
+            return Result<QuoteDto>.Failure(SalesErrors.LineDescriptionRequired);
         }
 
         var updateResult = quote.UpdateDetails(
@@ -298,8 +332,21 @@ internal sealed class UpdateQuoteCommandHandler : IRequestHandler<UpdateQuoteCom
             }
         }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));
+        var persisted = await PersistQuoteAsync(cancellationToken);
+        return persisted ?? Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));
+    }
+
+    private async Task<Result<QuoteDto>?> PersistQuoteAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _quotes.SaveAsync(cancellationToken);
+            return null;
+        }
+        catch (QuotePersistenceException ex)
+        {
+            return Result<QuoteDto>.Failure(Error.Validation("Sales.Quote.SaveFailed", ex.Message));
+        }
     }
 }
 
@@ -405,7 +452,6 @@ internal sealed class CreateDraftFromOpportunityCommandHandler
     private readonly IOpportunityLookup _opportunities;
     private readonly ICustomerDirectory _customers;
     private readonly IQuoteRepository _quotes;
-    private readonly ISalesUnitOfWork _unitOfWork;
     private readonly ITenantContext _tenant;
     private readonly IClock _clock;
 
@@ -413,14 +459,12 @@ internal sealed class CreateDraftFromOpportunityCommandHandler
         IOpportunityLookup opportunities,
         ICustomerDirectory customers,
         IQuoteRepository quotes,
-        ISalesUnitOfWork unitOfWork,
         ITenantContext tenant,
         IClock clock)
     {
         _opportunities = opportunities;
         _customers = customers;
         _quotes = quotes;
-        _unitOfWork = unitOfWork;
         _tenant = tenant;
         _clock = clock;
     }
@@ -460,8 +504,8 @@ internal sealed class CreateDraftFromOpportunityCommandHandler
             return Result<QuoteDto>.Success(QuoteMappings.ToDto(existing));
         }
 
-        var count = await _quotes.CountAsync(_tenant.TenantId, cancellationToken);
-        var number = $"P-{_clock.UtcNow:yyyy}-{(count + 1):D4}";
+        await _quotes.EnsureTechnicalDetailColumnAsync(cancellationToken);
+        var number = await _quotes.NextNumberAsync(_tenant.TenantId, _clock.UtcNow.Year, cancellationToken);
 
         var draft = Quote.Draft(
             _tenant.TenantId,
@@ -492,7 +536,27 @@ internal sealed class CreateDraftFromOpportunityCommandHandler
         }
 
         _quotes.Add(draft.Value);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _quotes.SaveAsync(cancellationToken);
+        }
+        catch (QuotePersistenceException ex) when (ex.IsNumberCollision)
+        {
+            draft.Value.AssignNumber(await _quotes.NextNumberAsync(_tenant.TenantId, _clock.UtcNow.Year, cancellationToken));
+            try
+            {
+                await _quotes.SaveAsync(cancellationToken);
+            }
+            catch (QuotePersistenceException retry)
+            {
+                return Result<QuoteDto>.Failure(Error.Validation("Sales.Quote.SaveFailed", retry.Message));
+            }
+        }
+        catch (QuotePersistenceException ex)
+        {
+            return Result<QuoteDto>.Failure(Error.Validation("Sales.Quote.SaveFailed", ex.Message));
+        }
+
         return Result<QuoteDto>.Success(QuoteMappings.ToDto(draft.Value));
     }
 }

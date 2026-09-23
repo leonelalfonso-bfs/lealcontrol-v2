@@ -318,12 +318,19 @@ try
         {
             exceptionHandlerApp.Run(async context =>
             {
+                var error = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+                if (error is not null)
+                {
+                    Log.Error(error, "Error no controlado en {Method} {Path}", context.Request.Method, context.Request.Path);
+                }
+
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 context.Response.ContentType = "application/problem+json";
                 await context.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
                 {
                     Status = StatusCodes.Status500InternalServerError,
                     Title = "Error interno del servidor",
+                    Detail = DescribeUnhandled(error),
                     Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
                 });
             });
@@ -414,6 +421,29 @@ try
     }
 
     await app.RunAsync();
+
+    static string DescribeUnhandled(Exception? error)
+    {
+        if (error is null)
+        {
+            return "Error interno del servidor.";
+        }
+
+        var pg = error.GetBaseException() as Npgsql.PostgresException
+            ?? error.InnerException as Npgsql.PostgresException;
+        if (pg is null)
+        {
+            return error.GetBaseException().Message;
+        }
+
+        return pg.SqlState switch
+        {
+            "23505" => "Ya existe un registro con el mismo número. Volvé a guardar.",
+            "42703" => "Falta una columna en la base: " + pg.MessageText,
+            "22001" => "Hay un texto demasiado largo: " + pg.MessageText,
+            _ => pg.MessageText
+        };
+    }
 }
 catch (HostAbortedException)
 {
