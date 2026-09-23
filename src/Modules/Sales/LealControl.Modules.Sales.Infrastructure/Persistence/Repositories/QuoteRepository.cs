@@ -20,7 +20,9 @@ internal sealed class QuoteRepository : IQuoteRepository
         CancellationToken cancellationToken = default) =>
         await _db.Quotes.Include(x => x.Lines)
             .FirstOrDefaultAsync(
-                x => x.TenantId == tenantId && x.OpportunityId == opportunityId,
+                x => x.TenantId == tenantId
+                    && x.OpportunityId == opportunityId
+                    && x.Status != QuoteStatus.Cancelled,
                 cancellationToken);
 
     public async Task<IReadOnlyList<Quote>> ListAsync(
@@ -36,4 +38,6 @@ internal sealed class QuoteRepository : IQuoteRepository
         _db.Quotes.CountAsync(x => x.TenantId == tenantId, cancellationToken);
 
     public void Add(Quote quote) => _db.Quotes.Add(quote);
+
+    public void Remove(Quote quote) => _db.Quotes.Remove(quote);
 }

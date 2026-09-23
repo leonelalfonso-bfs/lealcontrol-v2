@@ -33,6 +33,8 @@ export const QuoteFormPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quoteStatus, setQuoteStatus] = useState<string>("");
+  const [quoteNumber, setQuoteNumber] = useState<string>("");
 
   // Form Fields
   const [customerId, setCustomerId] = useState("");
@@ -136,6 +138,8 @@ export const QuoteFormPage: React.FC = () => {
 
         if (isEditing && id) {
           const q = await api.getQuote(id);
+          setQuoteStatus(q.status);
+          setQuoteNumber(q.quoteNumber);
           setCustomerId(q.customerId);
           setLocationId(q.locationId ?? "");
           setContactId(q.contactId ?? "");
@@ -497,6 +501,35 @@ export const QuoteFormPage: React.FC = () => {
           </div>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
+          {isEditing && id && quoteStatus !== "Ordered" && quoteStatus !== "Cancelled" && (
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                if (!confirm(`¿Anular el presupuesto ${quoteNumber || ""}? Queda registrado como anulado.`)) return;
+                void api.cancelQuote(id).then(() => navigate("/presupuestos")).catch((err: unknown) => {
+                  setError(err instanceof Error ? err.message : "Error al anular el presupuesto");
+                });
+              }}
+            >
+              Anular
+            </button>
+          )}
+          {isEditing && id && quoteStatus !== "Ordered" && (
+            <button
+              type="button"
+              className="btn ghost"
+              style={{ color: "#b91c1c" }}
+              onClick={() => {
+                if (!confirm(`¿Eliminar el presupuesto ${quoteNumber || ""}? No se puede recuperar.`)) return;
+                void api.deleteQuote(id).then(() => navigate("/presupuestos")).catch((err: unknown) => {
+                  setError(err instanceof Error ? err.message : "Error al eliminar el presupuesto");
+                });
+              }}
+            >
+              Eliminar
+            </button>
+          )}
           <button
             type="button"
             onClick={() => navigate("/presupuestos")}
@@ -506,6 +539,13 @@ export const QuoteFormPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {quoteStatus === "Cancelled" && (
+        <div className="alert">Este presupuesto está anulado. Podés eliminarlo si ya no lo necesitás en el listado.</div>
+      )}
+      {quoteStatus === "Ordered" && (
+        <div className="alert">Este presupuesto ya generó un pedido de venta. Para anularlo o eliminarlo, primero hay que resolver ese pedido.</div>
+      )}
 
       {error && <div className="alert">{error}</div>}
 
@@ -1021,12 +1061,12 @@ export const QuoteFormPage: React.FC = () => {
             onClick={() => navigate("/presupuestos")}
             className="btn ghost"
           >
-            Cancelar
+            Volver
           </button>
           
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || quoteStatus === "Cancelled" || quoteStatus === "Ordered"}
             className="btn ghost"
           >
             {saving ? "Guardando..." : "Guardar Borrador"}
@@ -1034,7 +1074,7 @@ export const QuoteFormPage: React.FC = () => {
 
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || quoteStatus === "Cancelled" || quoteStatus === "Ordered"}
             onClick={(e) => handleSubmit(e, true)}
             className="btn"
             style={{ background: "linear-gradient(180deg, #1aaa97, #128c7e)" }}

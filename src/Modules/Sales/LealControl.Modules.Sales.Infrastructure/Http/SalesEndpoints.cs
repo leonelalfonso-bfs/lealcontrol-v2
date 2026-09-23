@@ -130,6 +130,18 @@ public static class SalesEndpoints
             return result.ToHttp();
         });
 
+        sales.MapPost("/quotes/{id:guid}/cancel", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(new CancelQuoteCommand(id), cancellationToken);
+            return result.ToHttp();
+        });
+
+        sales.MapDelete("/quotes/{id:guid}", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var result = await sender.Send(new DeleteQuoteCommand(id), cancellationToken);
+            return result.ToHttp();
+        });
+
         // Orders Endpoints (Pedidos de Venta)
         sales.MapGet("/orders", async (
             string? search,

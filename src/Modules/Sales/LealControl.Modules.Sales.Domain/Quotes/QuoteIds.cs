@@ -17,5 +17,6 @@ public enum QuoteStatus
     Accepted = 3,
     Ordered = 3,
     Rejected = 4,
-    Expired = 5
+    Expired = 5,
+    Cancelled = 6
 }
