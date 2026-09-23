@@ -707,8 +707,8 @@ export function SettingsPage() {
                   </ul>
                   {!arcaDiagnostics.readyForCuitLookup && (
                     <p className="muted" style={{ fontSize: "0.8rem", marginTop: 10 }}>
-                      Si falla solo el padrón: en ARCA → Administrador de Relaciones asociá el certificado al
-                      web service «Consulta a Padrón Alcance 5» (<code>ws_sr_padron_a5</code>).
+                      Si falla solo la consulta de CUIT: en ARCA → Administrador de Relaciones asociá el certificado a
+                      «Constancia de Inscripción» (<code>ws_sr_constancia_inscripcion</code>). Alcance 5 ya no se usa.
                     </p>
                   )}
                 </div>

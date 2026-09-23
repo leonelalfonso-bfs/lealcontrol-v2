@@ -27,20 +27,20 @@ internal sealed class ArcaPadronClient
         CancellationToken cancellationToken)
     {
         var url = production
-            ? "https://aws.afip.gov.ar/sr-padron/webservices/personaServiceA5"
-            : "https://awshomo.afip.gov.ar/sr-padron/webservices/personaServiceA5";
+            ? "https://aws.arca.gob.ar/sr-padron/webservices/personaServiceA5"
+            : "https://awshomo.arca.gob.ar/sr-padron/webservices/personaServiceA5";
 
         var envelope = $"""
             <?xml version="1.0" encoding="utf-8"?>
-            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:a5="http://a5.soap.ws.server.puc.sr.gov.ar/">
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:a5="http://a5.soap.ws.server.puc.sr/">
               <soapenv:Header/>
               <soapenv:Body>
-                <a5:getPersona>
+                <a5:getPersona_v2>
                   <token>{Escape(token)}</token>
                   <sign>{Escape(sign)}</sign>
                   <cuitRepresentada>{Escape(cuitRepresentada)}</cuitRepresentada>
                   <idPersona>{Escape(idPersona)}</idPersona>
-                </a5:getPersona>
+                </a5:getPersona_v2>
               </soapenv:Body>
             </soapenv:Envelope>
             """;
@@ -58,7 +58,7 @@ internal sealed class ArcaPadronClient
             if (!response.IsSuccessStatusCode)
             {
                 return Result<ArcaCuitLookupResult>.Failure(
-                    Error.Failure("Crm.Arca.PadronHttp", $"Padrón A5 HTTP {(int)response.StatusCode}."));
+                    Error.Failure("Crm.Arca.PadronHttp", $"Constancia de inscripción HTTP {(int)response.StatusCode}."));
             }
 
             if (body.Contains("faultstring", StringComparison.OrdinalIgnoreCase))
@@ -68,10 +68,12 @@ internal sealed class ArcaPadronClient
                     Error.Failure("Crm.Arca.PadronFault", fault));
             }
 
-            var legalName =
-                Extract(body, "razonSocial")
-                ?? Extract(body, "nombre")
-                ?? Extract(body, "denominacion");
+            var razonSocial = Extract(body, "razonSocial") ?? Extract(body, "denominacion");
+            var apellido = Extract(body, "apellido");
+            var nombre = Extract(body, "nombre");
+            var legalName = !string.IsNullOrWhiteSpace(razonSocial)
+                ? razonSocial
+                : string.Join(" ", new[] { apellido, nombre }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
             if (string.IsNullOrWhiteSpace(legalName))
             {

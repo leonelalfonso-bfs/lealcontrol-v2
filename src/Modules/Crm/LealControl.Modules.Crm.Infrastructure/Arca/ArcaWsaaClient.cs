@@ -172,6 +172,14 @@ internal sealed class ArcaWsaaClient
                 + "Si querés Homologación, el .crt debe salir de WSASS (testing), no del portal de producción.";
         }
 
+        if (blob.Contains("coe.notauthorized", StringComparison.Ordinal)
+            || fault.Contains("no autorizado a acceder", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"WSAA rechazó '{service}': el certificado no tiene esa relación en ARCA. "
+                + "Para consultar un CUIT hace falta «Constancia de Inscripción» (ws_sr_constancia_inscripcion), no el padrón Alcance 5. "
+                + "Para facturar, «Facturación Electrónica» (wsfe).";
+        }
+
         if (blob.Contains("alreadyauthenticated", StringComparison.Ordinal)
             || fault.Contains("ya posee un tat vigente", StringComparison.OrdinalIgnoreCase))
         {
