@@ -54,14 +54,13 @@ internal sealed class ArcaWsaaClient
 
             if (!response.IsSuccessStatusCode)
             {
-                return (false, null, null, $"WSAA HTTP {(int)response.StatusCode} para '{service}': {Trim(body)}");
+                return (false, null, null, ExplainWsaaFault(service, body, (int)response.StatusCode));
             }
 
             if (body.Contains("faultstring", StringComparison.OrdinalIgnoreCase)
                 || body.Contains("Fault>", StringComparison.Ordinal))
             {
-                var fault = ExtractXmlText(body, "faultstring") ?? Trim(body);
-                return (false, null, null, $"WSAA rechazó '{service}': {fault}");
+                return (false, null, null, ExplainWsaaFault(service, body, null));
             }
 
             var taXml = ExtractXmlText(body, "loginCmsReturn");
@@ -157,6 +156,38 @@ internal sealed class ArcaWsaaClient
         {
             try { System.IO.Directory.Delete(workDir, recursive: true); } catch { /* ignore */ }
         }
+    }
+
+    private static string ExplainWsaaFault(string service, string body, int? httpStatus)
+    {
+        var fault = ExtractXmlText(body, "faultstring") ?? string.Empty;
+        var code = ExtractXmlText(body, "faultcode") ?? string.Empty;
+        var blob = (code + " " + fault + " " + body).ToLowerInvariant();
+
+        if (blob.Contains("cms.cert.untrusted", StringComparison.Ordinal)
+            || fault.Contains("no emitido por AC de confianza", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"WSAA rechazó '{service}': certificado no emitido por la AC de confianza de este ambiente. "
+                + "Si el .crt salió del Administrador de Certificados (producción), en Configuración poné Ambiente = Producción. "
+                + "Si querés Homologación, el .crt debe salir de WSASS (testing), no del portal de producción.";
+        }
+
+        if (blob.Contains("alreadyauthenticated", StringComparison.Ordinal)
+            || fault.Contains("ya posee un tat vigente", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"WSAA '{service}': ya hay un ticket vigente (reintentá en ~1 minuto).";
+        }
+
+        if (!string.IsNullOrWhiteSpace(fault))
+        {
+            return httpStatus is null
+                ? $"WSAA rechazó '{service}': {fault}"
+                : $"WSAA HTTP {httpStatus} para '{service}': {fault}";
+        }
+
+        return httpStatus is null
+            ? $"WSAA rechazó '{service}': {Trim(body)}"
+            : $"WSAA HTTP {httpStatus} para '{service}': {Trim(body)}";
     }
 
     private static string? ExtractXmlText(string xml, string localName)

@@ -3,7 +3,6 @@ using System.Text;
 using System.Xml.Linq;
 using LealControl.BuildingBlocks.Results;
 using LealControl.Modules.Crm.Application.Customers;
-using LealControl.Modules.Crm.Domain.Shared;
 using Microsoft.Extensions.Logging;
 
 namespace LealControl.Modules.Crm.Infrastructure.Arca;
