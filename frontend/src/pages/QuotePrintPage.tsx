@@ -114,7 +114,7 @@ export const QuotePrintPage: React.FC = () => {
       const filename = `Presupuesto_${quote.quoteNumber}_rev${quote.revision}.pdf`;
 
       const opt = {
-        margin: [4, 4, 4, 4] as [number, number, number, number],
+        margin: [8, 8, 8, 8] as [number, number, number, number],
         filename,
         image: { type: "jpeg" as const, quality: 0.98 },
         html2canvas: {
@@ -129,7 +129,7 @@ export const QuotePrintPage: React.FC = () => {
           }
         },
         jsPDF: { unit: "mm" as const, format: "a4", orientation: "portrait" as const },
-        pagebreak: { mode: ["css", "legacy"], before: ".html2pdf__page-break" }
+        pagebreak: { mode: ["css"], before: ".quote-page-break", avoid: ["tr", "article", ".quote-keep"] }
       };
 
       const html2pdf = await loadHtml2Pdf();
@@ -328,16 +328,13 @@ export const QuotePrintPage: React.FC = () => {
         <div
           id="quote-pdf-sheet"
           style={{
-            width: "210mm",
-            minHeight: "297mm",
+            width: "100%",
             background: "#ffffff",
-            padding: "14mm 16mm",
+            padding: "8mm",
             boxSizing: "border-box",
             fontFamily: "Arial, Helvetica, sans-serif",
             fontSize: "11px",
-            color: "#1e293b",
-            display: "flex",
-            flexDirection: "column"
+            color: "#1e293b"
           }}
         >
           {quote.status === "Cancelled" && (
@@ -349,8 +346,11 @@ export const QuotePrintPage: React.FC = () => {
               HEADER BLOCK: Adaptable to configured template style
               ========================================================================= */}
           {settings.templateStyle === "classic" ? (
-            <div style={{ background: primaryCol, color: "#ffffff", padding: "14px 18px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", gap: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <table style={{ width: "100%", background: primaryCol, color: "#ffffff", borderRadius: "6px", marginBottom: "16px", borderCollapse: "separate" }}>
+              <tbody>
+              <tr>
+              <td style={{ padding: "14px 18px", verticalAlign: "middle" }}>
+              <div>
                 {company?.logoUrl ? (
                   <img
                     src={company.logoUrl}
@@ -367,14 +367,20 @@ export const QuotePrintPage: React.FC = () => {
                   <div style={{ fontSize: "0.72rem", opacity: 0.9 }}>CUIT: {companyCuit} | {companyTax}</div>
                 </div>
               </div>
-              <div style={{ textAlign: "right" }}>
+              </td>
+              <td style={{ padding: "14px 18px", textAlign: "right", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                 <div style={{ fontSize: "1.1rem", fontWeight: 900 }}>{showTechnicalOffer ? "OFERTA TÉCNICA" : (settings.quote.headerTitle || "PRESUPUESTO COMERCIAL")}</div>
                 <div style={{ fontSize: "0.85rem", opacity: 0.95 }}>N° {quote.quoteNumber} (Rev. {quote.revision})</div>
-              </div>
-            </div>
+              </td>
+              </tr>
+              </tbody>
+            </table>
           ) : (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: `2px solid ${primaryCol}`, marginBottom: "16px", gap: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <table style={{ width: "100%", borderBottom: `2px solid ${primaryCol}`, marginBottom: "16px", borderCollapse: "collapse" }}>
+              <tbody>
+              <tr>
+              <td style={{ paddingBottom: "14px", verticalAlign: "top" }}>
+              <div>
                 {logoBlock}
                 <div>
                   <h1 style={{ margin: 0, fontSize: "1.45rem", fontWeight: 900, color: "#0f172a", letterSpacing: "0.01em" }}>
@@ -397,7 +403,8 @@ export const QuotePrintPage: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ textAlign: "right" }}>
+              </td>
+              <td style={{ paddingBottom: "14px", textAlign: "right", verticalAlign: "top", whiteSpace: "nowrap" }}>
                 <div style={{ display: "inline-block", padding: "3px 12px", borderRadius: "6px", background: primaryLightBg, color: primaryCol, fontWeight: 800, fontSize: "0.9rem" }}>
                   {showTechnicalOffer ? "OFERTA TÉCNICA" : (settings.quote.headerTitle || "PRESUPUESTO COMERCIAL")}
                 </div>
@@ -407,8 +414,10 @@ export const QuotePrintPage: React.FC = () => {
                 <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
                   Fecha: {new Date(quote.createdAtUtc).toLocaleDateString("es-AR")}
                 </div>
-              </div>
-            </div>
+              </td>
+              </tr>
+              </tbody>
+            </table>
           )}
 
           {showTechnicalOffer && (
@@ -438,20 +447,28 @@ export const QuotePrintPage: React.FC = () => {
                   </article>
                 ))}
               </div>
-              <div className="html2pdf__page-break" style={{ breakAfter: "page", pageBreakAfter: "always" }} />
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderBottom: `2px solid ${primaryCol}`, paddingBottom: 8, margin: "8px 0 14px" }}>
+              <div className="quote-page-break" style={{ height: 0, breakBefore: "page", pageBreakBefore: "always" }} />
+              <table className="quote-keep" style={{ width: "100%", borderBottom: `2px solid ${primaryCol}`, margin: "0 0 14px", borderCollapse: "collapse" }}>
+                <tbody>
+                <tr>
+                <td style={{ paddingBottom: 8, verticalAlign: "bottom" }}>
                 <div>
                   <div style={{ fontWeight: 900, color: primaryCol, letterSpacing: "0.04em" }}>OFERTA COMERCIAL</div>
                   <div style={{ fontSize: "0.78rem", color: "#64748b" }}>N° {quote.quoteNumber} · Rev. {quote.revision}</div>
                 </div>
-                <div style={{ fontSize: "0.78rem", color: "#64748b" }}>{companyDisplayName}</div>
-              </div>
+                </td>
+                <td style={{ paddingBottom: 8, textAlign: "right", verticalAlign: "bottom", fontSize: "0.78rem", color: "#64748b" }}>{companyDisplayName}</td>
+                </tr>
+                </tbody>
+              </table>
             </section>
           )}
 
           {/* Customer & Commercial Details */}
-          <div style={{ background: "#f8fafc", padding: "12px 16px", borderRadius: "8px", border: `1px solid ${primaryBorderLight}`, marginBottom: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div>
+          <table className="quote-keep" style={{ width: "100%", background: "#f8fafc", borderRadius: "8px", border: `1px solid ${primaryBorderLight}`, marginBottom: "14px", borderCollapse: "separate" }}>
+            <tbody>
+            <tr>
+            <td style={{ width: "50%", padding: "12px 16px", verticalAlign: "top" }}>
               <div style={{ color: "#64748b", fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 700 }}>Cliente / Razón Social:</div>
               <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>{customer?.legalName || "Cliente Genérico"}</strong>
               <div style={{ color: "#475569", fontSize: "0.8rem" }}>CUIT: {customer?.documentNumber || "—"} ({customer?.taxCondition || "IVA Resp. Inscripto"})</div>
@@ -460,9 +477,8 @@ export const QuotePrintPage: React.FC = () => {
                   <strong>Atención:</strong> {assignedContact.name} {assignedContact.role ? `(${assignedContact.role})` : ""}
                 </div>
               )}
-            </div>
-
-            <div>
+            </td>
+            <td style={{ width: "50%", padding: "12px 16px", verticalAlign: "top" }}>
               <div style={{ color: "#64748b", fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 700 }}>Destino / Entrega:</div>
               <div style={{ fontSize: "0.82rem", color: "#0f172a" }}>{deliveryLocation?.name || "Entrega en Planta Central"}</div>
               <div style={{ color: "#475569", fontSize: "0.78rem" }}>
@@ -471,11 +487,13 @@ export const QuotePrintPage: React.FC = () => {
               <div style={{ color: "#475569", fontSize: "0.78rem", marginTop: "2px" }}>
                 <strong>Validez:</strong> {quote.validDays} días corridos
               </div>
-            </div>
-          </div>
+            </td>
+            </tr>
+            </tbody>
+          </table>
 
           {/* Commercial Items Table */}
-          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px", tableLayout: "fixed" }}>
             <thead>
               <tr style={{ background: primaryLightBg, borderBottom: `2px solid ${primaryCol}`, color: primaryCol, fontSize: "9.5px", textTransform: "uppercase" }}>
                 <th style={{ padding: "8px 6px", textAlign: "center", width: "5%" }}>#</th>
@@ -512,28 +530,21 @@ export const QuotePrintPage: React.FC = () => {
           </table>
 
           {/* Totals Table */}
-          <div style={{ marginLeft: "auto", width: "42%", marginBottom: "14px" }}>
+          <table style={{ width: "100%", marginBottom: "14px", borderCollapse: "collapse" }}><tbody><tr>
+            <td style={{ width: "58%" }} />
+            <td style={{ width: "42%", verticalAlign: "top" }}>
             <div style={{ border: `1px solid ${primaryBorderLight}`, borderRadius: "8px", padding: "10px", background: "#f8fafc" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "3px" }}>
-                <span style={{ color: "#64748b" }}>Subtotal Neto:</span>
-                <span style={{ fontFamily: "monospace" }}>{curr.symbol} {subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
-              </div>
+              <table style={{ width: "100%", fontSize: "0.8rem", borderCollapse: "collapse" }}><tbody>
+              <tr><td style={{ color: "#64748b", paddingBottom: 3 }}>Subtotal Neto:</td><td style={{ textAlign: "right", fontFamily: "monospace", paddingBottom: 3 }}>{curr.symbol} {subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td></tr>
               {quote.discountPercent > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "3px", color: "#16a34a" }}>
-                  <span>Descuento ({quote.discountPercent}%):</span>
-                  <span style={{ fontFamily: "monospace" }}>- {curr.symbol} {globalDiscountAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
-                </div>
+                <tr style={{ color: "#16a34a" }}><td style={{ paddingBottom: 3 }}>Descuento ({quote.discountPercent}%):</td><td style={{ textAlign: "right", fontFamily: "monospace", paddingBottom: 3 }}>- {curr.symbol} {globalDiscountAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td></tr>
               )}
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "4px" }}>
-                <span style={{ color: "#64748b" }}>IVA Estimado:</span>
-                <span style={{ fontFamily: "monospace" }}>{curr.symbol} {estimatedVat.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "1rem", fontWeight: 900, paddingTop: "5px", borderTop: `2px solid ${primaryCol}`, color: primaryCol }}>
-                <span>TOTAL:</span>
-                <span style={{ fontFamily: "monospace" }}>{curr.symbol} {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
-              </div>
+              <tr><td style={{ color: "#64748b", paddingBottom: 4 }}>IVA Estimado:</td><td style={{ textAlign: "right", fontFamily: "monospace", paddingBottom: 4 }}>{curr.symbol} {estimatedVat.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td></tr>
+              <tr style={{ fontSize: "1rem", fontWeight: 900, color: primaryCol }}><td style={{ paddingTop: 5, borderTop: `2px solid ${primaryCol}` }}>TOTAL:</td><td style={{ textAlign: "right", fontFamily: "monospace", paddingTop: 5, borderTop: `2px solid ${primaryCol}` }}>{curr.symbol} {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td></tr>
+              </tbody></table>
             </div>
-          </div>
+            </td>
+          </tr></tbody></table>
 
           {/* Amount in Words */}
           <div style={{ background: "#f8fafc", border: `1px solid ${primaryBorderLight}`, padding: "6px 10px", borderRadius: "6px", marginBottom: "12px", fontSize: "0.75rem", color: "#1e293b", display: "flex", alignItems: "baseline", gap: "6px" }}>
@@ -544,13 +555,19 @@ export const QuotePrintPage: React.FC = () => {
           </div>
 
           {/* Commercial Conditions Table */}
-          <div style={{ marginTop: "14px", borderTop: `1px solid ${primaryBorderLight}`, paddingTop: "8px", fontSize: "0.76rem" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", color: "#475569" }}>
-              <div><strong>Plazo de Entrega:</strong> {quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : settings.quote.deliveryTerms}</div>
-              <div><strong>Condiciones de Pago:</strong> {quote.paymentTerms || settings.quote.paymentTerms}</div>
-              <div><strong>Garantía:</strong> {settings.quote.warrantyTerms}</div>
-              <div><strong>Transporte / Flete:</strong> {quote.transportation || "Flete por cuenta y orden del comprador"}</div>
-            </div>
+          <table style={{ width: "100%", marginTop: "14px", borderTop: `1px solid ${primaryBorderLight}`, fontSize: "0.76rem", color: "#475569", borderCollapse: "collapse" }}>
+            <tbody>
+            <tr>
+              <td style={{ width: "50%", padding: "8px 8px 3px 0", verticalAlign: "top" }}><strong>Plazo de Entrega:</strong> {quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : settings.quote.deliveryTerms}</td>
+              <td style={{ width: "50%", padding: "8px 0 3px 8px", verticalAlign: "top" }}><strong>Condiciones de Pago:</strong> {quote.paymentTerms || settings.quote.paymentTerms}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: "3px 8px 0 0", verticalAlign: "top" }}><strong>Garantía:</strong> {quote.warranty || settings.quote.warrantyTerms}</td>
+              <td style={{ padding: "3px 0 0 8px", verticalAlign: "top" }}><strong>Transporte / Flete:</strong> {quote.transportation || "Flete por cuenta y orden del comprador"}</td>
+            </tr>
+            </tbody>
+          </table>
+          <div style={{ fontSize: "0.76rem" }}>
 
             {quote.notes && (
               <div style={{ background: "#fef9c3", borderLeft: "3px solid #eab308", padding: "6px 8px", marginTop: "6px", fontSize: "0.76rem", color: "#713f12" }}>
@@ -561,20 +578,20 @@ export const QuotePrintPage: React.FC = () => {
 
           {/* Signatures Space */}
           {settings.quote.showSignatures && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "30px", marginTop: "24px" }}>
-              <div style={{ textAlign: "center" }}>
+            <table style={{ width: "100%", marginTop: "24px", borderCollapse: "collapse" }}><tbody><tr>
+              <td style={{ width: "50%", textAlign: "center", paddingRight: 16 }}>
                 <div style={{ borderTop: "1px dashed #94a3b8", width: "75%", margin: "0 auto 3px" }} />
                 <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Firma Responsable / Asesor Técnico</div>
-              </div>
-              <div style={{ textAlign: "center" }}>
+              </td>
+              <td style={{ width: "50%", textAlign: "center", paddingLeft: 16 }}>
                 <div style={{ borderTop: "1px dashed #94a3b8", width: "75%", margin: "0 auto 3px" }} />
                 <div style={{ fontSize: "0.7rem", color: "#64748b" }}>Aceptación de Propuesta / Firma Cliente</div>
-              </div>
-            </div>
+              </td>
+            </tr></tbody></table>
           )}
 
           {/* Custom Footer Terms */}
-          <div style={{ marginTop: "auto", paddingTop: "14px", borderTop: "1px solid #e2e8f0", fontSize: "0.7rem", color: "#64748b", textAlign: "center", lineHeight: 1.3 }}>
+          <div style={{ marginTop: "18px", paddingTop: "14px", borderTop: "1px solid #e2e8f0", fontSize: "0.7rem", color: "#64748b", textAlign: "center", lineHeight: 1.3 }}>
             {settings.quote.customFooterText}
           </div>
         </div>

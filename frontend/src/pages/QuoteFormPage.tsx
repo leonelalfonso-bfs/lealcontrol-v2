@@ -490,7 +490,8 @@ export const QuoteFormPage: React.FC = () => {
         return;
       }
 
-      navigate(isEditing && id ? `/presupuestos/${id}` : `/presupuestos/${saved.id}`);
+      const quoteId = isEditing && id ? id : saved.id;
+      navigate(`/presupuestos/${quoteId}/editar`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al guardar presupuesto");
     } finally {
