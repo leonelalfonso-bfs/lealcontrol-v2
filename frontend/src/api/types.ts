@@ -549,7 +549,7 @@ export const labels: Record<string, string> = {
   Lost: "Perdido",
   Draft: "Borrador",
   Sent: "Enviado",
-  Accepted: "Aceptado / Ganado",
+  Accepted: "Aceptado",
   Ordered: "Pedido de Venta",
   Rejected: "Rechazado",
   Expired: "Vencido",

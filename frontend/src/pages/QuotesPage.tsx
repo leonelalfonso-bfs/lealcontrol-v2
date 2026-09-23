@@ -61,7 +61,7 @@ export function QuotesPage() {
       case "Sent":
         return { label: "Enviado", badgeClass: "badge warn" };
       case "Accepted":
-        return { label: "Aceptado / Ganado", badgeClass: "badge ok" };
+        return { label: "Aceptado", badgeClass: "badge warn" };
       case "Ordered":
         return { label: "Pedido de Venta", badgeClass: "badge ok" };
       case "Rejected":
@@ -93,18 +93,6 @@ export function QuotesPage() {
       fetchQuotes();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Error al cambiar estado");
-    }
-  };
-
-  const handleAcceptQuote = async (e: React.MouseEvent, id: string, quoteNumber: string) => {
-    e.stopPropagation();
-    if (confirm(`¿Marcar el presupuesto #${quoteNumber} como Aceptado y Ganado?`)) {
-      try {
-        await api.acceptQuote(id);
-        fetchQuotes();
-      } catch (err: unknown) {
-        alert(err instanceof Error ? err.message : "Error al aceptar presupuesto");
-      }
     }
   };
 
@@ -210,7 +198,7 @@ export function QuotesPage() {
           <option value="">Todos los Estados</option>
           <option value="Draft">Borrador</option>
           <option value="Sent">Enviado</option>
-          <option value="Accepted">Aceptado / Ganado</option>
+          <option value="Accepted">Aceptado</option>
           <option value="Ordered">Pedido de Venta</option>
           <option value="Rejected">Rechazado</option>
           <option value="Cancelled">Anulado</option>
@@ -287,7 +275,7 @@ export function QuotesPage() {
                       <td className="muted">{new Date(q.createdAtUtc).toLocaleDateString("es-AR")}</td>
                       <td style={{ textAlign: "right" }}>
                         <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
-                          {q.status === "Accepted" && (
+                          {(q.status === "Draft" || q.status === "Sent" || q.status === "Accepted" || q.status === "Expired") && (
                             <button
                               type="button"
                               onClick={(e) => void openConvertModal(e, q.id)}
@@ -295,7 +283,7 @@ export function QuotesPage() {
                               disabled={converting}
                               style={{ padding: "4px 10px", fontSize: "0.75rem", background: "linear-gradient(180deg, #0284c7, #0369a1)" }}
                             >
-                              📦 Convertir a Pedido
+                              Convertir a Pedido
                             </button>
                           )}
                           {q.status === "Draft" && (
@@ -308,17 +296,7 @@ export function QuotesPage() {
                               Marcar Enviado
                             </button>
                           )}
-                          {(q.status === "Draft" || q.status === "Sent") && (
-                            <button
-                              type="button"
-                              onClick={(e) => handleAcceptQuote(e, q.id, q.quoteNumber)}
-                              className="btn"
-                              style={{ padding: "4px 10px", fontSize: "0.75rem", background: "linear-gradient(180deg, #1aaa97, #128c7e)" }}
-                            >
-                              ✓ Aceptar & Ganar
-                            </button>
-                          )}
-                          {q.status !== "Ordered" && q.status !== "Cancelled" && (
+                          {q.status !== "Cancelled" && (
                             <button
                               type="button"
                               onClick={(e) => handleCancelQuote(e, q.id, q.quoteNumber)}
@@ -328,7 +306,7 @@ export function QuotesPage() {
                               Anular
                             </button>
                           )}
-                          {q.status !== "Ordered" && (
+                          {q.status !== "Cancelled" && (
                             <button
                               type="button"
                               onClick={(e) => handleDeleteQuote(e, q.id, q.quoteNumber)}

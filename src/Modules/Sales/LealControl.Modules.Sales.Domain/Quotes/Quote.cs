@@ -84,7 +84,7 @@ public sealed class Quote : AggregateRoot<QuoteId>
 
     public DateTime UpdatedAtUtc { get; private set; }
 
-    public bool IsEditable => Status == QuoteStatus.Draft || Status == QuoteStatus.Sent;
+    public bool IsEditable => Status is QuoteStatus.Draft or QuoteStatus.Sent or QuoteStatus.Accepted;
 
     public IReadOnlyCollection<QuoteLine> Lines => _lines.AsReadOnly();
 
@@ -256,9 +256,23 @@ public sealed class Quote : AggregateRoot<QuoteId>
 
     public Result MarkOrdered(DateTime utcNow)
     {
+        if (Status is QuoteStatus.Cancelled or QuoteStatus.Rejected)
+        {
+            return Result.Failure(SalesErrors.QuoteNotEditable);
+        }
+
         Status = QuoteStatus.Ordered;
         UpdatedAtUtc = utcNow;
         return Result.Success();
+    }
+
+    public void Reopen(DateTime utcNow)
+    {
+        if (Status is QuoteStatus.Ordered or QuoteStatus.Accepted)
+        {
+            Status = QuoteStatus.Sent;
+            UpdatedAtUtc = utcNow;
+        }
     }
 
     public Result Reject(DateTime utcNow)
@@ -278,11 +292,6 @@ public sealed class Quote : AggregateRoot<QuoteId>
         if (Status == QuoteStatus.Cancelled)
         {
             return Result.Failure(SalesErrors.QuoteAlreadyCancelled);
-        }
-
-        if (Status == QuoteStatus.Ordered)
-        {
-            return Result.Failure(SalesErrors.QuoteHasSalesOrder);
         }
 
         Status = QuoteStatus.Cancelled;

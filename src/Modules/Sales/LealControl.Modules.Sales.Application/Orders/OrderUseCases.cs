@@ -167,7 +167,7 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
             return Result.Failure<OrderDto>(Error.NotFound("Quote.NotFound", $"No se encontró el presupuesto '{request.QuoteId}'."));
         }
 
-        var existingOrder = await _orderRepository.GetByQuoteIdAsync(
+        var existingOrder = await _orderRepository.GetOpenByQuoteIdAsync(
             _tenantContext.TenantId,
             quote.Id.Value,
             cancellationToken);
@@ -177,11 +177,11 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
             return Result.Success(existingOrder.ToDto());
         }
 
-        if (quote.Status != QuoteStatus.Accepted)
+        if (quote.Status is QuoteStatus.Cancelled or QuoteStatus.Rejected)
         {
             return Result.Failure<OrderDto>(Error.Validation(
-                "Sales.Order.QuoteNotAccepted",
-                "El presupuesto debe estar aceptado antes de generar el pedido de venta."));
+                "Sales.Order.QuoteNotConvertible",
+                "No se puede generar un pedido desde un presupuesto anulado o rechazado."));
         }
 
         var count = await _orderRepository.GetCountAsync(_tenantContext.TenantId, cancellationToken);
@@ -300,13 +300,16 @@ internal sealed class UpdateOrderCommandHandler : IRequestHandler<UpdateOrderCom
 internal sealed class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatusCommand, Result<OrderDto>>
 {
     private readonly IOrderRepository _orderRepository;
+    private readonly IQuoteRepository _quoteRepository;
     private readonly ISalesUnitOfWork _unitOfWork;
 
     public UpdateOrderStatusCommandHandler(
         IOrderRepository orderRepository,
+        IQuoteRepository quoteRepository,
         ISalesUnitOfWork unitOfWork)
     {
         _orderRepository = orderRepository;
+        _quoteRepository = quoteRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -318,10 +321,17 @@ internal sealed class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOr
             return Result.Failure<OrderDto>(Error.NotFound("Order.NotFound", $"No se encontró el pedido '{request.Id}'."));
         }
 
-        var result = order.ChangeStatus(request.NewStatus, DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        var result = order.ChangeStatus(request.NewStatus, now);
         if (result.IsFailure)
         {
             return Result.Failure<OrderDto>(result.Error);
+        }
+
+        if (request.NewStatus == OrderStatus.Cancelled && order.QuoteId is Guid quoteId)
+        {
+            var quote = await _quoteRepository.GetByIdAsync(new QuoteId(quoteId), cancellationToken);
+            quote?.Reopen(now);
         }
 
         _orderRepository.Update(order);
