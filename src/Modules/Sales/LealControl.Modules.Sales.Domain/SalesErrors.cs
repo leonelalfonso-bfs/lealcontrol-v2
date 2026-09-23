@@ -16,6 +16,14 @@ public static class SalesErrors
         "Sales.Quote.NotEditable",
         "El presupuesto no se puede editar en este estado.");
 
+    public static readonly Error QuoteAlreadyCancelled = Error.Conflict(
+        "Sales.Quote.AlreadyCancelled",
+        "El presupuesto ya está anulado.");
+
+    public static readonly Error QuoteHasSalesOrder = Error.Conflict(
+        "Sales.Quote.ConflictHasOrder",
+        "Este presupuesto ya generó un pedido de venta. No se puede anular ni eliminar mientras ese pedido exista.");
+
     public static readonly Error OpportunityNotFound = Error.NotFound(
         "Sales.Quote.OpportunityNotFound",
         "La oportunidad no existe.");

@@ -142,6 +142,28 @@ export const QuotePrintPage: React.FC = () => {
     }
   };
 
+  const handleCancelQuote = async () => {
+    if (!id || !quote) return;
+    if (!confirm(`¿Anular el presupuesto ${quote.quoteNumber}? Queda registrado como anulado.`)) return;
+    try {
+      const updated = await api.cancelQuote(id);
+      setQuote(updated);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error al anular el presupuesto");
+    }
+  };
+
+  const handleDeleteQuote = async () => {
+    if (!id || !quote) return;
+    if (!confirm(`¿Eliminar el presupuesto ${quote.quoteNumber}? No se puede recuperar.`)) return;
+    try {
+      await api.deleteQuote(id);
+      navigate("/presupuestos");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error al eliminar el presupuesto");
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ padding: "40px", textAlign: "center", fontFamily: "sans-serif", color: "#64748b" }}>
@@ -233,6 +255,25 @@ export const QuotePrintPage: React.FC = () => {
             {includeTechnicalOffer ? "🖼️ Oferta Técnica con Fotos: ACTIVADA" : "📄 Solo Tabla Comercial"}
           </button>
 
+          {quote.status !== "Ordered" && quote.status !== "Cancelled" && (
+            <button
+              type="button"
+              onClick={() => void handleCancelQuote()}
+              style={{ padding: "8px 14px", borderRadius: "8px", background: "#ffffff", border: "1px solid #cbd5e1", cursor: "pointer", fontWeight: 700 }}
+            >
+              Anular
+            </button>
+          )}
+          {quote.status !== "Ordered" && (
+            <button
+              type="button"
+              onClick={() => void handleDeleteQuote()}
+              style={{ padding: "8px 14px", borderRadius: "8px", background: "#ffffff", border: "1px solid #fecaca", color: "#b91c1c", cursor: "pointer", fontWeight: 700 }}
+            >
+              Eliminar
+            </button>
+          )}
+
           <button
             type="button"
             className="btn btn-outline"
@@ -298,6 +339,11 @@ export const QuotePrintPage: React.FC = () => {
             flexDirection: "column"
           }}
         >
+          {quote.status === "Cancelled" && (
+            <div style={{ marginBottom: 12, padding: "8px 12px", border: "2px solid #b91c1c", color: "#b91c1c", fontWeight: 800, textAlign: "center", letterSpacing: "0.14em" }}>
+              ANULADO
+            </div>
+          )}
           {/* =========================================================================
               HEADER BLOCK: Adaptable to configured template style
               ========================================================================= */}

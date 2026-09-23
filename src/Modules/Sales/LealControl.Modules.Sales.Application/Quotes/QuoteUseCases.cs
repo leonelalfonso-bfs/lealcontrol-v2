@@ -10,6 +10,7 @@ using LealControl.Modules.Directory.Contracts.Customers;
 using LealControl.Modules.Crm.Contracts.Opportunities;
 using LealControl.Modules.Sales.Application.Abstractions;
 using LealControl.Modules.Sales.Domain;
+using LealControl.Modules.Sales.Domain.Orders;
 using LealControl.Modules.Sales.Domain.Quotes;
 using MediatR;
 
@@ -32,6 +33,12 @@ public sealed record SendQuoteCommand(Guid Id)
 
 public sealed record RejectQuoteCommand(Guid Id)
     : IRequest<Result<QuoteDto>>;
+
+public sealed record CancelQuoteCommand(Guid Id)
+    : IRequest<Result<QuoteDto>>;
+
+public sealed record DeleteQuoteCommand(Guid Id)
+    : IRequest<Result>;
 
 public sealed record ListQuotesQuery : IRequest<Result<IReadOnlyList<QuoteDto>>>;
 
@@ -519,5 +526,96 @@ internal sealed class GetQuoteQueryHandler : IRequestHandler<GetQuoteQuery, Resu
         return quote is null
             ? Result<QuoteDto>.Failure(SalesErrors.QuoteNotFound)
             : Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));
+    }
+}
+
+internal sealed class CancelQuoteCommandHandler : IRequestHandler<CancelQuoteCommand, Result<QuoteDto>>
+{
+    private readonly IQuoteRepository _quotes;
+    private readonly IOrderRepository _orders;
+    private readonly ISalesUnitOfWork _unitOfWork;
+    private readonly ITenantContext _tenant;
+    private readonly IClock _clock;
+
+    public CancelQuoteCommandHandler(
+        IQuoteRepository quotes,
+        IOrderRepository orders,
+        ISalesUnitOfWork unitOfWork,
+        ITenantContext tenant,
+        IClock clock)
+    {
+        _quotes = quotes;
+        _orders = orders;
+        _unitOfWork = unitOfWork;
+        _tenant = tenant;
+        _clock = clock;
+    }
+
+    public async Task<Result<QuoteDto>> Handle(CancelQuoteCommand request, CancellationToken cancellationToken)
+    {
+        var quote = await _quotes.GetByIdAsync(new QuoteId(request.Id), cancellationToken);
+        if (quote is null)
+        {
+            return Result<QuoteDto>.Failure(SalesErrors.QuoteNotFound);
+        }
+
+        var order = await _orders.GetByQuoteIdAsync(_tenant.TenantId, quote.Id.Value, cancellationToken);
+        if (order is not null)
+        {
+            return Result<QuoteDto>.Failure(SalesErrors.QuoteHasSalesOrder);
+        }
+
+        var cancelResult = quote.Cancel(_clock.UtcNow);
+        if (cancelResult.IsFailure)
+        {
+            return Result<QuoteDto>.Failure(cancelResult.Error);
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));
+    }
+}
+
+internal sealed class DeleteQuoteCommandHandler : IRequestHandler<DeleteQuoteCommand, Result>
+{
+    private readonly IQuoteRepository _quotes;
+    private readonly IOrderRepository _orders;
+    private readonly ISalesUnitOfWork _unitOfWork;
+    private readonly ITenantContext _tenant;
+
+    public DeleteQuoteCommandHandler(
+        IQuoteRepository quotes,
+        IOrderRepository orders,
+        ISalesUnitOfWork unitOfWork,
+        ITenantContext tenant)
+    {
+        _quotes = quotes;
+        _orders = orders;
+        _unitOfWork = unitOfWork;
+        _tenant = tenant;
+    }
+
+    public async Task<Result> Handle(DeleteQuoteCommand request, CancellationToken cancellationToken)
+    {
+        var quote = await _quotes.GetByIdAsync(new QuoteId(request.Id), cancellationToken);
+        if (quote is null)
+        {
+            return Result.Failure(SalesErrors.QuoteNotFound);
+        }
+
+        if (quote.Status == QuoteStatus.Ordered)
+        {
+            return Result.Failure(SalesErrors.QuoteHasSalesOrder);
+        }
+
+        var order = await _orders.GetByQuoteIdAsync(_tenant.TenantId, quote.Id.Value, cancellationToken);
+        if (order is not null)
+        {
+            return Result.Failure(SalesErrors.QuoteHasSalesOrder);
+        }
+
+        _quotes.Remove(quote);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return Result.Success();
     }
 }

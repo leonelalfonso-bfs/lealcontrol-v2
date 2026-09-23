@@ -272,4 +272,21 @@ public sealed class Quote : AggregateRoot<QuoteId>
         UpdatedAtUtc = utcNow;
         return Result.Success();
     }
+
+    public Result Cancel(DateTime utcNow)
+    {
+        if (Status == QuoteStatus.Cancelled)
+        {
+            return Result.Failure(SalesErrors.QuoteAlreadyCancelled);
+        }
+
+        if (Status == QuoteStatus.Ordered)
+        {
+            return Result.Failure(SalesErrors.QuoteHasSalesOrder);
+        }
+
+        Status = QuoteStatus.Cancelled;
+        UpdatedAtUtc = utcNow;
+        return Result.Success();
+    }
 }

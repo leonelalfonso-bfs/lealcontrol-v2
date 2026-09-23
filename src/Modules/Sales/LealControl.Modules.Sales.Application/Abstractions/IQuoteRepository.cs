@@ -17,6 +17,8 @@ public interface IQuoteRepository
     Task<int> CountAsync(TenantId tenantId, CancellationToken cancellationToken = default);
 
     void Add(Quote quote);
+
+    void Remove(Quote quote);
 }
 
 public interface ISalesUnitOfWork

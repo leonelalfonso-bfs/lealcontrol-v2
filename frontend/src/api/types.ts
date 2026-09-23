@@ -223,7 +223,7 @@ export type Quote = {
   locationId?: string | null;
   contactId?: string | null;
   opportunityId?: string | null;
-  status: "Draft" | "Sent" | "Accepted" | "Ordered" | "Rejected" | "Expired";
+  status: "Draft" | "Sent" | "Accepted" | "Ordered" | "Rejected" | "Expired" | "Cancelled";
   currency: "ARS" | "USD_BILLETE" | "USD_DIVISA";
   exchangeRateUsdBillete: number;
   exchangeRateUsdDivisa: number;

@@ -366,6 +366,10 @@ export const api = {
     request<Quote>(`/api/v1/sales/quotes/${id}/send`, { method: "POST" }),
   rejectQuote: (id: string) =>
     request<Quote>(`/api/v1/sales/quotes/${id}/reject`, { method: "POST" }),
+  cancelQuote: (id: string) =>
+    request<Quote>(`/api/v1/sales/quotes/${id}/cancel`, { method: "POST" }),
+  deleteQuote: (id: string) =>
+    request<void>(`/api/v1/sales/quotes/${id}`, { method: "DELETE" }),
 
   // Orders Methods (Pedidos de Venta)
   listOrders: (search = "", status = "") => {

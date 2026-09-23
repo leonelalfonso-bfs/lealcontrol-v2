@@ -68,6 +68,8 @@ export function QuotesPage() {
         return { label: "Rechazado", badgeClass: "badge prio-high" };
       case "Expired":
         return { label: "Vencido", badgeClass: "badge off" };
+      case "Cancelled":
+        return { label: "Anulado", badgeClass: "badge prio-high" };
       default:
         return { label: status, badgeClass: "badge" };
     }
@@ -140,6 +142,32 @@ export function QuotesPage() {
     }
   };
 
+  const handleCancelQuote = async (e: React.MouseEvent, id: string, quoteNumber: string) => {
+    e.stopPropagation();
+    if (!confirm(`¿Anular el presupuesto ${quoteNumber}? Queda en el listado como anulado y no se puede aceptar ni pasar a pedido.`)) {
+      return;
+    }
+    try {
+      await api.cancelQuote(id);
+      fetchQuotes();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error al anular el presupuesto");
+    }
+  };
+
+  const handleDeleteQuote = async (e: React.MouseEvent, id: string, quoteNumber: string) => {
+    e.stopPropagation();
+    if (!confirm(`¿Eliminar el presupuesto ${quoteNumber}? Se borra el documento y no se puede recuperar.`)) {
+      return;
+    }
+    try {
+      await api.deleteQuote(id);
+      fetchQuotes();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error al eliminar el presupuesto");
+    }
+  };
+
   const toggleOptional = (lineId: string) => {
     setSelectedOptionalIds((prev) =>
       prev.includes(lineId) ? prev.filter((id) => id !== lineId) : [...prev, lineId]
@@ -185,6 +213,7 @@ export function QuotesPage() {
           <option value="Accepted">Aceptado / Ganado</option>
           <option value="Ordered">Pedido de Venta</option>
           <option value="Rejected">Rechazado</option>
+          <option value="Cancelled">Anulado</option>
         </select>
 
         <select
@@ -287,6 +316,26 @@ export function QuotesPage() {
                               style={{ padding: "4px 10px", fontSize: "0.75rem", background: "linear-gradient(180deg, #1aaa97, #128c7e)" }}
                             >
                               ✓ Aceptar & Ganar
+                            </button>
+                          )}
+                          {q.status !== "Ordered" && q.status !== "Cancelled" && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleCancelQuote(e, q.id, q.quoteNumber)}
+                              className="btn ghost"
+                              style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                            >
+                              Anular
+                            </button>
+                          )}
+                          {q.status !== "Ordered" && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteQuote(e, q.id, q.quoteNumber)}
+                              className="btn ghost"
+                              style={{ padding: "4px 10px", fontSize: "0.75rem", color: "#b91c1c" }}
+                            >
+                              Eliminar
                             </button>
                           )}
                           <button
