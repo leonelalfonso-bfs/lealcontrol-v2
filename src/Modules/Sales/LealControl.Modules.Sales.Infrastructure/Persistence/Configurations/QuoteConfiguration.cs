@@ -19,11 +19,11 @@ internal sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
         builder.Property(x => x.ExchangeRateUsdBillete).HasPrecision(18, 2);
         builder.Property(x => x.ExchangeRateUsdDivisa).HasPrecision(18, 2);
         builder.Property(x => x.DiscountPercent).HasPrecision(8, 4);
-        builder.Property(x => x.PaymentTerms).HasMaxLength(200);
+        builder.Property(x => x.PaymentTerms).HasMaxLength(2000);
         builder.Property(x => x.PaymentMethod).HasMaxLength(100);
         builder.Property(x => x.Transportation).HasMaxLength(200);
-        builder.Property(x => x.Warranty).HasMaxLength(200);
-        builder.Property(x => x.Notes).HasMaxLength(4000);
+        builder.Property(x => x.Warranty).HasMaxLength(2000);
+        builder.Property(x => x.Notes).HasMaxLength(8000);
         builder.Property(x => x.OwnerName).HasMaxLength(120);
 
         builder.Ignore(x => x.Subtotal);
@@ -40,7 +40,7 @@ internal sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
             line.HasKey(x => x.Id);
             line.Property(x => x.Id).HasColumnName("Id").HasConversion(id => id.Value, value => new QuoteLineId(value));
             line.Property(x => x.ProductId).HasColumnName("ProductId");
-            line.Property(x => x.Description).HasMaxLength(500).IsRequired();
+            line.Property(x => x.Description).HasMaxLength(4000).IsRequired();
             line.Property(x => x.Quantity).HasPrecision(18, 4);
             line.Property(x => x.UnitPrice).HasPrecision(18, 2);
             line.Property(x => x.DiscountPercent).HasPrecision(8, 4);

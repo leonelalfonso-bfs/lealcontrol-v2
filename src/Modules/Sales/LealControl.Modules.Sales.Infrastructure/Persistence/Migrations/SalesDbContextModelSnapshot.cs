@@ -1808,8 +1808,8 @@ namespace LealControl.Modules.Sales.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Notes")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
 
                     b.Property<Guid?>("OpportunityId")
                         .HasColumnType("uuid");
@@ -1823,8 +1823,8 @@ namespace LealControl.Modules.Sales.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<string>("PaymentTerms")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("QuoteNumber")
                         .IsRequired()
@@ -1853,8 +1853,8 @@ namespace LealControl.Modules.Sales.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Warranty")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.HasKey("Id");
 
@@ -2127,8 +2127,8 @@ namespace LealControl.Modules.Sales.Infrastructure.Persistence.Migrations
 
                             b1.Property<string>("Description")
                                 .IsRequired()
-                                .HasMaxLength(500)
-                                .HasColumnType("character varying(500)");
+                                .HasMaxLength(4000)
+                                .HasColumnType("character varying(4000)");
 
                             b1.Property<decimal>("DiscountPercent")
                                 .HasPrecision(8, 4)

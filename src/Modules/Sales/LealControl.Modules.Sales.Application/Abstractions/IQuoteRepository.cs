@@ -16,6 +16,12 @@ public interface IQuoteRepository
 
     Task<int> CountAsync(TenantId tenantId, CancellationToken cancellationToken = default);
 
+    Task<string> NextNumberAsync(TenantId tenantId, int year, CancellationToken cancellationToken = default);
+
+    Task EnsureTechnicalDetailColumnAsync(CancellationToken cancellationToken = default);
+
+    Task SaveAsync(CancellationToken cancellationToken = default);
+
     void Add(Quote quote);
 
     void Remove(Quote quote);
