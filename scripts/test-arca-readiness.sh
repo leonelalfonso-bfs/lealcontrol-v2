@@ -133,7 +133,7 @@ print("Listo facturación:", d.get("readyForInvoicing"))
 print("Listo consulta CUIT:", d.get("readyForCuitLookup"))
 for c in d.get("checks") or []:
     mark = "OK" if c.get("ok") else "FAIL"
-    print(f"  [{mark}] {c.get(\"label\")}: {c.get(\"detail\")}")
+    print("  [%s] %s: %s" % (mark, c.get("label"), c.get("detail")))
 ok = bool(d.get("readyForInvoicing")) and bool(d.get("readyForCuitLookup"))
 raise SystemExit(0 if ok else 2)
 '
