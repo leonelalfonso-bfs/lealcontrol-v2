@@ -2149,6 +2149,9 @@ namespace LealControl.Modules.Sales.Infrastructure.Persistence.Migrations
                                 .HasPrecision(8, 4)
                                 .HasColumnType("numeric(8,4)");
 
+                            b1.Property<string>("TechnicalDetail")
+                                .HasColumnType("text");
+
                             b1.Property<decimal>("UnitPrice")
                                 .HasPrecision(18, 2)
                                 .HasColumnType("numeric(18,2)");
