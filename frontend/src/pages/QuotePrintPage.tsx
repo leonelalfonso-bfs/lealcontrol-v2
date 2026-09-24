@@ -114,22 +114,12 @@ export const QuotePrintPage: React.FC = () => {
       const filename = `Presupuesto_${quote.quoteNumber}_rev${quote.revision}.pdf`;
 
       const opt = {
-        margin: [8, 8, 8, 8] as [number, number, number, number],
+        margin: [10, 10, 10, 10] as [number, number, number, number],
         filename,
         image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          onclone: (clonedDoc: Document) => {
-            // Remove external stylesheet and style tags from the clone to prevent parsing errors on modern CSS features
-            const styles = clonedDoc.querySelectorAll("style, link[rel='stylesheet']");
-            styles.forEach((s) => s.remove());
-          }
-        },
+        html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff", windowWidth: 794 },
         jsPDF: { unit: "mm" as const, format: "a4", orientation: "portrait" as const },
-        pagebreak: { mode: ["css"], before: ".quote-page-break", avoid: ["tr", "article", ".quote-keep"] }
+        pagebreak: { mode: ["css", "legacy"] }
       };
 
       const html2pdf = await loadHtml2Pdf();
@@ -328,9 +318,10 @@ export const QuotePrintPage: React.FC = () => {
         <div
           id="quote-pdf-sheet"
           style={{
-            width: "100%",
+            width: "720px",
+            maxWidth: "100%",
             background: "#ffffff",
-            padding: "8mm",
+            padding: "12px",
             boxSizing: "border-box",
             fontFamily: "Arial, Helvetica, sans-serif",
             fontSize: "11px",
@@ -447,7 +438,7 @@ export const QuotePrintPage: React.FC = () => {
                   </article>
                 ))}
               </div>
-              <div className="quote-page-break" style={{ height: 0, breakBefore: "page", pageBreakBefore: "always" }} />
+              <div style={{ breakBefore: "page", pageBreakBefore: "always" }} />
               <table className="quote-keep" style={{ width: "100%", borderBottom: `2px solid ${primaryCol}`, margin: "0 0 14px", borderCollapse: "collapse" }}>
                 <tbody>
                 <tr>

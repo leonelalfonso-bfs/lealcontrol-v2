@@ -1,4 +1,4 @@
-import { Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { api } from "./api/client";
 import { useAuth } from "./context/AuthContext";
@@ -177,6 +177,11 @@ function PageFallback() {
       Cargando…
     </div>
   );
+}
+
+function QuoteSavedRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/presupuestos/${id}/editar`} replace />;
 }
 
 function withPageSuspense(node: ReactNode) {
@@ -549,6 +554,7 @@ export function App() {
               <Route path="/presupuestos/nuevo" element={<QuoteFormPage />} />
               <Route path="/presupuestos/:id/editar" element={<QuoteFormPage />} />
               <Route path="/presupuestos/:id/imprimir" element={<QuotePrintPage />} />
+              <Route path="/presupuestos/:id" element={<QuoteSavedRedirect />} />
               <Route path="/pedidos" element={<OrdersPage />} />
               <Route path="/pedidos/nuevo" element={<OrderFormPage />} />
               <Route path="/pedidos/:id" element={<OrderDetailPage />} />
