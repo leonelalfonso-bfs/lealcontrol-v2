@@ -121,7 +121,7 @@ export const QuotePrintPage: React.FC = () => {
       const opt = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
         filename,
-        image: { type: "jpeg" as const, quality: 0.98 },
+        image: { type: "png" as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff", windowWidth: 794 },
         jsPDF: { unit: "mm" as const, format: "a4", orientation: "portrait" as const },
         pagebreak: { mode: ["css", "legacy"] }
@@ -212,7 +212,7 @@ export const QuotePrintPage: React.FC = () => {
       src={company.logoUrl}
       alt={companyDisplayName}
       crossOrigin="anonymous"
-      style={{ maxHeight: 96, maxWidth: 240, objectFit: "contain", display: "block", background: "#000", borderRadius: 8, padding: 4 }}
+      style={{ maxHeight: 96, maxWidth: 240, objectFit: "contain", display: "block", background: "transparent" }}
     />
   ) : (
     <div style={{ width: "64px", height: "64px", borderRadius: "12px", background: primaryCol, color: "#ffffff", display: "grid", placeItems: "center", fontSize: "1.25rem", fontWeight: 900 }}>
@@ -227,7 +227,7 @@ export const QuotePrintPage: React.FC = () => {
           <td style={{ padding: "14px 18px", verticalAlign: "middle" }}>
             <div>
               {company?.logoUrl ? (
-                <img src={company.logoUrl} alt={companyDisplayName} crossOrigin="anonymous" style={{ maxHeight: 88, maxWidth: 220, objectFit: "contain", background: "#000", borderRadius: 6, padding: 4 }} />
+                <img src={company.logoUrl} alt={companyDisplayName} crossOrigin="anonymous" style={{ maxHeight: 88, maxWidth: 220, objectFit: "contain", background: "transparent" }} />
               ) : null}
               <div>
                 <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 900, color: "#ffffff" }}>{companyDisplayName}</h2>
