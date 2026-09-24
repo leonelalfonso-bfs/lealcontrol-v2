@@ -216,6 +216,7 @@ export const TrialBalancePage = named(() => import("../pages/accounting/TrialBal
 export const BankReconciliationPage = named(() => import("../pages/accounting/BankReconciliationPage"), "BankReconciliationPage");
 export const AccountingStudyPortalPage = named(() => import("../pages/accounting/AccountingStudyPortalPage"), "AccountingStudyPortalPage");
 export const MetrologyDashboardPage = named(() => import("../pages/metrology/MetrologyDashboardPage"), "MetrologyDashboardPage");
+export const MetrologyScopePage = named(() => import("../pages/metrology/MetrologyScopePage"), "MetrologyScopePage");
 export const MetrologyEquipmentPage = named(() => import("../pages/metrology/MetrologyEquipmentPage"), "MetrologyEquipmentPage");
 export const MetrologyEquipmentFormPage = named(() => import("../pages/metrology/MetrologyEquipmentFormPage"), "MetrologyEquipmentFormPage");
 export const StandardWeightsPage = named(() => import("../pages/metrology/StandardWeightsPage"), "StandardWeightsPage");

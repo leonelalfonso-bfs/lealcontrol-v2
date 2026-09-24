@@ -1729,8 +1729,14 @@ export type CalibrationReport = {
 
 export type MetrologyActivityMode = "Laboratory" | "Repairer";
 
+export type MetrologyAssayOption = {
+  code: string;
+  label: string;
+};
+
 export type MetrologyTenantSettings = {
   activityMode: MetrologyActivityMode;
+  assays?: MetrologyAssayOption[];
 };
 
 export type MetrologyInstrument = {

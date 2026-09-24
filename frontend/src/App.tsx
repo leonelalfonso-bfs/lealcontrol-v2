@@ -65,6 +65,7 @@ import {
   LoginPage,
   MailSettingsPage,
   MetrologyDashboardPage,
+  MetrologyScopePage,
   MetrologyEquipmentFormPage,
   MetrologyEquipmentPage,
   MetrologyInstrumentFormPage,
@@ -665,6 +666,7 @@ export function App() {
 
               {/* Metrology & Quality Professional Routes */}
               <Route path="/metrologia" element={<MetrologyDashboardPage />} />
+              <Route path="/metrologia/alcance" element={<MetrologyScopePage />} />
               <Route path="/metrologia/equipos" element={<MetrologyEquipmentPage />} />
               <Route path="/metrologia/equipos/nuevo" element={<MetrologyEquipmentFormPage />} />
               <Route path="/metrologia/equipos/:id" element={<MetrologyEquipmentFormPage />} />

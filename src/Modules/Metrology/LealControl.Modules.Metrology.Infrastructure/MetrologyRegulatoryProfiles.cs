@@ -18,6 +18,8 @@ public sealed record MetrologyRegulatoryProfile(
 
 public sealed record MetrologyTestPlanItem(string Code, string Title, string Purpose, bool Required);
 
+public sealed record MetrologyAssayOption(string Code, string Label);
+
 public static class MetrologyRegulatoryProfiles
 {
     public const string Transitional2307 = "REGIMEN_TRANSITORIO_R2307_80";
@@ -27,6 +29,9 @@ public static class MetrologyRegulatoryProfiles
     public const string OpPeriodicVerification = "VPE";
     public const string OpInitialVerification = "VPR";
     public const string OpPostRepair = "VPO";
+
+    public const string ActivityLaboratory = "Laboratory";
+    public const string ActivityRepairer = "Repairer";
 
     private static readonly IReadOnlyDictionary<string, string> CommonOperations =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -97,6 +102,41 @@ public static class MetrologyRegulatoryProfiles
             return OpPostRepair;
 
         return key.ToUpperInvariant();
+    }
+
+    public static bool IsLaboratory(string? activityMode) =>
+        string.Equals(activityMode, ActivityLaboratory, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Laboratorio de ensayos: solo VPE y VPR. Reparador: CAL, VPE, VPR y VPO.
+    /// </summary>
+    public static bool IsOperationAllowed(string? activityMode, string? operationType)
+    {
+        var op = NormalizeOperationType(operationType);
+        if (IsLaboratory(activityMode))
+            return op is OpPeriodicVerification or OpInitialVerification;
+
+        return op is OpCalibration or OpPeriodicVerification or OpInitialVerification or OpPostRepair;
+    }
+
+    public static IReadOnlyList<MetrologyAssayOption> AssaysFor(string? activityMode)
+    {
+        if (IsLaboratory(activityMode))
+        {
+            return
+            [
+                new(OpPeriodicVerification, "Verificación periódica"),
+                new(OpInitialVerification, "Verificación primitiva")
+            ];
+        }
+
+        return
+        [
+            new(OpCalibration, "Calibración"),
+            new(OpPeriodicVerification, "Verificación periódica"),
+            new(OpInitialVerification, "Verificación primitiva"),
+            new(OpPostRepair, "Verificación posterior a la reparación")
+        ];
     }
 
     public static string ResolveOperationLabel(MetrologyRegulatoryProfile profile, string? operationType)
