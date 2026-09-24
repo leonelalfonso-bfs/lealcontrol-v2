@@ -181,7 +181,7 @@ function PageFallback() {
 
 function QuoteSavedRedirect() {
   const { id } = useParams();
-  return <Navigate to={`/presupuestos/${id}/editar`} replace />;
+  return <Navigate to={`/presupuestos/${id}/imprimir`} replace />;
 }
 
 function withPageSuspense(node: ReactNode) {
