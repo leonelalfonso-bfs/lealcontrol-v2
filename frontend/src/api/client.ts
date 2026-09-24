@@ -546,6 +546,10 @@ export const api = {
       privateKeyFileName: string;
       settings: import("./types").CompanySettings;
     }>("/api/v1/company/settings/arca-csr", { method: "POST", body: JSON.stringify(body) }),
+  listArcaSalesPoints: () =>
+    request<{ suggested: number | null; points: Array<{ number: number; emissionType: string; blocked: boolean }> }>(
+      "/api/v1/company/settings/arca-sales-points"
+    ),
   diagnoseArca: () =>
     request<{
       readyForInvoicing: boolean;

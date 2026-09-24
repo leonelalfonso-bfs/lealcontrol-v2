@@ -11,4 +11,10 @@ public interface IArcaIntegration
     Task<Result<ArcaCuitLookupResult>> LookupCuitAsync(
         string cuit,
         CancellationToken cancellationToken = default);
+
+    Task<Result<ArcaSalesPointsDto>> ListSalesPointsAsync(CancellationToken cancellationToken = default);
 }
+
+public sealed record ArcaSalesPointDto(int Number, string EmissionType, bool Blocked);
+
+public sealed record ArcaSalesPointsDto(int? Suggested, IReadOnlyList<ArcaSalesPointDto> Points);

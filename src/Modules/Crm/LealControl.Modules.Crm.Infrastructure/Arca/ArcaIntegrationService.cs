@@ -15,6 +15,7 @@ internal sealed class ArcaIntegrationService : IArcaIntegration
     private readonly ITenantContext _tenant;
     private readonly ArcaWsaaClient _wsaa;
     private readonly ArcaPadronClient _padron;
+    private readonly ArcaWsfeClient _wsfe;
     private readonly ILogger<ArcaIntegrationService> _logger;
 
     public ArcaIntegrationService(
@@ -22,12 +23,14 @@ internal sealed class ArcaIntegrationService : IArcaIntegration
         ITenantContext tenant,
         ArcaWsaaClient wsaa,
         ArcaPadronClient padron,
+        ArcaWsfeClient wsfe,
         ILogger<ArcaIntegrationService> logger)
     {
         _db = db;
         _tenant = tenant;
         _wsaa = wsaa;
         _padron = padron;
+        _wsfe = wsfe;
         _logger = logger;
     }
 
@@ -171,6 +174,65 @@ internal sealed class ArcaIntegrationService : IArcaIntegration
                 cancellationToken);
         }
     }
+
+    public async Task<Result<ArcaSalesPointsDto>> ListSalesPointsAsync(CancellationToken cancellationToken = default)
+    {
+        var settings = await _db.CompanySettings.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TenantId == _tenant.TenantId, cancellationToken);
+        if (settings is null
+            || string.IsNullOrWhiteSpace(settings.ArcaCertificateCrt)
+            || string.IsNullOrWhiteSpace(settings.ArcaCertificateKey))
+        {
+            return Result<ArcaSalesPointsDto>.Failure(Error.Validation(
+                "Crm.Arca.Certificate",
+                "Cargá el certificado de ARCA para detectar el punto de venta."));
+        }
+
+        if (!ArcaCertificateLoader.TryLoad(settings.ArcaCertificateCrt, settings.ArcaCertificateKey, out var cert, out var loadError)
+            || cert is null)
+        {
+            return Result<ArcaSalesPointsDto>.Failure(Error.Validation(
+                "Crm.Arca.Certificate",
+                loadError ?? "El certificado de ARCA no se pudo leer."));
+        }
+
+        using (cert)
+        {
+            var signer = Digits(settings.ArcaSignerCuit);
+            if (signer.Length != 11) signer = Digits(settings.DocumentNumber);
+            if (signer.Length != 11)
+            {
+                return Result<ArcaSalesPointsDto>.Failure(Error.Validation(
+                    "Crm.Arca.SignerCuit",
+                    "Configurá el CUIT firmante ARCA (11 dígitos)."));
+            }
+
+            var production = IsProduction(settings.ArcaEnvironment);
+            var login = await _wsaa.LoginAsync(cert, settings.ArcaCertificateCrt, settings.ArcaCertificateKey, "wsfe", production, cancellationToken);
+            if (!login.Ok || login.Token is null || login.Sign is null)
+            {
+                return Result<ArcaSalesPointsDto>.Failure(Error.Validation("Crm.Arca.Wsfe", login.Detail));
+            }
+
+            var listed = await _wsfe.GetSalesPointsAsync(login.Token, login.Sign, signer, production, cancellationToken);
+            if (!listed.Ok)
+            {
+                return Result<ArcaSalesPointsDto>.Failure(Error.Validation("Crm.Arca.SalesPoint", listed.Detail));
+            }
+
+            var active = listed.Points.Where(x => !x.Blocked).ToList();
+            var pool = active.Count > 0 ? active : listed.Points.ToList();
+            var suggested = pool.FirstOrDefault(x => IsElectronic(x.EmissionType))?.Number ?? pool[0].Number;
+            return Result<ArcaSalesPointsDto>.Success(new ArcaSalesPointsDto(
+                suggested,
+                pool.Select(x => new ArcaSalesPointDto(x.Number, x.EmissionType, x.Blocked)).ToList()));
+        }
+    }
+
+    private static bool IsElectronic(string emissionType) =>
+        emissionType.Contains("CAE", StringComparison.OrdinalIgnoreCase)
+        && !emissionType.Contains("CAEA", StringComparison.OrdinalIgnoreCase)
+        || emissionType.Contains("WS", StringComparison.OrdinalIgnoreCase);
 
     private static ArcaDiagnosticsDto Build(
         bool readyInvoice,
