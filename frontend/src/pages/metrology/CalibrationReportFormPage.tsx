@@ -2,6 +2,7 @@ import { useEffect, useState, FormEvent, useMemo } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { MetrologyEquipment, StandardWeight, MetrologyInstrument, MetrologyTestPoint, EccentricityConfig } from "../../api/types";
+import { assaysForMode, METROLOGY_ASSAYS } from "./metrologyScope";
 
 export type FidelityTrial = {
   initialZero: string;
@@ -103,22 +104,7 @@ export function CalibrationReportFormPage() {
   const [finalTimeLocal, setFinalTimeLocal] = useState("");
   const [activityMode, setActivityMode] = useState<"Laboratory" | "Repairer">("Repairer");
 
-  const allOperationLabels: Record<string, string> = {
-    CAL: "Calibración",
-    VPE: "Verificación periódica",
-    VPR: "Verificación primitiva",
-    VPO: "Verificación posterior a la reparación"
-  };
-
-  const operationLabels = useMemo(() => {
-    if (activityMode === "Laboratory") {
-      return {
-        VPE: allOperationLabels.VPE,
-        VPR: allOperationLabels.VPR
-      };
-    }
-    return allOperationLabels;
-  }, [activityMode]);
+  const visibleAssays = useMemo(() => assaysForMode(activityMode), [activityMode]);
 
   const is2307 = regulatoryProfile === "REGIMEN_TRANSITORIO_R2307_80";
   const testPlanItems = [
@@ -747,7 +733,7 @@ export function CalibrationReportFormPage() {
           checklist: {
             profile: regulatoryProfile,
             operationType,
-            operationLabel: operationLabels[operationType] || allOperationLabels[operationType] || operationType,
+            operationLabel: METROLOGY_ASSAYS.find((a) => a.code === operationType)?.label || operationType,
             normativeApplied: is2307 ? "Resolución SCyNEI Nº 2307/1980 (régimen transitorio)" : "Resolución SIyC Nº 25/2025 (OIML R 76-1)",
             regulatoryStatus: is2307 ? "Régimen transitorio" : "Vigente",
             testPlanItems
@@ -1136,11 +1122,11 @@ export function CalibrationReportFormPage() {
                 </label>
 
                 <label>
-                  Tipo de Operación
+                  Tipo de ensayo
                   <select value={operationType} onChange={(e) => setOperationType(e.target.value)}>
-                    {Object.entries(operationLabels).map(([k, v]) => (
-                      <option key={k} value={k}>
-                        {k} — {v}
+                    {visibleAssays.map((assay) => (
+                      <option key={assay.code} value={assay.code}>
+                        {assay.label}
                       </option>
                     ))}
                   </select>

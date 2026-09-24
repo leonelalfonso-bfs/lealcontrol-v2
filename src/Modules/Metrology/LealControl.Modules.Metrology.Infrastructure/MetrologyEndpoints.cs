@@ -785,7 +785,12 @@ public static class MetrologyEndpoints
             await db.EnsureMetrologyTablesAsync(ct);
             var settings = await db.TenantSettings.AsNoTracking()
                 .FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
-            return Results.Ok(new { activityMode = settings?.ActivityMode ?? "Repairer" });
+            var mode = settings?.ActivityMode ?? MetrologyRegulatoryProfiles.ActivityRepairer;
+            return Results.Ok(new
+            {
+                activityMode = mode,
+                assays = MetrologyRegulatoryProfiles.AssaysFor(mode)
+            });
         });
 
         group.MapPut("/settings", async (
@@ -1143,6 +1148,16 @@ public static class MetrologyEndpoints
                 if (!profile.Operations.ContainsKey(operationType))
                 {
                     return Results.BadRequest(new { message = "La operación seleccionada no corresponde al perfil reglamentario." });
+                }
+
+                var activity = await db.TenantSettings.AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
+                if (!MetrologyRegulatoryProfiles.IsOperationAllowed(activity?.ActivityMode, operationType))
+                {
+                    return Results.BadRequest(new
+                    {
+                        message = "El alcance de laboratorio de ensayos solo admite verificación periódica y verificación primitiva."
+                    });
                 }
 
                 var standard = profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "Res2307_80" : "Res25_2025";

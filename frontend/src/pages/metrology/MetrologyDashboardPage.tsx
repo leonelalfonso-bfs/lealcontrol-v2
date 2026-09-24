@@ -8,8 +8,6 @@ export function MetrologyDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [activityMode, setActivityMode] = useState<"Laboratory" | "Repairer">("Repairer");
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
 
   const loadData = () => {
     setLoading(true);
@@ -28,20 +26,6 @@ export function MetrologyDashboardPage() {
   useEffect(() => {
     loadData();
   }, []);
-
-  const saveActivityMode = async (mode: "Laboratory" | "Repairer") => {
-    setSavingSettings(true);
-    setSettingsMsg(null);
-    try {
-      const res = await api.updateMetrologySettings({ activityMode: mode });
-      setActivityMode(res.activityMode === "Laboratory" ? "Laboratory" : "Repairer");
-      setSettingsMsg("Modo de actividad actualizado.");
-    } catch (err) {
-      setSettingsMsg(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSavingSettings(false);
-    }
-  };
 
   const totalEquipments = data?.equipments?.total ?? data?.stats?.totalEquipments ?? data?.Stats?.TotalEquipments ?? 0;
   const activeEquipments = data?.equipments?.active ?? data?.stats?.activeEquipments ?? data?.Stats?.ActiveEquipments ?? 0;
@@ -120,22 +104,17 @@ export function MetrologyDashboardPage() {
         <div className="card pad" style={{ gridColumn: "1 / -1" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
             <div>
-              <strong style={{ fontSize: "0.95rem" }}>Modo de actividad</strong>
+              <strong style={{ fontSize: "0.95rem" }}>Alcance de Metrología Legal</strong>
               <div className="muted" style={{ fontSize: "0.78rem", marginTop: 2 }}>
-                Laboratorio: solo VPE / VPR · Reparador: CAL / VPE / VPR / VPO
+                {activityMode === "Laboratory"
+                  ? "Laboratorio de ensayos: solo verificación periódica y verificación primitiva."
+                  : "Reparador: calibración, verificación periódica, verificación primitiva y verificación posterior a la reparación."}
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <select
-                value={activityMode}
-                disabled={savingSettings}
-                onChange={(e) => saveActivityMode(e.target.value as "Laboratory" | "Repairer")}
-                style={{ minWidth: 180 }}
-              >
-                <option value="Repairer">Reparador</option>
-                <option value="Laboratory">Laboratorio</option>
-              </select>
-              {settingsMsg && <span className="muted" style={{ fontSize: "0.78rem" }}>{settingsMsg}</span>}
+              <Link to="/metrologia/alcance" className="btn ghost compact">
+                Configurar alcance
+              </Link>
             </div>
           </div>
         </div>
