@@ -11,6 +11,8 @@ import {
   type QuoteLineWrite,
   type QuoteWrite
 } from "../api/types";
+import { TechnicalDetailEditor } from "../components/TechnicalDetailEditor";
+import { richTextIsEmpty } from "../utils/richText";
 import { QuickCustomerModal } from "../components/QuickCustomerModal";
 import { QuickProductModal } from "../components/QuickProductModal";
 
@@ -471,7 +473,7 @@ export const QuoteFormPage: React.FC = () => {
           discountPercent: l.discountPercent,
           taxRate: l.taxRate,
           isOptional: l.isOptional,
-          technicalDetail: l.technicalDetail?.trim() ? l.technicalDetail.trim() : null
+          technicalDetail: l.technicalDetail && !richTextIsEmpty(l.technicalDetail) ? l.technicalDetail.trim() : null
         }))
       };
 
@@ -894,7 +896,7 @@ export const QuoteFormPage: React.FC = () => {
                             padding: 0
                           }}
                         >
-                          {line.technicalDetail?.trim() ? "Editar detalle técnico (cargado)" : "Editar detalle técnico"}
+                          {line.technicalDetail && !richTextIsEmpty(line.technicalDetail) ? "Editar detalle técnico (cargado)" : "Editar detalle técnico"}
                         </button>
                       </div>
                     </td>
@@ -1134,13 +1136,7 @@ export const QuoteFormPage: React.FC = () => {
               Este texto sale en la primera hoja, como oferta técnica. La hoja siguiente es la oferta comercial, con precios.
               Podés escribir todo el alcance, las especificaciones y las condiciones técnicas.
             </p>
-            <textarea
-              rows={18}
-              value={technicalDraft}
-              onChange={(e) => setTechnicalDraft(e.target.value)}
-              placeholder="Alcance de obra, especificaciones, materiales, exclusiones, plazos técnicos..."
-              style={{ width: "100%", minHeight: 320, marginTop: 12 }}
-            />
+            <TechnicalDetailEditor value={technicalDraft} onChange={setTechnicalDraft} />
             <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 16 }}>
               <button type="button" className="btn ghost" onClick={() => setTechnicalLineIndex(null)}>Cerrar</button>
               <button

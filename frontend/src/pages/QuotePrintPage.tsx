@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { numberToWords } from "../utils/numberToWords";
+import { plainToRich, richTextIsEmpty } from "../utils/richText";
 import {
   currencyMeta,
   label,
@@ -273,6 +274,12 @@ export const QuotePrintPage: React.FC = () => {
 
   return (
     <div style={{ background: "#525659", minHeight: "100vh", padding: "20px" }}>
+      <style>{`
+        .quote-tech-html h2 { font-size: 1.15rem; margin: 0.55rem 0 0.25rem; }
+        .quote-tech-html h3 { font-size: 1rem; margin: 0.45rem 0 0.2rem; }
+        .quote-tech-html p { margin: 0 0 0.4rem; white-space: pre-wrap; }
+        .quote-tech-html ul, .quote-tech-html ol { margin: 0.15rem 0 0.5rem 1.2rem; padding: 0; }
+      `}</style>
       {/* Top Action Bar */}
       <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 16px auto", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#ffffff", padding: "10px 18px", borderRadius: "12px", boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}>
         <button
@@ -413,10 +420,12 @@ export const QuotePrintPage: React.FC = () => {
                         style={{ maxWidth: 220, maxHeight: 160, objectFit: "contain", marginBottom: 8 }}
                       />
                     )}
-                    {text && (
-                      <div style={{ whiteSpace: "pre-wrap", fontSize: "0.84rem", lineHeight: 1.45, color: "#1e293b" }}>
-                        {text}
-                      </div>
+                    {text && !richTextIsEmpty(text) && (
+                      <div
+                        className="quote-tech-html"
+                        style={{ fontSize: "0.84rem", lineHeight: 1.45, color: "#1e293b" }}
+                        dangerouslySetInnerHTML={{ __html: plainToRich(text) }}
+                      />
                     )}
                   </article>
                 ))}
