@@ -163,7 +163,7 @@ export const QuoteFormPage: React.FC = () => {
             setLines(
               q.lines.map((l) => ({
                 productId: l.productId ?? null,
-                description: l.description,
+                description: l.description.replace(/^\s*\[[^\]]+\]\s*/, ""),
                 quantity: l.quantity,
                 unitPrice: l.unitPrice,
                 discountPercent: l.discountPercent,
@@ -249,7 +249,7 @@ export const QuoteFormPage: React.FC = () => {
         ...prev,
         {
           productId: newProd.id,
-          description: `[${newProd.code}] ${newProd.name}`,
+          description: newProd.name,
           quantity: 1,
           unitPrice: convertedPrice,
           discountPercent: 0,
@@ -406,7 +406,7 @@ export const QuoteFormPage: React.FC = () => {
       copy[index] = {
         ...copy[index],
         productId: prod.id,
-        description: `[${prod.code}] ${prod.name}`,
+        description: prod.name,
         nativeCurrency: prodNativeCurrency,
         nativeUnitPrice: prodNativePrice,
         unitPrice: convertedUnitPrice,
