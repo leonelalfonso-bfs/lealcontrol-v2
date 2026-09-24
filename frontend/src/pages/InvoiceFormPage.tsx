@@ -39,6 +39,8 @@ export function InvoiceFormPage() {
   // Form Model
   const [invoiceType, setInvoiceType] = useState<string>("A");
   const [pointOfSale, setPointOfSale] = useState<number>(1);
+  const [salesPoints, setSalesPoints] = useState<Array<{ number: number; emissionType: string }>>([]);
+  const [salesPointHint, setSalesPointHint] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<string>("");
   const [customerName, setCustomerName] = useState<string>("");
   const [customerDocument, setCustomerDocument] = useState<string>("");
@@ -73,6 +75,14 @@ export function InvoiceFormPage() {
         setCustomers(custPage.items);
         setProducts(prodList);
         setExchangeRates(rates);
+        const points = await api.listArcaSalesPoints().catch(() => null);
+        if (points?.points?.length) {
+          setSalesPoints(points.points);
+          if (points.suggested) setPointOfSale(points.suggested);
+          setSalesPointHint(points.suggested
+            ? `ARCA autorizó el punto de venta ${points.suggested} para factura electrónica.`
+            : null);
+        }
 
         const defaultRate = rates?.usdDivisaSell || rates?.usdBilleteSell || 1400;
 
@@ -558,14 +568,25 @@ export function InvoiceFormPage() {
 
                 <label>
                   Punto de Venta *
-                  <input
-                    type="number"
-                    min="1"
-                    max="9999"
-                    value={pointOfSale}
-                    onChange={(e) => setPointOfSale(Number(e.target.value))}
-                    required
-                  />
+                  {salesPoints.length > 0 ? (
+                    <select value={pointOfSale} onChange={(e) => setPointOfSale(Number(e.target.value))} required>
+                      {salesPoints.map((point) => (
+                        <option key={point.number} value={point.number}>
+                          {String(point.number).padStart(4, "0")} · {point.emissionType || "Factura electrónica"}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="number"
+                      min="1"
+                      max="9999"
+                      value={pointOfSale}
+                      onChange={(e) => setPointOfSale(Number(e.target.value))}
+                      required
+                    />
+                  )}
+                  {salesPointHint && <span className="muted" style={{ display: "block", marginTop: 4, fontSize: "0.78rem" }}>{salesPointHint}</span>}
                 </label>
 
                 <label>

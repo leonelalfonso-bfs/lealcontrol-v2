@@ -40,6 +40,7 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(30);
         });
         services.AddScoped<ArcaWsaaClient>();
+        services.AddScoped<ArcaWsfeClient>();
         services.AddScoped<ArcaPadronClient>();
         services.AddScoped<IArcaIntegration, ArcaIntegrationService>();
         return services;

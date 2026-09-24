@@ -1,4 +1,5 @@
 using System;
+using LealControl.Modules.Crm.Application.Abstractions;
 using LealControl.Modules.Crm.Application.Settings;
 using MediatR;
 using System.Collections.Generic;
@@ -38,6 +39,12 @@ public static class CompanySettingsEndpoints
             var res = await sender.Send(cmd, cancellationToken);
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
         }).RequireAuthorization("RequireAdmin");
+
+        group.MapGet("/settings/arca-sales-points", async (IArcaIntegration arca, CancellationToken cancellationToken) =>
+        {
+            var res = await arca.ListSalesPointsAsync(cancellationToken);
+            return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(new { detail = res.Error.Message });
+        });
 
         group.MapGet("/settings/arca-diagnostics", async (ISender sender, CancellationToken cancellationToken) =>
         {
