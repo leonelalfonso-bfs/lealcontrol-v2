@@ -215,6 +215,57 @@ export const QuotePrintPage: React.FC = () => {
     </div>
   );
 
+  const sheetHeader = (title: string) => settings.templateStyle === "classic" ? (
+    <table style={{ width: "100%", background: primaryCol, color: "#ffffff", borderRadius: "6px", marginBottom: "16px", borderCollapse: "separate" }}>
+      <tbody>
+        <tr>
+          <td style={{ padding: "14px 18px", verticalAlign: "middle" }}>
+            <div>
+              {company?.logoUrl ? (
+                <img src={company.logoUrl} alt={companyDisplayName} crossOrigin="anonymous" style={{ maxHeight: 88, maxWidth: 220, objectFit: "contain", background: "#000", borderRadius: 6, padding: 4 }} />
+              ) : null}
+              <div>
+                <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 900, color: "#ffffff" }}>{companyDisplayName}</h2>
+                {companyLegalName ? <div style={{ fontSize: "0.78rem", opacity: 0.92, fontWeight: 600 }}>{companyLegalName}</div> : null}
+                <div style={{ fontSize: "0.72rem", opacity: 0.9 }}>CUIT: {companyCuit} | {companyTax}</div>
+              </div>
+            </div>
+          </td>
+          <td style={{ padding: "14px 18px", textAlign: "right", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: "1.1rem", fontWeight: 900 }}>{title}</div>
+            <div style={{ fontSize: "0.85rem", opacity: 0.95 }}>N° {quote.quoteNumber} (Rev. {quote.revision})</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  ) : (
+    <table style={{ width: "100%", borderBottom: `2px solid ${primaryCol}`, marginBottom: "16px", borderCollapse: "collapse" }}>
+      <tbody>
+        <tr>
+          <td style={{ paddingBottom: "14px", verticalAlign: "top" }}>
+            <div>
+              {logoBlock}
+              <div>
+                <h1 style={{ margin: 0, fontSize: "1.45rem", fontWeight: 900, color: "#0f172a", letterSpacing: "0.01em" }}>{companyDisplayName}</h1>
+                {companyLegalName ? <div style={{ fontSize: "0.82rem", color: "#475569", fontWeight: 600, marginTop: 2 }}>{companyLegalName}</div> : null}
+                <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>CUIT: {companyCuit} | {companyTax}</div>
+                {companyAddress ? <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{companyAddress}</div> : null}
+                {(company?.phone || company?.email) ? <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{[company?.phone, company?.email].filter(Boolean).join(" · ")}</div> : null}
+              </div>
+            </div>
+          </td>
+          <td style={{ paddingBottom: "14px", textAlign: "right", verticalAlign: "top", whiteSpace: "nowrap" }}>
+            <div style={{ display: "inline-block", padding: "3px 12px", borderRadius: "6px", background: primaryLightBg, color: primaryCol, fontWeight: 800, fontSize: "0.9rem" }}>{title}</div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#0f172a", marginTop: "4px" }}>
+              N° {quote.quoteNumber} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>(Rev. {quote.revision})</span>
+            </div>
+            <div style={{ fontSize: "0.78rem", color: "#64748b" }}>Fecha: {new Date(quote.createdAtUtc).toLocaleDateString("es-AR")}</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+
   return (
     <div style={{ background: "#525659", minHeight: "100vh", padding: "20px" }}>
       {/* Top Action Bar */}
@@ -336,80 +387,7 @@ export const QuotePrintPage: React.FC = () => {
           {/* =========================================================================
               HEADER BLOCK: Adaptable to configured template style
               ========================================================================= */}
-          {settings.templateStyle === "classic" ? (
-            <table style={{ width: "100%", background: primaryCol, color: "#ffffff", borderRadius: "6px", marginBottom: "16px", borderCollapse: "separate" }}>
-              <tbody>
-              <tr>
-              <td style={{ padding: "14px 18px", verticalAlign: "middle" }}>
-              <div>
-                {company?.logoUrl ? (
-                  <img
-                    src={company.logoUrl}
-                    alt={companyDisplayName}
-                    crossOrigin="anonymous"
-                    style={{ maxHeight: 88, maxWidth: 220, objectFit: "contain", background: "#000", borderRadius: 6, padding: 4 }}
-                  />
-                ) : null}
-                <div>
-                  <h2 style={{ margin: 0, fontSize: "1.35rem", fontWeight: 900, color: "#ffffff" }}>{companyDisplayName}</h2>
-                  {companyLegalName ? (
-                    <div style={{ fontSize: "0.78rem", opacity: 0.92, fontWeight: 600 }}>{companyLegalName}</div>
-                  ) : null}
-                  <div style={{ fontSize: "0.72rem", opacity: 0.9 }}>CUIT: {companyCuit} | {companyTax}</div>
-                </div>
-              </div>
-              </td>
-              <td style={{ padding: "14px 18px", textAlign: "right", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                <div style={{ fontSize: "1.1rem", fontWeight: 900 }}>{showTechnicalOffer ? "OFERTA TÉCNICA" : (settings.quote.headerTitle || "PRESUPUESTO COMERCIAL")}</div>
-                <div style={{ fontSize: "0.85rem", opacity: 0.95 }}>N° {quote.quoteNumber} (Rev. {quote.revision})</div>
-              </td>
-              </tr>
-              </tbody>
-            </table>
-          ) : (
-            <table style={{ width: "100%", borderBottom: `2px solid ${primaryCol}`, marginBottom: "16px", borderCollapse: "collapse" }}>
-              <tbody>
-              <tr>
-              <td style={{ paddingBottom: "14px", verticalAlign: "top" }}>
-              <div>
-                {logoBlock}
-                <div>
-                  <h1 style={{ margin: 0, fontSize: "1.45rem", fontWeight: 900, color: "#0f172a", letterSpacing: "0.01em" }}>
-                    {companyDisplayName}
-                  </h1>
-                  {companyLegalName ? (
-                    <div style={{ fontSize: "0.82rem", color: "#475569", fontWeight: 600, marginTop: 2 }}>
-                      {companyLegalName}
-                    </div>
-                  ) : null}
-                  <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: 2 }}>CUIT: {companyCuit} | {companyTax}</div>
-                  {companyAddress ? (
-                    <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{companyAddress}</div>
-                  ) : null}
-                  {(company?.phone || company?.email) ? (
-                    <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
-                      {[company?.phone, company?.email].filter(Boolean).join(" · ")}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              </td>
-              <td style={{ paddingBottom: "14px", textAlign: "right", verticalAlign: "top", whiteSpace: "nowrap" }}>
-                <div style={{ display: "inline-block", padding: "3px 12px", borderRadius: "6px", background: primaryLightBg, color: primaryCol, fontWeight: 800, fontSize: "0.9rem" }}>
-                  {showTechnicalOffer ? "OFERTA TÉCNICA" : (settings.quote.headerTitle || "PRESUPUESTO COMERCIAL")}
-                </div>
-                <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#0f172a", marginTop: "4px" }}>
-                  N° {quote.quoteNumber} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>(Rev. {quote.revision})</span>
-                </div>
-                <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                  Fecha: {new Date(quote.createdAtUtc).toLocaleDateString("es-AR")}
-                </div>
-              </td>
-              </tr>
-              </tbody>
-            </table>
-          )}
+          {sheetHeader(showTechnicalOffer ? "OFERTA TÉCNICA" : (settings.quote.headerTitle || "PRESUPUESTO COMERCIAL"))}
 
           {showTechnicalOffer && (
             <section>
@@ -439,19 +417,7 @@ export const QuotePrintPage: React.FC = () => {
                 ))}
               </div>
               <div style={{ breakBefore: "page", pageBreakBefore: "always" }} />
-              <table className="quote-keep" style={{ width: "100%", borderBottom: `2px solid ${primaryCol}`, margin: "0 0 14px", borderCollapse: "collapse" }}>
-                <tbody>
-                <tr>
-                <td style={{ paddingBottom: 8, verticalAlign: "bottom" }}>
-                <div>
-                  <div style={{ fontWeight: 900, color: primaryCol, letterSpacing: "0.04em" }}>OFERTA COMERCIAL</div>
-                  <div style={{ fontSize: "0.78rem", color: "#64748b" }}>N° {quote.quoteNumber} · Rev. {quote.revision}</div>
-                </div>
-                </td>
-                <td style={{ paddingBottom: 8, textAlign: "right", verticalAlign: "bottom", fontSize: "0.78rem", color: "#64748b" }}>{companyDisplayName}</td>
-                </tr>
-                </tbody>
-              </table>
+              {sheetHeader(settings.quote.headerTitle || "OFERTA COMERCIAL")}
             </section>
           )}
 
