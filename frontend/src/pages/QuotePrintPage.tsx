@@ -28,6 +28,11 @@ function hexToRgba(hex: string, alpha: number): string {
   return hex;
 }
 
+function quoteItemTitle(description: string): string {
+  const cleaned = description.replace(/^\s*\[[^\]]+\]\s*/, "").trim();
+  return cleaned || description;
+}
+
 function companyInitials(name?: string | null): string {
   const parts = (name || "").trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "EM";
@@ -398,7 +403,7 @@ export const QuotePrintPage: React.FC = () => {
                 {technicalItems.map(({ line, prod, text, idx }) => (
                   <article key={line.id || idx} style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
                     <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#0f172a", marginBottom: 6 }}>
-                      {idx + 1}. {line.description}
+                      {idx + 1}. {quoteItemTitle(line.description)}
                     </div>
                     {prod?.imagePath && (
                       <img
@@ -437,9 +442,11 @@ export const QuotePrintPage: React.FC = () => {
             </td>
             <td style={{ width: "50%", padding: "12px 16px", verticalAlign: "top" }}>
               <div style={{ color: "#64748b", fontSize: "0.72rem", textTransform: "uppercase", fontWeight: 700 }}>Destino / Entrega:</div>
-              <div style={{ fontSize: "0.82rem", color: "#0f172a" }}>{deliveryLocation?.name || "Entrega en Planta Central"}</div>
+              <div style={{ fontSize: "0.82rem", color: "#0f172a" }}>{deliveryLocation?.name || "Domicilio fiscal"}</div>
               <div style={{ color: "#475569", fontSize: "0.78rem" }}>
-                {deliveryLocation?.address?.street ? `${deliveryLocation.address.street}, ${deliveryLocation.address.city}` : "Según orden de compra"}
+                {deliveryLocation?.address?.street
+                  ? [deliveryLocation.address.street, deliveryLocation.address.city, deliveryLocation.address.province].filter(Boolean).join(", ")
+                  : [customer?.fiscalAddress?.street, customer?.fiscalAddress?.city, customer?.fiscalAddress?.province, customer?.fiscalAddress?.postalCode ? `CP ${customer.fiscalAddress.postalCode}` : null].filter(Boolean).join(", ") || "Según orden de compra"}
               </div>
               <div style={{ color: "#475569", fontSize: "0.78rem", marginTop: "2px" }}>
                 <strong>Validez:</strong> {quote.validDays} días corridos
@@ -467,7 +474,7 @@ export const QuotePrintPage: React.FC = () => {
                 <tr key={line.id} style={{ borderBottom: "1px solid #e2e8f0", opacity: line.isOptional ? 0.65 : 1 }}>
                   <td style={{ padding: "7px 6px", textAlign: "center", color: "#64748b" }}>{idx + 1}</td>
                   <td style={{ padding: "7px 6px" }}>
-                    <strong>{line.description}</strong>
+                    <strong>{quoteItemTitle(line.description)}</strong>
                     {line.isOptional && <span style={{ color: "#d97706", fontWeight: "bold", marginLeft: "6px" }}>(OPCIONAL)</span>}
                   </td>
                   <td style={{ padding: "7px 6px", textAlign: "center" }}>{line.quantity}</td>
