@@ -2354,11 +2354,9 @@ public static class QualityEndpoints
         string? compliance = null;
         if (latest is not null && i.TargetValue.HasValue)
         {
-            var useCumulative = string.Equals(i.Frequency, "Monthly", StringComparison.OrdinalIgnoreCase)
-                && IsYearMonthPeriod(latest.Period);
-            var compareValue = useCumulative
-                ? GetCumulativeYtd(latest, cumulativeById)
-                : latest.Value;
+            // Evaluate the same value exposed as latestCumulativeYtd and shown in the list.
+            // Historical indicators may have a non-monthly frequency with YYYY-MM measurements.
+            var compareValue = GetCumulativeYtd(latest, cumulativeById);
 
             compliance = i.Direction switch
             {

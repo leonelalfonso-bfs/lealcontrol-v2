@@ -10,13 +10,13 @@ public sealed class IndicatorTrackingTests : IClassFixture<QualityWebApplication
     public IndicatorTrackingTests(QualityWebApplicationFactory factory) => _factory = factory;
 
     [Fact]
-    public async Task Monthly_summary_uses_annual_cumulative_and_resets_each_year()
+    public async Task Summary_uses_displayed_cumulative_even_for_yearly_indicator_with_monthly_values()
     {
         using var client = _factory.CreateAuthenticatedClient();
         var name = "Indicador acumulado " + Guid.NewGuid().ToString("N");
         var created = await client.PostAsJsonAsync("/api/v1/quality/records/mc01-r03", new
         {
-            name, targetValue = 100, targetUnit = "%", direction = "HigherIsBetter", frequency = "Monthly"
+            name, targetValue = 100, targetUnit = "%", direction = "HigherIsBetter", frequency = "Yearly"
         });
         created.EnsureSuccessStatusCode();
         var id = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();

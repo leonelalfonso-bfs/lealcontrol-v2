@@ -305,9 +305,13 @@ export function QualityMc01R03Page() {
                 </thead>
                 <tbody>
                   {rows.map((r) => {
-                    const c = complianceLabel(r.compliance);
                     const latest = r.values?.find((v) => v.period === r.latestPeriod);
                     const cumulative = r.latestCumulativeYtd ?? (latest ? withCumulativeYtd(r.values ?? []).find((v) => v.id === latest.id)?.cumulativeYtd : null) ?? r.latestValue;
+                    const compliance = cumulative == null || r.targetValue == null ? null
+                      : (r.direction === "LowerIsBetter" ? cumulative <= r.targetValue
+                        : r.direction === "Exact" ? cumulative === r.targetValue
+                        : cumulative >= r.targetValue) ? "Met" : "Below";
+                    const c = complianceLabel(compliance);
                     return (
                       <tr
                         key={r.id}
