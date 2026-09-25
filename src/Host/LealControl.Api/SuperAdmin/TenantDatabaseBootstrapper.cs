@@ -216,7 +216,8 @@ public static class TenantDatabaseBootstrapper
             ex.SqlState == PostgresErrorCodes.DuplicateTable
             || ex.SqlState == PostgresErrorCodes.UniqueViolation
             || ex.SqlState == PostgresErrorCodes.DuplicateObject
-            || ex.SqlState == PostgresErrorCodes.DuplicateSchema)
+            || ex.SqlState == PostgresErrorCodes.DuplicateSchema
+            || ex.SqlState == PostgresErrorCodes.DuplicateColumn)
         {
             Log.Warning(
                 ex,

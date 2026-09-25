@@ -253,7 +253,8 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
     {
         try
         {
-            await Database.ExecuteSqlRawAsync(sql, cancellationToken);
+            // ExecuteSqlRawAsync interpreta las llaves de JSON como marcadores de formato.
+            await Database.ExecuteSqlRawAsync(sql.Replace("{", "{{").Replace("}", "}}"), cancellationToken);
         }
         catch (Exception ex)
         {
