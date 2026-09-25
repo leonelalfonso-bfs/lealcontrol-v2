@@ -273,3 +273,5 @@ export const QualityEquipmentLogPrintPage = named(
 );
 export const QualityRecordsHubPage = named(() => import("../pages/quality/QualityRecordsHubPage"), "QualityRecordsHubPage");
 export const QualityLinkedItPage = named(() => import("../pages/quality/QualityLinkedItPage"), "QualityLinkedItPage");
+
+export const QualityExternalDocumentsPrintPage = named(() => import("../pages/quality/QualityExternalDocumentsPrintPage"), "QualityExternalDocumentsPrintPage");

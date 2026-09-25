@@ -718,3 +718,24 @@ export interface QualityPg14R03Response {
   };
   rows: QualityPg14CalibrationProgramRow[];
 }
+
+export interface QualityExternalDocumentRow {
+  id: string;
+  code: string;
+  codigo: string;
+  nombre: string;
+  organismo: string | null;
+  url: string | null;
+  proximaRevision: string | null;
+  estado: string;
+  originalFileId: string | null;
+  originalFileName: string | null;
+}
+
+export interface QualityExternalDocumentList {
+  code: string;
+  title: string;
+  generatedAtUtc: string;
+  recordVersion: number | null;
+  rows: QualityExternalDocumentRow[];
+}

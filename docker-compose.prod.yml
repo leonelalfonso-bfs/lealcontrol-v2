@@ -26,6 +26,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
+      Storage__RootPath: /tmp/lealcontrol-storage
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=${POSTGRES_DB:-lealcontrol_v2};Username=${POSTGRES_USER:-lealv2};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       Jwt__Issuer: ${Jwt__Issuer:-lealcontrol}
@@ -46,6 +47,7 @@ services:
     volumes:
       - lealcontrol_v2_dp_keys:/root/.aspnet/DataProtection-Keys
       - lealcontrol_v2_logs:/var/log/lealcontrol
+      - ./storage:/tmp/lealcontrol-storage
     ports: ["127.0.0.1:5209:8080"]
     networks: [v2, evolution_net]
     healthcheck:

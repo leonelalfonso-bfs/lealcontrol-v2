@@ -6,3 +6,6 @@ frontend/dist
 *.log
 test_*
 *.sql
+
+# Never include uploaded tenant documents in the image build context
+storage/

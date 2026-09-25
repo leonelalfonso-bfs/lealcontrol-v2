@@ -101,6 +101,7 @@ import {
   QualityLinkedItPage,
   QualityPg01R01Page,
   QualityPg01R02Page,
+  QualityExternalDocumentsPrintPage,
   OpportunitiesPage,
   OpportunityDetailPage,
   OrderDetailPage,
@@ -688,6 +689,7 @@ export function App() {
               <Route path="/calidad/registros" element={<QualityRecordsHubPage />} />
               <Route path="/calidad/registros/pg01-r01" element={<QualityPg01R01Page />} />
               <Route path="/calidad/registros/pg01-r02" element={<QualityPg01R02Page />} />
+              <Route path="/calidad/registros/pg01-r02/pdf" element={<QualityExternalDocumentsPrintPage />} />
               <Route path="/calidad/registros/mc01-r01" element={<QualityMc01R01Page />} />
               <Route path="/calidad/registros/mc01-r02" element={<QualityMc01R02Page />} />
               <Route path="/calidad/registros/indicadores" element={<QualityMc01R03Page />} />

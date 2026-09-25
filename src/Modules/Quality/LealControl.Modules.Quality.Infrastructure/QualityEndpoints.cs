@@ -366,31 +366,7 @@ public static class QualityEndpoints
             });
         });
 
-        // PG01-R02 generated
-        group.MapGet("/records/pg01-r02", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
-        {
-            var tenantId = tenant.TenantId;
-            await db.EnsureQualityTablesAsync(ct);
-            var docs = await db.Documents.AsNoTracking()
-                .Where(d => d.TenantId == tenantId && d.Type == QualityDocumentTypes.External)
-                .OrderBy(d => d.Title)
-                .ToListAsync(ct);
-
-            return Results.Ok(new
-            {
-                code = "PG01-R02",
-                title = "Lista de documentos externos",
-                generatedAtUtc = DateTime.UtcNow,
-                rows = docs.Select(d => new
-                {
-                    nombre = d.Title,
-                    organismo = d.ExternalSource,
-                    url = d.ExternalUrl,
-                    proximaRevision = d.NextReviewDate,
-                    estado = d.Status
-                })
-            });
-        });
+        group.MapExternalDocumentRecords();
 
         // MC01-R01 — Compromisos de confidencialidad internos (instancias firmadas)
         group.MapGet("/records/mc01-r01", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
@@ -1645,6 +1621,13 @@ public static class QualityEndpoints
             if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(req.Title))
             {
                 return Results.BadRequest(new { message = "Código y título son obligatorios." });
+            }
+
+            if (req.Type == QualityDocumentTypes.External &&
+                (code.Length > 32 || req.Title.Trim().Length > 240 || req.ExternalSource?.Length > 240
+                 || req.ExternalUrl?.Length > 500 || req.ReviewPeriodMonths is < 1 or > 120))
+            {
+                return Results.BadRequest(new { message = "Verificá los datos: código hasta 32 caracteres, nombre y organismo hasta 240, URL hasta 500 y revisión entre 1 y 120 meses." });
             }
 
             var exists = await db.Documents.AnyAsync(d => d.TenantId == tenantId && d.Code == code, ct);

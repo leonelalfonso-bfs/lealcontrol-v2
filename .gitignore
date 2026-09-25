@@ -47,3 +47,6 @@ post_*.json
 
 ## Docker
 get-docker.sh
+
+# Persistent uploaded documents (per deployment; never commit tenant files)
+/storage/

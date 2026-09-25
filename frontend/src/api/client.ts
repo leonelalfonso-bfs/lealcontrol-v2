@@ -1360,9 +1360,24 @@ export const api = {
     ),
 
   getQualityDocumentListPg01R02: () =>
-    request<{ code: string; title: string; generatedAtUtc: string; rows: Array<Record<string, unknown>> }>(
+    request<import("./types/quality").QualityExternalDocumentList>(
       "/api/v1/quality/records/pg01-r02"
     ),
+
+  uploadQualityExternalOriginal: async (code: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const token = localStorage.getItem("leal_token");
+    const tenantId = localStorage.getItem("leal_tenant_id");
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    if (tenantId) headers["X-Tenant-Id"] = tenantId;
+    const response = await fetch(`/api/v1/quality/documents/${encodeURIComponent(code)}/external-original`, {
+      method: "POST", headers, body: form
+    });
+    if (!response.ok) throw new Error(await response.text() || `Error (${response.status})`);
+    return response.json() as Promise<{ id: string; fileName: string }>;
+  },
 
   listQualityMc01R01: () =>
     request<{
