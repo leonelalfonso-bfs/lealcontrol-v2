@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { CompanySettings } from "../../api/types";
 import type { QualityExternalDocumentList } from "../../api/types/quality";
+import { trimBlankPdfPages } from "../../utils/trimBlankPdfPages";
 import { loadHtml2Pdf } from "../../utils/loadHtml2Pdf";
 import { qualityExternalError } from "./QualityExternalDocumentsPage";
 import { labelOf, QUALITY_DOC_STATUS } from "./qualityLabels";
@@ -26,13 +27,17 @@ export function QualityExternalDocumentsPrintPage() {
       await document.fonts.ready;
       await Promise.all(Array.from(sheet.current.querySelectorAll("img")).map(img => img.decode()));
       const html2pdf = await loadHtml2Pdf();
-      await html2pdf().set({
+      const worker = html2pdf().set({
         margin: [10, 10, 10, 10], filename: "PG01-R02_documentos_externos.pdf",
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
         pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".pg01-heading"] }
-      }).from(sheet.current).save();
+      }).from(sheet.current).toCanvas();
+      const canvas: HTMLCanvasElement = await worker.get("canvas");
+      const pageSize: { inner: { ratio: number } } = await worker.get("pageSize");
+      const pageHeight = Math.floor(canvas.width * pageSize.inner.ratio);
+      await worker.set({ canvas: trimBlankPdfPages(canvas, pageHeight) }).toPdf().save();
     } catch (err) { setError(`No se pudo generar el PDF: ${qualityExternalError(err)}`); }
     finally { setBusy(false); }
   };

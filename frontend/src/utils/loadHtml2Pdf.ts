@@ -1,6 +1,7 @@
 type Html2PdfChain = {
   set: (opt: unknown) => Html2PdfChain;
   from: (element: HTMLElement) => Html2PdfChain;
+  toCanvas: () => Html2PdfChain;
   toPdf: () => Html2PdfChain;
   get: (key: "pdf" | string) => Promise<any>;
   save: () => Promise<void>;
