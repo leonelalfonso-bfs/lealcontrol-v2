@@ -357,11 +357,17 @@ public static class QualityEndpoints
                 };
             });
 
+            var record = docs.FirstOrDefault(d => d.Code == "PG01-R01");
+            var recordVersion = record?.CurrentVersionId is Guid versionId
+                ? (int?)versions.FirstOrDefault(v => v.Id == versionId)?.Version
+                : null;
+
             return Results.Ok(new
             {
                 code = "PG01-R01",
                 title = "Lista de documentos internos",
                 generatedAtUtc = DateTime.UtcNow,
+                recordVersion,
                 rows
             });
         });

@@ -39,9 +39,12 @@ export function QualityPg01R01Page() {
           <h1 style={{ marginTop: 8 }}>{title}</h1>
           <p style={{ color: "#64748b" }}>Registro generado automáticamente desde el árbol documental (PG01).</p>
         </div>
-        <button type="button" className="btn btn-outline" disabled={rows.length === 0} onClick={exportExcel}>
-          Exportar Excel
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link className="btn btn-outline" to="/calidad/registros/pg01-r01/pdf">Exportar PDF</Link>
+          <button type="button" className="btn btn-outline" disabled={rows.length === 0} onClick={exportExcel}>
+            Exportar Excel
+          </button>
+        </div>
       </div>
       {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
       <div className="table-wrap card pad" style={{ marginTop: 12 }}>

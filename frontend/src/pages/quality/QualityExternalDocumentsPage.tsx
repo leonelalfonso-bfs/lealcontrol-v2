@@ -104,7 +104,7 @@ export function QualityPg01R02Page() {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" className="btn btn-primary" disabled={busy || !data} onClick={() => setShowForm(true)}>Nuevo documento</button>
-          <Link className="btn btn-outline" to="/calidad/registros/pg01-r02/pdf">Descargar listado PDF</Link>
+          <Link className="btn btn-outline" to="/calidad/registros/pg01-r02/pdf">Exportar PDF</Link>
           <button type="button" className="btn btn-outline" disabled={busy || !data?.rows.length} onClick={() => void exportExcel()}>Exportar Excel</button>
         </div>
       </div>

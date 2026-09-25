@@ -1355,7 +1355,7 @@ export const api = {
     request<import("./types/quality").QualityDocumentDetail>(`/api/v1/quality/documents/${encodeURIComponent(code)}`),
 
   getQualityDocumentListPg01R01: () =>
-    request<{ code: string; title: string; generatedAtUtc: string; rows: Array<Record<string, unknown>> }>(
+    request<{ code: string; title: string; generatedAtUtc: string; recordVersion: number | null; rows: Array<Record<string, unknown>> }>(
       "/api/v1/quality/records/pg01-r01"
     ),
 
