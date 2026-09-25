@@ -14,6 +14,7 @@ import "./excel-tools.css";
 import "./themes.css";
 import "./brand-layout.css";
 import "./sober-shell.css";
+import "./leal-workspace-theme.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

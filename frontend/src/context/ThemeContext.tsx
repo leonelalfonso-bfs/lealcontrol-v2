@@ -21,15 +21,15 @@ export interface ModeConfig {
 export const LIGHT_THEME: ModeConfig = {
   mode: "light",
   themeId: "liquid-glass",
-  name: "Liquid Glass",
-  tagline: "Modo Claro cristalino con desenfoque de fondo y luz especular",
-  inspiration: "macOS Sonoma · iOS 18",
+  name: "LEAL Claro",
+  tagline: "Un espacio claro y sereno para trabajar todo el día",
+  inspiration: "Petróleo · azul suave · ocre",
   icon: "☀️",
   previewColors: {
-    bg: "#eaf0f8",
-    surface: "rgba(255, 255, 255, 0.75)",
-    primary: "#0d9488",
-    accent: "#0284c7",
+    bg: "#f3f5f4",
+    surface: "#ffffff",
+    primary: "#0f766e",
+    accent: "#426a91",
     text: "#132338"
   }
 };

@@ -420,7 +420,7 @@ export function App() {
 
               {/* User Session Bar */}
               {user && (
-                <div style={{
+                <div className="sidebar-user-session" style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
@@ -434,7 +434,7 @@ export function App() {
                     <div style={{ fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       👤 {user.fullName}
                     </div>
-                    <div style={{ fontSize: "0.68rem", color: presentationActive ? "#b45309" : "var(--brand-accent)" }}>
+                    <div style={{ fontSize: "0.68rem", color: presentationActive ? "#b45309" : "var(--sidebar-muted)" }}>
                       {presentationActive ? "Presentación · solo lectura" : user.role}
                     </div>
                   </div>

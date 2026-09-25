@@ -25,9 +25,9 @@ export function QualityDashboardPage() {
   }, []);
 
   const kpi = [
-    { label: "Documentos", value: data?.totalDocuments ?? "—" },
-    { label: "Vigentes", value: data?.current ?? "—" },
-    { label: "NC abiertas", value: data?.openNonConformities ?? "—" },
+    { label: "Documentos", value: data?.totalDocuments ?? "—", tone: "blue" },
+    { label: "Vigentes", value: data?.current ?? "—", tone: "teal" },
+    { label: "NC abiertas", value: data?.openNonConformities ?? "—", tone: "ochre" },
     { label: "Quejas fuera de plazo", value: data?.overdueComplaints ?? "—", danger: (data?.overdueComplaints ?? 0) > 0 },
     { label: "Revisión vencida", value: data?.overdueReview ?? "—", danger: (data?.overdueReview ?? 0) > 0 },
     { label: "Calibraciones vencidas", value: data?.calibrationsOverdue ?? "—", danger: (data?.calibrationsOverdue ?? 0) > 0 },
@@ -66,7 +66,7 @@ export function QualityDashboardPage() {
             }}
           >
             {kpi.map((k) => (
-              <div className="card pad" key={k.label}>
+              <div className={`card pad quality-kpi ${"tone" in k ? `quality-kpi--${k.tone}` : ""}`} key={k.label}>
                 <div style={{ fontSize: 12, color: "#64748b" }}>{k.label}</div>
                 <strong style={{ fontSize: 26, color: k.danger ? "#b91c1c" : undefined }}>{k.value}</strong>
               </div>

@@ -1,0 +1,205 @@
+/* LEAL workspace: quiet surfaces with restrained color accents.
+   Loaded after the legacy themes so shared controls look the same in every module. */
+:root[data-color-mode="light"] {
+  --canvas: #f3f5f4;
+  --paper: #ffffff;
+  --panel: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f5f7f8;
+  --surface-border: #dce4e7;
+  --line: #e4eaec;
+  --ink: #1d3039;
+  --ink-soft: #52646d;
+  --ink-muted: #687b83;
+  --primary: #0f766e;
+  --primary-hover: #0b5e58;
+  --primary-glow: rgba(15, 118, 110, 0.16);
+  --brand-accent: #0f766e;
+  --brand-teal: #0f766e;
+  --accent: #426a91;
+  --accent-2: #426a91;
+  --accent-soft: #eaf2f8;
+  --accent-ink: #315879;
+  --warm: #a96518;
+  --warm-soft: #fff3e2;
+  --warm-contrast: #ffffff;
+  --sidebar: #18262d;
+  --sidebar-text: #eef3f3;
+  --sidebar-muted: #bbc9cb;
+  --sidebar-hover: #263a42;
+  --active-bg: rgba(34, 142, 129, 0.22);
+  --active-text: #ffffff;
+  --row-hover: #eff5f5;
+  --input-border: #bfccd0;
+  --input-focus: #0f766e;
+  --badge-warn: #a96518;
+  --badge-warn-text: #895010;
+  --badge-warn-bg: #fff3e2;
+  --shadow-card: 0 1px 3px rgba(24, 38, 45, 0.06);
+}
+
+:root[data-color-mode="dark"] {
+  --primary: #0f766e;
+  --primary-hover: #0b5e58;
+  --accent: #90b8dc;
+  --accent-2: #90b8dc;
+  --accent-soft: #23394c;
+  --accent-ink: #bad8ee;
+  --warm: #e2ae65;
+  --warm-soft: #453522;
+  --warm-contrast: #1d3039;
+  --sidebar: #151f27;
+  --sidebar-text: #eef3f5;
+  --sidebar-muted: #b8c7cd;
+  --sidebar-hover: #273743;
+  --input-border: #536371;
+}
+
+.topbar,
+header.topbar,
+.sidebar,
+aside.sidebar {
+  background: var(--sidebar) !important;
+  color: var(--sidebar-text) !important;
+}
+
+.topbar,
+header.topbar {
+  border-bottom-color: color-mix(in srgb, var(--sidebar-text) 14%, var(--sidebar)) !important;
+}
+
+.sidebar,
+aside.sidebar {
+  border-right-color: color-mix(in srgb, var(--sidebar-text) 14%, var(--sidebar)) !important;
+}
+
+.sidebar .company-brand,
+.sidebar .sidebar-module-header,
+.sidebar .applications-launcher {
+  border-color: color-mix(in srgb, var(--sidebar-text) 14%, var(--sidebar)) !important;
+}
+
+.sidebar .company-logo-placeholder,
+.sidebar .applications-launcher span:first-child {
+  background: linear-gradient(145deg, var(--primary), var(--accent)) !important;
+}
+
+.nav a.active,
+.module-tab.active {
+  background: var(--active-bg) !important;
+  box-shadow: inset 3px 0 0 #52b0a3 !important;
+}
+
+.nav a.active .nav-icon-badge { color: #9de0d5 !important; }
+
+.topbar-badge {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--sidebar)) !important;
+  color: #d9ebf5 !important;
+}
+
+.help-number { background: var(--warm) !important; color: var(--warm-contrast) !important; }
+
+.page-head { margin-bottom: 20px; }
+.page-head h1 { color: var(--ink) !important; }
+.eyebrow { color: var(--accent-ink) !important; letter-spacing: 0.08em; }
+
+.card {
+  border-color: var(--surface-border) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.card:hover { border-color: var(--surface-border) !important; }
+
+.btn,
+.btn.btn-primary {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.btn:hover,
+.btn.btn-primary:hover { background: var(--primary-hover) !important; border-color: var(--primary-hover) !important; }
+
+.btn.btn-outline,
+.btn.ghost {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border-color: var(--input-border) !important;
+  box-shadow: none !important;
+}
+
+.btn.btn-outline:hover,
+.btn.ghost:hover {
+  background: var(--accent-soft) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-ink) !important;
+}
+
+.btn:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px var(--primary-glow) !important;
+}
+
+button:disabled,
+.btn:disabled { cursor: not-allowed !important; opacity: 0.58; }
+
+table th {
+  background: var(--surface-muted) !important;
+  color: var(--ink-soft) !important;
+  border-bottom-color: var(--surface-border) !important;
+}
+
+table td { border-bottom-color: var(--line) !important; }
+tr:hover td { background: var(--row-hover) !important; }
+
+.kpi .card { border-top: 3px solid var(--primary) !important; }
+.quality-kpi {
+  border-top: 3px solid var(--surface-border) !important;
+  min-height: 104px;
+}
+.quality-kpi--teal { border-top-color: var(--primary) !important; }
+.quality-kpi--blue { border-top-color: var(--accent) !important; }
+.quality-kpi--ochre { border-top-color: var(--warm) !important; }
+.quality-kpi--blue strong { color: var(--accent-ink) !important; }
+.quality-kpi--ochre strong { color: var(--warm) !important; }
+
+.badge.warn {
+  background: var(--badge-warn-bg) !important;
+  color: var(--badge-warn-text) !important;
+  border-color: color-mix(in srgb, var(--warm) 32%, var(--badge-warn-bg)) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .btn, .nav a, .module-tab { transition-duration: 0.01ms !important; }
+}
+
+:root[data-color-mode="light"] body,
+:root[data-color-mode="dark"] body {
+  background: var(--canvas) !important;
+  background-image: none !important;
+}
+
+.sidebar .sidebar-user-session {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(238, 243, 243, 0.17) !important;
+  color: var(--sidebar-text);
+}
+
+.sidebar .leal-logo-wrapper {
+  --logo-title-color: #eef3f3;
+  --logo-subtitle-color: #b8c9cc;
+}
