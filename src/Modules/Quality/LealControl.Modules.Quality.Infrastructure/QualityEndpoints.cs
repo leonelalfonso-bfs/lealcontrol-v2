@@ -555,6 +555,16 @@ public static class QualityEndpoints
                 .ToListAsync(ct);
 
             var byIndicator = values.GroupBy(v => v.IndicatorId).ToDictionary(g => g.Key, g => g.ToList());
+            var record = await db.Documents.AsNoTracking()
+                .FirstOrDefaultAsync(d => d.TenantId == tenantId && d.Code == "MC01-R03", ct);
+            int? recordVersion = null;
+            if (record?.CurrentVersionId is Guid versionId)
+            {
+                recordVersion = await db.DocumentVersions.AsNoTracking()
+                    .Where(v => v.TenantId == tenantId && v.Id == versionId)
+                    .Select(v => (int?)v.Version)
+                    .FirstOrDefaultAsync(ct);
+            }
 
             return Results.Ok(new
             {
@@ -562,6 +572,7 @@ public static class QualityEndpoints
                 title = "Seguimiento de objetivos e indicadores",
                 recordKind = QualityRecordKinds.Structured,
                 generatedAtUtc = DateTime.UtcNow,
+                recordVersion,
                 rows = indicators.Select(i =>
                 {
                     byIndicator.TryGetValue(i.Id, out var vals);
@@ -2377,6 +2388,7 @@ public static class QualityEndpoints
             i.UpdatedAtUtc,
             latestPeriod = latest?.Period,
             latestValue = latest?.Value,
+            latestCumulativeYtd = latest is null ? (decimal?)null : GetCumulativeYtd(latest, cumulativeById),
             compliance,
             values = values.Select(v => ToIndicatorValueDto(v, GetCumulativeYtd(v, cumulativeById)))
         };

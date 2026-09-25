@@ -77,6 +77,7 @@ import {
   QualityMc01R01Page,
   QualityMc01R02Page,
   QualityMc01R03Page,
+  QualityMc01R03PrintPage,
   QualityMc01R05Page,
   QualityPg11R01Page,
   QualityPg03R01Page,
@@ -694,6 +695,7 @@ export function App() {
               <Route path="/calidad/registros/mc01-r02" element={<QualityMc01R02Page />} />
               <Route path="/calidad/registros/indicadores" element={<QualityMc01R03Page />} />
               <Route path="/calidad/registros/mc01-r03" element={<QualityMc01R03Page />} />
+              <Route path="/calidad/registros/mc01-r03/pdf" element={<QualityMc01R03PrintPage />} />
               <Route path="/calidad/registros/mc01-r05" element={<QualityMc01R05Page />} />
               <Route path="/calidad/registros/pg11-r01" element={<QualityPg11R01Page />} />
               <Route path="/calidad/registros/quejas" element={<QualityPg03R01Page />} />

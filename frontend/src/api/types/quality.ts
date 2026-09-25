@@ -219,6 +219,7 @@ export interface QualityIndicator {
   updatedAtUtc: string;
   latestPeriod?: string | null;
   latestValue?: number | null;
+  latestCumulativeYtd?: number | null;
   compliance?: "Met" | "Below" | string | null;
   values?: QualityIndicatorValue[];
 }

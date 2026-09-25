@@ -204,6 +204,7 @@ export function QualityMc01R03Page() {
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link className="btn btn-outline" to="/calidad/registros">Índice registros</Link>
+          <Link className="btn btn-outline" to="/calidad/registros/mc01-r03/pdf">Descargar seguimiento PDF</Link>
           <button type="button" className="btn btn-primary" disabled={busy} onClick={() => setShowForm((v) => !v)}>
             {showForm ? "Cerrar alta" : "Nuevo indicador"}
           </button>
@@ -297,7 +298,7 @@ export function QualityMc01R03Page() {
                 <thead>
                   <tr>
                     <th>Indicador</th>
-                    <th>Último</th>
+                    <th>Acumulado</th>
                     <th>Meta</th>
                     <th />
                   </tr>
@@ -305,6 +306,8 @@ export function QualityMc01R03Page() {
                 <tbody>
                   {rows.map((r) => {
                     const c = complianceLabel(r.compliance);
+                    const latest = r.values?.find((v) => v.period === r.latestPeriod);
+                    const cumulative = r.latestCumulativeYtd ?? (latest ? withCumulativeYtd(r.values ?? []).find((v) => v.id === latest.id)?.cumulativeYtd : null) ?? r.latestValue;
                     return (
                       <tr
                         key={r.id}
@@ -322,9 +325,9 @@ export function QualityMc01R03Page() {
                           </div>
                         </td>
                         <td>
-                          {r.latestPeriod != null && r.latestValue != null ? (
+                          {r.latestPeriod != null && cumulative != null ? (
                             <>
-                              <div>{r.latestValue}{r.targetUnit ? ` ${r.targetUnit}` : ""}</div>
+                              <div>{cumulative}{r.targetUnit ? ` ${r.targetUnit}` : ""}</div>
                               <div className="muted" style={{ fontSize: 12 }}>{r.latestPeriod}</div>
                               <div style={{ fontSize: 12, color: c.color, fontWeight: 700 }}>{c.text}</div>
                             </>

@@ -1445,6 +1445,7 @@ export const api = {
       title: string;
       recordKind?: string;
       generatedAtUtc: string;
+      recordVersion?: number | null;
       rows: import("./types/quality").QualityIndicator[];
     }>("/api/v1/quality/records/mc01-r03"),
 
