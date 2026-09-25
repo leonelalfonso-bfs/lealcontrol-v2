@@ -58,9 +58,10 @@ export function QualityDashboardPage() {
       {data && (
         <>
           <div
+            className="quality-kpi-grid"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
               gap: 12,
               marginTop: 16
             }}

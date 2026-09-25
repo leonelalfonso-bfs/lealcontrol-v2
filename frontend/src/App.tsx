@@ -422,7 +422,7 @@ export function App() {
 
               {/* User Session Bar */}
               {user && (
-                <div className="sidebar-user-session" style={{
+                <div className={`sidebar-user-session ${presentationActive ? "presentation-active" : ""}`} style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
@@ -528,6 +528,13 @@ export function App() {
           )}
 
           <main className="main">
+            <div className="workspace-topbar" aria-label="Contexto de trabajo">
+              <span><strong>{activeModule.label}</strong> / Espacio de trabajo</span>
+              <span className="workspace-topbar-company">
+                <span className="workspace-topbar-avatar" aria-hidden="true">{activeCompanyName.slice(0, 2).toUpperCase()}</span>
+                {activeCompanyName}
+              </span>
+            </div>
             <ChunkLoadErrorBoundary>
             <Suspense fallback={<PageFallback />}>
             <Routes>

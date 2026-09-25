@@ -22,14 +22,14 @@ export const LIGHT_THEME: ModeConfig = {
   mode: "light",
   themeId: "liquid-glass",
   name: "LEAL Claro",
-  tagline: "Un espacio claro y sereno para trabajar todo el día",
-  inspiration: "Petróleo · azul suave · ocre",
+  tagline: "Interfaz clara con acentos azules y datos fáciles de leer",
+  inspiration: "Tabler · azul · blanco · estados semánticos",
   icon: "☀️",
   previewColors: {
-    bg: "#f3f5f4",
+    bg: "#f6f8fb",
     surface: "#ffffff",
-    primary: "#0f766e",
-    accent: "#426a91",
+    primary: "#206bc4",
+    accent: "#2ba777",
     text: "#132338"
   }
 };
