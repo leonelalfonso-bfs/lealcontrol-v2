@@ -56,6 +56,18 @@ export function MailSettingsPage() {
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
 
+  const toggleAutoSync = async (account: MailAccount) => {
+    setBusy(true); setError(null); setMessage(null);
+    try {
+      const enabled = !account.autoSyncEnabled;
+      await api.setMailAutoSync(account.id, enabled);
+      setMessage(enabled
+        ? `Recepción automática activada para ${account.emailAddress}. Se comprobará cada 5 minutos.`
+        : `Recepción automática pausada para ${account.emailAddress}.`);
+      await load();
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+
   const edit = (account: MailAccount) => {
     setError(null); setMessage(null);
     setForm({
@@ -73,7 +85,7 @@ export function MailSettingsPage() {
     <div className="page-head"><div><span className="eyebrow">COMUNICACIONES</span><h1>Cuentas de correo</h1><p className="muted">Conectá casillas para enviar propuestas y registrar respuestas en CRM y Ventas.</p></div></div>
     {message && <div className="success-banner">{message}</div>}{error && <div className="alert">{error}</div>}
     <div className="mail-layout">
-      <section className="card pad"><div className="section-head"><div><h2>Casillas conectadas</h2><p className="muted">Cada empresa puede usar varias cuentas y elegir un remitente principal.</p></div></div>
+      <section className="card pad"><div className="section-head"><div><h2>Casillas conectadas</h2><p className="muted">Cada empresa puede usar varias cuentas y elegir un remitente principal. La recepción automática es opcional por casilla y se ejecuta cada 5 minutos.</p></div></div>
         <div className="mail-account-list">
           {accounts.map((account) => {
             const health = mailHealth(account);
@@ -84,12 +96,14 @@ export function MailSettingsPage() {
                 <span>{account.emailAddress}</span>
                 <span className={`mail-health mail-health-${health.tone}`}>{health.label}</span>
                 <small>{account.provider} · {account.authMode}{account.lastSyncAtUtc ? ` · Última sincronización: ${new Date(account.lastSyncAtUtc).toLocaleString("es-AR")}` : ""}</small>
+                <small>{account.globalAutoSyncEnabled ? "Recepción automática controlada por el servidor" : account.autoSyncEnabled ? "Recepción automática activada" : "Recepción automática pausada"}</small>
                 {health.hint && <small className={`mail-health-hint mail-health-hint-${health.tone}`}>{health.hint}</small>}
               </div>
               <div className="mail-account-actions">
                 <button className="btn btn-outline compact" disabled={busy} onClick={() => edit(account)}>Editar</button>
                 <button className="btn btn-outline compact" disabled={busy} onClick={() => void action(account, "test")}>Probar</button>
                 <button className="btn compact" disabled={busy || !account.isActive} onClick={() => void action(account, "sync")}>Recibir</button>
+                {!account.globalAutoSyncEnabled && <button className="btn btn-outline compact" aria-pressed={account.autoSyncEnabled} disabled={busy || (!account.autoSyncEnabled && (!account.isActive || !account.hasSecret))} onClick={() => void toggleAutoSync(account)}>{account.autoSyncEnabled ? "Pausar automático" : "Activar automático"}</button>}
               </div>
             </article>;
           })}

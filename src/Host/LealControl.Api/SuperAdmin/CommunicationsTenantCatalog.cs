@@ -9,10 +9,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Api.SuperAdmin;
 
-public sealed class CommunicationsTenantCatalog(MasterDbContext masterDb) : ICommunicationsTenantCatalog
+public sealed class CommunicationsTenantCatalog(MasterDbContext masterDb, ICommunicationsInboxSettings settings) : ICommunicationsTenantCatalog
 {
     public async Task<IReadOnlyList<Guid>> ListEnabledTenantIdsAsync(CancellationToken cancellationToken = default)
     {
+        if (!await settings.IsEnabledAsync(cancellationToken)) return [];
         var tenants = await masterDb.Tenants.AsNoTracking()
             .Where(x => x.IsActive && (x.Status == "Active" || x.Status == "Trial"))
             .Select(x => new { x.Id, x.EnabledModulesJson })

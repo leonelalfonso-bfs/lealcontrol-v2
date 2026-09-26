@@ -49,7 +49,9 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.ToTable("mail_accounts"); b.HasKey(x => x.Id);
             b.Property(x => x.Provider).HasConversion<string>(); b.Property(x => x.AuthMode).HasConversion<string>();
             b.Property(x => x.DisplayName).HasMaxLength(160); b.Property(x => x.EmailAddress).HasMaxLength(320);
-            b.Property(x => x.ProtectedSecret).HasColumnType("text"); b.HasIndex(x => new { x.TenantId, x.EmailAddress }).IsUnique();
+            b.Property(x => x.ProtectedSecret).HasColumnType("text");
+            b.Property(x => x.AutoSyncEnabled).HasDefaultValue(false);
+            b.HasIndex(x => new { x.TenantId, x.EmailAddress }).IsUnique();
         });
         modelBuilder.Entity<EmailMessage>(b => {
             b.ToTable("email_messages"); b.HasKey(x => x.Id);
@@ -144,12 +146,15 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
                 ""Username"" character varying(200) NOT NULL,
                 ""ProtectedSecret"" text NOT NULL,
                 ""IsActive"" boolean NOT NULL DEFAULT true,
+                ""AutoSyncEnabled"" boolean NOT NULL DEFAULT false,
                 ""IsDefaultSender"" boolean NOT NULL DEFAULT false,
                 ""LastSyncAtUtc"" timestamp with time zone,
                 ""LastError"" character varying(1000),
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL,
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL
             );
+
+            ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""AutoSyncEnabled"" boolean NOT NULL DEFAULT false;
 
             CREATE TABLE IF NOT EXISTS communications.email_messages (
                 ""Id"" uuid PRIMARY KEY,

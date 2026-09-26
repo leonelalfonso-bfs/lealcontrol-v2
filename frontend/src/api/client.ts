@@ -399,6 +399,8 @@ export const api = {
   saveMailAccount: (body: object) => request<{ id: string }>("/api/v1/communications/accounts", { method: "POST", body: JSON.stringify(body) }),
   testMailAccount: (id: string) => request<{ connected: boolean }>(`/api/v1/communications/accounts/${id}/test`, { method: "POST" }),
   syncMailAccount: (id: string) => request<{ received: number }>(`/api/v1/communications/accounts/${id}/sync`, { method: "POST" }),
+  setMailAutoSync: (id: string, enabled: boolean) =>
+    request<{ id: string; autoSyncEnabled: boolean }>(`/api/v1/communications/accounts/${id}/auto-sync`, { method: "PUT", body: JSON.stringify({ enabled }) }),
   listEmails: (entityType?: string, entityId?: string) => { const p = new URLSearchParams(); if(entityType)p.set("entityType",entityType); if(entityId)p.set("entityId",entityId); return request<import("./types").EmailMessage[]>(`/api/v1/communications/messages${p.size?`?${p}`:""}`); },
   listConversations: (opts?: { channel?: string; folder?: string; search?: string; customerId?: string; assignedTo?: string; status?: string }) => {
     const p = new URLSearchParams();

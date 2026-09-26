@@ -24,6 +24,7 @@ using MimeKit;
 namespace LealControl.Modules.Communications.Infrastructure.Http;
 
 public sealed record SaveMailAccountRequest(Guid? Id, MailAccountSettings Settings, string? Secret);
+public sealed record SetMailAutoSyncRequest(bool Enabled);
 public sealed record SendWhatsAppRequest(
     string To,
     string Message,

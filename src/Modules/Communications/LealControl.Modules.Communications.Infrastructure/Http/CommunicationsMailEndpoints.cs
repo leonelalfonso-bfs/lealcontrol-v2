@@ -27,9 +27,11 @@ internal static class CommunicationsMailEndpoints
 {
     public static RouteGroupBuilder MapCommunicationsMailEndpoints(this RouteGroupBuilder group)
     {
-        group.MapGet("/accounts", async (CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) =>
-            Results.Ok(await db.MailAccounts.AsNoTracking().Where(x => x.TenantId == tenant.TenantId.Value)
-                .OrderBy(x => x.DisplayName).Select(x => new { x.Id, x.DisplayName, x.EmailAddress, Provider = x.Provider.ToString(), AuthMode = x.AuthMode.ToString(), x.ImapHost, x.ImapPort, x.ImapUseSsl, x.SmtpHost, x.SmtpPort, x.SmtpUseSsl, x.Username, x.IsActive, x.IsDefaultSender, x.LastSyncAtUtc, x.LastError, HasSecret = x.ProtectedSecret != "" }).ToListAsync(ct)));
+        group.MapGet("/accounts", async (CommunicationsDbContext db, ITenantContext tenant, IConfiguration configuration, CancellationToken ct) => {
+            var globalAutoSyncEnabled = configuration.GetValue<bool>("Communications:BackgroundSyncEnabled");
+            return Results.Ok(await db.MailAccounts.AsNoTracking().Where(x => x.TenantId == tenant.TenantId.Value)
+                .OrderBy(x => x.DisplayName).Select(x => new { x.Id, x.DisplayName, x.EmailAddress, Provider = x.Provider.ToString(), AuthMode = x.AuthMode.ToString(), x.ImapHost, x.ImapPort, x.ImapUseSsl, x.SmtpHost, x.SmtpPort, x.SmtpUseSsl, x.Username, x.IsActive, x.AutoSyncEnabled, GlobalAutoSyncEnabled = globalAutoSyncEnabled, x.IsDefaultSender, x.LastSyncAtUtc, x.LastError, HasSecret = x.ProtectedSecret != "" }).ToListAsync(ct));
+        });
 
         group.MapPost("/accounts", async (SaveMailAccountRequest request, CommunicationsDbContext db, ITenantContext tenant, MailSecretProtector protector, CancellationToken ct) => {
             var normalizedEmail = request.Settings.EmailAddress.Trim().ToLowerInvariant();
@@ -46,6 +48,18 @@ internal static class CommunicationsMailEndpoints
             {
                 return Results.Conflict(new { detail = "Ya existe una cuenta con ese email. Usá Editar para actualizar sus credenciales." });
             }
+        });
+
+        group.MapPut("/accounts/{id:guid}/auto-sync", async (Guid id, SetMailAutoSyncRequest request, CommunicationsDbContext db, ITenantContext tenant, IConfiguration configuration, CancellationToken ct) => {
+            if (configuration.GetValue<bool>("Communications:BackgroundSyncEnabled"))
+                return Results.Conflict(new { detail = "La recepción automática está controlada por la configuración global del servidor." });
+            var account = await db.MailAccounts.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, ct);
+            if (account is null) return Results.NotFound();
+            if (request.Enabled && (!account.IsActive || string.IsNullOrWhiteSpace(account.ProtectedSecret)))
+                return Results.BadRequest(new { detail = "La cuenta debe estar activa y tener credenciales para recibir correo automáticamente." });
+            account.SetAutoSyncEnabled(request.Enabled, DateTime.UtcNow);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { account.Id, account.AutoSyncEnabled });
         });
 
         group.MapPost("/accounts/{id:guid}/test", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, MailTransportService transport, CancellationToken ct) => {

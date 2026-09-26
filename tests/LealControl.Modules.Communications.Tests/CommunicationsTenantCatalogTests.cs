@@ -37,8 +37,12 @@ public sealed class CommunicationsTenantCatalogTests
             Tenant("malformed", "Active", true, "invalid"));
         await db.SaveChangesAsync();
 
-        var selected = await new CommunicationsTenantCatalog(db).ListEnabledTenantIdsAsync();
+        var settings = new CommunicationsInboxSettings(db);
+        var catalog = new CommunicationsTenantCatalog(db, settings);
+        Assert.Empty(await catalog.ListEnabledTenantIdsAsync());
 
+        await settings.SetEnabledAsync(true);
+        var selected = await catalog.ListEnabledTenantIdsAsync();
         Assert.Equal(new[] { enabled.Id }, selected);
     }
 }

@@ -433,9 +433,10 @@
 .mail-account-main .mail-health-neutral { color: var(--ink-soft); background: var(--surface-border); }
 .mail-account-main .mail-health-hint-warning { color: #895713; }
 .mail-account-main .mail-health-hint-error { color: #a33d3d; }
-.mail-account-actions { display: flex; gap: 6px; }.check-label { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 7px; }.check-label input { width: auto; }
+.mail-account-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }.check-label { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 7px; }.check-label input { width: auto; }
 .success-banner { margin-bottom: 14px; padding: 12px 14px; border: 1px solid #bfe6d2; border-radius: 12px; background: #eaf8f1; color: #2c7654; font-weight: 700; }
 @media (max-width: 1050px) { .mail-layout { grid-template-columns: 1fr; }.mail-account-form { position: static; } }
+@media (max-width: 700px) { .mail-account-card { grid-template-columns: 42px minmax(0, 1fr); }.mail-account-actions { grid-column: 1 / -1; justify-content: flex-start; } }
 .email-composer-backdrop {
   position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center;
   padding: 24px; background: rgba(15, 23, 42, .35); backdrop-filter: blur(10px);

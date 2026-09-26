@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Communications.Infrastructure.Domain;
 using LealControl.Modules.Communications.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -34,9 +35,7 @@ public sealed class CommunicationsSyncBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // The module is still under development. Polling mail requires an explicit
-        // switch and must never silently fall back to the default tenant database.
-        if (!_configuration.GetValue<bool>("Communications:BackgroundSyncEnabled")) return;
+        // Each account opts in independently. The legacy global switch remains supported.
         await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -63,12 +62,13 @@ public sealed class CommunicationsSyncBackgroundService : BackgroundService
         using var catalogScope = _services.CreateScope();
         var catalog = catalogScope.ServiceProvider.GetRequiredService<ICommunicationsTenantCatalog>();
         var tenantIds = await catalog.ListEnabledTenantIdsAsync(ct);
+        var globalSyncEnabled = _configuration.GetValue<bool>("Communications:BackgroundSyncEnabled");
 
         foreach (var tenantId in tenantIds)
         {
             try
             {
-                await SyncTenantAsync(tenantId, ct);
+                await SyncTenantAsync(tenantId, globalSyncEnabled, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -81,7 +81,10 @@ public sealed class CommunicationsSyncBackgroundService : BackgroundService
         }
     }
 
-    private async Task SyncTenantAsync(Guid tenantId, CancellationToken ct)
+    internal static IQueryable<MailAccount> EligibleAccounts(CommunicationsDbContext db, Guid tenantId, bool globalSyncEnabled) =>
+        db.MailAccounts.Where(x => x.TenantId == tenantId && x.IsActive && (x.AutoSyncEnabled || globalSyncEnabled));
+
+    private async Task SyncTenantAsync(Guid tenantId, bool globalSyncEnabled, CancellationToken ct)
     {
         if (tenantId == Guid.Empty) return;
         var connectionString = await _connections.GetConnectionStringAsync(new TenantId(tenantId), ct);
@@ -94,9 +97,8 @@ public sealed class CommunicationsSyncBackgroundService : BackgroundService
         var mailSync = scope.ServiceProvider.GetRequiredService<MailSyncService>();
         var conversationService = scope.ServiceProvider.GetRequiredService<ConversationService>();
 
-        var accounts = await db.MailAccounts
-            .Where(x => x.TenantId == tenantId && x.IsActive)
-            .OrderBy(x => x.LastSyncAtUtc)
+        var accounts = await EligibleAccounts(db, tenantId, globalSyncEnabled)
+            .OrderBy(x => x.UpdatedAtUtc)
             .Take(20)
             .ToListAsync(ct);
 

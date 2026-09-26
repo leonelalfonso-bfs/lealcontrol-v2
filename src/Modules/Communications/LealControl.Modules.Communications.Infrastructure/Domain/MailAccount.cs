@@ -22,6 +22,7 @@ public sealed class MailAccount
     public string Username { get; private set; } = string.Empty;
     public string ProtectedSecret { get; private set; } = string.Empty;
     public bool IsActive { get; private set; }
+    public bool AutoSyncEnabled { get; private set; }
     public bool IsDefaultSender { get; private set; }
     public DateTime? LastSyncAtUtc { get; private set; }
     public string? LastError { get; private set; }
@@ -51,6 +52,12 @@ public sealed class MailAccount
         if (!string.IsNullOrWhiteSpace(protectedSecret)) ProtectedSecret = protectedSecret;
         IsActive = settings.IsActive;
         IsDefaultSender = settings.IsDefaultSender;
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void SetAutoSyncEnabled(bool enabled, DateTime utcNow)
+    {
+        AutoSyncEnabled = enabled;
         UpdatedAtUtc = utcNow;
     }
 
