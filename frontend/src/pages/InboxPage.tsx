@@ -315,10 +315,11 @@ export function InboxPage() {
   };
 
   useEffect(() => {
+    if (activeConversation && getConversationChannel(activeConversation) === "email") return;
     if (chatBottomRef.current) {
       chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [activeMessages.length, activeNotes.length, activeActivities.length, selectedConversationId]);
+  }, [activeMessages.length, activeNotes.length, activeActivities.length, selectedConversationId, activeConversation]);
 
   const countEmail = channelCounts.email;
   const countWa = channelCounts.whatsapp;
@@ -646,6 +647,7 @@ export function InboxPage() {
   ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime() || a.id.localeCompare(b.id)), [activeMessages, activeNotes, activeActivities]);
 
   const activeDisplayName = activeConversation ? getConversationDisplayName(activeConversation) : "";
+  const isEmailConversation = activeConversation ? getConversationChannel(activeConversation) === "email" : false;
 
   return (
     <div className="inbox-page page-wide" style={{ paddingBottom: 40 }}>
@@ -708,7 +710,7 @@ export function InboxPage() {
         </button>
       </div>
 
-      <div className="inbox-shell card" style={{ minHeight: "70vh" }}>
+      <div className={`inbox-shell card${isEmailConversation ? " inbox-shell-email" : ""}`}>
         {/* Left Side: Folders & Actions */}
         <aside className="inbox-folders">
           <button className={folder === "Mine" ? "active" : ""} onClick={() => setFolder("Mine")}>
@@ -1057,11 +1059,9 @@ export function InboxPage() {
 
               {/* Chat Messages Body */}
               <div
+                className="inbox-thread-messages"
                 style={{
-                  flex: 1,
-                  minHeight: 0,
                   padding: 20,
-                  overflowY: "auto",
                   display: "flex",
                   flexDirection: "column",
                   gap: 14,
