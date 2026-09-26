@@ -166,31 +166,29 @@ export function InboxPage() {
     }
   };
 
-  const syncChannels = async () => {
-    try {
-      const [waRes, metaRes] = await Promise.all([
-        api.syncWhatsAppMessages().catch(() => ({ synced: 0 })),
-        api.syncMetaMessages().catch(() => ({ synced: 0, channels: [] }))
-      ]);
+  const syncChannels = async (showResult = false) => {
+    const [waResult, metaResult] = await Promise.allSettled([
+      api.syncWhatsAppMessages(),
+      api.syncMetaMessages()
+    ]);
+    const waSynced = waResult.status === "fulfilled" ? waResult.value.synced : 0;
+    const metaSynced = metaResult.status === "fulfilled" ? metaResult.value.synced : 0;
+    const warnings = [
+      ...(waResult.status === "rejected" ? [`WhatsApp: ${(waResult.reason as Error).message}`] : []),
+      ...(metaResult.status === "rejected" ? [`Instagram/Facebook: ${(metaResult.reason as Error).message}`] : []),
+      ...(metaResult.status === "fulfilled"
+        ? (metaResult.value.channels || []).filter((channel) => channel.error).map((channel) => `${channel.channel}: ${channel.error}`)
+        : [])
+    ];
 
-      const metaErrors = (metaRes.channels || [])
-        .filter((c) => c.error)
-        .map((c) => `${c.channel}: ${c.error}`)
-        .join(" | ");
-
-      if (metaErrors) {
-        setSyncNotification(`Sync: ${waRes.synced} WA, ${metaRes.synced} Meta. Advertencias: ${metaErrors}`);
-      } else if (waRes.synced > 0 || metaRes.synced > 0) {
-        setSyncNotification(`Sincronización: ${waRes.synced} WhatsApp, ${metaRes.synced} Instagram/Facebook.`);
-      }
-
-      await loadConversations();
-      if (selectedConversationId) {
-        await loadActiveMessages(selectedConversationId);
-      }
-    } catch {
-      // sync errors are non-blocking
+    if (showResult && warnings.length > 0) setError(warnings.join(" | "));
+    if (waSynced + metaSynced > 0 || (showResult && warnings.length === 0)) {
+      setSyncNotification(`Sincronización: ${waSynced} WhatsApp, ${metaSynced} Instagram/Facebook.`);
     }
+
+    await loadConversations();
+    const activeId = selectedConversationIdRef.current;
+    if (activeId) await loadActiveMessages(activeId);
   };
 
   useEffect(() => {
@@ -332,7 +330,7 @@ export function InboxPage() {
     setError(null);
     setSyncNotification(null);
     try {
-      await syncChannels();
+      await syncChannels(true);
       setTimeout(() => setSyncNotification(null), 8000);
     } catch (e: any) {
       setError("Error al sincronizar canales: " + e.message);

@@ -126,6 +126,12 @@ internal static class CommunicationsWhatsAppEndpoints
             if (tenantId == Guid.Empty) return Results.Unauthorized();
             var effectiveUserId = userId ?? CommunicationsEndpointHelpers.GetCurrentUserId(http);
             var instance = WhatsAppGatewayService.GetInstanceName(tenantId, effectiveUserId);
+            var status = await waService.GetStatusAsync(instance, ct);
+            if (!status.Available)
+                return Results.Problem("El servicio de WhatsApp no está disponible. Reintentá más tarde.", statusCode: StatusCodes.Status503ServiceUnavailable);
+            if (!status.State.Equals("open", StringComparison.OrdinalIgnoreCase) &&
+                !status.State.Equals("connected", StringComparison.OrdinalIgnoreCase))
+                return Results.Conflict(new { detail = "WhatsApp está desconectado. Vinculá la línea desde Canales antes de sincronizar." });
 
             await waService.ConfigureInstanceWebhookAsync(instance, ct);
             var contactsMap = await waService.FetchContactsMapAsync(instance, ct);
@@ -217,10 +223,7 @@ internal static class CommunicationsWhatsAppEndpoints
                 userConn.LastSyncAtUtc = DateTime.UtcNow;
             }
 
-            if (addedCount > 0)
-            {
-                await db.SaveChangesAsync(ct);
-            }
+            await db.SaveChangesAsync(ct);
 
             return Results.Ok(new { synced = addedCount, total = messages.Count });
         });
