@@ -167,8 +167,16 @@ export function InboxPage() {
   };
 
   const syncChannels = async (showResult = false) => {
+    const syncConnectedWhatsApp = async () => {
+      const status = await api.getWhatsAppStatus();
+      if (!status.isConnected) {
+        if (showResult) throw new Error(status.error || "La línea está desconectada. Vinculala desde Canales.");
+        return { synced: 0 };
+      }
+      return api.syncWhatsAppMessages();
+    };
     const [waResult, metaResult] = await Promise.allSettled([
-      api.syncWhatsAppMessages(),
+      syncConnectedWhatsApp(),
       api.syncMetaMessages()
     ]);
     const waSynced = waResult.status === "fulfilled" ? waResult.value.synced : 0;

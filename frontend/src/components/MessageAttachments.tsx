@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { EmailAttachmentMeta } from "../api/types";
+import { api } from "../api/client";
 
 type Props = {
   messageId: string;
@@ -28,25 +29,24 @@ function AuthenticatedMedia({ messageId, att }: { messageId: string; att: EmailA
   const isImage = att.contentType.startsWith("image/");
 
   useEffect(() => {
-    const tenantId = localStorage.getItem("tenantId") || "";
-    const url = `/api/v1/communications/messages/${messageId}/attachments/${att.id}/download`;
     let objectUrl: string | null = null;
-    void fetch(url, { headers: { "X-Tenant-Id": tenantId } })
-      .then((r) => {
-        if (!r.ok) throw new Error("download failed");
-        return r.blob();
-      })
+    let cancelled = false;
+    setSrc(null);
+    setLoadError(false);
+    void api.downloadMessageAttachment(messageId, att.id)
       .then((blob) => {
+        if (cancelled) return;
         const typedBlob = isAudio ? new Blob([blob], { type: audioMimeType(att) }) : blob;
         objectUrl = URL.createObjectURL(typedBlob);
         setSrc(objectUrl);
-        setLoadError(false);
       })
       .catch(() => {
+        if (cancelled) return;
         setSrc(null);
         setLoadError(true);
       });
     return () => {
+      cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [messageId, att.id, att.contentType, att.fileName, isAudio]);

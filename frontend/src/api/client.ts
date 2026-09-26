@@ -460,7 +460,7 @@ export const api = {
     return res.json() as Promise<{ mediaId: string; publicUrl: string }>;
   },
   downloadMessageAttachment: (messageId: string, attachmentId: string) =>
-    `/api/v1/communications/messages/${messageId}/attachments/${attachmentId}/download`,
+    requestBlob(`/api/v1/communications/messages/${messageId}/attachments/${attachmentId}/download`),
   deleteConversation: (id: string) => request<void>(`/api/v1/communications/conversations/${id}`, { method: "DELETE" }),
   markConversationRead: (id: string) => request<{ success: boolean }>(`/api/v1/communications/conversations/${id}/mark-read`, { method: "POST" }),
   deleteEmail: (id: string) => request<void>(`/api/v1/communications/messages/${id}`, { method: "DELETE" }),
