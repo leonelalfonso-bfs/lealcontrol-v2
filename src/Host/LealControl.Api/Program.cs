@@ -344,6 +344,7 @@ try
     app.UseCors("web");
     app.UseRateLimiter();
     app.UseAuthentication();
+    app.UseMiddleware<CommunicationsInboxGateMiddleware>();
     app.UseMiddleware<ContractedModuleMiddleware>();
     app.UseMiddleware<LealControl.Modules.Quality.Infrastructure.PresentationModeMiddleware>();
     app.UseAuthorization();
