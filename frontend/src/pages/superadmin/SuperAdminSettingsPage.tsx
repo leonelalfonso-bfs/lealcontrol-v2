@@ -22,8 +22,13 @@ export function SuperAdminSettingsPage() {
     setSaving(true);
     setError(null);
     try {
-      const result = await api.setSuperAdminCommunicationsInbox(!enabled);
-      setEnabled(result.enabled);
+      const requested = !enabled;
+      await api.setSuperAdminCommunicationsInbox(requested);
+      const actual = await api.getPublicFeatures();
+      setEnabled(actual.communicationsInboxEnabled);
+      if (actual.communicationsInboxEnabled !== requested) {
+        setError("El cambio no se refleja en la API del tenant. Revisá la conexión de staging antes de continuar.");
+      }
       window.dispatchEvent(new Event("communications-feature-changed"));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar el cambio.");

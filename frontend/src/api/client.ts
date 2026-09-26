@@ -957,7 +957,7 @@ export const api = {
   getPublicFeatures: () =>
     request<{ communicationsInboxEnabled: boolean }>("/api/v1/public/features", { cache: "no-store" }),
   getSuperAdminCommunicationsInbox: () =>
-    request<{ enabled: boolean }>("/api/v1/superadmin/features/communications-inbox"),
+    request<{ enabled: boolean }>("/api/v1/superadmin/features/communications-inbox", { cache: "no-store" }),
   setSuperAdminCommunicationsInbox: (enabled: boolean) =>
     request<{ enabled: boolean }>("/api/v1/superadmin/features/communications-inbox", { method: "PUT", body: JSON.stringify({ enabled }) }),
 

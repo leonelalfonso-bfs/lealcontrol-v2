@@ -14,6 +14,13 @@ export function SuperAdminTenantsPage() {
   const [editTenant, setEditTenant] = useState<any | null>(null);
   const [tenantModules, setTenantModules] = useState<string[]>([]);
   const [savingModules, setSavingModules] = useState(false);
+  const [communicationsEnabled, setCommunicationsEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    void api.getPublicFeatures()
+      .then((features) => setCommunicationsEnabled(features.communicationsInboxEnabled))
+      .catch(() => setCommunicationsEnabled(null));
+  }, []);
 
   // Payment Link Modal / Notification
   const [paymentInfo, setPaymentInfo] = useState<{ tenantName: string; paymentUrl: string; amount: number } | null>(null);
@@ -132,6 +139,9 @@ export function SuperAdminTenantsPage() {
           </Link>
           <Link to="/superadmin/planes" style={{ color: "#cbd5e1", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid #334155" }}>
             💎 Planes & Tarifas
+          </Link>
+          <Link to="/superadmin/configuracion" style={{ color: "#cbd5e1", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid #334155" }}>
+            ⚙️ Configuración
           </Link>
         </div>
       </header>
@@ -273,6 +283,12 @@ export function SuperAdminTenantsPage() {
                 Seleccioná qué módulos tiene contratados esta empresa. Al guardar se sincroniza con los usuarios activos.
                 <strong style={{ color: "#fbbf24" }}> Deben volver a iniciar sesión</strong> para ver el menú actualizado.
               </p>
+
+              {communicationsEnabled === false && (
+                <p role="status" style={{ padding: "10px 12px", borderRadius: 8, background: "#422f13", color: "#fde68a", fontSize: 13 }}>
+                  Comunicaciones está desactivado para todo el sistema. Podés asignarlo a esta empresa, pero aparecerá en su menú cuando lo actives en <Link to="/superadmin/configuracion" style={{ color: "#fff", fontWeight: 700 }}>Configuración de SuperAdmin</Link>.
+                </p>
+              )}
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "24px" }}>
                 {ALL_SYSTEM_MODULES.map((m) => {
