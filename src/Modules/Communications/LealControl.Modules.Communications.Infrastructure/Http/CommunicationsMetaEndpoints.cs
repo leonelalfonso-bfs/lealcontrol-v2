@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using MimeKit;
 
 namespace LealControl.Modules.Communications.Infrastructure.Http;
@@ -369,7 +370,7 @@ internal static class CommunicationsMetaEndpoints
         }).AllowAnonymous();
 
         // Meta Webhook Events (Messages received)
-        endpoints.MapPost("/api/communications/meta/webhook", async (HttpRequest request, CommunicationsDbContext db, MetaGraphApiService metaService, MetaChannelSecretProtector secrets, ConversationService conversationService, IConfiguration configuration, IHostEnvironment env, CancellationToken ct) => {
+        endpoints.MapPost("/api/communications/meta/webhook", async (HttpRequest request, CommunicationsDbContext db, MetaGraphApiService metaService, MetaChannelSecretProtector secrets, ConversationService conversationService, IConfiguration configuration, IHostEnvironment env, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory, CancellationToken ct) => {
             try
             {
                 using var reader = new StreamReader(request.Body);
@@ -433,7 +434,9 @@ internal static class CommunicationsMetaEndpoints
 
                                 if (msg.TryGetProperty("message", out var mObj))
                                 {
-                                    var mid = mObj.TryGetProperty("mid", out var midProp) ? midProp.GetString() : Guid.NewGuid().ToString("N");
+                                    var mid = mObj.TryGetProperty("mid", out var midProp) ? midProp.GetString() : null;
+                                    if (string.IsNullOrWhiteSpace(mid))
+                                        mid = "fallback_" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(entryId + ":" + msg.GetRawText())));
                                     var isEcho = mObj.TryGetProperty("is_echo", out var echoProp) && echoProp.GetBoolean();
                                     if (isEcho) continue;
 
@@ -502,7 +505,7 @@ internal static class CommunicationsMetaEndpoints
                                         }
                                     }
 
-                                    await db.SaveChangesAsync(ct);
+                                    await WebhookMessagePersistence.SaveAsync(db, conn.TenantId, internetId, ct);
                                 }
                             }
                         }
@@ -511,9 +514,14 @@ internal static class CommunicationsMetaEndpoints
 
                 return Results.Ok("EVENT_RECEIVED");
             }
-            catch
+            catch (JsonException)
             {
-                return Results.Ok("ERROR_HANDLED");
+                return Results.BadRequest("INVALID_PAYLOAD");
+            }
+            catch (Exception ex)
+            {
+                loggerFactory.CreateLogger("Communications.Webhooks").LogError(ex, "Fallo webhook Meta; se solicita reintento.");
+                return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
             }
         }).AllowAnonymous();
 

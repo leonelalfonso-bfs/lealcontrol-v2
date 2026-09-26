@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using MimeKit;
 
 namespace LealControl.Modules.Communications.Infrastructure.Http;
@@ -330,7 +331,7 @@ internal static class CommunicationsWhatsAppEndpoints
         });
 
         // Webhook (AllowAnonymous)
-        endpoints.MapPost("/api/communications/whatsapp/webhook", async (HttpRequest request, CommunicationsDbContext db, WhatsAppGatewayService waService, ConversationService conversationService, IConfiguration configuration, CancellationToken ct) => {
+        endpoints.MapPost("/api/communications/whatsapp/webhook", async (HttpRequest request, CommunicationsDbContext db, WhatsAppGatewayService waService, ConversationService conversationService, IConfiguration configuration, Microsoft.Extensions.Logging.ILoggerFactory loggerFactory, CancellationToken ct) => {
             try
             {
                 var expectedKey = configuration["WhatsAppGateway:WebhookSecret"]
@@ -460,14 +461,20 @@ internal static class CommunicationsWhatsAppEndpoints
                         }
                     }
 
-                    await db.SaveChangesAsync(ct);
+                    var saved = await WebhookMessagePersistence.SaveAsync(db, tenantId, internetId, ct);
+                    if (!saved) return Results.Ok(new { status = "already_processed" });
                 }
 
                 return Results.Ok(new { status = "processed" });
             }
+            catch (JsonException)
+            {
+                return Results.BadRequest(new { status = "invalid_payload" });
+            }
             catch (Exception ex)
             {
-                return Results.Ok(new { status = "error", message = ex.Message });
+                loggerFactory.CreateLogger("Communications.Webhooks").LogError(ex, "Fallo webhook WhatsApp; se solicita reintento.");
+                return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
             }
         }).AllowAnonymous();
 
