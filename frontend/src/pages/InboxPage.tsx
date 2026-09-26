@@ -753,7 +753,7 @@ export function InboxPage() {
         </aside>
 
         {/* Middle: Conversation Threads List */}
-        <section className="message-list" style={{ maxWidth: 360, minWidth: 300, borderRight: "1px solid var(--surface-border)", display: "flex", flexDirection: "column" }}>
+        <section className="message-list" style={{ display: "flex", flexDirection: "column" }}>
           <div className="message-list-toolbar" style={{ padding: "12px 16px", fontWeight: 700, fontSize: "0.86rem", color: "var(--ink-soft)", borderBottom: "1px solid var(--surface-border)" }}>
             CONVERSACIONES ({visibleConversations.length})
           </div>
@@ -886,36 +886,28 @@ export function InboxPage() {
         </section>
 
         {/* Right: Full Chat / Email Thread View */}
-        <section className="message-reader" style={{ display: "flex", flexDirection: "column", height: "100%", padding: 0 }}>
+        <section className="message-reader" style={{ display: "flex", flexDirection: "column", padding: 0 }}>
           {activeConversation ? (
             <>
               {/* Header */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "12px 20px",
-                  borderBottom: "1px solid var(--surface-border)",
-                  background: "var(--surface)"
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: "1.2rem" }}>
+              <div className="inbox-thread-header">
+                <div className="inbox-thread-identity">
+                  <div className="inbox-thread-title">
+                    <span aria-hidden="true" style={{ fontSize: "1.2rem" }}>
                       {getConversationChannel(activeConversation) === "whatsapp" ? "💬" : getConversationChannel(activeConversation) === "instagram" ? "📸" : getConversationChannel(activeConversation) === "facebook" ? "📘" : "✉️"}
                     </span>
-                    <h2 style={{ margin: 0, fontSize: "1.1rem" }}>{activeDisplayName}</h2>
+                    <h2>{activeDisplayName}</h2>
                   </div>
-                  <span className="muted" style={{ fontSize: "0.78rem" }}>
-                    {activeConversation.participantId} • {activeMessages.length} mensaje(s) en el historial
-                    {activeConversation.relatedLeadId ? " • Lead vinculado" : ""}
-                    {activeConversation.relatedCustomerId ? " • Cliente vinculado" : ""}
-                  </span>
+                  <div className="inbox-thread-subtitle muted">
+                    {activeConversation.participantId !== activeDisplayName && <span>{activeConversation.participantId} · </span>}
+                    {activeMessages.length} mensaje(s) en el historial
+                    {activeConversation.relatedLeadId ? " · Lead vinculado" : ""}
+                    {activeConversation.relatedCustomerId ? " · Cliente vinculado" : ""}
+                  </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 8 }}>
-                  {isConversationUnlinked(activeConversation) && (
+                <div className="inbox-thread-actions">
+                  {isConversationUnlinked(activeConversation) && !showLeadSuggestion && (
                     <>
                       <button className="btn btn-outline compact" onClick={createLeadFromThread} disabled={busy}>
                         ＋ Crear Lead CRM
@@ -937,34 +929,24 @@ export function InboxPage() {
               </div>
 
               {/* Ficha de contacto */}
-              <div
-                style={{
-                  padding: "12px 20px",
-                  borderBottom: "1px solid var(--surface-border)",
-                  background: "var(--surface)",
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                  gap: 12,
-                  fontSize: "0.82rem"
-                }}
-              >
-                <div>
+              <div className="inbox-thread-details">
+                <div className="inbox-thread-field">
                   <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Canal</div>
                   <strong>{channelLabel(getConversationChannel(activeConversation))}</strong>
                 </div>
                 {(activeConversation.participantPhone || getConversationChannel(activeConversation) === "whatsapp") && (
-                  <div>
+                  <div className="inbox-thread-field">
                     <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Teléfono</div>
                     <strong>{activeConversation.participantPhone || activeConversation.participantId.replace(/^lid_/, "")}</strong>
                   </div>
                 )}
                 {(activeConversation.participantEmail || getConversationChannel(activeConversation) === "email") && (
-                  <div>
+                  <div className="inbox-thread-field">
                     <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Email</div>
                     <strong>{activeConversation.participantEmail || activeConversation.participantId}</strong>
                   </div>
                 )}
-                <div>
+                <div className="inbox-thread-field">
                   <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado CRM</div>
                   {activeConversation.relatedCustomerId ? (
                     <Link to={`/clientes/${activeConversation.relatedCustomerId}`} style={{ color: "#2563eb", fontWeight: 600 }}>
@@ -978,7 +960,7 @@ export function InboxPage() {
                     <span style={{ color: "var(--ink-soft)" }}>Sin vincular</span>
                   )}
                 </div>
-                <div>
+                <div className="inbox-thread-field">
                   <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado</div>
                   <select
                     value={activeConversation.status || "open"}
@@ -991,7 +973,7 @@ export function InboxPage() {
                     <option value="archived">Archivada</option>
                   </select>
                 </div>
-                <div>
+                <div className="inbox-thread-field">
                   <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Asignado a</div>
                   <select
                     value={activeConversation.assignedToUserId || ""}
@@ -1077,6 +1059,7 @@ export function InboxPage() {
               <div
                 style={{
                   flex: 1,
+                  minHeight: 0,
                   padding: 20,
                   overflowY: "auto",
                   display: "flex",
@@ -1119,8 +1102,8 @@ export function InboxPage() {
 
                   if (ch === "email") {
                     return (
-                      <div key={m.id} className="card pad" style={{ marginBottom: 12 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: "0.82rem" }}>
+                      <div key={m.id} className="card pad inbox-email-card">
+                        <div className="inbox-email-meta">
                           <div>
                             <strong>De:</strong> {m.fromAddress} <br />
                             <strong>Para:</strong> {m.toAddresses}
@@ -1200,7 +1183,7 @@ export function InboxPage() {
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
                   maxLength={4000}
-                  style={{ flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #edcd79" }}
+                  style={{ flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: 8, border: "1px solid #edcd79" }}
                 />
                 <button type="submit" className="btn btn-outline" disabled={savingNote || !noteText.trim()}>
                   {savingNote ? "Guardando..." : "Guardar nota"}
