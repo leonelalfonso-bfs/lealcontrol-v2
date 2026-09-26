@@ -13,4 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\LealControl.BuildingBlocks\LealControl.BuildingBlocks.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="LealControl.Modules.Communications.Tests" />
+  </ItemGroup>
 </Project>

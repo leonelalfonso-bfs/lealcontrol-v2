@@ -39,6 +39,7 @@ services:
       WhatsAppGateway__WebhookSecret: ${WHATSAPP_WEBHOOK_SECRET:?WHATSAPP_WEBHOOK_SECRET is required}
       Meta__VerifyToken: ${Meta__VerifyToken:-}
       META_APP_SECRET: ${META_APP_SECRET:-}
+      Communications__BackgroundSyncEnabled: ${COMMUNICATIONS_BACKGROUND_SYNC_ENABLED:-false}
       SUPERADMIN_BOOTSTRAP_PASSWORD: ${SUPERADMIN_BOOTSTRAP_PASSWORD:-}
       SUPERADMIN_BOOTSTRAP_EMAIL: ${SUPERADMIN_BOOTSTRAP_EMAIL:-}
     depends_on:

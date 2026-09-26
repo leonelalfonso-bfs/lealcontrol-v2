@@ -15,5 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Modules/Communications/LealControl.Modules.Communications.Infrastructure/LealControl.Modules.Communications.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/Host/LealControl.Api/LealControl.Api.csproj" />
   </ItemGroup>
 </Project>

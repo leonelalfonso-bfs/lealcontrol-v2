@@ -88,6 +88,7 @@ try
     builder.Services.AddDbContext<MasterDbContext>(options =>
         options.UseNpgsql(dbConnectionString));
     builder.Services.AddSingleton<ITenantConnectionProvider, TenantConnectionProvider>();
+    builder.Services.AddScoped<LealControl.Modules.Communications.Infrastructure.Services.ICommunicationsTenantCatalog, CommunicationsTenantCatalog>();
     builder.Services.AddScoped<ITenantProvisionerService, TenantProvisionerService>();
 
     builder.Services.AddSingleton<IClock, SystemClock>();
