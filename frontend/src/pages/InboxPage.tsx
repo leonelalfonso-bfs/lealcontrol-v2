@@ -115,15 +115,16 @@ export function InboxPage() {
     try {
       const folderParam = folder === "All" ? undefined : folder;
       const searchParam = searchDebounced || undefined;
-      const [c, countsSource, a] = await Promise.all([
+      const [c, allChannels, a] = await Promise.all([
         api.listConversations({
           channel: channel === "all" ? undefined : channel,
           folder: folderParam,
           search: searchParam
         }),
-        api.listConversations({ folder: folderParam, search: searchParam }),
+        channel === "all" ? Promise.resolve(null) : api.listConversations({ folder: folderParam, search: searchParam }),
         api.listMailAccounts()
       ]);
+      const countsSource = allChannels ?? c;
       setConversations(c);
       setChannelCounts({
         email: countsSource.filter((x) => getConversationChannel(x) === "email").length,
@@ -217,18 +218,26 @@ export function InboxPage() {
     return () => clearTimeout(t);
   }, [search]);
 
+  const syncChannelsRef = useRef(syncChannels);
+  syncChannelsRef.current = syncChannels;
+
   useEffect(() => {
     void loadConversations();
-    void syncChannels();
+    const refreshInterval = window.setInterval(() => {
+      void loadConversations();
+      const activeId = selectedConversationIdRef.current;
+      if (activeId) void loadActiveMessages(activeId);
+    }, 15000);
+    return () => clearInterval(refreshInterval);
+  }, [channel, folder, searchDebounced]);
+
+  useEffect(() => {
+    void syncChannelsRef.current();
     void api.listReplyTemplates().then(setTemplates).catch(() => setTemplates([]));
     void api.listTenantUsers().then(setTenantUsers).catch(() => setTenantUsers([]));
-    const syncInterval = window.setInterval(() => void syncChannels(), 60000);
-    const refreshInterval = window.setInterval(() => void loadConversations(), 15000);
-    return () => {
-      clearInterval(syncInterval);
-      clearInterval(refreshInterval);
-    };
-  }, [channel, folder, searchDebounced]);
+    const syncInterval = window.setInterval(() => void syncChannelsRef.current(), 60000);
+    return () => clearInterval(syncInterval);
+  }, []);
 
   const visibleConversations = conversations;
 
@@ -333,13 +342,23 @@ export function InboxPage() {
   };
 
   const syncAll = async () => {
+    const activeAccounts = accounts.filter((account) => account.isActive);
+    if (activeAccounts.length === 0) {
+      setError("No hay cuentas de correo activas. Configurá una cuenta para recibir mensajes.");
+      return;
+    }
     setBusy(true);
     setError(null);
+    setSyncNotification(null);
     try {
-      await syncChannels();
-      for (const account of accounts.filter((a) => a.isActive)) await api.syncMailAccount(account.id);
+      let received = 0;
+      for (const account of activeAccounts) {
+        const result = await api.syncMailAccount(account.id);
+        received += result.received;
+      }
       await loadConversations();
       if (selectedConversationId) await loadActiveMessages(selectedConversationId);
+      setSyncNotification(`Correo: ${received} mensaje${received === 1 ? "" : "s"} recibido${received === 1 ? "" : "s"}.`);
     } catch (e) {
       setError((e as Error).message);
     } finally {
