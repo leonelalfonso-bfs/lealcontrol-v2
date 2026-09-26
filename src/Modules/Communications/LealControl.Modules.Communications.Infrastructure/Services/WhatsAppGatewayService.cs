@@ -28,11 +28,13 @@ public sealed class WhatsAppGatewayService
             ?? "http://evolution-api-evolution-api-1:8080";
         _apiKey = configuration["WhatsAppGateway:ApiKey"] 
             ?? Environment.GetEnvironmentVariable("WHATSAPP_GATEWAY_APIKEY") 
-            ?? "c0cffb77a0e57afb8a2799b3008d9b032615825abe964eae";
+            ?? string.Empty;
         _webhookUrl = configuration["WhatsAppGateway:WebhookUrl"]
             ?? Environment.GetEnvironmentVariable("WHATSAPP_GATEWAY_WEBHOOK_URL")
             ?? "https://v2.lealcontrol.com/api/communications/whatsapp/webhook";
 
+        if (string.IsNullOrWhiteSpace(_apiKey))
+            throw new InvalidOperationException("Falta configurar WhatsAppGateway:ApiKey.");
         if (!_baseUrl.EndsWith("/")) _baseUrl += "/";
         _httpClient.BaseAddress = new Uri(_baseUrl);
         _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("apikey", _apiKey);
