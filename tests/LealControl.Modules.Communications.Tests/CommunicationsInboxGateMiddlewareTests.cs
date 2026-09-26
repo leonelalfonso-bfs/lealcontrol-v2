@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Claims;
 using LealControl.Api.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -40,21 +41,52 @@ public sealed class CommunicationsInboxGateMiddlewareTests
     }
 
     [Theory]
-    [InlineData("/api/v1/communications/conversations")]
-    [InlineData("/api/communications/meta/webhook")]
-    public async Task EnabledInboxAllowsInboxRoutes(string path)
+    [InlineData("[\"communications\"]", HttpStatusCode.OK)]
+    [InlineData("[\"crm\"]", HttpStatusCode.Forbidden)]
+    [InlineData("[]", HttpStatusCode.Forbidden)]
+    [InlineData("malformed", HttpStatusCode.Forbidden)]
+    public async Task EnabledInboxRequiresExplicitCommunicationsClaim(string allowedModules, HttpStatusCode expected)
+    {
+        using var server = Server(true, User("Admin", allowedModules));
+        using var response = await server.CreateClient().GetAsync("/api/v1/communications/conversations");
+        Assert.Equal(expected, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task EnabledInboxRejectsAnonymousRequest()
     {
         using var server = Server(true);
-        using var response = await server.CreateClient().GetAsync(path);
+        using var response = await server.CreateClient().GetAsync("/api/v1/communications/conversations");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SuperAdminCanAccessEnabledInbox()
+    {
+        using var server = Server(true, User("SuperAdmin", "[]"));
+        using var response = await server.CreateClient().GetAsync("/api/v1/communications/conversations");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    private static TestServer Server(bool? enabled) => new(new WebHostBuilder()
+    [Fact]
+    public async Task SharedEmailRemainsAvailableWithoutCommunicationsClaim()
+    {
+        using var server = Server(true, User("Admin", "[]"));
+        using var response = await server.CreateClient().GetAsync("/api/v1/communications/accounts");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    private static ClaimsPrincipal User(string role, string modules) => new(new ClaimsIdentity(
+        [new Claim("role", role), new Claim("allowed_modules", modules)], "test"));
+
+    private static TestServer Server(bool? enabled, ClaimsPrincipal? user = null) => new(new WebHostBuilder()
         .ConfigureAppConfiguration((_, builder) => builder.AddInMemoryCollection(enabled.HasValue
             ? new Dictionary<string, string?> { ["Communications:InboxEnabled"] = enabled.Value.ToString() }
             : new Dictionary<string, string?>()))
         .Configure(app =>
         {
+            if (user is not null)
+                app.Use((context, next) => { context.User = user; return next(); });
             app.UseMiddleware<CommunicationsInboxGateMiddleware>();
             app.Run(context =>
             {
