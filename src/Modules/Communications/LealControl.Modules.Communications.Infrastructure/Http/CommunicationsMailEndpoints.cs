@@ -139,7 +139,8 @@ internal static class CommunicationsMailEndpoints
                     x.ParticipantId.ToLower().Contains(term) ||
                     (x.ParticipantEmail != null && x.ParticipantEmail.ToLower().Contains(term)) ||
                     (x.ParticipantPhone != null && x.ParticipantPhone.Contains(term)) ||
-                    (x.LastMessagePreview != null && x.LastMessagePreview.ToLower().Contains(term)));
+                    (x.LastMessagePreview != null && x.LastMessagePreview.ToLower().Contains(term)) ||
+                    db.ConversationTags.Any(t => t.TenantId == tenantId && t.ConversationId == x.Id && t.NormalizedName.Contains(term)));
             }
 
             if (string.Equals(folder, "Incoming", StringComparison.OrdinalIgnoreCase))
@@ -174,6 +175,12 @@ internal static class CommunicationsMailEndpoints
                 .ToListAsync(ct);
 
             var flagsById = messageFlags.ToDictionary(x => x.ConversationId);
+            var tags = await db.ConversationTags.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && conversationIds.Contains(x.ConversationId))
+                .Select(x => new { x.ConversationId, x.Name })
+                .ToListAsync(ct);
+            var tagsById = tags.GroupBy(x => x.ConversationId)
+                .ToDictionary(x => x.Key, x => x.Select(tag => tag.Name).OrderBy(name => name).ToArray());
 
             var result = conversations.Select(x =>
             {
@@ -196,6 +203,7 @@ internal static class CommunicationsMailEndpoints
                     x.AssignedToUserId,
                     x.SuggestionDismissed,
                     x.LastIncomingAtUtc,
+                    Tags = tagsById.TryGetValue(x.Id, out var conversationTags) ? conversationTags : Array.Empty<string>(),
                     NeedsResponse = x.LastIncomingAtUtc != null && x.LastIncomingAtUtc < slaCutoff && x.Status != "resolved" && x.Status != "archived",
                     HasIncoming = flags?.HasIncoming ?? false,
                     HasOutgoing = flags?.HasOutgoing ?? false
@@ -250,6 +258,39 @@ internal static class CommunicationsMailEndpoints
             db.ConversationNotes.Add(note);
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { note.Id, note.Body, note.AuthorUserId, note.CreatedAtUtc });
+        });
+
+        group.MapGet("/conversations/{id:guid}/tags", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            if (!await db.Conversations.AnyAsync(x => x.Id == id && x.TenantId == tenantId, ct)) return Results.NotFound();
+            var tags = await db.ConversationTags.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.ConversationId == id)
+                .OrderBy(x => x.Name)
+                .Select(x => new { x.Id, x.Name })
+                .ToListAsync(ct);
+            return Results.Ok(tags);
+        });
+
+        group.MapPost("/conversations/{id:guid}/tags", async (Guid id, AddConversationTagRequest request, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            if (request.Name is null || ConversationTagService.Normalize(request.Name).Length is < 1 or > 32)
+                return Results.BadRequest(new { detail = "La etiqueta debe tener entre 1 y 32 caracteres." });
+            if (!await db.Conversations.AnyAsync(x => x.Id == id && x.TenantId == tenantId, ct)) return Results.NotFound();
+            var tag = await ConversationTagService.AddAsync(db, tenantId, id, request.Name, ct);
+            return Results.Ok(new { tag.Id, tag.Name });
+        });
+
+        group.MapDelete("/conversations/{id:guid}/tags/{tagId:guid}", async (Guid id, Guid tagId, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            var tag = await db.ConversationTags.FirstOrDefaultAsync(x =>
+                x.Id == tagId && x.ConversationId == id && x.TenantId == tenantId, ct);
+            if (tag is null) return Results.NotFound();
+            db.ConversationTags.Remove(tag);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
         });
 
         group.MapPost("/conversations/{id:guid}/link", async (Guid id, LinkConversationRequest request, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {

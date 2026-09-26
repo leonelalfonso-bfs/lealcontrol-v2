@@ -1166,6 +1166,7 @@ export type MailAccount = {
 export type EmailMessage = { id:string; mailAccountId:string; conversationId?:string|null; internetMessageId:string; inReplyTo?:string|null; threadKey:string; channelType?:string; direction:"Incoming"|"Outgoing"; subject:string; fromAddress:string; toAddresses:string; bodyPreview:string; bodyHtml?:string|null; occurredAtUtc:string; relatedEntityType?:string|null; relatedEntityId?:string|null; attachments?: EmailAttachmentMeta[] };
 
 export type ConversationNote = { id: string; body: string; authorUserId: string; createdAtUtc: string };
+export type ConversationTag = { id: string; name: string };
 
 export type Conversation = {
   id: string;
@@ -1187,6 +1188,7 @@ export type Conversation = {
   needsResponse?: boolean;
   hasIncoming?: boolean;
   hasOutgoing?: boolean;
+  tags?: string[];
 };
 
 export type MessageReplyTemplate = {

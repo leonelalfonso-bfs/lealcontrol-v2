@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import type { Conversation, ConversationNote, CustomerMatch, CustomerSummary, EmailMessage, MailAccount, MessageReplyTemplate, TenantUser } from "../api/types";
+import type { Conversation, ConversationNote, ConversationTag, CustomerMatch, CustomerSummary, EmailMessage, MailAccount, MessageReplyTemplate, TenantUser } from "../api/types";
 import { EmailComposer } from "../components/EmailComposer";
 import { MessageAttachments } from "../components/MessageAttachments";
 import { AudioRecorderButton } from "../components/AudioRecorderButton";
@@ -68,6 +68,9 @@ export function InboxPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeMessages, setActiveMessages] = useState<EmailMessage[]>([]);
   const [activeNotes, setActiveNotes] = useState<ConversationNote[]>([]);
+  const [activeTags, setActiveTags] = useState<ConversationTag[]>([]);
+  const [tagText, setTagText] = useState("");
+  const [tagBusy, setTagBusy] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
@@ -240,8 +243,19 @@ export function InboxPage() {
     selectedConversationIdRef.current = selectedConversationId;
     setActiveMessages([]);
     setActiveNotes([]);
-    if (selectedConversationId) void loadActiveMessages(selectedConversationId);
+    setActiveTags([]);
+    if (selectedConversationId) {
+      void loadActiveMessages(selectedConversationId);
+      void api.getConversationTags(selectedConversationId)
+        .then((tags) => {
+          if (selectedConversationIdRef.current === selectedConversationId) setActiveTags(tags);
+        })
+        .catch((e: Error) => {
+          if (selectedConversationIdRef.current === selectedConversationId) setError(e.message);
+        });
+    }
     setNoteText("");
+    setTagText("");
   }, [selectedConversationId]);
 
   const activeConversation = useMemo(
@@ -543,6 +557,48 @@ export function InboxPage() {
     }
   };
 
+  const addTag = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedConversationId || !tagText.trim() || tagBusy) return;
+    const conversationId = selectedConversationId;
+    setTagBusy(true);
+    try {
+      const tag = await api.addConversationTag(conversationId, tagText.trim());
+      if (selectedConversationIdRef.current === conversationId) {
+        setActiveTags((current) => current.some((x) => x.id === tag.id) ? current : [...current, tag].sort((a, b) => a.name.localeCompare(b.name)));
+        setConversations((current) => current.map((c) => c.id === conversationId
+          ? { ...c, tags: Array.from(new Set([...(c.tags || []), tag.name])).sort() }
+          : c));
+        setTagText("");
+      }
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setTagBusy(false);
+    }
+  };
+
+  const removeTag = async (tagId: string) => {
+    if (!selectedConversationId || tagBusy) return;
+    const conversationId = selectedConversationId;
+    const removedTagName = activeTags.find((tag) => tag.id === tagId)?.name;
+    setTagBusy(true);
+    try {
+      await api.deleteConversationTag(conversationId, tagId);
+      if (selectedConversationIdRef.current === conversationId)
+        setActiveTags((current) => current.filter((x) => x.id !== tagId));
+      setConversations((current) => current.map((c) => c.id === conversationId
+        ? { ...c, tags: (c.tags || []).filter((name) => name !== removedTagName) }
+        : c));
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setTagBusy(false);
+    }
+  };
+
   const timeline = useMemo(() => [
     ...activeMessages.map((message) => ({ kind: "message" as const, id: message.id, at: message.occurredAtUtc, message })),
     ...activeNotes.map((note) => ({ kind: "note" as const, id: note.id, at: note.createdAtUtc, note }))
@@ -768,6 +824,11 @@ export function InboxPage() {
                   {c.needsResponse && (
                     <div style={{ fontSize: "0.72rem", color: "#dc2626", fontWeight: 600, marginTop: 2 }}>⏰ Requiere respuesta</div>
                   )}
+                  {!!c.tags?.length && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                      {c.tags.map((tag) => <span key={tag} style={{ background: "#e0f2fe", color: "#075985", borderRadius: 10, padding: "2px 6px", fontSize: "0.7rem" }}>{tag}</span>)}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -899,6 +960,20 @@ export function InboxPage() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--surface-border)", background: "var(--surface)", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                <strong style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>Etiquetas</strong>
+                {activeTags.map((tag) => (
+                  <span key={tag.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 8px", borderRadius: 12, background: "#e0f2fe", color: "#075985", fontSize: "0.78rem", fontWeight: 600 }}>
+                    {tag.name}
+                    <button type="button" aria-label={`Quitar etiqueta ${tag.name}`} title="Quitar etiqueta" disabled={tagBusy} onClick={() => void removeTag(tag.id)} style={{ border: 0, background: "transparent", color: "inherit", cursor: "pointer", fontWeight: 700 }}>×</button>
+                  </span>
+                ))}
+                <form onSubmit={addTag} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input aria-label="Nueva etiqueta" placeholder="Nueva etiqueta" value={tagText} onChange={(e) => setTagText(e.target.value)} maxLength={32} style={{ width: 125, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.78rem" }} />
+                  <button type="submit" className="btn btn-outline compact" disabled={tagBusy || !tagText.trim()}>Agregar</button>
+                </form>
               </div>
 
               {/* Sugerencia suave — nunca crea lead automáticamente */}

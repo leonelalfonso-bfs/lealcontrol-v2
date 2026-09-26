@@ -14,6 +14,7 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
     public DbSet<MetaChannelConnection> MetaConnections => Set<MetaChannelConnection>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ConversationNote> ConversationNotes => Set<ConversationNote>();
+    public DbSet<ConversationTag> ConversationTags => Set<ConversationTag>();
     public DbSet<MessageReplyTemplate> ReplyTemplates => Set<MessageReplyTemplate>();
     public DbSet<StoredMedia> StoredMedia => Set<StoredMedia>();
     public DbSet<WhatsAppConnection> WhatsAppConnections => Set<WhatsAppConnection>();
@@ -80,6 +81,13 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.ToTable("conversation_notes"); b.HasKey(x => x.Id);
             b.Property(x => x.Body).HasMaxLength(4000).IsRequired();
             b.HasIndex(x => new { x.TenantId, x.ConversationId, x.CreatedAtUtc });
+            b.HasOne<Conversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<ConversationTag>(b => {
+            b.ToTable("conversation_tags"); b.HasKey(x => x.Id);
+            b.Property(x => x.Name).HasMaxLength(32).IsRequired();
+            b.Property(x => x.NormalizedName).HasMaxLength(32).IsRequired();
+            b.HasIndex(x => new { x.TenantId, x.ConversationId, x.NormalizedName }).IsUnique();
             b.HasOne<Conversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Cascade);
         });
         modelBuilder.Entity<MessageReplyTemplate>(b => {
@@ -234,6 +242,17 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             );
             CREATE INDEX IF NOT EXISTS ""IX_conversation_notes_TenantId_ConversationId_CreatedAtUtc""
                 ON communications.conversation_notes (""TenantId"", ""ConversationId"", ""CreatedAtUtc"");
+
+            CREATE TABLE IF NOT EXISTS communications.conversation_tags (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ConversationId"" uuid NOT NULL REFERENCES communications.conversations(""Id"") ON DELETE CASCADE,
+                ""Name"" character varying(32) NOT NULL,
+                ""NormalizedName"" character varying(32) NOT NULL,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_conversation_tags_TenantId_ConversationId_NormalizedName""
+                ON communications.conversation_tags (""TenantId"", ""ConversationId"", ""NormalizedName"");
 
             CREATE TABLE IF NOT EXISTS communications.message_reply_templates (
                 ""Id"" uuid PRIMARY KEY,
