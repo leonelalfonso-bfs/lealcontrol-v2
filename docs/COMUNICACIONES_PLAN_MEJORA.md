@@ -1,10 +1,44 @@
 # Leal Control ERP 2.0
 ## Plan de mejora del módulo Communications (correo y canales)
 
-**Versión:** borrador 1.0 — plan de trabajo  
-**Fecha:** septiembre 2026  
-**Estado:** pendiente de implementación (retomar mañana)  
+**Versión:** 1.1 — plan y seguimiento
+
+**Última actualización:** 26 de septiembre de 2026
+
+**Estado:** piloto de Comunicaciones en staging; último cambio de código publicado en `main`: `f4467df`
+
 **Relacionado con:** `docs/CIRCUITO_DINERO_FINANZAS.md`, `docs/SIMULACION_CIRCUITO_DINERO_COMPLETA.md`
+
+---
+
+## 0. Punto de reanudación y checklist vivo
+
+La casilla de staging **recibió un correo automáticamente**, sin pulsar «Recibir Correo», después de activar **Comunicaciones → Cuentas de correo → Activar automático**. El servicio comprueba cada casilla habilitada aproximadamente cada 5 minutos. El usuario también confirmó que la vista ampliada del correo quedó bien. Estas son pruebas reales de staging; lo demás se marca por separado como publicado o pendiente de verificar.
+
+### Publicado en `main`
+
+- [x] Habilitación global de Comunicaciones desde SuperAdmin y acceso por tenant.
+- [x] Bandeja unificada con correo, WhatsApp, Instagram y Facebook; notas internas, etiquetas e historial de asignación/estado.
+- [x] Protección de credenciales de Meta por tenant y manejo idempotente de webhooks duplicados.
+- [x] Estado de salud de casillas (última sincronización y error), recepción automática opcional por cuenta y sincronización IMAP aislada por tenant (`fbe3871`).
+- [x] Mejora de distribución de la bandeja y área amplia de lectura de correo (`ca7ab08`, `e1b7c2d`).
+- [x] Descarga autenticada de adjuntos y omisión de sincronización periódica de WhatsApp desconectado (`f4467df`).
+
+### Comprobado por el usuario en staging
+
+- [x] El módulo pudo habilitarse desde SuperAdmin y quedó visible en el tenant.
+- [x] La vista del correo quedó cómoda para leer.
+- [x] Tras activar «Automático» en una casilla, un correo nuevo llegó sin intervención manual.
+- [ ] Confirmar que staging desplegó `f4467df` y que un adjunto se abre o descarga sin error 401.
+- [ ] Confirmar que, con WhatsApp desconectado, la bandeja deja de generar 409 periódicos.
+- [ ] Probar envío y respuesta de correo con una casilla real; comprobar que el mensaje saliente queda en el historial.
+- [ ] Probar notas, etiquetas, asignación, estado y vínculo a cliente/lead con usuarios reales.
+- [ ] Verificar deduplicación y aislamiento entre dos tenants con datos reales.
+- [ ] Repetir el recorrido validado en producción antes de considerar cerrado el piloto.
+
+**Criterio para marcar:** `[x]` en «Publicado» significa código integrado; `[x]` en «Comprobado» exige una prueba observada en el ambiente indicado. No dar por validada una función solo porque compiló.
+
+**Próximo paso:** cerrar las verificaciones del último despliegue, completar la prueba funcional de correo y después continuar con los vínculos de negocio (Fase B). Registrar cada resultado en los checklists de fase más abajo.
 
 ---
 
@@ -67,7 +101,7 @@ Por ahora: **mejorar lo propio**.
 | Vínculo conversación ↔ cliente/lead | ✅ | `POST /conversations/{id}/link` |
 | Sugerencia automática de cliente | ✅ | `suggested-matches` |
 | Asignación, estado, plantillas | ✅ | assign, status, templates |
-| Sync automático (cron) | ⚠️ | Manual hoy; falta programar |
+| Sync automático (servicio) | ✅ | Cada 5 minutos, activación por casilla; validado con correo real en staging |
 | OAuth Gmail / Microsoft | ⚠️ | UI avisa; OAuth no implementado |
 | Vínculo a factura / pedido / OP | ❌ | Solo Customer, Lead, Order parcial |
 | Envío con PDF adjunto desde documento | ⚠️ | `EmailComposer` en varias pantallas; sin adjunto PDF automático |
@@ -112,7 +146,7 @@ POST /media/upload
 
 | # | Brecha | Impacto | Prioridad |
 |---|--------|---------|-----------|
-| 1 | Sync solo manual ("Recibir") | Correos llegan tarde; usuario debe acordarse | **Alta** |
+| 1 | Monitoreo y reintentos del sync automático | Ya recibe solo; falta backoff y validar fallos prolongados | **Alta** |
 | 2 | Sin OAuth real para Gmail/Microsoft | Muchos usuarios no pueden conectar casilla | **Alta** |
 | 3 | Vínculo limitado a Cliente/Lead | No se ve hilo desde factura, compra, recibo | **Alta** |
 | 4 | Envío sin adjuntar PDF del documento automáticamente | Hay que reenviar manualmente | **Alta** |
@@ -172,11 +206,11 @@ Desde Factura / Presupuesto / Remito:
 
 | # | Tarea | Archivos probables |
 |---|-------|-------------------|
-| A1 | Job/cron de sync por tenant (cada 5–15 min) | `MailSyncService.cs`, `Program.cs` o hosted service |
-| A2 | Registrar `LastSyncAtUtc`, `LastError`, contador de mensajes | `MailAccount`, endpoints |
-| A3 | Reintentos con backoff si falla IMAP | `MailSyncService.cs` |
-| A4 | Alerta en UI si cuenta lleva >24h sin sync o con error | `MailSettingsPage.tsx` |
-| A5 | Logs estructurados (tenant, cuenta, mensajes nuevos) | Serilog |
+| A1 | ✅ Servicio de sync por tenant cada 5 min | `CommunicationsSyncBackgroundService.cs` |
+| A2 | ◐ `LastSyncAtUtc` y `LastError` disponibles; contador persistente pendiente | `MailAccount`, endpoints |
+| A3 | ☐ Reintentos con backoff si falla IMAP | `MailSyncService.cs` |
+| A4 | ✅ Alerta en UI si cuenta lleva >24h sin sync o con error | `MailSettingsPage.tsx` |
+| A5 | ◐ Logs de tenant y cantidad de correos; falta identificador de cuenta | Serilog |
 
 ### Checklist de validación — Fase A
 
@@ -184,12 +218,12 @@ Desde Factura / Presupuesto / Remito:
 |---|----------|:--:|-------|-------|
 | A-V1 | Cuenta IMAP conecta con "Probar" | ☐ | | |
 | A-V2 | Sync manual trae mensajes nuevos | ☐ | | |
-| A-V3 | Sync automático corre sin intervención (ver logs o `LastSyncAtUtc`) | ☐ | | |
+| A-V3 | Sync automático corre sin intervención | ✅ | 26-09-2026 | Correo recibido solo en staging tras activar la casilla |
 | A-V4 | Si la contraseña es incorrecta, se muestra error claro en Config | ☐ | | |
 | A-V5 | No se duplican mensajes al sincronizar dos veces | ☐ | | |
 | A-V6 | Multi-tenant: cuenta de empresa A no ve correos de empresa B | ☐ | | |
 
-**Estado fase A:** ☐ No iniciada · ☐ En curso · ☐ Completada
+**Estado fase A:** ◐ En curso. Recepción automática validada en staging; A3 y pruebas de errores, duplicados y multi-tenant pendientes.
 
 ---
 
@@ -218,7 +252,7 @@ Desde Factura / Presupuesto / Remito:
 | B-V5 | Sugerencia automática de cliente sigue funcionando | ☐ | | |
 | B-V6 | Desvincular / cambiar vínculo sin perder el mensaje | ☐ | | |
 
-**Estado fase B:** ☐ No iniciada · ☐ En curso · ☐ Completada
+**Estado fase B:** ◐ En curso. Vínculo a cliente/lead y contexto de algunos envíos ya existen; faltan vínculos a documentos y validación integral.
 
 ---
 
@@ -247,7 +281,7 @@ Desde Factura / Presupuesto / Remito:
 | C-V5 | Adjunto no supera límite razonable (ej. 10 MB) con mensaje claro | ☐ | | |
 | C-V6 | Finanzas / Contabilidad no requieren este módulo para operar | ☐ | | |
 
-**Estado fase C:** ☐ No iniciada · ☐ En curso · ☐ Completada
+**Estado fase C:** ☐ Pendiente. El composer existe, pero el PDF del documento aún no se adjunta automáticamente.
 
 ---
 
@@ -277,7 +311,7 @@ Desde Factura / Presupuesto / Remito:
 | D-V5 | Plantillas de respuesta insertan texto en composer | ☐ | | |
 | D-V6 | Bandeja usable en pantalla 1366×768 sin scroll horizontal | ☐ | | |
 
-**Estado fase D:** ☐ No iniciada · ☐ En curso · ☐ Completada
+**Estado fase D:** ◐ En curso. Bandeja y lector mejorados; reglas, firmas y validación responsive pendientes.
 
 ---
 
@@ -306,7 +340,7 @@ Desde Factura / Presupuesto / Remito:
 | E-V5 | Token expirado se renueva sin intervención del usuario | ☐ | | |
 | E-V6 | Desconectar cuenta revoca acceso en UI | ☐ | | |
 
-**Estado fase E:** ☐ No iniciada · ☐ En curso · ☐ Completada
+**Estado fase E:** ☐ Pendiente. Gmail con contraseña de aplicación es distinto de OAuth; Microsoft OAuth requiere desarrollo.
 
 ---
 
@@ -337,49 +371,49 @@ Solo si Fases A–D no alcanzan:
 
 ---
 
-## 14. Roadmap conjunto con Circuito del Dinero
+## 14. Orden de trabajo al retomar
 
-Para referencia al retomar mañana:
+1. **Cierre del piloto en staging:** comprobar adjuntos y ausencia de 409 periódicos con el commit `f4467df`; probar envío/respuesta de correo.
+2. **Fase A — confiabilidad:** validar errores IMAP visibles, deduplicación y aislamiento entre tenants; implementar reintentos con backoff si la prueba lo exige.
+3. **Fase B — vínculos de negocio:** extender y probar relación de conversaciones con facturas, presupuestos y pedidos; mostrar el historial donde corresponde.
+4. **Fase C — PDF adjunto:** enviar documentos desde el ERP con el PDF correcto y trazabilidad del mensaje.
+5. **Fases D/E:** reglas, firmas, UX restante y OAuth con Google/Microsoft según necesidad real del piloto.
 
-| Prioridad | Iniciativa | Documento | Estado |
-|-----------|------------|----------|--------|
-| 1 | Circuito del dinero — Fase A+B (carteras estrictas) | `CIRCUITO_DINERO_FINANZAS.md` | ✅ OK contable — pendiente implementar |
-| 2 | Communications — Fase A (sync automático) | Este documento | ☐ Pendiente |
-| 3 | Communications — Fase B+C (vínculos + PDF) | Este documento | ☐ Pendiente |
-| 4 | Circuito del dinero — Fase C (reglas enriquecidas) | `CIRCUITO_DINERO_FINANZAS.md` | ☐ Pendiente |
-| 5 | Communications — Fase D+E (UX + OAuth) | Este documento | ☐ Pendiente |
+El circuito del dinero se sigue en `docs/PLAN_MAESTRO_MEJORAS.md`; este documento registra solo Comunicaciones.
 
 ---
 
-## 15. Tablero de avance general (actualizar cada sesión)
+## 15. Tablero de avance general
 
-**Última actualización:** _______________  
-**Responsable:** _______________
+**Última actualización:** 26-09-2026
 
-| Fase | Estado | % estimado | Bloqueos |
-|------|--------|------------|----------|
-| Circuito dinero A+B | ☐ | | |
-| Comunicaciones A | ☐ | | |
-| Comunicaciones B | ☐ | | |
-| Comunicaciones C | ☐ | | |
-| Comunicaciones D | ☐ | | |
-| Comunicaciones E | ☐ | | |
-| Comunicaciones F | ☐ | N/A | |
+**Ambiente confirmado:** staging (recepción automática y lector de correo)
 
-### Leyenda de estado
-- ☐ No iniciada
-- ◐ En curso
-- ✅ Completada y validada en staging
+**Último commit de código publicado:** `f4467df`
+
+**Despliegue de ese commit en staging:** pendiente de confirmar
+
+| Fase | Estado | Siguiente criterio para avanzar |
+|------|--------|---------------------------------|
+| A — Sync y confiabilidad | ◐ En curso | A-V1, A-V2, A-V4…A-V6; adjuntos y 409 del último commit |
+| B — Vínculos de negocio | ◐ Parcial | Vínculo a factura/pedido y vista del historial |
+| C — PDF adjunto | ☐ Pendiente | Envío real de factura con PDF |
+| D — Bandeja y UX | ◐ Parcial | Reglas, firmas y prueba 1366×768 |
+| E — OAuth | ☐ Pendiente | Definir proveedor prioritario |
+| F — Avanzado | ☐ Opcional | Evaluar solo si hay necesidad concreta |
+
+**Leyenda:** ☐ pendiente · ◐ parcial/en curso · ✅ implementado y validado en staging.
 
 ---
 
-## 16. Próxima sesión (mañana) — sugerencia de arranque
+## 16. Checklist de la próxima sesión
 
-1. **Confirmar prioridad:** ¿Circuito del dinero A+B primero, o Communications A en paralelo?
-2. Si circuito primero → ver checklist en `CIRCUITO_DINERO_FINANZAS.md` §7 (Fases A–B).
-3. Si correo primero → empezar por **Fase A** (sync automático); es el mayor dolor operativo hoy.
-4. Probar en staging con casilla real (Gmail app password o corporativo IMAP).
-5. Marcar checklists de este documento a medida que se valida cada ítem.
+- [ ] Confirmar `git rev-parse --short HEAD` en `/opt/lealcontrol-staging` (esperado: `f4467df` o posterior).
+- [ ] Abrir y descargar un adjunto de correo; verificar que no haya 401.
+- [ ] Dejar la bandeja abierta varios minutos con WhatsApp desconectado; verificar que no reaparezcan 409 periódicos.
+- [ ] Enviar y responder un correo de prueba; comprobar recepción externa e historial interno.
+- [ ] Marcar los criterios A-V1…A-V6 y D-V1…D-V6 únicamente cuando se prueben.
+- [ ] Elegir el primer vínculo de Fase B (factura, presupuesto o pedido) para la siguiente implementación.
 
 ---
 
