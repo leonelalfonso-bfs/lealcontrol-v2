@@ -113,7 +113,7 @@ export function InboxPage() {
 
   const loadConversations = async () => {
     try {
-      const folderParam = folder === "All" || folder === "Mine" ? undefined : folder;
+      const folderParam = folder === "All" ? undefined : folder;
       const searchParam = searchDebounced || undefined;
       const [c, countsSource, a] = await Promise.all([
         api.listConversations({
@@ -230,16 +230,7 @@ export function InboxPage() {
     };
   }, [channel, folder, searchDebounced]);
 
-  const visibleConversations = useMemo(() => {
-    let list = conversations;
-    if (folder === "Mine") {
-      const userHex = user?.id ? user.id.replace(/-/g, "").toLowerCase() : "";
-      list = list.filter(
-        (c) => c.assignedToUserId === user?.id || (userHex && c.threadKey?.toLowerCase().includes(userHex))
-      );
-    }
-    return list;
-  }, [conversations, folder, user?.id]);
+  const visibleConversations = conversations;
 
   useEffect(() => {
     if (!selectedConversationId && visibleConversations.length > 0) {
@@ -707,10 +698,7 @@ export function InboxPage() {
             <span>👤 Mis Chats</span>
             <strong>
               {
-                conversations.filter((c) => {
-                  const userHex = user?.id ? user.id.replace(/-/g, "").toLowerCase() : "";
-                  return c.assignedToUserId === user?.id || (userHex && c.threadKey?.toLowerCase().includes(userHex));
-                }).length
+                folder === "Mine" ? conversations.length : conversations.filter((c) => c.assignedToUserId === user?.id).length
               }
             </strong>
           </button>

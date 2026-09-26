@@ -106,7 +106,7 @@ internal static class CommunicationsMailEndpoints
             db.Remove(message); await db.SaveChangesAsync(ct); return Results.NoContent();
         });
 
-        group.MapGet("/conversations", async (string? channel, string? folder, string? search, Guid? customerId, Guid? assignedTo, string? status, CommunicationsDbContext db, ITenantContext tenant, ConversationService conversationService, CancellationToken ct) => {
+        group.MapGet("/conversations", async (string? channel, string? folder, string? search, Guid? customerId, Guid? assignedTo, string? status, HttpContext http, CommunicationsDbContext db, ITenantContext tenant, ConversationService conversationService, CancellationToken ct) => {
             var tenantId = tenant.TenantId.Value;
             if (tenantId == Guid.Empty) return Results.Unauthorized();
 
@@ -143,7 +143,15 @@ internal static class CommunicationsMailEndpoints
                     db.ConversationTags.Any(t => t.TenantId == tenantId && t.ConversationId == x.Id && t.NormalizedName.Contains(term)));
             }
 
-            if (string.Equals(folder, "Incoming", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(folder, "Mine", StringComparison.OrdinalIgnoreCase))
+            {
+                var userId = CommunicationsEndpointHelpers.GetAuthenticatedUserId(http);
+                if (userId is null) return Results.Unauthorized();
+                var legacyThreadSuffix = $"_{userId.Value:N}";
+                query = query.Where(c => c.AssignedToUserId == userId ||
+                    (c.AssignedToUserId == null && c.ChannelType == CommunicationChannelHelper.WhatsApp && c.ThreadKey.EndsWith(legacyThreadSuffix)));
+            }
+            else if (string.Equals(folder, "Incoming", StringComparison.OrdinalIgnoreCase))
                 query = query.Where(c => db.EmailMessages.Any(m => m.ConversationId == c.Id && m.Direction == EmailDirection.Incoming));
             else if (string.Equals(folder, "Outgoing", StringComparison.OrdinalIgnoreCase))
                 query = query.Where(c => db.EmailMessages.Any(m => m.ConversationId == c.Id && m.Direction == EmailDirection.Outgoing));
