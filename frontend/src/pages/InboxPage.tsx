@@ -75,7 +75,7 @@ export function InboxPage() {
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
-  const [folder, setFolder] = useState<"Mine" | "Incoming" | "Outgoing" | "All" | "NeedsResponse" | "Unassigned">("Mine");
+  const [folder, setFolder] = useState<"Mine" | "Incoming" | "Outgoing" | "All" | "NeedsResponse" | "Unassigned">("All");
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [templates, setTemplates] = useState<MessageReplyTemplate[]>([]);
@@ -868,7 +868,13 @@ export function InboxPage() {
           })}
           {visibleConversations.length === 0 && (
             <div className="empty-state" style={{ padding: 24, textAlign: "center" }}>
-              No hay conversaciones en este filtro.
+              {folder === "All" && channel === "all" && !searchDebounced ? (
+                <>
+                  <strong style={{ display: "block", marginBottom: 8 }}>Todavía no hay conversaciones</strong>
+                  <span>Conectá un canal o configurá una casilla de correo para empezar.</span>
+                  <div style={{ marginTop: 12 }}><Link to="/comunicaciones/canales">Configurar canales →</Link></div>
+                </>
+              ) : "No hay conversaciones en este filtro."}
             </div>
           )}
           </div>
