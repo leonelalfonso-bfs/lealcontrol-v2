@@ -13,6 +13,7 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
     public DbSet<EmailAttachment> EmailAttachments => Set<EmailAttachment>();
     public DbSet<MetaChannelConnection> MetaConnections => Set<MetaChannelConnection>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<ConversationNote> ConversationNotes => Set<ConversationNote>();
     public DbSet<MessageReplyTemplate> ReplyTemplates => Set<MessageReplyTemplate>();
     public DbSet<StoredMedia> StoredMedia => Set<StoredMedia>();
     public DbSet<WhatsAppConnection> WhatsAppConnections => Set<WhatsAppConnection>();
@@ -74,6 +75,12 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.Property(x => x.AssignedToUserId);
             b.Property(x => x.SuggestionDismissed).HasDefaultValue(false);
             b.Property(x => x.LastIncomingAtUtc);
+        });
+        modelBuilder.Entity<ConversationNote>(b => {
+            b.ToTable("conversation_notes"); b.HasKey(x => x.Id);
+            b.Property(x => x.Body).HasMaxLength(4000).IsRequired();
+            b.HasIndex(x => new { x.TenantId, x.ConversationId, x.CreatedAtUtc });
+            b.HasOne<Conversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Cascade);
         });
         modelBuilder.Entity<MessageReplyTemplate>(b => {
             b.ToTable("message_reply_templates"); b.HasKey(x => x.Id);
@@ -216,6 +223,17 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AssignedToUserId"" uuid;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""SuggestionDismissed"" boolean NOT NULL DEFAULT false;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""LastIncomingAtUtc"" timestamp with time zone;
+
+            CREATE TABLE IF NOT EXISTS communications.conversation_notes (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ConversationId"" uuid NOT NULL REFERENCES communications.conversations(""Id"") ON DELETE CASCADE,
+                ""AuthorUserId"" uuid NOT NULL,
+                ""Body"" character varying(4000) NOT NULL,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ""IX_conversation_notes_TenantId_ConversationId_CreatedAtUtc""
+                ON communications.conversation_notes (""TenantId"", ""ConversationId"", ""CreatedAtUtc"");
 
             CREATE TABLE IF NOT EXISTS communications.message_reply_templates (
                 ""Id"" uuid PRIMARY KEY,

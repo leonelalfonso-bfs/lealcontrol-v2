@@ -224,6 +224,34 @@ internal static class CommunicationsMailEndpoints
             return Results.Ok(msgs.Select(CommunicationsEndpointHelpers.MapMessageDto).ToList());
         });
 
+        group.MapGet("/conversations/{id:guid}/notes", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            if (!await db.Conversations.AnyAsync(x => x.Id == id && x.TenantId == tenantId, ct)) return Results.NotFound();
+            var notes = await db.ConversationNotes.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.ConversationId == id)
+                .OrderBy(x => x.CreatedAtUtc).ThenBy(x => x.Id)
+                .Select(x => new { x.Id, x.Body, x.AuthorUserId, x.CreatedAtUtc })
+                .ToListAsync(ct);
+            return Results.Ok(notes);
+        });
+
+        group.MapPost("/conversations/{id:guid}/notes", async (Guid id, AddConversationNoteRequest request, HttpContext http, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            var claim = http.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? http.User.FindFirst("sub")?.Value
+                ?? http.User.FindFirst("id")?.Value;
+            if (!Guid.TryParse(claim, out var authorUserId) || authorUserId == Guid.Empty) return Results.Unauthorized();
+            if (string.IsNullOrWhiteSpace(request.Body) || request.Body.Trim().Length > 4000)
+                return Results.BadRequest(new { detail = "La nota debe tener entre 1 y 4000 caracteres." });
+            if (!await db.Conversations.AnyAsync(x => x.Id == id && x.TenantId == tenantId, ct)) return Results.NotFound();
+            var note = ConversationNote.Create(tenantId, id, authorUserId, request.Body);
+            db.ConversationNotes.Add(note);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { note.Id, note.Body, note.AuthorUserId, note.CreatedAtUtc });
+        });
+
         group.MapPost("/conversations/{id:guid}/link", async (Guid id, LinkConversationRequest request, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
             var tenantId = tenant.TenantId.Value;
             if (tenantId == Guid.Empty) return Results.Unauthorized();

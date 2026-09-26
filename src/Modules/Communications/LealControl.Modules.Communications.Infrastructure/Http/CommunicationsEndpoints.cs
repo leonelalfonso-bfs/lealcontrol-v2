@@ -51,6 +51,7 @@ public sealed record SendMetaMessageRequest(
 public sealed record LinkConversationRequest(Guid? LeadId, Guid? CustomerId);
 public sealed record AssignConversationRequest(Guid? UserId);
 public sealed record UpdateConversationStatusRequest(string Status);
+public sealed record AddConversationNoteRequest(string Body);
 public sealed record SaveReplyTemplateRequest(Guid? Id, string Name, string Body, string? ChannelType);
 
 public static class CommunicationsEndpoints

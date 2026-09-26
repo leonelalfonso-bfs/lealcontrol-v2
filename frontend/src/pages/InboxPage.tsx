@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import type { Conversation, CustomerMatch, CustomerSummary, EmailMessage, MailAccount, MessageReplyTemplate, TenantUser } from "../api/types";
+import type { Conversation, ConversationNote, CustomerMatch, CustomerSummary, EmailMessage, MailAccount, MessageReplyTemplate, TenantUser } from "../api/types";
 import { EmailComposer } from "../components/EmailComposer";
 import { MessageAttachments } from "../components/MessageAttachments";
 import { AudioRecorderButton } from "../components/AudioRecorderButton";
@@ -67,6 +67,9 @@ export function InboxPage() {
   const location = useLocation();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeMessages, setActiveMessages] = useState<EmailMessage[]>([]);
+  const [activeNotes, setActiveNotes] = useState<ConversationNote[]>([]);
+  const [noteText, setNoteText] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [folder, setFolder] = useState<"Mine" | "Incoming" | "Outgoing" | "All" | "NeedsResponse" | "Unassigned">("Mine");
   const [search, setSearch] = useState("");
@@ -102,6 +105,7 @@ export function InboxPage() {
   const [customerSearchBusy, setCustomerSearchBusy] = useState(false);
   const [linkedCustomerName, setLinkedCustomerName] = useState<string | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+  const selectedConversationIdRef = useRef<string | null>(null);
 
   const loadConversations = async () => {
     try {
@@ -132,7 +136,17 @@ export function InboxPage() {
   const loadActiveMessages = async (conversationId: string) => {
     try {
       const msgs = await api.getConversationMessages(conversationId);
+      if (selectedConversationIdRef.current !== conversationId) return;
       setActiveMessages(msgs);
+      try {
+        const notes = await api.getConversationNotes(conversationId);
+        if (selectedConversationIdRef.current === conversationId) setActiveNotes(notes);
+      } catch (e) {
+        if (selectedConversationIdRef.current === conversationId) {
+          setActiveNotes([]);
+          setError((e as Error).message);
+        }
+      }
     } catch (e: any) {
       setError(e.message);
     }
@@ -223,11 +237,11 @@ export function InboxPage() {
   }, [visibleConversations, selectedConversationId]);
 
   useEffect(() => {
-    if (selectedConversationId) {
-      void loadActiveMessages(selectedConversationId);
-    } else {
-      setActiveMessages([]);
-    }
+    selectedConversationIdRef.current = selectedConversationId;
+    setActiveMessages([]);
+    setActiveNotes([]);
+    if (selectedConversationId) void loadActiveMessages(selectedConversationId);
+    setNoteText("");
   }, [selectedConversationId]);
 
   const activeConversation = useMemo(
@@ -280,7 +294,7 @@ export function InboxPage() {
     if (chatBottomRef.current) {
       chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [activeMessages.length, selectedConversationId]);
+  }, [activeMessages.length, activeNotes.length, selectedConversationId]);
 
   const countEmail = channelCounts.email;
   const countWa = channelCounts.whatsapp;
@@ -509,6 +523,30 @@ export function InboxPage() {
       setSendingNew(false);
     }
   };
+
+  const saveNote = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedConversationId || !noteText.trim() || savingNote) return;
+    const conversationId = selectedConversationId;
+    setSavingNote(true);
+    try {
+      const note = await api.addConversationNote(conversationId, noteText.trim());
+      if (selectedConversationIdRef.current === conversationId) {
+        setActiveNotes((current) => [...current, note]);
+        setNoteText("");
+      }
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const timeline = useMemo(() => [
+    ...activeMessages.map((message) => ({ kind: "message" as const, id: message.id, at: message.occurredAtUtc, message })),
+    ...activeNotes.map((note) => ({ kind: "note" as const, id: note.id, at: note.createdAtUtc, note }))
+  ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime() || a.id.localeCompare(b.id)), [activeMessages, activeNotes]);
 
   const activeDisplayName = activeConversation ? getConversationDisplayName(activeConversation) : "";
 
@@ -928,7 +966,19 @@ export function InboxPage() {
                   background: getConversationChannel(activeConversation) !== "email" ? "rgba(0,0,0,0.02)" : "inherit"
                 }}
               >
-                {activeMessages.map((m) => {
+                {timeline.map((item) => {
+                  if (item.kind === "note") {
+                    const author = tenantUsers.find((u) => u.id === item.note.authorUserId)?.fullName || "Operador";
+                    return (
+                      <div key={item.id} style={{ alignSelf: "center", width: "min(100%, 620px)", padding: "12px 16px", borderRadius: 10, background: "#fff7dd", border: "1px solid #edcd79", color: "#493b17", whiteSpace: "pre-wrap" }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.78rem", marginBottom: 5 }}>
+                          📝 Nota interna · {author} · {new Date(item.at).toLocaleString("es-AR")}
+                        </div>
+                        {item.note.body}
+                      </div>
+                    );
+                  }
+                  const m = item.message;
                   const isOutgoing = m.direction === "Outgoing";
                   const ch = getConversationChannel(activeConversation);
 
@@ -1006,6 +1056,21 @@ export function InboxPage() {
                 })}
                 <div ref={chatBottomRef} />
               </div>
+
+              <form onSubmit={saveNote} style={{ padding: "10px 20px", borderTop: "1px solid var(--surface-border)", background: "#fffaf0", display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="text"
+                  aria-label="Nota interna"
+                  placeholder="Escribir nota interna (no se envía al cliente)"
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  maxLength={4000}
+                  style={{ flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #edcd79" }}
+                />
+                <button type="submit" className="btn btn-outline" disabled={savingNote || !noteText.trim()}>
+                  {savingNote ? "Guardando..." : "Guardar nota"}
+                </button>
+              </form>
 
               {getConversationChannel(activeConversation) !== "email" ? (
                 <form
