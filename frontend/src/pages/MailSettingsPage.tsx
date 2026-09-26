@@ -12,6 +12,19 @@ const presets: Record<Provider, { imapHost: string; imapPort: number; smtpHost: 
 
 const empty = { id: "", displayName: "", emailAddress: "", provider: "Custom" as Provider, authMode: "Password", imapHost: "", imapPort: 993, imapUseSsl: true, smtpHost: "", smtpPort: 587, smtpUseSsl: true, username: "", secret: "", isActive: true, isDefaultSender: false };
 
+type MailHealth = { label: string; tone: "ok" | "warning" | "error" | "neutral"; hint?: string };
+
+function mailHealth(account: MailAccount): MailHealth {
+  if (!account.isActive) return { label: "Inactiva", tone: "neutral" };
+  if (!account.hasSecret) return { label: "Sin credenciales", tone: "error", hint: "Editá la cuenta y cargá la contraseña o el token." };
+  if (account.lastError) return { label: "Requiere atención", tone: "error", hint: account.lastError };
+  if (!account.lastSyncAtUtc) return { label: "Sin sincronizar aún", tone: "warning", hint: "Usá Recibir para sincronizar los primeros correos." };
+  const lastSync = new Date(account.lastSyncAtUtc).getTime();
+  if (!Number.isFinite(lastSync) || Date.now() - lastSync > 24 * 60 * 60 * 1000)
+    return { label: "Sin sincronización reciente", tone: "warning", hint: "La última sincronización fue hace más de 24 horas. Probá Recibir." };
+  return { label: "Al día", tone: "ok" };
+}
+
 export function MailSettingsPage() {
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [form, setForm] = useState(empty);
@@ -61,7 +74,27 @@ export function MailSettingsPage() {
     {message && <div className="success-banner">{message}</div>}{error && <div className="alert">{error}</div>}
     <div className="mail-layout">
       <section className="card pad"><div className="section-head"><div><h2>Casillas conectadas</h2><p className="muted">Cada empresa puede usar varias cuentas y elegir un remitente principal.</p></div></div>
-        <div className="mail-account-list">{accounts.map((account) => <article className="mail-account-card" key={account.id}><div className={`provider-mark provider-${account.provider.toLowerCase()}`}>{account.provider.slice(0,1)}</div><div className="mail-account-main"><strong>{account.displayName}</strong><span>{account.emailAddress}</span><small>{account.provider} · {account.authMode}{account.lastSyncAtUtc ? ` · Sincronizado ${new Date(account.lastSyncAtUtc).toLocaleString("es-AR")}` : ""}</small>{account.lastError && <small className="mail-error">{account.lastError}</small>}</div><div className="mail-account-actions"><button className="btn btn-outline compact" disabled={busy} onClick={() => edit(account)}>Editar</button><button className="btn btn-outline compact" disabled={busy} onClick={() => void action(account, "test")}>Probar</button><button className="btn compact" disabled={busy} onClick={() => void action(account, "sync")}>Recibir</button></div></article>)}{accounts.length === 0 && <div className="empty-state">Todavía no hay cuentas conectadas.</div>}</div>
+        <div className="mail-account-list">
+          {accounts.map((account) => {
+            const health = mailHealth(account);
+            return <article className="mail-account-card" key={account.id}>
+              <div className={`provider-mark provider-${account.provider.toLowerCase()}`}>{account.provider.slice(0,1)}</div>
+              <div className="mail-account-main">
+                <strong>{account.displayName}</strong>
+                <span>{account.emailAddress}</span>
+                <span className={`mail-health mail-health-${health.tone}`}>{health.label}</span>
+                <small>{account.provider} · {account.authMode}{account.lastSyncAtUtc ? ` · Última sincronización: ${new Date(account.lastSyncAtUtc).toLocaleString("es-AR")}` : ""}</small>
+                {health.hint && <small className={`mail-health-hint mail-health-hint-${health.tone}`}>{health.hint}</small>}
+              </div>
+              <div className="mail-account-actions">
+                <button className="btn btn-outline compact" disabled={busy} onClick={() => edit(account)}>Editar</button>
+                <button className="btn btn-outline compact" disabled={busy} onClick={() => void action(account, "test")}>Probar</button>
+                <button className="btn compact" disabled={busy || !account.isActive} onClick={() => void action(account, "sync")}>Recibir</button>
+              </div>
+            </article>;
+          })}
+          {accounts.length === 0 && <div className="empty-state">Todavía no hay cuentas conectadas.</div>}
+        </div>
       </section>
       <form className="card pad mail-account-form" onSubmit={save}><h2>Agregar cuenta</h2><p className="muted">Elegí el proveedor. Los datos del servidor se completan automáticamente.</p>
         <div className="provider-picker">{(["Gmail","Microsoft","Yahoo","Custom"] as Provider[]).map((provider) => <button type="button" key={provider} className={form.provider === provider ? "active" : ""} onClick={() => chooseProvider(provider)}>{provider === "Custom" ? "Corporativo" : provider}</button>)}</div>

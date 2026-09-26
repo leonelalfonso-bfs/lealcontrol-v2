@@ -425,7 +425,14 @@
 .mail-account-card { display: grid; grid-template-columns: 42px 1fr auto; gap: 12px; align-items: center; padding: 14px; border: 1px solid var(--surface-border); border-radius: 13px; background: rgba(255,255,255,.72); }
 .provider-mark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: #edf1f6; color: #65748d; font-weight: 900; }
 .provider-gmail { background: #fdebea; color: #b74943; }.provider-microsoft { background: #e7f2fd; color: #3979bb; }.provider-yahoo { background: #eee9fd; color: #7659cf; }.provider-custom { background: #e5f6ed; color: #3a9a70; }
-.mail-account-main { display: grid; gap: 2px; min-width: 0; }.mail-account-main span { color: var(--ink-soft); }.mail-account-main small { color: var(--ink-soft); }.mail-account-main .mail-error { color: #b44742; }
+.mail-account-main { display: grid; gap: 2px; min-width: 0; }.mail-account-main span { color: var(--ink-soft); }.mail-account-main small { color: var(--ink-soft); }
+.mail-account-main .mail-health { display: inline-flex; width: fit-content; margin: 3px 0; padding: 3px 8px; border-radius: 999px; font-size: .72rem; font-weight: 750; }
+.mail-account-main .mail-health-ok { color: #247253; background: #e5f5ec; }
+.mail-account-main .mail-health-warning { color: #895713; background: #fff0d7; }
+.mail-account-main .mail-health-error { color: #a33d3d; background: #fde8e7; }
+.mail-account-main .mail-health-neutral { color: var(--ink-soft); background: var(--surface-border); }
+.mail-account-main .mail-health-hint-warning { color: #895713; }
+.mail-account-main .mail-health-hint-error { color: #a33d3d; }
 .mail-account-actions { display: flex; gap: 6px; }.check-label { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 7px; }.check-label input { width: auto; }
 .success-banner { margin-bottom: 14px; padding: 12px 14px; border: 1px solid #bfe6d2; border-radius: 12px; background: #eaf8f1; color: #2c7654; font-weight: 700; }
 @media (max-width: 1050px) { .mail-layout { grid-template-columns: 1fr; }.mail-account-form { position: static; } }
