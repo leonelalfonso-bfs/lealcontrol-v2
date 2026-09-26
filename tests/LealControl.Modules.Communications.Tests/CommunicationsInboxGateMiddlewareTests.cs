@@ -1,11 +1,12 @@
 using System.Net;
 using System.Security.Claims;
 using LealControl.Api.Security;
+using LealControl.Api.SuperAdmin;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace LealControl.Modules.Communications.Tests;
@@ -96,9 +97,7 @@ public sealed class CommunicationsInboxGateMiddlewareTests
         [new Claim("role", role), new Claim("allowed_modules", modules)], "test"));
 
     private static TestServer Server(bool? enabled, ClaimsPrincipal? user = null) => new(new WebHostBuilder()
-        .ConfigureAppConfiguration((_, builder) => builder.AddInMemoryCollection(enabled.HasValue
-            ? new Dictionary<string, string?> { ["Communications:InboxEnabled"] = enabled.Value.ToString() }
-            : new Dictionary<string, string?>()))
+        .ConfigureServices(services => services.AddSingleton<ICommunicationsInboxSettings>(new FakeInboxSettings(enabled ?? false)))
         .Configure(app =>
         {
             if (user is not null)
@@ -110,4 +109,10 @@ public sealed class CommunicationsInboxGateMiddlewareTests
                 return Task.CompletedTask;
             });
         }));
+
+    private sealed class FakeInboxSettings(bool enabled) : ICommunicationsInboxSettings
+    {
+        public Task<bool> IsEnabledAsync(CancellationToken cancellationToken = default) => Task.FromResult(enabled);
+        public Task SetEnabledAsync(bool value, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
 }

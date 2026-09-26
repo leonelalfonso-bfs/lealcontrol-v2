@@ -87,6 +87,7 @@ try
 
     builder.Services.AddDbContext<MasterDbContext>(options =>
         options.UseNpgsql(dbConnectionString));
+    builder.Services.AddScoped<ICommunicationsInboxSettings, CommunicationsInboxSettings>();
     builder.Services.AddSingleton<ITenantConnectionProvider, TenantConnectionProvider>();
     builder.Services.AddScoped<LealControl.Modules.Communications.Infrastructure.Services.ICommunicationsTenantCatalog, CommunicationsTenantCatalog>();
     builder.Services.AddScoped<ITenantProvisionerService, TenantProvisionerService>();
@@ -389,6 +390,8 @@ try
     app.MapQualityModule();
     app.MapAutomationEndpoints();
     app.MapPublicWebhookEndpoints();
+    app.MapGet("/api/v1/public/features", async (ICommunicationsInboxSettings settings, CancellationToken ct) =>
+        Results.Ok(new { communicationsInboxEnabled = await settings.IsEnabledAsync(ct) })).AllowAnonymous();
     app.MapSuperAdminModule();
     app.MapTenantBackupSelfService();
 

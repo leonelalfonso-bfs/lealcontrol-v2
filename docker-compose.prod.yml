@@ -62,11 +62,7 @@ services:
     cpus: "2.0"
 
   web:
-    build:
-      context: .
-      dockerfile: deploy/Dockerfile.web
-      args:
-        VITE_COMMUNICATIONS_INBOX_ENABLED: ${COMMUNICATIONS_INBOX_ENABLED:-false}
+    build: { context: ., dockerfile: deploy/Dockerfile.web }
     restart: unless-stopped
     depends_on:
       api:

@@ -23,7 +23,6 @@ export function SuperAdminDashboardPage() {
   ]);
   const [creating, setCreating] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
-
   const load = () => {
     setLoading(true);
     Promise.all([api.getSuperAdminDashboard(), api.listSuperAdminPlans()])
@@ -133,6 +132,9 @@ export function SuperAdminDashboardPage() {
           </Link>
           <Link to="/superadmin/planes" style={{ color: "#cbd5e1", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid #334155" }}>
             💎 Planes & Tarifas
+          </Link>
+          <Link to="/superadmin/configuracion" style={{ color: "#cbd5e1", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid #334155" }}>
+            ⚙️ Configuración
           </Link>
           <button
             onClick={() => { localStorage.removeItem("leal_superadmin_token"); navigate("/superadmin/login"); }}

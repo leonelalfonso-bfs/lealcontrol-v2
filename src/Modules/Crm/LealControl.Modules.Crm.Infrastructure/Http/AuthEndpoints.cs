@@ -343,9 +343,7 @@ public static class SimpleJwt
         try
         {
             return JsonSerializer.Deserialize<string[]>(allowedModulesJson)?
-                .Where(m => !string.IsNullOrWhiteSpace(m) && !TemporarilyDisabledModules.Contains(m)
-                    && (string.Equals(Environment.GetEnvironmentVariable("Communications__InboxEnabled"), "true", StringComparison.OrdinalIgnoreCase)
-                        || !string.Equals(m, "communications", StringComparison.OrdinalIgnoreCase)))
+                .Where(m => !string.IsNullOrWhiteSpace(m) && !TemporarilyDisabledModules.Contains(m))
                 .ToArray()
                 ?? [];
         }

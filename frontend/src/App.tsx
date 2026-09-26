@@ -4,7 +4,6 @@ import { api } from "./api/client";
 import { useAuth } from "./context/AuthContext";
 import { usePresentationMode } from "./context/PresentationModeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { COMMUNICATIONS_INBOX_ENABLED } from "./app/featureFlags";
 import { CommunicationsNotificationBell } from "./components/CommunicationsNotificationBell";
 import { useCommunicationsBrowserNotifications } from "./hooks/useCommunicationsBrowserNotifications";
 import {
@@ -164,6 +163,7 @@ import {
   SuperAdminDemoRequestsPage,
   SuperAdminLoginPage,
   SuperAdminPlansPage,
+  SuperAdminSettingsPage,
   SuperAdminTenantsPage,
   SuppliersPage,
   TrialBalancePage,
@@ -214,6 +214,24 @@ export function App() {
   const [exitPresentationOpen, setExitPresentationOpen] = useState(false);
   const [exitPassword, setExitPassword] = useState("");
   const [exitError, setExitError] = useState<string | null>(null);
+  const [communicationsEnabled, setCommunicationsEnabled] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const refresh = () => {
+      void api.getPublicFeatures()
+        .then((features) => { if (mounted) setCommunicationsEnabled(features.communicationsInboxEnabled); })
+        .catch(() => { if (mounted) setCommunicationsEnabled(false); });
+    };
+    refresh();
+    window.addEventListener("focus", refresh);
+    window.addEventListener("communications-feature-changed", refresh);
+    return () => {
+      mounted = false;
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("communications-feature-changed", refresh);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user || !tenant?.id) return;
@@ -229,7 +247,7 @@ export function App() {
   const activeCompanyName = tenant?.tradeName || tenant?.legalName || companyName;
 
   const userRole = user?.role || "Comercial";
-  const allowedModuleIds = resolveAllowedModuleIds(userRole, user?.allowedModulesJson);
+  const allowedModuleIds = resolveAllowedModuleIds(userRole, user?.allowedModulesJson, communicationsEnabled);
 
   const allMods = visibleModules(DEVELOPMENT_ACCESS);
   const modules = allMods
@@ -262,6 +280,9 @@ export function App() {
     }
     if (location.pathname === "/superadmin/demos") {
       return withPageSuspense(<SuperAdminDemoRequestsPage />);
+    }
+    if (location.pathname === "/superadmin/configuracion") {
+      return withPageSuspense(<SuperAdminSettingsPage />);
     }
     return withPageSuspense(<SuperAdminDashboardPage />);
   }
@@ -742,9 +763,9 @@ export function App() {
               <Route path="/configuracion/plantillas" element={<DocumentTemplatesPage />} />
               <Route path="/configuracion/correo" element={<MailSettingsPage />} />
               <Route path="/configuracion/ayuda" element={<SettingsHelpPage />} />
-              <Route path="/comunicaciones" element={COMMUNICATIONS_INBOX_ENABLED && hasCommunications ? <InboxPage /> : <Navigate to="/" replace />} />
-              <Route path="/comunicaciones/canales" element={COMMUNICATIONS_INBOX_ENABLED && hasCommunications ? <ChannelsPage /> : <Navigate to="/" replace />} />
-              <Route path="/comunicaciones/plantillas" element={COMMUNICATIONS_INBOX_ENABLED && hasCommunications ? <ReplyTemplatesPage /> : <Navigate to="/" replace />} />
+              <Route path="/comunicaciones" element={communicationsEnabled && hasCommunications ? <InboxPage /> : <Navigate to="/" replace />} />
+              <Route path="/comunicaciones/canales" element={communicationsEnabled && hasCommunications ? <ChannelsPage /> : <Navigate to="/" replace />} />
+              <Route path="/comunicaciones/plantillas" element={communicationsEnabled && hasCommunications ? <ReplyTemplatesPage /> : <Navigate to="/" replace />} />
             </Routes>
             </Suspense>
             </ChunkLoadErrorBoundary>

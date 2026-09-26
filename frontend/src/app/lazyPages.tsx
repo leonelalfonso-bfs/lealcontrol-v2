@@ -201,6 +201,7 @@ export const GrainDeliveriesPage = named(() => import("../pages/GrainDeliveriesP
 export const GrainPositionPage = named(() => import("../pages/GrainPositionPage"), "GrainPositionPage");
 export const SuperAdminLoginPage = named(() => import("../pages/superadmin/SuperAdminLoginPage"), "SuperAdminLoginPage");
 export const SuperAdminDashboardPage = named(() => import("../pages/superadmin/SuperAdminDashboardPage"), "SuperAdminDashboardPage");
+export const SuperAdminSettingsPage = named(() => import("../pages/superadmin/SuperAdminSettingsPage"), "SuperAdminSettingsPage");
 export const SuperAdminTenantsPage = named(() => import("../pages/superadmin/SuperAdminTenantsPage"), "SuperAdminTenantsPage");
 export const SuperAdminPlansPage = named(() => import("../pages/superadmin/SuperAdminPlansPage"), "SuperAdminPlansPage");
 export const SuperAdminDemoRequestsPage = named(() => import("../pages/superadmin/SuperAdminDemoRequestsPage"), "SuperAdminDemoRequestsPage");

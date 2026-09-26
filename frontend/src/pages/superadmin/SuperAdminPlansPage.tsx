@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
-import { COMMUNICATIONS_INBOX_ENABLED } from "../../app/featureFlags";
 
-/** Módulos contratables en SuperAdmin. CRM/Comunicaciones fuera hasta estabilizar (se reactivan luego en staging). */
+/** Módulos contratables en SuperAdmin. La disponibilidad global de Comunicaciones se controla aparte. */
 export const ALL_SYSTEM_MODULES = [
   { id: "sales", name: "Facturación & Ventas", desc: "Facturación ARCA, presupuestos, remitos y precios", icon: "🧾" },
   { id: "purchases", name: "Compras & Proveedores", desc: "Órdenes de compra y facturas proveedor", icon: "🛒" },
@@ -15,11 +14,11 @@ export const ALL_SYSTEM_MODULES = [
   { id: "accounting", name: "Contabilidad & Balances", desc: "Plan de cuentas, asientos, libro diario y balances", icon: "📚" },
   { id: "metrology", name: "Metrología Legal", desc: "Laboratorio de ensayos, pesas patrón e informes técnicos", icon: "⚖️" },
   { id: "quality", name: "Calidad ISO 17025", desc: "Sistema de gestión de calidad, documentos SGC y registros", icon: "✅" },
-  ...(COMMUNICATIONS_INBOX_ENABLED ? [{ id: "communications", name: "Comunicaciones", desc: "Bandeja, canales y plantillas", icon: "💬" }] : [])
+  { id: "communications", name: "Comunicaciones", desc: "Bandeja, canales y plantillas", icon: "💬" }
 ];
 
 /** No ofrecer ni persistir hasta nuevo aviso. */
-export const TEMPORARILY_DISABLED_MODULES = COMMUNICATIONS_INBOX_ENABLED ? ["crm"] : ["crm", "communications"];
+export const TEMPORARILY_DISABLED_MODULES = ["crm"] as const;
 
 export function SuperAdminPlansPage() {
   const navigate = useNavigate();

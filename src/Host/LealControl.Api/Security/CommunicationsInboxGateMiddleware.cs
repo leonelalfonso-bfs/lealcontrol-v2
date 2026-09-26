@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
+using LealControl.Api.SuperAdmin;
 
 namespace LealControl.Api.Security;
 
@@ -10,9 +10,9 @@ namespace LealControl.Api.Security;
 /// flows remain available to sales/directory. Existing provider webhooks and
 /// public media URLs remain untouched to preserve deliveries and attachments.
 /// </summary>
-public sealed class CommunicationsInboxGateMiddleware(RequestDelegate next, IConfiguration configuration)
+public sealed class CommunicationsInboxGateMiddleware(RequestDelegate next)
 {
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, ICommunicationsInboxSettings settings)
     {
         if (!IsInboxRoute(context.Request.Path))
         {
@@ -20,7 +20,7 @@ public sealed class CommunicationsInboxGateMiddleware(RequestDelegate next, ICon
             return;
         }
 
-        if (!configuration.GetValue<bool>("Communications:InboxEnabled"))
+        if (!await settings.IsEnabledAsync(context.RequestAborted))
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;
             return;

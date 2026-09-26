@@ -1,5 +1,3 @@
-import { COMMUNICATIONS_INBOX_ENABLED } from "./featureFlags";
-
 export type PlanTier = "base" | "comercial" | "operaciones" | "empresarial";
 
 export type ModulePermission =
@@ -385,8 +383,8 @@ export const DEVELOPMENT_ACCESS: AccessContext = {
   ])
 };
 
-export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: string | string[] | null): string[] {
-  const temporarilyDisabledUiIds = new Set(COMMUNICATIONS_INBOX_ENABLED ? ["crm"] : ["crm", "comunicaciones"]);
+export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: string | string[] | null, communicationsEnabled = false): string[] {
+  const temporarilyDisabledUiIds = new Set(communicationsEnabled ? ["crm"] : ["crm", "comunicaciones"]);
 
   const allAdminModules = [
     "inicio", "directorio", "ventas", "compras", "inventario",
@@ -395,7 +393,7 @@ export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: s
 
   const moduleMap: Record<string, string[]> = {
     sales: ["directorio", "ventas"],
-    communications: COMMUNICATIONS_INBOX_ENABLED ? ["comunicaciones"] : [],
+    communications: communicationsEnabled ? ["comunicaciones"] : [],
     purchases: ["directorio", "compras"],
     inventory: ["directorio", "inventario", "produccion"],
     finance: ["directorio", "finanzas"],

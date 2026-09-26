@@ -17,6 +17,7 @@ public sealed class MasterDbContext : DbContext
     }
 
     public DbSet<MasterTenant> Tenants => Set<MasterTenant>();
+    public DbSet<PlatformFeatureFlag> PlatformFeatures => Set<PlatformFeatureFlag>();
     public DbSet<SuperAdminUser> SuperAdmins => Set<SuperAdminUser>();
     public DbSet<SubscriptionPlan> Plans => Set<SubscriptionPlan>();
     public DbSet<TenantPaymentRecord> Payments => Set<TenantPaymentRecord>();
@@ -25,6 +26,13 @@ public sealed class MasterDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<PlatformFeatureFlag>(b =>
+        {
+            b.ToTable("platform_feature_flags", "public");
+            b.HasKey(x => x.Key);
+            b.Property(x => x.Key).HasMaxLength(80);
+        });
 
         modelBuilder.Entity<MasterDemoRequest>(b =>
         {
@@ -98,6 +106,12 @@ public sealed class MasterDbContext : DbContext
         CancellationToken cancellationToken = default)
     {
         var sql = @"
+            CREATE TABLE IF NOT EXISTS public.platform_feature_flags (
+                ""Key"" character varying(80) NOT NULL PRIMARY KEY,
+                ""Enabled"" boolean NOT NULL DEFAULT false,
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );
+
             CREATE TABLE IF NOT EXISTS public.master_tenants (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
                 ""Name"" character varying(160) NOT NULL,
@@ -180,6 +194,11 @@ public sealed class MasterDbContext : DbContext
         ";
 
         await Database.ExecuteSqlRawAsync(sql, cancellationToken);
+        await Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO public.platform_feature_flags ("Key", "Enabled")
+            VALUES ({"communications_inbox"}, {configuration.GetValue<bool>("Communications:InboxEnabled")})
+            ON CONFLICT ("Key") DO NOTHING
+            """, cancellationToken);
 
         // Seed Default SuperAdmin if not exists
         var hasAdmin = await SuperAdmins.AnyAsync(cancellationToken);
@@ -349,4 +368,11 @@ public sealed class MasterDbContext : DbContext
             return false;
         }
     }
+}
+
+public sealed class PlatformFeatureFlag
+{
+    public string Key { get; set; } = string.Empty;
+    public bool Enabled { get; set; }
+    public DateTime UpdatedAtUtc { get; set; }
 }

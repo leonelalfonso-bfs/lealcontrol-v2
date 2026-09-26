@@ -98,6 +98,16 @@ public static class SuperAdminEndpoints
             });
         }).RequireRateLimiting("auth-policy").AllowAnonymous();
 
+        group.MapGet("/features/communications-inbox", async (ICommunicationsInboxSettings settings, CancellationToken ct) =>
+            Results.Ok(new { enabled = await settings.IsEnabledAsync(ct) }));
+
+        group.MapPut("/features/communications-inbox", async (
+            UpdateCommunicationsInboxRequest request, ICommunicationsInboxSettings settings, CancellationToken ct) =>
+        {
+            await settings.SetEnabledAsync(request.Enabled, ct);
+            return Results.Ok(new { enabled = request.Enabled });
+        });
+
         // 2. Change SuperAdmin Password
         group.MapPost("/auth/change-password", async (
             ChangeSuperAdminPasswordRequest req,
@@ -666,3 +676,5 @@ public sealed record ProvisionFromDemoRequest(
     string? AdminFullName = null,
     string? EnabledModulesJson = null,
     decimal? MonthlyPriceArs = null);
+
+public sealed record UpdateCommunicationsInboxRequest(bool Enabled);

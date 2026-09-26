@@ -954,6 +954,13 @@ export const api = {
   listGrainMarketPrices: () =>
     request<import("./types").GrainMarketPrice[]>("/api/v1/grains/market-prices"),
 
+  getPublicFeatures: () =>
+    request<{ communicationsInboxEnabled: boolean }>("/api/v1/public/features", { cache: "no-store" }),
+  getSuperAdminCommunicationsInbox: () =>
+    request<{ enabled: boolean }>("/api/v1/superadmin/features/communications-inbox"),
+  setSuperAdminCommunicationsInbox: (enabled: boolean) =>
+    request<{ enabled: boolean }>("/api/v1/superadmin/features/communications-inbox", { method: "PUT", body: JSON.stringify({ enabled }) }),
+
   // SuperAdmin SaaS Management
   superAdminLogin: (body: { email: string; password: string }) =>
     request<{ token: string; user: { id: string; fullName: string; email: string; role: string } }>("/api/v1/superadmin/auth/login", { method: "POST", body: JSON.stringify(body) }),
