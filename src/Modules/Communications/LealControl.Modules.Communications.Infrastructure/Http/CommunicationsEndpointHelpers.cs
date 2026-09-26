@@ -184,6 +184,14 @@ internal static class CommunicationsEndpointHelpers
         return "No se pudo conectar con el servidor de correo. Revisá los servidores, puertos, conexión segura y disponibilidad de la cuenta.";
     }
 
+    internal static Guid? GetAuthenticatedUserId(HttpContext http)
+    {
+        var claim = http.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? http.User.FindFirst("sub")?.Value
+            ?? http.User.FindFirst("id")?.Value;
+        return Guid.TryParse(claim, out var userId) && userId != Guid.Empty ? userId : null;
+    }
+
     internal static Guid? GetCurrentUserId(HttpContext http)
     {
         var header = http.Request.Headers["X-User-Id"].ToString();

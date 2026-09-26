@@ -247,14 +247,12 @@ internal static class CommunicationsMailEndpoints
         group.MapPost("/conversations/{id:guid}/notes", async (Guid id, AddConversationNoteRequest request, HttpContext http, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
             var tenantId = tenant.TenantId.Value;
             if (tenantId == Guid.Empty) return Results.Unauthorized();
-            var claim = http.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                ?? http.User.FindFirst("sub")?.Value
-                ?? http.User.FindFirst("id")?.Value;
-            if (!Guid.TryParse(claim, out var authorUserId) || authorUserId == Guid.Empty) return Results.Unauthorized();
+            var authorUserId = CommunicationsEndpointHelpers.GetAuthenticatedUserId(http);
+            if (authorUserId is null) return Results.Unauthorized();
             if (string.IsNullOrWhiteSpace(request.Body) || request.Body.Trim().Length > 4000)
                 return Results.BadRequest(new { detail = "La nota debe tener entre 1 y 4000 caracteres." });
             if (!await db.Conversations.AnyAsync(x => x.Id == id && x.TenantId == tenantId, ct)) return Results.NotFound();
-            var note = ConversationNote.Create(tenantId, id, authorUserId, request.Body);
+            var note = ConversationNote.Create(tenantId, id, authorUserId.Value, request.Body);
             db.ConversationNotes.Add(note);
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { note.Id, note.Body, note.AuthorUserId, note.CreatedAtUtc });
@@ -307,19 +305,38 @@ internal static class CommunicationsMailEndpoints
             return Results.Ok(new { success = true, relatedLeadId = conversation.RelatedLeadId, relatedCustomerId = conversation.RelatedCustomerId });
         });
 
-        group.MapPost("/conversations/{id:guid}/assign", async (Guid id, AssignConversationRequest request, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
-            var conversation = await db.Conversations.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, ct);
+        group.MapGet("/conversations/{id:guid}/activities", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            if (!await db.Conversations.AnyAsync(x => x.Id == id && x.TenantId == tenantId, ct)) return Results.NotFound();
+            var activities = await db.ConversationActivities.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.ConversationId == id)
+                .OrderBy(x => x.OccurredAtUtc).ThenBy(x => x.Id)
+                .Select(x => new { x.Id, x.ActorUserId, x.Kind, x.PreviousValue, x.CurrentValue, x.OccurredAtUtc })
+                .ToListAsync(ct);
+            return Results.Ok(activities);
+        });
+
+        group.MapPost("/conversations/{id:guid}/assign", async (Guid id, AssignConversationRequest request, HttpContext http, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            var actorUserId = CommunicationsEndpointHelpers.GetAuthenticatedUserId(http);
+            if (actorUserId is null) return Results.Unauthorized();
+            var conversation = await ConversationWorkflowService.AssignAsync(db, tenantId, id, actorUserId.Value, request.UserId, ct);
             if (conversation is null) return Results.NotFound();
-            conversation.AssignTo(request.UserId);
-            await db.SaveChangesAsync(ct);
             return Results.Ok(new { success = true, assignedToUserId = conversation.AssignedToUserId });
         });
 
-        group.MapPost("/conversations/{id:guid}/status", async (Guid id, UpdateConversationStatusRequest request, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
-            var conversation = await db.Conversations.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, ct);
+        group.MapPost("/conversations/{id:guid}/status", async (Guid id, UpdateConversationStatusRequest request, HttpContext http, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            var actorUserId = CommunicationsEndpointHelpers.GetAuthenticatedUserId(http);
+            if (actorUserId is null) return Results.Unauthorized();
+            var status = request.Status?.Trim().ToLowerInvariant();
+            if (status is not ("open" or "pending" or "resolved" or "archived"))
+                return Results.BadRequest(new { detail = "Estado de conversación inválido." });
+            var conversation = await ConversationWorkflowService.SetStatusAsync(db, tenantId, id, actorUserId.Value, status, ct);
             if (conversation is null) return Results.NotFound();
-            conversation.SetStatus(request.Status);
-            await db.SaveChangesAsync(ct);
             return Results.Ok(new { success = true, status = conversation.Status });
         });
 

@@ -1167,6 +1167,10 @@ export type EmailMessage = { id:string; mailAccountId:string; conversationId?:st
 
 export type ConversationNote = { id: string; body: string; authorUserId: string; createdAtUtc: string };
 export type ConversationTag = { id: string; name: string };
+export type ConversationActivity = {
+  id: string; actorUserId: string; kind: "status" | "assignment";
+  previousValue?: string | null; currentValue?: string | null; occurredAtUtc: string;
+};
 
 export type Conversation = {
   id: string;

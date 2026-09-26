@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
-import type { Conversation, ConversationNote, ConversationTag, CustomerMatch, CustomerSummary, EmailMessage, MailAccount, MessageReplyTemplate, TenantUser } from "../api/types";
+import type { Conversation, ConversationActivity, ConversationNote, ConversationTag, CustomerMatch, CustomerSummary, EmailMessage, MailAccount, MessageReplyTemplate, TenantUser } from "../api/types";
 import { EmailComposer } from "../components/EmailComposer";
 import { MessageAttachments } from "../components/MessageAttachments";
 import { AudioRecorderButton } from "../components/AudioRecorderButton";
@@ -68,6 +68,7 @@ export function InboxPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeMessages, setActiveMessages] = useState<EmailMessage[]>([]);
   const [activeNotes, setActiveNotes] = useState<ConversationNote[]>([]);
+  const [activeActivities, setActiveActivities] = useState<ConversationActivity[]>([]);
   const [activeTags, setActiveTags] = useState<ConversationTag[]>([]);
   const [tagText, setTagText] = useState("");
   const [tagBusy, setTagBusy] = useState(false);
@@ -152,6 +153,15 @@ export function InboxPage() {
       }
     } catch (e: any) {
       setError(e.message);
+    }
+  };
+
+  const loadActiveActivities = async (conversationId: string) => {
+    try {
+      const activities = await api.getConversationActivities(conversationId);
+      if (selectedConversationIdRef.current === conversationId) setActiveActivities(activities);
+    } catch (e) {
+      if (selectedConversationIdRef.current === conversationId) setError((e as Error).message);
     }
   };
 
@@ -243,9 +253,11 @@ export function InboxPage() {
     selectedConversationIdRef.current = selectedConversationId;
     setActiveMessages([]);
     setActiveNotes([]);
+    setActiveActivities([]);
     setActiveTags([]);
     if (selectedConversationId) {
       void loadActiveMessages(selectedConversationId);
+      void loadActiveActivities(selectedConversationId);
       void api.getConversationTags(selectedConversationId)
         .then((tags) => {
           if (selectedConversationIdRef.current === selectedConversationId) setActiveTags(tags);
@@ -308,7 +320,7 @@ export function InboxPage() {
     if (chatBottomRef.current) {
       chatBottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [activeMessages.length, activeNotes.length, selectedConversationId]);
+  }, [activeMessages.length, activeNotes.length, activeActivities.length, selectedConversationId]);
 
   const countEmail = channelCounts.email;
   const countWa = channelCounts.whatsapp;
@@ -538,6 +550,26 @@ export function InboxPage() {
     }
   };
 
+  const changeStatus = async (conversationId: string, status: string) => {
+    try {
+      setError(null);
+      await api.setConversationStatus(conversationId, status);
+      await Promise.all([loadConversations(), loadActiveActivities(conversationId)]);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const changeAssignment = async (conversationId: string, userId?: string) => {
+    try {
+      setError(null);
+      await api.assignConversation(conversationId, userId);
+      await Promise.all([loadConversations(), loadActiveActivities(conversationId)]);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   const saveNote = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedConversationId || !noteText.trim() || savingNote) return;
@@ -601,8 +633,9 @@ export function InboxPage() {
 
   const timeline = useMemo(() => [
     ...activeMessages.map((message) => ({ kind: "message" as const, id: message.id, at: message.occurredAtUtc, message })),
-    ...activeNotes.map((note) => ({ kind: "note" as const, id: note.id, at: note.createdAtUtc, note }))
-  ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime() || a.id.localeCompare(b.id)), [activeMessages, activeNotes]);
+    ...activeNotes.map((note) => ({ kind: "note" as const, id: note.id, at: note.createdAtUtc, note })),
+    ...activeActivities.map((activity) => ({ kind: "activity" as const, id: activity.id, at: activity.occurredAtUtc, activity }))
+  ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime() || a.id.localeCompare(b.id)), [activeMessages, activeNotes, activeActivities]);
 
   const activeDisplayName = activeConversation ? getConversationDisplayName(activeConversation) : "";
 
@@ -938,7 +971,7 @@ export function InboxPage() {
                   <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado</div>
                   <select
                     value={activeConversation.status || "open"}
-                    onChange={(e) => void api.setConversationStatus(activeConversation.id, e.target.value).then(loadConversations)}
+                    onChange={(e) => void changeStatus(activeConversation.id, e.target.value)}
                     style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
                   >
                     <option value="open">Abierta</option>
@@ -951,7 +984,7 @@ export function InboxPage() {
                   <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Asignado a</div>
                   <select
                     value={activeConversation.assignedToUserId || ""}
-                    onChange={(e) => void api.assignConversation(activeConversation.id, e.target.value || undefined).then(loadConversations)}
+                    onChange={(e) => void changeAssignment(activeConversation.id, e.target.value || undefined)}
                     style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem", maxWidth: 160 }}
                   >
                     <option value="">Sin asignar</option>
@@ -1042,6 +1075,22 @@ export function InboxPage() {
                 }}
               >
                 {timeline.map((item) => {
+                  if (item.kind === "activity") {
+                    const activity = item.activity;
+                    const actor = tenantUsers.find((u) => u.id === activity.actorUserId)?.fullName || "Operador";
+                    const statusName = (value?: string | null) => ({ open: "Abierta", pending: "Pendiente", resolved: "Resuelta", archived: "Archivada" }[value || ""] || value || "Sin estado");
+                    const assigneeName = (value?: string | null) => value
+                      ? tenantUsers.find((u) => u.id === value)?.fullName || "Otro usuario"
+                      : "Sin asignar";
+                    const detail = activity.kind === "status"
+                      ? `Estado: ${statusName(activity.previousValue)} → ${statusName(activity.currentValue)}`
+                      : `Asignación: ${assigneeName(activity.previousValue)} → ${assigneeName(activity.currentValue)}`;
+                    return (
+                      <div key={item.id} style={{ alignSelf: "center", maxWidth: "85%", padding: "6px 12px", borderRadius: 12, background: "var(--surface)", border: "1px solid var(--surface-border)", color: "var(--ink-soft)", fontSize: "0.76rem", textAlign: "center" }}>
+                        {detail} · {actor} · {new Date(item.at).toLocaleString("es-AR")}
+                      </div>
+                    );
+                  }
                   if (item.kind === "note") {
                     const author = tenantUsers.find((u) => u.id === item.note.authorUserId)?.fullName || "Operador";
                     return (

@@ -416,6 +416,7 @@ export const api = {
   getConversationTags: (id: string) => request<import("./types").ConversationTag[]>(`/api/v1/communications/conversations/${id}/tags`),
   addConversationTag: (id: string, name: string) => request<import("./types").ConversationTag>(`/api/v1/communications/conversations/${id}/tags`, { method: "POST", body: JSON.stringify({ name }) }),
   deleteConversationTag: (id: string, tagId: string) => request<void>(`/api/v1/communications/conversations/${id}/tags/${tagId}`, { method: "DELETE" }),
+  getConversationActivities: (id: string) => request<import("./types").ConversationActivity[]>(`/api/v1/communications/conversations/${id}/activities`),
   linkConversation: (id: string, body: { leadId?: string; customerId?: string }) =>
     request<{ success: boolean; relatedLeadId?: string; relatedCustomerId?: string }>(`/api/v1/communications/conversations/${id}/link`, { method: "POST", body: JSON.stringify(body) }),
   assignConversation: (id: string, userId?: string) =>
