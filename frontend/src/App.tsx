@@ -4,6 +4,7 @@ import { api } from "./api/client";
 import { useAuth } from "./context/AuthContext";
 import { usePresentationMode } from "./context/PresentationModeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { COMMUNICATIONS_INBOX_ENABLED } from "./app/featureFlags";
 import { CommunicationsNotificationBell } from "./components/CommunicationsNotificationBell";
 import { useCommunicationsBrowserNotifications } from "./hooks/useCommunicationsBrowserNotifications";
 import {
@@ -741,9 +742,9 @@ export function App() {
               <Route path="/configuracion/plantillas" element={<DocumentTemplatesPage />} />
               <Route path="/configuracion/correo" element={<MailSettingsPage />} />
               <Route path="/configuracion/ayuda" element={<SettingsHelpPage />} />
-              <Route path="/comunicaciones" element={<InboxPage />} />
-              <Route path="/comunicaciones/canales" element={<ChannelsPage />} />
-              <Route path="/comunicaciones/plantillas" element={<ReplyTemplatesPage />} />
+              <Route path="/comunicaciones" element={COMMUNICATIONS_INBOX_ENABLED && hasCommunications ? <InboxPage /> : <Navigate to="/" replace />} />
+              <Route path="/comunicaciones/canales" element={COMMUNICATIONS_INBOX_ENABLED && hasCommunications ? <ChannelsPage /> : <Navigate to="/" replace />} />
+              <Route path="/comunicaciones/plantillas" element={COMMUNICATIONS_INBOX_ENABLED && hasCommunications ? <ReplyTemplatesPage /> : <Navigate to="/" replace />} />
             </Routes>
             </Suspense>
             </ChunkLoadErrorBoundary>

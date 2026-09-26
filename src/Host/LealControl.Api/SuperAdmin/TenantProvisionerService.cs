@@ -145,7 +145,9 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
     internal static string NormalizeModulesJson(string? enabledModulesJson)
     {
         // CRM/Comunicaciones fuera del catálogo hasta estabilizar (se reactivan en staging luego).
-        var disabled = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "crm", "communications" };
+        var disabled = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "crm" };
+        if (!string.Equals(Environment.GetEnvironmentVariable("Communications__InboxEnabled"), "true", StringComparison.OrdinalIgnoreCase))
+            disabled.Add("communications");
         const string fallback = """["sales","purchases","inventory","finance","fleet","hr"]""";
         if (string.IsNullOrWhiteSpace(enabledModulesJson))
             return fallback;

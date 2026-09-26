@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
+import { COMMUNICATIONS_INBOX_ENABLED } from "../../app/featureFlags";
 
 /** Módulos contratables en SuperAdmin. CRM/Comunicaciones fuera hasta estabilizar (se reactivan luego en staging). */
 export const ALL_SYSTEM_MODULES = [
@@ -13,11 +14,12 @@ export const ALL_SYSTEM_MODULES = [
   { id: "grains", name: "Cereales & Agro", desc: "Contratos de granos, balanza CPE/CTG y fijaciones", icon: "🌾" },
   { id: "accounting", name: "Contabilidad & Balances", desc: "Plan de cuentas, asientos, libro diario y balances", icon: "📚" },
   { id: "metrology", name: "Metrología Legal", desc: "Laboratorio de ensayos, pesas patrón e informes técnicos", icon: "⚖️" },
-  { id: "quality", name: "Calidad ISO 17025", desc: "Sistema de gestión de calidad, documentos SGC y registros", icon: "✅" }
+  { id: "quality", name: "Calidad ISO 17025", desc: "Sistema de gestión de calidad, documentos SGC y registros", icon: "✅" },
+  ...(COMMUNICATIONS_INBOX_ENABLED ? [{ id: "communications", name: "Comunicaciones", desc: "Bandeja, canales y plantillas", icon: "💬" }] : [])
 ];
 
 /** No ofrecer ni persistir hasta nuevo aviso. */
-export const TEMPORARILY_DISABLED_MODULES = ["crm", "communications"] as const;
+export const TEMPORARILY_DISABLED_MODULES = COMMUNICATIONS_INBOX_ENABLED ? ["crm"] : ["crm", "communications"];
 
 export function SuperAdminPlansPage() {
   const navigate = useNavigate();

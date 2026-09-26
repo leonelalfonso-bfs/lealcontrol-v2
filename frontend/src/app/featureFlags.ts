@@ -1,0 +1,1 @@
+export const COMMUNICATIONS_INBOX_ENABLED = import.meta.env.VITE_COMMUNICATIONS_INBOX_ENABLED === "true";

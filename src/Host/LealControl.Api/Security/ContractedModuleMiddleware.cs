@@ -87,7 +87,10 @@ public sealed class ContractedModuleMiddleware(RequestDelegate next)
     private static bool IsExempt(PathString path)
     {
         var value = path.Value ?? string.Empty;
-        return value.StartsWith("/api/v1/auth", StringComparison.OrdinalIgnoreCase)
+        // El correo se usa también desde Ventas y Directorio, sin contratar la bandeja.
+        return path.StartsWithSegments("/api/v1/communications/accounts", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWithSegments("/api/v1/communications/messages", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("/api/v1/auth", StringComparison.OrdinalIgnoreCase)
             || value.StartsWith("/api/v1/public", StringComparison.OrdinalIgnoreCase)
             || value.StartsWith("/api/v1/superadmin", StringComparison.OrdinalIgnoreCase)
             || value.StartsWith("/health", StringComparison.OrdinalIgnoreCase)

@@ -330,8 +330,7 @@ public static class SimpleJwt
 
     private static readonly HashSet<string> TemporarilyDisabledModules = new(StringComparer.OrdinalIgnoreCase)
     {
-        "crm",
-        "communications"
+        "crm"
     };
 
     private static string[] ParseAllowedModules(string? allowedModulesJson)
@@ -344,7 +343,9 @@ public static class SimpleJwt
         try
         {
             return JsonSerializer.Deserialize<string[]>(allowedModulesJson)?
-                .Where(m => !string.IsNullOrWhiteSpace(m) && !TemporarilyDisabledModules.Contains(m))
+                .Where(m => !string.IsNullOrWhiteSpace(m) && !TemporarilyDisabledModules.Contains(m)
+                    && (string.Equals(Environment.GetEnvironmentVariable("Communications__InboxEnabled"), "true", StringComparison.OrdinalIgnoreCase)
+                        || !string.Equals(m, "communications", StringComparison.OrdinalIgnoreCase)))
                 .ToArray()
                 ?? [];
         }

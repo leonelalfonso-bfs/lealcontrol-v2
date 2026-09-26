@@ -1,3 +1,5 @@
+import { COMMUNICATIONS_INBOX_ENABLED } from "./featureFlags";
+
 export type PlanTier = "base" | "comercial" | "operaciones" | "empresarial";
 
 export type ModulePermission =
@@ -384,8 +386,7 @@ export const DEVELOPMENT_ACCESS: AccessContext = {
 };
 
 export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: string | string[] | null): string[] {
-  // CRM / Comunicaciones: ocultos en prod hasta estabilizar el módulo.
-  const temporarilyDisabledUiIds = new Set(["crm", "comunicaciones"]);
+  const temporarilyDisabledUiIds = new Set(COMMUNICATIONS_INBOX_ENABLED ? ["crm"] : ["crm", "comunicaciones"]);
 
   const allAdminModules = [
     "inicio", "directorio", "ventas", "compras", "inventario",
@@ -394,7 +395,7 @@ export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: s
 
   const moduleMap: Record<string, string[]> = {
     sales: ["directorio", "ventas"],
-    // crm / communications: no expandir a UI mientras están deshabilitados
+    communications: COMMUNICATIONS_INBOX_ENABLED ? ["comunicaciones"] : [],
     purchases: ["directorio", "compras"],
     inventory: ["directorio", "inventario", "produccion"],
     finance: ["directorio", "finanzas"],
@@ -416,7 +417,7 @@ export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: s
       const allowed = ["inicio", "directorio", "administracion"];
       raw.forEach((entry: string) => {
         const key = String(entry).toLowerCase();
-        if (key === "crm" || key === "communications") return;
+        if (key === "crm") return;
         if (moduleMap[key]) allowed.push(...moduleMap[key]);
         else if (!temporarilyDisabledUiIds.has(entry)) allowed.push(entry);
       });
