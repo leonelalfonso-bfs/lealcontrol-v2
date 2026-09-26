@@ -66,7 +66,7 @@ internal static class CommunicationsMetaEndpoints
             });
         });
 
-        group.MapPost("/meta/config", async (ConfigureMetaChannelRequest req, MetaGraphApiService metaService, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+        group.MapPost("/meta/config", async (ConfigureMetaChannelRequest req, MetaGraphApiService metaService, MetaChannelSecretProtector secrets, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
             var tenantId = tenant.TenantId.Value;
             if (tenantId == Guid.Empty) return Results.Unauthorized();
             if (string.IsNullOrWhiteSpace(req.PageAccessToken)) return Results.BadRequest("El token de acceso de página es obligatorio.");
@@ -89,7 +89,7 @@ internal static class CommunicationsMetaEndpoints
             conn.PageName = pageInfo.PageName;
             conn.InstagramAccountId = pageInfo.InstagramAccountId;
             conn.InstagramUsername = pageInfo.InstagramUsername;
-            conn.PageAccessToken = pageInfo.ResolvedPageAccessToken ?? req.PageAccessToken;
+            conn.PageAccessToken = secrets.Protect(tenantId, pageInfo.ResolvedPageAccessToken ?? req.PageAccessToken);
             conn.IsConnected = true;
             conn.ConnectedAtUtc = DateTime.UtcNow;
             conn.UpdatedAtUtc = DateTime.UtcNow;
@@ -131,7 +131,7 @@ internal static class CommunicationsMetaEndpoints
             return Results.Ok(new { success = true });
         });
 
-        group.MapPost("/meta/sync", async (MetaGraphApiService metaService, CommunicationsDbContext db, ITenantContext tenant, ConversationService conversationService, CancellationToken ct) => {
+        group.MapPost("/meta/sync", async (MetaGraphApiService metaService, MetaChannelSecretProtector secrets, CommunicationsDbContext db, ITenantContext tenant, ConversationService conversationService, CancellationToken ct) => {
             var tenantId = tenant.TenantId.Value;
             if (tenantId == Guid.Empty) return Results.Unauthorized();
 
@@ -163,8 +163,9 @@ internal static class CommunicationsMetaEndpoints
                     ? (conn.InstagramUsername != null ? $"@{conn.InstagramUsername}" : "Instagram Oficial")
                     : (conn.PageName ?? "Página Oficial");
 
+                var accessToken = secrets.ReadAndUpgrade(conn);
                 var fetch = await metaService.FetchRecentConversationsAsync(
-                    conn.PageAccessToken!, conn.ChannelType, conn.PageName, conn.PageId, conn.InstagramAccountId, ct);
+                    accessToken, conn.ChannelType, conn.PageName, conn.PageId, conn.InstagramAccountId, ct);
 
                 conn.LastSyncAtUtc = DateTime.UtcNow;
                 if (!fetch.Success)
@@ -235,7 +236,7 @@ internal static class CommunicationsMetaEndpoints
 
                     if (!string.IsNullOrWhiteSpace(m.AttachmentUrl) && !string.IsNullOrWhiteSpace(m.AttachmentType))
                     {
-                        var bytes = await metaService.DownloadAttachmentAsync(m.AttachmentUrl, conn.PageAccessToken, ct);
+                        var bytes = await metaService.DownloadAttachmentAsync(m.AttachmentUrl, accessToken, ct);
                         if (bytes != null && bytes.Length > 0)
                         {
                             var mime = m.AttachmentType == "audio" ? "audio/mpeg" : m.AttachmentType == "image" ? "image/jpeg" : "application/octet-stream";
@@ -256,7 +257,7 @@ internal static class CommunicationsMetaEndpoints
             return Results.Ok(new { synced = addedCount, channels = channelResults });
         });
 
-        group.MapPost("/meta/send", async (SendMetaMessageRequest req, MetaGraphApiService metaService, CommunicationsDbContext db, ITenantContext tenant, ConversationService conversationService, CancellationToken ct) => {
+        group.MapPost("/meta/send", async (SendMetaMessageRequest req, MetaGraphApiService metaService, MetaChannelSecretProtector secrets, CommunicationsDbContext db, ITenantContext tenant, ConversationService conversationService, CancellationToken ct) => {
             var tenantId = tenant.TenantId.Value;
             if (tenantId == Guid.Empty) return Results.Unauthorized();
             if (string.IsNullOrWhiteSpace(req.RecipientId)) return Results.BadRequest("Destinatario obligatorio.");
@@ -268,14 +269,15 @@ internal static class CommunicationsMetaEndpoints
             if (conn is null || !conn.IsConnected || string.IsNullOrWhiteSpace(conn.PageAccessToken))
                 return Results.BadRequest("El canal seleccionado no está conectado.");
 
+            var accessToken = secrets.ReadAndUpgrade(conn);
             MetaSendResult sendRes;
             if (!string.IsNullOrWhiteSpace(req.MediaUrl))
             {
-                sendRes = await metaService.SendAttachmentAsync(conn.PageAccessToken, req.RecipientId, req.MediaType ?? "audio", req.MediaUrl, ct);
+                sendRes = await metaService.SendAttachmentAsync(accessToken, req.RecipientId, req.MediaType ?? "audio", req.MediaUrl, ct);
             }
             else
             {
-                sendRes = await metaService.SendMessageAsync(conn.PageAccessToken, req.RecipientId, req.Message, ct);
+                sendRes = await metaService.SendMessageAsync(accessToken, req.RecipientId, req.Message, ct);
             }
 
             if (!sendRes.Success) return Results.BadRequest(new { error = sendRes.Error });
@@ -367,7 +369,7 @@ internal static class CommunicationsMetaEndpoints
         }).AllowAnonymous();
 
         // Meta Webhook Events (Messages received)
-        endpoints.MapPost("/api/communications/meta/webhook", async (HttpRequest request, CommunicationsDbContext db, MetaGraphApiService metaService, ConversationService conversationService, IConfiguration configuration, IHostEnvironment env, CancellationToken ct) => {
+        endpoints.MapPost("/api/communications/meta/webhook", async (HttpRequest request, CommunicationsDbContext db, MetaGraphApiService metaService, MetaChannelSecretProtector secrets, ConversationService conversationService, IConfiguration configuration, IHostEnvironment env, CancellationToken ct) => {
             try
             {
                 using var reader = new StreamReader(request.Body);
@@ -491,7 +493,7 @@ internal static class CommunicationsMetaEndpoints
 
                                     if (!string.IsNullOrWhiteSpace(attachmentUrl) && !string.IsNullOrWhiteSpace(attachmentType))
                                     {
-                                        var bytes = await metaService.DownloadAttachmentAsync(attachmentUrl, conn.PageAccessToken, ct);
+                                        var bytes = await metaService.DownloadAttachmentAsync(attachmentUrl, secrets.ReadAndUpgrade(conn), ct);
                                         if (bytes != null && bytes.Length > 0)
                                         {
                                             var mime = attachmentType == "audio" ? "audio/mpeg" : attachmentType == "image" ? "image/jpeg" : "application/octet-stream";

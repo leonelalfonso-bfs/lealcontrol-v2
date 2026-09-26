@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddDataProtection();
         services.AddTenantDbContext<CommunicationsDbContext>(CommunicationsDbContext.Schema);
         services.AddScoped<MailSecretProtector>(); services.AddScoped<MailTransportService>();
+        services.AddScoped<MetaChannelSecretProtector>();
         services.AddScoped<ConversationService>();
         services.AddScoped<MailSyncService>();
         services.AddHostedService<CommunicationsSyncBackgroundService>();
