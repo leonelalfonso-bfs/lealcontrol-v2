@@ -235,6 +235,7 @@ export type Quote = {
   paymentTerms?: string | null;
   paymentMethod?: string | null;
   deliveryTimeDays?: number | null;
+  deliveryTimeText?: string | null;
   transportation?: string | null;
   warranty?: string | null;
   notes?: string | null;
@@ -300,6 +301,7 @@ export type QuoteWrite = {
   paymentTerms?: string | null;
   paymentMethod?: string | null;
   deliveryTimeDays?: number | null;
+  deliveryTimeText?: string | null;
   transportation?: string | null;
   warranty?: string | null;
   notes?: string | null;
@@ -341,6 +343,7 @@ export type Order = {
   paymentTerms?: string | null;
   paymentMethod?: string | null;
   deliveryTimeDays?: number | null;
+  deliveryTimeText?: string | null;
   transportation?: string | null;
   warranty?: string | null;
   notes?: string | null;
@@ -375,6 +378,7 @@ export type OrderWrite = {
   paymentTerms?: string | null;
   paymentMethod?: string | null;
   deliveryTimeDays?: number | null;
+  deliveryTimeText?: string | null;
   transportation?: string | null;
   warranty?: string | null;
   notes?: string | null;

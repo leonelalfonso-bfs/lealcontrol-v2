@@ -531,7 +531,7 @@ export const QuotePrintPage: React.FC = () => {
           <table style={{ width: "100%", marginTop: "14px", borderTop: `1px solid ${primaryBorderLight}`, fontSize: "0.76rem", color: "#475569", borderCollapse: "collapse" }}>
             <tbody>
             <tr>
-              <td style={{ width: "50%", padding: "8px 8px 3px 0", verticalAlign: "top" }}><strong>Plazo de Entrega:</strong> {quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : settings.quote.deliveryTerms}</td>
+              <td style={{ width: "50%", padding: "8px 8px 3px 0", verticalAlign: "top" }}><strong>Plazo de Entrega:</strong> {quote.deliveryTimeText || (quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : settings.quote.deliveryTerms)}</td>
               <td style={{ width: "50%", padding: "8px 0 3px 8px", verticalAlign: "top" }}><strong>Condiciones de Pago:</strong> {quote.paymentTerms || settings.quote.paymentTerms}</td>
             </tr>
             <tr>

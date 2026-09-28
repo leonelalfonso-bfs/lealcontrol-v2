@@ -20,6 +20,7 @@ public sealed class HistoricalQuote
     public decimal NetTotal { get; set; }
     public string SourceSnapshot { get; set; } = "{}";
     public string LinesSnapshot { get; set; } = "[]";
+    public Guid? PromotedQuoteId { get; set; }
 }
 
 internal sealed class HistoricalQuoteConfiguration : IEntityTypeConfiguration<HistoricalQuote>

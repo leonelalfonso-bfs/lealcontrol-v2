@@ -49,7 +49,8 @@ export const QuoteFormPage: React.FC = () => {
   const [validDays, setValidDays] = useState<number>(15);
   const [paymentTerms, setPaymentTerms] = useState("50% anticipo, saldo contra entrega");
   const [paymentMethod, setPaymentMethod] = useState("Transferencia Bancaria");
-  const [deliveryTimeDays, setDeliveryTimeDays] = useState<number>(15);
+  const [deliveryTimeDays, setDeliveryTimeDays] = useState<number | null>(15);
+  const [deliveryTimeText, setDeliveryTimeText] = useState("");
   const [transportation, setTransportation] = useState("Flete a cargo del comprador");
   const [warranty, setWarranty] = useState("12 meses de garantía oficial");
   const [notes, setNotes] = useState("");
@@ -155,7 +156,8 @@ export const QuoteFormPage: React.FC = () => {
           setValidDays(q.validDays);
           setPaymentTerms(q.paymentTerms ?? "");
           setPaymentMethod(q.paymentMethod ?? "");
-          setDeliveryTimeDays(q.deliveryTimeDays ?? 15);
+          setDeliveryTimeDays(q.deliveryTimeText ? null : q.deliveryTimeDays ?? 15);
+          setDeliveryTimeText(q.deliveryTimeText ?? "");
           setTransportation(q.transportation ?? "");
           setWarranty(q.warranty ?? "");
           setNotes(q.notes ?? "");
@@ -461,6 +463,7 @@ export const QuoteFormPage: React.FC = () => {
         paymentTerms,
         paymentMethod,
         deliveryTimeDays,
+        deliveryTimeText: deliveryTimeText.trim() || null,
         transportation,
         warranty,
         notes,
@@ -1033,8 +1036,19 @@ export const QuoteFormPage: React.FC = () => {
               <input
                 type="number"
                 min="0"
-                value={deliveryTimeDays}
-                onChange={(e) => setDeliveryTimeDays(Number(e.target.value))}
+                value={deliveryTimeDays ?? ""}
+                onChange={(e) => { setDeliveryTimeDays(e.target.value === "" ? null : Number(e.target.value)); if (e.target.value) setDeliveryTimeText(""); }}
+              />
+            </label>
+
+            <label>
+              Plazo de Entrega (Texto)
+              <input
+                type="text"
+                maxLength={200}
+                placeholder="Ej: A convenir"
+                value={deliveryTimeText}
+                onChange={(e) => { setDeliveryTimeText(e.target.value); if (e.target.value) setDeliveryTimeDays(null); }}
               />
             </label>
 

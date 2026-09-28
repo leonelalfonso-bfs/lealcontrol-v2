@@ -72,7 +72,8 @@ internal static class OrderMappingExtensions
                 l.DiscountPercent,
                 l.TaxRate,
                 l.IsOptional,
-                l.LineSubtotal)).ToList());
+                l.LineSubtotal)).ToList(),
+            order.DeliveryTimeText);
     }
 }
 
@@ -118,7 +119,8 @@ internal sealed class CreateOrderCommandHandler : IRequestHandler<CreateOrderCom
             request.Model.Transportation,
             request.Model.Warranty,
             request.Model.Notes,
-            request.Model.OwnerName);
+            request.Model.OwnerName,
+            deliveryTimeText: request.Model.DeliveryTimeText);
 
         foreach (var line in request.Model.Lines)
         {
@@ -177,11 +179,11 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
             return Result.Success(existingOrder.ToDto());
         }
 
-        if (quote.Status is QuoteStatus.Cancelled or QuoteStatus.Rejected)
+        if (quote.Status is QuoteStatus.Cancelled or QuoteStatus.Rejected or QuoteStatus.Ordered)
         {
             return Result.Failure<OrderDto>(Error.Validation(
                 "Sales.Order.QuoteNotConvertible",
-                "No se puede generar un pedido desde un presupuesto anulado o rechazado."));
+                "No se puede generar otro pedido desde un presupuesto anulado, rechazado o ya pedido."));
         }
 
         var count = await _orderRepository.GetCountAsync(_tenantContext.TenantId, cancellationToken);
@@ -221,7 +223,8 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
             quote.Warranty,
             quote.Notes,
             quote.OwnerName,
-            OrderStatus.Confirmed);
+            OrderStatus.Confirmed,
+            quote.DeliveryTimeText);
 
         foreach (var line in linesToAdd)
         {
@@ -288,7 +291,8 @@ internal sealed class UpdateOrderCommandHandler : IRequestHandler<UpdateOrderCom
             request.Model.Warranty,
             request.Model.Notes,
             request.Model.OwnerName,
-            now);
+            now,
+            request.Model.DeliveryTimeText);
 
         _orderRepository.Update(order);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

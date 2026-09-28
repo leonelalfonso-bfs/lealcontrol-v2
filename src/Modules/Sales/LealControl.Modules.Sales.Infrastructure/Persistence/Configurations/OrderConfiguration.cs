@@ -24,6 +24,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(x => x.Total).HasPrecision(18, 2);
         builder.Property(x => x.PaymentTerms).HasMaxLength(200);
         builder.Property(x => x.PaymentMethod).HasMaxLength(100);
+        builder.Property(x => x.DeliveryTimeText).HasMaxLength(200);
         builder.Property(x => x.Transportation).HasMaxLength(200);
         builder.Property(x => x.Warranty).HasMaxLength(200);
         builder.Property(x => x.Notes).HasMaxLength(4000);

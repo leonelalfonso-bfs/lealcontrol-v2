@@ -40,7 +40,8 @@ public sealed record OrderDto(
     string? OwnerName,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
-    IReadOnlyList<OrderLineDto> Lines);
+    IReadOnlyList<OrderLineDto> Lines,
+    string? DeliveryTimeText);
 
 public sealed record OrderLineWriteModel(
     Guid? ProductId,
@@ -70,4 +71,5 @@ public sealed record OrderWriteModel(
     string? Warranty,
     string? Notes,
     string? OwnerName,
-    IReadOnlyList<OrderLineWriteModel> Lines);
+    IReadOnlyList<OrderLineWriteModel> Lines,
+    string? DeliveryTimeText = null);

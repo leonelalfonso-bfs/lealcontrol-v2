@@ -450,6 +450,14 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
             """,
             cancellationToken);
 
+        await Database.ExecuteSqlRawAsync(
+            """
+            ALTER TABLE sales.quotes ADD COLUMN IF NOT EXISTS "DeliveryTimeText" character varying(200);
+            ALTER TABLE sales.orders ADD COLUMN IF NOT EXISTS "DeliveryTimeText" character varying(200);
+            ALTER TABLE sales.historical_quotes ADD COLUMN IF NOT EXISTS "PromotedQuoteId" uuid;
+            """,
+            cancellationToken);
+
         if (schemaError is not null)
         {
             throw schemaError;

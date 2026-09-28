@@ -230,7 +230,7 @@ export function OrderDetailPage() {
           <h3>Condiciones Comerciales y Logísticas</h3>
           <p><strong>Forma de Pago:</strong> {order.paymentTerms ?? "Contado / A convenir"}</p>
           <p><strong>Método de Pago:</strong> {order.paymentMethod ?? "Transferencia Bancaria"}</p>
-          <p><strong>Plazo de Entrega:</strong> {order.deliveryTimeDays ? `${order.deliveryTimeDays} días` : "Inmediata"}</p>
+          <p><strong>Plazo de Entrega:</strong> {order.deliveryTimeText || (order.deliveryTimeDays ? `${order.deliveryTimeDays} días` : "Inmediata")}</p>
           <p><strong>Transporte / Flete:</strong> {order.transportation ?? "A cargo del comprador"}</p>
           <p><strong>Garantía:</strong> {order.warranty ?? "6 meses"}</p>
           {order.notes && <p><strong>Notas Operativas:</strong> {order.notes}</p>}

@@ -80,6 +80,8 @@ public sealed class Quote : AggregateRoot<QuoteId>
 
     public int? DeliveryTimeDays { get; private set; }
 
+    public string? DeliveryTimeText { get; private set; }
+
     public string? Transportation { get; private set; }
 
     public string? Warranty { get; private set; }
@@ -115,7 +117,8 @@ public sealed class Quote : AggregateRoot<QuoteId>
         string? paymentMethod = null,
         int? deliveryTimeDays = null,
         string? transportation = null,
-        string? warranty = null)
+        string? warranty = null,
+        string? deliveryTimeText = null)
     {
         if (customerId == Guid.Empty)
         {
@@ -137,6 +140,7 @@ public sealed class Quote : AggregateRoot<QuoteId>
             PaymentTerms = string.IsNullOrWhiteSpace(paymentTerms) ? null : paymentTerms.Trim(),
             PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? null : paymentMethod.Trim(),
             DeliveryTimeDays = deliveryTimeDays,
+            DeliveryTimeText = string.IsNullOrWhiteSpace(deliveryTimeText) ? null : deliveryTimeText.Trim(),
             Transportation = string.IsNullOrWhiteSpace(transportation) ? null : transportation.Trim(),
             Warranty = string.IsNullOrWhiteSpace(warranty) ? null : warranty.Trim()
         };
@@ -160,7 +164,8 @@ public sealed class Quote : AggregateRoot<QuoteId>
         string? warranty,
         string? notes,
         string? ownerName,
-        DateTime utcNow)
+        DateTime utcNow,
+        string? deliveryTimeText = null)
     {
         if (!IsEditable)
         {
@@ -183,6 +188,7 @@ public sealed class Quote : AggregateRoot<QuoteId>
         PaymentTerms = string.IsNullOrWhiteSpace(paymentTerms) ? null : paymentTerms.Trim();
         PaymentMethod = string.IsNullOrWhiteSpace(paymentMethod) ? null : paymentMethod.Trim();
         DeliveryTimeDays = deliveryTimeDays;
+        DeliveryTimeText = string.IsNullOrWhiteSpace(deliveryTimeText) ? null : deliveryTimeText.Trim();
         Transportation = string.IsNullOrWhiteSpace(transportation) ? null : transportation.Trim();
         Warranty = string.IsNullOrWhiteSpace(warranty) ? null : warranty.Trim();
         Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();

@@ -72,7 +72,8 @@ public sealed record QuoteWriteModel(
     string? Warranty,
     string? Notes,
     string? OwnerName,
-    List<QuoteLineWriteModel> Lines);
+    List<QuoteLineWriteModel> Lines,
+    string? DeliveryTimeText = null);
 
 public sealed record QuoteLineDto(
     Guid Id,
@@ -112,7 +113,8 @@ public sealed record QuoteDto(
     string? OwnerName,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
-    IReadOnlyList<QuoteLineDto> Lines);
+    IReadOnlyList<QuoteLineDto> Lines,
+    string? DeliveryTimeText);
 
 internal static class QuoteMappings
 {
@@ -152,7 +154,8 @@ internal static class QuoteMappings
             l.IsOptional,
             l.CurrencyCode,
             l.LineSubtotal,
-            l.TechnicalDetail)).ToList());
+            l.TechnicalDetail)).ToList(),
+        quote.DeliveryTimeText);
 }
 
 internal sealed class CreateQuoteCommandHandler : IRequestHandler<CreateQuoteCommand, Result<QuoteDto>>
@@ -200,7 +203,8 @@ internal sealed class CreateQuoteCommandHandler : IRequestHandler<CreateQuoteCom
             request.Model.PaymentMethod,
             request.Model.DeliveryTimeDays,
             request.Model.Transportation,
-            request.Model.Warranty);
+            request.Model.Warranty,
+            request.Model.DeliveryTimeText);
 
         if (quoteResult.IsFailure)
         {
@@ -305,7 +309,8 @@ internal sealed class UpdateQuoteCommandHandler : IRequestHandler<UpdateQuoteCom
             request.Model.Warranty,
             request.Model.Notes,
             request.Model.OwnerName,
-            _clock.UtcNow);
+            _clock.UtcNow,
+            request.Model.DeliveryTimeText);
 
         if (updateResult.IsFailure)
         {

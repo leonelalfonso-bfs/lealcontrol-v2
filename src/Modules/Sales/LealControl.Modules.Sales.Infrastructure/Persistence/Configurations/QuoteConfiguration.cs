@@ -21,6 +21,7 @@ internal sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
         builder.Property(x => x.DiscountPercent).HasPrecision(8, 4);
         builder.Property(x => x.PaymentTerms).HasMaxLength(2000);
         builder.Property(x => x.PaymentMethod).HasMaxLength(100);
+        builder.Property(x => x.DeliveryTimeText).HasMaxLength(200);
         builder.Property(x => x.Transportation).HasMaxLength(200);
         builder.Property(x => x.Warranty).HasMaxLength(2000);
         builder.Property(x => x.Notes).HasMaxLength(8000);

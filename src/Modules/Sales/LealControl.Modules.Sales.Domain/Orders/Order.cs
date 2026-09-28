@@ -68,6 +68,8 @@ public sealed class Order : AggregateRoot<OrderId>
 
     public int? DeliveryTimeDays { get; private set; }
 
+    public string? DeliveryTimeText { get; private set; }
+
     public string? Transportation { get; private set; }
 
     public string? Warranty { get; private set; }
@@ -103,7 +105,8 @@ public sealed class Order : AggregateRoot<OrderId>
         string? warranty = null,
         string? notes = null,
         string? ownerName = null,
-        OrderStatus initialStatus = OrderStatus.Draft)
+        OrderStatus initialStatus = OrderStatus.Draft,
+        string? deliveryTimeText = null)
     {
         var order = new Order(OrderId.New(), tenantId, orderNumber, customerId, createdAtUtc)
         {
@@ -119,6 +122,7 @@ public sealed class Order : AggregateRoot<OrderId>
             PaymentTerms = paymentTerms,
             PaymentMethod = paymentMethod,
             DeliveryTimeDays = deliveryTimeDays,
+            DeliveryTimeText = string.IsNullOrWhiteSpace(deliveryTimeText) ? null : deliveryTimeText.Trim(),
             Transportation = transportation,
             Warranty = warranty,
             Notes = notes,
@@ -170,7 +174,8 @@ public sealed class Order : AggregateRoot<OrderId>
         string? warranty,
         string? notes,
         string? ownerName,
-        DateTime updatedAtUtc)
+        DateTime updatedAtUtc,
+        string? deliveryTimeText = null)
     {
         CustomerId = customerId;
         LocationId = locationId;
@@ -183,6 +188,7 @@ public sealed class Order : AggregateRoot<OrderId>
         PaymentTerms = paymentTerms;
         PaymentMethod = paymentMethod;
         DeliveryTimeDays = deliveryTimeDays;
+        DeliveryTimeText = string.IsNullOrWhiteSpace(deliveryTimeText) ? null : deliveryTimeText.Trim();
         Transportation = transportation;
         Warranty = warranty;
         Notes = notes;

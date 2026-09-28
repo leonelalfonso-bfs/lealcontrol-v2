@@ -27,7 +27,8 @@ export function OrderFormPage() {
   const [discountPercent, setDiscountPercent] = useState(0);
   const [paymentTerms, setPaymentTerms] = useState("Contado / 30 días");
   const [paymentMethod, setPaymentMethod] = useState("Transferencia Bancaria");
-  const [deliveryTimeDays, setDeliveryTimeDays] = useState(7);
+  const [deliveryTimeDays, setDeliveryTimeDays] = useState<number | null>(7);
+  const [deliveryTimeText, setDeliveryTimeText] = useState("");
   const [transportation, setTransportation] = useState("Flete a cargo del comprador");
   const [warranty, setWarranty] = useState("6 meses de garantía directa");
   const [notes, setNotes] = useState("");
@@ -66,7 +67,8 @@ export function OrderFormPage() {
             setDiscountPercent(ord.discountPercent);
             setPaymentTerms(ord.paymentTerms ?? "");
             setPaymentMethod(ord.paymentMethod ?? "");
-            setDeliveryTimeDays(ord.deliveryTimeDays ?? 7);
+            setDeliveryTimeDays(ord.deliveryTimeText ? null : ord.deliveryTimeDays ?? 7);
+            setDeliveryTimeText(ord.deliveryTimeText ?? "");
             setTransportation(ord.transportation ?? "");
             setWarranty(ord.warranty ?? "");
             setNotes(ord.notes ?? "");
@@ -169,6 +171,7 @@ export function OrderFormPage() {
       paymentTerms,
       paymentMethod,
       deliveryTimeDays,
+      deliveryTimeText: deliveryTimeText.trim() || null,
       transportation,
       warranty,
       notes,
@@ -460,7 +463,11 @@ export function OrderFormPage() {
             </label>
             <label>
               Plazo de Entrega (Días)
-              <input type="number" value={deliveryTimeDays} onChange={(e) => setDeliveryTimeDays(Number(e.target.value))} />
+              <input type="number" value={deliveryTimeDays ?? ""} onChange={(e) => { setDeliveryTimeDays(e.target.value === "" ? null : Number(e.target.value)); if (e.target.value) setDeliveryTimeText(""); }} />
+            </label>
+            <label>
+              Plazo de Entrega (Texto)
+              <input type="text" maxLength={200} value={deliveryTimeText} onChange={(e) => { setDeliveryTimeText(e.target.value); if (e.target.value) setDeliveryTimeDays(null); }} />
             </label>
           </div>
           <div className="grid-2" style={{ marginTop: 12 }}>

@@ -75,7 +75,7 @@ public static class SalesEndpoints
             CancellationToken cancellationToken) =>
         {
             var records = await db.HistoricalQuotes.AsNoTracking()
-                .Where(q => q.TenantId == tenant.TenantId.Value)
+                .Where(q => q.TenantId == tenant.TenantId.Value && q.PromotedQuoteId == null)
                 .OrderByDescending(q => q.QuoteDate)
                 .ThenByDescending(q => q.QuoteNumber)
                 .Select(q => new
