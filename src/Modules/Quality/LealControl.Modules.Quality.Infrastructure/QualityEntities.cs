@@ -565,6 +565,7 @@ public sealed record UpdateNonConformityRequest(
 public static class QualityInternalAuditStatuses
 {
     public const string Planned = "Planned";
+    public const string Done = "Done";
     public const string InProgress = "InProgress";
     public const string Reported = "Reported";
     public const string Closed = "Closed";
@@ -589,7 +590,8 @@ public sealed class QualityInternalAudit : Entity<Guid>
     public DateTime PlannedDate { get; set; } = DateTime.UtcNow;
     public DateTime? ExecutedDate { get; set; }
     public string Scope { get; set; } = string.Empty;
-    public string Clauses { get; set; } = string.Empty;
+    public string Clauses { get; set; } = string.Empty; // Historical field, retained for existing audits.
+    public string Criteria { get; set; } = string.Empty;
     public string Auditor { get; set; } = string.Empty;
     public string Auditee { get; set; } = string.Empty;
     public string Objectives { get; set; } = string.Empty;
@@ -610,10 +612,9 @@ public sealed record CreateInternalAuditRequest(
     int ProgramYear,
     DateTime? PlannedDate = null,
     string? Scope = null,
-    string? Clauses = null,
+    string? Criteria = null,
     string? Auditor = null,
     string? Auditee = null,
-    string? Objectives = null,
     string? Notes = null);
 
 public sealed record UpdateInternalAuditRequest(
@@ -621,14 +622,9 @@ public sealed record UpdateInternalAuditRequest(
     DateTime? PlannedDate = null,
     DateTime? ExecutedDate = null,
     string? Scope = null,
-    string? Clauses = null,
+    string? Criteria = null,
     string? Auditor = null,
     string? Auditee = null,
-    string? Objectives = null,
-    string? FindingsSummary = null,
-    string? Conclusions = null,
-    string? Recommendations = null,
-    string? ChecklistNotes = null,
     Guid? PlanFileId = null,
     Guid? ReportFileId = null,
     Guid? ChecklistFileId = null,

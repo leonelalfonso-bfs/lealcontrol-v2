@@ -268,6 +268,7 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.Number).HasMaxLength(32).IsRequired();
             b.Property(x => x.Scope).HasMaxLength(2000);
             b.Property(x => x.Clauses).HasMaxLength(500);
+            b.Property(x => x.Criteria).HasMaxLength(500);
             b.Property(x => x.Auditor).HasMaxLength(160);
             b.Property(x => x.Auditee).HasMaxLength(200);
             b.Property(x => x.Objectives).HasMaxLength(2000);
@@ -570,6 +571,7 @@ public sealed class QualityDbContext : DbContext
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_documents_Tenant_Code"" ON quality.documents (""TenantId"", ""Code"");",
+            @"UPDATE quality.documents SET ""RecordKind"" = 'Attachment' WHERE ""Code"" IN ('PG04-R02', 'PG04-R03', 'PG04-R04') AND ""RecordKind"" = 'Structured';",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_documents_Tenant_Parent"" ON quality.documents (""TenantId"", ""ParentId"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_documents_Tenant_Type"" ON quality.documents (""TenantId"", ""Type"");",
             @"ALTER TABLE quality.documents ALTER COLUMN ""DisplayCode"" TYPE character varying(120);",
@@ -814,6 +816,7 @@ public sealed class QualityDbContext : DbContext
                 ""ExecutedDate"" timestamp with time zone,
                 ""Scope"" character varying(2000) NOT NULL DEFAULT '',
                 ""Clauses"" character varying(500) NOT NULL DEFAULT '',
+                ""Criteria"" character varying(500) NOT NULL DEFAULT '',
                 ""Auditor"" character varying(160) NOT NULL DEFAULT '',
                 ""Auditee"" character varying(200) NOT NULL DEFAULT '',
                 ""Objectives"" character varying(2000) NOT NULL DEFAULT '',
@@ -829,6 +832,7 @@ public sealed class QualityDbContext : DbContext
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
+            @"ALTER TABLE quality.internal_audits ADD COLUMN IF NOT EXISTS ""Criteria"" character varying(500) NOT NULL DEFAULT '';",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_audits_Tenant_Number"" ON quality.internal_audits (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_audits_Tenant_Year_Status"" ON quality.internal_audits (""TenantId"", ""ProgramYear"", ""Status"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_audits_Tenant_Planned"" ON quality.internal_audits (""TenantId"", ""PlannedDate"");",

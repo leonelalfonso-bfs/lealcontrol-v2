@@ -205,25 +205,25 @@ export const QUALITY_OPERATIONAL_RECORDS: QualityOperationalRecord[] = [
     code: "PG04-R02",
     title: "Plan de auditoría",
     path: "/calidad/registros/auditorias",
-    kind: "Structured",
+    kind: "Attachment",
     ready: true,
-    blurb: "Etapa plan / objetivos / adjunto del mismo flujo PG04."
+    blurb: "Respaldo del plan; se adjunta a una auditoría realizada."
   },
   {
     code: "PG04-R03",
     title: "Informe de auditoría",
     path: "/calidad/registros/auditorias",
-    kind: "Structured",
+    kind: "Attachment",
     ready: true,
-    blurb: "Hallazgos, conclusiones e informe PDF exportable."
+    blurb: "Respaldo del informe; se adjunta a una auditoría realizada."
   },
   {
     code: "PG04-R04",
     title: "Lista de verificación ISO/IEC 17025",
     path: "/calidad/registros/auditorias",
-    kind: "Structured",
+    kind: "Attachment",
     ready: true,
-    blurb: "Checklist y cláusulas dentro de la auditoría."
+    blurb: "Respaldo de la lista de verificación; se adjunta a una auditoría realizada."
   },
   {
     code: "PG05-R01",

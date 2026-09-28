@@ -1750,10 +1750,9 @@ export const api = {
     programYear: number;
     plannedDate?: string;
     scope: string;
-    clauses?: string;
+    criteria?: string;
     auditor: string;
     auditee?: string;
-    objectives?: string;
     notes?: string;
   }) =>
     request<import("./types/quality").QualityInternalAudit>("/api/v1/quality/records/pg04", {
@@ -1768,18 +1767,13 @@ export const api = {
       plannedDate?: string;
       executedDate?: string;
       scope?: string;
-      clauses?: string;
+      criteria?: string;
       auditor?: string;
       auditee?: string;
-      objectives?: string;
-      findingsSummary?: string;
-      conclusions?: string;
-      recommendations?: string;
-      checklistNotes?: string;
       planFileId?: string;
       reportFileId?: string;
       checklistFileId?: string;
-      status?: string;
+      status?: "Planned" | "Done";
       notes?: string;
     }
   ) =>

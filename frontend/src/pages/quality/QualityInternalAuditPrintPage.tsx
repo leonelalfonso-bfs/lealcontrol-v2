@@ -7,9 +7,7 @@ import { loadHtml2Pdf } from "../../utils/loadHtml2Pdf";
 
 const STATUS_LABEL: Record<string, string> = {
   Planned: "Programada",
-  InProgress: "En curso",
-  Reported: "Informada",
-  Closed: "Cerrada",
+  Done: "Realizada",
   Cancelled: "Anulada"
 };
 
@@ -48,7 +46,7 @@ export function QualityInternalAuditPrintPage() {
       await html2pdf()
         .set({
           margin: [10, 10, 10, 10],
-          filename: `PG04_${row.number}.pdf`,
+          filename: `PG04-R01_${row.number}.pdf`,
           image: { type: "jpeg", quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
@@ -125,7 +123,7 @@ export function QualityInternalAuditPrintPage() {
               </td>
               <td style={{ ...cell, textAlign: "center" }}>
                 <div style={{ fontSize: 11 }}>SISTEMA DE GESTIÓN DE CALIDAD · ISO/IEC 17025</div>
-                <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>PG04 · Auditoría interna</div>
+                <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>PG04-R01 · Programa de auditorías</div>
               </td>
               <td style={{ ...cell, width: "24%", fontSize: 11 }}>
                 <div>
@@ -157,45 +155,15 @@ export function QualityInternalAuditPrintPage() {
               <td style={cell}>{row.auditee || "—"}</td>
             </tr>
             <tr>
-              <td style={label}>Cláusulas 17025</td>
+              <td style={label}>Criterios</td>
               <td style={cell} colSpan={3}>
-                {row.clauses || "—"}
+                {row.criteria || "—"}
               </td>
             </tr>
             <tr>
               <td style={label}>Alcance</td>
               <td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>
                 {row.scope || "—"}
-              </td>
-            </tr>
-            <tr>
-              <td style={label}>Objetivos / plan (R02)</td>
-              <td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>
-                {row.objectives || "—"}
-              </td>
-            </tr>
-            <tr>
-              <td style={label}>Lista de verificación (R04)</td>
-              <td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>
-                {row.checklistNotes || "—"}
-              </td>
-            </tr>
-            <tr>
-              <td style={label}>Hallazgos / informe (R03)</td>
-              <td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>
-                {row.findingsSummary || "—"}
-              </td>
-            </tr>
-            <tr>
-              <td style={label}>Conclusiones</td>
-              <td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>
-                {row.conclusions || "—"}
-              </td>
-            </tr>
-            <tr>
-              <td style={label}>Recomendaciones</td>
-              <td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>
-                {row.recommendations || "—"}
               </td>
             </tr>
             <tr>
@@ -208,7 +176,7 @@ export function QualityInternalAuditPrintPage() {
         </table>
 
         <p style={{ fontSize: 9, color: "#64748b", marginTop: 16 }}>
-          Documento generado desde LealControl · PG04 (programa / plan / informe / checklist unificados) · {new Date().toLocaleString("es-AR")}
+          Documento generado desde LealControl · PG04-R01 · Programa de auditorías internas · {new Date().toLocaleString("es-AR")}
         </p>
       </div>
 

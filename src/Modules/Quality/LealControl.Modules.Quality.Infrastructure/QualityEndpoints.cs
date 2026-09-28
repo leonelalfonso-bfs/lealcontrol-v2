@@ -1555,9 +1555,7 @@ public static class QualityEndpoints
                 .ThenByDescending(a => a.PlannedDate)
                 .ThenByDescending(a => a.Number)
                 .ToListAsync(ct);
-            var openCount = rows.Count(a => a.Status is QualityInternalAuditStatuses.Planned
-                or QualityInternalAuditStatuses.InProgress
-                or QualityInternalAuditStatuses.Reported);
+            var openCount = rows.Count(a => InternalAuditDisplayStatus(a) == QualityInternalAuditStatuses.Planned);
             return Results.Ok(new
             {
                 code = "PG04",
@@ -1565,7 +1563,7 @@ public static class QualityEndpoints
                 recordKind = "Structured",
                 generatedAtUtc = DateTime.UtcNow,
                 openCount,
-                rows = rows.Select(ToInternalAuditDto)
+                rows = rows.Where(a => a.Status != QualityInternalAuditStatuses.Cancelled).Select(ToInternalAuditDto)
             });
         });
 
@@ -1594,6 +1592,8 @@ public static class QualityEndpoints
                 return Results.BadRequest(new { message = "El alcance es obligatorio." });
             if (string.IsNullOrWhiteSpace(req.Auditor))
                 return Results.BadRequest(new { message = "El auditor es obligatorio." });
+            if (req.Criteria?.Length > 500)
+                return Results.BadRequest(new { message = "Los criterios no pueden superar 500 caracteres." });
 
             var prefix = $"AUD-{year}-";
             var lastNumber = await db.InternalAudits.AsNoTracking()
@@ -1616,10 +1616,9 @@ public static class QualityEndpoints
                 ProgramYear = year,
                 PlannedDate = planned,
                 Scope = req.Scope.Trim(),
-                Clauses = req.Clauses?.Trim() ?? string.Empty,
+                Criteria = req.Criteria?.Trim() ?? string.Empty,
                 Auditor = req.Auditor.Trim(),
                 Auditee = req.Auditee?.Trim() ?? string.Empty,
-                Objectives = req.Objectives?.Trim() ?? string.Empty,
                 Notes = req.Notes?.Trim() ?? string.Empty,
                 Status = QualityInternalAuditStatuses.Planned,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1644,22 +1643,22 @@ public static class QualityEndpoints
             var tenantId = tenant.TenantId;
             var entity = await db.InternalAudits.FirstOrDefaultAsync(a => a.Id == id && a.TenantId == tenantId, ct);
             if (entity is null) return Results.NotFound();
-            if (entity.Status is QualityInternalAuditStatuses.Closed or QualityInternalAuditStatuses.Cancelled)
-                return Results.BadRequest(new { message = "La auditoría está cerrada; no se puede editar." });
+            if (entity.Status == QualityInternalAuditStatuses.Cancelled)
+                return Results.BadRequest(new { message = "La auditoría está anulada." });
 
             var before = ToInternalAuditDto(entity);
-
             if (req.ProgramYear.HasValue && req.ProgramYear.Value > 2000)
                 entity.ProgramYear = req.ProgramYear.Value;
             if (req.PlannedDate.HasValue) entity.PlannedDate = req.PlannedDate.Value;
-            if (req.ExecutedDate.HasValue) entity.ExecutedDate = req.ExecutedDate;
             if (req.Scope is not null)
             {
                 if (string.IsNullOrWhiteSpace(req.Scope))
                     return Results.BadRequest(new { message = "El alcance no puede quedar vacío." });
                 entity.Scope = req.Scope.Trim();
             }
-            if (req.Clauses is not null) entity.Clauses = req.Clauses.Trim();
+            if (req.Criteria?.Length > 500)
+                return Results.BadRequest(new { message = "Los criterios no pueden superar 500 caracteres." });
+            if (req.Criteria is not null) entity.Criteria = req.Criteria.Trim();
             if (req.Auditor is not null)
             {
                 if (string.IsNullOrWhiteSpace(req.Auditor))
@@ -1667,69 +1666,49 @@ public static class QualityEndpoints
                 entity.Auditor = req.Auditor.Trim();
             }
             if (req.Auditee is not null) entity.Auditee = req.Auditee.Trim();
-            if (req.Objectives is not null) entity.Objectives = req.Objectives.Trim();
-            if (req.FindingsSummary is not null) entity.FindingsSummary = req.FindingsSummary.Trim();
-            if (req.Conclusions is not null) entity.Conclusions = req.Conclusions.Trim();
-            if (req.Recommendations is not null) entity.Recommendations = req.Recommendations.Trim();
-            if (req.ChecklistNotes is not null) entity.ChecklistNotes = req.ChecklistNotes.Trim();
             if (req.Notes is not null) entity.Notes = req.Notes.Trim();
-
-            async Task<IResult?> ValidateFileAsync(Guid? fileId)
-            {
-                if (!fileId.HasValue) return null;
-                var ok = await db.Files.AsNoTracking()
-                    .AnyAsync(f => f.TenantId == tenantId && f.Id == fileId.Value, ct);
-                return ok ? null : Results.BadRequest(new { message = "El archivo adjunto no existe." });
-            }
-
-            if (req.PlanFileId.HasValue)
-            {
-                var err = await ValidateFileAsync(req.PlanFileId);
-                if (err is not null) return err;
-                entity.PlanFileId = req.PlanFileId;
-            }
-            if (req.ReportFileId.HasValue)
-            {
-                var err = await ValidateFileAsync(req.ReportFileId);
-                if (err is not null) return err;
-                entity.ReportFileId = req.ReportFileId;
-            }
-            if (req.ChecklistFileId.HasValue)
-            {
-                var err = await ValidateFileAsync(req.ChecklistFileId);
-                if (err is not null) return err;
-                entity.ChecklistFileId = req.ChecklistFileId;
-            }
 
             if (req.Status is not null)
             {
-                var st = req.Status.Trim();
-                var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                if (req.Status == QualityInternalAuditStatuses.Done)
                 {
-                    QualityInternalAuditStatuses.Planned,
-                    QualityInternalAuditStatuses.InProgress,
-                    QualityInternalAuditStatuses.Reported,
-                    QualityInternalAuditStatuses.Closed,
-                    QualityInternalAuditStatuses.Cancelled
-                };
-                if (!allowed.Contains(st))
-                    return Results.BadRequest(new { message = "Estado inválido." });
-
-                if (st == QualityInternalAuditStatuses.Reported)
-                {
-                    entity.ExecutedDate ??= DateTime.UtcNow;
-                    if (string.IsNullOrWhiteSpace(entity.FindingsSummary) && string.IsNullOrWhiteSpace(req.FindingsSummary))
-                        return Results.BadRequest(new { message = "Indique el resumen de hallazgos antes de informar." });
+                    entity.ExecutedDate = req.ExecutedDate ?? entity.ExecutedDate;
+                    if (!entity.ExecutedDate.HasValue)
+                        return Results.BadRequest(new { message = "Indicá la fecha de realización." });
+                    if (entity.ExecutedDate.Value.Date > DateTime.UtcNow.Date)
+                        return Results.BadRequest(new { message = "La fecha de realización no puede ser futura." });
+                    entity.Status = QualityInternalAuditStatuses.Done;
                 }
-
-                if (st == QualityInternalAuditStatuses.Closed)
+                else if (req.Status == QualityInternalAuditStatuses.Planned
+                    && InternalAuditDisplayStatus(entity) == QualityInternalAuditStatuses.Planned)
                 {
-                    entity.ExecutedDate ??= DateTime.UtcNow;
-                    if (string.IsNullOrWhiteSpace(entity.Conclusions) && string.IsNullOrWhiteSpace(req.Conclusions))
-                        return Results.BadRequest(new { message = "Indique las conclusiones antes de cerrar." });
+                    entity.Status = QualityInternalAuditStatuses.Planned;
                 }
+                else
+                    return Results.BadRequest(new { message = "Solo se admiten los estados Programada y Realizada." });
+            }
+            else if (req.ExecutedDate.HasValue && InternalAuditDisplayStatus(entity) == QualityInternalAuditStatuses.Done)
+            {
+                if (req.ExecutedDate.Value.Date > DateTime.UtcNow.Date)
+                    return Results.BadRequest(new { message = "La fecha de realización no puede ser futura." });
+                entity.ExecutedDate = req.ExecutedDate;
+            }
 
-                entity.Status = st;
+            if (req.PlanFileId.HasValue || req.ReportFileId.HasValue || req.ChecklistFileId.HasValue)
+            {
+                if (InternalAuditDisplayStatus(entity) != QualityInternalAuditStatuses.Done)
+                    return Results.BadRequest(new { message = "Los respaldos R02, R03 y R04 se cargan después de realizar la auditoría." });
+
+                async Task<bool> FileExistsAsync(Guid fileId) => await db.Files.AsNoTracking()
+                    .AnyAsync(f => f.TenantId == tenantId && f.Id == fileId, ct);
+                if (req.PlanFileId.HasValue && !await FileExistsAsync(req.PlanFileId.Value)
+                    || req.ReportFileId.HasValue && !await FileExistsAsync(req.ReportFileId.Value)
+                    || req.ChecklistFileId.HasValue && !await FileExistsAsync(req.ChecklistFileId.Value))
+                    return Results.BadRequest(new { message = "El archivo de respaldo no existe en esta empresa." });
+
+                if (req.PlanFileId.HasValue) entity.PlanFileId = req.PlanFileId;
+                if (req.ReportFileId.HasValue) entity.ReportFileId = req.ReportFileId;
+                if (req.ChecklistFileId.HasValue) entity.ChecklistFileId = req.ChecklistFileId;
             }
 
             entity.UpdatedAtUtc = DateTime.UtcNow;
@@ -2446,6 +2425,11 @@ public static class QualityEndpoints
         n.UpdatedAtUtc
     };
 
+    private static string InternalAuditDisplayStatus(QualityInternalAudit audit) =>
+        audit.Status == QualityInternalAuditStatuses.Cancelled ? QualityInternalAuditStatuses.Cancelled
+        : audit.Status is QualityInternalAuditStatuses.Done or QualityInternalAuditStatuses.Reported or QualityInternalAuditStatuses.Closed
+          || audit.ExecutedDate.HasValue ? QualityInternalAuditStatuses.Done : QualityInternalAuditStatuses.Planned;
+
     private static object ToInternalAuditDto(QualityInternalAudit a) => new
     {
         a.Id,
@@ -2455,7 +2439,7 @@ public static class QualityEndpoints
         a.PlannedDate,
         a.ExecutedDate,
         a.Scope,
-        a.Clauses,
+        Criteria = string.IsNullOrWhiteSpace(a.Criteria) ? a.Clauses : a.Criteria,
         a.Auditor,
         a.Auditee,
         a.Objectives,
@@ -2466,7 +2450,7 @@ public static class QualityEndpoints
         a.PlanFileId,
         a.ReportFileId,
         a.ChecklistFileId,
-        a.Status,
+        Status = InternalAuditDisplayStatus(a),
         a.Notes,
         a.CreatedAtUtc,
         a.UpdatedAtUtc
