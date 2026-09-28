@@ -120,6 +120,7 @@ export const OpportunitiesPage = named(() => import("../pages/OpportunitiesPage"
 export const OpportunityDetailPage = named(() => import("../pages/OpportunityDetailPage"), "OpportunityDetailPage");
 export const CrmHelpPage = named(() => import("../pages/CrmHelpPage"), "CrmHelpPage");
 export const OrderDetailPage = named(() => import("../pages/OrderDetailPage"), "OrderDetailPage");
+export const OrderPrintPage = named(() => import("../pages/OrderPrintPage"), "OrderPrintPage");
 export const OrderFormPage = named(() => import("../pages/OrderFormPage"), "OrderFormPage");
 export const OrdersPage = named(() => import("../pages/OrdersPage"), "OrdersPage");
 export const ProductFormPage = named(() => import("../pages/ProductFormPage"), "ProductFormPage");

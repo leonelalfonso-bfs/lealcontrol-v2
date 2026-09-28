@@ -109,6 +109,7 @@ import {
   OpportunitiesPage,
   OpportunityDetailPage,
   OrderDetailPage,
+  OrderPrintPage,
   OrderFormPage,
   OrdersPage,
   OrgChartPage,
@@ -597,6 +598,7 @@ export function App() {
               <Route path="/pedidos" element={<OrdersPage />} />
               <Route path="/pedidos/nuevo" element={<OrderFormPage />} />
               <Route path="/pedidos/:id" element={<OrderDetailPage />} />
+              <Route path="/pedidos/:id/imprimir" element={<OrderPrintPage />} />
               <Route path="/pedidos/:id/editar" element={<OrderFormPage />} />
               <Route path="/remitos" element={<RemitosPage />} />
               <Route path="/remitos/nuevo" element={<RemitoFormPage />} />

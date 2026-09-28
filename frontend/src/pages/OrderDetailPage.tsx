@@ -95,9 +95,9 @@ export function OrderDetailPage() {
           <button
             type="button"
             className="btn ghost"
-            onClick={() => window.print()}
+            onClick={() => window.open(`/pedidos/${order.id}/imprimir`, "_blank")}
           >
-            🖨️ Imprimir
+            🖨️ Imprimir / PDF
           </button>
           <Link className="btn ghost" to={`/pedidos/${order.id}/editar`}>
             ✏️ Editar
