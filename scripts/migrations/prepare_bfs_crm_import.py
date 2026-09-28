@@ -124,6 +124,13 @@ def prepare(source, destination):
         if province_raw and not fiscal_province:
             issues["unmapped_province"] += 1
             flags.append("province_unmapped")
+        fiscal_street = text(prepared.get("fiscal_street"), 200, "customer_street_too_long", issues)
+        fiscal_city = text(prepared.get("fiscal_city"), 120, "customer_city_too_long", issues)
+        fiscal_postal = text(prepared.get("fiscal_postal_code"), 12, "customer_postal_too_long", issues)
+        if not fiscal_province and any((fiscal_street, fiscal_city, fiscal_postal)):
+            issues["fiscal_address_pending_province"] += 1
+            flags.append("fiscal_address_pending_province")
+            fiscal_street = fiscal_city = fiscal_postal = None
         number = prepared["document_number"] or ""
         if c_id:
             customer_phone = phone(old.get("phone"), "customer_phone_unmapped", issues)
@@ -135,10 +142,10 @@ def prepare(source, destination):
                 text(old.get("email"), 200, "customer_email_too_long", issues),
                 customer_phone,
                 phone(old.get("whatsapp_phone"), "customer_whatsapp_unmapped", issues),
-                text(prepared.get("fiscal_street"), 200, "customer_street_too_long", issues),
-                text(prepared.get("fiscal_city"), 120, "customer_city_too_long", issues),
+                fiscal_street,
+                fiscal_city,
                 fiscal_province,
-                text(prepared.get("fiscal_postal_code"), 12, "customer_postal_too_long", issues),
+                fiscal_postal,
                 bool(old.get("is_large_company")),
                 imported_at, imported_at,
             ))
