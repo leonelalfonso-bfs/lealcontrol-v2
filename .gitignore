@@ -44,6 +44,8 @@ post_*.json
 *.py
 !tools/quality-seed/seed.py
 !tools/quality-seed/**/*.py
+!scripts/migrations/prepare_bfs_crm_import.py
+__pycache__/
 
 ## Docker
 get-docker.sh
