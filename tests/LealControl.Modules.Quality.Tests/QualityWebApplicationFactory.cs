@@ -10,6 +10,11 @@ using Xunit;
 
 namespace LealControl.Modules.Quality.Tests;
 
+[CollectionDefinition("QualityApi")]
+public sealed class QualityApiCollection : ICollectionFixture<QualityWebApplicationFactory>
+{
+}
+
 public sealed class QualityWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public static readonly Guid DemoTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
