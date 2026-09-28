@@ -1,10 +1,21 @@
 # Migración del ERP Laravel a un nuevo tenant
 
-Estado: preparación de ensayo CRM, 28-09-2026. **No se ejecutó ninguna importación en producción, consulta masiva a ARCA ni carga de credenciales.** Se auditó una copia privada de `tenantbfs`; el informe sin datos personales está en el entorno privado de trabajo. El destino confirmado es `leal_tenant_bfs` y estaba vacío al comprobarlo.
+Estado: **ensayo importado en producción al tenant BFS**, 28-09-2026. No se consultó ARCA masivamente ni se cargaron credenciales. Se auditó una copia privada de `tenantbfs`; el informe sin datos personales está en el entorno privado de trabajo. El destino confirmado es `leal_tenant_bfs`, que estaba vacío antes de la carga. Se guardó un respaldo previo en el VPS antes de importar.
 
 El lote preparado por `scripts/migrations/prepare_bfs_crm_import.py` carga en una sola transacción 764 clientes, 1.393 proveedores, 49 ubicaciones y 57 contactos. Mantiene una tabla `legacy_bfs.entities` con IDs antiguos, nuevos IDs y copia del dato original, además de copias de origen de ubicaciones/contactos dentro del esquema `legacy_bfs`. Deja fuera 3 entidades cuya condición IVA no figura en el origen y conserva aparte un contacto de una entidad que solo es proveedora. Hay 16 teléfonos de cliente que no se pueden normalizar al formato actual y 165 domicilios fiscales parciales sin provincia: no se cargan esos campos incompletos en CRM, pero se conserva el valor original para revisión. El SQL generado contiene datos personales y **nunca debe subirse a Git**. La prueba con PostgreSQL aislado concilió los conteos y verificó que una segunda ejecución se rechaza al encontrar datos.
 
-La tabla `crm.suppliers` faltaba en el tenant recién creado porque la migración CRM chocó con `public.tenant_settings` ya existente. El bootstrap la crea de forma idempotente desde `04b8168`; el usuario confirmó que ya está en producción. La migración EF pendiente sigue requiriendo conciliación para eliminar esa advertencia. Los presupuestos antiguos se incorporan a `sales.historical_quotes` como historial de solo lectura, ya que su total neto no equivale al total calculado por `Sales.Quote`. El segundo lote conserva 118 versiones y 239 renglones completos, con estado/moneda originales y relación entre revisiones, sin dar de alta productos ni generar pedidos. Tiene pantalla de consulta y descarga de PDF. Ambos lotes se ensayaron juntos en PostgreSQL aislado con conciliación de cantidades; falta ejecutarlos y revisar la interfaz en el tenant BFS.
+La tabla `crm.suppliers` faltaba en el tenant recién creado porque la migración CRM chocó con `public.tenant_settings` ya existente. El bootstrap la crea de forma idempotente desde `04b8168`; el usuario confirmó que ya está en producción. La migración EF pendiente sigue requiriendo conciliación para eliminar esa advertencia. Los presupuestos antiguos están en `sales.historical_quotes` como historial de solo lectura, ya que su total neto no equivale al total calculado por `Sales.Quote`. El segundo lote conserva 118 versiones y 239 renglones completos, con estado/moneda originales y relación entre revisiones, sin dar de alta productos ni generar pedidos. Tiene pantalla de consulta y descarga de PDF. Ambos lotes se ensayaron juntos en PostgreSQL aislado y se ejecutaron en BFS; las salidas de producción conciliaron `764|1393|2095|49|57` (CRM) y `118|239` (presupuestos/renglones). Falta revisión visual por el usuario.
+
+### Estado del ensayo BFS
+
+- [x] Confirmar identidad y vacío de `leal_tenant_bfs`; guardar respaldo previo.
+- [x] Auditar una copia privada de `tenantbfs` y preparar lotes transaccionales con guardas de base, vacío y conteos.
+- [x] Importar 764 clientes, 1.393 proveedores, 49 ubicaciones y 57 contactos; conservar IDs y datos originales en `legacy_bfs`.
+- [x] Importar 118 versiones históricas y 239 renglones, sin productos ni pedidos nuevos.
+- [ ] Revisar en la interfaz clientes, proveedores, revisiones y PDF de una muestra de presupuestos.
+- [ ] Resolver 3 entidades sin condición IVA, 16 teléfonos no normalizados y 165 domicilios parciales; revisar 191 CUIT faltantes y 5 grupos de CUIT duplicados.
+- [ ] Contrastar datos fiscales con ARCA y corregir la exposición de la clave privada antes de cargar un certificado real.
+- [ ] Si el Laravel siguió operando después del respaldo fuente, obtener un respaldo fresco y conciliar las diferencias antes de considerar la migración definitiva.
 
 ## Alcance acordado
 
