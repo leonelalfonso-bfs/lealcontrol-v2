@@ -132,13 +132,13 @@ export const QuoteFormPage: React.FC = () => {
       try {
         setLoading(true);
         const [custData, prodsData, catsData, ratesData] = await Promise.all([
-          api.listCustomers(""),
+          api.listAllCustomers(),
           api.listProducts(),
           api.listCategories().catch(() => [] as ProductCategory[]),
           api.getExchangeRates().catch(() => null)
         ]);
 
-        setCustomers(custData.items);
+        setCustomers(custData);
         setProductsCatalog(prodsData);
         setCategories(catsData);
         if (ratesData) setRates(ratesData);

@@ -240,6 +240,17 @@ export const api = {
   cancelCheque: (id: string, reason: string) => request(`/api/v1/finance/echeqs/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }),
   listCustomers: (search = "", role = "customer") =>
     request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=50&search=${encodeURIComponent(search)}${role ? `&role=${encodeURIComponent(role)}` : ""}`),
+  listAllCustomers: async (role = "customer"): Promise<CustomerSummary[]> => {
+    const pageSize = 100;
+    const url = (page: number) => `/api/v1/crm/customers?page=${page}&pageSize=${pageSize}&role=${encodeURIComponent(role)}`;
+    const first = await request<Paged<CustomerSummary>>(url(1));
+    const pageCount = Math.ceil((first.total ?? first.totalCount ?? first.items.length) / pageSize);
+    const rest = await Promise.all(
+      Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+        request<Paged<CustomerSummary>>(url(index + 2)))
+    );
+    return [first, ...rest].flatMap((page) => page.items);
+  },
   getCustomer: (id: string) => request<CustomerDetail>(`/api/v1/crm/customers/${id}`),
   createCustomer: (body: CustomerWrite) =>
     request<CustomerDetail>("/api/v1/crm/customers", { method: "POST", body: JSON.stringify(body) }),

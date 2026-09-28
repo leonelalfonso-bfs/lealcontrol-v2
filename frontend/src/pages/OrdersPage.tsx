@@ -40,18 +40,16 @@ export function OrdersPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const [customersLoading, setCustomersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [customerError, setCustomerError] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const [ordData, custPage] = await Promise.all([
-        api.listOrders(search, statusFilter),
-        api.listCustomers()
-      ]);
+      const ordData = await api.listOrders(search, statusFilter);
       setOrders(ordData);
-      setCustomers(custPage.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar los pedidos de venta");
     } finally {
@@ -62,6 +60,17 @@ export function OrdersPage() {
   useEffect(() => {
     loadData();
   }, [search, statusFilter]);
+
+  useEffect(() => {
+    let active = true;
+    api.listAllCustomers()
+      .then((data) => { if (active) setCustomers(data); })
+      .catch((err: unknown) => {
+        if (active) setCustomerError(err instanceof Error ? err.message : "Error al cargar los nombres de clientes");
+      })
+      .finally(() => { if (active) setCustomersLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const customerMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -116,7 +125,7 @@ export function OrdersPage() {
         </div>
       </div>
 
-      {error && <div className="alert">{error}</div>}
+      {(error || customerError) && <div className="alert">{error || customerError}</div>}
 
       <div className="card pad toolbar" style={{ marginBottom: 20 }}>
         <input
@@ -137,7 +146,7 @@ export function OrdersPage() {
       </div>
 
       <section className="card">
-        {loading ? (
+        {loading || customersLoading ? (
           <div className="pad muted">Cargando pedidos de venta…</div>
         ) : (
           <div className="table-wrap">

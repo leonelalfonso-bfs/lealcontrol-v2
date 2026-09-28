@@ -45,12 +45,12 @@ export function OrderFormPage() {
 
   useEffect(() => {
     Promise.all([
-      api.listCustomers(),
+      api.listAllCustomers(),
       api.listProducts(),
       api.getExchangeRates().catch(() => null)
     ])
       .then(([custPage, prodData, rates]) => {
-        setCustomers(custPage.items);
+        setCustomers(custPage);
         setProducts(prodData);
         if (rates) {
           setExchangeRateUsdBillete(rates.usdBilleteSell);

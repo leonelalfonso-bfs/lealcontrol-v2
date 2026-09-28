@@ -12,7 +12,9 @@ export function QuotesPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const [customersLoading, setCustomersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [customerError, setCustomerError] = useState<string | null>(null);
   const [convertQuote, setConvertQuote] = useState<Quote | null>(null);
   const [selectedOptionalIds, setSelectedOptionalIds] = useState<string[]>([]);
   const [converting, setConverting] = useState(false);
@@ -21,12 +23,8 @@ export function QuotesPage() {
     try {
       setLoading(true);
       setError(null);
-      const [quotesData, customersData] = await Promise.all([
-        api.listQuotes(search),
-        api.listCustomers()
-      ]);
+      const quotesData = await api.listQuotes(search);
       setQuotes(quotesData);
-      setCustomers(customersData.items || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al cargar presupuestos");
     } finally {
@@ -37,6 +35,17 @@ export function QuotesPage() {
   useEffect(() => {
     fetchQuotes();
   }, [search]);
+
+  useEffect(() => {
+    let active = true;
+    api.listAllCustomers()
+      .then((data) => { if (active) setCustomers(data); })
+      .catch((err: unknown) => {
+        if (active) setCustomerError(err instanceof Error ? err.message : "Error al cargar los nombres de clientes");
+      })
+      .finally(() => { if (active) setCustomersLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const customerMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -178,7 +187,7 @@ export function QuotesPage() {
         </button></div>
       </div>
 
-      {error && <div className="alert">{error}</div>}
+      {(error || customerError) && <div className="alert">{error || customerError}</div>}
 
       {/* Toolbar & Filters */}
       <div className="card pad toolbar" style={{ marginBottom: "20px" }}>
@@ -218,7 +227,7 @@ export function QuotesPage() {
 
       {/* Quotes Table */}
       <section className="card">
-        {loading ? (
+        {loading || customersLoading ? (
           <div className="pad muted">Cargando presupuestos...</div>
         ) : (
           <div className="table-wrap">
