@@ -19,6 +19,9 @@ STATUS = {"draft": "Draft", "ordered": "Ordered", "rejected": "Rejected"}
 
 
 def timestamp(value):
+    if len(value) == 10:
+        # Noon UTC keeps a date-only legacy issue date on the same day in Argentina.
+        value += "T12:00:00"
     return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=timezone.utc).isoformat()
 
 
