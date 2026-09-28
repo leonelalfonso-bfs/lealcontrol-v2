@@ -131,7 +131,7 @@ export function QualityNonConformityPrintPage() {
             <tr>
               <td style={label}>Responsable</td>
               <td style={cell}>{row.responsible || "—"}</td>
-              <td style={label}>Vencimiento</td>
+              <td style={label}>Próxima implementación</td>
               <td style={cell}>{fmt(row.effectiveDueAt)}</td>
             </tr>
             <tr>
@@ -151,7 +151,7 @@ export function QualityNonConformityPrintPage() {
           </tbody>
         </table>
 
-        {row.kind === "Risk" && (
+        {(row.kind === "Risk" || row.kind === "Opportunity") && (
           <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
             <tbody>
               <tr>
@@ -161,46 +161,42 @@ export function QualityNonConformityPrintPage() {
                 <td style={cell}>{row.impact ?? "—"}</td>
               </tr>
               <tr>
-                <td style={label}>Nivel</td>
-                <td style={cell}>{row.level ?? "—"}</td>
-                <td style={label}>Residual</td>
-                <td style={cell}>{row.residualLevel ?? "—"}</td>
+                <td style={label}>Nivel / valoración</td>
+                <td style={cell}>{row.rating ? `${row.rating.level} · ${row.rating.valuation}` : "—"}</td>
+                <td style={label}>Criterio</td>
+                <td style={cell}>{row.rating?.criterion || "—"}</td>
               </tr>
               <tr>
-                <td style={label}>Controles</td>
+                <td style={label}>Acciones propuestas</td>
                 <td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>{row.controls || "—"}</td>
               </tr>
             </tbody>
           </table>
         )}
 
-        <div style={{ fontSize: 12, fontWeight: 800, margin: "10px 0 6px" }}>Análisis de causa y acción</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
-          <tbody>
-            <tr>
-              <td style={label}>Método</td>
-              <td style={cell} colSpan={3}>{row.rootCauseMethod || "—"}</td>
-            </tr>
-            <tr>
-              <td style={label}>Causa raíz</td>
-              <td style={{ ...cell, whiteSpace: "pre-wrap", minHeight: 48 }} colSpan={3}>{row.rootCause || "—"}</td>
-            </tr>
-            <tr>
-              <td style={label}>Acción correctiva / mejora</td>
-              <td style={{ ...cell, whiteSpace: "pre-wrap", minHeight: 48 }} colSpan={3}>{row.correctiveAction || "—"}</td>
-            </tr>
-            <tr>
-              <td style={label}>Verificación eficacia</td>
-              <td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>{row.effectivenessCheck || "—"}</td>
-            </tr>
-            <tr>
-              <td style={label}>Resultado</td>
-              <td style={cell}>{row.effectivenessResult || "—"}</td>
-              <td style={label}>Cierre</td>
-              <td style={cell}>{fmt(row.closedAt)}</td>
-            </tr>
-          </tbody>
-        </table>
+        {row.sourceComplaintId && <p style={{ fontSize: 12 }}><strong>Queja de origen:</strong> {row.notes || row.sourceComplaintId}</p>}
+        {row.treatmentRationale && <p style={{ fontSize: 12 }}><strong>Decisión de tratamiento:</strong> {row.treatmentRationale}</p>}
+        <div style={{ fontSize: 12, fontWeight: 800, margin: "10px 0 6px" }}>Causas, acciones y verificación de eficacia</div>
+        {(row.actions || []).length === 0 ? <p style={{ fontSize: 12 }}>Sin acciones registradas según el criterio de valoración.</p> :
+          (row.actions || []).map((action, index) => (
+            <table key={action.id} style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10, breakInside: "avoid" }}>
+              <tbody>
+                <tr><td style={label}>Acción {index + 1}</td><td style={cell} colSpan={3}>
+                  {action.replacesActionId ? "Sucesora de una acción no eficaz" : "Acción inicial"} · {action.effectivenessResult === "Effective" ? "Eficaz" :
+                    action.effectivenessResult === "NotEffective" ? "No eficaz" : "Pendiente"}
+                </td></tr>
+                {(row.kind === "NonConformity" || row.kind === "NonConformingWork") &&
+                  <tr><td style={label}>Causa raíz</td><td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>{action.cause || "—"}</td></tr>}
+                <tr><td style={label}>Acción correctiva / mejora</td><td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>{action.action || "Pendiente de definir"}</td></tr>
+                <tr><td style={label}>Responsable</td><td style={cell}>{action.responsible || "—"}</td>
+                  <td style={label}>Implementación</td><td style={cell}>{fmt(action.implementationDate)}</td></tr>
+                <tr><td style={label}>Verificación</td><td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>{action.effectivenessCheck || "Pendiente"}</td></tr>
+                <tr><td style={label}>Evaluada</td><td style={cell}>{fmt(action.evaluatedAtUtc)}</td>
+                  <td style={label}>Resultado</td><td style={cell}>{action.effectivenessResult || "Pendiente"}</td></tr>
+              </tbody>
+            </table>
+          ))}
+        <p style={{ fontSize: 12 }}><strong>Cierre:</strong> {fmt(row.closedAt)}</p>
 
         <p style={{ fontSize: 10, color: "#64748b", margin: 0 }}>
           Copia generada desde Leal Control · PG07-R1 · {new Date().toLocaleString("es-AR")} · COPIA NO CONTROLADA

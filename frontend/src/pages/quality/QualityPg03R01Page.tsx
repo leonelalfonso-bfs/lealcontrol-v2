@@ -370,7 +370,7 @@ export function QualityPg03R01Page() {
                     style={{ marginLeft: 8 }}
                     to={`/calidad/registros/nc?fromComplaint=${selected.id}`}
                   >
-                    Generar NC / TNC / R / OM
+                    Generar NC
                   </Link>
                 )}
                 {selected.linkedNonConformityId && (

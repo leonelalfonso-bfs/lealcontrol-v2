@@ -70,10 +70,27 @@ public static class QualityEndpoints
                 var openNcQuery = db.NonConformities.AsNoTracking()
                     .Where(n => n.TenantId == tenantId && openNcStatuses.Contains(n.Status));
                 var openNcCount = await openNcQuery.CountAsync(ct);
-                var openNcs = await openNcQuery
-                    .OrderBy(n => n.DueDate ?? n.DetectedAt)
-                    .Take(20)
-                    .ToListAsync(ct);
+                var allOpenNcs = await openNcQuery.ToListAsync(ct);
+                var openNcs = allOpenNcs
+                    .OrderBy(n => QualityPg07Workflow.NextImplementationDate(QualityPg07Workflow.Actions(n)) ?? n.DetectedAt)
+                    .Take(20).ToList();
+                var implementationAlerts = allOpenNcs
+                    .SelectMany(n => QualityPg07Workflow.CurrentActions(QualityPg07Workflow.Actions(n))
+                        .Where(a => a.EffectivenessResult == "Pending"
+                            && a.ImplementationDate.HasValue
+                            && a.ImplementationDate.Value.Date <= now.Date)
+                        .Select(a => new
+                        {
+                            n.Id,
+                            n.Number,
+                            n.Kind,
+                            actionId = a.Id,
+                            action = a.Action,
+                            implementationDate = a.ImplementationDate,
+                            href = $"/calidad/registros/nc?selected={n.Id}"
+                        }))
+                    .OrderBy(a => a.implementationDate)
+                    .ToList();
 
                 var openComplaints = await db.Complaints.AsNoTracking()
                     .Where(c => c.TenantId == tenantId
@@ -183,6 +200,7 @@ public static class QualityEndpoints
                     overdueReview = docs.Count(d => d.NextReviewDate.HasValue && d.NextReviewDate.Value < now
                         && d.Status is QualityDocumentStatuses.Current or QualityDocumentStatuses.Approved),
                     openNonConformities = openNcCount,
+                    actionsReadyForVerification = implementationAlerts.Count,
                     overdueComplaints = overdueComplaints.Count,
                     authorizationsExpiring = authRows.Count,
                     calibrationsDueSoon = calibSoon.Count,
@@ -198,9 +216,10 @@ public static class QualityEndpoints
                             n.Kind,
                             n.Status,
                             n.Description,
-                            dueDate = n.NewDueDate ?? n.DueDate,
-                            href = "/calidad/registros/nc"
+                            dueDate = QualityPg07Workflow.NextImplementationDate(QualityPg07Workflow.Actions(n)),
+                            href = $"/calidad/registros/nc?selected={n.Id}"
                         }),
+                        implementationActions = implementationAlerts.Take(20),
                         complaints = overdueComplaints.Select(c => new
                         {
                             c.Id,
@@ -1194,12 +1213,39 @@ public static class QualityEndpoints
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
 
-            if (string.IsNullOrWhiteSpace(req.Description))
-                return Results.BadRequest(new { message = "La descripción es obligatoria." });
-
             var kind = string.IsNullOrWhiteSpace(req.Kind) ? QualityNonConformityKinds.NonConformity : req.Kind.Trim();
             if (!IsValidNcKind(kind))
                 return Results.BadRequest(new { message = "Tipo inválido. Use NonConformity, NonConformingWork, Risk u Opportunity." });
+
+            QualityComplaint? complaint = null;
+            if (req.SourceComplaintId.HasValue)
+            {
+                complaint = await db.Complaints.FirstOrDefaultAsync(c =>
+                    c.Id == req.SourceComplaintId.Value && c.TenantId == tenantId, ct);
+                if (complaint is null)
+                    return Results.BadRequest(new { message = "La queja de origen no existe." });
+                if (complaint.LinkedNonConformityId.HasValue)
+                    return Results.Conflict(new { message = "La queja ya tiene una NC vinculada." });
+                kind = QualityNonConformityKinds.NonConformity;
+            }
+
+            var description = string.IsNullOrWhiteSpace(req.Description) ? complaint?.Description : req.Description.Trim();
+            if (string.IsNullOrWhiteSpace(description))
+                return Results.BadRequest(new { message = "La descripción es obligatoria." });
+
+            var rating = QualityPg07Workflow.Rate(kind, req.Probability, req.Impact);
+            if (kind is QualityNonConformityKinds.Risk or QualityNonConformityKinds.Opportunity && rating is null)
+                return Results.BadRequest(new { message = "Probabilidad e impacto deben estar entre 1 y 5." });
+            var treatmentDecision = rating is { Level: <= 2 } ? "NoAction"
+                : rating is { RequiresAction: true } ? "Treat"
+                : req.TreatmentDecision?.Trim() ?? string.Empty;
+            if (rating is { AllowsDecision: true })
+            {
+                if (treatmentDecision is not ("Treat" or "NoAction"))
+                    return Results.BadRequest(new { message = "Seleccioná si la valoración amerita acciones." });
+                if (treatmentDecision == "NoAction" && string.IsNullOrWhiteSpace(req.TreatmentRationale))
+                    return Results.BadRequest(new { message = "Fundamentá por qué no amerita acciones." });
+            }
 
             if (req.EvidenceFileId.HasValue)
             {
@@ -1209,15 +1255,7 @@ public static class QualityEndpoints
                     return Results.BadRequest(new { message = "El archivo de evidencia no existe." });
             }
 
-            if (req.SourceComplaintId.HasValue)
-            {
-                var complaintOk = await db.Complaints.AsNoTracking()
-                    .AnyAsync(c => c.TenantId == tenantId && c.Id == req.SourceComplaintId.Value, ct);
-                if (!complaintOk)
-                    return Results.BadRequest(new { message = "La queja de origen no existe." });
-            }
-
-            var detectedAt = req.DetectedAt ?? DateTime.UtcNow;
+            var detectedAt = req.DetectedAt ?? complaint?.ReceivedAt ?? DateTime.UtcNow;
             var prefix = NcNumberPrefix(kind) + $"-{detectedAt.Year}-";
             var lastNumber = await db.NonConformities.AsNoTracking()
                 .Where(n => n.TenantId == tenantId && n.Number.StartsWith(prefix))
@@ -1231,49 +1269,43 @@ public static class QualityEndpoints
                 seq = parsed + 1;
             }
 
-            int? level = null;
-            if (kind == QualityNonConformityKinds.Risk && req.Probability.HasValue && req.Impact.HasValue)
-                level = req.Probability.Value * req.Impact.Value;
-
             var entity = new QualityNonConformity
             {
                 TenantId = tenantId,
                 RecordCode = "PG07-R01",
                 Number = $"{prefix}{seq:D4}",
                 Kind = kind,
-                Origin = string.IsNullOrWhiteSpace(req.Origin)
-                    ? (req.SourceComplaintId.HasValue ? "Complaint" : "Internal")
-                    : req.Origin.Trim(),
+                Origin = complaint is not null ? "Complaint" : string.IsNullOrWhiteSpace(req.Origin) ? "Internal" : req.Origin.Trim(),
                 DetectedAt = detectedAt,
-                Description = req.Description.Trim(),
+                Description = description!,
                 ImmediateAction = req.ImmediateAction?.Trim() ?? string.Empty,
                 ImpactOnPreviousResults = req.ImpactOnPreviousResults ?? false,
                 CustomerNotified = req.CustomerNotified ?? false,
-                Responsible = req.Responsible?.Trim() ?? string.Empty,
+                Responsible = string.IsNullOrWhiteSpace(req.Responsible) ? complaint?.Responsible ?? string.Empty : req.Responsible.Trim(),
                 DueDate = req.DueDate,
                 Probability = req.Probability,
                 Impact = req.Impact,
-                Level = level,
+                Level = rating?.Level,
                 Controls = req.Controls?.Trim() ?? string.Empty,
                 SourceComplaintId = req.SourceComplaintId,
                 EvidenceFileId = req.EvidenceFileId,
-                Notes = req.Notes?.Trim() ?? string.Empty,
-                Status = QualityNonConformityStatuses.Open,
+                Notes = !string.IsNullOrWhiteSpace(req.Notes) ? req.Notes.Trim() : complaint is null
+                    ? string.Empty : $"Queja {complaint.Number} · {complaint.PartyName} · {complaint.Channel} · {complaint.PartyContact}",
+                Status = treatmentDecision == "NoAction" ? QualityNonConformityStatuses.Closed
+                    : treatmentDecision == "Treat" ? QualityNonConformityStatuses.ActionPending : QualityNonConformityStatuses.Open,
+                ClosedAt = treatmentDecision == "NoAction" ? DateTime.UtcNow : null,
+                TreatmentDecision = treatmentDecision,
+                TreatmentRationale = req.TreatmentRationale?.Trim() ?? string.Empty,
                 CreatedAtUtc = DateTime.UtcNow,
                 UpdatedAtUtc = DateTime.UtcNow
             };
 
             db.NonConformities.Add(entity);
 
-            if (req.SourceComplaintId.HasValue)
+            if (complaint is not null)
             {
-                var complaint = await db.Complaints
-                    .FirstOrDefaultAsync(c => c.Id == req.SourceComplaintId.Value && c.TenantId == tenantId, ct);
-                if (complaint is not null)
-                {
-                    complaint.LinkedNonConformityId = entity.Id;
-                    complaint.UpdatedAtUtc = DateTime.UtcNow;
-                }
+                complaint.LinkedNonConformityId = entity.Id;
+                complaint.UpdatedAtUtc = DateTime.UtcNow;
             }
 
             QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.NonConformity, entity.Id, "NonConformityCreated",
@@ -1298,12 +1330,8 @@ public static class QualityEndpoints
 
             var before = ToNonConformityDto(entity);
 
-            if (req.Kind is not null)
-            {
-                if (!IsValidNcKind(req.Kind.Trim()))
-                    return Results.BadRequest(new { message = "Tipo inválido." });
-                entity.Kind = req.Kind.Trim();
-            }
+            if (req.Kind is not null && req.Kind.Trim() != entity.Kind)
+                return Results.BadRequest(new { message = "El tipo del registro no puede cambiar luego del alta." });
             if (req.Origin is not null) entity.Origin = req.Origin.Trim();
             if (req.DetectedAt.HasValue) entity.DetectedAt = req.DetectedAt.Value;
             if (req.Description is not null)
@@ -1331,8 +1359,34 @@ public static class QualityEndpoints
             if (req.EvidenceFileId.HasValue) entity.EvidenceFileId = req.EvidenceFileId;
             if (req.Notes is not null) entity.Notes = req.Notes.Trim();
 
-            if (entity.Probability.HasValue && entity.Impact.HasValue)
-                entity.Level = entity.Probability.Value * entity.Impact.Value;
+            var rating = QualityPg07Workflow.Rate(entity.Kind, entity.Probability, entity.Impact);
+            if (entity.Kind is QualityNonConformityKinds.Risk or QualityNonConformityKinds.Opportunity && rating is null)
+                return Results.BadRequest(new { message = "Probabilidad e impacto deben estar entre 1 y 5." });
+            entity.Level = rating?.Level;
+            if (req.TreatmentRationale is not null) entity.TreatmentRationale = req.TreatmentRationale.Trim();
+            if (req.TreatmentDecision is not null)
+            {
+                var decision = req.TreatmentDecision.Trim();
+                if (decision is not ("Treat" or "NoAction"))
+                    return Results.BadRequest(new { message = "Decisión de tratamiento inválida." });
+                if (decision == "NoAction")
+                {
+                    if (rating is null || rating.RequiresAction || rating.Level > 8)
+                        return Results.BadRequest(new { message = "La valoración requiere acciones." });
+                    if (rating.AllowsDecision && string.IsNullOrWhiteSpace(entity.TreatmentRationale))
+                        return Results.BadRequest(new { message = "Fundamentá por qué no amerita acciones." });
+                    if (QualityPg07Workflow.Actions(entity).Count > 0)
+                        return Results.BadRequest(new { message = "Ya hay acciones registradas; no se puede cerrar sin tratamiento." });
+                    entity.Status = QualityNonConformityStatuses.Closed;
+                    entity.ClosedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    entity.TreatmentDecision = "Treat";
+                    entity.Status = QualityNonConformityStatuses.ActionPending;
+                }
+                entity.TreatmentDecision = decision;
+            }
 
             if (req.Status is not null)
             {
@@ -1348,6 +1402,13 @@ public static class QualityEndpoints
                 };
                 if (!allowed.Contains(st))
                     return Results.BadRequest(new { message = "Estado no válido." });
+                if (entity.TreatmentDecision == "NoAction"
+                    && st is not (QualityNonConformityStatuses.Closed or QualityNonConformityStatuses.Cancelled))
+                    return Results.BadRequest(new { message = "El registro cerrado sin acciones no puede reabrirse sin revisar la decisión." });
+                if (st == QualityNonConformityStatuses.Closed
+                    && entity.TreatmentDecision != "NoAction"
+                    && !QualityPg07Workflow.AllCausesEffective(QualityPg07Workflow.Actions(entity)))
+                    return Results.BadRequest(new { message = "Todas las causas deben tener una acción final eficaz antes del cierre." });
                 entity.Status = st;
                 if (st == QualityNonConformityStatuses.Closed)
                     entity.ClosedAt ??= DateTime.UtcNow;
@@ -1356,6 +1417,110 @@ public static class QualityEndpoints
             entity.UpdatedAtUtc = DateTime.UtcNow;
             QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.NonConformity, entity.Id, "NonConformityUpdated",
                 $"{entity.Number} actualizado ({entity.Status}).", before, ToNonConformityDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToNonConformityDto(entity));
+        });
+
+        group.MapPost("/records/pg07-r01/{id:guid}/actions", async (
+            Guid id, CreateQualityActionRequest req, ITenantContext tenant, QualityDbContext db, HttpContext http, CancellationToken ct) =>
+        {
+            var entity = await db.NonConformities.FirstOrDefaultAsync(n => n.Id == id && n.TenantId == tenant.TenantId, ct);
+            if (entity is null) return Results.NotFound();
+            if (entity.Status is QualityNonConformityStatuses.Closed or QualityNonConformityStatuses.Cancelled)
+                return Results.Conflict(new { message = "El registro ya está cerrado." });
+            if (entity.Kind is QualityNonConformityKinds.NonConformity or QualityNonConformityKinds.NonConformingWork
+                && string.IsNullOrWhiteSpace(req.Cause))
+                return Results.BadRequest(new { message = "Indicá la causa." });
+            if (string.IsNullOrWhiteSpace(req.Action) || !req.ImplementationDate.HasValue)
+                return Results.BadRequest(new { message = "Cada acción necesita descripción y fecha de implementación." });
+            var before = ToNonConformityDto(entity);
+            var actions = QualityPg07Workflow.Actions(entity);
+            var action = new QualityCorrectiveAction
+            {
+                Cause = req.Cause?.Trim() ?? string.Empty,
+                Action = req.Action.Trim(),
+                Responsible = req.Responsible?.Trim() ?? entity.Responsible,
+                ImplementationDate = req.ImplementationDate.Value
+            };
+            actions.Add(action);
+            QualityPg07Workflow.SaveActions(entity, actions);
+            entity.TreatmentDecision = "Treat";
+            QualityPg07Status.Refresh(entity);
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            QualityAudit.Record(db, tenant.TenantId, QualityAuditEntityTypes.NonConformity, id, "CorrectiveActionAdded",
+                $"Acción agregada a {entity.Number}.", before, ToNonConformityDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToNonConformityDto(entity));
+        });
+
+        group.MapPut("/records/pg07-r01/{id:guid}/actions/{actionId:guid}", async (
+            Guid id, Guid actionId, UpdateQualityActionRequest req, ITenantContext tenant, QualityDbContext db, HttpContext http, CancellationToken ct) =>
+        {
+            var entity = await db.NonConformities.FirstOrDefaultAsync(n => n.Id == id && n.TenantId == tenant.TenantId, ct);
+            if (entity is null) return Results.NotFound();
+            if (entity.Status is QualityNonConformityStatuses.Closed or QualityNonConformityStatuses.Cancelled)
+                return Results.Conflict(new { message = "El registro ya está cerrado." });
+            var actions = QualityPg07Workflow.Actions(entity);
+            var action = actions.FirstOrDefault(a => a.Id == actionId);
+            if (action is null) return Results.NotFound();
+            if (action.EffectivenessResult != "Pending" || actions.Any(a => a.ReplacesActionId == actionId))
+                return Results.Conflict(new { message = "La acción ya fue evaluada." });
+            if (string.IsNullOrWhiteSpace(req.Action) || !req.ImplementationDate.HasValue)
+                return Results.BadRequest(new { message = "Cargá la acción y su fecha de implementación." });
+            var before = ToNonConformityDto(entity);
+            action.Action = req.Action.Trim();
+            action.Responsible = req.Responsible?.Trim() ?? string.Empty;
+            action.ImplementationDate = req.ImplementationDate;
+            QualityPg07Workflow.SaveActions(entity, actions);
+            QualityPg07Status.Refresh(entity);
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            QualityAudit.Record(db, tenant.TenantId, QualityAuditEntityTypes.NonConformity, id, "CorrectiveActionUpdated",
+                $"Acción actualizada en {entity.Number}.", before, ToNonConformityDto(entity), http);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToNonConformityDto(entity));
+        });
+
+        group.MapPost("/records/pg07-r01/{id:guid}/actions/{actionId:guid}/evaluate", async (
+            Guid id, Guid actionId, EvaluateQualityActionRequest req, ITenantContext tenant, QualityDbContext db, HttpContext http, CancellationToken ct) =>
+        {
+            var entity = await db.NonConformities.FirstOrDefaultAsync(n => n.Id == id && n.TenantId == tenant.TenantId, ct);
+            if (entity is null) return Results.NotFound();
+            if (entity.Status is QualityNonConformityStatuses.Closed or QualityNonConformityStatuses.Cancelled)
+                return Results.Conflict(new { message = "El registro ya está cerrado." });
+            var actions = QualityPg07Workflow.Actions(entity);
+            var action = actions.FirstOrDefault(a => a.Id == actionId);
+            if (action is null) return Results.NotFound();
+            if (action.EffectivenessResult != "Pending" || actions.Any(a => a.ReplacesActionId == actionId))
+                return Results.Conflict(new { message = "La acción ya fue evaluada." });
+            if (!action.ImplementationDate.HasValue || string.IsNullOrWhiteSpace(action.Action))
+                return Results.BadRequest(new { message = "Primero completá la acción y su fecha de implementación." });
+            if (action.ImplementationDate.Value.Date > DateTime.UtcNow.Date)
+                return Results.BadRequest(new { message = "La eficacia se verifica desde la fecha de implementación." });
+            var result = req.Result?.Trim();
+            if (result is not ("Pending" or "Effective" or "NotEffective"))
+                return Results.BadRequest(new { message = "Resultado de eficacia inválido." });
+            if (result != "Pending" && string.IsNullOrWhiteSpace(req.Check))
+                return Results.BadRequest(new { message = "Describí la verificación de eficacia." });
+
+            var before = ToNonConformityDto(entity);
+            action.EffectivenessResult = result;
+            action.EffectivenessCheck = req.Check?.Trim() ?? string.Empty;
+            action.EvaluatedAtUtc = result == "Pending" ? null : DateTime.UtcNow;
+            if (result == "NotEffective")
+            {
+                actions.Add(new QualityCorrectiveAction
+                {
+                    CauseId = action.CauseId,
+                    ReplacesActionId = action.Id,
+                    Cause = action.Cause,
+                    Responsible = action.Responsible
+                });
+            }
+            QualityPg07Workflow.SaveActions(entity, actions);
+            QualityPg07Status.Refresh(entity);
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            QualityAudit.Record(db, tenant.TenantId, QualityAuditEntityTypes.NonConformity, id, "CorrectiveActionEvaluated",
+                $"Acción evaluada como {result} en {entity.Number}.", before, ToNonConformityDto(entity), http);
             await db.SaveChangesAsync(ct);
             return Results.Ok(ToNonConformityDto(entity));
         });
@@ -2237,8 +2402,8 @@ public static class QualityEndpoints
     {
         if (n.Status is QualityNonConformityStatuses.Closed or QualityNonConformityStatuses.Cancelled)
             return false;
-        var due = n.NewDueDate ?? n.DueDate;
-        return due.HasValue && DateTime.UtcNow > due.Value;
+        var due = QualityPg07Workflow.NextImplementationDate(QualityPg07Workflow.Actions(n));
+        return due.HasValue && DateTime.UtcNow.Date > due.Value.Date;
     }
 
     private static object ToNonConformityDto(QualityNonConformity n) => new
@@ -2256,6 +2421,10 @@ public static class QualityEndpoints
         n.RootCauseMethod,
         n.RootCause,
         n.CorrectiveAction,
+        actions = QualityPg07Workflow.Actions(n),
+        n.TreatmentDecision,
+        n.TreatmentRationale,
+        rating = QualityPg07Workflow.Rate(n.Kind, n.Probability, n.Impact),
         n.Responsible,
         n.DueDate,
         n.NewDueDate,
@@ -2271,7 +2440,7 @@ public static class QualityEndpoints
         n.SourceComplaintId,
         n.EvidenceFileId,
         n.Notes,
-        effectiveDueAt = n.NewDueDate ?? n.DueDate,
+        effectiveDueAt = QualityPg07Workflow.NextImplementationDate(QualityPg07Workflow.Actions(n)),
         isOverdue = IsNonConformityOverdue(n),
         n.CreatedAtUtc,
         n.UpdatedAtUtc

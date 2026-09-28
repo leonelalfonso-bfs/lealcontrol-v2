@@ -19,15 +19,21 @@ export function QualityDashboardPage() {
   const { active: presentation } = usePresentationMode();
 
   useEffect(() => {
-    api.getQualityDashboard()
-      .then(setData)
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+    const refresh = () => {
+      void api.getQualityDashboard()
+        .then(setData)
+        .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 60_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const kpi = [
     { label: "Documentos", value: data?.totalDocuments ?? "—", tone: "blue" },
     { label: "Vigentes", value: data?.current ?? "—", tone: "teal" },
-    { label: "NC abiertas", value: data?.openNonConformities ?? "—", tone: "ochre" },
+    { label: "PG07 abiertos", value: data?.openNonConformities ?? "—", tone: "ochre" },
+    { label: "Acciones para verificar", value: data?.actionsReadyForVerification ?? "—", danger: (data?.actionsReadyForVerification ?? 0) > 0 },
     { label: "Quejas fuera de plazo", value: data?.overdueComplaints ?? "—", danger: (data?.overdueComplaints ?? 0) > 0 },
     { label: "Revisión vencida", value: data?.overdueReview ?? "—", danger: (data?.overdueReview ?? 0) > 0 },
     { label: "Calibraciones vencidas", value: data?.calibrationsOverdue ?? "—", danger: (data?.calibrationsOverdue ?? 0) > 0 },
@@ -101,6 +107,17 @@ export function QualityDashboardPage() {
                 primary: `${n.number} · ${n.kind}`,
                 secondary: `${n.status}${n.dueDate ? ` · vence ${fmtDate(n.dueDate)}` : ""}`,
                 href: n.href || "/calidad/registros/nc"
+              }))}
+            />
+            <AlertList
+              title="Acciones para verificar eficacia"
+              empty="Ninguna acción llegó a su fecha de implementación."
+              items={(data.alerts?.implementationActions || []).map((a) => ({
+                key: a.actionId,
+                primary: `${a.number} · ${a.action || "Completar acción sucesora"}`,
+                secondary: `Implementación ${fmtDate(a.implementationDate)} · verificar eficacia`,
+                href: a.href || "/calidad/registros/nc",
+                danger: true
               }))}
             />
             <AlertList

@@ -245,6 +245,9 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.RootCauseMethod).HasMaxLength(120);
             b.Property(x => x.RootCause).HasMaxLength(4000);
             b.Property(x => x.CorrectiveAction).HasMaxLength(4000);
+            b.Property(x => x.ActionsJson).HasColumnType("text");
+            b.Property(x => x.TreatmentDecision).HasMaxLength(20);
+            b.Property(x => x.TreatmentRationale).HasMaxLength(2000);
             b.Property(x => x.Responsible).HasMaxLength(160);
             b.Property(x => x.EffectivenessCheck).HasMaxLength(4000);
             b.Property(x => x.EffectivenessResult).HasMaxLength(40);
@@ -773,6 +776,9 @@ public sealed class QualityDbContext : DbContext
                 ""RootCauseMethod"" character varying(120) NOT NULL DEFAULT '',
                 ""RootCause"" character varying(4000) NOT NULL DEFAULT '',
                 ""CorrectiveAction"" character varying(4000) NOT NULL DEFAULT '',
+                ""ActionsJson"" text NOT NULL DEFAULT '[]',
+                ""TreatmentDecision"" character varying(20) NOT NULL DEFAULT '',
+                ""TreatmentRationale"" character varying(2000) NOT NULL DEFAULT '',
                 ""Responsible"" character varying(160) NOT NULL DEFAULT '',
                 ""DueDate"" timestamp with time zone,
                 ""NewDueDate"" timestamp with time zone,
@@ -794,6 +800,9 @@ public sealed class QualityDbContext : DbContext
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_nc_Tenant_Number"" ON quality.non_conformities (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_nc_Tenant_Kind_Status"" ON quality.non_conformities (""TenantId"", ""Kind"", ""Status"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_nc_Tenant_Due"" ON quality.non_conformities (""TenantId"", ""DueDate"");",
+            @"ALTER TABLE quality.non_conformities ADD COLUMN IF NOT EXISTS ""ActionsJson"" text NOT NULL DEFAULT '[]';",
+            @"ALTER TABLE quality.non_conformities ADD COLUMN IF NOT EXISTS ""TreatmentDecision"" character varying(20) NOT NULL DEFAULT '';",
+            @"ALTER TABLE quality.non_conformities ADD COLUMN IF NOT EXISTS ""TreatmentRationale"" character varying(2000) NOT NULL DEFAULT '';",
 
             @"CREATE TABLE IF NOT EXISTS quality.internal_audits (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

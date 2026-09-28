@@ -491,6 +491,9 @@ public sealed class QualityNonConformity : Entity<Guid>
     public string RootCauseMethod { get; set; } = string.Empty;
     public string RootCause { get; set; } = string.Empty;
     public string CorrectiveAction { get; set; } = string.Empty;
+    public string ActionsJson { get; set; } = "[]";
+    public string TreatmentDecision { get; set; } = string.Empty; // Treat | NoAction
+    public string TreatmentRationale { get; set; } = string.Empty;
     public string Responsible { get; set; } = string.Empty;
     public DateTime? DueDate { get; set; }
     public DateTime? NewDueDate { get; set; }
@@ -528,7 +531,9 @@ public sealed record CreateNonConformityRequest(
     string? Controls = null,
     Guid? SourceComplaintId = null,
     Guid? EvidenceFileId = null,
-    string? Notes = null);
+    string? Notes = null,
+    string? TreatmentDecision = null,
+    string? TreatmentRationale = null);
 
 public sealed record UpdateNonConformityRequest(
     string? Kind = null,
@@ -552,6 +557,8 @@ public sealed record UpdateNonConformityRequest(
     int? Impact = null,
     string? Controls = null,
     int? ResidualLevel = null,
+    string? TreatmentDecision = null,
+    string? TreatmentRationale = null,
     Guid? EvidenceFileId = null,
     string? Notes = null);
 

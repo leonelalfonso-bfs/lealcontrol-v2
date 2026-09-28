@@ -1670,6 +1670,8 @@ export const api = {
     sourceComplaintId?: string;
     evidenceFileId?: string;
     notes?: string;
+    treatmentDecision?: string;
+    treatmentRationale?: string;
   }) =>
     request<import("./types/quality").QualityNonConformity>("/api/v1/quality/records/pg07-r01", {
       method: "POST",
@@ -1700,6 +1702,8 @@ export const api = {
       impact?: number;
       controls?: string;
       residualLevel?: number;
+      treatmentDecision?: string;
+      treatmentRationale?: string;
       evidenceFileId?: string;
       notes?: string;
     }
@@ -1708,6 +1712,21 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(body)
     }),
+
+  addQualityPg07Action: (id: string, body: {
+    cause: string; action: string; responsible?: string; implementationDate: string;
+  }) => request<import("./types/quality").QualityNonConformity>(
+    `/api/v1/quality/records/pg07-r01/${id}/actions`, { method: "POST", body: JSON.stringify(body) }),
+
+  updateQualityPg07Action: (id: string, actionId: string, body: {
+    action: string; responsible?: string; implementationDate: string;
+  }) => request<import("./types/quality").QualityNonConformity>(
+    `/api/v1/quality/records/pg07-r01/${id}/actions/${actionId}`, { method: "PUT", body: JSON.stringify(body) }),
+
+  evaluateQualityPg07Action: (id: string, actionId: string, body: {
+    result: "Pending" | "Effective" | "NotEffective"; check?: string;
+  }) => request<import("./types/quality").QualityNonConformity>(
+    `/api/v1/quality/records/pg07-r01/${id}/actions/${actionId}/evaluate`, { method: "POST", body: JSON.stringify(body) }),
 
   cancelQualityNonConformity: (id: string) =>
     request<import("./types/quality").QualityNonConformity>(`/api/v1/quality/records/pg07-r01/${id}`, {

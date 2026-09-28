@@ -49,6 +49,7 @@ export interface QualityDashboard {
   reviewDue: number;
   overdueReview: number;
   openNonConformities?: number;
+  actionsReadyForVerification?: number;
   overdueComplaints?: number;
   authorizationsExpiring?: number;
   calibrationsDueSoon?: number;
@@ -70,6 +71,15 @@ export interface QualityDashboard {
       status: string;
       description?: string;
       dueDate?: string | null;
+      href?: string;
+    }>;
+    implementationActions?: Array<{
+      id: string;
+      number: string;
+      kind: string;
+      actionId: string;
+      action: string;
+      implementationDate: string;
       href?: string;
     }>;
     complaints?: Array<{
@@ -293,6 +303,27 @@ export type QualityNonConformityKind =
   | "Opportunity"
   | string;
 
+export interface QualityCorrectiveAction {
+  id: string;
+  causeId: string;
+  replacesActionId?: string | null;
+  cause: string;
+  action: string;
+  responsible: string;
+  implementationDate?: string | null;
+  effectivenessResult: "Pending" | "Effective" | "NotEffective";
+  effectivenessCheck: string;
+  evaluatedAtUtc?: string | null;
+}
+
+export interface QualityRating {
+  level: number;
+  valuation: string;
+  criterion: string;
+  requiresAction: boolean;
+  allowsDecision: boolean;
+}
+
 export interface QualityNonConformity {
   id: string;
   recordCode: string;
@@ -307,6 +338,10 @@ export interface QualityNonConformity {
   rootCauseMethod?: string;
   rootCause?: string;
   correctiveAction?: string;
+  actions: QualityCorrectiveAction[];
+  treatmentDecision?: string;
+  treatmentRationale?: string;
+  rating?: QualityRating | null;
   responsible?: string;
   dueDate?: string | null;
   newDueDate?: string | null;
