@@ -469,6 +469,13 @@ export interface QualityPg06Summary {
   counts?: { r01: number; r02: number; r03: number; r04: number };
 }
 
+export interface QualitySupplierCriterion {
+  code: string;
+  label: string;
+  score: number;
+  observation: string;
+}
+
 export interface QualitySupplierEvaluation {
   id: string;
   recordCode: string;
@@ -479,6 +486,7 @@ export interface QualitySupplierEvaluation {
   serviceScope?: string;
   evaluatedAt: string;
   score?: number | null;
+  criteria: QualitySupplierCriterion[];
   criteriaNotes?: string;
   strengths?: string;
   weaknesses?: string;

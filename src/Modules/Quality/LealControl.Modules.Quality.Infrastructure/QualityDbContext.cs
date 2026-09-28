@@ -362,6 +362,7 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.SupplierDocument).HasMaxLength(64);
             b.Property(x => x.ServiceScope).HasMaxLength(1000);
             b.Property(x => x.Score).HasPrecision(8, 2);
+            b.Property(x => x.CriteriaScoresJson).HasColumnType("text");
             b.Property(x => x.CriteriaNotes).HasMaxLength(4000);
             b.Property(x => x.Strengths).HasMaxLength(2000);
             b.Property(x => x.Weaknesses).HasMaxLength(2000);
@@ -933,6 +934,7 @@ public sealed class QualityDbContext : DbContext
                 ""EvaluatedAt"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""Score"" numeric(8,2),
                 ""CriteriaNotes"" character varying(4000) NOT NULL DEFAULT '',
+                ""CriteriaScoresJson"" text NOT NULL DEFAULT '[]',
                 ""Strengths"" character varying(2000) NOT NULL DEFAULT '',
                 ""Weaknesses"" character varying(2000) NOT NULL DEFAULT '',
                 ""ApprovedBy"" character varying(160) NOT NULL DEFAULT '',
@@ -944,6 +946,7 @@ public sealed class QualityDbContext : DbContext
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
+            @"ALTER TABLE quality.supplier_evaluations ADD COLUMN IF NOT EXISTS ""CriteriaScoresJson"" text NOT NULL DEFAULT '[]';",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_suppev_Tenant_Number"" ON quality.supplier_evaluations (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_suppev_Tenant_Supplier_Status"" ON quality.supplier_evaluations (""TenantId"", ""SupplierId"", ""Status"");",
 

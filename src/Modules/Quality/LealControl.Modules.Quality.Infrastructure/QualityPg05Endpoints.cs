@@ -108,8 +108,10 @@ internal static class QualityPg05Endpoints
                 return Results.BadRequest(new { message = "El proveedor es obligatorio." });
             if (string.IsNullOrWhiteSpace(req.SupplierName))
                 return Results.BadRequest(new { message = "El nombre del proveedor es obligatorio." });
-            if (req.Score is decimal score && (score < 0 || score > 100))
-                return Results.BadRequest(new { message = "El puntaje debe estar entre 0 y 100." });
+            if (!QualitySupplierCriteria.TryNormalize(req.Criteria, out var criteria, out var criteriaError))
+                return Results.BadRequest(new { message = criteriaError });
+            if (req.Score.HasValue)
+                return Results.BadRequest(new { message = "El puntaje total se calcula desde los criterios." });
 
             if (req.EvidenceFileId.HasValue)
             {
@@ -138,7 +140,8 @@ internal static class QualityPg05Endpoints
                 SupplierDocument = req.SupplierDocument?.Trim() ?? string.Empty,
                 ServiceScope = req.ServiceScope?.Trim() ?? string.Empty,
                 EvaluatedAt = evaluatedAt,
-                Score = req.Score,
+                Score = QualitySupplierCriteria.Total(criteria),
+                CriteriaScoresJson = QualitySupplierCriteria.Serialize(criteria),
                 CriteriaNotes = req.CriteriaNotes?.Trim() ?? string.Empty,
                 Strengths = req.Strengths?.Trim() ?? string.Empty,
                 Weaknesses = req.Weaknesses?.Trim() ?? string.Empty,
@@ -183,10 +186,13 @@ internal static class QualityPg05Endpoints
             if (req.ServiceScope is not null) entity.ServiceScope = req.ServiceScope.Trim();
             if (req.EvaluatedAt.HasValue) entity.EvaluatedAt = req.EvaluatedAt.Value;
             if (req.Score.HasValue)
+                return Results.BadRequest(new { message = "El puntaje total se calcula desde los criterios." });
+            if (req.Criteria is not null)
             {
-                if (req.Score.Value is < 0 or > 100)
-                    return Results.BadRequest(new { message = "El puntaje debe estar entre 0 y 100." });
-                entity.Score = req.Score;
+                if (!QualitySupplierCriteria.TryNormalize(req.Criteria, out var criteria, out var criteriaError))
+                    return Results.BadRequest(new { message = criteriaError });
+                entity.CriteriaScoresJson = QualitySupplierCriteria.Serialize(criteria);
+                entity.Score = QualitySupplierCriteria.Total(criteria);
             }
             if (req.CriteriaNotes is not null) entity.CriteriaNotes = req.CriteriaNotes.Trim();
             if (req.Strengths is not null) entity.Strengths = req.Strengths.Trim();
@@ -218,16 +224,11 @@ internal static class QualityPg05Endpoints
                 if (!allowed.Contains(st))
                     return Results.BadRequest(new { message = "Estado de evaluación no válido." });
 
+                if (st is QualitySupplierEvaluationStatuses.Approved or QualitySupplierEvaluationStatuses.Rejected
+                    && QualitySupplierCriteria.Read(entity.CriteriaScoresJson).Count != QualitySupplierCriteria.Required.Count)
+                    return Results.BadRequest(new { message = "Evaluá los seis criterios antes de clasificar." });
                 if (st == QualitySupplierEvaluationStatuses.Approved)
-                {
-                    var score = req.Score ?? entity.Score;
-                    if (score is null)
-                        return Results.BadRequest(new { message = "Para aprobar se requiere un puntaje (Score)." });
-                    if (score.Value is < 0 or > 100)
-                        return Results.BadRequest(new { message = "El puntaje debe estar entre 0 y 100." });
-                    entity.Score = score;
                     entity.ApprovedAt ??= req.ApprovedAt ?? DateTime.UtcNow;
-                }
 
                 entity.Status = st;
             }
@@ -620,6 +621,7 @@ internal static class QualityPg05Endpoints
             e.ServiceScope,
             e.EvaluatedAt,
             e.Score,
+            Criteria = QualitySupplierCriteria.Read(e.CriteriaScoresJson),
             e.CriteriaNotes,
             e.Strengths,
             e.Weaknesses,

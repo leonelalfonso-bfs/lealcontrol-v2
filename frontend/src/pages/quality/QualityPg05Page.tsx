@@ -6,6 +6,7 @@ import type {
   QualityEnabledSupplierRow,
   QualityPg05Summary,
   QualitySupplierEvaluation,
+  QualitySupplierCriterion,
   QualitySupplierPerformanceReview
 } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
@@ -46,6 +47,45 @@ function supplierLabel(s: Supplier) {
   return s.tradeName || s.legalName;
 }
 
+const EVAL_CRITERIA = [
+  { code: "quality", label: "Calidad del producto/servicio" },
+  { code: "timeliness", label: "Cumplimiento de plazos" },
+  { code: "documentation", label: "Documentación" },
+  { code: "support", label: "Atención y soporte técnico" },
+  { code: "price", label: "Precio" },
+  { code: "experience", label: "Experiencia del proveedor" }
+] as const;
+type CriterionAnswers = Record<string, { score: string; observation: string }>;
+const criteriaCompleted = (answers: CriterionAnswers) => EVAL_CRITERIA.every(({ code }) =>
+  ["1", "2", "3", "4", "5"].includes(answers[code]?.score || ""));
+const criteriaTotal = (answers: CriterionAnswers) => EVAL_CRITERIA.reduce((sum, { code }) =>
+  sum + Number(answers[code]?.score || 0), 0);
+const criteriaPayload = (answers: CriterionAnswers): QualitySupplierCriterion[] => EVAL_CRITERIA.map(({ code, label }) => ({
+  code, label, score: Number(answers[code].score), observation: answers[code]?.observation?.trim() || ""
+}));
+const answersFrom = (criteria: QualitySupplierCriterion[]): CriterionAnswers => Object.fromEntries(
+  criteria.map((criterion) => [criterion.code, { score: String(criterion.score), observation: criterion.observation || "" }])
+);
+
+function CriteriaTable({ answers, onChange }: { answers: CriterionAnswers; onChange: (answers: CriterionAnswers) => void }) {
+  const completed = EVAL_CRITERIA.filter(({ code }) => ["1", "2", "3", "4", "5"].includes(answers[code]?.score || "")).length;
+  return <div style={{ marginTop: 12 }}>
+    <strong>Criterios de evaluación · puntaje individual de 1 a 5</strong>
+    <div className="table-wrap" style={{ marginTop: 8 }}><table className="table"><thead><tr>
+      <th>Criterio</th><th>Puntaje (1–5)</th><th>Observaciones</th>
+    </tr></thead><tbody>{EVAL_CRITERIA.map(({ code, label }) => <tr key={code}>
+      <td>{label}</td><td><select aria-label={`Puntaje: ${label}`} required value={answers[code]?.score || ""}
+        onChange={(event) => onChange({ ...answers, [code]: { score: event.target.value, observation: answers[code]?.observation || "" } })}>
+        <option value="">Seleccionar</option>{[1, 2, 3, 4, 5].map((score) => <option key={score} value={score}>{score}</option>)}
+      </select></td><td><input aria-label={`Observaciones: ${label}`} value={answers[code]?.observation || ""}
+        onChange={(event) => onChange({ ...answers, [code]: { score: answers[code]?.score || "", observation: event.target.value } })}
+        maxLength={1000} placeholder="Opcional" /></td>
+    </tr>)}</tbody></table></div>
+    <p className="muted" style={{ marginBottom: 0 }}>{completed === EVAL_CRITERIA.length
+      ? `Puntaje total: ${criteriaTotal(answers)} / 30` : `Evaluados ${completed} de ${EVAL_CRITERIA.length}. Completá todos para guardar.`}</p>
+  </div>;
+}
+
 export function QualityPg05Page() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = parseTab(searchParams.get("tab"));
@@ -67,8 +107,8 @@ export function QualityPg05Page() {
   const [eSupplierId, setESupplierId] = useState("");
   const [eScope, setEScope] = useState("");
   const [eEvaluatedAt, setEEvaluatedAt] = useState(new Date().toISOString().slice(0, 10));
-  const [eScore, setEScore] = useState("");
-  const [eCriteria, setECriteria] = useState("");
+  const [newCriteriaAnswers, setNewCriteriaAnswers] = useState<CriterionAnswers>({});
+  const [editCriteriaAnswers, setEditCriteriaAnswers] = useState<CriterionAnswers>({});
   const [eStrengths, setEStrengths] = useState("");
   const [eWeaknesses, setEWeaknesses] = useState("");
   const [eApprovedBy, setEApprovedBy] = useState("");
@@ -170,8 +210,7 @@ export function QualityPg05Page() {
     if (tab === "r01" && selectedEval) {
       setEScope(selectedEval.serviceScope || "");
       setEEvaluatedAt(selectedEval.evaluatedAt ? selectedEval.evaluatedAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
-      setEScore(selectedEval.score != null ? String(selectedEval.score) : "");
-      setECriteria(selectedEval.criteriaNotes || "");
+      setEditCriteriaAnswers(answersFrom(selectedEval.criteria || []));
       setEStrengths(selectedEval.strengths || "");
       setEWeaknesses(selectedEval.weaknesses || "");
       setEApprovedBy(selectedEval.approvedBy || "");
@@ -212,6 +251,10 @@ export function QualityPg05Page() {
       setError("No se encontró el proveedor seleccionado.");
       return;
     }
+    if (!criteriaCompleted(newCriteriaAnswers)) {
+      setError("Evaluá los seis criterios con puntaje de 1 a 5 antes de guardar.");
+      return;
+    }
     setBusy(true);
     setError(null);
     setMsg(null);
@@ -222,8 +265,7 @@ export function QualityPg05Page() {
         supplierDocument: resolved.document,
         serviceScope: eScope.trim() || undefined,
         evaluatedAt: eEvaluatedAt ? new Date(eEvaluatedAt).toISOString() : undefined,
-        score: eScore !== "" ? Number(eScore) : undefined,
-        criteriaNotes: eCriteria.trim() || undefined,
+        criteria: criteriaPayload(newCriteriaAnswers),
         strengths: eStrengths.trim() || undefined,
         weaknesses: eWeaknesses.trim() || undefined,
         validUntil: eValidUntil ? new Date(eValidUntil).toISOString() : undefined,
@@ -233,8 +275,7 @@ export function QualityPg05Page() {
       setShowForm(false);
       setESupplierId("");
       setEScope("");
-      setEScore("");
-      setECriteria("");
+      setNewCriteriaAnswers({});
       setEStrengths("");
       setEWeaknesses("");
       setEValidUntil("");
@@ -304,12 +345,18 @@ export function QualityPg05Page() {
         { key: "supplierDocument", header: "Documento" },
         { key: "serviceScope", header: "Alcance" },
         { key: "evaluatedAt", header: "Evaluada", value: (r) => excelDate(r.evaluatedAt) },
-        { key: "score", header: "Puntaje" },
+        { key: "score", header: "Puntaje total" },
         { key: "status", header: "Estado", value: (r) => EVAL_STATUS[r.status] ?? r.status },
         { key: "validUntil", header: "Vigente hasta", value: (r) => (r.validUntil ? excelDate(r.validUntil) : "") },
         { key: "approvedBy", header: "Aprobó" },
         { key: "notes", header: "Notas" }
       ];
+      for (const criterion of EVAL_CRITERIA) {
+        columns.push({ key: `${criterion.code}-score`, header: `${criterion.label} · puntaje`,
+          value: (row) => row.criteria?.find((item) => item.code === criterion.code)?.score ?? "" });
+        columns.push({ key: `${criterion.code}-observation`, header: `${criterion.label} · observación`,
+          value: (row) => row.criteria?.find((item) => item.code === criterion.code)?.observation ?? "" });
+      }
       void exportToExcel("PG05_R01_evaluaciones", evaluations, columns);
     } else if (tab === "r02") {
       const columns: ExcelColumn<QualityEnabledSupplierRow>[] = [
@@ -430,22 +477,15 @@ export function QualityPg05Page() {
               <input type="date" value={eEvaluatedAt} onChange={(ev) => setEEvaluatedAt(ev.target.value)} required />
             </label>
             <label>
-              Puntaje (0–100)
-              <input type="number" min={0} max={100} step={0.1} value={eScore} onChange={(ev) => setEScore(ev.target.value)} />
-            </label>
-            <label>
               Vigente hasta
               <input type="date" value={eValidUntil} onChange={(ev) => setEValidUntil(ev.target.value)} />
             </label>
           </div>
           <label style={{ display: "block", marginTop: 12 }}>
-            Alcance del servicio
+            Alcance
             <input value={eScope} onChange={(ev) => setEScope(ev.target.value)} style={{ width: "100%" }} />
           </label>
-          <label style={{ display: "block", marginTop: 8 }}>
-            Criterios / notas de evaluación
-            <textarea value={eCriteria} onChange={(ev) => setECriteria(ev.target.value)} rows={2} style={{ width: "100%" }} />
-          </label>
+          <CriteriaTable answers={newCriteriaAnswers} onChange={setNewCriteriaAnswers} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
             <label>
               Fortalezas
@@ -460,8 +500,8 @@ export function QualityPg05Page() {
             Notas
             <textarea value={eNotes} onChange={(ev) => setENotes(ev.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
-          <button type="submit" className="btn btn-primary" disabled={busy} style={{ marginTop: 12 }}>
-            Crear borrador
+          <button type="submit" className="btn btn-primary" disabled={busy || !criteriaCompleted(newCriteriaAnswers)} style={{ marginTop: 12 }}>
+            Guardar evaluación
           </button>
         </form>
       )}
@@ -677,21 +717,7 @@ export function QualityPg05Page() {
                         Fecha evaluación
                         <input type="date" value={eEvaluatedAt} onChange={(ev) => setEEvaluatedAt(ev.target.value)} />
                       </label>
-                      <label style={{ display: "block", marginBottom: 8 }}>
-                        Puntaje (0–100)
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={0.1}
-                          value={eScore}
-                          onChange={(ev) => setEScore(ev.target.value)}
-                        />
-                      </label>
-                      <label style={{ display: "block", marginBottom: 8 }}>
-                        Criterios
-                        <textarea value={eCriteria} onChange={(ev) => setECriteria(ev.target.value)} rows={2} style={{ width: "100%" }} />
-                      </label>
+                      <CriteriaTable answers={editCriteriaAnswers} onChange={setEditCriteriaAnswers} />
                       <label style={{ display: "block", marginBottom: 8 }}>
                         Fortalezas
                         <textarea value={eStrengths} onChange={(ev) => setEStrengths(ev.target.value)} rows={2} style={{ width: "100%" }} />
@@ -716,7 +742,7 @@ export function QualityPg05Page() {
                         <button
                           type="button"
                           className="btn btn-outline"
-                          disabled={busy}
+                          disabled={busy || !criteriaCompleted(editCriteriaAnswers)}
                           onClick={() =>
                             void (async () => {
                               setBusy(true);
@@ -725,8 +751,7 @@ export function QualityPg05Page() {
                                 await api.updateQualityPg05R01(selectedEval.id, {
                                   serviceScope: eScope.trim() || undefined,
                                   evaluatedAt: eEvaluatedAt ? new Date(eEvaluatedAt).toISOString() : undefined,
-                                  score: eScore !== "" ? Number(eScore) : undefined,
-                                  criteriaNotes: eCriteria.trim() || undefined,
+                                  criteria: criteriaPayload(editCriteriaAnswers),
                                   strengths: eStrengths.trim() || undefined,
                                   weaknesses: eWeaknesses.trim() || undefined,
                                   approvedBy: eApprovedBy.trim() || undefined,
@@ -749,7 +774,7 @@ export function QualityPg05Page() {
                           <button
                             type="button"
                             className="btn btn-primary"
-                            disabled={busy}
+                            disabled={busy || !criteriaCompleted(editCriteriaAnswers)}
                             onClick={() =>
                               void (async () => {
                                 setBusy(true);
@@ -758,7 +783,7 @@ export function QualityPg05Page() {
                                 try {
                                   await api.updateQualityPg05R01(selectedEval.id, {
                                     status: "Approved",
-                                    score: eScore !== "" ? Number(eScore) : undefined,
+                                    criteria: criteriaPayload(editCriteriaAnswers),
                                     approvedBy: eApprovedBy.trim() || undefined,
                                     approvedAt: new Date().toISOString(),
                                     validUntil: eValidUntil ? new Date(eValidUntil).toISOString() : undefined,
@@ -781,12 +806,12 @@ export function QualityPg05Page() {
                           <button
                             type="button"
                             className="btn btn-outline"
-                            disabled={busy}
+                            disabled={busy || !criteriaCompleted(editCriteriaAnswers)}
                             onClick={() =>
                               void (async () => {
                                 setBusy(true);
                                 try {
-                                  await api.updateQualityPg05R01(selectedEval.id, { status: "Rejected" });
+                                  await api.updateQualityPg05R01(selectedEval.id, { status: "Rejected", criteria: criteriaPayload(editCriteriaAnswers) });
                                   setMsg("Evaluación rechazada.");
                                   refresh();
                                 } catch (err) {

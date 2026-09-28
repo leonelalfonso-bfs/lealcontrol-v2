@@ -859,7 +859,8 @@ public sealed class QualitySupplierEvaluation : Entity<Guid>
     public string SupplierDocument { get; set; } = string.Empty;
     public string ServiceScope { get; set; } = string.Empty;
     public DateTime EvaluatedAt { get; set; } = DateTime.UtcNow;
-    public decimal? Score { get; set; } // 0-100
+    public decimal? Score { get; set; } // Legacy records used 0-100; new R01 stores the sum of six scores (6-30).
+    public string CriteriaScoresJson { get; set; } = "[]";
     public string CriteriaNotes { get; set; } = string.Empty;
     public string Strengths { get; set; } = string.Empty;
     public string Weaknesses { get; set; } = string.Empty;
@@ -885,7 +886,8 @@ public sealed record CreateSupplierEvaluationRequest(
     string? Weaknesses = null,
     DateTime? ValidUntil = null,
     Guid? EvidenceFileId = null,
-    string? Notes = null);
+    string? Notes = null,
+    List<QualitySupplierCriterion>? Criteria = null);
 
 public sealed record UpdateSupplierEvaluationRequest(
     string? SupplierName = null,
@@ -901,7 +903,8 @@ public sealed record UpdateSupplierEvaluationRequest(
     DateTime? ValidUntil = null,
     Guid? EvidenceFileId = null,
     string? Status = null,
-    string? Notes = null);
+    string? Notes = null,
+    List<QualitySupplierCriterion>? Criteria = null);
 
 public static class QualitySupplierPerformanceStatuses
 {

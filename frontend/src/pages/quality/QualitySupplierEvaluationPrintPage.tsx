@@ -157,22 +157,16 @@ export function QualitySupplierEvaluationPrintPage() {
               <td style={cell}>{fmt(row.evaluatedAt)}</td>
             </tr>
             <tr>
-              <td style={label}>Alcance del servicio</td>
+              <td style={label}>Alcance</td>
               <td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>
                 {row.serviceScope || "—"}
               </td>
             </tr>
             <tr>
-              <td style={label}>Puntaje</td>
-              <td style={cell}>{row.score ?? "—"}</td>
+              <td style={label}>Puntaje total</td>
+              <td style={cell}>{row.score != null ? `${row.score}${row.criteria?.length === 6 ? " / 30" : ""}` : "—"}</td>
               <td style={label}>Vigente hasta</td>
               <td style={cell}>{fmt(row.validUntil)}</td>
-            </tr>
-            <tr>
-              <td style={label}>Criterios / notas</td>
-              <td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>
-                {row.criteriaNotes || "—"}
-              </td>
             </tr>
             <tr>
               <td style={label}>Fortalezas</td>
@@ -200,6 +194,15 @@ export function QualitySupplierEvaluationPrintPage() {
             </tr>
           </tbody>
         </table>
+
+        {row.criteria?.length > 0 && <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
+          <thead><tr><th style={label}>Criterio</th><th style={label}>Puntaje (1–5)</th><th style={label}>Observaciones</th></tr></thead>
+          <tbody>{row.criteria.map((criterion) => <tr key={criterion.code}>
+            <td style={cell}>{criterion.label}</td><td style={cell}>{criterion.score}</td>
+            <td style={{ ...cell, whiteSpace: "pre-wrap" }}>{criterion.observation || "—"}</td>
+          </tr>)}</tbody>
+        </table>}
+        {row.criteria?.length === 0 && row.criteriaNotes && <p><strong>Criterios históricos:</strong> {row.criteriaNotes}</p>}
 
         <p style={{ fontSize: 9, color: "#64748b", marginTop: 16 }}>
           Documento generado desde LealControl · PG05-R01 (evaluación inicial de proveedores) ·{" "}

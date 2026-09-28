@@ -2002,7 +2002,7 @@ export const api = {
     supplierDocument?: string;
     serviceScope?: string;
     evaluatedAt?: string;
-    score?: number;
+    criteria: import("./types/quality").QualitySupplierCriterion[];
     criteriaNotes?: string;
     strengths?: string;
     weaknesses?: string;
@@ -2022,7 +2022,7 @@ export const api = {
       supplierDocument?: string;
       serviceScope?: string;
       evaluatedAt?: string;
-      score?: number;
+      criteria?: import("./types/quality").QualitySupplierCriterion[];
       criteriaNotes?: string;
       strengths?: string;
       weaknesses?: string;
