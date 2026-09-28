@@ -383,6 +383,7 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.SupplierName).HasMaxLength(240).IsRequired();
             b.Property(x => x.Period).HasMaxLength(40);
             b.Property(x => x.Score).HasPrecision(8, 2);
+            b.Property(x => x.CriteriaScoresJson).HasColumnType("text");
             b.Property(x => x.QualityScore).HasPrecision(8, 2);
             b.Property(x => x.DeliveryScore).HasPrecision(8, 2);
             b.Property(x => x.ServiceScore).HasPrecision(8, 2);
@@ -961,6 +962,7 @@ public sealed class QualityDbContext : DbContext
                 ""Period"" character varying(40) NOT NULL DEFAULT '',
                 ""ReviewDate"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""Score"" numeric(8,2),
+                ""CriteriaScoresJson"" text NOT NULL DEFAULT '[]',
                 ""QualityScore"" numeric(8,2),
                 ""DeliveryScore"" numeric(8,2),
                 ""ServiceScore"" numeric(8,2),
@@ -972,6 +974,7 @@ public sealed class QualityDbContext : DbContext
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
+            @"ALTER TABLE quality.supplier_performance_reviews ADD COLUMN IF NOT EXISTS ""CriteriaScoresJson"" text NOT NULL DEFAULT '[]';",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_suppperf_Tenant_Number"" ON quality.supplier_performance_reviews (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_suppperf_Tenant_Supplier_Date"" ON quality.supplier_performance_reviews (""TenantId"", ""SupplierId"", ""ReviewDate"");",
 

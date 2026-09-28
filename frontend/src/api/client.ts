@@ -2065,10 +2065,7 @@ export const api = {
     evaluationId?: string;
     period?: string;
     reviewDate?: string;
-    score?: number;
-    qualityScore?: number;
-    deliveryScore?: number;
-    serviceScore?: number;
+    criteria: import("./types/quality").QualitySupplierCriterion[];
     comments?: string;
     reviewedBy?: string;
     evidenceFileId?: string;
@@ -2086,10 +2083,7 @@ export const api = {
       evaluationId?: string;
       period?: string;
       reviewDate?: string;
-      score?: number;
-      qualityScore?: number;
-      deliveryScore?: number;
-      serviceScore?: number;
+      criteria?: import("./types/quality").QualitySupplierCriterion[];
       comments?: string;
       reviewedBy?: string;
       evidenceFileId?: string;

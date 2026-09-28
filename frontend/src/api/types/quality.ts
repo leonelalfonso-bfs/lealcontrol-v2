@@ -511,6 +511,7 @@ export interface QualitySupplierPerformanceReview {
   period?: string;
   reviewDate: string;
   score?: number | null;
+  criteria: QualitySupplierCriterion[];
   qualityScore?: number | null;
   deliveryScore?: number | null;
   serviceScore?: number | null;

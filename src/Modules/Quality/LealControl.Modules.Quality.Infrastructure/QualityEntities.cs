@@ -927,7 +927,8 @@ public sealed class QualitySupplierPerformanceReview : Entity<Guid>
     public Guid? EvaluationId { get; set; }
     public string Period { get; set; } = string.Empty; // 2026-Q1 / 2026
     public DateTime ReviewDate { get; set; } = DateTime.UtcNow;
-    public decimal? Score { get; set; }
+    public decimal? Score { get; set; } // New reviews use the sum of six scores (6-30).
+    public string CriteriaScoresJson { get; set; } = "[]";
     public decimal? QualityScore { get; set; }
     public decimal? DeliveryScore { get; set; }
     public decimal? ServiceScore { get; set; }
@@ -953,7 +954,8 @@ public sealed record CreateSupplierPerformanceRequest(
     string? Comments = null,
     string? ReviewedBy = null,
     Guid? EvidenceFileId = null,
-    string? Notes = null);
+    string? Notes = null,
+    List<QualitySupplierCriterion>? Criteria = null);
 
 public sealed record UpdateSupplierPerformanceRequest(
     string? SupplierName = null,
@@ -968,7 +970,8 @@ public sealed record UpdateSupplierPerformanceRequest(
     string? ReviewedBy = null,
     Guid? EvidenceFileId = null,
     string? Status = null,
-    string? Notes = null);
+    string? Notes = null,
+    List<QualitySupplierCriterion>? Criteria = null);
 
 // ─── PG08 Revisión por la dirección ──────────────────────────────────────────
 

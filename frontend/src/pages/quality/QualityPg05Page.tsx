@@ -119,10 +119,8 @@ export function QualityPg05Page() {
   const [pSupplierId, setPSupplierId] = useState("");
   const [pPeriod, setPPeriod] = useState("");
   const [pReviewDate, setPReviewDate] = useState(new Date().toISOString().slice(0, 10));
-  const [pScore, setPScore] = useState("");
-  const [pQuality, setPQuality] = useState("");
-  const [pDelivery, setPDelivery] = useState("");
-  const [pService, setPService] = useState("");
+  const [newPerformanceCriteria, setNewPerformanceCriteria] = useState<CriterionAnswers>({});
+  const [editPerformanceCriteria, setEditPerformanceCriteria] = useState<CriterionAnswers>({});
   const [pComments, setPComments] = useState("");
   const [pReviewedBy, setPReviewedBy] = useState("");
   const [pNotes, setPNotes] = useState("");
@@ -223,10 +221,7 @@ export function QualityPg05Page() {
     if (tab === "r03" && selectedPerf) {
       setPPeriod(selectedPerf.period || "");
       setPReviewDate(selectedPerf.reviewDate ? selectedPerf.reviewDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
-      setPScore(selectedPerf.score != null ? String(selectedPerf.score) : "");
-      setPQuality(selectedPerf.qualityScore != null ? String(selectedPerf.qualityScore) : "");
-      setPDelivery(selectedPerf.deliveryScore != null ? String(selectedPerf.deliveryScore) : "");
-      setPService(selectedPerf.serviceScore != null ? String(selectedPerf.serviceScore) : "");
+      setEditPerformanceCriteria(answersFrom(selectedPerf.criteria || []));
       setPComments(selectedPerf.comments || "");
       setPReviewedBy(selectedPerf.reviewedBy || "");
       setPNotes(selectedPerf.notes || "");
@@ -300,6 +295,10 @@ export function QualityPg05Page() {
       setError("No se encontró el proveedor seleccionado.");
       return;
     }
+    if (!criteriaCompleted(newPerformanceCriteria)) {
+      setError("Evaluá los seis criterios con puntaje de 1 a 5 antes de guardar.");
+      return;
+    }
     setBusy(true);
     setError(null);
     setMsg(null);
@@ -309,10 +308,7 @@ export function QualityPg05Page() {
         supplierName: resolved.name,
         period: pPeriod.trim() || undefined,
         reviewDate: pReviewDate ? new Date(pReviewDate).toISOString() : undefined,
-        score: pScore !== "" ? Number(pScore) : undefined,
-        qualityScore: pQuality !== "" ? Number(pQuality) : undefined,
-        deliveryScore: pDelivery !== "" ? Number(pDelivery) : undefined,
-        serviceScore: pService !== "" ? Number(pService) : undefined,
+        criteria: criteriaPayload(newPerformanceCriteria),
         comments: pComments.trim() || undefined,
         reviewedBy: pReviewedBy.trim() || undefined,
         notes: pNotes.trim() || undefined
@@ -321,10 +317,7 @@ export function QualityPg05Page() {
       setShowForm(false);
       setPSupplierId("");
       setPPeriod("");
-      setPScore("");
-      setPQuality("");
-      setPDelivery("");
-      setPService("");
+      setNewPerformanceCriteria({});
       setPComments("");
       setPReviewedBy("");
       setPNotes("");
@@ -382,14 +375,20 @@ export function QualityPg05Page() {
         { key: "supplierName", header: "Proveedor" },
         { key: "period", header: "Período" },
         { key: "reviewDate", header: "Fecha", value: (r) => excelDate(r.reviewDate) },
-        { key: "score", header: "Puntaje" },
-        { key: "qualityScore", header: "Calidad" },
-        { key: "deliveryScore", header: "Entrega" },
-        { key: "serviceScore", header: "Servicio" },
+        { key: "score", header: "Puntaje total" },
+        { key: "qualityScore", header: "Calidad histórica" },
+        { key: "deliveryScore", header: "Entrega histórica" },
+        { key: "serviceScore", header: "Servicio histórico" },
         { key: "status", header: "Estado", value: (r) => PERF_STATUS[r.status] ?? r.status },
         { key: "reviewedBy", header: "Revisó" },
         { key: "comments", header: "Comentarios" }
       ];
+      for (const criterion of EVAL_CRITERIA) {
+        columns.push({ key: `${criterion.code}-score`, header: `${criterion.label} · puntaje`,
+          value: (row) => row.criteria?.find((item) => item.code === criterion.code)?.score ?? "" });
+        columns.push({ key: `${criterion.code}-observation`, header: `${criterion.label} · observación`,
+          value: (row) => row.criteria?.find((item) => item.code === criterion.code)?.observation ?? "" });
+      }
       void exportToExcel("PG05_R03_desempeno", performances, columns);
     }
   };
@@ -534,23 +533,8 @@ export function QualityPg05Page() {
               Revisado por
               <input value={pReviewedBy} onChange={(ev) => setPReviewedBy(ev.target.value)} />
             </label>
-            <label>
-              Puntaje global
-              <input type="number" min={0} max={100} step={0.1} value={pScore} onChange={(ev) => setPScore(ev.target.value)} />
-            </label>
-            <label>
-              Calidad
-              <input type="number" min={0} max={100} step={0.1} value={pQuality} onChange={(ev) => setPQuality(ev.target.value)} />
-            </label>
-            <label>
-              Entrega
-              <input type="number" min={0} max={100} step={0.1} value={pDelivery} onChange={(ev) => setPDelivery(ev.target.value)} />
-            </label>
-            <label>
-              Servicio
-              <input type="number" min={0} max={100} step={0.1} value={pService} onChange={(ev) => setPService(ev.target.value)} />
-            </label>
           </div>
+          <CriteriaTable answers={newPerformanceCriteria} onChange={setNewPerformanceCriteria} />
           <label style={{ display: "block", marginTop: 12 }}>
             Comentarios
             <textarea value={pComments} onChange={(ev) => setPComments(ev.target.value)} rows={2} style={{ width: "100%" }} />
@@ -559,8 +543,8 @@ export function QualityPg05Page() {
             Notas
             <textarea value={pNotes} onChange={(ev) => setPNotes(ev.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
-          <button type="submit" className="btn btn-primary" disabled={busy} style={{ marginTop: 12 }}>
-            Crear
+          <button type="submit" className="btn btn-primary" disabled={busy || !criteriaCompleted(newPerformanceCriteria)} style={{ marginTop: 12 }}>
+            Guardar evaluación
           </button>
         </form>
       )}
@@ -906,45 +890,7 @@ export function QualityPg05Page() {
                         Revisado por
                         <input value={pReviewedBy} onChange={(ev) => setPReviewedBy(ev.target.value)} style={{ width: "100%" }} />
                       </label>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                        <label>
-                          Global
-                          <input type="number" min={0} max={100} step={0.1} value={pScore} onChange={(ev) => setPScore(ev.target.value)} />
-                        </label>
-                        <label>
-                          Calidad
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={0.1}
-                            value={pQuality}
-                            onChange={(ev) => setPQuality(ev.target.value)}
-                          />
-                        </label>
-                        <label>
-                          Entrega
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={0.1}
-                            value={pDelivery}
-                            onChange={(ev) => setPDelivery(ev.target.value)}
-                          />
-                        </label>
-                        <label>
-                          Servicio
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={0.1}
-                            value={pService}
-                            onChange={(ev) => setPService(ev.target.value)}
-                          />
-                        </label>
-                      </div>
+                      <CriteriaTable answers={editPerformanceCriteria} onChange={setEditPerformanceCriteria} />
                       <label style={{ display: "block", marginBottom: 8 }}>
                         Comentarios
                         <textarea value={pComments} onChange={(ev) => setPComments(ev.target.value)} rows={3} style={{ width: "100%" }} />
@@ -957,7 +903,7 @@ export function QualityPg05Page() {
                         <button
                           type="button"
                           className="btn btn-outline"
-                          disabled={busy}
+                          disabled={busy || !criteriaCompleted(editPerformanceCriteria)}
                           onClick={() =>
                             void (async () => {
                               setBusy(true);
@@ -965,10 +911,7 @@ export function QualityPg05Page() {
                                 await api.updateQualityPg05R03(selectedPerf.id, {
                                   period: pPeriod.trim() || undefined,
                                   reviewDate: pReviewDate ? new Date(pReviewDate).toISOString() : undefined,
-                                  score: pScore !== "" ? Number(pScore) : undefined,
-                                  qualityScore: pQuality !== "" ? Number(pQuality) : undefined,
-                                  deliveryScore: pDelivery !== "" ? Number(pDelivery) : undefined,
-                                  serviceScore: pService !== "" ? Number(pService) : undefined,
+                                  criteria: criteriaPayload(editPerformanceCriteria),
                                   comments: pComments.trim() || undefined,
                                   reviewedBy: pReviewedBy.trim() || undefined,
                                   notes: pNotes.trim() || undefined
@@ -988,7 +931,7 @@ export function QualityPg05Page() {
                         <button
                           type="button"
                           className="btn btn-primary"
-                          disabled={busy}
+                          disabled={busy || !criteriaCompleted(editPerformanceCriteria)}
                           onClick={() =>
                             void (async () => {
                               setBusy(true);
@@ -997,10 +940,7 @@ export function QualityPg05Page() {
                                   status: "Completed",
                                   period: pPeriod.trim() || undefined,
                                   reviewDate: pReviewDate ? new Date(pReviewDate).toISOString() : undefined,
-                                  score: pScore !== "" ? Number(pScore) : undefined,
-                                  qualityScore: pQuality !== "" ? Number(pQuality) : undefined,
-                                  deliveryScore: pDelivery !== "" ? Number(pDelivery) : undefined,
-                                  serviceScore: pService !== "" ? Number(pService) : undefined,
+                                  criteria: criteriaPayload(editPerformanceCriteria),
                                   comments: pComments.trim() || undefined,
                                   reviewedBy: pReviewedBy.trim() || undefined
                                 });
@@ -1046,11 +986,18 @@ export function QualityPg05Page() {
                       <div>
                         <strong>Revisó:</strong> {selectedPerf.reviewedBy || "—"}
                       </div>
-                      <div style={{ marginTop: 8 }}>
-                        <strong>Puntajes:</strong> global {selectedPerf.score ?? "—"} / calidad{" "}
+                      {selectedPerf.criteria?.length ? <div style={{ marginTop: 8 }}>
+                        <strong>Puntaje total: {selectedPerf.score} / 30</strong>
+                        <div className="table-wrap"><table className="table"><thead><tr>
+                          <th>Criterio</th><th>Puntaje (1–5)</th><th>Observaciones</th>
+                        </tr></thead><tbody>{selectedPerf.criteria.map((criterion) => <tr key={criterion.code}>
+                          <td>{criterion.label}</td><td>{criterion.score}</td><td>{criterion.observation || "—"}</td>
+                        </tr>)}</tbody></table></div>
+                      </div> : <div style={{ marginTop: 8 }}>
+                        <strong>Puntajes históricos:</strong> global {selectedPerf.score ?? "—"} / calidad{" "}
                         {selectedPerf.qualityScore ?? "—"} / entrega {selectedPerf.deliveryScore ?? "—"} / servicio{" "}
                         {selectedPerf.serviceScore ?? "—"}
-                      </div>
+                      </div>}
                       <div style={{ marginTop: 8 }}>
                         <strong>Comentarios:</strong> {selectedPerf.comments || "—"}
                       </div>

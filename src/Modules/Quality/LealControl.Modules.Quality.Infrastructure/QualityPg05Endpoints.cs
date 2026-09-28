@@ -380,13 +380,10 @@ internal static class QualityPg05Endpoints
             if (string.IsNullOrWhiteSpace(req.SupplierName))
                 return Results.BadRequest(new { message = "El nombre del proveedor es obligatorio." });
 
-            if (TryValidateScore(req.Score, out var scoreError)
-                || TryValidateScore(req.QualityScore, out scoreError)
-                || TryValidateScore(req.DeliveryScore, out scoreError)
-                || TryValidateScore(req.ServiceScore, out scoreError))
-            {
-                return Results.BadRequest(new { message = scoreError });
-            }
+            if (!QualitySupplierCriteria.TryNormalize(req.Criteria, out var criteria, out var criteriaError))
+                return Results.BadRequest(new { message = criteriaError });
+            if (req.Score.HasValue || req.QualityScore.HasValue || req.DeliveryScore.HasValue || req.ServiceScore.HasValue)
+                return Results.BadRequest(new { message = "El puntaje total se calcula desde los seis criterios." });
 
             if (req.EvidenceFileId.HasValue)
             {
@@ -423,10 +420,8 @@ internal static class QualityPg05Endpoints
                 EvaluationId = req.EvaluationId,
                 Period = req.Period?.Trim() ?? string.Empty,
                 ReviewDate = reviewDate,
-                Score = req.Score,
-                QualityScore = req.QualityScore,
-                DeliveryScore = req.DeliveryScore,
-                ServiceScore = req.ServiceScore,
+                Score = QualitySupplierCriteria.Total(criteria),
+                CriteriaScoresJson = QualitySupplierCriteria.Serialize(criteria),
                 Comments = req.Comments?.Trim() ?? string.Empty,
                 ReviewedBy = req.ReviewedBy?.Trim() ?? string.Empty,
                 EvidenceFileId = req.EvidenceFileId,
@@ -476,29 +471,14 @@ internal static class QualityPg05Endpoints
                 entity.EvaluationId = req.EvaluationId;
             }
 
-            if (req.Score.HasValue)
+            if (req.Score.HasValue || req.QualityScore.HasValue || req.DeliveryScore.HasValue || req.ServiceScore.HasValue)
+                return Results.BadRequest(new { message = "El puntaje total se calcula desde los seis criterios." });
+            if (req.Criteria is not null)
             {
-                if (TryValidateScore(req.Score, out var scoreError))
-                    return Results.BadRequest(new { message = scoreError });
-                entity.Score = req.Score;
-            }
-            if (req.QualityScore.HasValue)
-            {
-                if (TryValidateScore(req.QualityScore, out var scoreError))
-                    return Results.BadRequest(new { message = scoreError });
-                entity.QualityScore = req.QualityScore;
-            }
-            if (req.DeliveryScore.HasValue)
-            {
-                if (TryValidateScore(req.DeliveryScore, out var scoreError))
-                    return Results.BadRequest(new { message = scoreError });
-                entity.DeliveryScore = req.DeliveryScore;
-            }
-            if (req.ServiceScore.HasValue)
-            {
-                if (TryValidateScore(req.ServiceScore, out var scoreError))
-                    return Results.BadRequest(new { message = scoreError });
-                entity.ServiceScore = req.ServiceScore;
+                if (!QualitySupplierCriteria.TryNormalize(req.Criteria, out var criteria, out var criteriaError))
+                    return Results.BadRequest(new { message = criteriaError });
+                entity.CriteriaScoresJson = QualitySupplierCriteria.Serialize(criteria);
+                entity.Score = QualitySupplierCriteria.Total(criteria);
             }
 
             if (req.Comments is not null) entity.Comments = req.Comments.Trim();
@@ -524,6 +504,9 @@ internal static class QualityPg05Endpoints
                 };
                 if (!allowed.Contains(st))
                     return Results.BadRequest(new { message = "Estado de desempeño no válido." });
+                if (st == QualitySupplierPerformanceStatuses.Completed
+                    && QualitySupplierCriteria.Read(entity.CriteriaScoresJson).Count != QualitySupplierCriteria.Required.Count)
+                    return Results.BadRequest(new { message = "Evaluá los seis criterios antes de completar." });
                 entity.Status = st;
             }
 
@@ -568,14 +551,6 @@ internal static class QualityPg05Endpoints
                 .First())
             .Where(e => !e.ValidUntil.HasValue || e.ValidUntil.Value >= now)
             .ToList();
-
-    /// <returns>true if invalid (error message set).</returns>
-    private static bool TryValidateScore(decimal? score, out string message)
-    {
-        message = "El puntaje debe estar entre 0 y 100.";
-        if (score is null) return false;
-        return score.Value is < 0 or > 100;
-    }
 
     private static async Task<string> NextNumberAsync(
         IQueryable<string> numbers,
@@ -648,6 +623,7 @@ internal static class QualityPg05Endpoints
         p.Period,
         p.ReviewDate,
         p.Score,
+        Criteria = QualitySupplierCriteria.Read(p.CriteriaScoresJson),
         p.QualityScore,
         p.DeliveryScore,
         p.ServiceScore,
