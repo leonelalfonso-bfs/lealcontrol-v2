@@ -4,7 +4,8 @@ using Xunit;
 
 namespace LealControl.Modules.Quality.Tests;
 
-public sealed class IndicatorTrackingTests : IClassFixture<QualityWebApplicationFactory>
+[Collection("QualityApi")]
+public sealed class IndicatorTrackingTests
 {
     private readonly QualityWebApplicationFactory _factory;
     public IndicatorTrackingTests(QualityWebApplicationFactory factory) => _factory = factory;

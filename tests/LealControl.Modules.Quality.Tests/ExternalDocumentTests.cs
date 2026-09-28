@@ -11,7 +11,8 @@ using Xunit;
 
 namespace LealControl.Modules.Quality.Tests;
 
-public sealed class ExternalDocumentTests : IClassFixture<QualityWebApplicationFactory>
+[Collection("QualityApi")]
+public sealed class ExternalDocumentTests
 {
     private readonly QualityWebApplicationFactory _factory;
     public ExternalDocumentTests(QualityWebApplicationFactory factory) => _factory = factory;
