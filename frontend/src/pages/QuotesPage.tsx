@@ -169,7 +169,7 @@ export function QuotesPage() {
           <h1>Presupuestos Comerciales</h1>
           <p className="muted">Gestión de cotizaciones multimoneda para clientes</p>
         </div>
-        <div className="toolbar"><ExcelToolbar fileName="presupuestos" rows={quotes} columns={[{ key: "quoteNumber", header: "Número" }, { key: "customerId", header: "Cliente", value: row => customerMap[row.customerId] ?? "Cliente registrado" }, { key: "status", header: "Estado" }, { key: "currency", header: "Moneda" }, { key: "total", header: "Total", value: row => excelNumber(row.total) }, { key: "createdAtUtc", header: "Fecha", value: row => excelDate(row.createdAtUtc) }]} /><button
+        <div className="toolbar"><ExcelToolbar fileName="presupuestos" rows={quotes} columns={[{ key: "quoteNumber", header: "Número" }, { key: "customerId", header: "Cliente", value: row => customerMap[row.customerId] ?? "Cliente registrado" }, { key: "status", header: "Estado" }, { key: "currency", header: "Moneda" }, { key: "total", header: "Total", value: row => excelNumber(row.total) }, { key: "createdAtUtc", header: "Fecha", value: row => excelDate(row.createdAtUtc) }]} /><button type="button" className="btn" onClick={() => navigate("/presupuestos/historicos")}>Historial anterior</button><button
           type="button"
           onClick={() => navigate("/presupuestos/nuevo")}
           className="btn"

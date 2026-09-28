@@ -141,6 +141,8 @@ export const PurchaseReportsPage = named(() => import("../pages/PurchaseReportsP
 export const PurchaseHelpPage = named(() => import("../pages/PurchaseHelpPage"), "PurchaseHelpPage");
 export const QuoteFormPage = named(() => import("../pages/QuoteFormPage"), "QuoteFormPage");
 export const QuotePrintPage = named(() => import("../pages/QuotePrintPage"), "QuotePrintPage");
+export const HistoricalQuotesPage = named(() => import("../pages/HistoricalQuotesPage"), "HistoricalQuotesPage");
+export const HistoricalQuoteDetailPage = named(() => import("../pages/HistoricalQuotesPage"), "HistoricalQuoteDetailPage");
 export const QuotesPage = named(() => import("../pages/QuotesPage"), "QuotesPage");
 export const RemitoFormPage = named(() => import("../pages/RemitoFormPage"), "RemitoFormPage");
 export const RemitoPrintPage = named(() => import("../pages/RemitoPrintPage"), "RemitoPrintPage");

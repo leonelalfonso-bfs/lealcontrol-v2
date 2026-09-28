@@ -12,6 +12,7 @@ import unicodedata
 import uuid
 from collections import Counter
 from datetime import datetime, timezone
+from decimal import Decimal
 from pathlib import Path
 
 
@@ -282,15 +283,90 @@ def prepare(source, destination):
     return path, issues
 
 
+def prepare_quotes(source, destination):
+    entities = {r["legacy"]["id"]: r for r in load(source / "entities.jsonl")}
+    quotes = [r["legacy"] for r in load(source / "quotes.jsonl")]
+    lines = [r["legacy"] for r in load(source / "quote_items.jsonl")]
+    by_quote = {}
+    for line in lines:
+        by_quote.setdefault(line["quote_id"], []).append(line)
+    if (len(quotes), len(lines)) != (118, 239):
+        raise ValueError("Unexpected source quote/line count")
+
+    prepared = []
+    for quote in quotes:
+        customer = entities[quote["client_id"]]["prepared"]
+        if not customer["is_customer"] or not customer["tax_condition"]:
+            raise ValueError("Historical quote customer is not in CRM import")
+        quote_lines = sorted(by_quote.get(quote["id"], []), key=lambda line: line["id"])
+        original_net = Decimal(str(quote["total"] or 0))
+        calculated_net = sum(
+            (Decimal(str(line["total"] or 0)) for line in quote_lines if not line["is_optional"]),
+            Decimal(0),
+        )
+        if abs(original_net - calculated_net) > Decimal("0.02"):
+            raise ValueError(f"Quote {quote['id']} does not reconcile")
+        prepared.append((
+            uid("historical-quote", quote["id"]), TENANT_ID, "lealcontrol-laravel",
+            quote["id"], quote["parent_id"], str(quote["quote_number"]),
+            quote["revision"], uid("customer", quote["client_id"]),
+            entities[quote["client_id"]]["legacy"]["name"],
+            str(quote["date"])[:10], str(quote["currency"]), str(quote["status"]),
+            str(original_net), json.dumps(quote, ensure_ascii=False),
+            json.dumps(quote_lines, ensure_ascii=False),
+        ))
+
+    path = destination / "bfs_historical_quotes_import.sql"
+    with path.open("w", encoding="utf-8") as out:
+        out.write("\\set ON_ERROR_STOP on\nBEGIN;\nSET LOCAL client_encoding = 'UTF8';\n")
+        out.write(f"""DO $$ BEGIN
+            IF current_database() <> '{DATABASE}' THEN
+                RAISE EXCEPTION 'Wrong target database: %', current_database();
+            END IF;
+            IF (SELECT count(*) FROM crm.customers WHERE "TenantId" = '{TENANT_ID}') <> 764
+               OR (SELECT count(*) FROM legacy_bfs.entities) <> 2095
+               OR (SELECT count(*) FROM sales.historical_quotes WHERE "TenantId" = '{TENANT_ID}') <> 0
+               OR (SELECT count(*) FROM sales.quotes WHERE "TenantId" = '{TENANT_ID}') <> 0 THEN
+                RAISE EXCEPTION 'BFS historical quote preflight failed';
+            END IF;
+        END $$;
+        """)
+        insert_batch(out, "sales.historical_quotes", [
+            '"Id"', '"TenantId"', '"SourceSystem"', '"LegacyId"', '"LegacyParentId"',
+            '"QuoteNumber"', '"Revision"', '"CustomerId"', '"CustomerName"', '"QuoteDate"',
+            '"Currency"', '"Status"', '"NetTotal"', '"SourceSnapshot"', '"LinesSnapshot"',
+        ], prepared)
+        out.write("""DO $$ BEGIN
+            IF (SELECT count(*) FROM sales.historical_quotes) <> 118
+               OR (SELECT sum(jsonb_array_length("LinesSnapshot")) FROM sales.historical_quotes) <> 239
+               OR EXISTS (
+                   SELECT 1 FROM sales.historical_quotes q
+                   LEFT JOIN crm.customers c ON c."Id" = q."CustomerId" AND c."TenantId" = q."TenantId"
+                   WHERE c."Id" IS NULL
+               ) THEN
+                RAISE EXCEPTION 'Historical quote reconciliation failed';
+            END IF;
+        END $$;
+        COMMIT;
+        SELECT count(*) AS historical_quotes,
+               sum(jsonb_array_length("LinesSnapshot")) AS lines
+        FROM sales.historical_quotes;
+        """)
+    path.chmod(0o600)
+    return path
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path, help="Private prepared JSONL directory")
     parser.add_argument("destination", type=Path, help="Private output directory, outside Git")
     args = parser.parse_args()
     path, issues = prepare(args.source, args.destination)
+    quotes_path = prepare_quotes(args.source, args.destination)
     print("Prepared 764 customers, 1,393 suppliers, 49 locations and 57 contacts;")
     print("3 entities await tax review; 1 supplier-only contact retained in source archive.")
     print("Import SQL (contains personal data):", path)
+    print("Historical quotes SQL (contains commercial data):", quotes_path)
     print("Exceptions (counts only):", dict(issues))
 
 

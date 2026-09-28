@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.Json;
 using LealControl.BuildingBlocks.Security;
 using LealControl.Modules.Sales.Application.Orders;
 using LealControl.Modules.Sales.Application.Orders.Models;
@@ -68,6 +69,44 @@ public static class SalesEndpoints
         var sales = endpoints.MapGroup("/api/v1/sales").RequirePolicyOnWrites("RequireSales");
 
         // Quotes Endpoints
+        sales.MapGet("/quotes/historical", async (
+            SalesDbContext db,
+            ITenantContext tenant,
+            CancellationToken cancellationToken) =>
+        {
+            var records = await db.HistoricalQuotes.AsNoTracking()
+                .Where(q => q.TenantId == tenant.TenantId.Value)
+                .OrderByDescending(q => q.QuoteDate)
+                .ThenByDescending(q => q.QuoteNumber)
+                .Select(q => new
+                {
+                    q.Id, q.SourceSystem, q.LegacyId, q.LegacyParentId,
+                    q.QuoteNumber, q.Revision, q.CustomerId, q.CustomerName, q.QuoteDate,
+                    q.Currency, q.Status, q.NetTotal
+                })
+                .ToListAsync(cancellationToken);
+            return Results.Ok(records);
+        });
+
+        sales.MapGet("/quotes/historical/{id:guid}", async (
+            Guid id,
+            SalesDbContext db,
+            ITenantContext tenant,
+            CancellationToken cancellationToken) =>
+        {
+            var q = await db.HistoricalQuotes.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, cancellationToken);
+            if (q is null) return Results.NotFound();
+            return Results.Ok(new
+            {
+                q.Id, q.SourceSystem, q.LegacyId, q.LegacyParentId,
+                q.QuoteNumber, q.Revision, q.CustomerId, q.CustomerName, q.QuoteDate,
+                q.Currency, q.Status, q.NetTotal,
+                Source = JsonSerializer.Deserialize<JsonElement>(q.SourceSnapshot),
+                Lines = JsonSerializer.Deserialize<JsonElement>(q.LinesSnapshot)
+            });
+        });
+
         sales.MapGet("/quotes", async (
             string? search,
             ISender sender,

@@ -19,6 +19,8 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
 
     public DbSet<Quote> Quotes => Set<Quote>();
 
+    public DbSet<HistoricalQuote> HistoricalQuotes => Set<HistoricalQuote>();
+
     public DbSet<Order> Orders => Set<Order>();
 
     public DbSet<Product> Products => Set<Product>();
@@ -422,6 +424,29 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
                     ALTER TABLE sales.quote_lines ADD COLUMN IF NOT EXISTS "TechnicalDetail" text;
                 END IF;
             END $$;
+            """,
+            cancellationToken);
+
+        await Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE IF NOT EXISTS sales.historical_quotes (
+                "Id" uuid PRIMARY KEY,
+                "TenantId" uuid NOT NULL,
+                "SourceSystem" character varying(40) NOT NULL,
+                "LegacyId" bigint NOT NULL,
+                "LegacyParentId" bigint,
+                "QuoteNumber" character varying(100) NOT NULL,
+                "Revision" integer NOT NULL,
+                "CustomerId" uuid NOT NULL,
+                "CustomerName" character varying(200) NOT NULL,
+                "QuoteDate" date NOT NULL,
+                "Currency" character varying(32) NOT NULL,
+                "Status" character varying(32) NOT NULL,
+                "NetTotal" numeric(18,2) NOT NULL,
+                "SourceSnapshot" jsonb NOT NULL,
+                "LinesSnapshot" jsonb NOT NULL,
+                CONSTRAINT "UX_HistoricalQuotes_Tenant_Source_Legacy" UNIQUE ("TenantId", "SourceSystem", "LegacyId")
+            );
             """,
             cancellationToken);
 

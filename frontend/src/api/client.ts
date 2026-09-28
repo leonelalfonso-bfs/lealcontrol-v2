@@ -4,6 +4,8 @@
   CustomerSummary,
   CustomerWrite,
   ExchangeRates,
+  HistoricalQuote,
+  HistoricalQuoteDetail,
   Lead,
   Opportunity,
   Order,
@@ -355,6 +357,8 @@ export const api = {
     })),
   listQuotes: (search = "") =>
     request<Quote[]>(`/api/v1/sales/quotes?search=${encodeURIComponent(search)}`),
+  listHistoricalQuotes: () => request<HistoricalQuote[]>("/api/v1/sales/quotes/historical"),
+  getHistoricalQuote: (id: string) => request<HistoricalQuoteDetail>(`/api/v1/sales/quotes/historical/${id}`),
   getQuote: (id: string) => request<Quote>(`/api/v1/sales/quotes/${id}`),
   createQuote: (body: QuoteWrite) =>
     request<Quote>("/api/v1/sales/quotes", { method: "POST", body: JSON.stringify(body) }),

@@ -148,6 +148,8 @@ import {
   PurchasesDashboardPage,
   QuoteFormPage,
   QuotePrintPage,
+  HistoricalQuotesPage,
+  HistoricalQuoteDetailPage,
   QuotesPage,
   RemitoFormPage,
   RemitoPrintPage,
@@ -586,6 +588,8 @@ export function App() {
               <Route path="/productos/nuevo" element={<ProductFormPage />} />
               <Route path="/productos/:id/editar" element={<ProductFormPage />} />
               <Route path="/presupuestos" element={<QuotesPage />} />
+              <Route path="/presupuestos/historicos" element={<HistoricalQuotesPage />} />
+              <Route path="/presupuestos/historicos/:id" element={<HistoricalQuoteDetailPage />} />
               <Route path="/presupuestos/nuevo" element={<QuoteFormPage />} />
               <Route path="/presupuestos/:id/editar" element={<QuoteFormPage />} />
               <Route path="/presupuestos/:id/imprimir" element={<QuotePrintPage />} />

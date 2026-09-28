@@ -244,6 +244,38 @@ export type Quote = {
   lines: QuoteLine[];
 };
 
+export type HistoricalQuote = {
+  id: string;
+  sourceSystem: string;
+  legacyId: number;
+  legacyParentId: number | null;
+  quoteNumber: string;
+  revision: number;
+  customerId: string;
+  customerName: string;
+  quoteDate: string;
+  currency: string;
+  status: string;
+  netTotal: number;
+};
+
+export type HistoricalQuoteLine = {
+  id: number;
+  description: string;
+  detailed_description: string | null;
+  quantity: number;
+  unit_price: number;
+  tax_rate: number;
+  discount_percent: number;
+  total: number;
+  is_optional: boolean;
+};
+
+export type HistoricalQuoteDetail = HistoricalQuote & {
+  source: Record<string, unknown>;
+  lines: HistoricalQuoteLine[];
+};
+
 export type QuoteLineWrite = {
   productId?: string | null;
   description: string;
