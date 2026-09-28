@@ -44,6 +44,7 @@ internal static class QualityPg06Endpoints
                 recordKind = QualityRecordKinds.Structured,
                 generatedAtUtc = now,
                 trainingOpen = trainings.Count(s => s == QualityTrainingStatuses.Planned),
+                authorizationsActive = auths.Count(a => a.Status == QualityAuthorizationStatuses.Authorized),
                 authorizationsExpiringSoon = auths.Count(a =>
                     a.Status == QualityAuthorizationStatuses.Authorized
                     && a.ValidUntil.HasValue
@@ -122,6 +123,9 @@ internal static class QualityPg06Endpoints
             if (string.IsNullOrWhiteSpace(req.Topic))
                 return Results.BadRequest(new { message = "El tema de capacitación es obligatorio." });
 
+            if (req.TrainingType is not null && req.TrainingType is not ("Internal" or "External"))
+                return Results.BadRequest(new { message = "Tipo de capacitación no válido." });
+
             var year = req.ProgramYear > 2000 ? req.ProgramYear : DateTime.UtcNow.Year;
             var number = await NextNumberAsync(
                 db.TrainingPlanItems.AsNoTracking()
@@ -138,6 +142,8 @@ internal static class QualityPg06Endpoints
                 ProgramYear = year,
                 Topic = req.Topic.Trim(),
                 TargetRoles = req.TargetRoles?.Trim() ?? string.Empty,
+                InterveningPersonnel = req.InterveningPersonnel?.Trim() ?? string.Empty,
+                TrainingType = req.TrainingType == "External" ? "External" : "Internal",
                 PlannedDate = req.PlannedDate ?? DateTime.UtcNow,
                 Status = QualityTrainingStatuses.Planned,
                 Notes = req.Notes?.Trim() ?? string.Empty,
@@ -181,9 +187,15 @@ internal static class QualityPg06Endpoints
                 entity.Topic = req.Topic.Trim();
             }
             if (req.TargetRoles is not null) entity.TargetRoles = req.TargetRoles.Trim();
+            if (req.InterveningPersonnel is not null) entity.InterveningPersonnel = req.InterveningPersonnel.Trim();
+            if (req.TrainingType is not null)
+            {
+                if (req.TrainingType is not ("Internal" or "External"))
+                    return Results.BadRequest(new { message = "Tipo de capacitación no válido." });
+                entity.TrainingType = req.TrainingType;
+            }
             if (req.PlannedDate.HasValue) entity.PlannedDate = req.PlannedDate.Value;
             if (req.DoneDate.HasValue) entity.DoneDate = req.DoneDate;
-            if (req.EffectivenessCheck is not null) entity.EffectivenessCheck = req.EffectivenessCheck.Trim();
             if (req.Notes is not null) entity.Notes = req.Notes.Trim();
 
             if (req.Status is not null)
@@ -202,8 +214,6 @@ internal static class QualityPg06Endpoints
                 if (st == QualityTrainingStatuses.Done)
                 {
                     entity.DoneDate ??= DateTime.UtcNow;
-                    if (req.EffectivenessCheck is not null)
-                        entity.EffectivenessCheck = req.EffectivenessCheck.Trim();
                 }
             }
             else if (entity.Status == QualityTrainingStatuses.Done && req.DoneDate is null && entity.DoneDate is null)
@@ -297,8 +307,10 @@ internal static class QualityPg06Endpoints
                 return Results.BadRequest(new { message = "El usuario es obligatorio." });
             if (string.IsNullOrWhiteSpace(req.PersonName))
                 return Results.BadRequest(new { message = "El nombre de la persona es obligatorio." });
-            if (string.IsNullOrWhiteSpace(req.MethodDocumentCode))
-                return Results.BadRequest(new { message = "El código del método/instructivo es obligatorio." });
+            if (string.IsNullOrWhiteSpace(req.Method))
+                return Results.BadRequest(new { message = "El método es obligatorio." });
+            if (req.Method.Trim().Length > 240)
+                return Results.BadRequest(new { message = "El método no puede superar 240 caracteres." });
 
             if (req.EvidenceFileId.HasValue)
             {
@@ -323,14 +335,16 @@ internal static class QualityPg06Endpoints
                 Number = number,
                 UserId = req.UserId,
                 PersonName = req.PersonName.Trim(),
-                MethodDocumentCode = NormalizeMethodCode(req.MethodDocumentCode),
-                MethodTitle = req.MethodTitle?.Trim() ?? string.Empty,
+                MethodDocumentCode = MethodReference(req.Method),
+                Method = req.Method.Trim(),
+                TrainingActions = req.TrainingActions?.Trim() ?? string.Empty,
+                TrainingStartDate = req.TrainingStartDate,
+                ValidFrom = req.ValidFrom,
                 TrainingEvidence = req.TrainingEvidence?.Trim() ?? string.Empty,
                 SupervisedBy = req.SupervisedBy?.Trim() ?? string.Empty,
-                ValidUntil = req.ValidUntil,
                 EvidenceFileId = req.EvidenceFileId,
                 Status = QualityAuthorizationStatuses.Draft,
-                Notes = req.Notes?.Trim() ?? string.Empty,
+                Notes = string.Empty,
                 CreatedAtUtc = DateTime.UtcNow,
                 UpdatedAtUtc = DateTime.UtcNow
             };
@@ -363,8 +377,9 @@ internal static class QualityPg06Endpoints
             {
                 // Actualizaciones limitadas: evidencia de entrenamiento, vigencia, suspensión.
                 if (req.TrainingEvidence is not null) entity.TrainingEvidence = req.TrainingEvidence.Trim();
-                if (req.ValidUntil.HasValue) entity.ValidUntil = req.ValidUntil;
-                if (req.Notes is not null) entity.Notes = req.Notes.Trim();
+                if (req.ValidFrom.HasValue) entity.ValidFrom = req.ValidFrom;
+                if (req.TrainingStartDate.HasValue) entity.TrainingStartDate = req.TrainingStartDate;
+                if (req.TrainingActions is not null) entity.TrainingActions = req.TrainingActions.Trim();
                 if (req.Status is not null)
                 {
                     var st = req.Status.Trim();
@@ -374,8 +389,7 @@ internal static class QualityPg06Endpoints
                 }
 
                 if (req.PersonName is not null
-                    || req.MethodDocumentCode is not null
-                    || req.MethodTitle is not null
+                    || req.Method is not null
                     || req.SupervisedBy is not null
                     || req.EvidenceFileId.HasValue)
                 {
@@ -393,16 +407,18 @@ internal static class QualityPg06Endpoints
                         return Results.BadRequest(new { message = "El nombre no puede quedar vacío." });
                     entity.PersonName = req.PersonName.Trim();
                 }
-                if (req.MethodDocumentCode is not null)
+                if (req.Method is not null)
                 {
-                    if (string.IsNullOrWhiteSpace(req.MethodDocumentCode))
-                        return Results.BadRequest(new { message = "El código del método no puede quedar vacío." });
-                    entity.MethodDocumentCode = NormalizeMethodCode(req.MethodDocumentCode);
+                    if (string.IsNullOrWhiteSpace(req.Method) || req.Method.Trim().Length > 240)
+                        return Results.BadRequest(new { message = "El método debe tener entre 1 y 240 caracteres." });
+                    entity.Method = req.Method.Trim();
+                    entity.MethodDocumentCode = MethodReference(req.Method);
                 }
-                if (req.MethodTitle is not null) entity.MethodTitle = req.MethodTitle.Trim();
                 if (req.TrainingEvidence is not null) entity.TrainingEvidence = req.TrainingEvidence.Trim();
                 if (req.SupervisedBy is not null) entity.SupervisedBy = req.SupervisedBy.Trim();
-                if (req.ValidUntil.HasValue) entity.ValidUntil = req.ValidUntil;
+                if (req.ValidFrom.HasValue) entity.ValidFrom = req.ValidFrom;
+                if (req.TrainingStartDate.HasValue) entity.TrainingStartDate = req.TrainingStartDate;
+                if (req.TrainingActions is not null) entity.TrainingActions = req.TrainingActions.Trim();
                 if (req.EvidenceFileId.HasValue)
                 {
                     var fileOk = await db.Files.AsNoTracking()
@@ -411,7 +427,6 @@ internal static class QualityPg06Endpoints
                         return Results.BadRequest(new { message = "El archivo de evidencia no existe." });
                     entity.EvidenceFileId = req.EvidenceFileId;
                 }
-                if (req.Notes is not null) entity.Notes = req.Notes.Trim();
                 if (req.Status is not null)
                 {
                     var st = req.Status.Trim();
@@ -463,10 +478,11 @@ internal static class QualityPg06Endpoints
             entity.AuthorizedByUserId = authUserId;
             entity.AuthorizedByName = authName;
             entity.AuthorizedAt = req.AuthorizedAt ?? DateTime.UtcNow;
-            if (req.ValidUntil.HasValue)
-                entity.ValidUntil = req.ValidUntil;
-            if (req.Notes is not null)
-                entity.Notes = req.Notes.Trim();
+            if (req.ValidFrom.HasValue)
+                entity.ValidFrom = req.ValidFrom;
+            entity.ValidFrom ??= entity.AuthorizedAt;
+            if (req.TrainingActions is not null)
+                entity.TrainingActions = req.TrainingActions.Trim();
             entity.Status = QualityAuthorizationStatuses.Authorized;
             entity.UpdatedAtUtc = DateTime.UtcNow;
 
@@ -730,6 +746,8 @@ internal static class QualityPg06Endpoints
                 return Results.BadRequest(new { message = "El nombre de la persona es obligatorio." });
 
             var since = req.Since ?? DateTime.UtcNow;
+            if (req.Until.HasValue && req.Until.Value < since)
+                return Results.BadRequest(new { message = "Hasta no puede ser anterior a Desde." });
             var year = since.Year;
             var number = await NextNumberAsync(
                 db.RoleAssignments.AsNoTracking()
@@ -749,6 +767,7 @@ internal static class QualityPg06Endpoints
                 SubstituteUserId = req.SubstituteUserId,
                 SubstituteName = req.SubstituteName?.Trim() ?? string.Empty,
                 Since = since,
+                Until = req.Until,
                 Status = QualityRoleAssignmentStatuses.Active,
                 Notes = req.Notes?.Trim() ?? string.Empty,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -794,6 +813,8 @@ internal static class QualityPg06Endpoints
             if (req.SubstituteName is not null) entity.SubstituteName = req.SubstituteName.Trim();
             if (req.Since.HasValue) entity.Since = req.Since.Value;
             if (req.Until.HasValue) entity.Until = req.Until;
+            if (entity.Until.HasValue && entity.Until.Value < entity.Since)
+                return Results.BadRequest(new { message = "Hasta no puede ser anterior a Desde." });
             if (req.Notes is not null) entity.Notes = req.Notes.Trim();
 
             if (req.Status is not null)
@@ -869,6 +890,12 @@ internal static class QualityPg06Endpoints
         return $"{prefix}{seq:D4}";
     }
 
+    private static string MethodReference(string method)
+    {
+        var code = NormalizeMethodCode(method.Trim().Split(' ', 2)[0]);
+        return code[..Math.Min(code.Length, 64)];
+    }
+
     private static string NormalizeMethodCode(string code) =>
         new string(code.Trim().ToUpperInvariant()
             .Where(ch => !char.IsWhiteSpace(ch))
@@ -883,9 +910,10 @@ internal static class QualityPg06Endpoints
         t.ProgramYear,
         t.Topic,
         t.TargetRoles,
+        t.InterveningPersonnel,
+        t.TrainingType,
         t.PlannedDate,
         t.DoneDate,
-        t.EffectivenessCheck,
         t.Status,
         t.Notes,
         t.CreatedAtUtc,
@@ -907,6 +935,10 @@ internal static class QualityPg06Endpoints
             a.PersonName,
             a.MethodDocumentCode,
             a.MethodTitle,
+            Method = string.IsNullOrWhiteSpace(a.Method) ? string.Join(" ", new[] { a.MethodDocumentCode, a.MethodTitle }.Where(x => !string.IsNullOrWhiteSpace(x))) : a.Method,
+            TrainingActions = string.IsNullOrWhiteSpace(a.TrainingActions) ? a.Notes : a.TrainingActions,
+            a.TrainingStartDate,
+            ValidFrom = a.ValidFrom ?? a.AuthorizedAt,
             a.TrainingEvidence,
             a.SupervisedBy,
             a.AuthorizedByUserId,

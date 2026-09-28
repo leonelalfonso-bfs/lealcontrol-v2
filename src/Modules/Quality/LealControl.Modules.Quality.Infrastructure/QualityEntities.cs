@@ -651,6 +651,8 @@ public sealed class QualityTrainingPlanItem : Entity<Guid>
     public int ProgramYear { get; set; }
     public string Topic { get; set; } = string.Empty;
     public string TargetRoles { get; set; } = string.Empty;
+    public string InterveningPersonnel { get; set; } = string.Empty;
+    public string TrainingType { get; set; } = "Internal";
     public DateTime PlannedDate { get; set; } = DateTime.UtcNow;
     public DateTime? DoneDate { get; set; }
     public string EffectivenessCheck { get; set; } = string.Empty;
@@ -665,12 +667,16 @@ public sealed record CreateTrainingPlanItemRequest(
     string Topic,
     DateTime? PlannedDate = null,
     string? TargetRoles = null,
+    string? InterveningPersonnel = null,
+    string? TrainingType = null,
     string? Notes = null);
 
 public sealed record UpdateTrainingPlanItemRequest(
     int? ProgramYear = null,
     string? Topic = null,
     string? TargetRoles = null,
+    string? InterveningPersonnel = null,
+    string? TrainingType = null,
     DateTime? PlannedDate = null,
     DateTime? DoneDate = null,
     string? EffectivenessCheck = null,
@@ -699,6 +705,10 @@ public sealed class QualityPersonnelAuthorization : Entity<Guid>
     public string PersonName { get; set; } = string.Empty;
     public string MethodDocumentCode { get; set; } = string.Empty; // IT-01, IT 02…
     public string MethodTitle { get; set; } = string.Empty;
+    public string Method { get; set; } = string.Empty;
+    public string TrainingActions { get; set; } = string.Empty;
+    public DateTime? TrainingStartDate { get; set; }
+    public DateTime? ValidFrom { get; set; }
     public string TrainingEvidence { get; set; } = string.Empty;
     public string SupervisedBy { get; set; } = string.Empty;
     public Guid? AuthorizedByUserId { get; set; }
@@ -715,29 +725,29 @@ public sealed class QualityPersonnelAuthorization : Entity<Guid>
 public sealed record CreatePersonnelAuthorizationRequest(
     Guid UserId,
     string PersonName,
-    string MethodDocumentCode,
-    string? MethodTitle = null,
+    string Method,
     string? TrainingEvidence = null,
     string? SupervisedBy = null,
-    DateTime? ValidUntil = null,
+    DateTime? TrainingStartDate = null,
+    DateTime? ValidFrom = null,
     Guid? EvidenceFileId = null,
-    string? Notes = null);
+    string? TrainingActions = null);
 
 public sealed record UpdatePersonnelAuthorizationRequest(
     string? PersonName = null,
-    string? MethodDocumentCode = null,
-    string? MethodTitle = null,
+    string? Method = null,
     string? TrainingEvidence = null,
     string? SupervisedBy = null,
-    DateTime? ValidUntil = null,
+    DateTime? TrainingStartDate = null,
+    DateTime? ValidFrom = null,
     Guid? EvidenceFileId = null,
     string? Status = null,
-    string? Notes = null);
+    string? TrainingActions = null);
 
 public sealed record AuthorizePersonnelRequest(
     DateTime? AuthorizedAt = null,
-    DateTime? ValidUntil = null,
-    string? Notes = null);
+    DateTime? ValidFrom = null,
+    string? TrainingActions = null);
 
 public static class QualityCompetenceStatuses
 {
@@ -820,6 +830,7 @@ public sealed record CreateRoleAssignmentRequest(
     Guid UserId,
     string PersonName,
     DateTime? Since = null,
+    DateTime? Until = null,
     Guid? SubstituteUserId = null,
     string? SubstituteName = null,
     string? Notes = null);

@@ -392,6 +392,8 @@ export interface QualityTrainingPlanItem {
   programYear: number;
   topic: string;
   targetRoles?: string;
+  interveningPersonnel?: string;
+  trainingType: "Internal" | "External";
   plannedDate: string;
   doneDate?: string | null;
   effectivenessCheck?: string;
@@ -409,6 +411,10 @@ export interface QualityPersonnelAuthorization {
   personName: string;
   methodDocumentCode: string;
   methodTitle?: string;
+  method: string;
+  trainingActions?: string;
+  trainingStartDate?: string | null;
+  validFrom?: string | null;
   trainingEvidence?: string;
   supervisedBy?: string;
   authorizedByUserId?: string | null;
@@ -463,6 +469,7 @@ export interface QualityPg06Summary {
   recordKind?: string;
   generatedAtUtc: string;
   trainingOpen?: number;
+  authorizationsActive?: number;
   authorizationsExpiringSoon?: number;
   competenceDraft?: number;
   roleActive?: number;

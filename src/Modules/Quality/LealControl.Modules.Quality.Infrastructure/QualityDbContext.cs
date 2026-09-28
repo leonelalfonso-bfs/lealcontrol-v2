@@ -292,6 +292,8 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.Number).HasMaxLength(32).IsRequired();
             b.Property(x => x.Topic).HasMaxLength(500).IsRequired();
             b.Property(x => x.TargetRoles).HasMaxLength(500);
+            b.Property(x => x.InterveningPersonnel).HasMaxLength(2000);
+            b.Property(x => x.TrainingType).HasMaxLength(16);
             b.Property(x => x.EffectivenessCheck).HasMaxLength(4000);
             b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityTrainingStatuses.Planned);
             b.Property(x => x.Notes).HasMaxLength(2000);
@@ -309,6 +311,8 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.PersonName).HasMaxLength(160).IsRequired();
             b.Property(x => x.MethodDocumentCode).HasMaxLength(64).IsRequired();
             b.Property(x => x.MethodTitle).HasMaxLength(240);
+            b.Property(x => x.Method).HasMaxLength(240);
+            b.Property(x => x.TrainingActions).HasMaxLength(4000);
             b.Property(x => x.TrainingEvidence).HasMaxLength(4000);
             b.Property(x => x.SupervisedBy).HasMaxLength(160);
             b.Property(x => x.AuthorizedByName).HasMaxLength(160);
@@ -855,6 +859,8 @@ public sealed class QualityDbContext : DbContext
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
+            @"ALTER TABLE quality.training_plan_items ADD COLUMN IF NOT EXISTS ""InterveningPersonnel"" character varying(2000) NOT NULL DEFAULT '';",
+            @"ALTER TABLE quality.training_plan_items ADD COLUMN IF NOT EXISTS ""TrainingType"" character varying(16) NOT NULL DEFAULT 'Internal';",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_train_Tenant_Number"" ON quality.training_plan_items (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_train_Tenant_Year_Status"" ON quality.training_plan_items (""TenantId"", ""ProgramYear"", ""Status"");",
 
@@ -879,6 +885,10 @@ public sealed class QualityDbContext : DbContext
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
+            @"ALTER TABLE quality.personnel_authorizations ADD COLUMN IF NOT EXISTS ""Method"" character varying(240) NOT NULL DEFAULT '';",
+            @"ALTER TABLE quality.personnel_authorizations ADD COLUMN IF NOT EXISTS ""TrainingActions"" character varying(4000) NOT NULL DEFAULT '';",
+            @"ALTER TABLE quality.personnel_authorizations ADD COLUMN IF NOT EXISTS ""TrainingStartDate"" timestamp with time zone;",
+            @"ALTER TABLE quality.personnel_authorizations ADD COLUMN IF NOT EXISTS ""ValidFrom"" timestamp with time zone;",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_auth_Tenant_Number"" ON quality.personnel_authorizations (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_auth_Tenant_User_Method_Status"" ON quality.personnel_authorizations (""TenantId"", ""UserId"", ""MethodDocumentCode"", ""Status"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_auth_Tenant_ValidUntil"" ON quality.personnel_authorizations (""TenantId"", ""ValidUntil"");",

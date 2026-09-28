@@ -150,10 +150,12 @@ export function QualityPersonnelAuthorizationPrintPage() {
               </td>
             </tr>
             <tr>
-              <td style={label}>Código método / IT</td>
-              <td style={cell}>{row.methodDocumentCode || "—"}</td>
-              <td style={label}>Título del método</td>
-              <td style={cell}>{row.methodTitle || "—"}</td>
+              <td style={label}>Método</td>
+              <td style={cell} colSpan={3}>{row.method || "—"}</td>
+            </tr>
+            <tr>
+              <td style={label}>Inicio del entrenamiento</td>
+              <td style={cell} colSpan={3}>{fmt(row.trainingStartDate)}</td>
             </tr>
             <tr>
               <td style={label}>Evidencia de entrenamiento</td>
@@ -164,8 +166,8 @@ export function QualityPersonnelAuthorizationPrintPage() {
             <tr>
               <td style={label}>Supervisado por</td>
               <td style={cell}>{row.supervisedBy || "—"}</td>
-              <td style={label}>Vigente hasta</td>
-              <td style={cell}>{fmt(row.validUntil)}</td>
+              <td style={label}>Vigente desde</td>
+              <td style={cell}>{fmt(row.validFrom)}</td>
             </tr>
             <tr>
               <td style={label}>Autorizado por (DT)</td>
@@ -174,9 +176,9 @@ export function QualityPersonnelAuthorizationPrintPage() {
               <td style={cell}>{fmt(row.authorizedAt)}</td>
             </tr>
             <tr>
-              <td style={label}>Notas</td>
+              <td style={label}>Acciones utilizadas para el entrenamiento</td>
               <td style={{ ...cell, whiteSpace: "pre-wrap" }} colSpan={3}>
-                {row.notes || "—"}
+                {row.trainingActions || "—"}
               </td>
             </tr>
           </tbody>

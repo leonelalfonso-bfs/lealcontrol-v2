@@ -80,17 +80,19 @@ export function QualityPg06Page() {
   const [tRoles, setTRoles] = useState("");
   const [tPlanned, setTPlanned] = useState(new Date().toISOString().slice(0, 10));
   const [tNotes, setTNotes] = useState("");
-  const [tEff, setTEff] = useState("");
+  const [tPeople, setTPeople] = useState("");
+  const [tType, setTType] = useState<"Internal" | "External">("Internal");
   const [tDoneDate, setTDoneDate] = useState(new Date().toISOString().slice(0, 10));
 
   // R02 form / detail
   const [aUserId, setAUserId] = useState("");
-  const [aMethodCode, setAMethodCode] = useState("");
-  const [aMethodTitle, setAMethodTitle] = useState("");
+  const [aMethod, setAMethod] = useState("");
+  const [aStart, setAStart] = useState("");
+  const [aValidFrom, setAValidFrom] = useState("");
+  const [aActions, setAActions] = useState("");
   const [aEvidence, setAEvidence] = useState("");
   const [aSupervised, setASupervised] = useState("");
-  const [aValidUntil, setAValidUntil] = useState("");
-  const [aNotes, setANotes] = useState("");
+
 
   // R03 form / detail
   const [cUserId, setCUserId] = useState("");
@@ -106,6 +108,7 @@ export function QualityPg06Page() {
   const [rUserId, setRUserId] = useState("");
   const [rSubId, setRSubId] = useState("");
   const [rSince, setRSince] = useState(new Date().toISOString().slice(0, 10));
+  const [rUntil, setRUntil] = useState("");
   const [rNotes, setRNotes] = useState("");
 
   const activeUsers = useMemo(() => users.filter((u) => u.isActive), [users]);
@@ -188,7 +191,8 @@ export function QualityPg06Page() {
 
   useEffect(() => {
     if (tab === "r01" && selectedTraining) {
-      setTEff(selectedTraining.effectivenessCheck || "");
+      setTPeople(selectedTraining.interveningPersonnel || "");
+      setTType(selectedTraining.trainingType || "Internal");
       setTDoneDate(selectedTraining.doneDate ? selectedTraining.doneDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
       setTNotes(selectedTraining.notes || "");
     }
@@ -196,12 +200,13 @@ export function QualityPg06Page() {
 
   useEffect(() => {
     if (tab === "r02" && selectedAuth) {
-      setAMethodCode(selectedAuth.methodDocumentCode || "");
-      setAMethodTitle(selectedAuth.methodTitle || "");
+      setAMethod(selectedAuth.method || "");
+      setAStart(selectedAuth.trainingStartDate?.slice(0, 10) || "");
+      setAValidFrom(selectedAuth.validFrom?.slice(0, 10) || "");
+      setAActions(selectedAuth.trainingActions || "");
       setAEvidence(selectedAuth.trainingEvidence || "");
       setASupervised(selectedAuth.supervisedBy || "");
-      setAValidUntil(selectedAuth.validUntil ? selectedAuth.validUntil.slice(0, 10) : "");
-      setANotes(selectedAuth.notes || "");
+
     }
   }, [tab, selectedAuth?.id]);
 
@@ -214,6 +219,10 @@ export function QualityPg06Page() {
       setCNotes(selectedComp.notes || "");
     }
   }, [tab, selectedComp?.id]);
+
+  useEffect(() => {
+    if (tab === "r04" && selectedRole) setRUntil(selectedRole.until?.slice(0, 10) || "");
+  }, [tab, selectedRole?.id]);
 
   const refresh = () => {
     loadSummaryAndUsers();
@@ -236,6 +245,8 @@ export function QualityPg06Page() {
         programYear: Number(tYear) || currentYear,
         topic: tTopic.trim(),
         targetRoles: tRoles.trim() || undefined,
+        interveningPersonnel: tPeople.trim() || undefined,
+        trainingType: tType,
         plannedDate: tPlanned ? new Date(tPlanned).toISOString() : undefined,
         notes: tNotes.trim() || undefined
       });
@@ -243,6 +254,8 @@ export function QualityPg06Page() {
       setShowForm(false);
       setTTopic("");
       setTRoles("");
+      setTPeople("");
+      setTType("Internal");
       setTNotes("");
       setSelectedId(created.id);
       refresh();
@@ -255,8 +268,8 @@ export function QualityPg06Page() {
 
   const onCreateAuth = async (e: FormEvent) => {
     e.preventDefault();
-    if (!aUserId || !aMethodCode.trim()) {
-      setError("Persona y código de método/IT son obligatorios.");
+    if (!aUserId || !aMethod.trim()) {
+      setError("Persona y método son obligatorios.");
       return;
     }
     setBusy(true);
@@ -266,22 +279,23 @@ export function QualityPg06Page() {
       const created = await api.createQualityPersonnelAuthorization({
         userId: aUserId,
         personName: userName(aUserId),
-        methodDocumentCode: aMethodCode.trim(),
-        methodTitle: aMethodTitle.trim() || undefined,
+        method: aMethod.trim(),
+        trainingStartDate: aStart ? new Date(aStart).toISOString() : undefined,
+        validFrom: aValidFrom ? new Date(aValidFrom).toISOString() : undefined,
+        trainingActions: aActions.trim() || undefined,
         trainingEvidence: aEvidence.trim() || undefined,
-        supervisedBy: aSupervised.trim() || undefined,
-        validUntil: aValidUntil ? new Date(aValidUntil).toISOString() : undefined,
-        notes: aNotes.trim() || undefined
+        supervisedBy: aSupervised.trim() || undefined
       });
       setMsg(`${created.number} creada (borrador).`);
       setShowForm(false);
       setAUserId("");
-      setAMethodCode("");
-      setAMethodTitle("");
+      setAMethod("");
+      setAStart("");
+      setAValidFrom("");
+      setAActions("");
       setAEvidence("");
       setASupervised("");
-      setAValidUntil("");
-      setANotes("");
+
       setSelectedId(created.id);
       refresh();
     } catch (err) {
@@ -343,6 +357,7 @@ export function QualityPg06Page() {
         substituteUserId: rSubId || undefined,
         substituteName: rSubId ? userName(rSubId) : undefined,
         since: rSince ? new Date(rSince).toISOString() : undefined,
+        until: rUntil ? new Date(rUntil).toISOString() : undefined,
         notes: rNotes.trim() || undefined
       });
       setMsg(`${created.number} asignada.`);
@@ -350,6 +365,7 @@ export function QualityPg06Page() {
       setRRole("");
       setRUserId("");
       setRSubId("");
+      setRUntil("");
       setRNotes("");
       setSelectedId(created.id);
       refresh();
@@ -370,7 +386,8 @@ export function QualityPg06Page() {
         { key: "plannedDate", header: "Planificada", value: (r) => excelDate(r.plannedDate) },
         { key: "doneDate", header: "Realizada", value: (r) => (r.doneDate ? excelDate(r.doneDate) : "") },
         { key: "status", header: "Estado", value: (r) => TRAINING_STATUS[r.status] ?? r.status },
-        { key: "effectivenessCheck", header: "Eficacia" },
+        { key: "interveningPersonnel", header: "Personal interviniente" },
+        { key: "trainingType", header: "Tipo", value: (r) => r.trainingType === "External" ? "Externa" : "Interna" },
         { key: "notes", header: "Notas" }
       ];
       void exportToExcel("PG06_R01_capacitaciones", trainings, columns);
@@ -378,13 +395,13 @@ export function QualityPg06Page() {
       const columns: ExcelColumn<QualityPersonnelAuthorization>[] = [
         { key: "number", header: "Número" },
         { key: "personName", header: "Persona" },
-        { key: "methodDocumentCode", header: "Método/IT" },
-        { key: "methodTitle", header: "Título" },
+        { key: "method", header: "Método" },
+        { key: "trainingStartDate", header: "Inicio entrenamiento", value: (r) => r.trainingStartDate ? excelDate(r.trainingStartDate) : "" },
+        { key: "trainingActions", header: "Acciones utilizadas para el entrenamiento" },
         { key: "status", header: "Estado", value: (r) => AUTH_STATUS[r.status] ?? r.status },
-        { key: "validUntil", header: "Vigente hasta", value: (r) => (r.validUntil ? excelDate(r.validUntil) : "") },
+        { key: "validFrom", header: "Vigente desde", value: (r) => (r.validFrom ? excelDate(r.validFrom) : "") },
         { key: "authorizedByName", header: "Autorizó DT" },
         { key: "supervisedBy", header: "Supervisó" },
-        { key: "notes", header: "Notas" }
       ];
       void exportToExcel("PG06_R02_autorizaciones", auths, columns);
     } else if (tab === "r03") {
@@ -456,7 +473,7 @@ export function QualityPg06Page() {
           Capacitaciones abiertas: <strong>{summary?.trainingOpen ?? 0}</strong>
         </span>
         <span className="card pad" style={{ padding: "6px 10px" }}>
-          Autorizaciones por vencer: <strong>{summary?.authorizationsExpiringSoon ?? 0}</strong>
+          Autorizaciones vigentes: <strong>{auths.filter((a) => a.status === "Authorized").length}</strong>
         </span>
         <span className="card pad" style={{ padding: "6px 10px" }}>
           Competencias borrador: <strong>{summary?.competenceDraft ?? 0}</strong>
@@ -496,11 +513,13 @@ export function QualityPg06Page() {
               Roles destino
               <input value={tRoles} onChange={(e) => setTRoles(e.target.value)} placeholder="Analistas, DT…" />
             </label>
+            <label>Tipo de capacitación<select value={tType} onChange={(e) => setTType(e.target.value as "Internal" | "External")}><option value="Internal">Interna</option><option value="External">Externa</option></select></label>
           </div>
           <label style={{ display: "block", marginTop: 12 }}>
             Tema
             <input value={tTopic} onChange={(e) => setTTopic(e.target.value)} style={{ width: "100%" }} required />
           </label>
+          <label style={{ display: "block", marginTop: 8 }}>Personal interviniente<input value={tPeople} onChange={(e) => setTPeople(e.target.value)} style={{ width: "100%" }} placeholder="Nombres de quienes participan" /></label>
           <label style={{ display: "block", marginTop: 8 }}>
             Notas
             <textarea value={tNotes} onChange={(e) => setTNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
@@ -527,20 +546,20 @@ export function QualityPg06Page() {
               </select>
             </label>
             <label>
-              Código método / IT
-              <input value={aMethodCode} onChange={(e) => setAMethodCode(e.target.value)} required />
-            </label>
-            <label>
-              Título método
-              <input value={aMethodTitle} onChange={(e) => setAMethodTitle(e.target.value)} />
+              Método
+              <input value={aMethod} onChange={(e) => setAMethod(e.target.value)} required maxLength={240} />
             </label>
             <label>
               Supervisado por
               <input value={aSupervised} onChange={(e) => setASupervised(e.target.value)} />
             </label>
             <label>
-              Vigente hasta
-              <input type="date" value={aValidUntil} onChange={(e) => setAValidUntil(e.target.value)} />
+              Vigente desde
+              <input type="date" value={aValidFrom} onChange={(e) => setAValidFrom(e.target.value)} />
+            </label>
+            <label>
+              Inicio del entrenamiento
+              <input type="date" value={aStart} onChange={(e) => setAStart(e.target.value)} />
             </label>
           </div>
           <label style={{ display: "block", marginTop: 12 }}>
@@ -548,8 +567,8 @@ export function QualityPg06Page() {
             <textarea value={aEvidence} onChange={(e) => setAEvidence(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
           <label style={{ display: "block", marginTop: 8 }}>
-            Notas
-            <textarea value={aNotes} onChange={(e) => setANotes(e.target.value)} rows={2} style={{ width: "100%" }} />
+            Acciones utilizadas para el entrenamiento
+            <textarea value={aActions} onChange={(e) => setAActions(e.target.value)} rows={2} style={{ width: "100%" }} />
           </label>
           <button type="submit" className="btn btn-primary" disabled={busy} style={{ marginTop: 12 }}>
             Crear borrador
@@ -637,6 +656,7 @@ export function QualityPg06Page() {
               Desde
               <input type="date" value={rSince} onChange={(e) => setRSince(e.target.value)} required />
             </label>
+            <label>Hasta<input type="date" min={rSince} value={rUntil} onChange={(e) => setRUntil(e.target.value)} /></label>
           </div>
           <label style={{ display: "block", marginTop: 12 }}>
             Notas
@@ -699,7 +719,7 @@ export function QualityPg06Page() {
                       <th>Persona</th>
                       <th>Método</th>
                       <th>Estado</th>
-                      <th>Vigente hasta</th>
+                      <th>Vigente desde</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -714,12 +734,12 @@ export function QualityPg06Page() {
                       >
                         <td>{r.number}</td>
                         <td>{r.personName}</td>
-                        <td>{r.methodDocumentCode}</td>
+                        <td>{r.method}</td>
                         <td>
                           {AUTH_STATUS[r.status] ?? r.status}
                           {r.isExpired ? " · vencida" : ""}
                         </td>
-                        <td>{fmtDate(r.validUntil)}</td>
+                        <td>{fmtDate(r.validFrom)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -773,6 +793,7 @@ export function QualityPg06Page() {
                     <th>Titular</th>
                     <th>Reemplazo</th>
                     <th>Desde</th>
+                    <th>Hasta</th>
                     <th>Estado</th>
                   </tr>
                 </thead>
@@ -788,6 +809,7 @@ export function QualityPg06Page() {
                       <td>{r.personName}</td>
                       <td>{r.substituteName || "—"}</td>
                       <td>{fmtDate(r.since)}</td>
+                      <td>{fmtDate(r.until)}</td>
                       <td>{ROLE_STATUS[r.status] ?? r.status}</td>
                     </tr>
                   ))}
@@ -808,16 +830,16 @@ export function QualityPg06Page() {
                   {TRAINING_STATUS[selectedTraining.status] ?? selectedTraining.status} · {selectedTraining.programYear}
                 </p>
                 <p style={{ fontSize: 13 }}>{selectedTraining.topic}</p>
+                <p style={{ fontSize: 13 }}>Tipo: {selectedTraining.trainingType === "External" ? "Externa" : "Interna"} · Personal interviniente: {selectedTraining.interveningPersonnel || "—"}</p>
                 {selectedTraining.status !== "Cancelled" && selectedTraining.status !== "Done" && (
                   <>
+                    <label style={{ display: "block", marginBottom: 8 }}>Tipo de capacitación<select value={tType} onChange={(e) => setTType(e.target.value as "Internal" | "External")}><option value="Internal">Interna</option><option value="External">Externa</option></select></label>
+                    <label style={{ display: "block", marginBottom: 8 }}>Personal interviniente<input value={tPeople} onChange={(e) => setTPeople(e.target.value)} style={{ width: "100%" }} /></label>
                     <label style={{ display: "block", marginBottom: 8 }}>
                       Fecha realización
                       <input type="date" value={tDoneDate} onChange={(e) => setTDoneDate(e.target.value)} />
                     </label>
-                    <label style={{ display: "block", marginBottom: 8 }}>
-                      Verificación de eficacia
-                      <textarea value={tEff} onChange={(e) => setTEff(e.target.value)} rows={3} style={{ width: "100%" }} />
-                    </label>
+
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <button
                         type="button"
@@ -830,8 +852,9 @@ export function QualityPg06Page() {
                             try {
                               await api.updateQualityTraining(selectedTraining.id, {
                                 status: "Done",
-                                doneDate: tDoneDate ? new Date(tDoneDate).toISOString() : new Date().toISOString(),
-                                effectivenessCheck: tEff.trim() || undefined
+                                interveningPersonnel: tPeople.trim(),
+                                trainingType: tType,
+                                doneDate: tDoneDate ? new Date(tDoneDate).toISOString() : new Date().toISOString()
                               });
                               setMsg("Capacitación marcada como realizada.");
                               refresh();
@@ -854,8 +877,9 @@ export function QualityPg06Page() {
                             setBusy(true);
                             try {
                               await api.updateQualityTraining(selectedTraining.id, {
-                                effectivenessCheck: tEff.trim() || undefined,
-                                notes: tNotes.trim() || undefined
+                                notes: tNotes.trim(),
+                                interveningPersonnel: tPeople.trim(),
+                                trainingType: tType
                               });
                               setMsg("Borrador guardado.");
                               refresh();
@@ -867,7 +891,7 @@ export function QualityPg06Page() {
                           })()
                         }
                       >
-                        Guardar eficacia
+                        Guardar cambios
                       </button>
                       <button
                         type="button"
@@ -899,9 +923,6 @@ export function QualityPg06Page() {
                     <div>
                       <strong>Realizada:</strong> {fmtDate(selectedTraining.doneDate)}
                     </div>
-                    <div style={{ marginTop: 8 }}>
-                      <strong>Eficacia:</strong> {selectedTraining.effectivenessCheck || "—"}
-                    </div>
                   </div>
                 )}
               </>
@@ -928,38 +949,30 @@ export function QualityPg06Page() {
                 {selectedAuth.status !== "Cancelled" && (
                   <>
                     <label style={{ display: "block", marginBottom: 8 }}>
-                      Código método / IT
+                      Método
                       <input
-                        value={aMethodCode}
-                        onChange={(e) => setAMethodCode(e.target.value)}
+                        value={aMethod}
+                        onChange={(e) => setAMethod(e.target.value)}
                         style={{ width: "100%" }}
                         disabled={selectedAuth.status === "Authorized"}
                       />
                     </label>
-                    <label style={{ display: "block", marginBottom: 8 }}>
-                      Título
-                      <input
-                        value={aMethodTitle}
-                        onChange={(e) => setAMethodTitle(e.target.value)}
-                        style={{ width: "100%" }}
-                        disabled={selectedAuth.status === "Authorized"}
-                      />
-                    </label>
+                    <label style={{ display: "block", marginBottom: 8 }}>Inicio del entrenamiento<input type="date" value={aStart} onChange={(e) => setAStart(e.target.value)} style={{ width: "100%" }} /></label>
                     <label style={{ display: "block", marginBottom: 8 }}>
                       Evidencia de entrenamiento
                       <textarea value={aEvidence} onChange={(e) => setAEvidence(e.target.value)} rows={2} style={{ width: "100%" }} />
                     </label>
                     <label style={{ display: "block", marginBottom: 8 }}>
                       Supervisado por
-                      <input value={aSupervised} onChange={(e) => setASupervised(e.target.value)} style={{ width: "100%" }} />
+                      <input value={aSupervised} onChange={(e) => setASupervised(e.target.value)} style={{ width: "100%" }} disabled={selectedAuth.status === "Authorized"} />
                     </label>
                     <label style={{ display: "block", marginBottom: 8 }}>
-                      Vigente hasta
-                      <input type="date" value={aValidUntil} onChange={(e) => setAValidUntil(e.target.value)} />
+                      Vigente desde
+                      <input type="date" value={aValidFrom} onChange={(e) => setAValidFrom(e.target.value)} />
                     </label>
                     <label style={{ display: "block", marginBottom: 8 }}>
-                      Notas
-                      <textarea value={aNotes} onChange={(e) => setANotes(e.target.value)} rows={2} style={{ width: "100%" }} />
+                      Acciones utilizadas para el entrenamiento
+                      <textarea value={aActions} onChange={(e) => setAActions(e.target.value)} rows={2} style={{ width: "100%" }} />
                     </label>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <button
@@ -972,12 +985,11 @@ export function QualityPg06Page() {
                             setError(null);
                             try {
                               await api.updateQualityPersonnelAuthorization(selectedAuth.id, {
-                                methodDocumentCode: aMethodCode.trim() || undefined,
-                                methodTitle: aMethodTitle.trim() || undefined,
+                                ...(selectedAuth.status !== "Authorized" ? { method: aMethod.trim() || undefined, supervisedBy: aSupervised.trim() || undefined } : {}),
+                                trainingStartDate: aStart ? new Date(aStart).toISOString() : undefined,
+                                trainingActions: aActions.trim(),
                                 trainingEvidence: aEvidence.trim() || undefined,
-                                supervisedBy: aSupervised.trim() || undefined,
-                                validUntil: aValidUntil ? new Date(aValidUntil).toISOString() : undefined,
-                                notes: aNotes.trim() || undefined
+                                validFrom: aValidFrom ? new Date(aValidFrom).toISOString() : undefined
                               });
                               setMsg("Borrador guardado.");
                               refresh();
@@ -1004,8 +1016,8 @@ export function QualityPg06Page() {
                               setMsg(null);
                               try {
                                 await api.authorizeQualityPersonnel(selectedAuth.id, {
-                                  validUntil: aValidUntil ? new Date(aValidUntil).toISOString() : undefined,
-                                  notes: aNotes.trim() || undefined
+                                  validFrom: aValidFrom ? new Date(aValidFrom).toISOString() : undefined,
+                                  trainingActions: aActions.trim()
                                 });
                                 setMsg("Autorización firmada por DT.");
                                 refresh();
@@ -1235,7 +1247,15 @@ export function QualityPg06Page() {
                   {selectedRole.until ? <> · Hasta: {fmtDate(selectedRole.until)}</> : null}
                 </p>
                 {selectedRole.status === "Active" && (
+                  <>
+                  <label style={{ display: "block", marginBottom: 8 }}>Hasta<input type="date" min={selectedRole.since.slice(0, 10)} value={rUntil} onChange={(e) => setRUntil(e.target.value)} style={{ width: "100%" }} /></label>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button type="button" className="btn btn-outline" disabled={busy || !rUntil} onClick={() => void (async () => {
+                      setBusy(true); setError(null);
+                      try { await api.updateQualityRoleAssignment(selectedRole.id, { until: new Date(rUntil).toISOString() }); setMsg("Fecha hasta guardada."); refresh(); }
+                      catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+                      finally { setBusy(false); }
+                    })()}>Guardar hasta</button>
                     <button
                       type="button"
                       className="btn btn-primary"
@@ -1283,6 +1303,7 @@ export function QualityPg06Page() {
                       Anular
                     </button>
                   </div>
+                  </>
                 )}
               </>
             ))}

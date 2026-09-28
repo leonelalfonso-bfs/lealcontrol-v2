@@ -1803,6 +1803,8 @@ export const api = {
     topic: string;
     plannedDate?: string;
     targetRoles?: string;
+    interveningPersonnel?: string;
+    trainingType?: "Internal" | "External";
     notes?: string;
   }) =>
     request<import("./types/quality").QualityTrainingPlanItem>("/api/v1/quality/records/pg06/r01", {
@@ -1816,9 +1818,10 @@ export const api = {
       programYear?: number;
       topic?: string;
       targetRoles?: string;
+    interveningPersonnel?: string;
+    trainingType?: "Internal" | "External";
       plannedDate?: string;
       doneDate?: string;
-      effectivenessCheck?: string;
       status?: string;
       notes?: string;
     }
@@ -1846,13 +1849,13 @@ export const api = {
   createQualityPersonnelAuthorization: (body: {
     userId: string;
     personName: string;
-    methodDocumentCode: string;
-    methodTitle?: string;
+    method: string;
+    trainingActions?: string;
+    trainingStartDate?: string;
+    validFrom?: string;
     trainingEvidence?: string;
     supervisedBy?: string;
-    validUntil?: string;
     evidenceFileId?: string;
-    notes?: string;
   }) =>
     request<import("./types/quality").QualityPersonnelAuthorization>("/api/v1/quality/records/pg06/r02", {
       method: "POST",
@@ -1863,14 +1866,14 @@ export const api = {
     id: string,
     body: {
       personName?: string;
-      methodDocumentCode?: string;
-      methodTitle?: string;
+      method?: string;
+      trainingActions?: string;
+      trainingStartDate?: string;
+      validFrom?: string;
       trainingEvidence?: string;
       supervisedBy?: string;
-      validUntil?: string;
       evidenceFileId?: string;
       status?: string;
-      notes?: string;
     }
   ) =>
     request<import("./types/quality").QualityPersonnelAuthorization>(`/api/v1/quality/records/pg06/r02/${id}`, {
@@ -1880,7 +1883,7 @@ export const api = {
 
   authorizeQualityPersonnel: (
     id: string,
-    body?: { authorizedAt?: string; validUntil?: string; notes?: string }
+    body?: { authorizedAt?: string; validFrom?: string; trainingActions?: string }
   ) =>
     request<import("./types/quality").QualityPersonnelAuthorization>(
       `/api/v1/quality/records/pg06/r02/${id}/authorize`,
@@ -1949,6 +1952,7 @@ export const api = {
     userId: string;
     personName: string;
     since?: string;
+    until?: string;
     substituteUserId?: string;
     substituteName?: string;
     notes?: string;

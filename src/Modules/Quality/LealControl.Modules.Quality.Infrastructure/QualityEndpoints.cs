@@ -2649,7 +2649,10 @@ public sealed class QualityAuthorizationGateway(QualityDbContext db) : IQualityA
         return rows.Any(a =>
         {
             var method = NormalizeMethod(a.MethodDocumentCode);
-            if (!string.Equals(method, code, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(method, code, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(NormalizeMethod(a.Method), code, StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (a.ValidFrom.HasValue && a.ValidFrom.Value > asOfUtc)
                 return false;
             if (a.AuthorizedAt.HasValue && a.AuthorizedAt.Value > asOfUtc)
                 return false;
