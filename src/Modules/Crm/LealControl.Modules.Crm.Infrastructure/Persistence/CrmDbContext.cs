@@ -203,6 +203,31 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 );
             ", cancellationToken);
 
+        // ProductionSchemaParity can stop at an already existing CRM column before
+        // reaching suppliers. Keep supplier creation independent so a tenant remains
+        // usable even when that migration needs reconciliation.
+        await TryEnsureAsync("suppliers base", @"
+                CREATE TABLE IF NOT EXISTS crm.suppliers (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""TenantId"" uuid NOT NULL,
+                    ""LegalName"" character varying(256) NOT NULL,
+                    ""TradeName"" character varying(256),
+                    ""DocumentType"" character varying(20) NOT NULL,
+                    ""DocumentNumber"" character varying(20) NOT NULL,
+                    ""TaxCondition"" character varying(64) NOT NULL,
+                    ""Email"" character varying(128),
+                    ""Phone"" character varying(64),
+                    ""ContactName"" character varying(128),
+                    ""FiscalStreet"" character varying(256),
+                    ""FiscalCity"" character varying(128),
+                    ""FiscalProvince"" character varying(64),
+                    ""FiscalPostalCode"" character varying(20),
+                    ""PaymentTermsDays"" integer,
+                    ""Notes"" text,
+                    ""CreatedAtUtc"" timestamp with time zone NOT NULL
+                );
+            ", cancellationToken);
+
         await TryEnsureAsync("customers BCRA columns", @"
                     ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""CreditRating"" character varying(10);
                     ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""BcraWorstSituation"" integer;
