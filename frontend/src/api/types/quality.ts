@@ -652,6 +652,7 @@ export interface QualityMaintenancePlanItem {
   recordCode: string;
   number: string;
   equipmentId: string;
+  assetSource: string;
   equipmentCode?: string;
   equipmentDescription?: string;
   activity: string;

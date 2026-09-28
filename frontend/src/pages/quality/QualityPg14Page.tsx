@@ -162,6 +162,7 @@ export function QualityPg14Page() {
 
   // R06 form
   const [mEquipmentId, setMEquipmentId] = useState("");
+  const [mAssetSource, setMAssetSource] = useState("QualityEquipment");
   const [mActivity, setMActivity] = useState("");
   const [mFrequency, setMFrequency] = useState("Monthly");
   const [mNextDue, setMNextDue] = useState("");
@@ -282,6 +283,7 @@ export function QualityPg14Page() {
     }
     if (tab === "r06" && selectedPlan) {
       setMEquipmentId(selectedPlan.equipmentId);
+      setMAssetSource(selectedPlan.assetSource || "QualityEquipment");
       setMActivity(selectedPlan.activity);
       setMFrequency(selectedPlan.frequency);
       setMNextDue(selectedPlan.nextDue?.slice(0, 10) || "");
@@ -332,6 +334,7 @@ export function QualityPg14Page() {
 
   const resetPlanForm = () => {
     setMEquipmentId("");
+    setMAssetSource("QualityEquipment");
     setMActivity("");
     setMFrequency("Monthly");
     setMNextDue("");
@@ -497,7 +500,7 @@ export function QualityPg14Page() {
   const createPlan = async (e: FormEvent) => {
     e.preventDefault();
     if (!mEquipmentId) {
-      setError("Seleccione un equipo.");
+      setError("Seleccione un activo.");
       return;
     }
     setBusy(true);
@@ -505,6 +508,7 @@ export function QualityPg14Page() {
     try {
       await api.createQualityMaintenancePlanItem({
         equipmentId: mEquipmentId,
+        assetSource: mAssetSource,
         activity: mActivity,
         programYear: Number(mYear),
         months: mMonths,
@@ -703,8 +707,9 @@ export function QualityPg14Page() {
   const exportPlans = () => {
     const columns: ExcelColumn<QualityMaintenancePlanItem>[] = [
       { key: "number", header: "Número" },
-      { key: "equipmentCode", header: "Equipo", value: (r) => r.equipmentCode || "" },
-      { key: "equipmentDescription", header: "Descripción equipo", value: (r) => r.equipmentDescription || "" },
+      { key: "equipmentCode", header: "Activo", value: (r) => r.equipmentCode || "" },
+      { key: "assetSource", header: "Tipo", value: (r) => SOURCE_LABEL[r.assetSource] || r.assetSource },
+      { key: "equipmentDescription", header: "Descripción", value: (r) => r.equipmentDescription || "" },
       { key: "activity", header: "Actividad" },
       { key: "programYear", header: "Año" },
       ...MONTHS.map((month, index) => ({ key: `month${index}`, header: month, value: (r: QualityMaintenancePlanItem) => r.months?.[index] === "-" ? "" : r.months?.[index] || "" })),
@@ -1641,11 +1646,19 @@ export function QualityPg14Page() {
               <h3 style={{ marginTop: 0 }}>PG14-R06 · Mantenimiento preventivo</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 12 }}>
                 <label>
-                  Equipo *
+                  Tipo de activo *
+                  <select value={mAssetSource} onChange={(e) => { setMAssetSource(e.target.value); setMEquipmentId(""); }}>
+                    <option value="QualityEquipment">Equipo auxiliar</option>
+                    <option value="StandardWeight">Pesa</option>
+                    <option value="Instrument">Termómetro</option>
+                  </select>
+                </label>
+                <label>
+                  Activo *
                   <select value={mEquipmentId} onChange={(e) => setMEquipmentId(e.target.value)} required>
-                    <option value="">—</option>
-                    {activeEquipment.map((eq) => (
-                      <option key={eq.id} value={eq.id}>{eq.code} · {eq.description || KIND_LABEL[eq.kind]}</option>
+                    <option value="">Seleccione…</option>
+                    {inventory.filter((asset) => asset.source === mAssetSource && (mAssetSource !== "Instrument" || asset.kind === "Thermometer")).map((asset) => (
+                      <option key={`${asset.source}:${asset.id}`} value={asset.id}>{asset.code} · {asset.description || asset.kind}</option>
                     ))}
                   </select>
                 </label>
@@ -1691,7 +1704,7 @@ export function QualityPg14Page() {
                 <thead>
                   <tr>
                     <th>Número</th>
-                    <th>Equipo</th>
+                    <th>Activo</th>
                     <th>Actividad</th>
                     {MONTHS.map((month) => <th key={month} title={month}>{month}</th>)}
                     <th>Próximo</th>
@@ -1709,7 +1722,7 @@ export function QualityPg14Page() {
                       }}
                     >
                       <td>{r.number}</td>
-                      <td>{r.equipmentCode}</td>
+                      <td>{SOURCE_LABEL[r.assetSource] || r.assetSource} · {r.equipmentCode}</td>
                       <td>{r.activity}</td>
                       {MONTHS.map((month, index) => <td key={month}><button type="button" className="btn btn-outline compact" disabled={busy || r.status === "Cancelled"} style={{ minWidth: 30, padding: "2px 5px", color: r.months?.[index] === "D" ? "#166534" : r.months?.[index] === "P" ? "#b45309" : "#94a3b8" }} title={`${month}: ${r.months?.[index] === "D" ? "realizado" : r.months?.[index] === "P" ? "planificado" : "sin programar"}`} onClick={(event) => { event.stopPropagation(); void setMonth(r, index + 1); }}>{r.months?.[index] === "-" ? "·" : r.months?.[index] || "·"}</button></td>)}
                       <td>{fmtDate(r.nextDue)}{r.isOverdue ? " ⚠" : ""}</td>
@@ -1727,7 +1740,7 @@ export function QualityPg14Page() {
               <div className="card" style={{ padding: 16 }}>
                 <h3 style={{ marginTop: 0 }}>{selectedPlan.number}</h3>
                 <p style={{ marginTop: 0, color: "#64748b" }}>
-                  {selectedPlan.equipmentCode} · {selectedPlan.equipmentDescription}
+                  {SOURCE_LABEL[selectedPlan.assetSource] || selectedPlan.assetSource} · {selectedPlan.equipmentCode} · {selectedPlan.equipmentDescription}
                   {selectedPlan.isOverdue ? " · Vencido" : ""}
                 </p>
                 <p className="muted">Año {selectedPlan.programYear} · P = planificado · D = realizado. Cambiá los meses en la grilla.</p>

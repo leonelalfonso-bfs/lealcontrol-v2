@@ -89,4 +89,37 @@ public sealed class QualityPg14WorkflowTests : IClassFixture<QualityWebApplicati
         var logs = await client.GetFromJsonAsync<JsonElement>($"/api/v1/quality/records/pg14/r01?assetSource=QualityEquipment&assetId={eqId}");
         Assert.Single(logs.GetProperty("rows").EnumerateArray(), log => log.GetProperty("kind").GetString() == "MP");
     }
+    [Theory]
+    [InlineData("StandardWeight")]
+    [InlineData("Instrument")]
+    public async Task Maintenance_of_metrology_asset_appears_in_its_lifecycle(string source)
+    {
+        using var client = _factory.CreateClient();
+        var tenant = QualityWebApplicationFactory.DemoTenantId;
+        var token = SimpleJwt.CreateToken(Guid.NewGuid(), "quality@example.com", "Quality", "Admin", tenant,
+            "Empresa Test", """["quality","metrology"]""");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        client.DefaultRequestHeaders.Add("X-Tenant-Id", tenant.ToString());
+        var code = $"MP-{Guid.NewGuid():N}"[..30];
+        var assetResponse = source == "StandardWeight"
+            ? await client.PostAsJsonAsync("/api/v1/metrology/weights", new { code, nominalValue = 1000, unit = "kg" })
+            : await client.PostAsJsonAsync("/api/v1/metrology/instruments", new { code, kind = "Thermometer", description = "Termómetro de prueba" });
+        Assert.Equal(HttpStatusCode.Created, assetResponse.StatusCode);
+        var asset = await assetResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var assetId = asset.GetProperty("id").GetGuid();
+        var url = "/api/v1/quality/records/pg14/r06";
+        var created = await client.PostAsJsonAsync(url, new { assetSource = source, equipmentId = assetId,
+            activity = "Control preventivo", months = "P-----------" });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var plan = await created.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(source, plan.GetProperty("assetSource").GetString());
+        Assert.Equal(code, plan.GetProperty("equipmentCode").GetString());
+        var id = plan.GetProperty("id").GetGuid();
+        var done = await client.PutAsJsonAsync($"{url}/{id}", new { month = 1, monthValue = "D" });
+        Assert.Equal(HttpStatusCode.OK, done.StatusCode);
+        var logs = await client.GetFromJsonAsync<JsonElement>($"/api/v1/quality/records/pg14/r01?assetSource={source}&assetId={assetId}");
+        Assert.Single(logs.GetProperty("rows").EnumerateArray(), log =>
+            log.GetProperty("kind").GetString() == "MP" && log.GetProperty("assetSource").GetString() == source);
+    }
+
 }

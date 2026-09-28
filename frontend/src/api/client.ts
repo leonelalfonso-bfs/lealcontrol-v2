@@ -2372,6 +2372,7 @@ export const api = {
 
   createQualityMaintenancePlanItem: (body: {
     equipmentId: string;
+    assetSource: string;
     activity: string;
     programYear?: number;
     months?: string;

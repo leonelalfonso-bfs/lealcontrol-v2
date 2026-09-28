@@ -1147,6 +1147,7 @@ internal static class QualityPg14Endpoints
             CreateMaintenancePlanItemRequest req,
             ITenantContext tenant,
             QualityDbContext db,
+            IMetrologyAssetCatalog metrologyCatalog,
             HttpContext http,
             CancellationToken ct) =>
         {
@@ -1154,14 +1155,24 @@ internal static class QualityPg14Endpoints
             await db.EnsureQualityTablesAsync(ct);
 
             if (req.EquipmentId == Guid.Empty)
-                return Results.BadRequest(new { message = "EquipmentId es obligatorio." });
+                return Results.BadRequest(new { message = "Seleccione un activo del listado." });
             if (string.IsNullOrWhiteSpace(req.Activity))
                 return Results.BadRequest(new { message = "La actividad es obligatoria." });
 
-            var equipment = await db.Equipments.AsNoTracking()
-                .FirstOrDefaultAsync(e => e.Id == req.EquipmentId && e.TenantId == tenantId, ct);
-            if (equipment is null)
-                return Results.BadRequest(new { message = "El equipo indicado no existe." });
+            var source = string.IsNullOrWhiteSpace(req.AssetSource)
+                ? QualityEquipmentLogAssetSources.QualityEquipment
+                : NormalizeAllowed(req.AssetSource, AllowedLogAssetSources);
+            if (source is null) return Results.BadRequest(new { message = "Origen del activo inválido." });
+            var resolved = await ResolveAssetAsync(db, metrologyCatalog, tenantId, source,
+                req.EquipmentId, null, null, ct);
+            if (resolved is null) return Results.BadRequest(new { message = "El activo seleccionado no existe." });
+            if (source == QualityEquipmentLogAssetSources.Instrument)
+            {
+                var instrument = (await metrologyCatalog.ListCalibrationAssetsAsync(tenantId.Value, ct))
+                    .FirstOrDefault(a => a.Source == source && a.Id == req.EquipmentId);
+                if (instrument?.Kind != "Thermometer")
+                    return Results.BadRequest(new { message = "Seleccione un termómetro del listado." });
+            }
 
             var frequency = string.IsNullOrWhiteSpace(req.Frequency)
                 ? QualityMaintenanceFrequencies.Monthly
@@ -1184,11 +1195,10 @@ internal static class QualityPg14Endpoints
                 TenantId = tenantId,
                 RecordCode = "PG14-R06",
                 Number = number,
-                EquipmentId = equipment.Id,
-                EquipmentCode = equipment.Code,
-                EquipmentDescription = string.IsNullOrWhiteSpace(equipment.Description)
-                    ? $"{equipment.Kind} {equipment.Code}".Trim()
-                    : equipment.Description,
+                EquipmentId = req.EquipmentId,
+                AssetSource = source,
+                EquipmentCode = resolved.Value.Code,
+                EquipmentDescription = resolved.Value.Description,
                 Activity = req.Activity.Trim(),
                 ProgramYear = year,
                 Months = req.Months ?? "------------",
@@ -1405,7 +1415,7 @@ internal static class QualityPg14Endpoints
         var log = new QualityEquipmentLogEntry
         {
             TenantId = tenantId, RecordCode = "PG14-R01", Number = number,
-            AssetSource = QualityEquipmentLogAssetSources.QualityEquipment,
+            AssetSource = item.AssetSource,
             AssetId = item.EquipmentId, AssetCode = item.EquipmentCode,
             AssetDescription = item.EquipmentDescription, EventDate = doneDate,
             Kind = QualityEquipmentLogKinds.PreventiveMaintenance,
@@ -1465,6 +1475,7 @@ internal static class QualityPg14Endpoints
         r.RecordCode,
         r.Number,
         r.EquipmentId,
+        r.AssetSource,
         r.EquipmentCode,
         r.EquipmentDescription,
         r.Activity,

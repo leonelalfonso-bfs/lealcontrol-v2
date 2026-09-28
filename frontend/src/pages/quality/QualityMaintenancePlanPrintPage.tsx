@@ -138,8 +138,8 @@ export function QualityMaintenancePlanPrintPage() {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <tbody>
             <tr>
-              <td style={label}>Equipo</td>
-              <td style={cell}>{row.equipmentCode} — {row.equipmentDescription || "—"}</td>
+              <td style={label}>Activo</td>
+              <td style={cell}>{row.assetSource === "StandardWeight" ? "Pesa" : row.assetSource === "Instrument" ? "Termómetro" : "Equipo"} · {row.equipmentCode} — {row.equipmentDescription || "—"}</td>
             </tr>
             <tr>
               <td style={label}>Actividad</td>

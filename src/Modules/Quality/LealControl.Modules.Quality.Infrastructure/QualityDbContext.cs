@@ -494,6 +494,7 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
             b.Property(x => x.Number).HasMaxLength(32).IsRequired();
             b.Property(x => x.EquipmentCode).HasMaxLength(32);
+            b.Property(x => x.AssetSource).HasMaxLength(40).HasDefaultValue(QualityEquipmentLogAssetSources.QualityEquipment);
             b.Property(x => x.EquipmentDescription).HasMaxLength(300);
             b.Property(x => x.Activity).HasMaxLength(500).IsRequired();
             b.Property(x => x.Months).HasMaxLength(12);
@@ -1120,6 +1121,7 @@ public sealed class QualityDbContext : DbContext
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
+            @"ALTER TABLE quality.maintenance_plan_items ADD COLUMN IF NOT EXISTS ""AssetSource"" character varying(40) NOT NULL DEFAULT 'QualityEquipment';",
             @"ALTER TABLE quality.maintenance_plan_items ADD COLUMN IF NOT EXISTS ""ProgramYear"" integer NOT NULL DEFAULT 0;",
             @"ALTER TABLE quality.maintenance_plan_items ADD COLUMN IF NOT EXISTS ""Months"" character varying(12) NOT NULL DEFAULT '------------';",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_mp_Tenant_Number"" ON quality.maintenance_plan_items (""TenantId"", ""Number"");",

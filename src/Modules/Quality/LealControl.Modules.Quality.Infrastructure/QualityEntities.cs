@@ -1289,6 +1289,7 @@ public sealed class QualityMaintenancePlanItem : Entity<Guid>
     public string RecordCode { get; set; } = "PG14-R06";
     public string Number { get; set; } = string.Empty; // MP-2026-0001
     public Guid EquipmentId { get; set; }
+    public string AssetSource { get; set; } = QualityEquipmentLogAssetSources.QualityEquipment;
     public string EquipmentCode { get; set; } = string.Empty;
     public string EquipmentDescription { get; set; } = string.Empty;
     public string Activity { get; set; } = string.Empty;
@@ -1312,7 +1313,8 @@ public sealed record CreateMaintenancePlanItemRequest(
     string? Frequency = null,
     DateTime? NextDue = null,
     string? Responsible = null,
-    string? Notes = null);
+    string? Notes = null,
+    string? AssetSource = null);
 
 public sealed record UpdateMaintenancePlanItemRequest(
     string? Activity = null,
