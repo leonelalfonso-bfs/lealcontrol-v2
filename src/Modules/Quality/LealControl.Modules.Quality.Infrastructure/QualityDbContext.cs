@@ -468,6 +468,14 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.WeightUsed).HasMaxLength(80).HasDefaultValue("1000 kg");
             b.Property(x => x.Instrument).HasMaxLength(240);
             b.Property(x => x.Readings).HasMaxLength(4000);
+            b.Property(x => x.TargetWeightCode).HasMaxLength(64);
+            b.Property(x => x.MasterWeightCode).HasMaxLength(64);
+            b.Property(x => x.ComparatorResolution).HasPrecision(18, 6);
+            b.Property(x => x.ReadingA1).HasPrecision(18, 6);
+            b.Property(x => x.ReadingB1).HasPrecision(18, 6);
+            b.Property(x => x.ReadingB2).HasPrecision(18, 6);
+            b.Property(x => x.ReadingA2).HasPrecision(18, 6);
+            b.Property(x => x.MeanDifference).HasPrecision(18, 6);
             b.Property(x => x.Result).HasMaxLength(40);
             b.Property(x => x.Responsible).HasMaxLength(160);
             b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityIntermediateCheckStatuses.Draft);
@@ -488,6 +496,7 @@ public sealed class QualityDbContext : DbContext
             b.Property(x => x.EquipmentCode).HasMaxLength(32);
             b.Property(x => x.EquipmentDescription).HasMaxLength(300);
             b.Property(x => x.Activity).HasMaxLength(500).IsRequired();
+            b.Property(x => x.Months).HasMaxLength(12);
             b.Property(x => x.Frequency).HasMaxLength(40).HasDefaultValue(QualityMaintenanceFrequencies.Monthly);
             b.Property(x => x.Responsible).HasMaxLength(160);
             b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityMaintenanceStatuses.Active);
@@ -1078,6 +1087,16 @@ public sealed class QualityDbContext : DbContext
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
+            @"ALTER TABLE quality.intermediate_checks ADD COLUMN IF NOT EXISTS ""TargetWeightId"" uuid;",
+            @"ALTER TABLE quality.intermediate_checks ADD COLUMN IF NOT EXISTS ""MasterWeightId"" uuid;",
+            @"ALTER TABLE quality.intermediate_checks ADD COLUMN IF NOT EXISTS ""TargetWeightCode"" character varying(64) NOT NULL DEFAULT '';",
+            @"ALTER TABLE quality.intermediate_checks ADD COLUMN IF NOT EXISTS ""MasterWeightCode"" character varying(64) NOT NULL DEFAULT '';",
+            @"ALTER TABLE quality.intermediate_checks ADD COLUMN IF NOT EXISTS ""ComparatorResolution"" numeric(18,6);",
+            @"ALTER TABLE quality.intermediate_checks ADD COLUMN IF NOT EXISTS ""ReadingA1"" numeric(18,6);",
+            @"ALTER TABLE quality.intermediate_checks ADD COLUMN IF NOT EXISTS ""ReadingB1"" numeric(18,6);",
+            @"ALTER TABLE quality.intermediate_checks ADD COLUMN IF NOT EXISTS ""ReadingB2"" numeric(18,6);",
+            @"ALTER TABLE quality.intermediate_checks ADD COLUMN IF NOT EXISTS ""ReadingA2"" numeric(18,6);",
+            @"ALTER TABLE quality.intermediate_checks ADD COLUMN IF NOT EXISTS ""MeanDifference"" numeric(18,6);",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_vic_Tenant_Number"" ON quality.intermediate_checks (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_vic_Tenant_CheckDate"" ON quality.intermediate_checks (""TenantId"", ""CheckDate"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_vic_Tenant_Status"" ON quality.intermediate_checks (""TenantId"", ""Status"");",
@@ -1101,6 +1120,8 @@ public sealed class QualityDbContext : DbContext
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
+            @"ALTER TABLE quality.maintenance_plan_items ADD COLUMN IF NOT EXISTS ""ProgramYear"" integer NOT NULL DEFAULT 0;",
+            @"ALTER TABLE quality.maintenance_plan_items ADD COLUMN IF NOT EXISTS ""Months"" character varying(12) NOT NULL DEFAULT '------------';",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_mp_Tenant_Number"" ON quality.maintenance_plan_items (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_mp_Tenant_Equipment"" ON quality.maintenance_plan_items (""TenantId"", ""EquipmentId"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_mp_Tenant_Status_NextDue"" ON quality.maintenance_plan_items (""TenantId"", ""Status"", ""NextDue"");",

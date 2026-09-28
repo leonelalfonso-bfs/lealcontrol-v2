@@ -55,6 +55,7 @@ const EQ_STATUS = EQUIPMENT_STATUS;
 const CHECK_STATUS = GENERIC_RECORD_STATUS;
 const RESULT_LABEL = CHECK_RESULT;
 const FREQ_LABEL = FREQUENCY_LABEL;
+const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 const MP_STATUS: Record<string, string> = {
   Active: "Activo",
   Done: "Hecho",
@@ -118,6 +119,7 @@ export function QualityPg14Page() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [equipment, setEquipment] = useState<QualityEquipment[]>([]);
   const [checks, setChecks] = useState<QualityIntermediateCheck[]>([]);
+  const [checkSchedule, setCheckSchedule] = useState<Awaited<ReturnType<typeof api.listQualityPg14R05>>["schedule"]>([]);
   const [plans, setPlans] = useState<QualityMaintenancePlanItem[]>([]);
   const [logEntries, setLogEntries] = useState<QualityEquipmentLogEntry[]>([]);
   const [logCounts, setLogCounts] = useState<QualityEquipmentLogListResponse["countsByKind"] | null>(null);
@@ -147,6 +149,13 @@ export function QualityPg14Page() {
   const [cInstrument, setCInstrument] = useState("");
   const [cEquipmentId, setCEquipmentId] = useState("");
   const [cReadings, setCReadings] = useState("");
+  const [cTarget, setCTarget] = useState("");
+  const [cMaster, setCMaster] = useState("");
+  const [cResolution, setCResolution] = useState("");
+  const [cA1, setCA1] = useState("0");
+  const [cB1, setCB1] = useState("");
+  const [cB2, setCB2] = useState("");
+  const [cA2, setCA2] = useState("0");
   const [cResult, setCResult] = useState("");
   const [cResponsible, setCResponsible] = useState("");
   const [cNotes, setCNotes] = useState("");
@@ -158,6 +167,9 @@ export function QualityPg14Page() {
   const [mNextDue, setMNextDue] = useState("");
   const [mResponsible, setMResponsible] = useState("");
   const [mNotes, setMNotes] = useState("");
+  const [mYear, setMYear] = useState(String(new Date().getFullYear()));
+  const [mMonths, setMMonths] = useState("------------");
+  const [programYearFilter, setProgramYearFilter] = useState(new Date().getFullYear());
 
   // R01 form
   const [lSource, setLSource] = useState("StandardWeight");
@@ -225,6 +237,7 @@ export function QualityPg14Page() {
         setCalSummary(r03.summary || null);
         setEquipment(eq.rows || []);
         setChecks(r05.rows || []);
+        setCheckSchedule(r05.schedule || []);
         setPlans(r06.rows || []);
         setLogEntries(r01.rows || []);
         setLogCounts(r01.countsByKind || null);
@@ -256,6 +269,13 @@ export function QualityPg14Page() {
       setCInstrument(selectedCheck.instrument || "");
       setCEquipmentId(selectedCheck.equipmentId || "");
       setCReadings(selectedCheck.readings || "");
+      setCTarget(selectedCheck.targetWeightId || "");
+      setCMaster(selectedCheck.masterWeightId || "");
+      setCResolution(selectedCheck.comparatorResolution?.toString() || "");
+      setCA1(String(selectedCheck.readingA1 ?? 0));
+      setCB1(selectedCheck.readingB1?.toString() || "");
+      setCB2(selectedCheck.readingB2?.toString() || "");
+      setCA2(String(selectedCheck.readingA2 ?? 0));
       setCResult(selectedCheck.result || "");
       setCResponsible(selectedCheck.responsible || "");
       setCNotes(selectedCheck.notes || "");
@@ -267,6 +287,8 @@ export function QualityPg14Page() {
       setMNextDue(selectedPlan.nextDue?.slice(0, 10) || "");
       setMResponsible(selectedPlan.responsible || "");
       setMNotes(selectedPlan.notes || "");
+      setMYear(String(selectedPlan.programYear));
+      setMMonths(selectedPlan.months || "------------");
     }
     if (tab === "r01" && selectedLog) {
       setLSource(selectedLog.assetSource);
@@ -301,6 +323,8 @@ export function QualityPg14Page() {
     setCInstrument("");
     setCEquipmentId("");
     setCReadings("");
+    setCTarget(""); setCMaster(""); setCResolution("");
+    setCA1("0"); setCB1(""); setCB2(""); setCA2("0");
     setCResult("");
     setCResponsible("");
     setCNotes("");
@@ -313,6 +337,8 @@ export function QualityPg14Page() {
     setMNextDue("");
     setMResponsible("");
     setMNotes("");
+    setMYear(String(programYearFilter));
+    setMMonths("------------");
   };
 
   const resetLogForm = () => {
@@ -403,7 +429,9 @@ export function QualityPg14Page() {
     try {
       await api.createQualityIntermediateCheck({
         checkDate: cDate ? new Date(cDate).toISOString() : undefined,
-        weightUsed: cWeight || "1000 kg",
+        targetWeightId: cTarget || undefined, masterWeightId: cMaster || undefined,
+        comparatorResolution: Number(cResolution),
+        readingA1: Number(cA1), readingB1: Number(cB1), readingB2: Number(cB2), readingA2: Number(cA2),
         instrument: cInstrument || undefined,
         equipmentId: cEquipmentId || undefined,
         readings: cReadings || undefined,
@@ -429,6 +457,10 @@ export function QualityPg14Page() {
     try {
       await api.updateQualityIntermediateCheck(selectedCheck.id, {
         checkDate: cDate ? new Date(cDate).toISOString() : undefined,
+        targetWeightId: cTarget || undefined, masterWeightId: cMaster || undefined,
+        comparatorResolution: cResolution ? Number(cResolution) : undefined,
+        readingA1: cA1 ? Number(cA1) : undefined, readingB1: cB1 ? Number(cB1) : undefined,
+        readingB2: cB2 ? Number(cB2) : undefined, readingA2: cA2 ? Number(cA2) : undefined,
         weightUsed: cWeight,
         instrument: cInstrument,
         equipmentId: cEquipmentId || null,
@@ -474,12 +506,15 @@ export function QualityPg14Page() {
       await api.createQualityMaintenancePlanItem({
         equipmentId: mEquipmentId,
         activity: mActivity,
+        programYear: Number(mYear),
+        months: mMonths,
         frequency: mFrequency,
         nextDue: mNextDue ? new Date(mNextDue).toISOString() : undefined,
         responsible: mResponsible || undefined,
         notes: mNotes || undefined
       });
       setMsg("Ítem de mantenimiento creado.");
+      setProgramYearFilter(Number(mYear));
       setShowForm(false);
       resetPlanForm();
       loadAll();
@@ -497,28 +532,14 @@ export function QualityPg14Page() {
     try {
       await api.updateQualityMaintenancePlanItem(selectedPlan.id, {
         activity: mActivity,
+        programYear: Number(mYear),
+        months: mMonths,
         frequency: mFrequency,
         nextDue: mNextDue ? new Date(mNextDue).toISOString() : null,
         responsible: mResponsible,
         notes: mNotes
       });
       setMsg("Ítem actualizado.");
-      loadAll();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const markDone = async (row: QualityMaintenancePlanItem) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await api.updateQualityMaintenancePlanItem(row.id, {
-        lastDone: new Date().toISOString()
-      });
-      setMsg(`Mantenimiento ${row.number} marcado como hecho; próximo vencimiento avanzado.`);
       loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -630,11 +651,46 @@ export function QualityPg14Page() {
     }
   };
 
+  const abbaMean = [cA1, cB1, cB2, cA2].every((v) => v.trim() !== "")
+    ? ((Number(cB1) - Number(cA1)) + (Number(cB2) - Number(cA2))) / 2 : null;
+  const weights = inventory.filter((asset) => asset.source === "StandardWeight");
+  const abbaFields = (disabled: boolean) => (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(175px,1fr))", gap: 12, marginTop: 12 }}>
+      <label>Pesa objetivo (B) *<select value={cTarget} onChange={(e) => { setCTarget(e.target.value); if (e.target.value === cMaster) setCMaster(""); }} disabled={disabled} required>
+        <option value="">Seleccionar</option>{weights.map((w) => <option key={w.id} value={w.id}>{w.code} · {w.extra || w.description}</option>)}
+      </select></label>
+      <label>Patrón maestro (A) *<select value={cMaster} onChange={(e) => setCMaster(e.target.value)} disabled={disabled} required>
+        <option value="">Seleccionar</option>{weights.filter((w) => w.id !== cTarget).map((w) => <option key={w.id} value={w.id}>{w.code} · {w.extra || w.description}{w.extra && Math.abs(Number.parseFloat(w.extra) - 1000) <= 1 && w.extra.includes("kg") ? " ★" : ""}</option>)}
+      </select>{cMaster && !checkSchedule?.find((row) => row.weightId === cMaster)?.isReferenceMass && <small style={{ color: "#b45309" }}>PG14 recomienda patrón maestro de 1000 kg.</small>}</label>
+      <label>Resolución comparador (g) *<input type="number" step="0.000001" min="0.000001" value={cResolution} onChange={(e) => setCResolution(e.target.value)} disabled={disabled} required /></label>
+      {([['A1', cA1, setCA1], ['B1', cB1, setCB1], ['B2', cB2, setCB2], ['A2', cA2, setCA2]] as const).map(([name, value, setter]) =>
+        <label key={name}>Lectura {name} (g) *<input type="number" step="0.000001" value={value} onChange={(e) => setter(e.target.value)} disabled={disabled} required /></label>)}
+      <div style={{ alignSelf: "end", padding: 9, background: "#eff6ff", borderRadius: 6 }}><strong>Δm media:</strong> {abbaMean == null ? "—" : `${abbaMean.toFixed(6)} g`}</div>
+    </div>
+  );
+
+  const setMonth = async (row: QualityMaintenancePlanItem, month: number) => {
+    const current = row.months?.[month - 1] || "-";
+    const next = current === "-" ? "P" : current === "P" ? "D" : "-";
+    setBusy(true); setError(null);
+    try {
+      await api.updateQualityMaintenancePlanItem(row.id, { month, monthValue: next });
+      setMsg(`${row.number} · ${MONTHS[month - 1]}: ${next === "-" ? "sin programar" : next === "P" ? "planificado" : "realizado"}.`);
+      loadAll();
+    } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    finally { setBusy(false); }
+  };
+
   const exportChecks = () => {
     const columns: ExcelColumn<QualityIntermediateCheck>[] = [
       { key: "number", header: "Número" },
       { key: "checkDate", header: "Fecha", value: (r) => excelDate(r.checkDate) },
-      { key: "weightUsed", header: "Pesa", value: (r) => r.weightUsed || "" },
+      { key: "targetWeightCode", header: "Pesa objetivo" },
+      { key: "masterWeightCode", header: "Patrón maestro" },
+      { key: "comparatorResolution", header: "Resolución (g)" },
+      { key: "readingA1", header: "A1" }, { key: "readingB1", header: "B1" },
+      { key: "readingB2", header: "B2" }, { key: "readingA2", header: "A2" },
+      { key: "meanDifference", header: "Diferencia media (g)" },
       { key: "instrument", header: "Instrumento", value: (r) => r.instrument || "" },
       { key: "result", header: "Resultado", value: (r) => RESULT_LABEL[r.result || ""] || r.result || "" },
       { key: "responsible", header: "Responsable", value: (r) => r.responsible || "" },
@@ -650,6 +706,8 @@ export function QualityPg14Page() {
       { key: "equipmentCode", header: "Equipo", value: (r) => r.equipmentCode || "" },
       { key: "equipmentDescription", header: "Descripción equipo", value: (r) => r.equipmentDescription || "" },
       { key: "activity", header: "Actividad" },
+      { key: "programYear", header: "Año" },
+      ...MONTHS.map((month, index) => ({ key: `month${index}`, header: month, value: (r: QualityMaintenancePlanItem) => r.months?.[index] === "-" ? "" : r.months?.[index] || "" })),
       { key: "frequency", header: "Frecuencia", value: (r) => FREQ_LABEL[r.frequency] || r.frequency },
       { key: "nextDue", header: "Próximo", value: (r) => excelDate(r.nextDue) },
       { key: "lastDone", header: "Último", value: (r) => excelDate(r.lastDone) },
@@ -787,6 +845,7 @@ export function QualityPg14Page() {
             <button type="button" className="btn btn-outline" onClick={exportInventory}>
               Excel
             </button>
+            <Link className="btn btn-outline" to={`/calidad/registros/equipos/r04/pdf${sourceFilter === "all" ? "" : `?source=${sourceFilter}`}`}>PDF</Link>
             {inventoryCounts && (
               <span style={{ fontSize: 13, color: "#64748b" }}>
                 Pesas {inventoryCounts.weights} · Instrumentos {inventoryCounts.instruments} · Auxiliares {inventoryCounts.auxiliaries} · Total {inventoryCounts.total}
@@ -905,6 +964,7 @@ export function QualityPg14Page() {
             <button type="button" className="btn btn-outline" onClick={exportCalProgram}>
               Excel
             </button>
+            <Link className="btn btn-outline" to="/calidad/registros/equipos/r03/pdf">PDF</Link>
             {calSummary && (
               <span style={{ fontSize: 13, color: "#64748b" }}>
                 Vencidos <strong style={{ color: calSummary.expired ? "#b91c1c" : undefined }}>{calSummary.expired}</strong>
@@ -1426,38 +1486,23 @@ export function QualityPg14Page() {
 
           {showForm && !selectedId && (
             <form onSubmit={createCheck} className="card" style={{ padding: 16, marginBottom: 16 }}>
-              <h3 style={{ marginTop: 0 }}>PG14-R05 · Verificación intermedia</h3>
+              <h3 style={{ marginTop: 0 }}>PG14-R05 · Verificación intermedia (ABBA)</h3>
+              <p className="muted">Control semestral. Preferir patrón maestro de 1000 kg. {weights.length < 2 ? "Cargá al menos dos pesas en Metrología antes de registrar la comprobación." : ""}</p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 12 }}>
                 <label>
                   Fecha
                   <input type="date" value={cDate} onChange={(e) => setCDate(e.target.value)} required />
                 </label>
                 <label>
-                  Pesa utilizada
-                  <input value={cWeight} onChange={(e) => setCWeight(e.target.value)} />
-                </label>
-                <label>
                   Instrumento / balanza
                   <input value={cInstrument} onChange={(e) => setCInstrument(e.target.value)} />
-                </label>
-                <label>
-                  Equipo auxiliar (opcional)
-                  <select value={cEquipmentId} onChange={(e) => setCEquipmentId(e.target.value)}>
-                    <option value="">—</option>
-                    {activeEquipment.map((eq) => (
-                      <option key={eq.id} value={eq.id}>{eq.code} · {eq.description || KIND_LABEL[eq.kind]}</option>
-                    ))}
-                  </select>
                 </label>
                 <label>
                   Responsable
                   <input value={cResponsible} onChange={(e) => setCResponsible(e.target.value)} />
                 </label>
               </div>
-              <label style={{ display: "block", marginTop: 12 }}>
-                Lecturas
-                <textarea value={cReadings} onChange={(e) => setCReadings(e.target.value)} rows={2} style={{ width: "100%" }} />
-              </label>
+              {abbaFields(false)}
               <label style={{ display: "block", marginTop: 8 }}>
                 Notas
                 <textarea value={cNotes} onChange={(e) => setCNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
@@ -1469,6 +1514,13 @@ export function QualityPg14Page() {
             </form>
           )}
 
+          <div className="card" style={{ padding: 16, marginBottom: 16, overflowX: "auto" }}>
+            <h3 style={{ marginTop: 0 }}>Calendario semestral de pesas</h3>
+            <table className="data-table" style={{ width: "100%" }}><thead><tr><th>Pesa</th><th>Masa</th><th>Última V</th><th>Próxima</th><th>Estado</th></tr></thead>
+              <tbody>{(checkSchedule || []).map((item) => <tr key={item.weightId}><td>{item.code}{item.isReferenceMass ? " ★" : ""}</td><td>{item.mass || "—"}</td><td>{fmtDate(item.lastDate)}</td><td>{fmtDate(item.nextDate)}</td><td>{item.status === "overdue" ? "Vencida" : item.status === "due_soon" ? "Próxima / sin registro" : "Al día"}</td></tr>)}
+              {!checkSchedule?.length && <tr><td colSpan={5}>Sin pesas en Metrología.</td></tr>}</tbody></table>
+          </div>
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="card" style={{ padding: 0, overflow: "auto" }}>
               <table className="table" style={{ width: "100%" }}>
@@ -1476,6 +1528,8 @@ export function QualityPg14Page() {
                   <tr>
                     <th>Número</th>
                     <th>Fecha</th>
+                    <th>Objetivo / patrón</th>
+                    <th>Δm (g)</th>
                     <th>Resultado</th>
                     <th>Estado</th>
                   </tr>
@@ -1489,12 +1543,14 @@ export function QualityPg14Page() {
                     >
                       <td>{r.number}</td>
                       <td>{fmtDate(r.checkDate)}</td>
+                      <td>{r.targetWeightCode || "—"} / {r.masterWeightCode || "—"}</td>
+                      <td>{r.meanDifference?.toFixed(6) ?? "—"}</td>
                       <td>{RESULT_LABEL[r.result || ""] || r.result || "—"}</td>
                       <td>{CHECK_STATUS[r.status] || r.status}</td>
                     </tr>
                   ))}
                   {checks.length === 0 && (
-                    <tr><td colSpan={4} style={{ padding: 16, color: "#64748b" }}>Sin verificaciones.</td></tr>
+                    <tr><td colSpan={6} style={{ padding: 16, color: "#64748b" }}>Sin verificaciones.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1507,10 +1563,6 @@ export function QualityPg14Page() {
                   <label>
                     Fecha
                     <input type="date" value={cDate} onChange={(e) => setCDate(e.target.value)} disabled={selectedCheck.status === "Cancelled"} />
-                  </label>
-                  <label>
-                    Pesa
-                    <input value={cWeight} onChange={(e) => setCWeight(e.target.value)} disabled={selectedCheck.status === "Cancelled"} />
                   </label>
                   <label>
                     Instrumento
@@ -1526,27 +1578,15 @@ export function QualityPg14Page() {
                     </select>
                   </label>
                   <label>
-                    Equipo
-                    <select value={cEquipmentId} onChange={(e) => setCEquipmentId(e.target.value)} disabled={selectedCheck.status === "Cancelled"}>
-                      <option value="">—</option>
-                      {activeEquipment.map((eq) => (
-                        <option key={eq.id} value={eq.id}>{eq.code}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
                     Responsable
                     <input value={cResponsible} onChange={(e) => setCResponsible(e.target.value)} disabled={selectedCheck.status === "Cancelled"} />
-                  </label>
-                  <label style={{ gridColumn: "1 / -1" }}>
-                    Lecturas
-                    <textarea value={cReadings} onChange={(e) => setCReadings(e.target.value)} rows={2} style={{ width: "100%" }} disabled={selectedCheck.status === "Cancelled"} />
                   </label>
                   <label style={{ gridColumn: "1 / -1" }}>
                     Notas
                     <textarea value={cNotes} onChange={(e) => setCNotes(e.target.value)} rows={2} style={{ width: "100%" }} disabled={selectedCheck.status === "Cancelled"} />
                   </label>
                 </div>
+                {selectedCheck.targetWeightId ? abbaFields(selectedCheck.status !== "Draft") : <p className="muted">Lecturas anteriores: {selectedCheck.readings || "—"}</p>}
                 <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {selectedCheck.status !== "Cancelled" && (
                     <>
@@ -1590,6 +1630,10 @@ export function QualityPg14Page() {
             <button type="button" className="btn btn-outline" onClick={exportPlans}>
               Excel
             </button>
+            <label>Año <select value={programYearFilter} onChange={(e) => { setProgramYearFilter(Number(e.target.value)); setSelectedId(null); }}>
+              {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1, ...plans.map((p) => p.programYear)].filter((y, i, all) => all.indexOf(y) === i).sort().map((year) => <option key={year} value={year}>{year}</option>)}
+            </select></label>
+            <Link className="btn btn-outline" to={`/calidad/registros/equipos/r06/pdf?year=${programYearFilter}`}>PDF programa</Link>
           </div>
 
           {showForm && !selectedId && (
@@ -1605,6 +1649,7 @@ export function QualityPg14Page() {
                     ))}
                   </select>
                 </label>
+                <label>Año<input type="number" min={2000} max={2100} value={mYear} onChange={(e) => setMYear(e.target.value)} required /></label>
                 <label>
                   Frecuencia
                   <select value={mFrequency} onChange={(e) => setMFrequency(e.target.value)}>
@@ -1626,6 +1671,9 @@ export function QualityPg14Page() {
                   <input value={mActivity} onChange={(e) => setMActivity(e.target.value)} required />
                 </label>
               </div>
+              <div style={{ marginTop: 12 }}><strong>Meses planificados (P)</strong><div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
+                {MONTHS.map((month, index) => <label key={month} style={{ display: "flex", gap: 3, alignItems: "center" }}><input type="checkbox" checked={mMonths[index] === "P"} onChange={(e) => setMMonths(mMonths.slice(0, index) + (e.target.checked ? "P" : "-") + mMonths.slice(index + 1))} />{month}</label>)}
+              </div></div>
               <label style={{ display: "block", marginTop: 12 }}>
                 Notas
                 <textarea value={mNotes} onChange={(e) => setMNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
@@ -1637,7 +1685,7 @@ export function QualityPg14Page() {
             </form>
           )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 16 }}>
             <div className="card" style={{ padding: 0, overflow: "auto" }}>
               <table className="table" style={{ width: "100%" }}>
                 <thead>
@@ -1645,12 +1693,13 @@ export function QualityPg14Page() {
                     <th>Número</th>
                     <th>Equipo</th>
                     <th>Actividad</th>
+                    {MONTHS.map((month) => <th key={month} title={month}>{month}</th>)}
                     <th>Próximo</th>
                     <th>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {plans.map((r) => (
+                  {plans.filter((r) => r.programYear === programYearFilter).map((r) => (
                     <tr
                       key={r.id}
                       onClick={() => { setSelectedId(r.id); setShowForm(false); }}
@@ -1662,12 +1711,13 @@ export function QualityPg14Page() {
                       <td>{r.number}</td>
                       <td>{r.equipmentCode}</td>
                       <td>{r.activity}</td>
+                      {MONTHS.map((month, index) => <td key={month}><button type="button" className="btn btn-outline compact" disabled={busy || r.status === "Cancelled"} style={{ minWidth: 30, padding: "2px 5px", color: r.months?.[index] === "D" ? "#166534" : r.months?.[index] === "P" ? "#b45309" : "#94a3b8" }} title={`${month}: ${r.months?.[index] === "D" ? "realizado" : r.months?.[index] === "P" ? "planificado" : "sin programar"}`} onClick={(event) => { event.stopPropagation(); void setMonth(r, index + 1); }}>{r.months?.[index] === "-" ? "·" : r.months?.[index] || "·"}</button></td>)}
                       <td>{fmtDate(r.nextDue)}{r.isOverdue ? " ⚠" : ""}</td>
                       <td>{MP_STATUS[r.status] || r.status}</td>
                     </tr>
                   ))}
-                  {plans.length === 0 && (
-                    <tr><td colSpan={5} style={{ padding: 16, color: "#64748b" }}>Sin ítems.</td></tr>
+                  {plans.filter((r) => r.programYear === programYearFilter).length === 0 && (
+                    <tr><td colSpan={17} style={{ padding: 16, color: "#64748b" }}>Sin ítems para {programYearFilter}.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1680,6 +1730,7 @@ export function QualityPg14Page() {
                   {selectedPlan.equipmentCode} · {selectedPlan.equipmentDescription}
                   {selectedPlan.isOverdue ? " · Vencido" : ""}
                 </p>
+                <p className="muted">Año {selectedPlan.programYear} · P = planificado · D = realizado. Cambiá los meses en la grilla.</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <label style={{ gridColumn: "1 / -1" }}>
                     Actividad
@@ -1716,11 +1767,7 @@ export function QualityPg14Page() {
                       <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void savePlan()}>
                         Guardar
                       </button>
-                      {selectedPlan.status === "Active" && (
-                        <button type="button" className="btn btn-outline" disabled={busy} onClick={() => void markDone(selectedPlan)}>
-                          Marcar hecho
-                        </button>
-                      )}
+
                       <button type="button" className="btn btn-outline" disabled={busy} onClick={() => void cancelPlan(selectedPlan.id)}>
                         Anular
                       </button>

@@ -2295,6 +2295,8 @@ export const api = {
       title: string;
       draftCount?: number;
       completedCount?: number;
+      policy?: { intervalMonths: number; alertDays: number; referenceMassKg: number };
+      schedule?: { weightId: string; code: string; mass?: string | null; isReferenceMass: boolean; lastDate?: string | null; nextDate?: string | null; status: "ok" | "due_soon" | "overdue" }[];
       rows: import("./types/quality").QualityIntermediateCheck[];
     }>("/api/v1/quality/records/pg14/r05"),
 
@@ -2307,6 +2309,13 @@ export const api = {
     instrument?: string;
     equipmentId?: string;
     readings?: string;
+    targetWeightId?: string;
+    masterWeightId?: string;
+    comparatorResolution?: number;
+    readingA1?: number;
+    readingB1?: number;
+    readingB2?: number;
+    readingA2?: number;
     result?: string;
     responsible?: string;
     evidenceFileId?: string;
@@ -2325,6 +2334,13 @@ export const api = {
       instrument?: string;
       equipmentId?: string | null;
       readings?: string;
+      targetWeightId?: string;
+      masterWeightId?: string;
+      comparatorResolution?: number;
+      readingA1?: number;
+      readingB1?: number;
+      readingB2?: number;
+      readingA2?: number;
       result?: string;
       responsible?: string;
       evidenceFileId?: string;
@@ -2357,6 +2373,8 @@ export const api = {
   createQualityMaintenancePlanItem: (body: {
     equipmentId: string;
     activity: string;
+    programYear?: number;
+    months?: string;
     frequency?: string;
     nextDue?: string;
     responsible?: string;
@@ -2371,6 +2389,10 @@ export const api = {
     id: string,
     body: {
       activity?: string;
+      programYear?: number;
+      months?: string;
+      month?: number;
+      monthValue?: "-" | "P" | "D";
       frequency?: string;
       nextDue?: string | null;
       lastDone?: string | null;

@@ -270,6 +270,16 @@ export const QualityMaintenancePlanPrintPage = named(
   () => import("../pages/quality/QualityMaintenancePlanPrintPage"),
   "QualityMaintenancePlanPrintPage"
 );
+export const QualityMaintenanceProgramPrintPage = named(
+  () => import("../pages/quality/QualityMaintenanceProgramPrintPage"),
+  "QualityMaintenanceProgramPrintPage"
+);
+
+export const QualityPg14ListPrintPage = named(
+  () => import("../pages/quality/QualityPg14ListPrintPage"),
+  "QualityPg14ListPrintPage"
+);
+
 export const QualityEquipmentLogPrintPage = named(
   () => import("../pages/quality/QualityEquipmentLogPrintPage"),
   "QualityEquipmentLogPrintPage"

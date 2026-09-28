@@ -98,6 +98,8 @@ import {
   QualityIntermediateCheckPrintPage,
   QualityMaintenancePlanPrintPage,
   QualityEquipmentLogPrintPage,
+  QualityPg14ListPrintPage,
+  QualityMaintenanceProgramPrintPage,
   QualityRecordsHubPage,
   QualityLinkedItPage,
   QualityPg01R01Page,
@@ -752,6 +754,8 @@ export function App() {
               <Route path="/calidad/registros/encuestas/:id/pdf" element={<QualitySatisfactionSurveyPrintPage />} />
               <Route path="/calidad/registros/equipos" element={<QualityPg14Page />} />
               <Route path="/calidad/registros/pg14" element={<QualityPg14Page />} />
+              <Route path="/calidad/registros/equipos/r06/pdf" element={<QualityMaintenanceProgramPrintPage />} />
+              <Route path="/calidad/registros/equipos/:record/pdf" element={<QualityPg14ListPrintPage />} />
               <Route path="/calidad/registros/equipos/verificacion/:id/pdf" element={<QualityIntermediateCheckPrintPage />} />
               <Route path="/calidad/registros/equipos/mantenimiento/:id/pdf" element={<QualityMaintenancePlanPrintPage />} />
               <Route path="/calidad/registros/equipos/hoja-vida/:source/:assetId/pdf" element={<QualityEquipmentLogPrintPage />} />

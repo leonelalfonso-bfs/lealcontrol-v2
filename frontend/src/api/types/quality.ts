@@ -627,7 +627,17 @@ export interface QualityIntermediateCheck {
   weightUsed?: string;
   instrument?: string;
   equipmentId?: string | null;
-  readings?: string;
+  readings?: string; // Historical free-text readings
+  targetWeightId?: string | null;
+  masterWeightId?: string | null;
+  targetWeightCode?: string;
+  masterWeightCode?: string;
+  comparatorResolution?: number | null;
+  readingA1?: number | null;
+  readingB1?: number | null;
+  readingB2?: number | null;
+  readingA2?: number | null;
+  meanDifference?: number | null;
   result?: string;
   responsible?: string;
   evidenceFileId?: string | null;
@@ -645,6 +655,8 @@ export interface QualityMaintenancePlanItem {
   equipmentCode?: string;
   equipmentDescription?: string;
   activity: string;
+  programYear: number;
+  months: string;
   frequency: string;
   nextDue?: string | null;
   lastDone?: string | null;

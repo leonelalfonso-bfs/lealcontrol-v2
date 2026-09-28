@@ -94,16 +94,11 @@ internal static class QualityPg14Endpoints
                 .CountAsync(e => e.TenantId == tenantId && e.Status == QualityEquipmentStatuses.Active, ct);
             var checksDraft = await db.IntermediateChecks.AsNoTracking()
                 .CountAsync(c => c.TenantId == tenantId && c.Status == QualityIntermediateCheckStatuses.Draft, ct);
-            var maintenanceDue = await db.MaintenancePlanItems.AsNoTracking()
-                .CountAsync(m => m.TenantId == tenantId
-                    && m.Status == QualityMaintenanceStatuses.Active
-                    && m.NextDue != null
-                    && m.NextDue < dueHorizon, ct);
-            var maintenanceOverdue = await db.MaintenancePlanItems.AsNoTracking()
-                .CountAsync(m => m.TenantId == tenantId
-                    && m.Status == QualityMaintenanceStatuses.Active
-                    && m.NextDue != null
-                    && m.NextDue < now, ct);
+            var maintenanceItems = await db.MaintenancePlanItems.AsNoTracking()
+                .Where(m => m.TenantId == tenantId && m.Status == QualityMaintenanceStatuses.Active)
+                .ToListAsync(ct);
+            var maintenanceDue = maintenanceItems.Count(IsDueSoon);
+            var maintenanceOverdue = maintenanceItems.Count(IsOverdue);
             var logEntries = await db.EquipmentLogEntries.AsNoTracking()
                 .CountAsync(e => e.TenantId == tenantId && e.Status == QualityEquipmentLogStatuses.Active, ct);
 
@@ -846,7 +841,7 @@ internal static class QualityPg14Endpoints
 
     private static void MapR05(RouteGroupBuilder group)
     {
-        group.MapGet("/records/pg14/r05", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
+        group.MapGet("/records/pg14/r05", async (ITenantContext tenant, QualityDbContext db, IMetrologyAssetCatalog metrologyCatalog, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
@@ -865,6 +860,8 @@ internal static class QualityPg14Endpoints
                 generatedAtUtc = DateTime.UtcNow,
                 draftCount = rows.Count(r => r.Status == QualityIntermediateCheckStatuses.Draft),
                 completedCount = rows.Count(r => r.Status == QualityIntermediateCheckStatuses.Completed),
+                policy = new { intervalMonths = 6, alertDays = 30, referenceMassKg = 1000 },
+                schedule = BuildCheckSchedule(await metrologyCatalog.ListCalibrationAssetsAsync(tenantId.Value, ct), rows),
                 rows = rows.Select(ToCheckDto)
             });
         });
@@ -886,11 +883,22 @@ internal static class QualityPg14Endpoints
             CreateIntermediateCheckRequest req,
             ITenantContext tenant,
             QualityDbContext db,
+            IMetrologyAssetCatalog metrologyCatalog,
             HttpContext http,
             CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
+
+            if (!HasCompleteAbba(req.TargetWeightId, req.MasterWeightId, req.ComparatorResolution,
+                    req.ReadingA1, req.ReadingB1, req.ReadingB2, req.ReadingA2))
+                return Results.BadRequest(new { message = "Seleccione dos pesas distintas e ingrese resolución y las cuatro lecturas ABBA." });
+            var weights = (await metrologyCatalog.ListCalibrationAssetsAsync(tenantId.Value, ct))
+                .Where(a => a.Source == "StandardWeight").ToList();
+            var target = weights.FirstOrDefault(a => a.Id == req.TargetWeightId);
+            var master = weights.FirstOrDefault(a => a.Id == req.MasterWeightId);
+            if (target is null || master is null)
+                return Results.BadRequest(new { message = "Las pesas deben existir en Metrología." });
 
             if (req.EquipmentId.HasValue)
             {
@@ -929,10 +937,20 @@ internal static class QualityPg14Endpoints
                 RecordCode = "PG14-R05",
                 Number = number,
                 CheckDate = checkDate,
-                WeightUsed = string.IsNullOrWhiteSpace(req.WeightUsed) ? "1000 kg" : req.WeightUsed.Trim(),
+                WeightUsed = string.IsNullOrWhiteSpace(req.WeightUsed) ? (target.Extra ?? target.Description) : req.WeightUsed.Trim(),
                 Instrument = req.Instrument?.Trim() ?? string.Empty,
                 EquipmentId = req.EquipmentId,
                 Readings = req.Readings?.Trim() ?? string.Empty,
+                TargetWeightId = target.Id,
+                MasterWeightId = master.Id,
+                TargetWeightCode = target.Code,
+                MasterWeightCode = master.Code,
+                ComparatorResolution = req.ComparatorResolution,
+                ReadingA1 = req.ReadingA1,
+                ReadingB1 = req.ReadingB1,
+                ReadingB2 = req.ReadingB2,
+                ReadingA2 = req.ReadingA2,
+                MeanDifference = MeanDifference(req.ReadingA1, req.ReadingB1, req.ReadingB2, req.ReadingA2),
                 Result = string.IsNullOrWhiteSpace(req.Result) ? string.Empty : NormalizeAllowed(req.Result, AllowedCheckResults)!,
                 Responsible = req.Responsible?.Trim() ?? string.Empty,
                 EvidenceFileId = req.EvidenceFileId,
@@ -954,6 +972,7 @@ internal static class QualityPg14Endpoints
             UpdateIntermediateCheckRequest req,
             ITenantContext tenant,
             QualityDbContext db,
+            IMetrologyAssetCatalog metrologyCatalog,
             HttpContext http,
             CancellationToken ct) =>
         {
@@ -971,6 +990,35 @@ internal static class QualityPg14Endpoints
             if (req.Readings is not null) entity.Readings = req.Readings.Trim();
             if (req.Responsible is not null) entity.Responsible = req.Responsible.Trim();
             if (req.Notes is not null) entity.Notes = req.Notes.Trim();
+
+            if (req.TargetWeightId.HasValue || req.MasterWeightId.HasValue)
+            {
+                var weights = (await metrologyCatalog.ListCalibrationAssetsAsync(tenantId.Value, ct))
+                    .Where(asset => asset.Source == "StandardWeight").ToList();
+                if (req.TargetWeightId.HasValue)
+                {
+                    var target = weights.FirstOrDefault(asset => asset.Id == req.TargetWeightId.Value);
+                    if (target is null) return Results.BadRequest(new { message = "Pesa objetivo no encontrada." });
+                    entity.TargetWeightId = target.Id;
+                    entity.TargetWeightCode = target.Code;
+                }
+                if (req.MasterWeightId.HasValue)
+                {
+                    var master = weights.FirstOrDefault(asset => asset.Id == req.MasterWeightId.Value);
+                    if (master is null) return Results.BadRequest(new { message = "Patrón maestro no encontrado." });
+                    entity.MasterWeightId = master.Id;
+                    entity.MasterWeightCode = master.Code;
+                }
+            }
+            if (req.ComparatorResolution.HasValue) entity.ComparatorResolution = req.ComparatorResolution;
+            if (req.ReadingA1.HasValue) entity.ReadingA1 = req.ReadingA1;
+            if (req.ReadingB1.HasValue) entity.ReadingB1 = req.ReadingB1;
+            if (req.ReadingB2.HasValue) entity.ReadingB2 = req.ReadingB2;
+            if (req.ReadingA2.HasValue) entity.ReadingA2 = req.ReadingA2;
+            if (entity.TargetWeightId.HasValue && !HasCompleteAbba(entity.TargetWeightId, entity.MasterWeightId,
+                    entity.ComparatorResolution, entity.ReadingA1, entity.ReadingB1, entity.ReadingB2, entity.ReadingA2))
+                return Results.BadRequest(new { message = "Complete las cuatro lecturas ABBA y la resolución." });
+            entity.MeanDifference = MeanDifference(entity.ReadingA1, entity.ReadingB1, entity.ReadingB2, entity.ReadingA2);
 
             if (req.EquipmentId.HasValue)
             {
@@ -1022,7 +1070,7 @@ internal static class QualityPg14Endpoints
                     && entity.Status != QualityIntermediateCheckStatuses.Completed;
                 entity.Status = st;
 
-                if (becomingCompleted && entity.EquipmentId.HasValue)
+                if (becomingCompleted && (entity.EquipmentId.HasValue || entity.TargetWeightId.HasValue))
                 {
                     await TryCreateVerificationLogFromCheckAsync(db, tenantId, entity, http, ct);
                 }
@@ -1121,7 +1169,9 @@ internal static class QualityPg14Endpoints
             if (frequency is null)
                 return Results.BadRequest(new { message = "Frecuencia inválida. Use Monthly, Quarterly, Semiannual o Annual." });
 
-            var year = DateTime.UtcNow.Year;
+            var year = req.ProgramYear ?? DateTime.UtcNow.Year;
+            if (year < 2000 || year > 2100 || !ValidMonths(req.Months) || req.Months?.Contains('D') == true)
+                return Results.BadRequest(new { message = "Año o programación mensual inválidos. Al crear, use solo meses planificados (P)." });
             var number = await NextNumberAsync(
                 db.MaintenancePlanItems.AsNoTracking()
                     .Where(r => r.TenantId == tenantId)
@@ -1140,6 +1190,8 @@ internal static class QualityPg14Endpoints
                     ? $"{equipment.Kind} {equipment.Code}".Trim()
                     : equipment.Description,
                 Activity = req.Activity.Trim(),
+                ProgramYear = year,
+                Months = req.Months ?? "------------",
                 Frequency = frequency,
                 NextDue = req.NextDue,
                 Responsible = req.Responsible?.Trim() ?? string.Empty,
@@ -1185,6 +1237,39 @@ internal static class QualityPg14Endpoints
                 if (frequency is null)
                     return Results.BadRequest(new { message = "Frecuencia inválida. Use Monthly, Quarterly, Semiannual o Annual." });
                 entity.Frequency = frequency;
+            }
+
+            if (req.ProgramYear.HasValue)
+            {
+                if (req.ProgramYear.Value < 2000 || req.ProgramYear.Value > 2100)
+                    return Results.BadRequest(new { message = "Año inválido." });
+                entity.ProgramYear = req.ProgramYear.Value;
+            }
+            if (req.Months is not null)
+            {
+                if (!ValidMonths(req.Months)) return Results.BadRequest(new { message = "Programación mensual inválida." });
+                var current = entity.Months.Length == 12 ? entity.Months : "------------";
+                if (req.Months.Where((value, index) => value == 'D' && current[index] != 'D').Any())
+                    return Results.BadRequest(new { message = "Marque meses realizados de a uno para registrar la hoja de vida." });
+                entity.Months = req.Months;
+            }
+            if (req.Month.HasValue)
+            {
+                if (req.Month.Value is < 1 or > 12 || req.MonthValue is not ("P" or "D" or "-"))
+                    return Results.BadRequest(new { message = "Mes o estado inválido. Use P, D o -." });
+                var month = req.Month.Value;
+                var current = entity.Months.Length == 12 ? entity.Months : "------------";
+                var previous = current[month - 1];
+                var chars = current.ToCharArray();
+                chars[month - 1] = req.MonthValue[0];
+                entity.Months = new string(chars);
+                if (previous != 'D' && req.MonthValue == "D")
+                {
+                    var doneDate = new DateTime(entity.ProgramYear > 0 ? entity.ProgramYear : DateTime.UtcNow.Year,
+                        month, 15, 0, 0, 0, DateTimeKind.Utc);
+                    entity.LastDone = doneDate;
+                    await TryCreateMaintenanceLogAsync(db, tenantId, entity, doneDate, http, ct);
+                }
             }
 
             if (req.NextDue.HasValue) entity.NextDue = req.NextDue;
@@ -1245,8 +1330,22 @@ internal static class QualityPg14Endpoints
 
     private static bool IsOverdue(QualityMaintenancePlanItem r) =>
         r.Status == QualityMaintenanceStatuses.Active
-        && r.NextDue.HasValue
-        && r.NextDue.Value < DateTime.UtcNow;
+        && ((r.NextDue.HasValue && r.NextDue.Value < DateTime.UtcNow)
+            || PlannedMonthDates(r).Any(date => date < DateTime.UtcNow.Date));
+
+    private static bool IsDueSoon(QualityMaintenancePlanItem r) =>
+        r.Status == QualityMaintenanceStatuses.Active
+        && ((r.NextDue.HasValue && r.NextDue.Value < DateTime.UtcNow.AddDays(30))
+            || PlannedMonthDates(r).Any(date => date < DateTime.UtcNow.Date.AddDays(30)));
+
+    private static IEnumerable<DateTime> PlannedMonthDates(QualityMaintenancePlanItem r)
+    {
+        if (r.ProgramYear is < 2000 or > 2100 || r.Months.Length != 12) yield break;
+        for (var month = 1; month <= 12; month++)
+            if (r.Months[month - 1] == 'P')
+                yield return new DateTime(r.ProgramYear, month,
+                    DateTime.DaysInMonth(r.ProgramYear, month), 0, 0, 0, DateTimeKind.Utc);
+    }
 
     private static DateTime AdvanceByFrequency(DateTime from, string frequency) =>
         frequency switch
@@ -1256,6 +1355,68 @@ internal static class QualityPg14Endpoints
             QualityMaintenanceFrequencies.Annual => from.AddYears(1),
             _ => from.AddMonths(1)
         };
+
+    private static bool HasCompleteAbba(Guid? target, Guid? master, decimal? resolution,
+        decimal? a1, decimal? b1, decimal? b2, decimal? a2) =>
+        target.HasValue && master.HasValue && target != master && resolution > 0
+        && a1.HasValue && b1.HasValue && b2.HasValue && a2.HasValue;
+
+    private static decimal? MeanDifference(decimal? a1, decimal? b1, decimal? b2, decimal? a2) =>
+        a1.HasValue && b1.HasValue && b2.HasValue && a2.HasValue
+            ? ((b1.Value - a1.Value) + (b2.Value - a2.Value)) / 2m : null;
+
+    private static bool ValidMonths(string? months) => months is null
+        || (months.Length == 12 && months.All(ch => ch is '-' or 'P' or 'D'));
+
+    private static bool IsReferenceMass(MetrologyCatalogAsset asset)
+    {
+        var parts = asset.Extra?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts is { Length: >= 2 } && parts[1].Equals("kg", StringComparison.OrdinalIgnoreCase)
+            && decimal.TryParse(parts[0].Replace(',', '.'), System.Globalization.NumberStyles.AllowDecimalPoint,
+                System.Globalization.CultureInfo.InvariantCulture, out var mass)
+            && Math.Abs(mass - 1000m) <= 1m;
+    }
+
+    private static object[] BuildCheckSchedule(IReadOnlyList<MetrologyCatalogAsset> assets,
+        IReadOnlyList<QualityIntermediateCheck> checks)
+    {
+        var now = DateTime.UtcNow.Date;
+        return assets.Where(a => a.Source == "StandardWeight").Select(asset =>
+        {
+            var last = checks.Where(c => c.TargetWeightId == asset.Id && c.Status == QualityIntermediateCheckStatuses.Completed)
+                .OrderByDescending(c => c.CheckDate).FirstOrDefault();
+            var next = last?.CheckDate.Date.AddMonths(6);
+            var status = next is null ? "due_soon" : now > next ? "overdue"
+                : now >= next.Value.AddDays(-30) ? "due_soon" : "ok";
+            return (object)new { weightId = asset.Id, code = asset.Code, mass = asset.Extra,
+                isReferenceMass = IsReferenceMass(asset),
+                lastDate = last?.CheckDate, nextDate = next, status };
+        }).ToArray();
+    }
+
+    private static async Task TryCreateMaintenanceLogAsync(QualityDbContext db, TenantId tenantId,
+        QualityMaintenancePlanItem item, DateTime doneDate, HttpContext http, CancellationToken ct)
+    {
+        var marker = $"Origen R06 {item.Number} {doneDate:yyyy-MM}";
+        if (await db.EquipmentLogEntries.AsNoTracking().AnyAsync(r => r.TenantId == tenantId
+            && r.Kind == QualityEquipmentLogKinds.PreventiveMaintenance && r.Notes == marker, ct)) return;
+        var number = await NextNumberAsync(db.EquipmentLogEntries.AsNoTracking()
+            .Where(r => r.TenantId == tenantId).Select(r => r.Number), $"HV-{doneDate.Year}-", ct);
+        var log = new QualityEquipmentLogEntry
+        {
+            TenantId = tenantId, RecordCode = "PG14-R01", Number = number,
+            AssetSource = QualityEquipmentLogAssetSources.QualityEquipment,
+            AssetId = item.EquipmentId, AssetCode = item.EquipmentCode,
+            AssetDescription = item.EquipmentDescription, EventDate = doneDate,
+            Kind = QualityEquipmentLogKinds.PreventiveMaintenance,
+            Description = $"Mantenimiento preventivo: {item.Activity}",
+            Responsible = item.Responsible, Status = QualityEquipmentLogStatuses.Active,
+            Notes = marker, CreatedAtUtc = DateTime.UtcNow, UpdatedAtUtc = DateTime.UtcNow
+        };
+        db.EquipmentLogEntries.Add(log);
+        QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.EquipmentLogEntry, log.Id,
+            "EquipmentLogEntryFromMaintenance", $"Evento {log.Number} desde {item.Number}.", null, ToLogDto(log), http);
+    }
 
     private static object ToEquipmentDto(QualityEquipment e) => new
     {
@@ -1286,6 +1447,9 @@ internal static class QualityPg14Endpoints
         r.Instrument,
         r.EquipmentId,
         r.Readings,
+        r.TargetWeightId, r.MasterWeightId,
+        r.TargetWeightCode, r.MasterWeightCode,
+        r.ComparatorResolution, r.ReadingA1, r.ReadingB1, r.ReadingB2, r.ReadingA2, r.MeanDifference,
         r.Result,
         r.Responsible,
         r.EvidenceFileId,
@@ -1304,6 +1468,8 @@ internal static class QualityPg14Endpoints
         r.EquipmentCode,
         r.EquipmentDescription,
         r.Activity,
+        ProgramYear = r.ProgramYear > 0 ? r.ProgramYear : r.CreatedAtUtc.Year,
+        r.Months,
         r.Frequency,
         r.NextDue,
         r.LastDone,
@@ -1373,18 +1539,22 @@ internal static class QualityPg14Endpoints
         HttpContext http,
         CancellationToken ct)
     {
-        if (!check.EquipmentId.HasValue) return;
-
-        var eq = await db.Equipments.AsNoTracking()
-            .FirstOrDefaultAsync(e => e.Id == check.EquipmentId.Value && e.TenantId == tenantId, ct);
-        if (eq is null) return;
+        if (!check.EquipmentId.HasValue && !check.TargetWeightId.HasValue) return;
+        var eq = check.EquipmentId.HasValue ? await db.Equipments.AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == check.EquipmentId.Value && e.TenantId == tenantId, ct) : null;
+        if (check.EquipmentId.HasValue && eq is null) return;
+        var source = check.TargetWeightId.HasValue ? QualityEquipmentLogAssetSources.StandardWeight
+            : QualityEquipmentLogAssetSources.QualityEquipment;
+        var assetId = check.TargetWeightId ?? eq!.Id;
+        var assetCode = check.TargetWeightId.HasValue ? check.TargetWeightCode : eq!.Code;
+        var assetDescription = check.TargetWeightId.HasValue ? check.WeightUsed : eq!.Description;
 
         var already = await db.EquipmentLogEntries.AsNoTracking()
             .AnyAsync(r => r.TenantId == tenantId
                 && r.Status == QualityEquipmentLogStatuses.Active
                 && r.Kind == QualityEquipmentLogKinds.Verification
-                && r.AssetSource == QualityEquipmentLogAssetSources.QualityEquipment
-                && r.AssetId == eq.Id
+                && r.AssetSource == source
+                && r.AssetId == assetId
                 && r.Notes.Contains(check.Number), ct);
         if (already) return;
 
@@ -1408,10 +1578,10 @@ internal static class QualityPg14Endpoints
             TenantId = tenantId,
             RecordCode = "PG14-R01",
             Number = number,
-            AssetSource = QualityEquipmentLogAssetSources.QualityEquipment,
-            AssetId = eq.Id,
-            AssetCode = eq.Code,
-            AssetDescription = eq.Description,
+            AssetSource = source,
+            AssetId = assetId,
+            AssetCode = assetCode,
+            AssetDescription = assetDescription,
             EventDate = check.CheckDate,
             Kind = QualityEquipmentLogKinds.Verification,
             Description = $"Verificación intermedia {check.Number}",

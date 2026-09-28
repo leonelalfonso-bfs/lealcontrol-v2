@@ -1207,7 +1207,17 @@ public sealed class QualityIntermediateCheck : Entity<Guid>
     public string WeightUsed { get; set; } = "1000 kg";
     public string Instrument { get; set; } = string.Empty; // balanza / equipo verificado
     public Guid? EquipmentId { get; set; } // optional QualityEquipment
-    public string Readings { get; set; } = string.Empty;
+    public string Readings { get; set; } = string.Empty; // Legacy free-text readings
+    public Guid? TargetWeightId { get; set; }
+    public Guid? MasterWeightId { get; set; }
+    public string TargetWeightCode { get; set; } = string.Empty;
+    public string MasterWeightCode { get; set; } = string.Empty;
+    public decimal? ComparatorResolution { get; set; }
+    public decimal? ReadingA1 { get; set; }
+    public decimal? ReadingB1 { get; set; }
+    public decimal? ReadingB2 { get; set; }
+    public decimal? ReadingA2 { get; set; }
+    public decimal? MeanDifference { get; set; }
     public string Result { get; set; } = string.Empty; // Pass|Fail|Conditional
     public string Responsible { get; set; } = string.Empty;
     public Guid? EvidenceFileId { get; set; }
@@ -1223,6 +1233,13 @@ public sealed record CreateIntermediateCheckRequest(
     string? Instrument = null,
     Guid? EquipmentId = null,
     string? Readings = null,
+    Guid? TargetWeightId = null,
+    Guid? MasterWeightId = null,
+    decimal? ComparatorResolution = null,
+    decimal? ReadingA1 = null,
+    decimal? ReadingB1 = null,
+    decimal? ReadingB2 = null,
+    decimal? ReadingA2 = null,
     string? Result = null,
     string? Responsible = null,
     Guid? EvidenceFileId = null,
@@ -1234,6 +1251,13 @@ public sealed record UpdateIntermediateCheckRequest(
     string? Instrument = null,
     Guid? EquipmentId = null,
     string? Readings = null,
+    Guid? TargetWeightId = null,
+    Guid? MasterWeightId = null,
+    decimal? ComparatorResolution = null,
+    decimal? ReadingA1 = null,
+    decimal? ReadingB1 = null,
+    decimal? ReadingB2 = null,
+    decimal? ReadingA2 = null,
     string? Result = null,
     string? Responsible = null,
     Guid? EvidenceFileId = null,
@@ -1268,6 +1292,8 @@ public sealed class QualityMaintenancePlanItem : Entity<Guid>
     public string EquipmentCode { get; set; } = string.Empty;
     public string EquipmentDescription { get; set; } = string.Empty;
     public string Activity { get; set; } = string.Empty;
+    public int ProgramYear { get; set; }
+    public string Months { get; set; } = "------------"; // Jan..Dec: - / P / D
     public string Frequency { get; set; } = QualityMaintenanceFrequencies.Monthly;
     public DateTime? NextDue { get; set; }
     public DateTime? LastDone { get; set; }
@@ -1281,6 +1307,8 @@ public sealed class QualityMaintenancePlanItem : Entity<Guid>
 public sealed record CreateMaintenancePlanItemRequest(
     Guid EquipmentId,
     string Activity,
+    int? ProgramYear = null,
+    string? Months = null,
     string? Frequency = null,
     DateTime? NextDue = null,
     string? Responsible = null,
@@ -1288,6 +1316,10 @@ public sealed record CreateMaintenancePlanItemRequest(
 
 public sealed record UpdateMaintenancePlanItemRequest(
     string? Activity = null,
+    int? ProgramYear = null,
+    string? Months = null,
+    int? Month = null,
+    string? MonthValue = null,
     string? Frequency = null,
     DateTime? NextDue = null,
     DateTime? LastDone = null,

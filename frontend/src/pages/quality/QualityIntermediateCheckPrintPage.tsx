@@ -140,6 +140,13 @@ export function QualityIntermediateCheckPrintPage() {
               <td style={label}>Fecha</td>
               <td style={cell}>{fmt(row.checkDate)}</td>
             </tr>
+            {row.targetWeightId && <>
+              <tr><td style={label}>Pesa objetivo (B)</td><td style={cell}>{row.targetWeightCode || "—"}</td></tr>
+              <tr><td style={label}>Patrón maestro (A)</td><td style={cell}>{row.masterWeightCode || "—"}</td></tr>
+              <tr><td style={label}>Resolución del comparador</td><td style={cell}>{row.comparatorResolution ?? "—"} g</td></tr>
+              <tr><td style={label}>Lecturas ABBA</td><td style={cell}>A1 {row.readingA1 ?? "—"} · B1 {row.readingB1 ?? "—"} · B2 {row.readingB2 ?? "—"} · A2 {row.readingA2 ?? "—"} g</td></tr>
+              <tr><td style={label}>Diferencia media</td><td style={cell}><strong>{row.meanDifference?.toFixed(6) ?? "—"} g</strong></td></tr>
+            </>}
             <tr>
               <td style={label}>Pesa utilizada</td>
               <td style={cell}>{row.weightUsed || "1000 kg"}</td>
