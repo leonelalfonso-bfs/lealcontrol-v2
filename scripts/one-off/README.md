@@ -7,6 +7,7 @@
 | `migrate-tenant-id.sql` | Reasigna masivamente `TenantId` viejo → canónico en todas las tablas | Ejecutado en migración histórica |
 | `migrate-tenant-id-safe.sql` | Igual pero tabla por tabla, tolera errores parciales | Ejecutado en migración histórica |
 | `wipe-staging-operational.sql` | Staging: borra datos operativos; **conserva** usuarios + empresa | Solo `/opt/lealcontrol-staging` |
+| `rename-bfs-quote-numbers-to-p-year.sql` | BFS: convierte números legacy (`3698`) a `P-AAAA-NNNN` | Una vez en `leal_tenant_bfs` |
 
 Uso original (referencia):
 

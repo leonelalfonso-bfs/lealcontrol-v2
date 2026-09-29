@@ -40,24 +40,38 @@ internal sealed class QuoteRepository : IQuoteRepository
 
     public async Task<string> NextNumberAsync(TenantId tenantId, int year, CancellationToken cancellationToken = default)
     {
-        var prefix = $"P-{year}-";
+        // Continúa la secuencia numérica aunque existan números legacy ("3698")
+        // o de otros años ("P-2025-3600"), y siempre emite P-{año}-{nnnn}.
         var numbers = await _db.Quotes.AsNoTracking()
-            .Where(x => x.TenantId == tenantId && x.QuoteNumber.StartsWith(prefix))
+            .Where(x => x.TenantId == tenantId)
             .Select(x => x.QuoteNumber)
             .ToListAsync(cancellationToken);
 
         var max = 0;
         foreach (var number in numbers)
         {
-            if (number.Length > prefix.Length
-                && int.TryParse(number.AsSpan(prefix.Length), out var value)
-                && value > max)
-            {
+            if (TryParseQuoteSequence(number, out var value) && value > max)
                 max = value;
-            }
         }
 
-        return $"{prefix}{(max + 1):D4}";
+        return $"P-{year}-{(max + 1):D4}";
+    }
+
+    /// <summary>
+    /// Acepta "3698", "P-2026-0001" o "P-2026-3698".
+    /// </summary>
+    internal static bool TryParseQuoteSequence(string? quoteNumber, out int sequence)
+    {
+        sequence = 0;
+        if (string.IsNullOrWhiteSpace(quoteNumber)) return false;
+        var value = quoteNumber.Trim();
+        if (int.TryParse(value, out sequence) && sequence > 0) return true;
+
+        // P-YYYY-NNNN…
+        if (value.Length < 8 || value[0] is not ('P' or 'p') || value[1] != '-') return false;
+        var lastDash = value.LastIndexOf('-');
+        if (lastDash < 2 || lastDash >= value.Length - 1) return false;
+        return int.TryParse(value.AsSpan(lastDash + 1), out sequence) && sequence > 0;
     }
 
     public async Task EnsureTechnicalDetailColumnAsync(CancellationToken cancellationToken = default)
