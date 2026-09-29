@@ -18,8 +18,10 @@ public sealed class MailSecretProtector(IDataProtectionProvider provider)
     public string Unprotect(string value) => _protector.Unprotect(value);
 }
 
+public sealed record OutgoingEmailAttachment(string FileName, string ContentType, string ContentBase64);
+
 public sealed record SendEmailRequest(string[] To, string Subject, string HtmlBody, string? TextBody,
-    string? RelatedEntityType, Guid? RelatedEntityId, string? InReplyTo);
+    string? RelatedEntityType, Guid? RelatedEntityId, string? InReplyTo, OutgoingEmailAttachment[]? Attachments = null);
 
 public sealed class MailTransportService(MailSecretProtector secrets)
 {
@@ -51,7 +53,22 @@ public sealed class MailTransportService(MailSecretProtector secrets)
         foreach (var address in request.To.Where(x => !string.IsNullOrWhiteSpace(x))) message.To.Add(MailboxAddress.Parse(address));
         message.Subject = request.Subject.Trim();
         if (!string.IsNullOrWhiteSpace(request.InReplyTo)) { message.InReplyTo = request.InReplyTo; message.References.Add(request.InReplyTo); }
-        message.Body = new BodyBuilder { HtmlBody = request.HtmlBody, TextBody = request.TextBody }.ToMessageBody();
+        var builder = new BodyBuilder { HtmlBody = request.HtmlBody, TextBody = request.TextBody };
+        const long maxAttachmentBytes = 10 * 1024 * 1024;
+        long totalBytes = 0;
+        foreach (var attachment in request.Attachments ?? Array.Empty<OutgoingEmailAttachment>())
+        {
+            if (string.IsNullOrWhiteSpace(attachment.ContentBase64) || string.IsNullOrWhiteSpace(attachment.FileName)) continue;
+            byte[] bytes;
+            try { bytes = Convert.FromBase64String(attachment.ContentBase64); }
+            catch (FormatException) { throw new InvalidOperationException($"El adjunto «{attachment.FileName}» no es válido."); }
+            totalBytes += bytes.LongLength;
+            if (totalBytes > maxAttachmentBytes)
+                throw new InvalidOperationException("Los adjuntos superan el tope de 10 MB.");
+            var contentType = string.IsNullOrWhiteSpace(attachment.ContentType) ? "application/octet-stream" : attachment.ContentType;
+            builder.Attachments.Add(attachment.FileName.Trim(), bytes, ContentType.Parse(contentType));
+        }
+        message.Body = builder.ToMessageBody();
         using var smtp = new SmtpClient();
         await smtp.ConnectAsync(account.SmtpHost, account.SmtpPort, SocketOption(account.SmtpUseSsl, account.SmtpPort), cancellationToken);
         Authenticate(account, secrets.Unprotect(account.ProtectedSecret), smtp);

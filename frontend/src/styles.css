@@ -444,6 +444,13 @@
 .email-composer { width: min(720px, 100%); max-height: calc(100vh - 48px); overflow: auto; }
 .email-composer form { display: grid; gap: 14px; }
 .email-composer textarea { min-height: 220px; resize: vertical; }
+.email-attach-row { display: flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 600; }
+.email-attach-row input { width: auto; }
+.customer-next-action { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 14px; padding: 12px 14px; border: 1px solid #c5daf8; border-radius: 10px; background: #f3f8ff; }
+.customer-next-action strong { display: block; margin-bottom: 2px; }
+.customer-next-action.overdue { border-color: #f1b4b4; background: #fff5f5; }
+.customer-next-action.today { border-color: #f0d48a; background: #fffbeb; }
+.nav-unread-badge { min-width: 18px; height: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #ef4444; color: #fff; font-size: .68rem; font-weight: 800; line-height: 18px; text-align: center; }
 .mail-layout { display: grid; grid-template-columns: minmax(320px, 42%) 1fr; min-height: 610px; overflow: hidden; }
 .mail-list { border-right: 1px solid var(--surface-border); overflow: auto; max-height: 68vh; }
 .mail-row { width: 100%; padding: 16px; border: 0; border-bottom: 1px solid var(--surface-border); background: transparent; text-align: left; cursor: pointer; }

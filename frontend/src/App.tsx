@@ -266,6 +266,21 @@ export function App() {
   const canTogglePresentation =
     !!user && (allowedModuleIds.includes("calidad") || activeModuleId === "calidad" || activeModuleId === "metrologia");
   useCommunicationsBrowserNotifications(hasCommunications);
+  const [communicationsUnread, setCommunicationsUnread] = useState(0);
+  useEffect(() => {
+    if (!hasCommunications) {
+      setCommunicationsUnread(0);
+      return;
+    }
+    const loadUnread = () => {
+      void api.getCommunicationsNotificationSummary()
+        .then((summary) => setCommunicationsUnread((summary.unreadTotal || 0) + (summary.needsResponseCount || 0)))
+        .catch(() => setCommunicationsUnread(0));
+    };
+    loadUnread();
+    const interval = window.setInterval(loadUnread, 30000);
+    return () => window.clearInterval(interval);
+  }, [hasCommunications]);
 
   if (location.pathname === "/login") {
     return withPageSuspense(<LoginPage />);
@@ -405,6 +420,9 @@ export function App() {
                 >
                   <span className="nav-icon-badge">{item.icon}</span>
                   <span>{item.label}</span>
+                  {item.path === "/comunicaciones" && communicationsUnread > 0 && (
+                    <span className="nav-unread-badge">{communicationsUnread > 99 ? "99+" : communicationsUnread}</span>
+                  )}
                 </NavLink>
               ))}
             </nav>

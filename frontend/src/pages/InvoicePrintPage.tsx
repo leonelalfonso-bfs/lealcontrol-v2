@@ -216,7 +216,11 @@ export function InvoicePrintPage() {
               entityId: invoice.id,
               to: customer?.email ?? undefined,
               subject: `${docTitle} ${invoiceLetter} N° ${formattedPtoVta}-${formattedVoucherNum} - ${company?.tradeName || company?.legalName || "LEAL CONTROL"}`,
-              body: `Estimado cliente,\n\nAdjuntamos el comprobante fiscal electrónico ${docTitle} ${invoiceLetter} N° ${formattedPtoVta}-${formattedVoucherNum} correspondiente a los servicios/productos provistos.\n\nDatos para el pago:\nBanco: ${settings.invoice.bankDetails.bankName}\nCBU: ${settings.invoice.bankDetails.cbu}\nAlias: ${settings.invoice.bankDetails.alias}\n\nSaludos cordiales,\n${company?.tradeName || "LEAL CONTROL ERP"}`
+              body: `Estimado cliente,\n\nAdjuntamos el comprobante fiscal electrónico ${docTitle} ${invoiceLetter} N° ${formattedPtoVta}-${formattedVoucherNum} correspondiente a los servicios/productos provistos.\n\nDatos para el pago:\nBanco: ${settings.invoice.bankDetails.bankName}\nCBU: ${settings.invoice.bankDetails.cbu}\nAlias: ${settings.invoice.bankDetails.alias}\n\nSaludos cordiales,\n${company?.tradeName || "LEAL CONTROL ERP"}`,
+              documentPdf: {
+                elementId: "invoice-pdf-sheet",
+                fileName: `Factura_${invoiceLetter}_${formattedPtoVta}-${formattedVoucherNum}.pdf`
+              }
             }}
             onClose={() => setShowEmail(false)}
           />
