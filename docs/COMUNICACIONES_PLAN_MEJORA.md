@@ -1,9 +1,11 @@
 # Leal Control ERP 2.0
 ## Plan de mejora del módulo Communications (correo y canales)
 
-**Versión:** 1.1 — plan y seguimiento
+> El checklist vivo de CRM y Comunicaciones está en [`docs/PLAN_RELACION_COMERCIAL.md`](PLAN_RELACION_COMERCIAL.md). Este archivo conserva el detalle técnico de las fases A–F hasta el 26 de septiembre de 2026. Las marcas nuevas se hacen en el plan unificado.
 
-**Última actualización:** 26 de septiembre de 2026
+**Versión:** 1.1 — detalle histórico
+
+**Última actualización del detalle:** 26 de septiembre de 2026
 
 **Estado:** piloto de Comunicaciones en staging; último cambio de código publicado en `main`: `f4467df`
 

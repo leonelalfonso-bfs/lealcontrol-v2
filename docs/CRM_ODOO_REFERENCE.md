@@ -1,5 +1,7 @@
 # Referencia CRM Odoo (Community) → Leal Control 2.0
 
+> Mapa de capacidades. El seguimiento del producto está en [`docs/PLAN_RELACION_COMERCIAL.md`](PLAN_RELACION_COMERCIAL.md).
+
 Odoo es open source. La edición **Community** es gratuita (código en [github.com/odoo/odoo](https://github.com/odoo/odoo), módulo `addons/crm`). Hay extras de la comunidad en [OCA/crm](https://github.com/OCA/crm) (AGPL).
 
 Usamos Odoo como **mapa de capacidades**, no como código a copiar (licencias distintas; Leal tiene su propio dominio AR/CUIT/IIBB).
