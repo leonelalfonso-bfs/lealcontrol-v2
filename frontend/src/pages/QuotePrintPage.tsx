@@ -88,7 +88,7 @@ export const QuotePrintPage: React.FC = () => {
       const filename = `Presupuesto_${quote.quoteNumber}_rev${quote.revision}.pdf`;
 
       const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number],
+        margin: [8, 10, 8, 10] as [number, number, number, number],
         filename,
         image: { type: "jpeg" as const, quality: 0.92 },
         html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff", windowWidth: 794 },

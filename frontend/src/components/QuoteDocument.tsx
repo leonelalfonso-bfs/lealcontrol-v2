@@ -62,7 +62,6 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
 
   return (
     <article id="quote-pdf-sheet" className={`quote-document quote-document--${settings.templateStyle}`} style={sheetStyle}>
-      <div className="quote-document__rule" />
       {quote.status === "Cancelled" && <div className="quote-document__cancelled">ANULADO</div>}
       <header className="quote-document__masthead">
         <div className="quote-document__brand">
@@ -154,7 +153,7 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
         </aside>
       )}
 
-      <section className="quote-document__section quote-document__conditions quote-document__keep">
+      <section className="quote-document__section quote-document__conditions">
         <div className="quote-document__section-heading"><span className="quote-document__section-index">02</span><div><h2>Condiciones de la propuesta</h2><p>Información para coordinar la compra y la entrega</p></div></div>
         <div className="quote-document__condition-grid">
           <div><span>PLAZO DE ENTREGA</span><strong>{quote.deliveryTimeText || (quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : settings.quote.deliveryTerms)}</strong></div>
