@@ -30,7 +30,111 @@ internal static class CommunicationsMailEndpoints
         group.MapGet("/accounts", async (CommunicationsDbContext db, ITenantContext tenant, IConfiguration configuration, CancellationToken ct) => {
             var globalAutoSyncEnabled = configuration.GetValue<bool>("Communications:BackgroundSyncEnabled");
             return Results.Ok(await db.MailAccounts.AsNoTracking().Where(x => x.TenantId == tenant.TenantId.Value)
-                .OrderBy(x => x.DisplayName).Select(x => new { x.Id, x.DisplayName, x.EmailAddress, Provider = x.Provider.ToString(), AuthMode = x.AuthMode.ToString(), x.ImapHost, x.ImapPort, x.ImapUseSsl, x.SmtpHost, x.SmtpPort, x.SmtpUseSsl, x.Username, x.IsActive, x.AutoSyncEnabled, GlobalAutoSyncEnabled = globalAutoSyncEnabled, x.IsDefaultSender, x.LastSyncAtUtc, x.LastError, HasSecret = x.ProtectedSecret != "" }).ToListAsync(ct));
+                .OrderBy(x => x.DisplayName).Select(x => new {
+                    x.Id, x.DisplayName, x.EmailAddress,
+                    Provider = x.Provider.ToString(), AuthMode = x.AuthMode.ToString(),
+                    x.ImapHost, x.ImapPort, x.ImapUseSsl, x.SmtpHost, x.SmtpPort, x.SmtpUseSsl, x.Username,
+                    x.IsActive, x.AutoSyncEnabled, GlobalAutoSyncEnabled = globalAutoSyncEnabled,
+                    x.IsDefaultSender, x.LastSyncAtUtc, x.LastError, x.Signature,
+                    HasSecret = x.ProtectedSecret != "",
+                    OAuthConnected = x.AuthMode == MailAuthMode.OAuth2 && x.OAuthConnectedAtUtc != null && x.ProtectedSecret != "",
+                    x.OAuthConnectedAtUtc
+                }).ToListAsync(ct));
+        });
+
+        group.MapGet("/accounts/oauth/providers", (MailOAuthService oauth) =>
+            Results.Ok(oauth.ListProviders()));
+
+        group.MapGet("/accounts/{id:guid}/oauth/start", async (
+            Guid id, string? provider, string? returnPath,
+            CommunicationsDbContext db, ITenantContext tenant, MailOAuthService oauth, CancellationToken ct) =>
+        {
+            var account = await db.MailAccounts.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, ct);
+            if (account is null) return Results.NotFound();
+            var resolvedProvider = string.IsNullOrWhiteSpace(provider)
+                ? account.Provider == MailProvider.Gmail ? "Google"
+                    : account.Provider == MailProvider.Microsoft ? "Microsoft"
+                    : null
+                : provider;
+            if (resolvedProvider is null)
+                return Results.BadRequest(new { detail = "Indicá el proveedor OAuth (Google o Microsoft)." });
+            if (!oauth.IsConfigured(resolvedProvider))
+                return Results.BadRequest(new { detail = $"OAuth de {resolvedProvider} no está configurado en el servidor." });
+            try
+            {
+                var url = oauth.BuildAuthorizationUrl(
+                    resolvedProvider,
+                    account.Id,
+                    tenant.TenantId.Value,
+                    string.IsNullOrWhiteSpace(returnPath) ? "/configuracion/correo" : returnPath!);
+                return Results.Ok(new { authorizationUrl = url, provider = resolvedProvider });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { detail = ex.Message });
+            }
+        });
+
+        group.MapGet("/accounts/oauth/callback", async (
+            string? code, string? state, string? error, string? error_description,
+            MailOAuthService oauth, ITenantConnectionProvider connections, CancellationToken ct) =>
+        {
+            string Fail(string message)
+            {
+                var path = "/configuracion/correo";
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(state))
+                        path = oauth.DecodeState(state).ReturnPath;
+                }
+                catch { /* keep default */ }
+                return oauth.ResolveFrontendReturnUrl(path, "oauth=error&detail=" + Uri.EscapeDataString(message));
+            }
+
+            if (!string.IsNullOrWhiteSpace(error))
+                return Results.Redirect(Fail(error_description ?? error));
+            if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(state))
+                return Results.Redirect(Fail("Faltó el código de autorización OAuth."));
+
+            MailOAuthService.OAuthState oauthState;
+            try { oauthState = oauth.DecodeState(state); }
+            catch (InvalidOperationException ex) { return Results.Redirect(Fail(ex.Message)); }
+
+            try
+            {
+                var tokens = await oauth.ExchangeCodeAsync(oauthState.Provider, code, ct);
+                var connectionString = await connections.GetConnectionStringAsync(new TenantId(oauthState.TenantId), ct);
+                var options = new DbContextOptionsBuilder<CommunicationsDbContext>().UseNpgsql(connectionString).Options;
+                await using var db = new CommunicationsDbContext(options);
+                var account = await db.MailAccounts.FirstOrDefaultAsync(
+                    x => x.Id == oauthState.AccountId && x.TenantId == oauthState.TenantId, ct);
+                if (account is null)
+                    return Results.Redirect(Fail("No se encontró la cuenta de correo para completar OAuth."));
+
+                account.ConnectOAuth(
+                    oauth.ProtectAccessToken(tokens.AccessToken),
+                    oauth.ProtectRefreshToken(tokens.RefreshToken),
+                    tokens.ExpiresAtUtc,
+                    DateTime.UtcNow);
+                await db.SaveChangesAsync(ct);
+                return Results.Redirect(oauth.ResolveFrontendReturnUrl(
+                    oauthState.ReturnPath,
+                    "oauth=connected&accountId=" + account.Id.ToString("N")));
+            }
+            catch (Exception ex)
+            {
+                return Results.Redirect(Fail(ex.Message));
+            }
+        }).AllowAnonymous();
+
+        group.MapPost("/accounts/{id:guid}/oauth/disconnect", async (
+            Guid id, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var account = await db.MailAccounts.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, ct);
+            if (account is null) return Results.NotFound();
+            account.DisconnectOAuth(DateTime.UtcNow);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { id = account.Id, oauthConnected = false });
         });
 
         group.MapPost("/accounts", async (SaveMailAccountRequest request, CommunicationsDbContext db, ITenantContext tenant, MailSecretProtector protector, CancellationToken ct) => {
@@ -41,7 +145,14 @@ internal static class CommunicationsMailEndpoints
             account ??= await db.MailAccounts.FirstOrDefaultAsync(
                 x => x.TenantId == tenant.TenantId.Value && x.EmailAddress.ToLower() == normalizedEmail, ct);
             var protectedSecret = string.IsNullOrWhiteSpace(request.Secret) ? null : protector.Protect(request.Secret);
-            if (account is null) { if (protectedSecret is null) return Results.BadRequest(new { detail = "Ingresá una contraseña, contraseña de aplicación o token." }); account = MailAccount.Create(tenant.TenantId.Value, request.Settings, protectedSecret, DateTime.UtcNow); db.Add(account); }
+            var oauthPending = request.Settings.AuthMode == MailAuthMode.OAuth2;
+            if (account is null)
+            {
+                if (protectedSecret is null && !oauthPending)
+                    return Results.BadRequest(new { detail = "Ingresá una contraseña, contraseña de aplicación o token." });
+                account = MailAccount.Create(tenant.TenantId.Value, request.Settings, protectedSecret ?? string.Empty, DateTime.UtcNow);
+                db.Add(account);
+            }
             else account.Update(request.Settings, protectedSecret, DateTime.UtcNow);
             try { await db.SaveChangesAsync(ct); return Results.Ok(new { account.Id }); }
             catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "23505" })
@@ -62,18 +173,31 @@ internal static class CommunicationsMailEndpoints
             return Results.Ok(new { account.Id, account.AutoSyncEnabled });
         });
 
-        group.MapPost("/accounts/{id:guid}/test", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, MailTransportService transport, CancellationToken ct) => {
+        group.MapPost("/accounts/{id:guid}/test", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, MailTransportService transport, MailOAuthService oauth, CancellationToken ct) => {
             var account = await db.MailAccounts.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, ct);
             if (account is null) return Results.NotFound();
-            try { await transport.TestAsync(account, ct); account.RecordError(string.Empty, DateTime.UtcNow); await db.SaveChangesAsync(ct); return Results.Ok(new { connected = true }); }
+            try
+            {
+                await oauth.EnsureFreshAccessTokenAsync(account, ct);
+                await db.SaveChangesAsync(ct);
+                await transport.TestAsync(account, ct);
+                account.RecordError(string.Empty, DateTime.UtcNow);
+                await db.SaveChangesAsync(ct);
+                return Results.Ok(new { connected = true });
+            }
             catch (Exception ex) { var detail = CommunicationsEndpointHelpers.FriendlyMailError(account, ex); account.RecordError(detail, DateTime.UtcNow); await db.SaveChangesAsync(ct); return Results.BadRequest(new { detail }); }
         });
 
-        group.MapPost("/accounts/{id:guid}/send", async (Guid id, SendEmailRequest request, CommunicationsDbContext db, ITenantContext tenant, MailTransportService transport, ConversationService conversationService, CancellationToken ct) => {
+        group.MapPost("/accounts/{id:guid}/send", async (Guid id, SendEmailRequest request, CommunicationsDbContext db, ITenantContext tenant, MailTransportService transport, MailOAuthService oauth, ConversationService conversationService, CancellationToken ct) => {
             var account = await db.MailAccounts.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value && x.IsActive, ct);
             if (account is null) return Results.NotFound();
             MimeMessage mime;
-            try { mime = await transport.SendAsync(account, request, ct); }
+            try
+            {
+                await oauth.EnsureFreshAccessTokenAsync(account, ct);
+                await db.SaveChangesAsync(ct);
+                mime = await transport.SendAsync(account, request, ct);
+            }
             catch (Exception ex) { return Results.BadRequest(new { detail = CommunicationsEndpointHelpers.FriendlyMailError(account, ex) }); }
             var cleanPreview = !string.IsNullOrWhiteSpace(request.TextBody) ? request.TextBody.Trim() : CommunicationsEndpointHelpers.StripHtml(request.HtmlBody ?? "");
             if (cleanPreview.Length > 500) cleanPreview = cleanPreview[..500];
@@ -115,11 +239,13 @@ internal static class CommunicationsMailEndpoints
             await db.SaveChangesAsync(ct); return Results.Ok(new { stored.Id, mime.MessageId });
         });
 
-        group.MapPost("/accounts/{id:guid}/sync", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, MailSyncService mailSync, ConversationService conversationService, CancellationToken ct) => {
+        group.MapPost("/accounts/{id:guid}/sync", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, MailSyncService mailSync, MailOAuthService oauth, ConversationService conversationService, CancellationToken ct) => {
             var account = await db.MailAccounts.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value && x.IsActive, ct);
             if (account is null) return Results.NotFound();
             try
             {
+                await oauth.EnsureFreshAccessTokenAsync(account, ct);
+                await db.SaveChangesAsync(ct);
                 var added = await mailSync.SyncAccountAsync(db, conversationService, account, ct);
                 return Results.Ok(new { received = added });
             }

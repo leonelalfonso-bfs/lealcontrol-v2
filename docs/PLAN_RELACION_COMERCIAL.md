@@ -4,7 +4,7 @@
 
 **Última actualización:** 29 de septiembre de 2026
 
-**Base de código:** rama de trabajo con fases 1–4 en curso
+**Base de código:** rama de trabajo con fases 4–5 en curso
 
 **Ambiente de prueba:** staging (`https://v2.lealcontrol.com`). Producción no entra en este piloto hasta cerrar las verificaciones de staging.
 
@@ -141,9 +141,9 @@ Objetivo: la sensación de producto terminado, reescrita en Leal a partir de Cha
 - [x] Contador de no leídos en el menú de Comunicaciones.
 - [x] Si el remitente coincide con el correo de un cliente, la bandeja propone el vínculo. *(ya existía)*
 - [x] Plantilla de respuesta que inserta texto en el compositor. *(ya existía en reply social)*
-- [ ] Bandeja en tres zonas estrictas lista | lectura | panel de contexto (hoy el contexto sigue embebido en el hilo; folders + lista + hilo).
-- [ ] Firma simple por cuenta, al pie del correo saliente.
-- [ ] Usable en 1366×768 sin scroll horizontal.
+- [x] Bandeja en tres zonas estrictas lista | lectura | panel de contexto.
+- [x] Firma simple por cuenta, al pie del correo saliente.
+- [x] Usable en 1366×768 sin scroll horizontal. *(CSS; falta comprobación visual en staging)*
 - [ ] Comprobar el recorrido completo en staging con un usuario que no armó la pantalla.
 
 ### Fase 5 — Casillas modernas
@@ -151,18 +151,18 @@ Objetivo: la sensación de producto terminado, reescrita en Leal a partir de Cha
 Objetivo: conectar Gmail o Microsoft sin contraseña de aplicación, cuando una casilla real del piloto lo necesite.
 
 - [ ] Elegir el primer proveedor según la casilla que use el equipo (Google o Microsoft).
-- [ ] Conexión OAuth, token cifrado y renovación antes del sync o del envío.
-- [ ] Botón «Conectar con Google» o «Conectar con Microsoft» en Cuentas de correo.
-- [ ] Desconectar revoca el acceso en la pantalla.
+- [x] Conexión OAuth, token cifrado y renovación antes del sync o del envío. *(código; requiere ClientId/Secret en el servidor)*
+- [x] Botón «Conectar con Google» o «Conectar con Microsoft» en Cuentas de correo. *(visible cuando el proveedor está configurado)*
+- [x] Desconectar revoca el acceso en la pantalla.
 - [ ] Comprobar sync y envío con esa casilla real.
 
 Queda fuera hasta que las fases 0 a 4 estén comprobadas: carpetas IMAP (Enviados, Borradores, Papelera), búsqueda full-text masiva y un motor de correo externo.
 
 ## 5. Orden de la próxima sesión
 
-1. Mergear este trabajo y cerrar Fase 0 + comprobaciones de fases 1–3 en staging.
-2. Completar el panel de contexto separado y la firma (resto de Fase 4).
-3. Fase 5 solo si una casilla real del piloto lo pide.
+1. Mergear este trabajo y comprobar en staging: bandeja de tres paneles, firma al enviar, layout 1366×768.
+2. Cerrar Fase 0 + comprobaciones de fases 1–3 en staging.
+3. Configurar ClientId/Secret del proveedor OAuth elegido y probar una casilla real (resto de Fase 5).
 
 ## 6. Dónde está el código
 
@@ -187,7 +187,7 @@ Queda fuera hasta que las fases 0 a 4 estén comprobadas: carpetas IMAP (Enviado
 | 1 — CRM visible | Parcial (código) | Merge + staging |
 | 2 — Una historia en la ficha | Parcial (código) | Staging con cliente real |
 | 3 — Documento y PDF | Parcial (código) | Enviar presupuesto con PDF en staging |
-| 4 — Bandeja y ficha | Parcial | Panel de contexto + firma |
-| 5 — OAuth | Pendiente | Elegir proveedor cuando haya una casilla real |
+| 4 — Bandeja y ficha | Parcial (código) | Staging: tres paneles + firma + 1366 |
+| 5 — OAuth | Parcial (código) | ClientId real + sync/envío con casilla |
 
 Leyenda: Pendiente · Parcial · Hecho cuando todos los ítems de la fase están en Publicado y los de prueba están en Comprobado.

@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
-import type { MailAccount } from "../api/types";
+import type { MailAccount, MailOAuthProvider } from "../api/types";
 
 type Provider = "Custom" | "Gmail" | "Microsoft" | "Yahoo";
 const presets: Record<Provider, { imapHost: string; imapPort: number; smtpHost: string; smtpPort: number; authMode: string }> = {
@@ -10,12 +11,18 @@ const presets: Record<Provider, { imapHost: string; imapPort: number; smtpHost: 
   Custom: { imapHost: "", imapPort: 993, smtpHost: "", smtpPort: 587, authMode: "Password" }
 };
 
-const empty = { id: "", displayName: "", emailAddress: "", provider: "Custom" as Provider, authMode: "Password", imapHost: "", imapPort: 993, imapUseSsl: true, smtpHost: "", smtpPort: 587, smtpUseSsl: true, username: "", secret: "", isActive: true, isDefaultSender: false };
+const empty = {
+  id: "", displayName: "", emailAddress: "", provider: "Custom" as Provider, authMode: "Password",
+  imapHost: "", imapPort: 993, imapUseSsl: true, smtpHost: "", smtpPort: 587, smtpUseSsl: true,
+  username: "", secret: "", signature: "", isActive: true, isDefaultSender: false
+};
 
 type MailHealth = { label: string; tone: "ok" | "warning" | "error" | "neutral"; hint?: string };
 
 function mailHealth(account: MailAccount): MailHealth {
   if (!account.isActive) return { label: "Inactiva", tone: "neutral" };
+  if (account.authMode === "OAuth2" && !account.oauthConnected && !account.hasSecret)
+    return { label: "OAuth pendiente", tone: "warning", hint: "Usá Conectar con Google o Microsoft para autorizar la casilla." };
   if (!account.hasSecret) return { label: "Sin credenciales", tone: "error", hint: "Editá la cuenta y cargá la contraseña o el token." };
   if (account.lastError) return { label: "Requiere atención", tone: "error", hint: account.lastError };
   if (!account.lastSyncAtUtc) return { label: "Sin sincronizar aún", tone: "warning", hint: "Usá Recibir para sincronizar los primeros correos." };
@@ -25,25 +32,81 @@ function mailHealth(account: MailAccount): MailHealth {
   return { label: "Al día", tone: "ok" };
 }
 
+function oauthProviderFor(account: MailAccount): "Google" | "Microsoft" | null {
+  if (account.provider === "Gmail") return "Google";
+  if (account.provider === "Microsoft") return "Microsoft";
+  return null;
+}
+
 export function MailSettingsPage() {
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
+  const [oauthProviders, setOauthProviders] = useState<MailOAuthProvider[]>([]);
   const [form, setForm] = useState(empty);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const load = () => api.listMailAccounts().then(setAccounts).catch((e: Error) => setError(e.message));
-  useEffect(() => { void load(); }, []);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const load = async () => {
+    const [list, providers] = await Promise.all([
+      api.listMailAccounts(),
+      api.listMailOAuthProviders().catch(() => [] as MailOAuthProvider[])
+    ]);
+    setAccounts(list);
+    setOauthProviders(providers);
+  };
+
+  useEffect(() => { void load().catch((e: Error) => setError(e.message)); }, []);
+
+  useEffect(() => {
+    const oauth = searchParams.get("oauth");
+    if (!oauth) return;
+    if (oauth === "connected") setMessage("Casilla conectada con OAuth. Ya podés probar o recibir correo.");
+    else if (oauth === "error") setError(searchParams.get("detail") || "No se pudo completar la conexión OAuth.");
+    const next = new URLSearchParams(searchParams);
+    next.delete("oauth");
+    next.delete("detail");
+    next.delete("accountId");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const chooseProvider = (provider: Provider) => {
     const preset = presets[provider];
     setForm({ ...form, provider, ...preset, secret: "" });
   };
 
+  const providerConfigured = (name: "Google" | "Microsoft") =>
+    oauthProviders.some((p) => p.provider === name && p.configured);
+
   const save = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setError(null); setMessage(null);
     try {
-      await api.saveMailAccount({ id: form.id || null, settings: { displayName: form.displayName, emailAddress: form.emailAddress, provider: form.provider, authMode: form.authMode, imapHost: form.imapHost, imapPort: Number(form.imapPort), imapUseSsl: form.imapUseSsl, smtpHost: form.smtpHost, smtpPort: Number(form.smtpPort), smtpUseSsl: form.smtpUseSsl, username: form.username || null, isActive: form.isActive, isDefaultSender: form.isDefaultSender }, secret: form.secret || null });
-      setMessage("Casilla guardada de forma segura."); setForm(empty); await load();
+      const oauthPending = form.authMode === "OAuth2";
+      await api.saveMailAccount({
+        id: form.id || null,
+        settings: {
+          displayName: form.displayName,
+          emailAddress: form.emailAddress,
+          provider: form.provider,
+          authMode: form.authMode,
+          imapHost: form.imapHost,
+          imapPort: Number(form.imapPort),
+          imapUseSsl: form.imapUseSsl,
+          smtpHost: form.smtpHost,
+          smtpPort: Number(form.smtpPort),
+          smtpUseSsl: form.smtpUseSsl,
+          username: form.username || null,
+          isActive: form.isActive,
+          isDefaultSender: form.isDefaultSender,
+          signature: form.signature || null
+        },
+        secret: form.secret || null
+      });
+      setMessage(oauthPending && !form.secret
+        ? "Casilla guardada. Ahora conectala con OAuth desde la lista."
+        : "Casilla guardada de forma segura.");
+      setForm(empty);
+      await load();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
 
@@ -68,18 +131,41 @@ export function MailSettingsPage() {
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
 
+  const connectOAuth = async (account: MailAccount) => {
+    const provider = oauthProviderFor(account);
+    if (!provider) { setError("Esta casilla no admite OAuth."); return; }
+    setBusy(true); setError(null); setMessage(null);
+    try {
+      const result = await api.startMailOAuth(account.id, provider);
+      window.location.href = result.authorizationUrl;
+    } catch (e) { setError((e as Error).message); setBusy(false); }
+  };
+
+  const disconnectOAuth = async (account: MailAccount) => {
+    setBusy(true); setError(null); setMessage(null);
+    try {
+      await api.disconnectMailOAuth(account.id);
+      setMessage(`Se desconectó OAuth de ${account.emailAddress}.`);
+      await load();
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+
   const edit = (account: MailAccount) => {
     setError(null); setMessage(null);
     setForm({
       id: account.id, displayName: account.displayName, emailAddress: account.emailAddress,
       provider: account.provider as Provider,
-      authMode: account.provider === "Gmail" ? "AppPassword" : account.authMode,
+      authMode: account.provider === "Gmail" && account.authMode !== "OAuth2" ? "AppPassword" : account.authMode,
       imapHost: account.imapHost, imapPort: account.imapPort, imapUseSsl: account.imapUseSsl,
       smtpHost: account.smtpHost, smtpPort: account.smtpPort, smtpUseSsl: account.smtpUseSsl,
-      username: account.username || account.emailAddress, secret: "", isActive: account.isActive,
+      username: account.username || account.emailAddress, secret: "",
+      signature: account.signature || "",
+      isActive: account.isActive,
       isDefaultSender: account.isDefaultSender
     });
   };
+
+  const secretRequired = !form.id && form.authMode !== "OAuth2";
 
   return <div className="mail-settings page-wide">
     <div className="page-head"><div><span className="eyebrow">COMUNICACIONES</span><h1>Cuentas de correo</h1><p className="muted">Conectá casillas para enviar propuestas y registrar respuestas en CRM y Ventas.</p></div></div>
@@ -89,18 +175,29 @@ export function MailSettingsPage() {
         <div className="mail-account-list">
           {accounts.map((account) => {
             const health = mailHealth(account);
+            const oauthName = oauthProviderFor(account);
+            const canOAuth = !!oauthName && providerConfigured(oauthName);
             return <article className="mail-account-card" key={account.id}>
               <div className={`provider-mark provider-${account.provider.toLowerCase()}`}>{account.provider.slice(0,1)}</div>
               <div className="mail-account-main">
                 <strong>{account.displayName}</strong>
                 <span>{account.emailAddress}</span>
                 <span className={`mail-health mail-health-${health.tone}`}>{health.label}</span>
-                <small>{account.provider} · {account.authMode}{account.lastSyncAtUtc ? ` · Última sincronización: ${new Date(account.lastSyncAtUtc).toLocaleString("es-AR")}` : ""}</small>
+                <small>{account.provider} · {account.authMode}{account.oauthConnected ? " · OAuth conectado" : ""}{account.lastSyncAtUtc ? ` · Última sincronización: ${new Date(account.lastSyncAtUtc).toLocaleString("es-AR")}` : ""}</small>
                 <small>{account.globalAutoSyncEnabled ? "Recepción automática controlada por el servidor" : account.autoSyncEnabled ? "Recepción automática activada" : "Recepción automática pausada"}</small>
+                {account.signature && <small>Firma configurada</small>}
                 {health.hint && <small className={`mail-health-hint mail-health-hint-${health.tone}`}>{health.hint}</small>}
               </div>
               <div className="mail-account-actions">
                 <button className="btn btn-outline compact" disabled={busy} onClick={() => edit(account)}>Editar</button>
+                {oauthName && canOAuth && !account.oauthConnected && (
+                  <button className="btn compact" disabled={busy} onClick={() => void connectOAuth(account)}>
+                    Conectar con {oauthName === "Google" ? "Google" : "Microsoft"}
+                  </button>
+                )}
+                {account.oauthConnected && (
+                  <button className="btn btn-outline compact" disabled={busy} onClick={() => void disconnectOAuth(account)}>Desconectar OAuth</button>
+                )}
                 <button className="btn btn-outline compact" disabled={busy} onClick={() => void action(account, "test")}>Probar</button>
                 <button className="btn compact" disabled={busy || !account.isActive} onClick={() => void action(account, "sync")}>Recibir</button>
                 {!account.globalAutoSyncEnabled && <button className="btn btn-outline compact" aria-pressed={account.autoSyncEnabled} disabled={busy || (!account.autoSyncEnabled && (!account.isActive || !account.hasSecret))} onClick={() => void toggleAutoSync(account)}>{account.autoSyncEnabled ? "Pausar automático" : "Activar automático"}</button>}
@@ -112,11 +209,41 @@ export function MailSettingsPage() {
       </section>
       <form className="card pad mail-account-form" onSubmit={save}><h2>Agregar cuenta</h2><p className="muted">Elegí el proveedor. Los datos del servidor se completan automáticamente.</p>
         <div className="provider-picker">{(["Gmail","Microsoft","Yahoo","Custom"] as Provider[]).map((provider) => <button type="button" key={provider} className={form.provider === provider ? "active" : ""} onClick={() => chooseProvider(provider)}>{provider === "Custom" ? "Corporativo" : provider}</button>)}</div>
-        {form.provider === "Gmail" && <div className="oauth-notice"><strong>Gmail requiere una contraseña de aplicación</strong><span>No ingreses tu contraseña habitual. Activá la verificación en dos pasos en Google, creá una contraseña de aplicación y pegá aquí sus 16 caracteres.</span></div>}
-        {form.provider === "Microsoft" && <div className="oauth-notice"><strong>Microsoft requiere conexión OAuth</strong><span>La contraseña normal puede ser rechazada. La conexión con Microsoft se habilitará mediante autorización segura de la cuenta.</span></div>}
+        {form.provider === "Gmail" && <div className="oauth-notice"><strong>Gmail</strong><span>Podés usar una contraseña de aplicación, o guardar la casilla y conectar con Google OAuth si el servidor tiene ClientId configurado{providerConfigured("Google") ? " (disponible)." : " (aún no configurado)."}</span></div>}
+        {form.provider === "Microsoft" && <div className="oauth-notice"><strong>Microsoft requiere conexión OAuth</strong><span>{providerConfigured("Microsoft") ? "Guardá la casilla y usá «Conectar con Microsoft»." : "Definí ClientId y ClientSecret de Microsoft en el servidor para habilitar el botón Conectar."}</span></div>}
         <div className="grid-2"><label>Nombre visible *<input required value={form.displayName} onChange={(e) => setForm({...form,displayName:e.target.value})} placeholder="Equipo Comercial" /></label><label>Email *<input required type="email" value={form.emailAddress} onChange={(e) => setForm({...form,emailAddress:e.target.value,username:e.target.value})} /></label></div>
         <label>Usuario<input value={form.username} onChange={(e) => setForm({...form,username:e.target.value})} placeholder="Normalmente el email completo" /></label>
-        <label>{form.authMode === "OAuth2" ? "Token OAuth" : form.authMode === "AppPassword" ? "Contraseña de aplicación" : "Contraseña"}<input type="password" required={!form.id} value={form.secret} onChange={(e) => setForm({...form,secret:e.target.value.replace(/\s/g, "")})} autoComplete="new-password" placeholder={form.id ? "Dejar vacío para conservar la actual" : form.provider === "Gmail" ? "16 caracteres generados por Google" : ""} /></label>
+        {form.provider === "Gmail" && (
+          <label className="check-label">
+            <input
+              type="checkbox"
+              checked={form.authMode === "OAuth2"}
+              onChange={(e) => setForm({ ...form, authMode: e.target.checked ? "OAuth2" : "AppPassword", secret: "" })}
+            />
+            Usar OAuth de Google en lugar de contraseña de aplicación
+          </label>
+        )}
+        {!(form.authMode === "OAuth2" && !form.secret && form.id) && (
+          <label>{form.authMode === "OAuth2" ? "Token OAuth (opcional si vas a conectar)" : form.authMode === "AppPassword" ? "Contraseña de aplicación" : "Contraseña"}
+            <input
+              type="password"
+              required={secretRequired}
+              value={form.secret}
+              onChange={(e) => setForm({...form,secret:e.target.value.replace(/\s/g, "")})}
+              autoComplete="new-password"
+              placeholder={form.id ? "Dejar vacío para conservar la actual" : form.provider === "Gmail" && form.authMode !== "OAuth2" ? "16 caracteres generados por Google" : form.authMode === "OAuth2" ? "Opcional: pegá un token o usá Conectar" : ""}
+            />
+          </label>
+        )}
+        <label>Firma del correo
+          <textarea
+            rows={4}
+            value={form.signature}
+            onChange={(e) => setForm({ ...form, signature: e.target.value })}
+            placeholder={"Equipo Comercial\nLeal Control\n+54 9 11 0000-0000"}
+          />
+        </label>
+        <p className="muted" style={{ fontSize: "0.78rem", marginTop: -8 }}>Se agrega al pie de cada correo saliente enviado desde esta casilla.</p>
         <div className="grid-2"><label>Servidor IMAP<input required value={form.imapHost} onChange={(e) => setForm({...form,imapHost:e.target.value})} /></label><label>Puerto IMAP<input required type="number" value={form.imapPort} onChange={(e) => setForm({...form,imapPort:Number(e.target.value)})} /></label><label>Servidor SMTP<input required value={form.smtpHost} onChange={(e) => setForm({...form,smtpHost:e.target.value})} /></label><label>Puerto SMTP<input required type="number" value={form.smtpPort} onChange={(e) => setForm({...form,smtpPort:Number(e.target.value)})} /></label></div>
         <div className="row"><label className="check-label"><input type="checkbox" checked={form.isDefaultSender} onChange={(e) => setForm({...form,isDefaultSender:e.target.checked})} /> Remitente principal</label><label className="check-label"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({...form,isActive:e.target.checked})} /> Cuenta activa</label></div>
         <div className="toolbar"><button className="btn" disabled={busy}>{form.id ? "Guardar cambios" : "Guardar cuenta cifrada"}</button>{form.id && <button type="button" className="btn btn-outline" onClick={() => setForm(empty)}>Cancelar edición</button>}</div>

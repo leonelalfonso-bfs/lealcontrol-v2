@@ -1197,7 +1197,17 @@ export type PurchaseRequestWrite = {
 export type MailAccount = {
   id: string; displayName: string; emailAddress: string; provider: string; authMode: string;
   imapHost: string; imapPort: number; imapUseSsl: boolean; smtpHost: string; smtpPort: number; smtpUseSsl: boolean;
-  username: string; isActive: boolean; autoSyncEnabled: boolean; globalAutoSyncEnabled: boolean; isDefaultSender: boolean; lastSyncAtUtc?: string | null; lastError?: string | null; hasSecret: boolean;
+  username: string; isActive: boolean; autoSyncEnabled: boolean; globalAutoSyncEnabled: boolean; isDefaultSender: boolean;
+  lastSyncAtUtc?: string | null; lastError?: string | null; hasSecret: boolean;
+  signature?: string | null;
+  oauthConnected?: boolean;
+  oauthConnectedAtUtc?: string | null;
+};
+
+export type MailOAuthProvider = {
+  provider: string;
+  configured: boolean;
+  label: string;
 };
 export type EmailMessage = { id:string; mailAccountId:string; conversationId?:string|null; internetMessageId:string; inReplyTo?:string|null; threadKey:string; channelType?:string; direction:"Incoming"|"Outgoing"; subject:string; fromAddress:string; toAddresses:string; bodyPreview:string; bodyHtml?:string|null; occurredAtUtc:string; relatedEntityType?:string|null; relatedEntityId?:string|null; attachments?: EmailAttachmentMeta[] };
 

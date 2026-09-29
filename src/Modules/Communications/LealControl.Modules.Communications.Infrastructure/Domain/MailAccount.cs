@@ -21,6 +21,10 @@ public sealed class MailAccount
     public bool SmtpUseSsl { get; private set; }
     public string Username { get; private set; } = string.Empty;
     public string ProtectedSecret { get; private set; } = string.Empty;
+    public string? ProtectedRefreshToken { get; private set; }
+    public DateTime? OAuthAccessTokenExpiresAtUtc { get; private set; }
+    public DateTime? OAuthConnectedAtUtc { get; private set; }
+    public string? Signature { get; private set; }
     public bool IsActive { get; private set; }
     public bool AutoSyncEnabled { get; private set; }
     public bool IsDefaultSender { get; private set; }
@@ -28,6 +32,11 @@ public sealed class MailAccount
     public string? LastError { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime UpdatedAtUtc { get; private set; }
+
+    public bool IsOAuthConnected =>
+        AuthMode == MailAuthMode.OAuth2 &&
+        OAuthConnectedAtUtc.HasValue &&
+        !string.IsNullOrWhiteSpace(ProtectedSecret);
 
     public static MailAccount Create(Guid tenantId, MailAccountSettings settings, string protectedSecret, DateTime utcNow)
     {
@@ -50,8 +59,38 @@ public sealed class MailAccount
         SmtpUseSsl = settings.SmtpUseSsl;
         Username = string.IsNullOrWhiteSpace(settings.Username) ? EmailAddress : settings.Username.Trim();
         if (!string.IsNullOrWhiteSpace(protectedSecret)) ProtectedSecret = protectedSecret;
+        Signature = string.IsNullOrWhiteSpace(settings.Signature) ? null : settings.Signature.Trim();
         IsActive = settings.IsActive;
         IsDefaultSender = settings.IsDefaultSender;
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void ConnectOAuth(string protectedAccessToken, string? protectedRefreshToken, DateTime? expiresAtUtc, DateTime utcNow)
+    {
+        ProtectedSecret = protectedAccessToken;
+        ProtectedRefreshToken = protectedRefreshToken;
+        OAuthAccessTokenExpiresAtUtc = expiresAtUtc;
+        OAuthConnectedAtUtc = utcNow;
+        AuthMode = MailAuthMode.OAuth2;
+        LastError = null;
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void RefreshOAuthAccessToken(string protectedAccessToken, string? protectedRefreshToken, DateTime? expiresAtUtc, DateTime utcNow)
+    {
+        ProtectedSecret = protectedAccessToken;
+        if (!string.IsNullOrWhiteSpace(protectedRefreshToken))
+            ProtectedRefreshToken = protectedRefreshToken;
+        OAuthAccessTokenExpiresAtUtc = expiresAtUtc;
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void DisconnectOAuth(DateTime utcNow)
+    {
+        ProtectedSecret = string.Empty;
+        ProtectedRefreshToken = null;
+        OAuthAccessTokenExpiresAtUtc = null;
+        OAuthConnectedAtUtc = null;
         UpdatedAtUtc = utcNow;
     }
 
@@ -69,4 +108,4 @@ public sealed record MailAccountSettings(
     string DisplayName, string EmailAddress, MailProvider Provider, MailAuthMode AuthMode,
     string ImapHost, int ImapPort, bool ImapUseSsl,
     string SmtpHost, int SmtpPort, bool SmtpUseSsl,
-    string? Username, bool IsActive, bool IsDefaultSender);
+    string? Username, bool IsActive, bool IsDefaultSender, string? Signature = null);

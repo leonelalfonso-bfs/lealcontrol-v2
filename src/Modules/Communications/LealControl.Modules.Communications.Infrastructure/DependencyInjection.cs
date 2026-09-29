@@ -13,11 +13,14 @@ public static class DependencyInjection
     {
         services.AddDataProtection();
         services.AddTenantDbContext<CommunicationsDbContext>(CommunicationsDbContext.Schema);
-        services.AddScoped<MailSecretProtector>(); services.AddScoped<MailTransportService>();
+        services.AddScoped<MailSecretProtector>();
+        services.AddScoped<MailTransportService>();
+        services.AddScoped<MailOAuthService>();
         services.AddScoped<MetaChannelSecretProtector>();
         services.AddScoped<ConversationService>();
         services.AddScoped<MailSyncService>();
         services.AddHostedService<CommunicationsSyncBackgroundService>();
+        services.AddHttpClient(nameof(MailOAuthService));
         services.AddHttpClient<WhatsAppGatewayService>();
         services.AddHttpClient<MetaGraphApiService>();
         return services;

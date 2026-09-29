@@ -60,6 +60,17 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
     }).catch((e: Error) => setError(e.message));
   }, []);
 
+  const selectedAccount = accounts.find((a) => a.id === accountId);
+  const signature = selectedAccount?.signature?.trim() || "";
+
+  const withSignature = (text: string) => {
+    if (!signature) return text;
+    const marker = `--\n${signature}`;
+    if (text.includes(marker) || text.trimEnd().endsWith(signature)) return text;
+    const trimmed = text.trimEnd();
+    return trimmed ? `${trimmed}\n\n${marker}` : marker;
+  };
+
   const send = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
@@ -69,11 +80,12 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
       if (attachDocument && context.documentPdf) {
         attachments.push(await buildPdfAttachment(context.documentPdf.elementId, context.documentPdf.fileName));
       }
+      const finalBody = withSignature(body);
       await api.sendEmail(accountId, {
         to: to.split(/[,;]+/).map((x) => x.trim()).filter(Boolean),
         subject,
-        htmlBody: `<div style="font-family:Arial,sans-serif;white-space:pre-line">${body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")}</div>`,
-        textBody: body,
+        htmlBody: `<div style="font-family:Arial,sans-serif;white-space:pre-line">${finalBody.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")}</div>`,
+        textBody: finalBody,
         relatedEntityType: context.entityType,
         relatedEntityId: context.entityId,
         inReplyTo: context.inReplyTo ?? null,
@@ -106,6 +118,11 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
         <label>Para<input required type="text" value={to} onChange={(e) => setTo(e.target.value)} placeholder="cliente@empresa.com" /></label>
         <label>Asunto<input required value={subject} onChange={(e) => setSubject(e.target.value)} /></label>
         <label>Mensaje<textarea required rows={10} value={body} onChange={(e) => setBody(e.target.value)} /></label>
+        {signature && (
+          <div className="muted" style={{ fontSize: "0.78rem", marginTop: -4 }}>
+            Al enviar se agregará la firma de {selectedAccount?.displayName} al pie del correo.
+          </div>
+        )}
         {context.documentPdf && (
           <label className="email-attach-row">
             <input type="checkbox" checked={attachDocument} onChange={(e) => setAttachDocument(e.target.checked)} />
