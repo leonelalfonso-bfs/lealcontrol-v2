@@ -26,6 +26,16 @@ function formatCuit(raw?: string | null) {
   return digits.length === 11 ? `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}` : raw || "—";
 }
 
+function sentenceCase(value: string) {
+  const text = value.trim().toLocaleLowerCase("es-AR");
+  return text ? text.charAt(0).toLocaleUpperCase("es-AR") + text.slice(1) : "";
+}
+
+function optionalAmount(line: { quantity: number; unitPrice: number; discountPercent: number; lineSubtotal: number }) {
+  if (line.lineSubtotal > 0) return line.lineSubtotal;
+  return Math.round(line.quantity * line.unitPrice * (1 - (line.discountPercent || 0) / 100) * 100) / 100;
+}
+
 export function QuoteDocument({ quote, company, customer, deliveryLocation, assignedContact, productsMap, includeTechnicalOffer }: Props) {
   const { settings } = useDocumentTemplate();
   const accent = settings.primaryColor || "#3975e5";
@@ -46,6 +56,9 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
   const net = subtotal - discount;
   const tax = Math.max(0, Math.round((quote.total - net) * 100) / 100);
   const total = quote.total;
+  const includedLines = quote.lines.filter((line) => !line.isOptional);
+  const taxRates = [...new Set(includedLines.map((line) => line.taxRate))];
+  const taxLabel = taxRates.length === 1 ? `IVA ${taxRates[0]}%` : "IVA";
   const date = new Date(quote.createdAtUtc).toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
   const exchangeRate = quote.currency === "USD_BILLETE" ? quote.exchangeRateUsdBillete
     : quote.currency === "USD_DIVISA" ? quote.exchangeRateUsdDivisa : 0;
@@ -55,94 +68,96 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
   }).filter((item) => Boolean(item.detail && !richTextIsEmpty(item.detail)) || Boolean(item.product?.imagePath));
   const showTechnical = includeTechnicalOffer && settings.quote.showTechnicalOffer && technicalItems.length > 0;
   const inlineTechnical = showTechnical && technicalItems.length <= 2 && technicalItems.every((item) => !item.product?.imagePath && item.detail.length <= 180);
+  const contactLine = [companyAddress, company?.phone, company?.email].filter(Boolean).join("  ·  ");
   const footerText = settings.quote.customFooterText.replace(
     /(presupuesto válido por )\d+( días corridos)/i,
     (_match, before: string, after: string) => `${before}${quote.validDays}${after}`
   );
 
   return (
-    <article id="quote-pdf-sheet" className={`quote-document quote-document--${settings.templateStyle}`} style={sheetStyle}>
+    <article id="quote-pdf-sheet" className={`quote-document quote-sheet quote-document--${settings.templateStyle}`} style={sheetStyle}>
       {quote.status === "Cancelled" && <div className="quote-document__cancelled">ANULADO</div>}
-      <header className="quote-document__masthead">
-        <div className="quote-document__brand">
-          {company?.logoUrl ? (
-            <img className="quote-document__logo" src={company.logoUrl} alt={companyName} crossOrigin="anonymous" />
-          ) : (
-            <div className="quote-document__monogram">{companyName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</div>
-          )}
-          <div className="quote-document__brand-copy">
-            <strong>{companyName}</strong>
-            {company?.legalName && company.legalName !== companyName && <span>{company.legalName}</span>}
-            <span>{[companyAddress, company?.phone, company?.email].filter(Boolean).join("  ·  ")}</span>
-            <span>CUIT {formatCuit(company?.documentNumber)} · {label(company?.taxCondition)}</span>
+      <header className="qs-head">
+        <div className="qs-top">
+          <div className="qs-brand">
+            {company?.logoUrl ? (
+              <img className="qs-logo" src={company.logoUrl} alt={companyName} crossOrigin="anonymous" />
+            ) : (
+              <div className="qs-mark">{companyName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</div>
+            )}
+            <div className="qs-brand-text">
+              <strong>{company?.logoUrl && company.legalName && company.legalName !== companyName ? company.legalName : companyName}</strong>
+              {!company?.logoUrl && company?.legalName && company.legalName !== companyName && <em>{company.legalName}</em>}
+            </div>
+          </div>
+          <div className="qs-doc">
+            <span>{settings.quote.headerTitle || "Presupuesto"}</span>
+            <b>{quote.quoteNumber}</b>
+            <small>Revisión {quote.revision} · {date}</small>
           </div>
         </div>
-        <div className="quote-document__identity">
-          <span className="quote-document__eyebrow">{settings.quote.headerTitle || "PROPUESTA COMERCIAL"}</span>
-          <h1>Presupuesto</h1>
-          <div className="quote-document__number">N° {quote.quoteNumber} <span>R{quote.revision}</span></div>
-        </div>
+        {(contactLine || company?.documentNumber) && (
+          <p className="qs-meta">
+            {contactLine}
+            {contactLine && company?.documentNumber ? <br /> : null}
+            {company?.documentNumber ? <>CUIT {formatCuit(company.documentNumber)} · {label(company.taxCondition)}</> : null}
+          </p>
+        )}
       </header>
 
-      <section className="quote-document__recipient quote-document__keep">
+      <section className="qs-for">
         <div>
-          <span className="quote-document__field-label">PREPARADO PARA</span>
-          <h2>{customer?.legalName || "Cliente"}</h2>
+          <span>Para</span>
+          <strong>{customer?.legalName || "Cliente"}</strong>
           <p>CUIT {formatCuit(customer?.documentNumber)} · {label(customer?.taxCondition)}</p>
           {customerAddress && <p>{customerAddress}</p>}
-          {assignedContact && <p><strong>Atención:</strong> {assignedContact.name}</p>}
+          {assignedContact && <p>Atención: {assignedContact.name}</p>}
         </div>
-        <div className="quote-document__recipient-meta">
-          <div><span>EMISIÓN</span><strong>{date}</strong></div>
-          <div><span>VIGENCIA</span><strong>{quote.validDays} días corridos</strong></div>
-          <div><span>MONEDA</span><strong>{curr.label}</strong></div>
-        </div>
+        <dl>
+          <div><dt>Vigencia</dt><dd>{quote.validDays} días</dd></div>
+          <div><dt>Moneda</dt><dd>{curr.label}</dd></div>
+        </dl>
       </section>
 
-      <section className="quote-document__section">
-        <div className="quote-document__section-heading quote-document__keep">
-          <span className="quote-document__section-index">01</span>
-          <div><h2>Propuesta económica</h2><p>Detalle de equipos y servicios cotizados</p></div>
-        </div>
-        <table className="quote-document__items">
+      <table className="qs-items">
           <thead><tr>
-            <th>ÍTEM / DESCRIPCIÓN</th><th>CANT.</th><th>PRECIO UNIT.</th>
+            <th>Descripción</th><th>Cant.</th><th>Precio</th>
             {settings.quote.showItemDiscounts && <th>DESC.</th>}
             {settings.quote.showTaxesBreakdown && <th>IVA</th>}
-            <th>IMPORTE</th>
+            <th>Importe</th>
           </tr></thead>
           <tbody>
             {quote.lines.map((line, index) => (
-              <tr key={line.id}>
+              <tr key={line.id} className={line.isOptional ? "qs-opt" : undefined}>
                 <td>
-                  <span className="quote-document__item-index">{String(index + 1).padStart(2, "0")}</span><strong>{quoteItemTitle(line.description)}</strong>
-                  {line.isOptional && <small>OPCIONAL · no incluido en el total</small>}
-                  {inlineTechnical && technicalItems.find((item) => item.line.id === line.id)?.detail && (
-                    <div className="quote-document__inline-tech" dangerouslySetInnerHTML={{ __html: plainToRich(technicalItems.find((item) => item.line.id === line.id)!.detail) }} />
-                  )}
+                  <div className="qs-line">
+                    <span className="qs-n">{String(index + 1).padStart(2, "0")}</span>
+                    <div>
+                      <strong>{quoteItemTitle(line.description)}</strong>
+                      {line.isOptional && <small>Opcional · no incluido en el total</small>}
+                      {inlineTechnical && technicalItems.find((item) => item.line.id === line.id)?.detail && (
+                        <div className="quote-document__inline-tech" dangerouslySetInnerHTML={{ __html: plainToRich(technicalItems.find((item) => item.line.id === line.id)!.detail) }} />
+                      )}
+                    </div>
+                  </div>
                 </td>
                 <td>{line.quantity.toLocaleString("es-AR")}</td>
                 <td>{money(line.unitPrice)}</td>
                 {settings.quote.showItemDiscounts && <td>{line.discountPercent ? `${line.discountPercent}%` : "—"}</td>}
                 {settings.quote.showTaxesBreakdown && <td>{line.taxRate}%</td>}
-                <td className="quote-document__item-total">{line.isOptional ? "—" : money(line.lineSubtotal)}</td>
+                <td className={line.isOptional ? "qs-muted" : "quote-document__item-total"}>{money(line.isOptional ? optionalAmount(line) : line.lineSubtotal)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-      </section>
 
-      <section className="quote-document__closing quote-document__keep">
-        <div className="quote-document__closing-note">
-          <span className="quote-document__field-label">IMPORTE TOTAL</span>
-          <p>{numberToWords(total, quote.currency)}</p>
-          <small>Importes expresados en {curr.label.toLowerCase()}. Los ítems opcionales se cotizan por separado.</small>
-        </div>
-        <div className="quote-document__totals">
-          <div><span>Subtotal neto</span><strong>{curr.symbol} {money(subtotal)}</strong></div>
+      <section className="qs-sum">
+        <p>{sentenceCase(numberToWords(total, quote.currency))}.</p>
+        <div className="qs-totals">
+          <div><span>Subtotal</span><strong>{curr.symbol} {money(subtotal)}</strong></div>
           {quote.discountPercent > 0 && <div><span>Descuento {quote.discountPercent}%</span><strong>− {curr.symbol} {money(discount)}</strong></div>}
-          <div><span>IVA</span><strong>{curr.symbol} {money(tax)}</strong></div>
-          <div className="quote-document__grand-total"><span>Total</span><strong>{curr.symbol} {money(total)}</strong></div>
+          <div><span>{taxLabel}</span><strong>{curr.symbol} {money(tax)}</strong></div>
+          <div className="qs-grand"><span>Total</span><strong>{curr.symbol} {money(total)}</strong></div>
         </div>
       </section>
 
@@ -153,16 +168,13 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
         </aside>
       )}
 
-      <section className="quote-document__section quote-document__conditions">
-        <div className="quote-document__section-heading"><span className="quote-document__section-index">02</span><div><h2>Condiciones de la propuesta</h2><p>Información para coordinar la compra y la entrega</p></div></div>
-        <div className="quote-document__condition-grid">
-          <div><span>PLAZO DE ENTREGA</span><strong>{quote.deliveryTimeText || (quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : settings.quote.deliveryTerms)}</strong></div>
-          <div><span>CONDICIONES DE PAGO</span><strong>{quote.paymentTerms || settings.quote.paymentTerms}</strong></div>
-          <div><span>MEDIO DE PAGO</span><strong>{quote.paymentMethod || "A convenir"}</strong></div>
-          <div><span>GARANTÍA</span><strong>{quote.warranty || settings.quote.warrantyTerms}</strong></div>
-          <div><span>ENTREGA / DESTINO</span><strong>{deliveryLocation?.name || "Domicilio fiscal"}{deliveryAddress ? ` · ${deliveryAddress}` : ""}</strong></div>
-          <div><span>TRANSPORTE</span><strong>{quote.transportation || "A coordinar"}</strong></div>
-        </div>
+      <section className="qs-terms">
+        <div><span>Entrega</span><strong>{quote.deliveryTimeText || (quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : settings.quote.deliveryTerms)}</strong></div>
+        <div><span>Pago</span><strong>{quote.paymentTerms || settings.quote.paymentTerms}</strong></div>
+        <div><span>Medio</span><strong>{quote.paymentMethod || "A convenir"}</strong></div>
+        <div><span>Garantía</span><strong>{quote.warranty || settings.quote.warrantyTerms}</strong></div>
+        <div><span>Destino</span><strong>{deliveryLocation?.name || "Domicilio fiscal"}{deliveryAddress ? ` · ${deliveryAddress}` : ""}</strong></div>
+        <div><span>Transporte</span><strong>{quote.transportation || "A coordinar"}</strong></div>
       </section>
 
       {quote.notes && <aside className="quote-document__notes quote-document__keep"><strong>Observaciones</strong><p>{quote.notes}</p></aside>}
@@ -170,10 +182,9 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
       {settings.quote.showSignatures && (
         <div className="quote-document__signatures quote-document__keep"><div>Responsable / asesor técnico</div><div>Aceptación del cliente</div></div>
       )}
-      <footer className="quote-document__footer quote-document__keep">
-        <div><strong>{companyName}</strong><span>{company?.website || company?.email || ""}</span></div>
-        <p>{footerText}</p>
-        <span>Presupuesto {quote.quoteNumber} · R{quote.revision}</span>
+      <footer className="qs-foot">
+        <span>{companyName}{company?.website ? ` · ${company.website}` : company?.email ? ` · ${company.email}` : ""}</span>
+        <span>{footerText}</span>
       </footer>
 
       {showTechnical && !inlineTechnical && (
