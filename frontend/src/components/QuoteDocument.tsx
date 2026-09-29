@@ -36,10 +36,22 @@ function optionalAmount(line: { quantity: number; unitPrice: number; discountPer
   return Math.round(line.quantity * line.unitPrice * (1 - (line.discountPercent || 0) / 100) * 100) / 100;
 }
 
+function tint(hex: string, towardWhite: number) {
+  const raw = hex.trim().replace("#", "");
+  const full = raw.length === 3 ? raw.replace(/./g, (char) => char + char) : raw;
+  const value = Number.parseInt(full, 16);
+  if (!Number.isFinite(value) || full.length !== 6) return "#f3f7f6";
+  const channel = (color: number) => Math.round(color + (255 - color) * towardWhite);
+  return `rgb(${channel((value >> 16) & 255)}, ${channel((value >> 8) & 255)}, ${channel(value & 255)})`;
+}
+
 export function QuoteDocument({ quote, company, customer, deliveryLocation, assignedContact, productsMap, includeTechnicalOffer }: Props) {
   const { settings } = useDocumentTemplate();
-  const accent = settings.primaryColor || "#3975e5";
-  const sheetStyle = { "--document-accent": accent } as CSSProperties;
+  const accent = settings.primaryColor || "#0d9488";
+  const sheetStyle = {
+    "--document-accent": accent,
+    "--document-accent-soft": tint(accent, 0.9)
+  } as CSSProperties;
   const companyName = company?.tradeName?.trim() || company?.legalName || "Empresa";
   const companyAddress = [company?.fiscalStreet, company?.fiscalCity, company?.fiscalProvince].filter(Boolean).join(" · ");
   const customerAddress = [
