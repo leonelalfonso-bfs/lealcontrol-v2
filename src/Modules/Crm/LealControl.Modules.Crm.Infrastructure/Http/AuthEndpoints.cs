@@ -194,8 +194,6 @@ public static class AuthEndpoints
                 ? tenantSettings.DocumentNumber
                 : activeMembership?.DocumentNumber ?? "";
             var logoUrl = tenantSettings?.LogoUrl ?? activeMembership?.LogoUrl;
-            if (logoUrl is { Length: > 180_000 })
-                logoUrl = null;
 
             UserDto? userDto = null;
             if (user != null)

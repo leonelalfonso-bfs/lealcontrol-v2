@@ -264,9 +264,6 @@ public static class MultiTenantAuthResolver
         }
 
         var (legal, trade) = ChooseCompanyLabels(companyName, legalName, tradeName, catalogName);
-        if (logoUrl is { Length: > 180_000 })
-            logoUrl = null;
-
         return (legal, trade, documentNumber, logoUrl);
     }
 
