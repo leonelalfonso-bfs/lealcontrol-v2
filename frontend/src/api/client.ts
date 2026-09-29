@@ -416,6 +416,14 @@ export const api = {
   syncMailAccount: (id: string) => request<{ received: number }>(`/api/v1/communications/accounts/${id}/sync`, { method: "POST" }),
   setMailAutoSync: (id: string, enabled: boolean) =>
     request<{ id: string; autoSyncEnabled: boolean }>(`/api/v1/communications/accounts/${id}/auto-sync`, { method: "PUT", body: JSON.stringify({ enabled }) }),
+  listMailOAuthProviders: () => request<import("./types").MailOAuthProvider[]>("/api/v1/communications/accounts/oauth/providers"),
+  startMailOAuth: (id: string, provider?: string, returnPath = "/configuracion/correo") => {
+    const p = new URLSearchParams({ returnPath });
+    if (provider) p.set("provider", provider);
+    return request<{ authorizationUrl: string; provider: string }>(`/api/v1/communications/accounts/${id}/oauth/start?${p}`);
+  },
+  disconnectMailOAuth: (id: string) =>
+    request<{ id: string; oauthConnected: boolean }>(`/api/v1/communications/accounts/${id}/oauth/disconnect`, { method: "POST" }),
   listEmails: (entityType?: string, entityId?: string) => { const p = new URLSearchParams(); if(entityType)p.set("entityType",entityType); if(entityId)p.set("entityId",entityId); return request<import("./types").EmailMessage[]>(`/api/v1/communications/messages${p.size?`?${p}`:""}`); },
   listConversations: (opts?: { channel?: string; folder?: string; search?: string; customerId?: string; assignedTo?: string; status?: string }) => {
     const p = new URLSearchParams();

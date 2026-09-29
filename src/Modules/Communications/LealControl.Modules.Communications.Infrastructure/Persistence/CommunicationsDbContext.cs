@@ -50,6 +50,8 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.Property(x => x.Provider).HasConversion<string>(); b.Property(x => x.AuthMode).HasConversion<string>();
             b.Property(x => x.DisplayName).HasMaxLength(160); b.Property(x => x.EmailAddress).HasMaxLength(320);
             b.Property(x => x.ProtectedSecret).HasColumnType("text");
+            b.Property(x => x.ProtectedRefreshToken).HasColumnType("text");
+            b.Property(x => x.Signature).HasColumnType("text");
             b.Property(x => x.AutoSyncEnabled).HasDefaultValue(false);
             b.HasIndex(x => new { x.TenantId, x.EmailAddress }).IsUnique();
         });
@@ -155,6 +157,10 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             );
 
             ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""AutoSyncEnabled"" boolean NOT NULL DEFAULT false;
+            ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""Signature"" text;
+            ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""ProtectedRefreshToken"" text;
+            ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""OAuthAccessTokenExpiresAtUtc"" timestamp with time zone;
+            ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""OAuthConnectedAtUtc"" timestamp with time zone;
 
             CREATE TABLE IF NOT EXISTS communications.email_messages (
                 ""Id"" uuid PRIMARY KEY,

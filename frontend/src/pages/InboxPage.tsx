@@ -719,6 +719,7 @@ export function InboxPage() {
       </div>
 
       <div className={`inbox-shell card${isEmailConversation ? " inbox-shell-email" : ""}`}>
+        <div className="inbox-list-column">
         {/* Left Side: Folders & Actions */}
         <aside className="inbox-folders">
           <button className={folder === "Mine" ? "active" : ""} onClick={() => setFolder("Mine")}>
@@ -898,8 +899,9 @@ export function InboxPage() {
           )}
           </div>
         </section>
+        </div>
 
-        {/* Right: Full Chat / Email Thread View */}
+        {/* Center: Full Chat / Email Thread View */}
         <section className="message-reader" style={{ display: "flex", flexDirection: "column", padding: 0 }}>
           {activeConversation ? (
             <>
@@ -944,153 +946,6 @@ export function InboxPage() {
                   </button>
                 </div>
               </div>
-
-              {/* Ficha de contacto */}
-              <div className="inbox-thread-details">
-                <div className="inbox-thread-field">
-                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Canal</div>
-                  <strong>{channelLabel(getConversationChannel(activeConversation))}</strong>
-                </div>
-                {(activeConversation.participantPhone || getConversationChannel(activeConversation) === "whatsapp") && (
-                  <div className="inbox-thread-field">
-                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Teléfono</div>
-                    <strong>{activeConversation.participantPhone || activeConversation.participantId.replace(/^lid_/, "")}</strong>
-                  </div>
-                )}
-                {(activeConversation.participantEmail || getConversationChannel(activeConversation) === "email") && (
-                  <div className="inbox-thread-field">
-                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Email</div>
-                    <strong>{activeConversation.participantEmail || activeConversation.participantId}</strong>
-                  </div>
-                )}
-                <div className="inbox-thread-field">
-                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado CRM</div>
-                  {activeConversation.relatedCustomerId ? (
-                    <Link to={`/clientes/${activeConversation.relatedCustomerId}`} style={{ color: "#2563eb", fontWeight: 600 }}>
-                      Cliente: {linkedCustomerName || "vinculado"}
-                    </Link>
-                  ) : activeConversation.relatedLeadId ? (
-                    <Link to="/prospectos" style={{ color: "#0d9488", fontWeight: 600 }}>
-                      Lead vinculado
-                    </Link>
-                  ) : (
-                    <span style={{ color: "var(--ink-soft)" }}>Sin vincular</span>
-                  )}
-                </div>
-                {(activeConversation.relatedQuoteId || activeConversation.relatedOrderId || activeConversation.relatedInvoiceId) && (
-                  <div className="inbox-thread-field">
-                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Documento</div>
-                    {activeConversation.relatedQuoteId && (
-                      <Link to={`/presupuestos/${activeConversation.relatedQuoteId}/imprimir`} style={{ color: "#2563eb", fontWeight: 600 }}>
-                        Presupuesto
-                      </Link>
-                    )}
-                    {activeConversation.relatedOrderId && (
-                      <Link to={`/pedidos/${activeConversation.relatedOrderId}`} style={{ color: "#2563eb", fontWeight: 600, marginLeft: 8 }}>
-                        Pedido
-                      </Link>
-                    )}
-                    {activeConversation.relatedInvoiceId && (
-                      <Link to={`/facturas/${activeConversation.relatedInvoiceId}/imprimir`} style={{ color: "#2563eb", fontWeight: 600, marginLeft: 8 }}>
-                        Factura
-                      </Link>
-                    )}
-                  </div>
-                )}
-                <div className="inbox-thread-field">
-                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado</div>
-                  <select
-                    value={activeConversation.status || "open"}
-                    onChange={(e) => void changeStatus(activeConversation.id, e.target.value)}
-                    style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
-                  >
-                    <option value="open">Abierta</option>
-                    <option value="pending">Pendiente</option>
-                    <option value="resolved">Resuelta</option>
-                    <option value="archived">Archivada</option>
-                  </select>
-                </div>
-                <div className="inbox-thread-field">
-                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Asignado a</div>
-                  <select
-                    value={activeConversation.assignedToUserId || ""}
-                    onChange={(e) => void changeAssignment(activeConversation.id, e.target.value || undefined)}
-                    style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem", maxWidth: 160 }}
-                  >
-                    <option value="">Sin asignar</option>
-                    {tenantUsers.map((u) => (
-                      <option key={u.id} value={u.id}>{u.fullName}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--surface-border)", background: "var(--surface)", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-                <strong style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>Etiquetas</strong>
-                {activeTags.map((tag) => (
-                  <span key={tag.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 8px", borderRadius: 12, background: "#e0f2fe", color: "#075985", fontSize: "0.78rem", fontWeight: 600 }}>
-                    {tag.name}
-                    <button type="button" aria-label={`Quitar etiqueta ${tag.name}`} title="Quitar etiqueta" disabled={tagBusy} onClick={() => void removeTag(tag.id)} style={{ border: 0, background: "transparent", color: "inherit", cursor: "pointer", fontWeight: 700 }}>×</button>
-                  </span>
-                ))}
-                <form onSubmit={addTag} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input aria-label="Nueva etiqueta" placeholder="Nueva etiqueta" value={tagText} onChange={(e) => setTagText(e.target.value)} maxLength={32} style={{ width: 125, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.78rem" }} />
-                  <button type="submit" className="btn btn-outline compact" disabled={tagBusy || !tagText.trim()}>Agregar</button>
-                </form>
-              </div>
-
-              {/* Sugerencia suave — nunca crea lead automáticamente */}
-              {showLeadSuggestion && (
-                <div
-                  style={{
-                    margin: "0 20px",
-                    marginTop: 12,
-                    padding: "12px 16px",
-                    borderRadius: 8,
-                    background: "#fffbeb",
-                    border: "1px solid #fcd34d",
-                    display: "flex",
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    <strong style={{ fontSize: "0.88rem" }}>¿Registrar este contacto en el CRM?</strong>
-                    <div className="muted" style={{ fontSize: "0.8rem", marginTop: 2 }}>
-                      Este contacto escribió por {channelLabel(getConversationChannel(activeConversation))}. Podés crear un lead o vincular un cliente existente.
-                    </div>
-                    {suggestedMatches.length > 0 && (
-                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-                        <span className="muted" style={{ fontSize: "0.75rem" }}>¿Es alguno de estos clientes?</span>
-                        {suggestedMatches.map((m) => (
-                          <button
-                            key={m.id}
-                            type="button"
-                            className="btn ghost compact"
-                            style={{ justifyContent: "flex-start", padding: "4px 8px" }}
-                            onClick={() => void linkCustomerToThread(m.id)}
-                          >
-                            🔗 {m.tradeName || m.legalName}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button className="btn compact" onClick={createLeadFromThread} disabled={busy}>
-                      Crear lead
-                    </button>
-                    <button className="btn btn-outline compact" onClick={openLinkCustomerModal} disabled={busy}>
-                      Vincular cliente
-                    </button>
-                    <button className="btn ghost compact" onClick={() => void dismissSuggestion(activeConversation.id)}>
-                      Ahora no
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Chat Messages Body */}
               <div
@@ -1310,6 +1165,164 @@ export function InboxPage() {
             </div>
           )}
         </section>
+
+        <aside className="inbox-context">
+          {activeConversation ? (
+            <>
+              <div className="inbox-context-head">
+                <span className="eyebrow">CONTEXTO</span>
+                <strong>{activeDisplayName}</strong>
+              </div>
+              <div className="inbox-context-details">
+                <div className="inbox-context-field">
+                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Canal</div>
+                  <strong>{channelLabel(getConversationChannel(activeConversation))}</strong>
+                </div>
+                {(activeConversation.participantPhone || getConversationChannel(activeConversation) === "whatsapp") && (
+                  <div className="inbox-context-field">
+                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Teléfono</div>
+                    <strong>{activeConversation.participantPhone || activeConversation.participantId.replace(/^lid_/, "")}</strong>
+                  </div>
+                )}
+                {(activeConversation.participantEmail || getConversationChannel(activeConversation) === "email") && (
+                  <div className="inbox-context-field">
+                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Email</div>
+                    <strong>{activeConversation.participantEmail || activeConversation.participantId}</strong>
+                  </div>
+                )}
+                <div className="inbox-context-field">
+                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado CRM</div>
+                  {activeConversation.relatedCustomerId ? (
+                    <Link to={`/clientes/${activeConversation.relatedCustomerId}`} style={{ color: "#2563eb", fontWeight: 600 }}>
+                      Cliente: {linkedCustomerName || "vinculado"}
+                    </Link>
+                  ) : activeConversation.relatedLeadId ? (
+                    <Link to="/prospectos" style={{ color: "#0d9488", fontWeight: 600 }}>
+                      Lead vinculado
+                    </Link>
+                  ) : (
+                    <span style={{ color: "var(--ink-soft)" }}>Sin vincular</span>
+                  )}
+                </div>
+                {(activeConversation.relatedQuoteId || activeConversation.relatedOrderId || activeConversation.relatedInvoiceId) && (
+                  <div className="inbox-context-field">
+                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Documento</div>
+                    {activeConversation.relatedQuoteId && (
+                      <Link to={`/presupuestos/${activeConversation.relatedQuoteId}/imprimir`} style={{ color: "#2563eb", fontWeight: 600 }}>
+                        Presupuesto
+                      </Link>
+                    )}
+                    {activeConversation.relatedOrderId && (
+                      <Link to={`/pedidos/${activeConversation.relatedOrderId}`} style={{ color: "#2563eb", fontWeight: 600, marginLeft: 8 }}>
+                        Pedido
+                      </Link>
+                    )}
+                    {activeConversation.relatedInvoiceId && (
+                      <Link to={`/facturas/${activeConversation.relatedInvoiceId}/imprimir`} style={{ color: "#2563eb", fontWeight: 600, marginLeft: 8 }}>
+                        Factura
+                      </Link>
+                    )}
+                  </div>
+                )}
+                <div className="inbox-context-field">
+                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado</div>
+                  <select
+                    value={activeConversation.status || "open"}
+                    onChange={(e) => void changeStatus(activeConversation.id, e.target.value)}
+                    style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
+                  >
+                    <option value="open">Abierta</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="resolved">Resuelta</option>
+                    <option value="archived">Archivada</option>
+                  </select>
+                </div>
+                <div className="inbox-context-field">
+                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Asignado a</div>
+                  <select
+                    value={activeConversation.assignedToUserId || ""}
+                    onChange={(e) => void changeAssignment(activeConversation.id, e.target.value || undefined)}
+                    style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem", width: "100%" }}
+                  >
+                    <option value="">Sin asignar</option>
+                    {tenantUsers.map((u) => (
+                      <option key={u.id} value={u.id}>{u.fullName}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--surface-border)", background: "var(--surface)", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                <strong style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>Etiquetas</strong>
+                {activeTags.map((tag) => (
+                  <span key={tag.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 8px", borderRadius: 12, background: "#e0f2fe", color: "#075985", fontSize: "0.78rem", fontWeight: 600 }}>
+                    {tag.name}
+                    <button type="button" aria-label={`Quitar etiqueta ${tag.name}`} title="Quitar etiqueta" disabled={tagBusy} onClick={() => void removeTag(tag.id)} style={{ border: 0, background: "transparent", color: "inherit", cursor: "pointer", fontWeight: 700 }}>×</button>
+                  </span>
+                ))}
+                <form onSubmit={addTag} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input aria-label="Nueva etiqueta" placeholder="Nueva etiqueta" value={tagText} onChange={(e) => setTagText(e.target.value)} maxLength={32} style={{ width: "100%", minWidth: 0, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.78rem" }} />
+                  <button type="submit" className="btn btn-outline compact" disabled={tagBusy || !tagText.trim()}>Agregar</button>
+                </form>
+              </div>
+
+              {/* Sugerencia suave — nunca crea lead automáticamente */}
+              {showLeadSuggestion && (
+                <div
+                  style={{
+                    margin: "12px 14px",
+                    padding: "12px",
+                    borderRadius: 8,
+                    background: "#fffbeb",
+                    border: "1px solid #fcd34d",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <strong style={{ fontSize: "0.88rem" }}>¿Registrar este contacto en el CRM?</strong>
+                    <div className="muted" style={{ fontSize: "0.8rem", marginTop: 2 }}>
+                      Este contacto escribió por {channelLabel(getConversationChannel(activeConversation))}. Podés crear un lead o vincular un cliente existente.
+                    </div>
+                    {suggestedMatches.length > 0 && (
+                      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                        <span className="muted" style={{ fontSize: "0.75rem" }}>¿Es alguno de estos clientes?</span>
+                        {suggestedMatches.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className="btn ghost compact"
+                            style={{ justifyContent: "flex-start", padding: "4px 8px" }}
+                            onClick={() => void linkCustomerToThread(m.id)}
+                          >
+                            🔗 {m.tradeName || m.legalName}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button className="btn compact" onClick={createLeadFromThread} disabled={busy}>
+                      Crear lead
+                    </button>
+                    <button className="btn btn-outline compact" onClick={openLinkCustomerModal} disabled={busy}>
+                      Vincular cliente
+                    </button>
+                    <button className="btn ghost compact" onClick={() => void dismissSuggestion(activeConversation.id)}>
+                      Ahora no
+                    </button>
+                  </div>
+                </div>
+              )}
+
+
+            </>
+          ) : (
+            <div className="empty-state inbox-context-empty">Seleccioná un hilo para ver el vínculo CRM, etiquetas y estado.</div>
+          )}
+        </aside>
+
       </div>
 
       {compose && (
