@@ -87,18 +87,55 @@
 
 .company-logo {
   width: 100%;
-  max-width: 170px;
-  height: 64px;
+  max-width: 210px;
+  height: 96px;
   object-fit: contain;
-  border-radius: 10px;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.06));
+  border-radius: 0;
+  background: transparent;
+}
+
+.company-brand-name {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+}
+
+.company-brand-name strong {
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.company-brand-legal,
+.company-brand-cuit,
+.company-switch span {
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.company-switch {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  margin-top: 4px;
+  text-align: left;
+}
+
+.company-switch select {
+  width: 100%;
+  font-size: 0.82rem;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface, #fff);
+  color: var(--ink);
 }
 
 .company-logo-placeholder {
   display: grid;
   place-items: center;
   width: 100%;
-  height: 64px;
+  height: 96px;
   border-radius: 12px;
   background: linear-gradient(135deg, var(--primary), var(--accent));
   color: #ffffff;

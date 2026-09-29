@@ -18,7 +18,8 @@ public sealed record TenantMembership(
     string Email,
     string Role,
     string? AllowedModulesJson,
-    bool IsTechnicalDirector = false);
+    bool IsTechnicalDirector = false,
+    string? LogoUrl = null);
 
 public static class MultiTenantAuthResolver
 {
@@ -62,7 +63,7 @@ public static class MultiTenantAuthResolver
 
     public static List<TenantSummaryDto> ToSummaries(IEnumerable<TenantMembership> memberships) =>
         memberships
-            .Select(m => new TenantSummaryDto(m.TenantId, m.LegalName, m.TradeName, m.DocumentNumber))
+            .Select(m => new TenantSummaryDto(m.TenantId, m.LegalName, m.TradeName, m.DocumentNumber, m.LogoUrl))
             .ToList();
 
     public static AuthResponse ToAuthResponse(TenantMembership active, IReadOnlyList<TenantMembership> all) =>
@@ -77,7 +78,7 @@ public static class MultiTenantAuthResolver
                 active.AllowedModulesJson,
                 active.IsTechnicalDirector),
             new UserDto(active.UserId, active.FullName, active.Email, active.Role, active.AllowedModulesJson, active.IsTechnicalDirector),
-            new TenantSummaryDto(active.TenantId, active.LegalName, active.TradeName, active.DocumentNumber),
+            new TenantSummaryDto(active.TenantId, active.LegalName, active.TradeName, active.DocumentNumber, active.LogoUrl),
             ToSummaries(all));
 
     private static async Task<List<(Guid Id, string Name, string DbName)>> ListDedicatedTenantsAsync(
@@ -158,7 +159,7 @@ public static class MultiTenantAuthResolver
                     continue;
                 }
 
-                var (legalName, tradeName, docNumber) = await ResolveTenantLabelsAsync(
+                var (legalName, tradeName, docNumber, logoUrl) = await ResolveTenantLabelsAsync(
                     connectionString, tenantId, cancellationToken);
 
                 results.Add(new TenantMembership(
@@ -171,7 +172,8 @@ public static class MultiTenantAuthResolver
                     emailLower,
                     role,
                     allowedModulesJson,
-                    isTechnicalDirector));
+                    isTechnicalDirector,
+                    logoUrl));
             }
         }
         catch
@@ -182,66 +184,78 @@ public static class MultiTenantAuthResolver
         return results;
     }
 
-    private static async Task<(string LegalName, string? TradeName, string DocumentNumber)> ResolveTenantLabelsAsync(
+    internal static bool IsProductPlaceholder(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return true;
+        var v = value.Trim();
+        return v.Equals("Empresa", StringComparison.OrdinalIgnoreCase)
+            || v.Equals("LEAL CONTROL", StringComparison.OrdinalIgnoreCase)
+            || v.StartsWith("LEAL CONTROL ERP", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// El nombre comercial de la empresa gana sobre la razón social y sobre el nombre de catálogo.
+    /// </summary>
+    internal static (string LegalName, string? TradeName) ChooseCompanyLabels(
+        string? companyName,
+        string? legalName,
+        string? tradeName,
+        string? catalogName)
+    {
+        var trade = FirstRealName(tradeName, companyName, legalName, catalogName);
+        var legal = FirstRealName(legalName, companyName, tradeName, catalogName) ?? trade ?? "Empresa";
+        if (string.Equals(trade, legal, StringComparison.OrdinalIgnoreCase))
+            trade = null;
+        return (legal, trade);
+    }
+
+    private static string? FirstRealName(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!IsProductPlaceholder(value))
+                return value!.Trim();
+        }
+
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                return value.Trim();
+        }
+
+        return null;
+    }
+
+    private static async Task<(string LegalName, string? TradeName, string DocumentNumber, string? LogoUrl)> ResolveTenantLabelsAsync(
         string connectionString,
         Guid tenantId,
         CancellationToken cancellationToken)
     {
+        string? companyName = null;
+        string? legalName = null;
+        string? tradeName = null;
+        var documentNumber = string.Empty;
+        string? logoUrl = null;
+        string? catalogName = null;
+
         try
         {
             await using var conn = new NpgsqlConnection(connectionString);
             await conn.OpenAsync(cancellationToken);
 
-            // master_tenants lives in the default/catalog database
-            await using var masterCmd = new NpgsqlCommand(
-                @"SELECT ""Name"" FROM public.master_tenants WHERE ""Id"" = @id LIMIT 1", conn);
-            masterCmd.Parameters.AddWithValue("id", tenantId);
-            var masterName = await masterCmd.ExecuteScalarAsync(cancellationToken) as string;
-            if (!string.IsNullOrWhiteSpace(masterName))
-            {
-                return (masterName, masterName, string.Empty);
-            }
+            (companyName, legalName, tradeName, documentNumber, logoUrl) =
+                await ReadCompanySettingsAsync(conn, tenantId, cancellationToken);
 
-            // Shared schema (LegalName)
             try
             {
-                await using var legalCmd = new NpgsqlCommand(
-                    @"SELECT ""LegalName"", ""TradeName"", ""DocumentNumber""
-                      FROM public.tenant_settings WHERE ""TenantId"" = @id LIMIT 1", conn);
-                legalCmd.Parameters.AddWithValue("id", tenantId);
-                await using var reader = await legalCmd.ExecuteReaderAsync(cancellationToken);
-                if (await reader.ReadAsync(cancellationToken))
-                {
-                    return (
-                        reader.IsDBNull(0) ? "LEAL CONTROL ERP" : reader.GetString(0),
-                        reader.IsDBNull(1) ? null : reader.GetString(1),
-                        reader.IsDBNull(2) ? string.Empty : reader.GetString(2));
-                }
+                await using var masterCmd = new NpgsqlCommand(
+                    @"SELECT ""Name"" FROM public.master_tenants WHERE ""Id"" = @id LIMIT 1", conn);
+                masterCmd.Parameters.AddWithValue("id", tenantId);
+                catalogName = await masterCmd.ExecuteScalarAsync(cancellationToken) as string;
             }
             catch
             {
-                // Column LegalName may not exist on provisioned tenant DBs.
-            }
-
-            // Provisioned tenant schema (CompanyName)
-            try
-            {
-                await using var companyCmd = new NpgsqlCommand(
-                    @"SELECT ""CompanyName"", ""TradeName"", ""DocumentNumber""
-                      FROM public.tenant_settings WHERE ""TenantId"" = @id LIMIT 1", conn);
-                companyCmd.Parameters.AddWithValue("id", tenantId);
-                await using var reader = await companyCmd.ExecuteReaderAsync(cancellationToken);
-                if (await reader.ReadAsync(cancellationToken))
-                {
-                    return (
-                        reader.IsDBNull(0) ? "LEAL CONTROL ERP" : reader.GetString(0),
-                        reader.IsDBNull(1) ? null : reader.GetString(1),
-                        reader.IsDBNull(2) ? string.Empty : reader.GetString(2));
-                }
-            }
-            catch
-            {
-                // Ignore schema differences between shared and dedicated DBs.
+                // La base de la empresa no tiene el catálogo maestro.
             }
         }
         catch
@@ -249,6 +263,57 @@ public static class MultiTenantAuthResolver
             // Ignore lookup errors — login should still succeed.
         }
 
-        return ("LEAL CONTROL ERP", null, string.Empty);
+        var (legal, trade) = ChooseCompanyLabels(companyName, legalName, tradeName, catalogName);
+        if (logoUrl is { Length: > 180_000 })
+            logoUrl = null;
+
+        return (legal, trade, documentNumber, logoUrl);
+    }
+
+    private static async Task<(string? CompanyName, string? LegalName, string? TradeName, string DocumentNumber, string? LogoUrl)> ReadCompanySettingsAsync(
+        NpgsqlConnection conn,
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        string[][] attempts =
+        [
+            ["CompanyName", "LegalName", "TradeName", "DocumentNumber", "LogoUrl"],
+            ["LegalName", "TradeName", "DocumentNumber", "LogoUrl"],
+            ["CompanyName", "TradeName", "DocumentNumber"],
+            ["LegalName", "TradeName", "DocumentNumber"]
+        ];
+
+        foreach (var columns in attempts)
+        {
+            try
+            {
+                var list = string.Join(", ", columns.Select(c => $@"""{c}"""));
+                await using var cmd = new NpgsqlCommand(
+                    $@"SELECT {list} FROM public.tenant_settings WHERE ""TenantId"" = @id LIMIT 1", conn);
+                cmd.Parameters.AddWithValue("id", tenantId);
+                await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+                if (!await reader.ReadAsync(cancellationToken))
+                    return (null, null, null, string.Empty, null);
+
+                string? Read(string column)
+                {
+                    var ordinal = reader.GetOrdinal(column);
+                    return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+                }
+
+                return (
+                    columns.Contains("CompanyName") ? Read("CompanyName") : null,
+                    columns.Contains("LegalName") ? Read("LegalName") : null,
+                    columns.Contains("TradeName") ? Read("TradeName") : null,
+                    (columns.Contains("DocumentNumber") ? Read("DocumentNumber") : null) ?? string.Empty,
+                    columns.Contains("LogoUrl") ? Read("LogoUrl") : null);
+            }
+            catch
+            {
+                // Esquema distinto entre bases compartidas y dedicadas.
+            }
+        }
+
+        return (null, null, null, string.Empty, null);
     }
 }

@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api/client";
 import type { TenantInfo } from "../api/types";
+import { tenantLegalLine, tenantTitle } from "../utils/tenantLabel";
 import "./login-page.css";
 
 export function LoginPage() {
@@ -24,7 +25,7 @@ export function LoginPage() {
     return [...tenants].sort((a, b) => {
       if (preferred && a.id === preferred) return -1;
       if (preferred && b.id === preferred) return 1;
-      return (a.legalName || a.tradeName || "").localeCompare(b.legalName || b.tradeName || "", "es");
+      return tenantTitle(a).localeCompare(tenantTitle(b), "es");
     });
   };
 
@@ -138,9 +139,16 @@ export function LoginPage() {
             <div className="login-tenants">
               {tenantChoices.map((tenant) => (
                 <button key={tenant.id} type="button" disabled={loading} onClick={() => handleTenantPick(tenant.id)} className="login-tenant">
-                  <strong>{tenant.legalName}</strong>
-                  {tenant.tradeName && tenant.tradeName !== tenant.legalName && <span>{tenant.tradeName}</span>}
-                  {tenant.documentNumber && <small>CUIT {tenant.documentNumber}</small>}
+                  {tenant.logoUrl ? (
+                    <img className="login-tenant-logo" src={tenant.logoUrl} alt="" />
+                  ) : (
+                    <span className="login-tenant-mark" aria-hidden="true">{tenantTitle(tenant).slice(0, 2).toUpperCase()}</span>
+                  )}
+                  <span className="login-tenant-copy">
+                    <strong>{tenantTitle(tenant)}</strong>
+                    {tenantLegalLine(tenant) && <span>{tenantLegalLine(tenant)}</span>}
+                    {tenant.documentNumber && <small>CUIT {tenant.documentNumber}</small>}
+                  </span>
                 </button>
               ))}
               <button type="button" className="login-back" onClick={resetToCredentials} disabled={loading}>← Volver a credenciales</button>
