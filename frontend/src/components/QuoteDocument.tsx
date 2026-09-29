@@ -70,59 +70,72 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
     /(presupuesto válido por )\d+( días corridos)/i,
     (_match, before: string, after: string) => `${before}${quote.validDays}${after}`
   );
+  const masthead = (
+    <header className="qs-head">
+      <div className="qs-top">
+        {company?.logoUrl ? (
+          <img className="qs-logo" src={company.logoUrl} alt={companyName} crossOrigin="anonymous" />
+        ) : (
+          <div className="qs-mark">{companyName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</div>
+        )}
+        <div className="qs-brand-text">
+          <strong>{letterName}</strong>
+          {placeLine && <span>{placeLine}</span>}
+          {company?.documentNumber && <span>CUIT: {formatCuit(company.documentNumber)}</span>}
+          {reachLine && <span>{reachLine}</span>}
+        </div>
+        <div className="qs-doc">
+          <span>{docTitle}</span>
+          <b>N° {quote.quoteNumber}</b>
+          <small>Fecha: {date}{quote.revision > 0 ? ` · Rev. ${quote.revision}` : ""}</small>
+        </div>
+        {/* El logo secundario (acreditación) todavía no está en los datos de la empresa. */}
+        <div className="qs-seal" />
+      </div>
+    </header>
+  );
+  const clientCard = (
+    <section className="qs-for">
+      <div>
+        <span>Cliente / destinatario (datos fiscales)</span>
+        <strong>{customer?.legalName || "Cliente"}</strong>
+        <p>CUIT: {formatCuit(customer?.documentNumber)}</p>
+        <p>IVA: {label(customer?.taxCondition)}</p>
+        {customer?.fiscalAddress?.street && <p>{customer.fiscalAddress.street}</p>}
+        {customerCity && <p>{customerCity}</p>}
+        {assignedContact && <p>Atención: {assignedContact.name}</p>}
+      </div>
+      <div className="qs-delivery">
+        <span>Lugar de entrega / atención</span>
+        <strong>{deliveryLocation?.name || "Dirección fiscal"}</strong>
+        <p>{deliveryAddress || "Se entrega en el domicilio fiscal del cliente."}</p>
+      </div>
+    </section>
+  );
+  const sheetFooter = (
+    <footer className="qs-foot">
+      <span>Este presupuesto tiene una validez de {quote.validDays} días.</span>
+      {footerText && <span className="qs-legal">{footerText}</span>}
+    </footer>
+  );
+  const technicalArticles = technicalItems.map(({ line, index, product, detail }) => (
+    <article key={line.id}>
+      <h3>{index + 1}. {quoteItemTitle(line.description)}</h3>
+      {product?.imagePath && <img src={product.imagePath} alt={line.description} crossOrigin="anonymous" />}
+      {detail && <div className="quote-tech-html" dangerouslySetInnerHTML={{ __html: plainToRich(detail) }} />}
+    </article>
+  ));
 
   return (
     <article id="quote-pdf-sheet" className={`quote-document quote-sheet quote-document--${settings.templateStyle}`} style={sheetStyle}>
       {quote.status === "Cancelled" && <div className="quote-document__cancelled">ANULADO</div>}
-      <header className="qs-head">
-        <div className="qs-top">
-          {company?.logoUrl ? (
-            <img className="qs-logo" src={company.logoUrl} alt={companyName} crossOrigin="anonymous" />
-          ) : (
-            <div className="qs-mark">{companyName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</div>
-          )}
-          <div className="qs-brand-text">
-            <strong>{letterName}</strong>
-            {placeLine && <span>{placeLine}</span>}
-            {company?.documentNumber && <span>CUIT: {formatCuit(company.documentNumber)}</span>}
-            {reachLine && <span>{reachLine}</span>}
-          </div>
-          <div className="qs-doc">
-            <span>{docTitle}</span>
-            <b>N° {quote.quoteNumber}</b>
-            <small>Fecha: {date}{quote.revision > 0 ? ` · Rev. ${quote.revision}` : ""}</small>
-          </div>
-          {/* El logo secundario (acreditación) todavía no está en los datos de la empresa. */}
-          <div className="qs-seal" />
-        </div>
-      </header>
-
-      <section className="qs-for">
-        <div>
-          <span>Cliente / destinatario (datos fiscales)</span>
-          <strong>{customer?.legalName || "Cliente"}</strong>
-          <p>CUIT: {formatCuit(customer?.documentNumber)}</p>
-          <p>IVA: {label(customer?.taxCondition)}</p>
-          {customer?.fiscalAddress?.street && <p>{customer.fiscalAddress.street}</p>}
-          {customerCity && <p>{customerCity}</p>}
-          {assignedContact && <p>Atención: {assignedContact.name}</p>}
-        </div>
-        <div className="qs-delivery">
-          <span>Lugar de entrega / atención</span>
-          <strong>{deliveryLocation?.name || "Dirección fiscal"}</strong>
-          <p>{deliveryAddress || "Se entrega en el domicilio fiscal del cliente."}</p>
-        </div>
-      </section>
+      {masthead}
+      {clientCard}
 
       {inlineTechnical && (
         <section className="qs-tech">
           <div className="qs-banner">Oferta técnica</div>
-          {technicalItems.map(({ line, index, detail }) => (
-            <article key={line.id}>
-              <h3>{index + 1}. {quoteItemTitle(line.description)}</h3>
-              {detail && <div className="quote-tech-html" dangerouslySetInnerHTML={{ __html: plainToRich(detail) }} />}
-            </article>
-          ))}
+          {technicalArticles}
         </section>
       )}
 
@@ -185,26 +198,15 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
       {settings.quote.showSignatures && (
         <div className="quote-document__signatures quote-document__keep"><div>Responsable / asesor técnico</div><div>Aceptación del cliente</div></div>
       )}
-      <footer className="qs-foot">
-        <span>Este presupuesto tiene una validez de {quote.validDays} días.</span>
-        {footerText && <span className="qs-legal">{footerText}</span>}
-      </footer>
+      {sheetFooter}
 
       {showTechnical && !inlineTechnical && (
-        <section className="quote-document__section quote-document__technical quote-document__appendix">
-          <div className="quote-document__appendix-masthead quote-document__keep">
-            <span>ANEXO TÉCNICO · PRESUPUESTO {quote.quoteNumber} / R{quote.revision}</span>
-            <strong>{companyName}</strong>
-          </div>
-          <div className="quote-document__section-heading quote-document__keep"><span className="quote-document__section-index">03</span><div><h2>Detalle técnico</h2><p>Especificaciones de los ítems cotizados para {customer?.legalName || "el cliente"}</p></div></div>
-          {technicalItems.map(({ line, index, product, detail }) => (
-            <div className="quote-document__technical-item" key={line.id}>
-              <h3><span>{String(index + 1).padStart(2, "0")}</span>{quoteItemTitle(line.description)}</h3>
-              {product?.imagePath && <img src={product.imagePath} alt={line.description} crossOrigin="anonymous" />}
-              {detail && <div className="quote-tech-html" dangerouslySetInnerHTML={{ __html: plainToRich(detail) }} />}
-            </div>
-          ))}
-          <div className="quote-document__appendix-footer">{companyName} · Presupuesto {quote.quoteNumber} · Anexo técnico</div>
+        <section className="qs-appendix">
+          {masthead}
+          {clientCard}
+          <div className="qs-banner">Oferta técnica</div>
+          <div className="qs-tech">{technicalArticles}</div>
+          {sheetFooter}
         </section>
       )}
     </article>
