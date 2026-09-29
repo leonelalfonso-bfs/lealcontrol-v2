@@ -268,7 +268,7 @@ public static class AuthEndpoints
             var list = await db.CompanySettings
                 .AsNoTracking()
                 .Where(s => s.TenantId == tenantId)
-                .Select(s => new TenantSummaryDto(s.TenantId.Value, s.LegalName, s.TradeName, s.DocumentNumber))
+                .Select(s => new TenantSummaryDto(s.TenantId.Value, s.LegalName, s.TradeName, s.DocumentNumber, s.LogoUrl))
                 .ToListAsync(ct);
 
             return Results.Ok(list);
