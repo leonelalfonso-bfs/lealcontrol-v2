@@ -30,8 +30,7 @@ export function CommercialDocument({ id, company, title, eyebrow, number, badge,
   const style = { "--document-accent": settings.global.primaryColor || "#3975e5" } as CSSProperties;
   return (
     <article id={id} className={`quote-document quote-document--${settings.global.templateStyle} commercial-document`} style={style}>
-      <div className="quote-document__rule" />
-      <header className="quote-document__masthead quote-document__keep">
+      <header className="quote-document__masthead">
         <div className="quote-document__brand">
           {company?.logoUrl ? <img className="quote-document__logo" src={company.logoUrl} alt={companyName} crossOrigin="anonymous" /> :
             <div className="quote-document__monogram">{companyName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</div>}
