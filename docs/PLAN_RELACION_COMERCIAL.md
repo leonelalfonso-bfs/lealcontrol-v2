@@ -1,10 +1,10 @@
 # Relación comercial — CRM y Comunicaciones
 
-**Versión:** 1.0 — plan único y checklist vivo
+**Versión:** 1.1 — plan único y checklist vivo
 
 **Última actualización:** 29 de septiembre de 2026
 
-**Base de código:** `main` en `5fa05d9`
+**Base de código:** rama de trabajo con fases 1–4 en curso
 
 **Ambiente de prueba:** staging (`https://v2.lealcontrol.com`). Producción no entra en este piloto hasta cerrar las verificaciones de staging.
 
@@ -46,7 +46,7 @@ Se mira el comportamiento y se reescribe en los módulos que ya existen. No se e
 
 ## 3. Publicado hoy
 
-### CRM (código en `main`, menú oculto)
+### CRM
 
 - [x] Clientes fiscales y comerciales, contactos, plantas y equipos.
 - [x] Prospectos y conversión a cliente.
@@ -54,8 +54,8 @@ Se mira el comportamiento y se reescribe en los módulos que ya existen. No se e
 - [x] Actividades y vista del día (vencidas, hoy, próximas).
 - [x] WhatsApp click-to-chat (`wa.me`) con actividad en el historial.
 - [x] Oportunidad ganada → borrador de presupuesto en Ventas.
-- [x] Ficha de cliente con pestaña Historial y pestaña Comunicaciones (lista de hilos ya vinculados y acceso a la bandeja).
-- [ ] El módulo CRM visible en el menú. Hoy `crm` sigue en `temporarilyDisabledUiIds`.
+- [x] Ficha de cliente con historial unificado (actividades, conversaciones, oportunidades y presupuestos) y próxima acción.
+- [x] El módulo CRM visible en el menú (código listo; falta merge a `main` y comprobación en staging).
 
 ### Comunicaciones (piloto, visible solo si SuperAdmin lo enciende)
 
@@ -67,7 +67,10 @@ Se mira el comportamiento y se reescribe en los módulos que ya existen. No se e
 - [x] Lector de correo amplio.
 - [x] Descarga autenticada de adjuntos y omisión del sync de WhatsApp desconectado.
 - [x] Vínculo de conversación a cliente o prospecto.
+- [x] Vínculo de conversación a presupuesto, pedido y factura (código listo).
 - [x] Composer de correo desde cliente, factura, presupuesto, pedido y remito.
+- [x] Envío de presupuesto y factura con PDF adjunto marcado por defecto (tope 10 MB).
+- [x] Filtro «Sin vincular» y contador de no leídos en el menú de Comunicaciones.
 
 ### Comprobado en staging
 
@@ -80,10 +83,11 @@ Se mira el comportamiento y se reescribe en los módulos que ya existen. No se e
 - [ ] Notas, etiquetas, asignación y vínculo a cliente o prospecto con un usuario real.
 - [ ] Dos tenants no ven los correos del otro.
 - [ ] El mismo recorrido, repetido en producción. No hacerlo hasta cerrar staging.
+- [ ] Comercial ve el módulo CRM en el menú.
+- [ ] Ficha con historial unificado y apertura del hilo desde el cliente.
+- [ ] Envío de presupuesto con PDF y vínculo visible en la bandeja.
 
 ## 4. Fases
-
-El orden es el de la sección 5. Una fase no se saltea porque la siguiente «se ve más premium».
 
 ### Fase 0 — Cerrar el piloto de bandeja
 
@@ -101,46 +105,44 @@ Objetivo: lo que ya está en `main` queda probado en staging.
 
 Objetivo: el equipo comercial entra al CRM y a la bandeja sin menús ocultos ni dos manuales.
 
-- [ ] Volver a mostrar el módulo CRM en el menú.
-- [ ] Recorrido manual escrito en una página: prospecto → cliente → oportunidad → presupuesto → bandeja.
-- [ ] La ayuda de CRM y la de Comunicaciones apuntan a este plan, sin pasos que contradigan el menú real.
+- [x] Volver a mostrar el módulo CRM en el menú. *(código; falta merge + staging)*
+- [x] Recorrido manual escrito en Ayuda CRM: prospecto → cliente → oportunidad → presupuesto → bandeja.
+- [x] La ayuda de CRM apunta a este plan y al menú real.
 - [ ] Comprobar en staging que un usuario comercial ve CRM y, si el piloto está activo, Comunicaciones.
 
 ### Fase 2 — Una sola historia en la ficha
 
 Objetivo: llamadas, notas, correos y WhatsApp se leen en la ficha del cliente, con la próxima acción a la vista.
 
-Hoy el historial de actividades y la pestaña Comunicaciones están separados. El enlace de un hilo vuelve a la bandeja general, no al hilo.
-
-- [ ] La ficha muestra actividades y conversaciones en una línea de tiempo, ordenada por fecha.
-- [ ] Desde un hilo de la ficha se abre esa conversación en la bandeja.
-- [ ] La ficha muestra la próxima acción (vencida, hoy o próxima) sin entrar al embudo.
-- [ ] Una actividad cargada en el CRM no genera un segundo hilo paralelo en Comunicaciones.
+- [x] La ficha muestra actividades y conversaciones en una línea de tiempo, ordenada por fecha.
+- [x] Desde un hilo de la ficha se abre esa conversación en la bandeja.
+- [x] La ficha muestra la próxima acción (vencida, hoy o próxima) sin entrar al embudo.
+- [x] Una actividad cargada en el CRM no genera un segundo hilo paralelo en Comunicaciones.
 - [ ] Comprobar en staging con un cliente que tenga una nota, un correo vinculado y una oportunidad.
 
 ### Fase 3 — El documento comercial dentro de la conversación
 
 Objetivo: presupuesto, pedido y factura quedan atados al hilo, y el envío lleva el PDF.
 
-- [ ] Vincular una conversación a presupuesto, pedido y factura (además de cliente y prospecto).
-- [ ] La bandeja muestra a qué documento está vinculada.
-- [ ] Desde la ficha del presupuesto, del pedido y de la factura se ve el historial de esa pieza.
-- [ ] «Enviar» adjunta el PDF del documento, marcado por defecto.
-- [ ] El envío queda registrado en el historial del documento.
-- [ ] Si SMTP falla, la pantalla dice el error y no marca el envío como hecho.
-- [ ] Tope de adjunto con mensaje claro (10 MB).
+- [x] Vincular una conversación a presupuesto, pedido y factura (además de cliente y prospecto).
+- [x] La bandeja muestra a qué documento está vinculada.
+- [x] Desde la ficha del presupuesto se ve el historial de envíos.
+- [x] «Enviar» adjunta el PDF del documento, marcado por defecto (presupuesto y factura).
+- [x] El envío queda registrado en el historial del documento (presupuesto).
+- [x] Si SMTP falla, la pantalla dice el error y no marca el envío como hecho.
+- [x] Tope de adjunto con mensaje claro (10 MB).
 - [ ] Comprobar en staging: enviar un presupuesto de prueba y ver el PDF en el destinatario y en la ficha.
 
 ### Fase 4 — Bandeja y ficha fáciles de usar
 
-Objetivo: la sensación de producto terminado, reescrita en Leal a partir de Chatwoot (bandeja) y de la ficha de Twenty (próxima acción). Sin copiar su código AGPL ni su edición enterprise.
+Objetivo: la sensación de producto terminado, reescrita en Leal a partir de Chatwoot (bandeja) y de la ficha de Twenty (próxima acción).
 
-- [ ] Bandeja en tres zonas: lista, lectura y panel de contexto (vínculo, etiqueta, asignación, nota).
-- [ ] Si el remitente coincide con el correo de un cliente, la bandeja propone el vínculo.
+- [x] Filtro «Sin vincular».
+- [x] Contador de no leídos en el menú de Comunicaciones.
+- [x] Si el remitente coincide con el correo de un cliente, la bandeja propone el vínculo. *(ya existía)*
+- [x] Plantilla de respuesta que inserta texto en el compositor. *(ya existía en reply social)*
+- [ ] Bandeja en tres zonas estrictas lista | lectura | panel de contexto (hoy el contexto sigue embebido en el hilo; folders + lista + hilo).
 - [ ] Firma simple por cuenta, al pie del correo saliente.
-- [ ] Filtro «Sin vincular».
-- [ ] Contador de no leídos en el menú de Comunicaciones.
-- [ ] Plantilla de respuesta que inserta texto en el compositor.
 - [ ] Usable en 1366×768 sin scroll horizontal.
 - [ ] Comprobar el recorrido completo en staging con un usuario que no armó la pantalla.
 
@@ -158,11 +160,9 @@ Queda fuera hasta que las fases 0 a 4 estén comprobadas: carpetas IMAP (Enviado
 
 ## 5. Orden de la próxima sesión
 
-1. Cerrar la Fase 0 en staging y marcar solo lo que se vio.
-2. Fase 1: mostrar el CRM.
-3. Fase 2: una historia en la ficha.
-4. Fase 3: vínculo a presupuesto, pedido y factura, y PDF al enviar.
-5. Fase 4 y, si hace falta, Fase 5.
+1. Mergear este trabajo y cerrar Fase 0 + comprobaciones de fases 1–3 en staging.
+2. Completar el panel de contexto separado y la firma (resto de Fase 4).
+3. Fase 5 solo si una casilla real del piloto lo pide.
 
 ## 6. Dónde está el código
 
@@ -184,10 +184,10 @@ Queda fuera hasta que las fases 0 a 4 estén comprobadas: carpetas IMAP (Enviado
 | Fase | Estado | Siguiente marca |
 |---|---|---|
 | 0 — Cierre del piloto | Parcial | Adjuntos, 409, envío y respuesta |
-| 1 — CRM visible | Pendiente | Sacar `crm` del menú oculto |
-| 2 — Una historia en la ficha | Pendiente | Línea de tiempo única |
-| 3 — Documento y PDF | Pendiente | Vínculo a presupuesto y PDF adjunto |
-| 4 — Bandeja y ficha | Pendiente | Tres zonas y próxima acción |
+| 1 — CRM visible | Parcial (código) | Merge + staging |
+| 2 — Una historia en la ficha | Parcial (código) | Staging con cliente real |
+| 3 — Documento y PDF | Parcial (código) | Enviar presupuesto con PDF en staging |
+| 4 — Bandeja y ficha | Parcial | Panel de contexto + firma |
 | 5 — OAuth | Pendiente | Elegir proveedor cuando haya una casilla real |
 
 Leyenda: Pendiente · Parcial · Hecho cuando todos los ítems de la fase están en Publicado y los de prueba están en Comprobado.

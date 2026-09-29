@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 
 const steps = [
-  ["1", "Capturar el prospecto", "Registrá empresa, contacto, origen y necesidad. Todavía no es una oportunidad: primero hay que verificar que exista interés real."],
-  ["2", "Contactar y calificar", "Confirmá quién compra, qué necesita, en qué plazo y cuál será el próximo paso. Si califica, convertí el prospecto y abrí la oportunidad."],
-  ["3", "Relevar", "Completá cliente, necesidad, monto aproximado, fecha esperada, responsable y una próxima actividad."],
-  ["4", "Proponer", "Creá el presupuesto desde la oportunidad. La propuesta debe existir, tener versión y ser enviada al contacto correcto."],
-  ["5", "Negociar", "Registrá llamadas, reuniones, respuestas, objeciones y cambios de condiciones. Mantené siempre una próxima acción."],
+  ["1", "Capturar el prospecto", "En CRM → Prospectos registrá empresa, contacto, origen y necesidad. Todavía no es una oportunidad: primero hay que verificar interés real."],
+  ["2", "Contactar y calificar", "Confirmá quién compra, qué necesita, en qué plazo y cuál será el próximo paso. Si califica, convertí el prospecto a cliente y abrí la oportunidad."],
+  ["3", "Abrir la oportunidad", "En CRM → Oportunidades completá necesidad, monto, fecha esperada, responsable y una próxima actividad. Eso alimenta el Centro de Pendientes."],
+  ["4", "Proponer", "Desde la oportunidad creá el presupuesto en Ventas. La propuesta debe existir, tener versión y poder enviarse por correo con el PDF adjunto."],
+  ["5", "Seguir la conversación", "En Comunicaciones → Bandeja respondé el hilo. Vinculá el cliente si hace falta. En la ficha del cliente, el historial muestra notas, correos y oportunidades juntos."],
   ["6", "Cerrar", "Para ganar, registrá la evidencia de aceptación. Para perder, indicá el motivo. Ambos resultados quedan en el historial del cliente."],
 ];
 
@@ -15,10 +15,17 @@ export function CrmHelpPage() {
       <div className="page-head">
         <div>
           <span className="eyebrow">MANUAL DE USO</span>
-          <h1>Cómo trabajar con el CRM</h1>
-          <p className="muted">Una guía práctica para que todo el equipo siga el mismo proceso comercial.</p>
+          <h1>Cómo trabajar la relación comercial</h1>
+          <p className="muted">
+            Recorrido único: prospecto → cliente → oportunidad → presupuesto → bandeja.
+            El detalle vivo del plan está en <code>docs/PLAN_RELACION_COMERCIAL.md</code>.
+          </p>
         </div>
-        <Link className="btn btn-outline" to="/oportunidades">Volver al embudo</Link>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link className="btn btn-outline" to="/crm">Centro de pendientes</Link>
+          <Link className="btn btn-outline" to="/oportunidades">Embudo</Link>
+          <Link className="btn" to="/comunicaciones">Bandeja</Link>
+        </div>
       </div>
 
       <div className="help-flow card pad">
@@ -32,25 +39,23 @@ export function CrmHelpPage() {
 
       <div className="grid-2 help-grid">
         <section className="card pad">
-          <h2>Qué significa “calificado”</h2>
-          <p>Un prospecto está calificado cuando cumple estas cuatro condiciones:</p>
+          <h2>Dónde se trabaja cada cosa</h2>
           <ul>
-            <li>Existe una empresa o persona identificable.</li>
-            <li>Hay una necesidad concreta que podemos resolver.</li>
-            <li>Existe intención o plazo razonable de compra.</li>
-            <li>Quedó acordado un próximo paso comercial.</li>
+            <li><strong>CRM</strong>: prospectos, oportunidades, pendientes del día.</li>
+            <li><strong>Ficha del cliente</strong>: historial único (notas, correos, oportunidades, presupuestos) y próxima acción.</li>
+            <li><strong>Comunicaciones</strong>: bandeja de correo, WhatsApp y redes. Solo aparece si SuperAdmin activó el piloto.</li>
+            <li><strong>Ventas</strong>: presupuestos, pedidos y facturas.</li>
           </ul>
-          <p className="hint">Si no cumple estas condiciones, se descarta o se mantiene como prospecto; no debe inflar el embudo.</p>
         </section>
         <section className="card pad">
           <h2>Reglas del embudo</h2>
           <ul>
             <li>Las oportunidades avanzan de a una etapa.</li>
-            <li>Cada avance solicita evidencia de lo ocurrido.</li>
+            <li>Cada avance pide evidencia de lo ocurrido.</li>
             <li>Una propuesta es un presupuesto real, no una intención.</li>
             <li>Una oportunidad abierta debe tener próxima acción.</li>
             <li>Ganada y Perdida son cierres auditables.</li>
-            <li>Reabrir o retroceder debe registrar el motivo.</li>
+            <li>Una actividad del CRM no crea un hilo paralelo en la bandeja.</li>
           </ul>
         </section>
       </div>

@@ -177,6 +177,8 @@ internal static class CommunicationsEndpointHelpers
 
     internal static string FriendlyMailError(MailAccount account, Exception exception)
     {
+        if (exception is InvalidOperationException && !string.IsNullOrWhiteSpace(exception.Message))
+            return exception.Message;
         if (exception is AuthenticationException)
             return account.Provider == MailProvider.Gmail
                 ? "Gmail rechazó el acceso. Usá una contraseña de aplicación de 16 caracteres; la contraseña normal de Google no funciona con IMAP/SMTP."

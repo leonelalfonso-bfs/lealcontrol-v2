@@ -384,15 +384,18 @@ export const DEVELOPMENT_ACCESS: AccessContext = {
 };
 
 export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: string | string[] | null, communicationsEnabled = false): string[] {
-  const temporarilyDisabledUiIds = new Set(communicationsEnabled ? ["crm"] : ["crm", "comunicaciones"]);
+  const temporarilyDisabledUiIds = new Set(communicationsEnabled ? [] : ["comunicaciones"]);
 
   const allAdminModules = [
-    "inicio", "directorio", "ventas", "compras", "inventario",
+    "inicio", "directorio", "crm",
+    ...(communicationsEnabled ? ["comunicaciones"] as const : []),
+    "ventas", "compras", "inventario",
     "produccion", "finanzas", "rrhh", "flota", "cereales", "contabilidad", "metrologia", "calidad", "administracion"
   ];
 
   const moduleMap: Record<string, string[]> = {
-    sales: ["directorio", "ventas"],
+    sales: ["directorio", "crm", "ventas"],
+    crm: ["directorio", "crm"],
     communications: communicationsEnabled ? ["comunicaciones"] : [],
     purchases: ["directorio", "compras"],
     inventory: ["directorio", "inventario", "produccion"],
@@ -415,7 +418,6 @@ export function resolveAllowedModuleIds(userRole: string, allowedModulesJson?: s
       const allowed = ["inicio", "directorio", "administracion"];
       raw.forEach((entry: string) => {
         const key = String(entry).toLowerCase();
-        if (key === "crm") return;
         if (moduleMap[key]) allowed.push(...moduleMap[key]);
         else if (!temporarilyDisabledUiIds.has(entry)) allowed.push(entry);
       });

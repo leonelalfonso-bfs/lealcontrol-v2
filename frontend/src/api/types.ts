@@ -1221,6 +1221,9 @@ export type Conversation = {
   unreadCount: number;
   relatedLeadId?: string | null;
   relatedCustomerId?: string | null;
+  relatedQuoteId?: string | null;
+  relatedOrderId?: string | null;
+  relatedInvoiceId?: string | null;
   status?: string;
   assignedToUserId?: string | null;
   suggestionDismissed?: boolean;

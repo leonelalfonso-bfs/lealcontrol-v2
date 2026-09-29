@@ -49,7 +49,7 @@ public sealed record SendMetaMessageRequest(
     string? RelatedEntityType = null,
     Guid? RelatedEntityId = null
 );
-public sealed record LinkConversationRequest(Guid? LeadId, Guid? CustomerId);
+public sealed record LinkConversationRequest(Guid? LeadId, Guid? CustomerId, Guid? QuoteId = null, Guid? OrderId = null, Guid? InvoiceId = null);
 public sealed record AssignConversationRequest(Guid? UserId);
 public sealed record UpdateConversationStatusRequest(string Status);
 public sealed record AddConversationNoteRequest(string Body);

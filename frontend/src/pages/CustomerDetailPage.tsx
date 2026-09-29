@@ -1,19 +1,35 @@
-import { FormEvent, useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { label, provinces, type Activity, type Contact, type CustomerDetail, type Location, type Opportunity, type Quote } from "../api/types";
+import { label, provinces, type Activity, type Contact, type Conversation, type CustomerDetail, type Location, type Opportunity, type Quote } from "../api/types";
 import { buildWhatsAppUrl, formatCuitDisplay } from "../lib/arContact";
 import { EmailComposer } from "../components/EmailComposer";
 import { BcraCreditReportModal } from "../components/BcraCreditReportModal";
+
+type TimelineEntry = {
+  id: string;
+  at: number;
+  kind: "activity" | "conversation" | "opportunity" | "quote";
+  title: string;
+  body: string;
+  meta?: string;
+  href?: string;
+  openConversationId?: string;
+};
+
+function startOfDay(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+}
 
 export function CustomerDetailPage() {
   const [showEmail, setShowEmail] = useState(false);
   const [showBcraModal, setShowBcraModal] = useState(false);
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
-  const [tab, setTab] = useState<"ficha" | "plantas" | "contactos" | "equipos" | "fiscal" | "timeline" | "comunicaciones">("ficha");
-  const [customerConversations, setCustomerConversations] = useState<import("../api/types").Conversation[]>([]);
+  const [tab, setTab] = useState<"ficha" | "plantas" | "contactos" | "equipos" | "fiscal" | "timeline">("ficha");
+  const [customerConversations, setCustomerConversations] = useState<Conversation[]>([]);
   const [timeline, setTimeline] = useState<Activity[]>([]);
   const [opps, setOpps] = useState<Opportunity[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -30,9 +46,10 @@ export function CustomerDetailPage() {
       api.getCustomer(id),
       api.timeline(id),
       api.opportunities(id),
-      api.listQuotes()
+      api.listQuotes(),
+      api.listConversations({ customerId: id }).catch(() => [] as Conversation[])
     ])
-      .then(([c, t, o, q]) => {
+      .then(([c, t, o, q, conv]) => {
         if (c.status === "fulfilled") {
           setCustomer(c.value);
           setEditingLocation(null);
@@ -47,6 +64,8 @@ export function CustomerDetailPage() {
         if (q.status === "fulfilled") {
           setQuotes(q.value.filter((quote) => quote.customerId === id));
         }
+        if (conv.status === "fulfilled") setCustomerConversations(conv.value);
+        else setCustomerConversations([]);
         const secondaryErrors = [t, o]
           .filter((r) => r.status === "rejected")
           .map((r) => (r as PromiseRejectedResult).reason instanceof Error
@@ -59,6 +78,61 @@ export function CustomerDetailPage() {
   };
 
   useEffect(() => { refresh(); }, [id]);
+
+  const nextAction = useMemo(() => {
+    const today = startOfDay(new Date());
+    const candidates = timeline
+      .filter((act) => act.nextFollowUpOn)
+      .map((act) => ({
+        activity: act,
+        day: startOfDay(new Date(`${act.nextFollowUpOn}T12:00:00`))
+      }))
+      .sort((a, b) => a.day - b.day);
+    if (candidates.length === 0) return null;
+    const first = candidates[0];
+    const tone = first.day < today ? "overdue" : first.day === today ? "today" : "upcoming";
+    return { ...first, tone };
+  }, [timeline]);
+
+  const story = useMemo<TimelineEntry[]>(() => {
+    const entries: TimelineEntry[] = [
+      ...timeline.map((act) => ({
+        id: `act-${act.id}`,
+        at: new Date(act.occurredAtUtc).getTime() || 0,
+        kind: "activity" as const,
+        title: act.type,
+        body: act.description,
+        meta: act.nextFollowUpOn ? `Próxima acción: ${act.nextFollowUpOn}` : undefined
+      })),
+      ...customerConversations.map((c) => ({
+        id: `conv-${c.id}`,
+        at: new Date(c.lastMessageAtUtc).getTime() || 0,
+        kind: "conversation" as const,
+        title: c.channelType,
+        body: c.lastMessagePreview || c.participantName || "Conversación",
+        meta: c.participantName,
+        openConversationId: c.id
+      })),
+      ...opps.map((opp) => ({
+        id: `opp-${opp.id}`,
+        at: new Date(opp.createdAtUtc).getTime() || 0,
+        kind: "opportunity" as const,
+        title: "Oportunidad",
+        body: `${opp.title} · ${label(opp.stage)}${opp.amount ? ` · ${opp.currency} $${Number(opp.amount).toLocaleString("es-AR")}` : ""}`,
+        meta: opp.lostReason ? `Motivo de pérdida: ${opp.lostReason}` : undefined,
+        href: `/oportunidades/${opp.id}`
+      })),
+      ...quotes.map((quote) => ({
+        id: `quote-${quote.id}`,
+        at: new Date(quote.updatedAtUtc).getTime() || 0,
+        kind: "quote" as const,
+        title: "Presupuesto",
+        body: `${quote.quoteNumber} · ${label(quote.status)} · ${quote.currency} $${Number(quote.total).toLocaleString("es-AR")}`,
+        href: `/presupuestos/${quote.id}/editar`
+      }))
+    ];
+    return entries.sort((a, b) => b.at - a.at);
+  }, [timeline, customerConversations, opps, quotes]);
 
   if (!customer) return error ? <div className="alert">{error}</div> : <div className="card pad" style={{ textAlign: "center", padding: "40px" }}><p className="muted">Cargando ficha comercial…</p></div>;
 
@@ -290,19 +364,21 @@ export function CustomerDetailPage() {
           className={`tab-btn ${tab === "timeline" ? "active" : ""}`}
           onClick={() => setTab("timeline")}
         >
-          💬 Historial & Chatter ({timeline.length})
-        </button>
-        <button
-          type="button"
-          className={`tab-btn ${tab === "comunicaciones" ? "active" : ""}`}
-          onClick={() => {
-            setTab("comunicaciones");
-            if (id) void api.listConversations({ customerId: id }).then(setCustomerConversations).catch(() => setCustomerConversations([]));
-          }}
-        >
-          📨 Comunicaciones
+          💬 Historial ({story.length})
         </button>
       </div>
+
+      {nextAction && (
+        <div className={`customer-next-action ${nextAction.tone === "overdue" ? "overdue" : nextAction.tone === "today" ? "today" : ""}`}>
+          <div>
+            <strong>
+              {nextAction.tone === "overdue" ? "Próxima acción vencida" : nextAction.tone === "today" ? "Próxima acción para hoy" : "Próxima acción"}
+            </strong>
+            <span>{nextAction.activity.nextFollowUpOn} · {nextAction.activity.type}: {nextAction.activity.description}</span>
+          </div>
+          <button type="button" className="btn btn-outline compact" onClick={() => setTab("timeline")}>Ver historial</button>
+        </div>
+      )}
 
       {/* Tab 1: Ficha General */}
       {tab === "ficha" && (
@@ -601,66 +677,42 @@ export function CustomerDetailPage() {
         </section>
       )}
 
-      {/* Tab 6: Timeline & Chatter */}
       {tab === "timeline" && (
         <section className="card pad">
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
-            Historial comercial completo
-          </h3>
-          <div className="timeline">
-            {timeline.map((act) => (
-              <div key={act.id} className="timeline-item">
-                <div className="muted" style={{ fontSize: "0.82rem" }}>
-                  {new Date((act as unknown as { createdAtUtc?: string; occurredAtUtc?: string }).createdAtUtc || (act as unknown as { createdAtUtc?: string; occurredAtUtc?: string }).occurredAtUtc || Date.now()).toLocaleString()} — <strong>{act.type}</strong>
-                </div>
-                <div style={{ marginTop: 4 }}>{act.description}</div>
-              </div>
-            ))}
-            {opps.map((opp) => (
-              <div key={`opp-${opp.id}`} className="timeline-item timeline-commercial">
-                <div className="muted" style={{ fontSize: "0.82rem" }}>{new Date(opp.createdAtUtc).toLocaleString("es-AR")} — <strong>Oportunidad</strong></div>
-                <div style={{ marginTop: 4 }}><Link to={`/oportunidades/${opp.id}`}>{opp.title}</Link> · {label(opp.stage)} · {opp.amount ? `${opp.currency} $${Number(opp.amount).toLocaleString("es-AR")}` : "Sin monto"}</div>
-                {opp.lostReason && <div className="hint">Motivo de pérdida: {opp.lostReason}</div>}
-              </div>
-            ))}
-            {quotes.map((quote) => (
-              <div key={`quote-${quote.id}`} className="timeline-item timeline-commercial">
-                <div className="muted" style={{ fontSize: "0.82rem" }}>{new Date(quote.updatedAtUtc).toLocaleString("es-AR")} — <strong>Presupuesto</strong></div>
-                <div style={{ marginTop: 4 }}><Link to={`/presupuestos/${quote.id}/editar`}>{quote.quoteNumber}</Link> · {label(quote.status)} · {quote.currency} $${Number(quote.total).toLocaleString("es-AR")}</div>
-              </div>
-            ))}
-            {timeline.length === 0 && opps.length === 0 && quotes.length === 0 && <p className="muted" style={{ fontSize: "0.9rem" }}>No hay registros comerciales todavía.</p>}
-          </div>
-          <ActivityForm customerId={customer.id} onCreated={refresh} />
-        </section>
-      )}
-
-      {tab === "comunicaciones" && (
-        <section className="card pad">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>Comunicaciones con este cliente</h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12 }}>
+            <h3 style={{ margin: 0, fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+              Historial de la relación
+            </h3>
             <div style={{ display: "flex", gap: 8 }}>
               <button type="button" className="btn btn-outline compact" onClick={() => setShowEmail(true)}>✉️ Email</button>
               <Link className="btn btn-outline compact" to="/comunicaciones">Abrir bandeja</Link>
             </div>
           </div>
-          {customerConversations.length === 0 ? (
-            <p className="muted">No hay conversaciones vinculadas a este cliente. Vinculá chats desde la bandeja omnicanal.</p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {customerConversations.map((c) => (
-                <Link
-                  key={c.id}
-                  to="/comunicaciones"
-                  style={{ padding: 12, border: "1px solid var(--surface-border)", borderRadius: 8, textDecoration: "none", color: "inherit" }}
-                >
-                  <div style={{ fontWeight: 600 }}>{c.participantName || c.participantId}</div>
-                  <div className="muted" style={{ fontSize: "0.82rem" }}>{c.channelType} · {c.lastMessagePreview}</div>
-                  <div className="muted" style={{ fontSize: "0.75rem" }}>{new Date(c.lastMessageAtUtc).toLocaleString("es-AR")}</div>
-                </Link>
-              ))}
-            </div>
-          )}
+          <div className="timeline">
+            {story.map((entry) => (
+              <div key={entry.id} className={`timeline-item${entry.kind === "conversation" || entry.kind === "opportunity" || entry.kind === "quote" ? " timeline-commercial" : ""}`}>
+                <div className="muted" style={{ fontSize: "0.82rem" }}>
+                  {entry.at ? new Date(entry.at).toLocaleString("es-AR") : "—"} — <strong>{entry.title}</strong>
+                </div>
+                <div style={{ marginTop: 4 }}>
+                  {entry.href ? <Link to={entry.href}>{entry.body}</Link> : entry.body}
+                </div>
+                {entry.meta && <div className="hint">{entry.meta}</div>}
+                {entry.openConversationId && (
+                  <button
+                    type="button"
+                    className="btn btn-outline compact"
+                    style={{ marginTop: 8 }}
+                    onClick={() => navigate("/comunicaciones", { state: { conversationId: entry.openConversationId } })}
+                  >
+                    Abrir hilo en la bandeja
+                  </button>
+                )}
+              </div>
+            ))}
+            {story.length === 0 && <p className="muted" style={{ fontSize: "0.9rem" }}>No hay registros comerciales todavía.</p>}
+          </div>
+          <ActivityForm customerId={customer.id} onCreated={refresh} />
         </section>
       )}
 
@@ -1001,24 +1053,39 @@ function RateForm({ customerId, onCreated }: { customerId: string; onCreated: ()
 function ActivityForm({ customerId, onCreated }: { customerId: string; onCreated: () => void }) {
   const [type, setType] = useState("Note");
   const [description, setDescription] = useState("");
+  const [nextFollowUpOn, setNextFollowUpOn] = useState("");
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    await api.logActivity({ type, description, customerId });
+    await api.logActivity({
+      type,
+      description,
+      customerId,
+      nextFollowUpOn: nextFollowUpOn || null
+    });
     setDescription("");
+    setNextFollowUpOn("");
     onCreated();
   };
 
   return (
-    <form onSubmit={submit} style={{ marginTop: 16, display: "flex", gap: "10px" }}>
-      <select value={type} onChange={(e) => setType(e.target.value)} style={{ padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }}>
-        <option value="Note">Nota</option>
-        <option value="Call">Llamada</option>
-        <option value="Meeting">Reunión</option>
-        <option value="Visit">Visita</option>
-      </select>
-      <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Escribir entrada de chatter…" required style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: "1px solid var(--surface-border)" }} />
-      <button className="btn btn-primary">Publicar</button>
+    <form onSubmit={(e) => void submit(e)} style={{ marginTop: 16, display: "grid", gap: 10 }}>
+      <div style={{ display: "flex", gap: 10 }}>
+        <select value={type} onChange={(e) => setType(e.target.value)} style={{ padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }}>
+          <option value="Note">Nota</option>
+          <option value="Call">Llamada</option>
+          <option value="Meeting">Reunión</option>
+          <option value="Visit">Visita</option>
+        </select>
+        <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Escribir entrada de chatter…" required style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: "1px solid var(--surface-border)" }} />
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <label style={{ display: "flex", gap: 8, alignItems: "center", margin: 0, fontSize: "0.9rem" }}>
+          Próxima acción
+          <input type="date" value={nextFollowUpOn} onChange={(e) => setNextFollowUpOn(e.target.value)} style={{ padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} />
+        </label>
+        <button className="btn btn-primary">Publicar</button>
+      </div>
     </form>
   );
 }

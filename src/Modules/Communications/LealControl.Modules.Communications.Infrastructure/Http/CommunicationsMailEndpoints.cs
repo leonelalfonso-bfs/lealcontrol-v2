@@ -79,7 +79,40 @@ internal static class CommunicationsMailEndpoints
             if (cleanPreview.Length > 500) cleanPreview = cleanPreview[..500];
             var stored = EmailMessage.Create(tenant.TenantId.Value, account.Id, mime.MessageId ?? $"sent-{Guid.NewGuid():N}", mime.InReplyTo, MailTransportService.ThreadKey(mime), EmailDirection.Outgoing, mime.Subject ?? request.Subject, account.EmailAddress, string.Join(",", request.To), cleanPreview, DateTime.UtcNow, request.RelatedEntityType, request.RelatedEntityId, request.HtmlBody, CommunicationChannelHelper.Email);
             await CommunicationsEndpointHelpers.AttachMessageToConversationAsync(db, conversationService, stored, ct: ct);
-            db.Add(stored); await db.SaveChangesAsync(ct); return Results.Ok(new { stored.Id, mime.MessageId });
+            db.Add(stored);
+            foreach (var attachment in request.Attachments ?? Array.Empty<OutgoingEmailAttachment>())
+            {
+                if (string.IsNullOrWhiteSpace(attachment.ContentBase64) || string.IsNullOrWhiteSpace(attachment.FileName)) continue;
+                byte[] bytes;
+                try { bytes = Convert.FromBase64String(attachment.ContentBase64); }
+                catch (FormatException) { continue; }
+                db.EmailAttachments.Add(EmailAttachment.Create(
+                    tenant.TenantId.Value,
+                    stored.Id,
+                    attachment.FileName.Trim(),
+                    string.IsNullOrWhiteSpace(attachment.ContentType) ? "application/octet-stream" : attachment.ContentType,
+                    bytes.Length,
+                    bytes));
+            }
+            if (stored.ConversationId.HasValue && request.RelatedEntityId.HasValue && !string.IsNullOrWhiteSpace(request.RelatedEntityType))
+            {
+                var conversation = await db.Conversations.FirstOrDefaultAsync(x => x.Id == stored.ConversationId.Value && x.TenantId == tenant.TenantId.Value, ct);
+                if (conversation is not null)
+                {
+                    var entityType = request.RelatedEntityType.Trim();
+                    if (entityType.Equals("Quote", StringComparison.OrdinalIgnoreCase))
+                        conversation.LinkDocument(request.RelatedEntityId, null, null);
+                    else if (entityType.Equals("Order", StringComparison.OrdinalIgnoreCase))
+                        conversation.LinkDocument(null, request.RelatedEntityId, null);
+                    else if (entityType.Equals("Invoice", StringComparison.OrdinalIgnoreCase))
+                        conversation.LinkDocument(null, null, request.RelatedEntityId);
+                    else if (entityType.Equals("Customer", StringComparison.OrdinalIgnoreCase))
+                        conversation.LinkCustomer(request.RelatedEntityId.Value);
+                    else if (entityType.Equals("Lead", StringComparison.OrdinalIgnoreCase))
+                        conversation.LinkLead(request.RelatedEntityId.Value);
+                }
+            }
+            await db.SaveChangesAsync(ct); return Results.Ok(new { stored.Id, mime.MessageId });
         });
 
         group.MapPost("/accounts/{id:guid}/sync", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, MailSyncService mailSync, ConversationService conversationService, CancellationToken ct) => {
@@ -171,6 +204,8 @@ internal static class CommunicationsMailEndpoints
                 query = query.Where(c => db.EmailMessages.Any(m => m.ConversationId == c.Id && m.Direction == EmailDirection.Outgoing));
             else if (string.Equals(folder, "Unassigned", StringComparison.OrdinalIgnoreCase))
                 query = query.Where(c => c.AssignedToUserId == null);
+            else if (string.Equals(folder, "Unlinked", StringComparison.OrdinalIgnoreCase))
+                query = query.Where(c => c.RelatedCustomerId == null && c.RelatedLeadId == null);
             else if (string.Equals(folder, "NeedsResponse", StringComparison.OrdinalIgnoreCase))
                 query = query.Where(c => c.LastIncomingAtUtc != null && c.LastIncomingAtUtc < slaCutoff && c.Status != "resolved" && c.Status != "archived");
 
@@ -221,6 +256,9 @@ internal static class CommunicationsMailEndpoints
                     x.UnreadCount,
                     x.RelatedLeadId,
                     x.RelatedCustomerId,
+                    x.RelatedQuoteId,
+                    x.RelatedOrderId,
+                    x.RelatedInvoiceId,
                     x.Status,
                     x.AssignedToUserId,
                     x.SuggestionDismissed,
@@ -322,9 +360,19 @@ internal static class CommunicationsMailEndpoints
 
             if (request.LeadId.HasValue) conversation.LinkLead(request.LeadId.Value);
             if (request.CustomerId.HasValue) conversation.LinkCustomer(request.CustomerId.Value);
+            if (request.QuoteId.HasValue || request.OrderId.HasValue || request.InvoiceId.HasValue)
+                conversation.LinkDocument(request.QuoteId, request.OrderId, request.InvoiceId);
             await db.SaveChangesAsync(ct);
 
-            return Results.Ok(new { success = true, relatedLeadId = conversation.RelatedLeadId, relatedCustomerId = conversation.RelatedCustomerId });
+            return Results.Ok(new
+            {
+                success = true,
+                relatedLeadId = conversation.RelatedLeadId,
+                relatedCustomerId = conversation.RelatedCustomerId,
+                relatedQuoteId = conversation.RelatedQuoteId,
+                relatedOrderId = conversation.RelatedOrderId,
+                relatedInvoiceId = conversation.RelatedInvoiceId
+            });
         });
 
         group.MapGet("/conversations/{id:guid}/activities", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {

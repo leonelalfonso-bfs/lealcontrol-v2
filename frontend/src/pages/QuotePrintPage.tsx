@@ -10,6 +10,7 @@ import {
   type CompanySettings,
   type Contact,
   type CustomerDetail,
+  type EmailMessage,
   type Location,
   type Product,
   type Quote
@@ -31,6 +32,7 @@ export const QuotePrintPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
+  const [emailHistory, setEmailHistory] = useState<EmailMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export const QuotePrintPage: React.FC = () => {
 
         setQuote(q);
         setCompany(companySettings);
+        void api.listEmails("Quote", id).then(setEmailHistory).catch(() => setEmailHistory([]));
 
         // Build products lookup dictionary
         const pMap: Record<string, Product> = {};
@@ -224,9 +227,16 @@ export const QuotePrintPage: React.FC = () => {
                 entityId: quote.id,
                 to: assignedContact?.email || customer?.email || undefined,
                 subject: `Presupuesto ${quote.quoteNumber} rev.${quote.revision}`,
-                body: `Estimado/a,\n\nAdjuntamos la propuesta comercial y oferta técnica ${quote.quoteNumber} (rev. ${quote.revision}) por un total de ${curr.symbol} ${grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}.\n\nQuedamos a su entera disposición ante cualquier consulta técnica o comercial.\n\nSaludos cordiales.`
+                body: `Estimado/a,\n\nAdjuntamos la propuesta comercial y oferta técnica ${quote.quoteNumber} (rev. ${quote.revision}) por un total de ${curr.symbol} ${grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}.\n\nQuedamos a su entera disposición ante cualquier consulta técnica o comercial.\n\nSaludos cordiales.`,
+                documentPdf: {
+                  elementId: "quote-pdf-sheet",
+                  fileName: `Presupuesto_${quote.quoteNumber}_rev${quote.revision}.pdf`
+                }
               }}
               onClose={() => setShowEmail(false)}
+              onSent={() => {
+                if (id) void api.listEmails("Quote", id).then(setEmailHistory).catch(() => undefined);
+              }}
             />
           )}
 
@@ -261,6 +271,23 @@ export const QuotePrintPage: React.FC = () => {
           includeTechnicalOffer={includeTechnicalOffer}
         />
       </div>
+
+      {emailHistory.length > 0 && (
+        <div className="no-print" style={{ maxWidth: "720px", margin: "18px auto 0", background: "#fff", borderRadius: 12, padding: "14px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.08)" }}>
+          <h3 style={{ margin: "0 0 10px", fontSize: "1rem" }}>Historial de envíos</h3>
+          <div style={{ display: "grid", gap: 8 }}>
+            {emailHistory.map((mail) => (
+              <div key={mail.id} style={{ padding: "8px 0", borderTop: "1px solid #e6ebf1" }}>
+                <div style={{ fontWeight: 700 }}>{mail.subject || "(sin asunto)"}</div>
+                <div className="muted" style={{ fontSize: "0.82rem" }}>
+                  {mail.direction === "Outgoing" ? "Enviado" : "Recibido"} · {new Date(mail.occurredAtUtc).toLocaleString("es-AR")} · {mail.toAddresses || mail.fromAddress}
+                  {mail.attachments?.length ? ` · ${mail.attachments.length} adjunto(s)` : ""}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

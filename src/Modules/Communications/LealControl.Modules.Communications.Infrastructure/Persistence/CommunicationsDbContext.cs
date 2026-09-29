@@ -245,6 +245,9 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AssignedToUserId"" uuid;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""SuggestionDismissed"" boolean NOT NULL DEFAULT false;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""LastIncomingAtUtc"" timestamp with time zone;
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""RelatedQuoteId"" uuid;
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""RelatedOrderId"" uuid;
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""RelatedInvoiceId"" uuid;
 
             CREATE TABLE IF NOT EXISTS communications.conversation_notes (
                 ""Id"" uuid PRIMARY KEY,

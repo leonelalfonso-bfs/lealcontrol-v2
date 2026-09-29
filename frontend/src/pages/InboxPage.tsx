@@ -75,7 +75,7 @@ export function InboxPage() {
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
-  const [folder, setFolder] = useState<"Mine" | "Incoming" | "Outgoing" | "All" | "NeedsResponse" | "Unassigned">("All");
+  const [folder, setFolder] = useState<"Mine" | "Incoming" | "Outgoing" | "All" | "NeedsResponse" | "Unassigned" | "Unlinked">("All");
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [templates, setTemplates] = useState<MessageReplyTemplate[]>([]);
@@ -745,6 +745,10 @@ export function InboxPage() {
             <span>⏰ SLA</span>
             <strong>{conversations.filter((c) => c.needsResponse).length}</strong>
           </button>
+          <button className={folder === "Unlinked" ? "active" : ""} onClick={() => setFolder("Unlinked")}>
+            <span>🔗 Sin vincular</span>
+            <strong>{folder === "Unlinked" ? conversations.length : conversations.filter((c) => isConversationUnlinked(c)).length}</strong>
+          </button>
           <button className={folder === "Unassigned" ? "active" : ""} onClick={() => setFolder("Unassigned")}>
             <span>👤 Sin asignar</span>
             <strong>{conversations.filter((c) => !c.assignedToUserId).length}</strong>
@@ -913,6 +917,9 @@ export function InboxPage() {
                     {activeMessages.length} mensaje(s) en el historial
                     {activeConversation.relatedLeadId ? " · Lead vinculado" : ""}
                     {activeConversation.relatedCustomerId ? " · Cliente vinculado" : ""}
+                    {activeConversation.relatedQuoteId ? " · Presupuesto" : ""}
+                    {activeConversation.relatedOrderId ? " · Pedido" : ""}
+                    {activeConversation.relatedInvoiceId ? " · Factura" : ""}
                   </div>
                 </div>
 
@@ -970,6 +977,26 @@ export function InboxPage() {
                     <span style={{ color: "var(--ink-soft)" }}>Sin vincular</span>
                   )}
                 </div>
+                {(activeConversation.relatedQuoteId || activeConversation.relatedOrderId || activeConversation.relatedInvoiceId) && (
+                  <div className="inbox-thread-field">
+                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Documento</div>
+                    {activeConversation.relatedQuoteId && (
+                      <Link to={`/presupuestos/${activeConversation.relatedQuoteId}/imprimir`} style={{ color: "#2563eb", fontWeight: 600 }}>
+                        Presupuesto
+                      </Link>
+                    )}
+                    {activeConversation.relatedOrderId && (
+                      <Link to={`/pedidos/${activeConversation.relatedOrderId}`} style={{ color: "#2563eb", fontWeight: 600, marginLeft: 8 }}>
+                        Pedido
+                      </Link>
+                    )}
+                    {activeConversation.relatedInvoiceId && (
+                      <Link to={`/facturas/${activeConversation.relatedInvoiceId}/imprimir`} style={{ color: "#2563eb", fontWeight: 600, marginLeft: 8 }}>
+                        Factura
+                      </Link>
+                    )}
+                  </div>
+                )}
                 <div className="inbox-thread-field">
                   <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado</div>
                   <select

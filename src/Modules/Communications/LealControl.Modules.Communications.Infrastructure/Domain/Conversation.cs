@@ -20,6 +20,9 @@ public sealed class Conversation
     public int UnreadCount { get; private set; }
     public Guid? RelatedLeadId { get; private set; }
     public Guid? RelatedCustomerId { get; private set; }
+    public Guid? RelatedQuoteId { get; private set; }
+    public Guid? RelatedOrderId { get; private set; }
+    public Guid? RelatedInvoiceId { get; private set; }
     public string Status { get; private set; } = "open";
     public Guid? AssignedToUserId { get; private set; }
     public bool SuggestionDismissed { get; private set; }
@@ -96,6 +99,14 @@ public sealed class Conversation
     public void LinkCustomer(Guid customerId)
     {
         RelatedCustomerId = customerId;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void LinkDocument(Guid? quoteId, Guid? orderId, Guid? invoiceId)
+    {
+        if (quoteId.HasValue) RelatedQuoteId = quoteId;
+        if (orderId.HasValue) RelatedOrderId = orderId;
+        if (invoiceId.HasValue) RelatedInvoiceId = invoiceId;
         UpdatedAtUtc = DateTime.UtcNow;
     }
 
