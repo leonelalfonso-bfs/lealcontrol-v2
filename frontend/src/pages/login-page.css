@@ -30,7 +30,10 @@
 .login-notice { color: #17549a; background: #e9f2ff; border: 1px solid #b9d7fb; }
 .login-error { color: #a12626; background: #fff1f1; border: 1px solid #f3b5b5; }
 .login-tenants { display: grid; gap: 10px; }
-.login-tenant { display: grid; gap: 3px; width: 100%; padding: 13px 15px; text-align: left; border: 1px solid #dce3eb; border-radius: 7px; background: #fff; color: #1d2735; cursor: pointer; font: inherit; }
+.login-tenant { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; align-items: center; width: 100%; padding: 12px 14px; text-align: left; border: 1px solid #dce3eb; border-radius: 7px; background: #fff; color: #1d2735; cursor: pointer; font: inherit; }
+.login-tenant-copy { display: grid; gap: 2px; min-width: 0; }
+.login-tenant-logo { width: 88px; height: 56px; object-fit: contain; }
+.login-tenant-mark { display: grid; place-items: center; width: 88px; height: 56px; border-radius: 8px; background: #e9f2ff; color: #17549a; font-weight: 800; letter-spacing: .04em; }
 .login-tenant:hover { border-color: #206bc4; background: #f2f7ff; }
 .login-tenant span, .login-tenant small { color: #596b80; }
 .login-back { justify-self: start; margin-top: 7px; border: 0; background: transparent; color: #206bc4; font: inherit; font-size: .85rem; cursor: pointer; }

@@ -1,5 +1,7 @@
 # CRM 2.0 — alcance de migración y backlog
 
+> El checklist vivo de CRM y Comunicaciones está en [`docs/PLAN_RELACION_COMERCIAL.md`](PLAN_RELACION_COMERCIAL.md). Este archivo conserva las decisiones del núcleo CRM (CRM-1) y no se usa para marcar el trabajo nuevo.
+
 ## Propósito
 
 Este documento traduce las capacidades del CRM de Leal Control (Laravel) a decisiones explícitas para Leal Control 2.0. El sistema anterior es referencia de reglas y uso real; no se migra su código ni se modifica.

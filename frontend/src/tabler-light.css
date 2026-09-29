@@ -73,25 +73,27 @@
   box-shadow: none !important;
 }
 :root[data-color-mode="light"] .sidebar .company-brand {
-  display: grid !important;
-  grid-template-columns: 38px minmax(0, 1fr);
-  align-items: center !important;
-  text-align: left !important;
-  column-gap: 9px !important;
-  padding: 8px 5px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  text-align: center !important;
+  gap: 8px !important;
+  padding: 4px 4px 14px !important;
 }
-:root[data-color-mode="light"] .sidebar .company-brand > :nth-child(3) { grid-column: 1 / -1; }
 :root[data-color-mode="light"] .sidebar .company-logo-placeholder {
-  width: 38px !important;
-  height: 38px !important;
+  width: 100% !important;
+  height: 72px !important;
   margin: 0 !important;
-  border-radius: 6px !important;
-  font-size: 0.82rem !important;
+  border-radius: 8px !important;
+  font-size: 1.15rem !important;
 }
 :root[data-color-mode="light"] .sidebar .company-brand img {
-  width: 38px !important;
-  max-width: 38px !important;
-  max-height: 38px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 88px !important;
+  max-height: 88px !important;
+  object-fit: contain !important;
+  background: transparent !important;
   filter: none !important;
 }
 :root[data-color-mode="light"] .sidebar .company-brand strong,

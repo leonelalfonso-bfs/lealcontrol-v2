@@ -1,5 +1,7 @@
 # CRM vivo — branding, clientes reales y WhatsApp
 
+> El seguimiento actual está en [`docs/PLAN_RELACION_COMERCIAL.md`](PLAN_RELACION_COMERCIAL.md). Click-to-chat sigue vigente; la bandeja entrante se construye en Comunicaciones, no como un segundo WhatsApp.
+
 ## Qué se sumó
 
 1. **Logo** en sidebar + favicon (`frontend/public/logo.svg`)

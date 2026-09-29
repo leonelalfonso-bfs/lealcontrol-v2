@@ -3,6 +3,7 @@ import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { api } from "./api/client";
 import { useAuth } from "./context/AuthContext";
 import { usePresentationMode } from "./context/PresentationModeContext";
+import { tenantLegalLine, tenantTitle } from "./utils/tenantLabel";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { CommunicationsNotificationBell } from "./components/CommunicationsNotificationBell";
 import { useCommunicationsBrowserNotifications } from "./hooks/useCommunicationsBrowserNotifications";
@@ -249,7 +250,8 @@ export function App() {
       .catch(() => undefined);
   }, [user, tenant?.id]);
 
-  const activeCompanyName = tenant?.tradeName || tenant?.legalName || companyName;
+  const activeCompanyName = (companyName && companyName !== "Empresa" ? companyName : null)
+    || (tenant ? tenantTitle(tenant) : companyName);
 
   const userRole = user?.role || "Comercial";
   const allowedModuleIds = resolveAllowedModuleIds(userRole, user?.allowedModulesJson, communicationsEnabled);
@@ -330,46 +332,37 @@ export function App() {
         {/* Main Body with Clean Adaptive Sidebar */}
         <div className="app">
           <aside className={`sidebar ${mobileSidebarOpen ? "mobile-open" : ""}`}>
-            <div className="company-brand" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 6, padding: "8px 6px 12px", borderBottom: "1px solid var(--surface-border)" }}>
+            <div className="company-brand">
               {companyLogo ? (
-                <img src={companyLogo} alt={activeCompanyName} style={{ maxHeight: "42px", maxWidth: "160px", objectFit: "contain", filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.15))" }} />
+                <img className="company-logo" src={companyLogo} alt={activeCompanyName} />
               ) : (
-                <div className="company-logo-placeholder" style={{ margin: "0 auto" }}>{activeCompanyName.slice(0, 2).toUpperCase()}</div>
+                <div className="company-logo-placeholder">{activeCompanyName.slice(0, 2).toUpperCase()}</div>
               )}
-              <div style={{ width: "100%", marginTop: 2 }}>
-                <strong style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {activeCompanyName}
-                </strong>
+              <div className="company-brand-name">
+                <strong>{activeCompanyName}</strong>
+                {tenantLegalLine(tenant ?? { legalName: activeCompanyName }) && (
+                  <span className="company-brand-legal">{tenantLegalLine(tenant ?? { legalName: activeCompanyName })}</span>
+                )}
                 {tenant?.documentNumber && (
-                  <span style={{ fontSize: "0.72rem", color: "var(--ink-soft)", letterSpacing: "0.02em" }}>
-                    CUIT {tenant.documentNumber}
-                  </span>
+                  <span className="company-brand-cuit">CUIT {tenant.documentNumber}</span>
                 )}
               </div>
 
               {availableTenants.length > 1 && (
-                <div style={{ width: "100%", marginTop: 4 }}>
+                <label className="company-switch">
+                  <span>Cambiar de empresa</span>
                   <select
                     value={tenant?.id || ""}
                     onChange={(e) => switchTenant(e.target.value)}
-                    style={{
-                      width: "100%",
-                      fontSize: "0.75rem",
-                      padding: "4px 8px",
-                      borderRadius: "6px",
-                      border: "1px solid var(--surface-border)",
-                      background: "var(--surface-muted)",
-                      color: "var(--ink)"
-                    }}
-                    title="Alternar Empresa / Tenant"
+                    title="Cambiar de empresa"
                   >
                     {availableTenants.map((t) => (
                       <option key={t.id} value={t.id}>
-                        🏢 {t.legalName}{t.documentNumber ? ` (${t.documentNumber})` : ""}
+                        {tenantTitle(t)}{t.documentNumber ? ` · CUIT ${t.documentNumber}` : ""}
                       </option>
                     ))}
                   </select>
-                </div>
+                </label>
               )}
             </div>
 

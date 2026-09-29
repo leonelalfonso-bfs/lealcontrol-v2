@@ -185,12 +185,17 @@ public static class AuthEndpoints
 
             var activeMembership = memberships.FirstOrDefault(m => m.TenantId == tenantId.Value);
             var tenantSettings = await db.CompanySettings.FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
-            var tenantName = activeMembership?.LegalName
-                ?? tenantSettings?.LegalName
-                ?? tenantSettings?.TradeName
-                ?? "LEAL CONTROL ERP S.A.";
-            var tradeName = activeMembership?.TradeName ?? tenantSettings?.TradeName;
-            var docNumber = activeMembership?.DocumentNumber ?? tenantSettings?.DocumentNumber ?? "";
+            var (tenantName, tradeName) = MultiTenantAuthResolver.ChooseCompanyLabels(
+                null,
+                tenantSettings?.LegalName ?? activeMembership?.LegalName,
+                tenantSettings?.TradeName ?? activeMembership?.TradeName,
+                activeMembership?.LegalName);
+            var docNumber = !string.IsNullOrWhiteSpace(tenantSettings?.DocumentNumber)
+                ? tenantSettings.DocumentNumber
+                : activeMembership?.DocumentNumber ?? "";
+            var logoUrl = tenantSettings?.LogoUrl ?? activeMembership?.LogoUrl;
+            if (logoUrl is { Length: > 180_000 })
+                logoUrl = null;
 
             UserDto? userDto = null;
             if (user != null)
@@ -212,7 +217,7 @@ public static class AuthEndpoints
                 ? MultiTenantAuthResolver.ToSummaries(memberships)
                 : new List<TenantSummaryDto>
                 {
-                    new(tenantId.Value, tenantName, tradeName, docNumber)
+                    new(tenantId.Value, tenantName, tradeName, docNumber, logoUrl)
                 };
 
             if (userDto is null)
@@ -225,7 +230,7 @@ public static class AuthEndpoints
             return Results.Ok(new
             {
                 User = userDto,
-                Tenant = new TenantSummaryDto(tenantId.Value, tenantName, tradeName, docNumber),
+                Tenant = new TenantSummaryDto(tenantId.Value, tenantName, tradeName, docNumber, logoUrl),
                 AvailableTenants = availableTenants
             });
         });
@@ -425,5 +430,5 @@ public sealed record LoginRequest(string Email, string Password, Guid? TenantId)
 public sealed record RegisterTenantRequest(string CompanyName, string? Cuit, string? Phone, string? AdminFullName, string Email, string Password);
 public sealed record SwitchTenantRequest(Guid TenantId);
 public sealed record UserDto(Guid Id, string FullName, string Email, string Role, string? AllowedModulesJson = null, bool IsTechnicalDirector = false);
-public sealed record TenantSummaryDto(Guid Id, string LegalName, string? TradeName, string DocumentNumber);
+public sealed record TenantSummaryDto(Guid Id, string LegalName, string? TradeName, string DocumentNumber, string? LogoUrl = null);
 public sealed record AuthResponse(string Token, UserDto User, TenantSummaryDto Tenant, IReadOnlyList<TenantSummaryDto> AvailableTenants);
