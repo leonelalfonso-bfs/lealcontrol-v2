@@ -1,7 +1,6 @@
 import type { CSSProperties } from "react";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { currencyMeta, label, type CompanySettings, type Contact, type CustomerDetail, type Location, type Product, type Quote } from "../api/types";
-import { numberToWords } from "../utils/numberToWords";
 import { plainToRich, richTextIsEmpty } from "../utils/richText";
 import "./quoteDocument.css";
 
@@ -26,42 +25,28 @@ function formatCuit(raw?: string | null) {
   return digits.length === 11 ? `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}` : raw || "—";
 }
 
-function sentenceCase(value: string) {
-  const text = value.trim().toLocaleLowerCase("es-AR");
-  return text ? text.charAt(0).toLocaleUpperCase("es-AR") + text.slice(1) : "";
-}
-
 function optionalAmount(line: { quantity: number; unitPrice: number; discountPercent: number; lineSubtotal: number }) {
   if (line.lineSubtotal > 0) return line.lineSubtotal;
   return Math.round(line.quantity * line.unitPrice * (1 - (line.discountPercent || 0) / 100) * 100) / 100;
 }
 
-function tint(hex: string, towardWhite: number) {
-  const raw = hex.trim().replace("#", "");
-  const full = raw.length === 3 ? raw.replace(/./g, (char) => char + char) : raw;
-  const value = Number.parseInt(full, 16);
-  if (!Number.isFinite(value) || full.length !== 6) return "#f3f7f6";
-  const channel = (color: number) => Math.round(color + (255 - color) * towardWhite);
-  return `rgb(${channel((value >> 16) & 255)}, ${channel((value >> 8) & 255)}, ${channel(value & 255)})`;
-}
-
 export function QuoteDocument({ quote, company, customer, deliveryLocation, assignedContact, productsMap, includeTechnicalOffer }: Props) {
   const { settings } = useDocumentTemplate();
-  const accent = settings.primaryColor || "#0d9488";
-  const sheetStyle = {
-    "--document-accent": accent,
-    "--document-accent-soft": tint(accent, 0.9)
-  } as CSSProperties;
+  const accent = settings.primaryColor || "#3a82f6";
+  const sheetStyle = { "--document-accent": accent } as CSSProperties;
   const companyName = company?.tradeName?.trim() || company?.legalName || "Empresa";
-  const companyAddress = [company?.fiscalStreet, company?.fiscalCity, company?.fiscalProvince].filter(Boolean).join(" · ");
-  const customerAddress = [
-    customer?.fiscalAddress?.street,
-    customer?.fiscalAddress?.city,
-    customer?.fiscalAddress?.province
-  ].filter(Boolean).join(" · ");
+  const letterName = company?.legalName?.trim() || companyName;
+  const docTitle = (settings.quote.headerTitle || "Presupuesto").split("/")[0].trim() || "Presupuesto";
+  const placeLine = [company?.fiscalStreet, company?.fiscalCity, company?.fiscalProvince].filter(Boolean).join(" - ");
+  const phoneLine = [company?.phone, company?.whatsApp]
+    .filter((value): value is string => Boolean(value))
+    .filter((value, index, all) => all.indexOf(value) === index)
+    .join(" // ");
+  const reachLine = [company?.email, phoneLine, company?.website].filter(Boolean).join(" | ");
+  const customerCity = [customer?.fiscalAddress?.city, customer?.fiscalAddress?.province].filter(Boolean).join(", ");
   const deliveryAddress = deliveryLocation?.address?.street
-    ? [deliveryLocation.address.street, deliveryLocation.address.city, deliveryLocation.address.province].filter(Boolean).join(" · ")
-    : customerAddress;
+    ? [deliveryLocation.address.street, deliveryLocation.address.city, deliveryLocation.address.province].filter(Boolean).join(" - ")
+    : "";
   const curr = currencyMeta[quote.currency] ?? { label: quote.currency, detail: "", symbol: "$" };
   const subtotal = quote.subtotal;
   const discount = Math.round(subtotal * quote.discountPercent) / 100;
@@ -80,7 +65,7 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
   }).filter((item) => Boolean(item.detail && !richTextIsEmpty(item.detail)) || Boolean(item.product?.imagePath));
   const showTechnical = includeTechnicalOffer && settings.quote.showTechnicalOffer && technicalItems.length > 0;
   const inlineTechnical = showTechnical && technicalItems.length <= 2 && technicalItems.every((item) => !item.product?.imagePath && item.detail.length <= 180);
-  const contactLine = [companyAddress, company?.phone, company?.email].filter(Boolean).join("  ·  ");
+  const amount = (value: number) => `${quote.currency.startsWith("USD") ? "USD" : curr.symbol} ${money(value)}`;
   const footerText = settings.quote.customFooterText.replace(
     /(presupuesto válido por )\d+( días corridos)/i,
     (_match, before: string, after: string) => `${before}${quote.validDays}${after}`
@@ -91,71 +76,78 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
       {quote.status === "Cancelled" && <div className="quote-document__cancelled">ANULADO</div>}
       <header className="qs-head">
         <div className="qs-top">
-          <div className="qs-brand">
-            {company?.logoUrl ? (
-              <img className="qs-logo" src={company.logoUrl} alt={companyName} crossOrigin="anonymous" />
-            ) : (
-              <div className="qs-mark">{companyName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</div>
-            )}
-            <div className="qs-brand-text">
-              <strong>{company?.logoUrl && company.legalName && company.legalName !== companyName ? company.legalName : companyName}</strong>
-              {!company?.logoUrl && company?.legalName && company.legalName !== companyName && <em>{company.legalName}</em>}
-            </div>
+          {company?.logoUrl ? (
+            <img className="qs-logo" src={company.logoUrl} alt={companyName} crossOrigin="anonymous" />
+          ) : (
+            <div className="qs-mark">{companyName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</div>
+          )}
+          <div className="qs-brand-text">
+            <strong>{letterName}</strong>
+            {placeLine && <span>{placeLine}</span>}
+            {company?.documentNumber && <span>CUIT: {formatCuit(company.documentNumber)}</span>}
+            {reachLine && <span>{reachLine}</span>}
           </div>
           <div className="qs-doc">
-            <span>{settings.quote.headerTitle || "Presupuesto"}</span>
-            <b>{quote.quoteNumber}</b>
-            <small>Revisión {quote.revision} · {date}</small>
+            <span>{docTitle}</span>
+            <b>N° {quote.quoteNumber}</b>
+            <small>Fecha: {date}{quote.revision > 0 ? ` · Rev. ${quote.revision}` : ""}</small>
           </div>
+          {/* El logo secundario (acreditación) todavía no está en los datos de la empresa. */}
+          <div className="qs-seal" />
         </div>
-        {(contactLine || company?.documentNumber) && (
-          <p className="qs-meta">
-            {contactLine}
-            {contactLine && company?.documentNumber ? <br /> : null}
-            {company?.documentNumber ? <>CUIT {formatCuit(company.documentNumber)} · {label(company.taxCondition)}</> : null}
-          </p>
-        )}
       </header>
 
       <section className="qs-for">
         <div>
-          <span>Para</span>
+          <span>Cliente / destinatario (datos fiscales)</span>
           <strong>{customer?.legalName || "Cliente"}</strong>
-          <p>CUIT {formatCuit(customer?.documentNumber)} · {label(customer?.taxCondition)}</p>
-          {customerAddress && <p>{customerAddress}</p>}
+          <p>CUIT: {formatCuit(customer?.documentNumber)}</p>
+          <p>IVA: {label(customer?.taxCondition)}</p>
+          {customer?.fiscalAddress?.street && <p>{customer.fiscalAddress.street}</p>}
+          {customerCity && <p>{customerCity}</p>}
           {assignedContact && <p>Atención: {assignedContact.name}</p>}
         </div>
-        <dl>
-          <div><dt>Vigencia</dt><dd>{quote.validDays} días</dd></div>
-          <div><dt>Moneda</dt><dd>{curr.label}</dd></div>
-        </dl>
+        <div className="qs-delivery">
+          <span>Lugar de entrega / atención</span>
+          <strong>{deliveryLocation?.name || "Dirección fiscal"}</strong>
+          <p>{deliveryAddress || "Se entrega en el domicilio fiscal del cliente."}</p>
+        </div>
       </section>
 
+      {inlineTechnical && (
+        <section className="qs-tech">
+          <div className="qs-banner">Oferta técnica</div>
+          {technicalItems.map(({ line, index, detail }) => (
+            <article key={line.id}>
+              <h3>{index + 1}. {quoteItemTitle(line.description)}</h3>
+              {detail && <div className="quote-tech-html" dangerouslySetInnerHTML={{ __html: plainToRich(detail) }} />}
+            </article>
+          ))}
+        </section>
+      )}
+
+      <div className="qs-banner">Oferta comercial</div>
       <table className="qs-items">
           <thead><tr>
-            <th>Descripción</th><th>Cant.</th><th>Precio</th>
-            {settings.quote.showItemDiscounts && <th>DESC.</th>}
+            <th className="qs-col-item">Ítem</th>
+            <th className="qs-col-desc">Descripción</th>
+            <th>Cant.</th>
+            <th>Precio u.</th>
+            {settings.quote.showItemDiscounts && <th>Desc.</th>}
             {settings.quote.showTaxesBreakdown && <th>IVA</th>}
-            <th>Importe</th>
+            <th>Total</th>
           </tr></thead>
           <tbody>
             {quote.lines.map((line, index) => (
               <tr key={line.id} className={line.isOptional ? "qs-opt" : undefined}>
-                <td>
-                  <div className="qs-line">
-                    <span className="qs-n">{String(index + 1).padStart(2, "0")}</span>
-                    <div>
-                      <strong>{quoteItemTitle(line.description)}</strong>
-                      {line.isOptional && <small>Opcional · no incluido en el total</small>}
-                      {inlineTechnical && technicalItems.find((item) => item.line.id === line.id)?.detail && (
-                        <div className="quote-document__inline-tech" dangerouslySetInnerHTML={{ __html: plainToRich(technicalItems.find((item) => item.line.id === line.id)!.detail) }} />
-                      )}
-                    </div>
-                  </div>
+                <td className="qs-col-item">{index + 1}</td>
+                <td className="qs-col-desc">
+                  <strong>{quoteItemTitle(line.description)}</strong>
+                  {line.isOptional && <small>Opcional · no incluido en el total</small>}
                 </td>
                 <td>{line.quantity.toLocaleString("es-AR")}</td>
                 <td>{money(line.unitPrice)}</td>
-                {settings.quote.showItemDiscounts && <td>{line.discountPercent ? `${line.discountPercent}%` : "—"}</td>}
+                {settings.quote.showItemDiscounts && <td>{line.discountPercent}%</td>}
                 {settings.quote.showTaxesBreakdown && <td>{line.taxRate}%</td>}
                 <td className={line.isOptional ? "qs-muted" : "quote-document__item-total"}>{money(line.isOptional ? optionalAmount(line) : line.lineSubtotal)}</td>
               </tr>
@@ -164,29 +156,28 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
         </table>
 
       <section className="qs-sum">
-        <p>{sentenceCase(numberToWords(total, quote.currency))}.</p>
-        <div className="qs-totals">
-          <div><span>Subtotal</span><strong>{curr.symbol} {money(subtotal)}</strong></div>
-          {quote.discountPercent > 0 && <div><span>Descuento {quote.discountPercent}%</span><strong>− {curr.symbol} {money(discount)}</strong></div>}
-          <div><span>{taxLabel}</span><strong>{curr.symbol} {money(tax)}</strong></div>
-          <div className="qs-grand"><span>Total</span><strong>{curr.symbol} {money(total)}</strong></div>
-        </div>
+        <div><span>Subtotal {curr.label}</span><strong>{amount(subtotal)}</strong></div>
+        {quote.discountPercent > 0 && <div><span>Descuento {quote.discountPercent}%</span><strong>− {amount(discount)}</strong></div>}
+        <div><span>{taxLabel}</span><strong>{amount(tax)}</strong></div>
+        <div className="qs-grand"><span>Total {curr.label}</span><strong>{amount(total)}</strong></div>
       </section>
 
       {exchangeRate > 0 && (
         <aside className="quote-document__exchange quote-document__keep">
-          <strong>Referencia cambiaria · {curr.label}</strong>
-          <span>ARS {money(exchangeRate)} por USD. La conversión final en pesos se define al momento de la facturación o cobro.</span>
+          <strong>Tipo de cambio de referencia: $ {money(exchangeRate)} — {curr.label} (cotización vendedor).</strong>
+          <span>Los importes en dólares se cotizan según la tasa de referencia indicada. El valor final en pesos se definirá al momento de la facturación o el cobro.</span>
         </aside>
       )}
 
       <section className="qs-terms">
-        <div><span>Entrega</span><strong>{quote.deliveryTimeText || (quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días hábiles` : settings.quote.deliveryTerms)}</strong></div>
-        <div><span>Pago</span><strong>{quote.paymentTerms || settings.quote.paymentTerms}</strong></div>
-        <div><span>Medio</span><strong>{quote.paymentMethod || "A convenir"}</strong></div>
-        <div><span>Garantía</span><strong>{quote.warranty || settings.quote.warrantyTerms}</strong></div>
-        <div><span>Destino</span><strong>{deliveryLocation?.name || "Domicilio fiscal"}{deliveryAddress ? ` · ${deliveryAddress}` : ""}</strong></div>
-        <div><span>Transporte</span><strong>{quote.transportation || "A coordinar"}</strong></div>
+        <div className="qs-terms-title">Condiciones comerciales</div>
+        <div className="qs-terms-grid">
+          <p><span>Plazo de entrega:</span> {quote.deliveryTimeText || (quote.deliveryTimeDays ? `${quote.deliveryTimeDays} días` : settings.quote.deliveryTerms)}</p>
+          <p><span>Forma de pago:</span> {quote.paymentMethod || "A convenir"}</p>
+          <p><span>Condiciones de pago:</span> {quote.paymentTerms || settings.quote.paymentTerms}</p>
+          <p><span>Transporte:</span> {quote.transportation || "—"}</p>
+          <p className="qs-wide"><span>Garantía:</span> {quote.warranty || settings.quote.warrantyTerms}</p>
+        </div>
       </section>
 
       {quote.notes && <aside className="quote-document__notes quote-document__keep"><strong>Observaciones</strong><p>{quote.notes}</p></aside>}
@@ -195,8 +186,8 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
         <div className="quote-document__signatures quote-document__keep"><div>Responsable / asesor técnico</div><div>Aceptación del cliente</div></div>
       )}
       <footer className="qs-foot">
-        <span>{companyName}{company?.website ? ` · ${company.website}` : company?.email ? ` · ${company.email}` : ""}</span>
-        <span>{footerText}</span>
+        <span>Este presupuesto tiene una validez de {quote.validDays} días.</span>
+        {footerText && <span className="qs-legal">{footerText}</span>}
       </footer>
 
       {showTechnical && !inlineTechnical && (
