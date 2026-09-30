@@ -50,16 +50,16 @@ export function RemitoFormPage() {
     async function loadData() {
       try {
         setLoading(true);
-        const [custPage, prodList] = await Promise.all([
-          api.listCustomers().catch(() => ({ items: [], total: 0, page: 1, pageSize: 50 })),
+        const [customerList, prodList] = await Promise.all([
+          api.listAllCustomers(),
           api.listProducts().catch(() => [])
         ]);
 
-        setCustomers(custPage.items);
+        setCustomers(customerList);
         setProducts(prodList);
 
         if (orderId) {
-          const order = await api.getOrder(orderId).catch(() => null);
+          const order = await api.getOrder(orderId);
           if (order) {
             setOrderNumber(order.orderNumber);
             let custDetail: CustomerDetail | null = null;
@@ -67,8 +67,8 @@ export function RemitoFormPage() {
               custDetail = await api.getCustomer(order.customerId).catch(() => null);
             }
 
-            const foundName = custDetail?.legalName || custPage.items.find((c) => c.id === order.customerId)?.legalName || "";
-            const foundDoc = custDetail?.documentNumber || custPage.items.find((c) => c.id === order.customerId)?.documentNumber || "";
+            const foundName = custDetail?.legalName || customerList.find((c) => c.id === order.customerId)?.legalName || "";
+            const foundDoc = custDetail?.documentNumber || customerList.find((c) => c.id === order.customerId)?.documentNumber || "";
 
             setCustomerId(order.customerId);
             setCustomerName(foundName);
@@ -256,6 +256,9 @@ export function RemitoFormPage() {
                 required
               >
                 <option value="">Seleccionar cliente...</option>
+                {customerId && !customers.some((c) => c.id === customerId) && (
+                  <option value={customerId}>{customerName || `Cliente del pedido (${customerId})`}</option>
+                )}
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.legalName} ({c.documentNumber})
