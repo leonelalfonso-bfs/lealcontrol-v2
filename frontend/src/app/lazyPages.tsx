@@ -109,7 +109,7 @@ export const CustomerFormPage = named(() => import("../pages/CustomerFormPage"),
 export const DirectoryPage = named(() => import("../pages/DirectoryPage"), "DirectoryPage");
 export const CustomersPage = named(() => import("../pages/CustomersPage"), "CustomersPage");
 export const HoyPage = named(() => import("../pages/HoyPage"), "HoyPage");
-export const ExecutiveDashboardPage = named(() => import("../pages/ExecutiveDashboardPage"), "ExecutiveDashboardPage");
+export const ExecutiveDashboardPage = named(() => import("../pages/ExecutiveDashboardV2"), "ExecutiveDashboardV2");
 export const InventoryPage = named(() => import("../pages/InventoryPage"), "InventoryPage");
 export const InventoryHelpPage = named(() => import("../pages/InventoryHelpPage"), "InventoryHelpPage");
 export const InvoiceFormPage = named(() => import("../pages/InvoiceFormPage"), "InvoiceFormPage");
