@@ -6,7 +6,10 @@ import {
   type CustomerSummary,
   type ExchangeRates,
   type InvoiceWrite,
-  type ProductSummary
+  type Order,
+  type OrderLine,
+  type ProductSummary,
+  type RemitoItem
 } from "../api/types";
 
 interface FormInvoiceItem {
@@ -17,6 +20,23 @@ interface FormInvoiceItem {
   unitPrice: number;
   discountPercent: number;
   vatRate: number;
+}
+
+function combinedDiscount(linePercent: number, orderPercent: number) {
+  return Math.round((100 - (100 - linePercent) * (100 - orderPercent) / 100) * 10000) / 10000;
+}
+
+function orderLineForRemito(item: RemitoItem, order: Order): OrderLine | null {
+  const description = item.description.replace(/\s*\(S\/N:.*\)\s*$/i, "").trim().toLocaleLowerCase();
+  const sameDescription = (line: OrderLine) => line.description.trim().toLocaleLowerCase() === description;
+  const byProduct = item.productId ? order.lines.filter((line) => line.productId === item.productId) : [];
+  const matches = byProduct.length ? byProduct : order.lines.filter(sameDescription);
+  const exact = matches.filter(sameDescription);
+  const candidates = exact.length ? exact : matches;
+  if (!candidates.length) return null;
+  const first = candidates[0];
+  return candidates.every((line) => line.unitPrice === first.unitPrice && line.discountPercent === first.discountPercent && line.taxRate === first.taxRate)
+    ? first : null;
 }
 
 export function InvoiceFormPage() {
@@ -56,6 +76,8 @@ export function InvoiceFormPage() {
   const [advancePercent, setAdvancePercent] = useState<number>(100);
   const [notes, setNotes] = useState<string>("");
   const [sourceRemitoNumber, setSourceRemitoNumber] = useState<string>("");
+  const [sourceOrderId, setSourceOrderId] = useState<string>("");
+  const [pricingWarning, setPricingWarning] = useState<string | null>(null);
 
   const [items, setItems] = useState<FormInvoiceItem[]>([
     { productId: undefined, code: "SERV-01", description: "Servicio / Producto", quantity: 1, unitPrice: 10000, discountPercent: 0, vatRate: 21.0 }
@@ -66,13 +88,13 @@ export function InvoiceFormPage() {
     async function loadData() {
       try {
         setLoading(true);
-        const [custPage, prodList, rates] = await Promise.all([
-          api.listCustomers().catch(() => ({ items: [], total: 0, page: 1, pageSize: 50 })),
+        const [customerList, prodList, rates] = await Promise.all([
+          api.listAllCustomers(),
           api.listProducts().catch(() => []),
           api.getExchangeRates().catch(() => null)
         ]);
 
-        setCustomers(custPage.items);
+        setCustomers(customerList);
         setProducts(prodList);
         setExchangeRates(rates);
         const points = await api.listArcaSalesPoints().catch(() => null);
@@ -87,16 +109,16 @@ export function InvoiceFormPage() {
         const defaultRate = rates?.usdDivisaSell || rates?.usdBilleteSell || 1400;
 
         if (orderId) {
-          const order = await api.getOrder(orderId).catch(() => null);
+          const order = await api.getOrder(orderId);
           if (order) {
             let custDetail: CustomerDetail | null = null;
             if (order.customerId && order.customerId !== "00000000-0000-0000-0000-000000000000") {
               custDetail = await api.getCustomer(order.customerId).catch(() => null);
             }
 
-            const foundName = custDetail?.legalName || custPage.items.find((c) => c.id === order.customerId)?.legalName || "";
-            const foundDoc = custDetail?.documentNumber || custPage.items.find((c) => c.id === order.customerId)?.documentNumber || "";
-            const foundTax = custDetail?.taxCondition || custPage.items.find((c) => c.id === order.customerId)?.taxCondition || "ResponsableInscripto";
+            const foundName = custDetail?.legalName || customerList.find((c) => c.id === order.customerId)?.legalName || "";
+            const foundDoc = custDetail?.documentNumber || customerList.find((c) => c.id === order.customerId)?.documentNumber || "";
+            const foundTax = custDetail?.taxCondition || customerList.find((c) => c.id === order.customerId)?.taxCondition || "ResponsableInscripto";
 
             setCustomerId(order.customerId);
             setCustomerName(foundName);
@@ -123,9 +145,10 @@ export function InvoiceFormPage() {
             setCustomerAddress(address);
 
             const isUsd = order.currency?.includes("USD");
-            const orderRate = isUsd ? (order.exchangeRateUsdBillete || order.exchangeRateUsdDivisa || defaultRate) : 1.0;
+            const orderRate = order.currency === "USD_BILLETE" ? order.exchangeRateUsdBillete : order.exchangeRateUsdDivisa;
             setCurrency(isUsd ? "USD" : "ARS");
-            setExchangeRate(orderRate);
+            setRateSource(order.currency === "USD_BILLETE" ? "billetes" : "divisas");
+            setExchangeRate(isUsd ? (orderRate || defaultRate) : 1.0);
             setNotes(`Emitida a partir del Pedido N° ${order.orderNumber}${order.notes ? ` · ${order.notes}` : ""}`);
 
             const orderLines = order.lines || [];
@@ -138,16 +161,16 @@ export function InvoiceFormPage() {
                     code: prod?.code || "ITEM",
                     description: i.description || prod?.name || "Ítem de venta",
                     quantity: Math.round(i.quantity) || 1,
-                    unitPrice: i.unitPrice || 0,
-                    discountPercent: i.discountPercent || 0,
-                    vatRate: i.taxRate || 21.0
+                    unitPrice: i.unitPrice ?? 0,
+                    discountPercent: combinedDiscount(i.discountPercent || 0, order.discountPercent || 0),
+                    vatRate: i.taxRate ?? 21.0
                   };
                 })
               );
             }
           }
         } else if (remitoId) {
-          const remito = await api.getRemito(remitoId).catch(() => null);
+          const remito = await api.getRemito(remitoId);
           if (remito) {
             setSourceRemitoNumber(remito.remitoNumber);
             let custDetail: CustomerDetail | null = null;
@@ -158,29 +181,45 @@ export function InvoiceFormPage() {
 
             const foundTax = custDetail?.taxCondition || "ResponsableInscripto";
             setCustomerId(remito.customerId);
-            setCustomerName(remito.customerName);
-            setCustomerDocument(remito.customerDocument);
+            setCustomerName(custDetail?.legalName || remito.customerName);
+            setCustomerDocument(custDetail?.documentNumber || remito.customerDocument);
             setCustomerTaxCondition(foundTax);
             setInvoiceType(foundTax === "ResponsableInscripto" ? "A" : "B");
             setCustomerAddress(remito.deliveryAddress || "");
             setNotes(`Emitida a partir del Remito de Entrega N° ${remito.remitoNumber}`);
 
+            const linkedOrder = remito.orderId ? await api.getOrder(remito.orderId) : null;
+            if (linkedOrder && linkedOrder.customerId !== remito.customerId) {
+              throw new Error("El cliente del remito no coincide con el pedido vinculado. Revisá el origen antes de facturar.");
+            }
+            if (linkedOrder) {
+              setSourceOrderId(linkedOrder.id);
+              const isUsd = linkedOrder.currency !== "ARS";
+              const orderRate = linkedOrder.currency === "USD_BILLETE"
+                ? linkedOrder.exchangeRateUsdBillete : linkedOrder.exchangeRateUsdDivisa;
+              setCurrency(isUsd ? "USD" : "ARS");
+              setRateSource(linkedOrder.currency === "USD_BILLETE" ? "billetes" : "divisas");
+              setExchangeRate(isUsd ? (orderRate || defaultRate) : 1.0);
+            }
+
             const remitoItems = remito.items || [];
             if (remitoItems.length > 0) {
-              setItems(
-                remitoItems.map((i) => {
-                  const prod = prodList.find((p) => (i.productId && p.id === i.productId) || (i.code && p.code.toLowerCase() === i.code.toLowerCase()));
-                  return {
-                    productId: i.productId ?? prod?.id ?? undefined,
-                    code: i.code || prod?.code || "ITEM",
-                    description: i.description || prod?.name || "Ítem despachado",
-                    quantity: Math.round(i.quantity) || 1,
-                    unitPrice: prod?.basePrice || 10000,
-                    discountPercent: 0,
-                    vatRate: prod?.taxRate || 21.0
-                  };
-                })
-              );
+              let unmatched = 0;
+              setItems(remitoItems.map((i) => {
+                const prod = prodList.find((p) => (i.productId && p.id === i.productId) || (i.code && p.code.toLowerCase() === i.code.toLowerCase()));
+                const orderLine = linkedOrder ? orderLineForRemito(i, linkedOrder) : null;
+                if (!orderLine) unmatched++;
+                return {
+                  productId: i.productId ?? prod?.id ?? undefined,
+                  code: i.code || prod?.code || "ITEM",
+                  description: i.description || prod?.name || "Ítem despachado",
+                  quantity: i.quantity,
+                  unitPrice: orderLine?.unitPrice ?? 0,
+                  discountPercent: orderLine ? combinedDiscount(orderLine.discountPercent || 0, linkedOrder?.discountPercent || 0) : 0,
+                  vatRate: orderLine?.taxRate ?? prod?.taxRate ?? 21.0
+                };
+              }));
+              if (unmatched) setPricingWarning(`${unmatched} ítem(s) del remito no tienen un precio identificable en el pedido. Completá y verificá precio e IVA antes de facturar.`);
             }
           }
         }
@@ -356,10 +395,15 @@ export function InvoiceFormPage() {
       return;
     }
 
+    if (remitoId && items.some((item) => item.unitPrice <= 0)) {
+      setError("Revisá los precios del remito: todos los ítems deben tener un precio unitario mayor que cero antes de facturar.");
+      return;
+    }
+
     const payload: InvoiceWrite = {
       invoiceType,
       pointOfSale,
-      orderId: orderId || undefined,
+      orderId: orderId || sourceOrderId || undefined,
       remitoId: remitoId || undefined,
       customerId,
       customerName,
@@ -418,6 +462,7 @@ export function InvoiceFormPage() {
       </div>
 
       {error && <div className="alert">{error}</div>}
+      {pricingWarning && <div className="alert">{pricingWarning}</div>}
 
       <form onSubmit={(e) => handleSubmit(e, false)}>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
