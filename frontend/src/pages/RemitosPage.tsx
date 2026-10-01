@@ -228,6 +228,16 @@ export function RemitosPage() {
                       </td>
                       <td style={{ textAlign: "right" }}>
                         <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
+                          {isDelivered && (
+                            <button
+                              type="button"
+                              className="btn ghost compact"
+                              onClick={() => navigate("/remitos/" + r.id + "/devoluciones")}
+                              title={isInvoiced ? "Consultar devoluciones anteriores" : "Registrar devolución antes de facturar"}
+                            >
+                              ↩ Devoluciones
+                            </button>
+                          )}
                           {!isInvoiced && isDelivered && (
                             <button
                               type="button"

@@ -800,6 +800,34 @@ export type Remito = {
   createdAtUtc: string;
 };
 
+export type RemitoReturnItem = {
+  id: string;
+  remitoItemId: string;
+  code: string;
+  description: string;
+  productId?: string | null;
+  quantity: number;
+};
+
+export type RemitoReturn = {
+  id: string;
+  remitoId: string;
+  returnNumber: string;
+  warehouseId?: string | null;
+  warehouseName: string;
+  reason: string;
+  notes?: string | null;
+  receivedAtUtc: string;
+  items: RemitoReturnItem[];
+};
+
+export type RemitoReturnWrite = {
+  warehouseId?: string | null;
+  reason: string;
+  notes?: string | null;
+  items: Array<{ remitoItemId: string; quantity: number }>;
+};
+
 export type RemitoWrite = {
   orderId?: string | null;
   customerId: string;
@@ -821,6 +849,7 @@ export type RemitoWrite = {
 
 export type InvoiceItem = {
   id: string;
+  remitoItemId?: string | null;
   productId?: string | null;
   code: string;
   description: string;
@@ -882,6 +911,7 @@ export type InvoiceWrite = {
   notes?: string | null;
   items: Array<{
     productId?: string | null;
+    remitoItemId?: string | null;
     code: string;
     description: string;
     quantity: number;

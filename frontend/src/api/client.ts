@@ -731,6 +731,12 @@ export const api = {
   createRemito: (body: import("./types").RemitoWrite) =>
     request<import("./types").Remito>("/api/v1/sales/remitos", { method: "POST", body: JSON.stringify(body) }),
 
+  listRemitoReturns: (id: string) =>
+    request<import("./types").RemitoReturn[]>("/api/v1/sales/remitos/" + id + "/returns"),
+  confirmRemitoReturn: (id: string, body: import("./types").RemitoReturnWrite) =>
+    request<import("./types").RemitoReturn>("/api/v1/sales/remitos/" + id + "/returns",
+      { method: "POST", body: JSON.stringify(body) }),
+
   // Invoices & ARCA Methods
   listInvoices: (search = "", status = "", type = "") => {
     const params = new URLSearchParams();

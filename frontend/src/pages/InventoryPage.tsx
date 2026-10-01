@@ -1116,6 +1116,7 @@ export function InventoryPage() {
                 <option value="TransferOut">📤 Transferencia Salida</option>
                 <option value="TransferIn">📥 Transferencia Entrada</option>
                 <option value="SaleDelivery">📦 Remito de Venta</option>
+                <option value="SaleDeliveryReturn">↩ Devolución de Remito</option>
               </select>
             </div>
           </div>

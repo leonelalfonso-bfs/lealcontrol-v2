@@ -156,6 +156,7 @@ import {
   RemitoFormPage,
   RemitoPrintPage,
   RemitosPage,
+  RemitoReturnsPage,
   ReplyTemplatesPage,
   ReportsPage,
   SalesHelpPage,
@@ -614,6 +615,7 @@ export function App() {
               <Route path="/remitos" element={<RemitosPage />} />
               <Route path="/remitos/nuevo" element={<RemitoFormPage />} />
               <Route path="/remitos/:id/imprimir" element={<RemitoPrintPage />} />
+              <Route path="/remitos/:id/devoluciones" element={<RemitoReturnsPage />} />
               <Route path="/facturas" element={<InvoicesPage />} />
               <Route path="/facturas/nueva" element={<InvoiceFormPage />} />
               <Route path="/facturas/:id/imprimir" element={<InvoicePrintPage />} />

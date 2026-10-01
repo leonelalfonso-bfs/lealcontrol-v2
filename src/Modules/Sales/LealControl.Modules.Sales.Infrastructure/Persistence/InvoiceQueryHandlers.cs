@@ -49,6 +49,7 @@ internal sealed class InvoiceItemConfiguration : IEntityTypeConfiguration<Invoic
         builder.HasKey(i => i.Id);
         builder.Property(i => i.Code).HasMaxLength(80).IsRequired();
         builder.Property(i => i.Description).HasMaxLength(512).IsRequired();
+        builder.HasIndex(i => i.RemitoItemId);
     }
 }
 
@@ -132,6 +133,48 @@ internal sealed class InvoiceQueryHandlers
     public async Task<Result<InvoiceDto>> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantContext.TenantId;
+        if (request.Items is null || request.Items.Count == 0)
+            return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.Empty", "La factura debe tener al menos un ítem."));
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        LealControl.Modules.Sales.Domain.Remitos.Remito? linkedRemito = null;
+        if (request.RemitoId is Guid remitoId)
+        {
+            await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $@"SELECT 1 FROM sales.remitos WHERE ""Id"" = {remitoId} AND ""TenantId"" = {tenantId.Value} FOR UPDATE",
+                cancellationToken);
+            linkedRemito = await _dbContext.Remitos.Include(r => r.Items)
+                .FirstOrDefaultAsync(r => r.Id == remitoId && r.TenantId == tenantId, cancellationToken);
+            if (linkedRemito is null || linkedRemito.Status != "Delivered" ||
+                linkedRemito.InvoiceId.HasValue || linkedRemito.CustomerId != request.CustomerId ||
+                (request.OrderId.HasValue && request.OrderId != linkedRemito.OrderId) ||
+                await _dbContext.Invoices.AnyAsync(i => i.TenantId == tenantId && i.RemitoId == remitoId, cancellationToken))
+                return Result<InvoiceDto>.Failure(
+                    Error.Validation("Sales.Invoice.InvalidRemito", "El remito no existe, ya fue facturado o no corresponde al cliente y pedido."));
+
+            var returns = await _dbContext.RemitoReturns.Include(r => r.Items)
+                .Where(r => r.TenantId == tenantId && r.RemitoId == remitoId)
+                .ToListAsync(cancellationToken);
+            var returned = returns.SelectMany(r => r.Items).GroupBy(i => i.RemitoItemId)
+                .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+            if (request.Items.Any(i => i.RemitoItemId is null || i.Quantity <= 0))
+                return Result<InvoiceDto>.Failure(
+                    Error.Validation("Sales.Invoice.RemitoItems", "Cada ítem a facturar debe provenir del remito y tener cantidad positiva."));
+            var invoiced = request.Items.GroupBy(i => i.RemitoItemId!.Value)
+                .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+            if (linkedRemito.Items.Any(line =>
+                    line.Quantity - returned.GetValueOrDefault(line.Id) != invoiced.GetValueOrDefault(line.Id)) ||
+                invoiced.Keys.Any(id => linkedRemito.Items.All(line => line.Id != id)))
+                return Result<InvoiceDto>.Failure(
+                    Error.Validation("Sales.Invoice.RemitoBalance", "La factura debe contener exactamente lo enviado menos lo devuelto en cada renglón del remito."));
+        }
+        else if (request.OrderId is Guid directOrderId &&
+            await _dbContext.Remitos.AnyAsync(r => r.TenantId == tenantId &&
+                r.OrderId == directOrderId && r.Status == "Delivered", cancellationToken))
+        {
+            return Result<InvoiceDto>.Failure(
+                Error.Validation("Sales.Invoice.UseRemito", "El pedido tiene remitos entregados. Facturá desde el remito para respetar las devoluciones."));
+        }
 
         // Auto calculate next sequential invoice number for PointOfSale & InvoiceType
         var lastInvoice = await _dbContext.Invoices
@@ -166,21 +209,17 @@ internal sealed class InvoiceQueryHandlers
                 item.Description,
                 item.Quantity,
                 item.UnitPrice,
-                item.VatRate);
+                item.VatRate,
+                item.RemitoItemId);
         }
 
         _dbContext.Invoices.Add(invoice);
 
         // 1. Si la factura proviene de un Remito existente (request.RemitoId != null):
         // Vincula el Remito y lo marca como facturado. NO descuenta stock (el remito ya lo egresó).
-        if (request.RemitoId.HasValue)
+        if (linkedRemito is not null)
         {
-            var remito = await _dbContext.Remitos
-                .FirstOrDefaultAsync(r => r.Id == request.RemitoId.Value && r.TenantId == tenantId, cancellationToken);
-            if (remito != null)
-            {
-                remito.MarkAsInvoiced(invoice.Id, invoice.FormattedNumber);
-            }
+            linkedRemito.MarkAsInvoiced(invoice.Id, invoice.FormattedNumber);
         }
         else
         {
@@ -251,6 +290,7 @@ internal sealed class InvoiceQueryHandlers
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return Result<InvoiceDto>.Success(MapToDto(invoice));
     }
@@ -365,7 +405,8 @@ internal sealed class InvoiceQueryHandlers
                 item.VatRate,
                 item.NetSubtotal,
                 item.VatAmount,
-                item.Total)).ToList(),
+                item.Total,
+                item.RemitoItemId)).ToList(),
             i.CreatedAtUtc);
     }
 

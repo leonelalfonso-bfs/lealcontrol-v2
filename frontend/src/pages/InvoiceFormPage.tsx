@@ -14,6 +14,7 @@ import {
 
 interface FormInvoiceItem {
   productId?: string;
+  remitoItemId?: string;
   code: string;
   description: string;
   quantity: number;
@@ -76,6 +77,7 @@ export function InvoiceFormPage() {
   const [advancePercent, setAdvancePercent] = useState<number>(100);
   const [notes, setNotes] = useState<string>("");
   const [sourceRemitoNumber, setSourceRemitoNumber] = useState<string>("");
+  const [returnedItemCount, setReturnedItemCount] = useState(0);
   const [sourceOrderId, setSourceOrderId] = useState<string>("");
   const [pricingWarning, setPricingWarning] = useState<string | null>(null);
 
@@ -172,6 +174,7 @@ export function InvoiceFormPage() {
         } else if (remitoId) {
           const remito = await api.getRemito(remitoId);
           if (remito) {
+            if (remito.invoiceId) throw new Error("Este remito ya fue facturado.");
             setSourceRemitoNumber(remito.remitoNumber);
             let custDetail: CustomerDetail | null = null;
             if (remito.customerId) {
@@ -202,7 +205,15 @@ export function InvoiceFormPage() {
               setExchangeRate(isUsd ? (orderRate || defaultRate) : 1.0);
             }
 
-            const remitoItems = remito.items || [];
+            const previousReturns = await api.listRemitoReturns(remito.id);
+            const returned = new Map<string, number>();
+            for (const record of previousReturns) for (const item of record.items) {
+              returned.set(item.remitoItemId, (returned.get(item.remitoItemId) ?? 0) + item.quantity);
+            }
+            const remitoItems = (remito.items || [])
+              .map((i) => ({ ...i, billableQty: Math.max(0, i.quantity - (returned.get(i.id) ?? 0)) }))
+              .filter((i) => i.billableQty > 0);
+            setReturnedItemCount((remito.items || []).filter((i) => (returned.get(i.id) ?? 0) > 0).length);
             if (remitoItems.length > 0) {
               let unmatched = 0;
               setItems(remitoItems.map((i) => {
@@ -211,15 +222,19 @@ export function InvoiceFormPage() {
                 if (!orderLine) unmatched++;
                 return {
                   productId: i.productId ?? prod?.id ?? undefined,
+                  remitoItemId: i.id,
                   code: i.code || prod?.code || "ITEM",
                   description: i.description || prod?.name || "Ítem despachado",
-                  quantity: i.quantity,
+                  quantity: i.billableQty,
                   unitPrice: orderLine?.unitPrice ?? 0,
                   discountPercent: orderLine ? combinedDiscount(orderLine.discountPercent || 0, linkedOrder?.discountPercent || 0) : 0,
                   vatRate: orderLine?.taxRate ?? prod?.taxRate ?? 21.0
                 };
               }));
               if (unmatched) setPricingWarning(`${unmatched} ítem(s) del remito no tienen un precio identificable en el pedido. Completá y verificá precio e IVA antes de facturar.`);
+            } else {
+              setItems([]);
+              setPricingWarning("Todos los ítems del remito fueron devueltos. No queda saldo para facturar.");
             }
           }
         }
@@ -395,6 +410,10 @@ export function InvoiceFormPage() {
       return;
     }
 
+    if (remitoId && items.length === 0) {
+      setError("No quedan ítems del remito para facturar.");
+      return;
+    }
     if (remitoId && items.some((item) => item.unitPrice <= 0)) {
       setError("Revisá los precios del remito: todos los ítems deben tener un precio unitario mayor que cero antes de facturar.");
       return;
@@ -416,6 +435,7 @@ export function InvoiceFormPage() {
       notes,
       items: items.map((i) => ({
         productId: i.productId,
+        remitoItemId: i.remitoItemId,
         code: i.code || "ITEM",
         description: i.discountPercent > 0 ? `${i.description} (Desc. ${i.discountPercent}%)` : i.description,
         quantity: i.quantity,
@@ -463,6 +483,9 @@ export function InvoiceFormPage() {
 
       {error && <div className="alert">{error}</div>}
       {pricingWarning && <div className="alert">{pricingWarning}</div>}
+      {remitoId && returnedItemCount > 0 && <div className="card pad" style={{ background: "#eff6ff" }}>
+        ↩ {returnedItemCount} ítem(s) tienen devoluciones confirmadas. Se facturan solo las cantidades efectivamente utilizadas.
+      </div>}
 
       <form onSubmit={(e) => handleSubmit(e, false)}>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
@@ -730,9 +753,9 @@ export function InvoiceFormPage() {
             <div className="card pad">
               <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <h3 style={{ margin: 0 }}>2. Ítems, Precios & Alícuotas de IVA</h3>
-                <button type="button" className="btn ghost" onClick={handleAddItem}>
+                {!remitoId && <button type="button" className="btn ghost" onClick={handleAddItem}>
                   + Agregar Fila
-                </button>
+                </button>}
               </div>
 
               <div className="table-wrap">
@@ -758,6 +781,7 @@ export function InvoiceFormPage() {
                               <select
                                 value={item.productId ?? ""}
                                 onChange={(e) => handleItemProductSelect(idx, e.target.value)}
+                                disabled={Boolean(remitoId)}
                                 style={{ fontSize: "0.82rem" }}
                               >
                                 <option value="">Seleccionar del catálogo...</option>
@@ -775,6 +799,7 @@ export function InvoiceFormPage() {
                                   setItems(next);
                                 }}
                                 required
+                                readOnly={Boolean(remitoId)}
                                 placeholder="Descripción del ítem..."
                               />
                             </div>
@@ -782,9 +807,10 @@ export function InvoiceFormPage() {
                           <td>
                             <input
                               type="number"
-                              step="1"
-                              min="1"
+                              step="0.0001"
+                              min="0.0001"
                               value={item.quantity}
+                              readOnly={Boolean(remitoId)}
                               onChange={(e) => {
                                 const next = [...items];
                                 next[idx].quantity = Math.max(1, parseInt(e.target.value, 10) || 1);
@@ -846,14 +872,14 @@ export function InvoiceFormPage() {
                             </select>
                           </td>
                           <td style={{ textAlign: "right" }}>
-                            <button
+                            {!remitoId && <button
                               type="button"
                               className="btn danger"
                               style={{ padding: "4px 8px" }}
                               onClick={() => handleRemoveItem(idx)}
                             >
                               ✕
-                            </button>
+                            </button>}
                           </td>
                         </tr>
                       );
