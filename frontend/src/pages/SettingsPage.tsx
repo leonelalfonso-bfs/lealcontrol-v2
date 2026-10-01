@@ -57,13 +57,7 @@ export function SettingsPage() {
         setUsers(u);
         setCertEnv(s.arcaEnvironment || "Homologacion");
         setCertCuit(s.arcaSignerCuit || s.documentNumber || "");
-        if (s.arcaCertificateKey) {
-          setKeyText(s.arcaCertificateKey);
-          setCsrReady(true);
-        }
-        if (s.arcaCertificateCrt) {
-          setCrtText(s.arcaCertificateCrt);
-        }
+        setCsrReady(Boolean(s.hasArcaCertificateKey));
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -147,7 +141,7 @@ export function SettingsPage() {
         commonName: certAlias.trim() || "LealControl"
       });
       setSettings(result.settings);
-      setKeyText(result.privateKeyPem);
+      setKeyText("");
       setCrtText("");
       setCsrReady(true);
       downloadTextFile(result.csrPem, result.csrFileName);
@@ -169,7 +163,7 @@ export function SettingsPage() {
       setError("Seleccioná el archivo de Certificado (.crt) emitido por ARCA.");
       return;
     }
-    if (!keyText) {
+    if (!keyText && !settings?.hasArcaCertificateKey) {
       setError("Falta la clave privada (.key). Generá primero el archivo de consulta o cargá el .key manualmente.");
       return;
     }
@@ -184,6 +178,8 @@ export function SettingsPage() {
         signerCuit: certCuit
       });
       setSettings(updated);
+      setKeyText("");
+      setCrtText("");
       setSuccessMsg("✓ Certificado digital ARCA / AFIP actualizado correctamente.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar certificado");
@@ -644,9 +640,9 @@ export function SettingsPage() {
                   📄 Seleccionar archivo .CRT
                   <input type="file" accept=".crt,.pem,.txt" onChange={handleCrtFileUpload} style={{ display: "none" }} />
                 </label>
-                {crtText && (
+                {(crtText || settings?.hasArcaCertificateCrt) && (
                   <span className="badge ok" style={{ marginTop: 10, display: "inline-block" }}>
-                    ✓ Certificado cargado ({crtText.length} bytes)
+                    {crtText ? "✓ Certificado seleccionado" : "✓ Certificado guardado en el servidor"}
                   </span>
                 )}
               </div>
@@ -660,9 +656,9 @@ export function SettingsPage() {
                   🔑 Seleccionar archivo .KEY
                   <input type="file" accept=".key,.pem,.txt" onChange={handleKeyFileUpload} style={{ display: "none" }} />
                 </label>
-                {keyText && (
+                {(keyText || settings?.hasArcaCertificateKey) && (
                   <span className="badge ok" style={{ marginTop: 10, display: "inline-block" }}>
-                    ✓ Clave privada lista ({keyText.length} bytes)
+                    {keyText ? "✓ Clave privada seleccionada" : "✓ Clave privada guardada en el servidor"}
                   </span>
                 )}
               </div>

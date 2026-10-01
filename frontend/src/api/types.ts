@@ -629,6 +629,8 @@ export type CompanySettings = {
   hasArcaCertificate: boolean;
   arcaCertificateCrt?: string | null;
   arcaCertificateKey?: string | null;
+  hasArcaCertificateCrt?: boolean;
+  hasArcaCertificateKey?: boolean;
   arcaEnvironment: string;
   arcaSignerCuit?: string | null;
   bankName?: string | null;

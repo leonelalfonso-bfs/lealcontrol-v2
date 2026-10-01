@@ -34,7 +34,9 @@ public sealed record CompanySettingsDto(
     int DefaultQuoteValidDays,
     int DefaultDeliveryDays,
     string? DefaultWarranty,
-    string? DefaultPaymentTerms);
+    string? DefaultPaymentTerms,
+    bool HasArcaCertificateCrt = false,
+    bool HasArcaCertificateKey = false);
 
 public sealed record UpdateCompanySettingsCommand(CompanySettingsDto Model)
     : IRequest<Result<CompanySettingsDto>>;
