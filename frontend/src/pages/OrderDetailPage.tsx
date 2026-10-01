@@ -13,6 +13,7 @@ export function OrderDetailPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [canRemit, setCanRemit] = useState<boolean | null>(null);
+  const [hasDeliveredRemito, setHasDeliveredRemito] = useState(false);
 
   const loadData = async () => {
     if (!id) return;
@@ -23,6 +24,7 @@ export function OrderDetailPage() {
       setOrder(ord);
       try {
         const remitos = await api.listRemitos();
+        setHasDeliveredRemito(remitos.some((r) => r.orderId === id && r.status === "Delivered"));
         const keyFor = (productId: string | null | undefined, description: string) =>
           productId ? "P:" + productId.toLowerCase() : "D:" + description.replace(/\s*\(S\/N:.*\)\s*$/i, "").trim().toUpperCase();
         const ordered = new Map<string, number>();
@@ -117,8 +119,9 @@ export function OrderDetailPage() {
               {canRemit === false ? "Pedido remitido" : "Entrega no disponible"}
             </span>
           )}
-          <Link className="btn" to={`/facturas/nueva?order_id=${order.id}`} style={{ background: "linear-gradient(180deg, #059669, #047857)" }}>
-            📄 Emitir Factura
+          <Link className="btn" to={hasDeliveredRemito ? "/remitos" : "/facturas/nueva?order_id=" + order.id}
+            style={{ background: "linear-gradient(180deg, #059669, #047857)" }}>
+            {hasDeliveredRemito ? "📄 Facturar desde remito" : "📄 Emitir Factura"}
           </Link>
           <button
             type="button"

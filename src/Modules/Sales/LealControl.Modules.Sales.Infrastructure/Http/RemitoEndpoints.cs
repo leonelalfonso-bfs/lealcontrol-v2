@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using LealControl.BuildingBlocks.Security;
 using LealControl.Modules.Sales.Application.Remitos;
 using MediatR;
@@ -32,6 +33,21 @@ public static class RemitoEndpoints
             return res.IsSuccess ? Results.Created($"/api/v1/sales/remitos/{res.Value.Id}", res.Value) : Results.BadRequest(res.Error);
         });
 
+        group.MapGet("/{id:guid}/returns", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var res = await sender.Send(new ListRemitoReturnsQuery(id), cancellationToken);
+            return res.IsSuccess ? Results.Ok(res.Value) : Results.NotFound(res.Error);
+        });
+
+        group.MapPost("/{id:guid}/returns", async (Guid id, ConfirmRemitoReturnRequest body, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var res = await sender.Send(new ConfirmRemitoReturnCommand(id, body.WarehouseId, body.Reason, body.Notes, body.Items), cancellationToken);
+            return res.IsSuccess ? Results.Created($"/api/v1/sales/remitos/{id}/returns/{res.Value.Id}", res.Value) : Results.BadRequest(res.Error);
+        });
+
         return endpoints;
     }
 }
+
+public sealed record ConfirmRemitoReturnRequest(Guid? WarehouseId, string Reason, string? Notes,
+    IReadOnlyList<RemitoReturnItemWriteDto> Items);

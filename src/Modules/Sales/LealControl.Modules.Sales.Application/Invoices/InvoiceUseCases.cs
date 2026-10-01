@@ -15,7 +15,8 @@ public sealed record InvoiceItemDto(
     decimal VatRate,
     decimal NetSubtotal,
     decimal VatAmount,
-    decimal Total);
+    decimal Total,
+    Guid? RemitoItemId);
 
 public sealed record InvoiceDto(
     Guid Id,
@@ -56,7 +57,8 @@ public sealed record InvoiceItemWriteDto(
     string Description,
     decimal Quantity,
     decimal UnitPrice,
-    decimal VatRate);
+    decimal VatRate,
+    Guid? RemitoItemId = null);
 
 public sealed record CreateInvoiceCommand(
     string InvoiceType,

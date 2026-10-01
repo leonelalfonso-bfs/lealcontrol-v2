@@ -196,7 +196,8 @@ public sealed class Invoice : Entity<Guid>
         string description,
         decimal quantity,
         decimal unitPrice,
-        decimal vatRate)
+        decimal vatRate,
+        Guid? remitoItemId = null)
     {
         var net = Math.Round(quantity * unitPrice, 2);
         var vat = Math.Round(net * (vatRate / 100m), 2);
@@ -213,7 +214,8 @@ public sealed class Invoice : Entity<Guid>
             vatRate,
             net,
             vat,
-            tot);
+            tot,
+            remitoItemId);
 
         _items.Add(item);
         RecalculateTotals();
@@ -271,10 +273,12 @@ public sealed class InvoiceItem : Entity<Guid>
         decimal vatRate,
         decimal netSubtotal,
         decimal vatAmount,
-        decimal total)
+        decimal total,
+        Guid? remitoItemId)
         : base(id)
     {
         InvoiceId = invoiceId;
+        RemitoItemId = remitoItemId;
         ProductId = productId;
         Code = code;
         Description = description;
@@ -287,6 +291,8 @@ public sealed class InvoiceItem : Entity<Guid>
     }
 
     public Guid InvoiceId { get; private set; }
+
+    public Guid? RemitoItemId { get; private set; }
 
     public Guid? ProductId { get; private set; }
 
