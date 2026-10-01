@@ -403,10 +403,10 @@ export function InvoiceFormPage() {
   const totalFactura = subtotalNeto + totalIva;
   const equivArs = currency === "USD" ? totalFactura * (exchangeRate || 1) : totalFactura;
 
-  const handleSubmit = async (e: FormEvent, authorizeNow = false) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!customerId) {
-      setError("Por favor seleccioná un cliente para emitir la factura.");
+      setError("Por favor seleccioná un cliente para guardar el borrador.");
       return;
     }
 
@@ -449,13 +449,6 @@ export function InvoiceFormPage() {
       setError(null);
       const res = await api.createInvoice(payload);
 
-      if (authorizeNow && ["A", "B", "C", "M"].includes(invoiceType)) {
-        try {
-          await api.authorizeInvoiceArca(res.id);
-        } catch (authErr) {
-          console.warn("Could not authorize immediately, invoice saved as Draft", authErr);
-        }
-      }
 
       navigate(`/facturas/${res.id}/imprimir`);
     } catch (err) {
@@ -471,9 +464,9 @@ export function InvoiceFormPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>📄 {orderId ? "Emitir Comprobante desde Pedido" : remitoId ? "Emitir Comprobante desde Remito" : "Emitir Comprobante"}</h1>
+          <h1>📄 {orderId ? "Preparar borrador desde Pedido" : remitoId ? "Preparar borrador desde Remito" : "Preparar borrador de factura"}</h1>
           <p className="muted">
-            {orderId ? `Facturación oficial vinculada a Pedido de Venta` : "Carga y emisión de comprobantes fiscales con autorización ARCA"}
+            Este formulario guarda un borrador interno; todavía no autoriza el comprobante en ARCA.
           </p>
         </div>
         <Link className="btn ghost" to={orderId ? `/pedidos/${orderId}` : "/facturas"}>
@@ -487,7 +480,7 @@ export function InvoiceFormPage() {
         ↩ {returnedItemCount} ítem(s) tienen devoluciones confirmadas. Se facturan solo las cantidades efectivamente utilizadas.
       </div>}
 
-      <form onSubmit={(e) => handleSubmit(e, false)}>
+      <form onSubmit={handleSubmit}>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
           {/* Main Column */}
           <div className="stack" style={{ gap: 20 }}>
@@ -529,7 +522,7 @@ export function InvoiceFormPage() {
               >
                 <span style={{ fontSize: "1.2rem" }}>⚡</span>
                 <div>
-                  <strong>Venta Directa / Mostrador:</strong> Al emitir esta factura, el stock de los productos inventariables se descontará automáticamente del depósito.
+                  <strong>Venta Directa / Mostrador:</strong> Al guardar este borrador, el stock de los productos inventariables se descontará automáticamente del depósito.
                 </div>
               </div>
             ) : null}
@@ -970,22 +963,12 @@ export function InvoiceFormPage() {
 
             <div className="stack" style={{ gap: 10, marginTop: 24 }}>
               <button
-                type="button"
-                className="btn"
-                disabled={saving}
-                onClick={(e) => handleSubmit(e, true)}
-                style={{ background: "linear-gradient(180deg, #059669, #047857)", width: "100%", padding: 12, fontWeight: "bold" }}
-              >
-                {saving ? "Emitiendo..." : "⚡ Emitir con ARCA (CAE Directo)"}
-              </button>
-
-              <button
                 type="submit"
                 className="btn ghost"
                 disabled={saving}
                 style={{ width: "100%" }}
               >
-                💾 Guardar como Borrador / Proforma
+                💾 Guardar borrador
               </button>
 
               <Link
@@ -998,7 +981,7 @@ export function InvoiceFormPage() {
             </div>
 
             <div style={{ marginTop: 16, fontSize: "0.78rem", color: "#64748b", lineHeight: 1.4 }}>
-              ℹ️ Al emitir con ARCA, el comprobante se enviará al Web Service de Facturación Electrónica (WSFE v1) obteniendo el CAE oficial y el código QR de verificación fiscal.
+              Este botón guarda un borrador interno. Todavía no solicita CAE ni autoriza el comprobante en ARCA.
             </div>
           </div>
         </div>
