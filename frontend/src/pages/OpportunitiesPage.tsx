@@ -42,6 +42,7 @@ export function OpportunitiesPage() {
   const [showForm, setShowForm] = useState(false);
   const [transition, setTransition] = useState<Transition | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [filter, setFilter] = useState({ priority: "", health: "", owner: "", tag: "" });
   const [form, setForm] = useState({
     title: "",
@@ -78,8 +79,17 @@ export function OpportunitiesPage() {
 
   const owners = useMemo(() => [...new Set(items.map((o) => o.ownerName).filter(Boolean) as string[])].sort(), [items]);
   const tags = useMemo(() => [...new Set(items.flatMap((o) => o.tags ?? []))].sort(), [items]);
+  const customerNames = useMemo(() => new Map(customers.map((customer) => [
+    customer.id, customer.legalName || customer.tradeName || ""
+  ])), [customers]);
+  const customerNameFor = (opportunity: Opportunity) =>
+    opportunity.customerName?.trim() ||
+    (opportunity.customerId ? customerNames.get(opportunity.customerId) : null) ||
+    "Sin cliente asignado";
 
   const filtered = useMemo(() => items.filter((o) => {
+    const term = search.trim().toLocaleLowerCase("es-AR");
+    if (term && !`${o.title} ${customerNameFor(o)}`.toLocaleLowerCase("es-AR").includes(term)) return false;
     if (filter.priority && o.priority !== filter.priority) return false;
     if (filter.owner && o.ownerName !== filter.owner) return false;
     if (filter.tag && !o.tags?.includes(filter.tag)) return false;
@@ -87,7 +97,7 @@ export function OpportunitiesPage() {
     if (filter.health === "without_next_action" && o.activityBadgeStatus !== "Gray") return false;
     if (filter.health === "needs_attention" && !(o.isRotting || ["Red", "Yellow", "Gray"].includes(o.activityBadgeStatus ?? "Gray"))) return false;
     return true;
-  }), [items, filter]);
+  }), [items, filter, search, customerNames]);
 
   // Detector de duplicados en tiempo real
   const duplicateWarning = useMemo(() => {
@@ -146,7 +156,7 @@ export function OpportunitiesPage() {
           rows={items}
           columns={[
             { key: "title", header: "Título" },
-            { key: "customerId", header: "Cliente" },
+            { key: "customerId", header: "Cliente", value: customerNameFor },
             { key: "stage", header: "Etapa" },
             { key: "amount", header: "Monto" },
             { key: "ownerName", header: "Responsable" },
@@ -303,6 +313,10 @@ export function OpportunitiesPage() {
 
       <div className="card filters">
         <label>
+          Buscar cliente u oportunidad
+          <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nombre del cliente o de la gira" />
+        </label>
+        <label>
           Prioridad
           <select value={filter.priority} onChange={(e) => setFilter({ ...filter, priority: e.target.value })}>
             <option value="">Todas</option>
@@ -386,6 +400,9 @@ export function OpportunitiesPage() {
                       <Link className="opp-card-title" to={`/oportunidades/${opportunity.id}`}>
                         {opportunity.title}
                       </Link>
+                      <div className="opp-customer" style={{ marginTop: 6, overflowWrap: "anywhere" }}>
+                        <span className="muted">Cliente · </span><strong>{customerNameFor(opportunity)}</strong>
+                      </div>
                       <strong className="opp-amount">{money(opportunity.amount, opportunity.currency)}</strong>
                       <div className="tag-row">
                         <span className={`badge priority-${opportunity.priority?.toLowerCase()}`}>
