@@ -37,6 +37,8 @@ public sealed class CrmWebApplicationFactory : WebApplicationFactory<Program>, I
         .WithPassword("leal")
         .Build();
 
+    public string DatabaseConnectionString => _postgres.GetConnectionString();
+
     public async Task InitializeAsync() => await _postgres.StartAsync();
 
     public new async Task DisposeAsync()

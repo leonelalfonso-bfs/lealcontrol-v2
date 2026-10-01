@@ -31,6 +31,9 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(i => i.Currency).HasMaxLength(10).IsRequired();
         builder.Property(i => i.Cae).HasMaxLength(32);
         builder.Property(i => i.Status).HasMaxLength(32).IsRequired();
+        builder.HasIndex(i => new { i.TenantId, i.PointOfSale, i.InvoiceType, i.InvoiceNumber })
+            .HasDatabaseName("UX_invoice_authorized_number").IsUnique()
+            .HasFilter("\"Status\" = 'Authorized'");
 
         builder.HasMany(i => i.Items)
             .WithOne()
