@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { BcraCreditReportModal } from "../components/BcraCreditReportModal";
-import { provinces, type CustomerWrite, type EquipmentWrite } from "../api/types";
+import { provinces, provinceLabel, type CustomerWrite, type EquipmentWrite } from "../api/types";
 import { digitsOnly, formatCuitDisplay, isValidCuitChecksum } from "../lib/arContact";
 
 const emptyCustomer: CustomerWrite = {
@@ -19,7 +19,7 @@ const emptyCustomer: CustomerWrite = {
   whatsApp: "",
   fiscalStreet: "",
   fiscalCity: "",
-  fiscalProvince: "SantaFe",
+  fiscalProvince: null,
   fiscalPostalCode: "",
   notes: "",
   creditRating: null,
@@ -170,7 +170,7 @@ export function CustomerFormPage() {
         whatsApp: c.whatsApp ?? "",
         fiscalStreet: c.fiscalAddress?.street ?? "",
         fiscalCity: c.fiscalAddress?.city ?? "",
-        fiscalProvince: c.fiscalAddress?.province ?? "SantaFe",
+        fiscalProvince: c.fiscalAddress?.province ?? null,
         fiscalPostalCode: c.fiscalAddress?.postalCode ?? "",
         creditLimit: c.creditLimit ?? undefined,
         paymentTermsDays: c.paymentTermsDays ?? undefined,
@@ -255,10 +255,10 @@ export function CustomerFormPage() {
         taxCondition: res.taxCondition || m.taxCondition,
         fiscalStreet: res.fiscalStreet || m.fiscalStreet,
         fiscalCity: res.fiscalCity || m.fiscalCity,
-        fiscalProvince: res.fiscalProvince || m.fiscalProvince,
+        fiscalProvince: res.fiscalProvince || null,
         fiscalPostalCode: res.fiscalPostalCode || m.fiscalPostalCode
       }));
-      setArcaSuccessMsg(`✓ Datos fiscales e impositivos importados desde ARCA para ${res.legalName}`);
+      setArcaSuccessMsg(`✓ Datos fiscales e impositivos importados desde ARCA para ${res.legalName}${res.fiscalProvince ? "" : ". ARCA no informó una provincia reconocida; seleccionala antes de guardar"}`);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -530,6 +530,10 @@ export function CustomerFormPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if ((model.fiscalStreet || model.fiscalCity || model.fiscalPostalCode) && !model.fiscalProvince) {
+      setError("Seleccioná la provincia fiscal antes de guardar. ARCA no informó una provincia reconocida.");
+      return;
+    }
     setSaving(true);
 
     try {
@@ -747,8 +751,9 @@ export function CustomerFormPage() {
             <div className="grid-3">
               <label>Ciudad<input value={model.fiscalCity ?? ""} onChange={(e) => set("fiscalCity", e.target.value)} /></label>
               <label>Provincia
-                <select value={model.fiscalProvince ?? "SantaFe"} onChange={(e) => set("fiscalProvince", e.target.value)}>
-                  {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
+                <select value={model.fiscalProvince ?? ""} onChange={(e) => set("fiscalProvince", e.target.value || null)}>
+                  <option value="">Seleccionar provincia</option>
+                  {provinces.map((p) => <option key={p} value={p}>{provinceLabel(p)}</option>)}
                 </select>
               </label>
               <label>CP<input value={model.fiscalPostalCode ?? ""} onChange={(e) => set("fiscalPostalCode", e.target.value)} /></label>
@@ -797,7 +802,7 @@ export function CustomerFormPage() {
                   <label>Ciudad<input value={newLoc.city} onChange={(e) => setNewLoc({ ...newLoc, city: e.target.value })} placeholder="San Lorenzo" /></label>
                   <label>Provincia
                     <select value={newLoc.province} onChange={(e) => setNewLoc({ ...newLoc, province: e.target.value })}>
-                      {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
+                      {provinces.map((p) => <option key={p} value={p}>{provinceLabel(p)}</option>)}
                     </select>
                   </label>
                   <label>CP<input value={newLoc.postalCode} onChange={(e) => setNewLoc({ ...newLoc, postalCode: e.target.value })} placeholder="2200" /></label>
@@ -825,7 +830,7 @@ export function CustomerFormPage() {
                   {locations.map((loc) => (
                     <tr key={loc.tempId}>
                       <td><strong>📌 {loc.name}</strong></td>
-                      <td>{loc.street}, {loc.city} ({loc.province})</td>
+                      <td>{loc.street}, {loc.city} ({provinceLabel(loc.province)})</td>
                       <td>{loc.phone || "—"}</td>
                       <td style={{ textAlign: "right" }}>
                         <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
