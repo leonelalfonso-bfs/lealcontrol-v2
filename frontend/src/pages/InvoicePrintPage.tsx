@@ -20,7 +20,6 @@ export function InvoicePrintPage() {
   const [loading, setLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
-  const [authorizing, setAuthorizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
@@ -52,20 +51,6 @@ export function InvoicePrintPage() {
   useEffect(() => {
     loadData();
   }, [id]);
-
-  const handleAuthorizeArca = async () => {
-    if (!id) return;
-    try {
-      setAuthorizing(true);
-      setError(null);
-      await api.authorizeInvoiceArca(id);
-      await loadData();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al autorizar con ARCA");
-    } finally {
-      setAuthorizing(false);
-    }
-  };
 
   const handleDownloadPdf = async () => {
     const element = document.getElementById("invoice-pdf-sheet");
@@ -113,6 +98,7 @@ export function InvoicePrintPage() {
   }
 
   const primaryCol = settings.global.primaryColor;
+  const simulatedCae = invoice.afipRawResponse?.includes("otorgado exitosamente por ARCA WSFE v1.") ?? false;
   const isUsd = invoice.currency === "USD";
   const currSymbol = isUsd ? "USD " : "$ ";
   const invoiceLetter = invoice.invoiceType.replace("NC_", "").replace("ND_", "");
@@ -161,28 +147,15 @@ export function InvoicePrintPage() {
 
         <div style={{ display: "flex", gap: "10px" }}>
           {invoice.status !== "Authorized" && (
-            <button
-              type="button"
-              onClick={handleAuthorizeArca}
-              disabled={authorizing}
-              style={{
-                padding: "8px 20px",
-                borderRadius: "6px",
-                background: "#047857",
-                color: "white",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: "bold",
-                boxShadow: "0 4px 12px rgba(4, 120, 87, 0.3)"
-              }}
-            >
-              {authorizing ? "Autorizando con ARCA..." : "⚡ Autorizar con ARCA"}
-            </button>
+            <span style={{ color: "#92400e", fontWeight: 700 }}>
+              Autorización ARCA no disponible
+            </span>
           )}
 
           <button
             type="button"
             onClick={() => setShowEmail(!showEmail)}
+            disabled={simulatedCae}
             style={{ padding: "8px 16px", borderRadius: "6px", background: "white", border: "1px solid #cbd5e1", cursor: "pointer", fontWeight: 600 }}
           >
             ✉️ Enviar por Email
@@ -208,7 +181,7 @@ export function InvoicePrintPage() {
         </div>
       </div>
 
-      {showEmail && (
+      {showEmail && !simulatedCae && (
         <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 16px auto" }}>
           <EmailComposer
             context={{
@@ -246,6 +219,12 @@ export function InvoicePrintPage() {
           position: "relative"
         }}
       >
+        {simulatedCae && (
+          <div style={{ border: "2px solid #b91c1c", color: "#991b1b", padding: "10px", marginBottom: "8px", fontWeight: 700, textAlign: "center" }}>
+            SIN AUTORIZACIÓN FISCAL VERIFICADA. El CAE fue generado localmente por una versión anterior.
+            Verificar en ARCA antes de usar este documento como comprobante fiscal.
+          </div>
+        )}
         {/* Header Section (RG 1415 Anexo II Apartado B) */}
         <div style={{ border: `1.5px solid ${primaryCol}`, borderRadius: "6px", padding: "10px", marginBottom: "8px", position: "relative" }}>
           {/* Central Letter Box */}
@@ -549,7 +528,7 @@ export function InvoicePrintPage() {
           )}
 
           {/* Official ARCA CAE Box (RG 1415 Anexo II / RG 4290 / RG 4597) */}
-          {invoice.status === "Authorized" && invoice.cae ? (
+          {invoice.status === "Authorized" && invoice.cae && !simulatedCae ? (
             <div style={{ border: `2px solid ${primaryCol}`, borderRadius: "6px", padding: "8px 12px", display: "flex", alignItems: "center", gap: "12px", background: "#f8fafc" }}>
               {qrDataUrl && (
                 <img src={qrDataUrl} alt="QR ARCA Oficial" style={{ width: "80px", height: "80px", display: "block" }} />
@@ -572,7 +551,11 @@ export function InvoicePrintPage() {
             </div>
           ) : (
             <div style={{ border: "1px dashed #f59e0b", padding: "8px", textAlign: "center", background: "#fffbeb", borderRadius: "6px", fontSize: "10px", color: "#92400e" }}>
-              🟡 <strong>Comprobante en estado Borrador / Proforma</strong> (Pendiente de Autorización Fiscal con ARCA).
+              {simulatedCae ? (
+                <strong>CAE local no verificado. No usar como comprobante fiscal hasta cotejar en ARCA.</strong>
+              ) : (
+                <>🟡 <strong>Comprobante en estado Borrador / Proforma</strong> (Pendiente de Autorización Fiscal con ARCA).</>
+              )}
             </div>
           )}
         </div>
