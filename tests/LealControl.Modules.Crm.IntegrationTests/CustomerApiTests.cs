@@ -61,6 +61,28 @@ public sealed class CustomerApiTests : IClassFixture<CrmWebApplicationFactory>
     }
 
     [Fact]
+    public async Task Fiscal_address_without_province_is_rejected()
+    {
+        var client = _factory.CreateAuthenticatedClient();
+        var payload = new
+        {
+            legalName = "Prueba Provincia SA",
+            documentType = "Cuit",
+            documentNumber = "20123456786",
+            taxCondition = "ResponsableInscripto",
+            iibbRegime = "Local",
+            isCustomer = true,
+            isSupplier = false,
+            fiscalStreet = "Mitre 800",
+            fiscalCity = "Córdoba",
+            fiscalPostalCode = "5000"
+        };
+
+        var response = await client.PostAsJsonAsync("/api/v1/crm/customers", payload);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Duplicate_cuit_is_conflict()
     {
         var client = _factory.CreateAuthenticatedClient();

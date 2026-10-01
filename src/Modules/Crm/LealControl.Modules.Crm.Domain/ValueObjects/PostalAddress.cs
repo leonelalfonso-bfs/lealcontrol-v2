@@ -55,11 +55,17 @@ public sealed record PostalAddress
             return Result<PostalAddress?>.Success(null);
         }
 
-        var prov = province ?? ArgentineProvince.SantaFe;
+        if (province is null)
+        {
+            return Result<PostalAddress?>.Failure(Error.Validation(
+                "Crm.Customer.FiscalProvinceRequired",
+                "La provincia fiscal es obligatoria cuando se informa un domicilio."));
+        }
+
         var s = string.IsNullOrWhiteSpace(street) ? "S/D" : street.Trim();
         var c = string.IsNullOrWhiteSpace(city) ? "San Lorenzo" : city.Trim();
         var cp = string.IsNullOrWhiteSpace(postalCode) ? "2200" : postalCode.Trim();
 
-        return Result<PostalAddress?>.Success(new PostalAddress(s, c, prov, cp));
+        return Result<PostalAddress?>.Success(new PostalAddress(s, c, province.Value, cp));
     }
 }
