@@ -505,15 +505,12 @@ function TransitionDialog({
       await api.moveOpportunity(
         opportunity.id,
         target === "Discovery" ? "Qualified" : target,
-        target === "Lost" || isReversion ? detail : undefined
+        target === "Lost" || isReversion ? detail : undefined,
+        {
+          description: descriptions[target],
+          nextFollowUpOn: followUp ? new Date(`${followUp}T12:00:00`).toISOString() : null
+        }
       );
-      await api.logActivity({
-        type: "Note",
-        description: descriptions[target],
-        customerId: opportunity.customerId,
-        opportunityId: opportunity.id,
-        nextFollowUpOn: followUp ? new Date(`${followUp}T12:00:00`).toISOString() : null
-      });
       await onDone();
     } catch (e) {
       setError((e as Error).message);

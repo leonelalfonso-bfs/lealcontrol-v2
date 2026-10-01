@@ -19,6 +19,6 @@ Usar una empresa y un cliente de prueba. Crear una oportunidad y un presupuesto 
 5. Marcar una oportunidad de prueba como ganada y reabrirla a Negociación desde la ficha. Repetir con una perdida. Verificar etapa y motivo.
 6. Forzar un cambio inválido (por ejemplo, intentar ganar desde Relevamiento). Confirmar que se rechaza y no aparece una actividad falsa en el historial.
 
-## Límite
+## Integridad de la operación
 
-La pantalla registra la actividad después de que la API acepta el cambio. Si la segunda llamada falla, la etapa puede haber cambiado sin quedar actividad de auditoría. La solución definitiva debe hacer etapa y actividad en una transacción de servidor; este riesgo queda abierto antes de publicar.
+El cambio de etapa y su nota se guardan en una sola operación del servidor. La prueba `OpportunityMoveApiTests` confirma que un cambio rechazado no agrega actividad y que cierre y reapertura agregan una nota cada uno. Antes de publicar, repetir este recorrido en staging con una empresa de prueba.

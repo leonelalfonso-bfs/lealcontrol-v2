@@ -30,7 +30,9 @@ public sealed record MoveOpportunityCommand(
     OpportunityStage Stage,
     string? LostReason = null,
     int? Probability = null,
-    Dictionary<string, string>? CustomFields = null)
+    Dictionary<string, string>? CustomFields = null,
+    string? ActivityDescription = null,
+    DateTime? NextFollowUpOn = null)
     : IRequest<Result<OpportunityDto>>;
 
 public sealed record ClassifyOpportunityCommand(
@@ -239,16 +241,22 @@ internal sealed class ClassifyOpportunityCommandHandler
 internal sealed class MoveOpportunityCommandHandler : IRequestHandler<MoveOpportunityCommand, Result<OpportunityDto>>
 {
     private readonly IOpportunityRepository _opportunities;
+    private readonly IActivityRepository _activities;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITenantContext _tenant;
     private readonly IClock _clock;
 
     public MoveOpportunityCommandHandler(
         IOpportunityRepository opportunities,
+        IActivityRepository activities,
         IUnitOfWork unitOfWork,
+        ITenantContext tenant,
         IClock clock)
     {
         _opportunities = opportunities;
+        _activities = activities;
         _unitOfWork = unitOfWork;
+        _tenant = tenant;
         _clock = clock;
     }
 
@@ -260,6 +268,7 @@ internal sealed class MoveOpportunityCommandHandler : IRequestHandler<MoveOpport
             return Result<OpportunityDto>.Failure(CrmErrors.OpportunityNotFound);
         }
 
+        var previousStage = opportunity.Stage;
         Result moved;
         if (opportunity.IsClosed
             && request.Stage is not OpportunityStage.Won
@@ -281,6 +290,20 @@ internal sealed class MoveOpportunityCommandHandler : IRequestHandler<MoveOpport
         if (moved.IsFailure)
         {
             return Result<OpportunityDto>.Failure(moved.Error);
+        }
+
+        if (opportunity.Stage != previousStage)
+        {
+            var description = string.IsNullOrWhiteSpace(request.ActivityDescription)
+                ? $"Cambio de etapa: {previousStage} → {opportunity.Stage}. {request.LostReason}".Trim()
+                : request.ActivityDescription.Trim();
+            var activity = Activity.Log(
+                _tenant.TenantId, ActivityType.Note, description,
+                opportunity.CustomerId, opportunity.LeadId, opportunity.Id,
+                null, request.NextFollowUpOn, _clock.UtcNow);
+            if (activity.IsFailure)
+                return Result<OpportunityDto>.Failure(activity.Error);
+            _activities.Add(activity.Value);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

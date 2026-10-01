@@ -123,15 +123,9 @@ export function OpportunityDetailPage() {
       await api.moveOpportunity(
         opportunity.id,
         targetStage === "Discovery" ? "Qualified" : targetStage,
-        revertReason.trim()
+        revertReason.trim(),
+        { description: `[CAMBIO / REVERSIÓN DE ETAPA a ${stageLabels[targetStage]}] Motivo: ${revertReason.trim()}` }
       );
-      await api.logActivity({
-        type: "Note",
-        description: `[CAMBIO / REVERSIÓN DE ETAPA a ${stageLabels[targetStage]}] Motivo: ${revertReason.trim()}`,
-        customerId: opportunity.customerId,
-        opportunityId: opportunity.id,
-        nextFollowUpOn: null
-      });
       setShowStageModal(false);
       setRevertReason("");
       await load();

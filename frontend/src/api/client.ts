@@ -303,10 +303,20 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ stage })
     }),
-  moveOpportunity: (id: string, stage: string, reason?: string) =>
+  moveOpportunity: (
+    id: string,
+    stage: string,
+    reason?: string,
+    activity?: { description?: string; nextFollowUpOn?: string | null }
+  ) =>
     request<Opportunity>(`/api/v1/crm/opportunities/${id}/move`, {
       method: "POST",
-      body: JSON.stringify({ stage, lostReason: reason })
+      body: JSON.stringify({
+        stage,
+        lostReason: reason,
+        activityDescription: activity?.description,
+        nextFollowUpOn: activity?.nextFollowUpOn
+      })
     }),
   classifyOpportunity: (id: string, body: object) =>
     request<Opportunity>(`/api/v1/crm/opportunities/${id}/classify`, {

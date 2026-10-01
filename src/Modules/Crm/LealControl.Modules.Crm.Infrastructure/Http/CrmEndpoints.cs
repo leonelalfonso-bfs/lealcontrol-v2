@@ -352,7 +352,9 @@ public static class CrmEndpoints
             ISender sender,
             CancellationToken cancellationToken) =>
         {
-            var result = await sender.Send(new MoveOpportunityCommand(id, body.Stage, body.LostReason), cancellationToken);
+            var result = await sender.Send(new MoveOpportunityCommand(
+                id, body.Stage, body.LostReason, body.Probability, body.CustomFields,
+                body.ActivityDescription, body.NextFollowUpOn), cancellationToken);
             return result.ToHttp();
         });
 
@@ -405,7 +407,13 @@ public static class CrmEndpoints
     }
 }
 
-public sealed record MoveOpportunityRequest(OpportunityStage Stage, string? LostReason);
+public sealed record MoveOpportunityRequest(
+    OpportunityStage Stage,
+    string? LostReason,
+    int? Probability = null,
+    Dictionary<string, string>? CustomFields = null,
+    string? ActivityDescription = null,
+    DateTime? NextFollowUpOn = null);
 
 public sealed record ClassifyOpportunityRequest(
     OpportunityPriority Priority,
