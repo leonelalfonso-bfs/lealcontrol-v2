@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Xml;
 using System.Text;
 using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
@@ -94,6 +95,49 @@ internal sealed class ArcaWsfeClient
         }
     }
 
+    public async Task<WsfeLastAuthorizedReply> GetLastAuthorizedAsync(
+        string token, string sign, string cuit, bool production,
+        int pointOfSale, int voucherType, CancellationToken cancellationToken)
+    {
+        var url = production
+            ? "https://servicios1.afip.gov.ar/wsfev1/service.asmx"
+            : "https://wswhomo.afip.gov.ar/wsfev1/service.asmx";
+        var envelope = $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ar="http://ar.gov.afip.dif.FEV1/">
+              <soapenv:Header/>
+              <soapenv:Body>
+                <ar:FECompUltimoAutorizado>
+                  <ar:Auth>
+                    <ar:Token>{System.Security.SecurityElement.Escape(token)}</ar:Token>
+                    <ar:Sign>{System.Security.SecurityElement.Escape(sign)}</ar:Sign>
+                    <ar:Cuit>{System.Security.SecurityElement.Escape(cuit)}</ar:Cuit>
+                  </ar:Auth>
+                  <ar:PtoVta>{pointOfSale}</ar:PtoVta>
+                  <ar:CbteTipo>{voucherType}</ar:CbteTipo>
+                </ar:FECompUltimoAutorizado>
+              </soapenv:Body>
+            </soapenv:Envelope>
+            """;
+        try
+        {
+            var client = _httpClientFactory.CreateClient("arca");
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Content = new StringContent(envelope, Encoding.UTF8, "text/xml");
+            request.Headers.TryAddWithoutValidation("SOAPAction", "http://ar.gov.afip.dif.FEV1/FECompUltimoAutorizado");
+            using var response = await client.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return new(false, 0, $"ARCA respondió HTTP {(int)response.StatusCode} al consultar la numeración.");
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            return WsfeLastAuthorizedParser.Parse(body, pointOfSale, voucherType);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Fallo FECompUltimoAutorizado");
+            return new(false, 0, "No se pudo consultar la numeración en ARCA. Reintentá la consulta.");
+        }
+    }
+
     private static WsfeSalesPoint ParsePoint(XElement node)
     {
         var number = int.TryParse(Child(node, "Nro"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var nro) ? nro : 0;
@@ -109,3 +153,51 @@ internal sealed class ArcaWsfeClient
 }
 
 internal sealed record WsfeSalesPoint(int Number, string EmissionType, bool Blocked);
+
+public sealed record WsfeLastAuthorizedReply(bool Ok, long LastNumber, string Detail);
+
+public static class WsfeLastAuthorizedParser
+{
+    public static WsfeLastAuthorizedReply Parse(string body, int expectedPoint, int expectedType)
+    {
+        XDocument doc;
+        try
+        {
+            using var reader = XmlReader.Create(new StringReader(body), new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null
+            });
+            doc = XDocument.Load(reader);
+        }
+        catch (XmlException)
+        {
+            return new(false, 0, "ARCA devolvió una respuesta XML inválida.");
+        }
+
+        var fault = doc.Descendants().FirstOrDefault(x => x.Name.LocalName is "faultstring" or "Text")?.Value;
+        if (!string.IsNullOrWhiteSpace(fault))
+            return new(false, 0, "ARCA rechazó la consulta: " + Short(fault));
+
+        var result = doc.Descendants().FirstOrDefault(x => x.Name.LocalName == "FECompUltimoAutorizadoResult");
+        if (result is null)
+            return new(false, 0, "ARCA no devolvió el resultado de numeración esperado.");
+
+        var error = result.Descendants().FirstOrDefault(x => x.Name.LocalName == "Err");
+        if (error is not null)
+            return new(false, 0, "ARCA rechazó la consulta: " + Short(Value(error, "Msg") ?? "error sin descripción"));
+
+        if (!int.TryParse(Value(result, "PtoVta"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var point)
+            || !int.TryParse(Value(result, "CbteTipo"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var type)
+            || !long.TryParse(Value(result, "CbteNro"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)
+            || point != expectedPoint || type != expectedType || number < 0)
+            return new(false, 0, "ARCA devolvió una numeración incompleta o de otro punto de venta/tipo.");
+
+        return new(true, number, "Último número autorizado consultado en ARCA.");
+    }
+
+    private static string? Value(XElement node, string name) =>
+        node.Elements().FirstOrDefault(x => x.Name.LocalName == name)?.Value?.Trim();
+
+    private static string Short(string value) => value.Trim().Length <= 250 ? value.Trim() : value.Trim()[..250];
+}

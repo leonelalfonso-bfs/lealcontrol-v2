@@ -46,6 +46,13 @@ public static class CompanySettingsEndpoints
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(new { detail = res.Error.Message });
         });
 
+        group.MapGet("/settings/arca-last-authorized", async (
+            int pointOfSale, string invoiceType, IArcaIntegration arca, CancellationToken cancellationToken) =>
+        {
+            var res = await arca.GetLastAuthorizedAsync(pointOfSale, invoiceType, cancellationToken);
+            return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(new { detail = res.Error.Message });
+        }).RequireAuthorization("RequireAdmin");
+
         group.MapGet("/settings/arca-diagnostics", async (ISender sender, CancellationToken cancellationToken) =>
         {
             var res = await sender.Send(new DiagnoseArcaQuery(), cancellationToken);
