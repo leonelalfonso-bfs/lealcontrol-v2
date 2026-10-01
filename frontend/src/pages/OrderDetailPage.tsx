@@ -12,6 +12,7 @@ export function OrderDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
+  const [canRemit, setCanRemit] = useState<boolean | null>(null);
 
   const loadData = async () => {
     if (!id) return;
@@ -20,6 +21,27 @@ export function OrderDetailPage() {
       setError(null);
       const ord = await api.getOrder(id);
       setOrder(ord);
+      try {
+        const remitos = await api.listRemitos();
+        const keyFor = (productId: string | null | undefined, description: string) =>
+          productId ? "P:" + productId.toLowerCase() : "D:" + description.replace(/\s*\(S\/N:.*\)\s*$/i, "").trim().toUpperCase();
+        const ordered = new Map<string, number>();
+        const delivered = new Map<string, number>();
+        for (const line of ord.lines) {
+          const key = keyFor(line.productId, line.description);
+          ordered.set(key, (ordered.get(key) ?? 0) + line.quantity);
+        }
+        for (const remito of remitos) {
+          if (remito.orderId !== id || remito.status.toLowerCase() === "cancelled") continue;
+          for (const item of remito.items) {
+            const key = keyFor(item.productId, item.description);
+            delivered.set(key, (delivered.get(key) ?? 0) + item.quantity);
+          }
+        }
+        setCanRemit(ord.status !== "Cancelled" && [...ordered].some(([key, quantity]) => quantity > (delivered.get(key) ?? 0)));
+      } catch {
+        setCanRemit(null);
+      }
       if (ord.customerId && ord.customerId !== "00000000-0000-0000-0000-000000000000") {
         const cust = await api.getCustomer(ord.customerId).catch(() => null);
         setCustomer(cust);
@@ -86,9 +108,15 @@ export function OrderDetailPage() {
         <div className="row" style={{ gap: 10 }}>
           <button type="button" className="btn" onClick={() => setShowEmail(true)}>✉ Enviar por email</button>
           {showEmail && <EmailComposer context={{ entityType: "Order", entityId: order.id, to: contact?.email || customer?.email || undefined, subject: `Pedido de venta ${order.orderNumber}`, body: `Hola,\n\nCompartimos la confirmación del pedido de venta ${order.orderNumber}, por un total de ${currLabel} ${order.total.toLocaleString("es-AR")}.\n\nSaludos.\n` }} onClose={() => setShowEmail(false)} />}
-          <Link className="btn" to={`/remitos/nuevo?order_id=${order.id}`} style={{ background: "linear-gradient(180deg, #2563eb, #1d4ed8)" }}>
-            🚚 Generar Remito
-          </Link>
+          {canRemit === true ? (
+            <Link className="btn" to={"/remitos/nuevo?order_id=" + order.id} style={{ background: "linear-gradient(180deg, #2563eb, #1d4ed8)" }}>
+              🚚 Generar Remito
+            </Link>
+          ) : (
+            <span className="badge" title={canRemit === false ? "El pedido ya fue remitido por completo" : "No se pudo consultar el saldo de entrega"}>
+              {canRemit === false ? "Pedido remitido" : "Entrega no disponible"}
+            </span>
+          )}
           <Link className="btn" to={`/facturas/nueva?order_id=${order.id}`} style={{ background: "linear-gradient(180deg, #059669, #047857)" }}>
             📄 Emitir Factura
           </Link>

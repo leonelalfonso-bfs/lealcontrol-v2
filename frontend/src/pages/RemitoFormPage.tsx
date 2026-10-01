@@ -25,6 +25,7 @@ export function RemitoFormPage() {
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [customerDetail, setCustomerDetail] = useState<CustomerDetail | null>(null);
   const [orderNumber, setOrderNumber] = useState<string>("");
+  const [orderFullyRemitted, setOrderFullyRemitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +60,7 @@ export function RemitoFormPage() {
         setProducts(prodList);
 
         if (orderId) {
-          const order = await api.getOrder(orderId);
+          const [order, remitos] = await Promise.all([api.getOrder(orderId), api.listRemitos()]);
           if (order) {
             setOrderNumber(order.orderNumber);
             let custDetail: CustomerDetail | null = null;
@@ -92,24 +93,35 @@ export function RemitoFormPage() {
             setCarrierName(order.transportation || "");
             setNotes(`Generado desde Pedido N° ${order.orderNumber}${order.notes ? ` · ${order.notes}` : ""}`);
 
-            const orderLines = order.lines || [];
-            if (orderLines.length > 0) {
-              setItems(
-                orderLines.map((i) => {
-                  const prod = prodList.find((p) => p.id === i.productId);
-                  return {
-                    productId: i.productId ?? undefined,
-                    code: prod?.code || "ITEM",
-                    description: i.description || prod?.name || "Mercadería",
-                    orderedQty: i.quantity,
-                    deliveredQty: 0,
-                    pendingQty: i.quantity,
-                    quantity: i.quantity,
-                    unitMeasure: prod?.baseUnit || "u"
-                  };
-                })
-              );
+            const keyFor = (productId: string | null | undefined, description: string) =>
+              productId ? "P:" + productId.toLowerCase() : "D:" + description.replace(/\s*\(S\/N:.*\)\s*$/i, "").trim().toUpperCase();
+            const delivered = new Map<string, number>();
+            for (const remito of remitos) {
+              if (remito.orderId !== orderId || remito.status.toLowerCase() === "cancelled") continue;
+              for (const item of remito.items) {
+                const key = keyFor(item.productId, item.description);
+                delivered.set(key, (delivered.get(key) ?? 0) + item.quantity);
+              }
             }
+            const pendingLines = (order.lines || []).map((i) => {
+              const key = keyFor(i.productId, i.description);
+              const alreadyDelivered = Math.min(i.quantity, delivered.get(key) ?? 0);
+              delivered.set(key, Math.max(0, (delivered.get(key) ?? 0) - i.quantity));
+              const pendingQty = Math.max(0, i.quantity - alreadyDelivered);
+              const prod = prodList.find((p) => p.id === i.productId);
+              return {
+                productId: i.productId ?? undefined,
+                code: prod?.code || "ITEM",
+                description: i.description || prod?.name || "Mercadería",
+                orderedQty: i.quantity,
+                deliveredQty: alreadyDelivered,
+                pendingQty,
+                quantity: pendingQty,
+                unitMeasure: prod?.baseUnit || "u"
+              };
+            }).filter((i) => i.pendingQty > 0);
+            setItems(pendingLines);
+            setOrderFullyRemitted(pendingLines.length === 0);
           }
         }
       } catch (err) {
@@ -183,6 +195,14 @@ export function RemitoFormPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (orderId && orderFullyRemitted) {
+      setError("El pedido ya fue remitido por completo.");
+      return;
+    }
+    if (orderId && items.some((i) => i.quantity < 0 || i.quantity > (i.pendingQty ?? 0))) {
+      setError("La cantidad a remitir supera el saldo pendiente del pedido.");
+      return;
+    }
     if (!customerId) {
       setError("Por favor seleccioná un cliente para emitir el remito.");
       return;
@@ -240,6 +260,7 @@ export function RemitoFormPage() {
       </div>
 
       {error && <div className="alert">{error}</div>}
+      {orderFullyRemitted && <div className="alert">Este pedido ya fue remitido por completo. No quedan cantidades pendientes.</div>}
 
       <form onSubmit={handleSubmit} className="stack" style={{ gap: 20 }}>
         {/* General Info Card */}
@@ -253,6 +274,7 @@ export function RemitoFormPage() {
               <select
                 value={customerId}
                 onChange={(e) => handleCustomerChange(e.target.value)}
+                disabled={Boolean(orderId)}
                 required
               >
                 <option value="">Seleccionar cliente...</option>
@@ -353,9 +375,9 @@ export function RemitoFormPage() {
                 Ajustá las cantidades a entregar en esta ocasión. Si algún ítem no se despacha hoy, poné la cantidad en 0.
               </p>
             </div>
-            <button type="button" className="btn ghost" onClick={handleAddItem}>
+            {!orderId && <button type="button" className="btn ghost" onClick={handleAddItem}>
               + Agregar Ítem Manual
-            </button>
+            </button>}
           </div>
 
           <div className="table-wrap">
@@ -364,7 +386,7 @@ export function RemitoFormPage() {
                 <tr>
                   <th style={{ width: "25%" }}>Catálogo / Código</th>
                   <th style={{ width: "35%" }}>Descripción / Detalle Mercadería & Números de Serie</th>
-                  {orderId && <th style={{ width: "10%", textAlign: "center" }}>Cant. Pedida</th>}
+                  {orderId && <th style={{ width: "10%", textAlign: "center" }}>Pedida / Ya remitida / Pendiente</th>}
                   <th style={{ width: "14%", textAlign: "center" }}>A Remitir</th>
                   <th style={{ width: "10%" }}>Unidad</th>
                   <th style={{ width: "6%", textAlign: "right" }}></th>
@@ -378,6 +400,7 @@ export function RemitoFormPage() {
                         <select
                           value={item.productId ?? ""}
                           onChange={(e) => handleItemProductSelect(idx, e.target.value)}
+                          disabled={Boolean(orderId)}
                           style={{ fontSize: "0.82rem" }}
                         >
                           <option value="">Seleccionar del catálogo...</option>
@@ -395,6 +418,7 @@ export function RemitoFormPage() {
                             setItems(next);
                           }}
                           placeholder="Código..."
+                          readOnly={Boolean(orderId)}
                           style={{ fontSize: "0.82rem" }}
                         />
                       </div>
@@ -409,6 +433,7 @@ export function RemitoFormPage() {
                             setItems(next);
                           }}
                           required
+                          readOnly={Boolean(orderId)}
                           placeholder="Descripción detallada de la mercadería..."
                         />
                         <input
@@ -425,18 +450,20 @@ export function RemitoFormPage() {
                     </td>
                     {orderId && (
                       <td style={{ textAlign: "center", fontWeight: "bold", color: "#64748b" }}>
-                        {item.orderedQty ?? item.quantity}
+                        {item.orderedQty ?? item.quantity} / {item.deliveredQty ?? 0} / {item.pendingQty ?? item.quantity}
                       </td>
                     )}
                     <td>
                       <input
                         type="number"
-                        step="1"
-                        min="1"
+                        step="0.0001"
+                        min="0"
+                        max={orderId ? item.pendingQty : undefined}
                         value={item.quantity}
                         onChange={(e) => {
                           const next = [...items];
-                          next[idx].quantity = Math.max(1, parseInt(e.target.value, 10) || 1);
+                          const entered = Number(e.target.value) || 0;
+                          next[idx].quantity = Math.max(0, orderId ? Math.min(entered, item.pendingQty ?? 0) : entered);
                           setItems(next);
                         }}
                         style={{ textAlign: "center", fontWeight: "bold", fontSize: "1rem" }}
@@ -455,14 +482,14 @@ export function RemitoFormPage() {
                       />
                     </td>
                     <td style={{ textAlign: "right" }}>
-                      <button
+                      {!orderId && <button
                         type="button"
                         className="btn danger"
                         style={{ padding: "4px 8px" }}
                         onClick={() => handleRemoveItem(idx)}
                       >
                         ✕
-                      </button>
+                      </button>}
                     </td>
                   </tr>
                 ))}
@@ -495,7 +522,7 @@ export function RemitoFormPage() {
           </button>
           <button
             className="btn"
-            disabled={saving}
+            disabled={saving || orderFullyRemitted}
             style={{ background: "linear-gradient(180deg, #2563eb, #1d4ed8)", padding: "10px 24px", fontSize: "1rem" }}
           >
             {saving ? "Emitiendo Remito…" : "🚚 Generar y Guardar Remito"}

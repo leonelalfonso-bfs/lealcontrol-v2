@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Results;
@@ -8,6 +9,7 @@ using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Sales.Application.Remitos;
 using LealControl.Modules.Sales.Domain.Remitos;
 using LealControl.Modules.Sales.Domain.Inventory;
+using LealControl.Modules.Sales.Domain.Orders;
 using LealControl.Modules.Sales.Domain.Products;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -109,6 +111,61 @@ internal sealed class RemitoQueryHandlers
     public async Task<Result<RemitoDto>> Handle(CreateRemitoCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantContext.TenantId;
+        if (request.Items == null || request.Items.Count == 0 || request.Items.Any(item => item.Quantity <= 0))
+        {
+            return Result<RemitoDto>.Failure(Error.Validation("Sales.Remito.InvalidItems", "El remito debe tener al menos un ítem con cantidad positiva."));
+        }
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        if (request.OrderId is Guid orderId)
+        {
+            // Lock the source order until the delivery and stock movements are saved.
+            // A second request for the same order waits and then sees the first remito.
+            await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $@"SELECT 1 FROM sales.orders WHERE ""Id"" = {orderId} AND ""TenantId"" = {tenantId.Value} FOR UPDATE",
+                cancellationToken);
+            var order = await _dbContext.Orders
+                .Include(o => o.Lines)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == new OrderId(orderId) && o.TenantId == tenantId, cancellationToken);
+            if (order == null)
+            {
+                return Result<RemitoDto>.Failure(Error.NotFound("Sales.Remito.OrderNotFound", "El pedido vinculado no existe."));
+            }
+            if (order.Status == OrderStatus.Cancelled || order.CustomerId != request.CustomerId)
+            {
+                return Result<RemitoDto>.Failure(Error.Validation("Sales.Remito.InvalidOrder", "El pedido está cancelado o pertenece a otro cliente."));
+            }
+
+            var previousRemitos = await _dbContext.Remitos
+                .Include(r => r.Items)
+                .AsNoTracking()
+                .Where(r => r.TenantId == tenantId && r.OrderId == orderId && r.Status != "Cancelled")
+                .ToListAsync(cancellationToken);
+            var ordered = order.Lines
+                .GroupBy(line => DeliveryKey(line.ProductId, line.Description))
+                .ToDictionary(group => group.Key, group => group.Sum(line => line.Quantity));
+            var delivered = previousRemitos
+                .SelectMany(remito => remito.Items)
+                .GroupBy(item => DeliveryKey(item.ProductId, item.Description))
+                .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
+            var requested = request.Items
+                .GroupBy(item => DeliveryKey(item.ProductId, item.Description))
+                .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
+
+            foreach (var (key, quantity) in requested)
+            {
+                if (!ordered.TryGetValue(key, out var orderedQuantity))
+                {
+                    return Result<RemitoDto>.Failure(Error.Validation("Sales.Remito.ItemNotInOrder", "El remito contiene un ítem que no pertenece al pedido."));
+                }
+                var remaining = Math.Max(0m, orderedQuantity - delivered.GetValueOrDefault(key));
+                if (quantity > remaining)
+                {
+                    return Result<RemitoDto>.Failure(Error.Validation("Sales.Remito.ExceedsPending", "La cantidad a remitir supera el saldo pendiente del pedido. Pendiente: " + remaining + "."));
+                }
+            }
+        }
 
         // Auto calculate next Remito number
         var lastRemito = await _dbContext.Remitos
@@ -210,7 +267,15 @@ internal sealed class RemitoQueryHandlers
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Result<RemitoDto>.Success(MapToDto(remito));
+    }
+
+    private static string DeliveryKey(Guid? productId, string description)
+    {
+        if (productId is Guid id && id != Guid.Empty) return "P:" + id.ToString("N");
+        var clean = Regex.Replace(description ?? "", @"\s*\(S/N:.*\)\s*$", "", RegexOptions.IgnoreCase).Trim();
+        return "D:" + clean.ToUpperInvariant();
     }
 
     private static RemitoDto MapToDto(Remito r)
