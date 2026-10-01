@@ -10,6 +10,7 @@ using LealControl.BuildingBlocks.Results;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Crm.Application.Settings;
 using LealControl.Modules.Crm.Domain.Settings;
+using LealControl.Modules.Crm.Infrastructure.Arca;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -84,8 +85,24 @@ public sealed class CompanySettingsQueryHandler :
         var tenantId = _tenantContext.TenantId;
         var settings = await GetOrInitSettingsAsync(tenantId, cancellationToken);
 
+        var privateKey = string.IsNullOrWhiteSpace(request.CertificateKey)
+            ? settings.ArcaCertificateKey
+            : request.CertificateKey;
+        if (!ArcaCertificateLoader.TryLoad(request.CertificateCrt, privateKey, out var certificate, out var certificateError)
+            || certificate is null)
+        {
+            return Result<CompanySettingsDto>.Failure(Error.Validation(
+                "Crm.Arca.CertificateInvalid", certificateError ?? "El certificado y la clave privada no son válidos."));
+        }
+        using (certificate)
+        {
+            if (certificate.NotAfter.ToUniversalTime() <= DateTime.UtcNow)
+                return Result<CompanySettingsDto>.Failure(Error.Validation(
+                    "Crm.Arca.CertificateExpired", "El certificado de ARCA está vencido."));
+        }
+
         settings.ArcaCertificateCrt = request.CertificateCrt;
-        settings.ArcaCertificateKey = request.CertificateKey;
+        settings.ArcaCertificateKey = privateKey;
         settings.ArcaEnvironment = request.Environment;
         settings.ArcaSignerCuit = request.SignerCuit;
         settings.UpdatedAtUtc = DateTime.UtcNow;
@@ -360,8 +377,8 @@ public sealed class CompanySettingsQueryHandler :
         s.FiscalProvince,
         s.FiscalPostalCode,
         s.LogoUrl,
-        s.ArcaCertificateCrt,
-        s.ArcaCertificateKey,
+        null, // Never return certificate material to browsers.
+        null, // The private key is only returned once when generating the CSR.
         s.ArcaEnvironment,
         s.ArcaSignerCuit,
         s.BankName,
@@ -370,5 +387,7 @@ public sealed class CompanySettingsQueryHandler :
         s.DefaultQuoteValidDays,
         s.DefaultDeliveryDays,
         s.DefaultWarranty,
-        s.DefaultPaymentTerms);
+        s.DefaultPaymentTerms,
+        !string.IsNullOrWhiteSpace(s.ArcaCertificateCrt),
+        !string.IsNullOrWhiteSpace(s.ArcaCertificateKey));
 }
