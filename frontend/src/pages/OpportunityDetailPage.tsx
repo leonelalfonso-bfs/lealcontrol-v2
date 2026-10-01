@@ -44,10 +44,10 @@ export function OpportunityDetailPage() {
   const load = async () => {
     if (!id) return;
     try {
-      const [opps, quoteList, customerPage, opportunityActivities, userList] = await Promise.all([
+      const [opps, quoteList, customerList, opportunityActivities, userList] = await Promise.all([
         api.listOpportunities(),
         api.listQuotes(),
-        api.listCustomers(),
+        api.listAllCustomers(),
         api.opportunityTimeline(id),
         api.listTenantUsers().catch(() => [])
       ]);
@@ -55,7 +55,7 @@ export function OpportunityDetailPage() {
       setOpportunity(found);
       setQuotes(quoteList.filter((quote) => quote.opportunityId === id));
       setActivities(opportunityActivities);
-      setCustomers(Object.fromEntries((customerPage.items || []).map((customer) => [customer.id, customer.legalName])));
+      setCustomers(Object.fromEntries(customerList.map((customer) => [customer.id, customer.legalName])));
       setUsers((userList || []).filter((u) => u.isActive !== false));
       if (!found) setError("No se encontró la oportunidad.");
     } catch (e) {

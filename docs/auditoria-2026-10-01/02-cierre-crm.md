@@ -15,7 +15,7 @@ Auditoría de código sobre `main` `5acf972` (1 de octubre de 2026). Estado de i
 - [ ] Completar el contrato de `/opportunities/{id}/move`: la aplicación admite probabilidad y campos personalizados, pero el request HTTP solo transmite etapa y motivo.
 - [ ] Alinear el flujo «ganada → presupuesto» documentado con la regla actual que exige crear presupuesto antes de cerrar la oportunidad. Confirmar la regla comercial antes de cambiar comportamiento.
 - [ ] Corregir exportación Excel de prospectos: usa `companyName`, mientras el DTO expone `name`.
-- [ ] **Clientes fuera de la primera página**: ficha y embudo de oportunidades llaman a `listCustomers()` (50 registros); los clientes importados que quedan fuera pueden aparecer sin nombre o no ofrecerse en el selector. Usar la consulta paginada completa existente o búsqueda remota.
+- [x] **Clientes fuera de la primera página (corrección local)**: ficha y embudo de oportunidades usan `listAllCustomers()` para incluir clientes importados fuera de los primeros 50. El frontend compiló; falta comprobar el caso con más de 50 clientes en staging.
 - [ ] Ampliar pruebas de integración: prospecto con/sin oportunidad, filtro de oportunidades y actividades por cliente, transiciones y reapertura, vínculo presupuesto–oportunidad, permisos por tenant.
 
 ## Instructivo de prueba para el cambio de conversión

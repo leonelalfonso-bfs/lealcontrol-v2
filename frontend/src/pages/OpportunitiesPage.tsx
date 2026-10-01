@@ -56,15 +56,15 @@ export function OpportunitiesPage() {
 
   const load = async () => {
     try {
-      const [opps, quoteList, page, userList] = await Promise.all([
+      const [opps, quoteList, customerList, userList] = await Promise.all([
         api.listOpportunities(),
         api.listQuotes(),
-        api.listCustomers(),
+        api.listAllCustomers(),
         api.listTenantUsers().catch(() => [])
       ]);
       setItems(opps || []);
       setQuotes(quoteList || []);
-      setCustomers(page?.items || (page as any) || []);
+      setCustomers(customerList);
       setUsers((userList || []).filter((u) => u.isActive !== false));
       setError(null);
     } catch (e) {
