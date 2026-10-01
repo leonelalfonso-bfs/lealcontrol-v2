@@ -531,7 +531,7 @@ export function CustomerFormPage() {
     e.preventDefault();
     setError(null);
     if ((model.fiscalStreet || model.fiscalCity || model.fiscalPostalCode) && !model.fiscalProvince) {
-      setError("Seleccioná la provincia fiscal antes de guardar. ARCA no informó una provincia reconocida.");
+      setError("Seleccioná la provincia fiscal antes de guardar el domicilio.");
       return;
     }
     setSaving(true);
