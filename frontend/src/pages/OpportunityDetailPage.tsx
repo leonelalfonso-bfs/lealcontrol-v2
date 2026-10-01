@@ -120,6 +120,11 @@ export function OpportunityDetailPage() {
     setReverting(true);
     setError(null);
     try {
+      await api.moveOpportunity(
+        opportunity.id,
+        targetStage === "Discovery" ? "Qualified" : targetStage,
+        revertReason.trim()
+      );
       await api.logActivity({
         type: "Note",
         description: `[CAMBIO / REVERSIÓN DE ETAPA a ${stageLabels[targetStage]}] Motivo: ${revertReason.trim()}`,
@@ -127,11 +132,6 @@ export function OpportunityDetailPage() {
         opportunityId: opportunity.id,
         nextFollowUpOn: null
       });
-      await api.moveOpportunity(
-        opportunity.id,
-        targetStage,
-        revertReason.trim()
-      );
       setShowStageModal(false);
       setRevertReason("");
       await load();

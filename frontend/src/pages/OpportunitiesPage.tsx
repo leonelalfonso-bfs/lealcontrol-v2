@@ -127,7 +127,8 @@ export function OpportunitiesPage() {
   const requestTransition = (opportunity: Opportunity, target: VisualStage, isReversion = false) => {
     const current = visualStage(opportunity.stage);
     if (current === target) return;
-    setTransition({ opportunity, target, isReversion });
+    const backwards = pipeline.indexOf(target) < pipeline.indexOf(current) && target !== "Lost";
+    setTransition({ opportunity, target, isReversion: isReversion || backwards });
   };
 
   const quoteFor = (id: string) => quotes.find((quote) => quote.opportunityId === id);
@@ -501,6 +502,11 @@ function TransitionDialog({
         Won: `${evidenceType}: ${detail}`,
         Lost: `Motivo de pérdida: ${detail}`
       };
+      await api.moveOpportunity(
+        opportunity.id,
+        target === "Discovery" ? "Qualified" : target,
+        target === "Lost" || isReversion ? detail : undefined
+      );
       await api.logActivity({
         type: "Note",
         description: descriptions[target],
@@ -508,7 +514,6 @@ function TransitionDialog({
         opportunityId: opportunity.id,
         nextFollowUpOn: followUp ? new Date(`${followUp}T12:00:00`).toISOString() : null
       });
-      await api.moveOpportunity(opportunity.id, target, target === "Lost" || isReversion ? detail : undefined);
       await onDone();
     } catch (e) {
       setError((e as Error).message);

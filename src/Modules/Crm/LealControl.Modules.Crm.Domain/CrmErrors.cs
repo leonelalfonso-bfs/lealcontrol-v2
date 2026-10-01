@@ -112,6 +112,10 @@ public static class CrmErrors
         "Crm.Opportunity.LostReasonRequired",
         "Indicá el motivo de pérdida.");
 
+    public static readonly Error OpportunityReversionReasonRequired = Error.Validation(
+        "Crm.Opportunity.ReversionReasonRequired",
+        "Indicá el motivo de la reversión o reapertura.");
+
     public static readonly Error OpportunityInvalidTransition = Error.Validation(
         "Crm.Opportunity.InvalidTransition",
         "La oportunidad debe avanzar respetando el flujo comercial y la evidencia de cada etapa.");
