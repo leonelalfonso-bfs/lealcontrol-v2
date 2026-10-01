@@ -1,31 +1,27 @@
-# CRM · pendientes de cierre y verificación
+# CRM · estado de la primera tanda
 
-Auditoría de código sobre `main` `5acf972` (1 de octubre de 2026). Estado de implementación local: la rama `codex/crm-lead-conversion` pasó 14 pruebas de integración y la compilación del frontend; no hay publicación ni cambios de datos remotos.
+Base de revisión: `main` en `5acf972`. Rama propuesta: `codex/crm-primera-tanda-20261001`. Este documento describe el código combinado y verificado localmente; falta la prueba funcional en staging.
 
-## Prioridad alta
+## Corregido y verificado localmente
 
-- [x] **Conversión de prospecto (corrección local)**: el backend creaba una oportunidad aun cuando la casilla de la pantalla estaba desmarcada, y el frontend creaba otra cuando estaba marcada. El cambio local hace que la API respete la elección y usa la oportunidad creada por la API. Las dos pruebas nuevas pasaron; la suite del CRM terminó con 14/14. Pendiente prueba funcional en staging después de publicar.
-- [ ] **Oportunidades y actividades por cliente**: los filtros de `Guid?` se cambiaron localmente a `CustomerId?`/`OpportunityId?`; la prueba de conversión confirmó que la oportunidad aparece en el listado del cliente. Falta cubrir explícitamente el listado de actividades. El patrón de reintento que devuelve lista vacía tras cualquier excepción debería limitarse a errores de esquema y exponer los demás fallos.
-- [x] **Etapas del embudo (corrección local)**: la interfaz traduce «Relevamiento» a `Qualified`; el dominio admite retrocesos entre etapas abiertas con motivo y el handler existente admite reapertura de cerradas. Las pantallas registran la nota después de que la API acepta el cambio, por lo que un rechazo ya no deja una actividad falsa. Pasaron 18 pruebas unitarias y 12 de integración; API y frontend compilaron. Pendiente prueba funcional en staging.
-- [x] **Etapa e historial atómicos (corrección local)**: el cambio de etapa y su nota se envían en una solicitud y se guardan con una sola unidad de trabajo. La prueba de integración específica pasó (1/1), al igual que la compilación de API y frontend. Pendiente ejecutar la suite completa y la prueba funcional en staging antes de publicar.
-- [ ] **Presupuesto por oportunidad**: proteger en servidor la unicidad de presupuesto vigente por oportunidad frente a solicitudes simultáneas, con auditoría previa de duplicados existentes antes de agregar un índice único.
+- [x] **Conversión de prospectos**: la API respeta la elección de crear o no una oportunidad. La interfaz usa la oportunidad devuelta por la API y evita una segunda alta. Las pruebas de integración cubren ambos casos.
+- [x] **Oportunidades por cliente**: los filtros de identificadores fuertes de EF se corrigieron; la prueba de conversión confirma que la oportunidad vinculada aparece en el listado del cliente.
+- [x] **Etapas y reapertura**: la interfaz envía `Qualified` para «Relevamiento», permite retrocesos con motivo y usa el contrato de reapertura del servidor.
+- [x] **Etapa e historial juntos**: una sola solicitud guarda el movimiento, la nota y la fecha de seguimiento en el mismo contexto de datos. La prueba de integración confirma que una transición rechazada no deja una nota y que cierre/reapertura agregan una nota cada uno.
+- [x] **Contrato de movimiento**: el request HTTP ahora transmite probabilidad y campos personalizados además de etapa, motivo, descripción y próxima fecha de seguimiento.
+- [x] **Clientes fuera de la primera página**: ficha y embudo cargan todas las páginas del catálogo existente.
+- [x] **Exportación Excel de prospectos**: usa `name`, que es el campo expuesto por el DTO.
 
-## Prioridad media
+Verificación de la rama combinada: compilación de API exitosa; 18/18 pruebas unitarias y 15/15 pruebas de integración del CRM aprobadas; compilación del frontend exitosa.
 
-- [ ] Completar el contrato de `/opportunities/{id}/move`: la aplicación admite probabilidad y campos personalizados, pero el request HTTP solo transmite etapa y motivo.
-- [ ] Alinear el flujo «ganada → presupuesto» documentado con la regla actual que exige crear presupuesto antes de cerrar la oportunidad. Confirmar la regla comercial antes de cambiar comportamiento.
-- [ ] Corregir exportación Excel de prospectos: usa `companyName`, mientras el DTO expone `name`.
-- [x] **Clientes fuera de la primera página (corrección local)**: ficha y embudo de oportunidades usan `listAllCustomers()` para incluir clientes importados fuera de los primeros 50. El frontend compiló; falta comprobar el caso con más de 50 clientes en staging.
-- [ ] Ampliar pruebas de integración: prospecto con/sin oportunidad, filtro de oportunidades y actividades por cliente, transiciones y reapertura, vínculo presupuesto–oportunidad, permisos por tenant.
+## Pendiente antes de producción
 
-## Instructivo de prueba para el cambio de conversión
+- [ ] Probar en staging los recorridos de `05-prueba-etapas-crm.md`, `06-prueba-clientes-oportunidades.md` y `07-prueba-etapa-historial-atomicos.md`, además de la conversión con y sin oportunidad.
+- [ ] Probar explícitamente el listado de actividades por cliente. El repositorio aún convierte ciertas excepciones en lista vacía con HTTP 200; limitar el reintento a errores de esquema y exponer los demás fallos en una mejora separada.
+- [ ] Auditar duplicados de presupuestos por oportunidad antes de añadir una restricción única. El diseño y la consulta de solo lectura están en la rama local `codex/crm-quote-uniqueness`.
+- [ ] Acordar la regla comercial de «ganada → presupuesto»: el comportamiento actual exige generar el presupuesto antes de marcar la oportunidad como ganada.
+- [ ] Ampliar cobertura de permisos por tenant y vínculos presupuesto–oportunidad.
 
-En una base de prueba desechable, crear dos prospectos distintos. Convertir el primero con «Crear oportunidad» marcado; debe haber exactamente una oportunidad asociada al cliente y al prospecto y abrirse su ficha. Convertir el segundo con la casilla desmarcada; debe crearse el cliente y ninguna oportunidad. Repetir el GET de oportunidades por cliente y confirmar que no devuelve vacío si existen registros. Si la consulta falla, debe registrarse el error y no presentarse como un CRM sin oportunidades.
+## Límites
 
-## Instructivo de prueba para etapas (pendiente de implementación)
-
-Crear una oportunidad nueva y avanzar por las etapas admitidas con el requisito de presupuesto. Intentar un salto inválido y confirmar rechazo sin actividad falsa en la línea de tiempo. Cerrar como ganada y reabrir con motivo a `Negotiation`; luego hacer lo mismo con perdida. Probar también la opción visual «Relevamiento» y verificar que se traduzca a una etapa aceptada. Confirmar desde ficha y kanban que ambos muestran la misma etapa y que el motivo queda registrado solo cuando el cambio se confirma.
-
-## Límite
-
-Esto es una evaluación de código y pruebas locales. No demuestra por sí sola qué datos de staging o producción están afectados. Para cualquier reparación de datos se requiere primero auditoría de solo lectura y respaldo.
+Las pruebas locales no demuestran qué datos de staging o producción podrían estar afectados. Cualquier corrección de datos requiere auditoría de solo lectura y respaldo previos.
