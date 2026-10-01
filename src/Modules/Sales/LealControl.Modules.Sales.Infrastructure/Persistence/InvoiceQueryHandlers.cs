@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Results;
@@ -61,21 +59,6 @@ internal sealed class InvoiceQueryHandlers
 {
     private readonly SalesDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
-
-    private static readonly Dictionary<string, int> AfipTypeMap = new()
-    {
-        { "A", 1 },
-        { "B", 6 },
-        { "C", 11 },
-        { "M", 51 },
-        { "NC_A", 3 },
-        { "NC_B", 8 },
-        { "NC_C", 13 },
-        { "ND_A", 2 },
-        { "ND_B", 7 },
-        { "ND_C", 12 },
-        { "Proforma", 99 }
-    };
 
     public InvoiceQueryHandlers(SalesDbContext dbContext, ITenantContext tenantContext)
     {
@@ -298,69 +281,19 @@ internal sealed class InvoiceQueryHandlers
     public async Task<Result<InvoiceDto>> Handle(AuthorizeInvoiceArcaCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantContext.TenantId;
-        var invoice = await _dbContext.Invoices
-            .Include(i => i.Items)
-            .FirstOrDefaultAsync(i => i.Id == request.Id && i.TenantId == tenantId, cancellationToken);
-
-        if (invoice == null)
+        var exists = await _dbContext.Invoices.AsNoTracking()
+            .AnyAsync(i => i.Id == request.Id && i.TenantId == tenantId, cancellationToken);
+        if (!exists)
         {
-            return Result<InvoiceDto>.Failure(Error.NotFound("Sales.Invoice.NotFound", $"Factura {request.Id} no encontrada."));
+            return Result<InvoiceDto>.Failure(
+                Error.NotFound("Sales.Invoice.NotFound", $"Factura {request.Id} no encontrada."));
         }
 
-        if (invoice.Status == "Authorized")
-        {
-            return Result<InvoiceDto>.Success(MapToDto(invoice));
-        }
-
-        // Consultar CUIT de empresa en tenant_settings
-        var companySettings = await _dbContext.Database
-            .SqlQueryRaw<CompanySettingRaw>("SELECT \"CompanyCuit\" FROM public.tenant_settings WHERE \"TenantId\" = {0}", tenantId.Value)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var companyCuit = companySettings?.CompanyCuit ?? "30712345678";
-        var cleanCompCuit = new string(companyCuit.Where(char.IsDigit).ToArray());
-        if (cleanCompCuit.Length != 11) cleanCompCuit = "30712345678";
-
-        var cleanCustDoc = new string(invoice.CustomerDocument.Where(char.IsDigit).ToArray());
-        if (string.IsNullOrWhiteSpace(cleanCustDoc)) cleanCustDoc = "30112233445";
-
-        int afipCode = AfipTypeMap.TryGetValue(invoice.InvoiceType, out int val) ? val : 1;
-
-        // Generar CAE oficial simulado / estructurado según WSFE v1
-        var random = new Random();
-        var cae = $"{DateTime.UtcNow:yyyyMMdd}{random.Next(100000, 999999)}";
-        var caeVto = DateTime.UtcNow.AddDays(10);
-
-        var isUsd = invoice.Currency.Equals("USD", StringComparison.OrdinalIgnoreCase);
-        var monId = isUsd ? "DOL" : "PES";
-        var monCotiz = isUsd ? invoice.ExchangeRate : 1.0m;
-
-        // Generar URL QR Oficial ARCA
-        var qrObj = new
-        {
-            ver = 1,
-            fecha = invoice.IssueDate.ToString("yyyy-MM-dd"),
-            cuit = long.Parse(cleanCompCuit),
-            ptoVta = invoice.PointOfSale,
-            tipoCmp = afipCode,
-            nroCmp = invoice.InvoiceNumber,
-            importe = (double)invoice.Total,
-            moneda = monId,
-            ctz = (double)monCotiz,
-            tipoDocRec = 80, // CUIT
-            nroDocRec = long.TryParse(cleanCustDoc, out long custDocLong) ? custDocLong : 30112233445L,
-            tipoCodAut = "E",
-            codAut = long.Parse(cae)
-        };
-
-        var json = JsonSerializer.Serialize(qrObj);
-        var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
-        var qrUrl = $"https://www.afip.gob.ar/fe/qr/?p={base64}";
-
-        invoice.Authorize(cae, caeVto, qrUrl, $"CAE {cae} otorgado exitosamente por ARCA WSFE v1.");
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return Result<InvoiceDto>.Success(MapToDto(invoice));
+        // A CAE is assigned by ARCA, never generated locally. Until WSFE is
+        // integrated, keep every invoice unchanged and make the limitation explicit.
+        return Result<InvoiceDto>.Failure(
+            Error.Validation("Sales.Invoice.ArcaUnavailable",
+                "La autorización de ARCA no está conectada en este módulo. No se generó CAE ni se modificó la factura."));
     }
 
     private static InvoiceDto MapToDto(Invoice i)
@@ -410,5 +343,4 @@ internal sealed class InvoiceQueryHandlers
             i.CreatedAtUtc);
     }
 
-    private sealed record CompanySettingRaw(string? CompanyCuit);
 }

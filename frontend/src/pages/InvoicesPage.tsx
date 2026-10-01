@@ -17,7 +17,6 @@ export function InvoicesPage() {
   const [paymentFilter, setPaymentFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [authorizingId, setAuthorizingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -38,19 +37,6 @@ export function InvoicesPage() {
   useEffect(() => {
     void load();
   }, [search, statusFilter, typeFilter]);
-
-  const handleAuthorizeArca = async (inv: Invoice) => {
-    try {
-      setAuthorizingId(inv.id);
-      setError(null);
-      await api.authorizeInvoiceArca(inv.id);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al autorizar con ARCA");
-    } finally {
-      setAuthorizingId(null);
-    }
-  };
 
   // Enhance invoices with collection and pending status
   const enrichedInvoices = useMemo(() => {
@@ -120,8 +106,8 @@ export function InvoicesPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>📄 Facturación Electrónica ARCA</h1>
-          <p className="muted">Comprobantes fiscales autorizados, estado de cobranzas y CAE oficial</p>
+          <h1>📄 Facturas</h1>
+          <p className="muted">La autorización ARCA aún no está conectada. Verificá en ARCA cualquier CAE que figure en comprobantes anteriores.</p>
         </div>
         <div className="toolbar">
           <ExcelToolbar
@@ -154,7 +140,7 @@ export function InvoicesPage() {
           <span className="muted">Total Comprobantes</span>
           <strong>{items.length}</strong>
           <small className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 2 }}>
-            {totalAuthorized} autorizadas con CAE
+            {totalAuthorized} marcadas autorizadas · verificar CAE en ARCA
           </small>
         </div>
         <div className="card">
@@ -206,7 +192,7 @@ export function InvoicesPage() {
 
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ width: 160 }}>
             <option value="All">Todos los Estados ARCA</option>
-            <option value="Authorized">🟢 CAE Autorizado</option>
+            <option value="Authorized">Marcadas autorizadas</option>
             <option value="Draft">🟡 Borrador</option>
             <option value="Rejected">🔴 Rechazado ARCA</option>
           </select>
@@ -298,7 +284,7 @@ export function InvoicesPage() {
                     <td style={{ textAlign: "center" }}>
                       {inv.status === "Authorized" ? (
                         <div>
-                          <span className="badge ok">🟢 CAE {inv.cae}</span>
+                          <span className="badge">CAE registrado: {inv.cae} · verificar en ARCA</span>
                           {inv.caeDueDate && (
                             <div className="muted" style={{ fontSize: "0.72rem" }}>
                               Vto: {new Date(inv.caeDueDate).toLocaleDateString("es-AR")}
@@ -403,15 +389,9 @@ export function InvoicesPage() {
                           </Link>
                         )}
                         {inv.status === "Draft" && (
-                          <button
-                            type="button"
-                            className="btn"
-                            style={{ padding: "4px 8px", fontSize: "0.8rem", background: "linear-gradient(180deg, #059669, #047857)" }}
-                            onClick={() => handleAuthorizeArca(inv)}
-                            disabled={authorizingId === inv.id}
-                          >
-                            {authorizingId === inv.id ? "⌛ ARCA…" : "⚡ CAE ARCA"}
-                          </button>
+                          <span className="muted" title="La autorización ARCA todavía no está conectada">
+                            Autorización ARCA no disponible
+                          </span>
                         )}
                         <button
                           type="button"
