@@ -305,10 +305,11 @@ public static class CrmEndpoints
         leads.MapPost("/{id:guid}/convert", async (
             Guid id,
             CustomerWriteModel body,
+            bool? createOpportunity,
             ISender sender,
             CancellationToken cancellationToken) =>
         {
-            var result = await sender.Send(new ConvertLeadCommand(id, body), cancellationToken);
+            var result = await sender.Send(new ConvertLeadCommand(id, body, createOpportunity ?? true), cancellationToken);
             return result.IsSuccess
                 ? result.ToCreated($"/api/v1/crm/customers/{result.Value.Id}")
                 : result.ToHttp();

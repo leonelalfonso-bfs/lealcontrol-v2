@@ -488,6 +488,7 @@ export type Opportunity = {
   id: string;
   title: string;
   customerId?: string | null;
+  leadId?: string | null;
   customerName?: string | null;
   amount?: number | null;
   currency: string;

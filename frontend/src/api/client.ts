@@ -291,8 +291,9 @@ export const api = {
   listLeads: () => request<Lead[]>("/api/v1/crm/leads"),
   captureLead: (body: object) =>
     request<Lead>("/api/v1/crm/leads", { method: "POST", body: JSON.stringify(body) }),
-  convertLead: (id: string, body: CustomerWrite) =>
-    request<CustomerDetail>(`/api/v1/crm/leads/${id}/convert`, { method: "POST", body: JSON.stringify(body) }),
+  convertLead: (id: string, body: CustomerWrite, createOpportunity = true) =>
+    request<CustomerDetail>(`/api/v1/crm/leads/${id}/convert?createOpportunity=${createOpportunity}`,
+      { method: "POST", body: JSON.stringify(body) }),
   listOpportunities: () => request<Opportunity[]>("/api/v1/crm/opportunities"),
   getKanbanBoard: (ownerName?: string) =>
     request<Record<string, Opportunity[]>>(`/api/v1/crm/opportunities/kanban${ownerName ? `?ownerName=${encodeURIComponent(ownerName)}` : ""}`),

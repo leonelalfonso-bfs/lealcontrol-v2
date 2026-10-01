@@ -67,20 +67,14 @@ export function LeadsPage() {
         isSupplier: false,
         phone: conversionLead.phone ?? undefined,
         email: conversionLead.email ?? undefined
-      });
+      }, openOpportunityAfter);
 
       if (openOpportunityAfter) {
-        const opp = await api.openOpportunity({
-          title: `Negociación inicial: ${legalName.trim()}`,
-          customerId: customer.id,
-          amount: null,
-          currency: "ARS",
-          ownerName: "Comercial",
-          priority: "Normal",
-          tags: ["prospecto-convertido"],
-          customFields: { origen: conversionLead.source }
-        });
-        navigate(`/oportunidades/${opp.id}`);
+        const linked = await api.opportunities(customer.id).catch(() => []);
+        const opportunity = linked.find((item) => item.leadId === conversionLead.id);
+        navigate(opportunity
+          ? `/oportunidades/${opportunity.id}`
+          : `/clientes/${customer.id}?returnUrl=/prospectos`);
       } else {
         setConversionLead(null);
         navigate(`/clientes/${customer.id}?returnUrl=/prospectos`);
@@ -103,7 +97,7 @@ export function LeadsPage() {
           fileName="prospectos"
           rows={leads}
           columns={[
-            { key: "companyName", header: "Empresa" },
+            { key: "name", header: "Empresa" },
             { key: "contactName", header: "Contacto" },
             { key: "source", header: "Origen" },
             { key: "status", header: "Estado" },
