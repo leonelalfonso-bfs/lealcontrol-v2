@@ -138,6 +138,58 @@ internal sealed class ArcaWsfeClient
         }
     }
 
+    // Consulta de solo lectura. Nunca debe usarse una falla de red como prueba de que
+    // un comprobante no existe: la autorización anterior podría haber sido aceptada.
+    public async Task<WsfeVoucherReply> GetVoucherAsync(
+        string token, string sign, string cuit, bool production,
+        int pointOfSale, int voucherType, long number, CancellationToken cancellationToken)
+    {
+        if (pointOfSale <= 0 || voucherType <= 0 || number <= 0)
+            return WsfeVoucherReply.Failure("Punto de venta, tipo y número deben ser positivos.");
+
+        var url = production
+            ? "https://servicios1.afip.gov.ar/wsfev1/service.asmx"
+            : "https://wswhomo.afip.gov.ar/wsfev1/service.asmx";
+        var envelope = $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ar="http://ar.gov.afip.dif.FEV1/">
+              <soapenv:Header/>
+              <soapenv:Body>
+                <ar:FECompConsultar>
+                  <ar:Auth>
+                    <ar:Token>{System.Security.SecurityElement.Escape(token)}</ar:Token>
+                    <ar:Sign>{System.Security.SecurityElement.Escape(sign)}</ar:Sign>
+                    <ar:Cuit>{System.Security.SecurityElement.Escape(cuit)}</ar:Cuit>
+                  </ar:Auth>
+                  <ar:FeCompConsReq>
+                    <ar:CbteTipo>{voucherType}</ar:CbteTipo>
+                    <ar:CbteNro>{number}</ar:CbteNro>
+                    <ar:PtoVta>{pointOfSale}</ar:PtoVta>
+                  </ar:FeCompConsReq>
+                </ar:FECompConsultar>
+              </soapenv:Body>
+            </soapenv:Envelope>
+            """;
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("arca");
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Content = new StringContent(envelope, Encoding.UTF8, "text/xml");
+            request.Headers.TryAddWithoutValidation("SOAPAction", "http://ar.gov.afip.dif.FEV1/FECompConsultar");
+            using var response = await client.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return WsfeVoucherReply.Failure($"ARCA respondió HTTP {(int)response.StatusCode} al consultar el comprobante.");
+            return WsfeVoucherLookupParser.Parse(
+                await response.Content.ReadAsStringAsync(cancellationToken), pointOfSale, voucherType, number);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Fallo FECompConsultar");
+            return WsfeVoucherReply.Failure("No se pudo confirmar el comprobante en ARCA. No reintentar la autorización automáticamente.");
+        }
+    }
+
     private static WsfeSalesPoint ParsePoint(XElement node)
     {
         var number = int.TryParse(Child(node, "Nro"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var nro) ? nro : 0;
@@ -200,4 +252,67 @@ public static class WsfeLastAuthorizedParser
         node.Elements().FirstOrDefault(x => x.Name.LocalName == name)?.Value?.Trim();
 
     private static string Short(string value) => value.Trim().Length <= 250 ? value.Trim() : value.Trim()[..250];
+}
+
+// Un error, un resultado ausente o una respuesta incompleta quedan sin confirmar.
+// El emisor no debe inferir que puede reusar ese número a partir de este estado.
+public sealed record WsfeVoucherReply(
+    bool Confirmed, long Number, string RecipientDocument, decimal Total,
+    string Cae, DateTime CaeDueDate, string Detail)
+{
+    public static WsfeVoucherReply Failure(string detail) =>
+        new(false, 0, string.Empty, 0m, string.Empty, default, detail);
+}
+
+public static class WsfeVoucherLookupParser
+{
+    public static WsfeVoucherReply Parse(string body, int expectedPoint, int expectedType, long expectedNumber)
+    {
+        XDocument doc;
+        try
+        {
+            using var reader = XmlReader.Create(new StringReader(body), new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null
+            });
+            doc = XDocument.Load(reader);
+        }
+        catch (XmlException)
+        {
+            return WsfeVoucherReply.Failure("ARCA devolvió una respuesta XML inválida.");
+        }
+
+        var fault = doc.Descendants().FirstOrDefault(x => x.Name.LocalName is "faultstring" or "Fault")?.Value;
+        if (!string.IsNullOrWhiteSpace(fault))
+            return WsfeVoucherReply.Failure("ARCA rechazó la consulta del comprobante.");
+
+        var result = doc.Descendants().FirstOrDefault(x => x.Name.LocalName == "FECompConsultarResult");
+        if (result is null || result.Descendants().Any(x => x.Name.LocalName == "Err"))
+            return WsfeVoucherReply.Failure("ARCA no confirmó el comprobante consultado.");
+
+        var voucher = result.Elements().FirstOrDefault(x => x.Name.LocalName == "ResultGet");
+        if (voucher is null)
+            return WsfeVoucherReply.Failure("ARCA no devolvió datos del comprobante.");
+
+        static string? Field(XElement node, string name) =>
+            node.Elements().FirstOrDefault(x => x.Name.LocalName == name)?.Value?.Trim();
+
+        var recipient = Field(voucher, "DocNro") ?? string.Empty;
+        var cae = Field(voucher, "CodAutorizacion") ?? string.Empty;
+        if (!int.TryParse(Field(voucher, "PtoVta"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var point)
+            || !int.TryParse(Field(voucher, "CbteTipo"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var type)
+            || !long.TryParse(Field(voucher, "CbteDesde"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var from)
+            || !long.TryParse(Field(voucher, "CbteHasta"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var to)
+            || !decimal.TryParse(Field(voucher, "ImpTotal"), NumberStyles.Number, CultureInfo.InvariantCulture, out var total)
+            || !DateTime.TryParseExact(Field(voucher, "FchVto"), "yyyyMMdd", CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var dueDate)
+            || point != expectedPoint || type != expectedType || from != expectedNumber || to != expectedNumber
+            || total < 0 || recipient.Length == 0 || cae.Length != 14 || !cae.All(char.IsDigit)
+            || Field(voucher, "Resultado") != "A" || Field(voucher, "EmisionTipo") != "CAE")
+            return WsfeVoucherReply.Failure("ARCA devolvió datos incompletos o distintos al comprobante solicitado.");
+
+        return new(true, expectedNumber, recipient, total, cae, dueDate,
+            "Comprobante y CAE confirmados en ARCA; cotejar receptor e importe con el borrador antes de vincular.");
+    }
 }
