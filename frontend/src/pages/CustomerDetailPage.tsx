@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { label, provinces, type Activity, type Contact, type Conversation, type CustomerDetail, type Location, type Opportunity, type Quote } from "../api/types";
+import { label, provinces, provinceLabel, type Activity, type Contact, type Conversation, type CustomerDetail, type Location, type Opportunity, type Quote } from "../api/types";
 import { buildWhatsAppUrl, formatCuitDisplay } from "../lib/arContact";
 import { EmailComposer } from "../components/EmailComposer";
 import { BcraCreditReportModal } from "../components/BcraCreditReportModal";
@@ -414,7 +414,7 @@ export function CustomerDetailPage() {
               <span className="muted">Domicilio Fiscal:</span>
               <span>
                 {customer.fiscalAddress
-                  ? `${customer.fiscalAddress.street}, ${customer.fiscalAddress.city} (${customer.fiscalAddress.province}) CP ${customer.fiscalAddress.postalCode}`
+                  ? `${customer.fiscalAddress.street}, ${customer.fiscalAddress.city} (${provinceLabel(customer.fiscalAddress.province)}) CP ${customer.fiscalAddress.postalCode}`
                   : "—"}
               </span>
 
@@ -487,7 +487,7 @@ export function CustomerDetailPage() {
             <div key={l.id} style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--surface-border)", background: "white" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <strong style={{ fontSize: "0.95rem" }}>{l.name}</strong> — {l.address.street}, {l.address.city} ({l.address.province}) CP {l.address.postalCode}
+                  <strong style={{ fontSize: "0.95rem" }}>{l.name}</strong> — {l.address.street}, {l.address.city} ({provinceLabel(l.address.province)}) CP {l.address.postalCode}
                   {l.phone && <div className="muted" style={{ fontSize: "0.85rem", marginTop: 2 }}>Teléfono: {l.phone}</div>}
                   {l.notes && <div className="muted" style={{ fontSize: "0.85rem", marginTop: 2 }}>Notas: {l.notes}</div>}
                 </div>
@@ -787,7 +787,7 @@ function LocationForm({
         <label>Ciudad *<input value={city} onChange={(e) => setCity(e.target.value)} required style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
         <label>Provincia *
           <select value={province} onChange={(e) => setProvince(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }}>
-            {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
+            {provinces.map((p) => <option key={p} value={p}>{provinceLabel(p)}</option>)}
           </select>
         </label>
         <label>Código Postal *<input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} required style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>

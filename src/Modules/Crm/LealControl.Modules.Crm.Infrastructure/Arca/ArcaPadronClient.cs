@@ -5,6 +5,8 @@ using LealControl.BuildingBlocks.Results;
 using LealControl.Modules.Crm.Application.Customers;
 using Microsoft.Extensions.Logging;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("LealControl.Modules.Crm.IntegrationTests")]
+
 namespace LealControl.Modules.Crm.Infrastructure.Arca;
 
 internal sealed class ArcaPadronClient
@@ -126,7 +128,7 @@ internal sealed class ArcaPadronClient
         return "ResponsableInscripto";
     }
 
-    private static string? MapProvince(string? raw)
+    internal static string? MapProvince(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
         var n = raw.Trim();
@@ -134,40 +136,50 @@ internal sealed class ArcaPadronClient
         {
             return code switch
             {
-                0 => "CapitalFederal",
-                1 => "BuenosAires",
-                2 => "Catamarca",
-                3 => "Cordoba",
-                4 => "Corrientes",
-                5 => "EntreRios",
-                6 => "Jujuy",
-                7 => "Mendoza",
-                8 => "LaRioja",
-                9 => "Salta",
-                10 => "SanJuan",
-                11 => "SanLuis",
-                12 => "SantaFe",
-                13 => "SantiagoDelEstero",
-                14 => "Tucuman",
-                16 => "Chaco",
-                17 => "Chubut",
-                18 => "Formosa",
-                19 => "Misiones",
-                20 => "Neuquen",
-                21 => "LaPampa",
-                22 => "RioNegro",
-                23 => "SantaCruz",
-                24 => "TierraDelFuego",
+                0 => "CapitalFederal", 1 => "BuenosAires", 2 => "Catamarca",
+                3 => "Cordoba", 4 => "Corrientes", 5 => "EntreRios",
+                6 => "Jujuy", 7 => "Mendoza", 8 => "LaRioja",
+                9 => "Salta", 10 => "SanJuan", 11 => "SanLuis",
+                12 => "SantaFe", 13 => "SantiagoDelEstero", 14 => "Tucuman",
+                16 => "Chaco", 17 => "Chubut", 18 => "Formosa",
+                19 => "Misiones", 20 => "Neuquen", 21 => "LaPampa",
+                22 => "RioNegro", 23 => "SantaCruz", 24 => "TierraDelFuego",
                 _ => null
             };
         }
 
-        var u = n.ToUpperInvariant()
-            .Replace("Á", "A").Replace("É", "E").Replace("Í", "I").Replace("Ó", "O").Replace("Ú", "U");
-        if (u.Contains("SANTA FE")) return "SantaFe";
-        if (u.Contains("CAPITAL") || u.Contains("CABA")) return "CapitalFederal";
-        if (u.Contains("BUENOS AIRES")) return "BuenosAires";
-        return null;
+        var key = new string(n.Normalize(NormalizationForm.FormD)
+            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark && char.IsLetterOrDigit(c))
+            .Select(char.ToUpperInvariant).ToArray());
+        if (key.StartsWith("PROVINCIADE", StringComparison.Ordinal)) key = key[11..];
+        if (key.StartsWith("TIERRADELFUEGO", StringComparison.Ordinal)) return "TierraDelFuego";
+        return key switch
+        {
+            "CAPITALFEDERAL" or "CABA" or "CIUDADAUTONOMADEBUENOSAIRES" => "CapitalFederal",
+            "BUENOSAIRES" => "BuenosAires",
+            "CATAMARCA" => "Catamarca",
+            "CHACO" => "Chaco",
+            "CHUBUT" => "Chubut",
+            "CORDOBA" => "Cordoba",
+            "CORRIENTES" => "Corrientes",
+            "ENTRERIOS" => "EntreRios",
+            "FORMOSA" => "Formosa",
+            "JUJUY" => "Jujuy",
+            "LAPAMPA" => "LaPampa",
+            "LARIOJA" => "LaRioja",
+            "MENDOZA" => "Mendoza",
+            "MISIONES" => "Misiones",
+            "NEUQUEN" => "Neuquen",
+            "RIONEGRO" => "RioNegro",
+            "SALTA" => "Salta",
+            "SANJUAN" => "SanJuan",
+            "SANLUIS" => "SanLuis",
+            "SANTACRUZ" => "SantaCruz",
+            "SANTAFE" => "SantaFe",
+            "SANTIAGODELESTERO" => "SantiagoDelEstero",
+            "TUCUMAN" => "Tucuman",
+            _ => null
+        };
     }
 
     private static string? JoinAddress(string? street, string? number)

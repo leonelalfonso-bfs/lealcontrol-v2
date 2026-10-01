@@ -517,6 +517,19 @@ export const provinces = [
   "SantiagoDelEstero", "TierraDelFuego", "Tucuman"
 ] as const;
 
+export const provinceLabels: Record<(typeof provinces)[number], string> = {
+  BuenosAires: "Buenos Aires", CapitalFederal: "Capital Federal", Catamarca: "Catamarca",
+  Chaco: "Chaco", Chubut: "Chubut", Cordoba: "Córdoba", Corrientes: "Corrientes",
+  EntreRios: "Entre Ríos", Formosa: "Formosa", Jujuy: "Jujuy", LaPampa: "La Pampa",
+  LaRioja: "La Rioja", Mendoza: "Mendoza", Misiones: "Misiones", Neuquen: "Neuquén",
+  RioNegro: "Río Negro", Salta: "Salta", SanJuan: "San Juan", SanLuis: "San Luis",
+  SantaCruz: "Santa Cruz", SantaFe: "Santa Fe", SantiagoDelEstero: "Santiago del Estero",
+  TierraDelFuego: "Tierra del Fuego", Tucuman: "Tucumán"
+};
+
+export const provinceLabel = (code: string) =>
+  provinceLabels[code as keyof typeof provinceLabels] ?? code;
+
 export const currencyLabels: Record<string, string> = {
   ARS: "ARS $",
   USD_BILLETE: "U$D Billete",
