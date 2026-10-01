@@ -161,7 +161,7 @@ internal sealed class OpportunityRepository : IOpportunityRepository
     private IQueryable<Opportunity> QueryByCustomer(TenantId tenantId, Guid customerGuid) =>
         _db.Opportunities.AsNoTracking()
             .Where(x => x.TenantId == tenantId
-                        && EF.Property<Guid?>(x, nameof(Opportunity.CustomerId)) == customerGuid)
+                        && x.CustomerId == new CustomerId(customerGuid))
             .OrderByDescending(x => x.CreatedAtUtc);
 
     public async Task<IReadOnlyList<Opportunity>> ListAsync(
@@ -246,7 +246,7 @@ internal sealed class ActivityRepository : IActivityRepository
     private IQueryable<Activity> QueryByCustomer(TenantId tenantId, Guid customerGuid, int take) =>
         _db.Activities.AsNoTracking()
             .Where(x => x.TenantId == tenantId
-                        && EF.Property<Guid?>(x, nameof(Activity.CustomerId)) == customerGuid)
+                        && x.CustomerId == new CustomerId(customerGuid))
             .OrderByDescending(x => x.OccurredAtUtc)
             .Take(take);
 
@@ -273,7 +273,7 @@ internal sealed class ActivityRepository : IActivityRepository
         return await QueryWithSchemaRetryAsync(
             () => _db.Activities.AsNoTracking()
                 .Where(x => x.TenantId == tenantId
-                            && EF.Property<Guid?>(x, nameof(Activity.OpportunityId)) == opportunityGuid)
+                            && x.OpportunityId == new OpportunityId(opportunityGuid))
                 .OrderByDescending(x => x.OccurredAtUtc)
                 .Take(take)
                 .ToListAsync(cancellationToken),

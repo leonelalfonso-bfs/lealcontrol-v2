@@ -137,10 +137,20 @@ public sealed class Opportunity : AggregateRoot<OpportunityId>
             return Result.Success();
         }
 
+        var isReversion = (Stage == OpportunityStage.Proposal && stage == OpportunityStage.Qualified)
+            || (Stage == OpportunityStage.Negotiation &&
+                (stage is OpportunityStage.Proposal or OpportunityStage.Qualified));
         var validTransition = stage == OpportunityStage.Lost
+            || (Stage == OpportunityStage.Lead && stage == OpportunityStage.Qualified)
             || ((Stage is OpportunityStage.Lead or OpportunityStage.Qualified) && stage == OpportunityStage.Proposal)
             || (Stage == OpportunityStage.Proposal && stage == OpportunityStage.Negotiation)
-            || (Stage == OpportunityStage.Negotiation && stage == OpportunityStage.Won);
+            || (Stage == OpportunityStage.Negotiation && stage == OpportunityStage.Won)
+            || isReversion;
+
+        if (isReversion && string.IsNullOrWhiteSpace(lostReason))
+        {
+            return Result.Failure(CrmErrors.OpportunityReversionReasonRequired);
+        }
 
         if (!validTransition)
         {
@@ -227,7 +237,7 @@ public sealed class Opportunity : AggregateRoot<OpportunityId>
 
         if (string.IsNullOrWhiteSpace(reason))
         {
-            return Result.Failure(CrmErrors.OpportunityLostReasonRequired);
+            return Result.Failure(CrmErrors.OpportunityReversionReasonRequired);
         }
 
         Stage = stage;

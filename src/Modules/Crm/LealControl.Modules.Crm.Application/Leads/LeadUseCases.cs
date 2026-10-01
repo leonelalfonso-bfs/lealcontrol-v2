@@ -24,7 +24,7 @@ public sealed record CaptureLeadCommand(
     LeadSource Source,
     Guid? AssignedTo) : IRequest<Result<LeadDto>>;
 
-public sealed record ConvertLeadCommand(Guid LeadId, CustomerWriteModel Customer)
+public sealed record ConvertLeadCommand(Guid LeadId, CustomerWriteModel Customer, bool CreateOpportunity = true)
     : IRequest<Result<CustomerDetailDto>>;
 
 public sealed record ArchiveLeadCommand(Guid LeadId) : IRequest<Result<LeadDto>>;
@@ -194,39 +194,47 @@ internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCom
 
         _customers.Add(registered.Value);
 
-        var opportunity = Opportunity.Open(
-            _tenant.TenantId,
-            lead.Description ?? lead.Name,
-            registered.Value.Id,
-            lead.Id,
-            null,
-            "ARS",
-            lead.AssignedTo,
-            null,
-            OpportunityPriority.Normal,
-            new[] { "prospecto-calificado" },
-            _clock.UtcNow,
-            customFields: new Dictionary<string, string>
-            {
-                ["necesidad"] = lead.Description ?? "Pendiente de relevamiento",
-                ["origen"] = lead.Source.ToString(),
-                ["contacto"] = lead.ContactName ?? "Pendiente"
-            });
-
-        if (opportunity.IsFailure)
+        Opportunity? createdOpportunity = null;
+        if (request.CreateOpportunity)
         {
-            return Result<CustomerDetailDto>.Failure(opportunity.Error);
+            var opportunity = Opportunity.Open(
+                _tenant.TenantId,
+                lead.Description ?? lead.Name,
+                registered.Value.Id,
+                lead.Id,
+                null,
+                "ARS",
+                lead.AssignedTo,
+                null,
+                OpportunityPriority.Normal,
+                new[] { "prospecto-calificado" },
+                _clock.UtcNow,
+                customFields: new Dictionary<string, string>
+                {
+                    ["necesidad"] = lead.Description ?? "Pendiente de relevamiento",
+                    ["origen"] = lead.Source.ToString(),
+                    ["contacto"] = lead.ContactName ?? "Pendiente"
+                });
+
+            if (opportunity.IsFailure)
+            {
+                return Result<CustomerDetailDto>.Failure(opportunity.Error);
+            }
+
+            createdOpportunity = opportunity.Value;
+            _opportunities.Add(createdOpportunity);
         }
 
-        _opportunities.Add(opportunity.Value);
-
+        var activityDescription = createdOpportunity is null
+            ? "Prospecto calificado y convertido en cliente."
+            : $"Prospecto calificado y convertido. Se abrió la oportunidad '{createdOpportunity.Title}' en Relevamiento.";
         var conversionActivity = Activity.Log(
             _tenant.TenantId,
             ActivityType.Note,
-            $"Prospecto calificado y convertido. Se abrió la oportunidad '{opportunity.Value.Title}' en Relevamiento.",
+            activityDescription,
             registered.Value.Id,
             lead.Id,
-            opportunity.Value.Id,
+            createdOpportunity?.Id,
             lead.AssignedTo,
             null,
             _clock.UtcNow);

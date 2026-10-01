@@ -291,8 +291,9 @@ export const api = {
   listLeads: () => request<Lead[]>("/api/v1/crm/leads"),
   captureLead: (body: object) =>
     request<Lead>("/api/v1/crm/leads", { method: "POST", body: JSON.stringify(body) }),
-  convertLead: (id: string, body: CustomerWrite) =>
-    request<CustomerDetail>(`/api/v1/crm/leads/${id}/convert`, { method: "POST", body: JSON.stringify(body) }),
+  convertLead: (id: string, body: CustomerWrite, createOpportunity = true) =>
+    request<CustomerDetail>(`/api/v1/crm/leads/${id}/convert?createOpportunity=${createOpportunity}`,
+      { method: "POST", body: JSON.stringify(body) }),
   listOpportunities: () => request<Opportunity[]>("/api/v1/crm/opportunities"),
   getKanbanBoard: (ownerName?: string) =>
     request<Record<string, Opportunity[]>>(`/api/v1/crm/opportunities/kanban${ownerName ? `?ownerName=${encodeURIComponent(ownerName)}` : ""}`),
@@ -303,10 +304,20 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ stage })
     }),
-  moveOpportunity: (id: string, stage: string, reason?: string) =>
+  moveOpportunity: (
+    id: string,
+    stage: string,
+    reason?: string,
+    activity?: { description?: string; nextFollowUpOn?: string | null }
+  ) =>
     request<Opportunity>(`/api/v1/crm/opportunities/${id}/move`, {
       method: "POST",
-      body: JSON.stringify({ stage, lostReason: reason })
+      body: JSON.stringify({
+        stage,
+        lostReason: reason,
+        activityDescription: activity?.description,
+        nextFollowUpOn: activity?.nextFollowUpOn
+      })
     }),
   classifyOpportunity: (id: string, body: object) =>
     request<Opportunity>(`/api/v1/crm/opportunities/${id}/classify`, {

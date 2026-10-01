@@ -56,15 +56,15 @@ export function OpportunitiesPage() {
 
   const load = async () => {
     try {
-      const [opps, quoteList, page, userList] = await Promise.all([
+      const [opps, quoteList, customerList, userList] = await Promise.all([
         api.listOpportunities(),
         api.listQuotes(),
-        api.listCustomers(),
+        api.listAllCustomers(),
         api.listTenantUsers().catch(() => [])
       ]);
       setItems(opps || []);
       setQuotes(quoteList || []);
-      setCustomers(page?.items || (page as any) || []);
+      setCustomers(customerList);
       setUsers((userList || []).filter((u) => u.isActive !== false));
       setError(null);
     } catch (e) {
@@ -127,7 +127,8 @@ export function OpportunitiesPage() {
   const requestTransition = (opportunity: Opportunity, target: VisualStage, isReversion = false) => {
     const current = visualStage(opportunity.stage);
     if (current === target) return;
-    setTransition({ opportunity, target, isReversion });
+    const backwards = pipeline.indexOf(target) < pipeline.indexOf(current) && target !== "Lost";
+    setTransition({ opportunity, target, isReversion: isReversion || backwards });
   };
 
   const quoteFor = (id: string) => quotes.find((quote) => quote.opportunityId === id);
@@ -501,14 +502,15 @@ function TransitionDialog({
         Won: `${evidenceType}: ${detail}`,
         Lost: `Motivo de pérdida: ${detail}`
       };
-      await api.logActivity({
-        type: "Note",
-        description: descriptions[target],
-        customerId: opportunity.customerId,
-        opportunityId: opportunity.id,
-        nextFollowUpOn: followUp ? new Date(`${followUp}T12:00:00`).toISOString() : null
-      });
-      await api.moveOpportunity(opportunity.id, target, target === "Lost" || isReversion ? detail : undefined);
+      await api.moveOpportunity(
+        opportunity.id,
+        target === "Discovery" ? "Qualified" : target,
+        target === "Lost" || isReversion ? detail : undefined,
+        {
+          description: descriptions[target],
+          nextFollowUpOn: followUp ? new Date(`${followUp}T12:00:00`).toISOString() : null
+        }
+      );
       await onDone();
     } catch (e) {
       setError((e as Error).message);
