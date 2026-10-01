@@ -422,6 +422,7 @@ export function InvoiceFormPage() {
     const payload: InvoiceWrite = {
       invoiceType,
       pointOfSale,
+      issueDate,
       orderId: orderId || sourceOrderId || undefined,
       remitoId: remitoId || undefined,
       customerId,

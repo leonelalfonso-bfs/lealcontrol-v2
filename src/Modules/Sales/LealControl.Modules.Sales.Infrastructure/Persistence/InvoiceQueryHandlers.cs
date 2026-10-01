@@ -182,7 +182,8 @@ internal sealed class InvoiceQueryHandlers
             request.DueDate,
             request.Currency,
             request.ExchangeRate,
-            request.Notes);
+            request.Notes,
+            request.IssueDate);
 
         foreach (var item in request.Items)
         {

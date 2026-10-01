@@ -157,9 +157,14 @@ public sealed class Invoice : Entity<Guid>
         DateTime dueDate,
         string currency,
         decimal exchangeRate,
-        string? notes)
+        string? notes,
+        DateTime? issueDate = null)
     {
         var formatted = $"{pointOfSale:D4}-{invoiceNumber:D8}";
+        var utcIssueDate = issueDate is null ? DateTime.UtcNow
+            : issueDate.Value.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(issueDate.Value, DateTimeKind.Utc)
+                : issueDate.Value.ToUniversalTime();
         var utcDueDate = dueDate.Kind == DateTimeKind.Unspecified
             ? DateTime.SpecifyKind(dueDate, DateTimeKind.Utc)
             : dueDate.ToUniversalTime();
@@ -178,7 +183,7 @@ public sealed class Invoice : Entity<Guid>
             customerDocument,
             customerTaxCondition,
             customerAddress,
-            DateTime.UtcNow,
+            utcIssueDate,
             utcDueDate,
             currency,
             exchangeRate <= 0 ? 1.0m : exchangeRate,

@@ -914,6 +914,7 @@ export type Invoice = {
 export type InvoiceWrite = {
   invoiceType: string;
   pointOfSale: number;
+  issueDate?: string | null;
   orderId?: string | null;
   remitoId?: string | null;
   customerId: string;

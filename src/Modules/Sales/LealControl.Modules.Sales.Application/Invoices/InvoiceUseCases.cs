@@ -74,7 +74,8 @@ public sealed record CreateInvoiceCommand(
     string Currency,
     decimal ExchangeRate,
     string? Notes,
-    IReadOnlyList<InvoiceItemWriteDto> Items) : IRequest<Result<InvoiceDto>>;
+    IReadOnlyList<InvoiceItemWriteDto> Items,
+    DateTime? IssueDate = null) : IRequest<Result<InvoiceDto>>;
 
 public sealed record AuthorizeInvoiceArcaCommand(Guid Id) : IRequest<Result<InvoiceDto>>;
 
