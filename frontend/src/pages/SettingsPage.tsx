@@ -25,6 +25,13 @@ export function SettingsPage() {
   const [generatingCsr, setGeneratingCsr] = useState(false);
   const [csrReady, setCsrReady] = useState(false);
   const [diagnosingArca, setDiagnosingArca] = useState(false);
+  const [numberingPoint, setNumberingPoint] = useState("");
+  const [numberingType, setNumberingType] = useState<"A" | "B" | "C">("A");
+  const [checkingNumbering, setCheckingNumbering] = useState(false);
+  const [arcaNumbering, setArcaNumbering] = useState<{
+    pointOfSale: number; invoiceType: string; lastNumber: number;
+    nextNumber: number; environment: string;
+  } | null>(null);
   const [arcaDiagnostics, setArcaDiagnostics] = useState<{
     readyForInvoicing: boolean;
     readyForCuitLookup: boolean;
@@ -204,6 +211,25 @@ export function SettingsPage() {
       setError(err instanceof Error ? err.message : "No se pudo diagnosticar ARCA");
     } finally {
       setDiagnosingArca(false);
+    }
+  };
+
+  const handleCheckArcaNumbering = async () => {
+    const point = Number(numberingPoint);
+    if (!Number.isInteger(point) || point < 1 || point > 99998) {
+      setError("Indicá un punto de venta ARCA válido (1 a 99998).");
+      setArcaNumbering(null);
+      return;
+    }
+    try {
+      setCheckingNumbering(true);
+      setError(null);
+      setArcaNumbering(null);
+      setArcaNumbering(await api.getArcaLastAuthorized(point, numberingType));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo consultar la numeración en ARCA.");
+    } finally {
+      setCheckingNumbering(false);
     }
   };
 
@@ -710,6 +736,38 @@ export function SettingsPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          <div className="card pad" style={{ border: "1px solid var(--line)" }}>
+            <h4 style={{ marginTop: 0 }}>Paso 4 — Consultar numeración oficial</h4>
+            <p className="muted" style={{ fontSize: "0.85rem" }}>
+              Leé en ARCA el último comprobante autorizado para un punto de venta y tipo de factura.
+              Esta consulta no emite ni autoriza facturas. La numeración del borrador del ERP puede ser distinta.
+            </p>
+            <div className="row" style={{ gap: 12, flexWrap: "wrap", alignItems: "end" }}>
+              <label>Punto de venta
+                <input type="number" min="1" max="99998" value={numberingPoint}
+                  onChange={(e) => { setNumberingPoint(e.target.value); setArcaNumbering(null); }} />
+              </label>
+              <label>Tipo de factura
+                <select value={numberingType} onChange={(e) => {
+                  setNumberingType(e.target.value as "A" | "B" | "C"); setArcaNumbering(null);
+                }}>
+                  <option value="A">Factura A</option>
+                  <option value="B">Factura B</option>
+                  <option value="C">Factura C</option>
+                </select>
+              </label>
+              <button type="button" className="btn ghost" disabled={checkingNumbering}
+                onClick={() => void handleCheckArcaNumbering()}>
+                {checkingNumbering ? "Consultando ARCA…" : "Consultar último autorizado"}
+              </button>
+            </div>
+            {arcaNumbering && <p style={{ marginBottom: 0 }}>
+              <strong>{arcaNumbering.environment} · Punto {arcaNumbering.pointOfSale} · Factura {arcaNumbering.invoiceType}</strong>
+              <br />Último número autorizado: <strong>{arcaNumbering.lastNumber}</strong>.
+              Siguiente número orientativo: <strong>{arcaNumbering.nextNumber}</strong>.
+            </p>}
           </div>
 
           <div className="row" style={{ justifyContent: "flex-end" }}>

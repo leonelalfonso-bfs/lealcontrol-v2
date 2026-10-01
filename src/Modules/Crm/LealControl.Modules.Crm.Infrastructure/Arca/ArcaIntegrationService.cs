@@ -229,6 +229,52 @@ internal sealed class ArcaIntegrationService : IArcaIntegration
         }
     }
 
+    public async Task<Result<ArcaLastAuthorizedDto>> GetLastAuthorizedAsync(
+        int pointOfSale, string invoiceType, CancellationToken cancellationToken = default)
+    {
+        var voucherType = invoiceType.ToUpperInvariant() switch
+        {
+            "A" => 1,
+            "B" => 6,
+            "C" => 11,
+            _ => 0
+        };
+        if (pointOfSale < 1 || pointOfSale > 99998 || voucherType == 0)
+            return Result<ArcaLastAuthorizedDto>.Failure(Error.Validation(
+                "Crm.Arca.InvalidNumberingQuery", "Elegí un punto de venta válido y una factura A, B o C."));
+
+        var settings = await _db.CompanySettings.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TenantId == _tenant.TenantId, cancellationToken);
+        if (settings is null || !ArcaCertificateLoader.TryLoad(
+                settings.ArcaCertificateCrt, settings.ArcaCertificateKey, out var cert, out _) || cert is null)
+            return Result<ArcaLastAuthorizedDto>.Failure(Error.Validation(
+                "Crm.Arca.Certificate", "Cargá un certificado ARCA válido antes de consultar la numeración."));
+
+        using (cert)
+        {
+            // WSFE Auth.Cuit identifica al emisor representado, no necesariamente al firmante.
+            var issuerCuit = Digits(settings.DocumentNumber);
+            if (issuerCuit.Length != 11)
+                return Result<ArcaLastAuthorizedDto>.Failure(Error.Validation(
+                    "Crm.Arca.IssuerCuit", "Configurá el CUIT fiscal de la empresa (11 dígitos)."));
+
+            var production = IsProduction(settings.ArcaEnvironment);
+            var login = await _wsaa.LoginAsync(cert, settings.ArcaCertificateCrt!,
+                settings.ArcaCertificateKey!, "wsfe", production, cancellationToken);
+            if (!login.Ok || login.Token is null || login.Sign is null)
+                return Result<ArcaLastAuthorizedDto>.Failure(Error.Validation("Crm.Arca.Wsfe", login.Detail));
+
+            var response = await _wsfe.GetLastAuthorizedAsync(login.Token, login.Sign, issuerCuit,
+                production, pointOfSale, voucherType, cancellationToken);
+            if (!response.Ok || response.LastNumber >= long.MaxValue)
+                return Result<ArcaLastAuthorizedDto>.Failure(Error.Validation("Crm.Arca.LastAuthorized", response.Detail));
+
+            return Result<ArcaLastAuthorizedDto>.Success(new ArcaLastAuthorizedDto(
+                pointOfSale, invoiceType.ToUpperInvariant(), response.LastNumber,
+                response.LastNumber + 1, production ? "Producción" : "Homologación"));
+        }
+    }
+
     private static bool IsElectronic(string emissionType) =>
         emissionType.Contains("CAE", StringComparison.OrdinalIgnoreCase)
         && !emissionType.Contains("CAEA", StringComparison.OrdinalIgnoreCase)

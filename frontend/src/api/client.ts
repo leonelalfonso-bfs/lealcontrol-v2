@@ -592,6 +592,10 @@ export const api = {
     request<{ suggested: number | null; points: Array<{ number: number; emissionType: string; blocked: boolean }> }>(
       "/api/v1/company/settings/arca-sales-points"
     ),
+  getArcaLastAuthorized: (pointOfSale: number, invoiceType: "A" | "B" | "C") =>
+    request<{ pointOfSale: number; invoiceType: string; lastNumber: number; nextNumber: number; environment: string }>(
+      `/api/v1/company/settings/arca-last-authorized?pointOfSale=${pointOfSale}&invoiceType=${invoiceType}`
+    ),
   diagnoseArca: () =>
     request<{
       readyForInvoicing: boolean;

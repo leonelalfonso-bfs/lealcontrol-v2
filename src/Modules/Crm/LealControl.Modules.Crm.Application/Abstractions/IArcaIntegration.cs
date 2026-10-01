@@ -13,8 +13,13 @@ public interface IArcaIntegration
         CancellationToken cancellationToken = default);
 
     Task<Result<ArcaSalesPointsDto>> ListSalesPointsAsync(CancellationToken cancellationToken = default);
+
+    Task<Result<ArcaLastAuthorizedDto>> GetLastAuthorizedAsync(
+        int pointOfSale, string invoiceType, CancellationToken cancellationToken = default);
 }
 
 public sealed record ArcaSalesPointDto(int Number, string EmissionType, bool Blocked);
 
 public sealed record ArcaSalesPointsDto(int? Suggested, IReadOnlyList<ArcaSalesPointDto> Points);
+
+public sealed record ArcaLastAuthorizedDto(int PointOfSale, string InvoiceType, long LastNumber, long NextNumber, string Environment);
