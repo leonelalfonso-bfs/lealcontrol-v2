@@ -41,6 +41,7 @@ public static class DependencyInjection
         });
         services.AddScoped<ArcaWsaaClient>();
         services.AddScoped<ArcaWsfeClient>();
+        services.AddScoped<WsfeCaeTransport>();
         services.AddScoped<ArcaPadronClient>();
         services.AddScoped<IArcaIntegration, ArcaIntegrationService>();
         return services;
