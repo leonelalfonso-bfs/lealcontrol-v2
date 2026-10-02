@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace LealControl.Modules.Sales.Infrastructure.Fiscal;
+namespace LealControl.Modules.Crm.Contracts.Fiscal;
 
 public enum WsfeCaeOutcome
 {

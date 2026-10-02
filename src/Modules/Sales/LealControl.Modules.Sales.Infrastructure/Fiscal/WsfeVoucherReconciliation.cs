@@ -1,3 +1,4 @@
+using LealControl.Modules.Crm.Contracts.Fiscal;
 using LealControl.Modules.Sales.Domain.Invoices;
 
 namespace LealControl.Modules.Sales.Infrastructure.Fiscal;

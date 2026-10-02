@@ -1,3 +1,4 @@
+using LealControl.Modules.Crm.Contracts.Fiscal;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Sales.Domain.Invoices;
 using LealControl.Modules.Sales.Infrastructure.Fiscal;

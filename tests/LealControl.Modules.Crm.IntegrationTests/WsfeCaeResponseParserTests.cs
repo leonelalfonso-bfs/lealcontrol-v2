@@ -1,3 +1,4 @@
+using LealControl.Modules.Crm.Contracts.Fiscal;
 using LealControl.Modules.Sales.Infrastructure.Fiscal;
 using Xunit;
 

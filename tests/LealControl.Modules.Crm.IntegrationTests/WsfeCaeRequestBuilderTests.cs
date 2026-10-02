@@ -1,3 +1,4 @@
+using LealControl.Modules.Crm.Contracts.Fiscal;
 using System;
 using System.Linq;
 using System.Xml.Linq;

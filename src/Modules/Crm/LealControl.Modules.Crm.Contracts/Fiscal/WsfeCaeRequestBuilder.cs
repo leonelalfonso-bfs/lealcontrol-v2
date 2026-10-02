@@ -3,13 +3,13 @@ using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace LealControl.Modules.Sales.Infrastructure.Fiscal;
+namespace LealControl.Modules.Crm.Contracts.Fiscal;
 
 /// <summary>Construye un SOAP FECAESolicitar de un comprobante; no lo envía.</summary>
 public static class WsfeCaeRequestBuilder
 {
     public static string Build(
-        WsfeInvoiceAServicePreparation.Data data, int pointOfSale,
+        IWsfeInvoiceAServiceData data, int pointOfSale,
         long reservedNumber, string issuerCuit, string token, string sign)
     {
         if (data.VoucherType != 1 || data.Concept != 2 || data.CurrencyCode != "PES" ||
@@ -87,7 +87,7 @@ public static class WsfeCaeRequestBuilder
 
     // Hash de la solicitud sin token ni firma; detecta cambios tras reservar el número.
     public static string Fingerprint(
-        WsfeInvoiceAServicePreparation.Data data, int pointOfSale,
+        IWsfeInvoiceAServiceData data, int pointOfSale,
         long reservedNumber, string issuerCuit)
     {
         _ = Build(data, pointOfSale, reservedNumber, issuerCuit, "validation", "validation");

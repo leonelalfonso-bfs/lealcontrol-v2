@@ -1,3 +1,4 @@
+using LealControl.Modules.Crm.Contracts.Fiscal;
 using System.Globalization;
 using LealControl.Modules.Sales.Domain.Invoices;
 
@@ -25,7 +26,7 @@ public static class WsfeInvoiceAServicePreparation
         decimal TotalAmount,
         int VatRateCode,
         string CurrencyCode,
-        decimal ExchangeRate);
+        decimal ExchangeRate) : IWsfeInvoiceAServiceData;
 
     public static bool TryBuild(Invoice invoice, out Data? data, out string error)
     {
