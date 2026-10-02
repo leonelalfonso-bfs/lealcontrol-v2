@@ -69,7 +69,7 @@ public sealed class FiscalReservationService
             await _db.FiscalAuthorizationAttempts.AnyAsync(a =>
                 a.TenantId == tenantId && a.PointOfSale == invoice.PointOfSale &&
                 a.VoucherType == data.VoucherType &&
-                (a.Status == "Pending" || a.Status == "Unknown"), ct))
+                (a.Status == "Reserved" || a.Status == "Pending" || a.Status == "Unknown"), ct))
             return Fail("El borrador cambió o hay una reserva pendiente; resolverla antes de continuar.");
 
         var attempt = FiscalAuthorizationAttempt.Reserve(tenantId, invoiceId,
@@ -86,7 +86,7 @@ public sealed class FiscalReservationService
         {
             return Fail("El número fue reservado por otra operación; consultar ARCA antes de continuar.");
         }
-        return new(true, attempt.Id, number, "Número fiscal reservado; todavía no se solicitó CAE.");
+        return new(true, attempt.Id, number, "Número fiscal reservado, aún sin envío a ARCA.");
     }
 
     private static FiscalReservationResult Fail(string detail) =>

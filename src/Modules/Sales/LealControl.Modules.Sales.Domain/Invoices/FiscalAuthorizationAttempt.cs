@@ -19,7 +19,7 @@ public sealed class FiscalAuthorizationAttempt
     public string RequestHash { get; private set; } = string.Empty;
     public string RecipientDocument { get; private set; } = string.Empty;
     public decimal Total { get; private set; }
-    public string Status { get; private set; } = "Pending";
+    public string Status { get; private set; } = "Reserved";
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime? ResolvedAtUtc { get; private set; }
     public string? Cae { get; private set; }
@@ -50,6 +50,14 @@ public sealed class FiscalAuthorizationAttempt
             Total = total,
             CreatedAtUtc = DateTime.UtcNow
         };
+    }
+
+    // Debe confirmarse en base antes de iniciar la única solicitud a WSFE.
+    // Tras este punto un corte deja el resultado incierto: consultar, nunca reenviar.
+    public void MarkDispatching()
+    {
+        if (Status != "Reserved") throw new InvalidOperationException("Solo una reserva sin enviar puede iniciar el envío fiscal.");
+        Status = "Pending";
     }
 
     public void MarkUnknown()

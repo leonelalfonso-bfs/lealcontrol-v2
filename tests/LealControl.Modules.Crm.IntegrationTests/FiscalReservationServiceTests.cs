@@ -38,7 +38,7 @@ public sealed class FiscalReservationServiceTests : IAsyncLifetime
             var saved = await db.FiscalAuthorizationAttempts.AsNoTracking()
                 .SingleAsync(a => a.TenantId == tenant.TenantId && a.InvoiceId == invoiceId);
             Assert.Equal(first.AttemptId, saved.Id);
-            Assert.Equal("Pending", saved.Status);
+            Assert.Equal("Reserved", saved.Status);
             Assert.Equal("30715489629", saved.IssuerCuit);
             Assert.False(saved.Production);
             var second = await service.ReserveAsync(invoiceId, CancellationToken.None);

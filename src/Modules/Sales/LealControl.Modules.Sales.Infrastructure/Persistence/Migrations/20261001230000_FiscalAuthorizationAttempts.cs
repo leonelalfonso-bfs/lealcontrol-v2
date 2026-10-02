@@ -22,7 +22,7 @@ public sealed class FiscalAuthorizationAttempts : Migration
                 "RequestHash" character varying(64) NOT NULL,
                 "RecipientDocument" character varying(32) NOT NULL,
                 "Total" numeric(18,2) NOT NULL CHECK ("Total" > 0),
-                "Status" character varying(20) NOT NULL CHECK ("Status" IN ('Pending','Unknown','Confirmed','Rejected')),
+                "Status" character varying(20) NOT NULL CHECK ("Status" IN ('Reserved','Pending','Unknown','Confirmed','Rejected')),
                 "CreatedAtUtc" timestamp with time zone NOT NULL,
                 "ResolvedAtUtc" timestamp with time zone,
                 "Cae" character varying(14),

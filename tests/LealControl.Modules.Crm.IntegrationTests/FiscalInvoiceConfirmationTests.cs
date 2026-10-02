@@ -22,6 +22,7 @@ public sealed class FiscalInvoiceConfirmationTests
     public void Confirmed_reservation_assigns_official_number_and_cae()
     {
         var (invoice, attempt) = CreatePair();
+        attempt.MarkDispatching();
         attempt.Confirm("12345678901234", DateTime.UtcNow.AddDays(10));
         invoice.ConfirmFiscalAuthorization(attempt, new string('a', 64), "https://www.afip.gob.ar/fe/qr/?p=test");
         Assert.Equal("Authorized", invoice.Status);
@@ -36,6 +37,7 @@ public sealed class FiscalInvoiceConfirmationTests
         var (invoice, pending) = CreatePair();
         Assert.Throws<InvalidOperationException>(() =>
             invoice.ConfirmFiscalAuthorization(pending, new string('a', 64), "https://www.afip.gob.ar/fe/qr/?p=test"));
+        pending.MarkDispatching();
         pending.Confirm("12345678901234", DateTime.UtcNow.AddDays(10));
         var other = Invoice.Create(invoice.TenantId, "A", 3, 2, null, null, Guid.NewGuid(),
             "Otro", "20-12345678-6", "ResponsableInscripto", null,
@@ -55,6 +57,7 @@ public sealed class FiscalInvoiceConfirmationTests
     public void Confirmed_reservation_cannot_authorize_twice()
     {
         var (invoice, attempt) = CreatePair();
+        attempt.MarkDispatching();
         attempt.Confirm("12345678901234", DateTime.UtcNow.AddDays(10));
         invoice.ConfirmFiscalAuthorization(attempt, new string('a', 64), "https://www.afip.gob.ar/fe/qr/?p=test");
         Assert.Throws<InvalidOperationException>(() =>
