@@ -20,6 +20,7 @@ public static class WsfeVoucherReconciliation
             attempt.Status is not ("Pending" or "Unknown") ||
             attempt.InvoiceId != invoice.Id || attempt.TenantId.Value != invoice.TenantId.Value ||
             attempt.PointOfSale != invoice.PointOfSale || attempt.VoucherType != data.VoucherType ||
+            attempt.IssuerCuit != issuerCuit ||
             !observation.Confirmed || observation.Number != attempt.VoucherNumber ||
             observation.RecipientDocument != data.ReceiverCuit ||
             observation.RecipientDocument != attempt.RecipientDocument ||

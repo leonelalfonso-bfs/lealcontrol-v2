@@ -14,7 +14,7 @@ public sealed class FiscalInvoiceConfirmationTests
             DateTime.UtcNow.AddDays(30), "ARS", 1m, null);
         invoice.AddItem(null, "SERV", "Servicio", 1m, 1m, 21m);
         var attempt = FiscalAuthorizationAttempt.Reserve(tenant, invoice.Id, 3, 1, 42,
-            new string('a', 64), "20123456786", invoice.Total);
+            "30715489629", true, new string('a', 64), "20123456786", invoice.Total);
         return (invoice, attempt);
     }
 

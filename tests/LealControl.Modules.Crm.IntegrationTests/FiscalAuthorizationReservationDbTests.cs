@@ -48,8 +48,8 @@ public sealed class FiscalAuthorizationReservationDbTests : IAsyncLifetime
         await using var cmd = new NpgsqlCommand("""
             INSERT INTO sales.fiscal_authorization_attempts
             ("Id","TenantId","InvoiceId","PointOfSale","VoucherType","VoucherNumber",
-             "RequestHash","RecipientDocument","Total","Status","CreatedAtUtc")
-            VALUES (@id,@tenant,@invoice,5,1,@number,@hash,'20123456786',1,'Pending',@created)
+             "IssuerCuit","Production","RequestHash","RecipientDocument","Total","Status","CreatedAtUtc")
+            VALUES (@id,@tenant,@invoice,5,1,@number,'30715489629',false,@hash,'20123456786',1,'Pending',@created)
             """, db);
         cmd.Parameters.AddWithValue("id", Guid.NewGuid());
         cmd.Parameters.AddWithValue("tenant", CrmWebApplicationFactory.DemoTenantId);

@@ -12,6 +12,7 @@ internal sealed class FiscalAuthorizationAttemptConfiguration : IEntityTypeConfi
         builder.ToTable("fiscal_authorization_attempts", "sales");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.TenantId).HasConversion(id => id.Value, value => new TenantId(value));
+        builder.Property(x => x.IssuerCuit).HasMaxLength(11).IsRequired();
         builder.Property(x => x.RequestHash).HasMaxLength(64).IsRequired();
         builder.Property(x => x.RecipientDocument).HasMaxLength(32).IsRequired();
         builder.Property(x => x.Status).HasMaxLength(20).IsRequired();

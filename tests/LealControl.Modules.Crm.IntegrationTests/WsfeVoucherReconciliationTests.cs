@@ -26,7 +26,7 @@ public sealed class WsfeVoucherReconciliationTests
         Assert.NotNull(data);
         var hash = WsfeCaeRequestBuilder.Fingerprint(data, 3, 42, Issuer);
         var attempt = FiscalAuthorizationAttempt.Reserve(tenant, invoice.Id, 3, 1, 42,
-            hash, data.ReceiverCuit, data.TotalAmount);
+            Issuer, true, hash, data.ReceiverCuit, data.TotalAmount);
         var observation = new WsfeVoucherReconciliation.Observation(true, 42,
             data.ReceiverCuit, data.TotalAmount, Cae, now.AddDays(10));
         return (invoice, attempt, observation);

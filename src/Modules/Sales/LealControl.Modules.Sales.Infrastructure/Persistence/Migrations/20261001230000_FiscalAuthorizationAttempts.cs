@@ -17,6 +17,8 @@ public sealed class FiscalAuthorizationAttempts : Migration
                 "PointOfSale" integer NOT NULL CHECK ("PointOfSale" > 0),
                 "VoucherType" integer NOT NULL CHECK ("VoucherType" > 0),
                 "VoucherNumber" bigint NOT NULL CHECK ("VoucherNumber" > 0),
+                "IssuerCuit" character varying(11) NOT NULL,
+                "Production" boolean NOT NULL,
                 "RequestHash" character varying(64) NOT NULL,
                 "RecipientDocument" character varying(32) NOT NULL,
                 "Total" numeric(18,2) NOT NULL CHECK ("Total" > 0),
@@ -26,6 +28,10 @@ public sealed class FiscalAuthorizationAttempts : Migration
                 "Cae" character varying(14),
                 "CaeDueDate" timestamp with time zone
             );
+            ALTER TABLE sales.fiscal_authorization_attempts
+                ADD COLUMN IF NOT EXISTS "IssuerCuit" character varying(11) NOT NULL DEFAULT '';
+            ALTER TABLE sales.fiscal_authorization_attempts
+                ADD COLUMN IF NOT EXISTS "Production" boolean NOT NULL DEFAULT false;
             CREATE UNIQUE INDEX IF NOT EXISTS "UX_fiscal_attempt_invoice"
                 ON sales.fiscal_authorization_attempts ("TenantId", "InvoiceId");
             CREATE UNIQUE INDEX IF NOT EXISTS "UX_fiscal_attempt_number"
