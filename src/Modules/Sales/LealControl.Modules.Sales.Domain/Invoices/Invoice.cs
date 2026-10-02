@@ -277,16 +277,32 @@ public sealed class Invoice : Entity<Guid>
         Total = Subtotal + Iva21 + Iva105 + Iva27 + IibbPerception;
     }
 
-    public void Authorize(string cae, DateTime caeDueDate, string qrUrl, string? rawResponse)
+    // Solo se invoca después de confirmar FECompConsultar contra la reserva persistida.
+    // El número del borrador es provisorio; este método asigna el oficial.
+    public void ConfirmFiscalAuthorization(FiscalAuthorizationAttempt attempt, string expectedRequestHash, string qrUrl)
     {
-        var utcCaeDue = caeDueDate.Kind == DateTimeKind.Unspecified
-            ? DateTime.SpecifyKind(caeDueDate, DateTimeKind.Utc)
-            : caeDueDate.ToUniversalTime();
+        ArgumentNullException.ThrowIfNull(attempt);
+        if (string.IsNullOrWhiteSpace(expectedRequestHash) ||
+            !string.Equals(attempt.RequestHash, expectedRequestHash, StringComparison.OrdinalIgnoreCase) ||
+            Status != "Draft" || Cae is not null || attempt.Status != "Confirmed" ||
+            attempt.InvoiceId != Id || attempt.TenantId.Value != TenantId.Value ||
+            attempt.PointOfSale != PointOfSale ||
+            (InvoiceType == "A" ? 1 : 0) != attempt.VoucherType ||
+            attempt.VoucherNumber <= 0 || attempt.VoucherNumber > int.MaxValue ||
+            attempt.Total != Total ||
+            attempt.RecipientDocument != new string(CustomerDocument.Where(char.IsDigit).ToArray()) ||
+            attempt.Cae is null || attempt.CaeDueDate is null ||
+            !Uri.TryCreate(qrUrl, UriKind.Absolute, out var qr) || qr.Scheme != Uri.UriSchemeHttps ||
+            (qr.Host != "www.afip.gob.ar" && qr.Host != "www.arca.gob.ar") ||
+            qr.AbsolutePath != "/fe/qr/")
+            throw new InvalidOperationException("La reserva fiscal confirmada no corresponde al borrador.");
 
-        Cae = cae;
-        CaeDueDate = utcCaeDue;
+        InvoiceNumber = checked((int)attempt.VoucherNumber);
+        FormattedNumber = $"{PointOfSale:D4}-{InvoiceNumber:D8}";
+        Cae = attempt.Cae;
+        CaeDueDate = attempt.CaeDueDate;
         QrUrl = qrUrl;
-        AfipRawResponse = rawResponse;
+        AfipRawResponse = null;
         Status = "Authorized";
     }
 
