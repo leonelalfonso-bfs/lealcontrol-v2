@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddTenantDbContext<SalesDbContext>(SalesDbContext.Schema);
 
         services.AddScoped<ISalesUnitOfWork>(sp => sp.GetRequiredService<SalesDbContext>());
+        services.AddScoped<LealControl.Modules.Sales.Infrastructure.Fiscal.FiscalReservationService>();
         services.AddScoped<IQuoteRepository, QuoteRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
