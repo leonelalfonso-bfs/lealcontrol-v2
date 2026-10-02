@@ -20,4 +20,5 @@ public sealed record ArcaFiscalNumbering(
 
 public sealed record ArcaFiscalVoucherObservation(
     bool Confirmed, long Number, string RecipientDocument, decimal Total,
-    string Cae, DateTime CaeDueDate, string Detail);
+    string Cae, DateTime CaeDueDate, string Detail,
+    WsfeVoucherFiscalData? FiscalData = null);

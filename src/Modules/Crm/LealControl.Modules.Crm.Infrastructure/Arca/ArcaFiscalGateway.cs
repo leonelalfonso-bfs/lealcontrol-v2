@@ -64,7 +64,7 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
             auth.Production, pointOfSale, voucherType, number, cancellationToken);
         return result.Confirmed
             ? new(true, result.Number, result.RecipientDocument, result.Total,
-                result.Cae, result.CaeDueDate, result.Detail)
+                result.Cae, result.CaeDueDate, result.Detail, result.FiscalData)
             : Unconfirmed(result.Detail);
     }
 

@@ -8,7 +8,7 @@ public static class WsfeVoucherReconciliation
 {
     public sealed record Observation(
         bool Confirmed, long Number, string RecipientDocument, decimal Total,
-        string Cae, DateTime CaeDueDate);
+        string Cae, DateTime CaeDueDate, IWsfeInvoiceAServiceData? FiscalData = null);
 
     public static bool TryConfirm(
         Invoice invoice, FiscalAuthorizationAttempt attempt,
@@ -27,6 +27,22 @@ public static class WsfeVoucherReconciliation
             observation.Total != data.TotalAmount || observation.Total != attempt.Total ||
             observation.Cae.Length != 14 || !observation.Cae.All(char.IsDigit) ||
             observation.CaeDueDate == default ||
+            observation.FiscalData is null ||
+            observation.FiscalData.ReceiverCuit != data.ReceiverCuit ||
+            observation.FiscalData.ReceiverDocumentType != data.ReceiverDocumentType ||
+            observation.FiscalData.ReceiverVatCondition != data.ReceiverVatCondition ||
+            observation.FiscalData.VoucherType != data.VoucherType ||
+            observation.FiscalData.Concept != data.Concept ||
+            observation.FiscalData.IssueDate != data.IssueDate ||
+            observation.FiscalData.ServiceFrom != data.ServiceFrom ||
+            observation.FiscalData.ServiceTo != data.ServiceTo ||
+            observation.FiscalData.PaymentDue != data.PaymentDue ||
+            observation.FiscalData.NetAmount != data.NetAmount ||
+            observation.FiscalData.VatAmount != data.VatAmount ||
+            observation.FiscalData.TotalAmount != data.TotalAmount ||
+            observation.FiscalData.VatRateCode != data.VatRateCode ||
+            observation.FiscalData.CurrencyCode != data.CurrencyCode ||
+            observation.FiscalData.ExchangeRate != data.ExchangeRate ||
             submission?.Outcome == WsfeCaeOutcome.Rejected ||
             (submission?.Outcome == WsfeCaeOutcome.ApprovedPendingConsultation &&
                 (submission.Cae != observation.Cae ||

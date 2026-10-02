@@ -29,7 +29,7 @@ public sealed class WsfeVoucherReconciliationTests
             Issuer, true, hash, data.ReceiverCuit, data.TotalAmount);
         attempt.MarkDispatching();
         var observation = new WsfeVoucherReconciliation.Observation(true, 42,
-            data.ReceiverCuit, data.TotalAmount, Cae, now.AddDays(10));
+            data.ReceiverCuit, data.TotalAmount, Cae, now.AddDays(10), data);
         return (invoice, attempt, observation);
     }
 
@@ -51,6 +51,11 @@ public sealed class WsfeVoucherReconciliationTests
     [InlineData("number")]
     [InlineData("cae")]
     [InlineData("hash")]
+    [InlineData("concept")]
+    [InlineData("date")]
+    [InlineData("net")]
+    [InlineData("vat")]
+    [InlineData("currency")]
     public void Mismatch_never_confirms(string mismatch)
     {
         var (invoice, attempt, observation) = Setup();
@@ -58,6 +63,12 @@ public sealed class WsfeVoucherReconciliationTests
         if (mismatch == "amount") observation = observation with { Total = observation.Total + 1m };
         if (mismatch == "number") observation = observation with { Number = 43 };
         if (mismatch == "cae") observation = observation with { Cae = "00000000000000" };
+        var fiscal = (WsfeInvoiceAServicePreparation.Data)observation.FiscalData!;
+        if (mismatch == "concept") observation = observation with { FiscalData = fiscal with { Concept = 1 } };
+        if (mismatch == "date") observation = observation with { FiscalData = fiscal with { IssueDate = "20261001" } };
+        if (mismatch == "net") observation = observation with { FiscalData = fiscal with { NetAmount = fiscal.NetAmount + 1m } };
+        if (mismatch == "vat") observation = observation with { FiscalData = fiscal with { VatAmount = fiscal.VatAmount + 1m } };
+        if (mismatch == "currency") observation = observation with { FiscalData = fiscal with { CurrencyCode = "DOL" } };
         var submission = new WsfeCaeReply(WsfeCaeOutcome.ApprovedPendingConsultation,
             Cae, observation.CaeDueDate, "");
         var issuer = mismatch == "hash" ? "20999999999" : Issuer;
