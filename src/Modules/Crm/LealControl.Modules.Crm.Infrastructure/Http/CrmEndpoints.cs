@@ -253,14 +253,19 @@ public static class CrmEndpoints
             ISender sender,
             CancellationToken cancellationToken) =>
         {
+            if (!body.TryParseJurisdiction(out var jurisdiction))
+                return Results.BadRequest(new { message = "Elegí una jurisdicción fiscal válida." });
+            if (body.HasPerceptionExclusion is null || body.HasRetentionExclusion is null)
+                return Results.BadRequest(new { message = "Indicá expresamente ambas exclusiones fiscales." });
+
             var command = new UpsertCustomerFiscalRateCommand(
                 id,
-                body.ParseJurisdiction(),
+                jurisdiction,
                 body.PerceptionRate,
                 body.RetentionRate,
-                body.HasPerceptionExclusion,
+                body.HasPerceptionExclusion.Value,
                 body.PerceptionExclusionExpiresOn,
-                body.HasRetentionExclusion,
+                body.HasRetentionExclusion.Value,
                 body.RetentionExclusionExpiresOn,
                 body.ExclusionCertificateNumber);
             var result = await sender.Send(command, cancellationToken);
@@ -449,25 +454,35 @@ public sealed record UpsertCustomerFiscalRateRequest(
     string? Jurisdiction,
     decimal PerceptionRate,
     decimal RetentionRate,
-    bool HasPerceptionExclusion,
+    bool? HasPerceptionExclusion,
     DateOnly? PerceptionExclusionExpiresOn,
-    bool HasRetentionExclusion,
+    bool? HasRetentionExclusion,
     DateOnly? RetentionExclusionExpiresOn,
     string? ExclusionCertificateNumber)
 {
-    public FiscalJurisdiction ParseJurisdiction()
+    public bool TryParseJurisdiction(out FiscalJurisdiction jurisdiction)
     {
-        if (string.IsNullOrWhiteSpace(Jurisdiction)) return FiscalJurisdiction.Arba;
+        jurisdiction = default;
+        if (string.IsNullOrWhiteSpace(Jurisdiction)) return false;
         var j = Jurisdiction.Trim().ToLowerInvariant();
-        if (j.Contains("caba") || j.Contains("agip")) return FiscalJurisdiction.Agip;
-        if (j.Contains("arba") || j.Contains("buenos") || j.Contains("pba")) return FiscalJurisdiction.Arba;
-        if (j.Contains("santa") || j.Contains("api")) return FiscalJurisdiction.ApiSantaFe;
-        if (j.Contains("cordob") || j.Contains("córdob")) return FiscalJurisdiction.DgrCordoba;
-        if (j.Contains("mendoz")) return FiscalJurisdiction.DgrMendoza;
-        if (j.Contains("tucum")) return FiscalJurisdiction.DgrTucuman;
-        if (j.Contains("entre") || j.Contains("rios") || j.Contains("ríos")) return FiscalJurisdiction.DgrEntreRios;
-        if (j.Contains("gananc")) return FiscalJurisdiction.Ganancias;
-        if (Enum.TryParse<FiscalJurisdiction>(Jurisdiction, true, out var parsed)) return parsed;
-        return FiscalJurisdiction.Arba;
+        if (j is "caba" or "agip") jurisdiction = FiscalJurisdiction.Agip;
+        else if (j is "arba" or "buenos aires" or "buenosaires" or "pba") jurisdiction = FiscalJurisdiction.Arba;
+        else if (j is "santa fe" or "santafe" or "api" or "api santa fe") jurisdiction = FiscalJurisdiction.ApiSantaFe;
+        else if (j is "cordoba" or "córdoba" or "rentas cordoba" or "rentas córdoba") jurisdiction = FiscalJurisdiction.DgrCordoba;
+        else if (j is "mendoza" or "dgr mendoza" or "rentas mendoza") jurisdiction = FiscalJurisdiction.DgrMendoza;
+        else if (j is "tucuman" or "tucumán" or "dgr tucuman" or "dgr tucumán" or "rentas tucumán") jurisdiction = FiscalJurisdiction.DgrTucuman;
+        else if (j is "entre rios" or "entre ríos" or "dgr entre rios" or "dgr entre ríos" or "rentas entre ríos") jurisdiction = FiscalJurisdiction.DgrEntreRios;
+        else if (j is "ganancias") jurisdiction = FiscalJurisdiction.Ganancias;
+        else
+        {
+            foreach (var value in Enum.GetValues<FiscalJurisdiction>())
+            {
+                if (!string.Equals(value.ToString(), j, StringComparison.OrdinalIgnoreCase)) continue;
+                jurisdiction = value;
+                return true;
+            }
+            return false;
+        }
+        return true;
     }
 }

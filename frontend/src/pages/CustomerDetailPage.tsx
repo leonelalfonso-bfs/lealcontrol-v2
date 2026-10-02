@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { label, provinces, provinceLabel, type Activity, type Contact, type Conversation, type CustomerDetail, type Location, type Opportunity, type Quote } from "../api/types";
+import { label, provinces, provinceLabel, type Activity, type Contact, type Conversation, type CustomerDetail, type FiscalRate, type Location, type Opportunity, type Quote } from "../api/types";
 import { buildWhatsAppUrl, formatCuitDisplay } from "../lib/arContact";
 import { EmailComposer } from "../components/EmailComposer";
 import { BcraCreditReportModal } from "../components/BcraCreditReportModal";
@@ -667,13 +667,17 @@ export function CustomerDetailPage() {
           {customer.fiscalRates.map((r) => (
             <div key={r.jurisdiction} style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid var(--surface-border)", marginBottom: 10, background: "white", display: "flex", justifyContent: "space-between" }}>
               <strong>{label(r.jurisdiction)}</strong>
-              <div className="muted" style={{ fontWeight: 600 }}>Perc. {r.perceptionRate}% · Ret. {r.retentionRate}%</div>
+              <div className="muted" style={{ fontWeight: 600 }}>
+                Perc. {r.perceptionRate}% · Ret. {r.retentionRate}%
+                {r.hasPerceptionExclusion && " · Excl. percepción"}
+                {r.hasRetentionExclusion && " · Excl. retención"}
+              </div>
             </div>
           ))}
           {customer.fiscalRates.length === 0 && (
             <p className="muted" style={{ fontSize: "0.9rem" }}>No hay alícuotas personalizadas cargadas (aplica régimen general).</p>
           )}
-          <RateForm customerId={customer.id} onCreated={refresh} />
+          <RateForm customerId={customer.id} rates={customer.fiscalRates} onCreated={refresh} />
         </section>
       )}
 
@@ -1016,36 +1020,78 @@ function EquipmentForm({ customerId, locations, onCreated }: { customerId: strin
   );
 }
 
-function RateForm({ customerId, onCreated }: { customerId: string; onCreated: () => void }) {
+function RateForm({ customerId, rates, onCreated }: { customerId: string; rates: FiscalRate[]; onCreated: () => void }) {
   const [jurisdiction, setJurisdiction] = useState("Arba");
   const [perceptionRate, setPerceptionRate] = useState(3);
   const [retentionRate, setRetentionRate] = useState(1.5);
+  const [hasPerceptionExclusion, setHasPerceptionExclusion] = useState(false);
+  const [perceptionExclusionExpiresOn, setPerceptionExclusionExpiresOn] = useState("");
+  const [hasRetentionExclusion, setHasRetentionExclusion] = useState(false);
+  const [retentionExclusionExpiresOn, setRetentionExclusionExpiresOn] = useState("");
+  const [exclusionCertificateNumber, setExclusionCertificateNumber] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const existing = rates.find((rate) => rate.jurisdiction === jurisdiction);
+    setPerceptionRate(existing?.perceptionRate ?? 3);
+    setRetentionRate(existing?.retentionRate ?? 1.5);
+    setHasPerceptionExclusion(existing?.hasPerceptionExclusion ?? false);
+    setPerceptionExclusionExpiresOn(existing?.perceptionExclusionExpiresOn?.slice(0, 10) ?? "");
+    setHasRetentionExclusion(existing?.hasRetentionExclusion ?? false);
+    setRetentionExclusionExpiresOn(existing?.retentionExclusionExpiresOn?.slice(0, 10) ?? "");
+    setExclusionCertificateNumber(existing?.exclusionCertificateNumber ?? "");
+    setError(null);
+  }, [jurisdiction, rates]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    await api.upsertRate(customerId, {
-      jurisdiction,
-      perceptionRate,
-      retentionRate,
-      hasPerceptionExclusion: false,
-      hasRetentionExclusion: false
-    });
-    onCreated();
+    setSaving(true);
+    setError(null);
+    try {
+      await api.upsertRate(customerId, {
+        jurisdiction,
+        perceptionRate,
+        retentionRate,
+        hasPerceptionExclusion,
+        perceptionExclusionExpiresOn: hasPerceptionExclusion ? perceptionExclusionExpiresOn || null : null,
+        hasRetentionExclusion,
+        retentionExclusionExpiresOn: hasRetentionExclusion ? retentionExclusionExpiresOn || null : null,
+        exclusionCertificateNumber: hasPerceptionExclusion || hasRetentionExclusion
+          ? exclusionCertificateNumber.trim() || null : null
+      });
+      onCreated();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No se pudo guardar la alícuota.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <form onSubmit={submit} style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: "12px", alignItems: "end" }}>
+    <form onSubmit={submit} style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "12px", alignItems: "end" }}>
       <label>Jurisdicción
         <select value={jurisdiction} onChange={(e) => setJurisdiction(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }}>
           <option value="Arba">ARBA (Bs.As.)</option>
           <option value="Agip">AGIP (CABA)</option>
-          <option value="SantaFe">API Santa Fe</option>
-          <option value="Cordoba">Rentas Córdoba</option>
+          <option value="ApiSantaFe">API Santa Fe</option>
+          <option value="DgrCordoba">Rentas Córdoba</option>
+          <option value="DgrMendoza">Rentas Mendoza</option>
+          <option value="DgrTucuman">Rentas Tucumán</option>
+          <option value="DgrEntreRios">Rentas Entre Ríos</option>
+          <option value="Ganancias">Ganancias</option>
         </select>
       </label>
       <label>Percepción %<input type="number" step="0.01" value={perceptionRate} onChange={(e) => setPerceptionRate(Number(e.target.value))} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
       <label>Retención %<input type="number" step="0.01" value={retentionRate} onChange={(e) => setRetentionRate(Number(e.target.value))} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-      <button className="btn btn-primary">Guardar Alícuota</button>
+      <label><input type="checkbox" checked={hasPerceptionExclusion} onChange={(e) => setHasPerceptionExclusion(e.target.checked)} /> Excluido de percepción</label>
+      {hasPerceptionExclusion && <label>Vencimiento percepción<input type="date" value={perceptionExclusionExpiresOn} onChange={(e) => setPerceptionExclusionExpiresOn(e.target.value)} /></label>}
+      <label><input type="checkbox" checked={hasRetentionExclusion} onChange={(e) => setHasRetentionExclusion(e.target.checked)} /> Excluido de retención</label>
+      {hasRetentionExclusion && <label>Vencimiento retención<input type="date" value={retentionExclusionExpiresOn} onChange={(e) => setRetentionExclusionExpiresOn(e.target.value)} /></label>}
+      {(hasPerceptionExclusion || hasRetentionExclusion) &&
+        <label>Número de certificado<input type="text" value={exclusionCertificateNumber} onChange={(e) => setExclusionCertificateNumber(e.target.value)} /></label>}
+      {error && <p role="alert" style={{ color: "#b91c1c", gridColumn: "1 / -1", margin: 0 }}>{error}</p>}
+      <button className="btn btn-primary" disabled={saving}>{saving ? "Guardando…" : "Guardar alícuota"}</button>
     </form>
   );
 }
