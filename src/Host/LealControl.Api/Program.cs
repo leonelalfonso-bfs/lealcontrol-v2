@@ -444,9 +444,8 @@ try
         return pg.SqlState switch
         {
             "23505" => "Ya existe un registro con el mismo número. Volvé a guardar.",
-            "42703" => "Falta una columna en la base: " + pg.MessageText,
-            "22001" => "Hay un texto demasiado largo: " + pg.MessageText,
-            _ => pg.MessageText
+            "22001" => "Hay un texto demasiado largo; revisá los datos.",
+            _ => "No se pudo completar la operación por un error de base de datos."
         };
     }
 }

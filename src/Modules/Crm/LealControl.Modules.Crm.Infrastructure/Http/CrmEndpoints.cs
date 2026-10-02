@@ -49,7 +49,7 @@ public static class CrmEndpoints
         }
         catch
         {
-            // No bloquear el request: Ensure ya loguea por paso; el repo reintenta/degrada.
+            // El repositorio reintenta fallas de esquema reparables; las persistentes se propagan.
         }
 
         return await next(context);

@@ -7,6 +7,7 @@ using LealControl.Modules.Crm.Domain.Opportunities;
 using LealControl.Modules.Crm.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace LealControl.Modules.Crm.Infrastructure.Persistence.Repositories;
 
@@ -290,19 +291,12 @@ internal sealed class ActivityRepository : IActivityRepository
         {
             return await query();
         }
-        catch (Exception ex)
+        catch (PostgresException ex) when (ex.SqlState is
+            PostgresErrorCodes.UndefinedTable or PostgresErrorCodes.UndefinedColumn)
         {
             _logger.LogWarning(ex, "{Operation} falló; reintentando tras EnsureCrmTablesAsync.", operation);
             await ResetAndEnsureAsync(cancellationToken);
-            try
-            {
-                return await query();
-            }
-            catch (Exception retryEx)
-            {
-                _logger.LogError(retryEx, "{Operation} sigue fallando; se devuelve lista vacía.", operation);
-                return Array.Empty<Activity>();
-            }
+            return await query();
         }
     }
 

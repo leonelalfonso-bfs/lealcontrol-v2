@@ -518,20 +518,13 @@ internal sealed class ListCustomerTimelineQueryHandler
         ListCustomerTimelineQuery request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var items = await _activities.ListByCustomerAsync(
-                _tenant.TenantId,
-                new CustomerId(request.CustomerId),
-                Math.Clamp(request.Take, 1, 200),
-                cancellationToken);
+        var items = await _activities.ListByCustomerAsync(
+            _tenant.TenantId,
+            new CustomerId(request.CustomerId),
+            Math.Clamp(request.Take, 1, 200),
+            cancellationToken);
 
-            return Result<IReadOnlyList<ActivityDto>>.Success(items.Select(LogActivityCommandHandler.ToDto).ToList());
-        }
-        catch
-        {
-            return Result<IReadOnlyList<ActivityDto>>.Success(Array.Empty<ActivityDto>());
-        }
+        return Result<IReadOnlyList<ActivityDto>>.Success(items.Select(LogActivityCommandHandler.ToDto).ToList());
     }
 }
 
