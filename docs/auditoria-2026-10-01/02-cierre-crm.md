@@ -1,5 +1,7 @@
 # CRM · estado de la primera tanda
 
+> Actualización 2026-10-02: este informe conserva el alcance de la primera tanda. El estado vigente y los pendientes consolidados están en [CONTINUIDAD](../CONTINUIDAD.md). No repetir el pendiente del historial, ya cerrado. Los recorridos específicos de conversión y etapas siguen pendientes de confirmación explícita.
+
 Base de revisión: `main` en `5acf972`. Rama propuesta: `codex/crm-primera-tanda-20261001`. Este documento describe el código combinado y verificado localmente; falta la prueba funcional en staging.
 
 ## Corregido y verificado localmente
@@ -17,7 +19,7 @@ Verificación de la rama combinada: compilación de API exitosa; 18/18 pruebas u
 ## Pendiente antes de producción
 
 - [ ] Probar en staging los recorridos de `05-prueba-etapas-crm.md`, `06-prueba-clientes-oportunidades.md` y `07-prueba-etapa-historial-atomicos.md`, además de la conversión con y sin oportunidad.
-- [ ] Probar explícitamente el listado de actividades por cliente. El repositorio aún convierte ciertas excepciones en lista vacía con HTTP 200; limitar el reintento a errores de esquema y exponer los demás fallos en una mejora separada.
+- [x] Fallos del historial y de oportunidades: corregidos, cubiertos por pruebas y publicados en el bloque CRM de la PR #65. La prueba funcional en staging fue confirmada por el usuario.
 - [ ] Auditar duplicados de presupuestos por oportunidad antes de añadir una restricción única. El diseño y la consulta de solo lectura están en la rama local `codex/crm-quote-uniqueness`.
 - [ ] Acordar la regla comercial de «ganada → presupuesto»: el comportamiento actual exige generar el presupuesto antes de marcar la oportunidad como ganada.
 - [ ] Ampliar cobertura de permisos por tenant y vínculos presupuesto–oportunidad.
