@@ -21,7 +21,7 @@ public sealed class FiscalVoucherRecoveryService
         _gateway = gateway;
     }
 
-    public async Task<FiscalRecoveryResult> RecoverAsync(Guid invoiceId, CancellationToken ct)
+    public async Task<FiscalRecoveryResult> RecoverAsync(Guid invoiceId, CancellationToken ct, WsfeCaeReply? submission = null)
     {
         var tenantId = _tenant.TenantId;
         if (tenantId.Value == Guid.Empty || invoiceId == Guid.Empty)
@@ -90,7 +90,7 @@ public sealed class FiscalVoucherRecoveryService
                     observation.Number, observation.RecipientDocument, observation.Total,
                     observation.Cae, observation.CaeDueDate, observation.FiscalData);
                 if (WsfeVoucherReconciliation.TryConfirm(invoice, attempt, attempt.IssuerCuit,
-                    found, null, qr, out _))
+                    found, submission, qr, out _))
                 {
                     await _db.SaveChangesAsync(ct);
                     await tx.CommitAsync(ct);
