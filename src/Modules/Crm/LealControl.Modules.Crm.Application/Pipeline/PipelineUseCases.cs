@@ -428,20 +428,13 @@ internal sealed class ListCustomerOpportunitiesQueryHandler
         ListCustomerOpportunitiesQuery request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var items = await _opportunities.ListByCustomerAsync(
-                _tenant.TenantId,
-                new CustomerId(request.CustomerId),
-                cancellationToken);
+        var items = await _opportunities.ListByCustomerAsync(
+            _tenant.TenantId,
+            new CustomerId(request.CustomerId),
+            cancellationToken);
 
-            return Result<IReadOnlyList<OpportunityDto>>.Success(
-                items.Select(o => OpenOpportunityCommandHandler.ToDto(o, "Gray", _clock.UtcNow)).ToList());
-        }
-        catch
-        {
-            return Result<IReadOnlyList<OpportunityDto>>.Success(Array.Empty<OpportunityDto>());
-        }
+        return Result<IReadOnlyList<OpportunityDto>>.Success(
+            items.Select(o => OpenOpportunityCommandHandler.ToDto(o, "Gray", _clock.UtcNow)).ToList());
     }
 }
 
@@ -518,20 +511,13 @@ internal sealed class ListCustomerTimelineQueryHandler
         ListCustomerTimelineQuery request,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            var items = await _activities.ListByCustomerAsync(
-                _tenant.TenantId,
-                new CustomerId(request.CustomerId),
-                Math.Clamp(request.Take, 1, 200),
-                cancellationToken);
+        var items = await _activities.ListByCustomerAsync(
+            _tenant.TenantId,
+            new CustomerId(request.CustomerId),
+            Math.Clamp(request.Take, 1, 200),
+            cancellationToken);
 
-            return Result<IReadOnlyList<ActivityDto>>.Success(items.Select(LogActivityCommandHandler.ToDto).ToList());
-        }
-        catch
-        {
-            return Result<IReadOnlyList<ActivityDto>>.Success(Array.Empty<ActivityDto>());
-        }
+        return Result<IReadOnlyList<ActivityDto>>.Success(items.Select(LogActivityCommandHandler.ToDto).ToList());
     }
 }
 
