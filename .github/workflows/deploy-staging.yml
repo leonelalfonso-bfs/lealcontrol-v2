@@ -29,8 +29,17 @@ jobs:
             if [ -z "$APP_DIR" ]; then APP_DIR=/opt/lealcontrol-staging; fi
             cd "$APP_DIR"
             git fetch origin
-            git checkout staging
-            git pull --ff-only origin staging
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              DEPLOY_SHA="${{ github.sha }}"
+              if [[ ! "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+                echo "Invalid manual deployment commit"
+                exit 1
+              fi
+              git checkout --detach "$DEPLOY_SHA"
+            else
+              git checkout staging
+              git pull --ff-only origin staging
+            fi
             docker compose -f docker-compose.staging.yml --env-file .env up -d --build
             docker compose -f docker-compose.staging.yml ps
             bash scripts/smoke-health.sh 5210 9
