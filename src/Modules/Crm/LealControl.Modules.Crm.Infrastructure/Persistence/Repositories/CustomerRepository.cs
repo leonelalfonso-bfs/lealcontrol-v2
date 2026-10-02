@@ -185,19 +185,12 @@ internal sealed class OpportunityRepository : IOpportunityRepository
         {
             return await query();
         }
-        catch (Exception ex)
+        catch (PostgresException ex) when (ex.SqlState is
+            PostgresErrorCodes.UndefinedTable or PostgresErrorCodes.UndefinedColumn)
         {
             _logger.LogWarning(ex, "{Operation} falló; reintentando tras EnsureCrmTablesAsync.", operation);
             await ResetAndEnsureAsync(cancellationToken);
-            try
-            {
-                return await query();
-            }
-            catch (Exception retryEx)
-            {
-                _logger.LogError(retryEx, "{Operation} sigue fallando; se devuelve lista vacía.", operation);
-                return Array.Empty<Opportunity>();
-            }
+            return await query();
         }
     }
 
