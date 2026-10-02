@@ -518,6 +518,15 @@ CREATE INDEX IF NOT EXISTS "IX_remito_return_items_RemitoItemId"
                 WHERE "Status" = 'Authorized';
             """, cancellationToken);
 
+        await Database.ExecuteSqlRawAsync("""
+            ALTER TABLE sales.invoices
+                ADD COLUMN IF NOT EXISTS "FiscalConcept" integer NOT NULL DEFAULT 0;
+            ALTER TABLE sales.invoices
+                ADD COLUMN IF NOT EXISTS "ServiceFrom" timestamp with time zone;
+            ALTER TABLE sales.invoices
+                ADD COLUMN IF NOT EXISTS "ServiceTo" timestamp with time zone;
+            """, cancellationToken);
+
         if (schemaError is not null)
         {
             throw schemaError;

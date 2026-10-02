@@ -71,6 +71,9 @@ export function InvoiceFormPage() {
   const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [saleCondition, setSaleCondition] = useState<string>("Cuenta Corriente 30 días");
   const [dueDate, setDueDate] = useState<string>(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
+  const [fiscalConcept, setFiscalConcept] = useState<number>(0);
+  const [serviceFrom, setServiceFrom] = useState<string>("");
+  const [serviceTo, setServiceTo] = useState<string>("");
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
   const [rateSource, setRateSource] = useState<"divisas" | "billetes" | "manual">("divisas");
   const [exchangeRate, setExchangeRate] = useState<number>(1.0);
@@ -419,6 +422,16 @@ export function InvoiceFormPage() {
       return;
     }
 
+    if (fiscalConcept === 0) {
+      setError("Seleccioná si se facturan productos, servicios o ambos.");
+      return;
+    }
+    if ((fiscalConcept === 2 || fiscalConcept === 3) &&
+        (!serviceFrom || !serviceTo || serviceTo < serviceFrom || dueDate < issueDate)) {
+      setError("Indicá un período válido del servicio y un vencimiento no anterior a la emisión.");
+      return;
+    }
+
     const payload: InvoiceWrite = {
       invoiceType,
       pointOfSale,
@@ -431,6 +444,9 @@ export function InvoiceFormPage() {
       customerTaxCondition,
       customerAddress,
       dueDate,
+      fiscalConcept,
+      serviceFrom: fiscalConcept === 2 || fiscalConcept === 3 ? serviceFrom : undefined,
+      serviceTo: fiscalConcept === 2 || fiscalConcept === 3 ? serviceTo : undefined,
       currency,
       exchangeRate: currency === "USD" ? exchangeRate : 1.0,
       notes,
@@ -575,6 +591,28 @@ export function InvoiceFormPage() {
                     required
                   />
                 </label>
+              </div>
+
+              <div className="grid-3" style={{ marginTop: 14 }}>
+                <label>
+                  Concepto fiscal *
+                  <select value={fiscalConcept} onChange={(e) => setFiscalConcept(Number(e.target.value))} required>
+                    <option value={0}>— Elegí un concepto —</option>
+                    <option value={1}>Productos</option>
+                    <option value={2}>Servicios</option>
+                    <option value={3}>Productos y servicios</option>
+                  </select>
+                </label>
+                {(fiscalConcept === 2 || fiscalConcept === 3) && <>
+                  <label>
+                    Servicio desde *
+                    <input type="date" value={serviceFrom} onChange={(e) => setServiceFrom(e.target.value)} required />
+                  </label>
+                  <label>
+                    Servicio hasta *
+                    <input type="date" min={serviceFrom || undefined} value={serviceTo} onChange={(e) => setServiceTo(e.target.value)} required />
+                  </label>
+                </>}
               </div>
 
               <div className="grid-3" style={{ marginTop: 14 }}>

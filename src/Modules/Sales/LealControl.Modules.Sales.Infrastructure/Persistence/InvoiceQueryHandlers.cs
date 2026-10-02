@@ -31,6 +31,7 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(i => i.Currency).HasMaxLength(10).IsRequired();
         builder.Property(i => i.Cae).HasMaxLength(32);
         builder.Property(i => i.Status).HasMaxLength(32).IsRequired();
+        builder.Property(i => i.FiscalConcept).HasDefaultValue(0);
         builder.HasIndex(i => new { i.TenantId, i.PointOfSale, i.InvoiceType, i.InvoiceNumber })
             .HasDatabaseName("UX_invoice_authorized_number").IsUnique()
             .HasFilter("\"Status\" = 'Authorized'");
@@ -121,6 +122,15 @@ internal sealed class InvoiceQueryHandlers
         var tenantId = _tenantContext.TenantId;
         if (request.Items is null || request.Items.Count == 0)
             return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.Empty", "La factura debe tener al menos un ítem."));
+        if (request.FiscalConcept is < 0 or > 3 ||
+            (request.FiscalConcept is 2 or 3 &&
+                (!request.ServiceFrom.HasValue || !request.ServiceTo.HasValue ||
+                 request.ServiceTo.Value.Date < request.ServiceFrom.Value.Date ||
+                 request.DueDate.Date < (request.IssueDate ?? DateTime.UtcNow).Date)) ||
+            (request.FiscalConcept is 0 or 1 &&
+                (request.ServiceFrom.HasValue || request.ServiceTo.HasValue)))
+            return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.FiscalConcept",
+                "Revisá el concepto, el período del servicio y el vencimiento de pago."));
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         LealControl.Modules.Sales.Domain.Remitos.Remito? linkedRemito = null;
@@ -186,7 +196,10 @@ internal sealed class InvoiceQueryHandlers
             request.Currency,
             request.ExchangeRate,
             request.Notes,
-            request.IssueDate);
+            request.IssueDate,
+            request.FiscalConcept,
+            request.ServiceFrom,
+            request.ServiceTo);
 
         foreach (var item in request.Items)
         {
@@ -344,7 +357,10 @@ internal sealed class InvoiceQueryHandlers
                 item.VatAmount,
                 item.Total,
                 item.RemitoItemId)).ToList(),
-            i.CreatedAtUtc);
+            i.CreatedAtUtc,
+            i.FiscalConcept,
+            i.ServiceFrom,
+            i.ServiceTo);
     }
 
 }

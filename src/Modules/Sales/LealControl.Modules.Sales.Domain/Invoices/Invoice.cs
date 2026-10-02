@@ -108,6 +108,13 @@ public sealed class Invoice : Entity<Guid>
 
     public DateTime DueDate { get; private set; }
 
+    // 0 = pendiente de clasificar; 1 = productos; 2 = servicios; 3 = ambos.
+    public int FiscalConcept { get; private set; }
+
+    public DateTime? ServiceFrom { get; private set; }
+
+    public DateTime? ServiceTo { get; private set; }
+
     public string Currency { get; private set; } = "ARS";
 
     public decimal ExchangeRate { get; private set; } = 1.0m;
@@ -158,7 +165,10 @@ public sealed class Invoice : Entity<Guid>
         string currency,
         decimal exchangeRate,
         string? notes,
-        DateTime? issueDate = null)
+        DateTime? issueDate = null,
+        int fiscalConcept = 0,
+        DateTime? serviceFrom = null,
+        DateTime? serviceTo = null)
     {
         var formatted = $"{pointOfSale:D4}-{invoiceNumber:D8}";
         var utcIssueDate = issueDate is null ? DateTime.UtcNow
@@ -169,7 +179,7 @@ public sealed class Invoice : Entity<Guid>
             ? DateTime.SpecifyKind(dueDate, DateTimeKind.Utc)
             : dueDate.ToUniversalTime();
 
-        return new Invoice(
+        var invoice = new Invoice(
             Guid.NewGuid(),
             tenantId,
             invoiceType,
@@ -193,7 +203,38 @@ public sealed class Invoice : Entity<Guid>
             null,
             notes,
             DateTime.UtcNow);
+        invoice.SetFiscalDetails(fiscalConcept, serviceFrom, serviceTo);
+        return invoice;
     }
+
+    public void SetFiscalDetails(int concept, DateTime? from, DateTime? to)
+    {
+        if (Status != "Draft")
+            throw new InvalidOperationException("Solo se pueden cambiar datos fiscales de un borrador.");
+        if (concept < 0 || concept > 3)
+            throw new ArgumentOutOfRangeException(nameof(concept), "Concepto fiscal inválido.");
+        if (concept is 2 or 3)
+        {
+            if (!from.HasValue || !to.HasValue)
+                throw new ArgumentException("Indicá el período del servicio.");
+            if (to.Value.Date < from.Value.Date)
+                throw new ArgumentException("El fin del servicio no puede ser anterior al inicio.");
+            if (DueDate.Date < IssueDate.Date)
+                throw new ArgumentException("El vencimiento de pago no puede ser anterior a la emisión.");
+        }
+        else if (from.HasValue || to.HasValue)
+        {
+            throw new ArgumentException("Las fechas de servicio requieren concepto servicios o mixto.");
+        }
+
+        FiscalConcept = concept;
+        ServiceFrom = from.HasValue ? NormalizeUtc(from.Value) : null;
+        ServiceTo = to.HasValue ? NormalizeUtc(to.Value) : null;
+    }
+
+    private static DateTime NormalizeUtc(DateTime date) => date.Kind == DateTimeKind.Unspecified
+        ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
+        : date.ToUniversalTime();
 
     public void AddItem(
         Guid? productId,

@@ -49,7 +49,10 @@ public sealed record InvoiceDto(
     string? AfipRawResponse,
     string? Notes,
     IReadOnlyList<InvoiceItemDto> Items,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    int FiscalConcept,
+    DateTime? ServiceFrom,
+    DateTime? ServiceTo);
 
 public sealed record InvoiceItemWriteDto(
     Guid? ProductId,
@@ -75,7 +78,10 @@ public sealed record CreateInvoiceCommand(
     decimal ExchangeRate,
     string? Notes,
     IReadOnlyList<InvoiceItemWriteDto> Items,
-    DateTime? IssueDate = null) : IRequest<Result<InvoiceDto>>;
+    DateTime? IssueDate = null,
+    int FiscalConcept = 0,
+    DateTime? ServiceFrom = null,
+    DateTime? ServiceTo = null) : IRequest<Result<InvoiceDto>>;
 
 public sealed record AuthorizeInvoiceArcaCommand(Guid Id) : IRequest<Result<InvoiceDto>>;
 
