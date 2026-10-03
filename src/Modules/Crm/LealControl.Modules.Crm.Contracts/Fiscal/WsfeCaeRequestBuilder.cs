@@ -25,7 +25,7 @@ public static class WsfeCaeRequestBuilder
             serviceTo < serviceFrom || due < issue ||
             new[] { data.NetAmount, data.VatAmount, data.TotalAmount }.Any(n => decimal.Round(n, 2) != n))
             throw new ArgumentException("El comprobante no cumple el perfil inicial Factura A servicio.", nameof(data));
-        if (pointOfSale < 1 || pointOfSale > 99998 || reservedNumber < 1 ||
+        if (pointOfSale < 1 || pointOfSale > 99998 || reservedNumber is < 1 or > 99_999_999 ||
             issuerCuit.Length != 11 || !issuerCuit.All(char.IsDigit) ||
             string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(sign))
             throw new ArgumentException("Punto de venta, número reservado o autenticación inválidos.");

@@ -29,7 +29,7 @@ public sealed class FiscalAuthorizationAttempt
         TenantId tenantId, Guid invoiceId, int pointOfSale, int voucherType,
         long voucherNumber, string issuerCuit, bool production, string requestHash, string recipientDocument, decimal total)
     {
-        if (invoiceId == Guid.Empty || pointOfSale <= 0 || voucherType <= 0 || voucherNumber <= 0
+        if (invoiceId == Guid.Empty || pointOfSale <= 0 || voucherType <= 0 || voucherNumber is < 1 or > 99_999_999
             || issuerCuit.Length != 11 || !issuerCuit.All(ch => ch is >= '0' and <= '9')
             || requestHash.Length != 64 || !requestHash.All(Uri.IsHexDigit)
             || string.IsNullOrWhiteSpace(recipientDocument) || total <= 0)

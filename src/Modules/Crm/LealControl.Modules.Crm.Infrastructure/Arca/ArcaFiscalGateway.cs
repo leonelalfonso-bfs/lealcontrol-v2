@@ -33,7 +33,7 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
             return new(false, 0, string.Empty, false, auth.Detail);
         var result = await _wsfe.GetLastAuthorizedAsync(auth.Token!, auth.Sign!,
             auth.IssuerCuit, auth.Production, pointOfSale, voucherType, cancellationToken);
-        if (!result.Ok || result.LastNumber < 0 || result.LastNumber >= int.MaxValue)
+        if (!result.Ok || result.LastNumber < 0 || result.LastNumber >= 99_999_999)
             return new(false, 0, string.Empty, auth.Production,
                 "No se pudo verificar la numeración fiscal oficial.");
         return new(true, result.LastNumber, auth.IssuerCuit, auth.Production,
@@ -55,7 +55,7 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
         int pointOfSale, int voucherType, long number, string expectedIssuerCuit,
         bool expectedProduction, CancellationToken cancellationToken)
     {
-        if (pointOfSale is < 1 or > 99998 || voucherType != 1 || number < 1)
+        if (pointOfSale is < 1 or > 99998 || voucherType != 1 || number is < 1 or > 99_999_999)
             return Unconfirmed("Número fiscal inválido para consulta.");
         var auth = await AuthenticateAsync(expectedIssuerCuit, expectedProduction, cancellationToken);
         if (!auth.Ok)

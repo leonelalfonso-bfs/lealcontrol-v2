@@ -288,7 +288,7 @@ public sealed class Invoice : Entity<Guid>
             attempt.InvoiceId != Id || attempt.TenantId.Value != TenantId.Value ||
             attempt.PointOfSale != PointOfSale ||
             (InvoiceType == "A" ? 1 : 0) != attempt.VoucherType ||
-            attempt.VoucherNumber <= 0 || attempt.VoucherNumber > int.MaxValue ||
+            attempt.VoucherNumber <= 0 || attempt.VoucherNumber > 99_999_999 ||
             attempt.Total != Total ||
             attempt.RecipientDocument != new string(CustomerDocument.Where(char.IsDigit).ToArray()) ||
             attempt.Cae is null || attempt.CaeDueDate is null ||

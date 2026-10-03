@@ -72,6 +72,32 @@ public sealed class FiscalReservationServiceTests : IAsyncLifetime
         finally { accessor.HttpContext = null; }
     }
 
+    [Theory]
+    [InlineData(99_999_998L, true)]
+    [InlineData(99_999_999L, false)]
+    [InlineData(100_000_000L, false)]
+    [InlineData(long.MaxValue, false)]
+    public async Task Official_number_limit_is_checked_before_persisting(long last, bool allowed)
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        var id = await CreateDraft(client);
+        using var scope = _factory.Services.CreateScope();
+        var accessor = SetTenant(scope.ServiceProvider);
+        try
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
+            var tenant = scope.ServiceProvider.GetRequiredService<ITenantContext>();
+            var gateway = new FakeGateway { LastNumber = last };
+            var result = await new FiscalReservationService(db, tenant, gateway)
+                .ReserveAsync(id, CancellationToken.None);
+            Assert.Equal(allowed, result.Ok);
+            Assert.Equal(allowed ? 1 : 0, await db.FiscalAuthorizationAttempts.CountAsync(a => a.InvoiceId == id));
+            if (allowed) Assert.Equal(99_999_999L, result.VoucherNumber);
+            Assert.Equal(0, gateway.SubmitCalls);
+        }
+        finally { accessor.HttpContext = null; }
+    }
+
     private static IHttpContextAccessor SetTenant(IServiceProvider services)
     {
         var accessor = services.GetRequiredService<IHttpContextAccessor>();
@@ -105,6 +131,7 @@ public sealed class FiscalReservationServiceTests : IAsyncLifetime
 
     private sealed class FakeGateway : IArcaFiscalGateway
     {
+        public long LastNumber { get; init; } = 41;
         public int NumberingCalls { get; private set; }
         public int SubmitCalls { get; private set; }
         public int LookupCalls { get; private set; }
@@ -115,7 +142,7 @@ public sealed class FiscalReservationServiceTests : IAsyncLifetime
             NumberingCalls++;
             Assert.Equal(3, pointOfSale);
             Assert.Equal(1, voucherType);
-            return Task.FromResult(new ArcaFiscalNumbering(true, 41,
+            return Task.FromResult(new ArcaFiscalNumbering(true, LastNumber,
                 "30715489629", false, "prueba"));
         }
 

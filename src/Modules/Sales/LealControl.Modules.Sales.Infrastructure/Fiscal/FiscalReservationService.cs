@@ -42,7 +42,7 @@ public sealed class FiscalReservationService
 
         var numbering = await _gateway.GetLastAuthorizedAsync(
             invoice.PointOfSale, data.VoucherType, ct);
-        if (!numbering.Ok || numbering.LastNumber < 0 || numbering.LastNumber >= int.MaxValue)
+        if (!numbering.Ok || numbering.LastNumber < 0 || numbering.LastNumber >= 99_999_999)
             return Fail("No se pudo verificar el último número autorizado en ARCA.");
         var number = numbering.LastNumber + 1;
         string fingerprint;
