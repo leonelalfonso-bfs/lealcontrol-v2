@@ -87,6 +87,62 @@ public sealed class FiscalAuthorizationServiceTests : IAsyncLifetime
         finally { accessor.HttpContext = null; }
     }
 
+    [Fact]
+    public async Task Simultaneous_authorization_only_dispatches_once()
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        var id = await CreateDraft(client);
+        using var firstScope = _factory.Services.CreateScope();
+        var accessor = SetTenant(firstScope.ServiceProvider);
+        var entered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<FiscalRecoveryResult>? first = null;
+        try
+        {
+            var db = firstScope.ServiceProvider.GetRequiredService<SalesDbContext>();
+            var tenant = firstScope.ServiceProvider.GetRequiredService<ITenantContext>();
+            var gateway = new FakeGateway(db.Database.GetConnectionString()!, id, "approved")
+            {
+                Reply = await MatchingReply(db, id), DispatchEntered = entered,
+                DispatchRelease = release.Task, HideLookup = true
+            };
+            first = Service(db, tenant, gateway).AuthorizeAsync(id, CancellationToken.None);
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(20));
+            using (var secondScope = _factory.Services.CreateScope())
+            {
+                var secondDb = secondScope.ServiceProvider.GetRequiredService<SalesDbContext>();
+                var secondTenant = secondScope.ServiceProvider.GetRequiredService<ITenantContext>();
+                var second = await Service(secondDb, secondTenant, gateway)
+                    .AuthorizeAsync(id, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(20));
+                Assert.False(second.Confirmed);
+                Assert.Equal("Unknown", (await secondDb.FiscalAuthorizationAttempts.AsNoTracking()
+                    .SingleAsync(a => a.InvoiceId == id)).Status);
+                Assert.Equal("Draft", (await secondDb.Invoices.AsNoTracking()
+                    .SingleAsync(i => i.Id == id)).Status);
+            }
+            Assert.Equal(1, gateway.SubmitCalls);
+            Assert.Equal(1, gateway.NumberingCalls);
+            Assert.Equal(1, gateway.LookupCalls);
+            gateway.HideLookup = false;
+            release.TrySetResult(true);
+            Assert.True((await first.WaitAsync(TimeSpan.FromSeconds(20))).Confirmed);
+            Assert.Equal(1, gateway.SubmitCalls);
+            Assert.Equal(2, gateway.LookupCalls);
+            using var checkScope = _factory.Services.CreateScope();
+            var check = checkScope.ServiceProvider.GetRequiredService<SalesDbContext>();
+            Assert.Equal("Confirmed", (await check.FiscalAuthorizationAttempts.AsNoTracking()
+                .SingleAsync(a => a.InvoiceId == id)).Status);
+            Assert.Equal("Authorized", (await check.Invoices.AsNoTracking()
+                .SingleAsync(i => i.Id == id)).Status);
+        }
+        finally
+        {
+            release.TrySetResult(true);
+            if (first is not null) await first.WaitAsync(TimeSpan.FromSeconds(20));
+            accessor.HttpContext = null;
+        }
+    }
+
     private static FiscalAuthorizationService Service(SalesDbContext db, ITenantContext tenant, IArcaFiscalGateway gateway) =>
         new(db, tenant, gateway, new FiscalReservationService(db, tenant, gateway),
             new FiscalVoucherRecoveryService(db, tenant, gateway));
@@ -141,6 +197,9 @@ public sealed class FiscalAuthorizationServiceTests : IAsyncLifetime
     {
         public ArcaFiscalVoucherObservation Reply { get; init; } = null!;
         public CancellationTokenSource? Cancellation { get; init; }
+        public TaskCompletionSource<bool>? DispatchEntered { get; init; }
+        public Task? DispatchRelease { get; init; }
+        public bool HideLookup { get; set; }
         public int SubmitCalls { get; private set; }
         public int LookupCalls { get; private set; }
         public int NumberingCalls { get; private set; }
@@ -167,6 +226,8 @@ public sealed class FiscalAuthorizationServiceTests : IAsyncLifetime
                 "SELECT \"Status\" FROM sales.fiscal_authorization_attempts WHERE \"InvoiceId\" = @id", connection);
             command.Parameters.AddWithValue("id", invoiceId);
             Assert.Equal("Pending", await command.ExecuteScalarAsync(ct));
+            DispatchEntered?.TrySetResult(true);
+            if (DispatchRelease is not null) await DispatchRelease.WaitAsync(TimeSpan.FromSeconds(30));
             if (mode == "network") throw new HttpRequestException("Corte simulado");
             if (mode == "cancel")
             {
@@ -186,7 +247,9 @@ public sealed class FiscalAuthorizationServiceTests : IAsyncLifetime
             Assert.Equal(42, number);
             Assert.Equal("30715489629", issuer);
             Assert.False(production);
-            return Task.FromResult(Reply);
+            return Task.FromResult(HideLookup
+                ? new ArcaFiscalVoucherObservation(false, 0, string.Empty, 0m, string.Empty,
+                    default, "Consulta aún sin confirmación") : Reply);
         }
     }
 }

@@ -16,7 +16,7 @@ Cinco pruebas con PostgreSQL efímero verifican transacciones simultáneas en lo
 
 ## Pendientes
 
-- Probar dos autorizaciones simultáneas sobre la misma factura a través del servicio, además de la protección de reservas en base.
+- Concurrencia de autorización comprobada: dos solicitudes sobre la misma factura, con el primer envío en espera, realizan un único SubmitCaeAsync. La segunda consulta conserva Unknown y la confirmación posterior autoriza la factura. Las 16 pruebas fiscales seleccionadas pasaron.
 - Revisar el contrato oficial de consulta, límites de numeración y fechas antes de homologación.
 - Conectar endpoint y pantalla con permisos fiscales; verificar migraciones y solución completa antes de publicar.
 - La autorización real y el despliegue siguen pendientes; estas pruebas no emiten comprobantes.
