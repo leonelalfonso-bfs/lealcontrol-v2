@@ -85,10 +85,13 @@ public sealed class CompanySettingsQueryHandler :
         var tenantId = _tenantContext.TenantId;
         var settings = await GetOrInitSettingsAsync(tenantId, cancellationToken);
 
+        var certificatePem = string.IsNullOrWhiteSpace(request.CertificateCrt)
+            ? settings.ArcaCertificateCrt
+            : request.CertificateCrt;
         var privateKey = string.IsNullOrWhiteSpace(request.CertificateKey)
             ? settings.ArcaCertificateKey
             : request.CertificateKey;
-        if (!ArcaCertificateLoader.TryLoad(request.CertificateCrt, privateKey, out var certificate, out var certificateError)
+        if (!ArcaCertificateLoader.TryLoad(certificatePem, privateKey, out var certificate, out var certificateError)
             || certificate is null)
         {
             return Result<CompanySettingsDto>.Failure(Error.Validation(
@@ -101,7 +104,7 @@ public sealed class CompanySettingsQueryHandler :
                     "Crm.Arca.CertificateExpired", "El certificado de ARCA está vencido."));
         }
 
-        settings.ArcaCertificateCrt = request.CertificateCrt;
+        settings.ArcaCertificateCrt = certificatePem;
         settings.ArcaCertificateKey = privateKey;
         settings.ArcaEnvironment = request.Environment;
         settings.ArcaSignerCuit = request.SignerCuit;

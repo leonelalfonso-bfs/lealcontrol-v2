@@ -578,7 +578,7 @@ export const api = {
   getCompanySettings: () => request<import("./types").CompanySettings>("/api/v1/company/settings"),
   updateCompanySettings: (body: import("./types").CompanySettings) =>
     request<import("./types").CompanySettings>("/api/v1/company/settings", { method: "PUT", body: JSON.stringify(body) }),
-  uploadArcaCertificate: (body: { certificateCrt: string; certificateKey: string; environment: string; signerCuit: string }) =>
+  uploadArcaCertificate: (body: { certificateCrt?: string; certificateKey?: string; environment: string; signerCuit: string }) =>
     request<import("./types").CompanySettings>("/api/v1/company/settings/arca-certificate", { method: "POST", body: JSON.stringify(body) }),
   generateArcaCsr: (body: { signerCuit: string; environment: string; organizationName?: string; commonName?: string }) =>
     request<{
