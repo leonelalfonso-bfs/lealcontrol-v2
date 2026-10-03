@@ -58,6 +58,18 @@ public static class InvoiceEndpoints
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
         }).RequireAuthorization(policy => policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
 
+        group.MapPost("/{id:guid}/recover-arca", async (Guid id,
+            LealControl.Modules.Sales.Infrastructure.Fiscal.FiscalVoucherRecoveryService recovery,
+            ISender sender, CancellationToken cancellationToken) =>
+        {
+            var recovered = await recovery.RecoverAsync(id, cancellationToken);
+            if (!recovered.Confirmed)
+                return Results.BadRequest(LealControl.BuildingBlocks.Results.Error.Validation(
+                    "Sales.Invoice.ArcaNotConfirmed", recovered.Detail));
+            var res = await sender.Send(new GetInvoiceByIdQuery(id), cancellationToken);
+            return res.IsSuccess ? Results.Ok(res.Value) : Results.NotFound(res.Error);
+        }).RequireAuthorization(policy => policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
+
         return endpoints;
     }
 }

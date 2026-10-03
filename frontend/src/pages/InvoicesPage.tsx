@@ -50,8 +50,9 @@ export function InvoicesPage() {
   }, [search, statusFilter, typeFilter, canAuthorize]);
 
   const authorize = async (invoice: Invoice) => {
-    if (fiscalBusy.current || !canAuthorize || !fiscalEnabled) return;
+    if (fiscalBusy.current || !canAuthorize) return;
     const consulting = ["Pending", "Unknown"].includes(fiscalAttempts[invoice.id]?.status || "");
+    if (!consulting && !fiscalEnabled) return;
     if (!consulting && !window.confirm(
       `Solicitar autorización ARCA para ${invoice.customerName}, por ${money(invoice.total, invoice.currency)}. Esta acción puede emitir un comprobante fiscal. ¿Continuar?`
     )) return;
@@ -60,7 +61,9 @@ export function InvoicesPage() {
     setError(null);
     setNotice(null);
     try {
-      const confirmed = await api.authorizeInvoiceArca(invoice.id);
+      const confirmed = consulting
+        ? await api.recoverInvoiceArca(invoice.id)
+        : await api.authorizeInvoiceArca(invoice.id);
       setItems((current) => current.map((item) => item.id === confirmed.id ? confirmed : item));
       await load();
       setNotice(`Comprobante ${confirmed.formattedNumber} confirmado en ARCA. CAE: ${confirmed.cae}.`);
@@ -436,7 +439,8 @@ export function InvoicesPage() {
                             💵 Cobrar
                           </Link>
                         )}
-                        {inv.status === "Draft" && canAuthorize && fiscalEnabled &&
+                        {inv.status === "Draft" && canAuthorize &&
+                          (fiscalEnabled || ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")) &&
                           fiscalAttempts[inv.id]?.status !== "Rejected" &&
                           (inv.invoiceType === "A" && inv.fiscalConcept === 2 && inv.currency === "ARS" ||
                             ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")) && (

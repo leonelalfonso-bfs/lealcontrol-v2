@@ -766,6 +766,8 @@ export const api = {
     request<import("./types").Invoice>("/api/v1/sales/invoices", { method: "POST", body: JSON.stringify(body) }),
   getInvoiceFiscalStatus: () =>
     request<{ enabled: boolean; attempts: Array<{ invoiceId: string; status: string; voucherNumber: number }> }>("/api/v1/sales/invoices/fiscal-status"),
+  recoverInvoiceArca: (id: string) =>
+    request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/recover-arca`, { method: "POST" }),
   authorizeInvoiceArca: (id: string) =>
     request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/authorize-arca`, { method: "POST" }),
 
