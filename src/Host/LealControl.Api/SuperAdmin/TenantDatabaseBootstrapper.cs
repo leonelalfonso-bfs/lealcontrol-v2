@@ -49,16 +49,27 @@ public static class TenantDatabaseBootstrapper
             databaseNames.Add(defaultDbName);
         }
 
+        var failures = new List<Exception>();
         foreach (var dbName in databaseNames.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             try
             {
                 await EnsureDatabaseSchemaAsync(defaultConnectionString, dbName, cancellationToken);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "Fallo EnsureDatabaseSchemaAsync en base {DbName}; se continúa con el resto de tenants.", dbName);
+                failures.Add(ex);
             }
+        }
+
+        if (failures.Count > 0)
+        {
+            throw new AggregateException("No se pudo completar el esquema de todas las bases de tenant.", failures);
         }
     }
 

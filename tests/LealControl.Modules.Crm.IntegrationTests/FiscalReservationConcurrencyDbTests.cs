@@ -1,8 +1,10 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Npgsql;
 using Xunit;
+using System.Reflection;
 using LealControl.Modules.Sales.Infrastructure.Persistence.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 
@@ -111,6 +113,61 @@ public sealed class FiscalReservationConcurrencyDbTests : IAsyncLifetime
             Assert.Equal("Pending", await existing.ExecuteScalarAsync());
         }
         await Insert(db, null, second, 9002, 6, "Reserved");
+    }
+
+    [Fact]
+    public async Task Existing_conflicting_reservations_make_bootstrap_fail_without_changing_them()
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        var first = await CreateDraft(client);
+        var second = await CreateDraft(client);
+        await using var db = new NpgsqlConnection(_factory.DatabaseConnectionString);
+        await db.OpenAsync();
+        await using (var removeGuard = new NpgsqlCommand(
+            "DROP INDEX sales.\"UX_fiscal_attempt_unresolved_series\"", db))
+            await removeGuard.ExecuteNonQueryAsync();
+        await Insert(db, null, first, 9001, 5, "Pending");
+        await Insert(db, null, second, 9002, 5, "Unknown");
+
+        // Ejecuta el camino real de bootstrap sobre esta base efímera ya inicializada.
+        var type = typeof(Program).Assembly.GetTypes().Single(t => t.Name == "TenantDatabaseBootstrapper");
+        var method = type.GetMethod("EnsureDatabaseSchemaAsync", BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+        var connection = new NpgsqlConnectionStringBuilder(_factory.DatabaseConnectionString);
+        var task = (Task)method.Invoke(null, new object[]
+        {
+            _factory.DatabaseConnectionString, connection.Database!, CancellationToken.None
+        })!;
+        var error = await Assert.ThrowsAsync<PostgresException>(() => task);
+        Assert.Equal("23505", error.SqlState);
+        Assert.Equal("UX_fiscal_attempt_unresolved_series", error.ConstraintName);
+
+        // El inicializador general debe informar el fallo al host, aunque revise las demás bases.
+        var configuration = _factory.Services.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+        var environment = _factory.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>();
+        var aggregate = await Assert.ThrowsAsync<AggregateException>(() =>
+            LealControl.Api.SuperAdmin.TenantDatabaseBootstrapper.InitializeAllAsync(
+                _factory.Services, configuration, environment));
+        Assert.Contains(aggregate.Flatten().InnerExceptions, ex =>
+            ex is PostgresException pg && pg.SqlState == "23505" &&
+            pg.ConstraintName == "UX_fiscal_attempt_unresolved_series");
+
+        await using var query = new NpgsqlCommand("""
+            SELECT "InvoiceId", "Status", "VoucherNumber", "Cae"
+            FROM sales.fiscal_authorization_attempts ORDER BY "VoucherNumber"
+            """, db);
+        await using var reader = await query.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        Assert.Equal(first, reader.GetGuid(0));
+        Assert.Equal("Pending", reader.GetString(1));
+        Assert.Equal(9001L, reader.GetInt64(2));
+        Assert.True(reader.IsDBNull(3));
+        Assert.True(await reader.ReadAsync());
+        Assert.Equal(second, reader.GetGuid(0));
+        Assert.Equal("Unknown", reader.GetString(1));
+        Assert.Equal(9002L, reader.GetInt64(2));
+        Assert.True(reader.IsDBNull(3));
+        Assert.False(await reader.ReadAsync());
     }
 
     private static async Task<Guid> CreateDraft(HttpClient client)
