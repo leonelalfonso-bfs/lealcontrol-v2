@@ -46,6 +46,24 @@ public sealed class FiscalAuthorizationApiTests : IAsyncLifetime
         }
         using var response = await client.PostAsync($"/api/v1/sales/invoices/{id}/authorize-arca", null);
         Assert.Equal((HttpStatusCode)expectedStatus, response.StatusCode);
+        using var fiscalStatus = await client.GetAsync("/api/v1/sales/invoices/fiscal-status");
+        if (role is "Admin" or "Administrador")
+        {
+            Assert.Equal(HttpStatusCode.OK, fiscalStatus.StatusCode);
+            using var state = JsonDocument.Parse(await fiscalStatus.Content.ReadAsStringAsync());
+            Assert.Equal(enabled, state.RootElement.GetProperty("enabled").GetBoolean());
+            var attempts = state.RootElement.GetProperty("attempts").EnumerateArray().ToArray();
+            if (enabled)
+            {
+                var attempt = Assert.Single(attempts);
+                Assert.Equal(id, attempt.GetProperty("invoiceId").GetGuid());
+                Assert.Equal(uncertain ? "Unknown" : "Confirmed", attempt.GetProperty("status").GetString());
+                Assert.Equal(42, attempt.GetProperty("voucherNumber").GetInt64());
+            }
+            else Assert.Empty(attempts);
+        }
+        else Assert.Equal(role.Length == 0 ? HttpStatusCode.Unauthorized : HttpStatusCode.Forbidden,
+            fiscalStatus.StatusCode);
         var shouldDispatch = enabled && (role == "Admin" || role == "Administrador");
         Assert.Equal(shouldDispatch ? 1 : 0, gateway.SubmitCalls);
         await using var db = new NpgsqlConnection(_factory.DatabaseConnectionString);
@@ -81,6 +99,55 @@ public sealed class FiscalAuthorizationApiTests : IAsyncLifetime
             Assert.Equal(1, gateway.SubmitCalls);
             Assert.Equal(1, gateway.NumberingCalls);
         }
+    }
+
+    [Fact]
+    public async Task Fiscal_status_is_scoped_to_current_company_and_does_not_call_gateway()
+    {
+        using var admin = _factory.CreateAuthenticatedClient();
+        var mine = await CreateDraft(admin);
+        var other = await CreateDraft(admin);
+        var otherTenant = Guid.NewGuid();
+        await using (var db = new NpgsqlConnection(_factory.DatabaseConnectionString))
+        {
+            await db.OpenAsync();
+            await using var seed = new NpgsqlCommand("""
+                UPDATE sales.invoices SET "TenantId" = @otherTenant WHERE "Id" = @other;
+                INSERT INTO sales.fiscal_authorization_attempts
+                    ("Id","TenantId","InvoiceId","PointOfSale","VoucherType","VoucherNumber",
+                     "IssuerCuit","Production","RequestHash","RecipientDocument","Total","Status","CreatedAtUtc")
+                VALUES
+                    (@firstId,@tenant,@mine,3,1,42,'30715489629',false,@hash,'20123456786',1.21,'Unknown',@created),
+                    (@secondId,@otherTenant,@other,3,1,43,'30715489629',false,@hash,'20123456786',1.21,'Pending',@created);
+                """, db);
+            seed.Parameters.AddWithValue("otherTenant", otherTenant);
+            seed.Parameters.AddWithValue("other", other);
+            seed.Parameters.AddWithValue("mine", mine);
+            seed.Parameters.AddWithValue("tenant", CrmWebApplicationFactory.DemoTenantId);
+            seed.Parameters.AddWithValue("firstId", Guid.NewGuid());
+            seed.Parameters.AddWithValue("secondId", Guid.NewGuid());
+            seed.Parameters.AddWithValue("hash", new string('a', 64));
+            seed.Parameters.AddWithValue("created", DateTime.UtcNow);
+            await seed.ExecuteNonQueryAsync();
+        }
+        var gateway = new FakeGateway();
+        using var app = _factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<IArcaFiscalGateway>();
+            services.AddSingleton<IArcaFiscalGateway>(gateway);
+        }));
+        using var client = app.CreateClient();
+        client.DefaultRequestHeaders.Authorization = admin.DefaultRequestHeaders.Authorization;
+        using var response = await client.GetAsync("/api/v1/sales/invoices/fiscal-status");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var text = await response.Content.ReadAsStringAsync();
+        using var body = JsonDocument.Parse(text);
+        var attempt = Assert.Single(body.RootElement.GetProperty("attempts").EnumerateArray().ToArray());
+        Assert.Equal(mine, attempt.GetProperty("invoiceId").GetGuid());
+        Assert.Equal("Unknown", attempt.GetProperty("status").GetString());
+        Assert.DoesNotContain(other.ToString(), text);
+        Assert.Equal(0, gateway.SubmitCalls);
+        Assert.Equal(0, gateway.NumberingCalls);
     }
 
     private static async Task<Guid> CreateDraft(HttpClient client)

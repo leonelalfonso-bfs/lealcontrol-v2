@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { type Invoice } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
+import { useAuth } from "../context/AuthContext";
 
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
 
 export function InvoicesPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canAuthorize = ["Admin", "Administrador", "SuperAdmin"].includes(user?.role || "");
   const [items, setItems] = useState<Invoice[]>([]);
   const [receipts, setReceipts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -17,16 +20,24 @@ export function InvoicesPage() {
   const [paymentFilter, setPaymentFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [fiscalEnabled, setFiscalEnabled] = useState(false);
+  const [fiscalAttempts, setFiscalAttempts] = useState<Record<string, { status: string; voucherNumber: number }>>({});
+  const [busyInvoice, setBusyInvoice] = useState<string | null>(null);
+  const fiscalBusy = useRef(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [invList, recList] = await Promise.all([
+      const [invList, recList, fiscal] = await Promise.all([
         api.listInvoices(search, statusFilter, typeFilter),
-        api.listCollectionReceipts().catch(() => [] as any[])
+        api.listCollectionReceipts().catch(() => [] as any[]),
+        canAuthorize ? api.getInvoiceFiscalStatus() : Promise.resolve({ enabled: false, attempts: [] })
       ]);
       setItems(invList);
       setReceipts(recList || []);
+      setFiscalEnabled(fiscal.enabled);
+      setFiscalAttempts(Object.fromEntries(fiscal.attempts.map((a) => [a.invoiceId, a])));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar facturas");
     } finally {
@@ -36,7 +47,32 @@ export function InvoicesPage() {
 
   useEffect(() => {
     void load();
-  }, [search, statusFilter, typeFilter]);
+  }, [search, statusFilter, typeFilter, canAuthorize]);
+
+  const authorize = async (invoice: Invoice) => {
+    if (fiscalBusy.current || !canAuthorize || !fiscalEnabled) return;
+    const consulting = ["Pending", "Unknown"].includes(fiscalAttempts[invoice.id]?.status || "");
+    if (!consulting && !window.confirm(
+      `Solicitar autorización ARCA para ${invoice.customerName}, por ${money(invoice.total, invoice.currency)}. Esta acción puede emitir un comprobante fiscal. ¿Continuar?`
+    )) return;
+    fiscalBusy.current = true;
+    setBusyInvoice(invoice.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const confirmed = await api.authorizeInvoiceArca(invoice.id);
+      setItems((current) => current.map((item) => item.id === confirmed.id ? confirmed : item));
+      await load();
+      setNotice(`Comprobante ${confirmed.formattedNumber} confirmado en ARCA. CAE: ${confirmed.cae}.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo confirmar el comprobante.";
+      await load();
+      setError(message);
+    } finally {
+      fiscalBusy.current = false;
+      setBusyInvoice(null);
+    }
+  };
 
   // Enhance invoices with collection and pending status
   const enrichedInvoices = useMemo(() => {
@@ -107,7 +143,7 @@ export function InvoicesPage() {
       <div className="page-head">
         <div>
           <h1>📄 Facturas</h1>
-          <p className="muted">La autorización ARCA aún no está conectada. Verificá en ARCA cualquier CAE que figure en comprobantes anteriores.</p>
+          <p className="muted">Guardá el borrador y solicitá su autorización cuando la emisión esté habilitada. Los envíos sin confirmar se consultan con el mismo número reservado.</p>
         </div>
         <div className="toolbar">
           <ExcelToolbar
@@ -133,7 +169,8 @@ export function InvoicesPage() {
         </div>
       </div>
 
-      {error && <div className="alert">{error}</div>}
+      {error && <div className="alert" role="alert">{error}</div>}
+      {notice && <div className="alert" role="status">{notice}</div>}
 
       <div className="kpi kpi-4">
         <div className="card">
@@ -292,7 +329,18 @@ export function InvoicesPage() {
                           )}
                         </div>
                       ) : inv.status === "Draft" ? (
-                        <span className="badge warn">🟡 Borrador</span>
+                        <div>
+                          <span className="badge warn">🟡 Borrador</span>
+                          {fiscalAttempts[inv.id] && (
+                            <div className="muted" style={{ fontSize: "0.75rem" }}>
+                              {fiscalAttempts[inv.id].status === "Reserved" ? "Reserva sin enviar" :
+                                fiscalAttempts[inv.id].status === "Rejected" ? "Solicitud rechazada · requiere revisión" :
+                                  ["Pending", "Unknown"].includes(fiscalAttempts[inv.id].status)
+                                    ? "Envío sin confirmar · consultar ARCA" : "Reserva fiscal · requiere revisión"}
+                              {" · N° "}{fiscalAttempts[inv.id].voucherNumber}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <span className="badge off">🔴 Rechazado</span>
                       )}
@@ -388,10 +436,19 @@ export function InvoicesPage() {
                             💵 Cobrar
                           </Link>
                         )}
-                        {inv.status === "Draft" && (
-                          <span className="muted" title="La autorización ARCA todavía no está conectada">
-                            Autorización ARCA no disponible
-                          </span>
+                        {inv.status === "Draft" && canAuthorize && fiscalEnabled &&
+                          fiscalAttempts[inv.id]?.status !== "Rejected" &&
+                          (inv.invoiceType === "A" && inv.fiscalConcept === 2 && inv.currency === "ARS" ||
+                            ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")) && (
+                          <button type="button" className="btn" disabled={busyInvoice !== null}
+                            onClick={() => void authorize(inv)}>
+                            {busyInvoice === inv.id ? "Procesando…" :
+                              ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")
+                                ? "Consultar ARCA" : "Autorizar ARCA"}
+                          </button>
+                        )}
+                        {inv.status === "Draft" && canAuthorize && !fiscalEnabled && (
+                          <span className="muted">Emisión ARCA deshabilitada</span>
                         )}
                         <button
                           type="button"

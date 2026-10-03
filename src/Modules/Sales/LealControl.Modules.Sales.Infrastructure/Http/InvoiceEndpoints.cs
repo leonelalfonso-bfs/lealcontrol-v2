@@ -1,4 +1,8 @@
 using System;
+using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Sales.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using LealControl.BuildingBlocks.Security;
 using LealControl.Modules.Sales.Application.Invoices;
 using MediatR;
@@ -19,6 +23,22 @@ public static class InvoiceEndpoints
             var res = await sender.Send(new ListInvoicesQuery(search, status, type), cancellationToken);
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
         });
+
+        group.MapGet("/fiscal-status", async (SalesDbContext db, ITenantContext tenant,
+            IConfiguration configuration, CancellationToken cancellationToken) =>
+        {
+            var tenantId = tenant.TenantId;
+            var attempts = await db.FiscalAuthorizationAttempts.AsNoTracking()
+                .Where(a => a.TenantId == tenantId)
+                .Select(a => new { invoiceId = a.InvoiceId, status = a.Status, voucherNumber = a.VoucherNumber })
+                .ToListAsync(cancellationToken);
+            return Results.Ok(new
+            {
+                enabled = configuration.GetValue<bool>("Arca:EnableInvoiceAuthorization"),
+                attempts
+            });
+        }).RequireAuthorization("RequireSales")
+          .RequireAuthorization(policy => policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
 
         group.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
         {
