@@ -41,7 +41,7 @@ public sealed record CompanySettingsDto(
 public sealed record UpdateCompanySettingsCommand(CompanySettingsDto Model)
     : IRequest<Result<CompanySettingsDto>>;
 
-public sealed record UploadArcaCertificateCommand(string CertificateCrt, string CertificateKey, string Environment, string SignerCuit)
+public sealed record UploadArcaCertificateCommand(string? CertificateCrt, string? CertificateKey, string Environment, string SignerCuit)
     : IRequest<Result<CompanySettingsDto>>;
 
 /// <summary>
