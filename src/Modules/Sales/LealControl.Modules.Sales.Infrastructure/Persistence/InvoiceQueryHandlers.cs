@@ -10,6 +10,8 @@ using LealControl.Modules.Sales.Domain.Invoices;
 using LealControl.Modules.Sales.Domain.Inventory;
 using LealControl.Modules.Sales.Domain.Products;
 using MediatR;
+using LealControl.Modules.Sales.Infrastructure.Fiscal;
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -64,10 +66,16 @@ internal sealed class InvoiceQueryHandlers
     private readonly SalesDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
 
-    public InvoiceQueryHandlers(SalesDbContext dbContext, ITenantContext tenantContext)
+    private readonly FiscalAuthorizationService _fiscalAuthorization;
+    private readonly IConfiguration _configuration;
+
+    public InvoiceQueryHandlers(SalesDbContext dbContext, ITenantContext tenantContext,
+        FiscalAuthorizationService fiscalAuthorization, IConfiguration configuration)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
+        _fiscalAuthorization = fiscalAuthorization;
+        _configuration = configuration;
     }
 
     public async Task<Result<IReadOnlyList<InvoiceDto>>> Handle(ListInvoicesQuery request, CancellationToken cancellationToken)
@@ -306,11 +314,25 @@ internal sealed class InvoiceQueryHandlers
                 Error.NotFound("Sales.Invoice.NotFound", $"Factura {request.Id} no encontrada."));
         }
 
-        // A CAE is assigned by ARCA, never generated locally. Until WSFE is
-        // integrated, keep every invoice unchanged and make the limitation explicit.
-        return Result<InvoiceDto>.Failure(
-            Error.Validation("Sales.Invoice.ArcaUnavailable",
-                "La autorización de ARCA no está conectada en este módulo. No se generó CAE ni se modificó la factura."));
+        if (!_configuration.GetValue<bool>("Arca:EnableInvoiceAuthorization"))
+        {
+            return Result<InvoiceDto>.Failure(
+                Error.Validation("Sales.Invoice.ArcaUnavailable",
+                    "La autorización de ARCA está deshabilitada. No se generó CAE ni se modificó la factura."));
+        }
+
+        var result = await _fiscalAuthorization.AuthorizeAsync(request.Id, cancellationToken);
+        if (!result.Confirmed)
+        {
+            return Result<InvoiceDto>.Failure(
+                Error.Validation("Sales.Invoice.ArcaNotConfirmed", result.Detail));
+        }
+        var authorized = await _dbContext.Invoices.Include(i => i.Items).AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Id == request.Id && i.TenantId == tenantId, cancellationToken);
+        if (authorized is null || authorized.Status != "Authorized" || string.IsNullOrEmpty(authorized.Cae))
+            return Result<InvoiceDto>.Failure(
+                Error.Validation("Sales.Invoice.ArcaNotConfirmed", "No se pudo verificar la factura autorizada."));
+        return Result<InvoiceDto>.Success(MapToDto(authorized));
     }
 
     private static InvoiceDto MapToDto(Invoice i)

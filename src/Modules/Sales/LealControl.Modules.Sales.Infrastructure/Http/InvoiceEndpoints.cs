@@ -36,7 +36,7 @@ public static class InvoiceEndpoints
         {
             var res = await sender.Send(new AuthorizeInvoiceArcaCommand(id), cancellationToken);
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
-        });
+        }).RequireAuthorization(policy => policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
 
         return endpoints;
     }
