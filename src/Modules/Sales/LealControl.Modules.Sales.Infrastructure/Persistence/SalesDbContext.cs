@@ -524,6 +524,8 @@ CREATE INDEX IF NOT EXISTS "IX_remito_return_items_RemitoItemId"
                 WHERE "Status" = 'Authorized';
             """, cancellationToken);
 
+        await Database.ExecuteSqlRawAsync(FiscalReservationSchema.UpgradeSql, cancellationToken);
+
         await Database.ExecuteSqlRawAsync("""
             ALTER TABLE sales.invoices
                 ADD COLUMN IF NOT EXISTS "FiscalConcept" integer NOT NULL DEFAULT 0;

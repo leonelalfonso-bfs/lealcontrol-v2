@@ -19,6 +19,9 @@ internal sealed class FiscalAuthorizationAttemptConfiguration : IEntityTypeConfi
         builder.Property(x => x.Cae).HasMaxLength(14);
         builder.Property(x => x.Total).HasPrecision(18, 2);
         builder.HasIndex(x => new { x.TenantId, x.InvoiceId }).HasDatabaseName("UX_fiscal_attempt_invoice").IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.PointOfSale, x.VoucherType })
+            .HasDatabaseName("UX_fiscal_attempt_unresolved_series")
+            .HasFilter("\"Status\" IN ('Reserved','Pending','Unknown')").IsUnique();
         builder.HasIndex(x => new { x.TenantId, x.PointOfSale, x.VoucherType, x.VoucherNumber })
             .HasDatabaseName("UX_fiscal_attempt_number").IsUnique();
     }
