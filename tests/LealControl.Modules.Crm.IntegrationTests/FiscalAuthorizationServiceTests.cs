@@ -143,9 +143,48 @@ public sealed class FiscalAuthorizationServiceTests : IAsyncLifetime
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Old_unsent_reservation_is_not_dispatched_but_old_sent_voucher_can_be_recovered(bool alreadySent)
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        var id = await CreateDraft(client);
+        using var scope = _factory.Services.CreateScope();
+        var accessor = SetTenant(scope.ServiceProvider);
+        try
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
+            var tenant = scope.ServiceProvider.GetRequiredService<ITenantContext>();
+            var gateway = new FakeGateway(db.Database.GetConnectionString()!, id, "approved")
+            { Reply = await MatchingReply(db, id) };
+            var clock = new FiscalTestClock();
+            var reservation = new FiscalReservationService(db, tenant, gateway, clock);
+            Assert.True((await reservation.ReserveAsync(id, CancellationToken.None)).Ok);
+            if (alreadySent)
+            {
+                var attempt = await db.FiscalAuthorizationAttempts.SingleAsync(a => a.InvoiceId == id);
+                attempt.MarkDispatching();
+                await db.SaveChangesAsync();
+            }
+            clock.Now = new DateTimeOffset(2026, 10, 20, 15, 0, 0, TimeSpan.Zero);
+            var service = new FiscalAuthorizationService(db, tenant, gateway, reservation,
+                new FiscalVoucherRecoveryService(db, tenant, gateway), clock);
+            var result = await service.AuthorizeAsync(id, CancellationToken.None);
+            Assert.Equal(alreadySent, result.Confirmed);
+            Assert.Equal(0, gateway.SubmitCalls);
+            Assert.Equal(alreadySent ? 1 : 0, gateway.LookupCalls);
+            Assert.Equal(alreadySent ? "Confirmed" : "Reserved", (await db.FiscalAuthorizationAttempts
+                .AsNoTracking().SingleAsync(a => a.InvoiceId == id)).Status);
+            Assert.Equal(alreadySent ? "Authorized" : "Draft", (await db.Invoices
+                .AsNoTracking().SingleAsync(i => i.Id == id)).Status);
+        }
+        finally { accessor.HttpContext = null; }
+    }
+
     private static FiscalAuthorizationService Service(SalesDbContext db, ITenantContext tenant, IArcaFiscalGateway gateway) =>
-        new(db, tenant, gateway, new FiscalReservationService(db, tenant, gateway),
-            new FiscalVoucherRecoveryService(db, tenant, gateway));
+        new(db, tenant, gateway, new FiscalReservationService(db, tenant, gateway, new FiscalTestClock()),
+            new FiscalVoucherRecoveryService(db, tenant, gateway), new FiscalTestClock());
 
     private static async Task<ArcaFiscalVoucherObservation> MatchingReply(SalesDbContext db, Guid id)
     {

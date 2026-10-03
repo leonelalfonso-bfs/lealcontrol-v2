@@ -31,7 +31,7 @@ public sealed class FiscalVoucherRecoveryServiceTests : IAsyncLifetime
             var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
             var tenant = scope.ServiceProvider.GetRequiredService<ITenantContext>();
             var gateway = new FakeGateway();
-            var reserve = new FiscalReservationService(db, tenant, gateway);
+            var reserve = new FiscalReservationService(db, tenant, gateway, new FiscalTestClock());
             var reservation = await reserve.ReserveAsync(id, CancellationToken.None);
             Assert.True(reservation.Ok, reservation.Detail);
             var attempt = await db.FiscalAuthorizationAttempts.SingleAsync(a => a.InvoiceId == id);
@@ -68,7 +68,7 @@ public sealed class FiscalVoucherRecoveryServiceTests : IAsyncLifetime
             var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
             var tenant = scope.ServiceProvider.GetRequiredService<ITenantContext>();
             var gateway = new FakeGateway();
-            Assert.True((await new FiscalReservationService(db, tenant, gateway)
+            Assert.True((await new FiscalReservationService(db, tenant, gateway, new FiscalTestClock())
                 .ReserveAsync(id, CancellationToken.None)).Ok);
             var attempt = await db.FiscalAuthorizationAttempts.SingleAsync(a => a.InvoiceId == id);
             attempt.MarkDispatching();
@@ -98,7 +98,7 @@ public sealed class FiscalVoucherRecoveryServiceTests : IAsyncLifetime
             var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
             var tenant = scope.ServiceProvider.GetRequiredService<ITenantContext>();
             var gateway = new FakeGateway { ThrowOnLookup = true };
-            Assert.True((await new FiscalReservationService(db, tenant, gateway)
+            Assert.True((await new FiscalReservationService(db, tenant, gateway, new FiscalTestClock())
                 .ReserveAsync(id, CancellationToken.None)).Ok);
             var attempt = await db.FiscalAuthorizationAttempts.SingleAsync(a => a.InvoiceId == id);
             attempt.MarkDispatching();
@@ -127,7 +127,7 @@ public sealed class FiscalVoucherRecoveryServiceTests : IAsyncLifetime
             var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
             var tenant = scope.ServiceProvider.GetRequiredService<ITenantContext>();
             var gateway = new FakeGateway();
-            Assert.True((await new FiscalReservationService(db, tenant, gateway)
+            Assert.True((await new FiscalReservationService(db, tenant, gateway, new FiscalTestClock())
                 .ReserveAsync(id, CancellationToken.None)).Ok);
             var result = await new FiscalVoucherRecoveryService(db, tenant, gateway)
                 .RecoverAsync(id, CancellationToken.None);

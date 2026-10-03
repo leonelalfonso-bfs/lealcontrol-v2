@@ -31,7 +31,7 @@ public sealed class FiscalReservationServiceTests : IAsyncLifetime
             var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
             var tenant = scope.ServiceProvider.GetRequiredService<ITenantContext>();
             var gateway = new FakeGateway();
-            var service = new FiscalReservationService(db, tenant, gateway);
+            var service = new FiscalReservationService(db, tenant, gateway, new FiscalTestClock());
             var first = await service.ReserveAsync(invoiceId, CancellationToken.None);
             Assert.True(first.Ok, first.Detail);
             Assert.Equal(42, first.VoucherNumber);
@@ -63,7 +63,7 @@ public sealed class FiscalReservationServiceTests : IAsyncLifetime
             var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
             var tenant = scope.ServiceProvider.GetRequiredService<ITenantContext>();
             var gateway = new FakeGateway();
-            var service = new FiscalReservationService(db, tenant, gateway);
+            var service = new FiscalReservationService(db, tenant, gateway, new FiscalTestClock());
             Assert.True((await service.ReserveAsync(firstId, CancellationToken.None)).Ok);
             Assert.False((await service.ReserveAsync(secondId, CancellationToken.None)).Ok);
             Assert.Equal(1, await db.FiscalAuthorizationAttempts.CountAsync());
@@ -88,12 +88,34 @@ public sealed class FiscalReservationServiceTests : IAsyncLifetime
             var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
             var tenant = scope.ServiceProvider.GetRequiredService<ITenantContext>();
             var gateway = new FakeGateway { LastNumber = last };
-            var result = await new FiscalReservationService(db, tenant, gateway)
+            var result = await new FiscalReservationService(db, tenant, gateway, new FiscalTestClock())
                 .ReserveAsync(id, CancellationToken.None);
             Assert.Equal(allowed, result.Ok);
             Assert.Equal(allowed ? 1 : 0, await db.FiscalAuthorizationAttempts.CountAsync(a => a.InvoiceId == id));
             if (allowed) Assert.Equal(99_999_999L, result.VoucherNumber);
             Assert.Equal(0, gateway.SubmitCalls);
+        }
+        finally { accessor.HttpContext = null; }
+    }
+
+    [Fact]
+    public async Task Old_issue_date_is_rejected_before_numbering_or_reservation()
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        var id = await CreateDraft(client);
+        using var scope = _factory.Services.CreateScope();
+        var accessor = SetTenant(scope.ServiceProvider);
+        try
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
+            var tenant = scope.ServiceProvider.GetRequiredService<ITenantContext>();
+            var gateway = new FakeGateway();
+            var clock = new FiscalTestClock { Now = new DateTimeOffset(2026, 10, 20, 15, 0, 0, TimeSpan.Zero) };
+            Assert.False((await new FiscalReservationService(db, tenant, gateway, clock)
+                .ReserveAsync(id, CancellationToken.None)).Ok);
+            Assert.Equal(0, gateway.NumberingCalls);
+            Assert.Equal(0, gateway.SubmitCalls);
+            Assert.False(await db.FiscalAuthorizationAttempts.AnyAsync(a => a.InvoiceId == id));
         }
         finally { accessor.HttpContext = null; }
     }

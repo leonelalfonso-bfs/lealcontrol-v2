@@ -13,16 +13,18 @@ public sealed class FiscalAuthorizationService
     private readonly IArcaFiscalGateway _gateway;
     private readonly FiscalReservationService _reservation;
     private readonly FiscalVoucherRecoveryService _recovery;
+    private readonly TimeProvider _clock;
 
     public FiscalAuthorizationService(SalesDbContext db, ITenantContext tenant,
         IArcaFiscalGateway gateway, FiscalReservationService reservation,
-        FiscalVoucherRecoveryService recovery)
+        FiscalVoucherRecoveryService recovery, TimeProvider? clock = null)
     {
         _db = db;
         _tenant = tenant;
         _gateway = gateway;
         _reservation = reservation;
         _recovery = recovery;
+        _clock = clock ?? TimeProvider.System;
     }
 
     public async Task<FiscalRecoveryResult> AuthorizeAsync(Guid invoiceId, CancellationToken ct)
@@ -65,6 +67,8 @@ public sealed class FiscalAuthorizationService
             if (!WsfeInvoiceAServicePreparation.TryBuild(invoice, out var prepared, out var error)
                 || prepared is null)
                 return Fail(error);
+            if (!FiscalEmissionDateRule.IsAllowed(prepared.IssueDate, _clock.GetUtcNow()))
+                return Fail("La fecha de emisión quedó fuera de la ventana permitida; la reserva no se envió y requiere revisión.");
             if (invoice.PointOfSale != attempt.PointOfSale || prepared.VoucherType != attempt.VoucherType
                 || prepared.ReceiverCuit != attempt.RecipientDocument || prepared.TotalAmount != attempt.Total
                 || WsfeCaeRequestBuilder.Fingerprint(prepared, attempt.PointOfSale,

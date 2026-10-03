@@ -16,13 +16,15 @@ public sealed class FiscalReservationService
     private readonly SalesDbContext _db;
     private readonly ITenantContext _tenant;
     private readonly IArcaFiscalGateway _gateway;
+    private readonly TimeProvider _clock;
 
     public FiscalReservationService(SalesDbContext db, ITenantContext tenant,
-        IArcaFiscalGateway gateway)
+        IArcaFiscalGateway gateway, TimeProvider? clock = null)
     {
         _db = db;
         _tenant = tenant;
         _gateway = gateway;
+        _clock = clock ?? TimeProvider.System;
     }
 
     public async Task<FiscalReservationResult> ReserveAsync(Guid invoiceId, CancellationToken ct)
@@ -36,6 +38,8 @@ public sealed class FiscalReservationService
             return Fail("No se encontró el borrador en esta empresa.");
         if (!WsfeInvoiceAServicePreparation.TryBuild(invoice, out var data, out var error) || data is null)
             return Fail(error);
+        if (!FiscalEmissionDateRule.IsAllowed(data.IssueDate, _clock.GetUtcNow()))
+            return Fail("La fecha de emisión debe estar dentro de los diez días anteriores o posteriores a la fecha actual de Argentina.");
         if (await _db.FiscalAuthorizationAttempts.AnyAsync(a =>
                 a.TenantId == tenantId && a.InvoiceId == invoiceId, ct))
             return Fail("El borrador ya tiene una reserva fiscal; consultar su estado antes de reintentar.");
