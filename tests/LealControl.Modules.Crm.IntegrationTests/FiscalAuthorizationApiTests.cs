@@ -19,6 +19,7 @@ public sealed class FiscalAuthorizationApiTests : IAsyncLifetime
     [Theory]
     [InlineData(true, "Admin", false, 200)]
     [InlineData(true, "Administrador", false, 200)]
+    [InlineData(true, "SuperAdmin", false, 200)]
     [InlineData(false, "Admin", false, 400)]
     [InlineData(true, "Sales", false, 403)]
     [InlineData(true, "", false, 401)]
@@ -47,7 +48,7 @@ public sealed class FiscalAuthorizationApiTests : IAsyncLifetime
         using var response = await client.PostAsync($"/api/v1/sales/invoices/{id}/authorize-arca", null);
         Assert.Equal((HttpStatusCode)expectedStatus, response.StatusCode);
         using var fiscalStatus = await client.GetAsync("/api/v1/sales/invoices/fiscal-status");
-        if (role is "Admin" or "Administrador")
+        if (role is "Admin" or "Administrador" or "SuperAdmin")
         {
             Assert.Equal(HttpStatusCode.OK, fiscalStatus.StatusCode);
             using var state = JsonDocument.Parse(await fiscalStatus.Content.ReadAsStringAsync());
@@ -64,7 +65,7 @@ public sealed class FiscalAuthorizationApiTests : IAsyncLifetime
         }
         else Assert.Equal(role.Length == 0 ? HttpStatusCode.Unauthorized : HttpStatusCode.Forbidden,
             fiscalStatus.StatusCode);
-        var shouldDispatch = enabled && (role == "Admin" || role == "Administrador");
+        var shouldDispatch = enabled && (role == "Admin" || role == "Administrador" || role == "SuperAdmin");
         Assert.Equal(shouldDispatch ? 1 : 0, gateway.SubmitCalls);
         await using var db = new NpgsqlConnection(_factory.DatabaseConnectionString);
         await db.OpenAsync();
@@ -148,6 +149,71 @@ public sealed class FiscalAuthorizationApiTests : IAsyncLifetime
         Assert.DoesNotContain(other.ToString(), text);
         Assert.Equal(0, gateway.SubmitCalls);
         Assert.Equal(0, gateway.NumberingCalls);
+    }
+
+    [Theory]
+    [InlineData("other-company")]
+    [InlineData("missing")]
+    [InlineData("type")]
+    [InlineData("currency")]
+    [InlineData("tax-condition")]
+    [InlineData("cuit")]
+    [InlineData("period")]
+    [InlineData("not-draft")]
+    [InlineData("empty-items")]
+    public async Task Unsupported_or_foreign_invoice_never_calls_gateway(string scenario)
+    {
+        using var admin = _factory.CreateAuthenticatedClient();
+        var id = await CreateDraft(admin);
+        await using (var db = new NpgsqlConnection(_factory.DatabaseConnectionString))
+        {
+            await db.OpenAsync();
+            var sql = scenario switch
+            {
+                "other-company" => "UPDATE sales.invoices SET \"TenantId\" = @otherTenant WHERE \"Id\" = @id",
+                "type" => "UPDATE sales.invoices SET \"InvoiceType\" = 'B' WHERE \"Id\" = @id",
+                "currency" => "UPDATE sales.invoices SET \"Currency\" = 'USD' WHERE \"Id\" = @id",
+                "tax-condition" => "UPDATE sales.invoices SET \"CustomerTaxCondition\" = 'ConsumidorFinal' WHERE \"Id\" = @id",
+                "cuit" => "UPDATE sales.invoices SET \"CustomerDocument\" = '20123456789' WHERE \"Id\" = @id",
+                "period" => "UPDATE sales.invoices SET \"ServiceTo\" = '2026-09-30T00:00:00Z' WHERE \"Id\" = @id",
+                "not-draft" => "UPDATE sales.invoices SET \"Status\" = 'Cancelled' WHERE \"Id\" = @id",
+                "empty-items" => "DELETE FROM sales.invoice_items WHERE \"InvoiceId\" = @id",
+                _ => "SELECT 1"
+            };
+            await using var change = new NpgsqlCommand(sql, db);
+            change.Parameters.AddWithValue("id", id);
+            if (scenario == "other-company") change.Parameters.AddWithValue("otherTenant", Guid.NewGuid());
+            await change.ExecuteNonQueryAsync();
+        }
+        var gateway = new FakeGateway();
+        using var app = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("Arca:EnableInvoiceAuthorization", "true");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IArcaFiscalGateway>();
+                services.AddSingleton<IArcaFiscalGateway>(gateway);
+            });
+        });
+        using var client = app.CreateClient();
+        client.DefaultRequestHeaders.Authorization = admin.DefaultRequestHeaders.Authorization;
+        var requested = scenario == "missing" ? Guid.NewGuid() : id;
+        using var response = await client.PostAsync($"/api/v1/sales/invoices/{requested}/authorize-arca", null);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, gateway.NumberingCalls);
+        Assert.Equal(0, gateway.SubmitCalls);
+        await using var check = new NpgsqlConnection(_factory.DatabaseConnectionString);
+        await check.OpenAsync();
+        await using (var attempts = new NpgsqlCommand("SELECT count(*) FROM sales.fiscal_authorization_attempts", check))
+            Assert.Equal(0L, await attempts.ExecuteScalarAsync());
+        await using var invoice = new NpgsqlCommand("""
+            SELECT "Cae", "Status" FROM sales.invoices WHERE "Id" = @id
+            """, check);
+        invoice.Parameters.AddWithValue("id", id);
+        await using var reader = await invoice.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        Assert.True(reader.IsDBNull(0));
+        Assert.Equal(scenario == "not-draft" ? "Cancelled" : "Draft", reader.GetString(1));
     }
 
     private static async Task<Guid> CreateDraft(HttpClient client)
