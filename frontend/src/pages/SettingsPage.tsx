@@ -137,6 +137,9 @@ export function SettingsPage() {
       setError("Ingresá el CUIT del firmante (11 dígitos) para generar el archivo de consulta.");
       return;
     }
+    if ((settings?.hasArcaCertificateCrt || settings?.hasArcaCertificateKey) && !window.confirm(
+      "Generar otro CSR reemplaza la clave privada guardada y elimina el certificado de esta empresa en el ERP. Necesitarás cargar el certificado correspondiente a la nueva clave. ¿Continuar?"
+    )) return;
     try {
       setGeneratingCsr(true);
       setError(null);
@@ -155,7 +158,7 @@ export function SettingsPage() {
       // La clave privada se guarda en el servidor; también se descarga como respaldo local.
       downloadTextFile(result.privateKeyPem, result.privateKeyFileName);
       setSuccessMsg(
-        "✓ Archivo de consulta (.csr) generado. Subilo en ARCA → Administrador de Certificados Digitales. Cuando ARCA te entregue el .crt, cargalo abajo (la clave privada ya quedó guardada)."
+        `✓ Archivo de consulta (.csr) generado. Subilo en ARCA → ${certEnv === "Produccion" ? "Administrador de Certificados Digitales" : "WSASS (homologación)"}. Cuando ARCA te entregue el .crt, cargalo abajo (la clave privada ya quedó guardada).`
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al generar el archivo de consulta");
@@ -166,7 +169,7 @@ export function SettingsPage() {
 
   const handleUploadCertificate = async (e: FormEvent) => {
     e.preventDefault();
-    if (!crtText) {
+    if (!crtText && !settings?.hasArcaCertificateCrt) {
       setError("Seleccioná el archivo de Certificado (.crt) emitido por ARCA.");
       return;
     }
@@ -179,15 +182,16 @@ export function SettingsPage() {
       setError(null);
       setSuccessMsg(null);
       const updated = await api.uploadArcaCertificate({
-        certificateCrt: crtText,
-        certificateKey: keyText,
+        certificateCrt: crtText || undefined,
+        certificateKey: keyText || undefined,
         environment: certEnv,
         signerCuit: certCuit
       });
       setSettings(updated);
       setKeyText("");
       setCrtText("");
-      setSuccessMsg("✓ Certificado digital ARCA / AFIP actualizado correctamente.");
+      setArcaDiagnostics(null);
+      setSuccessMsg("✓ Configuración ARCA guardada. Los archivos no seleccionados se conservaron.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar certificado");
     } finally {
@@ -772,7 +776,7 @@ export function SettingsPage() {
 
           <div className="row" style={{ justifyContent: "flex-end" }}>
             <button className="btn" disabled={uploadingCert}>
-              {uploadingCert ? "Actualizando Certificado…" : "🔐 Guardar Certificado ARCA"}
+              {uploadingCert ? "Guardando configuración…" : "🔐 Guardar configuración ARCA"}
             </button>
           </div>
         </form>

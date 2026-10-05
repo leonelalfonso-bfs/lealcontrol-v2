@@ -39,6 +39,7 @@ public static class DependencyInjection
         {
             client.Timeout = TimeSpan.FromSeconds(30);
         });
+        services.AddSingleton<ArcaWsaaTicketCache>();
         services.AddScoped<ArcaWsaaClient>();
         services.AddScoped<ArcaWsfeClient>();
         services.AddScoped<WsfeCaeTransport>();

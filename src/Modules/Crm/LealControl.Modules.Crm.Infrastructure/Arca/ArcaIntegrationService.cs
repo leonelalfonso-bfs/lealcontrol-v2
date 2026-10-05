@@ -318,9 +318,9 @@ internal sealed class ArcaIntegrationService : IArcaIntegration
         if (invoice && lookup)
             return "ARCA listo: facturación electrónica y consulta de CUIT OK.";
         if (invoice && !lookup)
-            return "Certificado OK para facturar (wsfe), pero falta autorizar Constancia de Inscripción para el botón ARCA de clientes.";
+            return "Acceso WSAA a facturación (wsfe) OK; no se pudo confirmar el acceso a Constancia de Inscripción. Revisá el detalle del diagnóstico.";
         if (!invoice && lookup)
-            return "Consulta CUIT OK, pero falta habilitar wsfe para facturación electrónica.";
+            return "Acceso WSAA a Constancia de Inscripción OK; no se pudo confirmar el acceso a facturación (wsfe). Revisá el detalle del diagnóstico.";
         var firstFail = checks.FirstOrDefault(c => !c.Ok);
         return firstFail is null
             ? "ARCA incompleto."
