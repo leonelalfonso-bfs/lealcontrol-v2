@@ -30,7 +30,7 @@ internal sealed class ArcaPadronClient
     {
         var url = production
             ? "https://aws.arca.gob.ar/sr-padron/webservices/personaServiceA5"
-            : "https://awshomo.arca.gob.ar/sr-padron/webservices/personaServiceA5";
+            : "https://awshomo.afip.gov.ar/sr-padron/webservices/personaServiceA5";
 
         var envelope = $"""
             <?xml version="1.0" encoding="utf-8"?>
