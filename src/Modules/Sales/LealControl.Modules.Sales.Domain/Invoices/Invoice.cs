@@ -108,6 +108,13 @@ public sealed class Invoice : Entity<Guid>
 
     public DateTime DueDate { get; private set; }
 
+    // 0 = pendiente de clasificar; 1 = productos; 2 = servicios; 3 = ambos.
+    public int FiscalConcept { get; private set; }
+
+    public DateTime? ServiceFrom { get; private set; }
+
+    public DateTime? ServiceTo { get; private set; }
+
     public string Currency { get; private set; } = "ARS";
 
     public decimal ExchangeRate { get; private set; } = 1.0m;
@@ -157,14 +164,22 @@ public sealed class Invoice : Entity<Guid>
         DateTime dueDate,
         string currency,
         decimal exchangeRate,
-        string? notes)
+        string? notes,
+        DateTime? issueDate = null,
+        int fiscalConcept = 0,
+        DateTime? serviceFrom = null,
+        DateTime? serviceTo = null)
     {
         var formatted = $"{pointOfSale:D4}-{invoiceNumber:D8}";
+        var utcIssueDate = issueDate is null ? DateTime.UtcNow
+            : issueDate.Value.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(issueDate.Value, DateTimeKind.Utc)
+                : issueDate.Value.ToUniversalTime();
         var utcDueDate = dueDate.Kind == DateTimeKind.Unspecified
             ? DateTime.SpecifyKind(dueDate, DateTimeKind.Utc)
             : dueDate.ToUniversalTime();
 
-        return new Invoice(
+        var invoice = new Invoice(
             Guid.NewGuid(),
             tenantId,
             invoiceType,
@@ -178,7 +193,7 @@ public sealed class Invoice : Entity<Guid>
             customerDocument,
             customerTaxCondition,
             customerAddress,
-            DateTime.UtcNow,
+            utcIssueDate,
             utcDueDate,
             currency,
             exchangeRate <= 0 ? 1.0m : exchangeRate,
@@ -188,7 +203,38 @@ public sealed class Invoice : Entity<Guid>
             null,
             notes,
             DateTime.UtcNow);
+        invoice.SetFiscalDetails(fiscalConcept, serviceFrom, serviceTo);
+        return invoice;
     }
+
+    public void SetFiscalDetails(int concept, DateTime? from, DateTime? to)
+    {
+        if (Status != "Draft")
+            throw new InvalidOperationException("Solo se pueden cambiar datos fiscales de un borrador.");
+        if (concept < 0 || concept > 3)
+            throw new ArgumentOutOfRangeException(nameof(concept), "Concepto fiscal inválido.");
+        if (concept is 2 or 3)
+        {
+            if (!from.HasValue || !to.HasValue)
+                throw new ArgumentException("Indicá el período del servicio.");
+            if (to.Value.Date < from.Value.Date)
+                throw new ArgumentException("El fin del servicio no puede ser anterior al inicio.");
+            if (DueDate.Date < IssueDate.Date)
+                throw new ArgumentException("El vencimiento de pago no puede ser anterior a la emisión.");
+        }
+        else if (from.HasValue || to.HasValue)
+        {
+            throw new ArgumentException("Las fechas de servicio requieren concepto servicios o mixto.");
+        }
+
+        FiscalConcept = concept;
+        ServiceFrom = from.HasValue ? NormalizeUtc(from.Value) : null;
+        ServiceTo = to.HasValue ? NormalizeUtc(to.Value) : null;
+    }
+
+    private static DateTime NormalizeUtc(DateTime date) => date.Kind == DateTimeKind.Unspecified
+        ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
+        : date.ToUniversalTime();
 
     public void AddItem(
         Guid? productId,
@@ -231,16 +277,32 @@ public sealed class Invoice : Entity<Guid>
         Total = Subtotal + Iva21 + Iva105 + Iva27 + IibbPerception;
     }
 
-    public void Authorize(string cae, DateTime caeDueDate, string qrUrl, string? rawResponse)
+    // Solo se invoca después de confirmar FECompConsultar contra la reserva persistida.
+    // El número del borrador es provisorio; este método asigna el oficial.
+    public void ConfirmFiscalAuthorization(FiscalAuthorizationAttempt attempt, string expectedRequestHash, string qrUrl)
     {
-        var utcCaeDue = caeDueDate.Kind == DateTimeKind.Unspecified
-            ? DateTime.SpecifyKind(caeDueDate, DateTimeKind.Utc)
-            : caeDueDate.ToUniversalTime();
+        ArgumentNullException.ThrowIfNull(attempt);
+        if (string.IsNullOrWhiteSpace(expectedRequestHash) ||
+            !string.Equals(attempt.RequestHash, expectedRequestHash, StringComparison.OrdinalIgnoreCase) ||
+            Status != "Draft" || Cae is not null || attempt.Status != "Confirmed" ||
+            attempt.InvoiceId != Id || attempt.TenantId.Value != TenantId.Value ||
+            attempt.PointOfSale != PointOfSale ||
+            (InvoiceType == "A" ? 1 : 0) != attempt.VoucherType ||
+            attempt.VoucherNumber <= 0 || attempt.VoucherNumber > 99_999_999 ||
+            attempt.Total != Total ||
+            attempt.RecipientDocument != new string(CustomerDocument.Where(char.IsDigit).ToArray()) ||
+            attempt.Cae is null || attempt.CaeDueDate is null ||
+            !Uri.TryCreate(qrUrl, UriKind.Absolute, out var qr) || qr.Scheme != Uri.UriSchemeHttps ||
+            (qr.Host != "www.afip.gob.ar" && qr.Host != "www.arca.gob.ar") ||
+            qr.AbsolutePath != "/fe/qr/")
+            throw new InvalidOperationException("La reserva fiscal confirmada no corresponde al borrador.");
 
-        Cae = cae;
-        CaeDueDate = utcCaeDue;
+        InvoiceNumber = checked((int)attempt.VoucherNumber);
+        FormattedNumber = $"{PointOfSale:D4}-{InvoiceNumber:D8}";
+        Cae = attempt.Cae;
+        CaeDueDate = attempt.CaeDueDate;
         QrUrl = qrUrl;
-        AfipRawResponse = rawResponse;
+        AfipRawResponse = null;
         Status = "Authorized";
     }
 

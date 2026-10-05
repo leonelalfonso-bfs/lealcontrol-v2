@@ -71,6 +71,9 @@ export function InvoiceFormPage() {
   const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [saleCondition, setSaleCondition] = useState<string>("Cuenta Corriente 30 días");
   const [dueDate, setDueDate] = useState<string>(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
+  const [fiscalConcept, setFiscalConcept] = useState<number>(0);
+  const [serviceFrom, setServiceFrom] = useState<string>("");
+  const [serviceTo, setServiceTo] = useState<string>("");
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
   const [rateSource, setRateSource] = useState<"divisas" | "billetes" | "manual">("divisas");
   const [exchangeRate, setExchangeRate] = useState<number>(1.0);
@@ -403,10 +406,10 @@ export function InvoiceFormPage() {
   const totalFactura = subtotalNeto + totalIva;
   const equivArs = currency === "USD" ? totalFactura * (exchangeRate || 1) : totalFactura;
 
-  const handleSubmit = async (e: FormEvent, authorizeNow = false) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!customerId) {
-      setError("Por favor seleccioná un cliente para emitir la factura.");
+      setError("Por favor seleccioná un cliente para guardar el borrador.");
       return;
     }
 
@@ -419,9 +422,20 @@ export function InvoiceFormPage() {
       return;
     }
 
+    if (fiscalConcept === 0) {
+      setError("Seleccioná si se facturan productos, servicios o ambos.");
+      return;
+    }
+    if ((fiscalConcept === 2 || fiscalConcept === 3) &&
+        (!serviceFrom || !serviceTo || serviceTo < serviceFrom || dueDate < issueDate)) {
+      setError("Indicá un período válido del servicio y un vencimiento no anterior a la emisión.");
+      return;
+    }
+
     const payload: InvoiceWrite = {
       invoiceType,
       pointOfSale,
+      issueDate,
       orderId: orderId || sourceOrderId || undefined,
       remitoId: remitoId || undefined,
       customerId,
@@ -430,6 +444,9 @@ export function InvoiceFormPage() {
       customerTaxCondition,
       customerAddress,
       dueDate,
+      fiscalConcept,
+      serviceFrom: fiscalConcept === 2 || fiscalConcept === 3 ? serviceFrom : undefined,
+      serviceTo: fiscalConcept === 2 || fiscalConcept === 3 ? serviceTo : undefined,
       currency,
       exchangeRate: currency === "USD" ? exchangeRate : 1.0,
       notes,
@@ -449,13 +466,6 @@ export function InvoiceFormPage() {
       setError(null);
       const res = await api.createInvoice(payload);
 
-      if (authorizeNow && ["A", "B", "C", "M"].includes(invoiceType)) {
-        try {
-          await api.authorizeInvoiceArca(res.id);
-        } catch (authErr) {
-          console.warn("Could not authorize immediately, invoice saved as Draft", authErr);
-        }
-      }
 
       navigate(`/facturas/${res.id}/imprimir`);
     } catch (err) {
@@ -471,9 +481,9 @@ export function InvoiceFormPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>📄 {orderId ? "Emitir Comprobante desde Pedido" : remitoId ? "Emitir Comprobante desde Remito" : "Emitir Comprobante"}</h1>
+          <h1>📄 {orderId ? "Preparar borrador desde Pedido" : remitoId ? "Preparar borrador desde Remito" : "Preparar borrador de factura"}</h1>
           <p className="muted">
-            {orderId ? `Facturación oficial vinculada a Pedido de Venta` : "Carga y emisión de comprobantes fiscales con autorización ARCA"}
+            Este formulario guarda un borrador interno; todavía no autoriza el comprobante en ARCA.
           </p>
         </div>
         <Link className="btn ghost" to={orderId ? `/pedidos/${orderId}` : "/facturas"}>
@@ -487,7 +497,7 @@ export function InvoiceFormPage() {
         ↩ {returnedItemCount} ítem(s) tienen devoluciones confirmadas. Se facturan solo las cantidades efectivamente utilizadas.
       </div>}
 
-      <form onSubmit={(e) => handleSubmit(e, false)}>
+      <form onSubmit={handleSubmit}>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
           {/* Main Column */}
           <div className="stack" style={{ gap: 20 }}>
@@ -529,7 +539,7 @@ export function InvoiceFormPage() {
               >
                 <span style={{ fontSize: "1.2rem" }}>⚡</span>
                 <div>
-                  <strong>Venta Directa / Mostrador:</strong> Al emitir esta factura, el stock de los productos inventariables se descontará automáticamente del depósito.
+                  <strong>Venta Directa / Mostrador:</strong> Al guardar este borrador, el stock de los productos inventariables se descontará automáticamente del depósito.
                 </div>
               </div>
             ) : null}
@@ -581,6 +591,28 @@ export function InvoiceFormPage() {
                     required
                   />
                 </label>
+              </div>
+
+              <div className="grid-3" style={{ marginTop: 14 }}>
+                <label>
+                  Concepto fiscal *
+                  <select value={fiscalConcept} onChange={(e) => setFiscalConcept(Number(e.target.value))} required>
+                    <option value={0}>— Elegí un concepto —</option>
+                    <option value={1}>Productos</option>
+                    <option value={2}>Servicios</option>
+                    <option value={3}>Productos y servicios</option>
+                  </select>
+                </label>
+                {(fiscalConcept === 2 || fiscalConcept === 3) && <>
+                  <label>
+                    Servicio desde *
+                    <input type="date" value={serviceFrom} onChange={(e) => setServiceFrom(e.target.value)} required />
+                  </label>
+                  <label>
+                    Servicio hasta *
+                    <input type="date" min={serviceFrom || undefined} value={serviceTo} onChange={(e) => setServiceTo(e.target.value)} required />
+                  </label>
+                </>}
               </div>
 
               <div className="grid-3" style={{ marginTop: 14 }}>
@@ -970,22 +1002,12 @@ export function InvoiceFormPage() {
 
             <div className="stack" style={{ gap: 10, marginTop: 24 }}>
               <button
-                type="button"
-                className="btn"
-                disabled={saving}
-                onClick={(e) => handleSubmit(e, true)}
-                style={{ background: "linear-gradient(180deg, #059669, #047857)", width: "100%", padding: 12, fontWeight: "bold" }}
-              >
-                {saving ? "Emitiendo..." : "⚡ Emitir con ARCA (CAE Directo)"}
-              </button>
-
-              <button
                 type="submit"
                 className="btn ghost"
                 disabled={saving}
                 style={{ width: "100%" }}
               >
-                💾 Guardar como Borrador / Proforma
+                💾 Guardar borrador
               </button>
 
               <Link
@@ -998,7 +1020,7 @@ export function InvoiceFormPage() {
             </div>
 
             <div style={{ marginTop: 16, fontSize: "0.78rem", color: "#64748b", lineHeight: 1.4 }}>
-              ℹ️ Al emitir con ARCA, el comprobante se enviará al Web Service de Facturación Electrónica (WSFE v1) obteniendo el CAE oficial y el código QR de verificación fiscal.
+              Este botón guarda un borrador interno. Todavía no solicita CAE ni autoriza el comprobante en ARCA.
             </div>
           </div>
         </div>

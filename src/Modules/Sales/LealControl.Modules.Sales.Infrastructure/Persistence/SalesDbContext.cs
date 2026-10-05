@@ -53,6 +53,8 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
 
     public DbSet<LealControl.Modules.Sales.Domain.Invoices.Invoice> Invoices => Set<LealControl.Modules.Sales.Domain.Invoices.Invoice>();
 
+    public DbSet<LealControl.Modules.Sales.Domain.Invoices.FiscalAuthorizationAttempt> FiscalAuthorizationAttempts => Set<LealControl.Modules.Sales.Domain.Invoices.FiscalAuthorizationAttempt>();
+
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
 
     public DbSet<PurchaseReception> PurchaseReceptions => Set<PurchaseReception>();
@@ -488,6 +490,49 @@ CREATE INDEX IF NOT EXISTS "IX_remito_return_items_RemitoItemId"
             ALTER TABLE sales.invoice_items ADD COLUMN IF NOT EXISTS "RemitoItemId" uuid;
             CREATE INDEX IF NOT EXISTS "IX_invoice_items_RemitoItemId"
                 ON sales.invoice_items("RemitoItemId");
+            """, cancellationToken);
+
+        await Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS sales.fiscal_authorization_attempts (
+                "Id" uuid PRIMARY KEY,
+                "TenantId" uuid NOT NULL,
+                "InvoiceId" uuid NOT NULL REFERENCES sales.invoices("Id"),
+                "PointOfSale" integer NOT NULL CHECK ("PointOfSale" > 0),
+                "VoucherType" integer NOT NULL CHECK ("VoucherType" > 0),
+                "VoucherNumber" bigint NOT NULL CHECK ("VoucherNumber" > 0),
+                "IssuerCuit" character varying(11) NOT NULL,
+                "Production" boolean NOT NULL,
+                "RequestHash" character varying(64) NOT NULL,
+                "RecipientDocument" character varying(32) NOT NULL,
+                "Total" numeric(18,2) NOT NULL CHECK ("Total" > 0),
+                "Status" character varying(20) NOT NULL CHECK ("Status" IN ('Reserved','Pending','Unknown','Confirmed','Rejected')),
+                "CreatedAtUtc" timestamp with time zone NOT NULL,
+                "ResolvedAtUtc" timestamp with time zone,
+                "Cae" character varying(14),
+                "CaeDueDate" timestamp with time zone
+            );
+            ALTER TABLE sales.fiscal_authorization_attempts
+                ADD COLUMN IF NOT EXISTS "IssuerCuit" character varying(11) NOT NULL DEFAULT '';
+            ALTER TABLE sales.fiscal_authorization_attempts
+                ADD COLUMN IF NOT EXISTS "Production" boolean NOT NULL DEFAULT false;
+            CREATE UNIQUE INDEX IF NOT EXISTS "UX_fiscal_attempt_invoice"
+                ON sales.fiscal_authorization_attempts ("TenantId", "InvoiceId");
+            CREATE UNIQUE INDEX IF NOT EXISTS "UX_fiscal_attempt_number"
+                ON sales.fiscal_authorization_attempts ("TenantId", "PointOfSale", "VoucherType", "VoucherNumber");
+            CREATE UNIQUE INDEX IF NOT EXISTS "UX_invoice_authorized_number"
+                ON sales.invoices ("TenantId", "PointOfSale", "InvoiceType", "InvoiceNumber")
+                WHERE "Status" = 'Authorized';
+            """, cancellationToken);
+
+        await Database.ExecuteSqlRawAsync(FiscalReservationSchema.UpgradeSql, cancellationToken);
+
+        await Database.ExecuteSqlRawAsync("""
+            ALTER TABLE sales.invoices
+                ADD COLUMN IF NOT EXISTS "FiscalConcept" integer NOT NULL DEFAULT 0;
+            ALTER TABLE sales.invoices
+                ADD COLUMN IF NOT EXISTS "ServiceFrom" timestamp with time zone;
+            ALTER TABLE sales.invoices
+                ADD COLUMN IF NOT EXISTS "ServiceTo" timestamp with time zone;
             """, cancellationToken);
 
         if (schemaError is not null)

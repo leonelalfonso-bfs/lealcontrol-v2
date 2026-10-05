@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Testcontainers.PostgreSql;
 using Xunit;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LealControl.Modules.Crm.IntegrationTests;
 
@@ -37,6 +38,8 @@ public sealed class CrmWebApplicationFactory : WebApplicationFactory<Program>, I
         .WithPassword("leal")
         .Build();
 
+    public string DatabaseConnectionString => _postgres.GetConnectionString();
+
     public async Task InitializeAsync() => await _postgres.StartAsync();
 
     public new async Task DisposeAsync()
@@ -48,6 +51,7 @@ public sealed class CrmWebApplicationFactory : WebApplicationFactory<Program>, I
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(_environment);
+        builder.ConfigureServices(services => services.AddSingleton<TimeProvider>(new FiscalTestClock()));
         builder.UseSetting("ConnectionStrings:Database", _postgres.GetConnectionString());
         builder.UseSetting("Jwt:Secret", "DevOnly_LealControl_Local_JWT_Key_Not_For_Production_Use_32b!");
         builder.UseSetting("Jwt:Issuer", "lealcontrol");

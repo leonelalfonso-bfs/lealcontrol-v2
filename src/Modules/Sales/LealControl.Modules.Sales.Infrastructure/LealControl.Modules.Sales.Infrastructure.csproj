@@ -14,5 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="..\LealControl.Modules.Sales.Application\LealControl.Modules.Sales.Application.csproj" />
     <ProjectReference Include="..\..\Accounting\LealControl.Modules.Accounting.Contracts\LealControl.Modules.Accounting.Contracts.csproj" />
+    <ProjectReference Include="..\..\Crm\LealControl.Modules.Crm.Contracts\LealControl.Modules.Crm.Contracts.csproj" />
   </ItemGroup>
 </Project>

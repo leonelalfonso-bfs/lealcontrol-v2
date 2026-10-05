@@ -892,6 +892,9 @@ export type Invoice = {
   customerAddress?: string | null;
   issueDate: string;
   dueDate: string;
+  fiscalConcept: number;
+  serviceFrom?: string | null;
+  serviceTo?: string | null;
   currency: string;
   exchangeRate: number;
   subtotal: number;
@@ -914,6 +917,7 @@ export type Invoice = {
 export type InvoiceWrite = {
   invoiceType: string;
   pointOfSale: number;
+  issueDate?: string | null;
   orderId?: string | null;
   remitoId?: string | null;
   customerId: string;
@@ -922,6 +926,9 @@ export type InvoiceWrite = {
   customerTaxCondition: string;
   customerAddress?: string | null;
   dueDate: string;
+  fiscalConcept: number;
+  serviceFrom?: string | null;
+  serviceTo?: string | null;
   currency: string;
   exchangeRate: number;
   notes?: string | null;

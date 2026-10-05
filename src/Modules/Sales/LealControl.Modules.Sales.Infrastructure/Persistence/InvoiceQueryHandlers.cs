@@ -10,6 +10,8 @@ using LealControl.Modules.Sales.Domain.Invoices;
 using LealControl.Modules.Sales.Domain.Inventory;
 using LealControl.Modules.Sales.Domain.Products;
 using MediatR;
+using LealControl.Modules.Sales.Infrastructure.Fiscal;
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -31,6 +33,10 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(i => i.Currency).HasMaxLength(10).IsRequired();
         builder.Property(i => i.Cae).HasMaxLength(32);
         builder.Property(i => i.Status).HasMaxLength(32).IsRequired();
+        builder.Property(i => i.FiscalConcept).HasDefaultValue(0);
+        builder.HasIndex(i => new { i.TenantId, i.PointOfSale, i.InvoiceType, i.InvoiceNumber })
+            .HasDatabaseName("UX_invoice_authorized_number").IsUnique()
+            .HasFilter("\"Status\" = 'Authorized'");
 
         builder.HasMany(i => i.Items)
             .WithOne()
@@ -60,10 +66,16 @@ internal sealed class InvoiceQueryHandlers
     private readonly SalesDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
 
-    public InvoiceQueryHandlers(SalesDbContext dbContext, ITenantContext tenantContext)
+    private readonly FiscalAuthorizationService _fiscalAuthorization;
+    private readonly IConfiguration _configuration;
+
+    public InvoiceQueryHandlers(SalesDbContext dbContext, ITenantContext tenantContext,
+        FiscalAuthorizationService fiscalAuthorization, IConfiguration configuration)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
+        _fiscalAuthorization = fiscalAuthorization;
+        _configuration = configuration;
     }
 
     public async Task<Result<IReadOnlyList<InvoiceDto>>> Handle(ListInvoicesQuery request, CancellationToken cancellationToken)
@@ -118,6 +130,15 @@ internal sealed class InvoiceQueryHandlers
         var tenantId = _tenantContext.TenantId;
         if (request.Items is null || request.Items.Count == 0)
             return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.Empty", "La factura debe tener al menos un ítem."));
+        if (request.FiscalConcept is < 0 or > 3 ||
+            (request.FiscalConcept is 2 or 3 &&
+                (!request.ServiceFrom.HasValue || !request.ServiceTo.HasValue ||
+                 request.ServiceTo.Value.Date < request.ServiceFrom.Value.Date ||
+                 request.DueDate.Date < (request.IssueDate ?? DateTime.UtcNow).Date)) ||
+            (request.FiscalConcept is 0 or 1 &&
+                (request.ServiceFrom.HasValue || request.ServiceTo.HasValue)))
+            return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.FiscalConcept",
+                "Revisá el concepto, el período del servicio y el vencimiento de pago."));
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         LealControl.Modules.Sales.Domain.Remitos.Remito? linkedRemito = null;
@@ -182,7 +203,11 @@ internal sealed class InvoiceQueryHandlers
             request.DueDate,
             request.Currency,
             request.ExchangeRate,
-            request.Notes);
+            request.Notes,
+            request.IssueDate,
+            request.FiscalConcept,
+            request.ServiceFrom,
+            request.ServiceTo);
 
         foreach (var item in request.Items)
         {
@@ -289,11 +314,25 @@ internal sealed class InvoiceQueryHandlers
                 Error.NotFound("Sales.Invoice.NotFound", $"Factura {request.Id} no encontrada."));
         }
 
-        // A CAE is assigned by ARCA, never generated locally. Until WSFE is
-        // integrated, keep every invoice unchanged and make the limitation explicit.
-        return Result<InvoiceDto>.Failure(
-            Error.Validation("Sales.Invoice.ArcaUnavailable",
-                "La autorización de ARCA no está conectada en este módulo. No se generó CAE ni se modificó la factura."));
+        if (!_configuration.GetValue<bool>("Arca:EnableInvoiceAuthorization"))
+        {
+            return Result<InvoiceDto>.Failure(
+                Error.Validation("Sales.Invoice.ArcaUnavailable",
+                    "La autorización de ARCA está deshabilitada. No se generó CAE ni se modificó la factura."));
+        }
+
+        var result = await _fiscalAuthorization.AuthorizeAsync(request.Id, cancellationToken);
+        if (!result.Confirmed)
+        {
+            return Result<InvoiceDto>.Failure(
+                Error.Validation("Sales.Invoice.ArcaNotConfirmed", result.Detail));
+        }
+        var authorized = await _dbContext.Invoices.Include(i => i.Items).AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Id == request.Id && i.TenantId == tenantId, cancellationToken);
+        if (authorized is null || authorized.Status != "Authorized" || string.IsNullOrEmpty(authorized.Cae))
+            return Result<InvoiceDto>.Failure(
+                Error.Validation("Sales.Invoice.ArcaNotConfirmed", "No se pudo verificar la factura autorizada."));
+        return Result<InvoiceDto>.Success(MapToDto(authorized));
     }
 
     private static InvoiceDto MapToDto(Invoice i)
@@ -340,7 +379,10 @@ internal sealed class InvoiceQueryHandlers
                 item.VatAmount,
                 item.Total,
                 item.RemitoItemId)).ToList(),
-            i.CreatedAtUtc);
+            i.CreatedAtUtc,
+            i.FiscalConcept,
+            i.ServiceFrom,
+            i.ServiceTo);
     }
 
 }

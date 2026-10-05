@@ -74,3 +74,14 @@ Los SHA anteriores de staging y producción no fueron incluidos en las salidas c
 - `codex/crm-fiscal-rates-20261002`, `codex/crm-timeline-errors-20261002`, `codex/crm-opportunity-errors-20261002`: ramas locales de implementación ya integradas; no volver a fusionarlas ni limpiarlas sin revisar sus cambios.
 - `codex/arca-preparacion-20261001`: trabajo fiscal parcial pendiente de revisión e integración; conservar.
 - Esta consolidación se publica como cambio exclusivamente documental. Publicarla en GitHub no actualiza el código ejecutado en los servidores ni requiere un nuevo despliegue.
+
+## Actualización local ARCA — 2026-10-03
+
+El bloque ARCA está en la rama local `codex/arca-cierre-20261002`, con código
+validado hasta `c8bf811`: 334 pruebas Release aprobadas y frontend compilado.
+Incluye fallos de bootstrap visibles y recuperación de envíos inciertos aun
+con emisión desactivada. No está publicado ni desplegado.
+
+Continuar desde [Estado ARCA y homologación](auditoria-2026-10-01/48-estado-arca-y-homologacion.md).
+La prueba autenticada requiere un certificado de homologación; actualmente
+solo hay certificados de producción. Los pasos restantes están en ese informe.

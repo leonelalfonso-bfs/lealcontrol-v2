@@ -90,7 +90,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       if (typeof parsed === "string") {
         message = parsed;
       } else {
-        message = parsed.detail || parsed.title || parsed.message || message;
+        message = parsed.detail || parsed.description || parsed.title || parsed.message || message;
       }
     } catch {
       message = errorText || message;
@@ -764,6 +764,10 @@ export const api = {
   getInvoice: (id: string) => request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}`),
   createInvoice: (body: import("./types").InvoiceWrite) =>
     request<import("./types").Invoice>("/api/v1/sales/invoices", { method: "POST", body: JSON.stringify(body) }),
+  getInvoiceFiscalStatus: () =>
+    request<{ enabled: boolean; attempts: Array<{ invoiceId: string; status: string; voucherNumber: number }> }>("/api/v1/sales/invoices/fiscal-status"),
+  recoverInvoiceArca: (id: string) =>
+    request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/recover-arca`, { method: "POST" }),
   authorizeInvoiceArca: (id: string) =>
     request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/authorize-arca`, { method: "POST" }),
 
