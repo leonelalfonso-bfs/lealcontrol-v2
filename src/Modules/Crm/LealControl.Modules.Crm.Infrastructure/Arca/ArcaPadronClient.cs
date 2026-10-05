@@ -57,17 +57,20 @@ internal sealed class ArcaPadronClient
             using var response = await client.SendAsync(request, cancellationToken);
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
+            // Un SOAP Fault puede llegar con HTTP 500: leer el motivo antes del estado HTTP.
+            var fault = Extract(body, "faultstring");
+            if (!string.IsNullOrWhiteSpace(fault))
+            {
+                var detail = fault.Trim();
+                if (detail.Length > 400) detail = detail[..400] + "…";
+                return Result<ArcaCuitLookupResult>.Failure(
+                    Error.Failure("Crm.Arca.PadronFault", "ARCA rechazó la consulta: " + detail));
+            }
+
             if (!response.IsSuccessStatusCode)
             {
                 return Result<ArcaCuitLookupResult>.Failure(
                     Error.Failure("Crm.Arca.PadronHttp", $"Constancia de inscripción HTTP {(int)response.StatusCode}."));
-            }
-
-            if (body.Contains("faultstring", StringComparison.OrdinalIgnoreCase))
-            {
-                var fault = Extract(body, "faultstring") ?? "Error SOAP padrón";
-                return Result<ArcaCuitLookupResult>.Failure(
-                    Error.Failure("Crm.Arca.PadronFault", fault));
             }
 
             var razonSocial = Extract(body, "razonSocial") ?? Extract(body, "denominacion");
