@@ -10,20 +10,32 @@ internal sealed class ArcaWsaaClient
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ArcaWsaaClient> _logger;
+    private readonly ArcaWsaaTicketCache _tickets;
 
-    public ArcaWsaaClient(IHttpClientFactory httpClientFactory, ILogger<ArcaWsaaClient> logger)
+    public ArcaWsaaClient(IHttpClientFactory httpClientFactory, ILogger<ArcaWsaaClient> logger, ArcaWsaaTicketCache tickets)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _tickets = tickets;
     }
 
-    public async Task<(bool Ok, string? Token, string? Sign, string Detail)> LoginAsync(
+    public Task<(bool Ok, string? Token, string? Sign, string Detail)> LoginAsync(
         X509Certificate2 certificate,
         string certificatePem,
         string privateKeyPem,
         string service,
         bool production,
         CancellationToken cancellationToken)
+    {
+        var key = new ArcaWsaaTicketCache.Key(certificate.Thumbprint, service, production);
+        return _tickets.GetAsync(key,
+            () => RequestTicketAsync(certificate, certificatePem, privateKeyPem, service, production, cancellationToken),
+            cancellationToken);
+    }
+
+    private async Task<ArcaWsaaTicketCache.Ticket> RequestTicketAsync(
+        X509Certificate2 certificate, string certificatePem, string privateKeyPem,
+        string service, bool production, CancellationToken cancellationToken)
     {
         try
         {
@@ -54,19 +66,19 @@ internal sealed class ArcaWsaaClient
 
             if (!response.IsSuccessStatusCode)
             {
-                return (false, null, null, ExplainWsaaFault(service, body, (int)response.StatusCode));
+                return new(false, null, null, null, ExplainWsaaFault(service, body, (int)response.StatusCode));
             }
 
             if (body.Contains("faultstring", StringComparison.OrdinalIgnoreCase)
                 || body.Contains("Fault>", StringComparison.Ordinal))
             {
-                return (false, null, null, ExplainWsaaFault(service, body, null));
+                return new(false, null, null, null, ExplainWsaaFault(service, body, null));
             }
 
             var taXml = ExtractXmlText(body, "loginCmsReturn");
             if (string.IsNullOrWhiteSpace(taXml))
             {
-                return (false, null, null, $"WSAA no devolvió ticket para '{service}'.");
+                return new(false, null, null, null, $"WSAA no devolvió ticket para '{service}'.");
             }
 
             taXml = System.Net.WebUtility.HtmlDecode(taXml);
@@ -74,18 +86,26 @@ internal sealed class ArcaWsaaClient
             var sign = ExtractXmlText(taXml, "sign");
             if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(sign))
             {
-                return (false, null, null, $"Ticket WSAA incompleto para '{service}'.");
+                return new(false, null, null, null, $"Ticket WSAA incompleto para '{service}'.");
             }
 
             // certificate usado solo para forzar carga válida previa
             _ = certificate.Thumbprint;
 
-            return (true, token, sign, $"Ticket WSAA OK para '{service}'.");
+            if (!DateTimeOffset.TryParse(ExtractXmlText(taXml, "expirationTime"),
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var expires))
+                return new(false, null, null, null, $"Ticket WSAA sin vencimiento válido para '{service}'.");
+            return new(true, token, sign, expires, $"Ticket WSAA OK para '{service}'.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Fallo login WSAA service={Service}", service);
-            return (false, null, null, $"Error de red/WSAA ({service}): {ex.Message}");
+            return new(false, null, null, null, $"Error de red/WSAA ({service}): {ex.Message}");
         }
     }
 
@@ -183,7 +203,7 @@ internal sealed class ArcaWsaaClient
         if (blob.Contains("alreadyauthenticated", StringComparison.Ordinal)
             || fault.Contains("ya posee un tat vigente", StringComparison.OrdinalIgnoreCase))
         {
-            return $"WSAA '{service}': ya hay un ticket vigente (reintentá en ~1 minuto).";
+            return $"WSAA '{service}': ARCA informa que ya hay un ticket vigente, pero esta instancia no dispone de él. No indica falta de permisos; la espera depende de ARCA.";
         }
 
         if (!string.IsNullOrWhiteSpace(fault))
