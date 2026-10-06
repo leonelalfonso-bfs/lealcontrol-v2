@@ -146,6 +146,10 @@ public static class PasswordSecurity
         return $"{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
     }
 
+    /// <summary>Formato anterior a PBKDF2 (SHA-256 con sal fija, sin separador de sal).</summary>
+    public static bool IsLegacyHash(string? storedHash) =>
+        !string.IsNullOrWhiteSpace(storedHash) && !storedHash.Contains('.');
+
     public static bool VerifyPassword(string password, string storedHash)
     {
         if (string.IsNullOrWhiteSpace(storedHash))

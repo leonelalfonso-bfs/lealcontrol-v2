@@ -115,15 +115,22 @@ REGLAS DE RESPUESTA:
         _logger = logger;
         _apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
                ?? configuration["Gemini:ApiKey"]
-               ?? "AQ.Ab8RN6KSIzI37ur4u4gVfU3fDY1d-0rO9Dsw41J0FJs0oBmQIA";
+                  ?? string.Empty;
         _model = configuration["Gemini:Model"] ?? "gemini-3.5-flash-lite";
+
+        // La clave va en header y no en la URL, para que no quede en logs de requests ni proxies.
+        if (!string.IsNullOrWhiteSpace(_apiKey))
+        {
+            _httpClient.DefaultRequestHeaders.Remove("x-goog-api-key");
+            _httpClient.DefaultRequestHeaders.Add("x-goog-api-key", _apiKey);
+        }
     }
 
     public async Task<AskLealResponse> AskAsync(AskLealRequest request, CancellationToken ct = default)
     {
         try
         {
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
 
             var contentsList = new List<object>();
 

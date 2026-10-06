@@ -105,6 +105,29 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+type SharedEntry = { at: number; promise: Promise<unknown> };
+const sharedRequests = new Map<string, SharedEntry>();
+
+/**
+ * Comparte una misma lectura entre varios componentes que la consultan periódicamente
+ * (campana, contador del menú, notificaciones del navegador): una sola llamada por ventana
+ * de tiempo, y con la pestaña oculta se reutiliza el último resultado sin ir al servidor.
+ */
+function sharedRequest<T>(path: string, ttlMs: number): Promise<T> {
+  const cached = sharedRequests.get(path);
+  const now = Date.now();
+  const hidden = typeof document !== "undefined" && document.visibilityState === "hidden";
+  if (cached && (hidden || now - cached.at < ttlMs)) {
+    return cached.promise as Promise<T>;
+  }
+  const promise = request<T>(path).catch((error) => {
+    sharedRequests.delete(path);
+    throw error;
+  });
+  sharedRequests.set(path, { at: now, promise });
+  return promise;
+}
+
 async function requestBlob(path: string): Promise<Blob> {
   const normalToken = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
   const superToken = typeof window !== "undefined" ? localStorage.getItem("leal_superadmin_token") : null;
@@ -467,7 +490,7 @@ export const api = {
     request<{ id: string }>("/api/v1/communications/templates", { method: "POST", body: JSON.stringify(body) }),
   deleteReplyTemplate: (id: string) => request<void>(`/api/v1/communications/templates/${id}`, { method: "DELETE" }),
   getCommunicationsNotificationSummary: () =>
-    request<{
+    sharedRequest<{
       unreadTotal: number;
       needsResponseCount: number;
       recent: Array<{
@@ -480,7 +503,7 @@ export const api = {
         lastMessageAtUtc: string;
         needsResponse: boolean;
       }>;
-    }>("/api/v1/communications/notifications/summary"),
+    }>("/api/v1/communications/notifications/summary", 20_000),
   uploadCommunicationMedia: async (file: File) => {
     const form = new FormData();
     form.append("file", file);

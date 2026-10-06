@@ -1,10 +1,14 @@
+using LealControl.BuildingBlocks.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Modules.Finance.Infrastructure;
 
 public static class FinanceSchema
 {
-    public static Task EnsureFinanceTablesAsync(this FinanceDbContext db, CancellationToken cancellationToken = default) => db.Database.ExecuteSqlRawAsync(@"
+    public static Task EnsureFinanceTablesAsync(this FinanceDbContext db, CancellationToken cancellationToken = default) =>
+        SchemaInitializationGate.RunOnceAsync(db, "finance", ct => EnsureFinanceTablesCoreAsync(db, ct));
+
+    private static Task EnsureFinanceTablesCoreAsync(FinanceDbContext db, CancellationToken cancellationToken) => db.Database.ExecuteSqlRawAsync(@"
         CREATE SCHEMA IF NOT EXISTS finance;
         CREATE TABLE IF NOT EXISTS finance.""FinancialAccounts"" (
           ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""Name"" varchar(180) NOT NULL,

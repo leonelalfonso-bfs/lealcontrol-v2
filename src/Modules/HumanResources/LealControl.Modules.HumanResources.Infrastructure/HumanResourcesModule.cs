@@ -349,7 +349,10 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
 
     public Task EnsureHrTablesAsync(CancellationToken ct = default) => EnsureHumanResourcesTablesAsync(ct);
 
-    public async Task EnsureHumanResourcesTablesAsync(CancellationToken ct = default)
+    public Task EnsureHumanResourcesTablesAsync(CancellationToken ct = default) =>
+        SchemaInitializationGate.RunOnceAsync(this, "hr", EnsureHumanResourcesTablesCoreAsync);
+
+    private async Task EnsureHumanResourcesTablesCoreAsync(CancellationToken ct = default)
     {
         var sql = @"
             CREATE SCHEMA IF NOT EXISTS hr;

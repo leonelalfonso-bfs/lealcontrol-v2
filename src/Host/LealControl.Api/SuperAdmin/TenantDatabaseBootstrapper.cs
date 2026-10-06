@@ -96,6 +96,7 @@ public static class TenantDatabaseBootstrapper
         CancellationToken cancellationToken)
     {
         var connectionString = BuildConnectionString(baseConnectionString, dbName);
+        LealControl.BuildingBlocks.Persistence.SchemaInitializationGate.ForgetDatabase(dbName);
 
         await using (var crm = CreateContext<CrmDbContext>(connectionString, CrmDbContext.Schema))
         {

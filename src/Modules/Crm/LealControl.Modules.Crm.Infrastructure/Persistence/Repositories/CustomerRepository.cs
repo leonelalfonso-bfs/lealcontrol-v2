@@ -207,7 +207,7 @@ internal sealed class OpportunityRepository : IOpportunityRepository
         }
 
         _db.ChangeTracker.Clear();
-        await _db.EnsureCrmTablesAsync(cancellationToken);
+        await _db.RepairCrmTablesAsync(cancellationToken);
     }
 
     public void Add(Opportunity opportunity) => _db.Opportunities.Add(opportunity);
@@ -305,7 +305,7 @@ internal sealed class ActivityRepository : IActivityRepository
         }
 
         _db.ChangeTracker.Clear();
-        await _db.EnsureCrmTablesAsync(cancellationToken);
+        await _db.RepairCrmTablesAsync(cancellationToken);
     }
 
     public void Add(Activity activity) => _db.Activities.Add(activity);

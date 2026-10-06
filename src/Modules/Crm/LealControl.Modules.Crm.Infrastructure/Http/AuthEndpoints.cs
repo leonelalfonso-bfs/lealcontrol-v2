@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -180,7 +181,12 @@ public static class AuthEndpoints
             IReadOnlyList<TenantMembership> memberships = [];
             if (!string.IsNullOrWhiteSpace(emailFromToken))
             {
-                memberships = await MultiTenantAuthResolver.FindAllAsync(masterConnStr, emailFromToken, password: null, ct);
+                memberships = await MultiTenantAuthResolver.FindAllAsync(
+                    masterConnStr,
+                    emailFromToken,
+                    password: null,
+                    ct,
+                    onlyTenantIds: SimpleJwt.ReadVerifiedTenantIds(http.User));
             }
 
             var activeMembership = memberships.FirstOrDefault(m => m.TenantId == tenantId.Value);
@@ -249,7 +255,18 @@ public static class AuthEndpoints
                 return Results.Json(new { message = "Sesión inválida." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
-            var memberships = await MultiTenantAuthResolver.FindAllAsync(masterConnStr, email, password: null, ct);
+            var verifiedTenants = SimpleJwt.ReadVerifiedTenantIds(http.User);
+            if (!verifiedTenants.Contains(targetTenantId))
+            {
+                return Results.Json(new { message = "No tenés acceso a esa empresa." }, statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            var memberships = await MultiTenantAuthResolver.FindAllAsync(
+                masterConnStr,
+                email,
+                password: null,
+                ct,
+                onlyTenantIds: verifiedTenants);
             var active = memberships.FirstOrDefault(m => m.TenantId == targetTenantId);
             if (active == null)
             {
@@ -290,6 +307,41 @@ public static class SimpleJwt
 
     public static int LifetimeHours { get; set; } = 8;
 
+    public const string VerifiedTenantsClaim = "tenants";
+
+    /// <summary>
+    /// Empresas verificadas del token. Un token anterior a este claim solo habilita su empresa actual.
+    /// </summary>
+    public static IReadOnlySet<Guid> ReadVerifiedTenantIds(ClaimsPrincipal user)
+    {
+        var verified = new HashSet<Guid>();
+        var raw = user.FindFirst(VerifiedTenantsClaim)?.Value;
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            try
+            {
+                foreach (var value in JsonSerializer.Deserialize<string[]>(raw) ?? [])
+                {
+                    if (Guid.TryParse(value, out var id) && id != Guid.Empty)
+                    {
+                        verified.Add(id);
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                verified.Clear();
+            }
+        }
+
+        if (Guid.TryParse(user.FindFirst("tenant_id")?.Value, out var current) && current != Guid.Empty)
+        {
+            verified.Add(current);
+        }
+
+        return verified;
+    }
+
     public static byte[] GetSecretBytes() => Encoding.UTF8.GetBytes(SecretKey);
 
     public static string CreateToken(
@@ -300,9 +352,16 @@ public static class SimpleJwt
         Guid tenantId,
         string tenantName,
         string? allowedModulesJson = null,
-        bool isTechnicalDirector = false)
+        bool isTechnicalDirector = false,
+        IEnumerable<Guid>? verifiedTenantIds = null)
     {
         var now = DateTimeOffset.UtcNow;
+        var tenants = (verifiedTenantIds ?? [])
+            .Append(tenantId)
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .Select(id => id.ToString())
+            .ToArray();
         var header = new { alg = "HS256", typ = "JWT" };
         var allowedModules = ParseAllowedModules(allowedModulesJson);
         // Guardar como string JSON (no array nativo) para que JwtBearer entregue un solo claim
@@ -319,6 +378,8 @@ public static class SimpleJwt
             ["tenant_name"] = tenantName,
             ["allowed_modules"] = JsonSerializer.Serialize(allowedModules),
             ["technical_director"] = isTechnicalDirector ? "true" : "false",
+            // Empresas cuya contraseña se verificó en el login: únicas habilitadas para /me y switch-tenant.
+            [VerifiedTenantsClaim] = JsonSerializer.Serialize(tenants),
             ["nbf"] = now.ToUnixTimeSeconds(),
             ["iat"] = now.ToUnixTimeSeconds(),
             ["exp"] = now.AddHours(LifetimeHours).ToUnixTimeSeconds()

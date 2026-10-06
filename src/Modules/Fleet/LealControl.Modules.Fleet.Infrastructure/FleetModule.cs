@@ -176,7 +176,10 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
         });
     }
 
-    public async Task EnsureFleetTablesAsync(CancellationToken ct = default)
+    public Task EnsureFleetTablesAsync(CancellationToken ct = default) =>
+        SchemaInitializationGate.RunOnceAsync(this, "fleet", EnsureFleetTablesCoreAsync);
+
+    private async Task EnsureFleetTablesCoreAsync(CancellationToken ct = default)
     {
         var sql = @"
             CREATE SCHEMA IF NOT EXISTS fleet;

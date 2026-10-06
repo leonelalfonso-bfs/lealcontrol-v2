@@ -12,6 +12,17 @@ internal static class HealthCheckJsonWriter
     {
         context.Response.ContentType = "application/json; charset=utf-8";
 
+        // /health es anónimo: el detalle de la excepción (cadenas de conexión, hosts, SQL)
+        // va al log del servidor y no a la respuesta pública.
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("HealthChecks");
+        foreach (var (name, entry) in report.Entries)
+        {
+            if (entry.Exception is not null)
+            {
+                logger.LogWarning(entry.Exception, "Health check {Check} en estado {Status}.", name, entry.Status);
+            }
+        }
+
         var payload = new
         {
             status = report.Status.ToString(),
@@ -22,8 +33,7 @@ internal static class HealthCheckJsonWriter
                 {
                     status = entry.Value.Status.ToString(),
                     description = entry.Value.Description,
-                    duration = entry.Value.Duration.TotalMilliseconds,
-                    error = entry.Value.Exception?.Message
+                    duration = entry.Value.Duration.TotalMilliseconds
                 })
         };
 

@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Sales.Application.Abstractions;
 using LealControl.Modules.Sales.Domain.Quotes;
@@ -74,7 +75,10 @@ internal sealed class QuoteRepository : IQuoteRepository
         return int.TryParse(value.AsSpan(lastDash + 1), out sequence) && sequence > 0;
     }
 
-    public async Task EnsureTechnicalDetailColumnAsync(CancellationToken cancellationToken = default)
+    public Task EnsureTechnicalDetailColumnAsync(CancellationToken cancellationToken = default) =>
+        SchemaInitializationGate.RunOnceAsync(_db, "sales.quote-technical-detail", EnsureTechnicalDetailColumnCoreAsync);
+
+    private async Task EnsureTechnicalDetailColumnCoreAsync(CancellationToken cancellationToken = default)
     {
         try
         {

@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using System.Threading;
 using System.Threading.Tasks;
 using LealControl.Modules.Communications.Infrastructure.Domain;
@@ -127,7 +128,10 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
         });
     }
 
-    public async Task EnsureTablesCreatedAsync(CancellationToken cancellationToken = default)
+    public Task EnsureTablesCreatedAsync(CancellationToken cancellationToken = default) =>
+        SchemaInitializationGate.RunOnceAsync(this, "communications", EnsureTablesCreatedCoreAsync);
+
+    private async Task EnsureTablesCreatedCoreAsync(CancellationToken cancellationToken = default)
     {
         var sql = @"
             CREATE SCHEMA IF NOT EXISTS communications;

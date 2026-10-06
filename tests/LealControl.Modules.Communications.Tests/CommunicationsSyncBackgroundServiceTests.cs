@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Communications.Infrastructure.Domain;
 using LealControl.Modules.Communications.Infrastructure.Persistence;
@@ -45,6 +46,8 @@ public sealed class CommunicationsSyncBackgroundServiceTests
         await using var db = new CommunicationsDbContext(options);
         await db.EnsureTablesCreatedAsync();
         await db.Database.ExecuteSqlRawAsync("ALTER TABLE communications.mail_accounts DROP COLUMN \"AutoSyncEnabled\"");
+        // Un deploy arranca un proceso nuevo: la compuerta de esquema empieza vacía y vuelve a correr el script.
+        SchemaInitializationGate.Reset();
         await db.EnsureTablesCreatedAsync(); // Existing tenant databases receive the new opt-in column.
 
         var tenantId = Guid.NewGuid();
