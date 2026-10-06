@@ -82,6 +82,10 @@ internal sealed class ArcaPadronClient
 
             if (string.IsNullOrWhiteSpace(legalName))
             {
+                var businessErrors = ReadBusinessErrors(body);
+                if (!string.IsNullOrWhiteSpace(businessErrors))
+                    return Result<ArcaCuitLookupResult>.Failure(
+                        Error.Failure("Crm.Arca.PadronBusinessError", "ARCA respondió: " + businessErrors));
                 return Result<ArcaCuitLookupResult>.Failure(
                     Error.NotFound(
                         "Crm.Arca.NotFound",
@@ -115,6 +119,27 @@ internal sealed class ArcaPadronClient
             return Result<ArcaCuitLookupResult>.Failure(
                 Error.Failure("Crm.Arca.PadronError", "No se pudo consultar el padrón ARCA: " + ex.Message));
         }
+    }
+
+    private static string? ReadBusinessErrors(string body)
+    {
+        try
+        {
+            using var reader = System.Xml.XmlReader.Create(new StringReader(body), new System.Xml.XmlReaderSettings
+            {
+                DtdProcessing = System.Xml.DtdProcessing.Prohibit,
+                XmlResolver = null
+            });
+            var doc = XDocument.Load(reader);
+            var messages = doc.Descendants()
+                .Where(e => e.Name.LocalName is "errorConstancia" or "errorRegimenGeneral" or "errorMonotributo")
+                .SelectMany(e => e.Descendants().Where(n => n.Name.LocalName == "error"))
+                .Select(e => e.Value.Trim()).Where(m => m.Length > 0).Distinct().ToArray();
+            if (messages.Length == 0) return null;
+            var detail = string.Join("; ", messages);
+            return detail.Length <= 400 ? detail : detail[..400] + "…";
+        }
+        catch (System.Xml.XmlException) { return null; }
     }
 
     private static string MapTaxCondition(string body)

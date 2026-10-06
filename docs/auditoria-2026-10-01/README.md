@@ -9,6 +9,7 @@ Punto de entrada vigente: [CONTINUIDAD](../CONTINUIDAD.md). Contiene el estado p
 - [60 Cobranzas, diferencia de cambio, cuenta corriente y saldos en el servidor](60-cobranzas-cuenta-corriente-saldos.md).
 - [61 Encendido de la emisión en producción](61-encendido-produccion-arca.md).
 - [62 Diagnóstico general y plan](62-estado-general-y-plan.md).
+- [66 Padrón: errores de negocio cuando faltan datos](66-padron-errores-de-negocio.md): muestra el motivo que informa ARCA en lugar de "sin razón social".
 
 Los informes 09 a 53 documentan cómo se construyó ARCA; su estado actual está resumido en el 59.
 
