@@ -50,6 +50,45 @@ public sealed class FiscalReservationServiceTests : IAsyncLifetime
         finally { accessor.HttpContext = null; }
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    public async Task Production_environment_requires_explicit_server_permission(bool allowProduction, bool expectedOk)
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        var invoiceId = await CreateDraft(client);
+        using var scope = _factory.Services.CreateScope();
+        var accessor = SetTenant(scope.ServiceProvider);
+        try
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
+            var tenant = scope.ServiceProvider.GetRequiredService<ITenantContext>();
+            var gateway = new FakeGateway { Production = true };
+            var service = new FiscalReservationService(db, tenant, gateway, new FiscalTestClock(),
+                new FiscalEmissionPolicy(allowProduction));
+
+            var result = await service.ReserveAsync(invoiceId, CancellationToken.None);
+
+            Assert.Equal(expectedOk, result.Ok);
+            var reserved = await db.FiscalAuthorizationAttempts.AsNoTracking()
+                .AnyAsync(a => a.TenantId == tenant.TenantId && a.InvoiceId == invoiceId);
+            // Bloqueado: ninguna reserva queda colgada. Permitido: se reserva normalmente.
+            Assert.Equal(expectedOk, reserved);
+            if (!expectedOk)
+                Assert.Contains("producción", result.Detail);
+            Assert.Equal(0, gateway.SubmitCalls);
+        }
+        finally { accessor.HttpContext = null; }
+    }
+
+    [Fact]
+    public void Server_policy_defaults_to_homologation_only()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var policy = scope.ServiceProvider.GetRequiredService<FiscalEmissionPolicy>();
+        Assert.False(policy.AllowProduction);
+    }
+
     [Fact]
     public async Task Unresolved_reservation_blocks_next_invoice_in_same_series()
     {
@@ -154,6 +193,7 @@ public sealed class FiscalReservationServiceTests : IAsyncLifetime
     private sealed class FakeGateway : IArcaFiscalGateway
     {
         public long LastNumber { get; init; } = 41;
+        public bool Production { get; init; }
         public int NumberingCalls { get; private set; }
         public int SubmitCalls { get; private set; }
         public int LookupCalls { get; private set; }
@@ -165,7 +205,7 @@ public sealed class FiscalReservationServiceTests : IAsyncLifetime
             Assert.Equal(3, pointOfSale);
             Assert.Equal(1, voucherType);
             return Task.FromResult(new ArcaFiscalNumbering(true, LastNumber,
-                "30715489629", false, "prueba"));
+                "30715489629", Production, "prueba"));
         }
 
         public Task<WsfeCaeReply> SubmitCaeAsync(IWsfeInvoiceAServiceData data,
