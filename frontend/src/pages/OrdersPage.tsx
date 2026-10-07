@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { label, type CustomerSummary, type Order, type OrderStatus } from "../api/types";
 import { ExcelToolbar, excelDate, excelNumber } from "../components/ExcelTools";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 const statuses: OrderStatus[] = [
   "Draft",
@@ -38,6 +40,7 @@ export function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [customersLoading, setCustomersLoading] = useState(true);
@@ -48,7 +51,7 @@ export function OrdersPage() {
     try {
       setLoading(true);
       setError(null);
-      const ordData = await api.listOrders(search, statusFilter);
+      const ordData = await api.listOrders(debouncedSearch, statusFilter);
       setOrders(ordData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar los pedidos de venta");
@@ -59,7 +62,7 @@ export function OrdersPage() {
 
   useEffect(() => {
     loadData();
-  }, [search, statusFilter]);
+  }, [debouncedSearch, statusFilter]);
 
   useEffect(() => {
     let active = true;
@@ -128,12 +131,11 @@ export function OrdersPage() {
       {(error || customerError) && <div className="alert">{error || customerError}</div>}
 
       <div className="card pad toolbar" style={{ marginBottom: 20 }}>
-        <input
-          type="search"
-          placeholder="Buscar por Nro. Pedido, Cotización o Notas…"
+        <SearchField
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1 }}
+          onChange={setSearch}
+          placeholder="Buscar por número de pedido, presupuesto, responsable o nota"
+          style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ width: 220 }}>
           <option value="">Todos los estados</option>

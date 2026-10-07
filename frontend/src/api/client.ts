@@ -128,6 +128,18 @@ function sharedRequest<T>(path: string, ttlMs: number): Promise<T> {
   return promise;
 }
 
+/** Todas las páginas del directorio (clientes, proveedores o ambos con role ""): sin cortes en 50 o 200. */
+async function requestAllDirectory(role: string): Promise<CustomerSummary[]> {
+  const pageSize = 100;
+  const url = (page: number) => `/api/v1/crm/customers?page=${page}&pageSize=${pageSize}&role=${encodeURIComponent(role)}`;
+  const first = await request<Paged<CustomerSummary>>(url(1));
+  const pageCount = Math.ceil((first.total ?? first.totalCount ?? first.items.length) / pageSize);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => request<Paged<CustomerSummary>>(url(index + 2)))
+  );
+  return [first, ...rest].flatMap((page) => page.items);
+}
+
 async function requestBlob(path: string): Promise<Blob> {
   const normalToken = typeof window !== "undefined" ? localStorage.getItem("leal_token") : null;
   const superToken = typeof window !== "undefined" ? localStorage.getItem("leal_superadmin_token") : null;
@@ -263,17 +275,7 @@ export const api = {
   cancelCheque: (id: string, reason: string) => request(`/api/v1/finance/echeqs/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }),
   listCustomers: (search = "", role = "customer") =>
     request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=50&search=${encodeURIComponent(search)}${role ? `&role=${encodeURIComponent(role)}` : ""}`),
-  listAllCustomers: async (role = "customer"): Promise<CustomerSummary[]> => {
-    const pageSize = 100;
-    const url = (page: number) => `/api/v1/crm/customers?page=${page}&pageSize=${pageSize}&role=${encodeURIComponent(role)}`;
-    const first = await request<Paged<CustomerSummary>>(url(1));
-    const pageCount = Math.ceil((first.total ?? first.totalCount ?? first.items.length) / pageSize);
-    const rest = await Promise.all(
-      Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
-        request<Paged<CustomerSummary>>(url(index + 2)))
-    );
-    return [first, ...rest].flatMap((page) => page.items);
-  },
+  listAllCustomers: (role = "customer"): Promise<CustomerSummary[]> => requestAllDirectory(role),
   getCustomer: (id: string) => request<CustomerDetail>(`/api/v1/crm/customers/${id}`),
   createCustomer: (body: CustomerWrite) =>
     request<CustomerDetail>("/api/v1/crm/customers", { method: "POST", body: JSON.stringify(body) }),
@@ -643,9 +645,12 @@ export const api = {
   // Suppliers Methods (Unified Directory)
   listSuppliers: async (search = ""): Promise<import("./types").Supplier[]> => {
     try {
-      const paged = await request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=200&search=${encodeURIComponent(search)}&role=supplier`);
-      if (paged.items && paged.items.length > 0) {
-        return paged.items.map(s => ({
+      // Sin búsqueda se traen todas las páginas: antes la lista se cortaba en 200 proveedores.
+      const items = search
+        ? (await request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=200&search=${encodeURIComponent(search)}&role=supplier`)).items
+        : await requestAllDirectory("supplier");
+      if (items && items.length > 0) {
+        return items.map(s => ({
           id: s.id,
           legalName: s.legalName,
           tradeName: s.tradeName,

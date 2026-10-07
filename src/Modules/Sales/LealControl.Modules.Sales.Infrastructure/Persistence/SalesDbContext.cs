@@ -70,6 +70,7 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.AddSearchTextFunctions();
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(SalesDbContext).Assembly);
         modelBuilder.Entity<ProductionBom>(b => { b.ToTable("ProductionBoms"); b.HasKey(x => x.Id); b.Property(x => x.Version).HasMaxLength(40); b.Property(x => x.Name).HasMaxLength(160); b.Property(x => x.OutputQuantity).HasPrecision(18, 4); b.HasIndex(x => new { x.TenantId, x.ProductId, x.Version }).IsUnique(); b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.ProductionBomId).OnDelete(DeleteBehavior.Cascade); });

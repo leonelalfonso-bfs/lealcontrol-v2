@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { label, type CustomerSummary, type Opportunity, type Quote, type TenantUser } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
+import { CustomerPicker } from "../components/pickers";
 
 const pipeline = ["Discovery", "Proposal", "Negotiation", "Won", "Lost"] as const;
 type VisualStage = (typeof pipeline)[number];
@@ -215,18 +216,12 @@ export function OpportunitiesPage() {
 
             <label>
               Cliente *
-              <select
+              <CustomerPicker
                 required
                 value={form.customerId}
-                onChange={(e) => setForm({ ...form, customerId: e.target.value })}
-              >
-                <option value="">Seleccionar empresa</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.legalName || c.tradeName}
-                  </option>
-                ))}
-              </select>
+                onChange={(id) => setForm({ ...form, customerId: id })}
+                options={customers}
+              />
             </label>
 
             <label>

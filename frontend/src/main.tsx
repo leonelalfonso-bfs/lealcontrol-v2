@@ -16,6 +16,8 @@ import "./brand-layout.css";
 import "./sober-shell.css";
 import "./leal-workspace-theme.css";
 import "./tabler-light.css";
+import "./styles/instrumento.css";
+import "./styles/bridge.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

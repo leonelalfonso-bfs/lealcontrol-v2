@@ -3,7 +3,8 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { CustomerSummary, PurchaseInvoice } from "../api/types";
 import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
-import { Modal } from "../components/ui/Modal";
+import { Modal } from "../components/ui/Modal";
+import { CustomerPicker } from "../components/pickers";
 
 type Account = {
   id: string;
@@ -125,14 +126,14 @@ export function PaymentOrderFormPage() {
       setLoading(true);
       try {
         const [dirRes, accRes, chqRes, invRes, concRes] = await Promise.all([
-          api.listCustomers("", ""),
+          api.listAllCustomers("supplier"),
           api.listFinanceAccounts().catch(() => [] as Account[]),
           api.listReceivedCheques().catch(() => [] as any[]),
           api.listPurchaseInvoices("", "").catch(() => [] as PurchaseInvoice[]),
           api.listFinanceConcepts().catch(() => [] as any[])
         ]);
 
-        const supps = (dirRes.items || []).filter((d) => d.isSupplier);
+        const supps = (dirRes || []).filter((d) => d.isSupplier);
         setSuppliers(supps);
         setAccounts(accRes || []);
         const allCheques = chqRes || [];
@@ -498,18 +499,13 @@ export function PaymentOrderFormPage() {
             <div className="grid-2">
               <label>
                 Proveedor
-                <select
+                <CustomerPicker
+                  role="supplier"
                   value={selectedSupplierId}
-                  onChange={(e) => setSelectedSupplierId(e.target.value)}
+                  onChange={(id) => setSelectedSupplierId(id)}
+                  options={suppliers}
                   disabled={loading}
-                >
-                  <option value="">-- Seleccionar proveedor --</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.tradeName || s.legalName} {s.documentNumber ? `(${s.documentNumber})` : ""}
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
 
               <label>

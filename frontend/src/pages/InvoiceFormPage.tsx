@@ -11,6 +11,7 @@ import {
   type ProductSummary,
   type RemitoItem
 } from "../api/types";
+import { CustomerPicker, ProductPicker } from "../components/pickers";
 
 interface FormInvoiceItem {
   productId?: string;
@@ -553,18 +554,12 @@ export function InvoiceFormPage() {
               <div className="grid-3">
                 <label>
                   Cliente / Razón Social *
-                  <select
+                  <CustomerPicker
                     value={customerId}
-                    onChange={(e) => handleCustomerChange(e.target.value)}
+                    onChange={(id) => handleCustomerChange(id)}
+                    options={customers}
                     required
-                  >
-                    <option value="">Seleccionar cliente...</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.legalName} ({c.documentNumber})
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </label>
 
                 <label>
@@ -810,19 +805,14 @@ export function InvoiceFormPage() {
                         <tr key={idx}>
                           <td>
                             <div className="stack" style={{ gap: 4 }}>
-                              <select
+                              <ProductPicker
+                                aria-label={`Producto del renglón ${idx + 1}`}
                                 value={item.productId ?? ""}
-                                onChange={(e) => handleItemProductSelect(idx, e.target.value)}
+                                onChange={(id) => handleItemProductSelect(idx, id)}
+                                products={products}
                                 disabled={Boolean(remitoId)}
-                                style={{ fontSize: "0.82rem" }}
-                              >
-                                <option value="">Seleccionar del catálogo...</option>
-                                {products.map((p) => (
-                                  <option key={p.id} value={p.id}>
-                                    {p.code} - {p.name}
-                                  </option>
-                                ))}
-                              </select>
+                                placeholder="Elegir del catálogo"
+                              />
                               <input
                                 value={item.description}
                                 onChange={(e) => {

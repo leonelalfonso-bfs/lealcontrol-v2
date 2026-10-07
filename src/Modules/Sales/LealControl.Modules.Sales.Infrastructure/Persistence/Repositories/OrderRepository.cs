@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,13 +60,13 @@ internal sealed class OrderRepository : IOrderRepository
             query = query.Where(o => o.Status == status.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(search))
+        foreach (var token in SearchText.Parse(search))
         {
-            var term = search.Trim();
-            query = query.Where(o => o.OrderNumber.Contains(term)
-                                  || (o.QuoteNumber != null && o.QuoteNumber.Contains(term))
-                                  || (o.OwnerName != null && o.OwnerName.Contains(term))
-                                  || (o.Notes != null && o.Notes.Contains(term)));
+            var text = token.Text;
+            query = query.Where(o => SearchText.Fold(o.OrderNumber).Contains(text)
+                                  || (o.QuoteNumber != null && SearchText.Fold(o.QuoteNumber).Contains(text))
+                                  || (o.OwnerName != null && SearchText.Fold(o.OwnerName).Contains(text))
+                                  || (o.Notes != null && SearchText.Fold(o.Notes).Contains(text)));
         }
 
         return await query

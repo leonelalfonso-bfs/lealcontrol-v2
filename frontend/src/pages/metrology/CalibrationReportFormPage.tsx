@@ -2,7 +2,9 @@ import { useEffect, useState, FormEvent, useMemo } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { MetrologyEquipment, StandardWeight, MetrologyInstrument, MetrologyTestPoint, EccentricityConfig } from "../../api/types";
-import { assaysForMode, METROLOGY_ASSAYS } from "./metrologyScope";
+import { assaysForMode, METROLOGY_ASSAYS } from "./metrologyScope";
+import { SearchField } from "../../components/ui/SearchField";
+import { matchesSearch } from "../../lib/search";
 
 export type FidelityTrial = {
   initialZero: string;
@@ -2201,11 +2203,12 @@ export function CalibrationReportFormPage() {
           <div className="modal-card card pad" style={{ maxWidth: 650 }}>
             <h3>Seleccionar Patrones Metrológicos</h3>
             <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-              <input
-                type="text"
-                placeholder="Buscar por código, certificado o valor..."
+              <SearchField
                 value={weightSearch}
-                onChange={(e) => setWeightSearch(e.target.value)}
+                onChange={setWeightSearch}
+                placeholder="Buscar por código, certificado, valor o clase"
+                shortcut={false}
+                autoFocus
                 style={{ flex: 1 }}
               />
               <button
@@ -2226,11 +2229,8 @@ export function CalibrationReportFormPage() {
 
             <div style={{ maxHeight: 320, overflowY: "auto", border: "1px solid var(--surface-border)", borderRadius: 6 }}>
               {weights
-                .filter(
-                  (w) =>
-                    !weightSearch ||
-                    w.code.toLowerCase().includes(weightSearch.toLowerCase()) ||
-                    w.certificateNumber?.toLowerCase().includes(weightSearch.toLowerCase())
+                .filter((w) =>
+                  matchesSearch(weightSearch, w.code, w.certificateNumber, `${w.nominalValue} ${w.unit ?? ""}`, w.accuracyClass)
                 )
                 .map((w) => {
                   const checked = draftWeightIds.includes(w.id);

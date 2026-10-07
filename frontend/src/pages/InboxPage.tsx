@@ -10,6 +10,7 @@ import {
   consumePendingConversationOpen,
   setActiveConversationForNotifications
 } from "../lib/communicationsNotifications";
+import { SearchField } from "../components/ui/SearchField";
 
 const emptyLead = "00000000-0000-0000-0000-000000000000";
 
@@ -773,12 +774,11 @@ export function InboxPage() {
             CONVERSACIONES ({visibleConversations.length})
           </div>
           <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--surface-border)" }}>
-            <input
-              type="search"
-              placeholder="Buscar..."
+            <SearchField
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--surface-border)" }}
+              onChange={setSearch}
+              placeholder="Buscar conversaciones"
+              style={{ width: "100%" }}
             />
           </div>
           <div style={{ overflowY: "auto", flex: 1 }}>
@@ -1414,13 +1414,14 @@ export function InboxPage() {
             <p className="muted" style={{ fontSize: "0.85rem", marginTop: 0 }}>
               Buscá un cliente del CRM para asociarlo a la conversación con {activeDisplayName}.
             </p>
-            <input
-              type="search"
-              placeholder="Buscar por nombre, CUIT o razón social..."
+            <SearchField
               value={customerSearch}
-              onChange={(e) => setCustomerSearch(e.target.value)}
+              onChange={setCustomerSearch}
+              loading={customerSearchBusy}
+              placeholder="Buscar por nombre, CUIT o razón social"
+              shortcut={false}
               autoFocus
-              style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: "1px solid var(--surface-border)", marginBottom: 12 }}
+              style={{ width: "100%", marginBottom: 12 }}
             />
             <div style={{ maxHeight: 280, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
               {customerSearchBusy && <div className="muted" style={{ padding: 12, textAlign: "center" }}>Buscando...</div>}

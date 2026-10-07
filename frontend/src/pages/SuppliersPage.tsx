@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { label, type CustomerSummary } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
+import { SearchField } from "../components/ui/SearchField";
 
 function parseSupplierRow(row: Record<string, unknown>) {
   const getField = (...candidates: string[]): string => {
@@ -213,16 +214,14 @@ export function SuppliersPage() {
       </div>
 
       <div className="card pad toolbar" style={{ marginBottom: 20 }}>
-        <input
-          placeholder="Buscar por Razón Social, CUIT, email o teléfono..."
+        <SearchField
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && load()}
-          style={{ maxWidth: 420 }}
+          onChange={setSearch}
+          onSearch={(term) => load(term)}
+          resultCount={items.length}
+          placeholder="Buscar por razón social, CUIT, email o teléfono"
+          style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
-        <button type="button" className="btn ghost" onClick={() => load()}>
-          Buscar
-        </button>
       </div>
 
       <div className="card">

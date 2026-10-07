@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { label, type CustomerSummary } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
+import { SearchField } from "../components/ui/SearchField";
 
 function parseCustomerRow(row: Record<string, unknown>) {
   const getField = (...candidates: string[]): string => {
@@ -192,16 +193,14 @@ export function CustomersPage() {
       )}
 
       <div className="toolbar" style={{ marginBottom: 14 }}>
-        <input
-          placeholder="Buscar por razón social, CUIT, email o teléfono"
+        <SearchField
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && load()}
-          style={{ maxWidth: 420 }}
+          onChange={setSearch}
+          onSearch={(term) => load(term)}
+          resultCount={total}
+          placeholder="Buscar por razón social, CUIT, email o teléfono"
+          style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
-        <button className="btn ghost" onClick={() => load()}>
-          Buscar
-        </button>
       </div>
 
       <div className="card">

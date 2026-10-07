@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { label, type CustomerSummary } from "../api/types";
+import { SearchField } from "../components/ui/SearchField";
 
 type DirectoryFilter = "all" | "customers" | "suppliers" | "both";
 
@@ -64,14 +65,15 @@ export function DirectoryPage() {
       </div>
 
       <div className="card pad toolbar" style={{ marginBottom: 18 }}>
-        <input
-          placeholder="Buscar por empresa, CUIT, email o teléfono"
+        <SearchField
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          onKeyDown={(event) => event.key === "Enter" && load()}
-          style={{ maxWidth: 460 }}
+          onChange={setSearch}
+          onSearch={(term) => load(term)}
+          resultCount={visibleItems.length}
+          loading={loading}
+          placeholder="Buscar por empresa, CUIT, email o teléfono"
+          style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
-        <button type="button" className="btn ghost" onClick={() => load()}>Buscar</button>
         <div className="directory-filter" aria-label="Filtrar directorio">
           {(["all", "customers", "suppliers", "both"] as const).map((option) => (
             <button
