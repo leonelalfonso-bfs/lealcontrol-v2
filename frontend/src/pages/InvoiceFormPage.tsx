@@ -546,6 +546,24 @@ export function InvoiceFormPage() {
   const iva27 = items.filter((i) => Math.abs(i.vatRate - 27.0) < 0.1).reduce((s, i) => s + (calculateItemNet(i) * 0.27), 0);
   const totalIva = iva21 + iva105 + iva27;
   const totalFactura = subtotalNeto + totalIva;
+
+  // ¿Este cliente debe recibir Factura de Crédito Electrónica MiPyMEs por este importe? (consulta ARCA)
+  const [fceCheck, setFceCheck] = useState<{ ok: boolean; obligated: boolean; minimumAmount: number; required: boolean; detail: string } | null>(null);
+  const fceCuit = customerDocument.replace(/\D+/g, "");
+  const fceTotal = Math.round(totalFactura * 100) / 100;
+  useEffect(() => {
+    if (fceCuit.length !== 11 || fceTotal <= 0 || associatedInvoice || invoiceType === "Proforma") {
+      setFceCheck(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      api.getFceObligation(fceCuit, issueDate, fceTotal, currency === "USD" ? exchangeRate || 1 : 1)
+        .then((r) => !cancelled && setFceCheck(r))
+        .catch(() => !cancelled && setFceCheck(null));
+    }, 700);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [fceCuit, fceTotal, issueDate, currency, exchangeRate, associatedInvoice, invoiceType]);
   const equivArs = currency === "USD" ? totalFactura * (exchangeRate || 1) : totalFactura;
 
   const handleSubmit = async (e: FormEvent) => {
@@ -652,6 +670,29 @@ export function InvoiceFormPage() {
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
           {/* Main Column */}
           <div className="stack" style={{ gap: 20 }}>
+            {fceCheck && (
+              <div className="card pad" role="status" style={{
+                background: fceCheck.required ? "#fffbeb" : "#f8fafc",
+                border: `1px solid ${fceCheck.required ? "#f59e0b" : "#e2e8f0"}`
+              }}>
+                {!fceCheck.ok ? (
+                  <span className="muted">No se pudo verificar en ARCA si corresponde Factura de Crédito Electrónica: {fceCheck.detail}</span>
+                ) : fceCheck.required ? (
+                  <>
+                    <strong>Corresponde Factura de Crédito Electrónica MiPyMEs (FCE).</strong>
+                    <div style={{ fontSize: "0.88rem", marginTop: 4 }}>
+                      ARCA informa que este cliente está obligado a recibir FCE desde {fceCheck.minimumAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}, y esta factura supera ese monto.
+                    </div>
+                  </>
+                ) : fceCheck.obligated ? (
+                  <span className="muted">
+                    Este cliente recibe FCE desde {fceCheck.minimumAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}; por este importe corresponde factura común.
+                  </span>
+                ) : (
+                  <span className="muted">Verificado en ARCA: este cliente no está obligado a recibir Factura de Crédito Electrónica.</span>
+                )}
+              </div>
+            )}
             {associatedInvoice ? (
               <div className="card pad" style={{ background: "#f8fafc", border: "1px solid #cbd5e1" }}>
                 <strong>

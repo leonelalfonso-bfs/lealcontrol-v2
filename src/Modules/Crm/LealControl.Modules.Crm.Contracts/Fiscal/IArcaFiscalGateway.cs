@@ -16,10 +16,17 @@ public interface IArcaFiscalGateway
         string currencyCode, string? issueDate, CancellationToken cancellationToken) =>
         Task.FromResult(new ArcaExchangeRate(false, 0m, string.Empty, "Cotización ARCA no disponible."));
 
+    // Si la CUIT receptora debe recibir Factura de Crédito Electrónica MiPyMEs (wsfecred).
+    Task<ArcaFceObligation> GetFceObligationAsync(
+        string receiverCuit, DateOnly issueDate, CancellationToken cancellationToken) =>
+        Task.FromResult(new ArcaFceObligation(false, false, 0m, "Consulta de FCE no disponible."));
+
     Task<ArcaFiscalVoucherObservation> GetVoucherAsync(
         int pointOfSale, int voucherType, long number, string expectedIssuerCuit,
         bool expectedProduction, CancellationToken cancellationToken);
 }
+
+public sealed record ArcaFceObligation(bool Ok, bool Obligated, decimal MinimumAmount, string Detail);
 
 public sealed record ArcaExchangeRate(bool Ok, decimal Rate, string RateDate, string Detail, bool Production = false);
 
