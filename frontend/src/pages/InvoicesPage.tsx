@@ -6,6 +6,7 @@ import { ExcelToolbar } from "../components/ExcelTools";
 import { useAuth } from "../context/AuthContext";
 import { SearchField } from "../components/ui/SearchField";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
+import { withCollections } from "../lib/receivables";
 
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
@@ -81,50 +82,7 @@ export function InvoicesPage() {
   };
 
   // Enhance invoices with collection and pending status
-  const enrichedInvoices = useMemo(() => {
-    const now = new Date().getTime();
-
-    return items.map((inv) => {
-      // Find receipts matching this invoice
-      const pastImputed = receipts
-        .filter((r) => r.invoiceId === inv.id || (r.invoicesSummary && r.invoicesSummary.includes(inv.formattedNumber)))
-        .reduce((sum, r) => {
-          if (inv.currency === "USD") {
-            if (r.invoiceAmount && r.invoiceCurrency === "USD") return sum + Number(r.invoiceAmount);
-            if (r.currency === "USD") return sum + Number(r.amount);
-            if (r.paymentExchangeRate && r.paymentExchangeRate > 0) return sum + (Number(r.amount) / Number(r.paymentExchangeRate));
-            if (inv.exchangeRate && inv.exchangeRate > 0) return sum + (Number(r.amount) / Number(inv.exchangeRate));
-          }
-          return sum + (Number(r.amount) || 0);
-        }, 0);
-
-      const totalCobrado = pastImputed;
-      const saldoPendiente = Math.max(0, inv.total - totalCobrado);
-      const isPaid = totalCobrado >= inv.total - 0.01 && inv.total > 0;
-      const isPartial = totalCobrado > 0.01 && saldoPendiente > 0.01;
-      const isPending = totalCobrado <= 0.01;
-
-      const paymentState = isPaid ? "Paid" : isPartial ? "Partial" : "Pending";
-
-      // Days calculations
-      const issueTime = new Date(inv.issueDate).getTime();
-      const dueTime = new Date(inv.dueDate).getTime();
-      const daysSinceIssue = Math.max(0, Math.floor((now - issueTime) / (1000 * 60 * 60 * 24)));
-      const daysOverdue = Math.floor((now - dueTime) / (1000 * 60 * 60 * 24));
-
-      return {
-        ...inv,
-        totalCobrado,
-        saldoPendiente,
-        paymentState,
-        isPaid,
-        isPartial,
-        isPending,
-        daysSinceIssue,
-        daysOverdue
-      };
-    });
-  }, [items, receipts]);
+  const enrichedInvoices = useMemo(() => withCollections(items, receipts), [items, receipts]);
 
   // Filtered by payment status
   const filteredInvoices = useMemo(() => {

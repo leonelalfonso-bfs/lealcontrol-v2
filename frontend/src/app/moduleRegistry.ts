@@ -102,7 +102,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     minimumPlan: "base",
     requiredPermission: "home.read",
     dependencies: [],
-    items: [{ path: "/", label: "Dashboard Ejecutivo", icon: "📊", end: true }]
+    items: [{ path: "/", label: "Hoy", icon: "📊", end: true }]
   },
   {
     id: "directorio",
