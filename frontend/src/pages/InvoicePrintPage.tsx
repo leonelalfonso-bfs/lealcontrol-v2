@@ -6,6 +6,7 @@ import { EmailComposer } from "../components/EmailComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { numberToWords } from "../utils/numberToWords";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
+import { isFceType, letterOf } from "../lib/documents";
 import { type CompanySettings, type CustomerDetail, type Invoice } from "../api/types";
 
 const TAX_CONDITION_LABELS: Record<string, string> = {
@@ -129,10 +130,13 @@ export function InvoicePrintPage() {
   const simulatedCae = invoice.afipRawResponse?.includes("otorgado exitosamente por ARCA WSFE v1.") ?? false;
   const isUsd = invoice.currency === "USD";
   const currSymbol = isUsd ? "USD " : "$ ";
-  const invoiceLetter = invoice.invoiceType.replace("NC_", "").replace("ND_", "");
+  const invoiceLetter = letterOf(invoice.invoiceType);
+  const isFce = isFceType(invoice.invoiceType);
   const isNc = invoice.invoiceType.startsWith("NC");
   const isNd = invoice.invoiceType.startsWith("ND");
-  const docTitle = isNc ? "NOTA DE CRÉDITO" : isNd ? "NOTA DE DÉBITO" : invoice.invoiceType === "Proforma" ? "FACTURA PROFORMA" : "FACTURA";
+  const docTitle = isFce
+    ? (isNc ? "NOTA DE CRÉDITO ELECTRÓNICA MiPyMEs (FCE)" : isNd ? "NOTA DE DÉBITO ELECTRÓNICA MiPyMEs (FCE)" : "FACTURA DE CRÉDITO ELECTRÓNICA MiPyMEs (FCE)")
+    : isNc ? "NOTA DE CRÉDITO" : isNd ? "NOTA DE DÉBITO" : invoice.invoiceType === "Proforma" ? "FACTURA PROFORMA" : "FACTURA";
 
   const afipCodes: Record<string, string> = {
     A: "01",
@@ -147,6 +151,12 @@ export function InvoicePrintPage() {
     ND_B: "07",
     ND_C: "12",
     ND_M: "53",
+    FCE_A: "201",
+    ND_FCE_A: "202",
+    NC_FCE_A: "203",
+    FCE_B: "206",
+    ND_FCE_B: "207",
+    NC_FCE_B: "208",
     Proforma: "00"
   };
   const invoiceCode = afipCodes[invoice.invoiceType] ?? "01";
@@ -596,6 +606,21 @@ export function InvoicePrintPage() {
               <div style={{ fontSize: "9px", color: "#475569", marginTop: "2px", fontStyle: "italic" }}>
                 {settings.invoice.paymentInstructions}
               </div>
+            )}
+          </div>
+        )}
+
+        {isFce && (
+          <div style={{ border: `1px solid ${primaryCol}55`, padding: "6px 8px", borderRadius: "4px", marginBottom: "8px", fontSize: "9.5px", color: "#334155" }}>
+            {invoice.fceCbu ? (
+              <>
+                <strong>Cobro de la Factura de Crédito Electrónica:</strong> CBU {invoice.fceCbu}
+                {invoice.fceAlias ? ` · Alias ${invoice.fceAlias}` : ""}
+                {" · "}Transferencia: {invoice.fceTransferMode === "ADC" ? "Agente de Depósito Colectivo" : "Sistema de Circulación Abierta"}
+              </>
+            ) : (
+              <><strong>{invoice.fceCancellation ? "Nota de anulación:" : "Nota sin anulación:"}</strong>{" "}
+                {invoice.fceCancellation ? "anula la Factura de Crédito Electrónica rechazada por el comprador." : "ajusta una Factura de Crédito Electrónica vigente."}</>
             )}
           </div>
         )}

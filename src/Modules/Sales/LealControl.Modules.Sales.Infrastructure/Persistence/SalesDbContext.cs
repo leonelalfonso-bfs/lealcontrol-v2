@@ -546,6 +546,10 @@ CREATE INDEX IF NOT EXISTS "IX_remito_return_items_RemitoItemId"
                 ADD COLUMN IF NOT EXISTS "ExchangeRateType" character varying(16);
             ALTER TABLE sales.invoices
                 ADD COLUMN IF NOT EXISTS "ExchangeDifferenceImputationId" uuid;
+            ALTER TABLE sales.invoices ADD COLUMN IF NOT EXISTS "FceCbu" character varying(22);
+            ALTER TABLE sales.invoices ADD COLUMN IF NOT EXISTS "FceAlias" character varying(20);
+            ALTER TABLE sales.invoices ADD COLUMN IF NOT EXISTS "FceTransferMode" character varying(3);
+            ALTER TABLE sales.invoices ADD COLUMN IF NOT EXISTS "FceCancellation" boolean;
             CREATE UNIQUE INDEX IF NOT EXISTS "UX_invoices_exchange_difference"
                 ON sales.invoices ("TenantId", "ExchangeDifferenceImputationId")
                 WHERE "ExchangeDifferenceImputationId" IS NOT NULL AND "Status" NOT IN ('Cancelled', 'Rejected');

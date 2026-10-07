@@ -36,6 +36,9 @@ public sealed class FiscalReservationService
         _policy = policy ?? new FiscalEmissionPolicy(AllowProduction: false);
     }
 
+    // Desde este total en pesos se consulta si el cliente debe recibir FCE (mínimo vigente: $5.549.862).
+    public const decimal FceCheckThreshold = 1_000_000m;
+
     public async Task<FiscalReservationResult> ReserveAsync(Guid invoiceId, CancellationToken ct)
     {
         var tenantId = _tenant.TenantId;
@@ -69,6 +72,19 @@ public sealed class FiscalReservationService
             if (official.Rate != data.ExchangeRate)
                 return Fail($"La cotización del borrador ({data.ExchangeRate:0.######}) no coincide con la oficial de ARCA " +
                     $"({official.Rate:0.######}{RateDateText(official)}). Usá \"Cotización ARCA\" para actualizarla.");
+        }
+
+        // Factura común a un cliente obligado a recibir FCE por este importe: no se autoriza.
+        // Debajo del umbral de consulta ningún cliente está obligado (el mínimo vigente es mayor).
+        if (data.VoucherType is 1 or 6 && data.ReceiverDocumentType == 80 &&
+            data.TotalAmount * data.ExchangeRate >= FceCheckThreshold)
+        {
+            var obligation = await _gateway.GetFceObligationAsync(data.ReceiverDocumentNumber,
+                DateOnly.ParseExact(data.IssueDate, "yyyyMMdd"), ct);
+            if (!obligation.Ok)
+                return Fail($"No se pudo verificar en ARCA si corresponde Factura de Crédito Electrónica: {obligation.Detail}");
+            if (obligation.Obligated && data.TotalAmount * data.ExchangeRate >= obligation.MinimumAmount)
+                return Fail($"Este cliente está obligado a recibir Factura de Crédito Electrónica desde $ {obligation.MinimumAmount:N2}: emití una FCE en lugar de una factura común.");
         }
 
         var numbering = await _gateway.GetLastAuthorizedAsync(

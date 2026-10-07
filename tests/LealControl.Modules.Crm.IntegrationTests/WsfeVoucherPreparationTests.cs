@@ -200,4 +200,52 @@ public sealed class WsfeVoucherPreparationTests
             System.Globalization.CultureInfo.InvariantCulture);
         Assert.Equal(expected, FiscalExchangeRateDate.For(issue, now));
     }
+
+    [Fact]
+    public void Fce_invoice_carries_cbu_alias_transfer_mode_and_due_date_even_for_products()
+    {
+        var invoice = Invoice.Create(new TenantId(Guid.NewGuid()), "FCE_A", 1, 1, null, null,
+            Guid.NewGuid(), "Gran empresa", "20123456786", "ResponsableInscripto", null,
+            Issue.AddDays(30), "ARS", 1m, null, Issue, 1,
+            fceCbu: "0070123420000012345678", fceAlias: "EMPRESA.COBRO", fceTransferMode: "SCA");
+        invoice.AddItem(null, "EQ", "Equipo", 1m, 100m, 21m);
+        var data = Valid(invoice);
+        Assert.Equal(201, data.VoucherType);
+        Assert.Equal("20261101", data.PaymentDue);
+        Assert.Equal(["2101=0070123420000012345678", "2102=EMPRESA.COBRO", "27=SCA"],
+            data.OptionalList.Select(o => $"{o.Id}={o.Value}").ToArray());
+        var xml = WsfeCaeRequestBuilder.Build(data, 1, 5, "30715489629", "t", "s");
+        Assert.Contains("<ar:FchVtoPago>20261101</ar:FchVtoPago>", xml);
+        Assert.Contains("<ar:Opcionales><ar:Opcional><ar:Id>2101</ar:Id><ar:Valor>0070123420000012345678</ar:Valor></ar:Opcional>", xml);
+    }
+
+    [Fact]
+    public void Fce_requires_company_cbu()
+    {
+        var invoice = Invoice.Create(new TenantId(Guid.NewGuid()), "FCE_A", 1, 1, null, null,
+            Guid.NewGuid(), "Gran empresa", "20123456786", "ResponsableInscripto", null,
+            Issue.AddDays(30), "ARS", 1m, null, Issue, 1);
+        invoice.AddItem(null, "EQ", "Equipo", 1m, 100m, 21m);
+        Assert.False(WsfeVoucherPreparation.TryBuild(invoice, out _, out var error));
+        Assert.Contains("CBU", error);
+    }
+
+    [Theory]
+    [InlineData(false, "N", null)]
+    [InlineData(true, "S", "20261101")]
+    public void Fce_credit_note_informs_cancellation_and_due_only_when_cancelling(
+        bool cancellation, string code, string? due)
+    {
+        var note = Invoice.Create(new TenantId(Guid.NewGuid()), "NC_FCE_A", 1, 1, null, null,
+            Guid.NewGuid(), "Gran empresa", "20123456786", "ResponsableInscripto", null,
+            Issue.AddDays(30), "ARS", 1m, null, Issue, 1, fceCancellation: cancellation);
+        note.AddItem(null, "EQ", "Equipo", 1m, 100m, 21m);
+        var associated = new WsfeAssociatedVoucher(201, 1, 5, "30715489629", "20261001");
+        Assert.True(WsfeVoucherPreparation.TryBuild(note, out var data, out var error, associated), error);
+        Assert.Equal(203, data!.VoucherType);
+        Assert.Equal(new WsfeOptional("22", code), Assert.Single(data.OptionalList));
+        Assert.Equal(due, data.PaymentDue);
+        Assert.False(WsfeVoucherPreparation.TryBuild(note, out _, out _,
+            associated with { Type = 1 }));
+    }
 }

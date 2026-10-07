@@ -13,6 +13,7 @@ import {
   type RemitoItem
 } from "../api/types";
 import { CustomerPicker, ProductPicker } from "../components/pickers";
+import { isFceType, letterOf } from "../lib/documents";
 
 interface FormInvoiceItem {
   productId?: string;
@@ -150,6 +151,17 @@ export function InvoiceFormPage() {
   // Cotización BNA vendedor pactada para cancelar en pesos (día hábil anterior al pago).
   const [exchangeRateType, setExchangeRateType] = useState<"Divisa" | "Billete">("Divisa");
   const [differenceInfo, setDifferenceInfo] = useState<string | null>(null);
+  // Factura de Crédito Electrónica: CBU/alias donde cobra la empresa (de Configuración) y modalidad.
+  const [fceCbu, setFceCbu] = useState("");
+  const [fceAlias, setFceAlias] = useState("");
+  const [fceTransferMode, setFceTransferMode] = useState<"SCA" | "ADC">("SCA");
+  const [fceCancellation, setFceCancellation] = useState(false);
+  useEffect(() => {
+    api.getCompanySettings().then((c) => {
+      setFceCbu((c?.bankCbu ?? "").replace(/\D+/g, ""));
+      setFceAlias(c?.bankAlias ?? "");
+    }).catch(() => undefined);
+  }, []);
   const [exchangeRate, setExchangeRate] = useState<number>(1.0);
   const [advancePercent, setAdvancePercent] = useState<number>(100);
   const [notes, setNotes] = useState<string>("");
@@ -586,6 +598,10 @@ export function InvoiceFormPage() {
       setError("Seleccioná si se facturan productos, servicios o ambos.");
       return;
     }
+    if ((invoiceType === "FCE_A" || invoiceType === "FCE_B") && fceCbu.replace(/\D+/g, "").length !== 22) {
+      setError("La Factura de Crédito Electrónica requiere el CBU de 22 dígitos donde cobra la empresa.");
+      return;
+    }
     if ((fiscalConcept === 2 || fiscalConcept === 3) &&
         (!serviceFrom || !serviceTo || serviceTo < serviceFrom || dueDate < issueDate)) {
       setError("Indicá un período válido del servicio y un vencimiento no anterior a la emisión.");
@@ -616,6 +632,12 @@ export function InvoiceFormPage() {
         : rateSource === "manual" ? exchangeRateType
         : "Divisa",
       exchangeDifferenceImputationId: differenceImputationId || undefined,
+      ...(isFceType(invoiceType) ? {
+        fceCbu: fceCbu || undefined,
+        fceAlias: fceAlias || undefined,
+        fceTransferMode,
+        fceCancellation: invoiceType.startsWith("NC_") || invoiceType.startsWith("ND_") ? fceCancellation : undefined
+      } : {}),
       associatedInvoiceId: associatedInvoice?.id,
       restockItems: noteKind === "NC" ? restockItems : undefined,
       notes,
@@ -677,13 +699,23 @@ export function InvoiceFormPage() {
               }}>
                 {!fceCheck.ok ? (
                   <span className="muted">No se pudo verificar en ARCA si corresponde Factura de Crédito Electrónica: {fceCheck.detail}</span>
+                ) : fceCheck.required && isFceType(invoiceType) ? (
+                  <span>✓ Corresponde Factura de Crédito Electrónica y es lo que estás emitiendo.</span>
                 ) : fceCheck.required ? (
                   <>
                     <strong>Corresponde Factura de Crédito Electrónica MiPyMEs (FCE).</strong>
                     <div style={{ fontSize: "0.88rem", marginTop: 4 }}>
                       ARCA informa que este cliente está obligado a recibir FCE desde {fceCheck.minimumAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}, y esta factura supera ese monto.
                     </div>
+                    <button type="button" className="btn compact" style={{ marginTop: 8 }}
+                      onClick={() => setInvoiceType(`FCE_${letterOf(invoiceType) === "B" ? "B" : "A"}`)}>
+                      Cambiar a Factura de Crédito Electrónica
+                    </button>
                   </>
+                ) : isFceType(invoiceType) && !fceCheck.obligated ? (
+                  <span style={{ color: "#92400e" }}>
+                    Este cliente no está obligado a recibir FCE según ARCA: si la emitís, ARCA puede rechazarla. Usá una factura común.
+                  </span>
                 ) : fceCheck.obligated ? (
                   <span className="muted">
                     Este cliente recibe FCE desde {fceCheck.minimumAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}; por este importe corresponde factura común.
@@ -869,15 +901,49 @@ export function InvoiceFormPage() {
                     <option value="B">Factura B (Cons. Final / Exento)</option>
                     <option value="C">Factura C (Emisor Monotributo)</option>
                     <option value="M">Factura M (Régimen Retención)</option>
+                    <option value="FCE_A">Factura de Crédito Electrónica A (MiPyMEs)</option>
+                    <option value="FCE_B">Factura de Crédito Electrónica B (MiPyMEs)</option>
                     {associatedInvoice && <>
                       <option value="NC_A">Nota de Crédito A</option>
                       <option value="NC_B">Nota de Crédito B</option>
                       <option value="ND_A">Nota de Débito A</option>
                       <option value="ND_B">Nota de Débito B</option>
+                      <option value="NC_FCE_A">Nota de Crédito FCE A</option>
+                      <option value="ND_FCE_A">Nota de Débito FCE A</option>
+                      <option value="NC_FCE_B">Nota de Crédito FCE B</option>
+                      <option value="ND_FCE_B">Nota de Débito FCE B</option>
                     </>}
                     <option value="Proforma">Factura Proforma / Interna</option>
                   </select>
                 </label>
+
+                {isFceType(invoiceType) && !invoiceType.startsWith("NC_") && !invoiceType.startsWith("ND_") && (
+                  <>
+                    <label>
+                      CBU de cobro (FCE) *
+                      <input value={fceCbu} inputMode="numeric" maxLength={22} placeholder="22 dígitos"
+                        onChange={(e) => setFceCbu(e.target.value.replace(/\D+/g, ""))} />
+                      <span className="muted" style={{ fontSize: "0.78rem" }}>Debe estar registrado en ARCA a nombre de la empresa.</span>
+                    </label>
+                    <label>
+                      Alias (opcional)
+                      <input value={fceAlias} maxLength={20} onChange={(e) => setFceAlias(e.target.value)} />
+                    </label>
+                    <label>
+                      Transferencia de la FCE
+                      <select value={fceTransferMode} onChange={(e) => setFceTransferMode(e.target.value as "SCA" | "ADC")}>
+                        <option value="SCA">Sistema de Circulación Abierta (SCA)</option>
+                        <option value="ADC">Agente de Depósito Colectivo (ADC)</option>
+                      </select>
+                    </label>
+                  </>
+                )}
+                {isFceType(invoiceType) && (invoiceType.startsWith("NC_") || invoiceType.startsWith("ND_")) && (
+                  <label style={{ display: "flex", flexDirection: "row", justifyContent: "flex-start", gap: 8, alignItems: "center" }}>
+                    <input type="checkbox" checked={fceCancellation} onChange={(e) => setFceCancellation(e.target.checked)} style={{ width: "auto" }} />
+                    Es de anulación: el cliente rechazó la Factura de Crédito en ARCA
+                  </label>
+                )}
 
                 <label>
                   Punto de Venta *

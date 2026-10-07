@@ -5,6 +5,7 @@ import type { CustomerSummary, Invoice } from "../api/types";
 import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
 import { CustomerPicker } from "../components/pickers";
 import { withCollections, type ReceiptForImputation } from "../lib/receivables";
+import { documentLabel } from "../lib/documents";
 import "./collections.css";
 
 type Account = {
@@ -58,11 +59,6 @@ const shortDate = (iso?: string | null) => {
   return y && m && d ? `${Number(d)}/${Number(m)}/${y}` : "—";
 };
 const newId = () => Math.random().toString(36).substring(2, 9);
-const documentLabel = (type: string) => {
-  const letter = type.replace(/^(NC_|ND_)/, "");
-  if (type.startsWith("ND_")) return `Nota de Débito ${letter}`;
-  return `Factura ${letter}`;
-};
 
 export function CollectionReceiptsWorkspacePage() {
   const [searchParams] = useSearchParams();

@@ -36,6 +36,9 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(i => i.Status).HasMaxLength(32).IsRequired();
         builder.Property(i => i.FiscalConcept).HasDefaultValue(0);
         builder.Property(i => i.ExchangeRateType).HasMaxLength(16);
+        builder.Property(i => i.FceCbu).HasMaxLength(22);
+        builder.Property(i => i.FceAlias).HasMaxLength(20);
+        builder.Property(i => i.FceTransferMode).HasMaxLength(3);
         builder.HasIndex(i => new { i.TenantId, i.PointOfSale, i.InvoiceType, i.InvoiceNumber })
             .HasDatabaseName("UX_invoice_authorized_number").IsUnique()
             .HasFilter("\"Status\" = 'Authorized'");
@@ -146,8 +149,9 @@ internal sealed class InvoiceQueryHandlers
             return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.FiscalConcept",
                 "Revisá el concepto, el período del servicio y el vencimiento de pago."));
 
-        var isNote = request.InvoiceType is "NC_A" or "NC_B" or "ND_A" or "ND_B";
-        var isCreditNoteType = request.InvoiceType is "NC_A" or "NC_B";
+        var isNote = request.InvoiceType is "NC_A" or "NC_B" or "ND_A" or "ND_B"
+            or "NC_FCE_A" or "NC_FCE_B" or "ND_FCE_A" or "ND_FCE_B";
+        var isCreditNoteType = request.InvoiceType.StartsWith("NC_", StringComparison.Ordinal);
         if (!isNote && request.AssociatedInvoiceId.HasValue)
             return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.UnexpectedAssociation",
                 "Solo las notas de crédito o débito se asocian a una factura."));
@@ -171,7 +175,8 @@ internal sealed class InvoiceQueryHandlers
                 cancellationToken);
             original = await _dbContext.Invoices.AsNoTracking()
                 .FirstOrDefaultAsync(i => i.Id == originalId && i.TenantId == tenantId, cancellationToken);
-            var letter = request.InvoiceType[^1..];
+            // La nota corresponde a su factura: NC_A/ND_A → A o ND_A; NC_FCE_A → FCE_A o ND_FCE_A.
+            var letter = FiscalVoucherCodes.BaseType(request.InvoiceType);
             // La diferencia de cambio de una factura en dólares se documenta con una nota en pesos.
             var currencyOk = original?.Currency == request.Currency ||
                 (exchangeDifference && original?.Currency == "USD" && request.Currency == "ARS");
@@ -254,7 +259,11 @@ internal sealed class InvoiceQueryHandlers
             original?.Id,
             request.PaidInForeignCurrency,
             request.ExchangeRateType,
-            request.ExchangeDifferenceImputationId);
+            request.ExchangeDifferenceImputationId,
+            request.FceCbu,
+            request.FceAlias,
+            request.FceTransferMode,
+            request.FceCancellation);
 
         foreach (var item in request.Items)
         {
@@ -480,7 +489,11 @@ internal sealed class InvoiceQueryHandlers
             i.AssociatedInvoiceId,
             i.PaidInForeignCurrency,
             i.ExchangeRateType,
-            i.ExchangeDifferenceImputationId);
+            i.ExchangeDifferenceImputationId,
+            i.FceCbu,
+            i.FceAlias,
+            i.FceTransferMode,
+            i.FceCancellation);
     }
 
 }

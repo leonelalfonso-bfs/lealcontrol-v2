@@ -8,8 +8,9 @@ namespace LealControl.Modules.Crm.Contracts.Fiscal;
 /// <summary>Construye un SOAP FECAESolicitar de un comprobante; no lo envía.</summary>
 public static class WsfeCaeRequestBuilder
 {
-    // Clases A y B con sus notas de débito y crédito (FEParamGetTiposCbte).
-    public static readonly IReadOnlySet<int> SupportedVoucherTypes = new HashSet<int> { 1, 2, 3, 6, 7, 8 };
+    // Clases A y B con sus notas, y Factura de Crédito Electrónica MiPyMEs A y B (FEParamGetTiposCbte).
+    public static readonly IReadOnlySet<int> SupportedVoucherTypes =
+        new HashSet<int> { 1, 2, 3, 6, 7, 8, 201, 202, 203, 206, 207, 208 };
 
     // Condición frente al IVA del receptor admitida por clase (FEParamGetCondicionIvaReceptor).
     private static readonly HashSet<int> ClassAReceiverConditions = [1, 6, 13, 16];
@@ -17,7 +18,8 @@ public static class WsfeCaeRequestBuilder
     private static readonly HashSet<int> VatRateIds = [3, 4, 5, 6, 8, 9];
     private static readonly HashSet<int> DocumentTypes = [80, 86, 96, 99];
 
-    public static bool IsClassA(int voucherType) => voucherType is 1 or 2 or 3;
+    public static bool IsClassA(int voucherType) => voucherType is 1 or 2 or 3 or 201 or 202 or 203;
+    public static bool IsFceInvoice(int voucherType) => voucherType is 201 or 206;
 
     public static string Build(
         WsfeVoucherData data, int pointOfSale,
@@ -50,8 +52,9 @@ public static class WsfeCaeRequestBuilder
         {
             Add("FchServDesde", data.ServiceFrom!);
             Add("FchServHasta", data.ServiceTo!);
-            Add("FchVtoPago", data.PaymentDue!);
         }
+        if (data.PaymentDue is not null)
+            Add("FchVtoPago", data.PaymentDue);
         Add("MonId", data.CurrencyCode);
         Add("MonCotiz", data.ExchangeRate.ToString("0.######", CultureInfo.InvariantCulture));
         if (data.CurrencyCode != "PES")
@@ -75,6 +78,13 @@ public static class WsfeCaeRequestBuilder
                     $"<ar:AlicIva><ar:Id>{v.Id}</ar:Id><ar:BaseImp>{Money(v.BaseAmount)}</ar:BaseImp>" +
                     $"<ar:Importe>{Money(v.Amount)}</ar:Importe></ar:AlicIva>");
             detail.Append("</ar:Iva>");
+        }
+        if (data.OptionalList.Count > 0)
+        {
+            detail.Append("<ar:Opcionales>");
+            foreach (var o in data.OptionalList)
+                detail.Append($"<ar:Opcional><ar:Id>{E(o.Id)}</ar:Id><ar:Valor>{E(o.Value)}</ar:Valor></ar:Opcional>");
+            detail.Append("</ar:Opcionales>");
         }
 
         return $"""
@@ -133,6 +143,8 @@ public static class WsfeCaeRequestBuilder
                 : data.ReceiverDocumentNumber != "0" &&
                   (data.ReceiverDocumentType != 80 || data.ReceiverDocumentNumber.Length == 11),
             "Documento del receptor inválido para su tipo.");
+        if (data.IsFce)
+            Require(data.ReceiverDocumentType == 80, "La Factura de Crédito Electrónica requiere el CUIT del cliente.");
         if (IsClassA(data.VoucherType))
             Require(data.ReceiverDocumentType == 80 &&
                     ClassAReceiverConditions.Contains(data.ReceiverVatCondition),
@@ -143,15 +155,39 @@ public static class WsfeCaeRequestBuilder
 
         Require(ValidDate(data.IssueDate, out var issue), "Fecha de emisión inválida.");
         if (data.Concept is 2 or 3)
+            Require(ValidDate(data.ServiceFrom, out var from) && ValidDate(data.ServiceTo, out var to) && to >= from,
+                "Servicios requieren un período válido.");
+        else
+            Require(data.ServiceFrom is null && data.ServiceTo is null,
+                "Las fechas de servicio solo corresponden a servicios.");
+        var cancellation = data.OptionalList.FirstOrDefault(o => o.Id == "22")?.Value;
+        // Vencimiento de pago: servicios en comprobantes comunes, siempre en la FCE, y en sus notas
+        // solo si son de anulación (validaciones 10163 y 10175).
+        var dueRequired = IsFceInvoice(data.VoucherType) || (!data.IsFce && data.Concept is 2 or 3);
+        var dueAllowed = dueRequired || (data.IsFce && cancellation == "S");
+        Require(data.PaymentDue is null ? !dueRequired
+                : dueAllowed && ValidDate(data.PaymentDue, out var due) && due >= issue,
+            dueRequired ? "Falta un vencimiento de pago válido." : "Este comprobante no lleva vencimiento de pago.");
+
+        // Opcionales de FCE: la factura informa CBU (y alias) y la modalidad de transferencia;
+        // sus notas, solo el código de anulación (validaciones 10165-10173).
+        var ids = data.OptionalList.Select(o => o.Id).ToList();
+        Require(ids.Distinct().Count() == ids.Count, "Opcionales repetidos.");
+        if (!data.IsFce)
+            Require(ids.Count == 0, "Solo la Factura de Crédito Electrónica lleva datos opcionales.");
+        else if (IsFceInvoice(data.VoucherType))
         {
-            Require(ValidDate(data.ServiceFrom, out var from) && ValidDate(data.ServiceTo, out var to) &&
-                    ValidDate(data.PaymentDue, out var due) && to >= from && due >= issue,
-                "Servicios requieren período y vencimiento de pago válidos.");
+            var cbu = data.OptionalList.FirstOrDefault(o => o.Id == "2101")?.Value;
+            var alias = data.OptionalList.FirstOrDefault(o => o.Id == "2102")?.Value;
+            var transfer = data.OptionalList.FirstOrDefault(o => o.Id == "27")?.Value;
+            Require(cbu is { Length: 22 } && cbu.All(char.IsDigit), "La FCE requiere el CBU de 22 dígitos de la empresa.");
+            Require(alias is null || alias.Length is >= 6 and <= 20, "El alias del CBU debe tener entre 6 y 20 caracteres.");
+            Require(transfer is "SCA" or "ADC", "Indicá la modalidad de transferencia de la FCE (SCA o ADC).");
+            Require(ids.All(id => id is "2101" or "2102" or "27"), "La FCE no lleva código de anulación.");
         }
         else
         {
-            Require(data.ServiceFrom is null && data.ServiceTo is null && data.PaymentDue is null,
-                "Las fechas de servicio solo corresponden a servicios.");
+            Require(cancellation is "S" or "N" && ids.Count == 1, "La nota de la FCE solo informa si es de anulación (S o N).");
         }
 
         decimal[] amounts = [data.NetAmount, data.NonTaxedAmount, data.ExemptAmount,
@@ -180,7 +216,9 @@ public static class WsfeCaeRequestBuilder
 
         if (data.IsCreditOrDebitNote)
         {
-            int[] allowed = IsClassA(data.VoucherType) ? [1, 2, 3] : [6, 7, 8];
+            int[] allowed = data.IsFce
+                ? (IsClassA(data.VoucherType) ? [201, 202, 203] : [206, 207, 208])
+                : IsClassA(data.VoucherType) ? [1, 2, 3] : [6, 7, 8];
             Require(data.AssociatedVouchers.Count > 0 && data.AssociatedVouchers.All(a =>
                     allowed.Contains(a.Type) && a.PointOfSale is >= 1 and <= 99998 &&
                     a.Number is >= 1 and <= 99_999_999 && a.IssuerCuit.Length == 11 &&
