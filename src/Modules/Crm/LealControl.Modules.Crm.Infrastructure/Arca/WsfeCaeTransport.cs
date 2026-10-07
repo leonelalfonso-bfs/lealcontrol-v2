@@ -18,7 +18,7 @@ public sealed class WsfeCaeTransport
 
     public async Task<WsfeCaeReply> SubmitAsync(
         string token, string sign, string issuerCuit, bool production,
-        IWsfeInvoiceAServiceData data, int pointOfSale, long reservedNumber,
+        WsfeVoucherData data, int pointOfSale, long reservedNumber,
         CancellationToken cancellationToken)
     {
         // Build valida el perfil fiscal antes de abrir la conexión HTTP.
@@ -39,7 +39,7 @@ public sealed class WsfeCaeTransport
                 return Unknown("ARCA no confirmó el resultado HTTP; consultar el número reservado.");
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             return WsfeCaeResponseParser.Parse(body, pointOfSale, data.VoucherType,
-                reservedNumber, data.Concept, data.ReceiverCuit, data.IssueDate);
+                reservedNumber, data.Concept, data.ReceiverDocumentType, data.ReceiverDocumentNumber, data.IssueDate);
         }
         catch (Exception)
         {

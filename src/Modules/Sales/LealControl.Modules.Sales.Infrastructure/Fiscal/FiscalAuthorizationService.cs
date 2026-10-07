@@ -44,7 +44,7 @@ public sealed class FiscalAuthorizationService
             return await _recovery.RecoverAsync(invoiceId, ct);
         }
 
-        IWsfeInvoiceAServiceData data;
+        WsfeVoucherData data;
         int point;
         long number;
         string issuer;
@@ -64,13 +64,13 @@ public sealed class FiscalAuthorizationService
             // Otro proceso pudo persistir el envío mientras esperábamos el bloqueo.
             if (attempt.Status != "Reserved")
                 return Fail("El envío ya fue iniciado por otra operación; consultar su estado.");
-            if (!WsfeInvoiceAServicePreparation.TryBuild(invoice, out var prepared, out var error)
+            if (!WsfeVoucherPreparation.TryBuild(invoice, out var prepared, out var error)
                 || prepared is null)
                 return Fail(error);
-            if (!FiscalEmissionDateRule.IsAllowed(prepared.IssueDate, _clock.GetUtcNow()))
+            if (!FiscalEmissionDateRule.IsAllowed(prepared.IssueDate, prepared.Concept, _clock.GetUtcNow()))
                 return Fail("La fecha de emisión quedó fuera de la ventana permitida; la reserva no se envió y requiere revisión.");
             if (invoice.PointOfSale != attempt.PointOfSale || prepared.VoucherType != attempt.VoucherType
-                || prepared.ReceiverCuit != attempt.RecipientDocument || prepared.TotalAmount != attempt.Total
+                || prepared.ReceiverDocumentNumber != attempt.RecipientDocument || prepared.TotalAmount != attempt.Total
                 || WsfeCaeRequestBuilder.Fingerprint(prepared, attempt.PointOfSale,
                     attempt.VoucherNumber, attempt.IssuerCuit) != attempt.RequestHash)
                 return Fail("El borrador cambió después de reservar; requiere revisión.");

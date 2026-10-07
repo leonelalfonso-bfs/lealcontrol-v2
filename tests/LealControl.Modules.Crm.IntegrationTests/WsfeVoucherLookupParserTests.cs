@@ -30,14 +30,46 @@ public sealed class WsfeVoucherLookupParserTests
     }
 
     [Theory]
-    [InlineData("<Concepto>2</Concepto>", "<Concepto>1</Concepto>")]
-    [InlineData("<ImpNeto>0.83</ImpNeto>", "<ImpNeto>0.84</ImpNeto>")]
-    [InlineData("<MonId>PES</MonId>", "<MonId>DOL</MonId>")]
-    [InlineData("<FchServDesde>20261001</FchServDesde>", "")]
-    [InlineData("<AlicIva><Id>5</Id>", "<AlicIva><Id>4</Id>")]
-    public void Rejects_incomplete_or_inconsistent_fiscal_profile(string original, string replacement)
+    [InlineData("<CodAutorizacion>12345678901234</CodAutorizacion>", "<CodAutorizacion>123</CodAutorizacion>")]
+    [InlineData("<Resultado>A</Resultado>", "<Resultado>R</Resultado>")]
+    [InlineData("<ImpNeto>0.83</ImpNeto>", "")]
+    [InlineData("<CondicionIVAReceptorId>1</CondicionIVAReceptorId>", "")]
+    [InlineData("<Iva>", "<Tributos><Tributo><Id>7</Id></Tributo></Tributos><Iva>")]
+    [InlineData("<AlicIva><Id>5</Id>", "<AlicIva>")]
+    public void Rejects_incomplete_or_foreign_responses(string original, string replacement)
     {
         Assert.False(WsfeVoucherLookupParser.Parse(Valid.Replace(original, replacement), 5, 1, 44).Confirmed);
+    }
+
+    [Fact]
+    public void Reads_product_voucher_b_with_several_rates_exempt_and_associated()
+    {
+        var xml = Valid
+            .Replace("<CbteTipo>1</CbteTipo>", "<CbteTipo>8</CbteTipo>")
+            .Replace("<Concepto>2</Concepto>", "<Concepto>1</Concepto>")
+            .Replace("<DocTipo>80</DocTipo><DocNro>20123456786</DocNro>", "<DocTipo>99</DocTipo><DocNro>0</DocNro>")
+            .Replace("<ImpTotal>1.00</ImpTotal>", "<ImpTotal>355.5</ImpTotal>")
+            .Replace("<ImpNeto>0.83</ImpNeto>", "<ImpNeto>300</ImpNeto>")
+            .Replace("<ImpOpEx>0</ImpOpEx>", "<ImpOpEx>10</ImpOpEx>")
+            .Replace("<ImpIVA>0.17</ImpIVA>", "<ImpIVA>45.5</ImpIVA>")
+            .Replace("<FchServDesde>20261001</FchServDesde><FchServHasta>20261002</FchServHasta><FchVtoPago>20261012</FchVtoPago>",
+                "<FchServDesde></FchServDesde><FchServHasta></FchServHasta><FchVtoPago></FchVtoPago>")
+            .Replace("<CondicionIVAReceptorId>1</CondicionIVAReceptorId>",
+                "<CondicionIVAReceptorId>5</CondicionIVAReceptorId><CbtesAsoc><CbteAsoc><Tipo>6</Tipo><PtoVta>5</PtoVta><Nro>12</Nro></CbteAsoc></CbtesAsoc>")
+            .Replace("<AlicIva><Id>5</Id><BaseImp>0.83</BaseImp><Importe>0.17</Importe></AlicIva>",
+                "<AlicIva><Id>5</Id><BaseImp>200</BaseImp><Importe>42</Importe></AlicIva><AlicIva><Id>4</Id><BaseImp>100</BaseImp><Importe>10.5</Importe></AlicIva>");
+        var result = WsfeVoucherLookupParser.Parse(xml, 5, 8, 44);
+        Assert.True(result.Confirmed, result.Detail);
+        var data = result.FiscalData!;
+        Assert.Equal(1, data.Concept);
+        Assert.Equal(99, data.ReceiverDocumentType);
+        Assert.Equal("0", data.ReceiverDocumentNumber);
+        Assert.Equal(5, data.ReceiverVatCondition);
+        Assert.Null(data.ServiceFrom);
+        Assert.Equal(300m, data.NetAmount);
+        Assert.Equal(10m, data.ExemptAmount);
+        Assert.Equal(2, data.VatLines.Count);
+        Assert.Equal(12, Assert.Single(data.AssociatedVouchers).Number);
     }
 
     [Fact]

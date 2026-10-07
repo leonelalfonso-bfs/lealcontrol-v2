@@ -32,9 +32,7 @@ public sealed class ArcaFiscalGatewayTests : IAsyncLifetime
             var numbering = await gateway.GetLastAuthorizedAsync(1, 1, CancellationToken.None);
             Assert.False(numbering.Ok);
 
-            var data = new WsfeInvoiceAServicePreparation.Data(
-                "20123456786", 80, 1, 1, 2, "20261002", "20261001", "20261002",
-                "20261010", 0.83m, 0.17m, 1.00m, 5, "PES", 1m);
+            var data = FiscalTestData.ServiceA(due: "20261010");
             var submission = await gateway.SubmitCaeAsync(data, 1, 1,
                 "30715489629", false, CancellationToken.None);
             Assert.Equal(WsfeCaeOutcome.Unknown, submission.Outcome);

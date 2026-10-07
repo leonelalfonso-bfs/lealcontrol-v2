@@ -208,7 +208,7 @@ public sealed class FiscalReservationServiceTests : IAsyncLifetime
                 "30715489629", Production, "prueba"));
         }
 
-        public Task<WsfeCaeReply> SubmitCaeAsync(IWsfeInvoiceAServiceData data,
+        public Task<WsfeCaeReply> SubmitCaeAsync(WsfeVoucherData data,
             int pointOfSale, long reservedNumber, string expectedIssuerCuit,
             bool expectedProduction, CancellationToken cancellationToken)
         {

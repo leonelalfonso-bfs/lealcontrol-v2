@@ -8,7 +8,7 @@ namespace LealControl.Modules.Crm.IntegrationTests;
 
 public sealed class WsfeVoucherReconciliationTests
 {
-    private const string Issuer = "20123456786";
+    private const string Issuer = "30715489629";
     private const string Cae = "12345678901234";
     private const string Qr = "https://www.afip.gob.ar/fe/qr/?p=test";
 
@@ -22,14 +22,14 @@ public sealed class WsfeVoucherReconciliationTests
             now.AddDays(30), "ARS", 1m, null, now);
         invoice.SetFiscalDetails(2, now.AddDays(-2), now);
         invoice.AddItem(null, "SERV", "Servicio", 1m, 1m, 21m);
-        Assert.True(WsfeInvoiceAServicePreparation.TryBuild(invoice, out var data, out var error), error);
+        Assert.True(WsfeVoucherPreparation.TryBuild(invoice, out var data, out var error), error);
         Assert.NotNull(data);
         var hash = WsfeCaeRequestBuilder.Fingerprint(data, 3, 42, Issuer);
         var attempt = FiscalAuthorizationAttempt.Reserve(tenant, invoice.Id, 3, 1, 42,
-            Issuer, true, hash, data.ReceiverCuit, data.TotalAmount);
+            Issuer, true, hash, data.ReceiverDocumentNumber, data.TotalAmount);
         attempt.MarkDispatching();
         var observation = new WsfeVoucherReconciliation.Observation(true, 42,
-            data.ReceiverCuit, data.TotalAmount, Cae, now.AddDays(10), data);
+            data.ReceiverDocumentNumber, data.TotalAmount, Cae, now.AddDays(10), data);
         return (invoice, attempt, observation);
     }
 
@@ -63,7 +63,7 @@ public sealed class WsfeVoucherReconciliationTests
         if (mismatch == "amount") observation = observation with { Total = observation.Total + 1m };
         if (mismatch == "number") observation = observation with { Number = 43 };
         if (mismatch == "cae") observation = observation with { Cae = "00000000000000" };
-        var fiscal = (WsfeInvoiceAServicePreparation.Data)observation.FiscalData!;
+        var fiscal = observation.FiscalData!;
         if (mismatch == "concept") observation = observation with { FiscalData = fiscal with { Concept = 1 } };
         if (mismatch == "date") observation = observation with { FiscalData = fiscal with { IssueDate = "20261001" } };
         if (mismatch == "net") observation = observation with { FiscalData = fiscal with { NetAmount = fiscal.NetAmount + 1m } };

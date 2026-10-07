@@ -14,7 +14,7 @@ public sealed class WsfeCaeResponseParserTests
         $"<Envelope><Body><FECAESolicitarResult><FeCabResp><CantReg>1</CantReg><PtoVta>1</PtoVta><CbteTipo>1</CbteTipo><Resultado>{header}</Resultado></FeCabResp><FeDetResp>{details}</FeDetResp>{errors}</FECAESolicitarResult></Body></Envelope>";
 
     private static WsfeCaeReply Parse(string xml) =>
-        WsfeCaeResponseParser.Parse(xml, 1, 1, 18, 2, "20123456786", "20261002");
+        WsfeCaeResponseParser.Parse(xml, 1, 1, 18, 2, 80, "20123456786", "20261002");
 
     [Fact]
     public void Approval_requires_follow_up_consultation()

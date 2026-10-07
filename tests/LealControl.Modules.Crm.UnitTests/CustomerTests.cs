@@ -12,6 +12,16 @@ public sealed class CustomerTests
     private static readonly DateTime Now = new(2026, 8, 11, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
+    public void Unidentified_document_is_only_for_final_consumers()
+    {
+        var anonymous = PartyDocument.ForTaxCondition(TaxCondition.ConsumidorFinal, DocumentType.Unidentified, "");
+        anonymous.IsSuccess.Should().BeTrue();
+        anonymous.Value.Number.Should().Be("0");
+
+        PartyDocument.ForTaxCondition(TaxCondition.Exento, DocumentType.Unidentified, "").IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
     public void Register_creates_active_customer_and_domain_event()
     {
         var customer = RegisterValid();

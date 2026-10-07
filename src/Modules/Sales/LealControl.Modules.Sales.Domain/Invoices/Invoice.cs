@@ -287,10 +287,10 @@ public sealed class Invoice : Entity<Guid>
             Status != "Draft" || Cae is not null || attempt.Status != "Confirmed" ||
             attempt.InvoiceId != Id || attempt.TenantId.Value != TenantId.Value ||
             attempt.PointOfSale != PointOfSale ||
-            (InvoiceType == "A" ? 1 : 0) != attempt.VoucherType ||
+            FiscalVoucherCodes.For(InvoiceType) != attempt.VoucherType ||
             attempt.VoucherNumber <= 0 || attempt.VoucherNumber > 99_999_999 ||
             attempt.Total != Total ||
-            attempt.RecipientDocument != new string(CustomerDocument.Where(char.IsDigit).ToArray()) ||
+            attempt.RecipientDocument != FiscalVoucherCodes.ReceiverDocument(CustomerDocument) ||
             attempt.Cae is null || attempt.CaeDueDate is null ||
             !Uri.TryCreate(qrUrl, UriKind.Absolute, out var qr) || qr.Scheme != Uri.UriSchemeHttps ||
             (qr.Host != "www.afip.gob.ar" && qr.Host != "www.arca.gob.ar") ||

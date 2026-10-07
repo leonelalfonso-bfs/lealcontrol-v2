@@ -20,6 +20,10 @@ public static class CrmErrors
         "Crm.Document.InvalidDni",
         "El DNI debe tener entre 7 y 8 dígitos.");
 
+    public static readonly Error UnidentifiedOnlyForFinalConsumer = Error.Validation(
+        "Crm.Document.UnidentifiedOnlyForFinalConsumer",
+        "Solo un consumidor final puede quedar sin identificar.");
+
     public static readonly Error DocumentRequired = Error.Validation(
         "Crm.Document.Required",
         "El documento es obligatorio.");

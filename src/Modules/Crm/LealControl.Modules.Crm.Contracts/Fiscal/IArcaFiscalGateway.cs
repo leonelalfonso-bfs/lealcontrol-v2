@@ -7,7 +7,7 @@ public interface IArcaFiscalGateway
         int pointOfSale, int voucherType, CancellationToken cancellationToken);
 
     Task<WsfeCaeReply> SubmitCaeAsync(
-        IWsfeInvoiceAServiceData data, int pointOfSale, long reservedNumber,
+        WsfeVoucherData data, int pointOfSale, long reservedNumber,
         string expectedIssuerCuit, bool expectedProduction, CancellationToken cancellationToken);
 
     Task<ArcaFiscalVoucherObservation> GetVoucherAsync(
@@ -21,4 +21,4 @@ public sealed record ArcaFiscalNumbering(
 public sealed record ArcaFiscalVoucherObservation(
     bool Confirmed, long Number, string RecipientDocument, decimal Total,
     string Cae, DateTime CaeDueDate, string Detail,
-    WsfeVoucherFiscalData? FiscalData = null);
+    WsfeVoucherData? FiscalData = null);

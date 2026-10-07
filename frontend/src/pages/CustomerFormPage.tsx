@@ -646,18 +646,32 @@ export function CustomerFormPage() {
             </div>
             <div className="grid-3">
               <label>Tipo
-                <select value={model.documentType} onChange={(e) => set("documentType", e.target.value)}>
+                <select
+                  value={model.documentType}
+                  onChange={(e) => {
+                    const type = e.target.value;
+                    setModel((m) => ({
+                      ...m,
+                      documentType: type,
+                      documentNumber: type === "Unidentified" ? "0" : m.documentNumber === "0" ? "" : m.documentNumber,
+                      taxCondition: type === "Unidentified" ? "ConsumidorFinal" : m.taxCondition
+                    }));
+                  }}
+                >
                   <option value="Cuit">Cuit</option>
                   <option value="Dni">Dni</option>
-                  <option value="Pasaporte">Pasaporte</option>
-                  <option value="Cdi">Cdi</option>
+                  <option value="Passport">Pasaporte</option>
+                  <option value="Foreign">Documento extranjero</option>
+                  <option value="Unidentified">Sin identificar (consumidor final)</option>
                 </select>
               </label>
               <label>Número
                 <div className="row" style={{ gap: 8 }}>
                   <input
                     required
-                    value={model.documentType === "Cuit" ? formatCuitDisplay(model.documentNumber) : model.documentNumber}
+                    disabled={model.documentType === "Unidentified"}
+                    value={model.documentType === "Cuit" ? formatCuitDisplay(model.documentNumber)
+                      : model.documentType === "Unidentified" ? "Sin documento" : model.documentNumber}
                     onChange={(e) => set("documentNumber", e.target.value)}
                     placeholder="30-00000000-0"
                   />

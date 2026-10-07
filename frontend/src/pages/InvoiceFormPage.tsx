@@ -41,6 +41,10 @@ function orderLineForRemito(item: RemitoItem, order: Order): OrderLine | null {
     ? first : null;
 }
 
+// Un emisor Responsable Inscripto emite A a inscriptos y monotributistas, y B al resto.
+const letterFor = (taxCondition: string) =>
+  taxCondition === "ResponsableInscripto" || taxCondition === "Monotributo" ? "A" : "B";
+
 export function InvoiceFormPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -132,8 +136,7 @@ export function InvoiceFormPage() {
             setCustomerTaxCondition(foundTax);
             setCustomerDetail(custDetail);
 
-            const isRi = foundTax === "ResponsableInscripto";
-            setInvoiceType(isRi ? "A" : "B");
+            setInvoiceType(letterFor(foundTax));
 
             let address = "";
             if (custDetail) {
@@ -191,7 +194,7 @@ export function InvoiceFormPage() {
             setCustomerName(custDetail?.legalName || remito.customerName);
             setCustomerDocument(custDetail?.documentNumber || remito.customerDocument);
             setCustomerTaxCondition(foundTax);
-            setInvoiceType(foundTax === "ResponsableInscripto" ? "A" : "B");
+            setInvoiceType(letterFor(foundTax));
             setCustomerAddress(remito.deliveryAddress || "");
             setNotes(`Emitida a partir del Remito de Entrega N° ${remito.remitoNumber}`);
 
@@ -266,7 +269,7 @@ export function InvoiceFormPage() {
       setCustomerDetail(detail);
       const taxCond = detail.taxCondition || c.taxCondition;
       setCustomerTaxCondition(taxCond);
-      setInvoiceType(taxCond === "ResponsableInscripto" ? "A" : "B");
+      setInvoiceType(letterFor(taxCond));
 
       if (detail.fiscalAddress?.street) {
         setCustomerAddress(`${detail.fiscalAddress.street}, ${detail.fiscalAddress.city}, ${detail.fiscalAddress.province}`);
@@ -649,8 +652,8 @@ export function InvoiceFormPage() {
                     onChange={(e) => setInvoiceType(e.target.value)}
                     required
                   >
-                    <option value="A">Factura A (Resp. Inscripto)</option>
-                    <option value="B">Factura B (Cons. Final / Monotributo)</option>
+                    <option value="A">Factura A (Resp. Inscripto / Monotributo)</option>
+                    <option value="B">Factura B (Cons. Final / Exento)</option>
                     <option value="C">Factura C (Emisor Monotributo)</option>
                     <option value="M">Factura M (Régimen Retención)</option>
                     <option value="NC_A">Nota de Crédito A</option>

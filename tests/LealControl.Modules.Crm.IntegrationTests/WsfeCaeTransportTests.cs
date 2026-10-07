@@ -9,9 +9,7 @@ namespace LealControl.Modules.Crm.IntegrationTests;
 
 public sealed class WsfeCaeTransportTests
 {
-    private static readonly WsfeInvoiceAServicePreparation.Data Data = new(
-        "20123456786", 80, 1, 1, 2, "20261002", "20261001", "20261002",
-        "20261010", 0.83m, 0.17m, 1.00m, 5, "PES", 1m);
+    private static readonly WsfeVoucherData Data = FiscalTestData.ServiceA(due: "20261010");
 
     [Fact]
     public async Task Approved_http_response_is_only_pending_consultation()
@@ -31,7 +29,7 @@ public sealed class WsfeCaeTransportTests
             };
         });
         var transport = Create(handler);
-        var reply = await transport.SubmitAsync("token", "sign", "20123456786", false,
+        var reply = await transport.SubmitAsync("token", "sign", "30715489629", false,
             Data, 3, 42, CancellationToken.None);
         Assert.Equal(1, calls);
         Assert.Equal(WsfeCaeOutcome.ApprovedPendingConsultation, reply.Outcome);
@@ -47,7 +45,7 @@ public sealed class WsfeCaeTransportTests
             calls++;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
         }));
-        var reply = await transport.SubmitAsync("token", "sign", "20123456786", true,
+        var reply = await transport.SubmitAsync("token", "sign", "30715489629", true,
             Data, 3, 42, CancellationToken.None);
         Assert.Equal(1, calls);
         Assert.Equal(WsfeCaeOutcome.Unknown, reply.Outcome);
@@ -62,7 +60,7 @@ public sealed class WsfeCaeTransportTests
             calls++;
             throw new HttpRequestException("simulated network loss");
         }));
-        var reply = await transport.SubmitAsync("token", "sign", "20123456786", false,
+        var reply = await transport.SubmitAsync("token", "sign", "30715489629", false,
             Data, 3, 42, CancellationToken.None);
         Assert.Equal(1, calls);
         Assert.Equal(WsfeCaeOutcome.Unknown, reply.Outcome);

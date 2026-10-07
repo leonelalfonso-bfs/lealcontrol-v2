@@ -45,10 +45,12 @@ public sealed class FiscalReservationService
             .FirstOrDefaultAsync(i => i.Id == invoiceId && i.TenantId == tenantId, ct);
         if (invoice is null)
             return Fail("No se encontró el borrador en esta empresa.");
-        if (!WsfeInvoiceAServicePreparation.TryBuild(invoice, out var data, out var error) || data is null)
+        if (!WsfeVoucherPreparation.TryBuild(invoice, out var data, out var error) || data is null)
             return Fail(error);
-        if (!FiscalEmissionDateRule.IsAllowed(data.IssueDate, _clock.GetUtcNow()))
-            return Fail("La fecha de emisión debe estar dentro de los diez días anteriores o posteriores a la fecha actual de Argentina.");
+        if (!FiscalEmissionDateRule.IsAllowed(data.IssueDate, data.Concept, _clock.GetUtcNow()))
+            return Fail(data.Concept == 1
+                ? "La fecha de emisión debe estar dentro de los cinco días anteriores o posteriores a la fecha actual de Argentina."
+                : "La fecha de emisión debe estar dentro de los diez días anteriores o posteriores a la fecha actual de Argentina.");
         if (await _db.FiscalAuthorizationAttempts.AnyAsync(a =>
                 a.TenantId == tenantId && a.InvoiceId == invoiceId, ct))
             return Fail("El borrador ya tiene una reserva fiscal; consultar su estado antes de reintentar.");
@@ -79,8 +81,8 @@ public sealed class FiscalReservationService
         var current = await _db.Invoices.Include(i => i.Items)
             .FirstOrDefaultAsync(i => i.Id == invoiceId && i.TenantId == tenantId, ct);
         if (current is null ||
-            !WsfeInvoiceAServicePreparation.TryBuild(current, out var currentData, out _) ||
-            currentData is null || currentData != data ||
+            !WsfeVoucherPreparation.TryBuild(current, out var currentData, out _) ||
+            currentData is null || currentData.RequestKey() != data.RequestKey() ||
             await _db.FiscalAuthorizationAttempts.AnyAsync(a =>
                 a.TenantId == tenantId && a.InvoiceId == invoiceId, ct) ||
             await _db.FiscalAuthorizationAttempts.AnyAsync(a =>
@@ -91,7 +93,7 @@ public sealed class FiscalReservationService
 
         var attempt = FiscalAuthorizationAttempt.Reserve(tenantId, invoiceId,
             invoice.PointOfSale, data.VoucherType, number, numbering.IssuerCuit,
-            numbering.Production, fingerprint, data.ReceiverCuit, data.TotalAmount);
+            numbering.Production, fingerprint, data.ReceiverDocumentNumber, data.TotalAmount);
         _db.FiscalAuthorizationAttempts.Add(attempt);
         try
         {

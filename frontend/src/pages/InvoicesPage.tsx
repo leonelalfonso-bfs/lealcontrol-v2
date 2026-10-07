@@ -403,7 +403,7 @@ export function InvoicesPage() {
                         {inv.status === "Draft" && canAuthorize &&
                           (fiscalEnabled || ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")) &&
                           fiscalAttempts[inv.id]?.status !== "Rejected" &&
-                          (inv.invoiceType === "A" && inv.fiscalConcept === 2 && inv.currency === "ARS" ||
+                          (["A", "B"].includes(inv.invoiceType) && inv.fiscalConcept > 0 && inv.currency === "ARS" ||
                             ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")) && (
                           <button type="button" className="btn" disabled={busyInvoice !== null}
                             onClick={() => void authorize(inv)}>
