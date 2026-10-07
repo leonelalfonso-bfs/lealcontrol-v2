@@ -108,7 +108,9 @@ internal sealed class InvoiceQueryHandlers
             query = query.Where(i => i.InvoiceType == request.Type);
         }
 
-        var list = await query.OrderByDescending(i => i.IssueDate).ToListAsync(cancellationToken);
+        // Mismo día: lo último cargado primero.
+        var list = await query.OrderByDescending(i => i.IssueDate).ThenByDescending(i => i.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
         IReadOnlyList<InvoiceDto> dtos = list.Select(MapToDto).ToList();
         return Result<IReadOnlyList<InvoiceDto>>.Success(dtos);
     }
