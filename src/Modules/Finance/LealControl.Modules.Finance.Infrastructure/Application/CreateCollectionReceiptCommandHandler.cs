@@ -222,6 +222,8 @@ internal sealed class CreateCollectionReceiptCommandHandler
 
         foreach (var imp in imputations)
         {
+            decimal? usd = imp.AmountUsd is > 0m && imp.InvoiceExchangeRate is > 0m && imp.PaymentExchangeRate is > 0m
+                ? Math.Round(imp.AmountUsd.Value, 2) : null;
             _db.CollectionReceiptImputations.Add(new CollectionReceiptImputation
             {
                 Id = Guid.NewGuid(),
@@ -231,6 +233,12 @@ internal sealed class CreateCollectionReceiptCommandHandler
                 InvoiceNumber = imp.InvoiceNumber.Trim(),
                 InvoiceTotal = imp.InvoiceTotal,
                 AmountImputed = imp.AmountImputed,
+                AmountUsd = usd,
+                InvoiceExchangeRate = usd is null ? null : imp.InvoiceExchangeRate,
+                PaymentExchangeRate = usd is null ? null : imp.PaymentExchangeRate,
+                // Diferencia de cambio realizada sobre los USD cancelados; se recalcula acá, no se confía en el cliente.
+                ExchangeDifferenceArs = usd is null ? null
+                    : Math.Round(usd.Value * (imp.PaymentExchangeRate!.Value - imp.InvoiceExchangeRate!.Value), 2),
                 CreatedAtUtc = DateTime.UtcNow
             });
         }

@@ -1,0 +1,188 @@
+/* Registrar cobro — sistema Instrumento. Tres preguntas a la izquierda, resumen fijo a la derecha. */
+
+.cobro-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .cobro-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.cobro-steps { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+html:root body .cobro-step h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--ins-ink);
+}
+.cobro-num {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  font-family: var(--ins-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ins-accent-ink);
+  background: var(--ins-accent-soft);
+}
+.cobro-step-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cobro-step-head h2 { margin-bottom: 14px; }
+
+.cobro-row,
+.cobro-line-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.cobro-grow { flex: 1 1 260px; min-width: 0; }
+.cobro-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ins-ink-2); }
+
+.cobro-segment {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid var(--ins-line);
+  background: var(--ins-surface-2);
+}
+.cobro-segment button {
+  all: unset;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--ins-ink-3);
+}
+.cobro-segment button.on {
+  background: var(--ins-surface);
+  color: var(--ins-ink);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(17, 22, 19, 0.08);
+}
+.cobro-segment button:focus-visible { outline: 2px solid var(--ins-accent); outline-offset: 1px; }
+
+/* Medios de pago */
+.cobro-line {
+  border: 1px solid var(--ins-line);
+  border-radius: var(--ins-radius-control, 10px);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--ins-surface);
+}
+.cobro-line-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.cobro-line-main select { flex: 1 1 220px; min-width: 0; }
+.cobro-line-kind { min-width: 130px; font-size: 14px; color: var(--ins-ink); }
+.cobro-line-details {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--ins-line);
+}
+.cobro-remove { color: var(--ins-ink-3); }
+.cobro-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.cobro-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ins-font-mono);
+  color: var(--ins-ink-3);
+}
+.cobro-amount input {
+  width: 150px;
+  text-align: right;
+  font-family: var(--ins-font-mono);
+  font-weight: 600;
+  color: var(--ins-ink);
+}
+
+/* Facturas a cancelar */
+.cobro-invoices { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cobro-invoice {
+  border: 1px solid var(--ins-line);
+  border-radius: var(--ins-radius-control, 10px);
+  padding: 10px 12px;
+  transition: border-color 120ms var(--ins-ease), background 120ms var(--ins-ease);
+}
+.cobro-invoice.on { border-color: var(--ins-accent); background: var(--ins-accent-soft); }
+.cobro-invoice.off { opacity: 0.6; }
+.cobro-invoice-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+}
+.cobro-invoice-main input[type="checkbox"] { width: 18px; height: 18px; }
+.cobro-invoice-doc { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cobro-invoice-doc strong { font-size: 14px; color: var(--ins-ink); }
+.cobro-invoice-doc .muted { font-size: 12px; }
+.cobro-overdue { color: var(--ins-danger); font-weight: 600; }
+.cobro-invoice-balance { display: flex; flex-direction: column; align-items: flex-end; font-size: 12px; }
+.cobro-invoice-balance strong { font-family: var(--ins-font-mono); font-size: 14px; color: var(--ins-ink); }
+@media (max-width: 640px) {
+  .cobro-invoice-main { grid-template-columns: auto minmax(0, 1fr); }
+  .cobro-invoice-balance, .cobro-invoice-main .cobro-amount { grid-column: 2; justify-self: start; }
+}
+
+.cobro-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0 30px;
+  font-size: 13px;
+  color: var(--ins-ink-2);
+}
+.cobro-rate-editor {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--ins-surface-2);
+}
+.cobro-inline { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.cobro-inline input { width: 110px; }
+.cobro-diff { flex-basis: 100%; margin: 2px 0 0; font-weight: 600; }
+.cobro-diff.up { color: var(--ins-accent-ink); }
+.cobro-diff.down { color: var(--ins-danger); }
+
+.cobro-notes { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ins-ink-2); }
+
+/* Resumen */
+.cobro-summary { position: sticky; top: 16px; }
+html:root body .cobro-summary h3 { margin: 0 0 12px; font-size: 15px; font-weight: 650; }
+.cobro-summary dl { margin: 0 0 12px; display: flex; flex-direction: column; gap: 8px; }
+.cobro-summary dl > div { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.cobro-summary dt { color: var(--ins-ink-2); }
+.cobro-summary dd { margin: 0; font-family: var(--ins-font-mono); font-weight: 600; color: var(--ins-ink); }
+.cobro-summary .cobro-info dd { color: var(--ins-accent-ink); }
+.cobro-hint { font-size: 12px; margin: 0 0 10px; }
+.cobro-confirm { width: 100%; justify-content: center; }
+.cobro-blocker { margin: 8px 0 0; font-size: 13px; color: var(--ins-ink-2); }
+.cobro-ok { border-color: var(--ins-accent); }
+
+/* Filas del listado de cuentas corrientes: se abren al tocarlas. */
+.row-link { cursor: pointer; }
+.row-link:hover td { background: var(--ins-surface-2); }

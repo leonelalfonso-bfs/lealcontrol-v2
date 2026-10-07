@@ -42,6 +42,63 @@ function orderLineForRemito(item: RemitoItem, order: Order): OrderLine | null {
     ? first : null;
 }
 
+// IVA en centavos con el mismo redondeo que el servidor (Math.Round de .NET: mitad al par).
+function vatCents(netCents: number, rate: number): number {
+  const tenths = Math.round(rate * 10);
+  const numerator = netCents * tenths;
+  const quotient = Math.floor(numerator / 1000);
+  const remainder = numerator - quotient * 1000;
+  if (remainder * 2 > 1000) return quotient + 1;
+  if (remainder * 2 < 1000) return quotient;
+  return quotient % 2 === 0 ? quotient : quotient + 1;
+}
+
+// Neto (centavos) cuyo neto + IVA da exactamente el bruto pedido, o null si no existe.
+function exactNet(grossCents: number, rate: number): number | null {
+  const guess = Math.round(grossCents / (1 + rate / 100));
+  for (let delta = -3; delta <= 3; delta++) {
+    const net = guess + delta;
+    if (net > 0 && net + vatCents(net, rate) === grossCents) return net;
+  }
+  return null;
+}
+
+// Reparte la diferencia de cambio (importe final, con IVA) en la misma proporción por alícuota
+// que la factura original. Los renglones suman exactamente la diferencia, al centavo.
+function splitDifference(total: number, original: Invoice): FormInvoiceItem[] {
+  const groups = new Map<number, number>();
+  for (const item of original.items) groups.set(item.vatRate, (groups.get(item.vatRate) ?? 0) + item.total);
+  const base = [...groups.values()].reduce((a, b) => a + b, 0) || 1;
+  const rates = [...groups.keys()].sort((a, b) => b - a);
+  const totalCents = Math.round(total * 100);
+  let assigned = 0;
+  const lines: FormInvoiceItem[] = [];
+  const line = (rate: number, netCents: number): FormInvoiceItem => ({
+    code: "DIF-CAMBIO",
+    description: rate ? `Diferencia de cambio (gravado ${rate}%)` : "Diferencia de cambio (exento)",
+    quantity: 1,
+    unitPrice: netCents / 100,
+    discountPercent: 0,
+    vatRate: rate
+  });
+  rates.forEach((rate, index) => {
+    const gross = index === rates.length - 1
+      ? totalCents - assigned
+      : Math.round(totalCents * (groups.get(rate)! / base));
+    if (gross <= 0) return;
+    assigned += gross;
+    const net = exactNet(gross, rate);
+    if (net !== null) {
+      lines.push(line(rate, net));
+    } else {
+      // Ese bruto no es alcanzable con un solo renglón: un centavo neto aparte (sin IVA por redondeo).
+      lines.push(line(rate, exactNet(gross - 1, rate) ?? Math.round((gross - 1) / (1 + rate / 100))));
+      lines.push(line(rate, 1));
+    }
+  });
+  return lines;
+}
+
 // Un emisor Responsable Inscripto emite A a inscriptos y monotributistas, y B al resto.
 const letterFor = (taxCondition: string) =>
   taxCondition === "ResponsableInscripto" || taxCondition === "Monotributo" ? "A" : "B";
@@ -55,6 +112,8 @@ export function InvoiceFormPage() {
   // Nota de crédito (NC) o débito (ND) generada desde una factura autorizada.
   const sourceInvoiceId = queryParams.get("origen");
   const noteKind = queryParams.get("nota") === "ND" ? "ND" : "NC";
+  // Nota por la diferencia de cambio de una imputación de cobro (factura en USD cobrada en pesos).
+  const differenceImputationId = queryParams.get("dif");
 
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -88,6 +147,9 @@ export function InvoiceFormPage() {
   const [arcaRateInfo, setArcaRateInfo] = useState<string | null>(null);
   // RG 5616: si se cobra en la misma moneda extranjera, la cotización es la oficial de ARCA.
   const [paidInForeignCurrency, setPaidInForeignCurrency] = useState(false);
+  // Cotización BNA vendedor pactada para cancelar en pesos (día hábil anterior al pago).
+  const [exchangeRateType, setExchangeRateType] = useState<"Divisa" | "Billete">("Divisa");
+  const [differenceInfo, setDifferenceInfo] = useState<string | null>(null);
   const [exchangeRate, setExchangeRate] = useState<number>(1.0);
   const [advancePercent, setAdvancePercent] = useState<number>(100);
   const [notes, setNotes] = useState<string>("");
@@ -145,7 +207,21 @@ export function InvoiceFormPage() {
           setPaidInForeignCurrency(Boolean(original.paidInForeignCurrency));
           setExchangeRate(original.exchangeRate || 1);
           setRateSource(original.paidInForeignCurrency ? "arca" : "manual");
+          setExchangeRateType(original.exchangeRateType === "Billete" ? "Billete" : "Divisa");
           setNotes(`${noteKind === "NC" ? "Nota de crédito" : "Nota de débito"} sobre Factura ${letter} ${original.formattedNumber}`);
+          if (differenceImputationId) {
+            const imp = await api.getCollectionImputation(differenceImputationId);
+            const diff = Math.abs(imp.exchangeDifferenceArs ?? 0);
+            const label = `Diferencia de cambio s/ Factura ${letter} ${original.formattedNumber} · ${imp.receiptNumber}: ` +
+              `USD ${(imp.amountUsd ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })} a TC $ ${(imp.paymentExchangeRate ?? 0).toLocaleString("es-AR")} ` +
+              `vs TC $ ${(imp.invoiceExchangeRate ?? 0).toLocaleString("es-AR")}`;
+            setCurrency("ARS");
+            setExchangeRate(1);
+            setPaidInForeignCurrency(false);
+            setNotes(label);
+            setDifferenceInfo(label);
+            setItems(splitDifference(diff, original));
+          } else
           setItems(noteKind === "NC"
             ? original.items.map((item) => ({
                 productId: item.productId ?? undefined,
@@ -294,7 +370,7 @@ export function InvoiceFormPage() {
     }
 
     loadData();
-  }, [orderId, remitoId, sourceInvoiceId, noteKind]);
+  }, [orderId, remitoId, sourceInvoiceId, noteKind, differenceImputationId]);
 
   // Handle Customer Selection
   const handleCustomerChange = async (newCustId: string) => {
@@ -516,6 +592,12 @@ export function InvoiceFormPage() {
       currency,
       exchangeRate: currency === "USD" ? exchangeRate : 1.0,
       paidInForeignCurrency: currency === "USD" && paidInForeignCurrency,
+      // El dólar pactado sale de la cotización elegida; solo con TC manual se elige aparte.
+      exchangeRateType: currency !== "USD" ? undefined
+        : rateSource === "billetes" ? "Billete"
+        : rateSource === "manual" ? exchangeRateType
+        : "Divisa",
+      exchangeDifferenceImputationId: differenceImputationId || undefined,
       associatedInvoiceId: associatedInvoice?.id,
       restockItems: noteKind === "NC" ? restockItems : undefined,
       notes,
@@ -576,6 +658,9 @@ export function InvoiceFormPage() {
                   {noteKind === "NC" ? "Nota de crédito" : "Nota de débito"} sobre Factura{" "}
                   {associatedInvoice.invoiceType.replace(/^(NC_|ND_)/, "")} {associatedInvoice.formattedNumber}
                 </strong>
+                {differenceInfo && (
+                  <div style={{ fontSize: "0.85rem", color: "#0f766e", marginTop: 4, fontWeight: 600 }}>{differenceInfo}</div>
+                )}
                 <div style={{ fontSize: "0.85rem", color: "#475569", marginTop: 4 }}>
                   {associatedInvoice.customerName} · Total original {associatedInvoice.currency === "USD" ? "USD" : "$"}{" "}
                   {associatedInvoice.total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}.{" "}
@@ -583,7 +668,7 @@ export function InvoiceFormPage() {
                     ? "Quitá los ítems que no se acreditan o ajustá cantidades y precios para una nota parcial."
                     : "Cargá el recargo, interés o diferencia de precio a debitar."}
                 </div>
-                {noteKind === "NC" && (
+                {noteKind === "NC" && !differenceImputationId && (
                   <label style={{ display: "flex", flexDirection: "row", justifyContent: "flex-start", gap: 8, alignItems: "center", marginTop: 8, fontSize: "0.88rem" }}>
                     <input type="checkbox" checked={restockItems} onChange={(e) => setRestockItems(e.target.checked)} style={{ width: "auto" }} />
                     Es una devolución: reingresar los productos al stock
@@ -814,6 +899,8 @@ export function InvoiceFormPage() {
                         onChange={(e) => {
                           const src = e.target.value as "arca" | "divisas" | "billetes" | "manual";
                           setRateSource(src);
+                          if (src === "billetes") setExchangeRateType("Billete");
+                          if (src === "divisas" || src === "arca") setExchangeRateType("Divisa");
                           if (src === "divisas" && exchangeRates?.usdDivisaSell) setExchangeRate(exchangeRates.usdDivisaSell);
                           if (src === "billetes" && exchangeRates?.usdBilleteSell) setExchangeRate(exchangeRates.usdBilleteSell);
                         }}
@@ -851,6 +938,15 @@ export function InvoiceFormPage() {
                     />
                     Se cobra en dólares (el cliente paga en USD). ARCA exige la cotización oficial.
                   </label>
+                  {!paidInForeignCurrency && rateSource === "manual" && (
+                    <label style={{ fontSize: "0.85rem", marginTop: 8 }}>
+                      Cotización pactada para cobrar en pesos
+                      <select value={exchangeRateType} onChange={(e) => setExchangeRateType(e.target.value as "Divisa" | "Billete")}>
+                        <option value="Divisa">Dólar divisa BNA vendedor, día hábil anterior al pago</option>
+                        <option value="Billete">Dólar billete BNA vendedor, día hábil anterior al pago</option>
+                      </select>
+                    </label>
+                  )}
                 </div>
               )}
 

@@ -161,6 +161,10 @@ export type CollectionReceiptImputationWrite = {
   invoiceNumber: string;
   invoiceTotal: number;
   amountImputed: number;
+  /** Factura en USD cobrada en pesos: dólares que cancela y cotizaciones de factura y pago. */
+  amountUsd?: number;
+  invoiceExchangeRate?: number;
+  paymentExchangeRate?: number;
 };
 
 export type FinanceReconciliationMovement = {

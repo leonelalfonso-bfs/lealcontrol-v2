@@ -47,10 +47,15 @@ public static class FinanceReceipts
             var imputations = (await db.CollectionReceiptImputations
                 .AsNoTracking()
                 .Where(x => x.TenantId == tenantId && receiptIds.Contains(x.ReceiptId) && x.Status == "Active")
-                .Select(x => new { x.ReceiptId, x.InvoiceId, x.AmountImputed })
+                .Select(x => new { x.Id, x.ReceiptId, x.InvoiceId, x.AmountImputed, x.AmountUsd,
+                    x.InvoiceExchangeRate, x.PaymentExchangeRate, x.ExchangeDifferenceArs })
                 .ToListAsync(ct))
                 .GroupBy(x => x.ReceiptId)
-                .ToDictionary(g => g.Key, g => g.Select(x => new { x.InvoiceId, Amount = x.AmountImputed }).ToList());
+                .ToDictionary(g => g.Key, g => g.Select(x => new
+                {
+                    x.Id, x.InvoiceId, Amount = x.AmountImputed, x.AmountUsd,
+                    x.InvoiceExchangeRate, x.PaymentExchangeRate, x.ExchangeDifferenceArs
+                }).ToList());
 
             var result = receipts.Select(r => new
             {
@@ -80,6 +85,25 @@ public static class FinanceReceipts
             });
 
             return Results.Ok(result);
+        });
+
+        // Una imputación con su diferencia de cambio, para emitir la ND/NC que la documenta.
+        group.MapGet("/imputations/{id:guid}", async (Guid id, FinanceDbContext db,
+            LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var imputation = await db.CollectionReceiptImputations.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId && x.Status == "Active", ct);
+            if (imputation is null) return Results.NotFound("Imputación inexistente.");
+            var receipt = await db.CollectionReceipts.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.Id == imputation.ReceiptId && x.TenantId == tenantId, ct);
+            if (receipt is null || receipt.Status == "Voided") return Results.NotFound("El recibo fue anulado.");
+            return Results.Ok(new
+            {
+                imputation.Id, imputation.InvoiceId, imputation.InvoiceNumber, imputation.AmountImputed,
+                imputation.AmountUsd, imputation.InvoiceExchangeRate, imputation.PaymentExchangeRate,
+                imputation.ExchangeDifferenceArs, receipt.ReceiptNumber, receipt.ReceiptDateUtc
+            });
         });
 
         // Get single receipt with detail

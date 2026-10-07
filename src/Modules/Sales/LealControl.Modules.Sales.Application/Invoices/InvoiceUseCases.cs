@@ -54,7 +54,9 @@ public sealed record InvoiceDto(
     DateTime? ServiceFrom,
     DateTime? ServiceTo,
     Guid? AssociatedInvoiceId = null,
-    bool PaidInForeignCurrency = false);
+    bool PaidInForeignCurrency = false,
+    string? ExchangeRateType = null,
+    Guid? ExchangeDifferenceImputationId = null);
 
 public sealed record InvoiceItemWriteDto(
     Guid? ProductId,
@@ -87,7 +89,11 @@ public sealed record CreateInvoiceCommand(
     Guid? AssociatedInvoiceId = null,
     // Solo notas de crédito: si reingresan al stock los productos devueltos.
     bool RestockItems = true,
-    bool PaidInForeignCurrency = false) : IRequest<Result<InvoiceDto>>;
+    bool PaidInForeignCurrency = false,
+    // "Divisa" o "Billete": cotización BNA pactada para cancelar en pesos.
+    string? ExchangeRateType = null,
+    // Imputación de cobro cuya diferencia de cambio documenta esta nota (en pesos).
+    Guid? ExchangeDifferenceImputationId = null) : IRequest<Result<InvoiceDto>>;
 
 public sealed record AuthorizeInvoiceArcaCommand(Guid Id) : IRequest<Result<InvoiceDto>>;
 

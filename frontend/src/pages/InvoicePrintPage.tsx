@@ -424,7 +424,10 @@ export function InvoicePrintPage() {
                   )}
                   {isUsd && (
                     <div style={{ fontSize: "10.5px", color: "#334155", marginTop: "2px" }}>
-                      <strong>Cancelación:</strong> {invoice.paidInForeignCurrency ? "en dólares estadounidenses" : "en pesos"}
+                      <strong>Cancelación:</strong>{" "}
+                      {invoice.paidInForeignCurrency
+                        ? "en dólares estadounidenses"
+                        : `en pesos al tipo de cambio ${invoice.exchangeRateType === "Billete" ? "billete" : "divisa"} vendedor BNA del día hábil anterior a la fecha de pago. Las diferencias de cambio se ajustarán mediante nota de crédito o débito.`}
                     </div>
                   )}
                   {associated && (

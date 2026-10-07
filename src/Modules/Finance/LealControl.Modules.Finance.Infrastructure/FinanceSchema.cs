@@ -161,6 +161,10 @@ public static class FinanceSchema
         ALTER TABLE finance.""CollectionReceipts"" ADD COLUMN IF NOT EXISTS ""VoidReason"" varchar(500);
         ALTER TABLE finance.""CollectionReceipts"" ADD COLUMN IF NOT EXISTS ""VoidedAtUtc"" timestamptz;
         ALTER TABLE finance.""CollectionReceiptImputations"" ADD COLUMN IF NOT EXISTS ""Status"" varchar(20) NOT NULL DEFAULT 'Active';
+        ALTER TABLE finance.""CollectionReceiptImputations"" ADD COLUMN IF NOT EXISTS ""AmountUsd"" numeric(18,2);
+        ALTER TABLE finance.""CollectionReceiptImputations"" ADD COLUMN IF NOT EXISTS ""InvoiceExchangeRate"" numeric(18,6);
+        ALTER TABLE finance.""CollectionReceiptImputations"" ADD COLUMN IF NOT EXISTS ""PaymentExchangeRate"" numeric(18,6);
+        ALTER TABLE finance.""CollectionReceiptImputations"" ADD COLUMN IF NOT EXISTS ""ExchangeDifferenceArs"" numeric(18,2);
 
         ALTER TABLE finance.""PaymentOrders"" ADD COLUMN IF NOT EXISTS ""AdvanceAmount"" numeric(18,2) NOT NULL DEFAULT 0;
         ALTER TABLE finance.""PaymentOrders"" ADD COLUMN IF NOT EXISTS ""VoidReason"" varchar(500);

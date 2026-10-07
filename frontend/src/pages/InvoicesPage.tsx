@@ -11,6 +11,19 @@ import { withCollections } from "../lib/receivables";
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
 
+// Fechas fiscales guardadas a medianoche UTC: se muestra el día calendario, sin correrlo por zona horaria.
+const civilDate = (value?: string | null) => {
+  const [y, m, d] = (value ?? "").slice(0, 10).split("-");
+  return y && m && d ? `${Number(d)}/${Number(m)}/${y}` : "—";
+};
+
+const documentLabel = (type: string) => {
+  const letter = type.replace(/^(NC_|ND_)/, "");
+  if (type.startsWith("NC_")) return `Nota de Crédito ${letter}`;
+  if (type.startsWith("ND_")) return `Nota de Débito ${letter}`;
+  return type === "Proforma" ? "Proforma" : `Factura ${type}`;
+};
+
 export function InvoicesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -259,7 +272,7 @@ export function InvoicesPage() {
                 {filteredInvoices.map((inv) => (
                   <tr key={inv.id}>
                     <td>
-                      <strong>Factura {inv.invoiceType}</strong>
+                      <strong>{documentLabel(inv.invoiceType)}</strong>
                       <div className="muted" style={{ fontFamily: "monospace", fontWeight: 700 }}>
                         {inv.formattedNumber}
                       </div>
@@ -278,14 +291,14 @@ export function InvoicesPage() {
                       )}
                     </td>
                     <td>
-                      <div>{new Date(inv.issueDate).toLocaleDateString("es-AR")}</div>
+                      <div>{civilDate(inv.issueDate)}</div>
                       <small className="muted" style={{ fontSize: "0.75rem" }}>
-                        Vto: {new Date(inv.dueDate).toLocaleDateString("es-AR")}
+                        Vto: {civilDate(inv.dueDate)}
                       </small>
                     </td>
                     <td>
                       <strong>{inv.customerName}</strong>
-                      <div className="muted" style={{ fontSize: "0.8rem" }}>{inv.customerDocument}</div>
+                      <div className="muted" style={{ fontSize: "0.8rem" }}>{!inv.customerDocument || inv.customerDocument === "0" ? "Sin identificar" : inv.customerDocument}</div>
                     </td>
                     <td>
                       <span className={`badge ${inv.currency === "USD" ? "prio-high" : "ok"}`}>
@@ -309,7 +322,7 @@ export function InvoicesPage() {
                           <span className="badge">CAE registrado: {inv.cae} · verificar en ARCA</span>
                           {inv.caeDueDate && (
                             <div className="muted" style={{ fontSize: "0.72rem" }}>
-                              Vto: {new Date(inv.caeDueDate).toLocaleDateString("es-AR")}
+                              Vto: {civilDate(inv.caeDueDate)}
                             </div>
                           )}
                         </div>

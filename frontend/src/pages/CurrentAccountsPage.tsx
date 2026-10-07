@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { exportToExcel, type ExcelColumn } from "../components/ExcelTools";
 import type { CustomerSummary, Invoice, PurchaseInvoice } from "../api/types";
 import { SearchField } from "../components/ui/SearchField";
 import { matchesSearch, parseSearch } from "../lib/search";
+import { withCollections, type ReceiptForImputation } from "../lib/receivables";
+import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
+import type { CompanySettings } from "../api/types";
+import "./collections.css";
 
 type TabMode = "customers" | "suppliers" | "dual";
 
@@ -34,11 +38,33 @@ type Receipt = {
   suggestedAdjustmentArs?: number;
   suggestedAdjustmentType?: string;
   receiptDateUtc: string;
+  createdAtUtc?: string;
   description?: string;
   invoicesSummary?: string;
   status?: string;
   voidReason?: string | null;
   voidedAtUtc?: string | null;
+  imputations?: Array<{
+    id: string;
+    invoiceId: string;
+    amount: number;
+    amountUsd?: number | null;
+    invoiceExchangeRate?: number | null;
+    paymentExchangeRate?: number | null;
+    exchangeDifferenceArs?: number | null;
+  }>;
+};
+
+/** Diferencia de cambio de un cobro todavía sin su ND/NC emitida. */
+type PendingDifference = {
+  imputationId: string;
+  invoiceId: string;
+  receiptNumber: string;
+  date: string;
+  amountUsd: number;
+  invoiceRate: number;
+  paymentRate: number;
+  differenceArs: number;
 };
 
 type PaymentOrder = {
@@ -64,8 +90,17 @@ type LedgerItem = {
   debit: number;
   credit: number;
   balance: number;
+  /** Lo que queda pendiente de ese comprobante (facturas de venta). */
+  documentBalance?: string;
   source: "sale" | "purchase" | "collection" | "payment" | "adjustment" | "void";
   muted?: boolean;
+  pending?: PendingDifference;
+};
+
+// Fechas guardadas a medianoche UTC: se muestra el día calendario, sin correrlo por zona horaria.
+const civilDate = (value?: string | null) => {
+  const [y, m, d] = (value ?? "").slice(0, 10).split("-");
+  return y && m && d ? `${Number(d)}/${Number(m)}/${y}` : "—";
 };
 
 const isActiveDoc = (status?: string | null) =>
@@ -87,7 +122,16 @@ export function CurrentAccountsPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Selected entity for Ledger (Mayor de Cuenta Corriente)
-  const [ledgerEntity, setLedgerEntity] = useState<CustomerSummary | null>(null);
+  // La cuenta abierta vive en la URL (?cuenta=id): Atrás vuelve al listado y el link se comparte.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const ledgerEntity = entities.find((e) => e.id === searchParams.get("cuenta")) ?? null;
+  const setLedgerEntity = (entity: CustomerSummary | null) =>
+    setSearchParams(entity ? { cuenta: entity.id } : {});
+  const [company, setCompany] = useState<CompanySettings | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  useEffect(() => {
+    void api.getCompanySettings().then(setCompany).catch(() => setCompany(null));
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -116,6 +160,39 @@ export function CurrentAccountsPage() {
   useEffect(() => {
     void loadData();
   }, []);
+
+  // Diferencias de cambio por imputación que todavía no tienen su ND/NC: cuentan en el saldo
+  // hasta que se emite la nota, y desde ahí solo cuenta la nota (nunca las dos).
+  const pendingDifferences = useMemo(() => {
+    const documented = new Set(salesInvoices
+      .filter((i) => i.exchangeDifferenceImputationId && !["Cancelled", "Rejected"].includes(i.status))
+      .map((i) => i.exchangeDifferenceImputationId as string));
+    const byCustomer = new Map<string, PendingDifference[]>();
+    for (const r of receipts) {
+      if (!isActiveDoc(r.status) || !r.customerId) continue;
+      for (const imp of r.imputations ?? []) {
+        const diff = imp.exchangeDifferenceArs ?? 0;
+        if (Math.abs(diff) < 0.01 || documented.has(imp.id)) continue;
+        const list = byCustomer.get(r.customerId) ?? [];
+        list.push({
+          imputationId: imp.id,
+          invoiceId: imp.invoiceId,
+          receiptNumber: r.receiptNumber,
+          date: r.receiptDateUtc,
+          amountUsd: imp.amountUsd ?? 0,
+          invoiceRate: imp.invoiceExchangeRate ?? 0,
+          paymentRate: imp.paymentExchangeRate ?? 0,
+          differenceArs: diff
+        });
+        byCustomer.set(r.customerId, list);
+      }
+    }
+    return byCustomer;
+  }, [receipts, salesInvoices]);
+
+  // Recibos viejos (sin diferencia por imputación) conservan su ajuste sugerido a nivel recibo.
+  const legacyAdjustment = (r: Receipt) =>
+    (r.imputations ?? []).some((imp) => imp.amountUsd) ? 0 : r.suggestedAdjustmentArs || 0;
 
   // Compute stats per entity with exact USD/ARS exchange rates
   const accountRows = useMemo(() => {
@@ -150,6 +227,8 @@ export function CurrentAccountsPage() {
 
       // Collected sales in USD
       const collectedSalesUsd = custReceipts.reduce((s, r) => {
+        const usdImputed = (r.imputations ?? []).reduce((sum, imp) => sum + (imp.amountUsd || 0), 0);
+        if (usdImputed > 0) return s + usdImputed;
         if (r.invoiceAmount && r.invoiceCurrency === "USD") return s + Number(r.invoiceAmount);
         if (r.currency === "USD") return s + Number(r.amount);
         if (r.paymentExchangeRate && r.paymentExchangeRate > 0) return s + (Number(r.amount) / Number(r.paymentExchangeRate));
@@ -158,7 +237,9 @@ export function CurrentAccountsPage() {
 
       // Balances
       const receivableBalanceUsd = Math.max(0, billedSalesUsd - collectedSalesUsd);
-      const receivableBalanceArs = billedSalesArs - (collectedSalesArs - (custReceipts.reduce((sum, r) => sum + (r.suggestedAdjustmentArs || 0), 0)));
+      const pendingDiffArs = (pendingDifferences.get(entity.id) ?? []).reduce((sum, d) => sum + d.differenceArs, 0);
+      const receivableBalanceArs = billedSalesArs - collectedSalesArs + pendingDiffArs +
+        custReceipts.reduce((sum, r) => sum + legacyAdjustment(r), 0);
 
       // Supplier calculations (Payables) — excluir OP anuladas
       const suppInvoices = purchaseInvoices.filter((p) => p.supplierId === entity.id && p.status !== "Cancelled");
@@ -212,7 +293,7 @@ export function CurrentAccountsPage() {
         netBalance
       };
     });
-  }, [entities, salesInvoices, purchaseInvoices, receipts, paymentOrders]);
+  }, [entities, salesInvoices, purchaseInvoices, receipts, paymentOrders, pendingDifferences]);
 
   // Filtered rows depending on active tab
   const filteredRows = useMemo(() => {
@@ -280,7 +361,14 @@ export function CurrentAccountsPage() {
       credit: number;
       source: LedgerItem["source"];
       muted?: boolean;
+      pending?: PendingDifference;
+      /** Orden cronológico: día calendario y, dentro del día, hora de carga. */
+      sortKey: string;
+      documentBalance?: string;
     }> = [];
+    const sortKey = (date: string, createdAt?: string | null) => `${date.slice(0, 10)}|${createdAt ?? date}`;
+    const salesBalances = new Map(withCollections(salesInvoices, receipts as ReceiptForImputation[])
+      .map((i) => [i.id, i] as const));
 
     // Sales invoices / NC / ND
     salesInvoices
@@ -290,11 +378,9 @@ export function CurrentAccountsPage() {
         const rate = i.exchangeRate && i.exchangeRate > 0 ? i.exchangeRate : 1;
         const amountArs = isUsd ? (i.total || 0) * rate : (i.total || 0);
         const nc = isCreditNoteType(i.invoiceType);
-        const label = nc
-          ? `Nota de Crédito Venta (${i.invoiceType}${isUsd ? " USD" : ""})`
-          : isDebitNoteType(i.invoiceType)
-            ? `Nota de Débito Venta (${i.invoiceType}${isUsd ? " USD" : ""})`
-            : `Factura Venta (${i.invoiceType || "B"}${isUsd ? " USD" : ""})`;
+        const letter = (i.invoiceType || "B").replace(/^(NC_|ND_)/, "");
+        const label = `${nc ? "Nota de Crédito" : isDebitNoteType(i.invoiceType) ? "Nota de Débito" : "Factura"} ${letter}${isUsd ? " (USD)" : ""}`;
+        const balance = salesBalances.get(i.id);
 
         history.push({
           date: i.issueDate,
@@ -307,7 +393,10 @@ export function CurrentAccountsPage() {
           // NC baja deuda del cliente → crédito; factura/ND → débito
           debit: nc ? 0 : amountArs,
           credit: nc ? amountArs : 0,
-          source: "sale"
+          source: "sale",
+          sortKey: sortKey(i.issueDate, i.createdAtUtc),
+          documentBalance: nc || !balance || i.status !== "Authorized" && i.status !== "Draft" ? undefined
+            : balance.saldoPendiente <= 0.01 ? "Cancelado" : money(balance.saldoPendiente, isUsd ? "USD" : "ARS")
         });
       });
 
@@ -331,7 +420,8 @@ export function CurrentAccountsPage() {
           debit: 0,
           credit: creditArs,
           source: "collection",
-          muted: voided
+          muted: voided,
+          sortKey: sortKey(r.receiptDateUtc, r.createdAtUtc)
         });
 
         if (voided) {
@@ -344,17 +434,19 @@ export function CurrentAccountsPage() {
             debit: creditArs,
             credit: 0,
             source: "void",
-            muted: true
+            muted: true,
+            sortKey: sortKey(r.voidedAtUtc || r.receiptDateUtc, r.voidedAtUtc)
           });
-        } else if (r.suggestedAdjustmentArs && r.suggestedAdjustmentArs > 0.01) {
+        } else if (legacyAdjustment(r) > 0.01) {
           history.push({
             date: r.receiptDateUtc,
             type: "Diferencia de Cambio (ND)",
             number: `Ajuste TC ${r.receiptNumber}`,
             description: `Diferencia de cambio al cobro: TC $${r.paymentExchangeRate} vs TC $${r.invoiceExchangeRate}`,
-            debit: r.suggestedAdjustmentArs,
+            debit: legacyAdjustment(r),
             credit: 0,
-            source: "adjustment"
+            source: "adjustment",
+            sortKey: sortKey(r.receiptDateUtc, r.createdAtUtc) + "~"
           });
         }
       });
@@ -367,11 +459,8 @@ export function CurrentAccountsPage() {
         const rate = p.exchangeRate && p.exchangeRate > 0 ? p.exchangeRate : 1;
         const amountArs = isUsd ? (p.total || 0) * rate : (p.total || 0);
         const nc = isCreditNoteType(p.invoiceType);
-        const label = nc
-          ? `Nota de Crédito Compra (${p.invoiceType}${isUsd ? " USD" : ""})`
-          : isDebitNoteType(p.invoiceType)
-            ? `Nota de Débito Compra (${p.invoiceType}${isUsd ? " USD" : ""})`
-            : `Factura Compra (${p.invoiceType || "A"}${isUsd ? " USD" : ""})`;
+        const pLetter = (p.invoiceType || "A").replace(/^(NC_|ND_)/, "");
+        const label = `${nc ? "Nota de Crédito" : isDebitNoteType(p.invoiceType) ? "Nota de Débito" : "Factura"} de compra ${pLetter}${isUsd ? " (USD)" : ""}`;
 
         history.push({
           date: p.issueDate,
@@ -384,7 +473,8 @@ export function CurrentAccountsPage() {
           // NC baja nuestra deuda → débito; factura/ND → crédito
           debit: nc ? amountArs : 0,
           credit: nc ? 0 : amountArs,
-          source: "purchase"
+          source: "purchase",
+          sortKey: sortKey(p.issueDate, (p as { createdAtUtc?: string }).createdAtUtc)
         });
       });
 
@@ -408,7 +498,8 @@ export function CurrentAccountsPage() {
           debit: debitArs,
           credit: 0,
           source: "payment",
-          muted: voided
+          muted: voided,
+          sortKey: sortKey(po.paymentDateUtc, (po as { createdAtUtc?: string }).createdAtUtc)
         });
 
         if (voided) {
@@ -421,13 +512,29 @@ export function CurrentAccountsPage() {
             debit: 0,
             credit: debitArs,
             source: "void",
-            muted: true
+            muted: true,
+            sortKey: sortKey(po.voidedAtUtc || po.paymentDateUtc, po.voidedAtUtc)
           });
         }
       });
 
+    for (const d of pendingDifferences.get(ledgerEntity.id) ?? []) {
+      const invoice = salesInvoices.find((i) => i.id === d.invoiceId);
+      history.push({
+        date: d.date,
+        type: d.differenceArs > 0 ? "Diferencia de cambio a documentar (ND)" : "Diferencia de cambio a documentar (NC)",
+        number: `${d.receiptNumber} → ${invoice?.formattedNumber ?? "factura"}`,
+        description: `USD ${d.amountUsd.toLocaleString("es-AR", { minimumFractionDigits: 2 })} cobrados a TC $ ${d.paymentRate.toLocaleString("es-AR")} vs TC $ ${d.invoiceRate.toLocaleString("es-AR")} de la factura`,
+        debit: d.differenceArs > 0 ? d.differenceArs : 0,
+        credit: d.differenceArs < 0 ? -d.differenceArs : 0,
+        source: "adjustment",
+        pending: d,
+        sortKey: sortKey(d.date) + "~"
+      });
+    }
+
     // Sort by date ascending
-    history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    history.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 
     // Calculate running balance
     let running = 0;
@@ -455,7 +562,7 @@ export function CurrentAccountsPage() {
     }
 
     return computed;
-  }, [ledgerEntity, salesInvoices, purchaseInvoices, receipts, paymentOrders]);
+  }, [ledgerEntity, salesInvoices, purchaseInvoices, receipts, paymentOrders, pendingDifferences]);
 
   const handleExportAccountsExcel = () => {
     const columns: ExcelColumn<any>[] = [
@@ -466,6 +573,211 @@ export function CurrentAccountsPage() {
     ];
     void exportToExcel(`cuentas-corrientes-${tab}`, filteredRows, columns);
   };
+
+  if (ledgerEntity) {
+    const row = accountRows.find((r) => r.entity.id === ledgerEntity.id);
+    const pending = pendingDifferences.get(ledgerEntity.id) ?? [];
+    const pendingTotal = pending.reduce((sum, d) => sum + d.differenceArs, 0);
+    const finalBalance = ledgerHistory.length ? ledgerHistory[ledgerHistory.length - 1].balance : 0;
+    const name = ledgerEntity.tradeName || ledgerEntity.legalName;
+    const roles = [ledgerEntity.isCustomer && "Cliente", ledgerEntity.isSupplier && "Proveedor"].filter(Boolean).join(" y ");
+    const today = new Date().toLocaleDateString("es-AR");
+    const companyAddress = [company?.fiscalStreet, company?.fiscalCity, company?.fiscalProvince].filter(Boolean).join(", ");
+
+    const downloadPdf = async () => {
+      const element = document.getElementById("account-statement-sheet");
+      if (!element) return;
+      setDownloadingPdf(true);
+      try {
+        const html2pdf = await loadHtml2Pdf();
+        await html2pdf().set({
+          margin: [8, 8, 10, 8] as [number, number, number, number],
+          filename: `Estado_de_cuenta_${name.replace(/[^\w]+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
+          image: { type: "jpeg" as const, quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: "mm" as const, format: "a4", orientation: "portrait" as const },
+          pagebreak: { mode: ["css", "legacy"], avoid: "tr" }
+        }).from(element).save();
+      } finally {
+        setDownloadingPdf(false);
+      }
+    };
+
+    return (
+      <div className="page-wide" style={{ paddingBottom: 60 }}>
+        <div className="card pad">
+          <div className="toolbar" style={{ justifyContent: "space-between", borderBottom: "1px solid var(--border, #e2e8f0)", paddingBottom: 12, flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <span className="eyebrow">CUENTA CORRIENTE</span>
+              <h2 style={{ margin: 0 }}>{name}</h2>
+              <p className="muted" style={{ margin: "2px 0 0 0" }}>
+                CUIT: {ledgerEntity.documentNumber || "Sin CUIT"} · {roles}
+              </p>
+            </div>
+            <div className="toolbar" style={{ gap: 8 }}>
+              <button className="btn btn-outline compact" onClick={() => setLedgerEntity(null)}>← Volver al listado</button>
+              <button className="btn btn-outline compact" disabled={downloadingPdf} onClick={() => void downloadPdf()}>
+                {downloadingPdf ? "Generando…" : "Descargar PDF"}
+              </button>
+              {ledgerEntity.isCustomer && (
+                <Link className="btn compact" to={`/finanzas/cobranzas?customerId=${ledgerEntity.id}`}>Registrar cobro</Link>
+              )}
+              {ledgerEntity.isSupplier && (
+                <Link className="btn compact" to={`/finanzas/pagos/nueva?supplierId=${ledgerEntity.id}`}>Emitir orden de pago</Link>
+              )}
+            </div>
+          </div>
+
+          {row && (
+            <div className="grid-3" style={{ marginTop: 16 }}>
+              <div className="card pad" style={{ margin: 0 }}>
+                <span className="muted">Saldo de la cuenta (pesos)</span>
+                <strong style={{ display: "block", fontSize: "1.4rem" }}>{money(finalBalance)}</strong>
+                <span className="muted">{finalBalance > 0.01 ? (ledgerEntity.isCustomer ? "A cobrar" : "A favor") : finalBalance < -0.01 ? "A pagar / saldo a favor del cliente" : "Al día"}</span>
+              </div>
+              {ledgerEntity.isCustomer && row.receivableBalanceUsd > 0.01 && (
+                <div className="card pad" style={{ margin: 0 }}>
+                  <span className="muted">Facturas en dólares pendientes</span>
+                  <strong style={{ display: "block", fontSize: "1.4rem" }}>{money(row.receivableBalanceUsd, "USD")}</strong>
+                  <span className="muted">Se cobran en pesos al TC pactado del día de pago</span>
+                </div>
+              )}
+              {Math.abs(pendingTotal) >= 0.01 && (
+                <div className="card pad" style={{ margin: 0 }}>
+                  <span className="muted">Diferencias de cambio a documentar</span>
+                  <strong style={{ display: "block", fontSize: "1.4rem" }}>{money(pendingTotal)}</strong>
+                  <span className="muted">{pending.length} pendiente(s): emití la ND/NC desde cada movimiento</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="table-wrap" style={{ marginTop: 16 }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Comprobante</th>
+                  <th>Número</th>
+                  <th>Descripción</th>
+                  <th style={{ textAlign: "right" }}>Debe</th>
+                  <th style={{ textAlign: "right" }}>Haber</th>
+                  <th style={{ textAlign: "right" }}>Saldo de la cuenta</th>
+                  <th style={{ textAlign: "right" }}>Pendiente del comprobante</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledgerHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                      Todavía no hay movimientos en esta cuenta.
+                    </td>
+                  </tr>
+                ) : ledgerHistory.map((item, idx) => (
+                  <tr key={idx} style={item.muted ? { opacity: 0.65 } : undefined}>
+                    <td>{civilDate(item.date)}</td>
+                    <td><strong>{item.type}</strong></td>
+                    <td><code style={item.muted ? { textDecoration: "line-through" } : undefined}>{item.number}</code></td>
+                    <td>
+                      {item.description}
+                      {item.originalAmount && (
+                        <span style={{ display: "block", color: "#2563eb", fontSize: "0.75rem", fontWeight: 700 }}>
+                          Original: {item.originalAmount}
+                        </span>
+                      )}
+                      {item.pending && (
+                        <Link className="btn compact" style={{ marginTop: 6, display: "inline-block" }}
+                          to={`/facturas/nueva?nota=${item.pending.differenceArs > 0 ? "ND" : "NC"}&origen=${item.pending.invoiceId}&dif=${item.pending.imputationId}`}>
+                          Emitir {item.pending.differenceArs > 0 ? "ND" : "NC"} por diferencia de cambio
+                        </Link>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "right" }}>{item.debit > 0 ? money(item.debit) : "—"}</td>
+                    <td style={{ textAlign: "right" }}>{item.credit > 0 ? money(item.credit) : "—"}</td>
+                    <td style={{ textAlign: "right", fontWeight: 700, color: item.balance > 0.01 ? "#b91c1c" : item.balance < -0.01 ? "#047857" : "inherit" }}>
+                      {money(item.balance)}
+                    </td>
+                    <td style={{ textAlign: "right", color: item.documentBalance === "Cancelado" ? "#047857" : "inherit" }}>
+                      {item.documentBalance ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Hoja del estado de cuenta para el PDF (fuera de pantalla). */}
+        <div style={{ position: "absolute", left: -10000, top: 0 }} aria-hidden="true">
+          <div id="account-statement-sheet" style={{ width: "190mm", padding: "6mm", background: "#fff", color: "#1e293b", fontFamily: "Helvetica, Arial, sans-serif", fontSize: "10px" }}>
+            <table style={{ width: "100%", borderBottom: "2px solid #0f766e", paddingBottom: 8, marginBottom: 10 }}>
+              <tbody>
+                <tr>
+                  <td style={{ verticalAlign: "top" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <img src="/logo.png?v=2" alt="" style={{ maxHeight: 48 }} />
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#0f766e" }}>{company?.legalName || ""}</div>
+                        {company?.tradeName && <div style={{ fontWeight: 600 }}>{company.tradeName}</div>}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 4, color: "#475569" }}>
+                      {company?.documentNumber && <>CUIT {company.documentNumber} · </>}
+                      {companyAddress}
+                      {company?.email && <> · {company.email}</>}
+                    </div>
+                  </td>
+                  <td style={{ textAlign: "right", verticalAlign: "top" }}>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>ESTADO DE CUENTA CORRIENTE</div>
+                    <div>Emitido el {today}</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 4, padding: "6px 8px", marginBottom: 10 }}>
+              <strong style={{ fontSize: 12 }}>{ledgerEntity.legalName}</strong>
+              {ledgerEntity.tradeName && ledgerEntity.tradeName !== ledgerEntity.legalName && <> ({ledgerEntity.tradeName})</>}
+              <div>CUIT: {ledgerEntity.documentNumber || "—"} · {roles}</div>
+            </div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ background: "#0f766e", color: "#fff" }}>
+                  {["Fecha", "Comprobante", "Número", "Debe", "Haber", "Saldo"].map((h, i) => (
+                    <th key={h} style={{ padding: "4px 6px", textAlign: i >= 3 ? "right" : "left" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ledgerHistory.filter((item) => !item.pending).map((item, idx) => (
+                  <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0", color: item.muted ? "#94a3b8" : undefined }}>
+                    <td style={{ padding: "3px 6px" }}>{civilDate(item.date)}</td>
+                    <td style={{ padding: "3px 6px" }}>{item.type}{item.originalAmount ? ` · ${item.originalAmount}` : ""}</td>
+                    <td style={{ padding: "3px 6px", fontFamily: "monospace" }}>{item.number}</td>
+                    <td style={{ padding: "3px 6px", textAlign: "right" }}>{item.debit > 0 ? money(item.debit) : ""}</td>
+                    <td style={{ padding: "3px 6px", textAlign: "right" }}>{item.credit > 0 ? money(item.credit) : ""}</td>
+                    <td style={{ padding: "3px 6px", textAlign: "right", fontWeight: 700 }}>{money(item.balance)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 10, textAlign: "right", fontSize: 13, fontWeight: 700 }}>
+              Saldo al {today}: {money(ledgerHistory.filter((item) => !item.pending).reduce(
+                (_, item) => item.balance, 0))}
+            </div>
+            {ledgerEntity.isCustomer && row && row.receivableBalanceUsd > 0.01 && (
+              <div style={{ marginTop: 4, textAlign: "right", color: "#475569" }}>
+                Incluye facturas en dólares por {money(row.receivableBalanceUsd, "USD")}, valuadas a la cotización de emisión.
+                Se cancelan en pesos a la cotización pactada del día de pago.
+              </div>
+            )}
+            <div style={{ marginTop: 18, color: "#94a3b8", fontSize: 8.5, textAlign: "center" }}>
+              Estado de cuenta informativo emitido por {company?.legalName || "la empresa"}. Ante cualquier diferencia, por favor comunicarse.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-wide" style={{ paddingBottom: 60 }}>
@@ -626,7 +938,7 @@ export function CurrentAccountsPage() {
                   </tr>
                 ) : (
                   filteredRows.map((row) => (
-                    <tr key={row.entity.id}>
+                    <tr key={row.entity.id} className="row-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) setLedgerEntity(row.entity); }}>
                       <td>
                         <strong>{row.entity.tradeName || row.entity.legalName}</strong>
                         <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
@@ -689,9 +1001,9 @@ export function CurrentAccountsPage() {
                           <button
                             className="btn btn-outline compact"
                             onClick={() => setLedgerEntity(row.entity)}
-                            title="Ver mayor de movimientos"
+                            title="Ver la cuenta corriente con sus movimientos"
                           >
-                            👁️ Mayor
+                            Ver cuenta
                           </button>
                           <Link
                             className="btn compact"
@@ -732,7 +1044,7 @@ export function CurrentAccountsPage() {
                   </tr>
                 ) : (
                   filteredRows.map((row) => (
-                    <tr key={row.entity.id}>
+                    <tr key={row.entity.id} className="row-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) setLedgerEntity(row.entity); }}>
                       <td>
                         <strong>{row.entity.tradeName || row.entity.legalName}</strong>
                         <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
@@ -795,9 +1107,9 @@ export function CurrentAccountsPage() {
                           <button
                             className="btn btn-outline compact"
                             onClick={() => setLedgerEntity(row.entity)}
-                            title="Ver mayor de movimientos"
+                            title="Ver la cuenta corriente con sus movimientos"
                           >
-                            👁️ Mayor
+                            Ver cuenta
                           </button>
                           <Link
                             className="btn compact"
@@ -840,7 +1152,7 @@ export function CurrentAccountsPage() {
                   filteredRows.map((row) => {
                     const net = row.netBalance;
                     return (
-                      <tr key={row.entity.id}>
+                      <tr key={row.entity.id} className="row-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) setLedgerEntity(row.entity); }}>
                         <td>
                           <strong>{row.entity.tradeName || row.entity.legalName}</strong>
                           <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
@@ -884,9 +1196,9 @@ export function CurrentAccountsPage() {
                             <button
                               className="btn btn-outline compact"
                               onClick={() => setLedgerEntity(row.entity)}
-                              title="Ver mayor unificado"
+                              title="Ver la cuenta corriente con sus movimientos"
                             >
-                              👁️ Mayor
+                              Ver cuenta
                             </button>
                             <Link
                               className="btn btn-outline compact"
@@ -914,122 +1226,6 @@ export function CurrentAccountsPage() {
         )}
       </section>
 
-      {/* Modal de Mayor de Cuenta Corriente */}
-      {ledgerEntity && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            padding: 20
-          }}
-        >
-          <div
-            className="card pad"
-            style={{
-              width: "100%",
-              maxWidth: 980,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              backgroundColor: "var(--surface, #ffffff)",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              borderRadius: 8
-            }}
-          >
-            <div className="toolbar" style={{ justifyContent: "space-between", borderBottom: "1px solid var(--border, #e2e8f0)", paddingBottom: 12 }}>
-              <div>
-                <span className="eyebrow">EXTRACTO HISTÓRICO · MAYOR DE CUENTA CORRIENTE</span>
-                <h2 style={{ margin: 0 }}>
-                  {ledgerEntity.tradeName || ledgerEntity.legalName}
-                </h2>
-                <p className="muted" style={{ margin: "2px 0 0 0" }}>
-                  CUIT: {ledgerEntity.documentNumber || "Sin CUIT"} · {ledgerEntity.isCustomer ? "Cliente " : ""}{ledgerEntity.isSupplier ? "Proveedor" : ""}
-                </p>
-              </div>
-              <button className="btn btn-outline compact" onClick={() => setLedgerEntity(null)}>
-                ✕ Cerrar
-              </button>
-            </div>
-
-            <div className="table-wrap" style={{ marginTop: 16 }}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Tipo Comprobante</th>
-                    <th>Número</th>
-                    <th>Descripción / TC</th>
-                    <th style={{ textAlign: "right" }}>Débito (+)</th>
-                    <th style={{ textAlign: "right" }}>Crédito (−)</th>
-                    <th style={{ textAlign: "right" }}>Saldo Acumulado (ARS)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ledgerHistory.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 24 }}>
-                        No hay movimientos históricos registrados para esta entidad.
-                      </td>
-                    </tr>
-                  ) : (
-                    ledgerHistory.map((item, idx) => (
-                      <tr key={idx} style={item.muted ? { opacity: 0.65 } : undefined}>
-                        <td>{new Date(item.date).toLocaleDateString("es-AR")}</td>
-                        <td>
-                          <strong>{item.type}</strong>
-                        </td>
-                        <td>
-                          <code style={item.muted ? { textDecoration: "line-through" } : undefined}>{item.number}</code>
-                        </td>
-                        <td>
-                          {item.description}
-                          {item.originalAmount && (
-                            <span style={{ display: "block", color: "#2563eb", fontSize: "0.75rem", fontWeight: 700 }}>
-                              Original: {item.originalAmount}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: "right", color: item.debit > 0 ? "#059669" : "inherit" }}>
-                          {item.debit > 0 ? money(item.debit) : "—"}
-                        </td>
-                        <td style={{ textAlign: "right", color: item.credit > 0 ? "#dc2626" : "inherit" }}>
-                          {item.credit > 0 ? money(item.credit) : "—"}
-                        </td>
-                        <td style={{ textAlign: "right", fontWeight: 700, color: item.balance > 0 ? "#dc2626" : item.balance < 0 ? "#059669" : "inherit" }}>
-                          {money(item.balance)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 20, gap: 10 }}>
-              {ledgerEntity.isCustomer && (
-                <Link className="btn btn-outline compact" to={`/finanzas/cobranzas?customerId=${ledgerEntity.id}`}>
-                  💵 Registrar Cobranza
-                </Link>
-              )}
-              {ledgerEntity.isSupplier && (
-                <Link className="btn compact" to={`/finanzas/pagos/nueva?supplierId=${ledgerEntity.id}`}>
-                  💳 Emitir Orden de Pago
-                </Link>
-              )}
-              <button className="btn btn-outline compact" onClick={() => setLedgerEntity(null)}>
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
