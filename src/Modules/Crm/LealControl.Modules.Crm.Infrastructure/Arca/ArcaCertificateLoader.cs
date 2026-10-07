@@ -9,7 +9,7 @@ internal static class ArcaCertificateLoader
     {
         // SignedCms en Linux suele requerir cert exportado a PKCS#12 con clave.
         using var fromPem = X509Certificate2.CreateFromPem(certificatePem, privateKeyPem);
-        return new X509Certificate2(fromPem.Export(X509ContentType.Pkcs12));
+        return X509CertificateLoader.LoadPkcs12(fromPem.Export(X509ContentType.Pkcs12), password: null);
     }
 
     public static bool TryLoad(

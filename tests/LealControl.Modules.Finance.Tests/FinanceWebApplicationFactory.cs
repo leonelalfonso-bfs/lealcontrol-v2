@@ -14,8 +14,7 @@ public sealed class FinanceWebApplicationFactory : WebApplicationFactory<Program
 {
     public static readonly Guid DemoTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("lealcontrol_finance_tests")
         .WithUsername("leal")
         .WithPassword("leal")

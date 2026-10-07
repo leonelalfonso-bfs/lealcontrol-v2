@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace LealControl.Modules.Communications.Tests;
@@ -28,16 +29,16 @@ public sealed class CommunicationsInboxGateMiddlewareTests
     [InlineData("/api/v1/sales/quotes", HttpStatusCode.OK)]
     public async Task DisabledInboxBlocksOnlyInboxRoutes(string path, HttpStatusCode expected)
     {
-        using var server = Server(false);
-        using var response = await server.CreateClient().GetAsync(path);
+        using var host = Server(false);
+        using var response = await host.GetTestClient().GetAsync(path);
         Assert.Equal(expected, response.StatusCode);
     }
 
     [Fact]
     public async Task MissingSettingKeepsInboxClosed()
     {
-        using var server = Server(null);
-        using var response = await server.CreateClient().GetAsync("/api/v1/communications/conversations");
+        using var host = Server(null);
+        using var response = await host.GetTestClient().GetAsync("/api/v1/communications/conversations");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -48,32 +49,32 @@ public sealed class CommunicationsInboxGateMiddlewareTests
     [InlineData("malformed", HttpStatusCode.Forbidden)]
     public async Task EnabledInboxRequiresExplicitCommunicationsClaim(string allowedModules, HttpStatusCode expected)
     {
-        using var server = Server(true, User("Admin", allowedModules));
-        using var response = await server.CreateClient().GetAsync("/api/v1/communications/conversations");
+        using var host = Server(true, User("Admin", allowedModules));
+        using var response = await host.GetTestClient().GetAsync("/api/v1/communications/conversations");
         Assert.Equal(expected, response.StatusCode);
     }
 
     [Fact]
     public async Task EnabledInboxRejectsAnonymousRequest()
     {
-        using var server = Server(true);
-        using var response = await server.CreateClient().GetAsync("/api/v1/communications/conversations");
+        using var host = Server(true);
+        using var response = await host.GetTestClient().GetAsync("/api/v1/communications/conversations");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
     public async Task SuperAdminCanAccessEnabledInbox()
     {
-        using var server = Server(true, User("SuperAdmin", "[]"));
-        using var response = await server.CreateClient().GetAsync("/api/v1/communications/conversations");
+        using var host = Server(true, User("SuperAdmin", "[]"));
+        using var response = await host.GetTestClient().GetAsync("/api/v1/communications/conversations");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
     public async Task SharedEmailRemainsAvailableWithoutCommunicationsClaim()
     {
-        using var server = Server(true, User("Admin", "[]"));
-        using var response = await server.CreateClient().GetAsync("/api/v1/communications/accounts");
+        using var host = Server(true, User("Admin", "[]"));
+        using var response = await host.GetTestClient().GetAsync("/api/v1/communications/accounts");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -83,22 +84,22 @@ public sealed class CommunicationsInboxGateMiddlewareTests
     [InlineData("/api/v1/communications/conversations", HttpStatusCode.Forbidden)]
     public async Task SharedMailIsNotBlockedByContractedModuleFilter(string path, HttpStatusCode expected)
     {
-        using var server = new TestServer(new WebHostBuilder().Configure(app =>
+        using var host = Host(_ => { }, app =>
         {
             app.Use((context, next) => { context.User = User("Admin", "[\"sales\"]"); return next(); });
             app.UseMiddleware<ContractedModuleMiddleware>();
             app.Run(context => { context.Response.StatusCode = 200; return Task.CompletedTask; });
-        }));
-        using var response = await server.CreateClient().GetAsync(path);
+        });
+        using var response = await host.GetTestClient().GetAsync(path);
         Assert.Equal(expected, response.StatusCode);
     }
 
     private static ClaimsPrincipal User(string role, string modules) => new(new ClaimsIdentity(
         [new Claim("role", role), new Claim("allowed_modules", modules)], "test"));
 
-    private static TestServer Server(bool? enabled, ClaimsPrincipal? user = null) => new(new WebHostBuilder()
-        .ConfigureServices(services => services.AddSingleton<ICommunicationsInboxSettings>(new FakeInboxSettings(enabled ?? false)))
-        .Configure(app =>
+    private static IHost Server(bool? enabled, ClaimsPrincipal? user = null) => Host(
+        services => services.AddSingleton<ICommunicationsInboxSettings>(new FakeInboxSettings(enabled ?? false)),
+        app =>
         {
             if (user is not null)
                 app.Use((context, next) => { context.User = user; return next(); });
@@ -108,7 +109,12 @@ public sealed class CommunicationsInboxGateMiddlewareTests
                 context.Response.StatusCode = StatusCodes.Status200OK;
                 return Task.CompletedTask;
             });
-        }));
+        });
+
+    private static IHost Host(Action<IServiceCollection> services, Action<IApplicationBuilder> configure) =>
+        new HostBuilder()
+            .ConfigureWebHost(web => web.UseTestServer().ConfigureServices(services).Configure(configure))
+            .Start();
 
     private sealed class FakeInboxSettings(bool enabled) : ICommunicationsInboxSettings
     {

@@ -10,8 +10,7 @@ public sealed class CommunicationsInboxSettingsTests
     [Fact]
     public async Task TogglePersistsAndCanBeReadByAnotherRequest()
     {
-        await using var postgres = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+        await using var postgres = new PostgreSqlBuilder("postgres:16-alpine")
             .WithDatabase("communications_settings_tests")
             .WithUsername("leal")
             .WithPassword("leal")
