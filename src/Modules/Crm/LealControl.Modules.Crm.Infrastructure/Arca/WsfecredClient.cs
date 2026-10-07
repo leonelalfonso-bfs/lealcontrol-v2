@@ -48,7 +48,8 @@ internal sealed class WsfecredClient
             var client = _clients.CreateClient("arca");
             using var request = new HttpRequestMessage(HttpMethod.Post, url);
             request.Content = new StringContent(envelope, Encoding.UTF8, "text/xml");
-            request.Headers.TryAddWithoutValidation("SOAPAction", "");
+            request.Headers.TryAddWithoutValidation("SOAPAction",
+                "http://ar.gob.afip.wsfecred/FECredService/consultarMontoObligadoRecepcion");
             using var response = await client.SendAsync(request, cancellationToken);
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             return WsfecredObligationParser.Parse(body);
@@ -91,9 +92,17 @@ public static class WsfecredObligationParser
             .Select(d => d.Value.Trim()).Where(v => v.Length > 0).ToList();
         if (errors.Count > 0)
             return Fail($"ARCA (wsfecred): {Short(string.Join(" · ", errors))}");
-        var answer = nodes.FirstOrDefault(x => x.Name.LocalName == "respuesta")?.Value?.Trim();
+        // El WSDL lo llama "obligado" (el manual dice "respuesta"): se aceptan ambos.
+        var answer = nodes.FirstOrDefault(x => x.Name.LocalName is "obligado" or "respuesta")?.Value?.Trim();
         if (answer is not ("S" or "N"))
-            return Fail("ARCA no informó si el cliente está obligado a recibir FCE.");
+        {
+            var observations = nodes.Where(x => x.Name.LocalName == "arrayObservacion")
+                .SelectMany(x => x.Descendants().Where(d => d.Name.LocalName == "descripcion"))
+                .Select(d => d.Value.Trim()).Where(v => v.Length > 0).ToList();
+            return Fail(observations.Count > 0
+                ? $"ARCA (wsfecred): {Short(string.Join(" · ", observations))}"
+                : "ARCA no informó si el cliente está obligado a recibir FCE.");
+        }
         var minimum = 0m;
         var rawMinimum = nodes.FirstOrDefault(x => x.Name.LocalName == "montoDesde")?.Value?.Trim();
         if (answer == "S" && !decimal.TryParse(rawMinimum, NumberStyles.AllowDecimalPoint,
