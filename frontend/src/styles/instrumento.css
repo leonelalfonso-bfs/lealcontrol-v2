@@ -75,9 +75,10 @@
   color: var(--ins-ink);
 }
 /* Los temas anteriores pintan todo input:focus con !important; el borde lo lleva el contenedor. */
-:root .ins-search input,
-:root .ins-search input:focus,
-:root .ins-search input:focus-visible {
+/* Más específico que las reglas globales (:root[data-color-mode] input:focus), que se cargan después. */
+html:root body .ins-search input,
+html:root body .ins-search input:focus,
+html:root body .ins-search input:focus-visible {
   border: 0 !important;
   box-shadow: none !important;
   outline: none !important;
@@ -280,6 +281,11 @@ mark.ins-mark {
   padding: 0 1px;
 }
 .ins-mono { font-family: var(--ins-font-mono); font-variant-numeric: tabular-nums; }
+
+/* En pantallas táctiles los atajos de teclado no aportan. */
+@media (max-width: 960px), (hover: none) {
+  .ins-search__kbd { display: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .ins-picker__panel { animation: none; }

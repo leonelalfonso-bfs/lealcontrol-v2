@@ -1,11 +1,10 @@
-import { Link, NavLink, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { api } from "./api/client";
 import { useAuth } from "./context/AuthContext";
 import { usePresentationMode } from "./context/PresentationModeContext";
-import { tenantLegalLine, tenantTitle } from "./utils/tenantLabel";
+import { tenantTitle } from "./utils/tenantLabel";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { CommunicationsNotificationBell } from "./components/CommunicationsNotificationBell";
 import { useCommunicationsBrowserNotifications } from "./hooks/useCommunicationsBrowserNotifications";
 import {
   AccountFormPage,
@@ -176,8 +175,7 @@ import {
   TrialBalancePage,
   ChunkLoadErrorBoundary
 } from "./app/lazyPages";
-import { ThemeToggle } from "./components/ThemeToggle";
-import { LealLogo } from "./components/LealLogo";
+import { AppShell } from "./components/shell/AppShell";
 import "./v1-theme.css";
 import "./brand-layout.css";
 import "./excel-tools.css";
@@ -216,8 +214,6 @@ export function App() {
 
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("Empresa");
-  const [appsOpen, setAppsOpen] = useState(false);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [exitPresentationOpen, setExitPresentationOpen] = useState(false);
   const [exitPassword, setExitPassword] = useState("");
   const [exitError, setExitError] = useState<string | null>(null);
@@ -312,268 +308,37 @@ export function App() {
 
   return (
     <ProtectedRoute>
-      <div className="app-shell">
-        {/* Mobile Header Bar */}
-        <header className="mobile-header">
-          <button
-            type="button"
-            className="mobile-hamburger-btn"
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            title="Abrir menú"
-          >
-            ☰
-          </button>
-          <div className="mobile-brand-title">
-            <strong>{activeCompanyName}</strong>
-            <span className="badge" style={{ fontSize: "0.68rem" }}>{activeModule.label}</span>
-          </div>
-          <button
-            type="button"
-            className="mobile-apps-btn"
-            onClick={() => setAppsOpen(true)}
-            title="Centro de Aplicaciones"
-          >
-            ▦
-          </button>
-        </header>
-
-        {/* Mobile Sidebar Backdrop */}
-        {mobileSidebarOpen && (
-          <div
-            className="mobile-sidebar-backdrop"
-            onClick={() => setMobileSidebarOpen(false)}
-          />
-        )}
-
-        {/* Main Body with Clean Adaptive Sidebar */}
-        <div className="app">
-          <aside className={`sidebar ${mobileSidebarOpen ? "mobile-open" : ""}`}>
-            <div className="company-brand">
-              {companyLogo ? (
-                <img className="company-logo" src={companyLogo} alt={activeCompanyName} />
-              ) : (
-                <div className="company-logo-placeholder">{activeCompanyName.slice(0, 2).toUpperCase()}</div>
-              )}
-              <div className="company-brand-name">
-                <strong>{activeCompanyName}</strong>
-                {tenantLegalLine(tenant ?? { legalName: activeCompanyName }) && (
-                  <span className="company-brand-legal">{tenantLegalLine(tenant ?? { legalName: activeCompanyName })}</span>
-                )}
-                {tenant?.documentNumber && (
-                  <span className="company-brand-cuit">CUIT {tenant.documentNumber}</span>
-                )}
-              </div>
-
-              {availableTenants.length > 1 && (
-                <label className="company-switch">
-                  <span>Cambiar de empresa</span>
-                  <select
-                    value={tenant?.id || ""}
-                    onChange={(e) => switchTenant(e.target.value)}
-                    title="Cambiar de empresa"
-                  >
-                    {availableTenants.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {tenantTitle(t)}{t.documentNumber ? ` · CUIT ${t.documentNumber}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-            </div>
-
-            <button
-              type="button"
-              className="applications-launcher"
-              onClick={() => {
-                setAppsOpen(true);
-                setMobileSidebarOpen(false);
-              }}
-            >
-              <span>▦</span>
-              <span>Aplicaciones</span>
-              <span>›</span>
-            </button>
-
-            <div className="sidebar-module-header">
-              <div className="sidebar-module-badge">
-                <span
-                  className="sidebar-module-icon"
-                  style={{
-                    background: activeModule.gradient,
-                    boxShadow: `0 3px 10px ${activeModule.glow}`
-                  }}
-                >
-                  {activeModule.icon}
-                </span>
-                <span className="sidebar-module-label">{activeModule.label}</span>
-              </div>
-            </div>
-
-            <nav className="nav">
-              {activeModule.items.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  end={item.end}
-                  onClick={() => setMobileSidebarOpen(false)}
-                  className={({ isActive }) => (isActive ? "active" : "")}
-                >
-                  <span className="nav-icon-badge">{item.icon}</span>
-                  <span>{item.label}</span>
-                  {item.path === "/comunicaciones" && communicationsUnread > 0 && (
-                    <span className="nav-unread-badge">{communicationsUnread > 99 ? "99+" : communicationsUnread}</span>
-                  )}
-                </NavLink>
-              ))}
-            </nav>
-
-            <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10, paddingTop: 12, borderTop: "1px solid var(--surface-border)" }}>
-              {hasCommunications && <CommunicationsNotificationBell />}
-
-              {canTogglePresentation && (
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  disabled={presentationLoading}
-                  onClick={() => {
-                    if (presentationActive) {
-                      setExitError(null);
-                      setExitPassword("");
-                      setExitPresentationOpen(true);
-                    } else {
-                      void startPresentation().catch((err) =>
-                        window.alert(err instanceof Error ? err.message : String(err))
-                      );
-                    }
-                  }}
-                  style={{
-                    fontSize: "0.75rem",
-                    borderColor: presentationActive ? "#b45309" : undefined,
-                    color: presentationActive ? "#b45309" : undefined,
-                    fontWeight: 700
-                  }}
-                  title={presentationActive ? "Salir del modo presentación (requiere contraseña)" : "Activar modo presentación para auditoría"}
-                >
-                  {presentationActive ? "Salir modo presentación" : "Modo presentación · Auditoría"}
-                </button>
-              )}
-
-              {/* User Session Bar */}
-              {user && (
-                <div className={`sidebar-user-session ${presentationActive ? "presentation-active" : ""}`} style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "6px 10px",
-                  borderRadius: "8px",
-                  background: presentationActive ? "#fff7ed" : "var(--surface-muted)",
-                  border: `1px solid ${presentationActive ? "#fdba74" : "var(--surface-border)"}`,
-                  fontSize: "0.78rem"
-                }}>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      👤 {user.fullName}
-                    </div>
-                    <div style={{ fontSize: "0.68rem", color: presentationActive ? "#b45309" : "var(--sidebar-muted)" }}>
-                      {presentationActive ? "Presentación · solo lectura" : user.role}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={logout}
-                    title="Cerrar Sesión"
-                    style={{
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                      fontSize: "0.82rem",
-                      color: "#dc2626",
-                      padding: "4px"
-                    }}
-                  >
-                    🚪 Salir
-                  </button>
-                </div>
-              )}
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <ThemeToggle />
-                <NavLink
-                  to="/estilos"
-                  title="Personalizar tema"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "6px 12px",
-                    borderRadius: 10,
-                    fontSize: "0.8rem",
-                    color: "var(--ink-soft)",
-                    fontWeight: 700,
-                    textDecoration: "none",
-                    background: "var(--surface-muted)",
-                    border: "1px solid var(--surface-border)"
-                  }}
-                >
-                  <span>🎨</span>
-                  <span>Temas</span>
-                </NavLink>
-              </div>
-
-              <div className="system-brand" style={{ padding: "6px 2px 2px", justifyContent: "flex-start" }}>
-                <LealLogo size={38} showText animated />
-              </div>
-            </div>
-          </aside>
-
-          {appsOpen && (
-            <div className="apps-overlay" onClick={() => setAppsOpen(false)}>
-              <section className="apps-modal" onClick={(event) => event.stopPropagation()}>
-                <div className="apps-modal-head">
-                  <h2>
-                    <span>▦</span> Centro de Aplicaciones
-                  </h2>
-                  <button type="button" onClick={() => setAppsOpen(false)} title="Cerrar">
-                    ×
-                  </button>
-                </div>
-                <div className="apps-grid">
-                  {modules.map((mod) => (
-                    <Link
-                      key={mod.id}
-                      to={mod.defaultPath}
-                      className={`app-card ${activeModuleId === mod.id ? "selected" : ""}`}
-                      onClick={() => setAppsOpen(false)}
-                    >
-                      <div
-                        className="app-icon"
-                        style={{
-                          background: mod.gradient,
-                          boxShadow: `0 4px 14px ${mod.glow}`
-                        }}
-                      >
-                        {mod.icon}
-                      </div>
-                      <div>
-                        <strong>{mod.label}</strong>
-                        <small>{mod.title.toLowerCase()}</small>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            </div>
-          )}
-
+      <>
+      <AppShell
+        modules={modules}
+        activeModule={activeModule}
+        allowedModuleIds={allowedModuleIds}
+        companyName={activeCompanyName}
+        companyLogo={companyLogo}
+        tenant={tenant}
+        availableTenants={availableTenants}
+        onSwitchTenant={(id) => switchTenant(id)}
+        userName={user?.fullName ?? ""}
+        userRole={user?.role ?? ""}
+        onLogout={logout}
+        hasCommunications={hasCommunications}
+        communicationsUnread={communicationsUnread}
+        presentation={{
+          canToggle: canTogglePresentation,
+          active: presentationActive,
+          loading: presentationLoading,
+          onToggle: () => {
+            if (presentationActive) {
+              setExitError(null);
+              setExitPassword("");
+              setExitPresentationOpen(true);
+            } else {
+              void startPresentation().catch((err) => window.alert(err instanceof Error ? err.message : String(err)));
+            }
+          }
+        }}
+      >
           <main className="main">
-            <div className="workspace-topbar" aria-label="Contexto de trabajo">
-              <span><strong>{activeModule.label}</strong> / Espacio de trabajo</span>
-              <span className="workspace-topbar-company">
-                <span className="workspace-topbar-avatar" aria-hidden="true">{activeCompanyName.slice(0, 2).toUpperCase()}</span>
-                {activeCompanyName}
-              </span>
-            </div>
             <ChunkLoadErrorBoundary>
             <Suspense fallback={<PageFallback />}>
             <Routes>
@@ -793,7 +558,7 @@ export function App() {
             </Suspense>
             </ChunkLoadErrorBoundary>
           </main>
-        </div>
+      </AppShell>
 
         {/* Asistente Copiloto Modal */}
         {exitPresentationOpen && (
@@ -851,7 +616,7 @@ export function App() {
             </div>
           </div>
         )}
-      </div>
+      </>
     </ProtectedRoute>
   );
 }
