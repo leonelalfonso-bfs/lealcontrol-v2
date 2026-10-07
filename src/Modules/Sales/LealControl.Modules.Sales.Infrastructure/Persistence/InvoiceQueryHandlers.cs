@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -86,12 +87,14 @@ internal sealed class InvoiceQueryHandlers
             .AsNoTracking()
             .Where(i => i.TenantId == tenantId);
 
-        if (!string.IsNullOrWhiteSpace(request.Search))
+        foreach (var token in SearchText.Parse(request.Search))
         {
-            var s = request.Search.Trim().ToLower();
-            query = query.Where(i => i.FormattedNumber.ToLower().Contains(s)
-                                  || i.CustomerName.ToLower().Contains(s)
-                                  || i.CustomerDocument.Contains(s));
+            var text = token.Text;
+            var digits = token.HasDigits ? token.Digits : null;
+            query = query.Where(i => SearchText.Fold(i.FormattedNumber).Contains(text)
+                                  || SearchText.Fold(i.CustomerName).Contains(text)
+                                  || (digits != null && (i.CustomerDocument.Replace("-", "").Replace(" ", "").Contains(digits)
+                                                         || i.FormattedNumber.Replace("-", "").Replace(" ", "").Contains(digits))));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Status) && request.Status != "All")

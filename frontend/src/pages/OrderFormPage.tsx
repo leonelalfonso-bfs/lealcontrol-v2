@@ -9,6 +9,7 @@ import {
   type OrderWrite,
   type Product
 } from "../api/types";
+import { ProductPicker } from "../components/pickers";
 
 export function OrderFormPage() {
   const { id } = useParams();
@@ -381,17 +382,13 @@ export function OrderFormPage() {
                   {lines.map((line, idx) => (
                     <tr key={idx}>
                       <td>
-                        <select
+                        <ProductPicker
+                          aria-label={`Producto del renglón ${idx + 1}`}
                           value={line.productId ?? ""}
-                          onChange={(e) => handleProductSelect(idx, e.target.value)}
-                        >
-                          <option value="">(Libre / Sin Catálogo)</option>
-                          {products.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.code} - {p.name}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(id) => handleProductSelect(idx, id)}
+                          products={products}
+                          placeholder="Libre / sin catálogo"
+                        />
                       </td>
                       <td>
                         <input

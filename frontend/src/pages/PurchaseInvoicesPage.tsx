@@ -4,6 +4,8 @@ import { api } from "../api/client";
 import { type PurchaseInvoice } from "../api/types";
 import { type PurchaseReception } from "../api/types";
 import { InvoiceOcrUploadModal } from "../components/InvoiceOcrUploadModal";
+import { SearchField } from "../components/ui/SearchField";
+import { matchesSearch, parseSearch } from "../lib/search";
 
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
@@ -91,12 +93,9 @@ export function PurchaseInvoicesPage() {
   }, [invoices, paymentOrders]);
 
   const filteredInvoices = useMemo(() => {
+    const tokens = parseSearch(searchTerm);
     return enrichedInvoices.filter((inv) => {
-      const matchSearch =
-        searchTerm === "" ||
-        inv.formattedNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inv.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inv.supplierDocument.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchSearch = matchesSearch(tokens, inv.formattedNumber, inv.supplierName, inv.supplierDocument);
 
       const matchType = selectedType === "All" || inv.invoiceType === selectedType;
       const matchStatus = selectedStatus === "All" || inv.status === selectedStatus;
@@ -190,12 +189,12 @@ export function PurchaseInvoicesPage() {
       {/* Filters Toolbar */}
       <div className="card pad toolbar" style={{ marginBottom: 20, justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-          <input
-            type="text"
-            placeholder="Buscar por N° Factura, Proveedor, CUIT..."
+          <SearchField
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ minWidth: 260 }}
+            onChange={setSearchTerm}
+            resultCount={filteredInvoices.length}
+            placeholder="Buscar por número, proveedor o CUIT"
+            style={{ flex: "1 1 320px", maxWidth: 520 }}
           />
 
           <select

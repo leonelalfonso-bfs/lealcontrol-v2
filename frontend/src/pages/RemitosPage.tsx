@@ -3,11 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { type Remito } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 export function RemitosPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<Remito[]>([]);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [statusFilter, setStatusFilter] = useState("All");
   const [invoiceFilter, setInvoiceFilter] = useState<"All" | "Pending" | "Invoiced">("All");
   const [loading, setLoading] = useState(true);
@@ -15,7 +18,7 @@ export function RemitosPage() {
 
   const load = () => {
     setLoading(true);
-    api.listRemitos(search, statusFilter === "Pending" || statusFilter === "Invoiced" ? "All" : statusFilter)
+    api.listRemitos(debouncedSearch, statusFilter === "Pending" || statusFilter === "Invoiced" ? "All" : statusFilter)
       .then(setItems)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -23,7 +26,7 @@ export function RemitosPage() {
 
   useEffect(() => {
     load();
-  }, [search, statusFilter]);
+  }, [debouncedSearch, statusFilter]);
 
   const filteredItems = items.filter((r) => {
     if (invoiceFilter === "Pending") {
@@ -103,11 +106,11 @@ export function RemitosPage() {
 
       <div className="card pad toolbar" style={{ marginBottom: 20, justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div className="row" style={{ gap: 12, flex: 1, minWidth: 280 }}>
-          <input
-            placeholder="Buscar por N° Remito, Cliente, CUIT..."
+          <SearchField
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ maxWidth: 360, width: "100%" }}
+            onChange={setSearch}
+            placeholder="Buscar por número, cliente o CUIT"
+            style={{ flex: "1 1 320px", maxWidth: 520 }}
           />
 
           <select

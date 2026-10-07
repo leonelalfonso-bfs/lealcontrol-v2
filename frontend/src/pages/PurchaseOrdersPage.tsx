@@ -3,17 +3,20 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { type PurchaseOrder } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 export function PurchaseOrdersPage() {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [statusFilter, setStatusFilter] = useState("");
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await api.listPurchaseOrders(search, statusFilter);
+      const data = await api.listPurchaseOrders(debouncedSearch, statusFilter);
       setOrders(data);
     } catch (err) {
       console.error(err);
@@ -24,7 +27,7 @@ export function PurchaseOrdersPage() {
 
   useEffect(() => {
     loadData();
-  }, [search, statusFilter]);
+  }, [debouncedSearch, statusFilter]);
 
   const totalSpent = orders
     .filter((o) => o.status !== "Cancelled")
@@ -86,12 +89,11 @@ export function PurchaseOrdersPage() {
 
       {/* Filter Bar */}
       <div className="card filters" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-        <input
-          type="text"
-          placeholder="Buscar por N° de orden, proveedor o CUIT..."
+        <SearchField
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+          onChange={setSearch}
+          placeholder="Buscar por número de orden, proveedor o CUIT"
+          style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
 
         <select

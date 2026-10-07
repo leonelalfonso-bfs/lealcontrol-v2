@@ -15,6 +15,7 @@ import { TechnicalDetailEditor } from "../components/TechnicalDetailEditor";
 import { richTextIsEmpty } from "../utils/richText";
 import { QuickCustomerModal } from "../components/QuickCustomerModal";
 import { QuickProductModal } from "../components/QuickProductModal";
+import { CustomerPicker, ProductPicker } from "../components/pickers";
 
 interface FormQuoteLine extends QuoteLineWrite {
   nativeCurrency: string;
@@ -587,7 +588,7 @@ export const QuoteFormPage: React.FC = () => {
           </div>
 
           <div className="grid-3">
-            <label>
+            <label htmlFor="quote-customer">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                 <span>Cliente *</span>
                 <button
@@ -598,18 +599,14 @@ export const QuoteFormPage: React.FC = () => {
                   + Alta Rápida
                 </button>
               </div>
-              <select
+              <CustomerPicker
+                id="quote-customer"
                 required
                 value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-              >
-                <option value="">Seleccionar Cliente...</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.tradeName ? `${c.tradeName} (${c.legalName})` : c.legalName}
-                  </option>
-                ))}
-              </select>
+                onChange={(id) => setCustomerId(id)}
+                options={customers}
+                onCreate={() => setShowQuickCustomerModal(true)}
+              />
             </label>
 
             <label>
@@ -841,18 +838,19 @@ export const QuoteFormPage: React.FC = () => {
                     <td>
                       <div className="stack" style={{ gap: "4px" }}>
                         <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                          <select
-                            value={line.productId ?? ""}
-                            onChange={(e) => handleSelectProductForLine(idx, e.target.value)}
-                            style={{ fontSize: "0.82rem", flex: 1 }}
-                          >
-                            <option value="">-- Cargar desde Catálogo (Opcional) --</option>
-                            {productsCatalog.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                [{p.code}] {p.name} ({p.saleCurrency} ${p.basePrice})
-                              </option>
-                            ))}
-                          </select>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <ProductPicker
+                              aria-label={`Producto del renglón ${idx + 1}`}
+                              value={line.productId ?? ""}
+                              onChange={(id) => handleSelectProductForLine(idx, id)}
+                              products={productsCatalog}
+                              placeholder="Cargar desde catálogo (opcional)"
+                              onCreate={() => {
+                                setQuickProductLineIndex(idx);
+                                setShowQuickProductModal(true);
+                              }}
+                            />
+                          </div>
                           <button
                             type="button"
                             onClick={() => {

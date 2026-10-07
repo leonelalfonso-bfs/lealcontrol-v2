@@ -3,12 +3,15 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { type PurchaseReception } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 export function PurchaseReceptionsPage() {
   const [receptions, setReceptions] = useState<PurchaseReception[]>([]);
   const [linkedReceptionIds, setLinkedReceptionIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -17,7 +20,7 @@ export function PurchaseReceptionsPage() {
       setLoading(true);
       setError(null);
       const [data, invs] = await Promise.all([
-        api.listPurchaseReceptions(search),
+        api.listPurchaseReceptions(debouncedSearch),
         api.listPurchaseInvoices().catch(() => [])
       ]);
       setReceptions(data);
@@ -38,7 +41,7 @@ export function PurchaseReceptionsPage() {
 
   useEffect(() => {
     void loadData();
-  }, [search]);
+  }, [debouncedSearch]);
 
   const cancelReception = async (r: PurchaseReception) => {
     const reason = window.prompt(
@@ -90,12 +93,11 @@ export function PurchaseReceptionsPage() {
       )}
 
       <div className="card filters">
-        <input
-          type="text"
-          placeholder="Buscar por N° de recepción, proveedor o remito del proveedor..."
+        <SearchField
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+          onChange={setSearch}
+          placeholder="Buscar por número de recepción, proveedor o remito del proveedor"
+          style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
       </div>
 

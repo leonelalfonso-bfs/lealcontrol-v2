@@ -2,22 +2,25 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { type Employee } from "../api/types";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 export function EmployeesListPage() {
   const navigate = useNavigate();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [departmentFilter, setDepartmentFilter] = useState("ALL");
 
   useEffect(() => {
     loadEmployees();
-  }, [search]);
+  }, [debouncedSearch]);
 
   const loadEmployees = async () => {
     try {
       setLoading(true);
-      const data = await api.listEmployees(search);
+      const data = await api.listEmployees(debouncedSearch);
       setEmployees(data);
     } catch (err) {
       console.error("Error al cargar empleados", err);
@@ -99,12 +102,11 @@ export function EmployeesListPage() {
       <div className="card pad" style={{ marginBottom: "20px" }}>
         <div style={{ display: "flex", gap: "14px", alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: "260px" }}>
-            <input
-              type="text"
-              placeholder="Buscar por Nombre, Apellido, Legajo o CUIL..."
+            <SearchField
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ width: "100%", padding: "9px 14px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+              onChange={setSearch}
+              placeholder="Buscar por nombre, apellido, legajo o CUIL"
+              style={{ flex: "1 1 320px", maxWidth: 520 }}
             />
           </div>
 

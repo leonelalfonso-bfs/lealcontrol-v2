@@ -4,6 +4,8 @@ import { api } from "../api/client";
 import type { HistoricalQuote, HistoricalQuoteDetail } from "../api/types";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { trimBlankPdfPages } from "../utils/trimBlankPdfPages";
+import { SearchField } from "../components/ui/SearchField";
+import { filterBySearch } from "../lib/search";
 
 const money = (value: number, currency: string) =>
   `${currency} ${Number(value).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -26,7 +28,7 @@ export function HistoricalQuotesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const visible = records.filter(q => `${q.quoteNumber} ${q.customerName}`.toLowerCase().includes(search.toLowerCase()));
+  const visible = filterBySearch(records, search, q => [q.quoteNumber, q.customerName]);
 
   return <>
     <div className="page-head">
@@ -35,7 +37,7 @@ export function HistoricalQuotesPage() {
     </div>
     {error && <div className="alert">{error}</div>}
     <div className="card pad" style={{ marginBottom: 16 }}>
-      <input type="search" placeholder="Buscar por número o cliente" value={search} onChange={event => setSearch(event.target.value)} style={{ width: "100%" }} />
+      <SearchField value={search} onChange={setSearch} resultCount={visible.length} placeholder="Buscar por número o cliente" />
     </div>
     <section className="card table-wrap">
       {loading ? <div className="pad muted">Cargando historial...</div> :

@@ -3,11 +3,14 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { type PurchaseRequest } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 export function PurchaseRequestsPage() {
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [statusFilter, setStatusFilter] = useState("");
   const [rejectModalId, setRejectModalId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -16,7 +19,7 @@ export function PurchaseRequestsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await api.listPurchaseRequests(search, statusFilter);
+      const data = await api.listPurchaseRequests(debouncedSearch, statusFilter);
       setRequests(data);
     } catch (err) {
       console.error(err);
@@ -27,7 +30,7 @@ export function PurchaseRequestsPage() {
 
   useEffect(() => {
     loadData();
-  }, [search, statusFilter]);
+  }, [debouncedSearch, statusFilter]);
 
   const handleApprove = async (id: string) => {
     try {
@@ -112,12 +115,11 @@ export function PurchaseRequestsPage() {
 
       {/* Filters Bar */}
       <div className="card filters" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-        <input
-          type="text"
-          placeholder="Buscar por N° solicitud, solicitante o motivo..."
+        <SearchField
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+          onChange={setSearch}
+          placeholder="Buscar por número de solicitud, solicitante o motivo"
+          style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
 
         <select

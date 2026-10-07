@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { CustomerSummary, Invoice } from "../api/types";
 import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
 
+import { CustomerPicker } from "../components/pickers";
 type Account = {
   id: string;
   name: string;
@@ -91,7 +92,7 @@ export function CollectionReceiptsWorkspacePage() {
     setLoading(true);
     try {
       const [custRes, accRes, chqRes, invRes, recRes, concRes] = await Promise.all([
-        api.listCustomers("", ""),
+        api.listAllCustomers(""),
         api.listFinanceAccounts().catch(() => [] as Account[]),
         api.listReceivedCheques().catch(() => [] as any[]),
         api.listInvoices("", "", "").catch(() => [] as Invoice[]),
@@ -99,7 +100,7 @@ export function CollectionReceiptsWorkspacePage() {
         api.listFinanceConcepts().catch(() => [] as any[])
       ]);
 
-      const custs = custRes.items || [];
+      const custs = custRes || [];
       setCustomers(custs);
       setAccounts(accRes || []);
       setInvoices(invRes || []);
@@ -607,18 +608,11 @@ export function CollectionReceiptsWorkspacePage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
               <label>
                 Cliente *
-                <select
+                <CustomerPicker
                   value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
-                >
-                  <option value="">-- Seleccione un cliente --</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.tradeName || c.legalName} ({c.documentNumber || "Sin CUIT"})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => setSelectedCustomerId(id)}
+                  options={customers}
+                />
               </label>
 
               <label>

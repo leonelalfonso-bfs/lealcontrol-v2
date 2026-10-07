@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { type PurchaseQuotation, type PurchaseRequest, type Supplier } from "../api/types";
+import { CustomerPicker } from "../components/pickers";
 
 export function PurchaseRequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -560,19 +561,13 @@ export function PurchaseRequestDetailPage() {
                   <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
                     Proveedor *
                   </label>
-                  <select
+                  <CustomerPicker
+                    role="supplier"
                     required
                     value={selectedSupplierId}
-                    onChange={(e) => handleSupplierChange(e.target.value)}
-                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)" }}
-                  >
-                    <option value="">Seleccione un proveedor...</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.legalName || s.tradeName} (CUIT: {s.documentNumber})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(id) => handleSupplierChange(id)}
+                    options={suppliers}
+                  />
                 </div>
 
                 <div>

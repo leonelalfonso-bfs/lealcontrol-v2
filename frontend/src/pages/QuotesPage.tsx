@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { ExcelToolbar, excelDate, excelNumber } from "../components/ExcelTools";
 import type { CustomerSummary, Quote } from "../api/types";
+import { SearchField } from "../components/ui/SearchField";
+import { matchesSearch, parseSearch } from "../lib/search";
 
 export function QuotesPage() {
   const navigate = useNavigate();
@@ -23,7 +25,7 @@ export function QuotesPage() {
     try {
       setLoading(true);
       setError(null);
-      const quotesData = await api.listQuotes(search);
+      const quotesData = await api.listQuotes();
       setQuotes(quotesData);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al cargar presupuestos");
@@ -32,9 +34,10 @@ export function QuotesPage() {
     }
   };
 
+  // El backend devuelve todos los presupuestos: se cargan una vez y se filtran localmente.
   useEffect(() => {
     fetchQuotes();
-  }, [search]);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -55,13 +58,22 @@ export function QuotesPage() {
     return map;
   }, [customers]);
 
+  const customerSearchText = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const c of customers) {
+      map[c.id] = [c.legalName, c.tradeName, c.documentNumber].filter(Boolean).join(" ");
+    }
+    return map;
+  }, [customers]);
+
   const filteredQuotes = useMemo(() => {
+    const tokens = parseSearch(search);
     return quotes.filter((q) => {
       if (statusFilter && q.status !== statusFilter) return false;
       if (currencyFilter && q.currency !== currencyFilter) return false;
-      return true;
+      return matchesSearch(tokens, q.quoteNumber, customerSearchText[q.customerId], q.ownerName, q.notes, q.total);
     });
-  }, [quotes, statusFilter, currencyFilter]);
+  }, [quotes, statusFilter, currencyFilter, search, customerSearchText]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -191,12 +203,12 @@ export function QuotesPage() {
 
       {/* Toolbar & Filters */}
       <div className="card pad toolbar" style={{ marginBottom: "20px" }}>
-        <input
-          type="search"
-          placeholder="Buscar por Nro. Presupuesto, Nota o Responsable..."
+        <SearchField
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1 }}
+          onChange={setSearch}
+          resultCount={filteredQuotes.length}
+          placeholder="Buscar por número, cliente, CUIT, responsable o nota"
+          style={{ flex: "1 1 320px" }}
         />
 
         <select

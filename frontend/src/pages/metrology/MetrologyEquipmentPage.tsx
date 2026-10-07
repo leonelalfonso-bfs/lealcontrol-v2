@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { MetrologyEquipment, CustomerSummary } from "../../api/types";
+import { CustomerPicker } from "../../components/pickers";
 
 export function MetrologyEquipmentPage() {
   const [equipments, setEquipments] = useState<MetrologyEquipment[]>([]);
@@ -149,18 +150,13 @@ export function MetrologyEquipmentPage() {
             <option value="Decommissioned">Fuera de Servicio</option>
           </select>
 
-          <select
+          <CustomerPicker
+            role="all"
             value={customerFilter}
-            onChange={(e) => setCustomerFilter(e.target.value)}
-            style={{ width: "100%", padding: "7px 10px", borderRadius: 6, border: "1px solid #cbd5e1" }}
-          >
-            <option value="">Todos los Clientes</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.legalName || c.tradeName || (c as any).name || "Cliente"}
-              </option>
-            ))}
-          </select>
+            onChange={(id) => setCustomerFilter(id)}
+            placeholder="Todos los clientes"
+            aria-label="Filtrar por cliente"
+          />
 
           <select
             value={standardFilter}

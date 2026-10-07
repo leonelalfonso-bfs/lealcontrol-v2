@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { type Vehicle, type VehicleDocument } from "../api/types";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 export function FleetVehiclesListPage() {
   const navigate = useNavigate();
@@ -9,16 +11,17 @@ export function FleetVehiclesListPage() {
   const [expiringDocs, setExpiringDocs] = useState<VehicleDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
 
   useEffect(() => {
     loadFleetData();
-  }, [search]);
+  }, [debouncedSearch]);
 
   const loadFleetData = async () => {
     try {
       setLoading(true);
       const [vehs, docs] = await Promise.all([
-        api.listVehicles(search),
+        api.listVehicles(debouncedSearch),
         api.listExpiringDocuments().catch(() => [])
       ]);
       setVehicles(vehs);
@@ -130,12 +133,11 @@ export function FleetVehiclesListPage() {
 
       {/* Search Bar */}
       <div className="card pad" style={{ marginBottom: "20px" }}>
-        <input
-          type="text"
-          placeholder="Buscar por Patente / Dominio, Marca o Modelo..."
+        <SearchField
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: "100%", padding: "9px 14px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+          onChange={setSearch}
+          placeholder="Buscar por patente, marca o modelo"
+          style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
       </div>
 

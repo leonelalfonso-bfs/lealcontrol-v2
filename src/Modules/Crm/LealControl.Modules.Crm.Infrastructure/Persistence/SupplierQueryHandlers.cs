@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,12 +62,13 @@ internal sealed class SupplierQueryHandlers
         var tenantId = _tenantContext.TenantId;
         var query = _dbContext.Suppliers.AsNoTracking().Where(s => s.TenantId == tenantId);
 
-        if (!string.IsNullOrWhiteSpace(request.Search))
+        foreach (var token in SearchText.Parse(request.Search))
         {
-            var search = request.Search.Trim().ToLower();
-            query = query.Where(s => s.LegalName.ToLower().Contains(search)
-                                  || s.DocumentNumber.Contains(search)
-                                  || (s.TradeName != null && s.TradeName.ToLower().Contains(search)));
+            var text = token.Text;
+            var digits = token.HasDigits ? token.Digits : null;
+            query = query.Where(s => SearchText.Fold(s.LegalName).Contains(text)
+                                  || (s.TradeName != null && SearchText.Fold(s.TradeName).Contains(text))
+                                  || (digits != null && s.DocumentNumber.Replace("-", "").Replace(" ", "").Contains(digits)));
         }
 
         var suppliers = await query.OrderBy(s => s.LegalName).ToListAsync(cancellationToken);

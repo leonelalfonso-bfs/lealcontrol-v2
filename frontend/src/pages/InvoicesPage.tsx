@@ -4,6 +4,8 @@ import { api } from "../api/client";
 import { type Invoice } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
 import { useAuth } from "../context/AuthContext";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
@@ -15,6 +17,7 @@ export function InvoicesPage() {
   const [items, setItems] = useState<Invoice[]>([]);
   const [receipts, setReceipts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [statusFilter, setStatusFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
   const [paymentFilter, setPaymentFilter] = useState("All");
@@ -30,7 +33,7 @@ export function InvoicesPage() {
     setLoading(true);
     try {
       const [invList, recList, fiscal] = await Promise.all([
-        api.listInvoices(search, statusFilter, typeFilter),
+        api.listInvoices(debouncedSearch, statusFilter, typeFilter),
         api.listCollectionReceipts().catch(() => [] as any[]),
         canAuthorize ? api.getInvoiceFiscalStatus() : Promise.resolve({ enabled: false, attempts: [] })
       ]);
@@ -47,7 +50,7 @@ export function InvoicesPage() {
 
   useEffect(() => {
     void load();
-  }, [search, statusFilter, typeFilter, canAuthorize]);
+  }, [debouncedSearch, statusFilter, typeFilter, canAuthorize]);
 
   const authorize = async (invoice: Invoice) => {
     if (fiscalBusy.current || !canAuthorize) return;
@@ -212,11 +215,11 @@ export function InvoicesPage() {
 
       <div className="card pad toolbar" style={{ marginBottom: 20, justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-          <input
-            placeholder="Buscar por N° Comprobante, Cliente, CUIT..."
+          <SearchField
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ minWidth: 260 }}
+            onChange={setSearch}
+            placeholder="Buscar por número, cliente o CUIT"
+            style={{ flex: "1 1 320px", maxWidth: 520 }}
           />
 
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ width: 160 }}>

@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -167,8 +168,14 @@ public sealed class PurchaseQueryHandlers :
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var s = request.Search.ToLower();
-            query = query.Where(o => o.OrderNumber.ToLower().Contains(s) || o.SupplierName.ToLower().Contains(s) || o.SupplierDocument.Contains(s));
+            foreach (var token in SearchText.Parse(request.Search))
+            {
+                var text = token.Text;
+                var digits = token.HasDigits ? token.Digits : null;
+                query = query.Where(o => SearchText.Fold(o.OrderNumber).Contains(text)
+                    || SearchText.Fold(o.SupplierName).Contains(text)
+                    || (digits != null && o.SupplierDocument.Replace("-", "").Replace(" ", "").Contains(digits)));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(request.Status))
@@ -260,8 +267,13 @@ public sealed class PurchaseQueryHandlers :
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var s = request.Search.ToLower();
-            query = query.Where(r => r.ReceptionNumber.ToLower().Contains(s) || r.SupplierName.ToLower().Contains(s) || (r.SupplierRemitoNumber != null && r.SupplierRemitoNumber.ToLower().Contains(s)));
+            foreach (var token in SearchText.Parse(request.Search))
+            {
+                var text = token.Text;
+                query = query.Where(r => SearchText.Fold(r.ReceptionNumber).Contains(text)
+                    || SearchText.Fold(r.SupplierName).Contains(text)
+                    || (r.SupplierRemitoNumber != null && SearchText.Fold(r.SupplierRemitoNumber).Contains(text)));
+            }
         }
 
         var list = await query.OrderByDescending(r => r.CreatedAtUtc).ToListAsync(cancellationToken);
@@ -582,8 +594,14 @@ public sealed class PurchaseQueryHandlers :
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var s = request.Search.ToLower();
-            query = query.Where(i => i.FormattedNumber.Contains(s) || i.SupplierName.ToLower().Contains(s) || i.SupplierDocument.Contains(s));
+            foreach (var token in SearchText.Parse(request.Search))
+            {
+                var text = token.Text;
+                var digits = token.HasDigits ? token.Digits : null;
+                query = query.Where(i => SearchText.Fold(i.FormattedNumber).Contains(text)
+                    || SearchText.Fold(i.SupplierName).Contains(text)
+                    || (digits != null && (i.SupplierDocument.Replace("-", "").Replace(" ", "").Contains(digits) || i.FormattedNumber.Replace("-", "").Replace(" ", "").Contains(digits))));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(request.Status) && !string.Equals(request.Status, "all", StringComparison.OrdinalIgnoreCase))
@@ -814,8 +832,14 @@ public sealed class PurchaseQueryHandlers :
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var s = request.Search.ToLower();
-            query = query.Where(v => v.IssuerName.ToLower().Contains(s) || v.IssuerCuit.Contains(s) || v.FormattedNumber.Contains(s));
+            foreach (var token in SearchText.Parse(request.Search))
+            {
+                var text = token.Text;
+                var digits = token.HasDigits ? token.Digits : null;
+                query = query.Where(v => SearchText.Fold(v.IssuerName).Contains(text)
+                    || SearchText.Fold(v.FormattedNumber).Contains(text)
+                    || (digits != null && (v.IssuerCuit.Replace("-", "").Replace(" ", "").Contains(digits) || v.FormattedNumber.Replace("-", "").Replace(" ", "").Contains(digits))));
+            }
         }
 
         var list = await query.OrderByDescending(v => v.IssueDate).ThenByDescending(v => v.CreatedAtUtc).ToListAsync(cancellationToken);
@@ -1220,8 +1244,13 @@ public sealed class PurchaseQueryHandlers :
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var s = request.Search.ToLower();
-            query = query.Where(r => r.RequestNumber.ToLower().Contains(s) || r.RequestedBy.ToLower().Contains(s) || r.Reason.ToLower().Contains(s));
+            foreach (var token in SearchText.Parse(request.Search))
+            {
+                var text = token.Text;
+                query = query.Where(r => SearchText.Fold(r.RequestNumber).Contains(text)
+                    || SearchText.Fold(r.RequestedBy).Contains(text)
+                    || SearchText.Fold(r.Reason).Contains(text));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(request.Status))
