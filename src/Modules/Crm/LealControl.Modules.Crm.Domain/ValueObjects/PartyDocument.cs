@@ -17,6 +17,11 @@ public sealed record PartyDocument
 
     public static Result<PartyDocument> Create(DocumentType type, string? raw)
     {
+        if (type == DocumentType.Unidentified)
+        {
+            return Result<PartyDocument>.Success(new PartyDocument(DocumentType.Unidentified, "0"));
+        }
+
         if (string.IsNullOrWhiteSpace(raw))
         {
             return Result<PartyDocument>.Failure(CrmErrors.DocumentRequired);
@@ -40,6 +45,11 @@ public sealed record PartyDocument
         if (requiresCuit && type != DocumentType.Cuit)
         {
             return Result<PartyDocument>.Failure(CrmErrors.CuitRequiredForTaxCondition);
+        }
+
+        if (type == DocumentType.Unidentified && taxCondition != TaxCondition.ConsumidorFinal)
+        {
+            return Result<PartyDocument>.Failure(CrmErrors.UnidentifiedOnlyForFinalConsumer);
         }
 
         return Create(type, raw);
