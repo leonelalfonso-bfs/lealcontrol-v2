@@ -8,6 +8,7 @@ using LealControl.Modules.Metrology.Infrastructure;
 using LealControl.Modules.Quality.Infrastructure;
 using LealControl.Modules.Sales.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -327,6 +328,10 @@ public static class TenantDatabaseBootstrapper
                 npgsql.MigrationsHistoryTable("__ef_migrations_history", migrationsHistorySchema);
                 npgsql.MigrationsAssembly(assemblyName);
             })
+            // EF Core 9+ corta Migrate() si el modelo difiere de la última migración. Acá esa diferencia
+            // es esperable: parte del esquema lo crean los Ensure*TablesAsync (CREATE/ALTER IF NOT EXISTS).
+            // Se mantiene el comportamiento de EF Core 8: queda registrado en el log y el arranque sigue.
+            .ConfigureWarnings(warnings => warnings.Log(RelationalEventId.PendingModelChangesWarning))
             .Options;
 
         return (TContext)Activator.CreateInstance(typeof(TContext), options)!;

@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
@@ -68,8 +67,8 @@ public static class SearchText
                     "translate",
                     [
                         lower,
-                        new SqlConstantExpression(Expression.Constant(AccentFrom), mapping),
-                        new SqlConstantExpression(Expression.Constant(AccentTo), mapping)
+                        new SqlConstantExpression(AccentFrom, typeof(string), mapping),
+                        new SqlConstantExpression(AccentTo, typeof(string), mapping)
                     ],
                     nullable: true,
                     argumentsPropagateNullability: [true, false, false],

@@ -34,8 +34,7 @@ public sealed class CommunicationsSyncBackgroundServiceTests
     [Fact]
     public async Task OnlyOptedInAccountsAreSelectedUnlessLegacyGlobalSyncIsEnabled()
     {
-        await using var postgres = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+        await using var postgres = new PostgreSqlBuilder("postgres:16-alpine")
             .WithDatabase("communications_auto_sync_tests")
             .WithUsername("leal")
             .WithPassword("leal")
@@ -80,8 +79,7 @@ public sealed class CommunicationsSyncBackgroundServiceTests
     [Fact]
     public async Task SyncResolvesEveryTenantAndDoesNotUseDefaultTenant()
     {
-        await using var postgres = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+        await using var postgres = new PostgreSqlBuilder("postgres:16-alpine")
             .WithDatabase("communications_tenants_tests")
             .WithUsername("leal")
             .WithPassword("leal")

@@ -9,8 +9,7 @@ namespace LealControl.Modules.Accounting.Tests;
 
 public sealed class AccountingPostgresFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("lealcontrol_accounting_tests")
         .WithUsername("leal")
         .WithPassword("leal")

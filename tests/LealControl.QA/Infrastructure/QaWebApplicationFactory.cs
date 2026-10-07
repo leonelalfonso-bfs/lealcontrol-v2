@@ -14,8 +14,7 @@ namespace LealControl.QA.Infrastructure;
 
 public sealed class QaWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("lealcontrol_qa_test")
         .WithUsername("leal_qa")
         .WithPassword("leal_qa_pass")

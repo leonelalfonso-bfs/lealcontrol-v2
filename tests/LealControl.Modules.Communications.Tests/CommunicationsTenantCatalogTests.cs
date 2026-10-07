@@ -11,8 +11,7 @@ public sealed class CommunicationsTenantCatalogTests
     [Fact]
     public async Task SelectsOnlyActiveTenantsWithCommunicationsExplicitlyEnabled()
     {
-        await using var postgres = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+        await using var postgres = new PostgreSqlBuilder("postgres:16-alpine")
             .WithDatabase("communications_catalog_tests")
             .WithUsername("leal")
             .WithPassword("leal")

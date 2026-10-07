@@ -14,8 +14,7 @@ public sealed class QualityWebApplicationFactory : WebApplicationFactory<Program
 {
     public static readonly Guid DemoTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("lealcontrol_quality_tests")
         .WithUsername("leal")
         .WithPassword("leal")

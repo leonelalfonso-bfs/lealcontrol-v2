@@ -34,7 +34,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -223,11 +223,11 @@ try
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
         options.ForwardLimit = null;
-        options.KnownNetworks.Clear();
+        options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
         foreach (var network in TrustedProxyNetworks)
         {
-            options.KnownNetworks.Add(network);
+            options.KnownIPNetworks.Add(network);
         }
     });
 
@@ -287,19 +287,9 @@ try
             BearerFormat = "JWT"
         });
 
-        options.AddSecurityRequirement(new OpenApiSecurityRequirement
+        options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
         {
-            {
-                new OpenApiSecurityScheme
-                {
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = "Bearer"
-                    }
-                },
-                Array.Empty<string>()
-            }
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = []
         });
     });
     builder.Services.AddHealthChecks()
@@ -492,13 +482,13 @@ finally
 
 public partial class Program
 {
-    private static readonly Microsoft.AspNetCore.HttpOverrides.IPNetwork[] TrustedProxyNetworks =
+    private static readonly System.Net.IPNetwork[] TrustedProxyNetworks =
     [
-        new(System.Net.IPAddress.Parse("127.0.0.0"), 8),
-        new(System.Net.IPAddress.Parse("10.0.0.0"), 8),
-        new(System.Net.IPAddress.Parse("172.16.0.0"), 12),
-        new(System.Net.IPAddress.Parse("192.168.0.0"), 16),
-        new(System.Net.IPAddress.IPv6Loopback, 128),
-        new(System.Net.IPAddress.Parse("fc00::"), 7)
+        System.Net.IPNetwork.Parse("127.0.0.0/8"),
+        System.Net.IPNetwork.Parse("10.0.0.0/8"),
+        System.Net.IPNetwork.Parse("172.16.0.0/12"),
+        System.Net.IPNetwork.Parse("192.168.0.0/16"),
+        System.Net.IPNetwork.Parse("::1/128"),
+        System.Net.IPNetwork.Parse("fc00::/7")
     ];
 }

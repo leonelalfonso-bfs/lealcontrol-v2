@@ -12,8 +12,7 @@ public sealed class WebhookMessagePersistenceTests
     [Fact]
     public async Task ConcurrentDeliveryStoresOneMessageAndOneUnreadConversation()
     {
-        await using var postgres = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+        await using var postgres = new PostgreSqlBuilder("postgres:16-alpine")
             .WithDatabase("communications_tests")
             .WithUsername("leal")
             .WithPassword("leal")

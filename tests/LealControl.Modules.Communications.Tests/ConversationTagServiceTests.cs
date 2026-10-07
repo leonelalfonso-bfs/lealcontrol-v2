@@ -12,8 +12,7 @@ public sealed class ConversationTagServiceTests
     [Fact]
     public async Task ConcurrentAddsKeepOneTagPerConversationAndTenant()
     {
-        await using var postgres = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+        await using var postgres = new PostgreSqlBuilder("postgres:16-alpine")
             .WithDatabase("communications_tags_tests")
             .WithUsername("leal")
             .WithPassword("leal")
