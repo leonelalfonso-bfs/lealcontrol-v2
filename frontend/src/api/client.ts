@@ -797,7 +797,7 @@ export const api = {
   recoverInvoiceArca: (id: string) =>
     request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/recover-arca`, { method: "POST" }),
   getArcaExchangeRate: (date?: string) =>
-    request<{ ok: boolean; rate: number; rateDate: string; detail: string }>(
+    request<{ ok: boolean; rate: number; rateDate: string; detail: string; production: boolean }>(
       `/api/v1/sales/invoices/arca-exchange-rate${date ? `?date=${encodeURIComponent(date)}` : ""}`),
   applyArcaExchangeRate: (id: string) =>
     request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/apply-arca-rate`, { method: "POST" }),

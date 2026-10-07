@@ -60,8 +60,9 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
         var auth = await AuthenticateAsync(null, null, cancellationToken);
         if (!auth.Ok)
             return new(false, 0m, string.Empty, auth.Detail);
-        return await _wsfe.GetExchangeRateAsync(auth.Token!, auth.Sign!, auth.IssuerCuit,
+        var rate = await _wsfe.GetExchangeRateAsync(auth.Token!, auth.Sign!, auth.IssuerCuit,
             auth.Production, currencyCode, issueDate, cancellationToken);
+        return rate with { Production = auth.Production };
     }
 
     public async Task<ArcaFiscalVoucherObservation> GetVoucherAsync(

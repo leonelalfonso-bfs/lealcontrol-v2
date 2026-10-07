@@ -21,7 +21,7 @@ public interface IArcaFiscalGateway
         bool expectedProduction, CancellationToken cancellationToken);
 }
 
-public sealed record ArcaExchangeRate(bool Ok, decimal Rate, string RateDate, string Detail);
+public sealed record ArcaExchangeRate(bool Ok, decimal Rate, string RateDate, string Detail, bool Production = false);
 
 public sealed record ArcaFiscalNumbering(
     bool Ok, long LastNumber, string IssuerCuit, bool Production, string Detail);

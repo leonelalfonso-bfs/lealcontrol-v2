@@ -49,7 +49,7 @@ public static class InvoiceEndpoints
             var issue = string.IsNullOrWhiteSpace(date) ? null : date.Replace("-", "");
             var query = issue is null ? null : FiscalExchangeRateDate.For(issue, TimeProvider.System.GetUtcNow());
             var rate = await gateway.GetExchangeRateAsync("DOL", query, cancellationToken);
-            return Results.Ok(new { ok = rate.Ok, rate = rate.Rate, rateDate = rate.RateDate, detail = rate.Detail });
+            return Results.Ok(new { ok = rate.Ok, rate = rate.Rate, rateDate = rate.RateDate, detail = rate.Detail, production = rate.Production });
         }).RequireAuthorization("RequireSales");
 
         group.MapPost("/{id:guid}/apply-arca-rate", async (Guid id, SalesDbContext db, ITenantContext tenant,

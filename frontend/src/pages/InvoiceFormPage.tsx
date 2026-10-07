@@ -374,7 +374,8 @@ export function InvoiceFormPage() {
         if (r.ok) {
           setExchangeRate(r.rate);
           const d = r.rateDate;
-          setArcaRateInfo(d.length === 8 ? `Cotización ARCA del ${d.slice(6, 8)}/${d.slice(4, 6)}/${d.slice(0, 4)}` : "Cotización ARCA vigente");
+          const env = r.production ? "" : " · ARCA homologación (datos de prueba)";
+          setArcaRateInfo((d.length === 8 ? `Cotización ARCA del ${d.slice(6, 8)}/${d.slice(4, 6)}/${d.slice(0, 4)}` : "Cotización ARCA vigente") + env);
         } else {
           setArcaRateInfo(r.detail || "No se pudo obtener la cotización de ARCA.");
         }

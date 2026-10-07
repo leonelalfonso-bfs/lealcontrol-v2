@@ -67,7 +67,8 @@ public sealed class FiscalReservationService
             if (!official.Ok)
                 return Fail($"No se pudo verificar la cotización oficial en ARCA: {official.Detail}");
             if (official.Rate != data.ExchangeRate)
-                return Fail($"La cotización del borrador ({data.ExchangeRate:0.######}) no coincide con la oficial de ARCA ({official.Rate:0.######}). Usá \"Cotización ARCA\" para actualizarla.");
+                return Fail($"La cotización del borrador ({data.ExchangeRate:0.######}) no coincide con la oficial de ARCA " +
+                    $"({official.Rate:0.######}{RateDateText(official)}). Usá \"Cotización ARCA\" para actualizarla.");
         }
 
         var numbering = await _gateway.GetLastAuthorizedAsync(
@@ -122,6 +123,10 @@ public sealed class FiscalReservationService
         }
         return new(true, attempt.Id, number, "Número fiscal reservado, aún sin envío a ARCA.");
     }
+
+    private static string RateDateText(ArcaExchangeRate rate) =>
+        (rate.RateDate.Length == 8 ? $" del {rate.RateDate[6..8]}/{rate.RateDate[4..6]}/{rate.RateDate[..4]}" : "") +
+        (rate.Production ? "" : ", ambiente de homologación");
 
     private static FiscalReservationResult Fail(string detail) =>
         new(false, null, null, detail);
