@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -138,6 +139,7 @@ internal sealed class InventoryQueryHandlers
 
     public async Task<Result<IReadOnlyList<StockItemDto>>> Handle(ListInventoryQuery request, CancellationToken cancellationToken)
     {
+        var searchTokens = SearchText.Parse(request.Search);
         var tenantId = _tenantContext.TenantId;
         await EnsureDefaultWarehousesAsync(tenantId, cancellationToken);
         var products = await _dbContext.Products.AsNoTracking().Where(p => p.TenantId == tenantId).OrderBy(p => p.Name).ToListAsync(cancellationToken);
@@ -173,7 +175,7 @@ internal sealed class InventoryQueryHandlers
                     product.PurchaseCurrency == CurrencyCode.ARS ? product.CostPrice : 0, costUsd ? product.CostPrice : 0,
                     product.SaleCurrency == CurrencyCode.ARS ? product.BasePrice : 0, priceUsd ? product.BasePrice : 0, s.UpdatedAtUtc);
             })
-            .Where(x => string.IsNullOrWhiteSpace(request.Search) || x.ProductName.Contains(request.Search.Trim(), StringComparison.OrdinalIgnoreCase) || x.ProductCode.Contains(request.Search.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Where(x => searchTokens.All(t => SearchText.Fold(x.ProductName).Contains(t.Text) || SearchText.Fold(x.ProductCode).Contains(t.Text)))
             .Where(x => string.IsNullOrWhiteSpace(request.StatusFilter) || request.StatusFilter == "All" || x.Status == request.StatusFilter)
             .OrderBy(x => x.ProductName).ThenBy(x => x.WarehouseName).ToList();
         return Result<IReadOnlyList<StockItemDto>>.Success(results);
@@ -447,8 +449,11 @@ internal sealed class InventoryQueryHandlers
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var s = request.Search.Trim().ToLowerInvariant();
-            dtos = dtos.Where(d => d.ProductName.ToLowerInvariant().Contains(s) || d.ProductCode.ToLowerInvariant().Contains(s) || (d.ReferenceNumber?.ToLowerInvariant().Contains(s) ?? false)).ToList();
+            var tokens = SearchText.Parse(request.Search);
+            dtos = dtos.Where(d => tokens.All(t =>
+                SearchText.Fold(d.ProductName).Contains(t.Text)
+                || SearchText.Fold(d.ProductCode).Contains(t.Text)
+                || SearchText.Fold(d.ReferenceNumber).Contains(t.Text))).ToList();
         }
 
         return Result<IReadOnlyList<StockMovementDto>>.Success(dtos);

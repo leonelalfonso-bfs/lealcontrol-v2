@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -557,7 +558,10 @@ public sealed class QualityDbContext : DbContext
 
     }
 
-    public async Task EnsureQualityTablesAsync(CancellationToken ct = default)
+    public Task EnsureQualityTablesAsync(CancellationToken ct = default) =>
+        SchemaInitializationGate.RunOnceAsync(this, "quality", EnsureQualityTablesCoreAsync);
+
+    private async Task EnsureQualityTablesCoreAsync(CancellationToken ct = default)
     {
         var statements = new[]
         {

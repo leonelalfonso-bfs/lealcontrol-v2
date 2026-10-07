@@ -43,11 +43,19 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.AddSearchTextFunctions();
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CrmDbContext).Assembly);
     }
 
-    public async Task EnsureCrmTablesAsync(CancellationToken cancellationToken = default)
+    public Task EnsureCrmTablesAsync(CancellationToken cancellationToken = default) =>
+        SchemaInitializationGate.RunOnceAsync(this, "crm", EnsureCrmTablesCoreAsync);
+
+    /// <summary>Fuerza el script aunque ya haya corrido en este proceso (reparación ante esquema faltante).</summary>
+    public Task RepairCrmTablesAsync(CancellationToken cancellationToken = default) =>
+        SchemaInitializationGate.RerunAsync(this, "crm", EnsureCrmTablesCoreAsync);
+
+    private async Task EnsureCrmTablesCoreAsync(CancellationToken cancellationToken = default)
     {
         // Cada bloque es independiente: un fallo en equipos/fiscal no debe impedir
         // columnas de opportunities/activities (causaba 500 en timeline y oportunidades).

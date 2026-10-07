@@ -230,18 +230,6 @@ public sealed class CompanySettingsQueryHandler :
             .OrderBy(u => u.FullName)
             .ToListAsync(cancellationToken);
 
-        if (users.Count == 0)
-        {
-            var adminUser = TenantUser.Create(tenantId, "Administrador Leal", "admin@lealcontrol.com", "Admin");
-            var comUser = TenantUser.Create(tenantId, "Ventas Comercial", "ventas@lealcontrol.com", "Comercial");
-            var tecUser = TenantUser.Create(tenantId, "Técnico Servicio", "servicio@lealcontrol.com", "Técnico");
-
-            _dbContext.TenantUsers.AddRange(adminUser, comUser, tecUser);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            users = new List<TenantUser> { adminUser, comUser, tecUser };
-        }
-
         IReadOnlyList<TenantUserDto> dtos = users.Select(u => new TenantUserDto(
             u.Id,
             u.FullName,

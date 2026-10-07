@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -159,7 +160,10 @@ public sealed class MetrologyDbContext : DbContext
         });
     }
 
-    public async Task EnsureMetrologyTablesAsync(CancellationToken ct = default)
+    public Task EnsureMetrologyTablesAsync(CancellationToken ct = default) =>
+        SchemaInitializationGate.RunOnceAsync(this, "metrology", EnsureMetrologyTablesCoreAsync);
+
+    private async Task EnsureMetrologyTablesCoreAsync(CancellationToken ct = default)
     {
         var statements = new[]
         {

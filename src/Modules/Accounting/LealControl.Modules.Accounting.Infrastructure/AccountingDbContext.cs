@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -210,7 +211,10 @@ public sealed class AccountingDbContext : DbContext
         });
     }
 
-    public async Task EnsureAccountingTablesAsync(CancellationToken ct = default)
+    public Task EnsureAccountingTablesAsync(CancellationToken ct = default) =>
+        SchemaInitializationGate.RunOnceAsync(this, "accounting", EnsureAccountingTablesCoreAsync);
+
+    private async Task EnsureAccountingTablesCoreAsync(CancellationToken ct = default)
     {
         var statements = new[]
         {

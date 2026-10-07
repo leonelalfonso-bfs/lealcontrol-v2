@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,10 +42,14 @@ internal sealed class ProductRepository : IProductRepository
     {
         var query = _dbContext.Products.AsNoTracking().Where(x => x.TenantId == tenantId && x.IsActive);
 
-        if (!string.IsNullOrWhiteSpace(search))
+        // Regla común de búsqueda (SearchText): cada palabra en código, nombre o descripción.
+        foreach (var token in SearchText.Parse(search))
         {
-            var term = search.Trim().ToLower();
-            query = query.Where(x => x.Code.ToLower().Contains(term) || x.Name.ToLower().Contains(term) || (x.Description != null && x.Description.ToLower().Contains(term)));
+            var text = token.Text;
+            query = query.Where(x =>
+                SearchText.Fold(x.Code).Contains(text)
+                || SearchText.Fold(x.Name).Contains(text)
+                || (x.Description != null && SearchText.Fold(x.Description).Contains(text)));
         }
 
         if (type.HasValue)

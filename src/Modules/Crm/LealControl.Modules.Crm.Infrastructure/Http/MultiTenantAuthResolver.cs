@@ -23,34 +23,56 @@ public sealed record TenantMembership(
 
 public static class MultiTenantAuthResolver
 {
+    private const int MaxParallelTenantLookups = 8;
+
+    /// <summary>
+    /// Busca las membresías del email. Con <paramref name="onlyTenantIds"/> se limita a esas
+    /// empresas (las verificadas con contraseña al iniciar sesión) y no consulta las demás bases.
+    /// </summary>
     public static async Task<IReadOnlyList<TenantMembership>> FindAllAsync(
         string masterConnectionString,
         string email,
         string? password,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlySet<Guid>? onlyTenantIds = null)
     {
         var emailLower = email.Trim().ToLowerInvariant();
-        var results = new Dictionary<Guid, TenantMembership>();
-
-        foreach (var membership in await FindInDatabaseAsync(masterConnectionString, emailLower, password, skipDatabase: null, cancellationToken))
-        {
-            results[membership.TenantId] = membership;
-        }
-
         var masterBuilder = new NpgsqlConnectionStringBuilder(masterConnectionString);
         var defaultDatabase = masterBuilder.Database ?? string.Empty;
 
         var tenants = await ListDedicatedTenantsAsync(masterConnectionString, cancellationToken);
-        foreach (var (_, _, dbName) in tenants)
-        {
-            if (string.IsNullOrWhiteSpace(dbName)
-                || string.Equals(dbName, defaultDatabase, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
+        var dedicatedDatabases = tenants
+            .Where(t => onlyTenantIds is null || onlyTenantIds.Contains(t.Id))
+            .Select(t => t.DbName)
+            .Where(dbName => !string.IsNullOrWhiteSpace(dbName)
+                && !string.Equals(dbName, defaultDatabase, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-            var tenantConn = new NpgsqlConnectionStringBuilder(masterConnectionString) { Database = dbName }.ConnectionString;
-            foreach (var membership in await FindInDatabaseAsync(tenantConn, emailLower, password, skipDatabase: null, cancellationToken))
+        var connectionStrings = new List<string> { masterConnectionString };
+        connectionStrings.AddRange(dedicatedDatabases.Select(dbName =>
+            new NpgsqlConnectionStringBuilder(masterConnectionString) { Database = dbName }.ConnectionString));
+
+        // Cada base es independiente: consultarlas en paralelo evita que el login crezca
+        // linealmente con la cantidad de empresas.
+        using var throttle = new SemaphoreSlim(MaxParallelTenantLookups);
+        var lookups = connectionStrings.Select(async connectionString =>
+        {
+            await throttle.WaitAsync(cancellationToken);
+            try
+            {
+                return await FindInDatabaseAsync(connectionString, emailLower, password, skipDatabase: null, cancellationToken);
+            }
+            finally
+            {
+                throttle.Release();
+            }
+        });
+
+        var results = new Dictionary<Guid, TenantMembership>();
+        foreach (var membership in (await Task.WhenAll(lookups)).SelectMany(m => m))
+        {
+            if (onlyTenantIds is null || onlyTenantIds.Contains(membership.TenantId))
             {
                 results[membership.TenantId] = membership;
             }
@@ -76,7 +98,8 @@ public static class MultiTenantAuthResolver
                 active.TenantId,
                 active.LegalName,
                 active.AllowedModulesJson,
-                active.IsTechnicalDirector),
+                active.IsTechnicalDirector,
+                all.Select(m => m.TenantId)),
             new UserDto(active.UserId, active.FullName, active.Email, active.Role, active.AllowedModulesJson, active.IsTechnicalDirector),
             new TenantSummaryDto(active.TenantId, active.LegalName, active.TradeName, active.DocumentNumber, active.LogoUrl),
             ToSummaries(all));
@@ -143,7 +166,8 @@ public static class MultiTenantAuthResolver
             await using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("email", emailLower);
 
-            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            var legacyHashUserIds = new List<Guid>();
+            await using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
             while (await reader.ReadAsync(cancellationToken))
             {
                 var tenantId = reader.GetGuid(0);
@@ -157,6 +181,11 @@ public static class MultiTenantAuthResolver
                 if (password != null && !PasswordSecurity.VerifyPassword(password, pwdHash))
                 {
                     continue;
+                }
+
+                if (password != null && PasswordSecurity.IsLegacyHash(pwdHash))
+                {
+                    legacyHashUserIds.Add(userId);
                 }
 
                 var (legalName, tradeName, docNumber, logoUrl) = await ResolveTenantLabelsAsync(
@@ -174,6 +203,17 @@ public static class MultiTenantAuthResolver
                     allowedModulesJson,
                     isTechnicalDirector,
                     logoUrl));
+            }
+
+            // Hash heredado (SHA-256 con sal fija): se reemplaza por PBKDF2 en el primer login válido.
+            foreach (var userId in legacyHashUserIds)
+            {
+                await using var rehash = new NpgsqlCommand(
+                    @"UPDATE public.tenant_users SET ""PasswordHash"" = @hash WHERE ""Id"" = @id",
+                    conn);
+                rehash.Parameters.AddWithValue("hash", PasswordSecurity.HashPassword(password!));
+                rehash.Parameters.AddWithValue("id", userId);
+                await rehash.ExecuteNonQueryAsync(cancellationToken);
             }
         }
         catch

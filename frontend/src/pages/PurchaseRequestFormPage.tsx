@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { type Product } from "../api/types";
+import { ProductPicker } from "../components/pickers";
 
 interface RequestRow {
   productId?: string;
@@ -245,18 +246,14 @@ export function PurchaseRequestFormPage() {
               {items.map((it, idx) => (
                 <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                   <td style={{ padding: "8px 4px" }}>
-                    <select
+                    <ProductPicker
+                      aria-label={`Producto del renglón ${idx + 1}`}
                       value={it.productId || ""}
-                      onChange={(e) => handleProductSelect(idx, e.target.value)}
-                      style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                    >
-                      <option value="">(Ítem libre)</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.code} - {p.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(id) => handleProductSelect(idx, id)}
+                      products={products}
+                      price="cost"
+                      placeholder="Ítem libre"
+                    />
                   </td>
                   <td style={{ padding: "8px 4px" }}>
                     <input

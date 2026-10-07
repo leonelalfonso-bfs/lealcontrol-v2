@@ -17,6 +17,27 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Ajuste para el límite de memoria del contenedor (por defecto Postgres usa 128 MB de caché).
+    # pg_stat_statements permite encontrar las consultas lentas reales en producción.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=1280MB
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - log_min_duration_statement=500
+    shm_size: 256mb
     mem_limit: 2048m
     cpus: "2.0"
 
@@ -43,6 +64,7 @@ services:
       Communications__InboxEnabled: ${COMMUNICATIONS_INBOX_ENABLED:-false}
       SUPERADMIN_BOOTSTRAP_PASSWORD: ${SUPERADMIN_BOOTSTRAP_PASSWORD:-}
       SUPERADMIN_BOOTSTRAP_EMAIL: ${SUPERADMIN_BOOTSTRAP_EMAIL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { type ImportArcaCsvResult, type PurchaseArcaVoucher } from "../api/types";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 export function PurchaseArcaImportPage() {
   const navigate = useNavigate();
@@ -11,13 +13,14 @@ export function PurchaseArcaImportPage() {
   const [importing, setImporting] = useState(false);
   const [statusFilter, setStatusFilter] = useState("Pending");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [importResult, setImportResult] = useState<ImportArcaCsvResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await api.listArcaVouchers(statusFilter, search);
+      const data = await api.listArcaVouchers(statusFilter, debouncedSearch);
       setVouchers(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al cargar comprobantes ARCA");
@@ -28,7 +31,7 @@ export function PurchaseArcaImportPage() {
 
   useEffect(() => {
     loadData();
-  }, [statusFilter, search]);
+  }, [statusFilter, debouncedSearch]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -149,12 +152,11 @@ export function PurchaseArcaImportPage() {
 
       {/* Filter and Search Bar */}
       <div className="card filters" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-        <input
-          type="text"
-          placeholder="Buscar por emisor, CUIT o número de comprobante..."
+        <SearchField
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+          onChange={setSearch}
+          placeholder="Buscar por emisor, CUIT o número de comprobante"
+          style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
 
         <div style={{ display: "flex", gap: "6px" }}>

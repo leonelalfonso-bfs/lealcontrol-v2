@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Crm.Application.Abstractions;
 using LealControl.Modules.Crm.Domain.Activities;
@@ -100,15 +101,19 @@ internal sealed class CustomerRepository : ICustomerRepository
             query = query.Where(x => x.Status == Domain.Shared.CustomerStatus.Active);
         }
 
-        if (!string.IsNullOrWhiteSpace(search))
+        // Regla común de búsqueda (SearchText): cada palabra debe aparecer en algún campo,
+        // sin acentos ni mayúsculas; CUIT y teléfono se comparan por dígitos.
+        foreach (var token in SearchText.Parse(search))
         {
-            var term = search.Trim().ToLower();
+            var text = token.Text;
+            var digits = token.HasDigits ? token.Digits : null;
             query = query.Where(x =>
-                x.LegalName.ToLower().Contains(term)
-                || (x.TradeName != null && x.TradeName.ToLower().Contains(term))
-                || x.Document.Number.Contains(term)
-                || (x.Email != null && x.Email.Value.Contains(term))
-                || (x.Phone != null && x.Phone.Value.Contains(term)));
+                SearchText.Fold(x.LegalName).Contains(text)
+                || (x.TradeName != null && SearchText.Fold(x.TradeName).Contains(text))
+                || (x.Email != null && x.Email.Value.ToLower().Contains(text))
+                || (digits != null && x.Document.Number.Replace("-", "").Replace(" ", "").Replace(".", "").Contains(digits))
+                || (digits != null && x.Phone != null
+                    && x.Phone.Value.Replace(" ", "").Replace("-", "").Replace("+", "").Replace("(", "").Replace(")", "").Contains(digits)));
         }
 
         return query;
@@ -207,7 +212,7 @@ internal sealed class OpportunityRepository : IOpportunityRepository
         }
 
         _db.ChangeTracker.Clear();
-        await _db.EnsureCrmTablesAsync(cancellationToken);
+        await _db.RepairCrmTablesAsync(cancellationToken);
     }
 
     public void Add(Opportunity opportunity) => _db.Opportunities.Add(opportunity);
@@ -305,7 +310,7 @@ internal sealed class ActivityRepository : IActivityRepository
         }
 
         _db.ChangeTracker.Clear();
-        await _db.EnsureCrmTablesAsync(cancellationToken);
+        await _db.RepairCrmTablesAsync(cancellationToken);
     }
 
     public void Add(Activity activity) => _db.Activities.Add(activity);

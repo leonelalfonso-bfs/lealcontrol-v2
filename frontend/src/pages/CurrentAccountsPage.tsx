@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { exportToExcel, type ExcelColumn } from "../components/ExcelTools";
 import type { CustomerSummary, Invoice, PurchaseInvoice } from "../api/types";
+import { SearchField } from "../components/ui/SearchField";
+import { matchesSearch, parseSearch } from "../lib/search";
 
 type TabMode = "customers" | "suppliers" | "dual";
 
@@ -92,14 +94,14 @@ export function CurrentAccountsPage() {
     setError(null);
     try {
       const [cRes, sInv, pInv, rList, pList] = await Promise.all([
-        api.listCustomers("", ""), // all directory entities (customers, suppliers, both)
+        api.listAllCustomers(""), // todo el directorio (clientes, proveedores y ambos), sin corte en 50
         api.listInvoices("", ""),
         api.listPurchaseInvoices("", "").catch(() => [] as PurchaseInvoice[]),
         api.listCollectionReceipts().catch(() => [] as Receipt[]),
         api.listPaymentOrders().catch(() => [] as PaymentOrder[])
       ]);
 
-      setEntities(cRes.items || []);
+      setEntities(cRes || []);
       setSalesInvoices(sInv || []);
       setPurchaseInvoices(pInv || []);
       setReceipts((rList || []) as Receipt[]);
@@ -214,13 +216,10 @@ export function CurrentAccountsPage() {
 
   // Filtered rows depending on active tab
   const filteredRows = useMemo(() => {
-    const q = query.toLowerCase().trim();
+    const tokens = parseSearch(query);
 
     return accountRows.filter((row) => {
-      const nameMatch =
-        (row.entity.tradeName || "").toLowerCase().includes(q) ||
-        (row.entity.legalName || "").toLowerCase().includes(q) ||
-        (row.entity.documentNumber || "").toLowerCase().includes(q);
+      const nameMatch = matchesSearch(tokens, row.entity.tradeName, row.entity.legalName, row.entity.documentNumber);
 
       if (!nameMatch) return false;
 
@@ -567,12 +566,12 @@ export function CurrentAccountsPage() {
       <section className="card pad" style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center", flex: "1 1 300px" }}>
-            <input
-              type="text"
-              placeholder="Buscar por Razón Social, Nombre Fantasía o CUIT..."
+            <SearchField
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              style={{ width: "100%", maxWidth: 420, padding: "8px 12px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+              onChange={setQuery}
+              resultCount={filteredRows.length}
+              placeholder="Buscar por razón social, nombre de fantasía o CUIT"
+              style={{ width: "100%", maxWidth: 520 }}
             />
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.85rem", cursor: "pointer", whiteSpace: "nowrap" }}>
               <input

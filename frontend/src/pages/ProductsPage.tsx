@@ -10,6 +10,8 @@ import {
   type ProductCategory
 } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 export const ProductsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +23,7 @@ export const ProductsPage: React.FC = () => {
 
   // Filters
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [selectedType, setSelectedType] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [catalogFilter, setCatalogFilter] = useState<"all" | "inCatalog" | "internal">("all");
@@ -42,7 +45,7 @@ export const ProductsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       const [prodsData, catsData, ratesData] = await Promise.all([
-        api.listProducts(search, selectedType, selectedCategory),
+        api.listProducts(debouncedSearch, selectedType, selectedCategory),
         api.listCategories(),
         api.getExchangeRates().catch(() => null)
       ]);
@@ -58,7 +61,7 @@ export const ProductsPage: React.FC = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [search, selectedType, selectedCategory]);
+  }, [debouncedSearch, selectedType, selectedCategory]);
 
   const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
@@ -336,12 +339,11 @@ export const ProductsPage: React.FC = () => {
 
       {/* Search & Filters Toolbar */}
       <div className="card pad filters" style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "16px" }}>
-        <input
-          type="text"
-          placeholder="Buscar por código, nombre o descripción..."
+        <SearchField
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ maxWidth: "340px" }}
+          onChange={setSearch}
+          placeholder="Buscar por código, nombre o descripción"
+          style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
 
         <select

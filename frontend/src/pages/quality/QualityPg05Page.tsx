@@ -10,6 +10,7 @@ import type {
   QualitySupplierPerformanceReview
 } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
+import { CustomerPicker } from "../../components/pickers";
 
 type Tab = "r01" | "r02" | "r03";
 
@@ -461,15 +462,7 @@ export function QualityPg05Page() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
             <label>
               Proveedor
-              <select value={eSupplierId} onChange={(ev) => setESupplierId(ev.target.value)} required>
-                <option value="">— Seleccionar —</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {supplierLabel(s)}
-                    {s.documentNumber ? ` · ${s.documentNumber}` : ""}
-                  </option>
-                ))}
-              </select>
+              <CustomerPicker role="supplier" value={eSupplierId} onChange={(id) => setESupplierId(id)} options={suppliers} required />
             </label>
             <label>
               Fecha evaluación
@@ -511,15 +504,7 @@ export function QualityPg05Page() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
             <label>
               Proveedor
-              <select value={pSupplierId} onChange={(ev) => setPSupplierId(ev.target.value)} required>
-                <option value="">— Seleccionar —</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {supplierLabel(s)}
-                    {s.documentNumber ? ` · ${s.documentNumber}` : ""}
-                  </option>
-                ))}
-              </select>
+              <CustomerPicker role="supplier" value={pSupplierId} onChange={(id) => setPSupplierId(id)} options={suppliers} required />
             </label>
             <label>
               Período

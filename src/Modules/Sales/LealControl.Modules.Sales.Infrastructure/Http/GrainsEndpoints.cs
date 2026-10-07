@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -136,12 +137,12 @@ public static class GrainsEndpoints
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                var q = search.Trim().ToLowerInvariant();
-                filtered = filtered.Where(c =>
-                    c.ContractNumber.ToLower().Contains(q) ||
-                    c.SellerName.ToLower().Contains(q) ||
-                    c.BuyerName.ToLower().Contains(q) ||
-                    c.GrainType.ToLower().Contains(q));
+                var tokens = SearchText.Parse(search);
+                filtered = filtered.Where(c => tokens.All(t =>
+                    SearchText.Fold(c.ContractNumber).Contains(t.Text) ||
+                    SearchText.Fold(c.SellerName).Contains(t.Text) ||
+                    SearchText.Fold(c.BuyerName).Contains(t.Text) ||
+                    SearchText.Fold(c.GrainType).Contains(t.Text)));
             }
             if (!string.IsNullOrWhiteSpace(grainType) && grainType != "all")
             {

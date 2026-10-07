@@ -2,24 +2,27 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { GrainContract } from "../api/types";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 export function GrainContractsPage() {
   const [contracts, setContracts] = useState<GrainContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [selectedGrain, setSelectedGrain] = useState("all");
   const [selectedPricing, setSelectedPricing] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
 
   useEffect(() => {
     loadContracts();
-  }, [search, selectedGrain, selectedPricing, selectedStatus]);
+  }, [debouncedSearch, selectedGrain, selectedPricing, selectedStatus]);
 
   const loadContracts = async () => {
     try {
       setLoading(true);
       const res = await api.listGrainContracts({
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         grainType: selectedGrain,
         pricingMode: selectedPricing,
         status: selectedStatus
@@ -76,12 +79,11 @@ export function GrainContractsPage() {
         gap: "12px",
         alignItems: "center"
       }}>
-        <input
-          type="text"
-          className="input"
-          placeholder="Buscar por N° de contrato, productor, comprador..."
+        <SearchField
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={setSearch}
+          placeholder="Buscar por número de contrato, productor o comprador"
+          style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
 
         <select className="input" value={selectedGrain} onChange={(e) => setSelectedGrain(e.target.value)}>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { type Product, type PurchaseInvoice, type PurchaseOrder, type Supplier, type Warehouse } from "../api/types";
+import { CustomerPicker, ProductPicker } from "../components/pickers";
 
 interface ReceptionRow {
   productId?: string;
@@ -297,18 +298,12 @@ export function PurchaseReceptionFormPage() {
               <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
                 Proveedor *
               </label>
-              <select
+              <CustomerPicker
+                role="supplier"
                 value={selectedSupplierId}
-                onChange={(e) => handleSupplierChange(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
-              >
-                <option value="">-- Seleccionar Proveedor --</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.legalName || s.tradeName} ({s.documentNumber})
-                  </option>
-                ))}
-              </select>
+                onChange={(id) => handleSupplierChange(id)}
+                options={suppliers}
+              />
             </div>
 
             <div>
@@ -471,18 +466,14 @@ export function PurchaseReceptionFormPage() {
                 {items.map((row, index) => (
                   <tr key={index} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                     <td style={{ padding: "6px 8px" }}>
-                      <select
+                      <ProductPicker
+                        aria-label={`Producto del renglón ${index + 1}`}
                         value={row.productId || ""}
-                        onChange={(e) => handleProductSelect(index, e.target.value)}
-                        style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                      >
-                        <option value="">-- Manual / Sin catálogo --</option>
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.code} - {p.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(id) => handleProductSelect(index, id)}
+                        products={products}
+                        price="cost"
+                        placeholder="Manual / Sin catálogo"
+                      />
                     </td>
                     <td style={{ padding: "6px 8px" }}>
                       <input

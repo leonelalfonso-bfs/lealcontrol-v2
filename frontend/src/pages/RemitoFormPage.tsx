@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { type CustomerDetail, type CustomerSummary, type ProductSummary, type RemitoWrite } from "../api/types";
+import { ProductPicker } from "../components/pickers";
 
 interface RemitoLineItem {
   productId?: string;
@@ -397,19 +398,14 @@ export function RemitoFormPage() {
                   <tr key={idx}>
                     <td>
                       <div className="stack" style={{ gap: 4 }}>
-                        <select
+                        <ProductPicker
+                          aria-label={`Producto del renglón ${idx + 1}`}
                           value={item.productId ?? ""}
-                          onChange={(e) => handleItemProductSelect(idx, e.target.value)}
+                          onChange={(id) => handleItemProductSelect(idx, id)}
+                          products={products}
                           disabled={Boolean(orderId)}
-                          style={{ fontSize: "0.82rem" }}
-                        >
-                          <option value="">Seleccionar del catálogo...</option>
-                          {products.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.code} - {p.name}
-                            </option>
-                          ))}
-                        </select>
+                          placeholder="Elegir del catálogo"
+                        />
                         <input
                           value={item.code}
                           onChange={(e) => {

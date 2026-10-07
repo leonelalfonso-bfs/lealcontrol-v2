@@ -232,6 +232,7 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.AddSearchTextFunctions();
         modelBuilder.HasDefaultSchema(Schema);
 
         modelBuilder.Entity<Employee>(b =>
@@ -349,7 +350,10 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
 
     public Task EnsureHrTablesAsync(CancellationToken ct = default) => EnsureHumanResourcesTablesAsync(ct);
 
-    public async Task EnsureHumanResourcesTablesAsync(CancellationToken ct = default)
+    public Task EnsureHumanResourcesTablesAsync(CancellationToken ct = default) =>
+        SchemaInitializationGate.RunOnceAsync(this, "hr", EnsureHumanResourcesTablesCoreAsync);
+
+    private async Task EnsureHumanResourcesTablesCoreAsync(CancellationToken ct = default)
     {
         var sql = @"
             CREATE SCHEMA IF NOT EXISTS hr;
@@ -595,8 +599,15 @@ public static class HumanResourcesModule
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                var s = search.Trim().ToLower();
-                q = q.Where(x => x.FirstName.ToLower().Contains(s) || x.LastName.ToLower().Contains(s) || x.FileNumber.ToLower().Contains(s) || x.Cuil.Contains(s));
+                foreach (var token in SearchText.Parse(search))
+                {
+                    var text = token.Text;
+                    var digits = token.HasDigits ? token.Digits : null;
+                    q = q.Where(x => SearchText.Fold(x.FirstName).Contains(text)
+                        || SearchText.Fold(x.LastName).Contains(text)
+                        || SearchText.Fold(x.FileNumber).Contains(text)
+                        || (digits != null && x.Cuil.Replace("-", "").Replace(" ", "").Contains(digits)));
+                }
             }
 
             var items = await q.OrderBy(x => x.LastName).ThenBy(x => x.FirstName).ToListAsync(ct);

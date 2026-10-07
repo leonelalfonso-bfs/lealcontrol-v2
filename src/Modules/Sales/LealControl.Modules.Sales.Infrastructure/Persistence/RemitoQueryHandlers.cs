@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -74,12 +75,14 @@ internal sealed class RemitoQueryHandlers
             .AsNoTracking()
             .Where(r => r.TenantId == tenantId);
 
-        if (!string.IsNullOrWhiteSpace(request.Search))
+        foreach (var token in SearchText.Parse(request.Search))
         {
-            var s = request.Search.Trim().ToLower();
-            query = query.Where(r => r.RemitoNumber.ToLower().Contains(s)
-                                  || r.CustomerName.ToLower().Contains(s)
-                                  || r.CustomerDocument.Contains(s));
+            var text = token.Text;
+            var digits = token.HasDigits ? token.Digits : null;
+            query = query.Where(r => SearchText.Fold(r.RemitoNumber).Contains(text)
+                                  || SearchText.Fold(r.CustomerName).Contains(text)
+                                  || (digits != null && (r.CustomerDocument.Replace("-", "").Replace(" ", "").Contains(digits)
+                                                         || r.RemitoNumber.Replace("-", "").Replace(" ", "").Contains(digits))));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Status) && request.Status != "All")

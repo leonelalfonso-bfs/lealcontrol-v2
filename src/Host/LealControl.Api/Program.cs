@@ -29,6 +29,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -214,16 +215,40 @@ try
         Log.Warning(ex, "No se pudo inicializar la persistencia de DataProtection en {Folder}. Se utilizará el proveedor en memoria.", keysFolder);
     }
 
-    // Rate Limiting: global + auth
+    // La API corre detrás de dos nginx (host con TLS → contenedor web → api). Sin esto,
+    // RemoteIpAddress es siempre la IP del contenedor web y todos los clientes comparten
+    // un único cupo de rate limiting. Solo se confía en proxies de redes privadas/loopback,
+    // así un X-Forwarded-For falsificado por el cliente no se acepta.
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = null;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+        foreach (var network in TrustedProxyNetworks)
+        {
+            options.KnownNetworks.Add(network);
+        }
+    });
+
+    // Rate Limiting: por usuario autenticado (cada empresa/usuario con su cupo) y por IP real
+    // para pedidos anónimos; login con cupo propio por IP.
     builder.Services.AddRateLimiter(options =>
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
         {
-            var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+            var userId = httpContext.User.Identity?.IsAuthenticated == true
+                ? httpContext.User.FindFirst("sub")?.Value
+                : null;
+            var partition = userId is not null
+                ? $"user:{userId}"
+                : $"ip:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+            var permitLimit = userId is not null ? 600 : 200;
+
+            return RateLimitPartition.GetFixedWindowLimiter(partition, _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 200,
+                PermitLimit = permitLimit,
                 Window = TimeSpan.FromMinutes(1),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
@@ -314,6 +339,8 @@ try
 
     var app = builder.Build();
 
+    app.UseForwardedHeaders();
+
     if (!app.Environment.IsDevelopment())
     {
         app.UseExceptionHandler(exceptionHandlerApp =>
@@ -343,8 +370,8 @@ try
 
     app.UseSerilogRequestLogging();
     app.UseCors("web");
-    app.UseRateLimiter();
     app.UseAuthentication();
+    app.UseRateLimiter();
     app.UseMiddleware<CommunicationsInboxGateMiddleware>();
     app.UseMiddleware<ContractedModuleMiddleware>();
     app.UseMiddleware<LealControl.Modules.Quality.Infrastructure.PresentationModeMiddleware>();
@@ -463,4 +490,15 @@ finally
     await Log.CloseAndFlushAsync();
 }
 
-public partial class Program;
+public partial class Program
+{
+    private static readonly Microsoft.AspNetCore.HttpOverrides.IPNetwork[] TrustedProxyNetworks =
+    [
+        new(System.Net.IPAddress.Parse("127.0.0.0"), 8),
+        new(System.Net.IPAddress.Parse("10.0.0.0"), 8),
+        new(System.Net.IPAddress.Parse("172.16.0.0"), 12),
+        new(System.Net.IPAddress.Parse("192.168.0.0"), 16),
+        new(System.Net.IPAddress.IPv6Loopback, 128),
+        new(System.Net.IPAddress.Parse("fc00::"), 7)
+    ];
+}

@@ -126,6 +126,7 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.AddSearchTextFunctions();
         modelBuilder.HasDefaultSchema(Schema);
 
         modelBuilder.Entity<Vehicle>(b =>
@@ -176,7 +177,10 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
         });
     }
 
-    public async Task EnsureFleetTablesAsync(CancellationToken ct = default)
+    public Task EnsureFleetTablesAsync(CancellationToken ct = default) =>
+        SchemaInitializationGate.RunOnceAsync(this, "fleet", EnsureFleetTablesCoreAsync);
+
+    private async Task EnsureFleetTablesCoreAsync(CancellationToken ct = default)
     {
         var sql = @"
             CREATE SCHEMA IF NOT EXISTS fleet;
@@ -299,8 +303,11 @@ public static class FleetModule
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                var s = search.Trim().ToLower();
-                q = q.Where(x => x.Plate.ToLower().Contains(s) || x.Brand.ToLower().Contains(s) || x.Model.ToLower().Contains(s));
+                foreach (var token in SearchText.Parse(search))
+                {
+                    var text = token.Text;
+                    q = q.Where(x => SearchText.Fold(x.Plate).Contains(text) || SearchText.Fold(x.Brand).Contains(text) || SearchText.Fold(x.Model).Contains(text));
+                }
             }
 
             var items = await q.OrderBy(x => x.Plate).ToListAsync(ct);

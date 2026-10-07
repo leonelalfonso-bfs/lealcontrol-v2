@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Persistence;
 using LealControl.Modules.Sales.Application.Abstractions;
 using LealControl.Modules.Sales.Domain.Orders;
 using LealControl.Modules.Sales.Domain.Products;
@@ -69,6 +70,7 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.AddSearchTextFunctions();
         modelBuilder.HasDefaultSchema(Schema);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(SalesDbContext).Assembly);
         modelBuilder.Entity<ProductionBom>(b => { b.ToTable("ProductionBoms"); b.HasKey(x => x.Id); b.Property(x => x.Version).HasMaxLength(40); b.Property(x => x.Name).HasMaxLength(160); b.Property(x => x.OutputQuantity).HasPrecision(18, 4); b.HasIndex(x => new { x.TenantId, x.ProductId, x.Version }).IsUnique(); b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.ProductionBomId).OnDelete(DeleteBehavior.Cascade); });
@@ -81,7 +83,10 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
         modelBuilder.Entity<ProductionVariant>(b => { b.ToTable("ProductionVariants"); b.HasKey(x => x.Id); b.Property(x => x.Code).HasMaxLength(80); b.Property(x => x.Name).HasMaxLength(160); b.Property(x => x.AttributesJson).HasMaxLength(2000); b.HasIndex(x => new { x.TenantId, x.ProductId, x.Code }).IsUnique(); });
     }
 
-    public async Task EnsureTablesCreatedAsync(CancellationToken cancellationToken = default)
+    public Task EnsureTablesCreatedAsync(CancellationToken cancellationToken = default) =>
+        SchemaInitializationGate.RunOnceAsync(this, "sales", EnsureTablesCreatedCoreAsync);
+
+    private async Task EnsureTablesCreatedCoreAsync(CancellationToken cancellationToken = default)
     {
         var sql = @"
             CREATE SCHEMA IF NOT EXISTS sales;

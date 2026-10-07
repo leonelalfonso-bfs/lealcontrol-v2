@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { type CustomerDetail, type Product, type Supplier } from "../api/types";
 import { QuickCustomerModal } from "../components/QuickCustomerModal";
 import { QuickProductModal } from "../components/QuickProductModal";
+import { CustomerPicker, ProductPicker } from "../components/pickers";
 
 interface ItemRow {
   productId?: string;
@@ -317,18 +318,12 @@ export function PurchaseOrderFormPage() {
                     + Alta Rápida
                   </button>
                 </div>
-                <select
+                <CustomerPicker
+                  role="supplier"
                   value={selectedSupplierId}
-                  onChange={(e) => handleSupplierChange(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
-                >
-                  <option value="">-- Seleccionar Proveedor --</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.legalName || s.tradeName} ({s.documentNumber})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => handleSupplierChange(id)}
+                  options={suppliers}
+                />
               </div>
 
               <div>
@@ -448,18 +443,14 @@ export function PurchaseOrderFormPage() {
                     <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
                       <td style={{ padding: "8px 4px" }}>
                         <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                          <select
+                          <ProductPicker
+                            aria-label={`Producto del renglón ${idx + 1}`}
                             value={it.productId || ""}
-                            onChange={(e) => handleProductSelect(idx, e.target.value)}
-                            style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                          >
-                            <option value="">(Ítem libre)</option>
-                            {products.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.code} - {p.name}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={(id) => handleProductSelect(idx, id)}
+                            products={products}
+                            price="cost"
+                            placeholder="Ítem libre"
+                          />
                           <button
                             type="button"
                             onClick={() => {

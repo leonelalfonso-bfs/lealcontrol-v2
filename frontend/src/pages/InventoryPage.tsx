@@ -2,6 +2,8 @@ import { FormEvent, useEffect, useState } from "react";
 import { api } from "../api/client";
 import { ExcelToolbar } from "../components/ExcelTools";
 import { type StockItem, type Warehouse, type StockTransfer, type StockMovement } from "../api/types";
+import { SearchField } from "../components/ui/SearchField";
+import { useDebouncedValue } from "../lib/useDebouncedValue";
 
 type TabMode = "stock" | "transfers" | "kardex" | "warehouses";
 
@@ -14,6 +16,7 @@ export function InventoryPage() {
   // Stock Matrix State
   const [items, setItems] = useState<StockItem[]>([]);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
   const [stockViewMode, setStockViewMode] = useState<"matrix" | "list">("matrix");
@@ -82,7 +85,7 @@ export function InventoryPage() {
   const loadStock = async () => {
     setLoading(true);
     try {
-      const data = await api.listInventory(search, statusFilter, selectedWarehouseId);
+      const data = await api.listInventory(debouncedSearch, statusFilter, selectedWarehouseId);
       setItems(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al cargar inventario");
@@ -134,7 +137,7 @@ export function InventoryPage() {
     } else if (activeTab === "warehouses") {
       loadWarehouses();
     }
-  }, [activeTab, search, statusFilter, selectedWarehouseId, transferFilter, kardexProductFilter, kardexTypeFilter]);
+  }, [activeTab, debouncedSearch, statusFilter, selectedWarehouseId, transferFilter, kardexProductFilter, kardexTypeFilter]);
 
   // Adjust Handlers
   const handleOpenAdjust = (item: StockItem) => {
@@ -661,12 +664,11 @@ export function InventoryPage() {
 
           <div className="card pad toolbar" style={{ marginBottom: 20, justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-              <input
-                type="search"
-                placeholder="Buscar por código, descripción..."
+              <SearchField
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{ width: 280 }}
+                onChange={setSearch}
+                placeholder="Buscar por código o descripción"
+                style={{ flex: "1 1 320px", maxWidth: 520 }}
               />
 
               <select
