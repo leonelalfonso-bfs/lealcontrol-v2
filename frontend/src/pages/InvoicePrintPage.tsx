@@ -558,10 +558,10 @@ export function InvoicePrintPage() {
               {isUsd && (
                 <tr>
                   <td style={{ padding: "2px 0", textAlign: "right", color: "#64748b", fontSize: "9.5px" }}>
-                    Equiv. Pesos Argentinos (TC ${invoice.exchangeRate}):
+                    Equiv. Pesos Argentinos (TC $ {invoice.exchangeRate.toLocaleString("es-AR", { maximumFractionDigits: 6 })}):
                   </td>
                   <td style={{ padding: "2px 0", textAlign: "right", fontSize: "9.5px", color: "#1e3a8a", fontFamily: "monospace", fontWeight: "bold" }}>
-                    $ {(invoice.total * invoice.exchangeRate).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    $ {(invoice.total * invoice.exchangeRate).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
               )}
