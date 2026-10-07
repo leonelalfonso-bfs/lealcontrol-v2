@@ -266,7 +266,7 @@ internal sealed class InvoiceQueryHandlers
             var available = original.Total + debited - credited;
             if (invoice.Total > available)
                 return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.CreditExceeded",
-                    $"La nota de crédito supera lo disponible para acreditar en la factura original ({available:N2})."));
+                    $"La nota de crédito supera lo disponible para acreditar en la factura original ($ {ArsAmount(available)})."));
         }
 
         _dbContext.Invoices.Add(invoice);
@@ -384,6 +384,11 @@ internal sealed class InvoiceQueryHandlers
                 Error.Validation("Sales.Invoice.ArcaNotConfirmed", "No se pudo verificar la factura autorizada."));
         return Result<InvoiceDto>.Success(MapToDto(authorized));
     }
+
+    // 1234.5 → "1.234,50", sin depender de la cultura instalada en el servidor.
+    private static string ArsAmount(decimal value) =>
+        value.ToString("#,0.00", System.Globalization.CultureInfo.InvariantCulture)
+            .Replace(",", "\u0001").Replace(".", ",").Replace("\u0001", ".");
 
     private static InvoiceDto MapToDto(Invoice i)
     {

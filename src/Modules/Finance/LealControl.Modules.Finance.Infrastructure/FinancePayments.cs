@@ -42,6 +42,15 @@ public static class FinancePayments
                 .Select(g => new { OrderId = g.Key, Count = g.Count(), Invoices = string.Join(", ", g.Select(i => i.InvoiceNumber)) })
                 .ToDictionaryAsync(x => x.OrderId, ct);
 
+            // Imputación exacta por factura de proveedor: distintos proveedores comparten números.
+            var imputations = (await db.PaymentOrderImputations
+                .AsNoTracking()
+                .Where(x => x.TenantId == tenantId && orderIds.Contains(x.PaymentOrderId))
+                .Select(x => new { x.PaymentOrderId, x.PurchaseInvoiceId, x.AmountImputed })
+                .ToListAsync(ct))
+                .GroupBy(x => x.PaymentOrderId)
+                .ToDictionary(g => g.Key, g => g.Select(x => new { InvoiceId = x.PurchaseInvoiceId, Amount = x.AmountImputed }).ToList());
+
             var result = orders.Select(o => new
             {
                 o.Id,
@@ -59,7 +68,8 @@ public static class FinancePayments
                 o.CreatedAtUtc,
                 LinesCount = linesSummary.TryGetValue(o.Id, out var lc) ? lc : 0,
                 InvoicesCount = imputationsSummary.TryGetValue(o.Id, out var imp) ? imp.Count : 0,
-                InvoicesSummary = imputationsSummary.TryGetValue(o.Id, out var imp2) ? imp2.Invoices : ""
+                InvoicesSummary = imputationsSummary.TryGetValue(o.Id, out var imp2) ? imp2.Invoices : "",
+                Imputations = imputations.TryGetValue(o.Id, out var list) ? list : []
             });
 
             return Results.Ok(result);

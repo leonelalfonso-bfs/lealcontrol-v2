@@ -558,7 +558,7 @@ export function InvoiceFormPage() {
                     : "Cargá el recargo, interés o diferencia de precio a debitar."}
                 </div>
                 {noteKind === "NC" && (
-                  <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, fontSize: "0.88rem" }}>
+                  <label style={{ display: "flex", flexDirection: "row", justifyContent: "flex-start", gap: 8, alignItems: "center", marginTop: 8, fontSize: "0.88rem" }}>
                     <input type="checkbox" checked={restockItems} onChange={(e) => setRestockItems(e.target.checked)} style={{ width: "auto" }} />
                     Es una devolución: reingresar los productos al stock
                   </label>

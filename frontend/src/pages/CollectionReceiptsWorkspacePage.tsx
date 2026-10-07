@@ -5,6 +5,7 @@ import type { CustomerSummary, Invoice } from "../api/types";
 import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
 
 import { CustomerPicker } from "../components/pickers";
+import { withCollections, type ReceiptForImputation } from "../lib/receivables";
 type Account = {
   id: string;
   name: string;
@@ -197,29 +198,17 @@ export function CollectionReceiptsWorkspacePage() {
       (inv) => inv.customerId === selectedCustomerId && inv.status !== "Cancelled"
     );
 
+    const collected = new Map(withCollections(invoices, receipts as ReceiptForImputation[]).map((inv) => [inv.id, inv.saldoPendiente]));
+
     // Calculate pending balances in USD and ARS accurately
-    const rows: ImputationRow[] = custInvoices.map((inv) => {
+    const rows: ImputationRow[] = custInvoices.filter((inv) => !inv.invoiceType.startsWith("NC")).map((inv) => {
       const isUsd = inv.currency === "USD";
       const invoiceRate = inv.exchangeRate && inv.exchangeRate > 0 ? inv.exchangeRate : 1;
 
-      // Calculate past imputed in USD
-      const pastImputedUsd = receipts
-        .filter((r) => r.invoiceId === inv.id || (r.invoicesSummary && r.invoicesSummary.includes(inv.formattedNumber)))
-        .reduce((sum, r) => {
-          if (r.invoiceAmount && r.invoiceCurrency === "USD") return sum + Number(r.invoiceAmount);
-          if (r.currency === "USD") return sum + Number(r.amount);
-          if (r.paymentExchangeRate && r.paymentExchangeRate > 0) return sum + (Number(r.amount) / Number(r.paymentExchangeRate));
-          if (inv.exchangeRate && inv.exchangeRate > 0) return sum + (Number(r.amount) / Number(inv.exchangeRate));
-          return sum;
-        }, 0);
-
-      // Calculate past imputed in ARS
-      const pastImputedArs = receipts
-        .filter((r) => r.invoiceId === inv.id || (r.invoicesSummary && r.invoicesSummary.includes(inv.formattedNumber)))
-        .reduce((sum, r) => {
-          if (r.currency === "USD") return sum + (Number(r.amount) * (r.invoiceExchangeRate || invoiceRate));
-          return sum + Number(r.amount);
-        }, 0);
+      // Saldo por imputaciones exactas (por id) y notas de crédito aplicadas; en la moneda de la factura.
+      const pending = collected.get(inv.id) ?? inv.total ?? 0;
+      const pastImputedUsd = isUsd ? (inv.total || 0) - pending : 0;
+      const pastImputedArs = isUsd ? 0 : (inv.total || 0) - pending;
 
       const pendingBalanceUsd = isUsd ? Math.max(0, (inv.total || 0) - pastImputedUsd) : 0;
       const pendingBalanceArs = isUsd ? pendingBalanceUsd * invoiceRate : Math.max(0, (inv.total || 0) - pastImputedArs);

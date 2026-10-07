@@ -9,7 +9,12 @@ export type ReceiptForImputation = {
   invoiceAmount?: number | null;
   invoiceCurrency?: string | null;
   paymentExchangeRate?: number | null;
+  status?: string | null;
+  /** Importe imputado a cada factura (en la moneda de la factura). */
+  imputations?: Array<{ invoiceId: string; amount: number }> | null;
 };
+
+const VOIDED = ["voided", "cancelled", "anulado"];
 
 export type InvoiceCollection<T extends Invoice = Invoice> = T & {
   totalCobrado: number;
@@ -40,8 +45,15 @@ export function withCollections<T extends Invoice>(invoices: readonly T[], recei
   }
   return invoices.map((inv) => {
     const isCreditNote = inv.invoiceType.startsWith("NC");
-    const totalCobrado = receipts
-      .filter((r) => r.invoiceId === inv.id || (r.invoicesSummary && r.invoicesSummary.includes(inv.formattedNumber)))
+    // Solo cuenta lo imputado a esta factura por id. El número formateado no sirve para
+    // imputar: Factura A, B y las notas pueden compartir 0001-00000001.
+    const active = receipts.filter((r) => !VOIDED.includes((r.status || "").toLowerCase()));
+    const imputed = active
+      .flatMap((r) => r.imputations ?? [])
+      .filter((imp) => imp.invoiceId === inv.id)
+      .reduce((sum, imp) => sum + (Number(imp.amount) || 0), 0);
+    const totalCobrado = imputed + active
+      .filter((r) => !r.imputations?.length && r.invoiceId === inv.id)
       .reduce((sum, r) => {
         if (inv.currency === "USD") {
           if (r.invoiceAmount && r.invoiceCurrency === "USD") return sum + Number(r.invoiceAmount);

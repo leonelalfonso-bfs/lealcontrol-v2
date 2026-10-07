@@ -54,8 +54,14 @@ export function PurchaseInvoicesPage() {
 
     return invoices.map((inv) => {
       // Find matching payment orders for this invoice
-      const pastPaid = paymentOrders
-        .filter((po: any) => po.invoicesSummary && po.invoicesSummary.includes(inv.formattedNumber))
+      // Solo lo imputado a esta factura por id; voided no cuenta.
+      const activeOrders = paymentOrders.filter((po: any) => !["voided", "cancelled", "anulado"].includes(String(po.status || "").toLowerCase()));
+      const imputedPaid = activeOrders
+        .flatMap((po: any) => po.imputations ?? [])
+        .filter((imp: any) => imp.invoiceId === inv.id)
+        .reduce((sum: number, imp: any) => sum + (Number(imp.amount) || 0), 0);
+      const pastPaid = imputedPaid + activeOrders
+        .filter((po: any) => !po.imputations?.length && po.invoicesSummary && po.invoicesSummary.includes(inv.formattedNumber) && po.supplierId === inv.supplierId)
         .reduce((sum: number, po: any) => {
           if (inv.currency === "USD") {
             if (po.currency === "USD") return sum + Number(po.amount);
