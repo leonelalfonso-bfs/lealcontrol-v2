@@ -40,6 +40,7 @@ export function InvoicePrintPage() {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [company, setCompany] = useState<CompanySettings | null>(null);
+  const [associated, setAssociated] = useState<Invoice | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -56,6 +57,9 @@ export function InvoicePrintPage() {
       ]);
       setInvoice(inv);
       setCompany(comp);
+      if (inv.associatedInvoiceId) {
+        setAssociated(await api.getInvoice(inv.associatedInvoiceId).catch(() => null));
+      }
 
       if (inv.customerId && inv.customerId !== "00000000-0000-0000-0000-000000000000") {
         const cust = await api.getCustomer(inv.customerId).catch(() => null);
@@ -416,6 +420,13 @@ export function InvoicePrintPage() {
                   {isUsd && (
                     <div style={{ fontSize: "10.5px", color: "#0d9488", marginTop: "2px", fontWeight: "bold" }}>
                       Tipo de Cambio Oficial (BNA Divisa): $ {invoice.exchangeRate.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    </div>
+                  )}
+                  {associated && (
+                    <div style={{ fontSize: "10.5px", color: "#334155", marginTop: "2px" }}>
+                      <strong>Comprobante asociado:</strong> Factura {associated.invoiceType.replace(/^(NC_|ND_)/, "")}{" "}
+                      {String(associated.pointOfSale).padStart(5, "0")}-{String(associated.invoiceNumber).padStart(8, "0")}{" "}
+                      del {fiscalDate(associated.issueDate)}
                     </div>
                   )}
                   {invoice.remitoId && (

@@ -115,6 +115,9 @@ public sealed class Invoice : Entity<Guid>
 
     public DateTime? ServiceTo { get; private set; }
 
+    // Factura original de una nota de crédito o débito (se informa a ARCA como CbteAsoc).
+    public Guid? AssociatedInvoiceId { get; private set; }
+
     public string Currency { get; private set; } = "ARS";
 
     public decimal ExchangeRate { get; private set; } = 1.0m;
@@ -168,7 +171,8 @@ public sealed class Invoice : Entity<Guid>
         DateTime? issueDate = null,
         int fiscalConcept = 0,
         DateTime? serviceFrom = null,
-        DateTime? serviceTo = null)
+        DateTime? serviceTo = null,
+        Guid? associatedInvoiceId = null)
     {
         var formatted = $"{pointOfSale:D4}-{invoiceNumber:D8}";
         var utcIssueDate = issueDate is null ? DateTime.UtcNow
@@ -204,6 +208,7 @@ public sealed class Invoice : Entity<Guid>
             notes,
             DateTime.UtcNow);
         invoice.SetFiscalDetails(fiscalConcept, serviceFrom, serviceTo);
+        invoice.AssociatedInvoiceId = associatedInvoiceId;
         return invoice;
     }
 

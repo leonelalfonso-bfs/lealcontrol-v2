@@ -13,6 +13,8 @@ export type ReceiptForImputation = {
 
 export type InvoiceCollection<T extends Invoice = Invoice> = T & {
   totalCobrado: number;
+  /** Notas de crédito autorizadas asociadas a la factura. */
+  totalAcreditado: number;
   saldoPendiente: number;
   paymentState: "Paid" | "Partial" | "Pending";
   isPaid: boolean;
@@ -30,7 +32,14 @@ const DAY_MS = 1000 * 60 * 60 * 24;
  */
 export function withCollections<T extends Invoice>(invoices: readonly T[], receipts: readonly ReceiptForImputation[]): InvoiceCollection<T>[] {
   const now = Date.now();
+  const credits = new Map<string, number>();
+  for (const note of invoices) {
+    if (note.invoiceType.startsWith("NC") && note.status === "Authorized" && note.associatedInvoiceId) {
+      credits.set(note.associatedInvoiceId, (credits.get(note.associatedInvoiceId) ?? 0) + note.total);
+    }
+  }
   return invoices.map((inv) => {
+    const isCreditNote = inv.invoiceType.startsWith("NC");
     const totalCobrado = receipts
       .filter((r) => r.invoiceId === inv.id || (r.invoicesSummary && r.invoicesSummary.includes(inv.formattedNumber)))
       .reduce((sum, r) => {
@@ -43,15 +52,18 @@ export function withCollections<T extends Invoice>(invoices: readonly T[], recei
         return sum + (Number(r.amount) || 0);
       }, 0);
 
-    const saldoPendiente = Math.max(0, inv.total - totalCobrado);
-    const isPaid = totalCobrado >= inv.total - 0.01 && inv.total > 0;
-    const isPartial = totalCobrado > 0.01 && saldoPendiente > 0.01;
-    const isPending = totalCobrado <= 0.01;
+    // Una nota de crédito no es un saldo a cobrar: descuenta el de su factura original.
+    const totalAcreditado = isCreditNote ? 0 : credits.get(inv.id) ?? 0;
+    const saldoPendiente = isCreditNote ? 0 : Math.max(0, inv.total - totalCobrado - totalAcreditado);
+    const isPaid = isCreditNote || (saldoPendiente <= 0.01 && inv.total > 0);
+    const isPartial = !isPaid && totalCobrado + totalAcreditado > 0.01;
+    const isPending = !isPaid && !isPartial;
     const paymentState: InvoiceCollection["paymentState"] = isPaid ? "Paid" : isPartial ? "Partial" : "Pending";
 
     return {
       ...inv,
       totalCobrado,
+      totalAcreditado,
       saldoPendiente,
       paymentState,
       isPaid,

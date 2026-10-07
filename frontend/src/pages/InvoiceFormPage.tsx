@@ -5,6 +5,7 @@ import {
   type CustomerDetail,
   type CustomerSummary,
   type ExchangeRates,
+  type Invoice,
   type InvoiceWrite,
   type Order,
   type OrderLine,
@@ -51,6 +52,9 @@ export function InvoiceFormPage() {
   const queryParams = new URLSearchParams(location.search);
   const orderId = queryParams.get("order_id");
   const remitoId = queryParams.get("remito_id");
+  // Nota de crédito (NC) o débito (ND) generada desde una factura autorizada.
+  const sourceInvoiceId = queryParams.get("origen");
+  const noteKind = queryParams.get("nota") === "ND" ? "ND" : "NC";
 
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -88,6 +92,8 @@ export function InvoiceFormPage() {
   const [returnedItemCount, setReturnedItemCount] = useState(0);
   const [sourceOrderId, setSourceOrderId] = useState<string>("");
   const [pricingWarning, setPricingWarning] = useState<string | null>(null);
+  const [associatedInvoice, setAssociatedInvoice] = useState<Invoice | null>(null);
+  const [restockItems, setRestockItems] = useState(true);
 
   const [items, setItems] = useState<FormInvoiceItem[]>([
     { productId: undefined, code: "SERV-01", description: "Servicio / Producto", quantity: 1, unitPrice: 10000, discountPercent: 0, vatRate: 21.0 }
@@ -117,6 +123,37 @@ export function InvoiceFormPage() {
         }
 
         const defaultRate = rates?.usdDivisaSell || rates?.usdBilleteSell || 1400;
+
+        if (sourceInvoiceId) {
+          const original = await api.getInvoice(sourceInvoiceId);
+          const letter = original.invoiceType.replace(/^(NC_|ND_)/, "");
+          setAssociatedInvoice(original);
+          setInvoiceType(`${noteKind}_${letter}`);
+          setPointOfSale(original.pointOfSale);
+          setCustomerId(original.customerId);
+          setCustomerName(original.customerName);
+          setCustomerDocument(original.customerDocument);
+          setCustomerTaxCondition(original.customerTaxCondition);
+          setCustomerAddress(original.customerAddress ?? "");
+          setFiscalConcept(original.fiscalConcept);
+          setServiceFrom(original.serviceFrom?.slice(0, 10) ?? "");
+          setServiceTo(original.serviceTo?.slice(0, 10) ?? "");
+          setCurrency(original.currency === "USD" ? "USD" : "ARS");
+          setExchangeRate(original.exchangeRate || 1);
+          setRateSource("manual");
+          setNotes(`${noteKind === "NC" ? "Nota de crédito" : "Nota de débito"} sobre Factura ${letter} ${original.formattedNumber}`);
+          setItems(noteKind === "NC"
+            ? original.items.map((item) => ({
+                productId: item.productId ?? undefined,
+                code: item.code,
+                description: item.description,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                discountPercent: 0,
+                vatRate: item.vatRate
+              }))
+            : [{ code: "AJUSTE", description: "Ajuste / recargo", quantity: 1, unitPrice: 0, discountPercent: 0, vatRate: 21 }]);
+        }
 
         if (orderId) {
           const order = await api.getOrder(orderId);
@@ -253,7 +290,7 @@ export function InvoiceFormPage() {
     }
 
     loadData();
-  }, [orderId, remitoId]);
+  }, [orderId, remitoId, sourceInvoiceId, noteKind]);
 
   // Handle Customer Selection
   const handleCustomerChange = async (newCustId: string) => {
@@ -453,6 +490,8 @@ export function InvoiceFormPage() {
       serviceTo: fiscalConcept === 2 || fiscalConcept === 3 ? serviceTo : undefined,
       currency,
       exchangeRate: currency === "USD" ? exchangeRate : 1.0,
+      associatedInvoiceId: associatedInvoice?.id,
+      restockItems: noteKind === "NC" ? restockItems : undefined,
       notes,
       items: items.map((i) => ({
         productId: i.productId,
@@ -505,7 +544,27 @@ export function InvoiceFormPage() {
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
           {/* Main Column */}
           <div className="stack" style={{ gap: 20 }}>
-            {sourceRemitoNumber ? (
+            {associatedInvoice ? (
+              <div className="card pad" style={{ background: "#f8fafc", border: "1px solid #cbd5e1" }}>
+                <strong>
+                  {noteKind === "NC" ? "Nota de crédito" : "Nota de débito"} sobre Factura{" "}
+                  {associatedInvoice.invoiceType.replace(/^(NC_|ND_)/, "")} {associatedInvoice.formattedNumber}
+                </strong>
+                <div style={{ fontSize: "0.85rem", color: "#475569", marginTop: 4 }}>
+                  {associatedInvoice.customerName} · Total original {associatedInvoice.currency === "USD" ? "USD" : "$"}{" "}
+                  {associatedInvoice.total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}.{" "}
+                  {noteKind === "NC"
+                    ? "Quitá los ítems que no se acreditan o ajustá cantidades y precios para una nota parcial."
+                    : "Cargá el recargo, interés o diferencia de precio a debitar."}
+                </div>
+                {noteKind === "NC" && (
+                  <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, fontSize: "0.88rem" }}>
+                    <input type="checkbox" checked={restockItems} onChange={(e) => setRestockItems(e.target.checked)} style={{ width: "auto" }} />
+                    Es una devolución: reingresar los productos al stock
+                  </label>
+                )}
+              </div>
+            ) : sourceRemitoNumber ? (
               <div
                 style={{
                   background: "rgba(13, 148, 136, 0.08)",
@@ -561,6 +620,7 @@ export function InvoiceFormPage() {
                     value={customerId}
                     onChange={(id) => handleCustomerChange(id)}
                     options={customers}
+                    disabled={Boolean(associatedInvoice)}
                     required
                   />
                 </label>
@@ -650,16 +710,19 @@ export function InvoiceFormPage() {
                   <select
                     value={invoiceType}
                     onChange={(e) => setInvoiceType(e.target.value)}
+                    disabled={Boolean(associatedInvoice)}
                     required
                   >
                     <option value="A">Factura A (Resp. Inscripto / Monotributo)</option>
                     <option value="B">Factura B (Cons. Final / Exento)</option>
                     <option value="C">Factura C (Emisor Monotributo)</option>
                     <option value="M">Factura M (Régimen Retención)</option>
-                    <option value="NC_A">Nota de Crédito A</option>
-                    <option value="NC_B">Nota de Crédito B</option>
-                    <option value="ND_A">Nota de Débito A</option>
-                    <option value="ND_B">Nota de Débito B</option>
+                    {associatedInvoice && <>
+                      <option value="NC_A">Nota de Crédito A</option>
+                      <option value="NC_B">Nota de Crédito B</option>
+                      <option value="ND_A">Nota de Débito A</option>
+                      <option value="ND_B">Nota de Débito B</option>
+                    </>}
                     <option value="Proforma">Factura Proforma / Interna</option>
                   </select>
                 </label>

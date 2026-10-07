@@ -895,6 +895,7 @@ export type Invoice = {
   fiscalConcept: number;
   serviceFrom?: string | null;
   serviceTo?: string | null;
+  associatedInvoiceId?: string | null;
   currency: string;
   exchangeRate: number;
   subtotal: number;
@@ -929,6 +930,8 @@ export type InvoiceWrite = {
   fiscalConcept: number;
   serviceFrom?: string | null;
   serviceTo?: string | null;
+  associatedInvoiceId?: string | null;
+  restockItems?: boolean;
   currency: string;
   exchangeRate: number;
   notes?: string | null;

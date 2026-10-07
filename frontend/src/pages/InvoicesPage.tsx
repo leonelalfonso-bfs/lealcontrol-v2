@@ -382,7 +382,7 @@ export function InvoicesPage() {
 
                     <td style={{ textAlign: "right" }}>
                       <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
-                        {!inv.isPaid && (
+                        {!inv.isPaid && !inv.invoiceType.startsWith("NC") && (
                           <Link
                             to={`/finanzas/cobranzas?customerId=${inv.customerId}`}
                             className="btn compact"
@@ -403,7 +403,8 @@ export function InvoicesPage() {
                         {inv.status === "Draft" && canAuthorize &&
                           (fiscalEnabled || ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")) &&
                           fiscalAttempts[inv.id]?.status !== "Rejected" &&
-                          (["A", "B"].includes(inv.invoiceType) && inv.fiscalConcept > 0 && inv.currency === "ARS" ||
+                          (["A", "B", "NC_A", "NC_B", "ND_A", "ND_B"].includes(inv.invoiceType) &&
+                            inv.fiscalConcept > 0 && inv.currency === "ARS" ||
                             ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")) && (
                           <button type="button" className="btn" disabled={busyInvoice !== null}
                             onClick={() => void authorize(inv)}>
@@ -411,6 +412,14 @@ export function InvoicesPage() {
                               ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")
                                 ? "Consultar ARCA" : "Autorizar ARCA"}
                           </button>
+                        )}
+                        {["Authorized", "Draft"].includes(inv.status) && ["A", "B", "ND_A", "ND_B"].includes(inv.invoiceType) && (
+                          <>
+                            <Link className="btn ghost compact" title="Nota de crédito sobre esta factura"
+                              to={`/facturas/nueva?nota=NC&origen=${inv.id}`}>NC</Link>
+                            <Link className="btn ghost compact" title="Nota de débito sobre esta factura"
+                              to={`/facturas/nueva?nota=ND&origen=${inv.id}`}>ND</Link>
+                          </>
                         )}
                         {inv.status === "Draft" && canAuthorize && !fiscalEnabled && (
                           <span className="muted">Emisión ARCA deshabilitada</span>
