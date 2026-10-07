@@ -246,7 +246,7 @@ public sealed class FiscalAuthorizationApiTests : IAsyncLifetime
             NumberingCalls++;
             return Task.FromResult(new ArcaFiscalNumbering(true, 41, "30715489629", false, "prueba"));
         }
-        public Task<WsfeCaeReply> SubmitCaeAsync(IWsfeInvoiceAServiceData data, int point,
+        public Task<WsfeCaeReply> SubmitCaeAsync(WsfeVoucherData data, int point,
             long number, string issuer, bool production, CancellationToken ct)
         {
             SubmitCalls++;
@@ -254,12 +254,9 @@ public sealed class FiscalAuthorizationApiTests : IAsyncLifetime
             Assert.Equal(42, number);
             Assert.Equal("30715489629", issuer);
             Assert.False(production);
-            var fields = new WsfeVoucherFiscalData(data.ReceiverCuit, data.ReceiverDocumentType,
-                data.ReceiverVatCondition, data.VoucherType, data.Concept, data.IssueDate,
-                data.ServiceFrom, data.ServiceTo, data.PaymentDue, data.NetAmount, data.VatAmount,
-                data.TotalAmount, data.VatRateCode, data.CurrencyCode, data.ExchangeRate);
+            var fields = data;
             var due = new DateTime(2026, 10, 15, 0, 0, 0, DateTimeKind.Utc);
-            _observation = new(true, number, data.ReceiverCuit, data.TotalAmount,
+            _observation = new(true, number, data.ReceiverDocumentNumber, data.TotalAmount,
                 "12345678901234", due, "prueba", fields);
             return Task.FromResult(Uncertain
                 ? new WsfeCaeReply(WsfeCaeOutcome.Unknown, null, null, "prueba")

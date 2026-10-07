@@ -8,41 +8,30 @@ public static class WsfeVoucherReconciliation
 {
     public sealed record Observation(
         bool Confirmed, long Number, string RecipientDocument, decimal Total,
-        string Cae, DateTime CaeDueDate, IWsfeInvoiceAServiceData? FiscalData = null);
+        string Cae, DateTime CaeDueDate, WsfeVoucherData? FiscalData = null);
 
     public static bool TryConfirm(
         Invoice invoice, FiscalAuthorizationAttempt attempt,
         string issuerCuit, Observation observation, WsfeCaeReply? submission,
-        string qrUrl, out string reason)
+        string qrUrl, out string reason, WsfeAssociatedVoucher? associated = null)
     {
         reason = "La consulta oficial no coincide íntegramente con la reserva y el borrador.";
-        if (!WsfeInvoiceAServicePreparation.TryBuild(invoice, out var data, out _) || data is null ||
+        if (!WsfeVoucherPreparation.TryBuild(invoice, out var data, out _, associated) || data is null ||
             attempt.Status is not ("Pending" or "Unknown") ||
             attempt.InvoiceId != invoice.Id || attempt.TenantId.Value != invoice.TenantId.Value ||
             attempt.PointOfSale != invoice.PointOfSale || attempt.VoucherType != data.VoucherType ||
             attempt.IssuerCuit != issuerCuit ||
             !observation.Confirmed || observation.Number != attempt.VoucherNumber ||
-            observation.RecipientDocument != data.ReceiverCuit ||
+            observation.RecipientDocument != data.ReceiverDocumentNumber ||
             observation.RecipientDocument != attempt.RecipientDocument ||
             observation.Total != data.TotalAmount || observation.Total != attempt.Total ||
             observation.Cae.Length != 14 || !observation.Cae.All(char.IsDigit) ||
             observation.CaeDueDate == default ||
             observation.FiscalData is null ||
-            observation.FiscalData.ReceiverCuit != data.ReceiverCuit ||
-            observation.FiscalData.ReceiverDocumentType != data.ReceiverDocumentType ||
-            observation.FiscalData.ReceiverVatCondition != data.ReceiverVatCondition ||
-            observation.FiscalData.VoucherType != data.VoucherType ||
-            observation.FiscalData.Concept != data.Concept ||
-            observation.FiscalData.IssueDate != data.IssueDate ||
-            observation.FiscalData.ServiceFrom != data.ServiceFrom ||
-            observation.FiscalData.ServiceTo != data.ServiceTo ||
-            observation.FiscalData.PaymentDue != data.PaymentDue ||
-            observation.FiscalData.NetAmount != data.NetAmount ||
-            observation.FiscalData.VatAmount != data.VatAmount ||
-            observation.FiscalData.TotalAmount != data.TotalAmount ||
-            observation.FiscalData.VatRateCode != data.VatRateCode ||
-            observation.FiscalData.CurrencyCode != data.CurrencyCode ||
-            observation.FiscalData.ExchangeRate != data.ExchangeRate ||
+            // Cada campo que devuelve FECompConsultar debe coincidir con lo preparado.
+            observation.FiscalData.ObservableKey() != data.ObservableKey() ||
+            (observation.FiscalData.PaidInSameForeignCurrency is not null &&
+                observation.FiscalData.PaidInSameForeignCurrency != (data.PaidInSameForeignCurrency ?? false)) ||
             submission?.Outcome == WsfeCaeOutcome.Rejected ||
             (submission?.Outcome == WsfeCaeOutcome.ApprovedPendingConsultation &&
                 (submission.Cae != observation.Cae ||

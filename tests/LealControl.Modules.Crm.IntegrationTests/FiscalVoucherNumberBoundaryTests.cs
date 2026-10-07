@@ -8,9 +8,7 @@ namespace LealControl.Modules.Crm.IntegrationTests;
 
 public sealed class FiscalVoucherNumberBoundaryTests
 {
-    private static readonly WsfeInvoiceAServicePreparation.Data Data = new(
-        "20123456786", 80, 1, 1, 2, "20261002", "20261001", "20261002",
-        "20261012", 100m, 21m, 121m, 5, "PES", 1m);
+    private static readonly WsfeVoucherData Data = FiscalTestData.ServiceA(100m, 21m);
 
     [Theory]
     [InlineData(1L)]
@@ -19,7 +17,7 @@ public sealed class FiscalVoucherNumberBoundaryTests
     {
         var attempt = FiscalAuthorizationAttempt.Reserve(new TenantId(Guid.NewGuid()),
             Guid.NewGuid(), 3, 1, number, "30715489629", false, new string('a', 64),
-            Data.ReceiverCuit, Data.TotalAmount);
+            Data.ReceiverDocumentNumber, Data.TotalAmount);
         Assert.Equal(number, attempt.VoucherNumber);
         var xml = WsfeCaeRequestBuilder.Build(Data, 3, number, "30715489629", "fake-token", "fake-sign");
         Assert.Contains($"<ar:CbteDesde>{number}</ar:CbteDesde>", xml);
@@ -34,7 +32,7 @@ public sealed class FiscalVoucherNumberBoundaryTests
     {
         Assert.Throws<ArgumentException>(() => FiscalAuthorizationAttempt.Reserve(
             new TenantId(Guid.NewGuid()), Guid.NewGuid(), 3, 1, number,
-            "30715489629", false, new string('a', 64), Data.ReceiverCuit, Data.TotalAmount));
+            "30715489629", false, new string('a', 64), Data.ReceiverDocumentNumber, Data.TotalAmount));
         Assert.Throws<ArgumentException>(() => WsfeCaeRequestBuilder.Build(
             Data, 3, number, "30715489629", "fake-token", "fake-sign"));
     }

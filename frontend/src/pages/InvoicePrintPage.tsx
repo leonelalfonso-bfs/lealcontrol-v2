@@ -155,6 +155,13 @@ export function InvoicePrintPage() {
   const formattedVoucherNum = isDraft ? "Sin asignar" : String(invoice.invoiceNumber || 1).padStart(8, "0");
 
   const totalIva = (invoice.iva21 || 0) + (invoice.iva105 || 0) + (invoice.iva27 || 0);
+  // En comprobantes B el IVA no se discrimina: los precios se muestran finales y el IVA
+  // contenido va en el recuadro de Transparencia Fiscal (Ley 27.743).
+  const vatIncluded = invoiceLetter === "B" || invoiceLetter === "C";
+  const exemptAmount = invoice.exemptAmount || 0;
+  const taxedNet = invoice.subtotal - exemptAmount;
+  const monotributoReceiver = invoiceLetter === "A" &&
+    (invoice.customerTaxCondition || customer?.taxCondition) === "Monotributo";
 
   const formattedStartDate = company?.activityStartDate ? fiscalDate(company.activityStartDate) : null;
   const issuerAddress = [company?.fiscalStreet, company?.fiscalCity, company?.fiscalProvince].filter(Boolean).join(", ");
@@ -434,7 +441,7 @@ export function InvoicePrintPage() {
               <th style={{ padding: "5px 6px", textAlign: "center", width: "7%" }}>Cant.</th>
               <th style={{ padding: "5px 6px", textAlign: "center", width: "6%" }}>U.M.</th>
               <th style={{ padding: "5px 6px", textAlign: "right", width: "14%" }}>Precio Unit. ({currSymbol.trim()})</th>
-              <th style={{ padding: "5px 6px", textAlign: "center", width: "7%" }}>% IVA</th>
+              <th style={{ padding: "5px 6px", textAlign: "center", width: "7%" }}>{vatIncluded ? "" : "% IVA"}</th>
               <th style={{ padding: "5px 6px", textAlign: "right", width: "15%" }}>Subtotal ({currSymbol.trim()})</th>
             </tr>
           </thead>
@@ -449,11 +456,11 @@ export function InvoicePrintPage() {
                 <td style={{ padding: "6px 6px", textAlign: "center" }}>{item.quantity}</td>
                 <td style={{ padding: "6px 6px", textAlign: "center", color: "#64748b" }}>u</td>
                 <td style={{ padding: "6px 6px", textAlign: "right", fontFamily: "monospace" }}>
-                  {item.unitPrice.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                  {(vatIncluded && item.quantity ? item.total / item.quantity : item.unitPrice).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
-                <td style={{ padding: "6px 6px", textAlign: "center", color: "#64748b" }}>{item.vatRate}%</td>
+                <td style={{ padding: "6px 6px", textAlign: "center", color: "#64748b" }}>{vatIncluded ? "" : item.vatRate ? `${item.vatRate}%` : "Exento"}</td>
                 <td style={{ padding: "6px 6px", textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
-                  {item.netSubtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                  {(vatIncluded ? item.total : item.netSubtotal).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </td>
               </tr>
             ))}
@@ -464,13 +471,32 @@ export function InvoicePrintPage() {
         <div style={{ marginLeft: "auto", width: "46%", marginBottom: "10px" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10.5px" }}>
             <tbody>
-              <tr>
-                <td style={{ padding: "2px 0", textAlign: "right", color: "#64748b" }}>Importe Neto Gravado:</td>
-                <td style={{ padding: "2px 0", textAlign: "right", width: "45%", fontFamily: "monospace", fontWeight: "bold" }}>
-                  {currSymbol}{invoice.subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                </td>
-              </tr>
-              {invoice.iva21 > 0 && (
+              {vatIncluded ? (
+                <tr>
+                  <td style={{ padding: "2px 0", textAlign: "right", color: "#64748b" }}>Subtotal:</td>
+                  <td style={{ padding: "2px 0", textAlign: "right", width: "45%", fontFamily: "monospace", fontWeight: "bold" }}>
+                    {currSymbol}{(invoice.total - (invoice.iibbPerception || 0)).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  <tr>
+                    <td style={{ padding: "2px 0", textAlign: "right", color: "#64748b" }}>Importe Neto Gravado:</td>
+                    <td style={{ padding: "2px 0", textAlign: "right", width: "45%", fontFamily: "monospace", fontWeight: "bold" }}>
+                      {currSymbol}{taxedNet.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                  {exemptAmount > 0 && (
+                    <tr>
+                      <td style={{ padding: "2px 0", textAlign: "right", color: "#64748b" }}>Importe Exento:</td>
+                      <td style={{ padding: "2px 0", textAlign: "right", fontFamily: "monospace" }}>
+                        {currSymbol}{exemptAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  )}
+                </>
+              )}
+              {!vatIncluded && invoice.iva21 > 0 && (
                 <tr>
                   <td style={{ padding: "2px 0", textAlign: "right", color: "#64748b" }}>IVA 21.0%:</td>
                   <td style={{ padding: "2px 0", textAlign: "right", fontFamily: "monospace" }}>
@@ -478,7 +504,7 @@ export function InvoicePrintPage() {
                   </td>
                 </tr>
               )}
-              {invoice.iva105 > 0 && (
+              {!vatIncluded && invoice.iva105 > 0 && (
                 <tr>
                   <td style={{ padding: "2px 0", textAlign: "right", color: "#64748b" }}>IVA 10.5%:</td>
                   <td style={{ padding: "2px 0", textAlign: "right", fontFamily: "monospace" }}>
@@ -486,7 +512,7 @@ export function InvoicePrintPage() {
                   </td>
                 </tr>
               )}
-              {invoice.iva27 > 0 && (
+              {!vatIncluded && invoice.iva27 > 0 && (
                 <tr>
                   <td style={{ padding: "2px 0", textAlign: "right", color: "#64748b" }}>IVA 27.0%:</td>
                   <td style={{ padding: "2px 0", textAlign: "right", fontFamily: "monospace" }}>
@@ -549,6 +575,12 @@ export function InvoicePrintPage() {
                 {settings.invoice.paymentInstructions}
               </div>
             )}
+          </div>
+        )}
+
+        {monotributoReceiver && (
+          <div style={{ border: "1px solid #cbd5e1", padding: "5px 8px", borderRadius: "4px", marginBottom: "8px", fontSize: "9.5px", color: "#334155" }}>
+            El crédito fiscal discriminado en el presente comprobante, sólo podrá ser computado a efectos del Régimen de Sostenimiento e Inclusión Fiscal para Pequeños Contribuyentes de la Ley Nº 27.618
           </div>
         )}
 

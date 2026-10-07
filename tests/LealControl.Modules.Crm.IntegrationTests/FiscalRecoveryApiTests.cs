@@ -45,8 +45,7 @@ public sealed class FiscalRecoveryApiTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         using var body = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
         var id = body.RootElement.GetProperty("id").GetGuid();
-        var fields = new WsfeVoucherFiscalData("20123456786", 80, 1, 1, 2,
-            "20261002", "20261001", "20261002", "20261012", 1m, .21m, 1.21m, 5, "PES", 1m);
+        var fields = FiscalTestData.ServiceA(1m, .21m);
         await using var db = new NpgsqlConnection(_factory.DatabaseConnectionString);
         await db.OpenAsync();
         if (status != "None")
@@ -97,7 +96,7 @@ public sealed class FiscalRecoveryApiTests : IAsyncLifetime
         else Assert.True(reader.IsDBNull(1));
     }
 
-    private sealed class RecoveryOnlyGateway(WsfeVoucherFiscalData fields) : IArcaFiscalGateway
+    private sealed class RecoveryOnlyGateway(WsfeVoucherData fields) : IArcaFiscalGateway
     {
         public int NumberingCalls { get; private set; }
         public int SubmitCalls { get; private set; }
@@ -107,7 +106,7 @@ public sealed class FiscalRecoveryApiTests : IAsyncLifetime
             NumberingCalls++;
             throw new InvalidOperationException("La recuperación no debe reservar números.");
         }
-        public Task<WsfeCaeReply> SubmitCaeAsync(IWsfeInvoiceAServiceData data, int pointOfSale,
+        public Task<WsfeCaeReply> SubmitCaeAsync(WsfeVoucherData data, int pointOfSale,
             long reservedNumber, string expectedIssuerCuit, bool expectedProduction, CancellationToken cancellationToken)
         {
             SubmitCalls++;
@@ -122,7 +121,7 @@ public sealed class FiscalRecoveryApiTests : IAsyncLifetime
             Assert.Equal(42L, number);
             Assert.Equal("30715489629", expectedIssuerCuit);
             Assert.False(expectedProduction);
-            return Task.FromResult(new ArcaFiscalVoucherObservation(true, 42, fields.ReceiverCuit,
+            return Task.FromResult(new ArcaFiscalVoucherObservation(true, 42, fields.ReceiverDocumentNumber,
                 fields.TotalAmount, "12345678901234", new DateTime(2026, 10, 15, 0, 0, 0, DateTimeKind.Utc),
                 "Respuesta simulada", fields));
         }

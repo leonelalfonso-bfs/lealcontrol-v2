@@ -143,14 +143,10 @@ public sealed class FiscalVoucherRecoveryServiceTests : IAsyncLifetime
     {
         var invoice = await db.Invoices.Include(i => i.Items).AsNoTracking()
             .SingleAsync(i => i.Id == id);
-        Assert.True(WsfeInvoiceAServicePreparation.TryBuild(invoice, out var data, out var error), error);
+        Assert.True(WsfeVoucherPreparation.TryBuild(invoice, out var data, out var error), error);
         Assert.NotNull(data);
-        var fields = new WsfeVoucherFiscalData(data.ReceiverCuit, data.ReceiverDocumentType,
-            data.ReceiverVatCondition, data.VoucherType, data.Concept, data.IssueDate,
-            data.ServiceFrom, data.ServiceTo, data.PaymentDue, data.NetAmount,
-            data.VatAmount, data.TotalAmount, data.VatRateCode, data.CurrencyCode,
-            data.ExchangeRate);
-        return new(true, 42, data.ReceiverCuit, data.TotalAmount, "12345678901234",
+        var fields = data;
+        return new(true, 42, data.ReceiverDocumentNumber, data.TotalAmount, "12345678901234",
             new DateTime(2026, 10, 15, 0, 0, 0, DateTimeKind.Utc), "prueba", fields);
     }
 
@@ -194,7 +190,7 @@ public sealed class FiscalVoucherRecoveryServiceTests : IAsyncLifetime
         public Task<ArcaFiscalNumbering> GetLastAuthorizedAsync(
             int pointOfSale, int voucherType, CancellationToken cancellationToken) =>
             Task.FromResult(new ArcaFiscalNumbering(true, 41, "30715489629", false, "prueba"));
-        public Task<WsfeCaeReply> SubmitCaeAsync(IWsfeInvoiceAServiceData data,
+        public Task<WsfeCaeReply> SubmitCaeAsync(WsfeVoucherData data,
             int pointOfSale, long reservedNumber, string expectedIssuerCuit,
             bool expectedProduction, CancellationToken cancellationToken)
         {

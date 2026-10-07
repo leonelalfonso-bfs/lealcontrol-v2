@@ -26,7 +26,7 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
     public async Task<ArcaFiscalNumbering> GetLastAuthorizedAsync(
         int pointOfSale, int voucherType, CancellationToken cancellationToken)
     {
-        if (pointOfSale is < 1 or > 99998 || voucherType != 1)
+        if (pointOfSale is < 1 or > 99998 || !WsfeCaeRequestBuilder.SupportedVoucherTypes.Contains(voucherType))
             return new(false, 0, string.Empty, false, "Punto de venta o tipo fiscal no admitido.");
         var auth = await AuthenticateAsync(null, null, cancellationToken);
         if (!auth.Ok)
@@ -41,7 +41,7 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
     }
 
     public async Task<WsfeCaeReply> SubmitCaeAsync(
-        IWsfeInvoiceAServiceData data, int pointOfSale, long reservedNumber,
+        WsfeVoucherData data, int pointOfSale, long reservedNumber,
         string expectedIssuerCuit, bool expectedProduction, CancellationToken cancellationToken)
     {
         var auth = await AuthenticateAsync(expectedIssuerCuit, expectedProduction, cancellationToken);
@@ -55,7 +55,8 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
         int pointOfSale, int voucherType, long number, string expectedIssuerCuit,
         bool expectedProduction, CancellationToken cancellationToken)
     {
-        if (pointOfSale is < 1 or > 99998 || voucherType != 1 || number is < 1 or > 99_999_999)
+        if (pointOfSale is < 1 or > 99998 || !WsfeCaeRequestBuilder.SupportedVoucherTypes.Contains(voucherType)
+            || number is < 1 or > 99_999_999)
             return Unconfirmed("Número fiscal inválido para consulta.");
         var auth = await AuthenticateAsync(expectedIssuerCuit, expectedProduction, cancellationToken);
         if (!auth.Ok)

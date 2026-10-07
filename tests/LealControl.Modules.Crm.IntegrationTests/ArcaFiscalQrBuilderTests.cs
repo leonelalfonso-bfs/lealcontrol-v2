@@ -1,4 +1,5 @@
 using System.Text;
+using LealControl.Modules.Crm.Contracts.Fiscal;
 using System.Text.Json;
 using LealControl.Modules.Sales.Infrastructure.Fiscal;
 using Xunit;
@@ -7,9 +8,7 @@ namespace LealControl.Modules.Crm.IntegrationTests;
 
 public sealed class ArcaFiscalQrBuilderTests
 {
-    private static readonly WsfeInvoiceAServicePreparation.Data Data = new(
-        "20123456786", 80, 1, 1, 2, "20261002", "20261001", "20261002",
-        "20261010", 0.83m, 0.17m, 1.00m, 5, "PES", 1m);
+    private static readonly WsfeVoucherData Data = FiscalTestData.ServiceA(due: "20261010");
 
     [Fact]
     public void Qr_contains_official_invoice_and_authorization_data()

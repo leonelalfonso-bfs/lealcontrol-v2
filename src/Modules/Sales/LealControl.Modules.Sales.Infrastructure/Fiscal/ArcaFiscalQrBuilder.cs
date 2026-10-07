@@ -9,16 +9,17 @@ namespace LealControl.Modules.Sales.Infrastructure.Fiscal;
 public static class ArcaFiscalQrBuilder
 {
     public static string Build(
-        IWsfeInvoiceAServiceData data, string issuerCuit, int pointOfSale,
+        WsfeVoucherData data, string issuerCuit, int pointOfSale,
         long officialNumber, string cae)
     {
         ArgumentNullException.ThrowIfNull(data);
         if (issuerCuit.Length != 11 || !issuerCuit.All(ch => ch is >= '0' and <= '9') ||
-            data.ReceiverCuit.Length != 11 || !data.ReceiverCuit.All(ch => ch is >= '0' and <= '9') ||
+            data.ReceiverDocumentNumber.Length is < 1 or > 11 ||
+            !data.ReceiverDocumentNumber.All(ch => ch is >= '0' and <= '9') ||
             cae.Length != 14 || !cae.All(ch => ch is >= '0' and <= '9') ||
             pointOfSale is < 1 or > 99998 || officialNumber is < 1 or > 99999999 ||
-            data.VoucherType != 1 || data.ReceiverDocumentType != 80 ||
-            data.CurrencyCode != "PES" || data.ExchangeRate != 1m ||
+            !WsfeCaeRequestBuilder.SupportedVoucherTypes.Contains(data.VoucherType) ||
+            data.CurrencyCode is not ("PES" or "DOL") || data.ExchangeRate <= 0m ||
             data.TotalAmount <= 0m || decimal.Round(data.TotalAmount, 2) != data.TotalAmount ||
             !DateTime.TryParseExact(data.IssueDate, "yyyyMMdd", CultureInfo.InvariantCulture,
                 DateTimeStyles.None, out var issued))
@@ -36,7 +37,7 @@ public static class ArcaFiscalQrBuilder
             moneda = data.CurrencyCode,
             ctz = data.ExchangeRate,
             tipoDocRec = data.ReceiverDocumentType,
-            nroDocRec = long.Parse(data.ReceiverCuit, CultureInfo.InvariantCulture),
+            nroDocRec = long.Parse(data.ReceiverDocumentNumber, CultureInfo.InvariantCulture),
             tipoCodAut = "E",
             codAut = long.Parse(cae, CultureInfo.InvariantCulture)
         };

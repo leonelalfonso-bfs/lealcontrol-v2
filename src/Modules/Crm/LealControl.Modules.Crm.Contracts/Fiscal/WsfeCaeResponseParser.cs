@@ -22,7 +22,7 @@ public static class WsfeCaeResponseParser
 {
     public static WsfeCaeReply Parse(
         string xml, int expectedPoint, int expectedType, long expectedNumber,
-        int expectedConcept, string expectedCuit, string expectedDate)
+        int expectedConcept, int expectedDocumentType, string expectedDocument, string expectedDate)
     {
         if (string.IsNullOrEmpty(xml) || xml.Length > 1_000_000)
             return Unknown("Respuesta de ARCA vacía o demasiado extensa.");
@@ -65,9 +65,9 @@ public static class WsfeCaeResponseParser
         var detail = details[0];
         if (!EqualsNumber(detail, "CbteDesde", expectedNumber) ||
             !EqualsNumber(detail, "CbteHasta", expectedNumber) ||
-            !EqualsNumber(detail, "DocTipo", 80) ||
+            !EqualsNumber(detail, "DocTipo", expectedDocumentType) ||
             !EqualsNumber(detail, "Concepto", expectedConcept) ||
-            Value(detail, "DocNro") != expectedCuit ||
+            !EqualsNumber(detail, "DocNro", long.Parse(expectedDocument, CultureInfo.InvariantCulture)) ||
             Value(detail, "CbteFch") != expectedDate)
             return Unknown("El detalle de ARCA no corresponde al comprobante reservado.");
 

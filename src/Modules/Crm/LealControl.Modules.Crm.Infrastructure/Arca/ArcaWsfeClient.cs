@@ -260,7 +260,7 @@ public static class WsfeLastAuthorizedParser
 public sealed record WsfeVoucherReply(
     bool Confirmed, long Number, string RecipientDocument, decimal Total,
     string Cae, DateTime CaeDueDate, string Detail,
-    WsfeVoucherFiscalData? FiscalData = null)
+    WsfeVoucherData? FiscalData = null)
 {
     public static WsfeVoucherReply Failure(string detail) =>
         new(false, 0, string.Empty, 0m, string.Empty, default, detail);
@@ -299,54 +299,76 @@ public static class WsfeVoucherLookupParser
         var voucher = vouchers[0];
         static string? Field(XElement node, string name) =>
             node.Elements().FirstOrDefault(x => x.Name.LocalName == name)?.Value?.Trim();
+        static List<XElement> Items(XElement node, string group, string item) =>
+            node.Elements().Where(x => x.Name.LocalName == group)
+                .SelectMany(x => x.Elements().Where(y => y.Name.LocalName == item)).ToList();
         const NumberStyles moneyStyle = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
-        bool Money(string field, out decimal amount) => decimal.TryParse(
-            Field(voucher, field), moneyStyle, CultureInfo.InvariantCulture, out amount);
-        bool Date(string field, out DateTime value) => DateTime.TryParseExact(
-            Field(voucher, field), "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out value);
+        static bool Money(XElement node, string field, out decimal amount)
+        {
+            var ok = decimal.TryParse(Field(node, field), moneyStyle, CultureInfo.InvariantCulture, out amount);
+            amount = ok ? decimal.Round(amount, 2) : 0m;
+            return ok;
+        }
+        static bool Int(XElement node, string field, out int value) =>
+            int.TryParse(Field(node, field), NumberStyles.None, CultureInfo.InvariantCulture, out value);
+        static bool Long(XElement node, string field, out long value) =>
+            long.TryParse(Field(node, field), NumberStyles.None, CultureInfo.InvariantCulture, out value);
+        static string? OptionalDate(XElement node, string field)
+        {
+            var value = Field(node, field);
+            return string.IsNullOrEmpty(value) || value == "NULL" ? null : value;
+        }
+        bool ValidDate(string? value, out DateTime date) => DateTime.TryParseExact(
+            value, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
-        var recipient = Field(voucher, "DocNro") ?? string.Empty;
         var cae = Field(voucher, "CodAutorizacion") ?? string.Empty;
         var issue = Field(voucher, "CbteFch") ?? string.Empty;
-        var fromService = Field(voucher, "FchServDesde") ?? string.Empty;
-        var toService = Field(voucher, "FchServHasta") ?? string.Empty;
-        var payment = Field(voucher, "FchVtoPago") ?? string.Empty;
         var currency = Field(voucher, "MonId") ?? string.Empty;
-        var vatEntries = voucher.Elements().Where(x => x.Name.LocalName == "Iva")
-            .SelectMany(x => x.Elements().Where(y => y.Name.LocalName == "AlicIva")).ToList();
-        if (!int.TryParse(Field(voucher, "PtoVta"), NumberStyles.None, CultureInfo.InvariantCulture, out var point)
-            || !int.TryParse(Field(voucher, "CbteTipo"), NumberStyles.None, CultureInfo.InvariantCulture, out var type)
-            || !long.TryParse(Field(voucher, "CbteDesde"), NumberStyles.None, CultureInfo.InvariantCulture, out var first)
-            || !long.TryParse(Field(voucher, "CbteHasta"), NumberStyles.None, CultureInfo.InvariantCulture, out var last)
-            || !int.TryParse(Field(voucher, "Concepto"), NumberStyles.None, CultureInfo.InvariantCulture, out var concept)
-            || !int.TryParse(Field(voucher, "DocTipo"), NumberStyles.None, CultureInfo.InvariantCulture, out var docType)
-            || !int.TryParse(Field(voucher, "CondicionIVAReceptorId"), NumberStyles.None, CultureInfo.InvariantCulture, out var receiverVat)
-            || !Money("ImpTotal", out var total) || !Money("ImpNeto", out var net)
-            || !decimal.TryParse(Field(voucher, "ImpIVA") ?? Field(voucher, "ImpIva"),
-                moneyStyle, CultureInfo.InvariantCulture, out var vat)
-            || !Money("ImpTotConc", out var nonTaxed) || !Money("ImpOpEx", out var exempt)
-            || !Money("ImpTrib", out var otherTaxes) || !Money("MonCotiz", out var exchange)
-            || !Date("CbteFch", out var issueDate) || !Date("FchServDesde", out var serviceFrom)
-            || !Date("FchServHasta", out var serviceTo) || !Date("FchVtoPago", out var paymentDue)
-            || !Date("FchVto", out var caeDue)
-            || vatEntries.Count != 1
-            || !int.TryParse(Field(vatEntries[0], "Id"), NumberStyles.None, CultureInfo.InvariantCulture, out var vatCode)
-            || !decimal.TryParse(Field(vatEntries[0], "BaseImp"), moneyStyle, CultureInfo.InvariantCulture, out var vatBase)
-            || !decimal.TryParse(Field(vatEntries[0], "Importe"), moneyStyle, CultureInfo.InvariantCulture, out var vatValue)
+        if (!Int(voucher, "PtoVta", out var point) || !Int(voucher, "CbteTipo", out var type)
+            || !Long(voucher, "CbteDesde", out var first) || !Long(voucher, "CbteHasta", out var last)
+            || !Int(voucher, "Concepto", out var concept) || !Int(voucher, "DocTipo", out var docType)
+            || !Long(voucher, "DocNro", out var docNumber)
+            || !Int(voucher, "CondicionIVAReceptorId", out var receiverVat)
+            || !Money(voucher, "ImpTotal", out var total) || !Money(voucher, "ImpNeto", out var net)
+            || !(Money(voucher, "ImpIVA", out var vat) || Money(voucher, "ImpIva", out vat))
+            || !Money(voucher, "ImpTotConc", out var nonTaxed) || !Money(voucher, "ImpOpEx", out var exempt)
+            || !Money(voucher, "ImpTrib", out var otherTaxes)
+            || !decimal.TryParse(Field(voucher, "MonCotiz"), moneyStyle, CultureInfo.InvariantCulture, out var exchange)
+            || !ValidDate(issue, out _) || !ValidDate(Field(voucher, "FchVto"), out var caeDue)
             || point != expectedPoint || type != expectedType || first != expectedNumber || last != expectedNumber
-            || type != 1 || concept != 2 || docType != 80 || receiverVat != 1 || vatCode != 5
-            || recipient.Length != 11 || !recipient.All(char.IsDigit)
-            || total <= 0 || net <= 0 || vat <= 0 || total != net + vat
-            || vatBase != net || vatValue != vat || nonTaxed != 0 || exempt != 0 || otherTaxes != 0
-            || currency != "PES" || exchange != 1m || serviceTo < serviceFrom || paymentDue < issueDate
-            || voucher.Descendants().Any(x => x.Name.LocalName is "Tributo" or "CbteAsoc" or "Opcional" or "Comprador")
             || cae.Length != 14 || !cae.All(char.IsDigit)
-            || Field(voucher, "Resultado") != "A" || Field(voucher, "EmisionTipo") != "CAE")
-            return WsfeVoucherReply.Failure("ARCA devolvió datos incompletos o distintos al perfil fiscal solicitado.");
+            || Field(voucher, "Resultado") != "A" || Field(voucher, "EmisionTipo") != "CAE"
+            // Nunca se envían tributos, opcionales ni compradores: si aparecen, no es nuestro pedido.
+            || Items(voucher, "Tributos", "Tributo").Count > 0
+            || Items(voucher, "Opcionales", "Opcional").Count > 0
+            || Items(voucher, "Compradores", "Comprador").Count > 0)
+            return WsfeVoucherReply.Failure("ARCA devolvió datos incompletos o distintos al comprobante solicitado.");
 
-        var fields = new WsfeVoucherFiscalData(recipient, docType, receiverVat, type, concept,
-            issue, fromService, toService, payment, net, vat, total, vatCode, currency, exchange);
-        return new(true, expectedNumber, recipient, total, cae,
+        var vatLines = new List<WsfeVatLine>();
+        foreach (var line in Items(voucher, "Iva", "AlicIva"))
+        {
+            if (!Int(line, "Id", out var id) || !Money(line, "BaseImp", out var vatBase)
+                || !Money(line, "Importe", out var vatValue))
+                return WsfeVoucherReply.Failure("ARCA devolvió alícuotas de IVA incompletas.");
+            vatLines.Add(new WsfeVatLine(id, vatBase, vatValue));
+        }
+        var associated = new List<WsfeAssociatedVoucher>();
+        foreach (var asoc in Items(voucher, "CbtesAsoc", "CbteAsoc"))
+        {
+            if (!Int(asoc, "Tipo", out var asocType) || !Int(asoc, "PtoVta", out var asocPoint)
+                || !Long(asoc, "Nro", out var asocNumber))
+                return WsfeVoucherReply.Failure("ARCA devolvió comprobantes asociados incompletos.");
+            // FECompConsultar no devuelve CUIT ni fecha del asociado; solo se cotejan tipo, punto y número.
+            associated.Add(new WsfeAssociatedVoucher(asocType, asocPoint, asocNumber, string.Empty, string.Empty));
+        }
+        var sameCurrency = Field(voucher, "CanMisMonExt") switch { "S" => true, "N" => (bool?)false, _ => null };
+
+        var fields = new WsfeVoucherData(type, concept, docType,
+            docNumber.ToString(CultureInfo.InvariantCulture), receiverVat, issue,
+            OptionalDate(voucher, "FchServDesde"), OptionalDate(voucher, "FchServHasta"),
+            OptionalDate(voucher, "FchVtoPago"), net, nonTaxed, exempt, vat, otherTaxes, total,
+            vatLines, currency, exchange, sameCurrency, associated);
+        return new(true, expectedNumber, fields.ReceiverDocumentNumber, total, cae,
             DateTime.SpecifyKind(caeDue, DateTimeKind.Utc),
             "Comprobante y CAE confirmados en ARCA; cotejar todos los campos con el borrador.", fields);
     }
