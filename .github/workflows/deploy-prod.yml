@@ -1,11 +1,17 @@
 name: Deploy production
 
+# Se despliega solo cuando el CI de un push a main termina bien (es decir, al fusionar un PR).
+# También se puede lanzar a mano desde Actions → Deploy production → Run workflow (despliega main).
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
     branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -15,22 +21,47 @@ jobs:
        github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     environment: production
+    timeout-minutes: 30
     steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.PROD_SSH_HOST }}
-          username: ${{ secrets.PROD_SSH_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: 22
-          script: |
-            set -euo pipefail
-            APP_DIR="${{ secrets.PROD_APP_DIR }}"
-            if [ -z "$APP_DIR" ]; then APP_DIR=/opt/lealcontrol-v2; fi
-            cd "$APP_DIR"
-            git fetch origin
-            git checkout main
-            git pull --ff-only origin main
-            docker compose -f docker-compose.prod.yml --env-file .env up -d --build
-            docker compose -f docker-compose.prod.yml ps
-            bash scripts/smoke-health.sh 5209 9
+      - name: Commit a desplegar
+        id: target
+        env:
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            if [ "$REF" != "refs/heads/main" ]; then
+              echo "Producción solo se despliega desde main." >&2
+              exit 1
+            fi
+            echo "sha=$DISPATCH_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=$RUN_SHA" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy en el VPS
+        env:
+          SSH_HOST: ${{ secrets.VPS_SSH_HOST }}
+          SSH_USER: ${{ secrets.VPS_SSH_USER }}
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_KEY" ]; then
+            echo "Faltan los secretos VPS_SSH_HOST, VPS_SSH_USER o VPS_SSH_KEY." >&2
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -T 15 "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          fi
+          # La clave está restringida en el VPS: solo puede ejecutar "prod <sha>" o "staging <sha>".
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o ServerAliveInterval=30 \
+            "$SSH_USER@$SSH_HOST" "prod $SHA"
