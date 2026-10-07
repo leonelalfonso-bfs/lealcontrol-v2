@@ -51,6 +51,19 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
             auth.Production, data, pointOfSale, reservedNumber, cancellationToken);
     }
 
+    public async Task<ArcaExchangeRate> GetExchangeRateAsync(
+        string currencyCode, string? issueDate, CancellationToken cancellationToken)
+    {
+        if (currencyCode != "DOL" || (issueDate is not null &&
+            (issueDate.Length != 8 || !issueDate.All(char.IsDigit))))
+            return new(false, 0m, string.Empty, "Moneda o fecha inválida para cotizar.");
+        var auth = await AuthenticateAsync(null, null, cancellationToken);
+        if (!auth.Ok)
+            return new(false, 0m, string.Empty, auth.Detail);
+        return await _wsfe.GetExchangeRateAsync(auth.Token!, auth.Sign!, auth.IssuerCuit,
+            auth.Production, currencyCode, issueDate, cancellationToken);
+    }
+
     public async Task<ArcaFiscalVoucherObservation> GetVoucherAsync(
         int pointOfSale, int voucherType, long number, string expectedIssuerCuit,
         bool expectedProduction, CancellationToken cancellationToken)

@@ -49,8 +49,11 @@ public static class WsfeVoucherPreparation
             return Fail("El punto de venta no es válido.", out error);
         if (invoice.FiscalConcept is not (1 or 2 or 3))
             return Fail("Indicá si el comprobante es por productos, servicios o ambos.", out error);
-        if (invoice.Currency != "ARS" || invoice.ExchangeRate != 1m)
-            return Fail("Por ahora se autorizan en ARCA solo comprobantes en pesos.", out error);
+        var currency = invoice.Currency switch { "ARS" => "PES", "USD" => "DOL", _ => null };
+        // Un comprobante en dólares a cotización 1 es un error de carga, no una cotización.
+        if (currency is null || (currency == "PES" && invoice.ExchangeRate != 1m) ||
+            (currency == "DOL" && invoice.ExchangeRate <= 1m))
+            return Fail("Se autorizan en ARCA comprobantes en pesos o en dólares con cotización válida.", out error);
 
         if (!Receivers.TryGetValue(invoice.CustomerTaxCondition, out var receiver))
             return Fail("Indicá la condición frente al IVA del cliente.", out error);
@@ -77,7 +80,7 @@ public static class WsfeVoucherPreparation
         }
         else if (document == "0")
         {
-            if (invoice.Total >= ConsumerIdentificationThreshold)
+            if (invoice.Total * invoice.ExchangeRate >= ConsumerIdentificationThreshold)
                 return Fail("Desde $10.000.000 el consumidor final debe identificarse con DNI o CUIT.", out error);
             documentType = 99;
         }
@@ -128,7 +131,8 @@ public static class WsfeVoucherPreparation
 
         var prepared = new WsfeVoucherData(voucherType, invoice.FiscalConcept, documentType, document,
             receiver.VatCondition, Date(invoice.IssueDate), serviceFrom, serviceTo, paymentDue,
-            net, 0m, exempt, vat, 0m, invoice.Total, vatLines, "PES", 1m, null,
+            net, 0m, exempt, vat, 0m, invoice.Total, vatLines, currency, invoice.ExchangeRate,
+            currency == "PES" ? null : invoice.PaidInForeignCurrency,
             associated is null ? WsfeVoucherData.NoAssociated : [associated]);
         try
         {

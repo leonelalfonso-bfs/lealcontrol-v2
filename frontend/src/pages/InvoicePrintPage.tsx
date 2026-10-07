@@ -419,7 +419,12 @@ export function InvoicePrintPage() {
                   </div>
                   {isUsd && (
                     <div style={{ fontSize: "10.5px", color: "#0d9488", marginTop: "2px", fontWeight: "bold" }}>
-                      Tipo de Cambio Oficial (BNA Divisa): $ {invoice.exchangeRate.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                      Tipo de Cambio: $ {invoice.exchangeRate.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                    </div>
+                  )}
+                  {isUsd && (
+                    <div style={{ fontSize: "10.5px", color: "#334155", marginTop: "2px" }}>
+                      <strong>Cancelación:</strong> {invoice.paidInForeignCurrency ? "en dólares estadounidenses" : "en pesos"}
                     </div>
                   )}
                   {associated && (

@@ -28,6 +28,8 @@ export function InvoicesPage() {
   const [fiscalEnabled, setFiscalEnabled] = useState(false);
   const [fiscalAttempts, setFiscalAttempts] = useState<Record<string, { status: string; voucherNumber: number }>>({});
   const [busyInvoice, setBusyInvoice] = useState<string | null>(null);
+  // Borrador en USD cuya cotización no coincide con la oficial de ARCA.
+  const [rateFix, setRateFix] = useState<Invoice | null>(null);
   const fiscalBusy = useRef(false);
 
   const load = async () => {
@@ -75,6 +77,7 @@ export function InvoicesPage() {
       const message = err instanceof Error ? err.message : "No se pudo confirmar el comprobante.";
       await load();
       setError(message);
+      setRateFix(invoice.currency !== "ARS" && message.includes("Cotización ARCA") ? invoice : null);
     } finally {
       fiscalBusy.current = false;
       setBusyInvoice(null);
@@ -133,7 +136,25 @@ export function InvoicesPage() {
         </div>
       </div>
 
-      {error && <div className="alert" role="alert">{error}</div>}
+      {error && <div className="alert" role="alert">
+        {error}
+        {rateFix && (
+          <button type="button" className="btn" style={{ marginLeft: 12 }} disabled={busyInvoice !== null}
+            onClick={async () => {
+              try {
+                const updated = await api.applyArcaExchangeRate(rateFix.id);
+                setRateFix(null);
+                setError(null);
+                await load();
+                setNotice(`Cotización actualizada a la oficial de ARCA ($ ${updated.exchangeRate.toLocaleString("es-AR")}). Ya podés autorizar ${updated.formattedNumber}.`);
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "No se pudo actualizar la cotización.");
+              }
+            }}>
+            Usar cotización ARCA
+          </button>
+        )}
+      </div>}
       {notice && <div className="alert" role="status">{notice}</div>}
 
       <div className="kpi kpi-4">
@@ -404,7 +425,7 @@ export function InvoicesPage() {
                           (fiscalEnabled || ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")) &&
                           fiscalAttempts[inv.id]?.status !== "Rejected" &&
                           (["A", "B", "NC_A", "NC_B", "ND_A", "ND_B"].includes(inv.invoiceType) &&
-                            inv.fiscalConcept > 0 && inv.currency === "ARS" ||
+                            inv.fiscalConcept > 0 && ["ARS", "USD"].includes(inv.currency) ||
                             ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")) && (
                           <button type="button" className="btn" disabled={busyInvoice !== null}
                             onClick={() => void authorize(inv)}>

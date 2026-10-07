@@ -53,7 +53,8 @@ public sealed record InvoiceDto(
     int FiscalConcept,
     DateTime? ServiceFrom,
     DateTime? ServiceTo,
-    Guid? AssociatedInvoiceId = null);
+    Guid? AssociatedInvoiceId = null,
+    bool PaidInForeignCurrency = false);
 
 public sealed record InvoiceItemWriteDto(
     Guid? ProductId,
@@ -85,7 +86,8 @@ public sealed record CreateInvoiceCommand(
     DateTime? ServiceTo = null,
     Guid? AssociatedInvoiceId = null,
     // Solo notas de crédito: si reingresan al stock los productos devueltos.
-    bool RestockItems = true) : IRequest<Result<InvoiceDto>>;
+    bool RestockItems = true,
+    bool PaidInForeignCurrency = false) : IRequest<Result<InvoiceDto>>;
 
 public sealed record AuthorizeInvoiceArcaCommand(Guid Id) : IRequest<Result<InvoiceDto>>;
 

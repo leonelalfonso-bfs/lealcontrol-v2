@@ -540,6 +540,8 @@ CREATE INDEX IF NOT EXISTS "IX_remito_return_items_RemitoItemId"
                 ADD COLUMN IF NOT EXISTS "ServiceTo" timestamp with time zone;
             ALTER TABLE sales.invoices
                 ADD COLUMN IF NOT EXISTS "AssociatedInvoiceId" uuid;
+            ALTER TABLE sales.invoices
+                ADD COLUMN IF NOT EXISTS "PaidInForeignCurrency" boolean NOT NULL DEFAULT false;
             CREATE INDEX IF NOT EXISTS "IX_invoices_associated"
                 ON sales.invoices ("TenantId", "AssociatedInvoiceId")
                 WHERE "AssociatedInvoiceId" IS NOT NULL;

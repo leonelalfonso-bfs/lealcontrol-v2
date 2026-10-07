@@ -796,6 +796,11 @@ export const api = {
     request<{ enabled: boolean; attempts: Array<{ invoiceId: string; status: string; voucherNumber: number }> }>("/api/v1/sales/invoices/fiscal-status"),
   recoverInvoiceArca: (id: string) =>
     request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/recover-arca`, { method: "POST" }),
+  getArcaExchangeRate: (date?: string) =>
+    request<{ ok: boolean; rate: number; rateDate: string; detail: string }>(
+      `/api/v1/sales/invoices/arca-exchange-rate${date ? `?date=${encodeURIComponent(date)}` : ""}`),
+  applyArcaExchangeRate: (id: string) =>
+    request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/apply-arca-rate`, { method: "POST" }),
   authorizeInvoiceArca: (id: string) =>
     request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/authorize-arca`, { method: "POST" }),
 

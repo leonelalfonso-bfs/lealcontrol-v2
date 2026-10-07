@@ -191,6 +191,50 @@ internal sealed class ArcaWsfeClient
         }
     }
 
+    // Solo lectura: cotización oficial de ARCA (BNA) para una moneda y, opcionalmente, una fecha.
+    public async Task<ArcaExchangeRate> GetExchangeRateAsync(
+        string token, string sign, string cuit, bool production,
+        string currencyCode, string? date, CancellationToken cancellationToken)
+    {
+        var url = production
+            ? "https://servicios1.afip.gov.ar/wsfev1/service.asmx"
+            : "https://wswhomo.afip.gov.ar/wsfev1/service.asmx";
+        var dateNode = date is null ? "" : $"<ar:FchCotiz>{date}</ar:FchCotiz>";
+        var envelope = $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ar="http://ar.gov.afip.dif.FEV1/">
+              <soapenv:Header/>
+              <soapenv:Body>
+                <ar:FEParamGetCotizacion>
+                  <ar:Auth>
+                    <ar:Token>{System.Security.SecurityElement.Escape(token)}</ar:Token>
+                    <ar:Sign>{System.Security.SecurityElement.Escape(sign)}</ar:Sign>
+                    <ar:Cuit>{System.Security.SecurityElement.Escape(cuit)}</ar:Cuit>
+                  </ar:Auth>
+                  <ar:MonId>{System.Security.SecurityElement.Escape(currencyCode)}</ar:MonId>
+                  {dateNode}
+                </ar:FEParamGetCotizacion>
+              </soapenv:Body>
+            </soapenv:Envelope>
+            """;
+        try
+        {
+            var client = _httpClientFactory.CreateClient("arca");
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Content = new StringContent(envelope, Encoding.UTF8, "text/xml");
+            request.Headers.TryAddWithoutValidation("SOAPAction", "http://ar.gov.afip.dif.FEV1/FEParamGetCotizacion");
+            using var response = await client.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return new(false, 0m, string.Empty, $"ARCA respondió HTTP {(int)response.StatusCode} al consultar la cotización.");
+            return WsfeExchangeRateParser.Parse(await response.Content.ReadAsStringAsync(cancellationToken), currencyCode);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Fallo FEParamGetCotizacion");
+            return new(false, 0m, string.Empty, "No se pudo consultar la cotización en ARCA.");
+        }
+    }
+
     private static WsfeSalesPoint ParsePoint(XElement node)
     {
         var number = int.TryParse(Child(node, "Nro"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var nro) ? nro : 0;
@@ -372,4 +416,40 @@ public static class WsfeVoucherLookupParser
             DateTime.SpecifyKind(caeDue, DateTimeKind.Utc),
             "Comprobante y CAE confirmados en ARCA; cotejar todos los campos con el borrador.", fields);
     }
+}
+
+public static class WsfeExchangeRateParser
+{
+    public static ArcaExchangeRate Parse(string body, string expectedCurrency)
+    {
+        if (string.IsNullOrEmpty(body) || body.Length > 200_000)
+            return Fail("ARCA devolvió una cotización vacía.");
+        XDocument doc;
+        try
+        {
+            using var reader = XmlReader.Create(new StringReader(body), new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null,
+                MaxCharactersInDocument = 200_000
+            });
+            doc = XDocument.Load(reader);
+        }
+        catch (XmlException)
+        {
+            return Fail("ARCA devolvió una cotización ilegible.");
+        }
+        var result = doc.Descendants().FirstOrDefault(x => x.Name.LocalName == "FEParamGetCotizacionResult");
+        var get = result?.Elements().FirstOrDefault(x => x.Name.LocalName == "ResultGet");
+        string? Value(string name) => get?.Elements().FirstOrDefault(x => x.Name.LocalName == name)?.Value?.Trim();
+        if (result is null || get is null ||
+            result.Descendants().Any(x => x.Name.LocalName == "Err") ||
+            Value("MonId") != expectedCurrency ||
+            !decimal.TryParse(Value("MonCotiz"), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var rate) ||
+            rate <= 0m)
+            return Fail("ARCA no informó la cotización solicitada.");
+        return new(true, decimal.Round(rate, 6), Value("FchCotiz") ?? string.Empty, "Cotización oficial de ARCA.");
+    }
+
+    private static ArcaExchangeRate Fail(string detail) => new(false, 0m, string.Empty, detail);
 }

@@ -58,6 +58,18 @@ public sealed class FiscalReservationService
                 a.TenantId == tenantId && a.InvoiceId == invoiceId, ct))
             return Fail("El borrador ya tiene una reserva fiscal; consultar su estado antes de reintentar.");
 
+        // RG 5616: si se cancela en la misma moneda extranjera, la cotización debe ser
+        // exactamente la oficial de ARCA. Se verifica antes de reservar el número.
+        if (data.PaidInSameForeignCurrency == true)
+        {
+            var official = await _gateway.GetExchangeRateAsync(data.CurrencyCode,
+                FiscalExchangeRateDate.For(data.IssueDate, _clock.GetUtcNow()), ct);
+            if (!official.Ok)
+                return Fail($"No se pudo verificar la cotización oficial en ARCA: {official.Detail}");
+            if (official.Rate != data.ExchangeRate)
+                return Fail($"La cotización del borrador ({data.ExchangeRate:0.######}) no coincide con la oficial de ARCA ({official.Rate:0.######}). Usá \"Cotización ARCA\" para actualizarla.");
+        }
+
         var numbering = await _gateway.GetLastAuthorizedAsync(
             invoice.PointOfSale, data.VoucherType, ct);
         if (!numbering.Ok || numbering.LastNumber < 0 || numbering.LastNumber >= 99_999_999)

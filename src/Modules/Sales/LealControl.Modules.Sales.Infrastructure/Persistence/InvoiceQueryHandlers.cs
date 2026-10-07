@@ -240,7 +240,8 @@ internal sealed class InvoiceQueryHandlers
             request.FiscalConcept,
             request.ServiceFrom,
             request.ServiceTo,
-            original?.Id);
+            original?.Id,
+            request.PaidInForeignCurrency);
 
         foreach (var item in request.Items)
         {
@@ -390,6 +391,8 @@ internal sealed class InvoiceQueryHandlers
         value.ToString("#,0.00", System.Globalization.CultureInfo.InvariantCulture)
             .Replace(",", "\u0001").Replace(".", ",").Replace("\u0001", ".");
 
+    internal static InvoiceDto ToDto(Invoice i) => MapToDto(i);
+
     private static InvoiceDto MapToDto(Invoice i)
     {
         return new InvoiceDto(
@@ -438,7 +441,8 @@ internal sealed class InvoiceQueryHandlers
             i.FiscalConcept,
             i.ServiceFrom,
             i.ServiceTo,
-            i.AssociatedInvoiceId);
+            i.AssociatedInvoiceId,
+            i.PaidInForeignCurrency);
     }
 
 }
