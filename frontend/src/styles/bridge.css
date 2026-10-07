@@ -1,0 +1,101 @@
+/*
+ * Puente "Instrumento" → temas anteriores.
+ * Las pantallas existentes usan variables (--primary, --ink, --surface…) definidas por varias hojas
+ * de tema. Esta hoja se carga última y les asigna los valores del sistema "Instrumento", así toda la
+ * aplicación adopta la misma paleta y tipografía mientras las pantallas se migran una por una.
+ */
+:root {
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-sans);
+}
+
+:root[data-color-mode="light"] {
+  --canvas: var(--ins-canvas);
+  --paper: var(--ins-surface);
+  --panel: var(--ins-surface);
+  --surface: var(--ins-surface);
+  --surface-muted: var(--ins-surface-2);
+  --surface-border: var(--ins-line);
+  --line: var(--ins-line);
+  --ink: var(--ins-ink);
+  --text-main: var(--ins-ink);
+  --ink-soft: var(--ins-ink-2);
+  --ink-muted: var(--ins-ink-3);
+  --primary: var(--ins-accent);
+  --primary-hover: #065f46;
+  --primary-glow: rgba(4, 120, 87, 0.18);
+  --brand-accent: var(--ins-accent);
+  --brand-teal: var(--ins-accent);
+  --accent: var(--ins-accent);
+  --accent-2: var(--ins-accent);
+  --accent-soft: var(--ins-accent-soft);
+  --accent-ink: var(--ins-accent-ink);
+  --active-bg: var(--ins-accent-soft);
+  --active-text: var(--ins-accent-ink);
+  --row-hover: #f1f8f4;
+  --input-bg: var(--ins-surface);
+  --input-border: var(--ins-line-2);
+  --input-focus: var(--ins-accent);
+  --ok: var(--ins-accent);
+  --danger: var(--ins-danger);
+  --shadow-card: var(--ins-shadow-1);
+  --radius: 12px;
+  --radius-sm: 9px;
+}
+
+:root[data-color-mode="dark"] {
+  --canvas: var(--ins-canvas);
+  --paper: var(--ins-surface);
+  --panel: var(--ins-surface);
+  --surface: var(--ins-surface);
+  --surface-muted: var(--ins-surface-2);
+  --surface-border: var(--ins-line);
+  --line: var(--ins-line);
+  --ink: var(--ins-ink);
+  --text-main: var(--ins-ink);
+  --ink-soft: var(--ins-ink-2);
+  --ink-muted: var(--ins-ink-3);
+  --primary: #34d399;
+  --primary-hover: #6ee7b7;
+  --primary-glow: rgba(52, 211, 153, 0.22);
+  --brand-accent: var(--ins-accent);
+  --brand-teal: var(--ins-accent);
+  --accent: var(--ins-accent);
+  --accent-2: var(--ins-accent);
+  --accent-soft: var(--ins-accent-soft);
+  --accent-ink: var(--ins-accent-ink);
+  --active-bg: var(--ins-accent-soft);
+  --active-text: var(--ins-accent-ink);
+  --row-hover: rgba(52, 211, 153, 0.06);
+  --input-bg: var(--ins-surface-2);
+  --input-border: var(--ins-line-2);
+  --input-focus: var(--ins-accent);
+  --ok: var(--ins-accent);
+  --danger: var(--ins-danger);
+  --radius: 12px;
+  --radius-sm: 9px;
+}
+
+/* El botón primario oscuro necesita texto claro en modo oscuro (fondo esmeralda). */
+:root[data-color-mode="dark"] .btn.btn-primary,
+:root[data-color-mode="dark"] .btn-primary {
+  color: #052e21 !important;
+}
+
+/* Tipografía única: Geist para texto, Geist Mono para cifras y códigos. */
+:root body,
+:root button,
+:root input,
+:root select,
+:root textarea {
+  font-family: var(--font-sans);
+}
+:root body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv11";
+}
+:root h1, :root h2, :root h3, :root h4 {
+  font-family: var(--font-sans);
+  letter-spacing: -0.02em;
+}

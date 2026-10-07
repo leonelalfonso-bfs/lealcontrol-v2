@@ -1,3 +1,5 @@
+import type { IconName } from "../components/ui/Icon";
+
 export type PlanTier = "base" | "comercial" | "operaciones" | "empresarial";
 
 export type ModulePermission =
@@ -18,10 +20,23 @@ export interface NavigationItem {
   end?: boolean;
 }
 
+/** Agrupación del menú lateral. */
+export type ModuleArea = "general" | "comercial" | "operaciones" | "administracion";
+
+export const MODULE_AREAS: ReadonlyArray<{ id: ModuleArea; label: string }> = [
+  { id: "general", label: "General" },
+  { id: "comercial", label: "Comercial" },
+  { id: "operaciones", label: "Operaciones" },
+  { id: "administracion", label: "Administración" }
+];
+
 export interface ModuleDefinition {
   id: string;
   label: string;
   icon: string;
+  /** Ícono de línea del sistema "Instrumento" (components/ui/Icon). */
+  glyph: IconName;
+  area: ModuleArea;
   gradient: string;
   glow: string;
   title: string;
@@ -48,6 +63,8 @@ const planOrder: Record<PlanTier, number> = {
 export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   {
     id: "inicio",
+    glyph: "gauge",
+    area: "general",
     label: "Inicio",
     icon: "🏠",
     gradient: "linear-gradient(135deg, #38bdf8, #2563eb)",
@@ -62,6 +79,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "directorio",
+    glyph: "building",
+    area: "comercial",
     label: "Directorio",
     icon: "🏢",
     gradient: "linear-gradient(135deg, #818cf8, #4f46e5)",
@@ -81,6 +100,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "crm",
+    glyph: "target",
+    area: "comercial",
     label: "CRM",
     icon: "🎯",
     gradient: "linear-gradient(135deg, #c084fc, #9333ea)",
@@ -101,6 +122,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "comunicaciones",
+    glyph: "inbox",
+    area: "general",
     label: "Comunicaciones",
     icon: "💬",
     gradient: "linear-gradient(135deg, #38bdf8, #0284c7)",
@@ -120,6 +143,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "ventas",
+    glyph: "document",
+    area: "comercial",
     label: "Ventas",
     icon: "💼",
     gradient: "linear-gradient(135deg, #34d399, #059669)",
@@ -140,6 +165,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "compras",
+    glyph: "cart",
+    area: "comercial",
     label: "Compras",
     icon: "🛒",
     gradient: "linear-gradient(135deg, #fbbf24, #d97706)",
@@ -163,6 +190,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "inventario",
+    glyph: "package",
+    area: "operaciones",
     label: "Inventario",
     icon: "📦",
     gradient: "linear-gradient(135deg, #2dd4bf, #0d9488)",
@@ -181,6 +210,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "produccion",
+    glyph: "factory",
+    area: "operaciones",
     label: "Producción",
     icon: "⚙️",
     gradient: "linear-gradient(135deg, #fb7185, #e11d48)",
@@ -202,6 +233,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "finanzas",
+    glyph: "wallet",
+    area: "administracion",
     label: "Finanzas",
     icon: "💳",
     gradient: "linear-gradient(135deg, #facc15, #10b981)",
@@ -226,6 +259,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "rrhh",
+    glyph: "users",
+    area: "administracion",
     label: "RRHH",
     icon: "👥",
     gradient: "linear-gradient(135deg, #ec4899, #db2777)",
@@ -247,6 +282,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "flota",
+    glyph: "truck",
+    area: "operaciones",
     label: "Flota",
     icon: "🚛",
     gradient: "linear-gradient(135deg, #3b82f6, #0284c7)",
@@ -265,6 +302,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "cereales",
+    glyph: "wheat",
+    area: "operaciones",
     label: "Cereales & Granos",
     icon: "🌾",
     gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
@@ -285,6 +324,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "contabilidad",
+    glyph: "book",
+    area: "administracion",
     label: "Contabilidad",
     icon: "🏛️",
     gradient: "linear-gradient(135deg, #6366f1, #4338ca)",
@@ -308,6 +349,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "metrologia",
+    glyph: "scale",
+    area: "operaciones",
     label: "Metrología Legal",
     icon: "⚖️",
     gradient: "linear-gradient(135deg, #0d9488, #0f766e)",
@@ -330,6 +373,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "calidad",
+    glyph: "shield",
+    area: "operaciones",
     label: "Calidad",
     icon: "📘",
     gradient: "linear-gradient(135deg, #0369a1, #0e7490)",
@@ -349,6 +394,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
   },
   {
     id: "administracion",
+    glyph: "settings",
+    area: "administracion",
     label: "Configuración",
     icon: "🛠️",
     gradient: "linear-gradient(135deg, #94a3b8, #475569)",
