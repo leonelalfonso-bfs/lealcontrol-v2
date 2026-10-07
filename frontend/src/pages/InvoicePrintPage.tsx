@@ -8,6 +8,30 @@ import { numberToWords } from "../utils/numberToWords";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { type CompanySettings, type CustomerDetail, type Invoice } from "../api/types";
 
+const TAX_CONDITION_LABELS: Record<string, string> = {
+  ResponsableInscripto: "IVA Responsable Inscripto",
+  Monotributo: "Responsable Monotributo",
+  Exento: "IVA Sujeto Exento",
+  ConsumidorFinal: "Consumidor Final",
+  NoResponsable: "IVA No Responsable"
+};
+const taxConditionLabel = (value?: string | null) => (value ? TAX_CONDITION_LABELS[value] ?? value : "");
+
+// Fecha tal como se informa a ARCA (parte de fecha del valor guardado), sin corrimiento por zona horaria.
+const fiscalDate = (value?: string | null) => {
+  const [y, m, d] = (value ?? "").slice(0, 10).split("-");
+  return y && m && d ? `${d}/${m}/${y}` : "—";
+};
+
+const formatCuit = (value?: string | null) => {
+  const digits = (value ?? "").replace(/\D+/g, "");
+  return digits.length === 11 ? `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}` : value ?? "";
+};
+
+const Missing = ({ label }: { label: string }) => (
+  <span style={{ color: "#b91c1c", fontWeight: 700 }}>Falta cargar {label}</span>
+);
+
 export function InvoicePrintPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -125,13 +149,25 @@ export function InvoicePrintPage() {
 
   // Formatted Point of Sale (5 digits) and Voucher Number (8 digits) per RG 1415 / RG 4290
   const formattedPtoVta = String(invoice.pointOfSale || 1).padStart(5, "0");
-  const formattedVoucherNum = String(invoice.invoiceNumber || 1).padStart(8, "0");
+  // El número oficial lo asigna ARCA al autorizar: en borrador no se muestra uno provisorio.
+  const hasCae = Boolean(invoice.cae) && !simulatedCae;
+  const isDraft = invoice.status === "Draft" && !hasCae && !simulatedCae && invoice.invoiceType !== "Proforma";
+  const formattedVoucherNum = isDraft ? "Sin asignar" : String(invoice.invoiceNumber || 1).padStart(8, "0");
 
   const totalIva = (invoice.iva21 || 0) + (invoice.iva105 || 0) + (invoice.iva27 || 0);
 
-  const formattedStartDate = company?.activityStartDate
-    ? new Date(company.activityStartDate + "T00:00:00").toLocaleDateString("es-AR")
-    : "01/03/2018";
+  const formattedStartDate = company?.activityStartDate ? fiscalDate(company.activityStartDate) : null;
+  const issuerAddress = [company?.fiscalStreet, company?.fiscalCity, company?.fiscalProvince].filter(Boolean).join(", ");
+  const bank = settings.invoice.bankDetails;
+  const hasBankData = Boolean(bank.cbu?.trim() || bank.alias?.trim());
+  const missingIssuerData = [
+    !company?.legalName && "razón social",
+    !company?.documentNumber && "CUIT",
+    !issuerAddress && "domicilio comercial",
+    !company?.taxCondition && "condición frente al IVA",
+    !company?.iibbNumber && "Ingresos Brutos",
+    !company?.activityStartDate && "fecha de inicio de actividades"
+  ].filter(Boolean) as string[];
 
   return (
     <div style={{ background: "#f1f5f9", minHeight: "100vh", padding: "20px" }}>
@@ -146,10 +182,10 @@ export function InvoicePrintPage() {
         </button>
 
         <div style={{ display: "flex", gap: "10px" }}>
-          {invoice.status !== "Authorized" && (
-            <span style={{ color: "#92400e", fontWeight: 700 }}>
-              Autorización ARCA no disponible
-            </span>
+          {isDraft && (
+            <Link to="/facturas" style={{ color: "#92400e", fontWeight: 700, alignSelf: "center" }}>
+              Borrador sin CAE · autorizalo desde Facturas
+            </Link>
           )}
 
           <button
@@ -188,8 +224,8 @@ export function InvoicePrintPage() {
               entityType: "Invoice",
               entityId: invoice.id,
               to: customer?.email ?? undefined,
-              subject: `${docTitle} ${invoiceLetter} N° ${formattedPtoVta}-${formattedVoucherNum} - ${company?.tradeName || company?.legalName || "LEAL CONTROL"}`,
-              body: `Estimado cliente,\n\nAdjuntamos el comprobante fiscal electrónico ${docTitle} ${invoiceLetter} N° ${formattedPtoVta}-${formattedVoucherNum} correspondiente a los servicios/productos provistos.\n\nDatos para el pago:\nBanco: ${settings.invoice.bankDetails.bankName}\nCBU: ${settings.invoice.bankDetails.cbu}\nAlias: ${settings.invoice.bankDetails.alias}\n\nSaludos cordiales,\n${company?.tradeName || "LEAL CONTROL ERP"}`,
+              subject: `${docTitle} ${invoiceLetter} N° ${formattedPtoVta}-${formattedVoucherNum} - ${company?.tradeName || company?.legalName || ""}`,
+              body: `Estimado cliente,\n\nAdjuntamos el comprobante fiscal electrónico ${docTitle} ${invoiceLetter} N° ${formattedPtoVta}-${formattedVoucherNum} correspondiente a los servicios/productos provistos.\n\n${hasBankData ? `Datos para el pago:\nBanco: ${bank.bankName}\nCBU: ${bank.cbu}\nAlias: ${bank.alias}\n\n` : ""}Saludos cordiales,\n${company?.tradeName || company?.legalName || ""}`,
               documentPdf: {
                 elementId: "invoice-pdf-sheet",
                 fileName: `Factura_${invoiceLetter}_${formattedPtoVta}-${formattedVoucherNum}.pdf`
@@ -197,6 +233,13 @@ export function InvoicePrintPage() {
             }}
             onClose={() => setShowEmail(false)}
           />
+        </div>
+      )}
+
+      {missingIssuerData.length > 0 && (
+        <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 12px auto", padding: "10px 14px", borderRadius: "6px", background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", fontSize: "13px" }}>
+          Faltan datos fiscales de la empresa: <strong>{missingIssuerData.join(", ")}</strong>.{" "}
+          <Link to="/configuracion" style={{ color: "#991b1b", fontWeight: 700 }}>Completalos en Configuración</Link> antes de enviar este comprobante.
         </div>
       )}
 
@@ -223,6 +266,11 @@ export function InvoicePrintPage() {
           <div style={{ border: "2px solid #b91c1c", color: "#991b1b", padding: "10px", marginBottom: "8px", fontWeight: 700, textAlign: "center" }}>
             SIN AUTORIZACIÓN FISCAL VERIFICADA. El CAE fue generado localmente por una versión anterior.
             Verificar en ARCA antes de usar este documento como comprobante fiscal.
+          </div>
+        )}
+        {isDraft && (
+          <div style={{ border: "2px dashed #d97706", color: "#92400e", padding: "6px", marginBottom: "8px", fontWeight: 700, textAlign: "center", letterSpacing: "0.5px" }}>
+            BORRADOR · DOCUMENTO NO VÁLIDO COMO FACTURA
           </div>
         )}
         {/* Header Section (RG 1415 Anexo II Apartado B) */}
@@ -257,10 +305,10 @@ export function InvoicePrintPage() {
                 {/* Left Header: Issuer Company Data */}
                 <td style={{ width: "47%", verticalAlign: "top", paddingRight: "15px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
-                    <img src="/logo.png?v=2" alt="Leal Control ERP" style={{ maxHeight: "55px", width: "auto" }} />
+                    <img src="/logo.png?v=2" alt="" style={{ maxHeight: "55px", width: "auto" }} />
                     <div>
                       <h1 style={{ margin: 0, fontSize: "15px", fontWeight: "bold", color: primaryCol, textTransform: "uppercase" }}>
-                        {company?.legalName || "LEAL CONTROL ERP S.A."}
+                        {company?.legalName || <Missing label="razón social" />}
                       </h1>
                       {company?.tradeName && (
                         <div style={{ fontSize: "10px", fontWeight: 600, color: "#475569" }}>
@@ -270,8 +318,8 @@ export function InvoicePrintPage() {
                     </div>
                   </div>
                   <div style={{ fontSize: "10px", color: "#475569", lineHeight: "1.35", marginTop: "4px" }}>
-                    <div><strong>Domicilio Comercial:</strong> {company?.fiscalStreet || "Luis Braile 705"}, {company?.fiscalCity || "San Lorenzo"}, {company?.fiscalProvince || "Santa Fe"} (CP {company?.fiscalPostalCode || "2200"})</div>
-                    <div><strong>Condición frente al IVA:</strong> <span style={{ fontWeight: "bold", color: "#0f172a" }}>{company?.taxCondition || "IVA Responsable Inscripto"}</span></div>
+                    <div><strong>Domicilio Comercial:</strong> {issuerAddress ? <>{issuerAddress}{company?.fiscalPostalCode ? ` (CP ${company.fiscalPostalCode})` : ""}</> : <Missing label="domicilio" />}</div>
+                    <div><strong>Condición frente al IVA:</strong> <span style={{ fontWeight: "bold", color: "#0f172a" }}>{taxConditionLabel(company?.taxCondition) || <Missing label="condición IVA" />}</span></div>
                     {company?.phone && <div><strong>Teléfono:</strong> {company.phone}</div>}
                     {company?.email && <div><strong>Email:</strong> {company.email}</div>}
                   </div>
@@ -294,10 +342,10 @@ export function InvoicePrintPage() {
                     Punto de Venta: {formattedPtoVta} &nbsp; Comp. Nro: {formattedVoucherNum}
                   </div>
                   <div style={{ fontSize: "10.5px", color: "#334155", marginTop: "4px", lineHeight: "1.4" }}>
-                    <div><strong>Fecha de Emisión:</strong> {new Date(invoice.issueDate).toLocaleDateString("es-AR")}</div>
-                    <div><strong>CUIT:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>{company?.documentNumber || "30-71548962-9"}</span></div>
-                    <div><strong>Ingresos Brutos:</strong> {company?.iibbNumber || "30-71548962-9"} ({company?.iibbRegime || "Convenio Multilateral"})</div>
-                    <div><strong>Fecha de Inicio de Actividades:</strong> {formattedStartDate}</div>
+                    <div><strong>Fecha de Emisión:</strong> {fiscalDate(invoice.issueDate)}</div>
+                    <div><strong>CUIT:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>{company?.documentNumber ? formatCuit(company.documentNumber) : <Missing label="CUIT" />}</span></div>
+                    <div><strong>Ingresos Brutos:</strong> {company?.iibbNumber ? <>{company.iibbNumber}{company.iibbRegime ? ` (${company.iibbRegime})` : ""}</> : <Missing label="IIBB" />}</div>
+                    <div><strong>Fecha de Inicio de Actividades:</strong> {formattedStartDate ?? <Missing label="inicio de actividades" />}</div>
                   </div>
                 </td>
               </tr>
@@ -308,11 +356,15 @@ export function InvoicePrintPage() {
         {/* Invoiced Period & Payment Due Date Bar (RG 1415 Anexo II / Servicios) */}
         <div style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "4px 10px", marginBottom: "8px", display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#334155" }}>
           <div>
-            <strong>Período Facturado Desde:</strong> {new Date(invoice.issueDate).toLocaleDateString("es-AR")} &nbsp;&nbsp;
-            <strong>Hasta:</strong> {new Date(invoice.issueDate).toLocaleDateString("es-AR")}
+            {invoice.serviceFrom && invoice.serviceTo && (
+              <>
+                <strong>Período Facturado Desde:</strong> {fiscalDate(invoice.serviceFrom)} &nbsp;&nbsp;
+                <strong>Hasta:</strong> {fiscalDate(invoice.serviceTo)}
+              </>
+            )}
           </div>
           <div>
-            <strong>Fecha de Vto. para el Pago:</strong> <span style={{ fontWeight: "bold", color: "#b91c1c" }}>{invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("es-AR") : new Date(invoice.issueDate).toLocaleDateString("es-AR")}</span>
+            <strong>Fecha de Vto. para el Pago:</strong> <span style={{ fontWeight: "bold", color: "#b91c1c" }}>{fiscalDate(invoice.dueDate || invoice.issueDate)}</span>
           </div>
         </div>
 
@@ -332,13 +384,13 @@ export function InvoicePrintPage() {
                     <div style={{ fontSize: "10px", color: "#475569" }}>Nombre Fantasía: {customer.tradeName}</div>
                   )}
                   <div style={{ fontSize: "10px", color: "#475569", marginTop: "2px" }}>
-                    <strong>CUIT / Identificación:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>{invoice.customerDocument || customer?.documentNumber || "—"}</span>
+                    <strong>CUIT / Identificación:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>{formatCuit(invoice.customerDocument || customer?.documentNumber) || "—"}</span>
                   </div>
                   <div style={{ fontSize: "10px", color: "#475569" }}>
-                    <strong>Condición frente al IVA:</strong> {invoice.customerTaxCondition || customer?.taxCondition || "IVA Responsable Inscripto"}
+                    <strong>Condición frente al IVA:</strong> {taxConditionLabel(invoice.customerTaxCondition || customer?.taxCondition) || "—"}
                   </div>
                   <div style={{ fontSize: "10px", color: "#475569" }}>
-                    <strong>Domicilio Comercial:</strong> {invoice.customerAddress || (customer?.fiscalAddress ? `${customer.fiscalAddress.street}, ${customer.fiscalAddress.city}, ${customer.fiscalAddress.province}` : "Sede Fiscal del Cliente")}
+                    <strong>Domicilio Comercial:</strong> {invoice.customerAddress || (customer?.fiscalAddress ? [customer.fiscalAddress.street, customer.fiscalAddress.city, customer.fiscalAddress.province].filter(Boolean).join(", ") : "—")}
                   </div>
                 </td>
                 <td style={{ width: "42%", verticalAlign: "top", textAlign: "right", borderLeft: "1px dashed #cbd5e1", paddingLeft: "10px" }}>
@@ -481,16 +533,16 @@ export function InvoicePrintPage() {
         </div>
 
         {/* Banking Info Box for Invoice Collection */}
-        {settings.invoice.showBankingInfo && (
+        {settings.invoice.showBankingInfo && hasBankData && (
           <div style={{ background: "rgba(13, 148, 136, 0.08)", border: `1px solid ${primaryCol}44`, padding: "6px 10px", borderRadius: "6px", marginBottom: "8px", fontSize: "9.5px" }}>
             <strong style={{ color: primaryCol, display: "block", marginBottom: "2px" }}>
               🏦 DATOS PARA ACREDITACIÓN / TRANSFERENCIA BANCARIA:
             </strong>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
-              <div><strong>Banco:</strong> {settings.invoice.bankDetails.bankName} ({settings.invoice.bankDetails.accountType})</div>
-              <div><strong>CBU:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>{settings.invoice.bankDetails.cbu}</span></div>
-              <div><strong>Alias:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold", color: primaryCol }}>{settings.invoice.bankDetails.alias}</span></div>
-              <div><strong>Titular / CUIT:</strong> {settings.invoice.bankDetails.accountHolder} ({settings.invoice.bankDetails.cuit})</div>
+              {bank.bankName && <div><strong>Banco:</strong> {bank.bankName}{bank.accountType ? ` (${bank.accountType})` : ""}</div>}
+              {bank.cbu && <div><strong>CBU:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>{bank.cbu}</span></div>}
+              {bank.alias && <div><strong>Alias:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold", color: primaryCol }}>{bank.alias}</span></div>}
+              {bank.accountHolder && <div><strong>Titular / CUIT:</strong> {bank.accountHolder}{bank.cuit ? ` (${bank.cuit})` : ""}</div>}
             </div>
             {settings.invoice.paymentInstructions && (
               <div style={{ fontSize: "9px", color: "#475569", marginTop: "2px", fontStyle: "italic" }}>
@@ -536,16 +588,16 @@ export function InvoicePrintPage() {
               <div style={{ flex: 1, fontSize: "10px", lineHeight: "1.4" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ fontWeight: "bold", fontSize: "13px", color: primaryCol }}>ARCA</span>
-                  <span style={{ fontSize: "9.5px", color: "#64748b" }}>Agencia de Recaudación y Control Aduanero</span>
+                  <span style={{ fontSize: "9.5px", color: "#64748b" }}>Comprobante Autorizado</span>
                 </div>
                 <div style={{ marginTop: "3px" }}>
                   <strong>C.A.E. N°:</strong> <span style={{ fontFamily: "monospace", fontSize: "12px", fontWeight: "bold" }}>{invoice.cae}</span>
                 </div>
                 <div>
-                  <strong>Fecha de Vto. de CAE:</strong> <span style={{ fontSize: "11px", fontWeight: "bold" }}>{invoice.caeDueDate ? new Date(invoice.caeDueDate).toLocaleDateString("es-AR") : "—"}</span>
+                  <strong>Fecha de Vto. de CAE:</strong> <span style={{ fontSize: "11px", fontWeight: "bold" }}>{fiscalDate(invoice.caeDueDate)}</span>
                 </div>
                 <div style={{ fontSize: "8.5px", color: "#64748b", marginTop: "2px" }}>
-                  {settings.invoice.customFooterText || "Comprobante Autorizado por ARCA. La autenticidad puede verificarse en www.afip.gob.ar/fe/qr/ escaneando el código QR."}
+                  {settings.invoice.customFooterText || "La autenticidad puede verificarse en www.arca.gob.ar/fe/qr/ escaneando el código QR."}
                 </div>
               </div>
             </div>
@@ -554,7 +606,7 @@ export function InvoicePrintPage() {
               {simulatedCae ? (
                 <strong>CAE local no verificado. No usar como comprobante fiscal hasta cotejar en ARCA.</strong>
               ) : (
-                <>🟡 <strong>Comprobante en estado Borrador / Proforma</strong> (Pendiente de Autorización Fiscal con ARCA).</>
+                <>🟡 <strong>{invoice.invoiceType === "Proforma" ? "Factura proforma" : "Borrador"}</strong> · sin CAE. No válido como comprobante fiscal.</>
               )}
             </div>
           )}
