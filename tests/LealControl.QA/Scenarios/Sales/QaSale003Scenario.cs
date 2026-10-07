@@ -151,7 +151,8 @@ public sealed class QaSale003Scenario : ITestScenario
                 Items: new List<InvoiceItemWriteDto>
                 {
                     new(product.Id, product.Code, product.Name, returnedQuantity, product.UnitPrice, product.VatRate)
-                });
+                },
+                AssociatedInvoiceId: invoice.Id);
 
             var ncRes = await context.HttpClient.PostAsJsonAsync("/api/v1/sales/invoices", ncCmd);
             scenario.AddCheck(

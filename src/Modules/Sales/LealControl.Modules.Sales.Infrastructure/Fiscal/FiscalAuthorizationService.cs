@@ -64,7 +64,10 @@ public sealed class FiscalAuthorizationService
             // Otro proceso pudo persistir el envío mientras esperábamos el bloqueo.
             if (attempt.Status != "Reserved")
                 return Fail("El envío ya fue iniciado por otra operación; consultar su estado.");
-            if (!WsfeVoucherPreparation.TryBuild(invoice, out var prepared, out var error)
+            var (associationOk, associated) = await FiscalAssociation.LoadAsync(_db, invoice, ct);
+            if (!associationOk)
+                return Fail(FiscalAssociation.Unavailable);
+            if (!WsfeVoucherPreparation.TryBuild(invoice, out var prepared, out var error, associated)
                 || prepared is null)
                 return Fail(error);
             if (!FiscalEmissionDateRule.IsAllowed(prepared.IssueDate, prepared.Concept, _clock.GetUtcNow()))

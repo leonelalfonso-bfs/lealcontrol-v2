@@ -45,7 +45,10 @@ public sealed class FiscalReservationService
             .FirstOrDefaultAsync(i => i.Id == invoiceId && i.TenantId == tenantId, ct);
         if (invoice is null)
             return Fail("No se encontró el borrador en esta empresa.");
-        if (!WsfeVoucherPreparation.TryBuild(invoice, out var data, out var error) || data is null)
+        var (associationOk, associated) = await FiscalAssociation.LoadAsync(_db, invoice, ct);
+        if (!associationOk)
+            return Fail(FiscalAssociation.Unavailable);
+        if (!WsfeVoucherPreparation.TryBuild(invoice, out var data, out var error, associated) || data is null)
             return Fail(error);
         if (!FiscalEmissionDateRule.IsAllowed(data.IssueDate, data.Concept, _clock.GetUtcNow()))
             return Fail(data.Concept == 1
@@ -81,7 +84,7 @@ public sealed class FiscalReservationService
         var current = await _db.Invoices.Include(i => i.Items)
             .FirstOrDefaultAsync(i => i.Id == invoiceId && i.TenantId == tenantId, ct);
         if (current is null ||
-            !WsfeVoucherPreparation.TryBuild(current, out var currentData, out _) ||
+            !WsfeVoucherPreparation.TryBuild(current, out var currentData, out _, associated) ||
             currentData is null || currentData.RequestKey() != data.RequestKey() ||
             await _db.FiscalAuthorizationAttempts.AnyAsync(a =>
                 a.TenantId == tenantId && a.InvoiceId == invoiceId, ct) ||

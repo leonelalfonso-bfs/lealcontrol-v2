@@ -143,7 +143,35 @@ internal sealed class InvoiceQueryHandlers
             return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.FiscalConcept",
                 "Revisá el concepto, el período del servicio y el vencimiento de pago."));
 
+        var isNote = request.InvoiceType is "NC_A" or "NC_B" or "ND_A" or "ND_B";
+        var isCreditNoteType = request.InvoiceType is "NC_A" or "NC_B";
+        if (!isNote && request.AssociatedInvoiceId.HasValue)
+            return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.UnexpectedAssociation",
+                "Solo las notas de crédito o débito se asocian a una factura."));
+        if (isNote && (request.AssociatedInvoiceId is null || request.RemitoId.HasValue || request.OrderId.HasValue))
+            return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.AssociationRequired",
+                "Una nota de crédito o débito se genera desde la factura original autorizada."));
+
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        Invoice? original = null;
+        if (isNote)
+        {
+            var originalId = request.AssociatedInvoiceId!.Value;
+            // Serializa las notas de una misma factura para no acreditar dos veces el mismo saldo.
+            await _dbContext.Database.ExecuteSqlInterpolatedAsync(
+                $@"SELECT 1 FROM sales.invoices WHERE ""Id"" = {originalId} AND ""TenantId"" = {tenantId.Value} FOR UPDATE",
+                cancellationToken);
+            original = await _dbContext.Invoices.AsNoTracking()
+                .FirstOrDefaultAsync(i => i.Id == originalId && i.TenantId == tenantId, cancellationToken);
+            var letter = request.InvoiceType[^1..];
+            // Sin emisión ARCA las facturas quedan en borrador: la nota se asocia igual, pero solo
+            // puede autorizarse en ARCA si la original tiene CAE (ver FiscalAssociation).
+            if (original is null || original.Status is not ("Authorized" or "Draft") ||
+                original.CustomerId != request.CustomerId || original.Currency != request.Currency ||
+                (original.InvoiceType != letter && original.InvoiceType != "ND_" + letter))
+                return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.InvalidAssociation",
+                    "La nota debe asociarse a una factura vigente del mismo cliente, moneda y letra."));
+        }
         LealControl.Modules.Sales.Domain.Remitos.Remito? linkedRemito = null;
         if (request.RemitoId is Guid remitoId)
         {
@@ -199,10 +227,11 @@ internal sealed class InvoiceQueryHandlers
             request.OrderId,
             request.RemitoId,
             request.CustomerId,
-            request.CustomerName,
-            request.CustomerDocument,
-            request.CustomerTaxCondition,
-            request.CustomerAddress,
+            // Una nota repite el receptor de la factura original tal como se informó a ARCA.
+            original?.CustomerName ?? request.CustomerName,
+            original?.CustomerDocument ?? request.CustomerDocument,
+            original?.CustomerTaxCondition ?? request.CustomerTaxCondition,
+            original?.CustomerAddress ?? request.CustomerAddress,
             request.DueDate,
             request.Currency,
             request.ExchangeRate,
@@ -210,7 +239,8 @@ internal sealed class InvoiceQueryHandlers
             request.IssueDate,
             request.FiscalConcept,
             request.ServiceFrom,
-            request.ServiceTo);
+            request.ServiceTo,
+            original?.Id);
 
         foreach (var item in request.Items)
         {
@@ -224,6 +254,21 @@ internal sealed class InvoiceQueryHandlers
                 item.RemitoItemId);
         }
 
+        if (original is not null && isCreditNoteType)
+        {
+            var notes = await _dbContext.Invoices.AsNoTracking()
+                .Where(i => i.TenantId == tenantId && i.AssociatedInvoiceId == original.Id &&
+                            i.Status != "Cancelled" && i.Status != "Rejected")
+                .Select(i => new { i.InvoiceType, i.Status, i.Total })
+                .ToListAsync(cancellationToken);
+            var credited = notes.Where(n => n.InvoiceType.StartsWith("NC")).Sum(n => n.Total);
+            var debited = notes.Where(n => n.InvoiceType.StartsWith("ND") && n.Status == "Authorized").Sum(n => n.Total);
+            var available = original.Total + debited - credited;
+            if (invoice.Total > available)
+                return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.CreditExceeded",
+                    $"La nota de crédito supera lo disponible para acreditar en la factura original ($ {ArsAmount(available)})."));
+        }
+
         _dbContext.Invoices.Add(invoice);
 
         // 1. Si la factura proviene de un Remito existente (request.RemitoId != null):
@@ -232,7 +277,9 @@ internal sealed class InvoiceQueryHandlers
         {
             linkedRemito.MarkAsInvoiced(invoice.Id, invoice.FormattedNumber);
         }
-        else
+        // Las notas de débito no mueven mercadería; una nota de crédito solo reingresa stock si es devolución.
+        else if (!request.InvoiceType.StartsWith("ND", StringComparison.OrdinalIgnoreCase) &&
+                 (!isCreditNoteType || request.RestockItems))
         {
             // 2. Si es una Factura Directa / Venta de Mostrador (sin remito previo):
             // Descuenta stock físico de los productos inventariables para que no quede la mercadería sin descontar.
@@ -338,6 +385,11 @@ internal sealed class InvoiceQueryHandlers
         return Result<InvoiceDto>.Success(MapToDto(authorized));
     }
 
+    // 1234.5 → "1.234,50", sin depender de la cultura instalada en el servidor.
+    private static string ArsAmount(decimal value) =>
+        value.ToString("#,0.00", System.Globalization.CultureInfo.InvariantCulture)
+            .Replace(",", "\u0001").Replace(".", ",").Replace("\u0001", ".");
+
     private static InvoiceDto MapToDto(Invoice i)
     {
         return new InvoiceDto(
@@ -385,7 +437,8 @@ internal sealed class InvoiceQueryHandlers
             i.CreatedAtUtc,
             i.FiscalConcept,
             i.ServiceFrom,
-            i.ServiceTo);
+            i.ServiceTo,
+            i.AssociatedInvoiceId);
     }
 
 }

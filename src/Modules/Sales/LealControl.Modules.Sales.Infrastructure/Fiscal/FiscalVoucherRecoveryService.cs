@@ -80,7 +80,8 @@ public sealed class FiscalVoucherRecoveryService
         if (attempt.Status is not ("Pending" or "Unknown") || invoice.Status != "Draft")
             return Fail("El estado fiscal cambió durante la consulta; requiere revisión.");
 
-        if (observation.Confirmed && observation.FiscalData is not null)
+        var (associationOk, associated) = await FiscalAssociation.LoadAsync(_db, invoice, ct);
+        if (associationOk && observation.Confirmed && observation.FiscalData is not null)
         {
             try
             {
@@ -90,7 +91,7 @@ public sealed class FiscalVoucherRecoveryService
                     observation.Number, observation.RecipientDocument, observation.Total,
                     observation.Cae, observation.CaeDueDate, observation.FiscalData);
                 if (WsfeVoucherReconciliation.TryConfirm(invoice, attempt, attempt.IssuerCuit,
-                    found, submission, qr, out _))
+                    found, submission, qr, out _, associated))
                 {
                     await _db.SaveChangesAsync(ct);
                     await tx.CommitAsync(ct);

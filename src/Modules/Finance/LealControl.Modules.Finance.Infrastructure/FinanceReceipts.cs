@@ -42,6 +42,16 @@ public static class FinanceReceipts
                 .Select(g => new { ReceiptId = g.Key, Count = g.Count(), Invoices = string.Join(", ", g.Select(i => i.InvoiceNumber)) })
                 .ToDictionaryAsync(x => x.ReceiptId, ct);
 
+            // Imputación exacta por factura: el resumen por número no distingue tipo ni cliente
+            // (Factura A y B, o una nota, pueden compartir 0001-00000001).
+            var imputations = (await db.CollectionReceiptImputations
+                .AsNoTracking()
+                .Where(x => x.TenantId == tenantId && receiptIds.Contains(x.ReceiptId) && x.Status == "Active")
+                .Select(x => new { x.ReceiptId, x.InvoiceId, x.AmountImputed })
+                .ToListAsync(ct))
+                .GroupBy(x => x.ReceiptId)
+                .ToDictionary(g => g.Key, g => g.Select(x => new { x.InvoiceId, Amount = x.AmountImputed }).ToList());
+
             var result = receipts.Select(r => new
             {
                 r.Id,
@@ -65,7 +75,8 @@ public static class FinanceReceipts
                 r.CreatedAtUtc,
                 LinesCount = linesSummary.TryGetValue(r.Id, out var lc) ? lc : 0,
                 InvoicesCount = imputationsSummary.TryGetValue(r.Id, out var imp) ? imp.Count : (r.InvoiceId.HasValue ? 1 : 0),
-                InvoicesSummary = imputationsSummary.TryGetValue(r.Id, out var imp2) ? imp2.Invoices : ""
+                InvoicesSummary = imputationsSummary.TryGetValue(r.Id, out var imp2) ? imp2.Invoices : "",
+                Imputations = imputations.TryGetValue(r.Id, out var list) ? list : []
             });
 
             return Results.Ok(result);

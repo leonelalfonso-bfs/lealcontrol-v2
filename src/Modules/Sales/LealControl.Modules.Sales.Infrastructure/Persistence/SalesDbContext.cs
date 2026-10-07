@@ -538,6 +538,11 @@ CREATE INDEX IF NOT EXISTS "IX_remito_return_items_RemitoItemId"
                 ADD COLUMN IF NOT EXISTS "ServiceFrom" timestamp with time zone;
             ALTER TABLE sales.invoices
                 ADD COLUMN IF NOT EXISTS "ServiceTo" timestamp with time zone;
+            ALTER TABLE sales.invoices
+                ADD COLUMN IF NOT EXISTS "AssociatedInvoiceId" uuid;
+            CREATE INDEX IF NOT EXISTS "IX_invoices_associated"
+                ON sales.invoices ("TenantId", "AssociatedInvoiceId")
+                WHERE "AssociatedInvoiceId" IS NOT NULL;
             """, cancellationToken);
 
         if (schemaError is not null)

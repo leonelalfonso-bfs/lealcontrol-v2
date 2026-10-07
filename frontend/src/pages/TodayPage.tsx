@@ -190,7 +190,8 @@ export function TodayPage() {
     [invoices]
   );
   const receivables = useMemo(
-    () => withCollections(authorized.filter((inv) => !inv.invoiceType.startsWith("NC")), receipts as unknown as ReceiptForImputation[]),
+    () => withCollections(authorized, receipts as unknown as ReceiptForImputation[])
+      .filter((inv) => !inv.invoiceType.startsWith("NC")),
     [authorized, receipts]
   );
   const validReceipts = useMemo(

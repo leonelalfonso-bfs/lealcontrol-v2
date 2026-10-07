@@ -52,7 +52,8 @@ public sealed record InvoiceDto(
     DateTime CreatedAtUtc,
     int FiscalConcept,
     DateTime? ServiceFrom,
-    DateTime? ServiceTo);
+    DateTime? ServiceTo,
+    Guid? AssociatedInvoiceId = null);
 
 public sealed record InvoiceItemWriteDto(
     Guid? ProductId,
@@ -81,7 +82,10 @@ public sealed record CreateInvoiceCommand(
     DateTime? IssueDate = null,
     int FiscalConcept = 0,
     DateTime? ServiceFrom = null,
-    DateTime? ServiceTo = null) : IRequest<Result<InvoiceDto>>;
+    DateTime? ServiceTo = null,
+    Guid? AssociatedInvoiceId = null,
+    // Solo notas de crédito: si reingresan al stock los productos devueltos.
+    bool RestockItems = true) : IRequest<Result<InvoiceDto>>;
 
 public sealed record AuthorizeInvoiceArcaCommand(Guid Id) : IRequest<Result<InvoiceDto>>;
 
