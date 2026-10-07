@@ -391,7 +391,10 @@ export function InvoicePrintPage() {
                     <div style={{ fontSize: "10px", color: "#475569" }}>Nombre Fantasía: {customer.tradeName}</div>
                   )}
                   <div style={{ fontSize: "10px", color: "#475569", marginTop: "2px" }}>
-                    <strong>CUIT / Identificación:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>{formatCuit(invoice.customerDocument || customer?.documentNumber) || "—"}</span>
+                    <strong>CUIT / Identificación:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>{(() => {
+                      const doc = (invoice.customerDocument || customer?.documentNumber || "").replace(/\D+/g, "");
+                      return !doc || doc === "0" ? "Sin identificar" : formatCuit(doc);
+                    })()}</span>
                   </div>
                   <div style={{ fontSize: "10px", color: "#475569" }}>
                     <strong>Condición frente al IVA:</strong> {taxConditionLabel(invoice.customerTaxCondition || customer?.taxCondition) || "—"}
