@@ -35,7 +35,7 @@ public sealed class FceApiTests : IAsyncLifetime
         client.DefaultRequestHeaders.Authorization = identity.DefaultRequestHeaders.Authorization;
         var customer = Guid.NewGuid();
 
-        async Task<Guid> Create(string type)
+        async Task<Guid> Create(string type, decimal price = 2_000_000m)
         {
             using var response = await client.PostAsJsonAsync("/api/v1/sales/invoices", new
             {
@@ -44,7 +44,7 @@ public sealed class FceApiTests : IAsyncLifetime
                 customerTaxCondition = "ResponsableInscripto", issueDate = Today, dueDate = InAMonth,
                 fiscalConcept = 1, currency = "ARS", exchangeRate = 1m,
                 fceCbu = "0070123420000012345678", fceTransferMode = "SCA",
-                items = new[] { new { code = "EQ", description = "Equipo", quantity = 1m, unitPrice = 2_000_000m, vatRate = 21m } }
+                items = new[] { new { code = "EQ", description = "Equipo", quantity = 1m, unitPrice = price, vatRate = 21m } }
             });
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
             using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -57,6 +57,12 @@ public sealed class FceApiTests : IAsyncLifetime
             Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
             Assert.Contains("FCE", await blocked.Content.ReadAsStringAsync());
         }
+        Assert.Empty(gateway.Submitted);
+
+        // Una FCE por debajo del mínimo tampoco se autoriza.
+        var smallFce = await Create("FCE_A", 1_000m);
+        using (var belowMinimum = await client.PostAsync($"/api/v1/sales/invoices/{smallFce}/authorize-arca", null))
+            Assert.Equal(HttpStatusCode.BadRequest, belowMinimum.StatusCode);
         Assert.Empty(gateway.Submitted);
 
         var fce = await Create("FCE_A");

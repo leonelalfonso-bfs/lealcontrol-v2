@@ -712,10 +712,20 @@ export function InvoiceFormPage() {
                       Cambiar a Factura de Crédito Electrónica
                     </button>
                   </>
-                ) : isFceType(invoiceType) && !fceCheck.obligated ? (
-                  <span style={{ color: "#92400e" }}>
-                    Este cliente no está obligado a recibir FCE según ARCA: si la emitís, ARCA puede rechazarla. Usá una factura común.
-                  </span>
+                ) : isFceType(invoiceType) && !invoiceType.startsWith("NC_") && !invoiceType.startsWith("ND_") ? (
+                  <>
+                    <strong style={{ color: "#92400e" }}>
+                      {fceCheck.obligated
+                        ? `Por este importe corresponde factura común: este cliente recibe FCE desde ${fceCheck.minimumAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.`
+                        : "Este cliente no está obligado a recibir Factura de Crédito Electrónica: corresponde factura común."}
+                    </strong>
+                    <div>
+                      <button type="button" className="btn compact" style={{ marginTop: 8 }}
+                        onClick={() => setInvoiceType(letterOf(invoiceType) === "B" ? "B" : "A")}>
+                        Cambiar a factura común
+                      </button>
+                    </div>
+                  </>
                 ) : fceCheck.obligated ? (
                   <span className="muted">
                     Este cliente recibe FCE desde {fceCheck.minimumAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}; por este importe corresponde factura común.

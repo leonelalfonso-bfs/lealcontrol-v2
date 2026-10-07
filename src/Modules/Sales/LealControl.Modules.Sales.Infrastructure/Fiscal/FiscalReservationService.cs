@@ -87,6 +87,19 @@ public sealed class FiscalReservationService
                 return Fail($"Este cliente está obligado a recibir Factura de Crédito Electrónica desde $ {obligation.MinimumAmount:N2}: emití una FCE en lugar de una factura común.");
         }
 
+        // Y al revés: una FCE solo si el cliente está obligado y el importe llega al mínimo vigente.
+        if (WsfeCaeRequestBuilder.IsFceInvoice(data.VoucherType))
+        {
+            var obligation = await _gateway.GetFceObligationAsync(data.ReceiverDocumentNumber,
+                DateOnly.ParseExact(data.IssueDate, "yyyyMMdd"), ct);
+            if (!obligation.Ok)
+                return Fail($"No se pudo verificar en ARCA si corresponde Factura de Crédito Electrónica: {obligation.Detail}");
+            if (!obligation.Obligated)
+                return Fail("Este cliente no está obligado a recibir Factura de Crédito Electrónica: emití una factura común.");
+            if (data.TotalAmount * data.ExchangeRate < obligation.MinimumAmount)
+                return Fail($"Por este importe corresponde factura común: el cliente recibe Factura de Crédito Electrónica desde $ {obligation.MinimumAmount:N2}.");
+        }
+
         var numbering = await _gateway.GetLastAuthorizedAsync(
             invoice.PointOfSale, data.VoucherType, ct);
         if (!numbering.Ok || numbering.LastNumber < 0 || numbering.LastNumber >= 99_999_999)
