@@ -419,7 +419,12 @@ export function InvoicePrintPage() {
                   </div>
                   {isUsd && (
                     <div style={{ fontSize: "10.5px", color: "#0d9488", marginTop: "2px", fontWeight: "bold" }}>
-                      Tipo de Cambio Oficial (BNA Divisa): $ {invoice.exchangeRate.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                      Tipo de Cambio: $ {invoice.exchangeRate.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                    </div>
+                  )}
+                  {isUsd && (
+                    <div style={{ fontSize: "10.5px", color: "#334155", marginTop: "2px" }}>
+                      <strong>Cancelación:</strong> {invoice.paidInForeignCurrency ? "en dólares estadounidenses" : "en pesos"}
                     </div>
                   )}
                   {associated && (
@@ -553,10 +558,10 @@ export function InvoicePrintPage() {
               {isUsd && (
                 <tr>
                   <td style={{ padding: "2px 0", textAlign: "right", color: "#64748b", fontSize: "9.5px" }}>
-                    Equiv. Pesos Argentinos (TC ${invoice.exchangeRate}):
+                    Equiv. Pesos Argentinos (TC $ {invoice.exchangeRate.toLocaleString("es-AR", { maximumFractionDigits: 6 })}):
                   </td>
                   <td style={{ padding: "2px 0", textAlign: "right", fontSize: "9.5px", color: "#1e3a8a", fontFamily: "monospace", fontWeight: "bold" }}>
-                    $ {(invoice.total * invoice.exchangeRate).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    $ {(invoice.total * invoice.exchangeRate).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
               )}

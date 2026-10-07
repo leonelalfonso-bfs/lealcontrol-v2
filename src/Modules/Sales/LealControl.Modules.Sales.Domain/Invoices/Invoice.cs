@@ -118,6 +118,9 @@ public sealed class Invoice : Entity<Guid>
     // Factura original de una nota de crédito o débito (se informa a ARCA como CbteAsoc).
     public Guid? AssociatedInvoiceId { get; private set; }
 
+    // Comprobante en moneda extranjera que se cancela en esa misma moneda (CanMisMonExt = S).
+    public bool PaidInForeignCurrency { get; private set; }
+
     public string Currency { get; private set; } = "ARS";
 
     public decimal ExchangeRate { get; private set; } = 1.0m;
@@ -172,7 +175,8 @@ public sealed class Invoice : Entity<Guid>
         int fiscalConcept = 0,
         DateTime? serviceFrom = null,
         DateTime? serviceTo = null,
-        Guid? associatedInvoiceId = null)
+        Guid? associatedInvoiceId = null,
+        bool paidInForeignCurrency = false)
     {
         var formatted = $"{pointOfSale:D4}-{invoiceNumber:D8}";
         var utcIssueDate = issueDate is null ? DateTime.UtcNow
@@ -209,7 +213,18 @@ public sealed class Invoice : Entity<Guid>
             DateTime.UtcNow);
         invoice.SetFiscalDetails(fiscalConcept, serviceFrom, serviceTo);
         invoice.AssociatedInvoiceId = associatedInvoiceId;
+        invoice.PaidInForeignCurrency = currency != "ARS" && paidInForeignCurrency;
         return invoice;
+    }
+
+    // Solo en borradores sin reserva fiscal: alinea la cotización con la oficial de ARCA.
+    public void ApplyExchangeRate(decimal rate)
+    {
+        if (Status != "Draft" || Cae is not null)
+            throw new InvalidOperationException("Solo se puede cambiar la cotización de un borrador.");
+        if (Currency == "ARS" || rate <= 0m)
+            throw new ArgumentException("Cotización inválida.");
+        ExchangeRate = rate;
     }
 
     public void SetFiscalDetails(int concept, DateTime? from, DateTime? to)

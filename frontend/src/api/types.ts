@@ -896,6 +896,7 @@ export type Invoice = {
   serviceFrom?: string | null;
   serviceTo?: string | null;
   associatedInvoiceId?: string | null;
+  paidInForeignCurrency?: boolean;
   currency: string;
   exchangeRate: number;
   subtotal: number;
@@ -932,6 +933,7 @@ export type InvoiceWrite = {
   serviceTo?: string | null;
   associatedInvoiceId?: string | null;
   restockItems?: boolean;
+  paidInForeignCurrency?: boolean;
   currency: string;
   exchangeRate: number;
   notes?: string | null;

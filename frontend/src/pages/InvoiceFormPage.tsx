@@ -84,7 +84,10 @@ export function InvoiceFormPage() {
   const [serviceFrom, setServiceFrom] = useState<string>("");
   const [serviceTo, setServiceTo] = useState<string>("");
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
-  const [rateSource, setRateSource] = useState<"divisas" | "billetes" | "manual">("divisas");
+  const [rateSource, setRateSource] = useState<"arca" | "divisas" | "billetes" | "manual">("divisas");
+  const [arcaRateInfo, setArcaRateInfo] = useState<string | null>(null);
+  // RG 5616: si se cobra en la misma moneda extranjera, la cotización es la oficial de ARCA.
+  const [paidInForeignCurrency, setPaidInForeignCurrency] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<number>(1.0);
   const [advancePercent, setAdvancePercent] = useState<number>(100);
   const [notes, setNotes] = useState<string>("");
@@ -139,8 +142,9 @@ export function InvoiceFormPage() {
           setServiceFrom(original.serviceFrom?.slice(0, 10) ?? "");
           setServiceTo(original.serviceTo?.slice(0, 10) ?? "");
           setCurrency(original.currency === "USD" ? "USD" : "ARS");
+          setPaidInForeignCurrency(Boolean(original.paidInForeignCurrency));
           setExchangeRate(original.exchangeRate || 1);
-          setRateSource("manual");
+          setRateSource(original.paidInForeignCurrency ? "arca" : "manual");
           setNotes(`${noteKind === "NC" ? "Nota de crédito" : "Nota de débito"} sobre Factura ${letter} ${original.formattedNumber}`);
           setItems(noteKind === "NC"
             ? original.items.map((item) => ({
@@ -360,6 +364,26 @@ export function InvoiceFormPage() {
     }
   };
 
+  // Cotización oficial de ARCA (BNA divisa vendedor del día hábil anterior) para la fecha de emisión.
+  useEffect(() => {
+    if (currency !== "USD" || rateSource !== "arca") return;
+    let cancelled = false;
+    api.getArcaExchangeRate(issueDate)
+      .then((r) => {
+        if (cancelled) return;
+        if (r.ok) {
+          setExchangeRate(r.rate);
+          const d = r.rateDate;
+          const env = r.production ? "" : " · ARCA homologación (datos de prueba)";
+          setArcaRateInfo((d.length === 8 ? `Cotización ARCA del ${d.slice(6, 8)}/${d.slice(4, 6)}/${d.slice(0, 4)}` : "Cotización ARCA vigente") + env);
+        } else {
+          setArcaRateInfo(r.detail || "No se pudo obtener la cotización de ARCA.");
+        }
+      })
+      .catch(() => !cancelled && setArcaRateInfo("No se pudo obtener la cotización de ARCA."));
+    return () => { cancelled = true; };
+  }, [currency, rateSource, issueDate]);
+
   // Multicurrency Dynamic Conversion
   const handleCurrencyChange = async (newCurrency: "ARS" | "USD") => {
     if (newCurrency === currency) return;
@@ -382,6 +406,7 @@ export function InvoiceFormPage() {
 
     setCurrency(newCurrency);
     setExchangeRate(newCurrency === "ARS" ? 1.0 : effectiveRate);
+    if (newCurrency === "USD") setRateSource("arca");
     setItems(converted);
   };
 
@@ -490,6 +515,7 @@ export function InvoiceFormPage() {
       serviceTo: fiscalConcept === 2 || fiscalConcept === 3 ? serviceTo : undefined,
       currency,
       exchangeRate: currency === "USD" ? exchangeRate : 1.0,
+      paidInForeignCurrency: currency === "USD" && paidInForeignCurrency,
       associatedInvoiceId: associatedInvoice?.id,
       restockItems: noteKind === "NC" ? restockItems : undefined,
       notes,
@@ -786,15 +812,16 @@ export function InvoiceFormPage() {
                       <select
                         value={rateSource}
                         onChange={(e) => {
-                          const src = e.target.value as "divisas" | "billetes" | "manual";
+                          const src = e.target.value as "arca" | "divisas" | "billetes" | "manual";
                           setRateSource(src);
                           if (src === "divisas" && exchangeRates?.usdDivisaSell) setExchangeRate(exchangeRates.usdDivisaSell);
                           if (src === "billetes" && exchangeRates?.usdBilleteSell) setExchangeRate(exchangeRates.usdBilleteSell);
                         }}
                       >
-                        <option value="divisas">Dólar Divisa BNA (Mayorista Comercial)</option>
-                        <option value="billetes">Dólar Billete BNA (Minorista)</option>
-                        <option value="manual">Manual (Personalizado)</option>
+                        <option value="arca">Oficial ARCA (BNA divisa, día hábil anterior)</option>
+                        <option value="divisas" disabled={paidInForeignCurrency}>Dólar Divisa BNA (Mayorista Comercial)</option>
+                        <option value="billetes" disabled={paidInForeignCurrency}>Dólar Billete BNA (Minorista)</option>
+                        <option value="manual" disabled={paidInForeignCurrency}>Manual (Personalizado)</option>
                       </select>
                     </label>
 
@@ -806,10 +833,24 @@ export function InvoiceFormPage() {
                         min="1"
                         value={exchangeRate}
                         onChange={(e) => setExchangeRate(Number(e.target.value))}
+                        readOnly={rateSource === "arca"}
                         required
                       />
+                      {rateSource === "arca" && arcaRateInfo && <span className="muted" style={{ fontSize: "0.78rem" }}>{arcaRateInfo}</span>}
                     </label>
                   </div>
+                  <label style={{ display: "flex", flexDirection: "row", justifyContent: "flex-start", gap: 8, alignItems: "center", marginTop: 10, fontSize: "0.85rem" }}>
+                    <input
+                      type="checkbox"
+                      checked={paidInForeignCurrency}
+                      onChange={(e) => {
+                        setPaidInForeignCurrency(e.target.checked);
+                        if (e.target.checked) setRateSource("arca");
+                      }}
+                      style={{ width: "auto" }}
+                    />
+                    Se cobra en dólares (el cliente paga en USD). ARCA exige la cotización oficial.
+                  </label>
                 </div>
               )}
 

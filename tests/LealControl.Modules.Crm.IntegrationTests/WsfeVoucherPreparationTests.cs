@@ -129,7 +129,7 @@ public sealed class WsfeVoucherPreparationTests
     [InlineData("A", "ResponsableInscripto", "", "ARS", 2, 21)]
     [InlineData("B", "Exento", "30123456", "ARS", 2, 21)]
     [InlineData("B", "ConsumidorFinal", "12345", "ARS", 2, 21)]
-    [InlineData("A", "ResponsableInscripto", "20123456786", "USD", 2, 21)]
+    [InlineData("A", "ResponsableInscripto", "20123456786", "EUR", 2, 21)]
     [InlineData("A", "ResponsableInscripto", "20123456786", "ARS", 0, 21)]
     [InlineData("A", "ResponsableInscripto", "20123456786", "ARS", 2, 5)]
     [InlineData("C", "ResponsableInscripto", "20123456786", "ARS", 2, 21)]
@@ -158,5 +158,46 @@ public sealed class WsfeVoucherPreparationTests
         var wrongClass = associated with { Type = 6 };
         Assert.False(WsfeVoucherPreparation.TryBuild(Draft("NC_A"), out _, out _, wrongClass));
         Assert.False(WsfeVoucherPreparation.TryBuild(Draft("A"), out _, out _, associated));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Dollar_invoice_maps_to_dol_with_rate_and_same_currency_flag(bool paidInDollars)
+    {
+        var invoice = Invoice.Create(new TenantId(Guid.NewGuid()), "A", 1, 1, null, null,
+            Guid.NewGuid(), "Cliente de prueba", "20123456786", "ResponsableInscripto", null,
+            Issue.AddDays(10), "USD", 1450.5m, null, Issue, 1, paidInForeignCurrency: paidInDollars);
+        invoice.AddItem(null, "ITEM", "Ítem en dólares", 2m, 50m, 21m);
+        var data = Valid(invoice);
+        Assert.Equal("DOL", data.CurrencyCode);
+        Assert.Equal(1450.5m, data.ExchangeRate);
+        Assert.Equal(paidInDollars, data.PaidInSameForeignCurrency);
+        Assert.Equal(121m, data.TotalAmount);
+        var xml = WsfeCaeRequestBuilder.Build(data, 1, 9, "30715489629", "t", "s");
+        Assert.Contains($"<ar:CanMisMonExt>{(paidInDollars ? "S" : "N")}</ar:CanMisMonExt>", xml);
+    }
+
+    [Fact]
+    public void Consumer_threshold_is_measured_in_pesos_for_dollar_invoices()
+    {
+        var invoice = Invoice.Create(new TenantId(Guid.NewGuid()), "B", 1, 1, null, null,
+            Guid.NewGuid(), "Consumidor final", "0", "ConsumidorFinal", null,
+            Issue.AddDays(10), "USD", 1500m, null, Issue, 1);
+        invoice.AddItem(null, "ITEM", "Equipo", 1m, 6000m, 21m);
+        Assert.False(WsfeVoucherPreparation.TryBuild(invoice, out _, out var error));
+        Assert.Contains("identificarse", error);
+    }
+
+    [Theory]
+    [InlineData("20261005", "20261007", "20261005")]
+    [InlineData("20261007", "20261007", null)]
+    [InlineData("20261009", "20261007", null)]
+    public void Exchange_rate_date_uses_issue_date_only_when_it_is_in_the_past(
+        string issue, string today, string? expected)
+    {
+        var now = DateTimeOffset.ParseExact(today + " 15:00 -03:00", "yyyyMMdd HH:mm zzz",
+            System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal(expected, FiscalExchangeRateDate.For(issue, now));
     }
 }

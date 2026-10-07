@@ -6,6 +6,8 @@ using Microsoft.Extensions.Configuration;
 using LealControl.BuildingBlocks.Security;
 using LealControl.Modules.Sales.Application.Invoices;
 using MediatR;
+using LealControl.Modules.Crm.Contracts.Fiscal;
+using LealControl.Modules.Sales.Infrastructure.Fiscal;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -39,6 +41,37 @@ public static class InvoiceEndpoints
             });
         }).RequireAuthorization("RequireSales")
           .RequireAuthorization(policy => policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
+
+        // Cotización oficial de ARCA para la fecha de emisión (yyyy-MM-dd); sin fecha, la vigente.
+        group.MapGet("/arca-exchange-rate", async (string? date, IArcaFiscalGateway gateway,
+            CancellationToken cancellationToken) =>
+        {
+            var issue = string.IsNullOrWhiteSpace(date) ? null : date.Replace("-", "");
+            var query = issue is null ? null : FiscalExchangeRateDate.For(issue, TimeProvider.System.GetUtcNow());
+            var rate = await gateway.GetExchangeRateAsync("DOL", query, cancellationToken);
+            return Results.Ok(new { ok = rate.Ok, rate = rate.Rate, rateDate = rate.RateDate, detail = rate.Detail, production = rate.Production });
+        }).RequireAuthorization("RequireSales");
+
+        group.MapPost("/{id:guid}/apply-arca-rate", async (Guid id, SalesDbContext db, ITenantContext tenant,
+            IArcaFiscalGateway gateway, CancellationToken cancellationToken) =>
+        {
+            var tenantId = tenant.TenantId;
+            var invoice = await db.Invoices.Include(i => i.Items)
+                .FirstOrDefaultAsync(i => i.Id == id && i.TenantId == tenantId, cancellationToken);
+            if (invoice is null)
+                return Results.NotFound();
+            if (invoice.Status != "Draft" || invoice.Currency == "ARS" ||
+                await db.FiscalAuthorizationAttempts.AnyAsync(a => a.TenantId == tenantId && a.InvoiceId == id, cancellationToken))
+                return Results.BadRequest(LealControl.BuildingBlocks.Results.Error.Validation("Sales.Invoice.RateLocked",
+                    "Solo se actualiza la cotización de un borrador en moneda extranjera que aún no se envió a ARCA."));
+            var issue = invoice.IssueDate.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+            var rate = await gateway.GetExchangeRateAsync("DOL", FiscalExchangeRateDate.For(issue, TimeProvider.System.GetUtcNow()), cancellationToken);
+            if (!rate.Ok)
+                return Results.BadRequest(LealControl.BuildingBlocks.Results.Error.Validation("Sales.Invoice.RateUnavailable", rate.Detail));
+            invoice.ApplyExchangeRate(rate.Rate);
+            await db.SaveChangesAsync(cancellationToken);
+            return Results.Ok(InvoiceQueryHandlers.ToDto(invoice));
+        }).RequireAuthorization(policy => policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
 
         group.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
         {

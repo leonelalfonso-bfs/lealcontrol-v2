@@ -79,4 +79,17 @@ public sealed class WsfeVoucherLookupParserTests
         Assert.False(WsfeVoucherLookupParser.Parse("<Envelope><FECompConsultarResult/></Envelope>", 5, 1, 44).Confirmed);
         Assert.False(WsfeVoucherLookupParser.Parse("not xml", 5, 1, 44).Confirmed);
     }
+
+    [Fact]
+    public void Reads_official_exchange_rate_and_rejects_errors()
+    {
+        const string ok = "<Envelope><Body><FEParamGetCotizacionResponse><FEParamGetCotizacionResult><ResultGet><MonId>DOL</MonId><MonCotiz>1450.5</MonCotiz><FchCotiz>20261006</FchCotiz></ResultGet></FEParamGetCotizacionResult></FEParamGetCotizacionResponse></Body></Envelope>";
+        var rate = WsfeExchangeRateParser.Parse(ok, "DOL");
+        Assert.True(rate.Ok);
+        Assert.Equal(1450.5m, rate.Rate);
+        Assert.Equal("20261006", rate.RateDate);
+        Assert.False(WsfeExchangeRateParser.Parse(ok.Replace("<MonId>DOL", "<MonId>060"), "DOL").Ok);
+        Assert.False(WsfeExchangeRateParser.Parse(ok.Replace("</ResultGet>", "</ResultGet><Errors><Err><Code>12002</Code></Err></Errors>"), "DOL").Ok);
+        Assert.False(WsfeExchangeRateParser.Parse("no xml", "DOL").Ok);
+    }
 }
