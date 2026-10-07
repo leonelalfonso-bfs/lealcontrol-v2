@@ -23,6 +23,8 @@ public static class DependencyInjection
         services.AddTenantDbContext<SalesDbContext>(SalesDbContext.Schema);
 
         services.AddScoped<ISalesUnitOfWork>(sp => sp.GetRequiredService<SalesDbContext>());
+        services.AddSingleton(new LealControl.Modules.Sales.Infrastructure.Fiscal.FiscalEmissionPolicy(
+            configuration.GetValue("Arca:AllowProductionAuthorization", false)));
         services.AddScoped<LealControl.Modules.Sales.Infrastructure.Fiscal.FiscalReservationService>();
         services.AddScoped<LealControl.Modules.Sales.Infrastructure.Fiscal.FiscalVoucherRecoveryService>();
         services.AddScoped<LealControl.Modules.Sales.Infrastructure.Fiscal.FiscalAuthorizationService>();

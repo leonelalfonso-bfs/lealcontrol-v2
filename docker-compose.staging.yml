@@ -67,6 +67,9 @@ services:
       SUPERADMIN_BOOTSTRAP_PASSWORD: ${SUPERADMIN_BOOTSTRAP_PASSWORD:-}
       SUPERADMIN_BOOTSTRAP_EMAIL: ${SUPERADMIN_BOOTSTRAP_EMAIL:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # Emisión de facturas en ARCA: apagada por defecto. ALLOW_PRODUCTION solo en el servidor de producción.
+      Arca__EnableInvoiceAuthorization: ${ARCA_ENABLE_INVOICE_AUTHORIZATION:-false}
+      Arca__AllowProductionAuthorization: ${ARCA_ALLOW_PRODUCTION_AUTHORIZATION:-false}
     depends_on:
       postgres:
         condition: service_healthy

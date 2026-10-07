@@ -10,6 +10,13 @@ namespace LealControl.Modules.Sales.Infrastructure.Fiscal;
 public sealed record FiscalReservationResult(
     bool Ok, Guid? AttemptId, long? VoucherNumber, string Detail);
 
+/// <summary>
+/// Qué ambientes de ARCA puede usar este servidor para emitir. Por defecto solo homologación:
+/// un staging con una empresa configurada en producción no puede generar facturas reales.
+/// Se habilita con Arca:AllowProductionAuthorization=true únicamente en el servidor de producción.
+/// </summary>
+public sealed record FiscalEmissionPolicy(bool AllowProduction);
+
 /// <summary>Reserva y confirma en base el número antes de cualquier FECAESolicitar.</summary>
 public sealed class FiscalReservationService
 {
@@ -17,14 +24,16 @@ public sealed class FiscalReservationService
     private readonly ITenantContext _tenant;
     private readonly IArcaFiscalGateway _gateway;
     private readonly TimeProvider _clock;
+    private readonly FiscalEmissionPolicy _policy;
 
     public FiscalReservationService(SalesDbContext db, ITenantContext tenant,
-        IArcaFiscalGateway gateway, TimeProvider? clock = null)
+        IArcaFiscalGateway gateway, TimeProvider? clock = null, FiscalEmissionPolicy? policy = null)
     {
         _db = db;
         _tenant = tenant;
         _gateway = gateway;
         _clock = clock ?? TimeProvider.System;
+        _policy = policy ?? new FiscalEmissionPolicy(AllowProduction: false);
     }
 
     public async Task<FiscalReservationResult> ReserveAsync(Guid invoiceId, CancellationToken ct)
@@ -48,6 +57,10 @@ public sealed class FiscalReservationService
             invoice.PointOfSale, data.VoucherType, ct);
         if (!numbering.Ok || numbering.LastNumber < 0 || numbering.LastNumber >= 99_999_999)
             return Fail("No se pudo verificar el último número autorizado en ARCA.");
+        // Antes de reservar: no se deja ninguna reserva colgada si el ambiente no está permitido.
+        if (numbering.Production && !_policy.AllowProduction)
+            return Fail("La emisión en ARCA producción está deshabilitada en este servidor. "
+                + "Esta empresa tiene configurado el ambiente de producción: usá homologación para probar.");
         var number = numbering.LastNumber + 1;
         string fingerprint;
         try
