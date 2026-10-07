@@ -121,6 +121,12 @@ public sealed class Invoice : Entity<Guid>
     // Comprobante en moneda extranjera que se cancela en esa misma moneda (CanMisMonExt = S).
     public bool PaidInForeignCurrency { get; private set; }
 
+    // Cotización BNA pactada para cancelar en pesos ("Divisa" o "Billete"), del día hábil anterior al pago.
+    public string? ExchangeRateType { get; private set; }
+
+    // Nota de débito/crédito que documenta la diferencia de cambio de una imputación de cobro.
+    public Guid? ExchangeDifferenceImputationId { get; private set; }
+
     public string Currency { get; private set; } = "ARS";
 
     public decimal ExchangeRate { get; private set; } = 1.0m;
@@ -176,7 +182,9 @@ public sealed class Invoice : Entity<Guid>
         DateTime? serviceFrom = null,
         DateTime? serviceTo = null,
         Guid? associatedInvoiceId = null,
-        bool paidInForeignCurrency = false)
+        bool paidInForeignCurrency = false,
+        string? exchangeRateType = null,
+        Guid? exchangeDifferenceImputationId = null)
     {
         var formatted = $"{pointOfSale:D4}-{invoiceNumber:D8}";
         var utcIssueDate = issueDate is null ? DateTime.UtcNow
@@ -214,6 +222,8 @@ public sealed class Invoice : Entity<Guid>
         invoice.SetFiscalDetails(fiscalConcept, serviceFrom, serviceTo);
         invoice.AssociatedInvoiceId = associatedInvoiceId;
         invoice.PaidInForeignCurrency = currency != "ARS" && paidInForeignCurrency;
+        invoice.ExchangeRateType = currency != "ARS" && exchangeRateType is "Divisa" or "Billete" ? exchangeRateType : null;
+        invoice.ExchangeDifferenceImputationId = exchangeDifferenceImputationId;
         return invoice;
     }
 

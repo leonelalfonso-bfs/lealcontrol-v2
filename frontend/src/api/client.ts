@@ -239,7 +239,7 @@ export const api = {
   importIssuedCheques: (csvContent: string) => request<{ imported: number; duplicates: number }>("/api/v1/finance/echeqs/import-issued", { method: "POST", body: JSON.stringify({ csvContent }) }),
   createReceivedCheque: (body: object) => request<import("./types/finance").ReceivedCheque>("/api/v1/finance/echeqs", { method: "POST", body: JSON.stringify(body) }),
   useChequeForPayment: (id: string, reference: string) => request(`/api/v1/finance/echeqs/${id}/use-for-payment`, { method: "POST", body: JSON.stringify({ reference }) }),
-  listCollectionReceipts: () => request<{ id: string; customerId?: string; accountId?: string; invoiceId?: string; receiptNumber: string; amount: number; currency: string; receiptDateUtc: string; description: string; status: string; voidReason?: string | null; voidedAtUtc?: string | null; linesCount?: number; invoicesCount?: number; invoicesSummary?: string; imputations?: Array<{ invoiceId: string; amount: number }> }[]>("/api/v1/finance/collections"),
+  listCollectionReceipts: () => request<{ id: string; customerId?: string; accountId?: string; invoiceId?: string; receiptNumber: string; amount: number; currency: string; receiptDateUtc: string; description: string; status: string; voidReason?: string | null; voidedAtUtc?: string | null; linesCount?: number; invoicesCount?: number; invoicesSummary?: string; imputations?: Array<{ id: string; invoiceId: string; amount: number; amountUsd?: number | null; invoiceExchangeRate?: number | null; paymentExchangeRate?: number | null; exchangeDifferenceArs?: number | null }> }[]>("/api/v1/finance/collections"),
   getCollectionReceipt: (id: string) => request<CollectionReceiptDetail>(`/api/v1/finance/collections/${id}`),
   createCollectionReceipt: (body: {
     accountId?: string;
@@ -796,6 +796,12 @@ export const api = {
     request<{ enabled: boolean; attempts: Array<{ invoiceId: string; status: string; voucherNumber: number }> }>("/api/v1/sales/invoices/fiscal-status"),
   recoverInvoiceArca: (id: string) =>
     request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/recover-arca`, { method: "POST" }),
+  getBnaRate: (type: "divisa" | "billete", date?: string) =>
+    request<{ type: string; date: string; current: { date: string; buy: number; sell: number } | null; previous: { date: string; buy: number; sell: number } | null }>(
+      `/api/v1/sales/quotes/bna?type=${type}${date ? `&date=${encodeURIComponent(date)}` : ""}`),
+  getCollectionImputation: (id: string) =>
+    request<{ id: string; invoiceId: string; invoiceNumber: string; amountImputed: number; amountUsd?: number | null; invoiceExchangeRate?: number | null; paymentExchangeRate?: number | null; exchangeDifferenceArs?: number | null; receiptNumber: string; receiptDateUtc: string }>(
+      `/api/v1/finance/collections/imputations/${id}`),
   getArcaExchangeRate: (date?: string) =>
     request<{ ok: boolean; rate: number; rateDate: string; detail: string; production: boolean }>(
       `/api/v1/sales/invoices/arca-exchange-rate${date ? `?date=${encodeURIComponent(date)}` : ""}`),

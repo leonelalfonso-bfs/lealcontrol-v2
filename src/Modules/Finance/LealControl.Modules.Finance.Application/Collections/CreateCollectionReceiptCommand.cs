@@ -19,7 +19,12 @@ public sealed record CollectionReceiptImputationInput(
     Guid InvoiceId,
     string InvoiceNumber,
     decimal InvoiceTotal,
-    decimal AmountImputed);
+    // En la moneda del recibo.
+    decimal AmountImputed,
+    // Factura en dólares: USD que cancela esta imputación y cotizaciones de factura y de pago.
+    decimal? AmountUsd = null,
+    decimal? InvoiceExchangeRate = null,
+    decimal? PaymentExchangeRate = null);
 
 public sealed record CreateCollectionReceiptCommand(
     Guid? AccountId,

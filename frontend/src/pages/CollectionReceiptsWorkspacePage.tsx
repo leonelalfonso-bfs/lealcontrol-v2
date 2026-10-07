@@ -42,7 +42,12 @@ type ImputationRow = {
   amountImputedUsd: number;
   differenceExchangeArs: number;
   adjustmentType: string;
+  rateType: "Divisa" | "Billete";
+  rateTouched?: boolean;
 };
+
+type BnaQuote = { date: string; buy: number; sell: number } | null;
+type BnaPair = { previous: BnaQuote; current: BnaQuote };
 
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
@@ -70,6 +75,8 @@ export function CollectionReceiptsWorkspacePage() {
   const [movementAccountFilter, setMovementAccountFilter] = useState<string>(""); // "" = todas las cuentas
   const [loadingMovements, setLoadingMovements] = useState(false);
 
+  // Cotizaciones BNA vendedor para la fecha del recibo: día hábil anterior (la pactada) y del día.
+  const [bnaRates, setBnaRates] = useState<Partial<Record<"Divisa" | "Billete", BnaPair>>>({});
   const [receiptDate, setReceiptDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
   );
@@ -213,7 +220,9 @@ export function CollectionReceiptsWorkspacePage() {
       const pendingBalanceUsd = isUsd ? Math.max(0, (inv.total || 0) - pastImputedUsd) : 0;
       const pendingBalanceArs = isUsd ? pendingBalanceUsd * invoiceRate : Math.max(0, (inv.total || 0) - pastImputedArs);
 
-      const paymentRate = invoiceRate; // Default to invoice issuance rate
+      const rateType: "Divisa" | "Billete" = inv.exchangeRateType === "Billete" ? "Billete" : "Divisa";
+      // Cotización pactada: BNA vendedor del día hábil anterior a la fecha de cobro.
+      const paymentRate = (isUsd && bnaRates[rateType]?.previous?.sell) || invoiceRate;
       const defaultArs = isUsd ? pendingBalanceUsd * paymentRate : pendingBalanceArs;
       const defaultUsd = isUsd ? pendingBalanceUsd : (paymentRate > 0 ? defaultArs / paymentRate : 0);
 
@@ -229,12 +238,39 @@ export function CollectionReceiptsWorkspacePage() {
         amountImputedArs: defaultArs,
         amountImputedUsd: defaultUsd,
         differenceExchangeArs: 0,
-        adjustmentType: "Sin ajuste"
+        adjustmentType: "Sin ajuste",
+        rateType
       };
     });
 
     setImputations(rows);
   }, [selectedCustomerId, invoices, customers, receipts]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all((["Divisa", "Billete"] as const).map(async (type) => {
+      const r = await api.getBnaRate(type === "Divisa" ? "divisa" : "billete", receiptDate).catch(() => null);
+      return [type, r ? { previous: r.previous, current: r.current } : { previous: null, current: null }] as const;
+    })).then((pairs) => {
+      if (cancelled) return;
+      const next = Object.fromEntries(pairs) as Record<"Divisa" | "Billete", BnaPair>;
+      setBnaRates(next);
+      // Las filas en USD que el usuario no tocó toman la cotización del día hábil anterior.
+      setImputations((prev) => prev.map((row) => {
+        const rate = next[row.rateType]?.previous?.sell;
+        if (!row.isUsd || row.rateTouched || !rate) return row;
+        const diffArs = row.selected ? row.amountImputedUsd * (rate - row.invoiceRate) : 0;
+        return {
+          ...row,
+          paymentRate: rate,
+          amountImputedArs: row.amountImputedUsd * rate,
+          differenceExchangeArs: diffArs,
+          adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
+        };
+      }));
+    });
+    return () => { cancelled = true; };
+  }, [receiptDate, selectedCustomerId]);
 
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.id === selectedCustomerId),
@@ -319,6 +355,7 @@ export function CollectionReceiptsWorkspacePage() {
 
       next[idx] = {
         ...cur,
+        rateTouched: true,
         paymentRate: validRate,
         amountImputedArs: imputedArs,
         differenceExchangeArs: diffArs,
@@ -496,8 +533,7 @@ export function CollectionReceiptsWorkspacePage() {
         invoiceCurrency: firstUsdImp ? "USD" : undefined,
         invoiceExchangeRate: firstUsdImp ? firstUsdImp.invoiceRate : undefined,
         paymentExchangeRate: firstUsdImp ? firstUsdImp.paymentRate : undefined,
-        suggestedAdjustmentArs: totalExchangeDifference !== 0 ? totalExchangeDifference : undefined,
-        suggestedAdjustmentType: totalExchangeDifference > 0.01 ? "Nota de débito sugerida" : totalExchangeDifference < -0.01 ? "Nota de crédito sugerida" : undefined,
+        // La diferencia de cambio viaja por imputación (factura); el ajuste a nivel recibo queda para recibos viejos.
         lines: lines.map((l) => ({
           method: l.method,
           amount: Number(l.amount) || 0,
@@ -514,7 +550,12 @@ export function CollectionReceiptsWorkspacePage() {
           invoiceId: i.invoice.id,
           invoiceNumber: i.invoice.formattedNumber,
           invoiceTotal: i.invoice.total,
-          amountImputed: currency === "USD" ? Number(i.amountImputedUsd) : Number(i.amountImputedArs)
+          amountImputed: currency === "USD" ? Number(i.amountImputedUsd) : Number(i.amountImputedArs),
+          ...(i.isUsd && currency === "ARS" ? {
+            amountUsd: Math.round(Number(i.amountImputedUsd) * 100) / 100,
+            invoiceExchangeRate: i.invoiceRate,
+            paymentExchangeRate: i.paymentRate
+          } : {})
         }))
       };
 
@@ -747,6 +788,23 @@ export function CollectionReceiptsWorkspacePage() {
                                   onChange={(e) => handlePaymentRateChange(idx, Number(e.target.value) || 1)}
                                   style={{ width: 85, textAlign: "right", padding: "3px 6px", borderRadius: 4, border: "1px solid var(--surface-border)", fontWeight: 700 }}
                                 />
+                                {(() => {
+                                  const pair = bnaRates[row.rateType];
+                                  const pick = (q: BnaQuote, label: string) => q && (
+                                    <button type="button" className="btn ghost compact" style={{ fontSize: "0.68rem", padding: "1px 5px", marginTop: 3 }}
+                                      title={`${row.rateType} BNA vendedor del ${q.date.split("-").reverse().join("/")}`}
+                                      onClick={() => handlePaymentRateChange(idx, q.sell)}>
+                                      {label} {q.date.slice(8, 10)}/{q.date.slice(5, 7)}: {q.sell.toLocaleString("es-AR")}
+                                    </button>
+                                  );
+                                  return pair && (
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                      <small className="muted" style={{ fontSize: "0.66rem" }}>{row.rateType} BNA</small>
+                                      {pick(pair.previous, "Ant.")}
+                                      {pick(pair.current, "Hoy")}
+                                    </div>
+                                  );
+                                })()}
                                 {row.differenceExchangeArs !== 0 && (
                                   <small style={{ display: "block", fontSize: "0.7rem", color: row.differenceExchangeArs > 0 ? "#059669" : "#dc2626", fontWeight: 700 }}>
                                     {row.differenceExchangeArs > 0 ? `+${money(row.differenceExchangeArs)} (ND)` : `${money(row.differenceExchangeArs)} (NC)`}

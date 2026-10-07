@@ -254,6 +254,32 @@ public static class SalesEndpoints
             return Results.Ok(rates);
         });
 
+        // Cotización BNA (billete o divisa) de una fecha y del día hábil anterior.
+        sales.MapGet("/quotes/bna", async (string type, string? date, IExchangeRateService rateService,
+            CancellationToken cancellationToken) =>
+        {
+            if (type is not ("billete" or "divisa"))
+                return Results.BadRequest("Tipo de cotización inválido: usar billete o divisa.");
+            var day = DateOnly.TryParseExact(date, "yyyy-MM-dd", out var parsed)
+                ? parsed : DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3));
+            try
+            {
+                var rows = await rateService.GetBnaHistoryAsync(type, day, cancellationToken);
+                var current = rows.FirstOrDefault(r => r.Date == day.ToString("yyyy-MM-dd"));
+                var previous = rows.FirstOrDefault(r => string.CompareOrdinal(r.Date, day.ToString("yyyy-MM-dd")) < 0);
+                if (previous is null)
+                {
+                    var older = await rateService.GetBnaHistoryAsync(type, day.AddDays(-5), cancellationToken);
+                    previous = older.FirstOrDefault(r => string.CompareOrdinal(r.Date, day.ToString("yyyy-MM-dd")) < 0);
+                }
+                return Results.Ok(new BnaRateHistoryDto(type, day.ToString("yyyy-MM-dd"), current, previous));
+            }
+            catch (Exception)
+            {
+                return Results.Problem("No se pudo consultar la cotización del Banco Nación.", statusCode: 502);
+            }
+        });
+
         // Product Catalog Endpoints
         sales.MapGet("/categories", async (ISender sender, CancellationToken cancellationToken) =>
         {

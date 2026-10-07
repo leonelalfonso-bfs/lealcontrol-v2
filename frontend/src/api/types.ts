@@ -897,6 +897,8 @@ export type Invoice = {
   serviceTo?: string | null;
   associatedInvoiceId?: string | null;
   paidInForeignCurrency?: boolean;
+  exchangeRateType?: "Divisa" | "Billete" | null;
+  exchangeDifferenceImputationId?: string | null;
   currency: string;
   exchangeRate: number;
   subtotal: number;
@@ -934,6 +936,8 @@ export type InvoiceWrite = {
   associatedInvoiceId?: string | null;
   restockItems?: boolean;
   paidInForeignCurrency?: boolean;
+  exchangeRateType?: "Divisa" | "Billete" | null;
+  exchangeDifferenceImputationId?: string | null;
   currency: string;
   exchangeRate: number;
   notes?: string | null;

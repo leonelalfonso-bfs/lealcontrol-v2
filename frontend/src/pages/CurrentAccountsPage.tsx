@@ -39,6 +39,27 @@ type Receipt = {
   status?: string;
   voidReason?: string | null;
   voidedAtUtc?: string | null;
+  imputations?: Array<{
+    id: string;
+    invoiceId: string;
+    amount: number;
+    amountUsd?: number | null;
+    invoiceExchangeRate?: number | null;
+    paymentExchangeRate?: number | null;
+    exchangeDifferenceArs?: number | null;
+  }>;
+};
+
+/** Diferencia de cambio de un cobro todavía sin su ND/NC emitida. */
+type PendingDifference = {
+  imputationId: string;
+  invoiceId: string;
+  receiptNumber: string;
+  date: string;
+  amountUsd: number;
+  invoiceRate: number;
+  paymentRate: number;
+  differenceArs: number;
 };
 
 type PaymentOrder = {
@@ -66,6 +87,7 @@ type LedgerItem = {
   balance: number;
   source: "sale" | "purchase" | "collection" | "payment" | "adjustment" | "void";
   muted?: boolean;
+  pending?: PendingDifference;
 };
 
 const isActiveDoc = (status?: string | null) =>
@@ -117,6 +139,39 @@ export function CurrentAccountsPage() {
     void loadData();
   }, []);
 
+  // Diferencias de cambio por imputación que todavía no tienen su ND/NC: cuentan en el saldo
+  // hasta que se emite la nota, y desde ahí solo cuenta la nota (nunca las dos).
+  const pendingDifferences = useMemo(() => {
+    const documented = new Set(salesInvoices
+      .filter((i) => i.exchangeDifferenceImputationId && !["Cancelled", "Rejected"].includes(i.status))
+      .map((i) => i.exchangeDifferenceImputationId as string));
+    const byCustomer = new Map<string, PendingDifference[]>();
+    for (const r of receipts) {
+      if (!isActiveDoc(r.status) || !r.customerId) continue;
+      for (const imp of r.imputations ?? []) {
+        const diff = imp.exchangeDifferenceArs ?? 0;
+        if (Math.abs(diff) < 0.01 || documented.has(imp.id)) continue;
+        const list = byCustomer.get(r.customerId) ?? [];
+        list.push({
+          imputationId: imp.id,
+          invoiceId: imp.invoiceId,
+          receiptNumber: r.receiptNumber,
+          date: r.receiptDateUtc,
+          amountUsd: imp.amountUsd ?? 0,
+          invoiceRate: imp.invoiceExchangeRate ?? 0,
+          paymentRate: imp.paymentExchangeRate ?? 0,
+          differenceArs: diff
+        });
+        byCustomer.set(r.customerId, list);
+      }
+    }
+    return byCustomer;
+  }, [receipts, salesInvoices]);
+
+  // Recibos viejos (sin diferencia por imputación) conservan su ajuste sugerido a nivel recibo.
+  const legacyAdjustment = (r: Receipt) =>
+    (r.imputations ?? []).some((imp) => imp.amountUsd) ? 0 : r.suggestedAdjustmentArs || 0;
+
   // Compute stats per entity with exact USD/ARS exchange rates
   const accountRows = useMemo(() => {
     return entities.map((entity) => {
@@ -150,6 +205,8 @@ export function CurrentAccountsPage() {
 
       // Collected sales in USD
       const collectedSalesUsd = custReceipts.reduce((s, r) => {
+        const usdImputed = (r.imputations ?? []).reduce((sum, imp) => sum + (imp.amountUsd || 0), 0);
+        if (usdImputed > 0) return s + usdImputed;
         if (r.invoiceAmount && r.invoiceCurrency === "USD") return s + Number(r.invoiceAmount);
         if (r.currency === "USD") return s + Number(r.amount);
         if (r.paymentExchangeRate && r.paymentExchangeRate > 0) return s + (Number(r.amount) / Number(r.paymentExchangeRate));
@@ -158,7 +215,9 @@ export function CurrentAccountsPage() {
 
       // Balances
       const receivableBalanceUsd = Math.max(0, billedSalesUsd - collectedSalesUsd);
-      const receivableBalanceArs = billedSalesArs - (collectedSalesArs - (custReceipts.reduce((sum, r) => sum + (r.suggestedAdjustmentArs || 0), 0)));
+      const pendingDiffArs = (pendingDifferences.get(entity.id) ?? []).reduce((sum, d) => sum + d.differenceArs, 0);
+      const receivableBalanceArs = billedSalesArs - collectedSalesArs + pendingDiffArs +
+        custReceipts.reduce((sum, r) => sum + legacyAdjustment(r), 0);
 
       // Supplier calculations (Payables) — excluir OP anuladas
       const suppInvoices = purchaseInvoices.filter((p) => p.supplierId === entity.id && p.status !== "Cancelled");
@@ -212,7 +271,7 @@ export function CurrentAccountsPage() {
         netBalance
       };
     });
-  }, [entities, salesInvoices, purchaseInvoices, receipts, paymentOrders]);
+  }, [entities, salesInvoices, purchaseInvoices, receipts, paymentOrders, pendingDifferences]);
 
   // Filtered rows depending on active tab
   const filteredRows = useMemo(() => {
@@ -280,6 +339,7 @@ export function CurrentAccountsPage() {
       credit: number;
       source: LedgerItem["source"];
       muted?: boolean;
+      pending?: PendingDifference;
     }> = [];
 
     // Sales invoices / NC / ND
@@ -346,13 +406,13 @@ export function CurrentAccountsPage() {
             source: "void",
             muted: true
           });
-        } else if (r.suggestedAdjustmentArs && r.suggestedAdjustmentArs > 0.01) {
+        } else if (legacyAdjustment(r) > 0.01) {
           history.push({
             date: r.receiptDateUtc,
             type: "Diferencia de Cambio (ND)",
             number: `Ajuste TC ${r.receiptNumber}`,
             description: `Diferencia de cambio al cobro: TC $${r.paymentExchangeRate} vs TC $${r.invoiceExchangeRate}`,
-            debit: r.suggestedAdjustmentArs,
+            debit: legacyAdjustment(r),
             credit: 0,
             source: "adjustment"
           });
@@ -426,6 +486,20 @@ export function CurrentAccountsPage() {
         }
       });
 
+    for (const d of pendingDifferences.get(ledgerEntity.id) ?? []) {
+      const invoice = salesInvoices.find((i) => i.id === d.invoiceId);
+      history.push({
+        date: d.date,
+        type: d.differenceArs > 0 ? "Diferencia de cambio a documentar (ND)" : "Diferencia de cambio a documentar (NC)",
+        number: `${d.receiptNumber} → ${invoice?.formattedNumber ?? "factura"}`,
+        description: `USD ${d.amountUsd.toLocaleString("es-AR", { minimumFractionDigits: 2 })} cobrados a TC $ ${d.paymentRate.toLocaleString("es-AR")} vs TC $ ${d.invoiceRate.toLocaleString("es-AR")} de la factura`,
+        debit: d.differenceArs > 0 ? d.differenceArs : 0,
+        credit: d.differenceArs < 0 ? -d.differenceArs : 0,
+        source: "adjustment",
+        pending: d
+      });
+    }
+
     // Sort by date ascending
     history.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -455,7 +529,7 @@ export function CurrentAccountsPage() {
     }
 
     return computed;
-  }, [ledgerEntity, salesInvoices, purchaseInvoices, receipts, paymentOrders]);
+  }, [ledgerEntity, salesInvoices, purchaseInvoices, receipts, paymentOrders, pendingDifferences]);
 
   const handleExportAccountsExcel = () => {
     const columns: ExcelColumn<any>[] = [
@@ -994,6 +1068,12 @@ export function CurrentAccountsPage() {
                             <span style={{ display: "block", color: "#2563eb", fontSize: "0.75rem", fontWeight: 700 }}>
                               Original: {item.originalAmount}
                             </span>
+                          )}
+                          {item.pending && (
+                            <Link className="btn compact" style={{ marginTop: 6, display: "inline-block" }}
+                              to={`/facturas/nueva?nota=${item.pending.differenceArs > 0 ? "ND" : "NC"}&origen=${item.pending.invoiceId}&dif=${item.pending.imputationId}`}>
+                              Emitir {item.pending.differenceArs > 0 ? "ND" : "NC"} por diferencia de cambio
+                            </Link>
                           )}
                         </td>
                         <td style={{ textAlign: "right", color: item.debit > 0 ? "#059669" : "inherit" }}>

@@ -11,7 +11,8 @@ export type ReceiptForImputation = {
   paymentExchangeRate?: number | null;
   status?: string | null;
   /** Importe imputado a cada factura (en la moneda de la factura). */
-  imputations?: Array<{ invoiceId: string; amount: number }> | null;
+  /** amount está en la moneda del recibo; amountUsd son los dólares que cancela en una factura USD. */
+  imputations?: Array<{ invoiceId: string; amount: number; amountUsd?: number | null }> | null;
 };
 
 const VOIDED = ["voided", "cancelled", "anulado"];
@@ -39,19 +40,28 @@ export function withCollections<T extends Invoice>(invoices: readonly T[], recei
   const now = Date.now();
   const credits = new Map<string, number>();
   for (const note of invoices) {
-    if (note.invoiceType.startsWith("NC") && note.status === "Authorized" && note.associatedInvoiceId) {
+    // Las notas por diferencia de cambio se cancelan con el cobro que las origina: no acreditan la factura.
+    if (note.invoiceType.startsWith("NC") && note.status === "Authorized" && note.associatedInvoiceId &&
+        !note.exchangeDifferenceImputationId) {
       credits.set(note.associatedInvoiceId, (credits.get(note.associatedInvoiceId) ?? 0) + note.total);
     }
   }
   return invoices.map((inv) => {
     const isCreditNote = inv.invoiceType.startsWith("NC");
+    const isExchangeDifference = Boolean(inv.exchangeDifferenceImputationId);
     // Solo cuenta lo imputado a esta factura por id. El número formateado no sirve para
     // imputar: Factura A, B y las notas pueden compartir 0001-00000001.
     const active = receipts.filter((r) => !VOIDED.includes((r.status || "").toLowerCase()));
     const imputed = active
-      .flatMap((r) => r.imputations ?? [])
-      .filter((imp) => imp.invoiceId === inv.id)
-      .reduce((sum, imp) => sum + (Number(imp.amount) || 0), 0);
+      .flatMap((r) => (r.imputations ?? []).map((imp) => ({ imp, r })))
+      .filter(({ imp }) => imp.invoiceId === inv.id)
+      .reduce((sum, { imp, r }) => {
+        if (inv.currency !== "USD" || (r.currency || "ARS") === "USD") return sum + (Number(imp.amount) || 0);
+        // Factura en dólares cobrada en pesos: lo que cancela son los USD de la imputación.
+        if (imp.amountUsd) return sum + Number(imp.amountUsd);
+        const rate = Number(r.paymentExchangeRate) || Number(inv.exchangeRate) || 1;
+        return sum + (Number(imp.amount) || 0) / rate;
+      }, 0);
     const totalCobrado = imputed + active
       .filter((r) => !r.imputations?.length && r.invoiceId === inv.id)
       .reduce((sum, r) => {
@@ -66,8 +76,9 @@ export function withCollections<T extends Invoice>(invoices: readonly T[], recei
 
     // Una nota de crédito no es un saldo a cobrar: descuenta el de su factura original.
     const totalAcreditado = isCreditNote ? 0 : credits.get(inv.id) ?? 0;
-    const saldoPendiente = isCreditNote ? 0 : Math.max(0, inv.total - totalCobrado - totalAcreditado);
-    const isPaid = isCreditNote || (saldoPendiente <= 0.01 && inv.total > 0);
+    const settled = isCreditNote || isExchangeDifference;
+    const saldoPendiente = settled ? 0 : Math.max(0, inv.total - totalCobrado - totalAcreditado);
+    const isPaid = settled || (saldoPendiente <= 0.01 && inv.total > 0);
     const isPartial = !isPaid && totalCobrado + totalAcreditado > 0.01;
     const isPending = !isPaid && !isPartial;
     const paymentState: InvoiceCollection["paymentState"] = isPaid ? "Paid" : isPartial ? "Partial" : "Pending";

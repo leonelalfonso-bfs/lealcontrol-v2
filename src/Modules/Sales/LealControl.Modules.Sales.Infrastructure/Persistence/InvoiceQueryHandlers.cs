@@ -35,6 +35,7 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(i => i.Cae).HasMaxLength(32);
         builder.Property(i => i.Status).HasMaxLength(32).IsRequired();
         builder.Property(i => i.FiscalConcept).HasDefaultValue(0);
+        builder.Property(i => i.ExchangeRateType).HasMaxLength(16);
         builder.HasIndex(i => new { i.TenantId, i.PointOfSale, i.InvoiceType, i.InvoiceNumber })
             .HasDatabaseName("UX_invoice_authorized_number").IsUnique()
             .HasFilter("\"Status\" = 'Authorized'");
@@ -152,6 +153,11 @@ internal sealed class InvoiceQueryHandlers
             return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.AssociationRequired",
                 "Una nota de crédito o débito se genera desde la factura original autorizada."));
 
+        var exchangeDifference = request.ExchangeDifferenceImputationId.HasValue;
+        if (exchangeDifference && !isNote)
+            return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.ExchangeDifference",
+                "La diferencia de cambio se documenta con una nota de crédito o débito."));
+
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         Invoice? original = null;
         if (isNote)
@@ -164,10 +170,13 @@ internal sealed class InvoiceQueryHandlers
             original = await _dbContext.Invoices.AsNoTracking()
                 .FirstOrDefaultAsync(i => i.Id == originalId && i.TenantId == tenantId, cancellationToken);
             var letter = request.InvoiceType[^1..];
+            // La diferencia de cambio de una factura en dólares se documenta con una nota en pesos.
+            var currencyOk = original?.Currency == request.Currency ||
+                (exchangeDifference && original?.Currency == "USD" && request.Currency == "ARS");
             // Sin emisión ARCA las facturas quedan en borrador: la nota se asocia igual, pero solo
             // puede autorizarse en ARCA si la original tiene CAE (ver FiscalAssociation).
             if (original is null || original.Status is not ("Authorized" or "Draft") ||
-                original.CustomerId != request.CustomerId || original.Currency != request.Currency ||
+                original.CustomerId != request.CustomerId || !currencyOk ||
                 (original.InvoiceType != letter && original.InvoiceType != "ND_" + letter))
                 return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.InvalidAssociation",
                     "La nota debe asociarse a una factura vigente del mismo cliente, moneda y letra."));
@@ -241,7 +250,9 @@ internal sealed class InvoiceQueryHandlers
             request.ServiceFrom,
             request.ServiceTo,
             original?.Id,
-            request.PaidInForeignCurrency);
+            request.PaidInForeignCurrency,
+            request.ExchangeRateType,
+            request.ExchangeDifferenceImputationId);
 
         foreach (var item in request.Items)
         {
@@ -255,7 +266,30 @@ internal sealed class InvoiceQueryHandlers
                 item.RemitoItemId);
         }
 
-        if (original is not null && isCreditNoteType)
+        if (exchangeDifference)
+        {
+            var imputationId = request.ExchangeDifferenceImputationId!.Value;
+            var imputation = await _dbContext.Database.SqlQuery<ExchangeDifferenceRow>($"""
+                SELECT i."InvoiceId", i."ExchangeDifferenceArs"
+                FROM finance."CollectionReceiptImputations" i
+                JOIN finance."CollectionReceipts" r ON r."Id" = i."ReceiptId" AND r."TenantId" = i."TenantId"
+                WHERE i."Id" = {imputationId} AND i."TenantId" = {tenantId.Value}
+                  AND i."Status" = 'Active' AND r."Status" <> 'Voided'
+                """).ToListAsync(cancellationToken);
+            var difference = imputation.Count == 1 ? imputation[0].ExchangeDifferenceArs ?? 0m : 0m;
+            var expectedType = difference > 0m ? "ND_" : "NC_";
+            if (imputation.Count != 1 || imputation[0].InvoiceId != original?.Id || difference == 0m ||
+                !request.InvoiceType.StartsWith(expectedType, StringComparison.Ordinal) ||
+                invoice.Total != Math.Abs(difference))
+                return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.ExchangeDifference",
+                    "La nota no coincide con la diferencia de cambio del cobro (tipo, factura o importe)."));
+            if (await _dbContext.Invoices.AnyAsync(i => i.TenantId == tenantId &&
+                    i.ExchangeDifferenceImputationId == imputationId &&
+                    i.Status != "Cancelled" && i.Status != "Rejected", cancellationToken))
+                return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.ExchangeDifferenceDocumented",
+                    "Esa diferencia de cambio ya tiene su nota emitida."));
+        }
+        else if (original is not null && isCreditNoteType)
         {
             var notes = await _dbContext.Invoices.AsNoTracking()
                 .Where(i => i.TenantId == tenantId && i.AssociatedInvoiceId == original.Id &&
@@ -280,7 +314,7 @@ internal sealed class InvoiceQueryHandlers
         }
         // Las notas de débito no mueven mercadería; una nota de crédito solo reingresa stock si es devolución.
         else if (!request.InvoiceType.StartsWith("ND", StringComparison.OrdinalIgnoreCase) &&
-                 (!isCreditNoteType || request.RestockItems))
+                 !exchangeDifference && (!isCreditNoteType || request.RestockItems))
         {
             // 2. Si es una Factura Directa / Venta de Mostrador (sin remito previo):
             // Descuenta stock físico de los productos inventariables para que no quede la mercadería sin descontar.
@@ -442,7 +476,11 @@ internal sealed class InvoiceQueryHandlers
             i.ServiceFrom,
             i.ServiceTo,
             i.AssociatedInvoiceId,
-            i.PaidInForeignCurrency);
+            i.PaidInForeignCurrency,
+            i.ExchangeRateType,
+            i.ExchangeDifferenceImputationId);
     }
 
 }
+
+internal sealed record ExchangeDifferenceRow(Guid InvoiceId, decimal? ExchangeDifferenceArs);
