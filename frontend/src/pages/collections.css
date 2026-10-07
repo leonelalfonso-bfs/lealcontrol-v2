@@ -182,3 +182,7 @@ html:root body .cobro-summary h3 { margin: 0 0 12px; font-size: 15px; font-weigh
 .cobro-confirm { width: 100%; justify-content: center; }
 .cobro-blocker { margin: 8px 0 0; font-size: 13px; color: var(--ins-ink-2); }
 .cobro-ok { border-color: var(--ins-accent); }
+
+/* Filas del listado de cuentas corrientes: se abren al tocarlas. */
+.row-link { cursor: pointer; }
+.row-link:hover td { background: var(--ins-surface-2); }

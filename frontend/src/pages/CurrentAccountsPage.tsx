@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { exportToExcel, type ExcelColumn } from "../components/ExcelTools";
 import type { CustomerSummary, Invoice, PurchaseInvoice } from "../api/types";
 import { SearchField } from "../components/ui/SearchField";
 import { matchesSearch, parseSearch } from "../lib/search";
+import "./collections.css";
 
 type TabMode = "customers" | "suppliers" | "dual";
 
@@ -109,7 +110,11 @@ export function CurrentAccountsPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Selected entity for Ledger (Mayor de Cuenta Corriente)
-  const [ledgerEntity, setLedgerEntity] = useState<CustomerSummary | null>(null);
+  // La cuenta abierta vive en la URL (?cuenta=id): Atrás vuelve al listado y el link se comparte.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const ledgerEntity = entities.find((e) => e.id === searchParams.get("cuenta")) ?? null;
+  const setLedgerEntity = (entity: CustomerSummary | null) =>
+    setSearchParams(entity ? { cuenta: entity.id } : {});
 
   const loadData = async () => {
     setLoading(true);
@@ -541,6 +546,133 @@ export function CurrentAccountsPage() {
     void exportToExcel(`cuentas-corrientes-${tab}`, filteredRows, columns);
   };
 
+  if (ledgerEntity) {
+    const row = accountRows.find((r) => r.entity.id === ledgerEntity.id);
+    const pending = pendingDifferences.get(ledgerEntity.id) ?? [];
+    const pendingTotal = pending.reduce((sum, d) => sum + d.differenceArs, 0);
+    return (
+      <div className="page-wide" style={{ paddingBottom: 60 }}>
+        <div className="card pad">
+            <div className="toolbar" style={{ justifyContent: "space-between", borderBottom: "1px solid var(--border, #e2e8f0)", paddingBottom: 12 }}>
+            <div>
+              <span className="eyebrow">CUENTA CORRIENTE</span>
+              <h2 style={{ margin: 0 }}>
+                {ledgerEntity.tradeName || ledgerEntity.legalName}
+              </h2>
+              <p className="muted" style={{ margin: "2px 0 0 0" }}>
+                CUIT: {ledgerEntity.documentNumber || "Sin CUIT"} · {ledgerEntity.isCustomer ? "Cliente " : ""}{ledgerEntity.isSupplier ? "Proveedor" : ""}
+              </p>
+            </div>
+            <button className="btn btn-outline compact" onClick={() => setLedgerEntity(null)}>
+              ← Volver al listado
+            </button>
+          </div>
+
+          <div className="table-wrap" style={{ marginTop: 16 }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo Comprobante</th>
+                  <th>Número</th>
+                  <th>Descripción / TC</th>
+                  <th style={{ textAlign: "right" }}>Débito (+)</th>
+                  <th style={{ textAlign: "right" }}>Crédito (−)</th>
+                  <th style={{ textAlign: "right" }}>Saldo Acumulado (ARS)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledgerHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                      No hay movimientos históricos registrados para esta entidad.
+                    </td>
+                  </tr>
+                ) : (
+                  ledgerHistory.map((item, idx) => (
+                    <tr key={idx} style={item.muted ? { opacity: 0.65 } : undefined}>
+                      <td>{new Date(item.date).toLocaleDateString("es-AR")}</td>
+                      <td>
+                        <strong>{item.type}</strong>
+                      </td>
+                      <td>
+                        <code style={item.muted ? { textDecoration: "line-through" } : undefined}>{item.number}</code>
+                      </td>
+                      <td>
+                        {item.description}
+                        {item.originalAmount && (
+                          <span style={{ display: "block", color: "#2563eb", fontSize: "0.75rem", fontWeight: 700 }}>
+                            Original: {item.originalAmount}
+                          </span>
+                        )}
+                        {item.pending && (
+                          <Link className="btn compact" style={{ marginTop: 6, display: "inline-block" }}
+                            to={`/facturas/nueva?nota=${item.pending.differenceArs > 0 ? "ND" : "NC"}&origen=${item.pending.invoiceId}&dif=${item.pending.imputationId}`}>
+                            Emitir {item.pending.differenceArs > 0 ? "ND" : "NC"} por diferencia de cambio
+                          </Link>
+                        )}
+                      </td>
+                      <td style={{ textAlign: "right", color: item.debit > 0 ? "#059669" : "inherit" }}>
+                        {item.debit > 0 ? money(item.debit) : "—"}
+                      </td>
+                      <td style={{ textAlign: "right", color: item.credit > 0 ? "#dc2626" : "inherit" }}>
+                        {item.credit > 0 ? money(item.credit) : "—"}
+                      </td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: item.balance > 0 ? "#dc2626" : item.balance < 0 ? "#059669" : "inherit" }}>
+                        {money(item.balance)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 20, gap: 10 }}>
+            {ledgerEntity.isCustomer && (
+              <Link className="btn btn-outline compact" to={`/finanzas/cobranzas?customerId=${ledgerEntity.id}`}>
+                💵 Registrar Cobranza
+              </Link>
+            )}
+            {ledgerEntity.isSupplier && (
+              <Link className="btn compact" to={`/finanzas/pagos/nueva?supplierId=${ledgerEntity.id}`}>
+                💳 Emitir Orden de Pago
+              </Link>
+            )}
+
+          </div>
+
+          {row && (
+            <div className="grid-3" style={{ marginTop: 16 }}>
+              {ledgerEntity.isCustomer && (
+                <div className="card pad" style={{ margin: 0 }}>
+                  <span className="muted">Saldo a cobrar (pesos)</span>
+                  <strong style={{ display: "block", fontSize: "1.4rem" }}>{money(row.receivableBalance)}</strong>
+                  {row.receivableBalanceUsd > 0.01 && (
+                    <span className="muted">Incluye facturas en dólares por {money(row.receivableBalanceUsd, "USD")} pendientes</span>
+                  )}
+                </div>
+              )}
+              {Math.abs(pendingTotal) >= 0.01 && (
+                <div className="card pad" style={{ margin: 0 }}>
+                  <span className="muted">Diferencias de cambio a documentar</span>
+                  <strong style={{ display: "block", fontSize: "1.4rem" }}>{money(pendingTotal)}</strong>
+                  <span className="muted">{pending.length} pendiente(s): emití la ND/NC desde cada movimiento.</span>
+                </div>
+              )}
+              {ledgerEntity.isSupplier && (
+                <div className="card pad" style={{ margin: 0 }}>
+                  <span className="muted">Saldo a pagar (pesos)</span>
+                  <strong style={{ display: "block", fontSize: "1.4rem" }}>{money(row.payableBalance)}</strong>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page-wide" style={{ paddingBottom: 60 }}>
       {/* Encabezado */}
@@ -700,7 +832,7 @@ export function CurrentAccountsPage() {
                   </tr>
                 ) : (
                   filteredRows.map((row) => (
-                    <tr key={row.entity.id}>
+                    <tr key={row.entity.id} className="row-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) setLedgerEntity(row.entity); }}>
                       <td>
                         <strong>{row.entity.tradeName || row.entity.legalName}</strong>
                         <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
@@ -763,9 +895,9 @@ export function CurrentAccountsPage() {
                           <button
                             className="btn btn-outline compact"
                             onClick={() => setLedgerEntity(row.entity)}
-                            title="Ver mayor de movimientos"
+                            title="Ver la cuenta corriente con sus movimientos"
                           >
-                            👁️ Mayor
+                            Ver cuenta
                           </button>
                           <Link
                             className="btn compact"
@@ -806,7 +938,7 @@ export function CurrentAccountsPage() {
                   </tr>
                 ) : (
                   filteredRows.map((row) => (
-                    <tr key={row.entity.id}>
+                    <tr key={row.entity.id} className="row-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) setLedgerEntity(row.entity); }}>
                       <td>
                         <strong>{row.entity.tradeName || row.entity.legalName}</strong>
                         <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
@@ -869,9 +1001,9 @@ export function CurrentAccountsPage() {
                           <button
                             className="btn btn-outline compact"
                             onClick={() => setLedgerEntity(row.entity)}
-                            title="Ver mayor de movimientos"
+                            title="Ver la cuenta corriente con sus movimientos"
                           >
-                            👁️ Mayor
+                            Ver cuenta
                           </button>
                           <Link
                             className="btn compact"
@@ -914,7 +1046,7 @@ export function CurrentAccountsPage() {
                   filteredRows.map((row) => {
                     const net = row.netBalance;
                     return (
-                      <tr key={row.entity.id}>
+                      <tr key={row.entity.id} className="row-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) setLedgerEntity(row.entity); }}>
                         <td>
                           <strong>{row.entity.tradeName || row.entity.legalName}</strong>
                           <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
@@ -958,9 +1090,9 @@ export function CurrentAccountsPage() {
                             <button
                               className="btn btn-outline compact"
                               onClick={() => setLedgerEntity(row.entity)}
-                              title="Ver mayor unificado"
+                              title="Ver la cuenta corriente con sus movimientos"
                             >
-                              👁️ Mayor
+                              Ver cuenta
                             </button>
                             <Link
                               className="btn btn-outline compact"
@@ -988,128 +1120,6 @@ export function CurrentAccountsPage() {
         )}
       </section>
 
-      {/* Modal de Mayor de Cuenta Corriente */}
-      {ledgerEntity && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            padding: 20
-          }}
-        >
-          <div
-            className="card pad"
-            style={{
-              width: "100%",
-              maxWidth: 980,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              backgroundColor: "var(--surface, #ffffff)",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              borderRadius: 8
-            }}
-          >
-            <div className="toolbar" style={{ justifyContent: "space-between", borderBottom: "1px solid var(--border, #e2e8f0)", paddingBottom: 12 }}>
-              <div>
-                <span className="eyebrow">EXTRACTO HISTÓRICO · MAYOR DE CUENTA CORRIENTE</span>
-                <h2 style={{ margin: 0 }}>
-                  {ledgerEntity.tradeName || ledgerEntity.legalName}
-                </h2>
-                <p className="muted" style={{ margin: "2px 0 0 0" }}>
-                  CUIT: {ledgerEntity.documentNumber || "Sin CUIT"} · {ledgerEntity.isCustomer ? "Cliente " : ""}{ledgerEntity.isSupplier ? "Proveedor" : ""}
-                </p>
-              </div>
-              <button className="btn btn-outline compact" onClick={() => setLedgerEntity(null)}>
-                ✕ Cerrar
-              </button>
-            </div>
-
-            <div className="table-wrap" style={{ marginTop: 16 }}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Tipo Comprobante</th>
-                    <th>Número</th>
-                    <th>Descripción / TC</th>
-                    <th style={{ textAlign: "right" }}>Débito (+)</th>
-                    <th style={{ textAlign: "right" }}>Crédito (−)</th>
-                    <th style={{ textAlign: "right" }}>Saldo Acumulado (ARS)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ledgerHistory.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 24 }}>
-                        No hay movimientos históricos registrados para esta entidad.
-                      </td>
-                    </tr>
-                  ) : (
-                    ledgerHistory.map((item, idx) => (
-                      <tr key={idx} style={item.muted ? { opacity: 0.65 } : undefined}>
-                        <td>{new Date(item.date).toLocaleDateString("es-AR")}</td>
-                        <td>
-                          <strong>{item.type}</strong>
-                        </td>
-                        <td>
-                          <code style={item.muted ? { textDecoration: "line-through" } : undefined}>{item.number}</code>
-                        </td>
-                        <td>
-                          {item.description}
-                          {item.originalAmount && (
-                            <span style={{ display: "block", color: "#2563eb", fontSize: "0.75rem", fontWeight: 700 }}>
-                              Original: {item.originalAmount}
-                            </span>
-                          )}
-                          {item.pending && (
-                            <Link className="btn compact" style={{ marginTop: 6, display: "inline-block" }}
-                              to={`/facturas/nueva?nota=${item.pending.differenceArs > 0 ? "ND" : "NC"}&origen=${item.pending.invoiceId}&dif=${item.pending.imputationId}`}>
-                              Emitir {item.pending.differenceArs > 0 ? "ND" : "NC"} por diferencia de cambio
-                            </Link>
-                          )}
-                        </td>
-                        <td style={{ textAlign: "right", color: item.debit > 0 ? "#059669" : "inherit" }}>
-                          {item.debit > 0 ? money(item.debit) : "—"}
-                        </td>
-                        <td style={{ textAlign: "right", color: item.credit > 0 ? "#dc2626" : "inherit" }}>
-                          {item.credit > 0 ? money(item.credit) : "—"}
-                        </td>
-                        <td style={{ textAlign: "right", fontWeight: 700, color: item.balance > 0 ? "#dc2626" : item.balance < 0 ? "#059669" : "inherit" }}>
-                          {money(item.balance)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 20, gap: 10 }}>
-              {ledgerEntity.isCustomer && (
-                <Link className="btn btn-outline compact" to={`/finanzas/cobranzas?customerId=${ledgerEntity.id}`}>
-                  💵 Registrar Cobranza
-                </Link>
-              )}
-              {ledgerEntity.isSupplier && (
-                <Link className="btn compact" to={`/finanzas/pagos/nueva?supplierId=${ledgerEntity.id}`}>
-                  💳 Emitir Orden de Pago
-                </Link>
-              )}
-              <button className="btn btn-outline compact" onClick={() => setLedgerEntity(null)}>
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
