@@ -30,6 +30,33 @@ export const MODULE_AREAS: ReadonlyArray<{ id: ModuleArea; label: string }> = [
   { id: "administracion", label: "Administración" }
 ];
 
+/**
+ * Color propio de cada módulo (tono 600: legible en claro y oscuro). Tiñe su ícono, el ítem activo,
+ * la ubicación y el buscador, así cada área se reconoce de un vistazo sin recargar las superficies.
+ */
+const MODULE_HUES: Record<string, string> = {
+  inicio: "#059669",
+  comunicaciones: "#0284c7",
+  directorio: "#4f46e5",
+  crm: "#9333ea",
+  ventas: "#16a34a",
+  compras: "#d97706",
+  inventario: "#0d9488",
+  produccion: "#e11d48",
+  flota: "#0369a1",
+  cereales: "#ca8a04",
+  metrologia: "#0891b2",
+  calidad: "#2563eb",
+  finanzas: "#65a30d",
+  contabilidad: "#c026d3",
+  rrhh: "#db2777",
+  administracion: "#64748b"
+};
+
+export function moduleHue(moduleId: string): string {
+  return MODULE_HUES[moduleId] ?? "#059669";
+}
+
 export interface ModuleDefinition {
   id: string;
   label: string;

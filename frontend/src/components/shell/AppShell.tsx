@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { MODULE_AREAS, type ModuleDefinition, type NavigationItem } from "../../app/moduleRegistry";
+import { MODULE_AREAS, moduleHue, type ModuleDefinition, type NavigationItem } from "../../app/moduleRegistry";
 import { allowedQuickActions } from "../../app/quickActions";
 import { useTheme } from "../../context/ThemeContext";
 import { tenantTitle } from "../../utils/tenantLabel";
@@ -82,7 +82,13 @@ function initials(name: string) {
 
 const LogoMark = () => (
   <svg className="ins-brand__mark" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-    <rect width="28" height="28" rx="7" fill="var(--ins-accent)" />
+    <defs>
+      <linearGradient id="ins-logo-gradient" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#10b981" />
+        <stop offset="1" stopColor="#0e7490" />
+      </linearGradient>
+    </defs>
+    <rect width="28" height="28" rx="7" fill="url(#ins-logo-gradient)" />
     <path d="M8 19a8 8 0 0 1 12-6.9" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
     <path d="M14 19l4.5-5.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
     <circle cx="14" cy="19" r="1.8" fill="#fff" />
@@ -160,7 +166,13 @@ export function AppShell({
   // Pantallas recientes para el ⌘K.
   useEffect(() => {
     const title = activeItem?.label ?? activeModule.label;
-    const entry: RecentPage = { path: location.pathname, title, moduleLabel: activeModule.label, glyph: activeModule.glyph };
+    const entry: RecentPage = {
+      path: location.pathname,
+      title,
+      moduleLabel: activeModule.label,
+      glyph: activeModule.glyph,
+      moduleId: activeModule.id
+    };
     setRecent((prev) => {
       const next = [entry, ...prev.filter((p) => p.path !== entry.path)].slice(0, 5);
       writeJson(RECENT_KEY, next);
@@ -193,7 +205,10 @@ export function AppShell({
   const shortcutLabel = isMac ? "⌘K" : "Ctrl K";
 
   return (
-    <div className={`ins-shell${drawerOpen ? " ins-shell--drawer" : ""}`}>
+    <div
+      className={`ins-shell${drawerOpen ? " ins-shell--drawer" : ""}`}
+      style={{ "--mod-current": moduleHue(activeModule.id) } as CSSProperties}
+    >
       <div className="ins-backdrop" onClick={() => setDrawerOpen(false)} aria-hidden="true" />
 
       <aside className="ins-sidebar" aria-label="Menú principal">
@@ -268,9 +283,12 @@ export function AppShell({
                       key={module.id}
                       to={target}
                       end
+                      style={{ "--mod": moduleHue(module.id) } as CSSProperties}
                       className={({ isActive }) => `ins-nav__module ins-nav__module--solo${isActive ? " active" : ""}`}
                     >
-                      <Icon name={module.glyph} className="ins-nav__glyph" />
+                      <span className="ins-nav__tile">
+                        <Icon name={module.glyph} size={16} />
+                      </span>
                       <span className="ins-nav__label">{module.label}</span>
                     </NavLink>
                   );
@@ -278,7 +296,7 @@ export function AppShell({
                 const isOpen = expanded.includes(module.id);
                 const listId = `ins-nav-${module.id}`;
                 return (
-                  <div key={module.id}>
+                  <div key={module.id} style={{ "--mod": moduleHue(module.id) } as CSSProperties}>
                     <button
                       type="button"
                       className={`ins-nav__module${isCurrent ? " ins-nav__module--current" : ""}`}
@@ -286,7 +304,9 @@ export function AppShell({
                       aria-controls={listId}
                       onClick={() => toggleModule(module.id)}
                     >
-                      <Icon name={module.glyph} className="ins-nav__glyph" />
+                      <span className="ins-nav__tile">
+                        <Icon name={module.glyph} size={16} />
+                      </span>
                       <span className="ins-nav__label">{module.label}</span>
                       {module.id === "comunicaciones" && communicationsUnread > 0 && (
                         <span className="ins-nav__badge">{communicationsUnread > 99 ? "99+" : communicationsUnread}</span>
@@ -383,6 +403,9 @@ export function AppShell({
             <Icon name="menu" />
           </button>
           <nav className="ins-crumbs" aria-label="Ubicación">
+            <span className="ins-crumbs__tile" aria-hidden="true">
+              <Icon name={activeModule.glyph} size={14} />
+            </span>
             {activeItem && activeModule.items.length > 1 ? (
               <>
                 <Link to={activeModule.defaultPath}>{activeModule.label}</Link>
@@ -423,8 +446,17 @@ export function AppShell({
                 <div className="ins-popover" role="menu">
                   <span className="ins-popover__label">Crear</span>
                   {actions.slice(0, 9).map((action) => (
-                    <Link key={action.id} role="menuitem" to={action.path} className="ins-menu-item" onClick={() => newMenu.setOpen(false)}>
-                      <Icon name={action.glyph} size={16} style={{ color: "var(--ins-ink-3)" }} />
+                    <Link
+                      key={action.id}
+                      role="menuitem"
+                      to={action.path}
+                      className="ins-menu-item"
+                      style={{ "--mod": moduleHue(action.moduleId) } as CSSProperties}
+                      onClick={() => newMenu.setOpen(false)}
+                    >
+                      <span className="ins-menu-item__tile">
+                        <Icon name={action.glyph} size={15} />
+                      </span>
                       {action.label}
                     </Link>
                   ))}

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
-import type { ModuleDefinition } from "../../app/moduleRegistry";
+import { moduleHue, type ModuleDefinition } from "../../app/moduleRegistry";
 import type { QuickAction } from "../../app/quickActions";
 import { highlightSearch, matchesSearch, parseSearch, type SearchToken } from "../../lib/search";
 import { useDebouncedValue } from "../../lib/useDebouncedValue";
@@ -11,7 +11,7 @@ import { Icon, type IconName } from "../ui/Icon";
 import "../../styles/instrumento.css";
 import "../../styles/shell.css";
 
-export type RecentPage = { path: string; title: string; moduleLabel: string; glyph: IconName };
+export type RecentPage = { path: string; title: string; moduleLabel: string; glyph: IconName; moduleId?: string };
 
 type Entry = {
   key: string;
@@ -21,6 +21,8 @@ type Entry = {
   meta?: string | null;
   glyph?: IconName;
   badge?: string;
+  /** Color del módulo al que pertenece la entrada. */
+  hue?: string;
   /** Palabras que también encuentran la entrada pero no se muestran. */
   keywords?: string;
   run: () => void;
@@ -121,6 +123,7 @@ export function CommandPalette({
               .join(" · "),
             meta: p.isCustomer && p.isSupplier ? "cliente y proveedor" : p.isSupplier ? "proveedor" : "cliente",
             badge: initials(p.tradeName?.trim() || p.legalName),
+            hue: moduleHue("directorio"),
             run: () => go(`/clientes/${p.id}`)
           }))
         )
@@ -134,6 +137,7 @@ export function CommandPalette({
             sub: [p.code, p.categoryName].filter(Boolean).join(" · "),
             meta: formatProductPrice(p),
             glyph: "package",
+            hue: moduleHue("inventario"),
             run: () => go(`/productos/${p.id}/editar`)
           }))
         )
@@ -157,7 +161,8 @@ export function CommandPalette({
       section: "Crear",
       title: action.title,
       keywords: action.keywords,
-      glyph: "plus",
+      glyph: action.glyph,
+      hue: moduleHue(action.moduleId),
       run: () => go(action.path)
     }));
     const pages: Entry[] = modules.flatMap((module) =>
@@ -167,6 +172,7 @@ export function CommandPalette({
         title: item.label,
         sub: module.label,
         glyph: module.glyph,
+        hue: moduleHue(module.id),
         run: () => go(item.path)
       }))
     );
@@ -187,6 +193,7 @@ export function CommandPalette({
         title: page.title,
         sub: page.moduleLabel,
         glyph: page.glyph,
+        hue: page.moduleId ? moduleHue(page.moduleId) : undefined,
         run: () => go(page.path)
       }));
       const create = localEntries.filter((e) => e.section === "Crear").slice(0, 5);
@@ -196,6 +203,7 @@ export function CommandPalette({
         title: module.label,
         sub: module.title.charAt(0) + module.title.slice(1).toLowerCase(),
         glyph: module.glyph,
+        hue: moduleHue(module.id),
         run: () => go(module.defaultPath)
       }));
       return [...recentEntries, ...create, ...modulesEntries];
@@ -269,7 +277,12 @@ export function CommandPalette({
                   onPointerMove={() => setActive(index)}
                   onClick={() => entry.run()}
                 >
-                  <span className="ins-cmdk__glyph">{entry.glyph ? <Icon name={entry.glyph} size={16} /> : entry.badge}</span>
+                  <span
+                    className={`ins-cmdk__glyph${entry.hue ? " ins-cmdk__glyph--hue" : ""}`}
+                    style={entry.hue ? ({ "--mod": entry.hue } as CSSProperties) : undefined}
+                  >
+                    {entry.glyph ? <Icon name={entry.glyph} size={16} /> : entry.badge}
+                  </span>
                   <span className="ins-cmdk__body">
                     <span className="ins-cmdk__title">
                       <Highlighted text={entry.title} tokens={tokens} />

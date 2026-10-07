@@ -491,6 +491,71 @@ html:root body .ins-main-column > main.main { padding-top: 24px !important; }
   .ins-new__button { padding: 0 10px; }
 }
 
+/* ---------------- Color por módulo ----------------
+ * Cada módulo define --mod (su tono 600). Se usa en pastillas, ítem activo, ubicación y buscador.
+ * Las superficies siguen neutras: el color identifica el área, no decora.
+ */
+/* En :root (no en .ins-shell): el buscador ⌘K y los menús se dibujan en un portal fuera de la estructura. */
+:root {
+  --mod-tint: 13%;
+  --mod-ink-mix: 72%;
+}
+:root[data-color-mode="dark"] {
+  --mod-tint: 22%;
+}
+
+.ins-nav__tile,
+.ins-crumbs__tile,
+.ins-menu-item__tile,
+.ins-cmdk__glyph--hue {
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--mod) var(--mod-tint), transparent);
+  color: var(--mod);
+  transition: background 140ms var(--ins-ease), color 140ms var(--ins-ease), transform 140ms var(--ins-ease);
+}
+:root[data-color-mode="dark"] .ins-nav__tile,
+:root[data-color-mode="dark"] .ins-crumbs__tile,
+:root[data-color-mode="dark"] .ins-menu-item__tile,
+:root[data-color-mode="dark"] .ins-cmdk__glyph--hue {
+  color: color-mix(in srgb, var(--mod) 62%, white);
+}
+.ins-nav__tile { width: 26px; height: 26px; }
+.ins-menu-item__tile { width: 26px; height: 26px; }
+.ins-cmdk__glyph--hue { border-color: transparent; }
+.ins-nav__module { padding: 5px 8px; }
+.ins-nav__module:hover .ins-nav__tile { transform: scale(1.06); }
+
+/* Módulo donde estás: pastilla llena con su color. */
+.ins-nav__module--current .ins-nav__tile,
+.ins-nav__module--solo.active .ins-nav__tile {
+  background: var(--mod);
+  color: #fff;
+  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--mod) 55%, transparent);
+}
+.ins-nav__module--solo.active {
+  background: color-mix(in srgb, var(--mod) 10%, transparent);
+  color: var(--ins-ink);
+}
+
+/* Pantallas del módulo: el activo toma el color del módulo (texto oscurecido para el contraste). */
+.ins-nav__items { margin-left: 20px; border-left-color: color-mix(in srgb, var(--mod) 28%, var(--ins-line)); }
+.ins-nav__item.active {
+  background: color-mix(in srgb, var(--mod) 11%, transparent);
+  color: color-mix(in srgb, var(--mod) var(--mod-ink-mix), var(--ins-ink));
+}
+:root[data-color-mode="dark"] .ins-nav__item.active { color: color-mix(in srgb, var(--mod) 55%, white); }
+.ins-nav__item.active::before { background: var(--mod); }
+
+/* Ubicación: pastilla del módulo actual y una línea fina con su color sobre la barra. */
+.ins-crumbs__tile { width: 24px; height: 24px; --mod: var(--mod-current); }
+.ins-topbar { box-shadow: inset 0 2px 0 var(--mod-current); }
+
+/* Avatar con degradé de marca. */
+.ins-avatar { background: linear-gradient(135deg, #10b981, #0e7490); color: #fff; }
+
 @media print {
   .ins-sidebar, .ins-topbar, .ins-backdrop { display: none !important; }
   .ins-shell { display: block; background: none; }
