@@ -37,6 +37,14 @@ public sealed class ExchangeDifferenceApiTests : IAsyncLifetime
             Assert.Equal("Billete", doc.RootElement.GetProperty("exchangeRateType").GetString());
         }
 
+        // Se persiste: la pantalla de cobranzas la lee del listado.
+        using (var listed = await client.GetAsync("/api/v1/sales/invoices"))
+        {
+            using var doc = JsonDocument.Parse(await listed.Content.ReadAsStringAsync());
+            var row = doc.RootElement.EnumerateArray().Single(e => e.GetProperty("id").GetGuid() == invoiceId);
+            Assert.Equal("Billete", row.GetProperty("exchangeRateType").GetString());
+        }
+
         var imputationId = Guid.NewGuid();
         await using (var db = new NpgsqlConnection(_factory.DatabaseConnectionString))
         {

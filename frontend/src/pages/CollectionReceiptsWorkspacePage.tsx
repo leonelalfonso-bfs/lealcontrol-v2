@@ -3,9 +3,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { CustomerSummary, Invoice } from "../api/types";
 import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
-
 import { CustomerPicker } from "../components/pickers";
 import { withCollections, type ReceiptForImputation } from "../lib/receivables";
+import "./collections.css";
+
 type Account = {
   id: string;
   name: string;
@@ -29,28 +30,39 @@ type PaymentLine = {
   notes?: string;
 };
 
-type ImputationRow = {
-  invoice: Invoice;
-  selected: boolean;
-  isUsd: boolean;
-  invoiceTotalOriginal: number;
-  invoiceRate: number;
-  paymentRate: number;
-  pendingBalanceUsd: number;
-  pendingBalanceArs: number;
-  amountImputedArs: number;
-  amountImputedUsd: number;
-  differenceExchangeArs: number;
-  adjustmentType: string;
-  rateType: "Divisa" | "Billete";
-  rateTouched?: boolean;
-};
-
 type BnaQuote = { date: string; buy: number; sell: number } | null;
 type BnaPair = { previous: BnaQuote; current: BnaQuote };
+type RateType = "Divisa" | "Billete";
+
+/** Una factura con saldo, tal como se puede cancelar en este cobro. */
+type OpenInvoice = {
+  invoice: Invoice;
+  isUsd: boolean;
+  invoiceRate: number;
+  pendingUsd: number;
+  pendingArs: number;
+};
+
+const METHODS: Record<PaymentLine["method"], { label: string; icon: string }> = {
+  BankTransfer: { label: "Transferencia", icon: "🏦" },
+  Cash: { label: "Efectivo", icon: "💵" },
+  Cheque: { label: "Cheque", icon: "🎫" },
+  Retention: { label: "Retención", icon: "📋" }
+};
 
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const shortDate = (iso?: string | null) => {
+  const [y, m, d] = (iso ?? "").slice(0, 10).split("-");
+  return y && m && d ? `${Number(d)}/${Number(m)}/${y}` : "—";
+};
+const newId = () => Math.random().toString(36).substring(2, 9);
+const documentLabel = (type: string) => {
+  const letter = type.replace(/^(NC_|ND_)/, "");
+  if (type.startsWith("ND_")) return `Nota de Débito ${letter}`;
+  return `Factura ${letter}`;
+};
 
 export function CollectionReceiptsWorkspacePage() {
   const [searchParams] = useSearchParams();
@@ -69,33 +81,48 @@ export function CollectionReceiptsWorkspacePage() {
   const [receipts, setReceipts] = useState<any[]>([]);
   const [selectedReceiptDetail, setSelectedReceiptDetail] = useState<any | null>(null);
   const [createChequeLineId, setCreateChequeLineId] = useState<string | null>(null);
-
-  // Filters for available bank movements (concept = cartera; account optional — empty = todas)
   const [movementConceptFilter, setMovementConceptFilter] = useState<string>("");
-  const [movementAccountFilter, setMovementAccountFilter] = useState<string>(""); // "" = todas las cuentas
+  const [movementAccountFilter, setMovementAccountFilter] = useState<string>("");
   const [loadingMovements, setLoadingMovements] = useState(false);
 
-  // Cotizaciones BNA vendedor para la fecha del recibo: día hábil anterior (la pactada) y del día.
-  const [bnaRates, setBnaRates] = useState<Partial<Record<"Divisa" | "Billete", BnaPair>>>({});
-  const [receiptDate, setReceiptDate] = useState<string>(
-    new Date().toISOString().slice(0, 10)
-  );
-  const [currency, setCurrency] = useState<string>("ARS");
+  const [receiptDate, setReceiptDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
   const [description, setDescription] = useState<string>("");
-
-  // Imputations (Facturas a imputar)
-  const [imputations, setImputations] = useState<ImputationRow[]>([]);
-
-  // Payment Lines (Medios de cobro recibidos)
   const [lines, setLines] = useState<PaymentLine[]>([]);
+  const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
 
-  // UI state
+  // Aplicación a facturas: automática (a lo más viejo) hasta que el usuario toca algo.
+  const [autoApply, setAutoApply] = useState(true);
+  const [manualApplied, setManualApplied] = useState<Record<string, number>>({});
+  // Cotización de cobro por factura en USD (pactada: BNA del día hábil anterior).
+  const [bnaRates, setBnaRates] = useState<Partial<Record<RateType, BnaPair>>>({});
+  const [rateOverride, setRateOverride] = useState<Record<string, number>>({});
+  const [rateTypeOverride, setRateTypeOverride] = useState<Record<string, RateType>>({});
+  const [rateEditor, setRateEditor] = useState<string | null>(null);
+
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Load initial data
+  const defaultConceptId = useMemo(() => {
+    const c = concepts.find((x: any) => x.code === "COBRO_CLIENTE" || x.code === "COBRO_CLIENTES")
+      || concepts.find((x: any) => x.direction === "Income");
+    return c?.id as string | undefined;
+  }, [concepts]);
+
+  const loadAvailableMovements = async (accountId?: string, conceptId?: string) => {
+    setLoadingMovements(true);
+    try {
+      const movs = await api.listCollectionAvailableMovements(accountId?.trim() || undefined, conceptId?.trim() || undefined);
+      setAvailableMovements(Array.isArray(movs) ? movs : []);
+    } catch {
+      setAvailableMovements([]);
+    } finally {
+      setLoadingMovements(false);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -107,62 +134,30 @@ export function CollectionReceiptsWorkspacePage() {
         api.listCollectionReceipts().catch(() => [] as any[]),
         api.listFinanceConcepts().catch(() => [] as any[])
       ]);
-
-      const custs = custRes || [];
-      setCustomers(custs);
+      setCustomers(custRes || []);
       setAccounts(accRes || []);
       setInvoices(invRes || []);
       setReceipts(recRes || []);
       const activeConcepts = (concRes || []).filter((c: any) => c.isActive);
       setConcepts(activeConcepts);
-      const defaultCobro = activeConcepts.find((c: any) => c.code === "COBRO_CLIENTE")
+      const cobro = activeConcepts.find((c: any) => c.code === "COBRO_CLIENTE")
         || activeConcepts.find((c: any) => c.direction === "Income");
-      const defaultConceptId = defaultCobro?.id || "";
-      if (defaultConceptId) {
-        setMovementConceptFilter(defaultConceptId);
-      }
+      if (cobro?.id) setMovementConceptFilter(cobro.id);
+      setAvailableCheques((chqRes || []).filter(
+        (c: any) => (c.status === 0 || c.status === "Available" || c.status === "En cartera") && !c.collectionReceiptId));
 
-      // Available cheques in portfolio
-      setAvailableCheques(
-        (chqRes || []).filter(
-          (c) => (c.status === 0 || c.status === "Available" || c.status === "En cartera") && !c.collectionReceiptId
-        )
-      );
-
-      // Initial default line: Bank Transfer with first active bank account or from query params
+      // Viniendo de un movimiento del banco, el cobro arranca con esa transferencia vinculada.
       if (initialMovementId) {
-        const parsedAmount = initialAmount ? parseFloat(initialAmount) || 0 : 0;
-        setLines([
-          {
-            id: Math.random().toString(36).substring(2, 9),
-            method: "BankTransfer",
-            amount: parsedAmount,
-            currency,
-            accountId: initialAccountId || undefined,
-            movementId: initialMovementId,
-            conceptId: defaultConceptId || undefined,
-            notes: ""
-          }
-        ]);
+        setLines([{
+          id: newId(), method: "BankTransfer", amount: initialAmount ? parseFloat(initialAmount) || 0 : 0,
+          currency: "ARS", accountId: initialAccountId || undefined, movementId: initialMovementId,
+          conceptId: cobro?.id, notes: ""
+        }]);
+        setOpenDetails({});
         if (initialAccountId) setMovementAccountFilter(initialAccountId);
-        void loadAvailableMovements(initialAccountId || "", defaultConceptId);
+        void loadAvailableMovements(initialAccountId || "", cobro?.id);
       } else {
-        const firstBank = (accRes || []).find((a) => a.isActive && (a.currency || "ARS") === currency) || (accRes || []).find((a) => a.isActive);
-        if (firstBank && lines.length === 0) {
-          setLines([
-            {
-              id: Math.random().toString(36).substring(2, 9),
-              method: String(firstBank.type) === "Cash" || String(firstBank.type) === "1" ? "Cash" : "BankTransfer",
-              amount: 0,
-              currency: firstBank.currency || currency,
-              accountId: firstBank.id,
-              conceptId: defaultConceptId || undefined,
-              notes: ""
-            }
-          ]);
-          // Cargar por cartera sin filtrar cuenta: muestra todos los créditos confirmados disponibles
-          void loadAvailableMovements("", defaultConceptId);
-        }
+        void loadAvailableMovements("", cobro?.id);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al cargar datos.");
@@ -171,412 +166,197 @@ export function CollectionReceiptsWorkspacePage() {
     }
   };
 
-  const loadAvailableMovements = async (accountId?: string, conceptId?: string) => {
-    setLoadingMovements(true);
-    try {
-      const account = accountId && accountId.trim() ? accountId : undefined;
-      const concept = conceptId && conceptId.trim() ? conceptId : undefined;
-      const movs = await api.listCollectionAvailableMovements(account, concept);
-      setAvailableMovements(Array.isArray(movs) ? movs : []);
-    } catch {
-      setAvailableMovements([]);
-    } finally {
-      setLoadingMovements(false);
-    }
-  };
-
   useEffect(() => {
     void loadData();
   }, []);
-
-  // Update imputations when customer or currency changes
-  useEffect(() => {
-    if (!selectedCustomerId) {
-      setImputations([]);
-      return;
-    }
-
-    const cust = customers.find((c) => c.id === selectedCustomerId);
-    if (cust && !description) {
-      setDescription(`Cobranza a ${cust.tradeName || cust.legalName}`);
-    }
-
-    const custInvoices = invoices.filter(
-      (inv) => inv.customerId === selectedCustomerId && inv.status !== "Cancelled"
-    );
-
-    const collected = new Map(withCollections(invoices, receipts as ReceiptForImputation[]).map((inv) => [inv.id, inv.saldoPendiente]));
-
-    // Calculate pending balances in USD and ARS accurately
-    const rows: ImputationRow[] = custInvoices.filter((inv) => !inv.invoiceType.startsWith("NC")).map((inv) => {
-      const isUsd = inv.currency === "USD";
-      const invoiceRate = inv.exchangeRate && inv.exchangeRate > 0 ? inv.exchangeRate : 1;
-
-      // Saldo por imputaciones exactas (por id) y notas de crédito aplicadas; en la moneda de la factura.
-      const pending = collected.get(inv.id) ?? inv.total ?? 0;
-      const pastImputedUsd = isUsd ? (inv.total || 0) - pending : 0;
-      const pastImputedArs = isUsd ? 0 : (inv.total || 0) - pending;
-
-      const pendingBalanceUsd = isUsd ? Math.max(0, (inv.total || 0) - pastImputedUsd) : 0;
-      const pendingBalanceArs = isUsd ? pendingBalanceUsd * invoiceRate : Math.max(0, (inv.total || 0) - pastImputedArs);
-
-      const rateType: "Divisa" | "Billete" = inv.exchangeRateType === "Billete" ? "Billete" : "Divisa";
-      // Cotización pactada: BNA vendedor del día hábil anterior a la fecha de cobro.
-      const paymentRate = (isUsd && bnaRates[rateType]?.previous?.sell) || invoiceRate;
-      const defaultArs = isUsd ? pendingBalanceUsd * paymentRate : pendingBalanceArs;
-      const defaultUsd = isUsd ? pendingBalanceUsd : (paymentRate > 0 ? defaultArs / paymentRate : 0);
-
-      return {
-        invoice: inv,
-        selected: false,
-        isUsd,
-        invoiceTotalOriginal: inv.total || 0,
-        invoiceRate,
-        paymentRate,
-        pendingBalanceUsd,
-        pendingBalanceArs,
-        amountImputedArs: defaultArs,
-        amountImputedUsd: defaultUsd,
-        differenceExchangeArs: 0,
-        adjustmentType: "Sin ajuste",
-        rateType
-      };
-    });
-
-    setImputations(rows);
-  }, [selectedCustomerId, invoices, customers, receipts]);
-
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all((["Divisa", "Billete"] as const).map(async (type) => {
-      const r = await api.getBnaRate(type === "Divisa" ? "divisa" : "billete", receiptDate).catch(() => null);
-      return [type, r ? { previous: r.previous, current: r.current } : { previous: null, current: null }] as const;
-    })).then((pairs) => {
-      if (cancelled) return;
-      const next = Object.fromEntries(pairs) as Record<"Divisa" | "Billete", BnaPair>;
-      setBnaRates(next);
-      // Las filas en USD que el usuario no tocó toman la cotización del día hábil anterior.
-      setImputations((prev) => prev.map((row) => {
-        const rate = next[row.rateType]?.previous?.sell;
-        if (!row.isUsd || row.rateTouched || !rate) return row;
-        const diffArs = row.selected ? row.amountImputedUsd * (rate - row.invoiceRate) : 0;
-        return {
-          ...row,
-          paymentRate: rate,
-          amountImputedArs: row.amountImputedUsd * rate,
-          differenceExchangeArs: diffArs,
-          adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
-        };
-      }));
-    });
-    return () => { cancelled = true; };
-  }, [receiptDate, selectedCustomerId]);
 
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.id === selectedCustomerId),
     [customers, selectedCustomerId]
   );
 
-  // Filter available movements by concept (client-side backup; API already filters confirmed + concept)
+  // Al cambiar de cliente o de moneda la aplicación vuelve a ser automática.
+  useEffect(() => {
+    setAutoApply(true);
+    setManualApplied({});
+    setRateOverride({});
+    setRateTypeOverride({});
+    setRateEditor(null);
+    const cust = customers.find((c) => c.id === selectedCustomerId);
+    if (cust) setDescription(`Cobranza a ${cust.tradeName || cust.legalName}`);
+  }, [selectedCustomerId, currency]);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all((["Divisa", "Billete"] as const).map(async (type) => {
+      const r = await api.getBnaRate(type === "Divisa" ? "divisa" : "billete", receiptDate).catch(() => null);
+      return [type, { previous: r?.previous ?? null, current: r?.current ?? null }] as const;
+    })).then((pairs) => {
+      if (!cancelled) setBnaRates(Object.fromEntries(pairs) as Record<RateType, BnaPair>);
+    });
+    return () => { cancelled = true; };
+  }, [receiptDate]);
+
+  // Facturas con saldo del cliente, de la más vieja (vencimiento) a la más nueva.
+  const openInvoices = useMemo<OpenInvoice[]>(() => {
+    if (!selectedCustomerId) return [];
+    const balances = withCollections(invoices, receipts as ReceiptForImputation[]);
+    return balances
+      .filter((inv) => inv.customerId === selectedCustomerId &&
+        !["Cancelled", "Rejected"].includes(inv.status) && inv.invoiceType !== "Proforma" &&
+        !inv.invoiceType.startsWith("NC") && inv.saldoPendiente > 0.01)
+      .sort((a, b) => (a.dueDate || a.issueDate).localeCompare(b.dueDate || b.issueDate))
+      .map((inv) => {
+        const isUsd = inv.currency === "USD";
+        return {
+          invoice: inv,
+          isUsd,
+          invoiceRate: inv.exchangeRate && inv.exchangeRate > 0 ? inv.exchangeRate : 1,
+          pendingUsd: isUsd ? inv.saldoPendiente : 0,
+          pendingArs: isUsd ? 0 : inv.saldoPendiente
+        };
+      });
+  }, [selectedCustomerId, invoices, receipts]);
+
+  const rateTypeOf = (row: OpenInvoice): RateType =>
+    rateTypeOverride[row.invoice.id] ?? (row.invoice.exchangeRateType === "Billete" ? "Billete" : "Divisa");
+  const paymentRateOf = (row: OpenInvoice) =>
+    rateOverride[row.invoice.id] ?? bnaRates[rateTypeOf(row)]?.previous?.sell ?? row.invoiceRate;
+  // Cobrando en dólares solo se cancelan facturas en dólares (y viceversa en pesos, cualquiera).
+  const canApply = (row: OpenInvoice) => currency === "ARS" || row.isUsd;
+  const maxApply = (row: OpenInvoice) => !canApply(row) ? 0
+    : currency === "USD" ? row.pendingUsd
+    : row.isUsd ? round2(row.pendingUsd * paymentRateOf(row)) : row.pendingArs;
+
+  const totalReceived = useMemo(() => round2(lines.reduce((s, l) => s + (Number(l.amount) || 0), 0)), [lines]);
+
+  const applied = useMemo(() => {
+    const result: Record<string, number> = {};
+    if (!autoApply) {
+      for (const row of openInvoices) result[row.invoice.id] = Math.min(manualApplied[row.invoice.id] ?? 0, maxApply(row));
+      return result;
+    }
+    let remaining = totalReceived;
+    for (const row of openInvoices) {
+      const amount = round2(Math.max(0, Math.min(remaining, maxApply(row))));
+      result[row.invoice.id] = amount;
+      remaining = round2(remaining - amount);
+    }
+    return result;
+  }, [autoApply, manualApplied, openInvoices, totalReceived, currency, bnaRates, rateOverride, rateTypeOverride]);
+
+  const totalApplied = round2(Object.values(applied).reduce((s, n) => s + n, 0));
+  const onAccount = round2(totalReceived - totalApplied);
+
+  const differences = openInvoices
+    .filter((row) => row.isUsd && currency === "ARS" && (applied[row.invoice.id] ?? 0) > 0)
+    .map((row) => {
+      const rate = paymentRateOf(row);
+      const usd = round2((applied[row.invoice.id] ?? 0) / rate);
+      return { row, usd, rate, diff: round2(usd * (rate - row.invoiceRate)) };
+    });
+  const totalDifference = round2(differences.reduce((s, d) => s + d.diff, 0));
+
+  const setManual = (id: string, amount: number) => {
+    setManualApplied(autoApply ? { ...applied, [id]: amount } : { ...manualApplied, [id]: amount });
+    setAutoApply(false);
+  };
+
   const incomeConcepts = useMemo(
     () => concepts.filter((c) => c.usableIn === "Receipt" && (c.direction === "Income" || c.direction === "Both")),
     [concepts]
   );
+  const filteredAvailableMovements = useMemo(() => (movementAccountFilter
+    ? availableMovements.filter((m) => String(m.accountId || "") === movementAccountFilter)
+    : availableMovements), [availableMovements, movementAccountFilter]);
 
-  // API ya filtra por conceptId; no re-filtrar en cliente (evita lista vacía por desfase de IDs)
-  const filteredAvailableMovements = useMemo(() => {
-    if (!movementAccountFilter) return availableMovements;
-    return availableMovements.filter((m) => String(m.accountId || "") === movementAccountFilter);
-  }, [availableMovements, movementAccountFilter]);
-
-  useEffect(() => {
-    if (!movementConceptFilter) return;
-    void loadAvailableMovements(movementAccountFilter || "", movementConceptFilter);
-  }, [movementConceptFilter, movementAccountFilter]);
-
-  // Totals calculations in Receipt Currency
-  const totalImputed = useMemo(() => {
-    return imputations
-      .filter((i) => i.selected)
-      .reduce((sum, i) => {
-        if (currency === "USD") {
-          return sum + (Number(i.amountImputedUsd) || 0);
-        }
-        return sum + (Number(i.amountImputedArs) || 0);
-      }, 0);
-  }, [imputations, currency]);
-
-  const totalExchangeDifference = useMemo(() => {
-    return imputations
-      .filter((i) => i.selected && i.isUsd)
-      .reduce((sum, i) => sum + (Number(i.differenceExchangeArs) || 0), 0);
-  }, [imputations]);
-
-  const totalCobrado = useMemo(
-    () => lines.reduce((sum, l) => sum + (Number(l.amount) || 0), 0),
-    [lines]
-  );
-
-  const difference = totalCobrado - totalImputed;
-  const hasOverImputation = totalImputed > totalCobrado + 0.01;
-
-  // Handlers for Imputations
-  const toggleSelectInvoice = (idx: number) => {
-    setImputations((prev) => {
-      const next = [...prev];
-      const cur = next[idx];
-      const newSelected = !cur.selected;
-
-      const imputedArs = newSelected ? cur.pendingBalanceArs : 0;
-      const imputedUsd = newSelected ? cur.pendingBalanceUsd : 0;
-      const diffArs = cur.isUsd && newSelected ? imputedUsd * (cur.paymentRate - cur.invoiceRate) : 0;
-
-      next[idx] = {
-        ...cur,
-        selected: newSelected,
-        amountImputedArs: imputedArs,
-        amountImputedUsd: imputedUsd,
-        differenceExchangeArs: diffArs,
-        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
-      };
-      return next;
-    });
-  };
-
-  const handlePaymentRateChange = (idx: number, rate: number) => {
-    setImputations((prev) => {
-      const next = [...prev];
-      const cur = next[idx];
-      const validRate = Math.max(0.0001, rate);
-
-      // Recompute ARS amount and difference of exchange
-      const imputedArs = cur.amountImputedUsd * validRate;
-      const diffArs = cur.isUsd ? cur.amountImputedUsd * (validRate - cur.invoiceRate) : 0;
-
-      next[idx] = {
-        ...cur,
-        rateTouched: true,
-        paymentRate: validRate,
-        amountImputedArs: imputedArs,
-        differenceExchangeArs: diffArs,
-        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
-      };
-      return next;
-    });
-  };
-
-  const handleImputedArsChange = (idx: number, val: number) => {
-    setImputations((prev) => {
-      const next = [...prev];
-      const cur = next[idx];
-      const clampedArs = Math.max(0, val);
-      const computedUsd = cur.paymentRate > 0 ? clampedArs / cur.paymentRate : 0;
-      const diffArs = cur.isUsd ? computedUsd * (cur.paymentRate - cur.invoiceRate) : 0;
-
-      next[idx] = {
-        ...cur,
-        amountImputedArs: clampedArs,
-        amountImputedUsd: computedUsd,
-        differenceExchangeArs: diffArs,
-        selected: clampedArs > 0,
-        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
-      };
-      return next;
-    });
-  };
-
-  const handleImputedUsdChange = (idx: number, val: number) => {
-    setImputations((prev) => {
-      const next = [...prev];
-      const cur = next[idx];
-      const clampedUsd = Math.max(0, val);
-      const computedArs = clampedUsd * cur.paymentRate;
-      const diffArs = cur.isUsd ? clampedUsd * (cur.paymentRate - cur.invoiceRate) : 0;
-
-      next[idx] = {
-        ...cur,
-        amountImputedUsd: clampedUsd,
-        amountImputedArs: computedArs,
-        differenceExchangeArs: diffArs,
-        selected: clampedUsd > 0,
-        adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
-      };
-      return next;
-    });
-  };
-
-  const handleSelectAllInvoices = () => {
-    setImputations((prev) =>
-      prev.map((r) => {
-        const diffArs = r.isUsd ? r.pendingBalanceUsd * (r.paymentRate - r.invoiceRate) : 0;
-        return {
-          ...r,
-          selected: true,
-          amountImputedArs: r.isUsd ? r.pendingBalanceUsd * r.paymentRate : r.pendingBalanceArs,
-          amountImputedUsd: r.pendingBalanceUsd,
-          differenceExchangeArs: diffArs,
-          adjustmentType: diffArs > 0.01 ? "Nota de débito sugerida" : diffArs < -0.01 ? "Nota de crédito sugerida" : "Sin ajuste"
-        };
-      })
-    );
-  };
-
-  const handleDeselectAllInvoices = () => {
-    setImputations((prev) =>
-      prev.map((r) => ({
-        ...r,
-        selected: false,
-        amountImputedArs: 0,
-        amountImputedUsd: 0,
-        differenceExchangeArs: 0,
-        adjustmentType: "Sin ajuste"
-      }))
-    );
-  };
-
-  // Handlers for Payment Lines
   const addLine = (method: PaymentLine["method"]) => {
-    const matchingAcc = accounts.find((a) => a.isActive && (a.currency || "ARS") === currency) || accounts.find((a) => a.isActive);
-    const suggestedAmount = Math.max(0, totalImputed - totalCobrado);
-    const defaultConcept = concepts.find((c) => c.code === "COBRO_CLIENTE" || c.code === "COBRO_CLIENTES");
-    const targetAccId = method === "BankTransfer" || method === "Cash" ? matchingAcc?.id : undefined;
-
-    setLines((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(36).substring(2, 9),
-        method,
-        amount: suggestedAmount,
-        currency,
-        accountId: targetAccId,
-        conceptId: defaultConcept?.id,
-        notes: ""
-      }
-    ]);
-
-    if (method === "BankTransfer") {
-      void loadAvailableMovements(movementAccountFilter || "", movementConceptFilter || defaultConcept?.id || "");
-    }
+    const account = accounts.find((a) => a.isActive && (a.currency || "ARS") === currency) || accounts.find((a) => a.isActive);
+    // Si ya hay facturas marcadas, el importe sugerido es lo que falta cubrir.
+    const suggested = autoApply ? 0 : Math.max(0, round2(totalApplied - totalReceived));
+    const id = newId();
+    setLines((prev) => [...prev, {
+      id, method, amount: suggested, currency,
+      accountId: method === "BankTransfer" || method === "Cash" ? account?.id : undefined,
+      conceptId: defaultConceptId, retentionType: method === "Retention" ? "IIBB" : undefined, notes: ""
+    }]);
+    if (method === "Retention") setOpenDetails((d) => ({ ...d, [id]: true }));
   };
+  const removeLine = (id: string) => setLines((prev) => prev.filter((l) => l.id !== id));
+  const updateLine = (id: string, patch: Partial<PaymentLine>) =>
+    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
 
-  const removeLine = (id: string) => {
-    setLines((prev) => prev.filter((l) => l.id !== id));
-  };
+  // Por qué no se puede confirmar todavía, en palabras.
+  const blocker = !selectedCustomer ? "Elegí el cliente que pagó."
+    : lines.length === 0 ? "Agregá cómo pagó: transferencia, efectivo, cheque o retención."
+    : totalReceived <= 0 ? "Indicá el importe recibido."
+    : totalApplied > totalReceived + 0.01 ? `Las facturas marcadas superan lo recibido en ${money(totalApplied - totalReceived, currency)}.`
+    : lines.some((l) => l.method === "Cheque" && !l.chequeId) ? "Elegí el cheque recibido (o crealo)."
+    : lines.some((l) => (l.method === "BankTransfer" || l.method === "Cash") && !l.accountId) ? "Elegí la cuenta donde ingresó el dinero."
+    : null;
 
-  const updateLine = (id: string, patch: Partial<PaymentLine>) => {
-    setLines((prev) =>
-      prev.map((l) => {
-        if (l.id === id) {
-          const updated = { ...l, ...patch };
-          if (patch.conceptId && updated.method === "BankTransfer") {
-            setMovementConceptFilter(patch.conceptId);
-          }
-          return updated;
-        }
-        return l;
-      })
-    );
-  };
-
-  // Submit Handler
   const handleSave = async () => {
-    if (!selectedCustomer) {
-      setError("Por favor seleccioná un cliente.");
+    if (blocker || !selectedCustomer) {
+      setError(blocker);
       return;
     }
-
-    if (totalCobrado <= 0) {
-      setError("El importe total de los medios de cobro debe ser mayor a cero.");
-      return;
-    }
-
-    if (hasOverImputation) {
-      setError(
-        `El total imputado a comprobantes (${money(totalImputed, currency)}) no puede superar el total de cobro recibido (${money(totalCobrado, currency)}). Ajustá los importes imputados.`
-      );
-      return;
-    }
-
-    if (!description.trim()) {
-      setError("Por favor indicá una descripción para el recibo.");
-      return;
-    }
-
-    const bankLineMissingWallet = lines.some(
-      (l) =>
-        (l.method === "BankTransfer" || l.method === "Cash") &&
-        l.movementId &&
-        !(l.conceptId || movementConceptFilter)
-    );
-    if (bankLineMissingWallet) {
-      setError("Elegí la cartera (concepto) para cada transferencia bancaria vinculada.");
-      return;
-    }
-
     setSaving(true);
     setError(null);
     setSuccessMsg(null);
-
     try {
-      const selectedImputations = imputations.filter((i) => i.selected && (currency === "USD" ? i.amountImputedUsd > 0 : i.amountImputedArs > 0));
-      const firstUsdImp = selectedImputations.find((i) => i.isUsd);
-
-      const payload = {
+      const imputations = openInvoices
+        .filter((row) => (applied[row.invoice.id] ?? 0) > 0)
+        .map((row) => {
+          const amount = applied[row.invoice.id];
+          const base = {
+            invoiceId: row.invoice.id,
+            invoiceNumber: row.invoice.formattedNumber,
+            invoiceTotal: row.invoice.total,
+            amountImputed: amount
+          };
+          if (!(row.isUsd && currency === "ARS")) return base;
+          const rate = paymentRateOf(row);
+          return { ...base, amountUsd: round2(amount / rate), invoiceExchangeRate: row.invoiceRate, paymentExchangeRate: rate };
+        });
+      const firstUsd = imputations.find((i) => "amountUsd" in i) as (typeof imputations[number] & { amountUsd?: number; invoiceExchangeRate?: number; paymentExchangeRate?: number }) | undefined;
+      const res = await api.createCollectionReceipt({
         customerId: selectedCustomer.id,
         accountId: lines.find((l) => l.accountId)?.accountId || accounts[0]?.id || undefined,
         currency,
-        amount: totalCobrado,
-        description: description.trim(),
+        amount: totalReceived,
+        description: description.trim() || `Cobranza a ${selectedCustomer.tradeName || selectedCustomer.legalName}`,
         receiptDateUtc: new Date(`${receiptDate}T12:00:00Z`).toISOString(),
-        invoiceId: firstUsdImp ? firstUsdImp.invoice.id : undefined,
-        invoiceAmount: firstUsdImp ? firstUsdImp.amountImputedUsd : undefined,
-        invoiceCurrency: firstUsdImp ? "USD" : undefined,
-        invoiceExchangeRate: firstUsdImp ? firstUsdImp.invoiceRate : undefined,
-        paymentExchangeRate: firstUsdImp ? firstUsdImp.paymentRate : undefined,
-        // La diferencia de cambio viaja por imputación (factura); el ajuste a nivel recibo queda para recibos viejos.
+        invoiceId: firstUsd?.invoiceId,
+        invoiceAmount: firstUsd?.amountUsd,
+        invoiceCurrency: firstUsd ? "USD" : undefined,
+        invoiceExchangeRate: firstUsd?.invoiceExchangeRate,
+        paymentExchangeRate: firstUsd?.paymentExchangeRate,
         lines: lines.map((l) => ({
           method: l.method,
           amount: Number(l.amount) || 0,
-          currency: l.currency || currency,
+          currency,
           accountId: l.accountId || null,
           movementId: l.movementId || null,
           chequeId: l.chequeId || null,
-          conceptId: l.conceptId || null,
+          conceptId: l.conceptId || defaultConceptId || null,
           retentionType: l.retentionType || null,
           retentionCertificate: l.retentionCertificate || null,
           notes: l.notes || null
-        })),
-        imputations: selectedImputations.map((i) => ({
-          invoiceId: i.invoice.id,
-          invoiceNumber: i.invoice.formattedNumber,
-          invoiceTotal: i.invoice.total,
-          amountImputed: currency === "USD" ? Number(i.amountImputedUsd) : Number(i.amountImputedArs),
-          ...(i.isUsd && currency === "ARS" ? {
-            amountUsd: Math.round(Number(i.amountImputedUsd) * 100) / 100,
-            invoiceExchangeRate: i.invoiceRate,
-            paymentExchangeRate: i.paymentRate
-          } : {})
-        }))
-      };
-
-      const res = await api.createCollectionReceipt(payload);
-      setSuccessMsg(`¡Recibo de Cobro ${res.receiptNumber} emitido exitosamente por ${money(totalCobrado, currency)}!`);
-      
-      // Reset form
-      setLines([
-        {
-          id: Math.random().toString(36).substring(2, 9),
-          method: "BankTransfer",
-          amount: 0,
-          currency,
-          accountId: accounts[0]?.id,
-          notes: ""
-        }
-      ]);
-      setDescription("");
+        })) as any,
+        imputations
+      });
+      setSuccessMsg(`Recibo ${res.receiptNumber} registrado por ${money(totalReceived, currency)}.` +
+        (Math.abs(totalDifference) >= 0.01
+          ? ` La diferencia de cambio (${money(Math.abs(totalDifference))}) queda en la cuenta corriente para emitir su ${totalDifference > 0 ? "ND" : "NC"}.`
+          : ""));
+      setLines([]);
+      setOpenDetails({});
+      setAutoApply(true);
+      setManualApplied({});
+      setRateOverride({});
       await loadData();
     } catch (e: any) {
-      setError(e.message || "Error al emitir el recibo de cobro.");
+      setError(e.message || "Error al registrar el cobro.");
     } finally {
       setSaving(false);
     }
@@ -584,643 +364,350 @@ export function CollectionReceiptsWorkspacePage() {
 
   const openReceiptDetail = async (id: string) => {
     try {
-      const detail = await api.getCollectionReceipt(id);
-      setSelectedReceiptDetail(detail);
+      setSelectedReceiptDetail(await api.getCollectionReceipt(id));
     } catch (e: any) {
       alert("Error al cargar detalle del recibo: " + e.message);
     }
   };
 
+  const markedTotal = round2(openInvoices.reduce((s, row) => s + (applied[row.invoice.id] ?? 0), 0));
+
   return (
-    <div className="page-wide" style={{ paddingBottom: 60 }}>
-      {/* Header */}
+    <div className="page-wide cobro" style={{ paddingBottom: 60 }}>
       <div className="page-head">
         <div>
           <span className="eyebrow">FINANZAS · COBRANZAS</span>
-          <h1>Recibos de Cobro a Clientes</h1>
-          <p className="muted">
-            Cobro en ARS o USD directo, cálculo exacto de tipos de cambio, diferencias de cotización y conciliación bancaria.
-          </p>
+          <h1>Registrar cobro</h1>
+          <p className="muted">Quién pagó, cómo pagó y qué cancela. El sistema aplica el pago a lo más viejo; podés cambiarlo.</p>
         </div>
         <div className="toolbar">
-          <Link to="/finanzas/cuentas-corrientes" className="btn btn-outline">
-            📊 Cuentas Corrientes
-          </Link>
-          <Link to="/finanzas/cuentas" className="btn btn-outline">
-            🏦 Cuentas Financieras
-          </Link>
+          <Link to="/finanzas/cuentas-corrientes" className="btn btn-outline">Cuentas corrientes</Link>
         </div>
       </div>
 
-      {error && (
-        <div className="alert" style={{ background: "#fee2e2", color: "#991b1b", borderColor: "#f87171", marginBottom: 16 }}>
-          ⚠️ {error}
-        </div>
-      )}
+      {error && <div className="alert" role="alert">{error}</div>}
+      {successMsg && <div className="alert cobro-ok" role="status">✓ {successMsg}</div>}
 
-      {successMsg && (
-        <div className="alert" style={{ background: "#dcfce7", color: "#166534", borderColor: "#86efac", marginBottom: 16 }}>
-          ✓ {successMsg}
-        </div>
-      )}
-
-      {/* Main Grid: Form Left, Balance Right */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 350px", gap: 20, alignItems: "start" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          
-          {/* STEP 1: CLIENTE Y DATOS GENERALES */}
-          <section className="card pad">
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <span style={{ fontSize: "1.2rem" }}>👤</span>
-              <h2 style={{ margin: 0, fontSize: "1.1rem" }}>1. Cliente y Moneda de Cobro</h2>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+      <div className="cobro-grid">
+        <div className="cobro-steps">
+          {/* 1. Quién pagó */}
+          <section className="card pad cobro-step">
+            <h2><span className="cobro-num">1</span> ¿Quién pagó?</h2>
+            <div className="cobro-row">
+              <label className="cobro-grow">
+                Cliente
+                <CustomerPicker value={selectedCustomerId} onChange={(id) => setSelectedCustomerId(id)} options={customers} />
+              </label>
               <label>
-                Cliente *
-                <CustomerPicker
-                  value={selectedCustomerId}
-                  onChange={(id) => setSelectedCustomerId(id)}
-                  options={customers}
-                />
+                Fecha
+                <input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} />
               </label>
-
-              <label>
-                Fecha de Cobro *
-                <input
-                  type="date"
-                  required
-                  value={receiptDate}
-                  onChange={(e) => setReceiptDate(e.target.value)}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
-                />
-              </label>
-
-              <label>
-                Moneda que Paga el Cliente *
-                <select
-                  value={currency}
-                  onChange={(e) => {
-                    const newCurr = e.target.value;
-                    setCurrency(newCurr);
-                    setLines((prev) => prev.map((l) => ({ ...l, currency: newCurr })));
-                  }}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)", fontWeight: 700 }}
-                >
-                  <option value="ARS">ARS ($ Pesos Argentinos - Modalidad TC)</option>
-                  <option value="USD">USD (U$S Dólares Estadounidenses Directos)</option>
-                </select>
-              </label>
-
-              <label style={{ gridColumn: "1 / -1" }}>
-                Concepto / Observaciones *
-                <input
-                  type="text"
-                  required
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Ej: Cobro de Facturas mes en curso"
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
-                />
-              </label>
-            </div>
-          </section>
-
-          {/* STEP 2: FACTURAS A IMPUTAR */}
-          <section className="card pad">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: "1.2rem" }}>📄</span>
-                <h2 style={{ margin: 0, fontSize: "1.1rem" }}>2. Facturas y Comprobantes a Imputar</h2>
-              </div>
-              {imputations.length > 0 && (
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button type="button" className="btn btn-outline compact" onClick={handleSelectAllInvoices}>
-                    Seleccionar Todas
-                  </button>
-                  <button type="button" className="btn ghost compact" onClick={handleDeselectAllInvoices}>
-                    Desmarcar
-                  </button>
+              <div className="cobro-field">
+                <span>Pagó en</span>
+                <div className="cobro-segment" role="group" aria-label="Moneda del cobro">
+                  {(["ARS", "USD"] as const).map((c) => (
+                    <button key={c} type="button" className={currency === c ? "on" : ""}
+                      onClick={() => {
+                        setCurrency(c);
+                        setLines((prev) => prev.map((l) => ({ ...l, currency: c })));
+                      }}>
+                      {c === "ARS" ? "Pesos" : "Dólares"}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
-
-            {!selectedCustomerId ? (
-              <p className="muted" style={{ margin: 0, padding: 12, textAlign: "center" }}>
-                Seleccioná un cliente para visualizar sus comprobantes pendientes de cobro.
-              </p>
-            ) : imputations.length === 0 ? (
-              <div style={{ background: "rgba(0,0,0,0.02)", padding: 16, borderRadius: 8, textAlign: "center" }}>
-                <p className="muted" style={{ margin: 0 }}>
-                  El cliente no posee comprobantes pendientes con saldo. Podés emitir el recibo como <strong>Anticipo / Saldo a Favor</strong>.
-                </p>
-              </div>
-            ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 40, textAlign: "center" }}>Aplicar</th>
-                      <th>Comprobante</th>
-                      <th>Fecha / Vto</th>
-                      <th style={{ textAlign: "right" }}>Total Original</th>
-                      <th style={{ textAlign: "right" }}>Saldo Pendiente</th>
-                      {currency === "ARS" && <th style={{ textAlign: "center", width: 110 }}>TC Cobro</th>}
-                      <th style={{ textAlign: "right", width: 160 }}>
-                        {currency === "USD" ? "Monto a Imputar (USD)" : "Monto a Imputar (ARS)"}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {imputations.map((row, idx) => (
-                      <tr key={row.invoice.id} style={{ background: row.selected ? "rgba(13, 148, 136, 0.04)" : "inherit" }}>
-                        <td style={{ textAlign: "center" }}>
-                          <input
-                            type="checkbox"
-                            checked={row.selected}
-                            onChange={() => toggleSelectInvoice(idx)}
-                            style={{ cursor: "pointer", width: 16, height: 16 }}
-                          />
-                        </td>
-                        <td>
-                          <strong>{row.invoice.formattedNumber}</strong>
-                          <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
-                            {row.invoice.invoiceType} · Pto Vta {row.invoice.pointOfSale}
-                          </small>
-                        </td>
-                        <td>
-                          <div style={{ fontSize: "0.82rem" }}>
-                            {new Date(row.invoice.issueDate).toLocaleDateString("es-AR")}
-                            <small className="muted" style={{ display: "block", fontSize: "0.72rem" }}>
-                              Vto: {new Date(row.invoice.dueDate).toLocaleDateString("es-AR")}
-                            </small>
-                          </div>
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <strong>{money(row.invoiceTotalOriginal, row.invoice.currency)}</strong>
-                          {row.isUsd && (
-                            <small className="muted" style={{ display: "block", fontSize: "0.72rem" }}>
-                              TC Emisión: ${row.invoiceRate.toLocaleString("es-AR")}
-                            </small>
-                          )}
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <strong style={{ color: "#0d9488" }}>
-                            {row.isUsd ? money(row.pendingBalanceUsd, "USD") : money(row.pendingBalanceArs, "ARS")}
-                          </strong>
-                          {row.isUsd && currency === "ARS" && (
-                            <small className="muted" style={{ display: "block", fontSize: "0.72rem" }}>
-                              Equiv: {money(row.pendingBalanceUsd * row.paymentRate, "ARS")}
-                            </small>
-                          )}
-                        </td>
-
-                        {/* TC Cobro input for USD Invoices when paying in ARS */}
-                        {currency === "ARS" && (
-                          <td style={{ textAlign: "center" }}>
-                            {row.isUsd ? (
-                              <div>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  step="0.01"
-                                  value={row.paymentRate}
-                                  onChange={(e) => handlePaymentRateChange(idx, Number(e.target.value) || 1)}
-                                  style={{ width: 85, textAlign: "right", padding: "3px 6px", borderRadius: 4, border: "1px solid var(--surface-border)", fontWeight: 700 }}
-                                />
-                                {(() => {
-                                  const pair = bnaRates[row.rateType];
-                                  const pick = (q: BnaQuote, label: string) => q && (
-                                    <button type="button" className="btn ghost compact" style={{ fontSize: "0.68rem", padding: "1px 5px", marginTop: 3 }}
-                                      title={`${row.rateType} BNA vendedor del ${q.date.split("-").reverse().join("/")}`}
-                                      onClick={() => handlePaymentRateChange(idx, q.sell)}>
-                                      {label} {q.date.slice(8, 10)}/{q.date.slice(5, 7)}: {q.sell.toLocaleString("es-AR")}
-                                    </button>
-                                  );
-                                  return pair && (
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                      <small className="muted" style={{ fontSize: "0.66rem" }}>{row.rateType} BNA</small>
-                                      {pick(pair.previous, "Ant.")}
-                                      {pick(pair.current, "Hoy")}
-                                    </div>
-                                  );
-                                })()}
-                                {row.differenceExchangeArs !== 0 && (
-                                  <small style={{ display: "block", fontSize: "0.7rem", color: row.differenceExchangeArs > 0 ? "#059669" : "#dc2626", fontWeight: 700 }}>
-                                    {row.differenceExchangeArs > 0 ? `+${money(row.differenceExchangeArs)} (ND)` : `${money(row.differenceExchangeArs)} (NC)`}
-                                  </small>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="muted" style={{ fontSize: "0.8rem" }}>—</span>
-                            )}
-                          </td>
-                        )}
-
-                        {/* Amount Input */}
-                        <td style={{ textAlign: "right" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}>
-                            <span style={{ fontSize: "0.85rem", color: "var(--ink-soft)" }}>{currency === "USD" ? "U$S" : "$"}</span>
-                            {currency === "USD" ? (
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={row.amountImputedUsd}
-                                onChange={(e) => handleImputedUsdChange(idx, Number(e.target.value) || 0)}
-                                style={{
-                                  width: 105,
-                                  textAlign: "right",
-                                  padding: "4px 8px",
-                                  borderRadius: 4,
-                                  border: "1px solid var(--surface-border)",
-                                  fontWeight: 700
-                                }}
-                              />
-                            ) : (
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={row.amountImputedArs}
-                                onChange={(e) => handleImputedArsChange(idx, Number(e.target.value) || 0)}
-                                style={{
-                                  width: 115,
-                                  textAlign: "right",
-                                  padding: "4px 8px",
-                                  borderRadius: 4,
-                                  border: "1px solid var(--surface-border)",
-                                  fontWeight: 700
-                                }}
-                              />
-                            )}
-                          </div>
-                          {row.isUsd && currency === "ARS" && (
-                            <small className="muted" style={{ display: "block", fontSize: "0.72rem", textAlign: "right", marginTop: 2 }}>
-                              Cancela: {money(row.amountImputedUsd, "USD")}
-                            </small>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </section>
 
-          {/* STEP 3: MEDIOS DE COBRO */}
-          <section className="card pad">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: "1.2rem" }}>💳</span>
-                <h2 style={{ margin: 0, fontSize: "1.1rem" }}>3. Medios de Cobro (Ingreso de Fondos en {currency})</h2>
-              </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <button type="button" className="btn btn-outline compact" onClick={() => addLine("BankTransfer")}>
-                  ＋ Transferencia
-                </button>
-                <button type="button" className="btn btn-outline compact" onClick={() => addLine("Cash")}>
-                  ＋ Efectivo
-                </button>
-                <button type="button" className="btn btn-outline compact" onClick={() => addLine("Cheque")}>
-                  ＋ Cheque
-                </button>
-                <button type="button" className="btn btn-outline compact" onClick={() => addLine("Retention")}>
-                  ＋ Retención
-                </button>
-              </div>
-            </div>
-
-            {lines.length === 0 ? (
-              <p className="muted" style={{ textAlign: "center", padding: 14 }}>
-                Agregá al menos un medio de cobro (transferencia, efectivo, cheque o retención).
-              </p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {lines.map((line, idx) => (
-                  <div
-                    key={line.id}
-                    style={{
-                      background: "rgba(0,0,0,0.02)",
-                      padding: 14,
-                      borderRadius: 8,
-                      border: "1px solid var(--surface-border)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 12
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>
-                          #{idx + 1} {line.method === "BankTransfer" ? "🏦 Transferencia Bancaria" : line.method === "Cash" ? "💵 Efectivo / Caja" : line.method === "Cheque" ? "🎫 Cheque Recibido" : "📋 Retención Sufrida"}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn ghost compact"
-                        style={{ color: "#dc2626", padding: "2px 8px" }}
-                        onClick={() => removeLine(line.id)}
-                      >
-                        ✕ Quitar
-                      </button>
+          {/* 2. Cómo pagó */}
+          <section className="card pad cobro-step">
+            <h2><span className="cobro-num">2</span> ¿Cómo pagó?</h2>
+            {lines.map((line) => {
+              const meta = METHODS[line.method];
+              const detailsOpen = openDetails[line.id] ?? false;
+              return (
+                <div key={line.id} className="cobro-line">
+                  <div className="cobro-line-main">
+                    <strong className="cobro-line-kind">{meta.icon} {meta.label}</strong>
+                    {(line.method === "BankTransfer" || line.method === "Cash") && (
+                      <select aria-label="Cuenta de ingreso" value={line.accountId || ""}
+                        onChange={(e) => updateLine(line.id, { accountId: e.target.value, movementId: undefined })}>
+                        {accounts.filter((a) => a.isActive).map((a) => (
+                          <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
+                        ))}
+                      </select>
+                    )}
+                    {line.method === "Cheque" && (
+                      <select aria-label="Cheque recibido" value={line.chequeId || ""}
+                        onChange={(e) => {
+                          const ch = availableCheques.find((c) => c.id === e.target.value);
+                          updateLine(line.id, {
+                            chequeId: e.target.value || undefined,
+                            amount: ch ? Number(ch.amount) : line.amount,
+                            notes: ch ? `Cheque N° ${ch.checkNumber} (${ch.bankName || "Banco"} - Librador: ${ch.issuerName || "s/d"})` : line.notes
+                          });
+                        }}>
+                        <option value="">Elegí el cheque…</option>
+                        {availableCheques.map((c) => (
+                          <option key={c.id} value={c.id}>N° {c.checkNumber} · {money(c.amount, c.currency)} · {c.bankName || "Banco"}</option>
+                        ))}
+                      </select>
+                    )}
+                    {line.method === "Retention" && (
+                      <select aria-label="Tipo de retención" value={line.retentionType || "IIBB"}
+                        onChange={(e) => updateLine(line.id, { retentionType: e.target.value })}>
+                        <option value="IIBB">Ingresos Brutos</option>
+                        <option value="Ganancias">Ganancias</option>
+                        <option value="IVA">IVA</option>
+                        <option value="SUSS">SUSS</option>
+                      </select>
+                    )}
+                    <div className="cobro-amount">
+                      <span>{currency === "USD" ? "US$" : "$"}</span>
+                      <input type="number" min="0" step="0.01" aria-label="Importe" value={line.amount || ""}
+                        placeholder="0,00" onChange={(e) => updateLine(line.id, { amount: Number(e.target.value) || 0 })} />
                     </div>
+                    <button type="button" className="btn ghost compact" aria-expanded={detailsOpen}
+                      onClick={() => setOpenDetails((d) => ({ ...d, [line.id]: !detailsOpen }))}>
+                      {detailsOpen ? "Ocultar" : "Detalles"}
+                    </button>
+                    <button type="button" className="btn ghost compact cobro-remove" aria-label="Quitar" onClick={() => removeLine(line.id)}>✕</button>
+                  </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, alignItems: "end" }}>
-                      {/* Bank or Cash Accounts */}
+                  {detailsOpen && (
+                    <div className="cobro-line-details">
                       {(line.method === "BankTransfer" || line.method === "Cash") && (
                         <label>
-                          Cuenta de Ingreso ({currency}) *
-                          <select
-                            value={line.accountId || ""}
-                            onChange={(e) => updateLine(line.id, { accountId: e.target.value, movementId: undefined })}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
-                          >
-                            {accounts.filter((a) => a.isActive).map((a) => (
-                              <option key={a.id} value={a.id}>
-                                {a.name} ({a.currency}) - Saldo: {money(a.balance, a.currency)}
-                              </option>
-                            ))}
+                          Cartera (concepto)
+                          <select value={line.conceptId || defaultConceptId || ""} onChange={(e) => {
+                            updateLine(line.id, { conceptId: e.target.value || undefined, movementId: undefined });
+                            if (e.target.value) setMovementConceptFilter(e.target.value);
+                          }}>
+                            {incomeConcepts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                           </select>
                         </label>
                       )}
-
-                      {/* Concept Selection for Line */}
-                      {(line.method === "BankTransfer" || line.method === "Cash") && (
-                        <label>
-                          Concepto de Cobro (cartera) *
-                          <select
-                            required
-                            value={line.conceptId || movementConceptFilter || ""}
-                            onChange={(e) => {
-                              const conceptId = e.target.value || undefined;
-                              updateLine(line.id, { conceptId, movementId: undefined });
-                              if (conceptId) setMovementConceptFilter(conceptId);
-                            }}
-                            style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
-                          >
-                            <option value="" disabled>Elegí una cartera de ingreso</option>
-                            {incomeConcepts.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                🏷️ {c.name} ({c.code})
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
-
-                      {/* Bank Movement link */}
                       {line.method === "BankTransfer" && (
-                        <div style={{ gridColumn: "1 / -1", background: "#f8fafc", padding: 12, borderRadius: 6, border: "1px solid #e2e8f0" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
-                            <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f766e" }}>
-                              🏦 Vincular Transferencia Bancaria Acreditada (Extracto Banco)
-                            </span>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                              <label style={{ fontSize: "0.75rem", color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 4 }}>
-                                Cartera
-                                <select
-                                  value={movementConceptFilter}
-                                  onChange={(e) => {
-                                    const conceptId = e.target.value;
-                                    setMovementConceptFilter(conceptId);
-                                    updateLine(line.id, { movementId: undefined, conceptId: conceptId || undefined });
-                                  }}
-                                  style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
-                                >
-                                  {incomeConcepts.map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                      {c.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <label style={{ fontSize: "0.75rem", color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 4 }}>
-                                Cuenta
-                                <select
-                                  value={movementAccountFilter}
-                                  onChange={(e) => {
-                                    setMovementAccountFilter(e.target.value);
-                                    updateLine(line.id, { movementId: undefined, accountId: e.target.value || line.accountId });
-                                  }}
-                                  style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
-                                >
-                                  <option value="">Todas las cuentas</option>
-                                  {accounts.filter((a) => a.isActive).map((a) => (
-                                    <option key={a.id} value={a.id}>{a.name}</option>
-                                  ))}
-                                </select>
-                              </label>
-                            </div>
-                          </div>
-
-                          <select
-                            value={line.movementId || ""}
-                            onChange={(e) => {
-                              const movId = e.target.value;
-                              const mov = filteredAvailableMovements.find((m) => m.id === movId);
-                              updateLine(line.id, {
-                                movementId: movId || undefined,
-                                accountId: mov?.accountId || line.accountId,
-                                amount: mov ? Number(mov.amount) : line.amount,
-                                notes: mov ? mov.description : line.notes,
-                                conceptId: mov?.conceptId || line.conceptId || movementConceptFilter || undefined
-                              });
-                            }}
-                            style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
-                          >
+                        <label className="cobro-grow">
+                          Vincular con el movimiento del banco (opcional)
+                          <select value={line.movementId || ""} onChange={(e) => {
+                            const mov = filteredAvailableMovements.find((m) => m.id === e.target.value);
+                            updateLine(line.id, {
+                              movementId: e.target.value || undefined,
+                              accountId: mov?.accountId || line.accountId,
+                              amount: mov ? Number(mov.amount) : line.amount,
+                              notes: mov ? mov.description : line.notes,
+                              conceptId: mov?.conceptId || line.conceptId
+                            });
+                          }}>
                             <option value="">
-                              {loadingMovements
-                                ? "Cargando movimientos…"
-                                : filteredAvailableMovements.length === 0
-                                  ? "-- Sin movimientos confirmados disponibles --"
-                                  : `-- Elegí entre ${filteredAvailableMovements.length} movimiento(s) del extracto --`}
+                              {loadingMovements ? "Cargando movimientos…"
+                                : filteredAvailableMovements.length === 0 ? "No hay acreditaciones pendientes de vincular"
+                                : "Sin vincular"}
                             </option>
                             {filteredAvailableMovements.map((m) => (
                               <option key={m.id} value={m.id}>
-                                {new Date(m.operationDateUtc).toLocaleDateString("es-AR")} · {money(m.amount, m.currency)} · [{m.conceptName || m.ConceptName || "Sin clasificar"}{m.accountName ? ` · ${m.accountName}` : ""}] · {m.description}
+                                {shortDate(m.operationDateUtc)} · {money(m.amount, m.currency)} · {m.accountName ? `${m.accountName} · ` : ""}{m.description}
                               </option>
                             ))}
                           </select>
-                          {!loadingMovements && filteredAvailableMovements.length === 0 && (
-                            <p className="muted" style={{ margin: "8px 0 0", fontSize: "0.8rem" }}>
-                              No hay créditos confirmados y sin conciliar para esta cartera
-                              {movementAccountFilter ? " en la cuenta elegida" : ""}. Confirmá movimientos en Finanzas → Conceptos → Bandeja, o cambiá la cartera/cuenta.
-                            </p>
-                          )}
-                        </div>
+                        </label>
                       )}
-
-                      {/* Cheques */}
                       {line.method === "Cheque" && (
-                        <div style={{ gridColumn: "1 / -1" }}>
-                          <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
-                            <label style={{ margin: 0, flex: 1 }}>
-                              Cheque en Cartera *
-                              <select
-                                value={line.chequeId || ""}
-                                onChange={(e) => {
-                                  const chId = e.target.value;
-                                  const ch = availableCheques.find((c) => c.id === chId);
-                                  updateLine(line.id, {
-                                    chequeId: chId || undefined,
-                                    amount: ch ? Number(ch.amount) : line.amount,
-                                    notes: ch ? `Cheque N° ${ch.checkNumber} (${ch.bankName || "Banco"} - Librador: ${ch.issuerName || "s/d"})` : line.notes
-                                  });
-                                }}
-                                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
-                              >
-                                <option value="">-- Seleccioná un cheque disponible --</option>
-                                {availableCheques.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    N° {c.checkNumber} · {money(c.amount, c.currency)} · {c.bankName || "Banco"} · Librador: {c.issuerName || "Sin datos"}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <button
-                              type="button"
-                              className="btn btn-outline compact"
-                              style={{ alignSelf: "flex-end" }}
-                              onClick={() => setCreateChequeLineId(line.id)}
-                            >
-                              + Nuevo cheque
-                            </button>
-                          </div>
-                          {availableCheques.length === 0 && (
-                            <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
-                              No hay cheques recibidos en cartera. Creá uno acá sin salir del recibo.
-                            </p>
-                          )}
-                        </div>
+                        <button type="button" className="btn btn-outline compact" onClick={() => setCreateChequeLineId(line.id)}>
+                          + Cargar un cheque nuevo
+                        </button>
                       )}
-
-                      {/* Retention fields */}
                       {line.method === "Retention" && (
-                        <>
-                          <label>
-                            Tipo de Retención *
-                            <select
-                              value={line.retentionType || "IIBB"}
-                              onChange={(e) => updateLine(line.id, { retentionType: e.target.value })}
-                              style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
-                            >
-                              <option value="IIBB">Ingresos Brutos (IIBB)</option>
-                              <option value="Ganancias">Impuesto a las Ganancias</option>
-                              <option value="IVA">Retención de IVA</option>
-                              <option value="SUSS">Seguridad Social (SUSS)</option>
-                            </select>
-                          </label>
-
-                          <label>
-                            N° Certificado de Retención
-                            <input
-                              type="text"
-                              value={line.retentionCertificate || ""}
-                              onChange={(e) => updateLine(line.id, { retentionCertificate: e.target.value })}
-                              placeholder="Ej: 2026-000123"
-                              style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
-                            />
-                          </label>
-                        </>
+                        <label>
+                          N° de certificado
+                          <input type="text" value={line.retentionCertificate || ""} placeholder="Ej: 2026-000123"
+                            onChange={(e) => updateLine(line.id, { retentionCertificate: e.target.value })} />
+                        </label>
                       )}
-
-                      {/* Amount */}
-                      <label>
-                        Importe Cobrado ({currency}) *
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          required
-                          value={line.amount}
-                          onChange={(e) => updateLine(line.id, { amount: Number(e.target.value) || 0 })}
-                          style={{
-                            width: "100%",
-                            padding: "6px 10px",
-                            borderRadius: 6,
-                            border: "1px solid var(--surface-border)",
-                            fontWeight: 700,
-                            textAlign: "right"
-                          }}
-                        />
+                      <label className="cobro-grow">
+                        Nota
+                        <input type="text" value={line.notes || ""} onChange={(e) => updateLine(line.id, { notes: e.target.value })} />
                       </label>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </div>
+              );
+            })}
+            <div className="cobro-add">
+              {lines.length === 0 && <span className="muted">Agregá cómo te pagaron:</span>}
+              {(Object.keys(METHODS) as PaymentLine["method"][]).map((m) => (
+                <button key={m} type="button" className="btn btn-outline compact" onClick={() => addLine(m)}>
+                  + {METHODS[m].label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* 3. Qué cancela */}
+          <section className="card pad cobro-step">
+            <div className="cobro-step-head">
+              <h2><span className="cobro-num">3</span> ¿Qué cancela?</h2>
+              {selectedCustomer && openInvoices.length > 0 && (
+                autoApply
+                  ? <span className="muted">Aplicado automáticamente a lo más viejo</span>
+                  : <button type="button" className="btn ghost compact" onClick={() => { setAutoApply(true); setManualApplied({}); }}>
+                      Volver a aplicar automáticamente
+                    </button>
+              )}
+            </div>
+            {!selectedCustomer ? (
+              <p className="muted">Elegí el cliente para ver sus facturas pendientes.</p>
+            ) : openInvoices.length === 0 ? (
+              <p className="muted">{loading ? "Cargando…" : "Este cliente no tiene facturas pendientes. Lo que cobres queda a cuenta."}</p>
+            ) : (
+              <ul className="cobro-invoices">
+                {openInvoices.map((row) => {
+                  const id = row.invoice.id;
+                  const amount = applied[id] ?? 0;
+                  const max = maxApply(row);
+                  const enabled = canApply(row);
+                  const rateType = rateTypeOf(row);
+                  const rate = paymentRateOf(row);
+                  const pair = bnaRates[rateType];
+                  const diff = differences.find((d) => d.row.invoice.id === id);
+                  const overdue = row.invoice.dueDate && row.invoice.dueDate.slice(0, 10) < receiptDate;
+                  return (
+                    <li key={id} className={`cobro-invoice${amount > 0 ? " on" : ""}${enabled ? "" : " off"}`}>
+                      <div className="cobro-invoice-main">
+                        <input type="checkbox" aria-label={`Aplicar a ${row.invoice.formattedNumber}`} disabled={!enabled}
+                          checked={amount > 0} onChange={(e) => setManual(id, e.target.checked ? max : 0)} />
+                        <div className="cobro-invoice-doc">
+                          <strong>{documentLabel(row.invoice.invoiceType)} {row.invoice.formattedNumber}</strong>
+                          <span className="muted">
+                            Emitida {shortDate(row.invoice.issueDate)} · {overdue ? <span className="cobro-overdue">vencida {shortDate(row.invoice.dueDate)}</span> : <>vence {shortDate(row.invoice.dueDate)}</>}
+                          </span>
+                        </div>
+                        <div className="cobro-invoice-balance">
+                          <span className="muted">Saldo</span>
+                          <strong>{row.isUsd ? money(row.pendingUsd, "USD") : money(row.pendingArs)}</strong>
+                        </div>
+                        <div className="cobro-amount">
+                          <span>{currency === "USD" ? "US$" : "$"}</span>
+                          <input type="number" min="0" step="0.01" aria-label="Importe a aplicar" disabled={!enabled}
+                            value={amount || ""} placeholder="0,00"
+                            onChange={(e) => setManual(id, Math.min(max, Math.max(0, Number(e.target.value) || 0)))} />
+                        </div>
+                      </div>
+                      {!enabled && (
+                        <p className="cobro-note muted">Es una factura en pesos: para cancelarla registrá el cobro en pesos.</p>
+                      )}
+                      {row.isUsd && currency === "ARS" && (
+                        <div className="cobro-note">
+                          <span>
+                            {amount > 0 ? `Cancela ${money(diff?.usd ?? 0, "USD")} · ` : ""}
+                            TC {rateType.toLowerCase()} BNA{pair?.previous && rate === pair.previous.sell ? ` ${shortDate(pair.previous.date)} (pactado)` : ""}: <strong>$ {rate.toLocaleString("es-AR")}</strong>
+                          </span>
+                          <button type="button" className="btn ghost compact" onClick={() => setRateEditor(rateEditor === id ? null : id)}>
+                            {rateEditor === id ? "Listo" : "Cambiar"}
+                          </button>
+                          {rateEditor === id && (
+                            <div className="cobro-rate-editor">
+                              <div className="cobro-segment" role="group" aria-label="Dólar pactado">
+                                {(["Divisa", "Billete"] as const).map((t) => (
+                                  <button key={t} type="button" className={rateType === t ? "on" : ""}
+                                    onClick={() => {
+                                      setRateTypeOverride((o) => ({ ...o, [id]: t }));
+                                      setRateOverride(({ [id]: _drop, ...rest }) => rest);
+                                    }}>
+                                    {t}
+                                  </button>
+                                ))}
+                              </div>
+                              {[pair?.previous && { q: pair.previous, label: "Día anterior" }, pair?.current && { q: pair.current, label: "Hoy" }]
+                                .filter(Boolean).map((opt) => {
+                                  const { q, label } = opt as { q: NonNullable<BnaQuote>; label: string };
+                                  return (
+                                    <button key={label} type="button" className={`btn compact ${rate === q.sell ? "" : "btn-outline"}`}
+                                      onClick={() => setRateOverride((o) => ({ ...o, [id]: q.sell }))}>
+                                      {label} {shortDate(q.date)}: $ {q.sell.toLocaleString("es-AR")}
+                                    </button>
+                                  );
+                                })}
+                              <label className="cobro-inline">
+                                Otro
+                                <input type="number" min="1" step="0.01" value={rateOverride[id] ?? ""} placeholder={String(rate)}
+                                  onChange={(e) => {
+                                    const v = Number(e.target.value);
+                                    setRateOverride((o) => ({ ...o, [id]: v > 0 ? v : rate }));
+                                  }} />
+                              </label>
+                            </div>
+                          )}
+                          {diff && Math.abs(diff.diff) >= 0.01 && (
+                            <p className={diff.diff > 0 ? "cobro-diff up" : "cobro-diff down"}>
+                              {diff.diff > 0
+                                ? `El dólar subió desde la factura (TC $ ${row.invoiceRate.toLocaleString("es-AR")}): corresponde una nota de débito por ${money(diff.diff)}.`
+                                : `El dólar bajó desde la factura (TC $ ${row.invoiceRate.toLocaleString("es-AR")}): corresponde una nota de crédito por ${money(-diff.diff)}.`}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {!autoApply && markedTotal > totalReceived + 0.01 && (
+              <button type="button" className="btn btn-outline compact" style={{ marginTop: 10 }}
+                onClick={() => {
+                  const missing = round2(markedTotal - totalReceived);
+                  if (lines.length === 0) {
+                    const account = accounts.find((acc) => acc.isActive && (acc.currency || "ARS") === currency) || accounts.find((acc) => acc.isActive);
+                    setLines([{ id: newId(), method: "BankTransfer", amount: missing, currency, accountId: account?.id, conceptId: defaultConceptId, notes: "" }]);
+                  } else {
+                    setLines((prev) => prev.map((l, i) => (i === prev.length - 1 ? { ...l, amount: round2((Number(l.amount) || 0) + missing) } : l)));
+                  }
+                }}>
+                Usar {money(markedTotal, currency)} como importe recibido
+              </button>
             )}
           </section>
+
+          <label className="cobro-notes">
+            Observaciones del recibo
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Cobranza a…" />
+          </label>
         </div>
 
-        {/* SUMMARY / BALANCE SIDEBAR */}
-        <aside style={{ position: "sticky", top: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-          <div className="card pad" style={{ borderTop: "4px solid #0d9488" }}>
-            <h3 style={{ margin: "0 0 14px 0", fontSize: "1.05rem" }}>Balance de Cobro ({currency})</h3>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: "0.9rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span className="muted">Total Medios de Cobro:</span>
-                <strong style={{ fontSize: "1.1rem", color: "#065f46" }}>{money(totalCobrado, currency)}</strong>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span className="muted">Total Imputado a Facturas:</span>
-                <strong>{money(totalImputed, currency)}</strong>
-              </div>
-
-              {totalExchangeDifference !== 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f0fdf4", padding: "6px 8px", borderRadius: 6 }}>
-                  <span style={{ fontSize: "0.8rem", color: "#166534" }}>Diferencia de Cambio:</span>
-                  <strong style={{ color: totalExchangeDifference > 0 ? "#059669" : "#dc2626", fontSize: "0.88rem" }}>
-                    {totalExchangeDifference > 0 ? `+${money(totalExchangeDifference)} (ND)` : `${money(totalExchangeDifference)} (NC)`}
-                  </strong>
+        <aside className="cobro-summary">
+          <div className="card pad">
+            <h3>Resumen</h3>
+            <dl>
+              <div><dt>Recibido</dt><dd>{money(totalReceived, currency)}</dd></div>
+              <div><dt>Aplicado a facturas</dt><dd>{money(totalApplied, currency)}</dd></div>
+              {onAccount > 0.01 && (
+                <div className="cobro-info"><dt>Queda a cuenta</dt><dd>{money(onAccount, currency)}</dd></div>
+              )}
+              {Math.abs(totalDifference) >= 0.01 && (
+                <div className="cobro-info">
+                  <dt>Diferencia de cambio</dt>
+                  <dd>{totalDifference > 0 ? "ND " : "NC "}{money(Math.abs(totalDifference))}</dd>
                 </div>
               )}
-
-              <div style={{ borderTop: "1px dashed var(--surface-border)", paddingTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span className="muted">Diferencia / Excedente:</span>
-                <strong style={{ color: hasOverImputation ? "#dc2626" : difference > 0 ? "#0d9488" : "inherit" }}>
-                  {money(difference, currency)}
-                </strong>
-              </div>
-            </div>
-
-            {hasOverImputation && (
-              <div style={{ marginTop: 14, padding: 10, borderRadius: 6, background: "#fee2e2", color: "#991b1b", fontSize: "0.82rem", lineHeight: 1.4 }}>
-                ⚠️ <strong>Cobro insuficiente:</strong> Estás imputando {money(totalImputed, currency)} a facturas, pero los medios de cobro suman solo {money(totalCobrado, currency)}. Ajustá los montos imputados a las facturas.
-              </div>
+            </dl>
+            {onAccount > 0.01 && (
+              <p className="muted cobro-hint">Lo que queda a cuenta se guarda como saldo a favor del cliente y se aplica en un próximo cobro.</p>
             )}
-
-            {!hasOverImputation && difference > 0.01 && (
-              <div style={{ marginTop: 14, padding: 10, borderRadius: 6, background: "#e0f2fe", color: "#0369a1", fontSize: "0.82rem", lineHeight: 1.4 }}>
-                ℹ️ <strong>Anticipo:</strong> El cobro supera las facturas imputadas en {money(difference, currency)}. Este monto quedará como saldo a favor del cliente en su cuenta corriente.
-              </div>
+            {Math.abs(totalDifference) >= 0.01 && (
+              <p className="muted cobro-hint">La nota por diferencia de cambio se emite desde la cuenta corriente del cliente.</p>
             )}
-
-            {!hasOverImputation && Math.abs(difference) <= 0.01 && totalCobrado > 0 && (
-              <div style={{ marginTop: 14, padding: 10, borderRadius: 6, background: "#dcfce7", color: "#166534", fontSize: "0.82rem" }}>
-                ✓ Cobro e imputaciones equilibrados al 100%.
-              </div>
-            )}
-
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={saving || loading || totalCobrado <= 0 || hasOverImputation || !selectedCustomerId}
-              onClick={() => void handleSave()}
-              style={{ width: "100%", justifyContent: "center", marginTop: 18, padding: "12px 16px", fontWeight: 700 }}
-            >
-              {saving ? "Emitiendo Recibo..." : "🧾 Confirmar Recibo de Cobro"}
+            <button type="button" className="btn cobro-confirm" disabled={Boolean(blocker) || saving} onClick={() => void handleSave()}>
+              {saving ? "Registrando…" : "Confirmar cobro"}
             </button>
+            {blocker && <p className="cobro-blocker">{blocker}</p>}
           </div>
         </aside>
       </div>
 
       {/* RECENT RECEIPTS TABLE */}
       <section className="card pad" style={{ marginTop: 30 }}>
-        <h2 style={{ margin: "0 0 14px 0", fontSize: "1.1rem" }}>Últimos Recibos de Cobro Emitidos</h2>
+        <h2 style={{ margin: "0 0 14px 0", fontSize: "1.1rem" }}>Últimos recibos</h2>
         <div className="table-wrap">
           <table>
             <thead>
@@ -1249,7 +736,7 @@ export function CollectionReceiptsWorkspacePage() {
                       <td>
                         <strong>{r.receiptNumber}</strong>
                       </td>
-                      <td>{new Date(r.receiptDateUtc).toLocaleDateString("es-AR")}</td>
+                      <td>{shortDate(r.receiptDateUtc)}</td>
                       <td>
                         <strong>{cust?.tradeName || cust?.legalName || "Cliente"}</strong>
                         <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>

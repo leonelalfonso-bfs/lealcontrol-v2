@@ -592,7 +592,11 @@ export function InvoiceFormPage() {
       currency,
       exchangeRate: currency === "USD" ? exchangeRate : 1.0,
       paidInForeignCurrency: currency === "USD" && paidInForeignCurrency,
-      exchangeRateType: currency === "USD" ? exchangeRateType : undefined,
+      // El dólar pactado sale de la cotización elegida; solo con TC manual se elige aparte.
+      exchangeRateType: currency !== "USD" ? undefined
+        : rateSource === "billetes" ? "Billete"
+        : rateSource === "manual" ? exchangeRateType
+        : "Divisa",
       exchangeDifferenceImputationId: differenceImputationId || undefined,
       associatedInvoiceId: associatedInvoice?.id,
       restockItems: noteKind === "NC" ? restockItems : undefined,
@@ -934,7 +938,7 @@ export function InvoiceFormPage() {
                     />
                     Se cobra en dólares (el cliente paga en USD). ARCA exige la cotización oficial.
                   </label>
-                  {!paidInForeignCurrency && (
+                  {!paidInForeignCurrency && rateSource === "manual" && (
                     <label style={{ fontSize: "0.85rem", marginTop: 8 }}>
                       Cotización pactada para cobrar en pesos
                       <select value={exchangeRateType} onChange={(e) => setExchangeRateType(e.target.value as "Divisa" | "Billete")}>
