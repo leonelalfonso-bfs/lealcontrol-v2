@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { useAuth } from "./AuthContext";
 
 export type TemplateStyle = "modern" | "classic" | "compact";
 
@@ -112,15 +113,16 @@ export const DEFAULT_DOCUMENT_TEMPLATES: DocumentTemplatesConfig = {
   invoice: {
     headerTitle: "FACTURA ELECTRÓNICA",
     showBankingInfo: true,
+    // Datos bancarios propios de cada empresa: sin valores de ejemplo.
     bankDetails: {
-      bankName: "Banco Galicia",
-      accountType: "Cuenta Corriente Especial en Pesos",
-      cbu: "0070123420000012345678",
-      alias: "LEAL.CONTROL.ERP",
-      accountHolder: "LEAL CONTROL S.A.",
-      cuit: "30-71548962-9"
+      bankName: "",
+      accountType: "",
+      cbu: "",
+      alias: "",
+      accountHolder: "",
+      cuit: ""
     },
-    paymentInstructions: "Por favor enviar el comprobante de transferencia indicando N° de Factura y Razón Social a: cobranzas@lealcontrol.com",
+    paymentInstructions: "",
     showAfipQr: true,
     showCaeBox: true,
     interestLegalText: "El vencimiento de este comprobante opera de pleno derecho en la fecha indicada. La mora devengará intereses punitorios según tasa activa BNA.",
@@ -173,32 +175,67 @@ interface DocumentTemplateContextValue {
 
 const DocumentTemplateContext = createContext<DocumentTemplateContextValue | undefined>(undefined);
 
-export const DocumentTemplateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<DocumentTemplatesConfig>(() => {
-    try {
-      const saved = localStorage.getItem("leal_doc_template_settings_v2");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          ...DEFAULT_DOCUMENT_TEMPLATES,
-          ...parsed,
-          global: { ...DEFAULT_DOCUMENT_TEMPLATES.global, ...(parsed.global || {}) },
-          quote: { ...DEFAULT_DOCUMENT_TEMPLATES.quote, ...(parsed.quote || {}) },
-          remito: { ...DEFAULT_DOCUMENT_TEMPLATES.remito, ...(parsed.remito || {}) },
-          invoice: { ...DEFAULT_DOCUMENT_TEMPLATES.invoice, ...(parsed.invoice || {}) },
-          purchaseOrder: { ...DEFAULT_DOCUMENT_TEMPLATES.purchaseOrder, ...(parsed.purchaseOrder || {}) }
-        };
-      }
-    } catch {
-      // fallback
+const LEGACY_STORAGE_KEY = "leal_doc_template_settings_v2";
+const storageKey = (tenantId: string | undefined) =>
+  tenantId ? `${LEGACY_STORAGE_KEY}:${tenantId}` : LEGACY_STORAGE_KEY;
+
+// La clave vieja era compartida por todas las empresas del navegador: se hereda
+// el diseño, pero nunca los datos bancarios ni las instrucciones de pago.
+function readLegacy(): any | null {
+  try {
+    const saved = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+    delete parsed.bankDetails;
+    if (parsed?.invoice) {
+      const { bankDetails: _bank, paymentInstructions: _instructions, ...invoice } = parsed.invoice;
+      parsed.invoice = invoice;
     }
-    return DEFAULT_DOCUMENT_TEMPLATES;
-  });
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function loadSettings(tenantId: string | undefined): DocumentTemplatesConfig {
+  try {
+    const saved = tenantId ? localStorage.getItem(storageKey(tenantId)) : null;
+    const parsed = saved ? JSON.parse(saved) : readLegacy();
+    if (parsed) {
+      return {
+        ...DEFAULT_DOCUMENT_TEMPLATES,
+        ...parsed,
+        global: { ...DEFAULT_DOCUMENT_TEMPLATES.global, ...(parsed.global || {}) },
+        quote: { ...DEFAULT_DOCUMENT_TEMPLATES.quote, ...(parsed.quote || {}) },
+        remito: { ...DEFAULT_DOCUMENT_TEMPLATES.remito, ...(parsed.remito || {}) },
+        invoice: {
+          ...DEFAULT_DOCUMENT_TEMPLATES.invoice,
+          ...(parsed.invoice || {}),
+          bankDetails: { ...DEFAULT_DOCUMENT_TEMPLATES.invoice.bankDetails, ...(parsed.invoice?.bankDetails || {}) }
+        },
+        purchaseOrder: { ...DEFAULT_DOCUMENT_TEMPLATES.purchaseOrder, ...(parsed.purchaseOrder || {}) }
+      };
+    }
+  } catch {
+    // fallback
+  }
+  return DEFAULT_DOCUMENT_TEMPLATES;
+}
+
+export const DocumentTemplateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { tenant } = useAuth();
+  const tenantId = tenant?.id;
+  const [settings, setSettings] = useState<DocumentTemplatesConfig>(() => loadSettings(tenantId));
+
+  useEffect(() => {
+    setSettings(loadSettings(tenantId));
+  }, [tenantId]);
 
   const persist = (updated: DocumentTemplatesConfig) => {
     setSettings(updated);
+    if (!tenantId) return;
     try {
-      localStorage.setItem("leal_doc_template_settings_v2", JSON.stringify(updated));
+      localStorage.setItem(storageKey(tenantId), JSON.stringify(updated));
     } catch {
       // ignore
     }
