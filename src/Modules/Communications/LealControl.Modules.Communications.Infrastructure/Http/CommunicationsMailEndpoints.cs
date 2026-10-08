@@ -66,7 +66,7 @@ internal static class CommunicationsMailEndpoints
                     resolvedProvider,
                     account.Id,
                     tenant.TenantId.Value,
-                    string.IsNullOrWhiteSpace(returnPath) ? "/configuracion/correo" : returnPath!);
+                    string.IsNullOrWhiteSpace(returnPath) ? MailOAuthService.DefaultReturnPath : returnPath!);
                 return Results.Ok(new { authorizationUrl = url, provider = resolvedProvider });
             }
             catch (InvalidOperationException ex)

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
+import { api } from "../api/client";
 
 export type TemplateStyle = "modern" | "classic" | "compact";
 
@@ -131,7 +132,7 @@ export const DEFAULT_DOCUMENT_TEMPLATES: DocumentTemplatesConfig = {
   purchaseOrder: {
     headerTitle: "ORDEN DE COMPRA A PROVEEDOR",
     receptionSchedule: "Lunes a Viernes de 07:00 a 16:00 hs en Planta Central.",
-    billingInstructions: "Facturar a nombre de LEAL CONTROL S.A. (CUIT 30-71548962-9) y enviar factura en formato PDF y XML a compras@lealcontrol.com indicando el número de esta Orden.",
+    billingInstructions: "Facturar a nombre de la empresa indicada en el encabezado e indicar el número de esta orden en la factura.",
     supplierTerms: "La aceptación de esta orden de compra implica la conformidad total con los precios, plazos y condiciones de entrega estipuladas.",
     customFooterText: "Orden de compra oficial emitida por el Departamento de Compras y Abastecimiento."
   },
@@ -171,10 +172,16 @@ interface DocumentTemplateContextValue {
   updatePurchaseOrder: (partial: Partial<PurchaseOrderTemplateSettings>) => void;
   updateSettings: (partial: Partial<DocumentTemplatesConfig> | any) => void;
   resetSettings: () => void;
+  /** Guarda en el servidor los cambios hechos con update*. */
+  save: () => Promise<void>;
+  /** Hay cambios sin guardar en el servidor. */
+  dirty: boolean;
 }
 
 const DocumentTemplateContext = createContext<DocumentTemplateContextValue | undefined>(undefined);
 
+// Antes las plantillas vivían solo en el navegador. Ahora se guardan por empresa en el
+// servidor; el navegador guarda una copia para mostrar rápido y para migrar lo viejo.
 const LEGACY_STORAGE_KEY = "leal_doc_template_settings_v2";
 const storageKey = (tenantId: string | undefined) =>
   tenantId ? `${LEGACY_STORAGE_KEY}:${tenantId}` : LEGACY_STORAGE_KEY;
@@ -186,9 +193,8 @@ function readLegacy(): any | null {
     const saved = localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!saved) return null;
     const parsed = JSON.parse(saved);
-    delete parsed.bankDetails;
     if (parsed?.invoice) {
-      const { bankDetails: _bank, paymentInstructions: _instructions, ...invoice } = parsed.invoice;
+      const { paymentInstructions: _instructions, ...invoice } = parsed.invoice;
       parsed.invoice = invoice;
     }
     return parsed;
@@ -197,84 +203,117 @@ function readLegacy(): any | null {
   }
 }
 
-function loadSettings(tenantId: string | undefined): DocumentTemplatesConfig {
+function readLocal(tenantId: string | undefined): any | null {
   try {
     const saved = tenantId ? localStorage.getItem(storageKey(tenantId)) : null;
-    const parsed = saved ? JSON.parse(saved) : readLegacy();
-    if (parsed) {
-      return {
-        ...DEFAULT_DOCUMENT_TEMPLATES,
-        ...parsed,
-        global: { ...DEFAULT_DOCUMENT_TEMPLATES.global, ...(parsed.global || {}) },
-        quote: { ...DEFAULT_DOCUMENT_TEMPLATES.quote, ...(parsed.quote || {}) },
-        remito: { ...DEFAULT_DOCUMENT_TEMPLATES.remito, ...(parsed.remito || {}) },
-        invoice: {
-          ...DEFAULT_DOCUMENT_TEMPLATES.invoice,
-          ...(parsed.invoice || {}),
-          bankDetails: { ...DEFAULT_DOCUMENT_TEMPLATES.invoice.bankDetails, ...(parsed.invoice?.bankDetails || {}) }
-        },
-        purchaseOrder: { ...DEFAULT_DOCUMENT_TEMPLATES.purchaseOrder, ...(parsed.purchaseOrder || {}) }
-      };
-    }
+    return saved ? JSON.parse(saved) : readLegacy();
   } catch {
-    // fallback
+    return null;
   }
-  return DEFAULT_DOCUMENT_TEMPLATES;
+}
+
+function writeLocal(tenantId: string | undefined, value: DocumentTemplatesConfig) {
+  if (!tenantId) return;
+  try {
+    localStorage.setItem(storageKey(tenantId), JSON.stringify(toStored(value)));
+  } catch {
+    // sin almacenamiento local: el servidor sigue siendo la fuente
+  }
+}
+
+/** Solo las secciones: sin los getters de compatibilidad ni los datos bancarios (van en Configuración). */
+function toStored(value: DocumentTemplatesConfig) {
+  const { bankDetails: _bank, ...invoice } = value.invoice;
+  return {
+    global: value.global,
+    quote: value.quote,
+    remito: value.remito,
+    invoice,
+    purchaseOrder: value.purchaseOrder
+  };
+}
+
+function merge(parsed: any | null): DocumentTemplatesConfig {
+  if (!parsed || typeof parsed !== "object") return DEFAULT_DOCUMENT_TEMPLATES;
+  return {
+    ...DEFAULT_DOCUMENT_TEMPLATES,
+    global: { ...DEFAULT_DOCUMENT_TEMPLATES.global, ...(parsed.global || {}) },
+    quote: { ...DEFAULT_DOCUMENT_TEMPLATES.quote, ...(parsed.quote || {}) },
+    remito: { ...DEFAULT_DOCUMENT_TEMPLATES.remito, ...(parsed.remito || {}) },
+    invoice: {
+      ...DEFAULT_DOCUMENT_TEMPLATES.invoice,
+      ...(parsed.invoice || {}),
+      bankDetails: DEFAULT_DOCUMENT_TEMPLATES.invoice.bankDetails
+    },
+    purchaseOrder: withoutDemoBilling({ ...DEFAULT_DOCUMENT_TEMPLATES.purchaseOrder, ...(parsed.purchaseOrder || {}) })
+  };
+}
+
+// Texto de ejemplo que traían las plantillas viejas, con razón social y CUIT de LealControl.
+const DEMO_BILLING_PREFIX = "Facturar a nombre de LEAL CONTROL S.A.";
+function withoutDemoBilling(po: PurchaseOrderTemplateSettings): PurchaseOrderTemplateSettings {
+  return po.billingInstructions?.startsWith(DEMO_BILLING_PREFIX)
+    ? { ...po, billingInstructions: DEFAULT_DOCUMENT_TEMPLATES.purchaseOrder.billingInstructions }
+    : po;
 }
 
 export const DocumentTemplateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { tenant } = useAuth();
+  const { tenant, user } = useAuth();
   const tenantId = tenant?.id;
-  const [settings, setSettings] = useState<DocumentTemplatesConfig>(() => loadSettings(tenantId));
+  const [settings, setSettings] = useState<DocumentTemplatesConfig>(() => merge(readLocal(tenantId)));
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    setSettings(loadSettings(tenantId));
-  }, [tenantId]);
+    let cancelled = false;
+    const local = readLocal(tenantId);
+    setSettings(merge(local));
+    setDirty(false);
+    if (!tenantId || !user) return;
+    api.getDocumentTemplates()
+      .then(async (server) => {
+        if (cancelled) return;
+        if (server) {
+          const merged = merge(server);
+          setSettings(merged);
+          writeLocal(tenantId, merged);
+          return;
+        }
+        // Nunca se guardaron en el servidor: se sube lo que tenía este navegador (si es admin).
+        if (local) {
+          await api.saveDocumentTemplates(toStored(merge(local))).catch(() => undefined);
+        }
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [tenantId, user]);
 
-  const persist = (updated: DocumentTemplatesConfig) => {
+  const edit = (updated: DocumentTemplatesConfig) => {
     setSettings(updated);
-    if (!tenantId) return;
-    try {
-      localStorage.setItem(storageKey(tenantId), JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
+    setDirty(true);
   };
 
-  const updateGlobal = (partial: Partial<GlobalTemplateSettings>) => {
-    persist({
-      ...settings,
-      global: { ...settings.global, ...partial }
-    });
+  const save = async () => {
+    const saved = await api.saveDocumentTemplates(toStored(settings));
+    const merged = merge(saved);
+    setSettings(merged);
+    writeLocal(tenantId, merged);
+    setDirty(false);
   };
 
-  const updateQuote = (partial: Partial<QuoteTemplateSettings>) => {
-    persist({
-      ...settings,
-      quote: { ...settings.quote, ...partial }
-    });
-  };
+  const updateGlobal = (partial: Partial<GlobalTemplateSettings>) =>
+    edit({ ...settings, global: { ...settings.global, ...partial } });
 
-  const updateRemito = (partial: Partial<RemitoTemplateSettings>) => {
-    persist({
-      ...settings,
-      remito: { ...settings.remito, ...partial }
-    });
-  };
+  const updateQuote = (partial: Partial<QuoteTemplateSettings>) =>
+    edit({ ...settings, quote: { ...settings.quote, ...partial } });
 
-  const updateInvoice = (partial: Partial<InvoiceTemplateSettings>) => {
-    persist({
-      ...settings,
-      invoice: { ...settings.invoice, ...partial }
-    });
-  };
+  const updateRemito = (partial: Partial<RemitoTemplateSettings>) =>
+    edit({ ...settings, remito: { ...settings.remito, ...partial } });
 
-  const updatePurchaseOrder = (partial: Partial<PurchaseOrderTemplateSettings>) => {
-    persist({
-      ...settings,
-      purchaseOrder: { ...settings.purchaseOrder, ...partial }
-    });
-  };
+  const updateInvoice = (partial: Partial<InvoiceTemplateSettings>) =>
+    edit({ ...settings, invoice: { ...settings.invoice, ...partial } });
+
+  const updatePurchaseOrder = (partial: Partial<PurchaseOrderTemplateSettings>) =>
+    edit({ ...settings, purchaseOrder: { ...settings.purchaseOrder, ...partial } });
 
   const updateSettings = (partial: any) => {
     if (partial.templateStyle || partial.primaryColor) {
@@ -283,13 +322,11 @@ export const DocumentTemplateProvider: React.FC<{ children: React.ReactNode }> =
         primaryColor: partial.primaryColor || settings.global.primaryColor
       });
     } else {
-      persist({ ...settings, ...partial });
+      edit({ ...settings, ...partial });
     }
   };
 
-  const resetSettings = () => {
-    persist(DEFAULT_DOCUMENT_TEMPLATES);
-  };
+  const resetSettings = () => edit(DEFAULT_DOCUMENT_TEMPLATES);
 
   return (
     <DocumentTemplateContext.Provider
@@ -301,7 +338,9 @@ export const DocumentTemplateProvider: React.FC<{ children: React.ReactNode }> =
         updateInvoice,
         updatePurchaseOrder,
         updateSettings,
-        resetSettings
+        resetSettings,
+        save,
+        dirty
       }}
     >
       {children}

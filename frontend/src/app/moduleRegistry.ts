@@ -157,15 +157,13 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     glow: "rgba(2, 132, 199, 0.35)",
     title: "COMUNICACIONES & MENSAJERÍA",
     defaultPath: "/comunicaciones",
-    pathPrefixes: ["/comunicaciones", "/configuracion/correo"],
+    pathPrefixes: ["/comunicaciones"],
     minimumPlan: "comercial",
     requiredPermission: "communications.read",
     dependencies: ["directorio"],
     items: [
       { path: "/comunicaciones", label: "Bandeja de Entrada", icon: "📬" },
-      { path: "/comunicaciones/canales", label: "WhatsApp & Redes", icon: "💬" },
-      { path: "/comunicaciones/plantillas", label: "Plantillas de respuesta", icon: "📝" },
-      { path: "/configuracion/correo", label: "Configurar Casillas de Mail", icon: "⚙️" }
+      { path: "/comunicaciones/plantillas", label: "Plantillas de respuesta", icon: "📝" }
     ]
   },
   {
@@ -434,10 +432,13 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     requiredPermission: "administration.read",
     dependencies: [],
     items: [
-      { path: "/configuracion", label: "Empresa e integraciones", icon: "🏢", end: true },
-      { path: "/configuracion/plantillas", label: "Plantillas de impresión", icon: "📄" },
-      { path: "/configuracion/correo", label: "Cuentas de correo", icon: "✉️" },
-      { path: "/configuracion/ayuda", label: "Ayuda Configuración", icon: "💡" }
+      { path: "/configuracion", label: "Empresa", icon: "🏢", end: true },
+      { path: "/configuracion/arca", label: "Facturación ARCA", icon: "🧾" },
+      { path: "/configuracion/bancos", label: "Cobros y bancos", icon: "🏦" },
+      { path: "/configuracion/documentos", label: "Documentos", icon: "📄" },
+      { path: "/configuracion/comunicaciones", label: "Comunicaciones", icon: "✉️" },
+      { path: "/configuracion/usuarios", label: "Usuarios y permisos", icon: "👥" },
+      { path: "/configuracion/respaldo", label: "Respaldo", icon: "💾" }
     ]
   }
 ];

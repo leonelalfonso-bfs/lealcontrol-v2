@@ -273,10 +273,10 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
                 ""Id"" uuid NOT NULL PRIMARY KEY,
                 ""TenantId"" uuid NOT NULL,
                 ""CompanyName"" character varying(160) NOT NULL,
-                ""LegalName"" character varying(256) NOT NULL DEFAULT 'LEAL CONTROL ERP S.A.',
+                ""LegalName"" character varying(256) NOT NULL DEFAULT '',
                 ""TradeName"" character varying(160),
                 ""DocumentType"" character varying(20) NOT NULL DEFAULT 'Cuit',
-                ""DocumentNumber"" character varying(20) NOT NULL DEFAULT '30715489629',
+                ""DocumentNumber"" character varying(20) NOT NULL DEFAULT '',
                 ""TaxCondition"" character varying(64) NOT NULL DEFAULT 'ResponsableInscripto',
                 ""IibbRegime"" character varying(64) NOT NULL DEFAULT 'ConvenioMultilateral',
                 ""IibbNumber"" character varying(64),
@@ -305,7 +305,7 @@ public sealed class TenantProvisionerService : ITenantProvisionerService
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );
 
-            ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""LegalName"" character varying(256) NOT NULL DEFAULT 'LEAL CONTROL ERP S.A.';
+            ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""LegalName"" character varying(256) NOT NULL DEFAULT '';
 
             CREATE TABLE IF NOT EXISTS public.tenant_users (
                 ""Id"" uuid NOT NULL PRIMARY KEY,

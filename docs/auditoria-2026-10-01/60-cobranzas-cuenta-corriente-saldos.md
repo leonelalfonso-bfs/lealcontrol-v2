@@ -50,4 +50,3 @@ El servidor calcula cobrado, acreditado y pendiente de cada comprobante (`Sales.
 
 - Órdenes de pago en USD: la orden no guarda cotización. La cuenta corriente de proveedores las suma a TC 1, igual que antes. Corregir junto con el módulo de compras.
 - Contabilización de diferencias de cambio y notas: no se revisó el módulo contable en estos bloques.
-- Plantillas de documentos (datos bancarios del PDF): se guardan por navegador y por empresa. Pasarlas al servidor.

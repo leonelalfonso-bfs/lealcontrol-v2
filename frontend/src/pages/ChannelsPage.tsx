@@ -58,7 +58,7 @@ function MetaReconnectBanner({
   );
 }
 
-export function ChannelsPage() {
+export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState<Channel | null>(null);
 
@@ -336,27 +336,15 @@ export function ChannelsPage() {
 
   return (
     <div className="channels-page page-wide" style={{ paddingBottom: 50 }}>
-      <div className="page-head">
-        <div>
-          <span className="eyebrow">COMUNICACIONES</span>
-          <h1>Canales Sociales & Mensajería</h1>
-          <p className="muted">
-            Conectá WhatsApp, Instagram y Facebook para gestionar todas las conversaciones en una sola bandeja omnicanal con costo $0 por mensaje.
-          </p>
+      {!embedded && (
+        <div className="page-head">
+          <div>
+            <span className="eyebrow">COMUNICACIONES</span>
+            <h1>WhatsApp y redes</h1>
+            <p className="muted">Conectá WhatsApp, Instagram y Facebook para recibir los mensajes en la bandeja.</p>
+          </div>
         </div>
-      </div>
-
-      {/* Intro Banner */}
-      <div className="card pad channel-intro">
-        <div>
-          <span className="eyebrow">BANDEJA OMNICANAL</span>
-          <h2>Una conversación, un historial</h2>
-          <p className="muted">
-            Cada mensaje entrante por WhatsApp, Instagram Direct o Facebook Messenger se vincula automáticamente con la ficha del cliente y oportunidad en el CRM.
-          </p>
-        </div>
-        <span className="channel-orbit">✉　💬　📸　📘</span>
-      </div>
+      )}
 
       {/* Channels Grid */}
       <div className="channel-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 18 }}>

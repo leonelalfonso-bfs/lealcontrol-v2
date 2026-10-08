@@ -1,4 +1,4 @@
-import { Component, lazy, type ComponentType, type ErrorInfo, type ReactNode } from "react";
+import { Component, lazy, type ComponentType, type ErrorInfo, type LazyExoticComponent, type ReactNode } from "react";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -30,7 +30,12 @@ async function loadWithRetry<T>(loader: () => Promise<T>, attempts = 3): Promise
  * Lazy named export con reintento ante 502/red y un reload automático
  * (index.html viejo tras deploy que apunta a chunks que ya no existen / proxy caído).
  */
+type PropsOf<C> = C extends ComponentType<infer P> ? P : object;
+
 const named = <T extends Record<string, unknown>, K extends keyof T>(loader: () => Promise<T>, key: K) =>
+  namedLazy(loader, key) as unknown as LazyExoticComponent<ComponentType<PropsOf<T[K]>>>;
+
+const namedLazy = <T extends Record<string, unknown>, K extends keyof T>(loader: () => Promise<T>, key: K) =>
   lazy(async () => {
     try {
       const mod = await loadWithRetry(loader);
@@ -153,9 +158,8 @@ export const ReportsPage = named(() => import("../pages/ReportsPage"), "ReportsP
 export const SettingsPage = named(() => import("../pages/SettingsPage"), "SettingsPage");
 export const DocumentTemplatesPage = named(() => import("../pages/DocumentTemplatesPage"), "DocumentTemplatesPage");
 export const SuppliersPage = named(() => import("../pages/SuppliersPage"), "SuppliersPage");
-export const MailSettingsPage = named(() => import("../pages/MailSettingsPage"), "MailSettingsPage");
 export const InboxPage = named(() => import("../pages/InboxPage"), "InboxPage");
-export const ChannelsPage = named(() => import("../pages/ChannelsPage"), "ChannelsPage");
+export const CommunicationsSettingsPage = named(() => import("../pages/CommunicationsSettingsPage"), "CommunicationsSettingsPage");
 export const ReplyTemplatesPage = named(() => import("../pages/ReplyTemplatesPage"), "ReplyTemplatesPage");
 export const ProductionPage = named(() => import("../pages/ProductionPage"), "ProductionPage");
 export const ProductionHelpPage = named(() => import("../pages/ProductionHelpPage"), "ProductionHelpPage");
@@ -194,7 +198,6 @@ export const FleetHelpPage = named(() => import("../pages/FleetHelpPage"), "Flee
 export const DirectoryHelpPage = named(() => import("../pages/DirectoryHelpPage"), "DirectoryHelpPage");
 export const SalesHelpPage = named(() => import("../pages/SalesHelpPage"), "SalesHelpPage");
 export const FinanceHelpPage = named(() => import("../pages/FinanceHelpPage"), "FinanceHelpPage");
-export const SettingsHelpPage = named(() => import("../pages/SettingsHelpPage"), "SettingsHelpPage");
 export const StyleShowcasePage = named(() => import("../pages/StyleShowcasePage"), "StyleShowcasePage");
 export const GrainsDashboardPage = named(() => import("../pages/GrainsDashboardPage"), "GrainsDashboardPage");
 export const GrainContractsPage = named(() => import("../pages/GrainContractsPage"), "GrainContractsPage");

@@ -453,7 +453,7 @@ export const api = {
   setMailAutoSync: (id: string, enabled: boolean) =>
     request<{ id: string; autoSyncEnabled: boolean }>(`/api/v1/communications/accounts/${id}/auto-sync`, { method: "PUT", body: JSON.stringify({ enabled }) }),
   listMailOAuthProviders: () => request<import("./types").MailOAuthProvider[]>("/api/v1/communications/accounts/oauth/providers"),
-  startMailOAuth: (id: string, provider?: string, returnPath = "/configuracion/correo") => {
+  startMailOAuth: (id: string, provider?: string, returnPath = "/configuracion/comunicaciones") => {
     const p = new URLSearchParams({ returnPath });
     if (provider) p.set("provider", provider);
     return request<{ authorizationUrl: string; provider: string }>(`/api/v1/communications/accounts/${id}/oauth/start?${p}`);
@@ -601,6 +601,10 @@ export const api = {
 
   // Company Settings & Users Methods
   getCompanySettings: () => request<import("./types").CompanySettings>("/api/v1/company/settings"),
+  /** Plantillas de documentos de la empresa; null si nunca se guardaron en el servidor. */
+  getDocumentTemplates: () => request<Record<string, unknown> | null>("/api/v1/company/document-templates"),
+  saveDocumentTemplates: (body: unknown) =>
+    request<Record<string, unknown>>("/api/v1/company/document-templates", { method: "PUT", body: JSON.stringify(body) }),
   updateCompanySettings: (body: import("./types").CompanySettings) =>
     request<import("./types").CompanySettings>("/api/v1/company/settings", { method: "PUT", body: JSON.stringify(body) }),
   uploadArcaCertificate: (body: { certificateCrt?: string; certificateKey?: string; environment: string; signerCuit: string }) =>

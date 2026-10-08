@@ -33,8 +33,7 @@ Seguridad y rendimiento (#72), buscadores (#73), estructura Instrumento (#74), t
    - API sin root;
    - acciones de GitHub en Node 20;
    - acelerar el CI (unos 20 minutos);
-   - plantillas de documentos en el servidor;
-   - quitar los datos de demostración de las empresas nuevas.
+   - ~~plantillas de documentos en el servidor~~ y ~~datos de demostración en empresas nuevas~~: hechos en la reorganización de Configuración (#88 y siguiente).
 6. **Para vender:**
    - recuperación de contraseña;
    - alta de clientes con planes y MercadoPago;

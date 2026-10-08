@@ -65,7 +65,7 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                     ""LegalName"" character varying(256) NOT NULL,
                     ""TradeName"" character varying(256),
                     ""DocumentType"" character varying(20) NOT NULL DEFAULT 'Cuit',
-                    ""DocumentNumber"" character varying(20) NOT NULL DEFAULT '30715489629',
+                    ""DocumentNumber"" character varying(20) NOT NULL DEFAULT '',
                     ""TaxCondition"" character varying(64) NOT NULL DEFAULT 'ResponsableInscripto',
                     ""IibbRegime"" character varying(64) NOT NULL DEFAULT 'ConvenioMultilateral',
                     ""IibbNumber"" character varying(64),
@@ -108,6 +108,11 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
 
                 ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""ActivityStartDate"" character varying(32);
                 ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""ArcaPointOfSale"" integer;
+                ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""DocumentTemplatesJson"" text;
+                ALTER TABLE public.tenant_settings ALTER COLUMN ""DocumentNumber"" SET DEFAULT '';
+                -- Datos bancarios de ejemplo con los que arrancaban las empresas nuevas: no son de nadie.
+                UPDATE public.tenant_settings SET ""BankName"" = NULL, ""BankCbu"" = NULL, ""BankAlias"" = NULL
+                 WHERE ""BankCbu"" = '2850001240000012345678' AND ""BankAlias"" = 'LEAL.CONTROL.ERP';
                 ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""CreatedAtUtc"" timestamp with time zone DEFAULT now();
                 ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""UpdatedAtUtc"" timestamp with time zone DEFAULT now();
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""PasswordHash"" character varying(256);

@@ -38,7 +38,7 @@ function oauthProviderFor(account: MailAccount): "Google" | "Microsoft" | null {
   return null;
 }
 
-export function MailSettingsPage() {
+export function MailSettingsPage({ embedded = false }: { embedded?: boolean }) {
   const [accounts, setAccounts] = useState<MailAccount[]>([]);
   const [oauthProviders, setOauthProviders] = useState<MailOAuthProvider[]>([]);
   const [form, setForm] = useState(empty);
@@ -168,7 +168,7 @@ export function MailSettingsPage() {
   const secretRequired = !form.id && form.authMode !== "OAuth2";
 
   return <div className="mail-settings page-wide">
-    <div className="page-head"><div><span className="eyebrow">COMUNICACIONES</span><h1>Cuentas de correo</h1><p className="muted">Conectá casillas para enviar propuestas y registrar respuestas en CRM y Ventas.</p></div></div>
+    {!embedded && <div className="page-head"><div><span className="eyebrow">COMUNICACIONES</span><h1>Cuentas de correo</h1><p className="muted">Conectá casillas para enviar propuestas y registrar respuestas en CRM y Ventas.</p></div></div>}
     {message && <div className="success-banner">{message}</div>}{error && <div className="alert">{error}</div>}
     <div className="mail-layout">
       <section className="card pad"><div className="section-head"><div><h2>Casillas conectadas</h2><p className="muted">Cada empresa puede usar varias cuentas y elegir un remitente principal. La recepción automática es opcional por casilla y se ejecuta cada 5 minutos.</p></div></div>

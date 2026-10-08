@@ -28,6 +28,21 @@ public static class CompanySettingsEndpoints
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
         }).RequireAuthorization("RequireAdmin");
 
+        group.MapGet("/document-templates", async (ISender sender, CancellationToken cancellationToken) =>
+        {
+            var res = await sender.Send(new GetDocumentTemplatesQuery(), cancellationToken);
+            if (!res.IsSuccess) return Results.BadRequest(res.Error);
+            return res.Value is null ? Results.NoContent() : Results.Content(res.Value, "application/json");
+        });
+
+        group.MapPut("/document-templates", async (System.Text.Json.JsonElement body, ISender sender, CancellationToken cancellationToken) =>
+        {
+            if (body.ValueKind != System.Text.Json.JsonValueKind.Object)
+                return Results.BadRequest(new { detail = "Las plantillas tienen que ser un objeto JSON." });
+            var res = await sender.Send(new SaveDocumentTemplatesCommand(body.GetRawText()), cancellationToken);
+            return res.IsSuccess ? Results.Content(res.Value ?? "{}", "application/json") : Results.BadRequest(res.Error);
+        }).RequireAuthorization("RequireAdmin");
+
         group.MapPost("/settings/arca-certificate", async (UploadArcaCertificateCommand cmd, ISender sender, CancellationToken cancellationToken) =>
         {
             var res = await sender.Send(cmd, cancellationToken);

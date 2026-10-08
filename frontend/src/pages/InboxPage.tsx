@@ -756,13 +756,13 @@ export function InboxPage() {
             <strong>{conversations.filter((c) => !c.assignedToUserId).length}</strong>
           </button>
           <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-            <Link to="/comunicaciones/canales" style={{ fontSize: "0.8rem", color: "#0d9488", fontWeight: 700 }}>
+            <Link to="/configuracion/comunicaciones?canal=mensajeria" style={{ fontSize: "0.8rem", color: "#0d9488", fontWeight: 700 }}>
               📲 Conectar Canales
             </Link>
             <Link to="/comunicaciones/plantillas" style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
               📝 Plantillas de respuesta
             </Link>
-            <Link to="/configuracion/correo" style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
+            <Link to="/configuracion/comunicaciones" style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
               ⚙️ Cuentas de correo
             </Link>
           </div>
@@ -892,7 +892,7 @@ export function InboxPage() {
                 <>
                   <strong style={{ display: "block", marginBottom: 8 }}>Todavía no hay conversaciones</strong>
                   <span>Conectá un canal o configurá una casilla de correo para empezar.</span>
-                  <div style={{ marginTop: 12 }}><Link to="/comunicaciones/canales">Configurar canales →</Link></div>
+                  <div style={{ marginTop: 12 }}><Link to="/configuracion/comunicaciones?canal=mensajeria">Configurar canales →</Link></div>
                 </>
               ) : "No hay conversaciones en este filtro."}
             </div>
