@@ -3,8 +3,10 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { CustomerSummary, PurchaseInvoice } from "../api/types";
 import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
-import { Modal } from "../components/ui/Modal";
+import { Modal } from "../components/ui/Modal";
+
 import { CustomerPicker } from "../components/pickers";
+import { todayAr } from "../lib/dates";
 
 type Account = {
   id: string;
@@ -76,7 +78,7 @@ export function PaymentOrderFormPage() {
   const [lineEditorError, setLineEditorError] = useState<string | null>(null);
 
   const [paymentDate, setPaymentDate] = useState<string>(
-    new Date().toISOString().slice(0, 10)
+    todayAr()
   );
   const [notes, setNotes] = useState<string>("");
 

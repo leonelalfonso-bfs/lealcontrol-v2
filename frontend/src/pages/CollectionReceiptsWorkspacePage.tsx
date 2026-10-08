@@ -7,6 +7,7 @@ import { CustomerPicker } from "../components/pickers";
 import { withCollections, type ReceiptForImputation } from "../lib/receivables";
 import { documentLabel } from "../lib/documents";
 import "./collections.css";
+import { todayAr } from "../lib/dates";
 
 type Account = {
   id: string;
@@ -81,7 +82,7 @@ export function CollectionReceiptsWorkspacePage() {
   const [movementAccountFilter, setMovementAccountFilter] = useState<string>("");
   const [loadingMovements, setLoadingMovements] = useState(false);
 
-  const [receiptDate, setReceiptDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [receiptDate, setReceiptDate] = useState<string>(todayAr());
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
   const [description, setDescription] = useState<string>("");
   const [lines, setLines] = useState<PaymentLine[]>([]);

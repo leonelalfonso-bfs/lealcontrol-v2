@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { provinces, type Employee, type EppDelivery, type EmployeeDocument } from "../api/types";
 import { digitsOnly } from "../lib/arContact";
+import { todayAr } from "../lib/dates";
 
 const INGRESO_DOC_TYPES = [
   { id: "CV", label: "📄 CV Actualizado", description: "Currículum Vitae con experiencia laboral y referencias" },
@@ -54,7 +55,7 @@ export function EmployeeFormPage() {
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
 
-  const [hireDate, setHireDate] = useState(new Date().toISOString().split("T")[0]);
+  const [hireDate, setHireDate] = useState(todayAr());
   const [seniorityRecognitionDate, setSeniorityRecognitionDate] = useState("");
   const [terminationDate, setTerminationDate] = useState("");
   const [contractType, setContractType] = useState<number>(0);

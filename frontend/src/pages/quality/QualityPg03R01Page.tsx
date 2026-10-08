@@ -6,6 +6,7 @@ import { excelDate, exportToExcel, type ExcelColumn } from "../../components/Exc
 import { COMPLAINT_CHANNEL, labelOf } from "./qualityLabels";
 import { QualityAuditHistory } from "./QualityAuditHistory";
 import { usePresentationMode } from "../../context/PresentationModeContext";
+import { todayAr } from "../../lib/dates";
 
 const STATUS_LABEL: Record<string, string> = {
   Open: "Registrada",
@@ -42,7 +43,7 @@ export function QualityPg03R01Page() {
   const [channel, setChannel] = useState("Email");
   const [description, setDescription] = useState("");
   const [responsible, setResponsible] = useState("");
-  const [receivedAt, setReceivedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [receivedAt, setReceivedAt] = useState(todayAr());
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
 

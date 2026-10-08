@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { Invoice, PurchaseInvoice } from "../api/types";
+import { todayAr } from "../lib/dates";
 
 type Account = { id: string; name: string; currency: string; balance: number };
 type Cheque = { id: string; checkNumber: string; amount: number; currency: string; dueDateUtc?: string; direction: string; status: string; issuerName?: string; bankName?: string };
@@ -17,7 +18,7 @@ export function CashFlowPage() {
   const [paymentOrders, setPaymentOrders] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(30);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayAr();
 
   useEffect(() => {
     Promise.all([

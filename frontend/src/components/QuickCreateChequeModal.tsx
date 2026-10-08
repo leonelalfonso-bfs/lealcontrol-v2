@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { todayAr } from "../lib/dates";
 
 export type ChequeDirection = "Received" | "Issued";
 
@@ -36,7 +37,7 @@ type FormState = {
   notes: string;
 };
 
-const todayIsoDate = () => new Date().toISOString().slice(0, 10);
+const todayIsoDate = () => todayAr();
 
 /**
  * Alta rápida de cheque en cartera sin salir del formulario (OP / Recibo).

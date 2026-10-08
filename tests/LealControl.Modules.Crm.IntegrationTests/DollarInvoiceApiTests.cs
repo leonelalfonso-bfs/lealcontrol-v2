@@ -11,7 +11,8 @@ namespace LealControl.Modules.Crm.IntegrationTests;
 
 public sealed class DollarInvoiceApiTests : IAsyncLifetime
 {
-    private static readonly string Today = DateTime.UtcNow.AddHours(-3).ToString("yyyy-MM-dd");
+    // Mismo día que FiscalTestClock: las ventanas de fecha de ARCA se miden contra ese reloj.
+    private const string Today = "2026-10-02";
     private readonly CrmWebApplicationFactory _factory = new();
     public Task InitializeAsync() => _factory.InitializeAsync();
     public Task DisposeAsync() => _factory.DisposeAsync();

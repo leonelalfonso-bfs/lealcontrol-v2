@@ -14,6 +14,7 @@ import {
 } from "../api/types";
 import { CustomerPicker, ProductPicker } from "../components/pickers";
 import { isFceType, letterOf } from "../lib/documents";
+import { todayAr, addDaysAr } from "../lib/dates";
 
 interface FormInvoiceItem {
   productId?: string;
@@ -142,9 +143,9 @@ export function InvoiceFormPage() {
   const [customerTaxCondition, setCustomerTaxCondition] = useState<string>("ResponsableInscripto");
   const [locationId, setLocationId] = useState<string>("");
   const [customerAddress, setCustomerAddress] = useState<string>("");
-  const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [issueDate, setIssueDate] = useState<string>(todayAr());
   const [saleCondition, setSaleCondition] = useState<string>("Cuenta Corriente 30 días");
-  const [dueDate, setDueDate] = useState<string>(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
+  const [dueDate, setDueDate] = useState<string>(addDaysAr(30));
   const [fiscalConcept, setFiscalConcept] = useState<number>(0);
   const [serviceFrom, setServiceFrom] = useState<string>("");
   const [serviceTo, setServiceTo] = useState<string>("");
@@ -467,7 +468,6 @@ export function InvoiceFormPage() {
   // Sale condition sync due date
   const handleSaleConditionChange = (cond: string) => {
     setSaleCondition(cond);
-    const now = new Date(issueDate || Date.now());
     let days = 30;
     if (cond === "Contado") days = 0;
     else if (cond.includes("15")) days = 15;
@@ -475,8 +475,10 @@ export function InvoiceFormPage() {
     else if (cond.includes("60")) days = 60;
     else if (cond.includes("90")) days = 90;
 
-    now.setDate(now.getDate() + days);
-    setDueDate(now.toISOString().split("T")[0]);
+    // Desde la fecha de emisión; mediodía UTC evita corrimientos de día.
+    const due = new Date(`${issueDate || addDaysAr(0)}T12:00:00Z`);
+    due.setUTCDate(due.getUTCDate() + days);
+    setDueDate(due.toISOString().slice(0, 10));
   };
 
   // Live Exchange Rates Refresh

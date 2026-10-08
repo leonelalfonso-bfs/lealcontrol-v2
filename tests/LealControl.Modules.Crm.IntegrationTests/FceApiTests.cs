@@ -11,8 +11,9 @@ namespace LealControl.Modules.Crm.IntegrationTests;
 
 public sealed class FceApiTests : IAsyncLifetime
 {
-    private static readonly string Today = DateTime.UtcNow.AddHours(-3).ToString("yyyy-MM-dd");
-    private static readonly string InAMonth = DateTime.UtcNow.AddHours(-3).AddDays(30).ToString("yyyy-MM-dd");
+    // Mismo día que FiscalTestClock: las ventanas de fecha de ARCA se miden contra ese reloj.
+    private const string Today = "2026-10-02";
+    private const string InAMonth = "2026-11-01";
     private readonly CrmWebApplicationFactory _factory = new();
     public Task InitializeAsync() => _factory.InitializeAsync();
     public Task DisposeAsync() => _factory.DisposeAsync();
@@ -67,7 +68,7 @@ public sealed class FceApiTests : IAsyncLifetime
 
         var fce = await Create("FCE_A");
         using (var authorized = await client.PostAsync($"/api/v1/sales/invoices/{fce}/authorize-arca", null))
-            Assert.Equal(HttpStatusCode.OK, authorized.StatusCode);
+            Assert.True(authorized.StatusCode == HttpStatusCode.OK, await authorized.Content.ReadAsStringAsync());
         var data = Assert.Single(gateway.Submitted);
         Assert.Equal(201, data.VoucherType);
         Assert.Contains(new WsfeOptional("2101", "0070123420000012345678"), data.OptionalList);

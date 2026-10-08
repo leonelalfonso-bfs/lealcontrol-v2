@@ -53,8 +53,12 @@ public sealed class FiscalReservationService
             return Fail(FiscalAssociation.Unavailable);
         if (!WsfeVoucherPreparation.TryBuild(invoice, out var data, out var error, associated) || data is null)
             return Fail(error);
-        if (!FiscalEmissionDateRule.IsAllowed(data.IssueDate, data.Concept, _clock.GetUtcNow()))
-            return Fail(data.Concept == 1
+        if (!FiscalEmissionDateRule.IsAllowed(data.IssueDate, data.Concept, _clock.GetUtcNow(), data.VoucherType))
+            return Fail(data.IsFce
+                ? (WsfeCaeRequestBuilder.IsFceInvoice(data.VoucherType)
+                    ? "La Factura de Crédito Electrónica debe tener fecha entre 5 días atrás y mañana (Argentina)."
+                    : "Las notas de la Factura de Crédito Electrónica deben tener fecha de hoy o de hasta 5 días atrás (Argentina).")
+                : data.Concept == 1
                 ? "La fecha de emisión debe estar dentro de los cinco días anteriores o posteriores a la fecha actual de Argentina."
                 : "La fecha de emisión debe estar dentro de los diez días anteriores o posteriores a la fecha actual de Argentina.");
         if (await _db.FiscalAuthorizationAttempts.AnyAsync(a =>
