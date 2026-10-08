@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { api } from "../api/client";
+import type { CompanySettings } from "../api/types";
 import { Link } from "react-router-dom";
 import { useDocumentTemplate, type TemplateStyle } from "../context/DocumentTemplateContext";
 
@@ -26,6 +28,11 @@ export const DocumentTemplatesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"global" | "quote" | "remito" | "invoice" | "purchase">("quote");
   const [docTypePreview, setDocTypePreview] = useState<"quote" | "remito" | "invoice" | "purchase">("quote");
   const [savedAlert, setSavedAlert] = useState(false);
+  const [company, setCompany] = useState<CompanySettings | null>(null);
+
+  useEffect(() => {
+    api.getCompanySettings().then(setCompany).catch(() => setCompany(null));
+  }, []);
 
   const handleSave = () => {
     setSavedAlert(true);
@@ -378,63 +385,12 @@ export const DocumentTemplatesPage: React.FC = () => {
                   </label>
                 </div>
 
-                <div className="grid-2">
-                  <label>
-                    Entidad Bancaria
-                    <input
-                      type="text"
-                      value={settings.invoice.bankDetails.bankName}
-                      onChange={(e) =>
-                        updateInvoice({
-                          bankDetails: { ...settings.invoice.bankDetails, bankName: e.target.value }
-                        })
-                      }
-                      placeholder="Ej: Banco Galicia"
-                    />
-                  </label>
-                  <label>
-                    Tipo de Cuenta
-                    <input
-                      type="text"
-                      value={settings.invoice.bankDetails.accountType}
-                      onChange={(e) =>
-                        updateInvoice({
-                          bankDetails: { ...settings.invoice.bankDetails, accountType: e.target.value }
-                        })
-                      }
-                      placeholder="Ej: CC Especial en Pesos"
-                    />
-                  </label>
-                </div>
-
-                <div className="grid-2" style={{ marginTop: "8px" }}>
-                  <label>
-                    CBU (22 Dígitos)
-                    <input
-                      type="text"
-                      value={settings.invoice.bankDetails.cbu}
-                      onChange={(e) =>
-                        updateInvoice({
-                          bankDetails: { ...settings.invoice.bankDetails, cbu: e.target.value }
-                        })
-                      }
-                      style={{ fontFamily: "monospace" }}
-                    />
-                  </label>
-                  <label>
-                    Alias Bancario
-                    <input
-                      type="text"
-                      value={settings.invoice.bankDetails.alias}
-                      onChange={(e) =>
-                        updateInvoice({
-                          bankDetails: { ...settings.invoice.bankDetails, alias: e.target.value }
-                        })
-                      }
-                      style={{ fontFamily: "monospace", fontWeight: 700 }}
-                    />
-                  </label>
-                </div>
+                <p className="muted" style={{ fontSize: "0.8rem", margin: 0 }}>
+                  {company?.bankCbu || company?.bankAlias
+                    ? <>Banco: <strong>{company.bankName || "—"}</strong> · CBU <code>{company.bankCbu || "—"}</code> · Alias <code>{company.bankAlias || "—"}</code></>
+                    : "Todavía no hay datos bancarios cargados."}
+                  {" "}Se editan en <Link to="/configuracion">Configuración → Bancos</Link> (son los mismos que se informan en la FCE).
+                </p>
               </div>
 
               <label>
@@ -695,8 +651,8 @@ export const DocumentTemplatesPage: React.FC = () => {
                         <strong style={{ color: currentPrimary, display: "block", marginBottom: "3px" }}>
                           🏦 Datos para Transferencia Bancaria (Cobranzas):
                         </strong>
-                        <div><strong>Banco:</strong> {settings.invoice.bankDetails.bankName} ({settings.invoice.bankDetails.accountType})</div>
-                        <div><strong>CBU:</strong> <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{settings.invoice.bankDetails.cbu}</span> • <strong>Alias:</strong> <span style={{ fontFamily: "monospace", fontWeight: 800 }}>{settings.invoice.bankDetails.alias}</span></div>
+                        <div><strong>Banco:</strong> {company?.bankName || "—"}</div>
+                        <div><strong>CBU:</strong> <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{company?.bankCbu || "—"}</span> • <strong>Alias:</strong> <span style={{ fontFamily: "monospace", fontWeight: 800 }}>{company?.bankAlias || "—"}</span></div>
                         <div style={{ fontSize: "0.7rem", color: "#64748b", marginTop: "4px" }}>
                           {settings.invoice.paymentInstructions}
                         </div>

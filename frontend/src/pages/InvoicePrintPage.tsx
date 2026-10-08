@@ -179,7 +179,14 @@ export function InvoicePrintPage() {
 
   const formattedStartDate = company?.activityStartDate ? fiscalDate(company.activityStartDate) : null;
   const issuerAddress = [company?.fiscalStreet, company?.fiscalCity, company?.fiscalProvince].filter(Boolean).join(", ");
-  const bank = settings.invoice.bankDetails;
+  // Los datos bancarios salen de Configuración → Bancos (servidor), los mismos que usa la FCE.
+  const bank = {
+    bankName: company?.bankName?.trim() || "",
+    cbu: company?.bankCbu?.trim() || "",
+    alias: company?.bankAlias?.trim() || "",
+    accountHolder: company?.legalName || "",
+    cuit: company?.documentNumber || ""
+  };
   const hasBankData = Boolean(bank.cbu?.trim() || bank.alias?.trim());
   const missingIssuerData = [
     !company?.legalName && "razón social",
@@ -598,7 +605,7 @@ export function InvoicePrintPage() {
               🏦 DATOS PARA ACREDITACIÓN / TRANSFERENCIA BANCARIA:
             </strong>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
-              {bank.bankName && <div><strong>Banco:</strong> {bank.bankName}{bank.accountType ? ` (${bank.accountType})` : ""}</div>}
+              {bank.bankName && <div><strong>Banco:</strong> {bank.bankName}</div>}
               {bank.cbu && <div><strong>CBU:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>{bank.cbu}</span></div>}
               {bank.alias && <div><strong>Alias:</strong> <span style={{ fontFamily: "monospace", fontWeight: "bold", color: primaryCol }}>{bank.alias}</span></div>}
               {bank.accountHolder && <div><strong>Titular / CUIT:</strong> {bank.accountHolder}{bank.cuit ? ` (${bank.cuit})` : ""}</div>}
