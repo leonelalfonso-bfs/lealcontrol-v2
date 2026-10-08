@@ -31,8 +31,18 @@ Ahora:
 
 Comandos: pasos 1 a 4 en la conversación del 8/10. Para restaurar de verdad: `docs/RUNBOOK_RESTORE.md`.
 
+## Alertas (Healthchecks.io)
+
+| Check | Quién lo avisa | Período / gracia |
+|---|---|---|
+| Respaldo diario | `leal-backup.sh`: `/start` al empezar y el código de salida al terminar. Variable `LEAL_HC_BACKUP_URL` en `backup.env` | 1 día / 3 h |
+| Sistema | `/usr/local/bin/leal-monitor.sh`, cron cada 5 minutos: API de producción `Healthy`, disco por debajo del 85% y certificado HTTPS con más de 14 días. Variable `LEAL_HC_SYSTEM_URL` en `/etc/lealcontrol/monitor.env` | 5 min / 10 min |
+
+- Si el VPS se cae, los pings dejan de llegar y Healthchecks avisa igual.
+- El `/health` público devuelve la página web, no el estado de la API: por eso el chequeo corre desde el VPS.
+
 ## Pendiente
 
 - Probar el descifrado desde una máquina que no sea el VPS, usando solo las contraseñas guardadas.
-- Alertas: respaldo fallido o que no corrió, sitio caído y disco (80% al 8/10).
+- Disco al 80% (8/10): revisar qué ocupa (imágenes de Docker viejas, logs).
 - Drive no impide que alguien con acceso al VPS borre los respaldos. Para vender el sistema, evaluar Backblaze B2 con Object Lock.

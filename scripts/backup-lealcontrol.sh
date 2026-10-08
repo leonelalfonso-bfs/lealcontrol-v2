@@ -11,6 +11,7 @@
 #   LEAL_BACKUP_BASE_DIR=/var/backups/lealcontrol
 #   LEAL_BACKUP_RETENTION_DAYS=14
 #   LEAL_RCLONE_REMOTE=gdrive:LEAL_BACKUPS
+#   LEAL_HC_BACKUP_URL=https://hc-ping.com/<uuid>   (alertas, opcional)
 # ==============================================================================
 
 set -euo pipefail
@@ -34,6 +35,20 @@ fi
 
 mkdir -p "$BACKUP_BASE_DIR"
 exec >> >(tee -a "$LOG_FILE") 2>&1
+
+# Alertas (Healthchecks.io): LEAL_HC_BACKUP_URL en backup.env. Avisa el inicio y el
+# resultado con el código de salida; si el respaldo no corre, Healthchecks avisa igual.
+HC_BACKUP_URL="${LEAL_HC_BACKUP_URL:-}"
+hc_ping() {
+  [[ -z "$HC_BACKUP_URL" ]] && return 0
+  curl -fsS -m 10 --retry 3 -o /dev/null --data-raw "${2:-}" "${HC_BACKUP_URL}/$1" 2>/dev/null || true
+}
+report_result() {
+  local code=$?
+  hc_ping "$code" "$(grep -F "$TIMESTAMP" -A 200 "$LOG_FILE" 2>/dev/null | grep -E 'OK |ERROR|AVISO|fin' | tail -40)"
+}
+trap report_result EXIT
+hc_ping start
 
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
