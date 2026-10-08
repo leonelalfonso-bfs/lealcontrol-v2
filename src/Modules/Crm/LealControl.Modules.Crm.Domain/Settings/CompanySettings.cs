@@ -50,6 +50,10 @@ public sealed class CompanySettings
 
     public string? ArcaSignerCuit { get; set; } = "30715489629";
 
+    // Punto de venta RECE que usa este sistema. Si está fijado, no se emite por otro
+    // (evita mezclar numeración con otro sistema de facturación de la misma empresa).
+    public int? ArcaPointOfSale { get; set; }
+
     public string? BankName { get; set; } = "Banco Macro";
 
     public string? BankCbu { get; set; } = "2850001240000012345678";

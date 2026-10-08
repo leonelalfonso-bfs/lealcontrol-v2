@@ -107,6 +107,7 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 );
 
                 ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""ActivityStartDate"" character varying(32);
+                ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""ArcaPointOfSale"" integer;
                 ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""CreatedAtUtc"" timestamp with time zone DEFAULT now();
                 ALTER TABLE public.tenant_settings ADD COLUMN IF NOT EXISTS ""UpdatedAtUtc"" timestamp with time zone DEFAULT now();
                 ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""PasswordHash"" character varying(256);

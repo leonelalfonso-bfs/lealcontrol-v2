@@ -107,7 +107,8 @@ public sealed class FiscalReservationService
         var numbering = await _gateway.GetLastAuthorizedAsync(
             invoice.PointOfSale, data.VoucherType, ct);
         if (!numbering.Ok || numbering.LastNumber < 0 || numbering.LastNumber >= 99_999_999)
-            return Fail("No se pudo verificar el último número autorizado en ARCA.");
+            return Fail(string.IsNullOrWhiteSpace(numbering.Detail)
+                ? "No se pudo verificar el último número autorizado en ARCA." : numbering.Detail);
         // Antes de reservar: no se deja ninguna reserva colgada si el ambiente no está permitido.
         if (numbering.Production && !_policy.AllowProduction)
             return Fail("La emisión en ARCA producción está deshabilitada en este servidor. "

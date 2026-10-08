@@ -614,7 +614,7 @@ export const api = {
       settings: import("./types").CompanySettings;
     }>("/api/v1/company/settings/arca-csr", { method: "POST", body: JSON.stringify(body) }),
   listArcaSalesPoints: () =>
-    request<{ suggested: number | null; points: Array<{ number: number; emissionType: string; blocked: boolean }> }>(
+    request<{ suggested: number | null; configured?: number | null; points: Array<{ number: number; emissionType: string; blocked: boolean }> }>(
       "/api/v1/company/settings/arca-sales-points"
     ),
   getArcaLastAuthorized: (pointOfSale: number, invoiceType: "A" | "B" | "C") =>

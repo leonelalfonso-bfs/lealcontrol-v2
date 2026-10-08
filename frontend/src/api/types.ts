@@ -646,6 +646,8 @@ export type CompanySettings = {
   hasArcaCertificateKey?: boolean;
   arcaEnvironment: string;
   arcaSignerCuit?: string | null;
+  /** Punto de venta fijo para emitir desde este sistema. */
+  arcaPointOfSale?: number | null;
   bankName?: string | null;
   bankCbu?: string | null;
   bankAlias?: string | null;

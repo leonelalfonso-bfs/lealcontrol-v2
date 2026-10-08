@@ -67,6 +67,7 @@ public sealed class CompanySettingsQueryHandler :
         settings.LogoUrl = model.LogoUrl;
         settings.ArcaEnvironment = model.ArcaEnvironment;
         settings.ArcaSignerCuit = model.ArcaSignerCuit;
+        settings.ArcaPointOfSale = model.ArcaPointOfSale is >= 1 and <= 99998 ? model.ArcaPointOfSale : null;
         settings.BankName = model.BankName;
         settings.BankCbu = model.BankCbu;
         settings.BankAlias = model.BankAlias;
@@ -380,5 +381,6 @@ public sealed class CompanySettingsQueryHandler :
         s.DefaultWarranty,
         s.DefaultPaymentTerms,
         !string.IsNullOrWhiteSpace(s.ArcaCertificateCrt),
-        !string.IsNullOrWhiteSpace(s.ArcaCertificateKey));
+        !string.IsNullOrWhiteSpace(s.ArcaCertificateKey),
+        s.ArcaPointOfSale);
 }
