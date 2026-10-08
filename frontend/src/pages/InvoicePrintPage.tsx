@@ -333,7 +333,7 @@ export function InvoicePrintPage() {
                 {/* Left Header: Issuer Company Data */}
                 <td style={{ width: "47%", verticalAlign: "top", paddingRight: "15px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
-                    <img src="/logo.png?v=2" alt="" style={{ maxHeight: "55px", width: "auto" }} />
+                    {company?.logoUrl && <img src={company.logoUrl} alt="" crossOrigin="anonymous" style={{ maxHeight: "55px", maxWidth: "140px", width: "auto", objectFit: "contain" }} />}
                     <div>
                       <h1 style={{ margin: 0, fontSize: "15px", fontWeight: "bold", color: primaryCol, textTransform: "uppercase" }}>
                         {company?.legalName || <Missing label="razón social" />}
