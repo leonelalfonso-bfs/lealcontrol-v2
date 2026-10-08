@@ -21,6 +21,8 @@ public sealed class CompanySettingsQueryHandler :
       IRequestHandler<UpdateCompanySettingsCommand, Result<CompanySettingsDto>>,
       IRequestHandler<UploadArcaCertificateCommand, Result<CompanySettingsDto>>,
       IRequestHandler<GenerateArcaCsrCommand, Result<ArcaCsrResultDto>>,
+      IRequestHandler<GetDocumentTemplatesQuery, Result<string?>>,
+      IRequestHandler<SaveDocumentTemplatesCommand, Result<string?>>,
       IRequestHandler<ListTenantUsersQuery, Result<IReadOnlyList<TenantUserDto>>>,
       IRequestHandler<CreateTenantUserCommand, Result<TenantUserDto>>,
       IRequestHandler<UpdateTenantUserCommand, Result<TenantUserDto>>,
@@ -80,6 +82,27 @@ public sealed class CompanySettingsQueryHandler :
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Result<CompanySettingsDto>.Success(MapToDto(settings));
     }
+
+    public async Task<Result<string?>> Handle(GetDocumentTemplatesQuery request, CancellationToken cancellationToken)
+    {
+        var settings = await GetOrInitSettingsAsync(_tenantContext.TenantId, cancellationToken);
+        return Result<string?>.Success(settings.DocumentTemplatesJson);
+    }
+
+    public async Task<Result<string?>> Handle(SaveDocumentTemplatesCommand request, CancellationToken cancellationToken)
+    {
+        if (request.Json.Length > MaxDocumentTemplatesLength)
+            return Result<string?>.Failure(Error.Validation(
+                "Crm.Settings.TemplatesTooLarge", "Las plantillas superan el tamaño permitido."));
+
+        var settings = await GetOrInitSettingsAsync(_tenantContext.TenantId, cancellationToken);
+        settings.DocumentTemplatesJson = request.Json;
+        settings.UpdatedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result<string?>.Success(settings.DocumentTemplatesJson);
+    }
+
+    private const int MaxDocumentTemplatesLength = 200_000;
 
     public async Task<Result<CompanySettingsDto>> Handle(UploadArcaCertificateCommand request, CancellationToken cancellationToken)
     {
@@ -334,13 +357,9 @@ public sealed class CompanySettingsQueryHandler :
             settings = new CompanySettings
             {
                 TenantId = tenantId,
-                LegalName = "LEAL CONTROL ERP S.A.",
-                TradeName = "Leal Control Metrología",
                 DocumentType = "Cuit",
-                DocumentNumber = "30715489629",
                 TaxCondition = "ResponsableInscripto",
                 IibbRegime = "ConvenioMultilateral",
-                Email = "contacto@lealcontrol.com",
                 CreatedAtUtc = DateTime.UtcNow,
                 UpdatedAtUtc = DateTime.UtcNow
             };

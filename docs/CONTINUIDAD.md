@@ -14,6 +14,10 @@ Actualizado el 8 de octubre de 2026. Leer este documento primero. La versión an
   - el deploy entra por SSH (puerto 5280) con una clave restringida a `/usr/local/bin/leal-deploy`;
   - hace backup, levanta, ejecuta el smoke test y vuelve atrás si falla.
   - Staging: `gh workflow run deploy-staging.yml --ref main -f ref=<sha>`.
+- **Configuración** (#88 y siguiente): secciones Empresa, Facturación ARCA, Cobros y bancos, Documentos, Comunicaciones (correo, WhatsApp y redes), Usuarios y Respaldo, cada una con su ruta `/configuracion/...`.
+  - Los datos bancarios se cargan una sola vez, en Cobros y bancos; de ahí los toman el PDF y la FCE.
+  - Las plantillas de documentos se guardan en el servidor, en `tenant_settings."DocumentTemplatesJson"`.
+  - Las empresas nuevas arrancan sin datos de ejemplo.
 - **Emisión ARCA:** apagada en producción. Procedimiento de encendido: [61](auditoria-2026-10-01/61-encendido-produccion-arca.md). En staging está activa contra homologación.
 
 ## Documentos vigentes

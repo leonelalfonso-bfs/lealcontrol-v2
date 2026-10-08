@@ -41,6 +41,7 @@ internal sealed class CompanySettingsConfiguration : IEntityTypeConfiguration<Co
         builder.Property(s => s.DefaultPaymentTerms).HasMaxLength(256);
         builder.Property(s => s.DefaultQuoteValidDays).IsRequired();
         builder.Property(s => s.DefaultDeliveryDays).IsRequired();
+        builder.Property(s => s.DocumentTemplatesJson);
         builder.Property(s => s.CreatedAtUtc);
         builder.Property(s => s.UpdatedAtUtc);
     }

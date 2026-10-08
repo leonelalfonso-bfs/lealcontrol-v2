@@ -12,12 +12,10 @@ Procedimiento para empezar a facturar desde erp.lealcontrol.com. Producción ya 
 
 ## 2. En el ERP de producción (cada empresa)
 
-- [ ] **Configuración → Empresa:**
-  - CUIT, condición de IVA, Ingresos Brutos, inicio de actividades y domicilio, todos reales;
-  - **CBU y alias reales**, porque las empresas nuevas traen datos de ejemplo;
-  - **punto de venta de este sistema**;
-  - ambiente ARCA "Producción", con el certificado de producción.
-- [ ] **Plantillas de documentos:** datos bancarios del PDF. Se guardan por navegador.
+- [ ] **Configuración → Empresa:** CUIT, condición de IVA, Ingresos Brutos, inicio de actividades y domicilio, todos reales.
+- [ ] **Configuración → Facturación ARCA:** **punto de venta de este sistema** (arriba de todo) y ambiente "Producción" con el certificado de producción.
+- [ ] **Configuración → Cobros y bancos:** **CBU y alias reales**. Son los únicos que salen en el PDF y en la FCE (#88).
+- [ ] **Configuración → Documentos → Factura:** si se muestran los datos bancarios y las instrucciones de pago. Se guardan en el servidor, por empresa.
 - [ ] **Nueva factura:** el punto de venta aparece fijo y es el configurado.
 
 ## 3. En el VPS (solo producción)

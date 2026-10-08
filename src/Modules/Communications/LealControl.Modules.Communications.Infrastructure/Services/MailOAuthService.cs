@@ -125,6 +125,8 @@ public sealed class MailOAuthService(IConfiguration configuration, MailSecretPro
     public string? ProtectRefreshToken(string? refreshToken) =>
         string.IsNullOrWhiteSpace(refreshToken) ? null : secrets.Protect(refreshToken);
 
+    public const string DefaultReturnPath = "/configuracion/comunicaciones";
+
     public string ResolveFrontendReturnUrl(string returnPath, string query)
     {
         var frontend = (configuration["FrontendBaseUrl"]
@@ -132,10 +134,10 @@ public sealed class MailOAuthService(IConfiguration configuration, MailSecretPro
             ?? configuration["PublicBaseUrl"]
             ?? Environment.GetEnvironmentVariable("PUBLIC_BASE_URL")
             ?? "https://v2.lealcontrol.com").Trim().TrimEnd('/');
-        var path = string.IsNullOrWhiteSpace(returnPath) ? "/configuracion/correo" : returnPath.Trim();
-        if (path.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-            path.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            return AppendQuery(path, query);
+        // Solo rutas internas del ERP: una URL absoluta (o "//host") redirigiría a otro sitio.
+        var path = string.IsNullOrWhiteSpace(returnPath) ? DefaultReturnPath : returnPath.Trim();
+        if (path.Contains("://", StringComparison.Ordinal) || path.StartsWith("//", StringComparison.Ordinal) || path.Contains('\\'))
+            path = DefaultReturnPath;
         if (!path.StartsWith('/')) path = "/" + path;
         return AppendQuery(frontend + path, query);
     }

@@ -15,7 +15,6 @@ import {
   CalibrationReportPrintPage,
   CalibrationReportsPage,
   CashFlowPage,
-  ChannelsPage,
   ChartOfAccountsPage,
   ChequePortfolioPage,
   CollectionReceiptsWorkspacePage,
@@ -26,6 +25,7 @@ import {
   CustomersPage,
   DirectoryHelpPage,
   DirectoryPage,
+  CommunicationsSettingsPage,
   DocumentTemplatesPage,
   EmployeeFormPage,
   EmployeesListPage,
@@ -63,7 +63,6 @@ import {
   LandingPage,
   LeadsPage,
   LoginPage,
-  MailSettingsPage,
   MetrologyDashboardPage,
   MetrologyScopePage,
   MetrologyEquipmentFormPage,
@@ -159,7 +158,6 @@ import {
   ReplyTemplatesPage,
   ReportsPage,
   SalesHelpPage,
-  SettingsHelpPage,
   SettingsPage,
   StandardWeightFormPage,
   StandardWeightsPage,
@@ -176,6 +174,7 @@ import {
   ChunkLoadErrorBoundary
 } from "./app/lazyPages";
 import { AppShell } from "./components/shell/AppShell";
+import { RedirectKeepingQuery } from "./components/RedirectKeepingQuery";
 import "./v1-theme.css";
 import "./brand-layout.css";
 import "./excel-tools.css";
@@ -547,12 +546,19 @@ export function App() {
 
               {/* Reports & Settings Routes */}
               <Route path="/reportes" element={<ReportsPage />} />
-              <Route path="/configuracion" element={<SettingsPage />} />
-              <Route path="/configuracion/plantillas" element={<DocumentTemplatesPage />} />
-              <Route path="/configuracion/correo" element={<MailSettingsPage />} />
-              <Route path="/configuracion/ayuda" element={<SettingsHelpPage />} />
+              <Route path="/configuracion" element={<SettingsPage section="general" />} />
+              <Route path="/configuracion/arca" element={<SettingsPage section="arca" />} />
+              <Route path="/configuracion/bancos" element={<SettingsPage section="banks" />} />
+              <Route path="/configuracion/documentos" element={<DocumentTemplatesPage />} />
+              <Route path="/configuracion/comunicaciones" element={<CommunicationsSettingsPage messagingEnabled={communicationsEnabled && hasCommunications} />} />
+              <Route path="/configuracion/usuarios" element={<SettingsPage section="users" />} />
+              <Route path="/configuracion/respaldo" element={<SettingsPage section="backup" />} />
+              {/* Direcciones viejas: el retorno de OAuth del correo puede traer ?oauth=… */}
+              <Route path="/configuracion/plantillas" element={<RedirectKeepingQuery to="/configuracion/documentos" />} />
+              <Route path="/configuracion/correo" element={<RedirectKeepingQuery to="/configuracion/comunicaciones" />} />
+              <Route path="/configuracion/ayuda" element={<Navigate to="/configuracion" replace />} />
               <Route path="/comunicaciones" element={communicationsEnabled && hasCommunications ? <InboxPage /> : <Navigate to="/" replace />} />
-              <Route path="/comunicaciones/canales" element={communicationsEnabled && hasCommunications ? <ChannelsPage /> : <Navigate to="/" replace />} />
+              <Route path="/comunicaciones/canales" element={<Navigate to="/configuracion/comunicaciones?canal=mensajeria" replace />} />
               <Route path="/comunicaciones/plantillas" element={communicationsEnabled && hasCommunications ? <ReplyTemplatesPage /> : <Navigate to="/" replace />} />
             </Routes>
             </Suspense>

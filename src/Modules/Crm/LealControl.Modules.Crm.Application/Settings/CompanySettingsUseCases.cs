@@ -42,6 +42,11 @@ public sealed record CompanySettingsDto(
 public sealed record UpdateCompanySettingsCommand(CompanySettingsDto Model)
     : IRequest<Result<CompanySettingsDto>>;
 
+/// <summary>Plantillas de documentos de la empresa (JSON del frontend); null si nunca se guardaron.</summary>
+public sealed record GetDocumentTemplatesQuery : IRequest<Result<string?>>;
+
+public sealed record SaveDocumentTemplatesCommand(string Json) : IRequest<Result<string?>>;
+
 public sealed record UploadArcaCertificateCommand(string? CertificateCrt, string? CertificateKey, string Environment, string SignerCuit)
     : IRequest<Result<CompanySettingsDto>>;
 

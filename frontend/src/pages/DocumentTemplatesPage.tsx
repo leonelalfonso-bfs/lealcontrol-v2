@@ -22,21 +22,34 @@ export const DocumentTemplatesPage: React.FC = () => {
     updateRemito,
     updateInvoice,
     updatePurchaseOrder,
-    resetSettings
+    resetSettings,
+    save,
+    dirty
   } = useDocumentTemplate();
 
   const [activeTab, setActiveTab] = useState<"global" | "quote" | "remito" | "invoice" | "purchase">("quote");
   const [docTypePreview, setDocTypePreview] = useState<"quote" | "remito" | "invoice" | "purchase">("quote");
   const [savedAlert, setSavedAlert] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [company, setCompany] = useState<CompanySettings | null>(null);
 
   useEffect(() => {
     api.getCompanySettings().then(setCompany).catch(() => setCompany(null));
   }, []);
 
-  const handleSave = () => {
-    setSavedAlert(true);
-    setTimeout(() => setSavedAlert(false), 3000);
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setSaveError(null);
+      await save();
+      setSavedAlert(true);
+      setTimeout(() => setSavedAlert(false), 3000);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "No se pudieron guardar las plantillas.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const currentPrimary = settings.global.primaryColor;
@@ -46,39 +59,43 @@ export const DocumentTemplatesPage: React.FC = () => {
       {/* Header */}
       <div className="page-head" style={{ marginBottom: 20 }}>
         <div>
-          <span className="eyebrow">CONFIGURACIÓN VISUAL ERP</span>
-          <h1>Plantillas y Diseño de Documentos</h1>
+          <span className="eyebrow">CONFIGURACIÓN</span>
+          <h1>Documentos</h1>
           <p className="muted">
-            Personalizá los modelos, colores y leyendas específicas de Presupuestos, Remitos, Facturas y Órdenes de Compra.
+            Diseño y textos de presupuestos, remitos, facturas y órdenes de compra. Valen para todos los usuarios de la empresa.
           </p>
         </div>
 
         <div className="toolbar">
-          <Link to="/configuracion" className="btn btn-outline">
-            ← Volver a Configuración
-          </Link>
           <button
             type="button"
             onClick={resetSettings}
             className="btn btn-outline"
             style={{ color: "#b91c1c", borderColor: "#fca5a5" }}
           >
-            ↺ Restaurar Predeterminados
+            Restaurar textos de fábrica
           </button>
           <button
             type="button"
-            onClick={handleSave}
+            onClick={() => void handleSave()}
+            disabled={saving || !dirty}
             className="btn btn-primary"
             style={{ background: currentPrimary }}
           >
-            ✓ Guardar Preferencias
+            {saving ? "Guardando…" : dirty ? "Guardar cambios" : "Guardado"}
           </button>
         </div>
       </div>
 
       {savedAlert && (
         <div className="alert ok" style={{ marginBottom: 20, background: "rgba(16, 185, 129, 0.15)", color: "#065f46", border: "1px solid #10b981", padding: "12px 16px", borderRadius: "8px" }}>
-          ✓ Configuración guardada correctamente. Se aplicará a todas las impresiones y descargas en PDF.
+          ✓ Guardado. Se aplica a todas las impresiones y PDF de la empresa.
+        </div>
+      )}
+      {saveError && <div className="alert" style={{ marginBottom: 20 }}>{saveError}</div>}
+      {dirty && !saving && (
+        <div className="alert" style={{ marginBottom: 20, background: "rgba(245, 158, 11, 0.1)", color: "#92400e", border: "1px solid rgba(245, 158, 11, 0.35)" }}>
+          Hay cambios sin guardar.
         </div>
       )}
 
@@ -389,7 +406,7 @@ export const DocumentTemplatesPage: React.FC = () => {
                   {company?.bankCbu || company?.bankAlias
                     ? <>Banco: <strong>{company.bankName || "—"}</strong> · CBU <code>{company.bankCbu || "—"}</code> · Alias <code>{company.bankAlias || "—"}</code></>
                     : "Todavía no hay datos bancarios cargados."}
-                  {" "}Se editan en <Link to="/configuracion">Configuración → Bancos</Link> (son los mismos que se informan en la FCE).
+                  {" "}Se editan en <Link to="/configuracion/bancos">Configuración → Cobros y bancos</Link> (son los mismos que se informan en la FCE).
                 </p>
               </div>
 

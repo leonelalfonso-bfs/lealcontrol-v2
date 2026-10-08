@@ -8,37 +8,37 @@ public sealed class CompanySettings
 {
     public TenantId TenantId { get; set; } = new(Guid.Empty);
 
-    public string LegalName { get; set; } = "LEAL CONTROL ERP S.A.";
+    public string LegalName { get; set; } = string.Empty;
 
-    public string? TradeName { get; set; } = "Leal Control Metrología";
+    public string? TradeName { get; set; }
 
     public string DocumentType { get; set; } = "Cuit";
 
-    public string DocumentNumber { get; set; } = "30715489629";
+    public string DocumentNumber { get; set; } = string.Empty;
 
     public string TaxCondition { get; set; } = "ResponsableInscripto";
 
     public string IibbRegime { get; set; } = "ConvenioMultilateral";
 
-    public string? IibbNumber { get; set; } = "30-71548962-9";
+    public string? IibbNumber { get; set; }
 
-    public string? ActivityStartDate { get; set; } = "2018-03-01";
+    public string? ActivityStartDate { get; set; }
 
-    public string? Email { get; set; } = "contacto@lealcontrol.com";
+    public string? Email { get; set; }
 
-    public string? Phone { get; set; } = "341-555-0000";
+    public string? Phone { get; set; }
 
-    public string? WhatsApp { get; set; } = "5493415550000";
+    public string? WhatsApp { get; set; }
 
-    public string? Website { get; set; } = "www.lealcontrol.com";
+    public string? Website { get; set; }
 
-    public string? FiscalStreet { get; set; } = "Luis Braile 705";
+    public string? FiscalStreet { get; set; }
 
-    public string? FiscalCity { get; set; } = "San Lorenzo";
+    public string? FiscalCity { get; set; }
 
-    public string? FiscalProvince { get; set; } = "SantaFe";
+    public string? FiscalProvince { get; set; }
 
-    public string? FiscalPostalCode { get; set; } = "2200";
+    public string? FiscalPostalCode { get; set; }
 
     public string? LogoUrl { get; set; }
 
@@ -48,25 +48,29 @@ public sealed class CompanySettings
 
     public string ArcaEnvironment { get; set; } = "Homologacion";
 
-    public string? ArcaSignerCuit { get; set; } = "30715489629";
+    public string? ArcaSignerCuit { get; set; }
 
     // Punto de venta RECE que usa este sistema. Si está fijado, no se emite por otro
     // (evita mezclar numeración con otro sistema de facturación de la misma empresa).
     public int? ArcaPointOfSale { get; set; }
 
-    public string? BankName { get; set; } = "Banco Macro";
+    public string? BankName { get; set; }
 
-    public string? BankCbu { get; set; } = "2850001240000012345678";
+    public string? BankCbu { get; set; }
 
-    public string? BankAlias { get; set; } = "LEAL.CONTROL.ERP";
+    public string? BankAlias { get; set; }
 
     public int DefaultQuoteValidDays { get; set; } = 15;
 
     public int DefaultDeliveryDays { get; set; } = 7;
 
-    public string? DefaultWarranty { get; set; } = "12 meses para repuestos y 6 meses para servicios";
+    public string? DefaultWarranty { get; set; }
 
-    public string? DefaultPaymentTerms { get; set; } = "Contado / 30 días con e-Cheq";
+    public string? DefaultPaymentTerms { get; set; }
+
+    // Diseño y textos de los documentos impresos (presupuesto, remito, factura, orden de compra).
+    // JSON que arma el frontend; se guarda por empresa para que todos los usuarios vean lo mismo.
+    public string? DocumentTemplatesJson { get; set; }
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
