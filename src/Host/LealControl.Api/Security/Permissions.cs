@@ -186,7 +186,7 @@ public sealed class PermissionResolver : IPermissionChangeNotifier
         return resolved;
     }
 
-    /// <summary>Usuarios sin perfil (tokens anteriores o de integración): como antes de los perfiles.</summary>
+    /// <summary>Usuarios sin perfil (tokens anteriores o de integración): administradores, todo; el resto, solo ver.</summary>
     private static UserPermissions FromLegacyClaims(ClaimsPrincipal user, string? role)
     {
         if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) || string.Equals(role, "Administrador", StringComparison.OrdinalIgnoreCase))
@@ -198,7 +198,8 @@ public sealed class PermissionResolver : IPermissionChangeNotifier
             foreach (var key in JsonSerializer.Deserialize<string[]>(string.IsNullOrWhiteSpace(raw) ? "[]" : raw) ?? [])
             {
                 var normalized = key.Equals("crm", StringComparison.OrdinalIgnoreCase) ? "sales" : key;
-                if (PermissionCatalog.Keys.Contains(normalized)) modules[normalized] = PermissionLevel.Approve;
+                // Sin perfil y sin ser administrador: solo consulta (conservador; con perfil manda el perfil).
+                if (PermissionCatalog.Keys.Contains(normalized)) modules[normalized] = PermissionLevel.View;
             }
         }
         catch (JsonException)
