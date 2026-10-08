@@ -27,6 +27,8 @@ public sealed class EmailMessage
     public Guid? ConversationId { get; private set; }
 
     public List<EmailAttachment> Attachments { get; private set; } = [];
+    /// <summary>Contenido borrado al descartar: la fila queda solo para que la sincronización no lo vuelva a traer.</summary>
+    public bool Redacted { get; private set; }
 
     public static EmailMessage Create(Guid tenantId, Guid accountId, string messageId, string? inReplyTo,
         string threadKey, EmailDirection direction, string subject, string from, string to, string preview,
@@ -40,6 +42,14 @@ public sealed class EmailMessage
         RelatedEntityType = entityType, RelatedEntityId = entityId, BodyHtml = bodyHtml,
         ChannelType = channelType
     };
+
+    public void Redact()
+    {
+        Subject = string.Empty;
+        BodyPreview = string.Empty;
+        BodyHtml = null;
+        Redacted = true;
+    }
 
     public void SetBodyHtml(string? html)
     {

@@ -96,6 +96,8 @@ internal static class CommunicationsEndpointHelpers
             ct);
 
         message.SetConversationId(conversation.Id);
+        // Conversación descartada que sigue descartada: se guarda solo la marca, sin contenido.
+        if (conversation.IsDiscarded) message.Redact();
     }
 
     internal static async Task AddTrackedMessageAsync(

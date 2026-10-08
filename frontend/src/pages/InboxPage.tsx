@@ -11,6 +11,7 @@ import {
   setActiveConversationForNotifications
 } from "../lib/communicationsNotifications";
 import { SearchField } from "../components/ui/SearchField";
+import { ConversationOpportunityModal } from "../components/ConversationOpportunityModal";
 
 const emptyLead = "00000000-0000-0000-0000-000000000000";
 
@@ -105,6 +106,9 @@ export function InboxPage() {
   const [channelCounts, setChannelCounts] = useState({ email: 0, whatsapp: 0, instagram: 0, facebook: 0 });
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(() => new Set());
   const [linkCustomerOpen, setLinkCustomerOpen] = useState(false);
+  const [opportunityOpen, setOpportunityOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [discardIgnore, setDiscardIgnore] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerResults, setCustomerResults] = useState<CustomerSummary[]>([]);
   const [customerSearchBusy, setCustomerSearchBusy] = useState(false);
@@ -374,13 +378,13 @@ export function InboxPage() {
     }
   };
 
-  const deleteThread = async () => {
+  const discardThread = async () => {
     if (!activeConversation) return;
-    const name = getConversationDisplayName(activeConversation);
-    if (!confirm(`¿Eliminar la conversación con "${name}" solo de Leal Control?`)) return;
     setBusy(true);
     try {
-      await api.deleteConversation(activeConversation.id);
+      await api.discardConversation(activeConversation.id, discardIgnore);
+      setDiscardOpen(false);
+      setDiscardIgnore(false);
       setSelectedConversationId(null);
       await loadConversations();
     } catch (e) {
@@ -922,27 +926,29 @@ export function InboxPage() {
                     {activeConversation.relatedQuoteId ? " · Presupuesto" : ""}
                     {activeConversation.relatedOrderId ? " · Pedido" : ""}
                     {activeConversation.relatedInvoiceId ? " · Factura" : ""}
+                    {activeConversation.relatedOpportunityId ? " · Oportunidad" : ""}
                   </div>
                 </div>
 
                 <div className="inbox-thread-actions">
-                  {isConversationUnlinked(activeConversation) && !showLeadSuggestion && (
-                    <>
-                      <button className="btn btn-outline compact" onClick={createLeadFromThread} disabled={busy}>
-                        ＋ Crear Lead CRM
-                      </button>
-                      <button className="btn btn-outline compact" onClick={openLinkCustomerModal} disabled={busy}>
-                        🔗 Vincular cliente
-                      </button>
-                    </>
+                  {activeConversation.relatedOpportunityId ? (
+                    <Link className="btn compact" to={`/oportunidades/${activeConversation.relatedOpportunityId}`}>
+                      Ver oportunidad
+                    </Link>
+                  ) : (
+                    <button className="btn compact" onClick={() => setOpportunityOpen(true)} disabled={busy}
+                      title="Crear una oportunidad en el CRM con este mensaje y seguirla desde ahí">
+                      → Oportunidad
+                    </button>
                   )}
                   {activeConversation.relatedCustomerId && (
                     <Link className="btn btn-outline compact" to={`/clientes/${activeConversation.relatedCustomerId}`}>
                       Ver cliente
                     </Link>
                   )}
-                  <button className="btn btn-danger compact" onClick={deleteThread}>
-                    Eliminar
+                  <button className="btn btn-danger compact" onClick={() => setDiscardOpen(true)} disabled={busy}
+                    title="Sacar de la bandeja. No se borra del teléfono.">
+                    Descartar
                   </button>
                 </div>
               </div>
@@ -1402,6 +1408,39 @@ export function InboxPage() {
       )}
 
       {/* Modal vincular cliente existente */}
+      {opportunityOpen && activeConversation && (
+        <ConversationOpportunityModal
+          conversation={activeConversation}
+          channel={getConversationChannel(activeConversation)}
+          displayName={activeDisplayName}
+          lastIncomingText={[...activeMessages].reverse().find((m) => m.direction === "Incoming")?.bodyPreview}
+          onClose={() => setOpportunityOpen(false)}
+          onCreated={() => void loadConversations()}
+        />
+      )}
+
+      {discardOpen && activeConversation && (
+        <div className="modal-backdrop" onClick={() => setDiscardOpen(false)}>
+          <div className="modal-card card pad stack" style={{ maxWidth: 460, gap: 12 }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: 0 }}>Descartar conversación</h3>
+            <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
+              Sale de la bandeja y se borra su contenido de LealControl. <strong>No se borra del teléfono ni del correo.</strong>
+              {" "}Si {activeDisplayName} vuelve a escribir, la conversación reaparece.
+            </p>
+            <label className="check-label">
+              <input type="checkbox" checked={discardIgnore} onChange={(e) => setDiscardIgnore(e.target.checked)} />
+              {" "}Ignorar este contacto: lo que mande después no aparece en la bandeja
+            </label>
+            <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
+              <button type="button" className="btn btn-outline" onClick={() => setDiscardOpen(false)} disabled={busy}>Cancelar</button>
+              <button type="button" className="btn btn-danger" onClick={() => void discardThread()} disabled={busy}>
+                {busy ? "Descartando…" : "Descartar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {linkCustomerOpen && activeConversation && (
         <div className="modal-backdrop" onClick={() => setLinkCustomerOpen(false)}>
           <div className="modal-card card pad" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>

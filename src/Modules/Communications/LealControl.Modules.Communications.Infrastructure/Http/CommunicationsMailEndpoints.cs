@@ -259,7 +259,7 @@ internal static class CommunicationsMailEndpoints
         });
 
         group.MapGet("/messages", async (string? entityType, Guid? entityId, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
-            var query = db.EmailMessages.AsNoTracking().Where(x => x.TenantId == tenant.TenantId.Value);
+            var query = db.EmailMessages.AsNoTracking().Where(x => x.TenantId == tenant.TenantId.Value && !x.Redacted);
             if (!string.IsNullOrWhiteSpace(entityType)) query = query.Where(x => x.RelatedEntityType == entityType);
             if (entityId.HasValue) query = query.Where(x => x.RelatedEntityId == entityId);
 
@@ -279,7 +279,7 @@ internal static class CommunicationsMailEndpoints
             db.Remove(message); await db.SaveChangesAsync(ct); return Results.NoContent();
         });
 
-        group.MapGet("/conversations", async (string? channel, string? folder, string? search, Guid? customerId, Guid? assignedTo, string? status, HttpContext http, CommunicationsDbContext db, ITenantContext tenant, ConversationService conversationService, CancellationToken ct) => {
+        group.MapGet("/conversations", async (string? channel, string? folder, string? search, Guid? customerId, Guid? assignedTo, string? status, Guid? opportunityId, HttpContext http, CommunicationsDbContext db, ITenantContext tenant, ConversationService conversationService, CancellationToken ct) => {
             var tenantId = tenant.TenantId.Value;
             if (tenantId == Guid.Empty) return Results.Unauthorized();
 
@@ -300,6 +300,10 @@ internal static class CommunicationsMailEndpoints
             }
 
             if (customerId.HasValue) query = query.Where(x => x.RelatedCustomerId == customerId);
+            if (opportunityId.HasValue) query = query.Where(x => x.RelatedOpportunityId == opportunityId);
+            // Las descartadas no se listan salvo que se pidan explícitamente.
+            if (!string.Equals(status, Conversation.DiscardedStatus, StringComparison.OrdinalIgnoreCase))
+                query = query.Where(x => x.Status != Conversation.DiscardedStatus);
             if (assignedTo.HasValue) query = query.Where(x => x.AssignedToUserId == assignedTo);
             if (!string.IsNullOrWhiteSpace(status) && !status.Equals("all", StringComparison.OrdinalIgnoreCase))
                 query = query.Where(x => x.Status == status);
@@ -385,6 +389,7 @@ internal static class CommunicationsMailEndpoints
                     x.RelatedQuoteId,
                     x.RelatedOrderId,
                     x.RelatedInvoiceId,
+                    x.RelatedOpportunityId,
                     x.Status,
                     x.AssignedToUserId,
                     x.SuggestionDismissed,
@@ -410,7 +415,7 @@ internal static class CommunicationsMailEndpoints
             await db.SaveChangesAsync(ct);
 
             var msgs = await db.EmailMessages.AsNoTracking()
-                .Where(x => x.TenantId == tenantId && x.ConversationId == id)
+                .Where(x => x.TenantId == tenantId && x.ConversationId == id && !x.Redacted)
                 .Include(x => x.Attachments)
                 .OrderBy(x => x.OccurredAtUtc)
                 .ToListAsync(ct);
@@ -488,6 +493,7 @@ internal static class CommunicationsMailEndpoints
             if (request.CustomerId.HasValue) conversation.LinkCustomer(request.CustomerId.Value);
             if (request.QuoteId.HasValue || request.OrderId.HasValue || request.InvoiceId.HasValue)
                 conversation.LinkDocument(request.QuoteId, request.OrderId, request.InvoiceId);
+            if (request.OpportunityId.HasValue) conversation.LinkOpportunity(request.OpportunityId.Value);
             await db.SaveChangesAsync(ct);
 
             return Results.Ok(new
@@ -497,8 +503,21 @@ internal static class CommunicationsMailEndpoints
                 relatedCustomerId = conversation.RelatedCustomerId,
                 relatedQuoteId = conversation.RelatedQuoteId,
                 relatedOrderId = conversation.RelatedOrderId,
-                relatedInvoiceId = conversation.RelatedInvoiceId
+                relatedInvoiceId = conversation.RelatedInvoiceId,
+                relatedOpportunityId = conversation.RelatedOpportunityId
             });
+        });
+
+        // Descartar: sale de la bandeja (no del teléfono) y se borra el contenido. Quedan solo
+        // las marcas de cada mensaje para que la sincronización no los vuelva a traer.
+        group.MapPost("/conversations/{id:guid}/discard", async (Guid id, DiscardConversationRequest? request, HttpContext http, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
+            var tenantId = tenant.TenantId.Value;
+            if (tenantId == Guid.Empty) return Results.Unauthorized();
+            var actor = CommunicationsEndpointHelpers.GetAuthenticatedUserId(http) ?? Guid.Empty;
+
+            var discarded = await ConversationWorkflowService.DiscardAsync(db, tenantId, id, actor, request?.IgnoreContact == true, ct);
+            if (discarded is null) return Results.NotFound();
+            return Results.Ok(new { success = true, discardedMessages = discarded });
         });
 
         group.MapGet("/conversations/{id:guid}/activities", async (Guid id, CommunicationsDbContext db, ITenantContext tenant, CancellationToken ct) => {
@@ -576,16 +595,17 @@ internal static class CommunicationsMailEndpoints
             if (tenantId == Guid.Empty) return Results.Unauthorized();
 
             var slaCutoff = DateTime.UtcNow.AddHours(-2);
-            var unreadTotal = await db.Conversations.Where(x => x.TenantId == tenantId).SumAsync(x => x.UnreadCount, ct);
+            var unreadTotal = await db.Conversations.Where(x => x.TenantId == tenantId && x.Status != Conversation.DiscardedStatus).SumAsync(x => x.UnreadCount, ct);
             var needsResponseCount = await db.Conversations.CountAsync(x =>
                 x.TenantId == tenantId &&
+                x.Status != Conversation.DiscardedStatus &&
                 x.LastIncomingAtUtc != null &&
                 x.LastIncomingAtUtc < slaCutoff &&
                 x.Status != "resolved" &&
                 x.Status != "archived", ct);
 
             var recent = await db.Conversations.AsNoTracking()
-                .Where(x => x.TenantId == tenantId && (x.UnreadCount > 0 ||
+                .Where(x => x.TenantId == tenantId && x.Status != Conversation.DiscardedStatus && (x.UnreadCount > 0 ||
                     (x.LastIncomingAtUtc != null && x.LastIncomingAtUtc < slaCutoff && x.Status != "resolved" && x.Status != "archived")))
                 .OrderByDescending(x => x.LastMessageAtUtc)
                 .Take(8)

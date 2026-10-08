@@ -47,6 +47,34 @@ public static class ConversationWorkflowService
         return conversation;
     }
 
+    /// <summary>
+    /// Descartar: sale de la bandeja (no del teléfono), se borran el contenido, los adjuntos y las
+    /// notas. Quedan las marcas de cada mensaje para que la sincronización no los vuelva a traer.
+    /// Devuelve la cantidad de mensajes borrados, o null si la conversación no existe.
+    /// </summary>
+    public static async Task<int?> DiscardAsync(CommunicationsDbContext db, Guid tenantId,
+        Guid conversationId, Guid actorUserId, bool ignoreContact, CancellationToken ct = default)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        var conversation = await LockConversationAsync(db, tenantId, conversationId, ct);
+        if (conversation is null) return null;
+
+        var messages = await db.EmailMessages.Include(x => x.Attachments)
+            .Where(x => x.TenantId == tenantId && x.ConversationId == conversationId).ToListAsync(ct);
+        foreach (var message in messages)
+        {
+            db.EmailAttachments.RemoveRange(message.Attachments);
+            message.Redact();
+        }
+        db.ConversationNotes.RemoveRange(db.ConversationNotes.Where(x => x.TenantId == tenantId && x.ConversationId == conversationId));
+        db.ConversationActivities.Add(ConversationActivity.Create(tenantId, conversationId, actorUserId, "status",
+            conversation.Status, ignoreContact ? "discarded+ignore" : Conversation.DiscardedStatus));
+        conversation.Discard(ignoreContact);
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+        return messages.Count;
+    }
+
     private static Task<Conversation?> LockConversationAsync(CommunicationsDbContext db,
         Guid tenantId, Guid conversationId, CancellationToken ct) =>
         db.Conversations.FromSqlInterpolated(

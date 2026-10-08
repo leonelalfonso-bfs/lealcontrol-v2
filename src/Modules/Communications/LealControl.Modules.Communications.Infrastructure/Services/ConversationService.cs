@@ -47,7 +47,7 @@ public sealed class ConversationService
                 direction);
             db.Conversations.Add(conversation);
         }
-        else
+        else if (conversation.AcceptMessageAfterDiscard(direction))
         {
             conversation.RecordMessage(direction, normalizedPreview, occurredAtUtc, displayName);
             conversation.UpdateParticipantContact(participantEmail, participantPhone);

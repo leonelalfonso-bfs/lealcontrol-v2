@@ -461,7 +461,7 @@ export const api = {
   disconnectMailOAuth: (id: string) =>
     request<{ id: string; oauthConnected: boolean }>(`/api/v1/communications/accounts/${id}/oauth/disconnect`, { method: "POST" }),
   listEmails: (entityType?: string, entityId?: string) => { const p = new URLSearchParams(); if(entityType)p.set("entityType",entityType); if(entityId)p.set("entityId",entityId); return request<import("./types").EmailMessage[]>(`/api/v1/communications/messages${p.size?`?${p}`:""}`); },
-  listConversations: (opts?: { channel?: string; folder?: string; search?: string; customerId?: string; assignedTo?: string; status?: string }) => {
+  listConversations: (opts?: { channel?: string; folder?: string; search?: string; customerId?: string; assignedTo?: string; status?: string; opportunityId?: string }) => {
     const p = new URLSearchParams();
     if (opts?.channel && opts.channel !== "all") p.set("channel", opts.channel);
     if (opts?.folder && opts.folder !== "All") p.set("folder", opts.folder);
@@ -469,6 +469,7 @@ export const api = {
     if (opts?.customerId) p.set("customerId", opts.customerId);
     if (opts?.assignedTo) p.set("assignedTo", opts.assignedTo);
     if (opts?.status) p.set("status", opts.status);
+    if (opts?.opportunityId) p.set("opportunityId", opts.opportunityId);
     return request<import("./types").Conversation[]>(`/api/v1/communications/conversations${p.size ? `?${p}` : ""}`);
   },
   getConversationMessages: (id: string) => request<import("./types").EmailMessage[]>(`/api/v1/communications/conversations/${id}/messages`),
@@ -478,12 +479,15 @@ export const api = {
   addConversationTag: (id: string, name: string) => request<import("./types").ConversationTag>(`/api/v1/communications/conversations/${id}/tags`, { method: "POST", body: JSON.stringify({ name }) }),
   deleteConversationTag: (id: string, tagId: string) => request<void>(`/api/v1/communications/conversations/${id}/tags/${tagId}`, { method: "DELETE" }),
   getConversationActivities: (id: string) => request<import("./types").ConversationActivity[]>(`/api/v1/communications/conversations/${id}/activities`),
-  linkConversation: (id: string, body: { leadId?: string; customerId?: string; quoteId?: string; orderId?: string; invoiceId?: string }) =>
+  linkConversation: (id: string, body: { leadId?: string; customerId?: string; quoteId?: string; orderId?: string; invoiceId?: string; opportunityId?: string }) =>
     request<{ success: boolean; relatedLeadId?: string; relatedCustomerId?: string }>(`/api/v1/communications/conversations/${id}/link`, { method: "POST", body: JSON.stringify(body) }),
   assignConversation: (id: string, userId?: string) =>
     request<{ success: boolean }>(`/api/v1/communications/conversations/${id}/assign`, { method: "POST", body: JSON.stringify({ userId: userId || null }) }),
   setConversationStatus: (id: string, status: string) =>
     request<{ success: boolean }>(`/api/v1/communications/conversations/${id}/status`, { method: "POST", body: JSON.stringify({ status }) }),
+  /** Saca la conversación de la bandeja (no del teléfono) y borra su contenido. */
+  discardConversation: (id: string, ignoreContact: boolean) =>
+    request<{ success: boolean; discardedMessages: number }>(`/api/v1/communications/conversations/${id}/discard`, { method: "POST", body: JSON.stringify({ ignoreContact }) }),
   dismissConversationSuggestion: (id: string) =>
     request<{ success: boolean }>(`/api/v1/communications/conversations/${id}/dismiss-suggestion`, { method: "POST" }),
   getSuggestedMatches: (id: string) => request<import("./types").CustomerMatch[]>(`/api/v1/communications/conversations/${id}/suggested-matches`),

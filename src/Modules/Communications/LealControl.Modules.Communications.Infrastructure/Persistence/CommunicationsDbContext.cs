@@ -1,3 +1,4 @@
+using System.Linq;
 using LealControl.BuildingBlocks.Persistence;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,33 @@ namespace LealControl.Modules.Communications.Infrastructure.Persistence;
 
 public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbContext> options) : DbContext(options)
 {
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        DropAttachmentsOfRedactedMessages();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        DropAttachmentsOfRedactedMessages();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    // Un mensaje de una conversación descartada se guarda sin contenido: tampoco sus adjuntos,
+    // los agregue quien los agregue (sincronización de correo, WhatsApp o Meta).
+    private void DropAttachmentsOfRedactedMessages()
+    {
+        var redacted = ChangeTracker.Entries<EmailMessage>()
+            .Where(e => e.Entity.Redacted)
+            .Select(e => e.Entity.Id)
+            .ToHashSet();
+        if (redacted.Count == 0) return;
+        foreach (var entry in ChangeTracker.Entries<EmailAttachment>()
+                     .Where(e => e.State == EntityState.Added && redacted.Contains(e.Entity.EmailMessageId))
+                     .ToList())
+            entry.State = EntityState.Detached;
+    }
+
     public const string Schema = "communications";
     public DbSet<MailAccount> MailAccounts => Set<MailAccount>();
     public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
@@ -61,6 +89,7 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.Property(x => x.Direction).HasConversion<string>(); b.Property(x => x.BodyPreview).HasMaxLength(2000);
             b.Property(x => x.BodyHtml).HasColumnType("text");
             b.Property(x => x.ChannelType).HasMaxLength(50).HasDefaultValue("email");
+            b.Property(x => x.Redacted).HasDefaultValue(false);
             b.HasIndex(x => new { x.TenantId, x.InternetMessageId }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.ThreadKey });
             b.HasIndex(x => new { x.TenantId, x.ConversationId });
@@ -82,6 +111,9 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.Property(x => x.AssignedToUserId);
             b.Property(x => x.SuggestionDismissed).HasDefaultValue(false);
             b.Property(x => x.LastIncomingAtUtc);
+            b.Property(x => x.RelatedOpportunityId);
+            b.Property(x => x.IgnoreParticipant).HasDefaultValue(false);
+            b.HasIndex(x => new { x.TenantId, x.RelatedOpportunityId });
         });
         modelBuilder.Entity<ConversationNote>(b => {
             b.ToTable("conversation_notes"); b.HasKey(x => x.Id);
@@ -258,6 +290,10 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""RelatedQuoteId"" uuid;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""RelatedOrderId"" uuid;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""RelatedInvoiceId"" uuid;
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""RelatedOpportunityId"" uuid;
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""IgnoreParticipant"" boolean NOT NULL DEFAULT false;
+            CREATE INDEX IF NOT EXISTS ""IX_conversations_TenantId_RelatedOpportunityId"" ON communications.conversations (""TenantId"", ""RelatedOpportunityId"");
+            ALTER TABLE communications.email_messages ADD COLUMN IF NOT EXISTS ""Redacted"" boolean NOT NULL DEFAULT false;
 
             CREATE TABLE IF NOT EXISTS communications.conversation_notes (
                 ""Id"" uuid PRIMARY KEY,

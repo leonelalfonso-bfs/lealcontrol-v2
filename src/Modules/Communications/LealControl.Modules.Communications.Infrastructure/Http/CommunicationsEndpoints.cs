@@ -49,7 +49,9 @@ public sealed record SendMetaMessageRequest(
     string? RelatedEntityType = null,
     Guid? RelatedEntityId = null
 );
-public sealed record LinkConversationRequest(Guid? LeadId, Guid? CustomerId, Guid? QuoteId = null, Guid? OrderId = null, Guid? InvoiceId = null);
+public sealed record LinkConversationRequest(Guid? LeadId, Guid? CustomerId, Guid? QuoteId = null, Guid? OrderId = null, Guid? InvoiceId = null, Guid? OpportunityId = null);
+
+public sealed record DiscardConversationRequest(bool IgnoreContact = false);
 public sealed record AssignConversationRequest(Guid? UserId);
 public sealed record UpdateConversationStatusRequest(string Status);
 public sealed record AddConversationNoteRequest(string Body);

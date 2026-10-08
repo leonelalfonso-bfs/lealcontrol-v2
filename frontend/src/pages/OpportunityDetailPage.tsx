@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { label, type Activity, type Opportunity, type Quote, type TenantUser } from "../api/types";
+import { label, type Activity, type Conversation, type Opportunity, type Quote, type TenantUser } from "../api/types";
 import { EmailComposer } from "../components/EmailComposer";
 
 function money(value?: number | null, currency = "ARS") {
@@ -40,6 +40,7 @@ export function OpportunityDetailPage() {
   const [followUp, setFollowUp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
 
   const load = async () => {
     if (!id) return;
@@ -65,6 +66,9 @@ export function OpportunityDetailPage() {
 
   useEffect(() => {
     void load();
+    // Conversaciones de la bandeja convertidas en esta oportunidad (si la empresa no tiene
+    // Comunicaciones, la API responde 404 y la sección no se muestra).
+    if (id) api.listConversations({ opportunityId: id }).then(setConversations).catch(() => setConversations([]));
   }, [id]);
 
   const timeline = useMemo(() => {
@@ -331,6 +335,27 @@ export function OpportunityDetailPage() {
               ))
             )}
           </section>
+          {conversations.length > 0 && (
+            <section className="card pad">
+              <h2>Conversaciones</h2>
+              <div className="stack" style={{ gap: 8 }}>
+                {conversations.map((c) => (
+                  <Link key={c.id} to="/comunicaciones" state={{ conversationId: c.id }}
+                    className="row" style={{ justifyContent: "space-between", gap: 12, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, textDecoration: "none", color: "inherit" }}>
+                    <div style={{ minWidth: 0 }}>
+                      <strong>{c.channelType === "whatsapp" ? "WhatsApp" : c.channelType === "email" ? "Correo" : c.channelType} · {c.participantName}</strong>
+                      <div className="muted" style={{ fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {c.lastMessagePreview || "—"}
+                      </div>
+                    </div>
+                    <time className="muted" style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}>
+                      {new Date(c.lastMessageAtUtc).toLocaleString("es-AR")}
+                    </time>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
           <section className="card pad">
             <h2>Historial comercial</h2>
             <div className="crm-timeline">
