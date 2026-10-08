@@ -4,6 +4,7 @@ import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { RemitoDocument } from "../components/CommercialDocuments";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
+import { WhatsAppComposer } from "../components/WhatsAppComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { type CompanySettings, type CustomerDetail, type Remito } from "../api/types";
 
@@ -18,6 +19,7 @@ export function RemitoPrintPage() {
   const [loading, setLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -112,6 +114,13 @@ export function RemitoPrintPage() {
           </button>
           <button
             type="button"
+            onClick={() => setShowWhatsApp(true)}
+            style={{ padding: "8px 16px", borderRadius: "6px", background: "white", border: "1px solid #cbd5e1", cursor: "pointer", fontWeight: 600 }}
+          >
+            💬 WhatsApp
+          </button>
+          <button
+            type="button"
             onClick={handleDownloadPdf}
             disabled={downloadingPdf}
             style={{
@@ -132,6 +141,19 @@ export function RemitoPrintPage() {
         </div>
       </div>
 
+      {showWhatsApp && (
+        <WhatsAppComposer
+          context={{
+            entityType: "Remito",
+            entityId: remito.id,
+            phone: customer?.whatsApp || customer?.phone,
+            body: `Hola, te enviamos el remito N° ${remito.remitoNumber}.\n\nSaludos, ${company?.tradeName || company?.legalName || ""}`,
+            documentPdf: { elementId: "remito-pdf-sheet", fileName: `Remito_${remito.remitoNumber}.pdf` }
+          }}
+          onClose={() => setShowWhatsApp(false)}
+        />
+      )}
+
       {showEmail && (
         <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 16px auto" }}>
           <EmailComposer
@@ -139,8 +161,9 @@ export function RemitoPrintPage() {
               entityType: "Remito",
               entityId: remito.id,
               to: customer?.email ?? undefined,
-              subject: `Remito de Entrega N° ${remito.remitoNumber} - ${company?.tradeName || company?.legalName || "LEAL CONTROL"}`,
-              body: `Estimado cliente,\n\nAdjuntamos el remito de entrega oficial N° ${remito.remitoNumber} correspondiente a la mercadería despachada.\n\nSaludos cordiales,\n${company?.tradeName || "LEAL CONTROL ERP"}`
+              subject: `Remito N° ${remito.remitoNumber} - ${company?.tradeName || company?.legalName || ""}`,
+              body: `Estimado cliente,\n\nAdjuntamos el remito N° ${remito.remitoNumber}.\n\nSaludos cordiales,\n${company?.tradeName || company?.legalName || ""}`,
+              documentPdf: { elementId: "remito-pdf-sheet", fileName: `Remito_${remito.remitoNumber}.pdf` }
             }}
             onClose={() => setShowEmail(false)}
           />

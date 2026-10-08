@@ -22,7 +22,18 @@ export type EmailContext = {
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
-async function buildPdfAttachment(elementId: string, fileName: string): Promise<EmailAttachmentPayload> {
+const ENTITY_LABELS: Record<string, string> = {
+  Invoice: "la factura",
+  Quote: "el presupuesto",
+  Order: "el pedido",
+  Remito: "el remito",
+  Customer: "la ficha del cliente",
+  AccountStatement: "la cuenta corriente del cliente"
+};
+
+export const entityLabel = (entityType: string) => ENTITY_LABELS[entityType] ?? "el documento";
+
+export async function buildPdfAttachment(elementId: string, fileName: string): Promise<EmailAttachmentPayload> {
   const element = document.getElementById(elementId);
   if (!element) throw new Error("No se encontró el documento para adjuntar.");
   const html2pdf = await loadHtml2Pdf();
@@ -108,7 +119,7 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
           <button type="button" className="icon-button" onClick={onClose}>×</button>
         </div>
         {error && <div className="alert">{error}</div>}
-        {accounts.length === 0 && <div className="alert">Primero conectá una cuenta desde Administración → Cuentas de correo.</div>}
+        {accounts.length === 0 && <div className="alert">Primero conectá una casilla en <a href="/configuracion/comunicaciones">Configuración → Comunicaciones</a>.</div>}
         <label>Desde
           <select required value={accountId} onChange={(e) => setAccountId(e.target.value)}>
             <option value="">Seleccionar cuenta</option>
@@ -129,7 +140,7 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
             Adjuntar PDF del documento ({context.documentPdf.fileName})
           </label>
         )}
-        <div className="email-link-note">El correo quedará vinculado automáticamente con {context.entityType}.</div>
+        <div className="email-link-note">El correo queda registrado en {entityLabel(context.entityType)}.</div>
         <div className="toolbar">
           <button type="button" className="btn btn-outline" onClick={onClose}>Cancelar</button>
           <button className="btn" disabled={busy || !accountId}>{busy ? "Enviando…" : "Enviar email"}</button>

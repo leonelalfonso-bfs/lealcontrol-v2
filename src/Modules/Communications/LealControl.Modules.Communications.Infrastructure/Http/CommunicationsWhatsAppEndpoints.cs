@@ -235,9 +235,15 @@ internal static class CommunicationsWhatsAppEndpoints
             if (string.IsNullOrWhiteSpace(req.Message) && string.IsNullOrWhiteSpace(req.MediaUrl) && string.IsNullOrWhiteSpace(req.MediaBase64))
                 return Results.BadRequest("El mensaje o archivo es obligatorio.");
 
-            var effectiveUserId = req.UserId ?? CommunicationsEndpointHelpers.GetCurrentUserId(http);
+            // Se envía siempre desde la línea del usuario conectado (o la general de su empresa).
+            // No se aceptan el usuario ni la instancia que mande el navegador: permitían usar el
+            // WhatsApp de otro usuario, o el de otra empresa.
+            var effectiveUserId = CommunicationsEndpointHelpers.GetCurrentUserId(http);
+            var tenantPrefix = WhatsAppGatewayService.GetTenantInstanceName(tenantId);
             string instance;
-            if (!string.IsNullOrWhiteSpace(req.InstanceName))
+            if (!string.IsNullOrWhiteSpace(req.InstanceName)
+                && (req.InstanceName == tenantPrefix
+                    || (effectiveUserId.HasValue && req.InstanceName == WhatsAppGatewayService.GetUserInstanceName(tenantId, effectiveUserId.Value))))
             {
                 instance = req.InstanceName;
             }

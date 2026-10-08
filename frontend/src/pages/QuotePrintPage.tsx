@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
+import { WhatsAppComposer } from "../components/WhatsAppComposer";
 import { QuoteDocument } from "../components/QuoteDocument";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import {
@@ -32,6 +33,7 @@ export const QuotePrintPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [emailHistory, setEmailHistory] = useState<EmailMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -219,6 +221,26 @@ export const QuotePrintPage: React.FC = () => {
           <button type="button" className="btn btn-outline" onClick={() => setShowEmail(true)} style={{ padding: "8px 14px" }}>
             ✉ Email
           </button>
+
+          <button type="button" className="btn btn-outline" onClick={() => setShowWhatsApp(true)} style={{ padding: "8px 14px" }}>
+            💬 WhatsApp
+          </button>
+
+          {showWhatsApp && (
+            <WhatsAppComposer
+              context={{
+                entityType: "Quote",
+                entityId: quote.id,
+                phone: assignedContact?.whatsApp || assignedContact?.phone || customer?.whatsApp || customer?.phone,
+                body: `Hola, te enviamos el presupuesto ${quote.quoteNumber} (rev. ${quote.revision}) por ${curr.symbol} ${grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}. Cualquier consulta, quedamos a disposición.`,
+                documentPdf: {
+                  elementId: "quote-pdf-sheet",
+                  fileName: `Presupuesto_${quote.quoteNumber}_rev${quote.revision}.pdf`
+                }
+              }}
+              onClose={() => setShowWhatsApp(false)}
+            />
+          )}
 
           {showEmail && (
             <EmailComposer

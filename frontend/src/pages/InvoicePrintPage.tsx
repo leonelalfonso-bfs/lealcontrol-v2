@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import QRCode from "qrcode";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
+import { WhatsAppComposer } from "../components/WhatsAppComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { numberToWords } from "../utils/numberToWords";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
@@ -46,6 +47,7 @@ export function InvoicePrintPage() {
   const [loading, setLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
@@ -227,6 +229,16 @@ export function InvoicePrintPage() {
 
           <button
             type="button"
+            onClick={() => setShowWhatsApp(true)}
+            disabled={simulatedCae || isDraft}
+            title={isDraft ? "Autorizá la factura antes de enviarla" : undefined}
+            style={{ padding: "8px 16px", borderRadius: "6px", background: "white", border: "1px solid #cbd5e1", cursor: "pointer", fontWeight: 600 }}
+          >
+            💬 WhatsApp
+          </button>
+
+          <button
+            type="button"
             disabled={downloadingPdf}
             onClick={handleDownloadPdf}
             style={{
@@ -244,6 +256,22 @@ export function InvoicePrintPage() {
           </button>
         </div>
       </div>
+
+      {showWhatsApp && !simulatedCae && (
+        <WhatsAppComposer
+          context={{
+            entityType: "Invoice",
+            entityId: invoice.id,
+            phone: customer?.whatsApp || customer?.phone,
+            body: `Hola, te enviamos la ${docTitle} ${invoiceLetter} N° ${formattedPtoVta}-${formattedVoucherNum}.${hasBankData ? `\n\nPara el pago: CBU ${bank.cbu}${bank.alias ? ` · Alias ${bank.alias}` : ""}.` : ""}\n\nSaludos, ${company?.tradeName || company?.legalName || ""}`,
+            documentPdf: {
+              elementId: "invoice-pdf-sheet",
+              fileName: `Factura_${invoiceLetter}_${formattedPtoVta}-${formattedVoucherNum}.pdf`
+            }
+          }}
+          onClose={() => setShowWhatsApp(false)}
+        />
+      )}
 
       {showEmail && !simulatedCae && (
         <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 16px auto" }}>
