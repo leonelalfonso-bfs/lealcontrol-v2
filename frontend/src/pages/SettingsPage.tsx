@@ -26,7 +26,7 @@ export function SettingsPage() {
   const [csrReady, setCsrReady] = useState(false);
   const [diagnosingArca, setDiagnosingArca] = useState(false);
   const [numberingPoint, setNumberingPoint] = useState("");
-  const [numberingType, setNumberingType] = useState<"A" | "B" | "C">("A");
+  const [numberingType, setNumberingType] = useState<"A" | "B">("A");
   const [checkingNumbering, setCheckingNumbering] = useState(false);
   const [arcaNumbering, setArcaNumbering] = useState<{
     pointOfSale: number; invoiceType: string; lastNumber: number;
@@ -65,6 +65,7 @@ export function SettingsPage() {
         setCertEnv(s.arcaEnvironment || "Homologacion");
         setCertCuit(s.arcaSignerCuit || s.documentNumber || "");
         setCsrReady(Boolean(s.hasArcaCertificateKey));
+        if (s.arcaPointOfSale) setNumberingPoint(String(s.arcaPointOfSale));
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -595,6 +596,36 @@ export function SettingsPage() {
       )}
 
       {tab === "arca" && (
+        <div className="stack" style={{ gap: 20 }}>
+        <form onSubmit={handleSaveSettings} className="card pad">
+          <h3>Punto de venta de este sistema</h3>
+          <p className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
+            Todas las facturas y notas salen por este punto de venta RECE y no se puede usar otro.
+            Elegí uno que no use ningún otro sistema de facturación, así la numeración no se mezcla.
+          </p>
+          <div className="row" style={{ gap: 12, flexWrap: "wrap", alignItems: "end", marginTop: 12 }}>
+            <label>
+              Punto de venta
+              <input
+                type="number"
+                min={1}
+                max={99998}
+                value={settings.arcaPointOfSale ?? ""}
+                onChange={(e) => setSetting("arcaPointOfSale", e.target.value ? Number(e.target.value) : null)}
+                placeholder="Ej. 2"
+              />
+            </label>
+            <button className="btn" disabled={saving}>
+              {saving ? "Guardando…" : "Guardar punto de venta"}
+            </button>
+          </div>
+          {!settings.arcaPointOfSale && (
+            <p className="muted" style={{ fontSize: "0.8rem", marginBottom: 0 }}>
+              Sin punto de venta fijo, la factura deja elegir cualquiera de los habilitados en ARCA.
+            </p>
+          )}
+        </form>
+
         <form onSubmit={handleUploadCertificate} className="stack" style={{ gap: 20 }}>
           <div className="card pad">
             <h3>Certificado Digital ARCA / AFIP (WebServices)</h3>
@@ -755,11 +786,10 @@ export function SettingsPage() {
               </label>
               <label>Tipo de factura
                 <select value={numberingType} onChange={(e) => {
-                  setNumberingType(e.target.value as "A" | "B" | "C"); setArcaNumbering(null);
+                  setNumberingType(e.target.value as "A" | "B"); setArcaNumbering(null);
                 }}>
                   <option value="A">Factura A</option>
                   <option value="B">Factura B</option>
-                  <option value="C">Factura C</option>
                 </select>
               </label>
               <button type="button" className="btn ghost" disabled={checkingNumbering}
@@ -780,6 +810,7 @@ export function SettingsPage() {
             </button>
           </div>
         </form>
+        </div>
       )}
 
       {tab === "banks" && (
@@ -787,7 +818,7 @@ export function SettingsPage() {
           <div className="card pad">
             <h3>Datos Bancarios para Cobranzas</h3>
             <p className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
-              Estos datos se imprimirán automáticamente al pie de los presupuestos y facturas para facilitar transferencias.
+              Son los datos para transferencias que salen en la factura y en la FCE. Se cargan solo acá.
             </p>
 
             <div className="grid-form" style={{ marginTop: 16 }}>
@@ -807,6 +838,9 @@ export function SettingsPage() {
                   onChange={(e) => setSetting("bankCbu", e.target.value)}
                   placeholder="0070000000000000000000"
                 />
+                <span className="muted" style={{ fontSize: "0.78rem" }}>
+                  Sale en el PDF de la factura y se informa a ARCA en la Factura de Crédito Electrónica.
+                </span>
               </label>
 
               <label>
@@ -818,21 +852,6 @@ export function SettingsPage() {
                 />
               </label>
 
-              <label>
-                Punto de venta de este sistema (ARCA)
-                <input
-                  type="number"
-                  min={1}
-                  max={99998}
-                  value={settings.arcaPointOfSale ?? ""}
-                  onChange={(e) => setSetting("arcaPointOfSale", e.target.value ? Number(e.target.value) : null)}
-                  placeholder="Ej. 2"
-                />
-                <span className="muted" style={{ fontSize: "0.78rem" }}>
-                  Si lo completás, todas las facturas salen por ese punto de venta RECE y no se puede usar otro.
-                  Útil si otro sistema factura con los demás puntos de venta.
-                </span>
-              </label>
             </div>
           </div>
 
@@ -1023,8 +1042,7 @@ export function SettingsPage() {
                 <li>Ventas, Presupuestos y Facturas</li>
                 <li>Compras, Gastos y Proveedores</li>
                 <li>Finanzas, Cuentas y Cheques Echeq</li>
-                <li>Flota, Choferes y Mantenimientos</li>
-                <li>Cereales, Contratos y Balanza</li>
+                <li>Contabilidad, Producción, Calidad y RRHH</li>
               </ul>
             </div>
 
@@ -1032,9 +1050,8 @@ export function SettingsPage() {
               <div style={{ fontWeight: "700", marginBottom: "6px" }}>🔒 Seguridad y Cifrado:</div>
               <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "13px", color: "#94a3b8", display: "flex", flexDirection: "column", gap: "4px" }}>
                 <li>Aislamiento físico por cliente</li>
-                <li>Compresión GZip de alta densidad</li>
+                <li>Archivo comprimido (.sql.gz)</li>
                 <li>Generación en caliente sin corte de servicio</li>
-                <li>Respaldos nocturnos automáticos a la nube</li>
               </ul>
             </div>
           </div>
