@@ -983,22 +983,29 @@ export const api = {
   // ==========================================
   // FLEET (GESTIÃ“N DE FLOTA)
   // ==========================================
-  listVehicles: (search?: string) => {
-    const q = search ? `?search=${encodeURIComponent(search)}` : "";
-    return request<import("./types").Vehicle[]>(`/api/v1/fleet/vehicles${q}`);
+  listVehicles: (search?: string, includeSold = false) => {
+    const p = new URLSearchParams();
+    if (search) p.set("search", search);
+    if (includeSold) p.set("includeSold", "true");
+    return request<import("./types").Vehicle[]>(`/api/v1/fleet/vehicles${p.size ? `?${p}` : ""}`);
   },
   getVehicle: (id: string) => request<import("./types").Vehicle>(`/api/v1/fleet/vehicles/${id}`),
-  createVehicle: (body: Partial<import("./types").Vehicle>) =>
+  createVehicle: (body: import("./types").VehicleWrite) =>
     request<import("./types").Vehicle>("/api/v1/fleet/vehicles", { method: "POST", body: JSON.stringify(body) }),
-  updateVehicle: (id: string, body: Partial<import("./types").Vehicle>) =>
+  updateVehicle: (id: string, body: import("./types").VehicleWrite) =>
     request<import("./types").Vehicle>(`/api/v1/fleet/vehicles/${id}`, { method: "PUT", body: JSON.stringify(body) }),
-
-  listVehicleDocuments: (vehicleId: string) =>
-    request<import("./types").VehicleDocument[]>(`/api/v1/fleet/vehicles/${vehicleId}/documents`),
-  createVehicleDocument: (body: Partial<import("./types").VehicleDocument>) =>
-    request<import("./types").VehicleDocument>("/api/v1/fleet/documents", { method: "POST", body: JSON.stringify(body) }),
-  listExpiringDocuments: () =>
-    request<import("./types").VehicleDocument[]>("/api/v1/fleet/documents/expiring"),
+  listVehicleReadings: (vehicleId: string) =>
+    request<import("./types").VehicleMeterReading[]>(`/api/v1/fleet/vehicles/${vehicleId}/readings`),
+  recordVehicleReading: (vehicleId: string, body: { kilometers?: number | null; hours?: number | null; date?: string; correction?: boolean; note?: string }) =>
+    request<{ currentKilometers: number; currentEngineHours: number }>(`/api/v1/fleet/vehicles/${vehicleId}/readings`, { method: "POST", body: JSON.stringify(body) }),
+  listVehicleDocuments: (vehicleId: string, history = false) =>
+    request<import("./types").VehicleDocument[]>(`/api/v1/fleet/vehicles/${vehicleId}/documents${history ? "?history=true" : ""}`),
+  createVehicleDocument: (vehicleId: string, body: import("./types").VehicleDocumentWrite) =>
+    request<import("./types").VehicleDocument>(`/api/v1/fleet/vehicles/${vehicleId}/documents`, { method: "POST", body: JSON.stringify(body) }),
+  updateVehicleDocument: (id: string, body: import("./types").VehicleDocumentWrite) =>
+    request<import("./types").VehicleDocument>(`/api/v1/fleet/documents/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteVehicleDocument: (id: string) => request<void>(`/api/v1/fleet/documents/${id}`, { method: "DELETE" }),
+  getFleetExpirations: () => request<import("./types").FleetExpirations>("/api/v1/fleet/expirations"),
 
   listDrivers: () => request<import("./types").VehicleDriver[]>("/api/v1/fleet/drivers"),
   createDriver: (body: Partial<import("./types").VehicleDriver>) =>
