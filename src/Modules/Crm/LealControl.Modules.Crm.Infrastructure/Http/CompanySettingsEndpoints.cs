@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using LealControl.Modules.Crm.Application.Abstractions;
 using LealControl.Modules.Crm.Application.Settings;
@@ -96,6 +97,36 @@ public static class CompanySettingsEndpoints
         group.MapDelete("/users/{id:guid}", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
         {
             var res = await sender.Send(new DeleteTenantUserCommand(id), cancellationToken);
+            return res.IsSuccess ? Results.NoContent() : Results.BadRequest(res.Error);
+        }).RequireAuthorization("RequireAdmin");
+
+        // Permisos: catálogo de módulos y perfiles (plantillas de módulo × nivel + sensibles).
+        group.MapGet("/permissions/catalog", () => Results.Ok(new PermissionCatalogDto(
+            LealControl.Modules.Crm.Domain.Settings.PermissionCatalog.Modules
+                .Select(m => new PermissionModuleDto(m.Key, m.Label, m.Description)).ToList())))
+            .RequireAuthorization("RequireAdmin");
+
+        group.MapGet("/permission-profiles", async (ISender sender, CancellationToken cancellationToken) =>
+        {
+            var res = await sender.Send(new ListPermissionProfilesQuery(), cancellationToken);
+            return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
+        }).RequireAuthorization("RequireAdmin");
+
+        group.MapPost("/permission-profiles", async (SavePermissionProfileCommand cmd, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var res = await sender.Send(cmd with { Id = null }, cancellationToken);
+            return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
+        }).RequireAuthorization("RequireAdmin");
+
+        group.MapPut("/permission-profiles/{id:guid}", async (Guid id, SavePermissionProfileCommand cmd, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var res = await sender.Send(cmd with { Id = id }, cancellationToken);
+            return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
+        }).RequireAuthorization("RequireAdmin");
+
+        group.MapDelete("/permission-profiles/{id:guid}", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
+        {
+            var res = await sender.Send(new DeletePermissionProfileCommand(id), cancellationToken);
             return res.IsSuccess ? Results.NoContent() : Results.BadRequest(res.Error);
         }).RequireAuthorization("RequireAdmin");
 

@@ -1,8 +1,7 @@
 import { FormEvent, ChangeEvent, useEffect, useState } from "react";
 import { api } from "../api/client";
-import { useAuth } from "../context/AuthContext";
-import { provinces, type CompanySettings, type TenantUser } from "../api/types";
-import { ALL_SYSTEM_MODULES } from "./superadmin/SuperAdminPlansPage";
+import { provinces, type CompanySettings } from "../api/types";
+import { UsersAndPermissions } from "../components/permissions/UsersAndPermissions";
 
 export type SettingsSection = "general" | "arca" | "banks" | "users" | "backup";
 
@@ -10,15 +9,13 @@ const SECTION_HEADERS: Record<SettingsSection, { title: string; subtitle: string
   general: { title: "Empresa", subtitle: "Logo, datos fiscales y domicilio. Salen en facturas, presupuestos y demás documentos." },
   arca: { title: "Facturación ARCA", subtitle: "Punto de venta, certificado digital y prueba de conexión con ARCA." },
   banks: { title: "Cobros y bancos", subtitle: "Cuenta para transferencias que sale en la factura y se informa en la FCE." },
-  users: { title: "Usuarios y permisos", subtitle: "Quién entra al sistema y a qué módulos." },
+  users: { title: "Usuarios y permisos", subtitle: "Quién entra al sistema, con qué perfil y qué puede ver y hacer." },
   backup: { title: "Respaldo", subtitle: "Descarga completa de los datos de la empresa." }
 };
 
 export function SettingsPage({ section = "general" }: { section?: SettingsSection }) {
-  const { user: currentUser, tenant } = useAuth();
   const tab = section;
   const [settings, setSettings] = useState<CompanySettings | null>(null);
-  const [users, setUsers] = useState<TenantUser[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,25 +50,10 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
     summary: string;
   } | null>(null);
 
-  // User Modal State (Create & Edit)
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [userName, setUserName] = useState("");
-  const [userEmail, setUserEmail] = useState("");
-  const [userPassword, setUserPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [userRole, setUserRole] = useState("Comercial");
-  const [userIsActive, setUserIsActive] = useState(true);
-  const [userModules, setUserModules] = useState<string[]>([
-    "sales", "purchases", "inventory", "finance", "fleet", "hr", "grains"
-  ]);
-  const [savingUser, setSavingUser] = useState(false);
-
   useEffect(() => {
-    Promise.all([api.getCompanySettings(), api.listTenantUsers()])
-      .then(([s, u]) => {
+    api.getCompanySettings()
+      .then((s) => {
         setSettings(s);
-        setUsers(u);
         setCertEnv(s.arcaEnvironment || "Homologacion");
         setCertCuit(s.arcaSignerCuit || s.documentNumber || "");
         setCsrReady(Boolean(s.hasArcaCertificateKey));
@@ -245,117 +227,6 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
       setError(err instanceof Error ? err.message : "No se pudo consultar la numeración en ARCA.");
     } finally {
       setCheckingNumbering(false);
-    }
-  };
-
-  const openNewUserModal = () => {
-    setEditingUserId(null);
-    setUserName("");
-    setUserEmail("");
-    setUserPassword("Leal" + Math.floor(1000 + Math.random() * 9000));
-    setShowPassword(false);
-    setUserRole("Comercial");
-    setUserIsActive(true);
-    setUserModules(["sales", "purchases"]);
-    setShowUserModal(true);
-  };
-
-  const openEditUserModal = (u: TenantUser) => {
-    setEditingUserId(u.id);
-    setUserName(u.fullName);
-    setUserEmail(u.email);
-    setUserPassword("");
-    setShowPassword(false);
-    setUserRole(u.role);
-    setUserIsActive(u.isActive);
-    try {
-      const mods = typeof u.allowedModulesJson === "string" ? JSON.parse(u.allowedModulesJson) : u.allowedModulesJson || [];
-      const selectable = new Set(ALL_SYSTEM_MODULES.map((m) => m.id));
-      const cleaned = Array.isArray(mods) ? mods.filter((m: string) => selectable.has(m)) : [];
-      setUserModules(cleaned.length > 0 ? cleaned : ["sales", "purchases"]);
-    } catch {
-      setUserModules(["sales", "purchases"]);
-    }
-    setShowUserModal(true);
-  };
-
-  const handleDeleteUser = async (u: TenantUser) => {
-    if (currentUser?.id === u.id) {
-      setError("No podés eliminar tu propio usuario mientras tenés la sesión abierta.");
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `¿Eliminar al usuario "${u.fullName}" (${u.email})?\n\nEsta acción no se puede deshacer.`
-    );
-    if (!confirmed) return;
-
-    try {
-      setError(null);
-      await api.deleteTenantUser(u.id);
-      setUsers((prev) => prev.filter((item) => item.id !== u.id));
-      setSuccessMsg(`✓ Usuario ${u.fullName} eliminado.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo eliminar el usuario.");
-    }
-  };
-
-  const handleRoleChange = (newRole: string) => {
-    setUserRole(newRole);
-    if (newRole === "Admin") {
-      setUserModules(ALL_SYSTEM_MODULES.map((m) => m.id));
-    } else if (newRole === "Comercial") {
-      setUserModules(["sales", "inventory"]);
-    } else if (newRole === "Técnico") {
-      setUserModules(["fleet", "inventory"]);
-    } else if (newRole === "Facturación") {
-      setUserModules(["sales", "purchases", "finance"]);
-    }
-  };
-
-  const toggleUserModule = (id: string) => {
-    if (userModules.includes(id)) {
-      if (userModules.length === 1) return;
-      setUserModules(userModules.filter((m) => m !== id));
-    } else {
-      setUserModules([...userModules, id]);
-    }
-  };
-
-  const handleSaveUser = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!userName.trim() || !userEmail.trim()) return;
-    try {
-      setSavingUser(true);
-      setError(null);
-      const modulesJson = JSON.stringify(userModules);
-
-      if (editingUserId) {
-        const updated = await api.updateTenantUser(editingUserId, {
-          fullName: userName.trim(),
-          role: userRole,
-          isActive: userIsActive,
-          password: userPassword.trim() || undefined,
-          allowedModulesJson: modulesJson
-        });
-        setUsers((prev) => prev.map((u) => (u.id === editingUserId ? updated : u)));
-        setSuccessMsg(`✓ Usuario ${updated.fullName} actualizado con éxito.`);
-      } else {
-        const created = await api.createTenantUser({
-          fullName: userName.trim(),
-          email: userEmail.trim(),
-          role: userRole,
-          password: userPassword.trim() || undefined,
-          allowedModulesJson: modulesJson
-        });
-        setUsers((prev) => [...prev, created]);
-        setSuccessMsg(`✓ Usuario ${created.fullName} creado con éxito con clave asignada.`);
-      }
-      setShowUserModal(false);
-    } catch (err: any) {
-      setError(err?.message || "Error al guardar el usuario.");
-    } finally {
-      setSavingUser(false);
     }
   };
 
@@ -836,111 +707,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
         </form>
       )}
 
-      {tab === "users" && (
-        <div className="card pad">
-          <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <div>
-              <h3>Usuarios</h3>
-              <p className="muted" style={{ fontSize: "0.85rem", marginTop: 2 }}>
-                Asigná qué módulos y secciones específicas puede ver y operar cada empleado de tu empresa.
-                Los usuarios se crean solo en la empresa con la que estás conectado ahora
-                {tenant?.legalName ? ` (${tenant.legalName})` : ""}.
-              </p>
-            </div>
-            <button type="button" className="btn" onClick={openNewUserModal}>
-              + Nuevo Usuario
-            </button>
-          </div>
-
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Usuario</th>
-                  <th>Email de Acceso</th>
-                  <th>Rol</th>
-                  <th>Módulos Autorizados</th>
-                  <th>Estado</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => {
-                  let uMods: string[] = [];
-                  try {
-                    uMods = typeof u.allowedModulesJson === "string" ? JSON.parse(u.allowedModulesJson) : u.allowedModulesJson || [];
-                  } catch {
-                    uMods = [];
-                  }
-
-                  return (
-                    <tr key={u.id}>
-                      <td>
-                        <strong>👤 {u.fullName}</strong>
-                      </td>
-                      <td>{u.email}</td>
-                      <td>
-                        <span
-                          className={`badge ${
-                            u.role === "Admin" ? "prio-high" : u.role === "Comercial" ? "ok" : "warn"
-                          }`}
-                        >
-                          {u.role}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", maxWidth: "320px" }}>
-                          {u.role === "Admin" ? (
-                            <span className="badge prio-high">⭐ Acceso Total (Admin)</span>
-                          ) : uMods.length > 0 ? (
-                            uMods.map((mId) => {
-                              const mod = ALL_SYSTEM_MODULES.find((s) => s.id === mId);
-                              return (
-                                <span key={mId} className="badge ok" style={{ fontSize: "0.72rem", padding: "2px 6px" }}>
-                                  {mod?.icon} {mod?.name.split(" ")[0]}
-                                </span>
-                              );
-                            })
-                          ) : (
-                            <span className="badge off">Sin módulos asignados</span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`badge ${u.isActive ? "ok" : "off"}`}>
-                          {u.isActive ? "✓ Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end", flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          className="btn ghost"
-                          style={{ fontSize: "0.78rem", padding: "4px 8px" }}
-                          onClick={() => openEditUserModal(u)}
-                        >
-                          ✏️ Editar Permisos
-                        </button>
-                        <button
-                          type="button"
-                          className="btn ghost"
-                          style={{ fontSize: "0.78rem", padding: "4px 8px", color: "#f87171", borderColor: "rgba(248,113,113,0.35)" }}
-                          onClick={() => handleDeleteUser(u)}
-                          disabled={currentUser?.id === u.id}
-                          title={currentUser?.id === u.id ? "No podés eliminar tu propio usuario" : "Eliminar usuario"}
-                        >
-                          🗑️ Eliminar
-                        </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {tab === "users" && <UsersAndPermissions />}
 
       {tab === "backup" && (
         <div className="card pad" style={{ maxWidth: 760 }}>
@@ -962,155 +729,6 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
         </div>
       )}
 
-      {/* Modal Alta / Edición de Usuario con Matriz Modular */}
-      {showUserModal && (
-        <div className="modal-backdrop">
-          <div className="modal-card card pad" style={{ maxWidth: "600px", width: "100%" }}>
-            <h3>{editingUserId ? `✏️ Editar Permisos: ${userName}` : "+ Alta de Nuevo Usuario"}</h3>
-            <form onSubmit={handleSaveUser} className="stack" style={{ marginTop: 12, gap: 14 }}>
-              <div className="grid-2" style={{ gap: 12 }}>
-                <label>
-                  Nombre y Apellido *
-                  <input
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    required
-                    placeholder="Ej. Martín González"
-                  />
-                </label>
-
-                <label>
-                  Email de Acceso *
-                  <input
-                    type="email"
-                    value={userEmail}
-                    disabled={!!editingUserId}
-                    onChange={(e) => setUserEmail(e.target.value)}
-                    required
-                    placeholder="mgonzalez@empresa.com"
-                  />
-                </label>
-              </div>
-
-              <div className="grid-2" style={{ gap: 12 }}>
-                <label>
-                  Rol Principal
-                  <select value={userRole} onChange={(e) => handleRoleChange(e.target.value)}>
-                    <option value="Comercial">Comercial / Ventas</option>
-                    <option value="Técnico">Técnico / Servicio / Flota</option>
-                    <option value="Facturación">Facturación / Administración</option>
-                    <option value="Admin">Administrador Total</option>
-                  </select>
-                </label>
-
-                <label>
-                  Estado
-                  <select
-                    value={userIsActive ? "true" : "false"}
-                    onChange={(e) => setUserIsActive(e.target.value === "true")}
-                  >
-                    <option value="true">Activo (Puede ingresar)</option>
-                    <option value="false">Inactivo (Acceso bloqueado)</option>
-                  </select>
-                </label>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 6 }}>
-                  {editingUserId ? "🔑 Modificar Contraseña (dejar en blanco para no cambiarla)" : "🔑 Contraseña de Acceso *"}
-                </label>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={userPassword}
-                    onChange={(e) => setUserPassword(e.target.value)}
-                    required={!editingUserId}
-                    placeholder={editingUserId ? "•••••••• (Sin cambios)" : "Ingresá clave segura"}
-                    style={{ flex: 1 }}
-                  />
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    style={{ fontSize: "12px", padding: "8px 12px", whiteSpace: "nowrap" }}
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? "👁️ Ocultar" : "👁️ Ver"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn ghost"
-                    style={{ fontSize: "12px", padding: "8px 12px", whiteSpace: "nowrap" }}
-                    onClick={() => {
-                      setUserPassword("Leal" + Math.floor(1000 + Math.random() * 9000));
-                      setShowPassword(true);
-                    }}
-                    title="Generar contraseña aleatoria"
-                  >
-                    🎲 Generar
-                  </button>
-                </div>
-                {!editingUserId && (
-                  <span className="muted" style={{ fontSize: "0.75rem", marginTop: 4, display: "block" }}>
-                    Podés usar la clave sugerida o escribir la que prefieras para el nuevo empleado.
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, marginBottom: 8 }}>
-                  Módulos y Lugares de Acceso Permitidos:
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                  {ALL_SYSTEM_MODULES.map((m) => {
-                    const isChecked = userRole === "Admin" || userModules.includes(m.id);
-                    return (
-                      <div
-                        key={m.id}
-                        onClick={() => userRole !== "Admin" && toggleUserModule(m.id)}
-                        style={{
-                          padding: "8px 10px",
-                          borderRadius: "var(--radius-sm)",
-                          border: isChecked ? "1px solid var(--accent)" : "1px solid var(--line)",
-                          background: isChecked ? "rgba(37, 99, 235, 0.08)" : "transparent",
-                          cursor: userRole === "Admin" ? "default" : "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          opacity: userRole === "Admin" ? 0.85 : 1
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          disabled={userRole === "Admin"}
-                          onChange={() => {}}
-                        />
-                        <span style={{ fontSize: "0.82rem", fontWeight: 500 }}>
-                          {m.icon} {m.name}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                {userRole === "Admin" && (
-                  <span className="muted" style={{ fontSize: "0.75rem", marginTop: 4, display: "block" }}>
-                    ⭐ Los administradores tienen acceso irrestricto a todos los módulos.
-                  </span>
-                )}
-              </div>
-
-              <div className="row" style={{ justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-                <button type="button" className="btn ghost" onClick={() => setShowUserModal(false)}>
-                  Cancelar
-                </button>
-                <button className="btn" disabled={savingUser}>
-                  {savingUser ? "Guardando…" : "💾 Guardar Usuario"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -63,5 +63,24 @@ internal sealed class TenantUserConfiguration : IEntityTypeConfiguration<TenantU
         builder.Property(u => u.Role).HasMaxLength(64).IsRequired();
         builder.Property(u => u.PasswordHash).HasMaxLength(256).IsRequired(false);
         builder.Property(u => u.LastLoginUtc).IsRequired(false);
+        builder.Property(u => u.ProfileId).IsRequired(false);
+        builder.Property(u => u.PermissionOverridesJson).IsRequired(false);
+    }
+}
+
+internal sealed class PermissionProfileConfiguration : IEntityTypeConfiguration<PermissionProfile>
+{
+    public void Configure(EntityTypeBuilder<PermissionProfile> builder)
+    {
+        builder.ToTable("permission_profiles", "public");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.TenantId).HasConversion(id => id.Value, value => new TenantId(value));
+        builder.Property(p => p.SystemKey).HasMaxLength(40);
+        builder.Property(p => p.Name).HasMaxLength(80).IsRequired();
+        builder.Property(p => p.Description).HasMaxLength(300);
+        builder.Property(p => p.MatrixJson).IsRequired();
+        builder.Property(p => p.LegacyRole).HasMaxLength(64).IsRequired();
+        builder.Ignore(p => p.IsLocked);
+        builder.HasIndex(p => new { p.TenantId, p.Name }).IsUnique();
     }
 }

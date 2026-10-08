@@ -643,10 +643,17 @@ export const api = {
       summary: string;
     }>("/api/v1/company/settings/arca-diagnostics"),
   listTenantUsers: () => request<import("./types").TenantUser[]>("/api/v1/company/users"),
-  createTenantUser: (body: { fullName: string; email: string; role: string; password?: string; allowedModulesJson?: string }) =>
+  createTenantUser: (body: { fullName: string; email: string; role: string; password?: string; allowedModulesJson?: string; profileId?: string; overrides?: import("./types").PermissionOverrides | null }) =>
     request<import("./types").TenantUser>("/api/v1/company/users", { method: "POST", body: JSON.stringify(body) }),
-  updateTenantUser: (id: string, body: { fullName: string; role: string; isActive: boolean; password?: string; allowedModulesJson?: string }) =>
-    request<import("./types").TenantUser>(`/api/v1/company/users/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  updateTenantUser: (id: string, body: { fullName: string; role: string; isActive: boolean; password?: string; allowedModulesJson?: string; profileId?: string; overrides?: import("./types").PermissionOverrides | null }) =>
+    request<import("./types").TenantUser>(`/api/v1/company/users/${id}`, { method: "PUT", body: JSON.stringify({ id, ...body }) }),
+  getPermissionCatalog: () => request<{ modules: import("./types").PermissionModule[] }>("/api/v1/company/permissions/catalog"),
+  listPermissionProfiles: () => request<import("./types").PermissionProfile[]>("/api/v1/company/permission-profiles"),
+  createPermissionProfile: (body: import("./types").PermissionProfileWrite) =>
+    request<import("./types").PermissionProfile>("/api/v1/company/permission-profiles", { method: "POST", body: JSON.stringify(body) }),
+  updatePermissionProfile: (id: string, body: import("./types").PermissionProfileWrite) =>
+    request<import("./types").PermissionProfile>(`/api/v1/company/permission-profiles/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deletePermissionProfile: (id: string) => request<void>(`/api/v1/company/permission-profiles/${id}`, { method: "DELETE" }),
   deleteTenantUser: (id: string) =>
     request<void>(`/api/v1/company/users/${id}`, { method: "DELETE" }),
 
