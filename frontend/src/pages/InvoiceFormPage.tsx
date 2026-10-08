@@ -114,7 +114,12 @@ export function InvoiceFormPage() {
   const sourceInvoiceId = queryParams.get("origen");
   const noteKind = queryParams.get("nota") === "ND" ? "ND" : "NC";
   // Nota por la diferencia de cambio de una imputación de cobro (factura en USD cobrada en pesos).
-  const differenceImputationId = queryParams.get("dif");
+  const differenceImputationIdParam = queryParams.get("dif");
+  // Corregir un borrador rechazado por ARCA: se precarga y al guardar se reemplaza.
+  const copyFromId = queryParams.get("copiar");
+  const [copiedDifferenceId, setCopiedDifferenceId] = useState<string | null>(null);
+  const differenceImputationId = differenceImputationIdParam || copiedDifferenceId;
+  const [replacing, setReplacing] = useState<Invoice | null>(null);
 
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -200,6 +205,45 @@ export function InvoiceFormPage() {
         }
 
         const defaultRate = rates?.usdDivisaSell || rates?.usdBilleteSell || 1400;
+
+        if (copyFromId) {
+          const draft = await api.getInvoice(copyFromId);
+          setReplacing(draft);
+          setInvoiceType(draft.invoiceType);
+          setPointOfSale(draft.pointOfSale);
+          setCustomerId(draft.customerId);
+          setCustomerName(draft.customerName);
+          setCustomerDocument(draft.customerDocument);
+          setCustomerTaxCondition(draft.customerTaxCondition);
+          setCustomerAddress(draft.customerAddress ?? "");
+          setDueDate(draft.dueDate.slice(0, 10));
+          setFiscalConcept(draft.fiscalConcept);
+          setServiceFrom(draft.serviceFrom?.slice(0, 10) ?? "");
+          setServiceTo(draft.serviceTo?.slice(0, 10) ?? "");
+          setCurrency(draft.currency === "USD" ? "USD" : "ARS");
+          setExchangeRate(draft.exchangeRate || 1);
+          setRateSource(draft.paidInForeignCurrency ? "arca" : "manual");
+          setPaidInForeignCurrency(Boolean(draft.paidInForeignCurrency));
+          setExchangeRateType(draft.exchangeRateType === "Billete" ? "Billete" : "Divisa");
+          setNotes(draft.notes ?? "");
+          if (draft.orderId) setSourceOrderId(draft.orderId);
+          if (draft.fceCbu) setFceCbu(draft.fceCbu);
+          if (draft.fceAlias) setFceAlias(draft.fceAlias);
+          if (draft.fceTransferMode) setFceTransferMode(draft.fceTransferMode);
+          setFceCancellation(Boolean(draft.fceCancellation));
+          setCopiedDifferenceId(draft.exchangeDifferenceImputationId ?? null);
+          if (draft.associatedInvoiceId) setAssociatedInvoice(await api.getInvoice(draft.associatedInvoiceId));
+          setItems(draft.items.map((item) => ({
+            productId: item.productId ?? undefined,
+            remitoItemId: item.remitoItemId ?? undefined,
+            code: item.code,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            discountPercent: 0,
+            vatRate: item.vatRate
+          })));
+        }
 
         if (sourceInvoiceId) {
           const original = await api.getInvoice(sourceInvoiceId);
@@ -382,7 +426,7 @@ export function InvoiceFormPage() {
     }
 
     loadData();
-  }, [orderId, remitoId, sourceInvoiceId, noteKind, differenceImputationId]);
+  }, [orderId, remitoId, sourceInvoiceId, noteKind, differenceImputationIdParam, copyFromId]);
 
   // Handle Customer Selection
   const handleCustomerChange = async (newCustId: string) => {
@@ -613,7 +657,8 @@ export function InvoiceFormPage() {
       pointOfSale,
       issueDate,
       orderId: orderId || sourceOrderId || undefined,
-      remitoId: remitoId || undefined,
+      remitoId: remitoId || replacing?.remitoId || undefined,
+      replacesInvoiceId: replacing?.id,
       customerId,
       customerName,
       customerDocument,
@@ -692,6 +737,14 @@ export function InvoiceFormPage() {
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
           {/* Main Column */}
           <div className="stack" style={{ gap: 20 }}>
+            {replacing && (
+              <div className="card pad" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
+                <strong>Corrigiendo {replacing.formattedNumber}, rechazado por ARCA.</strong>
+                <div style={{ fontSize: "0.88rem", marginTop: 4 }}>
+                  Ajustá lo que haga falta y guardá: se crea un borrador nuevo y el rechazado queda anulado. El stock no se mueve de nuevo.
+                </div>
+              </div>
+            )}
             {fceCheck && (
               <div className="card pad" role="status" style={{
                 background: fceCheck.required ? "#fffbeb" : "#f8fafc",
@@ -738,7 +791,7 @@ export function InvoiceFormPage() {
             {associatedInvoice ? (
               <div className="card pad" style={{ background: "#f8fafc", border: "1px solid #cbd5e1" }}>
                 <strong>
-                  {noteKind === "NC" ? "Nota de crédito" : "Nota de débito"} sobre Factura{" "}
+                  {invoiceType.startsWith("ND_") ? "Nota de débito" : "Nota de crédito"} sobre Factura{" "}
                   {associatedInvoice.invoiceType.replace(/^(NC_|ND_)/, "")} {associatedInvoice.formattedNumber}
                 </strong>
                 {differenceInfo && (

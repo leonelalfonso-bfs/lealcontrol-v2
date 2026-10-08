@@ -102,7 +102,9 @@ public sealed record CreateInvoiceCommand(
     string? FceCbu = null,
     string? FceAlias = null,
     string? FceTransferMode = null,
-    bool? FceCancellation = null) : IRequest<Result<InvoiceDto>>;
+    bool? FceCancellation = null,
+    // Borrador rechazado por ARCA que este comprobante corrige: se anula al crear el nuevo.
+    Guid? ReplacesInvoiceId = null) : IRequest<Result<InvoiceDto>>;
 
 public sealed record AuthorizeInvoiceArcaCommand(Guid Id) : IRequest<Result<InvoiceDto>>;
 

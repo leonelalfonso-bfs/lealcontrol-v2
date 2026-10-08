@@ -946,6 +946,7 @@ export type InvoiceWrite = {
   fceAlias?: string;
   fceTransferMode?: "SCA" | "ADC";
   fceCancellation?: boolean;
+  replacesInvoiceId?: string;
   currency: string;
   exchangeRate: number;
   notes?: string | null;

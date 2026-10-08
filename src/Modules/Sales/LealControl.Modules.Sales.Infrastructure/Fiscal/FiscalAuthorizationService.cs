@@ -112,10 +112,10 @@ public sealed class FiscalAuthorizationService
             _db.ChangeTracker.Clear();
             var attempt = await _db.FiscalAuthorizationAttempts.FirstOrDefaultAsync(a =>
                 a.Id == attemptId && a.TenantId == tenantId && a.InvoiceId == invoiceId, ct);
-            if (attempt?.Status == "Pending") attempt.Reject();
+            if (attempt?.Status == "Pending") attempt.Reject(reply.Detail);
             await _db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
-            return Fail("ARCA rechazó la solicitud; revisar la reserva antes de continuar.");
+            return Fail(reply.Detail);
         }
         return await _recovery.RecoverAsync(invoiceId, ct, reply);
     }

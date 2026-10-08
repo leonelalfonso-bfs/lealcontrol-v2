@@ -23,6 +23,8 @@ internal sealed class FiscalAuthorizationAttemptConfiguration : IEntityTypeConfi
             .HasDatabaseName("UX_fiscal_attempt_unresolved_series")
             .HasFilter("\"Status\" IN ('Reserved','Pending','Unknown')").IsUnique();
         builder.HasIndex(x => new { x.TenantId, x.PointOfSale, x.VoucherType, x.VoucherNumber })
-            .HasDatabaseName("UX_fiscal_attempt_number").IsUnique();
+            .HasDatabaseName("UX_fiscal_attempt_number_live").IsUnique()
+            .HasFilter("\"Status\" <> 'Rejected'");
+        builder.Property(x => x.RejectionDetail).HasMaxLength(1000);
     }
 }

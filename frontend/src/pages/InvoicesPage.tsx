@@ -34,7 +34,7 @@ export function InvoicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [fiscalEnabled, setFiscalEnabled] = useState(false);
-  const [fiscalAttempts, setFiscalAttempts] = useState<Record<string, { status: string; voucherNumber: number }>>({});
+  const [fiscalAttempts, setFiscalAttempts] = useState<Record<string, { status: string; voucherNumber: number; rejectionDetail?: string | null }>>({});
   const [busyInvoice, setBusyInvoice] = useState<string | null>(null);
   // Borrador en USD cuya cotización no coincide con la oficial de ARCA.
   const [rateFix, setRateFix] = useState<Invoice | null>(null);
@@ -337,6 +337,11 @@ export function InvoicesPage() {
                                   ["Pending", "Unknown"].includes(fiscalAttempts[inv.id].status)
                                     ? "Envío sin confirmar · consultar ARCA" : "Reserva fiscal · requiere revisión"}
                               {" · N° "}{fiscalAttempts[inv.id].voucherNumber}
+                              {fiscalAttempts[inv.id].status === "Rejected" && fiscalAttempts[inv.id].rejectionDetail && (
+                                <span style={{ display: "block", color: "#b91c1c", maxWidth: 360, whiteSpace: "normal" }}>
+                                  {fiscalAttempts[inv.id].rejectionDetail}
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
@@ -455,6 +460,12 @@ export function InvoicesPage() {
                             <Link className="btn ghost compact" title="Nota de débito sobre esta factura"
                               to={`/facturas/nueva?nota=ND&origen=${inv.id}`}>ND</Link>
                           </>
+                        )}
+                        {inv.status === "Draft" && fiscalAttempts[inv.id]?.status === "Rejected" && (
+                          <Link className="btn compact" to={`/facturas/nueva?copiar=${inv.id}`}
+                            title="Abre el comprobante para corregirlo; al guardarlo se anula este borrador rechazado">
+                            Corregir y reintentar
+                          </Link>
                         )}
                         {inv.status === "Draft" && canAuthorize && !fiscalEnabled && (
                           <span className="muted">Emisión ARCA deshabilitada</span>

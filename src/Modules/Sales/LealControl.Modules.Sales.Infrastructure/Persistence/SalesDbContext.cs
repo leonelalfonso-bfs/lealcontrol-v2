@@ -522,8 +522,13 @@ CREATE INDEX IF NOT EXISTS "IX_remito_return_items_RemitoItemId"
                 ADD COLUMN IF NOT EXISTS "Production" boolean NOT NULL DEFAULT false;
             CREATE UNIQUE INDEX IF NOT EXISTS "UX_fiscal_attempt_invoice"
                 ON sales.fiscal_authorization_attempts ("TenantId", "InvoiceId");
-            CREATE UNIQUE INDEX IF NOT EXISTS "UX_fiscal_attempt_number"
-                ON sales.fiscal_authorization_attempts ("TenantId", "PointOfSale", "VoucherType", "VoucherNumber");
+            -- Un número rechazado por ARCA no se consumió: el próximo envío puede reservarlo.
+            DROP INDEX IF EXISTS sales."UX_fiscal_attempt_number";
+            CREATE UNIQUE INDEX IF NOT EXISTS "UX_fiscal_attempt_number_live"
+                ON sales.fiscal_authorization_attempts ("TenantId", "PointOfSale", "VoucherType", "VoucherNumber")
+                WHERE "Status" <> 'Rejected';
+            ALTER TABLE sales.fiscal_authorization_attempts
+                ADD COLUMN IF NOT EXISTS "RejectionDetail" character varying(1000);
             CREATE UNIQUE INDEX IF NOT EXISTS "UX_invoice_authorized_number"
                 ON sales.invoices ("TenantId", "PointOfSale", "InvoiceType", "InvoiceNumber")
                 WHERE "Status" = 'Authorized';

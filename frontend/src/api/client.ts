@@ -793,7 +793,7 @@ export const api = {
   createInvoice: (body: import("./types").InvoiceWrite) =>
     request<import("./types").Invoice>("/api/v1/sales/invoices", { method: "POST", body: JSON.stringify(body) }),
   getInvoiceFiscalStatus: () =>
-    request<{ enabled: boolean; attempts: Array<{ invoiceId: string; status: string; voucherNumber: number }> }>("/api/v1/sales/invoices/fiscal-status"),
+    request<{ enabled: boolean; attempts: Array<{ invoiceId: string; status: string; voucherNumber: number; rejectionDetail?: string | null }> }>("/api/v1/sales/invoices/fiscal-status"),
   recoverInvoiceArca: (id: string) =>
     request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/recover-arca`, { method: "POST" }),
   getFceObligation: (cuit: string, date: string, total: number, rate: number) =>

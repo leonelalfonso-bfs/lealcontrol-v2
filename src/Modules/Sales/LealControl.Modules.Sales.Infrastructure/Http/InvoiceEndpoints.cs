@@ -32,7 +32,7 @@ public static class InvoiceEndpoints
             var tenantId = tenant.TenantId;
             var attempts = await db.FiscalAuthorizationAttempts.AsNoTracking()
                 .Where(a => a.TenantId == tenantId)
-                .Select(a => new { invoiceId = a.InvoiceId, status = a.Status, voucherNumber = a.VoucherNumber })
+                .Select(a => new { invoiceId = a.InvoiceId, status = a.Status, voucherNumber = a.VoucherNumber, rejectionDetail = a.RejectionDetail })
                 .ToListAsync(cancellationToken);
             return Results.Ok(new
             {
