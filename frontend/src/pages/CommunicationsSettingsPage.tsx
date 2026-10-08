@@ -7,7 +7,7 @@ type Channel = "correo" | "mensajeria";
 /**
  * Configuración → Comunicaciones: todas las cuentas en un solo lugar.
  * Correo (también se usa para enviar facturas y presupuestos) y, si la empresa tiene
- * el módulo Comunicaciones, WhatsApp, Instagram y Facebook.
+ * el módulo Comunicaciones, WhatsApp (Instagram y Facebook quedan para la segunda etapa).
  */
 export function CommunicationsSettingsPage({ messagingEnabled }: { messagingEnabled: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,7 +28,7 @@ export function CommunicationsSettingsPage({ messagingEnabled }: { messagingEnab
           <span className="eyebrow">CONFIGURACIÓN</span>
           <h1>Comunicaciones</h1>
           <p className="muted">
-            Cuentas de correo{messagingEnabled ? ", WhatsApp y redes" : ""} de la empresa. El correo también se usa para enviar facturas y presupuestos.
+            Cuentas de correo{messagingEnabled ? " y WhatsApp" : ""} de la empresa. El correo también se usa para enviar facturas y presupuestos.
           </p>
         </div>
       </div>
@@ -39,7 +39,7 @@ export function CommunicationsSettingsPage({ messagingEnabled }: { messagingEnab
             Correo
           </button>
           <button type="button" className={`tab-btn ${channel === "mensajeria" ? "active" : ""}`} onClick={() => select("mensajeria")}>
-            WhatsApp y redes
+            WhatsApp
           </button>
         </div>
       )}

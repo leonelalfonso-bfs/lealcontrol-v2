@@ -58,6 +58,9 @@ function MetaReconnectBanner({
   );
 }
 
+// Instagram y Facebook quedan para la segunda etapa de Comunicaciones (API oficial de Meta).
+const SOCIAL_CHANNELS_ENABLED = false;
+
 export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState<Channel | null>(null);
@@ -489,6 +492,8 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
           </div>
         </article>
 
+        {/* Instagram y Facebook: segunda etapa, junto con la API oficial de Meta. */}
+        {SOCIAL_CHANNELS_ENABLED && (<>
         {/* 2. INSTAGRAM DIRECT CARD */}
         <article
           className="card pad channel-card"
@@ -791,6 +796,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
             )}
           </div>
         </article>
+        </>)}
       </div>
 
       {/* Team WhatsApp Lines Section */}
