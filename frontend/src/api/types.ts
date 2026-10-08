@@ -903,6 +903,10 @@ export type Invoice = {
   fceAlias?: string | null;
   fceTransferMode?: "SCA" | "ADC" | null;
   fceCancellation?: boolean | null;
+  /** Saldo calculado por el servidor, en la moneda del comprobante. */
+  collected?: number | null;
+  credited?: number | null;
+  pending?: number | null;
   currency: string;
   exchangeRate: number;
   subtotal: number;

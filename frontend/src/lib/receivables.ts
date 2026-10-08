@@ -62,7 +62,7 @@ export function withCollections<T extends Invoice>(invoices: readonly T[], recei
         const rate = Number(r.paymentExchangeRate) || Number(inv.exchangeRate) || 1;
         return sum + (Number(imp.amount) || 0) / rate;
       }, 0);
-    const totalCobrado = imputed + active
+    const computedCollected = imputed + active
       .filter((r) => !r.imputations?.length && r.invoiceId === inv.id)
       .reduce((sum, r) => {
         if (inv.currency === "USD") {
@@ -74,10 +74,13 @@ export function withCollections<T extends Invoice>(invoices: readonly T[], recei
         return sum + (Number(r.amount) || 0);
       }, 0);
 
+    // El servidor es la fuente de verdad: si mandó el saldo, se usa tal cual; si no, se calcula acá.
+    const fromServer = inv.pending !== undefined && inv.pending !== null;
+    const totalCobrado = fromServer ? Number(inv.collected ?? 0) : computedCollected;
     // Una nota de crédito no es un saldo a cobrar: descuenta el de su factura original.
-    const totalAcreditado = isCreditNote ? 0 : credits.get(inv.id) ?? 0;
+    const totalAcreditado = fromServer ? Number(inv.credited ?? 0) : isCreditNote ? 0 : credits.get(inv.id) ?? 0;
     const settled = isCreditNote || isExchangeDifference;
-    const saldoPendiente = settled ? 0 : Math.max(0, inv.total - totalCobrado - totalAcreditado);
+    const saldoPendiente = fromServer ? Number(inv.pending) : settled ? 0 : Math.max(0, inv.total - totalCobrado - totalAcreditado);
     const isPaid = settled || (saldoPendiente <= 0.01 && inv.total > 0);
     const isPartial = !isPaid && totalCobrado + totalAcreditado > 0.01;
     const isPending = !isPaid && !isPartial;

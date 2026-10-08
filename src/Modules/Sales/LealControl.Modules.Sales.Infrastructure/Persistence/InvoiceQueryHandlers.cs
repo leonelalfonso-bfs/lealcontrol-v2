@@ -114,7 +114,8 @@ internal sealed class InvoiceQueryHandlers
         // Mismo día: lo último cargado primero.
         var list = await query.OrderByDescending(i => i.IssueDate).ThenByDescending(i => i.CreatedAtUtc)
             .ToListAsync(cancellationToken);
-        IReadOnlyList<InvoiceDto> dtos = list.Select(MapToDto).ToList();
+        var balances = await ReceivableBalances.ComputeAsync(_dbContext, tenantId, cancellationToken);
+        IReadOnlyList<InvoiceDto> dtos = list.Select(i => WithBalance(MapToDto(i), balances)).ToList();
         return Result<IReadOnlyList<InvoiceDto>>.Success(dtos);
     }
 
@@ -131,8 +132,14 @@ internal sealed class InvoiceQueryHandlers
             return Result<InvoiceDto>.Failure(Error.NotFound("Sales.Invoice.NotFound", $"Factura {request.Id} no encontrada."));
         }
 
-        return Result<InvoiceDto>.Success(MapToDto(invoice));
+        var balances = await ReceivableBalances.ComputeAsync(_dbContext, tenantId, cancellationToken);
+        return Result<InvoiceDto>.Success(WithBalance(MapToDto(invoice), balances));
     }
+
+    private static InvoiceDto WithBalance(InvoiceDto dto, IReadOnlyDictionary<Guid, ReceivableBalance> balances) =>
+        balances.TryGetValue(dto.Id, out var b)
+            ? dto with { Collected = b.Collected, Credited = b.Credited, Pending = b.Pending }
+            : dto;
 
     public async Task<Result<InvoiceDto>> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
     {
