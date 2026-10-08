@@ -56,6 +56,8 @@ public sealed class CrmWebApplicationFactory : WebApplicationFactory<Program>, I
         builder.UseSetting("Jwt:Issuer", "lealcontrol");
         builder.UseSetting("Jwt:Audience", "lealcontrol-web");
         builder.UseSetting("Jwt:LifetimeHours", "8");
+        // El envío automático diario no corre en las pruebas (se prueba el envío explícito).
+        builder.UseSetting("DailyNotices:Enabled", "false");
         foreach (var setting in _settings)
         {
             builder.UseSetting(setting.Key, setting.Value);

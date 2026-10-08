@@ -92,6 +92,7 @@ try
     builder.Services.AddSingleton<ITenantConnectionProvider, TenantConnectionProvider>();
     builder.Services.AddScoped<LealControl.Modules.Communications.Infrastructure.Services.ICommunicationsTenantCatalog, CommunicationsTenantCatalog>();
     builder.Services.AddScoped<ITenantProvisionerService, TenantProvisionerService>();
+    LealControl.Api.Notices.DailyNoticesEndpoints.AddDailyNotices(builder.Services);
 
     builder.Services.AddSingleton<IClock, SystemClock>();
     builder.Services.AddHttpClient<GeminiApiClient>();
@@ -402,6 +403,7 @@ try
     app.MapFinanceModule();
     app.MapHumanResourcesModule();
     app.MapFleetModule();
+    LealControl.Api.Notices.DailyNoticesEndpoints.MapDailyNotices(app);
     app.MapAccountingModule();
     app.MapMetrologyModule();
     app.MapQualityModule();

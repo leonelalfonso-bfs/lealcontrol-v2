@@ -68,6 +68,7 @@ services:
       # Emisión de facturas en ARCA: apagada por defecto. ALLOW_PRODUCTION solo en el servidor de producción.
       Arca__EnableInvoiceAuthorization: ${ARCA_ENABLE_INVOICE_AUTHORIZATION:-false}
       Arca__AllowProductionAuthorization: ${ARCA_ALLOW_PRODUCTION_AUTHORIZATION:-false}
+      DailyNotices__Enabled: ${DAILY_NOTICES_ENABLED:-true}
     depends_on:
       postgres:
         condition: service_healthy

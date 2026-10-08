@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
-import type { FleetExpirations, Vehicle } from "../api/types";
+import type { DailyNoticePreview, FleetExpirations, Vehicle } from "../api/types";
 import { SearchField } from "../components/ui/SearchField";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
 import {
@@ -18,6 +18,28 @@ export function FleetVehiclesListPage() {
   const [search, setSearch] = useState("");
   const [includeSold, setIncludeSold] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
+  const [notice, setNotice] = useState<DailyNoticePreview | null>(null);
+  const [sendingNotice, setSendingNotice] = useState(false);
+  const [noticeResult, setNoticeResult] = useState<string | null>(null);
+
+  // Solo los administradores ven y envían el aviso diario (para el resto la API responde 403).
+  useEffect(() => {
+    api.getFleetDailyNotice().then(setNotice).catch(() => setNotice(null));
+  }, []);
+
+  const sendNoticeNow = async () => {
+    setSendingNotice(true);
+    setNoticeResult(null);
+    try {
+      const result = await api.sendFleetDailyNoticeNow();
+      setNoticeResult(result.detail);
+      setNotice(await api.getFleetDailyNotice());
+    } catch (e) {
+      setNoticeResult(e instanceof Error ? e.message : "No se pudo enviar.");
+    } finally {
+      setSendingNotice(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +108,33 @@ export function FleetVehiclesListPage() {
           </div>
         )}
       </section>
+
+      {notice && (
+        <section className="card pad" style={{ marginBottom: 20 }}>
+          <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ margin: 0 }}>Aviso diario por correo</h3>
+              <p className="muted" style={{ margin: "4px 0 0", fontSize: "0.85rem" }}>
+                {notice.enabled ? "Todos los días a partir de las 7, " : "El envío automático está apagado en este servidor; "}
+                {notice.sender ? <>desde <strong>{notice.sender}</strong></> : <>sin casilla (cargala en <Link to="/configuracion/comunicaciones">Configuración → Comunicaciones</Link>)</>}
+                {" "}a {notice.recipients.length > 0
+                  ? notice.recipients.map((r) => r.email).join(", ")
+                  : "nadie: no hay administradores activos con correo"}.
+                {" "}Solo se envía si hay algo vencido, por vencer o sin cargar.
+              </p>
+              {notice.lastDay && (
+                <p className="muted" style={{ margin: "4px 0 0", fontSize: "0.8rem" }}>
+                  Último: {civilDate(notice.lastDay)} · {notice.lastResult}
+                </p>
+              )}
+              {noticeResult && <p style={{ margin: "6px 0 0", fontSize: "0.85rem", fontWeight: 600 }}>{noticeResult}</p>}
+            </div>
+            <button type="button" className="btn btn-outline" disabled={sendingNotice} onClick={() => void sendNoticeNow()}>
+              {sendingNotice ? "Enviando…" : "Enviar ahora"}
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="card pad">
         <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>

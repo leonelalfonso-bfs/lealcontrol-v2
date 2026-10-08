@@ -84,7 +84,7 @@ public static class FleetModule
     }
 
     /// <summary>Vencidos, por vencer y faltantes de cada unidad (sin las dadas de baja).</summary>
-    internal static List<ExpirationItem> Expirations(IEnumerable<Vehicle> vehicles, IEnumerable<VehicleDocument> activeDocuments, DateOnly today)
+    public static List<ExpirationItem> Expirations(IEnumerable<Vehicle> vehicles, IEnumerable<VehicleDocument> activeDocuments, DateOnly today)
     {
         var docsByVehicle = activeDocuments.GroupBy(d => d.VehicleId).ToDictionary(g => g.Key, g => g.ToList());
         var items = new List<ExpirationItem>();
