@@ -60,7 +60,11 @@ public sealed record InvoiceDto(
     string? FceCbu = null,
     string? FceAlias = null,
     string? FceTransferMode = null,
-    bool? FceCancellation = null);
+    bool? FceCancellation = null,
+    // Saldo calculado en el servidor, en la moneda del comprobante.
+    decimal? Collected = null,
+    decimal? Credited = null,
+    decimal? Pending = null);
 
 public sealed record InvoiceItemWriteDto(
     Guid? ProductId,

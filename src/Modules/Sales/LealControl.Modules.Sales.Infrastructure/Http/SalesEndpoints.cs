@@ -254,6 +254,31 @@ public static class SalesEndpoints
             return Results.Ok(rates);
         });
 
+        // Cuentas corrientes de clientes y proveedores, calculadas en el servidor.
+        sales.MapGet("/current-accounts", async (LealControl.Modules.Sales.Infrastructure.Persistence.SalesDbContext db,
+            LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken cancellationToken) =>
+        {
+            var snapshot = await LealControl.Modules.Sales.Infrastructure.Persistence.CurrentAccounts
+                .LoadAsync(db, tenant.TenantId, cancellationToken);
+            var summaries = LealControl.Modules.Sales.Infrastructure.Persistence.CurrentAccounts.Entities(snapshot)
+                .Select(id => LealControl.Modules.Sales.Infrastructure.Persistence.CurrentAccounts.Summary(snapshot, id))
+                .ToList();
+            return Results.Ok(summaries);
+        });
+
+        sales.MapGet("/current-accounts/{entityId:guid}", async (Guid entityId,
+            LealControl.Modules.Sales.Infrastructure.Persistence.SalesDbContext db,
+            LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken cancellationToken) =>
+        {
+            var snapshot = await LealControl.Modules.Sales.Infrastructure.Persistence.CurrentAccounts
+                .LoadAsync(db, tenant.TenantId, cancellationToken);
+            return Results.Ok(new
+            {
+                summary = LealControl.Modules.Sales.Infrastructure.Persistence.CurrentAccounts.Summary(snapshot, entityId),
+                movements = LealControl.Modules.Sales.Infrastructure.Persistence.CurrentAccounts.Ledger(snapshot, entityId)
+            });
+        });
+
         // Cotización BNA (billete o divisa) de una fecha y del día hábil anterior.
         sales.MapGet("/quotes/bna", async (string type, string? date, IExchangeRateService rateService,
             CancellationToken cancellationToken) =>

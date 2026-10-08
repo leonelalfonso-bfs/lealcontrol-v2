@@ -817,6 +817,22 @@ export function SettingsPage() {
                   placeholder="EMPRESA.PAGOS.GALICIA"
                 />
               </label>
+
+              <label>
+                Punto de venta de este sistema (ARCA)
+                <input
+                  type="number"
+                  min={1}
+                  max={99998}
+                  value={settings.arcaPointOfSale ?? ""}
+                  onChange={(e) => setSetting("arcaPointOfSale", e.target.value ? Number(e.target.value) : null)}
+                  placeholder="Ej. 2"
+                />
+                <span className="muted" style={{ fontSize: "0.78rem" }}>
+                  Si lo completás, todas las facturas salen por ese punto de venta RECE y no se puede usar otro.
+                  Útil si otro sistema factura con los demás puntos de venta.
+                </span>
+              </label>
             </div>
           </div>
 

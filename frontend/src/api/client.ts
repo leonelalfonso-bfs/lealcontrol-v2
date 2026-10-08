@@ -614,7 +614,7 @@ export const api = {
       settings: import("./types").CompanySettings;
     }>("/api/v1/company/settings/arca-csr", { method: "POST", body: JSON.stringify(body) }),
   listArcaSalesPoints: () =>
-    request<{ suggested: number | null; points: Array<{ number: number; emissionType: string; blocked: boolean }> }>(
+    request<{ suggested: number | null; configured?: number | null; points: Array<{ number: number; emissionType: string; blocked: boolean }> }>(
       "/api/v1/company/settings/arca-sales-points"
     ),
   getArcaLastAuthorized: (pointOfSale: number, invoiceType: "A" | "B" | "C") =>
@@ -796,6 +796,8 @@ export const api = {
     request<{ enabled: boolean; attempts: Array<{ invoiceId: string; status: string; voucherNumber: number; rejectionDetail?: string | null }> }>("/api/v1/sales/invoices/fiscal-status"),
   recoverInvoiceArca: (id: string) =>
     request<import("./types").Invoice>(`/api/v1/sales/invoices/${id}/recover-arca`, { method: "POST" }),
+  listCurrentAccounts: () => request<any[]>("/api/v1/sales/current-accounts"),
+  getCurrentAccount: (entityId: string) => request<{ summary: any; movements: any[] }>(`/api/v1/sales/current-accounts/${entityId}`),
   getFceObligation: (cuit: string, date: string, total: number, rate: number) =>
     request<{ ok: boolean; obligated: boolean; minimumAmount: number; required: boolean; detail: string }>(
       `/api/v1/sales/invoices/fce-obligation?cuit=${encodeURIComponent(cuit)}&date=${encodeURIComponent(date)}&total=${total}&rate=${rate}`),

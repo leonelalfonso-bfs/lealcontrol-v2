@@ -646,6 +646,8 @@ export type CompanySettings = {
   hasArcaCertificateKey?: boolean;
   arcaEnvironment: string;
   arcaSignerCuit?: string | null;
+  /** Punto de venta fijo para emitir desde este sistema. */
+  arcaPointOfSale?: number | null;
   bankName?: string | null;
   bankCbu?: string | null;
   bankAlias?: string | null;
@@ -903,6 +905,10 @@ export type Invoice = {
   fceAlias?: string | null;
   fceTransferMode?: "SCA" | "ADC" | null;
   fceCancellation?: boolean | null;
+  /** Saldo calculado por el servidor, en la moneda del comprobante. */
+  collected?: number | null;
+  credited?: number | null;
+  pending?: number | null;
   currency: string;
   exchangeRate: number;
   subtotal: number;

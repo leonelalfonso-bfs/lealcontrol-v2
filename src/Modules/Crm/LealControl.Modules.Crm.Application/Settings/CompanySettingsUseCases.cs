@@ -36,7 +36,8 @@ public sealed record CompanySettingsDto(
     string? DefaultWarranty,
     string? DefaultPaymentTerms,
     bool HasArcaCertificateCrt = false,
-    bool HasArcaCertificateKey = false);
+    bool HasArcaCertificateKey = false,
+    int? ArcaPointOfSale = null);
 
 public sealed record UpdateCompanySettingsCommand(CompanySettingsDto Model)
     : IRequest<Result<CompanySettingsDto>>;

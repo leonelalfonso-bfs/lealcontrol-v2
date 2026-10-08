@@ -222,10 +222,12 @@ internal sealed class ArcaIntegrationService : IArcaIntegration
 
             var active = listed.Points.Where(x => !x.Blocked).ToList();
             var pool = active.Count > 0 ? active : listed.Points.ToList();
-            var suggested = pool.FirstOrDefault(x => IsElectronic(x.EmissionType))?.Number ?? pool[0].Number;
+            var configured = settings.ArcaPointOfSale;
+            var suggested = configured ?? pool.FirstOrDefault(x => IsElectronic(x.EmissionType))?.Number ?? pool[0].Number;
             return Result<ArcaSalesPointsDto>.Success(new ArcaSalesPointsDto(
                 suggested,
-                pool.Select(x => new ArcaSalesPointDto(x.Number, x.EmissionType, x.Blocked)).ToList()));
+                pool.Select(x => new ArcaSalesPointDto(x.Number, x.EmissionType, x.Blocked)).ToList(),
+                configured));
         }
     }
 

@@ -30,6 +30,12 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
     {
         if (pointOfSale is < 1 or > 99998 || !WsfeCaeRequestBuilder.SupportedVoucherTypes.Contains(voucherType))
             return new(false, 0, string.Empty, false, "Punto de venta o tipo fiscal no admitido.");
+        var configured = await _db.CompanySettings.AsNoTracking()
+            .Where(x => x.TenantId == _tenant.TenantId).Select(x => x.ArcaPointOfSale)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (configured is not null && configured != pointOfSale)
+            return new(false, 0, string.Empty, false,
+                $"Este sistema emite solo por el punto de venta {configured} (Configuración). El comprobante usa el {pointOfSale}.");
         var auth = await AuthenticateAsync(null, null, cancellationToken);
         if (!auth.Ok)
             return new(false, 0, string.Empty, false, auth.Detail);

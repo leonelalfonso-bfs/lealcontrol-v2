@@ -137,6 +137,8 @@ export function InvoiceFormPage() {
   const [pointOfSale, setPointOfSale] = useState<number>(1);
   const [salesPoints, setSalesPoints] = useState<Array<{ number: number; emissionType: string }>>([]);
   const [salesPointHint, setSalesPointHint] = useState<string | null>(null);
+  // Punto de venta fijado en Configuración: no se puede elegir otro.
+  const [fixedPointOfSale, setFixedPointOfSale] = useState<number | null>(null);
   const [customerId, setCustomerId] = useState<string>("");
   const [customerName, setCustomerName] = useState<string>("");
   const [customerDocument, setCustomerDocument] = useState<string>("");
@@ -200,9 +202,12 @@ export function InvoiceFormPage() {
         if (points?.points?.length) {
           setSalesPoints(points.points);
           if (points.suggested) setPointOfSale(points.suggested);
-          setSalesPointHint(points.suggested
-            ? `ARCA autorizó el punto de venta ${points.suggested} para factura electrónica.`
-            : null);
+          setFixedPointOfSale(points.configured ?? null);
+          setSalesPointHint(points.configured
+            ? `Punto de venta fijo de este sistema (Configuración): ${points.configured}.`
+            : points.suggested
+              ? `ARCA autorizó el punto de venta ${points.suggested} para factura electrónica.`
+              : null);
         }
 
         const defaultRate = rates?.usdDivisaSell || rates?.usdBilleteSell || 1400;
@@ -1011,7 +1016,8 @@ export function InvoiceFormPage() {
                 <label>
                   Punto de Venta *
                   {salesPoints.length > 0 ? (
-                    <select value={pointOfSale} onChange={(e) => setPointOfSale(Number(e.target.value))} required>
+                    <select value={pointOfSale} onChange={(e) => setPointOfSale(Number(e.target.value))} required
+                      disabled={fixedPointOfSale !== null}>
                       {salesPoints.map((point) => (
                         <option key={point.number} value={point.number}>
                           {String(point.number).padStart(4, "0")} · {point.emissionType || "Factura electrónica"}

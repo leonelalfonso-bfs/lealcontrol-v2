@@ -20,6 +20,6 @@ public interface IArcaIntegration
 
 public sealed record ArcaSalesPointDto(int Number, string EmissionType, bool Blocked);
 
-public sealed record ArcaSalesPointsDto(int? Suggested, IReadOnlyList<ArcaSalesPointDto> Points);
+public sealed record ArcaSalesPointsDto(int? Suggested, IReadOnlyList<ArcaSalesPointDto> Points, int? Configured = null);
 
 public sealed record ArcaLastAuthorizedDto(int PointOfSale, string InvoiceType, long LastNumber, long NextNumber, string Environment);
