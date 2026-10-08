@@ -1,5 +1,7 @@
 # Flota y órdenes de servicio: plan (8 de octubre de 2026)
 
+> **Pausado después de la 1b.** Primero van los permisos personalizados y los avisos personales ([65](65-permisos-y-avisos-plan.md)). El aviso diario por empresa está apagado en producción (`DAILY_NOTICES_ENABLED=false`).
+
 ## Objetivo
 
 1. Controlar las unidades y las personas que las usan.

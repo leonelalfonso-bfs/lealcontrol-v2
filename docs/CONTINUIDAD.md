@@ -35,13 +35,22 @@ Actualizado el 8 de octubre de 2026. Leer este documento primero. La versión an
 | Diagnóstico general y plan | [62](auditoria-2026-10-01/62-estado-general-y-plan.md) |
 | Respaldos y prueba de restauración | [63](auditoria-2026-10-01/63-respaldos.md) |
 | Flota y órdenes de servicio: plan y avance | [64](auditoria-2026-10-01/64-flota-plan.md) |
+| Permisos personalizados y avisos personales: plan (prioridad actual) | [65](auditoria-2026-10-01/65-permisos-y-avisos-plan.md) |
 
 ## Próximos pasos (en orden)
 
-1. Encender la emisión en producción ([61](auditoria-2026-10-01/61-encendido-produccion-arca.md)): punto de venta fijo por empresa, wsfecred en el certificado de producción, primera factura real chica.
-2. Backups fuera del VPS con prueba de restauración, y alertas.
-3. Comunicaciones y Flota, con objetivos definidos con el usuario.
-4. Deuda técnica y requisitos para vender ([62](auditoria-2026-10-01/62-estado-general-y-plan.md)).
+Hecho el 8/10/2026:
+- emisión ARCA encendida en producción;
+- respaldos completos, cifrados y con restauración probada, más alertas ([63](auditoria-2026-10-01/63-respaldos.md));
+- Configuración reorganizada;
+- Comunicaciones etapa 1 (oportunidad, descartar, enviar documentos);
+- Flota 1a y 1b.
+
+1. **Permisos personalizados**, P1 a P3 ([65](auditoria-2026-10-01/65-permisos-y-avisos-plan.md)).
+2. **Avisos personales y casilla del sistema**, A1 y A2 ([65](auditoria-2026-10-01/65-permisos-y-avisos-plan.md)).
+3. **Flota 2 y 3** ([64](auditoria-2026-10-01/64-flota-plan.md)).
+4. **Comunicaciones etapa 2:** API oficial de Meta con coexistencia, cuando LealControl tenga CUIT y sea Tech Provider; Instagram y Facebook.
+5. **Deuda técnica y requisitos para vender** ([62](auditoria-2026-10-01/62-estado-general-y-plan.md)).
 
 ## Reglas de trabajo
 
