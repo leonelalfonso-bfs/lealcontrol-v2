@@ -92,7 +92,7 @@ cleanup_orphan_verify_databases() {
     [[ -z "$orphan" ]] && continue
     echo "Limpiando base huérfana de verificación: $orphan"
     docker compose -f "$COMPOSE" exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
-      psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS \"${orphan}\";" >/dev/null
+      psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS \"${orphan}\";" </dev/null >/dev/null
   done < <(docker compose -f "$COMPOSE" exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
     psql -U "$POSTGRES_USER" -d postgres -t -A -c \
     "SELECT datname FROM pg_database WHERE datname LIKE 'leal_restore_verify_%' ORDER BY datname;")
