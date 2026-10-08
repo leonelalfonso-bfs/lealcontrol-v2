@@ -420,7 +420,7 @@ export function CurrentAccountsPage() {
                 <tr>
                   <td style={{ verticalAlign: "top" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <img src="/logo.png?v=2" alt="" style={{ maxHeight: 48 }} />
+                      {company?.logoUrl && <img src={company.logoUrl} alt="" crossOrigin="anonymous" style={{ maxHeight: 48, maxWidth: 140, objectFit: "contain" }} />}
                       <div>
                         <div style={{ fontSize: 14, fontWeight: 700, color: "#0f766e" }}>{company?.legalName || ""}</div>
                         {company?.tradeName && <div style={{ fontWeight: 600 }}>{company.tradeName}</div>}

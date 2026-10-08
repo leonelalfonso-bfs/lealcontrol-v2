@@ -1,5 +1,7 @@
 # Encendido de la emisión ARCA en producción
 
+> **Encendida el 8/10/2026.** Punto de venta 6, CUIT 30715342215. Primera factura real: A 0006-00000003, CAE 86416730865280, verificada con el QR en ARCA.
+
 Procedimiento para empezar a facturar desde erp.lealcontrol.com. Producción ya tiene el código (#85 y #86). Solo falta habilitarlo.
 
 ## 1. En ARCA (clave fiscal de cada empresa)

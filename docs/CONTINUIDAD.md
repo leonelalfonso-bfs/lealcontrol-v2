@@ -18,7 +18,7 @@ Actualizado el 8 de octubre de 2026. Leer este documento primero. La versión an
   - Los datos bancarios se cargan una sola vez, en Cobros y bancos; de ahí los toman el PDF y la FCE.
   - Las plantillas de documentos se guardan en el servidor, en `tenant_settings."DocumentTemplatesJson"`.
   - Las empresas nuevas arrancan sin datos de ejemplo.
-- **Emisión ARCA:** apagada en producción. Procedimiento de encendido: [61](auditoria-2026-10-01/61-encendido-produccion-arca.md). En staging está activa contra homologación.
+- **Emisión ARCA:** **encendida en producción** desde el 8/10/2026 (punto de venta 6; primera factura A 0006-00000003). Antes: apagada. Procedimiento de encendido: [61](auditoria-2026-10-01/61-encendido-produccion-arca.md). En staging está activa contra homologación.
 
 ## Documentos vigentes
 
