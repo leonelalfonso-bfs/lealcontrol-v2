@@ -115,9 +115,11 @@ backup_stack() {
     local file_path="$stack_dir/$file_name"
     log " -> Dump $db ..."
 
+    # </dev/null: sin esto, `docker compose exec` lee la entrada estándar y se come el resto
+    # de la lista de bases del while; solo se respaldaba la primera.
     docker compose -f "$compose_file" exec -T \
       -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
-      pg_dump -U "$POSTGRES_USER" -d "$db" --no-owner --no-privileges \
+      pg_dump -U "$POSTGRES_USER" -d "$db" --no-owner --no-privileges </dev/null \
       | gzip -9 > "$file_path"
 
     if ! gzip -t "$file_path"; then
@@ -149,13 +151,17 @@ backup_stack() {
     count=$((count + 1))
   done <<< "$databases"
 
+  local expected
+  expected="$(sed '/^$/d' <<< "$databases" | grep -vx 'postgres' | sort -u | wc -l | tr -d ' ')"
+
   if [[ "$count" -lt 1 ]]; then
     log "ERROR: ninguna base respaldada en $label (fallidas/omitidas: $failed)"
     return 1
   fi
 
-  if [[ "$failed" -gt 0 ]]; then
-    log "AVISO: $failed base(s) omitida(s) en $label; $count respaldada(s) OK."
+  if [[ "$count" -ne "$expected" ]]; then
+    log "ERROR: $label respaldó $count de $expected base(s) (fallidas: $failed)."
+    return 1
   fi
 
   log "Stack $label: $count base(s) respaldada(s)."
@@ -166,16 +172,18 @@ log "LEAL BACKUP inicio $TIMESTAMP (target=$TARGET)"
 log "=========================================================="
 mkdir -p "$TODAY_DIR"
 
+# Un error en un stack no impide respaldar el otro; el estado final lo informa.
+STATUS=0
 case "$TARGET" in
   staging)
-    backup_stack "staging-v2" "$STAGING_DIR" "docker-compose.staging.yml"
+    backup_stack "staging-v2" "$STAGING_DIR" "docker-compose.staging.yml" || STATUS=1
     ;;
   prod|erp)
-    backup_stack "prod-erp" "$PROD_DIR" "docker-compose.prod.yml"
+    backup_stack "prod-erp" "$PROD_DIR" "docker-compose.prod.yml" || STATUS=1
     ;;
   all)
-    backup_stack "staging-v2" "$STAGING_DIR" "docker-compose.staging.yml"
-    backup_stack "prod-erp" "$PROD_DIR" "docker-compose.prod.yml"
+    backup_stack "prod-erp" "$PROD_DIR" "docker-compose.prod.yml" || STATUS=1
+    backup_stack "staging-v2" "$STAGING_DIR" "docker-compose.staging.yml" || STATUS=1
     ;;
   *)
     echo "Uso: $0 [staging|prod|all]" >&2
@@ -189,14 +197,21 @@ if command -v rclone >/dev/null 2>&1; then
     log "Google Drive OK"
     rclone delete --min-age 30d "$RCLONE_REMOTE/daily" 2>/dev/null || true
   else
-    log "AVISO: rclone falló; respaldo local conservado en $TODAY_DIR"
+    log "ERROR: rclone falló; respaldo local conservado en $TODAY_DIR"
+    STATUS=1
   fi
 else
-  log "AVISO: rclone no instalado. Solo backup local: $TODAY_DIR"
+  log "ERROR: rclone no instalado. Solo backup local: $TODAY_DIR"
+  STATUS=1
 fi
 
 log "Purgando carpetas locales > ${RETENTION_DAYS} días ..."
 find "$BACKUP_BASE_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +"$RETENTION_DAYS" -exec rm -rf {} + 2>/dev/null || true
 
+if [[ "$STATUS" -ne 0 ]]; then
+  log "LEAL BACKUP fin CON ERRORES"
+  log "=========================================================="
+  exit 1
+fi
 log "LEAL BACKUP fin OK"
 log "=========================================================="
