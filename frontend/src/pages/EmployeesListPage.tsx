@@ -218,10 +218,12 @@ export function EmployeesListPage() {
                     <span>Convenio / Gremio:</span>
                     <span style={{ fontWeight: 600 }}>{emp.unionCct}</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>Básico Mensual:</span>
-                    <strong style={{ color: "#047857", fontFamily: "monospace" }}>${(emp.baseSalary || 0).toLocaleString("es-AR")}</strong>
-                  </div>
+                  {emp.baseSalary != null && (
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>Básico Mensual:</span>
+                      <strong style={{ color: "#047857", fontFamily: "monospace" }}>${emp.baseSalary.toLocaleString("es-AR")}</strong>
+                    </div>
+                  )}
                 </div>
               </div>
 

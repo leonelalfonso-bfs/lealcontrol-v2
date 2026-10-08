@@ -110,15 +110,18 @@ internal sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProduc
     private readonly IProductRepository _productRepository;
     private readonly IProductCategoryRepository _categoryRepository;
     private readonly ISalesUnitOfWork _unitOfWork;
+    private readonly LealControl.BuildingBlocks.Security.ISensitiveDataAccess _sensitive;
 
     public UpdateProductCommandHandler(
         IProductRepository productRepository,
         IProductCategoryRepository categoryRepository,
-        ISalesUnitOfWork unitOfWork)
+        ISalesUnitOfWork unitOfWork,
+        LealControl.BuildingBlocks.Security.ISensitiveDataAccess? sensitive = null)
     {
         _productRepository = productRepository;
         _categoryRepository = categoryRepository;
         _unitOfWork = unitOfWork;
+        _sensitive = sensitive ?? new LealControl.BuildingBlocks.Security.UnrestrictedSensitiveDataAccess();
     }
 
     public async Task<Result<ProductDto>> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
@@ -147,8 +150,9 @@ internal sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProduc
             request.Model.ImagePath,
             request.Model.SaleCurrency,
             request.Model.BasePrice,
-            request.Model.PurchaseCurrency,
-            request.Model.CostPrice,
+            // Quien no ve costos no los recibe en pantalla: se conserva el que había.
+            _sensitive.CanSeeCosts ? request.Model.PurchaseCurrency : product.PurchaseCurrency,
+            _sensitive.CanSeeCosts ? request.Model.CostPrice : product.CostPrice,
             request.Model.TaxRate,
             request.Model.SalesAccountingCode,
             request.Model.PurchaseAccountingCode,

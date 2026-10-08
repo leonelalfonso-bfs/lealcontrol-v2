@@ -66,7 +66,7 @@ Cada nivel incluye a los anteriores.
 - **Frontend:** un hook `usePermission(módulo, nivel)`. Menús y botones se muestran según el nivel, sin botones que después den "403".
 - **Pruebas:** una matriz de perfiles × endpoints representativos (ver, cargar, aprobar).
 
-### P3. Datos sensibles
+### P3. Datos sensibles (hecha, PR "Permisos P3")
 
 - **El servidor no envía** los campos sensibles a quien no tiene el permiso: no se ocultan solo en la pantalla.
 - **Inventario por área:**
@@ -138,6 +138,29 @@ Pendiente de decisión del dueño:
   - anular recibos y órdenes de pago (Finanzas, Aprobar).
 
 **Pruebas:** `PermissionProfilesApiTests` y `PermissionLevelsApiTests`.
+
+## Cómo quedó P3 (código)
+
+**Áreas cerradas** sin el permiso (`PermissionRules.SensitiveAreas`, 403 con el motivo):
+- Importes: `/finance`, `/accounting`, `/sales/current-accounts`.
+- Costos: `/sales/production/costs`, precios de compra (`.../products/suppliers`), `/purchases`.
+- Sueldos: `/hr/payroll`.
+
+**Campos quitados** de la respuesta JSON, a cualquier profundidad (`SensitiveFieldFilter`):
+- Costos: `costPrice`, `purchaseCurrency` y `purchasePrice` en `/sales/products`; `unitCostArs`, `unitCostUsd`, `costPrice` y `purchasePrice` en `/sales/inventory`; `unitCost`, `extendedCost`, `materialCost` y `costPerOutputUnit` en `/sales/production`.
+- Sueldos: `baseSalary` y `hourlyRate` en `/hr`.
+
+**Protección al guardar** (`ISensitiveDataAccess`, en BuildingBlocks; implementación `HttpSensitiveDataAccess`):
+- Quien no ve costos y edita un producto conserva el costo y la moneda de compra.
+- Quien no ve sueldos y edita un empleado conserva el básico y el valor hora; al darlo de alta, quedan en cero.
+
+**Criterio:** los documentos de venta (facturas, presupuestos) muestran sus totales, porque son parte del documento. "Importes y saldos" cubre las pantallas de dinero: finanzas, contabilidad y cuentas corrientes.
+
+**Pantallas:**
+- El menú oculta Finanzas y Contabilidad (sin importes), Compras y Costos de fabricación (sin costos) y Liquidaciones (sin sueldos).
+- Los formularios de producto y empleado ocultan esos campos.
+
+**Pruebas:** `SensitiveDataApiTests`.
 
 ## Flota: dónde quedó (ver nota 64)
 

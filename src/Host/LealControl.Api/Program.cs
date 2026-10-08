@@ -93,6 +93,8 @@ try
     builder.Services.AddScoped<LealControl.Modules.Communications.Infrastructure.Services.ICommunicationsTenantCatalog, CommunicationsTenantCatalog>();
     builder.Services.AddScoped<ITenantProvisionerService, TenantProvisionerService>();
     builder.Services.AddSingleton<LealControl.Api.Security.PermissionResolver>();
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddScoped<LealControl.BuildingBlocks.Security.ISensitiveDataAccess, LealControl.Api.Security.HttpSensitiveDataAccess>();
     builder.Services.AddSingleton<LealControl.BuildingBlocks.Security.IPermissionChangeNotifier>(sp =>
         sp.GetRequiredService<LealControl.Api.Security.PermissionResolver>());
     LealControl.Api.Notices.DailyNoticesEndpoints.AddDailyNotices(builder.Services);
