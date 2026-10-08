@@ -96,6 +96,16 @@ public sealed class ExchangeDifferenceApiTests : IAsyncLifetime
         }
         using (var again = await Note("ND_A", 10000m))
             Assert.Equal(HttpStatusCode.BadRequest, again.StatusCode);
+
+        // Cuenta corriente del servidor: factura USD 121 × 1.000 = 121.000; cobro 133.100;
+        // la ND de 12.100 reemplaza a la diferencia "a documentar" sin duplicarla: saldo 0.
+        using var account = await client.GetAsync($"/api/v1/sales/current-accounts/{customer}");
+        using var ledger = JsonDocument.Parse(await account.Content.ReadAsStringAsync());
+        var movements = ledger.RootElement.GetProperty("movements").EnumerateArray().ToList();
+        Assert.DoesNotContain(movements, m => m.GetProperty("pending").ValueKind != JsonValueKind.Null);
+        Assert.Equal(0m, movements[^1].GetProperty("balance").GetDecimal());
+        Assert.Equal(0m, ledger.RootElement.GetProperty("summary").GetProperty("receivableBalance").GetDecimal());
+        Assert.Equal(0m, ledger.RootElement.GetProperty("summary").GetProperty("pendingDifferencesArs").GetDecimal());
     }
 
     [Fact]
