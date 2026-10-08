@@ -30,11 +30,14 @@ public sealed class CompanySettingsQueryHandler :
 {
     private readonly CrmDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
+    private readonly LealControl.BuildingBlocks.Security.IPermissionChangeNotifier? _permissionChanges;
 
-    public CompanySettingsQueryHandler(CrmDbContext dbContext, ITenantContext tenantContext)
+    public CompanySettingsQueryHandler(CrmDbContext dbContext, ITenantContext tenantContext,
+        LealControl.BuildingBlocks.Security.IPermissionChangeNotifier? permissionChanges = null)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
+        _permissionChanges = permissionChanges;
     }
 
     public async Task<Result<CompanySettingsDto>> Handle(GetCompanySettingsQuery request, CancellationToken cancellationToken)
@@ -312,6 +315,7 @@ public sealed class CompanySettingsQueryHandler :
 
         _dbContext.TenantUsers.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        _permissionChanges?.PermissionsChanged(tenantId.Value);
         return Result<TenantUserDto>.Success(ToDto(user, [profile.Value]));
     }
 
@@ -323,6 +327,11 @@ public sealed class CompanySettingsQueryHandler :
         {
             return Result<TenantUserDto>.Failure(new Error("UserNotFound", "Usuario no encontrado."));
         }
+
+        var previousProfile = user.ProfileId is { } previousId
+            ? await _dbContext.PermissionProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == previousId, cancellationToken)
+            : null;
+        var wasAdmin = user.IsActive && user.EffectivePermissions(previousProfile).LevelOf(PermissionCatalog.Administration) >= PermissionLevel.Admin;
 
         user.Update(request.FullName, request.Role, request.IsActive, request.AllowedModulesJson, request.Password, request.IsTechnicalDirector);
 
@@ -342,11 +351,13 @@ public sealed class CompanySettingsQueryHandler :
         }
 
         var stillAdmin = user.IsActive && user.EffectivePermissions(profile).LevelOf(PermissionCatalog.Administration) >= PermissionLevel.Admin;
-        if (await WouldLeaveNoAdministratorAsync(tenantId, user.Id, stillAdmin, cancellationToken))
+        // Solo importa si este cambio le saca la administración a alguien que la tenía.
+        if (wasAdmin && await WouldLeaveNoAdministratorAsync(tenantId, user.Id, stillAdmin, cancellationToken))
             return Result<TenantUserDto>.Failure(Error.Validation("Crm.Permissions.LastAdmin",
                 "Tiene que quedar al menos un usuario activo que administre la configuración y los usuarios."));
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        _permissionChanges?.PermissionsChanged(tenantId.Value);
         return Result<TenantUserDto>.Success(ToDto(user, profile is null ? [] : [profile]));
     }
 
@@ -361,7 +372,11 @@ public sealed class CompanySettingsQueryHandler :
             return Result<bool>.Success(true);
         }
 
-        if (await WouldLeaveNoAdministratorAsync(tenantId, user.Id, stillAdmin: false, cancellationToken))
+        var userProfile = user.ProfileId is { } pid
+            ? await _dbContext.PermissionProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == pid, cancellationToken)
+            : null;
+        var isAdmin = user.IsActive && user.EffectivePermissions(userProfile).LevelOf(PermissionCatalog.Administration) >= PermissionLevel.Admin;
+        if (isAdmin && await WouldLeaveNoAdministratorAsync(tenantId, user.Id, stillAdmin: false, cancellationToken))
         {
             return Result<bool>.Failure(new Error(
                 "LastAdmin",
@@ -370,6 +385,7 @@ public sealed class CompanySettingsQueryHandler :
 
         _dbContext.TenantUsers.Remove(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        _permissionChanges?.PermissionsChanged(tenantId.Value);
         return Result<bool>.Success(true);
     }
 

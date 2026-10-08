@@ -20,7 +20,8 @@ public sealed class RequirePolicyOnWriteFilter(string policyName) : IEndpointFil
         }
 
         var authorization = context.HttpContext.RequestServices.GetRequiredService<IAuthorizationService>();
-        var result = await authorization.AuthorizeAsync(context.HttpContext.User, policyName);
+        // Se pasa el pedido: las políticas por nivel leen los permisos ya resueltos para esta ruta.
+        var result = await authorization.AuthorizeAsync(context.HttpContext.User, context.HttpContext, policyName);
         if (!result.Succeeded)
         {
             return Microsoft.AspNetCore.Http.Results.Json(

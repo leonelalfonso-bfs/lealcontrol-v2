@@ -5,6 +5,7 @@ import { ARCA_TYPES, documentLabel } from "../lib/documents";
 import { type Invoice } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
 import { useAuth } from "../context/AuthContext";
+import { usePermissions } from "../context/PermissionsContext";
 import { SearchField } from "../components/ui/SearchField";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
 import { withCollections } from "../lib/receivables";
@@ -22,7 +23,11 @@ const civilDate = (value?: string | null) => {
 export function InvoicesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const canAuthorize = ["Admin", "Administrador", "SuperAdmin"].includes(user?.role || "");
+  // Autorizar en ARCA, consultar y ajustar la cotización: Ventas en nivel Aprobar (perfil del usuario).
+  const { can } = usePermissions();
+  const canAuthorize = can("sales", "Approve");
+  const canEditSales = can("sales", "Edit");
+  const canCollect = can("finance", "Edit");
   const [items, setItems] = useState<Invoice[]>([]);
   const [receipts, setReceipts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -422,7 +427,7 @@ export function InvoicesPage() {
 
                     <td style={{ textAlign: "right" }}>
                       <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
-                        {!inv.isPaid && !inv.invoiceType.startsWith("NC") && (
+                        {canCollect && !inv.isPaid && !inv.invoiceType.startsWith("NC") && (
                           <Link
                             to={`/finanzas/cobranzas?customerId=${inv.customerId}`}
                             className="btn compact"
@@ -453,7 +458,7 @@ export function InvoicesPage() {
                                 ? "Consultar ARCA" : "Autorizar ARCA"}
                           </button>
                         )}
-                        {["Authorized", "Draft"].includes(inv.status) && ["A", "B", "ND_A", "ND_B", "FCE_A", "FCE_B", "ND_FCE_A", "ND_FCE_B"].includes(inv.invoiceType) && (
+                        {canEditSales && ["Authorized", "Draft"].includes(inv.status) && ["A", "B", "ND_A", "ND_B", "FCE_A", "FCE_B", "ND_FCE_A", "ND_FCE_B"].includes(inv.invoiceType) && (
                           <>
                             <Link className="btn ghost compact" title="Nota de crédito sobre esta factura"
                               to={`/facturas/nueva?nota=NC&origen=${inv.id}`}>NC</Link>

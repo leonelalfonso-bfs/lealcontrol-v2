@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { useCan } from "../context/PermissionsContext";
 import type { PaymentOrder } from "../api/types";
 
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n);
 
 export function PaymentOrdersPage() {
+  // Anular una orden de pago pide Finanzas en nivel Aprobar.
+  const canVoid = useCan("finance", "Approve");
   const [orders, setOrders] = useState<PaymentOrder[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -193,7 +196,7 @@ export function PaymentOrdersPage() {
                         >
                           🖨️ Imprimir OP
                         </Link>
-                        {o.status !== "Voided" && (
+                        {canVoid && o.status !== "Voided" && (
                           <button
                             className="btn btn-sm btn-outline"
                             style={{ color: "#dc2626" }}

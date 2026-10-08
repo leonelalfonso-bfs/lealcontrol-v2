@@ -12,7 +12,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Modules.Crm.Infrastructure.Persistence;
 
-public sealed class PermissionProfileHandlers(CrmDbContext db, ITenantContext tenantContext) :
+public sealed class PermissionProfileHandlers(CrmDbContext db, ITenantContext tenantContext,
+    LealControl.BuildingBlocks.Security.IPermissionChangeNotifier? permissionChanges = null) :
     IRequestHandler<ListPermissionProfilesQuery, Result<IReadOnlyList<PermissionProfileDto>>>,
     IRequestHandler<SavePermissionProfileCommand, Result<PermissionProfileDto>>,
     IRequestHandler<DeletePermissionProfileCommand, Result<bool>>
@@ -58,12 +59,14 @@ public sealed class PermissionProfileHandlers(CrmDbContext db, ITenantContext te
             profile = profiles.FirstOrDefault(p => p.Id == id)!;
             if (profile is null) return Fail("El perfil no existe.");
             if (profile.IsLocked) return Fail("El perfil Dueño no se modifica: siempre tiene acceso a todo.");
+            var activeUsers = await db.TenantUsers.Where(u => u.TenantId == tenantId && u.IsActive).ToListAsync(ct);
+            var hadAdministrator = HasAdministrator(activeUsers, profiles);
             profile.Update(name, request.Description, request.Matrix, sensitive, now);
 
             // Los usuarios del perfil toman los cambios (módulos y rol derivados).
             var users = await db.TenantUsers.Where(u => u.TenantId == tenantId && u.ProfileId == id).ToListAsync(ct);
             foreach (var user in users) user.ApplyPermissions(profile, PermissionCatalog.ReadOverrides(user.PermissionOverridesJson));
-            if (!HasAdministrator(await db.TenantUsers.Where(u => u.TenantId == tenantId && u.IsActive).ToListAsync(ct), profiles))
+            if (hadAdministrator && !HasAdministrator(activeUsers, profiles))
                 return Fail("Con este cambio no quedaría nadie que administre la configuración y los usuarios.");
         }
         else
@@ -75,6 +78,7 @@ public sealed class PermissionProfileHandlers(CrmDbContext db, ITenantContext te
         }
 
         await db.SaveChangesAsync(ct);
+        permissionChanges?.PermissionsChanged(tenantId.Value);
         var count = await db.TenantUsers.CountAsync(u => u.TenantId == tenantId && u.ProfileId == profile.Id, ct);
         return Result<PermissionProfileDto>.Success(ToDto(profile, count));
     }

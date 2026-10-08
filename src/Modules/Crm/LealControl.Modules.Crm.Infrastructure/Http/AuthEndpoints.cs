@@ -365,7 +365,7 @@ public static class SimpleJwt
         var header = new { alg = "HS256", typ = "JWT" };
         var allowedModules = ParseAllowedModules(allowedModulesJson);
         // Guardar como string JSON (no array nativo) para que JwtBearer entregue un solo claim
-        // que ContractedModuleMiddleware pueda deserializar de forma fiable.
+        // que se pueda deserializar de forma fiable.
         var payload = new Dictionary<string, object>
         {
             ["iss"] = Issuer,

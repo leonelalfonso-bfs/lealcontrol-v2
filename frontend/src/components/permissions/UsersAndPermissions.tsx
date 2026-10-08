@@ -143,7 +143,7 @@ export function UsersAndPermissions() {
       if (userForm.id) await api.updateTenantUser(userForm.id, { ...body, isActive: userForm.isActive });
       else await api.createTenantUser({ ...body, email: userForm.email.trim() });
       setUserForm(null);
-    }, userForm.id ? "Usuario actualizado. Los cambios de módulos se ven en su próximo inicio de sesión." : "Usuario creado.");
+    }, userForm.id ? "Usuario actualizado. Los cambios aplican enseguida (su pantalla se actualiza al volver a la pestaña)." : "Usuario creado.");
   };
 
   const deleteUser = (u: TenantUser) => {
@@ -186,7 +186,7 @@ export function UsersAndPermissions() {
       if (profileForm.id) await api.updatePermissionProfile(profileForm.id, body);
       else await api.createPermissionProfile(body);
       setProfileForm(null);
-    }, profileForm.id ? "Perfil actualizado: sus usuarios ya tienen los cambios (se ven en su próximo inicio de sesión)." : "Perfil creado.");
+    }, profileForm.id ? "Perfil actualizado: sus usuarios ya tienen los cambios." : "Perfil creado.");
   };
 
   const deleteProfile = (p: PermissionProfile) => {
@@ -410,8 +410,8 @@ export function UsersAndPermissions() {
               ))}
             </div>
             <p className="muted" style={{ margin: 0, fontSize: "0.78rem" }}>
-              Cada nivel incluye a los anteriores. Por ahora el sistema controla qué módulos se ven; los niveles y los datos
-              sensibles se aplican en la próxima etapa (P2 y P3).
+              Cada nivel incluye a los anteriores. Los niveles se controlan en el servidor; los datos sensibles
+              (importes, costos y sueldos) se aplican en la próxima etapa.
             </p>
             {profileForm.id && profileForm.userCount > 0 && (
               <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 600 }}>Lo usan {profileForm.userCount} usuario(s): toman el cambio al guardar.</p>

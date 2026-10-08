@@ -67,6 +67,15 @@ public sealed class CrmWebApplicationFactory : WebApplicationFactory<Program>, I
     public string CreateAuthenticatedClientToken(Guid? tenantId = null, string role = "Admin") =>
         SimpleJwt.CreateToken(Guid.NewGuid(), "it@lealcontrol.com", "IT Admin", role, tenantId ?? DemoTenantId, "Empresa Test");
 
+    /// <summary>Cliente con el token de un usuario real de la empresa (sus permisos salen de la base).</summary>
+    public HttpClient CreateClientForUser(Guid userId, string email, string role = "Comercial", string allowedModulesJson = "[]")
+    {
+        var client = CreateClient();
+        var token = SimpleJwt.CreateToken(userId, email, email, role, DemoTenantId, "Empresa Test", allowedModulesJson);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client;
+    }
+
     public HttpClient CreateAuthenticatedClient(Guid? tenantId = null, string role = "Admin")
     {
         var client = CreateClient();

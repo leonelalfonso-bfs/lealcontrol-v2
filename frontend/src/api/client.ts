@@ -647,6 +647,7 @@ export const api = {
     request<import("./types").TenantUser>("/api/v1/company/users", { method: "POST", body: JSON.stringify(body) }),
   updateTenantUser: (id: string, body: { fullName: string; role: string; isActive: boolean; password?: string; allowedModulesJson?: string; profileId?: string; overrides?: import("./types").PermissionOverrides | null }) =>
     request<import("./types").TenantUser>(`/api/v1/company/users/${id}`, { method: "PUT", body: JSON.stringify({ id, ...body }) }),
+  getMyPermissions: () => request<import("../context/PermissionsContext").EffectivePermissions>("/api/v1/auth/permissions"),
   getPermissionCatalog: () => request<{ modules: import("./types").PermissionModule[] }>("/api/v1/company/permissions/catalog"),
   listPermissionProfiles: () => request<import("./types").PermissionProfile[]>("/api/v1/company/permission-profiles"),
   createPermissionProfile: (body: import("./types").PermissionProfileWrite) =>

@@ -40,7 +40,7 @@ public static class InvoiceEndpoints
                 attempts
             });
         }).RequireAuthorization("RequireSales")
-          .RequireAuthorization(policy => policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
+          .RequireAuthorization("RequireSalesApprove");
 
         // Cotización oficial de ARCA para la fecha de emisión (yyyy-MM-dd); sin fecha, la vigente.
         group.MapGet("/arca-exchange-rate", async (string? date, IArcaFiscalGateway gateway,
@@ -90,7 +90,7 @@ public static class InvoiceEndpoints
             invoice.ApplyExchangeRate(rate.Rate);
             await db.SaveChangesAsync(cancellationToken);
             return Results.Ok(InvoiceQueryHandlers.ToDto(invoice));
-        }).RequireAuthorization(policy => policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
+        }).RequireAuthorization("RequireSalesApprove");
 
         group.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
         {
@@ -108,7 +108,7 @@ public static class InvoiceEndpoints
         {
             var res = await sender.Send(new AuthorizeInvoiceArcaCommand(id), cancellationToken);
             return res.IsSuccess ? Results.Ok(res.Value) : Results.BadRequest(res.Error);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
+        }).RequireAuthorization("RequireSalesApprove");
 
         group.MapPost("/{id:guid}/recover-arca", async (Guid id,
             LealControl.Modules.Sales.Infrastructure.Fiscal.FiscalVoucherRecoveryService recovery,
@@ -120,7 +120,7 @@ public static class InvoiceEndpoints
                     "Sales.Invoice.ArcaNotConfirmed", recovered.Detail));
             var res = await sender.Send(new GetInvoiceByIdQuery(id), cancellationToken);
             return res.IsSuccess ? Results.Ok(res.Value) : Results.NotFound(res.Error);
-        }).RequireAuthorization(policy => policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
+        }).RequireAuthorization("RequireSalesApprove");
 
         return endpoints;
     }
