@@ -27,7 +27,13 @@ public sealed record DailyNoticeRecipient(string Email, string Name);
 
 public sealed record DailyNoticePreview(
     string? Sender, IReadOnlyList<DailyNoticeRecipient> Recipients, int Expired, int Missing, int DueSoon,
-    string? LastDay, string? LastResult, bool Enabled);
+    string? LastDay, string? LastResult, bool Enabled,
+    /// <summary>True si los destinatarios se eligieron; false = administradores (por defecto).</summary>
+    bool CustomRecipients = false,
+    /// <summary>Usuarios activos con correo, para elegir.</summary>
+    IReadOnlyList<DailyNoticeRecipient>? Users = null);
+
+public sealed record SaveDailyNoticeRecipientsRequest(string[]? Emails);
 
 public sealed record DailyNoticeResult(bool Sent, string Detail);
 
@@ -68,17 +74,88 @@ public sealed class DailyNoticeSender(
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
-    private static async Task<List<DailyNoticeRecipient>> AdminsAsync(NpgsqlConnection db, CancellationToken ct)
+    /// <summary>Usuarios activos con correo (sin repetir correos), con su rol.</summary>
+    private static async Task<List<(DailyNoticeRecipient User, bool IsAdmin)>> UsersAsync(NpgsqlConnection db, CancellationToken ct)
     {
-        var list = new List<DailyNoticeRecipient>();
+        var list = new List<(DailyNoticeRecipient, bool)>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         await using var cmd = new NpgsqlCommand("""
-            SELECT "Email", "FullName" FROM public.tenant_users
-            WHERE COALESCE("IsActive", true) AND lower("Role") IN ('admin', 'administrador') AND "Email" LIKE '%@%'
+            SELECT lower(trim("Email")), "FullName", lower("Role") IN ('admin', 'administrador') FROM public.tenant_users
+            WHERE COALESCE("IsActive", true) AND "Email" LIKE '%@%'
             ORDER BY "FullName"
             """, db);
         await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct)) list.Add(new DailyNoticeRecipient(reader.GetString(0), reader.GetString(1)));
+        while (await reader.ReadAsync(ct))
+        {
+            var email = reader.GetString(0);
+            if (seen.Add(email)) list.Add((new DailyNoticeRecipient(email, reader.GetString(1)), reader.GetBoolean(2)));
+        }
         return list;
+    }
+
+    private static async Task EnsureSettingsAsync(NpgsqlConnection db, CancellationToken ct)
+    {
+        await using var cmd = new NpgsqlCommand("""
+            CREATE TABLE IF NOT EXISTS public.daily_notice_settings (
+                "Kind" character varying(40) PRIMARY KEY,
+                "Recipients" text NOT NULL,
+                "UpdatedAtUtc" timestamp with time zone NOT NULL
+            );
+            """, db);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    private static async Task<List<string>?> ConfiguredRecipientsAsync(NpgsqlConnection db, CancellationToken ct)
+    {
+        await EnsureSettingsAsync(db, ct);
+        await using var cmd = new NpgsqlCommand("""SELECT "Recipients" FROM public.daily_notice_settings WHERE "Kind" = @kind""", db);
+        cmd.Parameters.AddWithValue("kind", FleetKind);
+        var raw = await cmd.ExecuteScalarAsync(ct) as string;
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var list = raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        return list.Count == 0 ? null : list;
+    }
+
+    /// <summary>Los elegidos; si no se eligió a nadie, los administradores activos. Siempre sin repetidos.</summary>
+    private static async Task<(List<DailyNoticeRecipient> Recipients, bool Custom, List<DailyNoticeRecipient> Users)> RecipientsAsync(NpgsqlConnection db, CancellationToken ct)
+    {
+        var users = await UsersAsync(db, ct);
+        var configured = await ConfiguredRecipientsAsync(db, ct);
+        if (configured is null)
+            return (users.Where(u => u.IsAdmin).Select(u => u.User).ToList(), false, users.Select(u => u.User).ToList());
+        var byEmail = users.ToDictionary(u => u.User.Email, u => u.User, StringComparer.OrdinalIgnoreCase);
+        var recipients = configured.Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(e => byEmail.TryGetValue(e, out var u) ? u : new DailyNoticeRecipient(e, e))
+            .ToList();
+        return (recipients, true, users.Select(u => u.User).ToList());
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex EmailPattern =
+        new(@"^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>Guarda los destinatarios elegidos. Vacío = volver a los administradores.</summary>
+    public async Task<string?> SaveRecipientsAsync(Guid tenantId, IEnumerable<string>? emails, CancellationToken ct)
+    {
+        var list = (emails ?? []).Select(e => e.Trim().ToLowerInvariant()).Where(e => e.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var invalid = list.FirstOrDefault(e => !EmailPattern.IsMatch(e) || e.Length > 200);
+        if (invalid is not null) return $"El correo \"{invalid}\" no es válido.";
+        if (list.Count > 20) return "Se pueden elegir hasta 20 destinatarios.";
+
+        await using var db = new NpgsqlConnection(await ConnectionAsync(tenantId, ct));
+        await db.OpenAsync(ct);
+        await EnsureSettingsAsync(db, ct);
+        await using var cmd = new NpgsqlCommand(list.Count == 0
+            ? """DELETE FROM public.daily_notice_settings WHERE "Kind" = @kind"""
+            : """
+              INSERT INTO public.daily_notice_settings ("Kind", "Recipients", "UpdatedAtUtc") VALUES (@kind, @to, @now)
+              ON CONFLICT ("Kind") DO UPDATE SET "Recipients" = @to, "UpdatedAtUtc" = @now
+              """, db);
+        cmd.Parameters.AddWithValue("kind", FleetKind);
+        cmd.Parameters.AddWithValue("to", string.Join(",", list));
+        cmd.Parameters.AddWithValue("now", clock.GetUtcNow().UtcDateTime);
+        await cmd.ExecuteNonQueryAsync(ct);
+        return null;
     }
 
     private static Task<MailAccount?> SenderAsync(CommunicationsDbContext db, Guid tenantId, CancellationToken ct) =>
@@ -105,7 +182,7 @@ public sealed class DailyNoticeSender(
         await using var db = new NpgsqlConnection(cs);
         await db.OpenAsync(ct);
         await EnsureLogAsync(db, ct);
-        var admins = await AdminsAsync(db, ct);
+        var (recipients, custom, users) = await RecipientsAsync(db, ct);
         string? lastDay = null, lastResult = null;
         await using (var cmd = new NpgsqlCommand("""
             SELECT "Day", "Detail" FROM public.daily_notices WHERE "Kind" = @kind ORDER BY "Day" DESC LIMIT 1
@@ -119,9 +196,9 @@ public sealed class DailyNoticeSender(
                 lastResult = reader.IsDBNull(1) ? null : reader.GetString(1);
             }
         }
-        return new DailyNoticePreview(sender?.EmailAddress, admins,
+        return new DailyNoticePreview(sender?.EmailAddress, recipients,
             items.Count(i => i.State == ExpirationState.Expired), items.Count(i => i.State == ExpirationState.Missing),
-            items.Count(i => i.State == ExpirationState.DueSoon), lastDay, lastResult, Enabled);
+            items.Count(i => i.State == ExpirationState.DueSoon), lastDay, lastResult, Enabled, custom, users);
     }
 
     /// <summary>
@@ -171,8 +248,10 @@ public sealed class DailyNoticeSender(
         var items = await FleetItemsAsync(cs, tenantId, today, ct);
         if (items.Count == 0) return await Finish(false, "Sin novedades: nada vencido, por vencer ni sin cargar.");
 
-        var admins = await AdminsAsync(db, ct);
-        if (admins.Count == 0) return await Finish(false, "No hay administradores activos con correo.");
+        var (admins, custom, _) = await RecipientsAsync(db, ct);
+        if (admins.Count == 0) return await Finish(false, custom
+            ? "No hay destinatarios elegidos."
+            : "No hay administradores activos con correo. Elegí destinatarios en Flota → Unidades.");
 
         await using var comms = new CommunicationsDbContext(new DbContextOptionsBuilder<CommunicationsDbContext>().UseNpgsql(cs).Options);
         var account = await SenderAsync(comms, tenantId, ct);
@@ -334,6 +413,14 @@ public static class DailyNoticesEndpoints
             Results.Ok(await sender.PreviewAsync(tenant.TenantId.Value, ct)));
 
         // "Enviar ahora": manda el resumen aunque ya haya salido hoy (para probar o reenviar).
+        group.MapPut("/fleet/recipients", async (SaveDailyNoticeRecipientsRequest req, ITenantContext tenant, DailyNoticeSender sender, CancellationToken ct) =>
+        {
+            var error = await sender.SaveRecipientsAsync(tenant.TenantId.Value, req.Emails, ct);
+            return error is null
+                ? Results.Ok(await sender.PreviewAsync(tenant.TenantId.Value, ct))
+                : Results.BadRequest(new { detail = error });
+        });
+
         group.MapPost("/fleet/send-now", async (HttpContext http, ITenantContext tenant, DailyNoticeSender sender, CancellationToken ct) =>
         {
             var baseUrl = $"{http.Request.Scheme}://{http.Request.Host}";

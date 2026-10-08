@@ -104,6 +104,7 @@ Proceso nocturno por empresa. Manda el resumen de lo vencido y por vencer a los 
   - **Endpoints (solo administradores):**
     - `GET /api/v1/notices/daily/fleet`: vista previa (casilla, destinatarios, cantidades, último resultado);
     - `POST /api/v1/notices/daily/fleet/send-now`: envía ya, aunque ya haya salido.
+- **Destinatarios:** por defecto, los administradores activos (sin repetir correos). Se pueden elegir usuarios y correos externos en el recuadro de Unidades. Se guardan en `public.daily_notice_settings`, y `PUT /api/v1/notices/daily/fleet/recipients` con la lista vacía vuelve a los administradores.
 - **Configuración** `DailyNotices:Enabled` (`DAILY_NOTICES_ENABLED`): en producción viene encendido; en staging, apagado, para no duplicar correos.
 - **Pantalla Unidades:** recuadro "Aviso diario por correo" con el botón "Enviar ahora".
 - **Pruebas:** `DailyNoticesApiTests`.

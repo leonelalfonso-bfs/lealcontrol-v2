@@ -21,6 +21,30 @@ export function FleetVehiclesListPage() {
   const [notice, setNotice] = useState<DailyNoticePreview | null>(null);
   const [sendingNotice, setSendingNotice] = useState(false);
   const [noticeResult, setNoticeResult] = useState<string | null>(null);
+  const [editingRecipients, setEditingRecipients] = useState(false);
+  const [chosen, setChosen] = useState<Set<string>>(new Set());
+  const [extraEmails, setExtraEmails] = useState("");
+
+  const startEditingRecipients = () => {
+    if (!notice) return;
+    const userEmails = new Set(notice.users.map((u) => u.email));
+    setChosen(new Set(notice.recipients.map((r) => r.email).filter((e) => userEmails.has(e))));
+    setExtraEmails(notice.recipients.map((r) => r.email).filter((e) => !userEmails.has(e)).join(", "));
+    setEditingRecipients(true);
+  };
+
+  const saveRecipients = async (emails: string[]) => {
+    setSendingNotice(true);
+    setNoticeResult(null);
+    try {
+      setNotice(await api.saveFleetDailyNoticeRecipients(emails));
+      setEditingRecipients(false);
+    } catch (e) {
+      setNoticeResult(e instanceof Error ? e.message : "No se pudieron guardar los destinatarios.");
+    } finally {
+      setSendingNotice(false);
+    }
+  };
 
   // Solo los administradores ven y envían el aviso diario (para el resto la API responde 403).
   useEffect(() => {
@@ -119,7 +143,8 @@ export function FleetVehiclesListPage() {
                 {notice.sender ? <>desde <strong>{notice.sender}</strong></> : <>sin casilla (cargala en <Link to="/configuracion/comunicaciones">Configuración → Comunicaciones</Link>)</>}
                 {" "}a {notice.recipients.length > 0
                   ? notice.recipients.map((r) => r.email).join(", ")
-                  : "nadie: no hay administradores activos con correo"}.
+                  : "nadie: no hay administradores activos con correo"}
+                {notice.customRecipients ? " (elegidos)" : " (los administradores)"}.
                 {" "}Solo se envía si hay algo vencido, por vencer o sin cargar.
               </p>
               {notice.lastDay && (
@@ -129,10 +154,44 @@ export function FleetVehiclesListPage() {
               )}
               {noticeResult && <p style={{ margin: "6px 0 0", fontSize: "0.85rem", fontWeight: 600 }}>{noticeResult}</p>}
             </div>
-            <button type="button" className="btn btn-outline" disabled={sendingNotice} onClick={() => void sendNoticeNow()}>
-              {sendingNotice ? "Enviando…" : "Enviar ahora"}
-            </button>
+            <div className="row" style={{ gap: 8 }}>
+              <button type="button" className="btn btn-outline" disabled={sendingNotice} onClick={startEditingRecipients}>
+                Elegir destinatarios
+              </button>
+              <button type="button" className="btn btn-outline" disabled={sendingNotice} onClick={() => void sendNoticeNow()}>
+                {sendingNotice ? "Enviando…" : "Enviar ahora"}
+              </button>
+            </div>
           </div>
+          {editingRecipients && (
+            <div className="stack" style={{ gap: 10, marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+              <strong style={{ fontSize: "0.9rem" }}>¿A quién le llega el aviso?</strong>
+              <div className="row" style={{ gap: 14, flexWrap: "wrap" }}>
+                {notice.users.map((u) => (
+                  <label key={u.email} className="check-label" style={{ flexDirection: "row", alignItems: "center", gap: 6, fontWeight: 500 }}>
+                    <input type="checkbox" checked={chosen.has(u.email)} onChange={(e) => {
+                      const next = new Set(chosen);
+                      if (e.target.checked) next.add(u.email); else next.delete(u.email);
+                      setChosen(next);
+                    }} />
+                    {u.name} <span className="muted">({u.email})</span>
+                  </label>
+                ))}
+              </div>
+              <label>Otros correos (separados por coma)
+                <input value={extraEmails} onChange={(e) => setExtraEmails(e.target.value)} placeholder="encargado.flota@empresa.com" />
+              </label>
+              <div className="row" style={{ gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                <button type="button" className="btn btn-outline" onClick={() => setEditingRecipients(false)}>Cancelar</button>
+                <button type="button" className="btn btn-outline" disabled={sendingNotice} onClick={() => void saveRecipients([])}>
+                  Volver a los administradores
+                </button>
+                <button type="button" className="btn" disabled={sendingNotice} onClick={() => void saveRecipients([
+                  ...chosen, ...extraEmails.split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean)
+                ])}>Guardar</button>
+              </div>
+            </div>
+          )}
         </section>
       )}
 

@@ -1621,6 +1621,10 @@ export type DailyNoticePreview = {
   lastDay?: string | null;
   lastResult?: string | null;
   enabled: boolean;
+  /** true si se eligieron destinatarios; false = administradores. */
+  customRecipients: boolean;
+  /** Usuarios activos con correo, para elegir. */
+  users: { email: string; name: string }[];
 };
 
 export type VehicleDriver = {

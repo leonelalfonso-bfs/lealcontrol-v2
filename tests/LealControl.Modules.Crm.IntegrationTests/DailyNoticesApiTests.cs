@@ -92,6 +92,47 @@ public sealed class DailyNoticesApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Recipients_default_to_admins_without_duplicates_and_can_be_chosen()
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        await using (var db = new NpgsqlConnection(_factory.DatabaseConnectionString))
+        {
+            await db.OpenAsync();
+            await using var cmd = new NpgsqlCommand("""
+                UPDATE public.tenant_users SET "IsActive" = false;
+                INSERT INTO public.tenant_users ("Id","TenantId","FullName","Email","Role","IsActive","CreatedAtUtc") VALUES
+                  (gen_random_uuid(), '11111111-1111-1111-1111-111111111111', 'Admin uno', 'admin@example.com', 'Admin', true, now()),
+                  (gen_random_uuid(), '22222222-2222-2222-2222-222222222222', 'Admin dos', 'ADMIN@example.com', 'Administrador', true, now()),
+                  (gen_random_uuid(), '11111111-1111-1111-1111-111111111111', 'Encargado', 'flota@example.com', 'Técnico', true, now());
+                """, db);
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        // Por defecto: los administradores, una sola vez cada correo.
+        var preview = await Json(await client.GetAsync("/api/v1/notices/daily/fleet"));
+        Assert.False(preview.GetProperty("customRecipients").GetBoolean());
+        Assert.Equal(["admin@example.com"], preview.GetProperty("recipients").EnumerateArray().Select(r => r.GetProperty("email").GetString()));
+        Assert.Equal(2, preview.GetProperty("users").GetArrayLength());
+
+        // Elegidos: un usuario que no es admin y un correo externo.
+        using (var bad = await client.PutAsJsonAsync("/api/v1/notices/daily/fleet/recipients", new { emails = new[] { "no-es-correo" } }))
+            Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+        using (var saved = await client.PutAsJsonAsync("/api/v1/notices/daily/fleet/recipients",
+                   new { emails = new[] { "flota@example.com", "taller@externo.com", "FLOTA@example.com" } }))
+        {
+            Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+            var json = await Json(saved);
+            Assert.True(json.GetProperty("customRecipients").GetBoolean());
+            Assert.Equal(["flota@example.com", "taller@externo.com"],
+                json.GetProperty("recipients").EnumerateArray().Select(r => r.GetProperty("email").GetString()));
+        }
+
+        // Vacío: vuelve a los administradores.
+        using (var reset = await client.PutAsJsonAsync("/api/v1/notices/daily/fleet/recipients", new { emails = Array.Empty<string>() }))
+            Assert.False((await Json(reset)).GetProperty("customRecipients").GetBoolean());
+    }
+
+    [Fact]
     public async Task Only_admins_can_send_or_preview()
     {
         using var client = _factory.CreateAuthenticatedClient(role: "Comercial");
