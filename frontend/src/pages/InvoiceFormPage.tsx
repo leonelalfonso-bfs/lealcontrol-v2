@@ -13,7 +13,7 @@ import {
   type RemitoItem
 } from "../api/types";
 import { CustomerPicker, ProductPicker } from "../components/pickers";
-import { isFceType, letterOf } from "../lib/documents";
+import { documentLabel, isFceType, letterOf } from "../lib/documents";
 import { todayAr, addDaysAr } from "../lib/dates";
 
 interface FormInvoiceItem {
@@ -265,7 +265,7 @@ export function InvoiceFormPage() {
           setExchangeRate(original.exchangeRate || 1);
           setRateSource(original.paidInForeignCurrency ? "arca" : "manual");
           setExchangeRateType(original.exchangeRateType === "Billete" ? "Billete" : "Divisa");
-          setNotes(`${noteKind === "NC" ? "Nota de crédito" : "Nota de débito"} sobre Factura ${letter} ${original.formattedNumber}`);
+          setNotes(`${noteKind === "NC" ? "Nota de crédito" : "Nota de débito"} sobre ${documentLabel(original.invoiceType)} ${original.formattedNumber}`);
           if (differenceImputationId) {
             const imp = await api.getCollectionImputation(differenceImputationId);
             const diff = Math.abs(imp.exchangeDifferenceArs ?? 0);
@@ -679,12 +679,10 @@ export function InvoiceFormPage() {
         : rateSource === "manual" ? exchangeRateType
         : "Divisa",
       exchangeDifferenceImputationId: differenceImputationId || undefined,
-      ...(isFceType(invoiceType) ? {
-        fceCbu: fceCbu || undefined,
-        fceAlias: fceAlias || undefined,
-        fceTransferMode,
-        fceCancellation: invoiceType.startsWith("NC_") || invoiceType.startsWith("ND_") ? fceCancellation : undefined
-      } : {}),
+      ...(isFceType(invoiceType) && !invoiceType.startsWith("NC_") && !invoiceType.startsWith("ND_")
+        ? { fceCbu: fceCbu || undefined, fceAlias: fceAlias || undefined, fceTransferMode } : {}),
+      ...(isFceType(invoiceType) && (invoiceType.startsWith("NC_") || invoiceType.startsWith("ND_"))
+        ? { fceCancellation } : {}),
       associatedInvoiceId: associatedInvoice?.id,
       restockItems: noteKind === "NC" ? restockItems : undefined,
       notes,
@@ -793,8 +791,8 @@ export function InvoiceFormPage() {
             {associatedInvoice ? (
               <div className="card pad" style={{ background: "#f8fafc", border: "1px solid #cbd5e1" }}>
                 <strong>
-                  {invoiceType.startsWith("ND_") ? "Nota de débito" : "Nota de crédito"} sobre Factura{" "}
-                  {associatedInvoice.invoiceType.replace(/^(NC_|ND_)/, "")} {associatedInvoice.formattedNumber}
+                  {invoiceType.startsWith("ND_") ? "Nota de débito" : "Nota de crédito"} sobre{" "}
+                  {documentLabel(associatedInvoice.invoiceType)} {associatedInvoice.formattedNumber}
                 </strong>
                 {differenceInfo && (
                   <div style={{ fontSize: "0.85rem", color: "#0f766e", marginTop: 4, fontWeight: 600 }}>{differenceInfo}</div>

@@ -237,10 +237,17 @@ public sealed class Invoice : Entity<Guid>
         invoice.ExchangeDifferenceImputationId = exchangeDifferenceImputationId;
         if (FiscalVoucherCodes.IsFce(invoiceType))
         {
-            invoice.FceCbu = string.IsNullOrWhiteSpace(fceCbu) ? null : new string(fceCbu.Where(char.IsDigit).ToArray());
-            invoice.FceAlias = string.IsNullOrWhiteSpace(fceAlias) ? null : fceAlias.Trim();
-            invoice.FceTransferMode = fceTransferMode is "ADC" ? "ADC" : "SCA";
-            invoice.FceCancellation = fceCancellation;
+            // La factura lleva los datos de cobro; sus notas, solo si son de anulación.
+            if (FiscalVoucherCodes.BaseType(invoiceType) == invoiceType)
+            {
+                invoice.FceCbu = string.IsNullOrWhiteSpace(fceCbu) ? null : new string(fceCbu.Where(char.IsDigit).ToArray());
+                invoice.FceAlias = string.IsNullOrWhiteSpace(fceAlias) ? null : fceAlias.Trim();
+                invoice.FceTransferMode = fceTransferMode is "ADC" ? "ADC" : "SCA";
+            }
+            else
+            {
+                invoice.FceCancellation = fceCancellation;
+            }
         }
         return invoice;
     }

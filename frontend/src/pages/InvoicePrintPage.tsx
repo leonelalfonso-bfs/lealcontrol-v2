@@ -6,7 +6,7 @@ import { EmailComposer } from "../components/EmailComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { numberToWords } from "../utils/numberToWords";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
-import { isFceType, letterOf } from "../lib/documents";
+import { documentLabel, isFceType, letterOf } from "../lib/documents";
 import { type CompanySettings, type CustomerDetail, type Invoice } from "../api/types";
 
 const TAX_CONDITION_LABELS: Record<string, string> = {
@@ -384,9 +384,10 @@ export function InvoicePrintPage() {
               </>
             )}
           </div>
-          <div>
+          {/* Una nota de crédito no tiene vencimiento de pago. */}
+          {!isNc && <div>
             <strong>Fecha de Vto. para el Pago:</strong> <span style={{ fontWeight: "bold", color: "#b91c1c" }}>{fiscalDate(invoice.dueDate || invoice.issueDate)}</span>
-          </div>
+          </div>}
         </div>
 
         {/* Customer / Receptor Section (RG 1415 Anexo II Título II) */}
@@ -442,7 +443,7 @@ export function InvoicePrintPage() {
                   )}
                   {associated && (
                     <div style={{ fontSize: "10.5px", color: "#334155", marginTop: "2px" }}>
-                      <strong>Comprobante asociado:</strong> Factura {associated.invoiceType.replace(/^(NC_|ND_)/, "")}{" "}
+                      <strong>Comprobante asociado:</strong> {documentLabel(associated.invoiceType)}{" "}
                       {String(associated.pointOfSale).padStart(5, "0")}-{String(associated.invoiceNumber).padStart(8, "0")}{" "}
                       del {fiscalDate(associated.issueDate)}
                     </div>
@@ -612,7 +613,7 @@ export function InvoicePrintPage() {
 
         {isFce && (
           <div style={{ border: `1px solid ${primaryCol}55`, padding: "6px 8px", borderRadius: "4px", marginBottom: "8px", fontSize: "9.5px", color: "#334155" }}>
-            {invoice.fceCbu ? (
+            {!isNc && !isNd ? (
               <>
                 <strong>Cobro de la Factura de Crédito Electrónica:</strong> CBU {invoice.fceCbu}
                 {invoice.fceAlias ? ` · Alias ${invoice.fceAlias}` : ""}
