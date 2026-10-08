@@ -52,7 +52,7 @@ Repo `leonelalfonso-bfs/lealcontrolerp` (Laravel), todavía montado en el servid
   - Faltantes en autoelevadores: habilitación.
 - **Validaciones en el servidor:** se acabó "guardar lo que llega".
 
-### 1b. Avisos diarios por correo
+### 1b. Avisos diarios por correo (hecha, PR "Flota 1b")
 
 Proceso nocturno por empresa. Manda el resumen de lo vencido y por vencer a los administradores, desde la casilla principal de la empresa. Se diseña genérico, para sumar después licencias, aptos y services.
 
@@ -93,6 +93,21 @@ Proceso nocturno por empresa. Manda el resumen de lo vencido y por vencer a los 
 - **Frontend:** `FleetVehiclesListPage` (unidades con el panel de vencimientos), `FleetVehicleFormPage` (ficha con datos, vencimientos y lecturas) y `lib/fleet.ts` (etiquetas y reglas).
 - **Pruebas:** `tests/LealControl.Modules.Crm.IntegrationTests/FleetApiTests.cs`.
 - **Quedan de la maqueta, para la entrega 2:** los endpoints de choferes, mantenimientos y combustible, y la página de combustible.
+
+## Cómo quedó 1b (código)
+
+- **`src/Host/LealControl.Api/Notices/DailyNotices.cs`.** Vive en el host porque une Flota (qué avisar) con Comunicaciones (cómo enviarlo).
+  - **`DailyNoticeSender`** arma el resumen de vencidos, sin cargar y por vencer. Lo envía desde la casilla principal activa de la empresa a los administradores activos (`public.tenant_users` con rol Admin).
+  - Registra el resultado en `public.daily_notices` (`Kind`, `Day`), en la base de cada empresa. Reserva el día antes de enviar, así dos procesos no mandan dos correos.
+  - Si no hay novedades, no envía, pero lo registra.
+  - **`DailyNoticesBackgroundService`** corre cada 10 minutos. Desde las 7 de Argentina, envía una vez por día a cada empresa activa.
+  - **Endpoints (solo administradores):**
+    - `GET /api/v1/notices/daily/fleet`: vista previa (casilla, destinatarios, cantidades, último resultado);
+    - `POST /api/v1/notices/daily/fleet/send-now`: envía ya, aunque ya haya salido.
+- **Configuración** `DailyNotices:Enabled` (`DAILY_NOTICES_ENABLED`): en producción viene encendido; en staging, apagado, para no duplicar correos.
+- **Pantalla Unidades:** recuadro "Aviso diario por correo" con el botón "Enviar ahora".
+- **Pruebas:** `DailyNoticesApiTests`.
+- **Para sumar más avisos** (licencias, aptos, services): agregar otro `Kind` y su armado en `DailyNoticeSender`.
 
 ## Estado anterior (antes de 1a)
 

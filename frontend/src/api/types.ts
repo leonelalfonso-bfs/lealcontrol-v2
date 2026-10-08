@@ -1612,6 +1612,17 @@ export type FleetExpirationItem = {
 
 export type FleetExpirations = { expired: number; dueSoon: number; missing: number; items: FleetExpirationItem[] };
 
+export type DailyNoticePreview = {
+  sender?: string | null;
+  recipients: { email: string; name: string }[];
+  expired: number;
+  missing: number;
+  dueSoon: number;
+  lastDay?: string | null;
+  lastResult?: string | null;
+  enabled: boolean;
+};
+
 export type VehicleDriver = {
   id: string;
   employeeId?: string | null;

@@ -1006,6 +1006,9 @@ export const api = {
     request<import("./types").VehicleDocument>(`/api/v1/fleet/documents/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteVehicleDocument: (id: string) => request<void>(`/api/v1/fleet/documents/${id}`, { method: "DELETE" }),
   getFleetExpirations: () => request<import("./types").FleetExpirations>("/api/v1/fleet/expirations"),
+  getFleetDailyNotice: () => request<import("./types").DailyNoticePreview>("/api/v1/notices/daily/fleet"),
+  sendFleetDailyNoticeNow: () =>
+    request<{ sent: boolean; detail: string }>("/api/v1/notices/daily/fleet/send-now", { method: "POST" }),
 
   listDrivers: () => request<import("./types").VehicleDriver[]>("/api/v1/fleet/drivers"),
   createDriver: (body: Partial<import("./types").VehicleDriver>) =>
