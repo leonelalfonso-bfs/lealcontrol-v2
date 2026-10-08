@@ -23,6 +23,9 @@ public sealed class Conversation
     public Guid? RelatedQuoteId { get; private set; }
     public Guid? RelatedOrderId { get; private set; }
     public Guid? RelatedInvoiceId { get; private set; }
+    public Guid? RelatedOpportunityId { get; private set; }
+    /// <summary>Descartada con "ignorar este contacto": lo que llegue después no vuelve a la bandeja.</summary>
+    public bool IgnoreParticipant { get; private set; }
     public string Status { get; private set; } = "open";
     public Guid? AssignedToUserId { get; private set; }
     public bool SuggestionDismissed { get; private set; }
@@ -100,6 +103,40 @@ public sealed class Conversation
     {
         RelatedCustomerId = customerId;
         UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void LinkOpportunity(Guid opportunityId)
+    {
+        RelatedOpportunityId = opportunityId;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public const string DiscardedStatus = "discarded";
+
+    public bool IsDiscarded => Status == DiscardedStatus;
+
+    /// <summary>Sale de la bandeja (no del teléfono). El contenido de los mensajes se borra aparte.</summary>
+    public void Discard(bool ignoreParticipant)
+    {
+        Status = DiscardedStatus;
+        IgnoreParticipant = ignoreParticipant;
+        UnreadCount = 0;
+        LastMessagePreview = null;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Llega un mensaje a una conversación descartada: vuelve a la bandeja, salvo que se haya
+    /// pedido ignorar el contacto. Devuelve false si el mensaje se tiene que guardar sin contenido.
+    /// </summary>
+    public bool AcceptMessageAfterDiscard(EmailDirection direction)
+    {
+        if (!IsDiscarded) return true;
+        if (IgnoreParticipant) return false;
+        if (direction != EmailDirection.Incoming) return false;
+        Status = "open";
+        UpdatedAtUtc = DateTime.UtcNow;
+        return true;
     }
 
     public void LinkDocument(Guid? quoteId, Guid? orderId, Guid? invoiceId)

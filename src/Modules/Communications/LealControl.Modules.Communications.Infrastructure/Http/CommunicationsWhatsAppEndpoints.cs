@@ -156,7 +156,7 @@ internal static class CommunicationsWhatsAppEndpoints
 
                 if (existing != null)
                 {
-                    if (!string.IsNullOrWhiteSpace(m.MediaType) && existing.Attachments.Count == 0)
+                    if (!existing.Redacted && !string.IsNullOrWhiteSpace(m.MediaType) && existing.Attachments.Count == 0)
                     {
                         var media = await waService.DownloadMediaAsync(instance, m.RemoteJid, m.FromMe, m.MessageId, ct);
                         if (media != null && media.Data.Length > 0)
