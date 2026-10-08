@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import { useCan } from "../context/PermissionsContext";
 import type { CustomerSummary, Invoice } from "../api/types";
 import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
 import { CustomerPicker } from "../components/pickers";
@@ -62,6 +63,8 @@ const shortDate = (iso?: string | null) => {
 const newId = () => Math.random().toString(36).substring(2, 9);
 
 export function CollectionReceiptsWorkspacePage() {
+  // Anular un recibo pide Finanzas en nivel Aprobar.
+  const canVoid = useCan("finance", "Approve");
   const [searchParams] = useSearchParams();
   const initialCustomerId = searchParams.get("customerId");
   const initialMovementId = searchParams.get("movementId");
@@ -870,7 +873,7 @@ export function CollectionReceiptsWorkspacePage() {
                 {money(selectedReceiptDetail.amount, selectedReceiptDetail.currency)}
               </strong>
             </div>
-            {selectedReceiptDetail.status !== "Voided" && (
+            {canVoid && selectedReceiptDetail.status !== "Voided" && (
               <div className="toolbar" style={{ marginTop: 16, justifyContent: "flex-end" }}>
                 <button
                   className="btn btn-outline"

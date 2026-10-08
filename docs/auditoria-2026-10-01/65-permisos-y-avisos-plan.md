@@ -48,7 +48,7 @@ Cada nivel incluye a los anteriores.
 
 ## Etapas
 
-### P1. Modelo y pantallas
+### P1. Modelo y pantallas (hecha, #99)
 
 - **Tablas por empresa:**
   - `public.permission_profiles`: nombre, descripción, de fábrica, matriz y sensibles;
@@ -56,7 +56,7 @@ Cada nivel incluye a los anteriores.
 - **Migración sin cambios de acceso:** cada usuario actual recibe un perfil equivalente a su rol y sus módulos de hoy. Lo único que cambia es que **se cierra el agujero** del usuario sin módulos.
 - **Configuración → Usuarios y permisos:** pestaña Perfiles (matriz) y, por usuario, perfil, excepciones y "qué puede hacer".
 
-### P2. Control en el servidor y en las pantallas
+### P2. Control en el servidor y en las pantallas (hecha, PR "Permisos P2")
 
 - **Middleware de permisos:**
   - el módulo sale de la ruta (se extiende `ContractedModuleMap` a todos los módulos);
@@ -93,6 +93,51 @@ Pendiente de decisión del dueño:
 - **Recomendada: casilla del sistema.** `avisos@lealcontrol.com`, a nombre de "LealControl · {empresa}", por un servicio transaccional (Brevo o Resend), con respuesta a la empresa. Requiere SPF/DKIM en lealcontrol.com.
 - **Alternativa:** casilla de avisos configurada por cada empresa.
 - **Descartado:** casilla por usuario. Son credenciales por persona y mucho soporte.
+
+## Cómo quedaron P1 y P2 (código)
+
+**Dominio**
+- `Crm.Domain/Settings/Permissions.cs`:
+  - niveles;
+  - catálogo de módulos (`PermissionCatalog`);
+  - perfiles de fábrica (`SystemProfiles`);
+  - cálculo del permiso efectivo (perfil + excepciones);
+  - lista de módulos y rol derivados.
+- `PermissionProfile.cs` y, en `TenantUser`, los campos `ProfileId`, `PermissionOverridesJson` y `ApplyPermissions`.
+
+**Persistencia** (`Crm.Infrastructure/Persistence`)
+- `PermissionProfilesBootstrap`: perfiles de fábrica y migración de usuarios, en el ensure de Crm.
+- `PermissionProfileHandlers`: listar, guardar y borrar perfiles.
+- Usuarios en `CompanySettingsQueryHandlers`: siempre queda al menos un administrador, pero solo se controla cuando el cambio le saca la administración a alguien que la tenía.
+
+**Control** (`Host/LealControl.Api/Security/Permissions.cs`)
+- **`PermissionRules`**: módulo y nivel de cada ruta.
+  - Lectura → Ver. Escritura → Cargar.
+  - Segmentos `authorize-arca`, `recover-arca`, `apply-arca-rate`, `authorize`, `approve`, `void`, `cancel`, `reject`, `deposit`, `reconcile`, `lock`, `unlock`, `revert`, `confirm`, `quick-post`, `execute`, `auto-post*` y `batch-post*` → Aprobar.
+  - `settings` y `config` → Administrar.
+  - Stock y producción (`/sales/products|warehouses|inventory|production`) son el módulo `inventory`; productos y depósitos también se leen con Ventas o Compras.
+  - Exentos: directorio, correo compartido, `/company`, `/auth`.
+- **`PermissionResolver`**:
+  - lee perfil + excepciones de la base, con caché de 60 segundos por usuario;
+  - se invalida por empresa con `IPermissionChangeNotifier` cada vez que cambian usuarios o perfiles;
+  - un usuario inactivo no tiene permisos;
+  - si no hay perfil o la base falla, usa los permisos del token, como antes.
+- **`PermissionMiddleware`** reemplaza a `ContractedModuleMiddleware` y responde 403 con el motivo ("Tu perfil no permite aprobar, anular o confirmar en Ventas y facturación").
+- **Políticas:**
+  - `RequireSales`, `RequireFinance` y las demás: aceptan si el middleware ya validó la ruta; si no, piden nivel Cargar en su módulo;
+  - `RequireAdmin`: Configuración en nivel Administrar;
+  - `RequireSalesApprove`: emisión fiscal.
+
+**Pantallas**
+- `GET /api/v1/auth/permissions` → `PermissionsContext` (`useCan(módulo, nivel)`). Se refresca al volver a la pestaña.
+- El menú usa esos permisos.
+- Se ocultan sin el nivel:
+  - autorizar o consultar ARCA (Ventas, Aprobar);
+  - NC y ND (Ventas, Cargar);
+  - cobrar (Finanzas, Cargar);
+  - anular recibos y órdenes de pago (Finanzas, Aprobar).
+
+**Pruebas:** `PermissionProfilesApiTests` y `PermissionLevelsApiTests`.
 
 ## Flota: dónde quedó (ver nota 64)
 

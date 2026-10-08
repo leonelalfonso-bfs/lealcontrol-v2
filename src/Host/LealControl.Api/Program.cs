@@ -92,6 +92,9 @@ try
     builder.Services.AddSingleton<ITenantConnectionProvider, TenantConnectionProvider>();
     builder.Services.AddScoped<LealControl.Modules.Communications.Infrastructure.Services.ICommunicationsTenantCatalog, CommunicationsTenantCatalog>();
     builder.Services.AddScoped<ITenantProvisionerService, TenantProvisionerService>();
+    builder.Services.AddSingleton<LealControl.Api.Security.PermissionResolver>();
+    builder.Services.AddSingleton<LealControl.BuildingBlocks.Security.IPermissionChangeNotifier>(sp =>
+        sp.GetRequiredService<LealControl.Api.Security.PermissionResolver>());
     LealControl.Api.Notices.DailyNoticesEndpoints.AddDailyNotices(builder.Services);
 
     builder.Services.AddSingleton<IClock, SystemClock>();
@@ -171,18 +174,38 @@ try
     });
     builder.Services.AddAuthorization(options =>
     {
-        options.AddPolicy("RequireAdmin", policy =>
-            policy.RequireRole("Admin", "Administrador", "SuperAdmin"));
-        options.AddPolicy("RequireFinance", policy =>
-            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Tesorero", "Contador"));
-        options.AddPolicy("RequireAccounting", policy =>
-            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Contador"));
-        options.AddPolicy("RequireSales", policy =>
-            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Comercial", "Contador"));
-        options.AddPolicy("RequirePurchases", policy =>
-            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Compras", "Contador"));
-        options.AddPolicy("RequireQuality", policy =>
-            policy.RequireRole("Admin", "Administrador", "SuperAdmin", "Calidad", "DirectorTecnico", "Técnico"));
+        // Las políticas de antes se basaban en roles fijos; desde los perfiles (P2) piden nivel.
+        // Si el control por ruta ya validó el pedido (PermissionMiddleware), la política lo acepta.
+        static Func<AuthorizationHandlerContext, Task<bool>> Level(string module, LealControl.Modules.Crm.Domain.Settings.PermissionLevel level) =>
+            async ctx =>
+            {
+                if (ctx.Resource is not HttpContext http) return false;
+                if (http.Items[LealControl.Api.Security.PermissionMiddleware.CheckedKey] is true) return true;
+                var resolver = http.RequestServices.GetRequiredService<LealControl.Api.Security.PermissionResolver>();
+                var permissions = await resolver.ResolveAsync(http, http.RequestAborted);
+                return permissions.Allows(module, level);
+            };
+        options.AddPolicy("RequireAdmin", policy => policy.RequireAssertion(async ctx =>
+        {
+            if (ctx.Resource is not HttpContext http) return ctx.User.IsInRole("SuperAdmin");
+            var resolver = http.RequestServices.GetRequiredService<LealControl.Api.Security.PermissionResolver>();
+            var permissions = await resolver.ResolveAsync(http, http.RequestAborted);
+            return permissions.Allows(LealControl.Modules.Crm.Domain.Settings.PermissionCatalog.Administration,
+                LealControl.Modules.Crm.Domain.Settings.PermissionLevel.Admin);
+        }));
+        options.AddPolicy("RequireFinance", policy => policy.RequireAssertion(Level("finance", LealControl.Modules.Crm.Domain.Settings.PermissionLevel.Edit)));
+        options.AddPolicy("RequireAccounting", policy => policy.RequireAssertion(Level("accounting", LealControl.Modules.Crm.Domain.Settings.PermissionLevel.Edit)));
+        options.AddPolicy("RequireSales", policy => policy.RequireAssertion(Level("sales", LealControl.Modules.Crm.Domain.Settings.PermissionLevel.Edit)));
+        options.AddPolicy("RequirePurchases", policy => policy.RequireAssertion(Level("purchases", LealControl.Modules.Crm.Domain.Settings.PermissionLevel.Edit)));
+        options.AddPolicy("RequireQuality", policy => policy.RequireAssertion(Level("quality", LealControl.Modules.Crm.Domain.Settings.PermissionLevel.Edit)));
+        // Emisión fiscal (autorizar, recuperar, ver intentos, cotización ARCA): Ventas en nivel Aprobar.
+        options.AddPolicy("RequireSalesApprove", policy => policy.RequireAssertion(async ctx =>
+        {
+            if (ctx.Resource is not HttpContext http) return false;
+            var resolver = http.RequestServices.GetRequiredService<LealControl.Api.Security.PermissionResolver>();
+            var permissions = await resolver.ResolveAsync(http, http.RequestAborted);
+            return permissions.Allows("sales", LealControl.Modules.Crm.Domain.Settings.PermissionLevel.Approve);
+        }));
         options.AddPolicy("RequireTechnicalDirector", policy =>
             policy.RequireAssertion(ctx =>
                 ctx.User.IsInRole("Admin")
@@ -364,7 +387,7 @@ try
     app.UseAuthentication();
     app.UseRateLimiter();
     app.UseMiddleware<CommunicationsInboxGateMiddleware>();
-    app.UseMiddleware<ContractedModuleMiddleware>();
+    app.UseMiddleware<LealControl.Api.Security.PermissionMiddleware>();
     app.UseMiddleware<LealControl.Modules.Quality.Infrastructure.PresentationModeMiddleware>();
     app.UseAuthorization();
     app.Use(async (context, next) =>
@@ -403,6 +426,7 @@ try
     app.MapFinanceModule();
     app.MapHumanResourcesModule();
     app.MapFleetModule();
+    LealControl.Api.Security.PermissionEndpoints.MapPermissionEndpoints(app);
     LealControl.Api.Notices.DailyNoticesEndpoints.MapDailyNotices(app);
     app.MapAccountingModule();
     app.MapMetrologyModule();

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation, useParams } from "react-router-do
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { api } from "./api/client";
 import { useAuth } from "./context/AuthContext";
+import { usePermissions } from "./context/PermissionsContext";
 import { usePresentationMode } from "./context/PresentationModeContext";
 import { tenantTitle } from "./utils/tenantLabel";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -250,7 +251,14 @@ export function App() {
     || (tenant ? tenantTitle(tenant) : companyName);
 
   const userRole = user?.role || "Comercial";
-  const allowedModuleIds = resolveAllowedModuleIds(userRole, user?.allowedModulesJson, communicationsEnabled);
+  // Los módulos visibles salen de los permisos del servidor (perfil + excepciones), que se
+  // actualizan sin volver a iniciar sesión; mientras cargan, de lo que trajo el login.
+  const { permissions } = usePermissions();
+  const allowedModuleIds = resolveAllowedModuleIds(
+    userRole,
+    permissions ? JSON.stringify(permissions.allowedModules.length ? permissions.allowedModules : ["none"]) : user?.allowedModulesJson,
+    communicationsEnabled
+  ).filter((id) => id !== "administracion" || !permissions || permissions.isSuperAdmin || permissions.modules.administration !== "None");
 
   const allMods = visibleModules(DEVELOPMENT_ACCESS);
   const modules = allMods

@@ -79,19 +79,13 @@ public sealed class CommunicationsInboxGateMiddlewareTests
     }
 
     [Theory]
-    [InlineData("/api/v1/communications/accounts", HttpStatusCode.OK)]
-    [InlineData("/api/v1/communications/messages", HttpStatusCode.OK)]
-    [InlineData("/api/v1/communications/conversations", HttpStatusCode.Forbidden)]
-    public async Task SharedMailIsNotBlockedByContractedModuleFilter(string path, HttpStatusCode expected)
+    [InlineData("/api/v1/communications/accounts", false)]
+    [InlineData("/api/v1/communications/messages", false)]
+    [InlineData("/api/v1/communications/conversations", true)]
+    public void SharedMailIsNotSubjectToCommunicationsPermissions(string path, bool requiresCommunications)
     {
-        using var host = Host(_ => { }, app =>
-        {
-            app.Use((context, next) => { context.User = User("Admin", "[\"sales\"]"); return next(); });
-            app.UseMiddleware<ContractedModuleMiddleware>();
-            app.Run(context => { context.Response.StatusCode = 200; return Task.CompletedTask; });
-        });
-        using var response = await host.GetTestClient().GetAsync(path);
-        Assert.Equal(expected, response.StatusCode);
+        var requirement = PermissionRules.Resolve("GET", path);
+        Assert.Equal(requiresCommunications, requirement?.Module == "communications");
     }
 
     private static ClaimsPrincipal User(string role, string modules) => new(new ClaimsIdentity(
