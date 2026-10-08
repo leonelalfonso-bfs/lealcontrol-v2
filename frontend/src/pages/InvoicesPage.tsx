@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
+import { ARCA_TYPES, documentLabel } from "../lib/documents";
 import { type Invoice } from "../api/types";
 import { ExcelToolbar } from "../components/ExcelTools";
 import { useAuth } from "../context/AuthContext";
@@ -17,12 +18,6 @@ const civilDate = (value?: string | null) => {
   return y && m && d ? `${Number(d)}/${Number(m)}/${y}` : "—";
 };
 
-const documentLabel = (type: string) => {
-  const letter = type.replace(/^(NC_|ND_)/, "");
-  if (type.startsWith("NC_")) return `Nota de Crédito ${letter}`;
-  if (type.startsWith("ND_")) return `Nota de Débito ${letter}`;
-  return type === "Proforma" ? "Proforma" : `Factura ${type}`;
-};
 
 export function InvoicesPage() {
   const navigate = useNavigate();
@@ -39,7 +34,7 @@ export function InvoicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [fiscalEnabled, setFiscalEnabled] = useState(false);
-  const [fiscalAttempts, setFiscalAttempts] = useState<Record<string, { status: string; voucherNumber: number }>>({});
+  const [fiscalAttempts, setFiscalAttempts] = useState<Record<string, { status: string; voucherNumber: number; rejectionDetail?: string | null }>>({});
   const [busyInvoice, setBusyInvoice] = useState<string | null>(null);
   // Borrador en USD cuya cotización no coincide con la oficial de ARCA.
   const [rateFix, setRateFix] = useState<Invoice | null>(null);
@@ -222,6 +217,12 @@ export function InvoicesPage() {
             <option value="M">Factura M</option>
             <option value="NC_A">Nota de Crédito A</option>
             <option value="NC_B">Nota de Crédito B</option>
+            <option value="ND_A">Nota de Débito A</option>
+            <option value="ND_B">Nota de Débito B</option>
+            <option value="FCE_A">Factura de Crédito Electrónica A</option>
+            <option value="FCE_B">Factura de Crédito Electrónica B</option>
+            <option value="NC_FCE_A">Nota de Crédito FCE A</option>
+            <option value="ND_FCE_A">Nota de Débito FCE A</option>
             <option value="Proforma">Proforma / Interna</option>
           </select>
 
@@ -336,6 +337,11 @@ export function InvoicesPage() {
                                   ["Pending", "Unknown"].includes(fiscalAttempts[inv.id].status)
                                     ? "Envío sin confirmar · consultar ARCA" : "Reserva fiscal · requiere revisión"}
                               {" · N° "}{fiscalAttempts[inv.id].voucherNumber}
+                              {fiscalAttempts[inv.id].status === "Rejected" && fiscalAttempts[inv.id].rejectionDetail && (
+                                <span style={{ display: "block", color: "#b91c1c", maxWidth: 360, whiteSpace: "normal" }}>
+                                  {fiscalAttempts[inv.id].rejectionDetail}
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
@@ -437,7 +443,7 @@ export function InvoicesPage() {
                         {inv.status === "Draft" && canAuthorize &&
                           (fiscalEnabled || ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")) &&
                           fiscalAttempts[inv.id]?.status !== "Rejected" &&
-                          (["A", "B", "NC_A", "NC_B", "ND_A", "ND_B"].includes(inv.invoiceType) &&
+                          (ARCA_TYPES.includes(inv.invoiceType) &&
                             inv.fiscalConcept > 0 && ["ARS", "USD"].includes(inv.currency) ||
                             ["Pending", "Unknown"].includes(fiscalAttempts[inv.id]?.status || "")) && (
                           <button type="button" className="btn" disabled={busyInvoice !== null}
@@ -447,13 +453,19 @@ export function InvoicesPage() {
                                 ? "Consultar ARCA" : "Autorizar ARCA"}
                           </button>
                         )}
-                        {["Authorized", "Draft"].includes(inv.status) && ["A", "B", "ND_A", "ND_B"].includes(inv.invoiceType) && (
+                        {["Authorized", "Draft"].includes(inv.status) && ["A", "B", "ND_A", "ND_B", "FCE_A", "FCE_B", "ND_FCE_A", "ND_FCE_B"].includes(inv.invoiceType) && (
                           <>
                             <Link className="btn ghost compact" title="Nota de crédito sobre esta factura"
                               to={`/facturas/nueva?nota=NC&origen=${inv.id}`}>NC</Link>
                             <Link className="btn ghost compact" title="Nota de débito sobre esta factura"
                               to={`/facturas/nueva?nota=ND&origen=${inv.id}`}>ND</Link>
                           </>
+                        )}
+                        {inv.status === "Draft" && fiscalAttempts[inv.id]?.status === "Rejected" && (
+                          <Link className="btn compact" to={`/facturas/nueva?copiar=${inv.id}`}
+                            title="Abre el comprobante para corregirlo; al guardarlo se anula este borrador rechazado">
+                            Corregir y reintentar
+                          </Link>
                         )}
                         {inv.status === "Draft" && canAuthorize && !fiscalEnabled && (
                           <span className="muted">Emisión ARCA deshabilitada</span>

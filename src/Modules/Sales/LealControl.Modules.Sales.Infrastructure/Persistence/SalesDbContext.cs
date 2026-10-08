@@ -522,8 +522,13 @@ CREATE INDEX IF NOT EXISTS "IX_remito_return_items_RemitoItemId"
                 ADD COLUMN IF NOT EXISTS "Production" boolean NOT NULL DEFAULT false;
             CREATE UNIQUE INDEX IF NOT EXISTS "UX_fiscal_attempt_invoice"
                 ON sales.fiscal_authorization_attempts ("TenantId", "InvoiceId");
-            CREATE UNIQUE INDEX IF NOT EXISTS "UX_fiscal_attempt_number"
-                ON sales.fiscal_authorization_attempts ("TenantId", "PointOfSale", "VoucherType", "VoucherNumber");
+            -- Un número rechazado por ARCA no se consumió: el próximo envío puede reservarlo.
+            DROP INDEX IF EXISTS sales."UX_fiscal_attempt_number";
+            CREATE UNIQUE INDEX IF NOT EXISTS "UX_fiscal_attempt_number_live"
+                ON sales.fiscal_authorization_attempts ("TenantId", "PointOfSale", "VoucherType", "VoucherNumber")
+                WHERE "Status" <> 'Rejected';
+            ALTER TABLE sales.fiscal_authorization_attempts
+                ADD COLUMN IF NOT EXISTS "RejectionDetail" character varying(1000);
             CREATE UNIQUE INDEX IF NOT EXISTS "UX_invoice_authorized_number"
                 ON sales.invoices ("TenantId", "PointOfSale", "InvoiceType", "InvoiceNumber")
                 WHERE "Status" = 'Authorized';
@@ -546,6 +551,10 @@ CREATE INDEX IF NOT EXISTS "IX_remito_return_items_RemitoItemId"
                 ADD COLUMN IF NOT EXISTS "ExchangeRateType" character varying(16);
             ALTER TABLE sales.invoices
                 ADD COLUMN IF NOT EXISTS "ExchangeDifferenceImputationId" uuid;
+            ALTER TABLE sales.invoices ADD COLUMN IF NOT EXISTS "FceCbu" character varying(22);
+            ALTER TABLE sales.invoices ADD COLUMN IF NOT EXISTS "FceAlias" character varying(20);
+            ALTER TABLE sales.invoices ADD COLUMN IF NOT EXISTS "FceTransferMode" character varying(3);
+            ALTER TABLE sales.invoices ADD COLUMN IF NOT EXISTS "FceCancellation" boolean;
             CREATE UNIQUE INDEX IF NOT EXISTS "UX_invoices_exchange_difference"
                 ON sales.invoices ("TenantId", "ExchangeDifferenceImputationId")
                 WHERE "ExchangeDifferenceImputationId" IS NOT NULL AND "Status" NOT IN ('Cancelled', 'Rejected');

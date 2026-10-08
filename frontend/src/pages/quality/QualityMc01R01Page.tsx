@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { QualityConfidentialityCommitment } from "../../api/types/quality";
 import { EQUIPMENT_STATUS, labelOf } from "./qualityLabels";
+import { todayAr } from "../../lib/dates";
 
 type Variant = "MC01-R01" | "MC01-R02";
 
@@ -51,7 +52,7 @@ export function QualityConfidentialityRecordPage({ variant }: Props) {
   const [personEmail, setPersonEmail] = useState("");
   const [personRole, setPersonRole] = useState("");
   const [organization, setOrganization] = useState("");
-  const [signedAt, setSignedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [signedAt, setSignedAt] = useState(todayAr());
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
 

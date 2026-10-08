@@ -32,7 +32,7 @@ public static class InvoiceEndpoints
             var tenantId = tenant.TenantId;
             var attempts = await db.FiscalAuthorizationAttempts.AsNoTracking()
                 .Where(a => a.TenantId == tenantId)
-                .Select(a => new { invoiceId = a.InvoiceId, status = a.Status, voucherNumber = a.VoucherNumber })
+                .Select(a => new { invoiceId = a.InvoiceId, status = a.Status, voucherNumber = a.VoucherNumber, rejectionDetail = a.RejectionDetail })
                 .ToListAsync(cancellationToken);
             return Results.Ok(new
             {
@@ -50,6 +50,25 @@ public static class InvoiceEndpoints
             var query = issue is null ? null : FiscalExchangeRateDate.For(issue, TimeProvider.System.GetUtcNow());
             var rate = await gateway.GetExchangeRateAsync("DOL", query, cancellationToken);
             return Results.Ok(new { ok = rate.Ok, rate = rate.Rate, rateDate = rate.RateDate, detail = rate.Detail, production = rate.Production });
+        }).RequireAuthorization("RequireSales");
+
+        // ¿El cliente debe recibir Factura de Crédito Electrónica MiPyMEs por este importe?
+        group.MapGet("/fce-obligation", async (string cuit, string? date, decimal? total, decimal? rate,
+            IArcaFiscalGateway gateway, CancellationToken cancellationToken) =>
+        {
+            var digits = new string((cuit ?? string.Empty).Where(char.IsDigit).ToArray());
+            var day = DateOnly.TryParseExact(date, "yyyy-MM-dd", out var parsed)
+                ? parsed : DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3));
+            var obligation = await gateway.GetFceObligationAsync(digits, day, cancellationToken);
+            var totalArs = (total ?? 0m) * (rate is > 0m ? rate.Value : 1m);
+            return Results.Ok(new
+            {
+                ok = obligation.Ok,
+                obligated = obligation.Obligated,
+                minimumAmount = obligation.MinimumAmount,
+                required = obligation.Ok && obligation.Obligated && totalArs >= obligation.MinimumAmount,
+                detail = obligation.Detail
+            });
         }).RequireAuthorization("RequireSales");
 
         group.MapPost("/{id:guid}/apply-arca-rate", async (Guid id, SalesDbContext db, ITenantContext tenant,

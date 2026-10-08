@@ -382,9 +382,8 @@ public static class WsfeVoucherLookupParser
             || point != expectedPoint || type != expectedType || first != expectedNumber || last != expectedNumber
             || cae.Length != 14 || !cae.All(char.IsDigit)
             || Field(voucher, "Resultado") != "A" || Field(voucher, "EmisionTipo") != "CAE"
-            // Nunca se envían tributos, opcionales ni compradores: si aparecen, no es nuestro pedido.
+            // Nunca se envían tributos ni compradores: si aparecen, no es nuestro pedido.
             || Items(voucher, "Tributos", "Tributo").Count > 0
-            || Items(voucher, "Opcionales", "Opcional").Count > 0
             || Items(voucher, "Compradores", "Comprador").Count > 0)
             return WsfeVoucherReply.Failure("ARCA devolvió datos incompletos o distintos al comprobante solicitado.");
 
@@ -405,13 +404,21 @@ public static class WsfeVoucherLookupParser
             // FECompConsultar no devuelve CUIT ni fecha del asociado; solo se cotejan tipo, punto y número.
             associated.Add(new WsfeAssociatedVoucher(asocType, asocPoint, asocNumber, string.Empty, string.Empty));
         }
+        var optionals = new List<WsfeOptional>();
+        foreach (var opt in Items(voucher, "Opcionales", "Opcional"))
+        {
+            var id = Field(opt, "Id");
+            if (string.IsNullOrEmpty(id))
+                return WsfeVoucherReply.Failure("ARCA devolvió datos opcionales incompletos.");
+            optionals.Add(new WsfeOptional(id, Field(opt, "Valor") ?? string.Empty));
+        }
         var sameCurrency = Field(voucher, "CanMisMonExt") switch { "S" => true, "N" => (bool?)false, _ => null };
 
         var fields = new WsfeVoucherData(type, concept, docType,
             docNumber.ToString(CultureInfo.InvariantCulture), receiverVat, issue,
             OptionalDate(voucher, "FchServDesde"), OptionalDate(voucher, "FchServHasta"),
             OptionalDate(voucher, "FchVtoPago"), net, nonTaxed, exempt, vat, otherTaxes, total,
-            vatLines, currency, exchange, sameCurrency, associated);
+            vatLines, currency, exchange, sameCurrency, associated, optionals.Count == 0 ? null : optionals);
         return new(true, expectedNumber, fields.ReceiverDocumentNumber, total, cae,
             DateTime.SpecifyKind(caeDue, DateTimeKind.Utc),
             "Comprobante y CAE confirmados en ARCA; cotejar todos los campos con el borrador.", fields);

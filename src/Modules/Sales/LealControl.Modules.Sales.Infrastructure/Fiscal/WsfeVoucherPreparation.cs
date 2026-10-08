@@ -62,7 +62,10 @@ public static class WsfeVoucherPreparation
                 ? "A un cliente Responsable Inscripto o Monotributista le corresponde un comprobante A."
                 : "A un cliente Consumidor Final, Exento o No Alcanzado le corresponde un comprobante B.", out error);
 
+        var isFce = FiscalVoucherCodes.IsFce(invoice.InvoiceType);
         var document = FiscalVoucherCodes.ReceiverDocument(invoice.CustomerDocument);
+        if (isFce && document.Length != 11)
+            return Fail("La Factura de Crédito Electrónica requiere el CUIT del cliente.", out error);
         int documentType;
         if (document.Length == 11)
         {
@@ -93,12 +96,36 @@ public static class WsfeVoucherPreparation
         if (invoice.FiscalConcept is 2 or 3)
         {
             if (!invoice.ServiceFrom.HasValue || !invoice.ServiceTo.HasValue ||
-                invoice.ServiceTo.Value.Date < invoice.ServiceFrom.Value.Date ||
-                invoice.DueDate.Date < invoice.IssueDate.Date)
-                return Fail("Revisá el período del servicio y el vencimiento de pago.", out error);
+                invoice.ServiceTo.Value.Date < invoice.ServiceFrom.Value.Date)
+                return Fail("Revisá el período del servicio.", out error);
             serviceFrom = Date(invoice.ServiceFrom.Value);
             serviceTo = Date(invoice.ServiceTo.Value);
+        }
+        // Vencimiento: servicios en comprobantes comunes; siempre en la FCE; en sus notas, solo de anulación.
+        var fceInvoice = WsfeCaeRequestBuilder.IsFceInvoice(voucherType);
+        var needsDue = fceInvoice || (!isFce && invoice.FiscalConcept is 2 or 3) ||
+                       (isFce && !fceInvoice && invoice.FceCancellation == true);
+        if (needsDue)
+        {
+            if (invoice.DueDate.Date < invoice.IssueDate.Date)
+                return Fail("El vencimiento de pago no puede ser anterior a la emisión.", out error);
             paymentDue = Date(invoice.DueDate);
+        }
+
+        List<WsfeOptional>? optionals = null;
+        if (fceInvoice)
+        {
+            if (invoice.FceCbu is not { Length: 22 })
+                return Fail("Cargá el CBU de la empresa (22 dígitos) para la Factura de Crédito Electrónica.", out error);
+            optionals = [new("2101", invoice.FceCbu)];
+            if (!string.IsNullOrWhiteSpace(invoice.FceAlias)) optionals.Add(new("2102", invoice.FceAlias));
+            optionals.Add(new("27", invoice.FceTransferMode ?? "SCA"));
+        }
+        else if (isFce)
+        {
+            if (invoice.FceCancellation is null)
+                return Fail("Indicá si la nota anula la FCE (el cliente la rechazó) o no.", out error);
+            optionals = [new("22", invoice.FceCancellation.Value ? "S" : "N")];
         }
 
         if (invoice.Items.Count == 0 || invoice.Items.Any(i => i.Quantity <= 0 || i.UnitPrice <= 0))
@@ -123,7 +150,7 @@ public static class WsfeVoucherPreparation
             .Any(n => decimal.Round(n, 2) != n))
             return Fail("Los importes fiscales deben tener dos decimales.", out error);
 
-        var isNote = voucherType is 2 or 3 or 7 or 8;
+        var isNote = voucherType is 2 or 3 or 7 or 8 or 202 or 203 or 207 or 208;
         if (isNote && associated is null)
             return Fail("La nota de crédito o débito debe estar asociada a la factura original autorizada.", out error);
         if (!isNote && associated is not null)
@@ -133,7 +160,7 @@ public static class WsfeVoucherPreparation
             receiver.VatCondition, Date(invoice.IssueDate), serviceFrom, serviceTo, paymentDue,
             net, 0m, exempt, vat, 0m, invoice.Total, vatLines, currency, invoice.ExchangeRate,
             currency == "PES" ? null : invoice.PaidInForeignCurrency,
-            associated is null ? WsfeVoucherData.NoAssociated : [associated]);
+            associated is null ? WsfeVoucherData.NoAssociated : [associated], optionals);
         try
         {
             WsfeCaeRequestBuilder.Validate(prepared);

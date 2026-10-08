@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddSingleton<ArcaWsaaTicketCache>();
         services.AddScoped<ArcaWsaaClient>();
         services.AddScoped<ArcaWsfeClient>();
+        services.AddScoped<WsfecredClient>();
         services.AddScoped<WsfeCaeTransport>();
         services.AddScoped<LealControl.Modules.Crm.Contracts.Fiscal.IArcaFiscalGateway, ArcaFiscalGateway>();
         services.AddScoped<ArcaPadronClient>();

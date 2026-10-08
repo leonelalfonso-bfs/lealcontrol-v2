@@ -24,6 +24,8 @@ public sealed class FiscalAuthorizationAttempt
     public DateTime? ResolvedAtUtc { get; private set; }
     public string? Cae { get; private set; }
     public DateTime? CaeDueDate { get; private set; }
+    // Códigos y mensajes con que ARCA rechazó la solicitud.
+    public string? RejectionDetail { get; private set; }
 
     public static FiscalAuthorizationAttempt Reserve(
         TenantId tenantId, Guid invoiceId, int pointOfSale, int voucherType,
@@ -78,10 +80,11 @@ public sealed class FiscalAuthorizationAttempt
         ResolvedAtUtc = DateTime.UtcNow;
     }
 
-    public void Reject()
+    public void Reject(string? detail = null)
     {
         if (Status != "Pending") throw new InvalidOperationException("No se puede rechazar una reserva indeterminada.");
         Status = "Rejected";
+        RejectionDetail = detail is null ? null : detail.Length <= 1000 ? detail : detail[..1000];
         ResolvedAtUtc = DateTime.UtcNow;
     }
 }

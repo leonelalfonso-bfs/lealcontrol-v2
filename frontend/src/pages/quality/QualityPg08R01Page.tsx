@@ -4,6 +4,7 @@ import { api } from "../../api/client";
 import type { QualityManagementReview } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
 import { AUDIT_STATUS, labelOf, NC_KIND } from "./qualityLabels";
+import { todayAr } from "../../lib/dates";
 
 const STATUS_LABEL: Record<string, string> = {
   Draft: "Borrador",
@@ -131,7 +132,7 @@ export function QualityPg08R01Page() {
   const [yearFilter, setYearFilter] = useState<string>("all");
 
   const [programYear, setProgramYear] = useState(String(currentYear));
-  const [reviewDate, setReviewDate] = useState(new Date().toISOString().slice(0, 10));
+  const [reviewDate, setReviewDate] = useState(todayAr());
   const [attendees, setAttendees] = useState("");
   const [inputsNotes, setInputsNotes] = useState("");
   const [notes, setNotes] = useState("");

@@ -899,6 +899,10 @@ export type Invoice = {
   paidInForeignCurrency?: boolean;
   exchangeRateType?: "Divisa" | "Billete" | null;
   exchangeDifferenceImputationId?: string | null;
+  fceCbu?: string | null;
+  fceAlias?: string | null;
+  fceTransferMode?: "SCA" | "ADC" | null;
+  fceCancellation?: boolean | null;
   currency: string;
   exchangeRate: number;
   subtotal: number;
@@ -938,6 +942,11 @@ export type InvoiceWrite = {
   paidInForeignCurrency?: boolean;
   exchangeRateType?: "Divisa" | "Billete" | null;
   exchangeDifferenceImputationId?: string | null;
+  fceCbu?: string;
+  fceAlias?: string;
+  fceTransferMode?: "SCA" | "ADC";
+  fceCancellation?: boolean;
+  replacesInvoiceId?: string;
   currency: string;
   exchangeRate: number;
   notes?: string | null;

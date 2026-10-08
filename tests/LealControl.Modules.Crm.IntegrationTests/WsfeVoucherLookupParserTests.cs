@@ -1,3 +1,4 @@
+using LealControl.Modules.Crm.Contracts.Fiscal;
 using LealControl.Modules.Crm.Infrastructure.Arca;
 using Xunit;
 
@@ -91,5 +92,16 @@ public sealed class WsfeVoucherLookupParserTests
         Assert.False(WsfeExchangeRateParser.Parse(ok.Replace("<MonId>DOL", "<MonId>060"), "DOL").Ok);
         Assert.False(WsfeExchangeRateParser.Parse(ok.Replace("</ResultGet>", "</ResultGet><Errors><Err><Code>12002</Code></Err></Errors>"), "DOL").Ok);
         Assert.False(WsfeExchangeRateParser.Parse("no xml", "DOL").Ok);
+    }
+
+    [Fact]
+    public void Reads_fce_optionals()
+    {
+        var xml = Valid.Replace("<Resultado>A</Resultado>",
+            "<Opcionales><Opcional><Id>2101</Id><Valor>0070123420000012345678</Valor></Opcional><Opcional><Id>27</Id><Valor>SCA</Valor></Opcional></Opcionales><Resultado>A</Resultado>");
+        var result = WsfeVoucherLookupParser.Parse(xml, 5, 1, 44);
+        Assert.True(result.Confirmed, result.Detail);
+        Assert.Equal(2, result.FiscalData!.OptionalList.Count);
+        Assert.Contains(new WsfeOptional("27", "SCA"), result.FiscalData.OptionalList);
     }
 }

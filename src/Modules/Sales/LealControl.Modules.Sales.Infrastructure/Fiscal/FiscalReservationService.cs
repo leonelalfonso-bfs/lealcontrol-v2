@@ -36,6 +36,9 @@ public sealed class FiscalReservationService
         _policy = policy ?? new FiscalEmissionPolicy(AllowProduction: false);
     }
 
+    // Desde este total en pesos se consulta si el cliente debe recibir FCE (mínimo vigente: $5.549.862).
+    public const decimal FceCheckThreshold = 1_000_000m;
+
     public async Task<FiscalReservationResult> ReserveAsync(Guid invoiceId, CancellationToken ct)
     {
         var tenantId = _tenant.TenantId;
@@ -50,8 +53,12 @@ public sealed class FiscalReservationService
             return Fail(FiscalAssociation.Unavailable);
         if (!WsfeVoucherPreparation.TryBuild(invoice, out var data, out var error, associated) || data is null)
             return Fail(error);
-        if (!FiscalEmissionDateRule.IsAllowed(data.IssueDate, data.Concept, _clock.GetUtcNow()))
-            return Fail(data.Concept == 1
+        if (!FiscalEmissionDateRule.IsAllowed(data.IssueDate, data.Concept, _clock.GetUtcNow(), data.VoucherType))
+            return Fail(data.IsFce
+                ? (WsfeCaeRequestBuilder.IsFceInvoice(data.VoucherType)
+                    ? "La Factura de Crédito Electrónica debe tener fecha entre 5 días atrás y mañana (Argentina)."
+                    : "Las notas de la Factura de Crédito Electrónica deben tener fecha de hoy o de hasta 5 días atrás (Argentina).")
+                : data.Concept == 1
                 ? "La fecha de emisión debe estar dentro de los cinco días anteriores o posteriores a la fecha actual de Argentina."
                 : "La fecha de emisión debe estar dentro de los diez días anteriores o posteriores a la fecha actual de Argentina.");
         if (await _db.FiscalAuthorizationAttempts.AnyAsync(a =>
@@ -69,6 +76,32 @@ public sealed class FiscalReservationService
             if (official.Rate != data.ExchangeRate)
                 return Fail($"La cotización del borrador ({data.ExchangeRate:0.######}) no coincide con la oficial de ARCA " +
                     $"({official.Rate:0.######}{RateDateText(official)}). Usá \"Cotización ARCA\" para actualizarla.");
+        }
+
+        // Factura común a un cliente obligado a recibir FCE por este importe: no se autoriza.
+        // Debajo del umbral de consulta ningún cliente está obligado (el mínimo vigente es mayor).
+        if (data.VoucherType is 1 or 6 && data.ReceiverDocumentType == 80 &&
+            data.TotalAmount * data.ExchangeRate >= FceCheckThreshold)
+        {
+            var obligation = await _gateway.GetFceObligationAsync(data.ReceiverDocumentNumber,
+                DateOnly.ParseExact(data.IssueDate, "yyyyMMdd"), ct);
+            if (!obligation.Ok)
+                return Fail($"No se pudo verificar en ARCA si corresponde Factura de Crédito Electrónica: {obligation.Detail}");
+            if (obligation.Obligated && data.TotalAmount * data.ExchangeRate >= obligation.MinimumAmount)
+                return Fail($"Este cliente está obligado a recibir Factura de Crédito Electrónica desde $ {obligation.MinimumAmount:N2}: emití una FCE en lugar de una factura común.");
+        }
+
+        // Y al revés: una FCE solo si el cliente está obligado y el importe llega al mínimo vigente.
+        if (WsfeCaeRequestBuilder.IsFceInvoice(data.VoucherType))
+        {
+            var obligation = await _gateway.GetFceObligationAsync(data.ReceiverDocumentNumber,
+                DateOnly.ParseExact(data.IssueDate, "yyyyMMdd"), ct);
+            if (!obligation.Ok)
+                return Fail($"No se pudo verificar en ARCA si corresponde Factura de Crédito Electrónica: {obligation.Detail}");
+            if (!obligation.Obligated)
+                return Fail("Este cliente no está obligado a recibir Factura de Crédito Electrónica: emití una factura común.");
+            if (data.TotalAmount * data.ExchangeRate < obligation.MinimumAmount)
+                return Fail($"Por este importe corresponde factura común: el cliente recibe Factura de Crédito Electrónica desde $ {obligation.MinimumAmount:N2}.");
         }
 
         var numbering = await _gateway.GetLastAuthorizedAsync(

@@ -6,6 +6,7 @@ import type { CustomerSummary, Invoice, PurchaseInvoice } from "../api/types";
 import { SearchField } from "../components/ui/SearchField";
 import { matchesSearch, parseSearch } from "../lib/search";
 import { withCollections, type ReceiptForImputation } from "../lib/receivables";
+import { documentLabel } from "../lib/documents";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import type { CompanySettings } from "../api/types";
 import "./collections.css";
@@ -378,8 +379,7 @@ export function CurrentAccountsPage() {
         const rate = i.exchangeRate && i.exchangeRate > 0 ? i.exchangeRate : 1;
         const amountArs = isUsd ? (i.total || 0) * rate : (i.total || 0);
         const nc = isCreditNoteType(i.invoiceType);
-        const letter = (i.invoiceType || "B").replace(/^(NC_|ND_)/, "");
-        const label = `${nc ? "Nota de Crédito" : isDebitNoteType(i.invoiceType) ? "Nota de Débito" : "Factura"} ${letter}${isUsd ? " (USD)" : ""}`;
+        const label = `${documentLabel(i.invoiceType || "B")}${isUsd ? " (USD)" : ""}`;
         const balance = salesBalances.get(i.id);
 
         history.push({

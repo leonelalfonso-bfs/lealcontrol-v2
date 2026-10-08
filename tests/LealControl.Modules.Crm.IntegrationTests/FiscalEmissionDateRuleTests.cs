@@ -34,4 +34,19 @@ public sealed class FiscalEmissionDateRuleTests
         var now = new DateTimeOffset(2026, 10, 2, 15, 0, 0, TimeSpan.Zero);
         Assert.Equal(expected, FiscalEmissionDateRule.IsAllowed(date, 1, now));
     }
+
+    [Theory]
+    [InlineData(201, "20261003", true)]
+    [InlineData(201, "20261002", false)]
+    [InlineData(201, "20261009", true)]
+    [InlineData(201, "20261010", false)]
+    [InlineData(203, "20261008", true)]
+    [InlineData(203, "20261009", false)]
+    [InlineData(202, "20261003", true)]
+    public void Fce_window_is_five_days_back_and_no_future_for_notes(int type, string date, bool expected)
+    {
+        // 8/10 a las 20 h de Argentina (23 h UTC).
+        var now = new DateTimeOffset(2026, 10, 8, 23, 0, 0, TimeSpan.Zero);
+        Assert.Equal(expected, FiscalEmissionDateRule.IsAllowed(date, 1, now, type));
+    }
 }

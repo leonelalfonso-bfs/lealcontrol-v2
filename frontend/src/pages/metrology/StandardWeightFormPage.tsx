@@ -1,6 +1,7 @@
 import React, { useState, useEffect, FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api/client";
+import { todayAr, addDaysAr } from "../../lib/dates";
 
 export function StandardWeightFormPage() {
   const navigate = useNavigate();
@@ -27,8 +28,8 @@ export function StandardWeightFormPage() {
   const [factorK, setFactorK] = useState("2");
   const [certificateNumber, setCertificateNumber] = useState("");
   const [traceabilityLab, setTraceabilityLab] = useState("Laboratorio Acreditado");
-  const [calibrationDate, setCalibrationDate] = useState(new Date().toISOString().split("T")[0]);
-  const [expirationDate, setExpirationDate] = useState(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
+  const [calibrationDate, setCalibrationDate] = useState(todayAr());
+  const [expirationDate, setExpirationDate] = useState(addDaysAr(365));
   const [status, setStatus] = useState("Valid");
 
   useEffect(() => {

@@ -70,7 +70,7 @@ public sealed class FiscalAuthorizationService
             if (!WsfeVoucherPreparation.TryBuild(invoice, out var prepared, out var error, associated)
                 || prepared is null)
                 return Fail(error);
-            if (!FiscalEmissionDateRule.IsAllowed(prepared.IssueDate, prepared.Concept, _clock.GetUtcNow()))
+            if (!FiscalEmissionDateRule.IsAllowed(prepared.IssueDate, prepared.Concept, _clock.GetUtcNow(), prepared.VoucherType))
                 return Fail("La fecha de emisión quedó fuera de la ventana permitida; la reserva no se envió y requiere revisión.");
             if (invoice.PointOfSale != attempt.PointOfSale || prepared.VoucherType != attempt.VoucherType
                 || prepared.ReceiverDocumentNumber != attempt.RecipientDocument || prepared.TotalAmount != attempt.Total
@@ -112,10 +112,10 @@ public sealed class FiscalAuthorizationService
             _db.ChangeTracker.Clear();
             var attempt = await _db.FiscalAuthorizationAttempts.FirstOrDefaultAsync(a =>
                 a.Id == attemptId && a.TenantId == tenantId && a.InvoiceId == invoiceId, ct);
-            if (attempt?.Status == "Pending") attempt.Reject();
+            if (attempt?.Status == "Pending") attempt.Reject(reply.Detail);
             await _db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
-            return Fail("ARCA rechazó la solicitud; revisar la reserva antes de continuar.");
+            return Fail(reply.Detail);
         }
         return await _recovery.RecoverAsync(invoiceId, ct, reply);
     }

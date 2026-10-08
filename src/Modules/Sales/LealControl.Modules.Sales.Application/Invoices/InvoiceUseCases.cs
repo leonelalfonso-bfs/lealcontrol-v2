@@ -56,7 +56,11 @@ public sealed record InvoiceDto(
     Guid? AssociatedInvoiceId = null,
     bool PaidInForeignCurrency = false,
     string? ExchangeRateType = null,
-    Guid? ExchangeDifferenceImputationId = null);
+    Guid? ExchangeDifferenceImputationId = null,
+    string? FceCbu = null,
+    string? FceAlias = null,
+    string? FceTransferMode = null,
+    bool? FceCancellation = null);
 
 public sealed record InvoiceItemWriteDto(
     Guid? ProductId,
@@ -93,7 +97,14 @@ public sealed record CreateInvoiceCommand(
     // "Divisa" o "Billete": cotización BNA pactada para cancelar en pesos.
     string? ExchangeRateType = null,
     // Imputación de cobro cuya diferencia de cambio documenta esta nota (en pesos).
-    Guid? ExchangeDifferenceImputationId = null) : IRequest<Result<InvoiceDto>>;
+    Guid? ExchangeDifferenceImputationId = null,
+    // Factura de Crédito Electrónica: CBU/alias de cobro, modalidad SCA/ADC y, en notas, anulación.
+    string? FceCbu = null,
+    string? FceAlias = null,
+    string? FceTransferMode = null,
+    bool? FceCancellation = null,
+    // Borrador rechazado por ARCA que este comprobante corrige: se anula al crear el nuevo.
+    Guid? ReplacesInvoiceId = null) : IRequest<Result<InvoiceDto>>;
 
 public sealed record AuthorizeInvoiceArcaCommand(Guid Id) : IRequest<Result<InvoiceDto>>;
 

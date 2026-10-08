@@ -13,6 +13,8 @@ import {
   type RemitoItem
 } from "../api/types";
 import { CustomerPicker, ProductPicker } from "../components/pickers";
+import { documentLabel, isFceType, letterOf } from "../lib/documents";
+import { todayAr, addDaysAr } from "../lib/dates";
 
 interface FormInvoiceItem {
   productId?: string;
@@ -113,7 +115,12 @@ export function InvoiceFormPage() {
   const sourceInvoiceId = queryParams.get("origen");
   const noteKind = queryParams.get("nota") === "ND" ? "ND" : "NC";
   // Nota por la diferencia de cambio de una imputación de cobro (factura en USD cobrada en pesos).
-  const differenceImputationId = queryParams.get("dif");
+  const differenceImputationIdParam = queryParams.get("dif");
+  // Corregir un borrador rechazado por ARCA: se precarga y al guardar se reemplaza.
+  const copyFromId = queryParams.get("copiar");
+  const [copiedDifferenceId, setCopiedDifferenceId] = useState<string | null>(null);
+  const differenceImputationId = differenceImputationIdParam || copiedDifferenceId;
+  const [replacing, setReplacing] = useState<Invoice | null>(null);
 
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -136,9 +143,9 @@ export function InvoiceFormPage() {
   const [customerTaxCondition, setCustomerTaxCondition] = useState<string>("ResponsableInscripto");
   const [locationId, setLocationId] = useState<string>("");
   const [customerAddress, setCustomerAddress] = useState<string>("");
-  const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [issueDate, setIssueDate] = useState<string>(todayAr());
   const [saleCondition, setSaleCondition] = useState<string>("Cuenta Corriente 30 días");
-  const [dueDate, setDueDate] = useState<string>(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
+  const [dueDate, setDueDate] = useState<string>(addDaysAr(30));
   const [fiscalConcept, setFiscalConcept] = useState<number>(0);
   const [serviceFrom, setServiceFrom] = useState<string>("");
   const [serviceTo, setServiceTo] = useState<string>("");
@@ -150,6 +157,17 @@ export function InvoiceFormPage() {
   // Cotización BNA vendedor pactada para cancelar en pesos (día hábil anterior al pago).
   const [exchangeRateType, setExchangeRateType] = useState<"Divisa" | "Billete">("Divisa");
   const [differenceInfo, setDifferenceInfo] = useState<string | null>(null);
+  // Factura de Crédito Electrónica: CBU/alias donde cobra la empresa (de Configuración) y modalidad.
+  const [fceCbu, setFceCbu] = useState("");
+  const [fceAlias, setFceAlias] = useState("");
+  const [fceTransferMode, setFceTransferMode] = useState<"SCA" | "ADC">("SCA");
+  const [fceCancellation, setFceCancellation] = useState(false);
+  useEffect(() => {
+    api.getCompanySettings().then((c) => {
+      setFceCbu((c?.bankCbu ?? "").replace(/\D+/g, ""));
+      setFceAlias(c?.bankAlias ?? "");
+    }).catch(() => undefined);
+  }, []);
   const [exchangeRate, setExchangeRate] = useState<number>(1.0);
   const [advancePercent, setAdvancePercent] = useState<number>(100);
   const [notes, setNotes] = useState<string>("");
@@ -189,6 +207,45 @@ export function InvoiceFormPage() {
 
         const defaultRate = rates?.usdDivisaSell || rates?.usdBilleteSell || 1400;
 
+        if (copyFromId) {
+          const draft = await api.getInvoice(copyFromId);
+          setReplacing(draft);
+          setInvoiceType(draft.invoiceType);
+          setPointOfSale(draft.pointOfSale);
+          setCustomerId(draft.customerId);
+          setCustomerName(draft.customerName);
+          setCustomerDocument(draft.customerDocument);
+          setCustomerTaxCondition(draft.customerTaxCondition);
+          setCustomerAddress(draft.customerAddress ?? "");
+          setDueDate(draft.dueDate.slice(0, 10));
+          setFiscalConcept(draft.fiscalConcept);
+          setServiceFrom(draft.serviceFrom?.slice(0, 10) ?? "");
+          setServiceTo(draft.serviceTo?.slice(0, 10) ?? "");
+          setCurrency(draft.currency === "USD" ? "USD" : "ARS");
+          setExchangeRate(draft.exchangeRate || 1);
+          setRateSource(draft.paidInForeignCurrency ? "arca" : "manual");
+          setPaidInForeignCurrency(Boolean(draft.paidInForeignCurrency));
+          setExchangeRateType(draft.exchangeRateType === "Billete" ? "Billete" : "Divisa");
+          setNotes(draft.notes ?? "");
+          if (draft.orderId) setSourceOrderId(draft.orderId);
+          if (draft.fceCbu) setFceCbu(draft.fceCbu);
+          if (draft.fceAlias) setFceAlias(draft.fceAlias);
+          if (draft.fceTransferMode) setFceTransferMode(draft.fceTransferMode);
+          setFceCancellation(Boolean(draft.fceCancellation));
+          setCopiedDifferenceId(draft.exchangeDifferenceImputationId ?? null);
+          if (draft.associatedInvoiceId) setAssociatedInvoice(await api.getInvoice(draft.associatedInvoiceId));
+          setItems(draft.items.map((item) => ({
+            productId: item.productId ?? undefined,
+            remitoItemId: item.remitoItemId ?? undefined,
+            code: item.code,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            discountPercent: 0,
+            vatRate: item.vatRate
+          })));
+        }
+
         if (sourceInvoiceId) {
           const original = await api.getInvoice(sourceInvoiceId);
           const letter = original.invoiceType.replace(/^(NC_|ND_)/, "");
@@ -208,7 +265,7 @@ export function InvoiceFormPage() {
           setExchangeRate(original.exchangeRate || 1);
           setRateSource(original.paidInForeignCurrency ? "arca" : "manual");
           setExchangeRateType(original.exchangeRateType === "Billete" ? "Billete" : "Divisa");
-          setNotes(`${noteKind === "NC" ? "Nota de crédito" : "Nota de débito"} sobre Factura ${letter} ${original.formattedNumber}`);
+          setNotes(`${noteKind === "NC" ? "Nota de crédito" : "Nota de débito"} sobre ${documentLabel(original.invoiceType)} ${original.formattedNumber}`);
           if (differenceImputationId) {
             const imp = await api.getCollectionImputation(differenceImputationId);
             const diff = Math.abs(imp.exchangeDifferenceArs ?? 0);
@@ -370,7 +427,7 @@ export function InvoiceFormPage() {
     }
 
     loadData();
-  }, [orderId, remitoId, sourceInvoiceId, noteKind, differenceImputationId]);
+  }, [orderId, remitoId, sourceInvoiceId, noteKind, differenceImputationIdParam, copyFromId]);
 
   // Handle Customer Selection
   const handleCustomerChange = async (newCustId: string) => {
@@ -411,7 +468,6 @@ export function InvoiceFormPage() {
   // Sale condition sync due date
   const handleSaleConditionChange = (cond: string) => {
     setSaleCondition(cond);
-    const now = new Date(issueDate || Date.now());
     let days = 30;
     if (cond === "Contado") days = 0;
     else if (cond.includes("15")) days = 15;
@@ -419,8 +475,10 @@ export function InvoiceFormPage() {
     else if (cond.includes("60")) days = 60;
     else if (cond.includes("90")) days = 90;
 
-    now.setDate(now.getDate() + days);
-    setDueDate(now.toISOString().split("T")[0]);
+    // Desde la fecha de emisión; mediodía UTC evita corrimientos de día.
+    const due = new Date(`${issueDate || addDaysAr(0)}T12:00:00Z`);
+    due.setUTCDate(due.getUTCDate() + days);
+    setDueDate(due.toISOString().slice(0, 10));
   };
 
   // Live Exchange Rates Refresh
@@ -546,6 +604,24 @@ export function InvoiceFormPage() {
   const iva27 = items.filter((i) => Math.abs(i.vatRate - 27.0) < 0.1).reduce((s, i) => s + (calculateItemNet(i) * 0.27), 0);
   const totalIva = iva21 + iva105 + iva27;
   const totalFactura = subtotalNeto + totalIva;
+
+  // ¿Este cliente debe recibir Factura de Crédito Electrónica MiPyMEs por este importe? (consulta ARCA)
+  const [fceCheck, setFceCheck] = useState<{ ok: boolean; obligated: boolean; minimumAmount: number; required: boolean; detail: string } | null>(null);
+  const fceCuit = customerDocument.replace(/\D+/g, "");
+  const fceTotal = Math.round(totalFactura * 100) / 100;
+  useEffect(() => {
+    if (fceCuit.length !== 11 || fceTotal <= 0 || associatedInvoice || invoiceType === "Proforma") {
+      setFceCheck(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      api.getFceObligation(fceCuit, issueDate, fceTotal, currency === "USD" ? exchangeRate || 1 : 1)
+        .then((r) => !cancelled && setFceCheck(r))
+        .catch(() => !cancelled && setFceCheck(null));
+    }, 700);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [fceCuit, fceTotal, issueDate, currency, exchangeRate, associatedInvoice, invoiceType]);
   const equivArs = currency === "USD" ? totalFactura * (exchangeRate || 1) : totalFactura;
 
   const handleSubmit = async (e: FormEvent) => {
@@ -568,6 +644,10 @@ export function InvoiceFormPage() {
       setError("Seleccioná si se facturan productos, servicios o ambos.");
       return;
     }
+    if ((invoiceType === "FCE_A" || invoiceType === "FCE_B") && fceCbu.replace(/\D+/g, "").length !== 22) {
+      setError("La Factura de Crédito Electrónica requiere el CBU de 22 dígitos donde cobra la empresa.");
+      return;
+    }
     if ((fiscalConcept === 2 || fiscalConcept === 3) &&
         (!serviceFrom || !serviceTo || serviceTo < serviceFrom || dueDate < issueDate)) {
       setError("Indicá un período válido del servicio y un vencimiento no anterior a la emisión.");
@@ -579,7 +659,8 @@ export function InvoiceFormPage() {
       pointOfSale,
       issueDate,
       orderId: orderId || sourceOrderId || undefined,
-      remitoId: remitoId || undefined,
+      remitoId: remitoId || replacing?.remitoId || undefined,
+      replacesInvoiceId: replacing?.id,
       customerId,
       customerName,
       customerDocument,
@@ -598,6 +679,10 @@ export function InvoiceFormPage() {
         : rateSource === "manual" ? exchangeRateType
         : "Divisa",
       exchangeDifferenceImputationId: differenceImputationId || undefined,
+      ...(isFceType(invoiceType) && !invoiceType.startsWith("NC_") && !invoiceType.startsWith("ND_")
+        ? { fceCbu: fceCbu || undefined, fceAlias: fceAlias || undefined, fceTransferMode } : {}),
+      ...(isFceType(invoiceType) && (invoiceType.startsWith("NC_") || invoiceType.startsWith("ND_"))
+        ? { fceCancellation } : {}),
       associatedInvoiceId: associatedInvoice?.id,
       restockItems: noteKind === "NC" ? restockItems : undefined,
       notes,
@@ -652,11 +737,62 @@ export function InvoiceFormPage() {
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
           {/* Main Column */}
           <div className="stack" style={{ gap: 20 }}>
+            {replacing && (
+              <div className="card pad" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
+                <strong>Corrigiendo {replacing.formattedNumber}, rechazado por ARCA.</strong>
+                <div style={{ fontSize: "0.88rem", marginTop: 4 }}>
+                  Ajustá lo que haga falta y guardá: se crea un borrador nuevo y el rechazado queda anulado. El stock no se mueve de nuevo.
+                </div>
+              </div>
+            )}
+            {fceCheck && (
+              <div className="card pad" role="status" style={{
+                background: fceCheck.required ? "#fffbeb" : "#f8fafc",
+                border: `1px solid ${fceCheck.required ? "#f59e0b" : "#e2e8f0"}`
+              }}>
+                {!fceCheck.ok ? (
+                  <span className="muted">No se pudo verificar en ARCA si corresponde Factura de Crédito Electrónica: {fceCheck.detail}</span>
+                ) : fceCheck.required && isFceType(invoiceType) ? (
+                  <span>✓ Corresponde Factura de Crédito Electrónica y es lo que estás emitiendo.</span>
+                ) : fceCheck.required ? (
+                  <>
+                    <strong>Corresponde Factura de Crédito Electrónica MiPyMEs (FCE).</strong>
+                    <div style={{ fontSize: "0.88rem", marginTop: 4 }}>
+                      ARCA informa que este cliente está obligado a recibir FCE desde {fceCheck.minimumAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}, y esta factura supera ese monto.
+                    </div>
+                    <button type="button" className="btn compact" style={{ marginTop: 8 }}
+                      onClick={() => setInvoiceType(`FCE_${letterOf(invoiceType) === "B" ? "B" : "A"}`)}>
+                      Cambiar a Factura de Crédito Electrónica
+                    </button>
+                  </>
+                ) : isFceType(invoiceType) && !invoiceType.startsWith("NC_") && !invoiceType.startsWith("ND_") ? (
+                  <>
+                    <strong style={{ color: "#92400e" }}>
+                      {fceCheck.obligated
+                        ? `Por este importe corresponde factura común: este cliente recibe FCE desde ${fceCheck.minimumAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.`
+                        : "Este cliente no está obligado a recibir Factura de Crédito Electrónica: corresponde factura común."}
+                    </strong>
+                    <div>
+                      <button type="button" className="btn compact" style={{ marginTop: 8 }}
+                        onClick={() => setInvoiceType(letterOf(invoiceType) === "B" ? "B" : "A")}>
+                        Cambiar a factura común
+                      </button>
+                    </div>
+                  </>
+                ) : fceCheck.obligated ? (
+                  <span className="muted">
+                    Este cliente recibe FCE desde {fceCheck.minimumAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}; por este importe corresponde factura común.
+                  </span>
+                ) : (
+                  <span className="muted">Verificado en ARCA: este cliente no está obligado a recibir Factura de Crédito Electrónica.</span>
+                )}
+              </div>
+            )}
             {associatedInvoice ? (
               <div className="card pad" style={{ background: "#f8fafc", border: "1px solid #cbd5e1" }}>
                 <strong>
-                  {noteKind === "NC" ? "Nota de crédito" : "Nota de débito"} sobre Factura{" "}
-                  {associatedInvoice.invoiceType.replace(/^(NC_|ND_)/, "")} {associatedInvoice.formattedNumber}
+                  {invoiceType.startsWith("ND_") ? "Nota de débito" : "Nota de crédito"} sobre{" "}
+                  {documentLabel(associatedInvoice.invoiceType)} {associatedInvoice.formattedNumber}
                 </strong>
                 {differenceInfo && (
                   <div style={{ fontSize: "0.85rem", color: "#0f766e", marginTop: 4, fontWeight: 600 }}>{differenceInfo}</div>
@@ -828,15 +964,49 @@ export function InvoiceFormPage() {
                     <option value="B">Factura B (Cons. Final / Exento)</option>
                     <option value="C">Factura C (Emisor Monotributo)</option>
                     <option value="M">Factura M (Régimen Retención)</option>
+                    <option value="FCE_A">Factura de Crédito Electrónica A (MiPyMEs)</option>
+                    <option value="FCE_B">Factura de Crédito Electrónica B (MiPyMEs)</option>
                     {associatedInvoice && <>
                       <option value="NC_A">Nota de Crédito A</option>
                       <option value="NC_B">Nota de Crédito B</option>
                       <option value="ND_A">Nota de Débito A</option>
                       <option value="ND_B">Nota de Débito B</option>
+                      <option value="NC_FCE_A">Nota de Crédito FCE A</option>
+                      <option value="ND_FCE_A">Nota de Débito FCE A</option>
+                      <option value="NC_FCE_B">Nota de Crédito FCE B</option>
+                      <option value="ND_FCE_B">Nota de Débito FCE B</option>
                     </>}
                     <option value="Proforma">Factura Proforma / Interna</option>
                   </select>
                 </label>
+
+                {isFceType(invoiceType) && !invoiceType.startsWith("NC_") && !invoiceType.startsWith("ND_") && (
+                  <>
+                    <label>
+                      CBU de cobro (FCE) *
+                      <input value={fceCbu} inputMode="numeric" maxLength={22} placeholder="22 dígitos"
+                        onChange={(e) => setFceCbu(e.target.value.replace(/\D+/g, ""))} />
+                      <span className="muted" style={{ fontSize: "0.78rem" }}>Debe estar registrado en ARCA a nombre de la empresa.</span>
+                    </label>
+                    <label>
+                      Alias (opcional)
+                      <input value={fceAlias} maxLength={20} onChange={(e) => setFceAlias(e.target.value)} />
+                    </label>
+                    <label>
+                      Transferencia de la FCE
+                      <select value={fceTransferMode} onChange={(e) => setFceTransferMode(e.target.value as "SCA" | "ADC")}>
+                        <option value="SCA">Sistema de Circulación Abierta (SCA)</option>
+                        <option value="ADC">Agente de Depósito Colectivo (ADC)</option>
+                      </select>
+                    </label>
+                  </>
+                )}
+                {isFceType(invoiceType) && (invoiceType.startsWith("NC_") || invoiceType.startsWith("ND_")) && (
+                  <label style={{ display: "flex", flexDirection: "row", justifyContent: "flex-start", gap: 8, alignItems: "center" }}>
+                    <input type="checkbox" checked={fceCancellation} onChange={(e) => setFceCancellation(e.target.checked)} style={{ width: "auto" }} />
+                    Es de anulación: el cliente rechazó la Factura de Crédito en ARCA
+                  </label>
+                )}
 
                 <label>
                   Punto de Venta *

@@ -5,7 +5,9 @@ import type { CustomerSummary, Invoice } from "../api/types";
 import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
 import { CustomerPicker } from "../components/pickers";
 import { withCollections, type ReceiptForImputation } from "../lib/receivables";
+import { documentLabel } from "../lib/documents";
 import "./collections.css";
+import { todayAr } from "../lib/dates";
 
 type Account = {
   id: string;
@@ -58,11 +60,6 @@ const shortDate = (iso?: string | null) => {
   return y && m && d ? `${Number(d)}/${Number(m)}/${y}` : "—";
 };
 const newId = () => Math.random().toString(36).substring(2, 9);
-const documentLabel = (type: string) => {
-  const letter = type.replace(/^(NC_|ND_)/, "");
-  if (type.startsWith("ND_")) return `Nota de Débito ${letter}`;
-  return `Factura ${letter}`;
-};
 
 export function CollectionReceiptsWorkspacePage() {
   const [searchParams] = useSearchParams();
@@ -85,7 +82,7 @@ export function CollectionReceiptsWorkspacePage() {
   const [movementAccountFilter, setMovementAccountFilter] = useState<string>("");
   const [loadingMovements, setLoadingMovements] = useState(false);
 
-  const [receiptDate, setReceiptDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [receiptDate, setReceiptDate] = useState<string>(todayAr());
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
   const [description, setDescription] = useState<string>("");
   const [lines, setLines] = useState<PaymentLine[]>([]);

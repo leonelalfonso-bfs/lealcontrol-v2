@@ -12,15 +12,17 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
     private readonly ArcaWsaaClient _wsaa;
     private readonly ArcaWsfeClient _wsfe;
     private readonly WsfeCaeTransport _cae;
+    private readonly WsfecredClient _wsfecred;
 
     public ArcaFiscalGateway(CrmDbContext db, ITenantContext tenant,
-        ArcaWsaaClient wsaa, ArcaWsfeClient wsfe, WsfeCaeTransport cae)
+        ArcaWsaaClient wsaa, ArcaWsfeClient wsfe, WsfeCaeTransport cae, WsfecredClient wsfecred)
     {
         _db = db;
         _tenant = tenant;
         _wsaa = wsaa;
         _wsfe = wsfe;
         _cae = cae;
+        _wsfecred = wsfecred;
     }
 
     public async Task<ArcaFiscalNumbering> GetLastAuthorizedAsync(
@@ -83,8 +85,21 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
             : Unconfirmed(result.Detail);
     }
 
+    public async Task<ArcaFceObligation> GetFceObligationAsync(
+        string receiverCuit, DateOnly issueDate, CancellationToken cancellationToken)
+    {
+        if (receiverCuit.Length != 11 || !receiverCuit.All(char.IsDigit))
+            return new(false, false, 0m, "CUIT del cliente inválido para consultar FCE.");
+        var auth = await AuthenticateAsync(null, null, cancellationToken, "wsfecred");
+        if (!auth.Ok)
+            return new(false, false, 0m, auth.Detail);
+        return await _wsfecred.GetObligationAsync(auth.Token!, auth.Sign!, auth.IssuerCuit,
+            auth.Production, receiverCuit, issueDate, cancellationToken);
+    }
+
     private async Task<Auth> AuthenticateAsync(
-        string? expectedIssuerCuit, bool? expectedProduction, CancellationToken cancellationToken)
+        string? expectedIssuerCuit, bool? expectedProduction, CancellationToken cancellationToken,
+        string service = "wsfe")
     {
         var settings = await _db.CompanySettings.AsNoTracking()
             .FirstOrDefaultAsync(x => x.TenantId == _tenant.TenantId, cancellationToken);
@@ -107,10 +122,11 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
         using (certificate)
         {
             var login = await _wsaa.LoginAsync(certificate, settings.ArcaCertificateCrt!,
-                settings.ArcaCertificateKey!, "wsfe", production, cancellationToken);
+                settings.ArcaCertificateKey!, service, production, cancellationToken);
             return login.Ok && login.Token is not null && login.Sign is not null
                 ? new(true, issuer, production, login.Token, login.Sign, string.Empty)
-                : Auth.Fail("ARCA no autorizó el acceso a WSFE.");
+                : Auth.Fail(service == "wsfe" ? "ARCA no autorizó el acceso a WSFE."
+                    : $"ARCA no autorizó el acceso a {service}: revisá que el certificado tenga ese servicio habilitado.");
         }
     }
 

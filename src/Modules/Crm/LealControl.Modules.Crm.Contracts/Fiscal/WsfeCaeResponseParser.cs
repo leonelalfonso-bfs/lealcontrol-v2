@@ -59,7 +59,7 @@ public static class WsfeCaeResponseParser
         var details = result.Descendants().Where(x => x.Name.LocalName == "FECAEDetResponse").ToList();
         var headerResult = Value(header, "Resultado");
         if (details.Count == 0 && headerResult == "R" && HasErrors(result))
-            return new(WsfeCaeOutcome.Rejected, null, null, "ARCA rechazó la solicitud a nivel general.");
+            return new(WsfeCaeOutcome.Rejected, null, null, "ARCA rechazó la solicitud: " + Messages(result));
         if (details.Count != 1) return Unknown("ARCA no devolvió un detalle único.");
 
         var detail = details[0];
@@ -73,7 +73,7 @@ public static class WsfeCaeResponseParser
 
         var detailResult = Value(detail, "Resultado");
         if (headerResult == "R" && detailResult == "R" && string.IsNullOrWhiteSpace(Value(detail, "CAE")))
-            return new(WsfeCaeOutcome.Rejected, null, null, "ARCA rechazó el comprobante.");
+            return new(WsfeCaeOutcome.Rejected, null, null, "ARCA rechazó el comprobante: " + Messages(result));
         if (headerResult != "A" || detailResult != "A" || HasErrors(result))
             return Unknown("Resultado ARCA mixto o contradictorio; consultar el comprobante.");
 
@@ -86,6 +86,18 @@ public static class WsfeCaeResponseParser
         return new(WsfeCaeOutcome.ApprovedPendingConsultation, cae,
             DateTime.SpecifyKind(expiry, DateTimeKind.Utc),
             "CAE recibido; verificar el comprobante mediante FECompConsultar antes de marcarlo autorizado.");
+    }
+
+    // "[10184] mensaje · [10154] mensaje": errores de la solicitud y observaciones del comprobante.
+    private static string Messages(XElement result)
+    {
+        var items = result.Descendants()
+            .Where(x => x.Name.LocalName is "Err" or "Obs")
+            .Select(x => $"[{Child(x, "Code")?.Value?.Trim()}] {Child(x, "Msg")?.Value?.Trim()}")
+            .Distinct()
+            .ToList();
+        var text = items.Count == 0 ? "sin detalle" : string.Join(" · ", items);
+        return text.Length <= 900 ? text : text[..900];
     }
 
     private static bool HasErrors(XElement result) =>

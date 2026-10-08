@@ -36,6 +36,9 @@ internal sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(i => i.Status).HasMaxLength(32).IsRequired();
         builder.Property(i => i.FiscalConcept).HasDefaultValue(0);
         builder.Property(i => i.ExchangeRateType).HasMaxLength(16);
+        builder.Property(i => i.FceCbu).HasMaxLength(22);
+        builder.Property(i => i.FceAlias).HasMaxLength(20);
+        builder.Property(i => i.FceTransferMode).HasMaxLength(3);
         builder.HasIndex(i => new { i.TenantId, i.PointOfSale, i.InvoiceType, i.InvoiceNumber })
             .HasDatabaseName("UX_invoice_authorized_number").IsUnique()
             .HasFilter("\"Status\" = 'Authorized'");
@@ -146,8 +149,9 @@ internal sealed class InvoiceQueryHandlers
             return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.FiscalConcept",
                 "Revisá el concepto, el período del servicio y el vencimiento de pago."));
 
-        var isNote = request.InvoiceType is "NC_A" or "NC_B" or "ND_A" or "ND_B";
-        var isCreditNoteType = request.InvoiceType is "NC_A" or "NC_B";
+        var isNote = request.InvoiceType is "NC_A" or "NC_B" or "ND_A" or "ND_B"
+            or "NC_FCE_A" or "NC_FCE_B" or "ND_FCE_A" or "ND_FCE_B";
+        var isCreditNoteType = request.InvoiceType.StartsWith("NC_", StringComparison.Ordinal);
         if (!isNote && request.AssociatedInvoiceId.HasValue)
             return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.UnexpectedAssociation",
                 "Solo las notas de crédito o débito se asocian a una factura."));
@@ -161,6 +165,22 @@ internal sealed class InvoiceQueryHandlers
                 "La diferencia de cambio se documenta con una nota de crédito o débito."));
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        Invoice? replaced = null;
+        if (request.ReplacesInvoiceId is Guid replacedId)
+        {
+            // Solo se reemplaza un borrador cuyo envío ARCA rechazó (o que nunca se envió).
+            replaced = await _dbContext.Invoices
+                .FirstOrDefaultAsync(i => i.Id == replacedId && i.TenantId == tenantId, cancellationToken);
+            var replacedAttempt = await _dbContext.FiscalAuthorizationAttempts.AsNoTracking()
+                .FirstOrDefaultAsync(a => a.TenantId == tenantId && a.InvoiceId == replacedId, cancellationToken);
+            if (replaced is null || replaced.Status != "Draft" || replaced.Cae is not null ||
+                (replacedAttempt is not null && replacedAttempt.Status != "Rejected"))
+                return Result<InvoiceDto>.Failure(Error.Validation("Sales.Invoice.NotReplaceable",
+                    "Solo se puede corregir un borrador sin CAE cuyo envío ARCA haya sido rechazado."));
+            replaced.Cancel();
+            // Se guarda antes: libera el saldo a acreditar, la diferencia de cambio y el remito.
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
         Invoice? original = null;
         if (isNote)
         {
@@ -171,7 +191,8 @@ internal sealed class InvoiceQueryHandlers
                 cancellationToken);
             original = await _dbContext.Invoices.AsNoTracking()
                 .FirstOrDefaultAsync(i => i.Id == originalId && i.TenantId == tenantId, cancellationToken);
-            var letter = request.InvoiceType[^1..];
+            // La nota corresponde a su factura: NC_A/ND_A → A o ND_A; NC_FCE_A → FCE_A o ND_FCE_A.
+            var letter = FiscalVoucherCodes.BaseType(request.InvoiceType);
             // La diferencia de cambio de una factura en dólares se documenta con una nota en pesos.
             var currencyOk = original?.Currency == request.Currency ||
                 (exchangeDifference && original?.Currency == "USD" && request.Currency == "ARS");
@@ -192,9 +213,11 @@ internal sealed class InvoiceQueryHandlers
             linkedRemito = await _dbContext.Remitos.Include(r => r.Items)
                 .FirstOrDefaultAsync(r => r.Id == remitoId && r.TenantId == tenantId, cancellationToken);
             if (linkedRemito is null || linkedRemito.Status != "Delivered" ||
-                linkedRemito.InvoiceId.HasValue || linkedRemito.CustomerId != request.CustomerId ||
+                (linkedRemito.InvoiceId.HasValue && linkedRemito.InvoiceId != replaced?.Id) ||
+                linkedRemito.CustomerId != request.CustomerId ||
                 (request.OrderId.HasValue && request.OrderId != linkedRemito.OrderId) ||
-                await _dbContext.Invoices.AnyAsync(i => i.TenantId == tenantId && i.RemitoId == remitoId, cancellationToken))
+                await _dbContext.Invoices.AnyAsync(i => i.TenantId == tenantId && i.RemitoId == remitoId &&
+                    i.Status != "Cancelled", cancellationToken))
                 return Result<InvoiceDto>.Failure(
                     Error.Validation("Sales.Invoice.InvalidRemito", "El remito no existe, ya fue facturado o no corresponde al cliente y pedido."));
 
@@ -254,7 +277,11 @@ internal sealed class InvoiceQueryHandlers
             original?.Id,
             request.PaidInForeignCurrency,
             request.ExchangeRateType,
-            request.ExchangeDifferenceImputationId);
+            request.ExchangeDifferenceImputationId,
+            request.FceCbu,
+            request.FceAlias,
+            request.FceTransferMode,
+            request.FceCancellation);
 
         foreach (var item in request.Items)
         {
@@ -315,7 +342,8 @@ internal sealed class InvoiceQueryHandlers
             linkedRemito.MarkAsInvoiced(invoice.Id, invoice.FormattedNumber);
         }
         // Las notas de débito no mueven mercadería; una nota de crédito solo reingresa stock si es devolución.
-        else if (!request.InvoiceType.StartsWith("ND", StringComparison.OrdinalIgnoreCase) &&
+        // Un comprobante que reemplaza a un borrador rechazado no vuelve a mover stock: ya lo movió el original.
+        else if (replaced is null && !request.InvoiceType.StartsWith("ND", StringComparison.OrdinalIgnoreCase) &&
                  !exchangeDifference && (!isCreditNoteType || request.RestockItems))
         {
             // 2. Si es una Factura Directa / Venta de Mostrador (sin remito previo):
@@ -480,7 +508,11 @@ internal sealed class InvoiceQueryHandlers
             i.AssociatedInvoiceId,
             i.PaidInForeignCurrency,
             i.ExchangeRateType,
-            i.ExchangeDifferenceImputationId);
+            i.ExchangeDifferenceImputationId,
+            i.FceCbu,
+            i.FceAlias,
+            i.FceTransferMode,
+            i.FceCancellation);
     }
 
 }

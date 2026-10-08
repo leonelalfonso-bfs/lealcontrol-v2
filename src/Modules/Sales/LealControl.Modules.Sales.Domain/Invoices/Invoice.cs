@@ -127,6 +127,13 @@ public sealed class Invoice : Entity<Guid>
     // Nota de débito/crédito que documenta la diferencia de cambio de una imputación de cobro.
     public Guid? ExchangeDifferenceImputationId { get; private set; }
 
+    // Factura de Crédito Electrónica: CBU y alias donde cobra la empresa, y modalidad de
+    // transferencia (SCA o ADC). En sus notas, si son de anulación (el cliente la rechazó).
+    public string? FceCbu { get; private set; }
+    public string? FceAlias { get; private set; }
+    public string? FceTransferMode { get; private set; }
+    public bool? FceCancellation { get; private set; }
+
     public string Currency { get; private set; } = "ARS";
 
     public decimal ExchangeRate { get; private set; } = 1.0m;
@@ -184,7 +191,11 @@ public sealed class Invoice : Entity<Guid>
         Guid? associatedInvoiceId = null,
         bool paidInForeignCurrency = false,
         string? exchangeRateType = null,
-        Guid? exchangeDifferenceImputationId = null)
+        Guid? exchangeDifferenceImputationId = null,
+        string? fceCbu = null,
+        string? fceAlias = null,
+        string? fceTransferMode = null,
+        bool? fceCancellation = null)
     {
         var formatted = $"{pointOfSale:D4}-{invoiceNumber:D8}";
         var utcIssueDate = issueDate is null ? DateTime.UtcNow
@@ -224,6 +235,20 @@ public sealed class Invoice : Entity<Guid>
         invoice.PaidInForeignCurrency = currency != "ARS" && paidInForeignCurrency;
         invoice.ExchangeRateType = currency != "ARS" && exchangeRateType is "Divisa" or "Billete" ? exchangeRateType : null;
         invoice.ExchangeDifferenceImputationId = exchangeDifferenceImputationId;
+        if (FiscalVoucherCodes.IsFce(invoiceType))
+        {
+            // La factura lleva los datos de cobro; sus notas, solo si son de anulación.
+            if (FiscalVoucherCodes.BaseType(invoiceType) == invoiceType)
+            {
+                invoice.FceCbu = string.IsNullOrWhiteSpace(fceCbu) ? null : new string(fceCbu.Where(char.IsDigit).ToArray());
+                invoice.FceAlias = string.IsNullOrWhiteSpace(fceAlias) ? null : fceAlias.Trim();
+                invoice.FceTransferMode = fceTransferMode is "ADC" ? "ADC" : "SCA";
+            }
+            else
+            {
+                invoice.FceCancellation = fceCancellation;
+            }
+        }
         return invoice;
     }
 
