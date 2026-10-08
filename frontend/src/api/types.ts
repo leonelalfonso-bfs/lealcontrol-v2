@@ -1511,43 +1511,106 @@ export type HrDashboardSummary = {
 // ==========================================
 // FLEET (GESTIÓN DE FLOTA VEHICULAR)
 // ==========================================
+export type VehicleType = "Pickup" | "Van" | "Truck" | "Car" | "Forklift" | "SemiTrailer" | "TractorUnit" | "Trailer" | "Other";
+export type VehicleStatus = "Active" | "InMaintenance" | "OutOfService" | "Sold";
+export type MeterType = "Kilometers" | "Hours" | "Both" | "None";
+export type FleetDocType = "VtvRto" | "InsurancePolicy" | "GreenCard" | "GncCard" | "Senasa" | "Ruta" | "Other" | "FireExtinguisher" | "ForkliftCertification";
+export type ExpirationState = "Ok" | "DueSoon" | "Expired" | "Missing";
+
 export type Vehicle = {
   id: string;
   plate: string;
+  internalCode?: string | null;
+  /** Patente o, si no tiene, código interno. */
+  label: string;
   brand: string;
   model: string;
   year: number;
-  type: number; // 0=Pickup, 1=Van, 2=Truck, 3=Car, 4=Forklift, 5=SemiTrailer
+  type: VehicleType;
+  meterType: MeterType;
   vinChassis: string;
   engineNumber: string;
   currentKilometers: number;
   currentEngineHours: number;
   fuelType: string;
-  status: number; // 0=Active, 1=InMaintenance, 2=OutOfService, 3=Sold
-  assignedDriverId?: string | null;
-  assignedDriverName?: string | null;
-  photoPath?: string | null;
+  status: VehicleStatus;
   notes?: string | null;
   createdAtUtc: string;
+  expiredCount: number;
+  dueSoonCount: number;
+  missingCount: number;
+  nextExpirationDate?: string | null;
+};
+
+export type VehicleWrite = {
+  type: VehicleType;
+  plate: string;
+  internalCode: string;
+  brand: string;
+  model: string;
+  year: number | null;
+  meterType: MeterType;
+  vinChassis: string;
+  engineNumber: string;
+  fuelType: string;
+  status: VehicleStatus;
+  notes: string;
+  initialKilometers?: number | null;
+  initialHours?: number | null;
 };
 
 export type VehicleDocument = {
   id: string;
   vehicleId: string;
-  plate?: string;
-  vehicleName?: string;
-  documentType: number; // 0=VtvRto, 1=InsurancePolicy, 2=GreenCard, 3=GncCard, 4=Senasa, 5=Ruta, 6=Other
+  documentType: FleetDocType;
   title: string;
-  policyOrDocNumber: string;
-  issuerCompany?: string | null;
-  issueDateUtc: string;
-  expirationDateUtc: string;
-  cost: number;
+  number: string;
+  issuer?: string | null;
+  issueDate?: string | null;
+  expirationDate: string;
   alertDaysBefore: number;
-  fileAttachmentUrl?: string | null;
+  cost: number;
   isActive: boolean;
-  daysRemaining?: number;
+  daysRemaining: number;
+  state: ExpirationState;
 };
+
+export type VehicleDocumentWrite = {
+  documentType: FleetDocType;
+  expirationDate: string;
+  number?: string;
+  issuer?: string;
+  issueDate?: string;
+  alertDaysBefore: number;
+  cost?: number;
+  title?: string;
+};
+
+export type VehicleMeterReading = {
+  id: string;
+  vehicleId: string;
+  readAtUtc: string;
+  kilometers?: number | null;
+  hours?: number | null;
+  isCorrection: boolean;
+  note?: string | null;
+  createdBy?: string | null;
+  createdAtUtc: string;
+};
+
+export type FleetExpirationItem = {
+  vehicleId: string;
+  vehicleLabel: string;
+  vehicleName: string;
+  vehicleType: VehicleType;
+  documentType: FleetDocType;
+  documentId?: string | null;
+  expirationDate?: string | null;
+  daysRemaining?: number | null;
+  state: ExpirationState;
+};
+
+export type FleetExpirations = { expired: number; dueSoon: number; missing: number; items: FleetExpirationItem[] };
 
 export type VehicleDriver = {
   id: string;

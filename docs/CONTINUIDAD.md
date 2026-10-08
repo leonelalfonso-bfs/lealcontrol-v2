@@ -34,6 +34,7 @@ Actualizado el 8 de octubre de 2026. Leer este documento primero. La versión an
 | Encendido de la emisión en producción | [61](auditoria-2026-10-01/61-encendido-produccion-arca.md) |
 | Diagnóstico general y plan | [62](auditoria-2026-10-01/62-estado-general-y-plan.md) |
 | Respaldos y prueba de restauración | [63](auditoria-2026-10-01/63-respaldos.md) |
+| Flota y órdenes de servicio: plan y avance | [64](auditoria-2026-10-01/64-flota-plan.md) |
 
 ## Próximos pasos (en orden)
 

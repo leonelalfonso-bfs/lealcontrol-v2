@@ -51,7 +51,6 @@ export function FleetFuelLogsPage() {
     const v = vehicles.find((x) => x.id === vehId);
     if (v) {
       setLogKm(v.currentKilometers);
-      if (v.assignedDriverId) setSelectedDriverId(v.assignedDriverId);
     }
   };
 
