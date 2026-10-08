@@ -33,8 +33,17 @@ public sealed class ContractedModuleMiddleware(RequestDelegate next)
             return;
         }
 
+        // Sin sesión: decide la autenticación (401), no este control de módulos.
+        if (context.User.Identity?.IsAuthenticated != true)
+        {
+            await next(context);
+            return;
+        }
+
         var allowedModules = ReadAllowedModules(context.User);
-        if (allowedModules.Count == 0)
+        // Sin lista de módulos: solo los administradores (tokens viejos) pasan. Antes cualquier
+        // usuario sin lista veía todo; desde los perfiles de permisos todos tienen lista.
+        if (allowedModules.Count == 0 && IsAdministrator(role))
         {
             await next(context);
             return;
@@ -57,6 +66,10 @@ public sealed class ContractedModuleMiddleware(RequestDelegate next)
     /// <summary>
     /// Directorio (clientes/proveedores) es base del ERP; CRM pipeline y Communications siguen bloqueados si no están contratados.
     /// </summary>
+    private static bool IsAdministrator(string? role) =>
+        string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(role, "Administrador", StringComparison.OrdinalIgnoreCase);
+
     private static bool IsModuleAllowed(HashSet<string> allowed, string moduleKey)
     {
         if (moduleKey.Equals("directory", StringComparison.OrdinalIgnoreCase))

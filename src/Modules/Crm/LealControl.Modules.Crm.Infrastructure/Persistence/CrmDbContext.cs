@@ -38,6 +38,7 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
     public DbSet<LealControl.Modules.Crm.Domain.Settings.CompanySettings> CompanySettings => Set<LealControl.Modules.Crm.Domain.Settings.CompanySettings>();
 
     public DbSet<LealControl.Modules.Crm.Domain.Settings.TenantUser> TenantUsers => Set<LealControl.Modules.Crm.Domain.Settings.TenantUser>();
+    public DbSet<LealControl.Modules.Crm.Domain.Settings.PermissionProfile> PermissionProfiles => Set<LealControl.Modules.Crm.Domain.Settings.PermissionProfile>();
 
     public DbSet<LealControl.Modules.Crm.Domain.Suppliers.Supplier> Suppliers => Set<LealControl.Modules.Crm.Domain.Suppliers.Supplier>();
 
@@ -286,6 +287,36 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                 UPDATE crm.opportunities SET tags = '{}'::text[] WHERE tags IS NULL;
                 UPDATE crm.activities SET ""IsDone"" = false WHERE ""IsDone"" IS NULL;
             ", cancellationToken);
+
+        await TryEnsureAsync("permission profiles", @"
+                CREATE TABLE IF NOT EXISTS public.permission_profiles (
+                    ""Id"" uuid NOT NULL PRIMARY KEY,
+                    ""TenantId"" uuid NOT NULL,
+                    ""SystemKey"" character varying(40),
+                    ""Name"" character varying(80) NOT NULL,
+                    ""Description"" character varying(300),
+                    ""MatrixJson"" text NOT NULL,
+                    ""SeeAmounts"" boolean NOT NULL DEFAULT false,
+                    ""SeeCosts"" boolean NOT NULL DEFAULT false,
+                    ""SeeSalaries"" boolean NOT NULL DEFAULT false,
+                    ""LegacyRole"" character varying(64) NOT NULL DEFAULT 'Comercial',
+                    ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                    ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS ""UX_permission_profiles_name"" ON public.permission_profiles (""TenantId"", ""Name"");
+                CREATE UNIQUE INDEX IF NOT EXISTS ""UX_permission_profiles_system"" ON public.permission_profiles (""TenantId"", ""SystemKey"") WHERE ""SystemKey"" IS NOT NULL;
+                ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""ProfileId"" uuid;
+                ALTER TABLE public.tenant_users ADD COLUMN IF NOT EXISTS ""PermissionOverridesJson"" text;
+            ", cancellationToken);
+
+        try
+        {
+            await PermissionProfilesBootstrap.MigrateAllTenantsAsync(this, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "EnsureCrmTablesAsync: migración de perfiles de permisos omitida.");
+        }
     }
 
     private async Task TryEnsureAsync(string step, string sql, CancellationToken cancellationToken)

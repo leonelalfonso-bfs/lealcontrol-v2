@@ -657,6 +657,17 @@ export type CompanySettings = {
   defaultPaymentTerms?: string | null;
 };
 
+export type PermissionLevel = "None" | "View" | "Edit" | "Approve" | "Admin";
+
+export type PermissionOverrides = {
+  modules?: Record<string, PermissionLevel> | null;
+  amounts?: boolean | null;
+  costs?: boolean | null;
+  salaries?: boolean | null;
+};
+
+export type SensitivePermissions = { amounts: boolean; costs: boolean; salaries: boolean };
+
 export type TenantUser = {
   id: string;
   fullName: string;
@@ -665,6 +676,37 @@ export type TenantUser = {
   isActive: boolean;
   createdAtUtc: string;
   allowedModulesJson?: string | null;
+  isTechnicalDirector?: boolean;
+  profileId?: string | null;
+  profileName?: string | null;
+  overrides?: PermissionOverrides | null;
+  effectiveModules?: Record<string, PermissionLevel> | null;
+  effectiveSensitive?: SensitivePermissions | null;
+};
+
+export type PermissionModule = { key: string; label: string; description: string };
+
+export type PermissionProfile = {
+  id: string;
+  name: string;
+  description?: string | null;
+  systemKey?: string | null;
+  isLocked: boolean;
+  matrix: Record<string, PermissionLevel>;
+  seeAmounts: boolean;
+  seeCosts: boolean;
+  seeSalaries: boolean;
+  userCount: number;
+};
+
+export type PermissionProfileWrite = {
+  name: string;
+  description?: string;
+  matrix: Record<string, PermissionLevel>;
+  seeAmounts: boolean;
+  seeCosts: boolean;
+  seeSalaries: boolean;
+  copyFromId?: string;
 };
 
 export type ProductSummary = Product;

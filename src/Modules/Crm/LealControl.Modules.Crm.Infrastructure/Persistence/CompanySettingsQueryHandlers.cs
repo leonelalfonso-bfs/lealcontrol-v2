@@ -248,46 +248,71 @@ public sealed class CompanySettingsQueryHandler :
     public async Task<Result<IReadOnlyList<TenantUserDto>>> Handle(ListTenantUsersQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantContext.TenantId;
+        var profiles = await PermissionProfilesBootstrap.EnsureSystemProfilesAsync(_dbContext, tenantId, cancellationToken);
         var users = await _dbContext.TenantUsers
             .AsNoTracking()
             .Where(u => u.TenantId == tenantId)
             .OrderBy(u => u.FullName)
             .ToListAsync(cancellationToken);
 
-        IReadOnlyList<TenantUserDto> dtos = users.Select(u => new TenantUserDto(
-            u.Id,
-            u.FullName,
-            u.Email,
-            u.Role,
-            u.IsActive,
-            u.CreatedAtUtc,
-            u.AllowedModulesJson,
-            u.IsTechnicalDirector)).ToList();
-
+        IReadOnlyList<TenantUserDto> dtos = users.Select(u => ToDto(u, profiles)).ToList();
         return Result<IReadOnlyList<TenantUserDto>>.Success(dtos);
+    }
+
+    internal static TenantUserDto ToDto(TenantUser u, IReadOnlyCollection<PermissionProfile> profiles)
+    {
+        var profile = profiles.FirstOrDefault(p => p.Id == u.ProfileId);
+        var effective = u.EffectivePermissions(profile);
+        var overrides = PermissionCatalog.ReadOverrides(u.PermissionOverridesJson);
+        return new TenantUserDto(u.Id, u.FullName, u.Email, u.Role, u.IsActive, u.CreatedAtUtc, u.AllowedModulesJson,
+            u.IsTechnicalDirector, u.ProfileId, profile?.Name, overrides.IsEmpty ? null : overrides,
+            effective.Modules, effective.Sensitive);
+    }
+
+    /// <summary>Siempre tiene que quedar al menos un usuario activo que administre la configuración.</summary>
+    private async Task<bool> WouldLeaveNoAdministratorAsync(TenantId tenantId, Guid userId, bool stillAdmin, CancellationToken ct)
+    {
+        if (stillAdmin) return false;
+        var profiles = await _dbContext.PermissionProfiles.AsNoTracking().Where(p => p.TenantId == tenantId).ToListAsync(ct);
+        var others = await _dbContext.TenantUsers.AsNoTracking()
+            .Where(u => u.TenantId == tenantId && u.IsActive && u.Id != userId).ToListAsync(ct);
+        return !others.Any(u => u.EffectivePermissions(profiles.FirstOrDefault(p => p.Id == u.ProfileId))
+            .LevelOf(PermissionCatalog.Administration) >= PermissionLevel.Admin);
+    }
+
+    private async Task<Result<PermissionProfile>> ResolveProfileAsync(TenantId tenantId, Guid? profileId, string role, CancellationToken ct)
+    {
+        var profiles = await PermissionProfilesBootstrap.EnsureSystemProfilesAsync(_dbContext, tenantId, ct);
+        if (profileId is { } id)
+        {
+            var chosen = profiles.FirstOrDefault(p => p.Id == id);
+            return chosen is null
+                ? Result<PermissionProfile>.Failure(Error.Validation("Crm.Permissions.ProfileNotFound", "El perfil elegido no existe."))
+                : Result<PermissionProfile>.Success(chosen);
+        }
+        var key = SystemProfiles.ForLegacyRole(role);
+        return Result<PermissionProfile>.Success(profiles.First(p => p.SystemKey == key));
     }
 
     public async Task<Result<TenantUserDto>> Handle(CreateTenantUserCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantContext.TenantId;
+        var profile = await ResolveProfileAsync(tenantId, request.ProfileId, request.Role, cancellationToken);
+        if (!profile.IsSuccess) return Result<TenantUserDto>.Failure(profile.Error);
+
         var user = TenantUser.Create(tenantId, request.FullName, request.Email, request.Role, initialPassword: request.Password, allowedModulesJson: request.AllowedModulesJson);
         if (request.IsTechnicalDirector)
         {
             user.SetTechnicalDirector(true);
         }
+        // Sin perfil explícito se respeta la lista de módulos que llegó (compatibilidad).
+        user.ApplyPermissions(profile.Value, request.ProfileId is null
+            ? PermissionProfilesBootstrap.OverridesPreservingModules(profile.Value, request.AllowedModulesJson)
+            : request.Overrides);
 
         _dbContext.TenantUsers.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return Result<TenantUserDto>.Success(new TenantUserDto(
-            user.Id,
-            user.FullName,
-            user.Email,
-            user.Role,
-            user.IsActive,
-            user.CreatedAtUtc,
-            user.AllowedModulesJson,
-            user.IsTechnicalDirector));
+        return Result<TenantUserDto>.Success(ToDto(user, [profile.Value]));
     }
 
     public async Task<Result<TenantUserDto>> Handle(UpdateTenantUserCommand request, CancellationToken cancellationToken)
@@ -300,17 +325,29 @@ public sealed class CompanySettingsQueryHandler :
         }
 
         user.Update(request.FullName, request.Role, request.IsActive, request.AllowedModulesJson, request.Password, request.IsTechnicalDirector);
-        await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return Result<TenantUserDto>.Success(new TenantUserDto(
-            user.Id,
-            user.FullName,
-            user.Email,
-            user.Role,
-            user.IsActive,
-            user.CreatedAtUtc,
-            user.AllowedModulesJson,
-            user.IsTechnicalDirector));
+        PermissionProfile? profile = null;
+        if (request.ProfileId is not null)
+        {
+            var resolved = await ResolveProfileAsync(tenantId, request.ProfileId, request.Role, cancellationToken);
+            if (!resolved.IsSuccess) return Result<TenantUserDto>.Failure(resolved.Error);
+            profile = resolved.Value;
+            user.ApplyPermissions(profile, request.Overrides);
+        }
+        else if (user.ProfileId is { } currentId)
+        {
+            // Pantallas viejas (sin perfil): el perfil y las excepciones mandan.
+            profile = await _dbContext.PermissionProfiles.FirstOrDefaultAsync(p => p.Id == currentId, cancellationToken);
+            if (profile is not null) user.ApplyPermissions(profile, PermissionCatalog.ReadOverrides(user.PermissionOverridesJson));
+        }
+
+        var stillAdmin = user.IsActive && user.EffectivePermissions(profile).LevelOf(PermissionCatalog.Administration) >= PermissionLevel.Admin;
+        if (await WouldLeaveNoAdministratorAsync(tenantId, user.Id, stillAdmin, cancellationToken))
+            return Result<TenantUserDto>.Failure(Error.Validation("Crm.Permissions.LastAdmin",
+                "Tiene que quedar al menos un usuario activo que administre la configuración y los usuarios."));
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result<TenantUserDto>.Success(ToDto(user, profile is null ? [] : [profile]));
     }
 
     public async Task<Result<bool>> Handle(DeleteTenantUserCommand request, CancellationToken cancellationToken)
@@ -324,24 +361,11 @@ public sealed class CompanySettingsQueryHandler :
             return Result<bool>.Success(true);
         }
 
-        var isAdminRole = string.Equals(user.Role, "Admin", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(user.Role, "Administrador", StringComparison.OrdinalIgnoreCase);
-
-        if (isAdminRole)
+        if (await WouldLeaveNoAdministratorAsync(tenantId, user.Id, stillAdmin: false, cancellationToken))
         {
-            var activeAdminCount = await _dbContext.TenantUsers.CountAsync(
-                u => u.TenantId == tenantId
-                    && u.IsActive
-                    && u.Id != user.Id
-                    && (u.Role == "Admin" || u.Role == "Administrador"),
-                cancellationToken);
-
-            if (activeAdminCount == 0)
-            {
-                return Result<bool>.Failure(new Error(
-                    "LastAdmin",
-                    "No podés eliminar el único administrador activo de la empresa."));
-            }
+            return Result<bool>.Failure(new Error(
+                "LastAdmin",
+                "No podés eliminar el único administrador activo de la empresa."));
         }
 
         _dbContext.TenantUsers.Remove(user);

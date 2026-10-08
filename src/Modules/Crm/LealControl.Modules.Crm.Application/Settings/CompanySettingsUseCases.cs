@@ -76,13 +76,55 @@ public sealed record TenantUserDto(
     bool IsActive,
     DateTime CreatedAtUtc,
     string? AllowedModulesJson = null,
-    bool IsTechnicalDirector = false);
+    bool IsTechnicalDirector = false,
+    Guid? ProfileId = null,
+    string? ProfileName = null,
+    LealControl.Modules.Crm.Domain.Settings.PermissionOverrides? Overrides = null,
+    IReadOnlyDictionary<string, LealControl.Modules.Crm.Domain.Settings.PermissionLevel>? EffectiveModules = null,
+    LealControl.Modules.Crm.Domain.Settings.SensitivePermissions? EffectiveSensitive = null);
 
-public sealed record CreateTenantUserCommand(string FullName, string Email, string Role, string? Password = null, string? AllowedModulesJson = null, bool IsTechnicalDirector = false)
+/// <summary>
+/// Alta de usuario. Con <paramref name="ProfileId"/> los módulos y el rol salen del perfil y las
+/// excepciones; sin perfil se usa el de fábrica que corresponde al rol.
+/// </summary>
+public sealed record CreateTenantUserCommand(string FullName, string Email, string Role, string? Password = null, string? AllowedModulesJson = null, bool IsTechnicalDirector = false,
+    Guid? ProfileId = null, LealControl.Modules.Crm.Domain.Settings.PermissionOverrides? Overrides = null)
     : IRequest<Result<TenantUserDto>>;
 
-public sealed record UpdateTenantUserCommand(Guid Id, string FullName, string Role, bool IsActive, string? Password = null, string? AllowedModulesJson = null, bool? IsTechnicalDirector = null)
+public sealed record UpdateTenantUserCommand(Guid Id, string FullName, string Role, bool IsActive, string? Password = null, string? AllowedModulesJson = null, bool? IsTechnicalDirector = null,
+    Guid? ProfileId = null, LealControl.Modules.Crm.Domain.Settings.PermissionOverrides? Overrides = null)
     : IRequest<Result<TenantUserDto>>;
+
+public sealed record PermissionModuleDto(string Key, string Label, string Description);
+
+public sealed record PermissionCatalogDto(IReadOnlyList<PermissionModuleDto> Modules);
+
+public sealed record PermissionProfileDto(
+    Guid Id,
+    string Name,
+    string? Description,
+    string? SystemKey,
+    bool IsLocked,
+    IReadOnlyDictionary<string, LealControl.Modules.Crm.Domain.Settings.PermissionLevel> Matrix,
+    bool SeeAmounts,
+    bool SeeCosts,
+    bool SeeSalaries,
+    int UserCount);
+
+public sealed record ListPermissionProfilesQuery : IRequest<Result<IReadOnlyList<PermissionProfileDto>>>;
+
+/// <summary>Crea (sin Id) o edita un perfil. Al crear, <paramref name="CopyFromId"/> hereda el rol base de ese perfil.</summary>
+public sealed record SavePermissionProfileCommand(
+    Guid? Id,
+    string Name,
+    string? Description,
+    Dictionary<string, LealControl.Modules.Crm.Domain.Settings.PermissionLevel> Matrix,
+    bool SeeAmounts,
+    bool SeeCosts,
+    bool SeeSalaries,
+    Guid? CopyFromId = null) : IRequest<Result<PermissionProfileDto>>;
+
+public sealed record DeletePermissionProfileCommand(Guid Id) : IRequest<Result<bool>>;
 
 public sealed record DeleteTenantUserCommand(Guid Id) : IRequest<Result<bool>>;
 

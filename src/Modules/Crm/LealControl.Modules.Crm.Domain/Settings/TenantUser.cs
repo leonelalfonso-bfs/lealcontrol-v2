@@ -55,6 +55,34 @@ public sealed class TenantUser : Entity<Guid>
 
     public string AllowedModulesJson { get; private set; } = @"[""sales"", ""crm"", ""purchases"", ""inventory"", ""finance"", ""fleet"", ""hr"", ""grains""]";
 
+    /// <summary>Perfil de permisos. La lista de módulos y el rol se derivan de él (y de las excepciones).</summary>
+    public Guid? ProfileId { get; private set; }
+
+    /// <summary>Excepciones del usuario sobre su perfil (JSON de <see cref="PermissionOverrides"/>).</summary>
+    public string? PermissionOverridesJson { get; private set; }
+
+    /// <summary>
+    /// Aplica perfil y excepciones. Se guardan también la lista de módulos y el rol derivados,
+    /// que son los que hoy usan el token, el menú y el control por ruta.
+    /// </summary>
+    public EffectivePermissions ApplyPermissions(PermissionProfile profile, PermissionOverrides? overrides)
+    {
+        ProfileId = profile.Id;
+        PermissionOverridesJson = PermissionCatalog.WriteOverrides(overrides);
+        var effective = PermissionCatalog.Resolve(profile, overrides);
+        var keys = PermissionCatalog.AllowedModuleKeys(effective);
+        // "none": lista explícitamente vacía (una lista vacía se interpretaba como "todo").
+        AllowedModulesJson = System.Text.Json.JsonSerializer.Serialize(keys.Length == 0 ? ["none"] : keys);
+        Role = PermissionCatalog.LegacyRole(effective, profile);
+        return effective;
+    }
+
+    /// <summary>Solo para la migración: conserva el rol que usan las políticas por rol hasta P2.</summary>
+    public void RestoreRole(string role) => Role = role;
+
+    public EffectivePermissions EffectivePermissions(PermissionProfile? profile) =>
+        PermissionCatalog.Resolve(profile, PermissionCatalog.ReadOverrides(PermissionOverridesJson));
+
     public void SetPassword(string password)
     {
         if (!string.IsNullOrWhiteSpace(password))
