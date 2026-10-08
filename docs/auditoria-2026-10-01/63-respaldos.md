@@ -41,8 +41,20 @@ Comandos: pasos 1 a 4 en la conversación del 8/10. Para restaurar de verdad: `d
 - Si el VPS se cae, los pings dejan de llegar y Healthchecks avisa igual.
 - El `/health` público devuelve la página web, no el estado de la API: por eso el chequeo corre desde el VPS.
 
+## Disco
+
+- El 8/10/2026 el disco estaba al 80%: 24 GB eran caché de compilación de Docker de los deploys. Se limpió con `docker builder prune -af` y `docker image prune -f`, sin `-a`, para conservar la imagen de vuelta atrás. Quedó en 29%.
+- Cron semanal, domingos 4:30: `docker builder prune -af --filter until=168h`.
+
+## Cron de root en el VPS
+
+```
+0 3 * * *    respaldo (leal-backup.sh all)
+*/5 * * * *  monitor (leal-monitor.sh)
+30 4 * * 0   limpieza de caché de Docker
+```
+
 ## Pendiente
 
 - Probar el descifrado desde una máquina que no sea el VPS, usando solo las contraseñas guardadas.
-- Disco al 80% (8/10): revisar qué ocupa (imágenes de Docker viejas, logs).
 - Drive no impide que alguien con acceso al VPS borre los respaldos. Para vender el sistema, evaluar Backblaze B2 con Object Lock.
