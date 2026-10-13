@@ -27,30 +27,41 @@ export function NoticesBell() {
 
   const total = notices?.total ?? 0;
   return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button type="button" className="icon-button" aria-label={`Avisos: ${total}`} title="Mis avisos" onClick={() => setOpen(!open)}
-        style={{ position: "relative", background: "transparent", border: "none", cursor: "pointer", fontSize: "1.1rem", padding: "4px 8px" }}>
-        🔔
+    // Va al pie del menú lateral: botón a lo ancho y la lista se abre hacia arriba, como la de Comunicaciones.
+    <div ref={ref} style={{ position: "relative", width: "100%" }}>
+      <button type="button" aria-label={`Mis avisos: ${total}`} title="Mis avisos" onClick={() => setOpen(!open)}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "8px 12px",
+          borderRadius: 10, border: total > 0 ? "1px solid #fbbf24" : "1px solid var(--surface-border)",
+          background: total > 0 ? "rgba(251, 191, 36, 0.12)" : "var(--surface-muted)", cursor: "pointer",
+          fontSize: "0.82rem", fontWeight: 700, color: "var(--ink)"
+        }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}><span>🔔</span><span>Mis avisos</span></span>
         {total > 0 && (
-          <span style={{ position: "absolute", top: -2, right: -2, background: "#dc2626", color: "#fff", borderRadius: 999,
-            fontSize: "0.65rem", fontWeight: 700, padding: "1px 5px", lineHeight: 1.3 }}>{total > 99 ? "99+" : total}</span>
+          <span style={{ background: "#dc2626", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: "0.72rem", minWidth: 20, textAlign: "center" }}>
+            {total > 99 ? "99+" : total}
+          </span>
         )}
       </button>
       {open && (
-        <div className="card pad" style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", width: 340, maxHeight: 420, overflowY: "auto", zIndex: 50 }}>
-          <strong>Mis avisos</strong>
-          {total === 0 ? <p className="muted" style={{ margin: "8px 0" }}>No tenés avisos pendientes.</p> : notices!.groups.map((g) => (
+        <div style={{
+          position: "absolute", bottom: "calc(100% + 8px)", left: 0, right: 0, zIndex: 50, background: "var(--surface)",
+          border: "1px solid var(--surface-border)", borderRadius: 12, boxShadow: "0 8px 30px rgba(0,0,0,0.15)",
+          maxHeight: 420, overflowY: "auto", padding: "12px 14px"
+        }}>
+          <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>Mis avisos</div>
+          {total === 0 ? <p className="muted" style={{ margin: "8px 0", fontSize: "0.82rem" }}>No tenés avisos pendientes.</p> : notices!.groups.map((g) => (
             <div key={g.code} style={{ marginTop: 10 }}>
-              <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", color: "var(--ink-soft)" }}>{g.label} ({g.items.length})</div>
+              <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", color: "var(--ink-soft)" }}>{g.label} ({g.items.length})</div>
               {g.items.slice(0, 4).map((item, i) => (
-                <div key={i} style={{ fontSize: "0.82rem", marginTop: 4 }}>
+                <div key={i} style={{ fontSize: "0.8rem", marginTop: 4 }}>
                   {item.link ? <Link to={item.link} onClick={() => setOpen(false)}>{item.title}</Link> : item.title}
-                  {item.detail && <div className="muted" style={{ fontSize: "0.75rem" }}>{item.detail}</div>}
+                  {item.detail && <div className="muted" style={{ fontSize: "0.72rem" }}>{item.detail}</div>}
                 </div>
               ))}
             </div>
           ))}
-          <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+          <div style={{ marginTop: 12, borderTop: "1px solid var(--surface-border)", paddingTop: 8, fontSize: "0.8rem" }}>
             <Link to="/mi-perfil/avisos" onClick={() => setOpen(false)}>Ver todos y elegir qué recibir →</Link>
           </div>
         </div>
