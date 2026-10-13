@@ -47,6 +47,10 @@ public sealed class ExchangeRateService : IExchangeRateService
     private readonly HttpClient _httpClient;
     private static ExchangeRatesDto? _cachedRates;
     private static DateTime _cacheExpiresAtUtc = DateTime.MinValue;
+    private static readonly SemaphoreSlim RefreshLock = new(1, 1);
+    /// <summary>Tope por consulta a una fuente externa: si el BNA tarda, se usa el respaldo.</summary>
+    private static readonly TimeSpan SourceTimeout = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan LiveTtl = TimeSpan.FromMinutes(15);
 
     public ExchangeRateService(HttpClient httpClient)
     {
@@ -75,9 +79,11 @@ public sealed class ExchangeRateService : IExchangeRateService
                   $"&fecha={Uri.EscapeDataString(date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture))}&idMoneda={currency}";
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (LealControl ERP)");
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(SourceTimeout);
+        using var response = await _httpClient.SendAsync(request, timeout.Token);
         response.EnsureSuccessStatusCode();
-        var html = await response.Content.ReadAsStringAsync(cancellationToken);
+        var html = await response.Content.ReadAsStringAsync(timeout.Token);
         var rows = ParseBnaHistory(html).Where(r => DateOnly.ParseExact(r.Date, "yyyy-MM-dd") <= date)
             .OrderByDescending(r => r.Date, StringComparer.Ordinal).ToList();
         _bnaCache[key] = (DateTime.UtcNow.AddMinutes(date >= DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3)) ? 10 : 720), rows);
@@ -109,19 +115,53 @@ public sealed class ExchangeRateService : IExchangeRateService
         return decimal.TryParse(normalized, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value);
     }
 
+    /// <summary>
+    /// Cotizaciones del día. Nadie espera al BNA salvo la primera vez: cuando la copia guardada
+    /// vence, se devuelve igual y se actualiza en segundo plano (una sola actualización a la vez).
+    /// </summary>
     public async Task<ExchangeRatesDto> GetLiveRatesAsync(CancellationToken cancellationToken = default)
     {
-        if (_cachedRates is not null && DateTime.UtcNow < _cacheExpiresAtUtc)
+        var cached = _cachedRates;
+        if (cached is not null)
         {
-            return _cachedRates;
+            if (DateTime.UtcNow >= _cacheExpiresAtUtc && RefreshLock.CurrentCount > 0)
+                _ = Task.Run(async () =>
+                {
+                    try { await RefreshAsync(CancellationToken.None); }
+                    catch { /* se reintenta en el próximo pedido */ }
+                });
+            return cached;
         }
+        return await RefreshAsync(cancellationToken);
+    }
 
-        // Fuente principal: Banco Nación (billete y divisa vendedor). DolarApi queda de respaldo.
+    private async Task<ExchangeRatesDto> RefreshAsync(CancellationToken cancellationToken)
+    {
+        await RefreshLock.WaitAsync(cancellationToken);
+        try
+        {
+            // Otro pedido pudo haberla actualizado mientras esperábamos.
+            if (_cachedRates is not null && DateTime.UtcNow < _cacheExpiresAtUtc) return _cachedRates;
+            return await FetchAsync(cancellationToken);
+        }
+        finally
+        {
+            RefreshLock.Release();
+        }
+    }
+
+    private async Task<ExchangeRatesDto> FetchAsync(CancellationToken cancellationToken)
+    {
+        // Fuente principal: Banco Nación (billete y divisa vendedor), las dos consultas a la vez.
+        // DolarApi queda de respaldo.
         try
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3));
-            var billete = (await GetBnaHistoryAsync("billete", today, cancellationToken)).FirstOrDefault();
-            var divisa = (await GetBnaHistoryAsync("divisa", today, cancellationToken)).FirstOrDefault();
+            var billeteTask = GetBnaHistoryAsync("billete", today, cancellationToken);
+            var divisaTask = GetBnaHistoryAsync("divisa", today, cancellationToken);
+            await Task.WhenAll(billeteTask, divisaTask);
+            var billete = billeteTask.Result.FirstOrDefault();
+            var divisa = divisaTask.Result.FirstOrDefault();
             if (billete is not null && divisa is not null)
             {
                 var billeteAt = DateTime.SpecifyKind(DateTime.Parse(billete.Date, CultureInfo.InvariantCulture), DateTimeKind.Utc);
@@ -132,7 +172,7 @@ public sealed class ExchangeRateService : IExchangeRateService
                     new CurrencyRateDetailDto("USD_DIVISA", "Dólar Divisa (BNA Vendedor)", "Banco de la Nación Argentina",
                         divisa.Buy, divisa.Sell, divisaAt),
                     DateTime.UtcNow);
-                _cacheExpiresAtUtc = DateTime.UtcNow.AddMinutes(5);
+                _cacheExpiresAtUtc = DateTime.UtcNow.Add(LiveTtl);
                 return _cachedRates;
             }
         }
@@ -143,7 +183,9 @@ public sealed class ExchangeRateService : IExchangeRateService
 
         try
         {
-            var response = await _httpClient.GetAsync("https://dolarapi.com/v1/dolares", cancellationToken);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(SourceTimeout);
+            var response = await _httpClient.GetAsync("https://dolarapi.com/v1/dolares", timeout.Token);
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -169,6 +211,7 @@ public sealed class ExchangeRateService : IExchangeRateService
                 mayorista?.FechaActualizacion ?? DateTime.UtcNow);
 
             _cachedRates = new ExchangeRatesDto(usdBillete, usdDivisa, DateTime.UtcNow);
+            // El respaldo dura menos: se vuelve a probar el BNA pronto.
             _cacheExpiresAtUtc = DateTime.UtcNow.AddMinutes(5);
 
             return _cachedRates;
@@ -182,6 +225,25 @@ public sealed class ExchangeRateService : IExchangeRateService
                 new CurrencyRateDetailDto("USD_BILLETE", "Dólar Billete (BNA Vendedor)", "BNA (Estimado)", 1460m, 1510m, DateTime.UtcNow),
                 new CurrencyRateDetailDto("USD_DIVISA", "Dólar Divisa (sin conexión, valor estimado)", "Estimado sin conexión", 1478.5m, 1487.5m, DateTime.UtcNow),
                 DateTime.UtcNow);
+        }
+    }
+}
+
+/// <summary>Al arrancar el servidor busca la cotización del día, así el primero que entra no espera al BNA.</summary>
+public sealed class ExchangeRateWarmup(IServiceProvider services) : Microsoft.Extensions.Hosting.BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            using var scope = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(services);
+            var rates = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<IExchangeRateService>(scope.ServiceProvider);
+            await rates.GetLiveRatesAsync(stoppingToken);
+        }
+        catch
+        {
+            // Sin conexión al arrancar: el primer pedido lo vuelve a intentar.
         }
     }
 }
