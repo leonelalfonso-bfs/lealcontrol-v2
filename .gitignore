@@ -53,3 +53,7 @@ get-docker.sh
 
 # Persistent uploaded documents (per deployment; never commit tenant files)
 /storage/
+
+# Caché de Vite y volcados locales: nunca al repositorio.
+.vite/
+.git-diff-stat*.txt

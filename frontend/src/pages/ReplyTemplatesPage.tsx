@@ -5,7 +5,6 @@ import type { MessageReplyTemplate } from "../api/types";
 
 const CHANNELS = [
   { value: "", label: "Todos los canales" },
-  { value: "whatsapp", label: "WhatsApp" },
   { value: "instagram", label: "Instagram" },
   { value: "facebook", label: "Facebook" },
   { value: "email", label: "Email" }
@@ -80,7 +79,7 @@ export function ReplyTemplatesPage() {
           <span className="eyebrow">COMUNICACIONES</span>
           <h1>Plantillas de respuesta rápida</h1>
           <p className="muted">
-            Mensajes predefinidos para WhatsApp, Instagram, Facebook y email. Se usan desde la bandeja omnicanal.
+            Mensajes predefinidos para Instagram, Facebook y email. Se usan desde la bandeja omnicanal.
           </p>
         </div>
         <Link className="btn btn-outline" to="/comunicaciones">

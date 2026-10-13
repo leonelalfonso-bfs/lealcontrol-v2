@@ -21,7 +21,6 @@ public static class DependencyInjection
         services.AddScoped<MailSyncService>();
         services.AddHostedService<CommunicationsSyncBackgroundService>();
         services.AddHttpClient(nameof(MailOAuthService));
-        services.AddHttpClient<WhatsAppGatewayService>();
         services.AddHttpClient<MetaGraphApiService>();
         return services;
     }

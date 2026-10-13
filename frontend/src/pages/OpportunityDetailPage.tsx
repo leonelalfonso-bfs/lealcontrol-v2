@@ -343,7 +343,7 @@ export function OpportunityDetailPage() {
                   <Link key={c.id} to="/comunicaciones" state={{ conversationId: c.id }}
                     className="row" style={{ justifyContent: "space-between", gap: 12, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, textDecoration: "none", color: "inherit" }}>
                     <div style={{ minWidth: 0 }}>
-                      <strong>{c.channelType === "whatsapp" ? "WhatsApp" : c.channelType === "email" ? "Correo" : c.channelType} · {c.participantName}</strong>
+                      <strong>{c.channelType === "email" ? "Correo" : c.channelType} · {c.participantName}</strong>
                       <div className="muted" style={{ fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {c.lastMessagePreview || "—"}
                       </div>

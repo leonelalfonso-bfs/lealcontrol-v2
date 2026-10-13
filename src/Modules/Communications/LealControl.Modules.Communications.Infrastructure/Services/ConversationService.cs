@@ -130,17 +130,6 @@ public sealed class ConversationService
         string toAddresses,
         EmailDirection direction)
     {
-        if (channelType == CommunicationChannelHelper.WhatsApp && threadKey.StartsWith("wa_", StringComparison.Ordinal))
-        {
-            var raw = threadKey["wa_".Length..];
-            var lastUnder = raw.LastIndexOf('_');
-            if (lastUnder > 0 && raw.Length - lastUnder - 1 == 32)
-            {
-                return raw[..lastUnder];
-            }
-            return raw;
-        }
-
         if (channelType == CommunicationChannelHelper.Instagram && threadKey.StartsWith("ig_", StringComparison.Ordinal))
             return threadKey["ig_".Length..];
 
@@ -164,9 +153,6 @@ public sealed class ConversationService
         string toAddresses,
         EmailDirection direction)
     {
-        if (subject.StartsWith("WhatsApp: ", StringComparison.Ordinal))
-            return subject["WhatsApp: ".Length..].Trim();
-
         if (subject.StartsWith("Instagram DM: ", StringComparison.Ordinal))
             return subject["Instagram DM: ".Length..].Trim();
 
@@ -189,9 +175,6 @@ public sealed class ConversationService
         string toAddresses,
         EmailDirection direction)
     {
-        if (channelType == CommunicationChannelHelper.WhatsApp)
-            return (null, participantId.Replace("lid_", "", StringComparison.Ordinal));
-
         if (channelType == CommunicationChannelHelper.Email)
         {
             var address = direction == EmailDirection.Incoming ? fromAddress : toAddresses.Split(',')[0].Trim();

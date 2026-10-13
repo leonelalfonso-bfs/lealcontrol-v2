@@ -57,7 +57,6 @@ export async function enableBrowserNotifications(): Promise<NotificationPermissi
 }
 
 function channelLabel(ch: string): string {
-  if (ch === "whatsapp") return "WhatsApp";
   if (ch === "instagram") return "Instagram";
   if (ch === "facebook") return "Facebook";
   return "Email";

@@ -18,7 +18,7 @@ public sealed class ConversationDiscardTests : IAsyncLifetime
         .WithDatabase("communications_discard").WithUsername("leal").WithPassword("leal").Build();
     private DbContextOptions<CommunicationsDbContext> _options = null!;
     private readonly Guid _tenant = Guid.NewGuid();
-    private const string Thread = "wa_5493410000000";
+    private const string Thread = "ig_17841400000000";
 
     public async Task InitializeAsync()
     {
@@ -34,7 +34,7 @@ public sealed class ConversationDiscardTests : IAsyncLifetime
     {
         await using var db = new CommunicationsDbContext(_options);
         var message = EmailMessage.Create(_tenant, Guid.Empty, externalId, null, Thread, direction,
-            "WhatsApp: Juan", "5493410000000", "WhatsApp", text, DateTime.UtcNow, channelType: "whatsapp");
+            "Instagram DM: Juan", "17841400000000", "Instagram", text, DateTime.UtcNow, channelType: "instagram");
         await CommunicationsEndpointHelpers.AddTrackedMessageAsync(db, new ConversationService(), message, "Juan");
         if (withAttachment)
             db.EmailAttachments.Add(EmailAttachment.Create(_tenant, message.Id, "foto.jpg", "image/jpeg", 3, new byte[] { 1, 2, 3 }));
@@ -52,7 +52,7 @@ public sealed class ConversationDiscardTests : IAsyncLifetime
     [Fact]
     public async Task Discard_hides_and_erases_content_and_a_new_message_brings_it_back()
     {
-        await DeliverAsync("wa_1", "Hola, ¿precio de la balanza?", withAttachment: true);
+        await DeliverAsync("meta_ig_1", "Hola, ¿precio de la balanza?", withAttachment: true);
         await DiscardAsync(ignore: false);
 
         await using (var db = new CommunicationsDbContext(_options))
@@ -60,13 +60,13 @@ public sealed class ConversationDiscardTests : IAsyncLifetime
             var conversation = await db.Conversations.SingleAsync(x => x.TenantId == _tenant);
             Assert.Equal(Conversation.DiscardedStatus, conversation.Status);
             Assert.Null(conversation.LastMessagePreview);
-            var stored = await db.EmailMessages.SingleAsync(x => x.InternetMessageId == "wa_1");
+            var stored = await db.EmailMessages.SingleAsync(x => x.InternetMessageId == "meta_ig_1");
             Assert.True(stored.Redacted);
             Assert.Equal(string.Empty, stored.BodyPreview);
             Assert.Equal(0, await db.EmailAttachments.CountAsync(x => x.TenantId == _tenant));
         }
 
-        await DeliverAsync("wa_2", "¿Me pasás el presupuesto?");
+        await DeliverAsync("meta_ig_2", "¿Me pasás el presupuesto?");
 
         await using (var db = new CommunicationsDbContext(_options))
         {
@@ -74,25 +74,25 @@ public sealed class ConversationDiscardTests : IAsyncLifetime
             Assert.Equal("open", conversation.Status);
             Assert.Equal(1, conversation.UnreadCount);
             Assert.Equal("¿Me pasás el presupuesto?", conversation.LastMessagePreview);
-            Assert.False((await db.EmailMessages.SingleAsync(x => x.InternetMessageId == "wa_2")).Redacted);
-            Assert.True((await db.EmailMessages.SingleAsync(x => x.InternetMessageId == "wa_1")).Redacted);
+            Assert.False((await db.EmailMessages.SingleAsync(x => x.InternetMessageId == "meta_ig_2")).Redacted);
+            Assert.True((await db.EmailMessages.SingleAsync(x => x.InternetMessageId == "meta_ig_1")).Redacted);
         }
     }
 
     [Fact]
     public async Task Ignored_contact_stays_discarded_and_new_messages_are_stored_without_content()
     {
-        await DeliverAsync("wa_1", "Promo imperdible");
+        await DeliverAsync("meta_ig_1", "Promo imperdible");
         await DiscardAsync(ignore: true);
 
-        await DeliverAsync("wa_2", "Otra promo", withAttachment: true);
+        await DeliverAsync("meta_ig_2", "Otra promo", withAttachment: true);
 
         await using var db = new CommunicationsDbContext(_options);
         var conversation = await db.Conversations.SingleAsync(x => x.TenantId == _tenant);
         Assert.Equal(Conversation.DiscardedStatus, conversation.Status);
         Assert.Equal(0, conversation.UnreadCount);
         Assert.Null(conversation.LastMessagePreview);
-        var second = await db.EmailMessages.SingleAsync(x => x.InternetMessageId == "wa_2");
+        var second = await db.EmailMessages.SingleAsync(x => x.InternetMessageId == "meta_ig_2");
         Assert.True(second.Redacted);
         Assert.Equal(string.Empty, second.BodyPreview);
         Assert.Equal(0, await db.EmailAttachments.CountAsync(x => x.TenantId == _tenant));
@@ -101,7 +101,7 @@ public sealed class ConversationDiscardTests : IAsyncLifetime
     [Fact]
     public async Task Link_to_opportunity_is_stored()
     {
-        await DeliverAsync("wa_1", "Necesito calibrar 3 balanzas");
+        await DeliverAsync("meta_ig_1", "Necesito calibrar 3 balanzas");
         var opportunityId = Guid.NewGuid();
         await using (var db = new CommunicationsDbContext(_options))
         {

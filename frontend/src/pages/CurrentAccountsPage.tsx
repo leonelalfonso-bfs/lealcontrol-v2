@@ -9,7 +9,6 @@ import { withCollections, type ReceiptForImputation } from "../lib/receivables";
 import { documentLabel } from "../lib/documents";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { EmailComposer } from "../components/EmailComposer";
-import { WhatsAppComposer } from "../components/WhatsAppComposer";
 import type { CompanySettings } from "../api/types";
 import "./collections.css";
 
@@ -149,7 +148,7 @@ export function CurrentAccountsPage() {
     setSearchParams(entity ? { cuenta: entity.id } : {});
   const [company, setCompany] = useState<CompanySettings | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [sendVia, setSendVia] = useState<"email" | "whatsapp" | null>(null);
+  const [sendVia, setSendVia] = useState<"email" | null>(null);
   useEffect(() => {
     void api.getCompanySettings().then(setCompany).catch(() => setCompany(null));
   }, []);
@@ -328,7 +327,6 @@ export function CurrentAccountsPage() {
                 {downloadingPdf ? "Generando…" : "Descargar PDF"}
               </button>
               <button className="btn btn-outline compact" onClick={() => setSendVia("email")}>✉ Email</button>
-              <button className="btn btn-outline compact" onClick={() => setSendVia("whatsapp")}>💬 WhatsApp</button>
               {ledgerEntity.isCustomer && (
                 <Link className="btn compact" to={`/finanzas/cobranzas?customerId=${ledgerEntity.id}`}>Registrar cobro</Link>
               )}
@@ -422,7 +420,7 @@ export function CurrentAccountsPage() {
           const sender = company?.tradeName || company?.legalName || "";
           const balanceText = `$ ${finalBalance.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
           const documentPdf = { elementId: "account-statement-sheet", fileName };
-          return sendVia === "email" ? (
+          return (
             <EmailComposer
               context={{
                 entityType: "AccountStatement",
@@ -430,17 +428,6 @@ export function CurrentAccountsPage() {
                 to: ledgerEntity.email ?? undefined,
                 subject: `Estado de cuenta al ${today} - ${sender}`,
                 body: `Estimado cliente,\n\nAdjuntamos el estado de cuenta al ${today}. Saldo: ${balanceText}.\n\nSaludos cordiales,\n${sender}`,
-                documentPdf
-              }}
-              onClose={() => setSendVia(null)}
-            />
-          ) : (
-            <WhatsAppComposer
-              context={{
-                entityType: "AccountStatement",
-                entityId: ledgerEntity.id,
-                phone: ledgerEntity.phone,
-                body: `Hola, te enviamos el estado de cuenta al ${today}. Saldo: ${balanceText}.\n\nSaludos, ${sender}`,
                 documentPdf
               }}
               onClose={() => setSendVia(null)}

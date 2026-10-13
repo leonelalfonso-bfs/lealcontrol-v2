@@ -43,7 +43,7 @@ export function CrmHelpPage() {
           <ul>
             <li><strong>CRM</strong>: prospectos, oportunidades, pendientes del día.</li>
             <li><strong>Ficha del cliente</strong>: historial único (notas, correos, oportunidades, presupuestos) y próxima acción.</li>
-            <li><strong>Comunicaciones</strong>: bandeja de correo, WhatsApp y redes. Solo aparece si SuperAdmin activó el piloto.</li>
+            <li><strong>Comunicaciones</strong>: bandeja de correo. Solo aparece si SuperAdmin activó el piloto.</li>
             <li><strong>Ventas</strong>: presupuestos, pedidos y facturas.</li>
           </ul>
         </section>

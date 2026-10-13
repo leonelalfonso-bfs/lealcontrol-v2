@@ -24,15 +24,15 @@ public sealed class WebhookMessagePersistenceTests
             await setup.EnsureTablesCreatedAsync();
 
         var tenantId = Guid.NewGuid();
-        const string externalId = "wa_delivery_1";
+        const string externalId = "meta_ig_delivery_1";
         var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         async Task<bool> DeliverAsync()
         {
             await using var db = new CommunicationsDbContext(options);
-            var conversation = Conversation.Create(tenantId, "whatsapp", "wa_contact_1", "contact_1", "Contacto", null, null, "hola", DateTime.UtcNow, EmailDirection.Incoming);
-            var message = EmailMessage.Create(tenantId, Guid.Empty, externalId, null, "wa_contact_1", EmailDirection.Incoming,
-                "WhatsApp: Contacto", "contact_1", "WhatsApp", "hola", DateTime.UtcNow, channelType: "whatsapp");
+            var conversation = Conversation.Create(tenantId, "instagram", "ig_contact_1", "contact_1", "Contacto", null, null, "hola", DateTime.UtcNow, EmailDirection.Incoming);
+            var message = EmailMessage.Create(tenantId, Guid.Empty, externalId, null, "ig_contact_1", EmailDirection.Incoming,
+                "Instagram DM: Contacto", "contact_1", "Instagram", "hola", DateTime.UtcNow, channelType: "instagram");
             message.SetConversationId(conversation.Id);
             db.Conversations.Add(conversation);
             db.EmailMessages.Add(message);
