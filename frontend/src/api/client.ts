@@ -1038,23 +1038,34 @@ export const api = {
     request<import("./types").NoticeSettings>("/api/v1/notices/settings", { method: "PUT", body: JSON.stringify(body) }),
   sendMyNoticeDigestNow: () => request<{ sent: boolean; detail: string }>("/api/v1/notices/send-me-now", { method: "POST" }),
 
-  listDrivers: () => request<import("./types").VehicleDriver[]>("/api/v1/fleet/drivers"),
-  createDriver: (body: Partial<import("./types").VehicleDriver>) =>
-    request<import("./types").VehicleDriver>("/api/v1/fleet/drivers", { method: "POST", body: JSON.stringify(body) }),
+  listMaintenancePlans: (vehicleId: string) =>
+    request<import("./types").MaintenancePlan[]>(`/api/v1/fleet/vehicles/${vehicleId}/plans`),
+  createMaintenancePlan: (vehicleId: string, body: import("./types").MaintenancePlanWrite) =>
+    request<import("./types").MaintenancePlan>(`/api/v1/fleet/vehicles/${vehicleId}/plans`, { method: "POST", body: JSON.stringify(body) }),
+  updateMaintenancePlan: (id: string, body: import("./types").MaintenancePlanWrite) =>
+    request<import("./types").MaintenancePlan>(`/api/v1/fleet/plans/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteMaintenancePlan: (id: string) => request<void>(`/api/v1/fleet/plans/${id}`, { method: "DELETE" }),
+  listVehicleMaintenances: (vehicleId: string) =>
+    request<import("./types").VehicleMaintenance[]>(`/api/v1/fleet/vehicles/${vehicleId}/maintenances`),
+  createMaintenance: (vehicleId: string, body: import("./types").VehicleMaintenanceWrite) =>
+    request<import("./types").VehicleMaintenance>(`/api/v1/fleet/vehicles/${vehicleId}/maintenances`, { method: "POST", body: JSON.stringify(body) }),
+  updateMaintenance: (id: string, body: import("./types").VehicleMaintenanceWrite) =>
+    request<import("./types").VehicleMaintenance>(`/api/v1/fleet/maintenances/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteMaintenance: (id: string) => request<void>(`/api/v1/fleet/maintenances/${id}`, { method: "DELETE" }),
+  getFleetMaintenance: () => request<import("./types").FleetMaintenanceOverview>("/api/v1/fleet/maintenance"),
 
-  listMaintenances: (vehicleId?: string) => {
-    const q = vehicleId ? `?vehicleId=${vehicleId}` : "";
-    return request<import("./types").VehicleMaintenance[]>(`/api/v1/fleet/maintenances${q}`);
+  listFuelLogs: (params: { vehicleId?: string; from?: string; to?: string } = {}) => {
+    const p = new URLSearchParams();
+    if (params.vehicleId) p.set("vehicleId", params.vehicleId);
+    if (params.from) p.set("from", params.from);
+    if (params.to) p.set("to", params.to);
+    return request<import("./types").VehicleFuelLog[]>(`/api/v1/fleet/fuel-logs${p.size ? `?${p}` : ""}`);
   },
-  createMaintenance: (body: Partial<import("./types").VehicleMaintenance>) =>
-    request<import("./types").VehicleMaintenance>("/api/v1/fleet/maintenances", { method: "POST", body: JSON.stringify(body) }),
-
-  listFuelLogs: (vehicleId?: string) => {
-    const q = vehicleId ? `?vehicleId=${vehicleId}` : "";
-    return request<import("./types").VehicleFuelLog[]>(`/api/v1/fleet/fuel-logs${q}`);
-  },
-  createFuelLog: (body: Partial<import("./types").VehicleFuelLog>) =>
-    request<import("./types").VehicleFuelLog>("/api/v1/fleet/fuel-logs", { method: "POST", body: JSON.stringify(body) }),
+  createFuelLog: (body: import("./types").VehicleFuelLogWrite) =>
+    request<{ id: string; kmPerLiter?: number | null; litersPerHour?: number | null }>("/api/v1/fleet/fuel-logs", { method: "POST", body: JSON.stringify(body) }),
+  deleteFuelLog: (id: string) => request<void>(`/api/v1/fleet/fuel-logs/${id}`, { method: "DELETE" }),
+  getFleetCosts: (from: string, to: string) =>
+    request<import("./types").FleetCosts>(`/api/v1/fleet/costs?from=${from}&to=${to}`),
 
   // Authentication & Multi-Tenancy
   login: (body: { email: string; password: string; tenantId?: string }) =>

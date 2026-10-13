@@ -74,14 +74,39 @@ Proceso nocturno por empresa. Manda el resumen de lo vencido y por vencer a los 
 - Los empleados no activos en RRHH no se controlan.
 - **Aviso nuevo:** `fleet.people-credentials` (`FleetPeopleNotices`).
 - **Pruebas:** `FleetPeopleApiTests`.
-- **Queda de la maqueta para 2b:** `fleet."VehicleDrivers"` y `/drivers`, que usa la pantalla de combustible.
 
-### 2b. Mantenimiento y combustible (siguiente)
+### 2b. Mantenimiento y combustible (hecha, PR "Flota 2b")
 
-- Plan por km, horas o fecha, aviso de service próximo, historial con costo; la unidad en taller no está disponible.
-- Combustible: cargas con el chofer de la flota (persona), consumo, y costo por km o por hora.
+- **Plan de mantenimiento** (`FleetMaintenance.cs`, tabla `fleet."MaintenancePlans"`):
+  - Cada ítem tiene frecuencia por km, horas o días; vence por lo que llegue primero.
+  - Tiene márgenes de aviso (km, horas y días) y un **punto de partida** ("último hecho": fecha y lectura).
+  - El último hecho **se calcula**: es el último trabajo completado que incluye el ítem (`VehicleMaintenances.PlanIds`, `uuid[]`). Si no hay ninguno, cuenta desde el punto de partida. Por eso borrar un trabajo equivocado no rompe el plan.
+  - Quitar un ítem lo da de baja (`IsActive`); no lo borra.
+- **Taller** (`fleet."VehicleMaintenances"`, ahora validado):
+  - Estados: programado, en taller, hecho y cancelado.
+  - **En taller** pone la unidad en `InMaintenance`. Cuando no queda ninguno en curso, vuelve a `Active`.
+  - Un trabajo hecho exige los km u horas si cumple ítems del plan. Además, actualiza la lectura de la unidad si es mayor.
+  - Quien no ve costos no puede pisar el costo al editar.
+- **Combustible** (`FleetFuel.cs`):
+  - Cada carga se asocia a la unidad, a la persona de la flota (`EmployeeId`) y a la lectura (km u horas, obligatoria según la medición).
+  - Los km no pueden ser menores que los de una carga anterior.
+  - Se informa litros más precio por litro o total del ticket.
+  - Consumo: km/l desde la carga anterior, o l/h. Se recalcula al borrar o al cargar con fecha atrasada.
+  - La carga también es una lectura de la unidad.
+- **Costos** (`GET /fleet/costs?from&to`): combustible, taller y vencimientos (por fecha de emisión) por unidad, con costo por km o por hora y consumo del período.
+  - Pantalla "Costos por unidad".
+  - Permisos: `/api/v1/fleet/costs` es área de **costos**. En el resto de Flota se ocultan `totalCost`, `pricePerLiter` y `cost` a quien no tiene el permiso.
+- **Aviso nuevo** `fleet.services` (`FleetServiceNotices`).
+- **Pantallas:**
+  - Mantenimiento (panel);
+  - en la ficha de la unidad, "Plan de mantenimiento" y "Taller" (`components/fleet/VehicleMaintenanceSection.tsx`);
+  - Combustible (rehecha);
+  - Costos por unidad;
+  - Ayuda.
+- **Fuera de servicio:** los endpoints de la maqueta `/drivers` y `/maintenances` (sin validar). La tabla `fleet."VehicleDrivers"` queda sin uso.
+- **Pruebas:** `FleetMaintenanceApiTests`.
 
-### 3. Órdenes de servicio y agenda
+### 3. Órdenes de servicio y agenda (siguiente)
 
 - **Orden de servicio:** sale del pedido o es suelta. Tiene cliente, lugar, descripción, inicio y fin, técnicos, unidades, repuestos usados y trabajo realizado.
 - **Control al asignar:** bloquea una unidad o persona que esté vencida o que **venza antes del fin del trabajo**, que esté en taller o que ya esté asignada esos días. Explica el motivo.

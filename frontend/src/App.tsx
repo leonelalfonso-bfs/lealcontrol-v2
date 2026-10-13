@@ -41,6 +41,8 @@ import {
   FinanceReconciliationPage,
   FleetFuelLogsPage,
   FleetHelpPage,
+  FleetMaintenancePage,
+  FleetCostsPage,
   FleetVehicleFormPage,
   FleetVehiclesListPage,
   GeneralLedgerPage,
@@ -479,7 +481,9 @@ export function App() {
               <Route path="/flota/vehiculos/:id" element={<FleetVehicleFormPage />} />
               <Route path="/flota/personas" element={<FleetPeoplePage />} />
               <Route path="/flota/personas/:id" element={<FleetPersonPage />} />
+              <Route path="/flota/mantenimiento" element={<FleetMaintenancePage />} />
               <Route path="/flota/combustible" element={<FleetFuelLogsPage />} />
+              <Route path="/flota/costos" element={<FleetCostsPage />} />
               <Route path="/flota/ayuda" element={<FleetHelpPage />} />
 
               {/* Grains & Agriculture Brokerage Routes */}

@@ -93,6 +93,7 @@ public sealed class VehicleDriver
     public DateTime CreatedAtUtc { get; set; }
 }
 
+/// <summary>Trabajo de taller: service, reparación o inspección. "En taller" deja la unidad no disponible.</summary>
 public sealed class VehicleMaintenance
 {
     public Guid Id { get; set; }
@@ -101,7 +102,10 @@ public sealed class VehicleMaintenance
     public MaintenanceType Type { get; set; } = MaintenanceType.Preventive;
     public string Title { get; set; } = "";
     public string Description { get; set; } = "";
+    /// <summary>0 cuando la unidad no se mide por km o no se cargó.</summary>
     public int KmAtService { get; set; }
+    public decimal? HoursAtService { get; set; }
+    /// <summary>Fecha civil (12:00 UTC): la del service hecho, o la programada.</summary>
     public DateTime ServiceDateUtc { get; set; }
     public string WorkshopName { get; set; } = "Taller Propio";
     public string? InvoiceReference { get; set; }
@@ -109,6 +113,33 @@ public sealed class VehicleMaintenance
     public int? NextServiceKm { get; set; }
     public DateTime? NextServiceDateUtc { get; set; }
     public MaintenanceStatus Status { get; set; } = MaintenanceStatus.Completed;
+    /// <summary>Ítems del plan que este trabajo cumple (al completarse, vuelven a contar desde acá).</summary>
+    public Guid[] PlanIds { get; set; } = [];
+    public string? CreatedBy { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+}
+
+/// <summary>
+/// Ítem del plan de mantenimiento de una unidad: cada cuántos km, horas o días se hace.
+/// El último hecho es el último trabajo completado que lo incluye o, si no hay, el punto de partida.
+/// </summary>
+public sealed class MaintenancePlan
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public Guid VehicleId { get; set; }
+    public string Title { get; set; } = "";
+    public int? IntervalKm { get; set; }
+    public decimal? IntervalHours { get; set; }
+    public int? IntervalDays { get; set; }
+    public int AlertKm { get; set; } = 1000;
+    public decimal AlertHours { get; set; } = 25;
+    public int AlertDays { get; set; } = 15;
+    public DateTime BaselineDateUtc { get; set; }
+    public int? BaselineKm { get; set; }
+    public decimal? BaselineHours { get; set; }
+    public bool IsActive { get; set; } = true;
+    public string? Notes { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 }
 
@@ -117,16 +148,23 @@ public sealed class VehicleFuelLog
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }
     public Guid VehicleId { get; set; }
+    /// <summary>Maqueta anterior (fleet.VehicleDrivers). Las cargas nuevas usan <see cref="EmployeeId"/>.</summary>
     public Guid? DriverId { get; set; }
+    /// <summary>Empleado de RRHH que cargó (persona de la flota).</summary>
+    public Guid? EmployeeId { get; set; }
     public DateTime LogDateUtc { get; set; }
-    public int KilometersAtFueling { get; set; }
+    public int? KilometersAtFueling { get; set; }
+    public decimal? HoursAtFueling { get; set; }
     public decimal Liters { get; set; }
     public decimal PricePerLiter { get; set; }
     public decimal TotalCost { get; set; }
-    public string GasStation { get; set; } = "YPF";
-    public string PaymentMethod { get; set; } = "YPF en Ruta";
+    public string GasStation { get; set; } = "";
+    public string PaymentMethod { get; set; } = "";
+    /// <summary>Km recorridos desde la carga anterior / litros de esta carga.</summary>
     public decimal? CalculatedKmPerLiter { get; set; }
+    public decimal? CalculatedLitersPerHour { get; set; }
     public string? Notes { get; set; }
+    public string? CreatedBy { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 }
 

@@ -17,6 +17,7 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
     public DbSet<VehicleMeterReading> VehicleMeterReadings => Set<VehicleMeterReading>();
     public DbSet<FleetMember> Members => Set<FleetMember>();
     public DbSet<PersonCredential> PersonCredentials => Set<PersonCredential>();
+    public DbSet<MaintenancePlan> MaintenancePlans => Set<MaintenancePlan>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -87,7 +88,25 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             b.ToTable("VehicleMaintenances");
             b.HasKey(x => x.Id);
             b.Property(x => x.TotalCost).HasPrecision(18, 2);
+            b.Property(x => x.HoursAtService).HasPrecision(10, 2);
+            b.Property(x => x.Title).HasMaxLength(160);
+            b.Property(x => x.WorkshopName).HasMaxLength(120);
+            b.Property(x => x.InvoiceReference).HasMaxLength(60);
+            b.Property(x => x.CreatedBy).HasMaxLength(140);
             b.HasIndex(x => new { x.TenantId, x.VehicleId, x.ServiceDateUtc });
+        });
+
+        modelBuilder.Entity<MaintenancePlan>(b =>
+        {
+            b.ToTable("MaintenancePlans");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Title).HasMaxLength(160);
+            b.Property(x => x.IntervalHours).HasPrecision(10, 2);
+            b.Property(x => x.AlertHours).HasPrecision(10, 2);
+            b.Property(x => x.BaselineHours).HasPrecision(10, 2);
+            b.Property(x => x.Notes).HasMaxLength(500);
+            b.HasIndex(x => new { x.TenantId, x.VehicleId });
+            b.HasOne<Vehicle>().WithMany().HasForeignKey(x => x.VehicleId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<VehicleFuelLog>(b =>
@@ -98,6 +117,9 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             b.Property(x => x.PricePerLiter).HasPrecision(18, 2);
             b.Property(x => x.TotalCost).HasPrecision(18, 2);
             b.Property(x => x.CalculatedKmPerLiter).HasPrecision(10, 2);
+            b.Property(x => x.CalculatedLitersPerHour).HasPrecision(10, 2);
+            b.Property(x => x.HoursAtFueling).HasPrecision(10, 2);
+            b.Property(x => x.CreatedBy).HasMaxLength(140);
             b.HasIndex(x => new { x.TenantId, x.VehicleId, x.LogDateUtc });
         });
     }
@@ -252,6 +274,36 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL
             );
             CREATE INDEX IF NOT EXISTS ""IX_PersonCredentials_Employee"" ON fleet.""PersonCredentials"" (""TenantId"", ""EmployeeId"", ""Type"", ""IsActive"");
+
+            ALTER TABLE fleet.""VehicleMaintenances"" ADD COLUMN IF NOT EXISTS ""HoursAtService"" numeric(10,2);
+            ALTER TABLE fleet.""VehicleMaintenances"" ADD COLUMN IF NOT EXISTS ""PlanIds"" uuid[] NOT NULL DEFAULT ARRAY[]::uuid[];
+            ALTER TABLE fleet.""VehicleMaintenances"" ADD COLUMN IF NOT EXISTS ""CreatedBy"" character varying(140);
+
+            CREATE TABLE IF NOT EXISTS fleet.""MaintenancePlans"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""VehicleId"" uuid NOT NULL REFERENCES fleet.""Vehicles""(""Id"") ON DELETE CASCADE,
+                ""Title"" character varying(160) NOT NULL,
+                ""IntervalKm"" integer,
+                ""IntervalHours"" numeric(10,2),
+                ""IntervalDays"" integer,
+                ""AlertKm"" integer NOT NULL DEFAULT 1000,
+                ""AlertHours"" numeric(10,2) NOT NULL DEFAULT 25,
+                ""AlertDays"" integer NOT NULL DEFAULT 15,
+                ""BaselineDateUtc"" timestamp with time zone NOT NULL,
+                ""BaselineKm"" integer,
+                ""BaselineHours"" numeric(10,2),
+                ""IsActive"" boolean NOT NULL DEFAULT true,
+                ""Notes"" character varying(500),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ""IX_MaintenancePlans_Vehicle"" ON fleet.""MaintenancePlans"" (""TenantId"", ""VehicleId"");
+
+            ALTER TABLE fleet.""VehicleFuelLogs"" ADD COLUMN IF NOT EXISTS ""EmployeeId"" uuid;
+            ALTER TABLE fleet.""VehicleFuelLogs"" ADD COLUMN IF NOT EXISTS ""HoursAtFueling"" numeric(10,2);
+            ALTER TABLE fleet.""VehicleFuelLogs"" ADD COLUMN IF NOT EXISTS ""CalculatedLitersPerHour"" numeric(10,2);
+            ALTER TABLE fleet.""VehicleFuelLogs"" ADD COLUMN IF NOT EXISTS ""CreatedBy"" character varying(140);
+            ALTER TABLE fleet.""VehicleFuelLogs"" ALTER COLUMN ""KilometersAtFueling"" DROP NOT NULL;
         ", ct);
 
         // Patente y código únicos por empresa. Con datos viejos duplicados el índice no se puede

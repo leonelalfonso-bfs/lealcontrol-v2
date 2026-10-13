@@ -8,9 +8,13 @@ namespace LealControl.Modules.Fleet.Infrastructure;
 
 public enum ExpirationState { Ok, DueSoon, Expired, Missing }
 
+/// <summary>Próximo service de un ítem del plan (lo que no aplica queda en null).</summary>
+public sealed record PlanDue(int? NextKm, int? KmLeft, decimal? NextHours, decimal? HoursLeft, DateOnly? NextDate, int? DaysLeft, ExpirationState State);
+
 /// <summary>Reglas de Flota sin base de datos: validaciones, vencimientos y documentación obligatoria.</summary>
 public static partial class FleetRules
 {
+    public static readonly CultureInfo Ar = CultureInfo.GetCultureInfo("es-AR");
     private static readonly TimeSpan ArgentinaOffset = TimeSpan.FromHours(-3);
 
     /// <summary>Día civil de Argentina (UTC-3, sin horario de verano).</summary>
@@ -115,6 +119,64 @@ public static partial class FleetRules
         if (km is { } k && k < currentKm) return $"Los kilómetros no pueden bajar (la unidad tiene {currentKm:N0}). Si es un error de carga, marcá \"corrección\" y explicá el motivo.";
         if (hours is { } h && h < currentHours) return $"Las horas no pueden bajar (la unidad tiene {currentHours:N1}). Si es un error de carga, marcá \"corrección\" y explicá el motivo.";
         return null;
+    }
+
+    public static bool UsesKm(MeterType meter) => meter is MeterType.Kilometers or MeterType.Both;
+    public static bool UsesHours(MeterType meter) => meter is MeterType.Hours or MeterType.Both;
+
+    public static string? ValidatePlan(MeterType meter, string? title, int? intervalKm, decimal? intervalHours, int? intervalDays,
+        int alertKm, decimal alertHours, int alertDays)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return "Poné qué se hace (por ejemplo \"Cambio de aceite y filtros\").";
+        if (title.Trim().Length > 160) return "La descripción admite hasta 160 caracteres.";
+        if (intervalKm is null && intervalHours is null && intervalDays is null) return "Indicá cada cuántos km, horas o días se hace.";
+        if (intervalKm is not null && !UsesKm(meter)) return "Esta unidad no se mide por kilómetros.";
+        if (intervalHours is not null && !UsesHours(meter)) return "Esta unidad no se mide por horas.";
+        if (intervalKm is <= 0 or > 1_000_000) return "El intervalo en km tiene que ser mayor a cero.";
+        if (intervalHours is <= 0 or > 100_000) return "El intervalo en horas tiene que ser mayor a cero.";
+        if (intervalDays is <= 0 or > 3650) return "El intervalo en días va de 1 a 3650.";
+        if (alertKm < 0 || alertHours < 0 || alertDays < 0) return "Los márgenes de aviso no pueden ser negativos.";
+        return null;
+    }
+
+    /// <summary>
+    /// Próximo service de un ítem del plan, desde el último hecho. Vence por lo que llegue primero
+    /// (km, horas o fecha); "por vencer" cuando falta menos que el margen de aviso.
+    /// </summary>
+    public static PlanDue EvaluatePlan(MaintenancePlan plan, Vehicle vehicle, DateOnly lastDate, int? lastKm, decimal? lastHours, DateOnly today)
+    {
+        int? nextKm = null, kmLeft = null, daysLeft = null;
+        decimal? nextHours = null, hoursLeft = null;
+        DateOnly? nextDate = null;
+        if (plan.IntervalKm is { } ik && UsesKm(vehicle.MeterType))
+        {
+            nextKm = (lastKm ?? 0) + ik;
+            kmLeft = nextKm - vehicle.CurrentKilometers;
+        }
+        if (plan.IntervalHours is { } ih && UsesHours(vehicle.MeterType))
+        {
+            nextHours = (lastHours ?? 0) + ih;
+            hoursLeft = nextHours - vehicle.CurrentEngineHours;
+        }
+        if (plan.IntervalDays is { } id)
+        {
+            nextDate = lastDate.AddDays(id);
+            daysLeft = nextDate.Value.DayNumber - today.DayNumber;
+        }
+        var state = kmLeft < 0 || hoursLeft < 0 || daysLeft < 0 ? ExpirationState.Expired
+            : kmLeft <= plan.AlertKm || hoursLeft <= plan.AlertHours || daysLeft <= plan.AlertDays ? ExpirationState.DueSoon
+            : ExpirationState.Ok;
+        return new PlanDue(nextKm, kmLeft, nextHours, hoursLeft, nextDate, daysLeft, state);
+    }
+
+    /// <summary>Texto corto de lo que falta: "faltan 800 km", "pasado por 120 km · vencido hace 3 días".</summary>
+    public static string DueText(PlanDue due)
+    {
+        var parts = new List<string>();
+        if (due.KmLeft is { } k) parts.Add(k < 0 ? $"pasado por {(-k).ToString("N0", Ar)} km" : $"faltan {k.ToString("N0", Ar)} km");
+        if (due.HoursLeft is { } h) parts.Add(h < 0 ? $"pasado por {(-h).ToString("N0", Ar)} h" : $"faltan {h.ToString("N0", Ar)} h");
+        if (due.DaysLeft is { } d) parts.Add(d < 0 ? $"vencido hace {-d} días" : d == 0 ? "vence hoy" : $"faltan {d} días");
+        return string.Join(" · ", parts);
     }
 
     [GeneratedRegex("[^A-Z0-9]")]

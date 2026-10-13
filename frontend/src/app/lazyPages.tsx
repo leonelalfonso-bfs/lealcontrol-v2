@@ -197,6 +197,8 @@ export const HumanResourcesHelpPage = named(() => import("../pages/HumanResource
 export const FleetVehiclesListPage = named(() => import("../pages/FleetVehiclesListPage"), "FleetVehiclesListPage");
 export const FleetVehicleFormPage = named(() => import("../pages/FleetVehicleFormPage"), "FleetVehicleFormPage");
 export const FleetFuelLogsPage = named(() => import("../pages/FleetFuelLogsPage"), "FleetFuelLogsPage");
+export const FleetMaintenancePage = named(() => import("../pages/FleetMaintenancePage"), "FleetMaintenancePage");
+export const FleetCostsPage = named(() => import("../pages/FleetCostsPage"), "FleetCostsPage");
 export const FleetHelpPage = named(() => import("../pages/FleetHelpPage"), "FleetHelpPage");
 export const DirectoryHelpPage = named(() => import("../pages/DirectoryHelpPage"), "DirectoryHelpPage");
 export const SalesHelpPage = named(() => import("../pages/SalesHelpPage"), "SalesHelpPage");
