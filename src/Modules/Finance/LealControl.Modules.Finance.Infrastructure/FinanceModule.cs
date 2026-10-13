@@ -62,6 +62,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddFinanceModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, ChequesToDepositNotices>();
         services.AddFinanceApplication();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(FinanceDbContext).Assembly));
         services.AddTenantDbContext<FinanceDbContext>(FinanceDbContext.Schema);

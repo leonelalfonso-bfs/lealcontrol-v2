@@ -75,7 +75,7 @@ Cada nivel incluye a los anteriores.
   - sueldos: liquidaciones de RRHH.
 - Las pantallas muestran "—" o esconden la columna.
 
-### A1. Avisos personales
+### A1. Avisos personales (hecha, PR "Avisos personales")
 
 - **Catálogo de avisos.** Cada uno tiene módulo, nivel mínimo y sensibles que exige. Ejemplos:
   - Flota: vencimientos de unidades (ya existe: `DailyNoticeSender`, nota 64);
@@ -161,6 +161,51 @@ Pendiente de decisión del dueño:
 - Los formularios de producto y empleado ocultan esos campos.
 
 **Pruebas:** `SensitiveDataApiTests`.
+
+## Cómo quedó A1 (código)
+
+**Contrato:** `BuildingBlocks/Notices/INoticeProvider`. Cada módulo publica sus avisos con: código, módulo, nivel mínimo, permiso sensible que exige, etiqueta, descripción y si viene activado.
+
+**Avisos disponibles:**
+- `fleet.expirations` (`FleetExpirationNotices`);
+- `sales.overdue-invoices` (facturas vencidas con saldo; exige importes);
+- `sales.quotes-expiring` (presupuestos enviados que vencen en ±3 días);
+- `finance.cheques-to-deposit` (cheques en cartera con fecha de pago hasta dentro de 3 días; exige importes).
+
+**`Host/Notices/PersonalNotices.cs`:**
+- **`NoticeCenter`**: filtra el catálogo por los permisos del usuario.
+  - Suscripciones en `public.notice_subscriptions`, por usuario y código; el código `__email__` es el resumen por correo.
+  - Caché de 5 minutos por empresa y aviso.
+  - Resumen diario por persona, registrado en `public.daily_notices` (`digest:{usuario}`, día): un solo correo, solo si hay novedades.
+- **`SystemMailer`** (A2): casilla del sistema por SMTP, a nombre de "LealControl · {empresa}", con respuesta al correo de la empresa.
+- **`NoticeDigestBackgroundService`**: desde las 7 de Argentina, a cada usuario activo de cada empresa activa.
+- **Endpoints:** `GET /api/v1/notices/mine`, `GET/PUT /api/v1/notices/settings` y `POST /api/v1/notices/send-me-now`.
+
+**Pantallas:**
+- **Mi perfil → Mis avisos** (`/mi-perfil/avisos`): los avisos de hoy, qué recibir y el resumen por correo.
+- **Campanita** en la barra superior.
+
+**Reemplazos:** reemplaza al aviso de Flota por empresa (`DailyNoticeSender`, borrado). El interruptor `DAILY_NOTICES_ENABLED` ahora controla los resúmenes por correo.
+
+**Pruebas:** `PersonalNoticesApiTests`.
+
+## A2: encender la casilla del sistema (pasos)
+
+1. Crear una cuenta en un servicio de envío transaccional. Recomendado: **Brevo** (gratis hasta 300 por día). Alternativa: Resend.
+2. Verificar el dominio **lealcontrol.com** cargando en el DNS los registros que indique el servicio (SPF, DKIM y, opcional, DMARC). Así los correos no caen en spam.
+3. Crear las credenciales SMTP del servicio.
+4. En el `.env` del VPS:
+
+   ```bash
+   NOTICES_SMTP_HOST=smtp-relay.brevo.com
+   NOTICES_SMTP_PORT=587
+   NOTICES_SMTP_USER=<usuario SMTP>
+   NOTICES_SMTP_PASSWORD=<clave SMTP>
+   NOTICES_SMTP_FROM=avisos@lealcontrol.com
+   DAILY_NOTICES_ENABLED=true
+   ```
+
+5. Recrear la API (`docker compose ... up -d api`) y probar con **Mis avisos → "Enviarme el resumen ahora"**.
 
 ## Flota: dónde quedó (ver nota 64)
 

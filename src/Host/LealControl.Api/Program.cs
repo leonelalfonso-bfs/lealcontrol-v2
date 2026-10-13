@@ -97,7 +97,7 @@ try
     builder.Services.AddScoped<LealControl.BuildingBlocks.Security.ISensitiveDataAccess, LealControl.Api.Security.HttpSensitiveDataAccess>();
     builder.Services.AddSingleton<LealControl.BuildingBlocks.Security.IPermissionChangeNotifier>(sp =>
         sp.GetRequiredService<LealControl.Api.Security.PermissionResolver>());
-    LealControl.Api.Notices.DailyNoticesEndpoints.AddDailyNotices(builder.Services);
+    LealControl.Api.Notices.NoticeEndpoints.AddPersonalNotices(builder.Services);
 
     builder.Services.AddSingleton<IClock, SystemClock>();
     builder.Services.AddHttpClient<GeminiApiClient>();
@@ -429,7 +429,7 @@ try
     app.MapHumanResourcesModule();
     app.MapFleetModule();
     LealControl.Api.Security.PermissionEndpoints.MapPermissionEndpoints(app);
-    LealControl.Api.Notices.DailyNoticesEndpoints.MapDailyNotices(app);
+    LealControl.Api.Notices.NoticeEndpoints.MapPersonalNotices(app);
     app.MapAccountingModule();
     app.MapMetrologyModule();
     app.MapQualityModule();

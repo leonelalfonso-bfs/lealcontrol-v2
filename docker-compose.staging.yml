@@ -71,6 +71,11 @@ services:
       Arca__EnableInvoiceAuthorization: ${ARCA_ENABLE_INVOICE_AUTHORIZATION:-false}
       Arca__AllowProductionAuthorization: ${ARCA_ALLOW_PRODUCTION_AUTHORIZATION:-false}
       DailyNotices__Enabled: ${DAILY_NOTICES_ENABLED:-false}
+      Notices__Smtp__Host: ${NOTICES_SMTP_HOST:-}
+      Notices__Smtp__Port: ${NOTICES_SMTP_PORT:-587}
+      Notices__Smtp__User: ${NOTICES_SMTP_USER:-}
+      Notices__Smtp__Password: ${NOTICES_SMTP_PASSWORD:-}
+      Notices__Smtp__From: ${NOTICES_SMTP_FROM:-}
     depends_on:
       postgres:
         condition: service_healthy

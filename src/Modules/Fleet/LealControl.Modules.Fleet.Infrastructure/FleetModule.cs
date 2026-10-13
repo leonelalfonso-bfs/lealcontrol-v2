@@ -64,6 +64,7 @@ public static class FleetModule
 {
     public static IServiceCollection AddFleetModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetExpirationNotices>();
         services.AddTenantDbContext<FleetDbContext>(FleetDbContext.Schema);
         services.TryAddSingleton(TimeProvider.System);
         return services;

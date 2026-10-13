@@ -27,6 +27,7 @@ import {
   DirectoryHelpPage,
   DirectoryPage,
   CommunicationsSettingsPage,
+  MyNoticesPage,
   DocumentTemplatesPage,
   EmployeeFormPage,
   EmployeesListPage,
@@ -567,6 +568,7 @@ export function App() {
 
               {/* Reports & Settings Routes */}
               <Route path="/reportes" element={<ReportsPage />} />
+              <Route path="/mi-perfil/avisos" element={<MyNoticesPage />} />
               <Route path="/configuracion" element={<SettingsPage section="general" />} />
               <Route path="/configuracion/arca" element={<SettingsPage section="arca" />} />
               <Route path="/configuracion/bancos" element={<SettingsPage section="banks" />} />

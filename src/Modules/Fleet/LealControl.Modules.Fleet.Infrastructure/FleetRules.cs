@@ -26,6 +26,19 @@ public static partial class FleetRules
     public static bool TryParseDate(string? value, out DateOnly date) =>
         DateOnly.TryParseExact(value?.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
+    public static string DocumentLabel(FleetDocType type) => type switch
+    {
+        FleetDocType.VtvRto => "VTV / RTO",
+        FleetDocType.InsurancePolicy => "Seguro",
+        FleetDocType.Ruta => "RUTA",
+        FleetDocType.FireExtinguisher => "Matafuego",
+        FleetDocType.ForkliftCertification => "Habilitación autoelevador",
+        FleetDocType.GreenCard => "Cédula",
+        FleetDocType.GncCard => "Oblea GNC",
+        FleetDocType.Senasa => "SENASA",
+        _ => "Otro"
+    };
+
     public static string NormalizePlate(string? plate) => NonAlphanumeric().Replace((plate ?? "").ToUpperInvariant(), "");
 
     public static string? NormalizeCode(string? code)
