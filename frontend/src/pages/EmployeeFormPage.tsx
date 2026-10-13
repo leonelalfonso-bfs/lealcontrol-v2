@@ -1,4 +1,5 @@
 import { useEffect, useState, FormEvent, ChangeEvent } from "react";
+import { usePermissions } from "../context/PermissionsContext";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { provinces, type Employee, type EppDelivery, type EmployeeDocument } from "../api/types";
@@ -26,6 +27,9 @@ const EGRESO_DOC_TYPES = [
 ];
 
 export function EmployeeFormPage() {
+  const { permissions } = usePermissions();
+  // Sin el permiso, el servidor no manda el dato ni lo pisa al guardar: el campo no se muestra.
+  const seesSalaries = !permissions || permissions.isSuperAdmin || permissions.sensitive.salaries;
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
@@ -129,8 +133,8 @@ export function EmployeeFormPage() {
       setUnionCct(emp.unionCct);
       setUnionCategory(emp.unionCategory);
       setHealthInsurance(emp.healthInsurance);
-      setBaseSalary(emp.baseSalary);
-      setHourlyRate(emp.hourlyRate);
+      setBaseSalary(emp.baseSalary ?? 0);
+      setHourlyRate(emp.hourlyRate ?? 0);
       setStatus(emp.status);
       setPhotoPath(emp.photoPath || null);
       setNotes(emp.notes || "");
@@ -628,7 +632,7 @@ export function EmployeeFormPage() {
           </div>
 
           <div className="grid-3">
-            <label>
+            {seesSalaries && <label>
               Sueldo Básico Mensual ($ ARS) *
               <input
                 type="number"
@@ -638,8 +642,8 @@ export function EmployeeFormPage() {
                 value={baseSalary}
                 onChange={(e) => setBaseSalary(Number(e.target.value))}
               />
-            </label>
-            <label>
+            </label>}
+            {seesSalaries && <label>
               Valor Hora ($ ARS)
               <input
                 type="number"
@@ -648,7 +652,7 @@ export function EmployeeFormPage() {
                 value={hourlyRate}
                 onChange={(e) => setHourlyRate(Number(e.target.value))}
               />
-            </label>
+            </label>}
             <label>
               Estado Laboral *
               <select value={status} onChange={(e) => setStatus(Number(e.target.value))}>

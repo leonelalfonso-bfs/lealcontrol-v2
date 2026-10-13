@@ -410,8 +410,8 @@ export function UsersAndPermissions() {
               ))}
             </div>
             <p className="muted" style={{ margin: 0, fontSize: "0.78rem" }}>
-              Cada nivel incluye a los anteriores. Los niveles se controlan en el servidor; los datos sensibles
-              (importes, costos y sueldos) se aplican en la próxima etapa.
+              Cada nivel incluye a los anteriores. Sin "importes" no se entra a Finanzas, Contabilidad ni cuentas
+              corrientes; sin "costos" no se ven costos ni Compras; sin "sueldos" no se ven liquidaciones ni el básico.
             </p>
             {profileForm.id && profileForm.userCount > 0 && (
               <p style={{ margin: 0, fontSize: "0.82rem", fontWeight: 600 }}>Lo usan {profileForm.userCount} usuario(s): toman el cambio al guardar.</p>

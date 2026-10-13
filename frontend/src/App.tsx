@@ -261,8 +261,21 @@ export function App() {
   ).filter((id) => id !== "administracion" || !permissions || permissions.isSuperAdmin || permissions.modules.administration !== "None");
 
   const allMods = visibleModules(DEVELOPMENT_ACCESS);
+  // Datos sensibles: sin "importes" no hay Finanzas ni Contabilidad; sin "costos", ni Compras ni
+  // costos de fabricación; sin "sueldos", no hay liquidaciones (el servidor igual los rechaza).
+  const sensitive = permissions && !permissions.isSuperAdmin ? permissions.sensitive : null;
+  const hiddenModules = new Set<string>([
+    ...(sensitive && !sensitive.amounts ? ["finanzas", "contabilidad"] : []),
+    ...(sensitive && !sensitive.costs ? ["compras"] : [])
+  ]);
+  const hiddenItems = new Set<string>([
+    ...(sensitive && !sensitive.costs ? ["/produccion/costos"] : []),
+    ...(sensitive && !sensitive.salaries ? ["/rrhh/liquidaciones"] : [])
+  ]);
   const modules = allMods
     .filter((m) => m.id === "inicio" || allowedModuleIds.includes(m.id))
+    .filter((m) => !hiddenModules.has(m.id))
+    .map((m) => (m.items.some((item) => hiddenItems.has(item.path)) ? { ...m, items: m.items.filter((item) => !hiddenItems.has(item.path)) } : m))
     .filter((m) => !presentationActive || m.id === "inicio" || m.id === "calidad" || m.id === "metrologia");
   const activeModule = resolveActiveModule(location.pathname, DEVELOPMENT_ACCESS);
   const activeModuleId = activeModule.id;

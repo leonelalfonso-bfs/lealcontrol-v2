@@ -98,6 +98,53 @@ public static class PermissionRules
         return new Requirement(module, PermissionLevel.Edit);
     }
 
+    public enum Sensitive { Amounts, Costs, Salaries }
+
+    /// <summary>Pantallas enteras de datos sensibles: sin el permiso, no se entra.</summary>
+    private static readonly (string Prefix, Sensitive Kind)[] SensitiveAreas =
+    [
+        ("/api/v1/finance", Sensitive.Amounts),
+        ("/api/v1/accounting", Sensitive.Amounts),
+        ("/api/v1/sales/current-accounts", Sensitive.Amounts),
+        ("/api/v1/sales/production/costs", Sensitive.Costs),
+        ("/api/v1/sales/inventory/products/suppliers", Sensitive.Costs),
+        ("/api/v1/sales/products/suppliers", Sensitive.Costs),
+        ("/api/v1/purchases", Sensitive.Costs),
+        ("/api/v1/hr/payroll", Sensitive.Salaries)
+    ];
+
+    /// <summary>Campos que se quitan de las respuestas a quien no tiene el permiso.</summary>
+    private static readonly (string Prefix, Sensitive Kind, string[] Fields)[] MaskedFields =
+    [
+        ("/api/v1/sales/products", Sensitive.Costs, ["costPrice", "purchaseCurrency", "purchasePrice"]),
+        ("/api/v1/sales/inventory", Sensitive.Costs, ["unitCostArs", "unitCostUsd", "costPrice", "purchasePrice"]),
+        ("/api/v1/sales/production", Sensitive.Costs, ["unitCost", "extendedCost", "materialCost", "costPerOutputUnit", "costPrice"]),
+        ("/api/v1/hr", Sensitive.Salaries, ["baseSalary", "hourlyRate"])
+    ];
+
+    public static Sensitive? SensitiveArea(string? path) =>
+        path is null ? null : SensitiveAreas.Where(a => path.StartsWith(a.Prefix, StringComparison.OrdinalIgnoreCase))
+            .Select(a => (Sensitive?)a.Kind).FirstOrDefault();
+
+    public static IReadOnlyList<string> FieldsToMask(string? path, SensitivePermissions sees) =>
+        path is null ? [] : MaskedFields
+            .Where(m => path.StartsWith(m.Prefix, StringComparison.OrdinalIgnoreCase) && !Sees(sees, m.Kind))
+            .SelectMany(m => m.Fields).ToList();
+
+    public static bool Sees(SensitivePermissions sees, Sensitive kind) => kind switch
+    {
+        Sensitive.Amounts => sees.Amounts,
+        Sensitive.Costs => sees.Costs,
+        _ => sees.Salaries
+    };
+
+    public static string SensitiveText(Sensitive kind) => kind switch
+    {
+        Sensitive.Amounts => "importes y saldos",
+        Sensitive.Costs => "costos y precios de compra",
+        _ => "sueldos"
+    };
+
     public static bool Satisfies(UserPermissions permissions, Requirement requirement) =>
         permissions.Allows(requirement.Module, requirement.Level)
         || (requirement.AlsoReadableWith?.Any(m => permissions.Allows(m, PermissionLevel.View)) ?? false);
@@ -250,8 +297,100 @@ public sealed class PermissionMiddleware(RequestDelegate next)
             return;
         }
         context.Items[CheckedKey] = true;
-        await next(context);
+
+        if (!permissions.IsSuperAdmin && PermissionRules.SensitiveArea(context.Request.Path.Value) is { } area
+            && !PermissionRules.Sees(permissions.Sensitive, area))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                message = $"Tu perfil no permite ver {PermissionRules.SensitiveText(area)}.",
+                sensitive = area.ToString()
+            });
+            return;
+        }
+
+        var mask = permissions.IsSuperAdmin ? [] : PermissionRules.FieldsToMask(context.Request.Path.Value, permissions.Sensitive);
+        if (mask.Count == 0)
+        {
+            await next(context);
+            return;
+        }
+        await SensitiveFieldFilter.WriteMaskedAsync(context, next, mask);
     }
+}
+
+/// <summary>
+/// Quita de la respuesta JSON los campos sensibles que el usuario no puede ver: el dato no sale
+/// del servidor (no alcanza con ocultarlo en la pantalla).
+/// </summary>
+public static class SensitiveFieldFilter
+{
+    public static async Task WriteMaskedAsync(HttpContext context, RequestDelegate next, IReadOnlyList<string> fields)
+    {
+        var original = context.Response.Body;
+        await using var buffer = new System.IO.MemoryStream();
+        context.Response.Body = buffer;
+        try
+        {
+            await next(context);
+        }
+        finally
+        {
+            context.Response.Body = original;
+        }
+
+        buffer.Position = 0;
+        var isJson = context.Response.ContentType?.Contains("json", StringComparison.OrdinalIgnoreCase) == true;
+        if (!isJson || buffer.Length == 0)
+        {
+            await buffer.CopyToAsync(original, context.RequestAborted);
+            return;
+        }
+
+        System.Text.Json.Nodes.JsonNode? node;
+        try
+        {
+            node = await System.Text.Json.Nodes.JsonNode.ParseAsync(buffer, cancellationToken: context.RequestAborted);
+        }
+        catch (JsonException)
+        {
+            buffer.Position = 0;
+            await buffer.CopyToAsync(original, context.RequestAborted);
+            return;
+        }
+        Strip(node, new HashSet<string>(fields, StringComparer.OrdinalIgnoreCase));
+        var bytes = System.Text.Encoding.UTF8.GetBytes(node?.ToJsonString() ?? "null");
+        context.Response.ContentLength = bytes.Length;
+        await original.WriteAsync(bytes, context.RequestAborted);
+    }
+
+    public static void Strip(System.Text.Json.Nodes.JsonNode? node, HashSet<string> fields)
+    {
+        switch (node)
+        {
+            case System.Text.Json.Nodes.JsonObject obj:
+                foreach (var key in obj.Select(p => p.Key).Where(fields.Contains).ToList()) obj.Remove(key);
+                foreach (var child in obj.Select(p => p.Value).ToList()) Strip(child, fields);
+                break;
+            case System.Text.Json.Nodes.JsonArray array:
+                foreach (var child in array) Strip(child, fields);
+                break;
+        }
+    }
+}
+
+/// <summary>Datos sensibles que ve el usuario del pedido, para las protecciones al guardar.</summary>
+public sealed class HttpSensitiveDataAccess(IHttpContextAccessor accessor) : ISensitiveDataAccess
+{
+    private SensitivePermissions Current =>
+        accessor.HttpContext is { } http && PermissionResolver.FromContext(http) is { } p && !p.IsSuperAdmin
+            ? p.Sensitive
+            : SensitivePermissions.All;
+
+    public bool CanSeeAmounts => Current.Amounts;
+    public bool CanSeeCosts => Current.Costs;
+    public bool CanSeeSalaries => Current.Salaries;
 }
 
 public static class PermissionEndpoints

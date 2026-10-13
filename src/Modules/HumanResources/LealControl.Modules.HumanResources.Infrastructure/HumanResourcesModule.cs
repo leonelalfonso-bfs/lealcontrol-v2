@@ -621,9 +621,15 @@ public static class HumanResourcesModule
             return emp is not null ? Results.Ok(emp) : Results.NotFound("Empleado no encontrado");
         });
 
-        group.MapPost("/employees", async (Employee body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        group.MapPost("/employees", async (Employee body, HttpContext http, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;
+            // Quien no ve sueldos no los define: quedan en cero para que los cargue quien sí puede.
+            if (http.RequestServices.GetService<LealControl.BuildingBlocks.Security.ISensitiveDataAccess>()?.CanSeeSalaries == false)
+            {
+                body.BaseSalary = 0;
+                body.HourlyRate = 0;
+            }
             body.Id = Guid.NewGuid();
             body.TenantId = tenantId;
             body.CreatedAtUtc = DateTime.UtcNow;
@@ -633,7 +639,7 @@ public static class HumanResourcesModule
             return Results.Created($"/api/v1/hr/employees/{body.Id}", body);
         });
 
-        group.MapPut("/employees/{id:guid}", async (Guid id, Employee body, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        group.MapPut("/employees/{id:guid}", async (Guid id, Employee body, HttpContext http, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId.Value;
             var emp = await db.Employees.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
@@ -667,8 +673,13 @@ public static class HumanResourcesModule
             emp.UnionCct = body.UnionCct;
             emp.UnionCategory = body.UnionCategory;
             emp.HealthInsurance = body.HealthInsurance;
-            emp.BaseSalary = body.BaseSalary;
-            emp.HourlyRate = body.HourlyRate;
+            // Quien no ve sueldos no los recibe en pantalla: se conserva el que había.
+            var sensitive = http.RequestServices.GetService<LealControl.BuildingBlocks.Security.ISensitiveDataAccess>();
+            if (sensitive?.CanSeeSalaries != false)
+            {
+                emp.BaseSalary = body.BaseSalary;
+                emp.HourlyRate = body.HourlyRate;
+            }
             emp.BankName = body.BankName;
             emp.Cbu = body.Cbu;
             emp.BankAlias = body.BankAlias;

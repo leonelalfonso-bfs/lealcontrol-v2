@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { usePermissions } from "../context/PermissionsContext";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { ProductCategory, ProductWrite } from "../api/types";
@@ -6,6 +7,9 @@ import type { ProductCategory, ProductWrite } from "../api/types";
 type TabType = "general" | "stock" | "fiscal" | "custom";
 
 export const ProductFormPage: React.FC = () => {
+  const { permissions } = usePermissions();
+  // Sin el permiso, el servidor no manda el dato ni lo pisa al guardar: el campo no se muestra.
+  const seesCosts = !permissions || permissions.isSuperAdmin || permissions.sensitive.costs;
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
@@ -102,7 +106,7 @@ export const ProductFormPage: React.FC = () => {
           setSaleCurrency(p.saleCurrency);
           setBasePrice(p.basePrice);
           setPurchaseCurrency(p.purchaseCurrency);
-          setCostPrice(p.costPrice);
+          setCostPrice(p.costPrice ?? 0);
 
           setTrackStock(p.trackStock);
           setMinStock(p.minStock);
@@ -537,7 +541,7 @@ export const ProductFormPage: React.FC = () => {
                       </select>
                     </div>
 
-                    <div>
+                    {seesCosts && <div>
                       <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: "4px" }}>
                         Costo Base Reposición
                       </label>
@@ -550,7 +554,7 @@ export const ProductFormPage: React.FC = () => {
                         onChange={(e) => setCostPrice(e.target.value === "" ? 0 : Number(e.target.value))}
                         style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold", fontSize: "1rem", color: "#b45309" }}
                       />
-                    </div>
+                    </div>}
                   </div>
                 </div>
               </div>
