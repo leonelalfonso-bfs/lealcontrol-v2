@@ -9,6 +9,8 @@ public enum VehicleStatus { Active, InMaintenance, OutOfService, Sold }
 public enum MeterType { Kilometers, Hours, Both, None }
 public enum FleetDocType { VtvRto, InsurancePolicy, GreenCard, GncCard, Senasa, Ruta, Other, FireExtinguisher, ForkliftCertification }
 public enum MaintenanceType { Preventive, Corrective, Urgent, Inspection }
+/// <summary>Credencial de una persona de la flota (se guarda como número: solo se agregan al final).</summary>
+public enum CredentialType { DrivingLicense, Linti, ForkliftOperator, MedicalFitness, Other }
 public enum MaintenanceStatus { Scheduled, InProgress, Completed, Cancelled }
 
 public sealed class Vehicle
@@ -125,5 +127,38 @@ public sealed class VehicleFuelLog
     public string PaymentMethod { get; set; } = "YPF en Ruta";
     public decimal? CalculatedKmPerLiter { get; set; }
     public string? Notes { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+}
+
+/// <summary>Empleado de RRHH que trabaja con la flota, con sus roles.</summary>
+public sealed class FleetMember
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public Guid EmployeeId { get; set; }
+    public bool IsDriver { get; set; }
+    /// <summary>Chofer de transporte de cargas: además de la licencia, necesita LINTI.</summary>
+    public bool IsCargoDriver { get; set; }
+    public bool IsForkliftOperator { get; set; }
+    public bool IsTechnician { get; set; }
+    public string? Notes { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+}
+
+/// <summary>Licencia, LINTI, carnet, apto médico… con vencimiento. Renovar deja la anterior en el historial.</summary>
+public sealed class PersonCredential
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public Guid EmployeeId { get; set; }
+    public CredentialType Type { get; set; }
+    /// <summary>Categoría de la licencia (B1, C, E1…) o detalle.</summary>
+    public string? Category { get; set; }
+    public string Number { get; set; } = "";
+    public string? Issuer { get; set; }
+    public DateTime IssueDateUtc { get; set; }
+    public DateTime ExpirationDateUtc { get; set; }
+    public int AlertDaysBefore { get; set; } = 30;
+    public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; }
 }

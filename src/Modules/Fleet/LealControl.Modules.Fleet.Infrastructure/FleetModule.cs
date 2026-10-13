@@ -65,6 +65,7 @@ public static class FleetModule
     public static IServiceCollection AddFleetModule(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetExpirationNotices>();
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetPeopleNotices>();
         services.AddTenantDbContext<FleetDbContext>(FleetDbContext.Schema);
         services.TryAddSingleton(TimeProvider.System);
         return services;
@@ -138,6 +139,7 @@ public static class FleetModule
     public static IEndpointRouteBuilder MapFleetModule(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/v1/fleet").WithTags("Fleet");
+        group.MapFleetPeople();
 
         // -------------------------------------------------------------
         // UNIDADES

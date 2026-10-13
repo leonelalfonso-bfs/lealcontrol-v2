@@ -40,3 +40,35 @@ public sealed class FleetExpirationNotices : INoticeProvider
             i.State == ExpirationState.DueSoon ? NoticeSeverity.Warning : NoticeSeverity.Critical)).ToList();
     }
 }
+
+/// <summary>Aviso: licencias, LINTI, carnets y aptos de las personas de la flota.</summary>
+public sealed class FleetPeopleNotices : INoticeProvider
+{
+    public string Code => "fleet.people-credentials";
+    public string Module => "fleet";
+    public int MinimumLevel => 1;
+    public NoticeSensitivity Sensitivity => NoticeSensitivity.None;
+    public string Label => "Licencias y credenciales del personal";
+    public string Description => "Licencias de conducir, LINTI, carnets de autoelevadorista y aptos médicos vencidos, por vencer o sin cargar.";
+    public bool DefaultOn => true;
+
+    public async Task<IReadOnlyList<NoticeItem>> GetAsync(NoticeContext context, CancellationToken cancellationToken)
+    {
+        await using var db = new FleetDbContext(new DbContextOptionsBuilder<FleetDbContext>().UseNpgsql(context.ConnectionString).Options);
+        var members = await db.Members.AsNoTracking().Where(m => m.TenantId == context.TenantId).ToListAsync(cancellationToken);
+        if (members.Count == 0) return [];
+        var creds = await db.PersonCredentials.AsNoTracking()
+            .Where(c => c.TenantId == context.TenantId && c.IsActive).ToListAsync(cancellationToken);
+        var employees = await FleetPeople.EmployeesAsync(db, context.TenantId, cancellationToken);
+        return FleetPeople.Expirations(members, creds, employees, context.Today).Select(i => new NoticeItem(
+            $"{i.FullName} — {FleetRules.CredentialLabel(i.Type)}",
+            i.State switch
+            {
+                ExpirationState.Missing => "Sin cargar",
+                ExpirationState.Expired => $"Venció el {DateOnly.Parse(i.ExpirationDate!):dd/MM/yyyy} (hace {-(i.DaysRemaining ?? 0)} días)",
+                _ => i.DaysRemaining == 0 ? "Vence hoy" : $"Vence el {DateOnly.Parse(i.ExpirationDate!):dd/MM/yyyy} (en {i.DaysRemaining} días)"
+            },
+            $"/flota/personas/{i.MemberId}",
+            i.State == ExpirationState.DueSoon ? NoticeSeverity.Warning : NoticeSeverity.Critical)).ToList();
+    }
+}

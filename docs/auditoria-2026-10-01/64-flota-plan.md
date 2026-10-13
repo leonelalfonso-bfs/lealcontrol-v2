@@ -1,6 +1,6 @@
 # Flota y órdenes de servicio: plan (8 de octubre de 2026)
 
-> **Pausado después de la 1b.** Primero van los permisos personalizados y los avisos personales ([65](65-permisos-y-avisos-plan.md)). El aviso diario por empresa está apagado en producción (`DAILY_NOTICES_ENABLED=false`).
+> **Retomado el 13/10/2026** después de los permisos y los avisos personales ([65](65-permisos-y-avisos-plan.md)). El aviso diario por empresa (1b) fue reemplazado por los avisos personales.
 
 ## Objetivo
 
@@ -64,6 +64,22 @@ Proceso nocturno por empresa. Manda el resumen de lo vencido y por vencer a los 
   - La tabla `fleet.VehicleDrivers` de la maqueta se reemplaza por el vínculo con `EmployeeId`.
 - **Mantenimiento:** plan por km, horas o fecha, aviso de service próximo e historial con costo. Una unidad en taller no está disponible.
 - **Combustible:** cargas, consumo, y costo por km o por hora.
+
+### 2a. Personas (hecha, PR "Flota 2a")
+
+- **Flota → Personas** (`FleetPeople.cs`): empleados de RRHH sumados a la flota. Se leen de `hr."Employees"`, sin duplicarlos. Tabla `fleet."Members"`, con los roles chofer, chofer de cargas, autoelevadorista y técnico.
+- **Credenciales** (`fleet."PersonCredentials"`): licencia (con categoría), LINTI, carnet de autoelevadorista, apto médico y otra.
+  - Renovar y borrar funcionan igual que con los documentos de las unidades.
+  - **Obligatorias por rol:** chofer → licencia; chofer de cargas → licencia y LINTI; autoelevadorista → carnet.
+- Los empleados no activos en RRHH no se controlan.
+- **Aviso nuevo:** `fleet.people-credentials` (`FleetPeopleNotices`).
+- **Pruebas:** `FleetPeopleApiTests`.
+- **Queda de la maqueta para 2b:** `fleet."VehicleDrivers"` y `/drivers`, que usa la pantalla de combustible.
+
+### 2b. Mantenimiento y combustible (siguiente)
+
+- Plan por km, horas o fecha, aviso de service próximo, historial con costo; la unidad en taller no está disponible.
+- Combustible: cargas con el chofer de la flota (persona), consumo, y costo por km o por hora.
 
 ### 3. Órdenes de servicio y agenda
 

@@ -26,6 +26,25 @@ public static partial class FleetRules
     public static bool TryParseDate(string? value, out DateOnly date) =>
         DateOnly.TryParseExact(value?.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
 
+    /// <summary>Credenciales que una persona tiene que tener vigentes según sus roles.</summary>
+    public static IReadOnlyList<CredentialType> RequiredCredentials(FleetMember member)
+    {
+        var list = new List<CredentialType>();
+        if (member.IsDriver || member.IsCargoDriver) list.Add(CredentialType.DrivingLicense);
+        if (member.IsCargoDriver) list.Add(CredentialType.Linti);
+        if (member.IsForkliftOperator) list.Add(CredentialType.ForkliftOperator);
+        return list;
+    }
+
+    public static string CredentialLabel(CredentialType type) => type switch
+    {
+        CredentialType.DrivingLicense => "Licencia de conducir",
+        CredentialType.Linti => "LINTI",
+        CredentialType.ForkliftOperator => "Carnet de autoelevadorista",
+        CredentialType.MedicalFitness => "Apto médico",
+        _ => "Otra"
+    };
+
     public static string DocumentLabel(FleetDocType type) => type switch
     {
         FleetDocType.VtvRto => "VTV / RTO",

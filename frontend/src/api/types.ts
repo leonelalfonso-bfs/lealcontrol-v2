@@ -1654,6 +1654,72 @@ export type FleetExpirationItem = {
 
 export type FleetExpirations = { expired: number; dueSoon: number; missing: number; items: FleetExpirationItem[] };
 
+export type CredentialType = "DrivingLicense" | "Linti" | "ForkliftOperator" | "MedicalFitness" | "Other";
+
+export type FleetMember = {
+  id: string;
+  employeeId: string;
+  fullName: string;
+  fileNumber: string;
+  documentNumber: string;
+  jobTitle: string;
+  employeeActive: boolean;
+  isDriver: boolean;
+  isCargoDriver: boolean;
+  isForkliftOperator: boolean;
+  isTechnician: boolean;
+  notes?: string | null;
+  expiredCount: number;
+  dueSoonCount: number;
+  missingCount: number;
+  nextExpirationDate?: string | null;
+};
+
+export type FleetMemberWrite = {
+  employeeId: string;
+  isDriver: boolean;
+  isCargoDriver: boolean;
+  isForkliftOperator: boolean;
+  isTechnician: boolean;
+  notes?: string;
+};
+
+export type PersonCredential = {
+  id: string;
+  employeeId: string;
+  type: CredentialType;
+  category?: string | null;
+  number: string;
+  issuer?: string | null;
+  issueDate?: string | null;
+  expirationDate: string;
+  alertDaysBefore: number;
+  isActive: boolean;
+  daysRemaining: number;
+  state: ExpirationState;
+};
+
+export type PersonCredentialWrite = {
+  type: CredentialType;
+  expirationDate: string;
+  category?: string;
+  number?: string;
+  issuer?: string;
+  issueDate?: string;
+  alertDaysBefore: number;
+};
+
+export type PersonExpirationItem = {
+  memberId: string;
+  employeeId: string;
+  fullName: string;
+  type: CredentialType;
+  credentialId?: string | null;
+  expirationDate?: string | null;
+  daysRemaining?: number | null;
+  state: ExpirationState;
+};
+
 export type NoticeSeverity = "Info" | "Warning" | "Critical";
 export type NoticeItem = { title: string; detail?: string | null; link?: string | null; severity: NoticeSeverity };
 export type NoticeGroup = { code: string; module: string; label: string; items: NoticeItem[] };
