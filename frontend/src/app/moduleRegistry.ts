@@ -320,6 +320,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     requiredPermission: "inventory.read",
     dependencies: [],
     items: [
+      { path: "/flota/agenda", label: "Agenda", icon: "📅" },
+      { path: "/flota/ordenes", label: "Órdenes de servicio", icon: "🧾" },
       { path: "/flota", label: "Unidades y vencimientos", icon: "🚗", end: true },
       { path: "/flota/personas", label: "Personas y licencias", icon: "🪪" },
       { path: "/flota/mantenimiento", label: "Mantenimiento", icon: "🔧" },

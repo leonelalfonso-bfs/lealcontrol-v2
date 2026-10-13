@@ -45,7 +45,17 @@ export function FleetHelpPage() {
         </section>
 
         <section className="card pad stack">
-          <h3 style={{ margin: 0 }}>4. Combustible y costos</h3>
+          <h3 style={{ margin: 0 }}>4. Órdenes de servicio y agenda</h3>
+          <ul>
+            <li>Una <Link to="/flota/ordenes">orden de servicio</Link> es un trabajo en el cliente: suelta o desde un pedido de venta, con inicio y fin, técnicos y unidades.</li>
+            <li>Al elegir el horario, el sistema muestra quién y qué está disponible. <strong>No deja asignar</strong> a una persona o unidad vencida (o que vence antes de que termine el trabajo), sin la documentación obligatoria, en taller, con taller programado o ya ocupada en ese horario.</li>
+            <li>Sin fecha, la orden queda "para coordinar". Si después de programar algo vence o la unidad entra al taller, la orden lo marca y llega un aviso.</li>
+            <li>La <Link to="/flota/agenda">Agenda</Link> muestra la semana con las órdenes, los vencimientos y el taller, más las órdenes sin fecha y los pedidos de venta sin coordinar.</li>
+          </ul>
+        </section>
+
+        <section className="card pad stack">
+          <h3 style={{ margin: 0 }}>5. Combustible y costos</h3>
           <ul>
             <li>Cada carga lleva los km (u horas) del tablero, los litros y el precio o el total del ticket. La carga también actualiza el uso de la unidad.</li>
             <li>Consumo = (km de esta carga − km de la carga anterior) / litros de esta carga. En las que miden horas: litros / horas.</li>

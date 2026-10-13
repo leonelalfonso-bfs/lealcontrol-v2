@@ -1,4 +1,4 @@
-import type { CredentialType, ExpirationState, FleetDocType, FleetMember, MaintenanceStatus, MaintenanceType, MeterType, Vehicle, VehicleStatus, VehicleType } from "../api/types";
+import type { CredentialType, ExpirationState, FleetDocType, FleetMember, MaintenanceStatus, MaintenanceType, MeterType, ServiceOrderStatus, Vehicle, VehicleStatus, VehicleType } from "../api/types";
 
 export const VEHICLE_TYPES: { value: VehicleType; label: string }[] = [
   { value: "Pickup", label: "Camioneta" },
@@ -178,3 +178,48 @@ export const money = (value?: number | null) =>
 
 export const num = (value?: number | null, decimals = 0) =>
   value == null ? "—" : value.toLocaleString("es-AR", { maximumFractionDigits: decimals });
+
+export const SERVICE_ORDER_STATUSES: { value: ServiceOrderStatus; label: string }[] = [
+  { value: "Pending", label: "Sin fecha" },
+  { value: "Scheduled", label: "Programada" },
+  { value: "InProgress", label: "En curso" },
+  { value: "Completed", label: "Terminada" },
+  { value: "Cancelled", label: "Cancelada" }
+];
+export const serviceOrderStatusLabel = (s: ServiceOrderStatus) => find(SERVICE_ORDER_STATUSES, s);
+export const serviceOrderStatusBadge: Record<ServiceOrderStatus, string> = {
+  Pending: "warn",
+  Scheduled: "",
+  InProgress: "warn",
+  Completed: "ok",
+  Cancelled: "off"
+};
+
+/** Argentina es UTC-3 todo el año: los horarios se cargan y muestran en esa hora. */
+const AR_OFFSET_MS = -3 * 3600_000;
+
+/** "2026-10-05T08:00" (hora de Argentina) desde un instante ISO. */
+export function toArLocalInput(iso?: string | null): string {
+  if (!iso) return "";
+  return new Date(new Date(iso).getTime() + AR_OFFSET_MS).toISOString().slice(0, 16);
+}
+
+/** Instante ISO con huso desde "2026-10-05T08:00" (hora de Argentina). */
+export const fromArLocalInput = (local: string) => (local ? `${local}:00-03:00` : null);
+
+/** "aaaa-mm-dd" del día de Argentina de un instante. */
+export const arDay = (iso: string) => toArLocalInput(iso).slice(0, 10);
+
+/** "08:00" de Argentina. */
+export const arTime = (iso?: string | null) => (iso ? toArLocalInput(iso).slice(11, 16) : "");
+
+/** "lun 05/10 08:00 → 18:00" o, si cambia el día, con las dos fechas. */
+export function rangeText(start?: string | null, end?: string | null): string {
+  if (!start || !end) return "Sin fecha";
+  const a = toArLocalInput(start);
+  const b = toArLocalInput(end);
+  const day = (x: string) => civilDate(x.slice(0, 10)).slice(0, 5);
+  return a.slice(0, 10) === b.slice(0, 10)
+    ? `${day(a)} ${a.slice(11)} → ${b.slice(11)}`
+    : `${day(a)} ${a.slice(11)} → ${day(b)} ${b.slice(11)}`;
+}

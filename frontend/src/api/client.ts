@@ -1067,6 +1067,33 @@ export const api = {
   getFleetCosts: (from: string, to: string) =>
     request<import("./types").FleetCosts>(`/api/v1/fleet/costs?from=${from}&to=${to}`),
 
+  listServiceOrders: (params: { status?: string; search?: string } = {}) => {
+    const p = new URLSearchParams();
+    if (params.status) p.set("status", params.status);
+    if (params.search) p.set("search", params.search);
+    return request<import("./types").ServiceOrder[]>(`/api/v1/fleet/service-orders${p.size ? `?${p}` : ""}`);
+  },
+  getServiceOrder: (id: string) => request<import("./types").ServiceOrder>(`/api/v1/fleet/service-orders/${id}`),
+  createServiceOrder: (body: import("./types").ServiceOrderWrite) =>
+    request<import("./types").ServiceOrder>("/api/v1/fleet/service-orders", { method: "POST", body: JSON.stringify(body) }),
+  updateServiceOrder: (id: string, body: import("./types").ServiceOrderWrite) =>
+    request<import("./types").ServiceOrder>(`/api/v1/fleet/service-orders/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  startServiceOrder: (id: string) => request<import("./types").ServiceOrder>(`/api/v1/fleet/service-orders/${id}/start`, { method: "POST" }),
+  completeServiceOrder: (id: string, body: { workPerformed: string; observations?: string }) =>
+    request<import("./types").ServiceOrder>(`/api/v1/fleet/service-orders/${id}/complete`, { method: "POST", body: JSON.stringify(body) }),
+  cancelServiceOrder: (id: string) => request<import("./types").ServiceOrder>(`/api/v1/fleet/service-orders/${id}/cancel`, { method: "POST" }),
+  getServiceOrderAvailability: (start: string, end: string, excludeId?: string) => {
+    const p = new URLSearchParams({ start, end });
+    if (excludeId) p.set("excludeId", excludeId);
+    return request<{ people: import("./types").ResourceStatus[]; vehicles: import("./types").ResourceStatus[] }>(`/api/v1/fleet/service-orders/availability?${p}`);
+  },
+  searchServiceOrderCustomers: (search: string) =>
+    request<{ id: string; name: string }[]>(`/api/v1/fleet/service-orders/customers?search=${encodeURIComponent(search)}`),
+  listSalesOrdersToCoordinate: (search = "") =>
+    request<import("./types").SalesOrderToCoordinate[]>(`/api/v1/fleet/service-orders/sales-orders?search=${encodeURIComponent(search)}`),
+  getFleetAgenda: (from?: string, days = 7) =>
+    request<import("./types").FleetAgenda>(`/api/v1/fleet/agenda?days=${days}${from ? `&from=${from}` : ""}`),
+
   // Authentication & Multi-Tenancy
   login: (body: { email: string; password: string; tenantId?: string }) =>
     request<import("./types").AuthResponse>("/api/v1/auth/login", { method: "POST", body: JSON.stringify(body) }),

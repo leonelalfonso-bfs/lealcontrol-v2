@@ -96,3 +96,26 @@ public sealed class FleetServiceNotices : INoticeProvider
             i.State == ExpirationState.DueSoon ? NoticeSeverity.Warning : NoticeSeverity.Critical)).ToList();
     }
 }
+
+/// <summary>Aviso: órdenes de servicio de los próximos días con una persona o unidad vencida, en taller u ocupada.</summary>
+public sealed class FleetServiceOrderNotices : INoticeProvider
+{
+    public string Code => "fleet.service-orders";
+    public string Module => "fleet";
+    public int MinimumLevel => 1;
+    public NoticeSensitivity Sensitivity => NoticeSensitivity.None;
+    public string Label => "Órdenes de servicio con problemas";
+    public string Description => "Órdenes programadas de los próximos 15 días con alguien o algo vencido, en taller u ocupado en ese horario.";
+    public bool DefaultOn => true;
+
+    public async Task<IReadOnlyList<NoticeItem>> GetAsync(NoticeContext context, CancellationToken cancellationToken)
+    {
+        await using var db = new FleetDbContext(new DbContextOptionsBuilder<FleetDbContext>().UseNpgsql(context.ConnectionString).Options);
+        var items = await FleetServiceOrders.UpcomingProblemsAsync(db, context.TenantId, context.Today, cancellationToken);
+        return items.Select(i => new NoticeItem(
+            $"{FleetServiceOrders.Code(i.Order.Number)} — {i.Order.CustomerName}",
+            string.Join(" · ", i.Problems),
+            $"/flota/ordenes/{i.Order.Id}",
+            NoticeSeverity.Critical)).ToList();
+    }
+}
