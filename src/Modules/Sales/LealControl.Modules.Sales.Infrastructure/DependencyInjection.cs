@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
         services.AddHttpClient<IExchangeRateService, ExchangeRateService>();
+        services.AddHostedService<ExchangeRateWarmup>();
         return services;
     }
 }
