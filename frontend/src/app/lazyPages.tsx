@@ -159,6 +159,7 @@ export const SettingsPage = named(() => import("../pages/SettingsPage"), "Settin
 export const DocumentTemplatesPage = named(() => import("../pages/DocumentTemplatesPage"), "DocumentTemplatesPage");
 export const SuppliersPage = named(() => import("../pages/SuppliersPage"), "SuppliersPage");
 export const InboxPage = named(() => import("../pages/InboxPage"), "InboxPage");
+export const MyNoticesPage = named(() => import("../pages/MyNoticesPage"), "MyNoticesPage");
 export const CommunicationsSettingsPage = named(() => import("../pages/CommunicationsSettingsPage"), "CommunicationsSettingsPage");
 export const ReplyTemplatesPage = named(() => import("../pages/ReplyTemplatesPage"), "ReplyTemplatesPage");
 export const ProductionPage = named(() => import("../pages/ProductionPage"), "ProductionPage");

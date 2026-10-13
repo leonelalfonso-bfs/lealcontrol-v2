@@ -5,6 +5,7 @@ import { allowedQuickActions } from "../../app/quickActions";
 import { useTheme } from "../../context/ThemeContext";
 import { tenantTitle } from "../../utils/tenantLabel";
 import { CommunicationsNotificationBell } from "../CommunicationsNotificationBell";
+import { NoticesBell } from "../notices/NoticesBell";
 import { Icon } from "../ui/Icon";
 import { CommandPalette, type RecentPage } from "./CommandPalette";
 import "../../styles/instrumento.css";
@@ -344,6 +345,7 @@ export function AppShell({
         </nav>
 
         <div className="ins-sidebar__footer">
+          <NoticesBell />
           {hasCommunications && <CommunicationsNotificationBell />}
           {presentation.canToggle && (
             <button
@@ -381,6 +383,9 @@ export function AppShell({
                 <Link role="menuitem" className="ins-menu-item" to="/estilos" onClick={() => userMenu.setOpen(false)}>
                   <Icon name="palette" size={16} />
                   Personalizar tema
+                </Link>
+                <Link role="menuitem" className="ins-menu-item" to="/mi-perfil/avisos" onClick={() => userMenu.setOpen(false)}>
+                  Mis avisos
                 </Link>
                 <Link role="menuitem" className="ins-menu-item" to="/configuracion" onClick={() => userMenu.setOpen(false)}>
                   <Icon name="settings" size={16} />

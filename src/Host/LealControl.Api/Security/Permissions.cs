@@ -212,11 +212,17 @@ public sealed class PermissionResolver : IPermissionChangeNotifier
         return Store(context, resolved);
     }
 
-    private static async Task<UserPermissions?> FromDatabaseAsync(HttpContext context, Guid tenantId, Guid userId, CancellationToken ct)
+    private static Task<UserPermissions?> FromDatabaseAsync(HttpContext context, Guid tenantId, Guid userId, CancellationToken ct) =>
+        FromCrmAsync(context.RequestServices.GetRequiredService<CrmDbContext>(), tenantId, userId, ct);
+
+    /// <summary>
+    /// Permisos de un usuario leídos de la base de su empresa (también fuera de un pedido, por
+    /// ejemplo en el resumen diario). Null si el usuario no existe o no tiene perfil.
+    /// </summary>
+    public static async Task<UserPermissions?> FromCrmAsync(CrmDbContext db, Guid tenantId, Guid userId, CancellationToken ct)
     {
         UserPermissions? resolved = null;
         {
-            var db = context.RequestServices.GetRequiredService<CrmDbContext>();
             var tenant = new TenantId(tenantId);
             var row = await db.TenantUsers.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId && u.TenantId == tenant, ct);
             if (row is not null && !row.IsActive)

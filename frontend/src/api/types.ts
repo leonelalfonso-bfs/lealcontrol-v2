@@ -1654,15 +1654,15 @@ export type FleetExpirationItem = {
 
 export type FleetExpirations = { expired: number; dueSoon: number; missing: number; items: FleetExpirationItem[] };
 
-export type DailyNoticePreview = {
-  sender?: string | null;
-  recipients: { email: string; name: string }[];
-  expired: number;
-  missing: number;
-  dueSoon: number;
-  lastDay?: string | null;
-  lastResult?: string | null;
-  enabled: boolean;
+export type NoticeSeverity = "Info" | "Warning" | "Critical";
+export type NoticeItem = { title: string; detail?: string | null; link?: string | null; severity: NoticeSeverity };
+export type NoticeGroup = { code: string; module: string; label: string; items: NoticeItem[] };
+export type MyNotices = { total: number; groups: NoticeGroup[] };
+export type NoticeSettings = {
+  emailDigest: boolean;
+  systemMailConfigured: boolean;
+  email?: string | null;
+  notices: { code: string; module: string; label: string; description: string; enabled: boolean }[];
 };
 
 export type VehicleDriver = {

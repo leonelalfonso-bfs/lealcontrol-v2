@@ -17,6 +17,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddSalesModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, Notices.OverdueInvoiceNotices>();
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, Notices.ExpiringQuoteNotices>();
         services.AddSalesApplication();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
 
