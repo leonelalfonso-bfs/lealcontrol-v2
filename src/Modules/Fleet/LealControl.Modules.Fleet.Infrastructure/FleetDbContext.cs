@@ -15,6 +15,8 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
     public DbSet<VehicleMaintenance> VehicleMaintenances => Set<VehicleMaintenance>();
     public DbSet<VehicleFuelLog> VehicleFuelLogs => Set<VehicleFuelLog>();
     public DbSet<VehicleMeterReading> VehicleMeterReadings => Set<VehicleMeterReading>();
+    public DbSet<FleetMember> Members => Set<FleetMember>();
+    public DbSet<PersonCredential> PersonCredentials => Set<PersonCredential>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +45,24 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             b.Property(x => x.CreatedBy).HasMaxLength(140);
             b.HasIndex(x => new { x.TenantId, x.VehicleId, x.ReadAtUtc });
             b.HasOne<Vehicle>().WithMany().HasForeignKey(x => x.VehicleId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FleetMember>(b =>
+        {
+            b.ToTable("Members");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Notes).HasMaxLength(500);
+            b.HasIndex(x => new { x.TenantId, x.EmployeeId }).IsUnique();
+        });
+
+        modelBuilder.Entity<PersonCredential>(b =>
+        {
+            b.ToTable("PersonCredentials");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Category).HasMaxLength(40);
+            b.Property(x => x.Number).HasMaxLength(60);
+            b.Property(x => x.Issuer).HasMaxLength(120);
+            b.HasIndex(x => new { x.TenantId, x.EmployeeId, x.Type, x.IsActive });
         });
 
         modelBuilder.Entity<VehicleDocument>(b =>
@@ -203,6 +223,35 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             );
             CREATE INDEX IF NOT EXISTS ""IX_VehicleMeterReadings_Vehicle"" ON fleet.""VehicleMeterReadings"" (""TenantId"", ""VehicleId"", ""ReadAtUtc"");
             CREATE INDEX IF NOT EXISTS ""IX_VehicleDocuments_Vehicle"" ON fleet.""VehicleDocuments"" (""TenantId"", ""VehicleId"", ""DocumentType"", ""IsActive"");
+
+            CREATE TABLE IF NOT EXISTS fleet.""Members"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""EmployeeId"" uuid NOT NULL,
+                ""IsDriver"" boolean NOT NULL DEFAULT false,
+                ""IsCargoDriver"" boolean NOT NULL DEFAULT false,
+                ""IsForkliftOperator"" boolean NOT NULL DEFAULT false,
+                ""IsTechnician"" boolean NOT NULL DEFAULT false,
+                ""Notes"" character varying(500),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""UX_Members_Employee"" ON fleet.""Members"" (""TenantId"", ""EmployeeId"");
+
+            CREATE TABLE IF NOT EXISTS fleet.""PersonCredentials"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""EmployeeId"" uuid NOT NULL,
+                ""Type"" integer NOT NULL,
+                ""Category"" character varying(40),
+                ""Number"" character varying(60) NOT NULL DEFAULT '',
+                ""Issuer"" character varying(120),
+                ""IssueDateUtc"" timestamp with time zone NOT NULL,
+                ""ExpirationDateUtc"" timestamp with time zone NOT NULL,
+                ""AlertDaysBefore"" integer NOT NULL DEFAULT 30,
+                ""IsActive"" boolean NOT NULL DEFAULT true,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ""IX_PersonCredentials_Employee"" ON fleet.""PersonCredentials"" (""TenantId"", ""EmployeeId"", ""Type"", ""IsActive"");
         ", ct);
 
         // Patente y código únicos por empresa. Con datos viejos duplicados el índice no se puede

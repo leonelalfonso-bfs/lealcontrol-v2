@@ -321,6 +321,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     dependencies: [],
     items: [
       { path: "/flota", label: "Unidades y vencimientos", icon: "🚗", end: true },
+      { path: "/flota/personas", label: "Personas y licencias", icon: "🪪" },
       { path: "/flota/combustible", label: "Control de combustible", icon: "⛽" },
       { path: "/flota/ayuda", label: "Ayuda Flota", icon: "💡" }
     ]

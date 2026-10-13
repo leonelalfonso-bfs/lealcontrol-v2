@@ -28,6 +28,8 @@ import {
   DirectoryPage,
   CommunicationsSettingsPage,
   MyNoticesPage,
+  FleetPeoplePage,
+  FleetPersonPage,
   DocumentTemplatesPage,
   EmployeeFormPage,
   EmployeesListPage,
@@ -475,6 +477,8 @@ export function App() {
               <Route path="/flota" element={<FleetVehiclesListPage />} />
               <Route path="/flota/vehiculos/nuevo" element={<FleetVehicleFormPage />} />
               <Route path="/flota/vehiculos/:id" element={<FleetVehicleFormPage />} />
+              <Route path="/flota/personas" element={<FleetPeoplePage />} />
+              <Route path="/flota/personas/:id" element={<FleetPersonPage />} />
               <Route path="/flota/combustible" element={<FleetFuelLogsPage />} />
               <Route path="/flota/ayuda" element={<FleetHelpPage />} />
 

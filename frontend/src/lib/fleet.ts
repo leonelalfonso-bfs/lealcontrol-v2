@@ -1,4 +1,4 @@
-import type { ExpirationState, FleetDocType, MeterType, Vehicle, VehicleStatus, VehicleType } from "../api/types";
+import type { CredentialType, ExpirationState, FleetDocType, FleetMember, MeterType, Vehicle, VehicleStatus, VehicleType } from "../api/types";
 
 export const VEHICLE_TYPES: { value: VehicleType; label: string }[] = [
   { value: "Pickup", label: "Camioneta" },
@@ -103,4 +103,31 @@ export function requiredDocuments(type: VehicleType): FleetDocType[] {
     default:
       return [];
   }
+}
+
+export const CREDENTIAL_TYPES: { value: CredentialType; label: string }[] = [
+  { value: "DrivingLicense", label: "Licencia de conducir" },
+  { value: "Linti", label: "LINTI" },
+  { value: "ForkliftOperator", label: "Carnet de autoelevadorista" },
+  { value: "MedicalFitness", label: "Apto médico" },
+  { value: "Other", label: "Otra" }
+];
+
+export const credentialLabel = (t: CredentialType) => CREDENTIAL_TYPES.find((x) => x.value === t)?.label ?? t;
+
+/** Credenciales obligatorias según los roles (la misma regla que el servidor). */
+export function requiredCredentials(m: Pick<FleetMember, "isDriver" | "isCargoDriver" | "isForkliftOperator">): CredentialType[] {
+  const list: CredentialType[] = [];
+  if (m.isDriver || m.isCargoDriver) list.push("DrivingLicense");
+  if (m.isCargoDriver) list.push("Linti");
+  if (m.isForkliftOperator) list.push("ForkliftOperator");
+  return list;
+}
+
+export function rolesText(m: Pick<FleetMember, "isDriver" | "isCargoDriver" | "isForkliftOperator" | "isTechnician">): string {
+  return [
+    m.isCargoDriver ? "Chofer de cargas" : m.isDriver ? "Chofer" : null,
+    m.isForkliftOperator ? "Autoelevadorista" : null,
+    m.isTechnician ? "Técnico" : null
+  ].filter(Boolean).join(" · ");
 }

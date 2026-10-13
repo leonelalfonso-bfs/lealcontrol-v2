@@ -1014,6 +1014,24 @@ export const api = {
     request<import("./types").VehicleDocument>(`/api/v1/fleet/documents/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteVehicleDocument: (id: string) => request<void>(`/api/v1/fleet/documents/${id}`, { method: "DELETE" }),
   getFleetExpirations: () => request<import("./types").FleetExpirations>("/api/v1/fleet/expirations"),
+  listFleetPeople: () => request<import("./types").FleetMember[]>("/api/v1/fleet/people"),
+  listFleetAvailableEmployees: () =>
+    request<{ id: string; fullName: string; fileNumber: string; documentNumber: string; jobTitle: string }[]>("/api/v1/fleet/people/available"),
+  getFleetPerson: (id: string) => request<import("./types").FleetMember>(`/api/v1/fleet/people/${id}`),
+  addFleetPerson: (body: import("./types").FleetMemberWrite) =>
+    request<import("./types").FleetMember>("/api/v1/fleet/people", { method: "POST", body: JSON.stringify(body) }),
+  updateFleetPerson: (id: string, body: import("./types").FleetMemberWrite) =>
+    request<void>(`/api/v1/fleet/people/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  removeFleetPerson: (id: string) => request<void>(`/api/v1/fleet/people/${id}`, { method: "DELETE" }),
+  listPersonCredentials: (id: string, history = false) =>
+    request<import("./types").PersonCredential[]>(`/api/v1/fleet/people/${id}/credentials${history ? "?history=true" : ""}`),
+  createPersonCredential: (id: string, body: import("./types").PersonCredentialWrite) =>
+    request<import("./types").PersonCredential>(`/api/v1/fleet/people/${id}/credentials`, { method: "POST", body: JSON.stringify(body) }),
+  updatePersonCredential: (id: string, body: import("./types").PersonCredentialWrite) =>
+    request<import("./types").PersonCredential>(`/api/v1/fleet/credentials/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deletePersonCredential: (id: string) => request<void>(`/api/v1/fleet/credentials/${id}`, { method: "DELETE" }),
+  getFleetPeopleExpirations: () =>
+    request<{ expired: number; dueSoon: number; missing: number; items: import("./types").PersonExpirationItem[] }>("/api/v1/fleet/people/expirations"),
   getMyNotices: () => request<import("./types").MyNotices>("/api/v1/notices/mine"),
   getNoticeSettings: () => request<import("./types").NoticeSettings>("/api/v1/notices/settings"),
   saveNoticeSetting: (body: { code?: string; enabled?: boolean; emailDigest?: boolean }) =>
