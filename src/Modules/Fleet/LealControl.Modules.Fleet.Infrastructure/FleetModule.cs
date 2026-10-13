@@ -67,6 +67,7 @@ public static class FleetModule
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetExpirationNotices>();
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetPeopleNotices>();
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetServiceNotices>();
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetServiceOrderNotices>();
         services.AddTenantDbContext<FleetDbContext>(FleetDbContext.Schema);
         services.TryAddSingleton(TimeProvider.System);
         return services;
@@ -143,6 +144,7 @@ public static class FleetModule
         group.MapFleetPeople();
         group.MapFleetMaintenance();
         group.MapFleetFuel();
+        group.MapFleetServiceOrders();
 
         // -------------------------------------------------------------
         // UNIDADES

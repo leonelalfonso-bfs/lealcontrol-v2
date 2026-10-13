@@ -106,11 +106,42 @@ Proceso nocturno por empresa. Manda el resumen de lo vencido y por vencer a los 
 - **Fuera de servicio:** los endpoints de la maqueta `/drivers` y `/maintenances` (sin validar). La tabla `fleet."VehicleDrivers"` queda sin uso.
 - **Pruebas:** `FleetMaintenanceApiTests`.
 
-### 3. Órdenes de servicio y agenda (siguiente)
+### 3. Órdenes de servicio y agenda (hecha, PR "Flota 3")
 
-- **Orden de servicio:** sale del pedido o es suelta. Tiene cliente, lugar, descripción, inicio y fin, técnicos, unidades, repuestos usados y trabajo realizado.
-- **Control al asignar:** bloquea una unidad o persona que esté vencida o que **venza antes del fin del trabajo**, que esté en taller o que ya esté asignada esos días. Explica el motivo.
-- **Agenda semanal:** órdenes, vencimientos, pedidos sin coordinar y órdenes sin fecha.
+- **Órdenes de servicio** (`FleetServiceOrders.cs`, tabla `fleet."ServiceOrders"`):
+  - número correlativo por empresa (`OS-00001`);
+  - cliente (de `crm.customers` o texto) o pedido de venta (`sales.orders`, que se lee por SQL sin depender de Ventas);
+  - lugar, descripción, inicio y fin (instantes; la pantalla trabaja en hora de Argentina);
+  - personas (`EmployeeIds`) y unidades (`VehicleIds`) como `uuid[]`.
+- **Estados:**
+  - sin fecha (Pending) y programada (Scheduled) se deciden solos según haya fechas;
+  - en curso, terminada (con el trabajo realizado) y cancelada se pasan con acciones.
+  - Una orden terminada o cancelada no se edita.
+- **Control al asignar** (`Snapshot`): carga todo una vez y evalúa cada persona o unidad para el horario.
+  - **Bloquea:**
+    - dada de baja, fuera de servicio o en taller;
+    - documentación o credencial obligatoria sin cargar;
+    - un vencimiento **anterior al día de fin** (vale hasta el día que vence);
+    - taller programado entre el inicio y el fin;
+    - otra orden programada o en curso que se superpone;
+    - una persona que no está en la flota o no está activa en RRHH.
+  - **Avisa sin bloquear:** service del plan vencido.
+  - Sin fecha no controla horario, pero sí que existan.
+- **Problemas posteriores:** las órdenes programadas recalculan sus problemas al verse (`problems`). El aviso nuevo `fleet.service-orders` cubre los próximos 15 días.
+- **Endpoints:**
+  - `GET/POST/PUT /fleet/service-orders`;
+  - `/{id}/start`, `/{id}/complete`, `/{id}/cancel`;
+  - `/service-orders/availability?start&end&excludeId`;
+  - `/service-orders/customers`, `/service-orders/sales-orders`;
+  - `/fleet/agenda?from&days`: órdenes, vencimientos de unidades y personas, taller, órdenes sin fecha y pedidos sin coordinar.
+- **Pantallas:** Agenda semanal, Órdenes de servicio y la ficha de la orden (disponibilidad en vivo al elegir horario).
+- **Pruebas:** `FleetServiceOrdersApiTests`.
+- **Queda para después:**
+  - remito por servicio;
+  - repuestos usados;
+  - firmas desde el celular;
+  - equipos del cliente (Calidad y Metrología);
+  - informe en PDF.
 
 ### Más adelante
 

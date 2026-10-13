@@ -18,6 +18,7 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
     public DbSet<FleetMember> Members => Set<FleetMember>();
     public DbSet<PersonCredential> PersonCredentials => Set<PersonCredential>();
     public DbSet<MaintenancePlan> MaintenancePlans => Set<MaintenancePlan>();
+    public DbSet<ServiceOrder> ServiceOrders => Set<ServiceOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,6 +65,21 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             b.Property(x => x.Number).HasMaxLength(60);
             b.Property(x => x.Issuer).HasMaxLength(120);
             b.HasIndex(x => new { x.TenantId, x.EmployeeId, x.Type, x.IsActive });
+        });
+
+        modelBuilder.Entity<ServiceOrder>(b =>
+        {
+            b.ToTable("ServiceOrders");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.CustomerName).HasMaxLength(256);
+            b.Property(x => x.SalesOrderNumber).HasMaxLength(32);
+            b.Property(x => x.Location).HasMaxLength(300);
+            b.Property(x => x.Description).HasMaxLength(2000);
+            b.Property(x => x.WorkPerformed).HasMaxLength(4000);
+            b.Property(x => x.Observations).HasMaxLength(2000);
+            b.Property(x => x.CreatedBy).HasMaxLength(140);
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            b.HasIndex(x => new { x.TenantId, x.StartUtc });
         });
 
         modelBuilder.Entity<VehicleDocument>(b =>
@@ -304,6 +320,31 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             ALTER TABLE fleet.""VehicleFuelLogs"" ADD COLUMN IF NOT EXISTS ""CalculatedLitersPerHour"" numeric(10,2);
             ALTER TABLE fleet.""VehicleFuelLogs"" ADD COLUMN IF NOT EXISTS ""CreatedBy"" character varying(140);
             ALTER TABLE fleet.""VehicleFuelLogs"" ALTER COLUMN ""KilometersAtFueling"" DROP NOT NULL;
+
+            CREATE TABLE IF NOT EXISTS fleet.""ServiceOrders"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Number"" integer NOT NULL,
+                ""Status"" integer NOT NULL DEFAULT 0,
+                ""CustomerId"" uuid,
+                ""CustomerName"" character varying(256) NOT NULL DEFAULT '',
+                ""SalesOrderId"" uuid,
+                ""SalesOrderNumber"" character varying(32),
+                ""Location"" character varying(300),
+                ""Description"" character varying(2000) NOT NULL DEFAULT '',
+                ""StartUtc"" timestamp with time zone,
+                ""EndUtc"" timestamp with time zone,
+                ""EmployeeIds"" uuid[] NOT NULL DEFAULT ARRAY[]::uuid[],
+                ""VehicleIds"" uuid[] NOT NULL DEFAULT ARRAY[]::uuid[],
+                ""WorkPerformed"" character varying(4000),
+                ""Observations"" character varying(2000),
+                ""CompletedAtUtc"" timestamp with time zone,
+                ""CreatedBy"" character varying(140),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""UX_ServiceOrders_Number"" ON fleet.""ServiceOrders"" (""TenantId"", ""Number"");
+            CREATE INDEX IF NOT EXISTS ""IX_ServiceOrders_Start"" ON fleet.""ServiceOrders"" (""TenantId"", ""StartUtc"");
+            CREATE INDEX IF NOT EXISTS ""IX_ServiceOrders_SalesOrder"" ON fleet.""ServiceOrders"" (""TenantId"", ""SalesOrderId"");
         ", ct);
 
         // Patente y código únicos por empresa. Con datos viejos duplicados el índice no se puede

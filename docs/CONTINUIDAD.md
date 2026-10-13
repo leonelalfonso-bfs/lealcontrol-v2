@@ -49,10 +49,10 @@ Hecho el 8/10/2026:
 Hecho del 9 al 13/10/2026:
 - permisos personalizados P1 a P3;
 - avisos personales A1;
-- Flota 2a (personas y licencias) y 2b (mantenimiento, combustible y costos).
+- Flota 2a (personas y licencias), 2b (mantenimiento, combustible y costos) y 3 (órdenes de servicio y agenda).
 
 1. **Casilla del sistema A2** ([65](auditoria-2026-10-01/65-permisos-y-avisos-plan.md)). Espera la cuenta de Brevo y el DNS de lealcontrol.com.
-2. **Flota 3:** órdenes de servicio y agenda ([64](auditoria-2026-10-01/64-flota-plan.md)).
+2. **Flota, lo que sigue** ([64](auditoria-2026-10-01/64-flota-plan.md)): remito por servicio, repuestos, firmas desde el celular, informe en PDF.
 3. **Comunicaciones etapa 2:** API oficial de Meta con coexistencia, cuando LealControl tenga CUIT y sea Tech Provider; Instagram y Facebook.
 4. **Deuda técnica y requisitos para vender** ([62](auditoria-2026-10-01/62-estado-general-y-plan.md)).
 

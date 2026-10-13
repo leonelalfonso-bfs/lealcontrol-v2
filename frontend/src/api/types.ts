@@ -1893,6 +1893,55 @@ export type FleetCosts = {
   rows: VehicleCostRow[];
 };
 
+export type ServiceOrderStatus = "Pending" | "Scheduled" | "InProgress" | "Completed" | "Cancelled";
+export type ResourceRef = { id: string; label: string };
+export type ResourceStatus = { id: string; label: string; detail?: string | null; blockers: string[]; warnings: string[] };
+
+export type ServiceOrder = {
+  id: string;
+  number: number;
+  code: string;
+  status: ServiceOrderStatus;
+  customerId?: string | null;
+  customerName: string;
+  salesOrderId?: string | null;
+  salesOrderNumber?: string | null;
+  location?: string | null;
+  description: string;
+  start?: string | null;
+  end?: string | null;
+  people: ResourceRef[];
+  vehicles: ResourceRef[];
+  workPerformed?: string | null;
+  observations?: string | null;
+  completedAt?: string | null;
+  createdBy?: string | null;
+  problems: string[];
+};
+
+export type ServiceOrderWrite = {
+  description: string;
+  customerId?: string | null;
+  customerName?: string;
+  salesOrderId?: string | null;
+  location?: string;
+  start?: string | null;
+  end?: string | null;
+  employeeIds: string[];
+  vehicleIds: string[];
+};
+
+export type SalesOrderToCoordinate = { id: string; orderNumber: string; customerId: string; customerName: string; status: string; createdAtUtc: string; serviceOrders: number };
+export type AgendaEvent = { date: string; kind: "expiration" | "shop"; title: string; detail?: string | null; link: string };
+export type FleetAgenda = {
+  from: string;
+  to: string;
+  orders: ServiceOrder[];
+  events: AgendaEvent[];
+  unscheduled: ServiceOrder[];
+  toCoordinate: SalesOrderToCoordinate[];
+};
+
 export type UserInfo = {
   id: string;
   fullName: string;

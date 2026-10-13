@@ -12,6 +12,8 @@ public enum MaintenanceType { Preventive, Corrective, Urgent, Inspection }
 /// <summary>Credencial de una persona de la flota (se guarda como número: solo se agregan al final).</summary>
 public enum CredentialType { DrivingLicense, Linti, ForkliftOperator, MedicalFitness, Other }
 public enum MaintenanceStatus { Scheduled, InProgress, Completed, Cancelled }
+/// <summary>Estado de una orden de servicio (se guarda como número: solo se agregan al final).</summary>
+public enum ServiceOrderStatus { Pending, Scheduled, InProgress, Completed, Cancelled }
 
 public sealed class Vehicle
 {
@@ -198,5 +200,33 @@ public sealed class PersonCredential
     public DateTime ExpirationDateUtc { get; set; }
     public int AlertDaysBefore { get; set; } = 30;
     public bool IsActive { get; set; } = true;
+    public DateTime CreatedAtUtc { get; set; }
+}
+
+/// <summary>
+/// Orden de servicio: un trabajo en el cliente, suelto o de un pedido de venta, con fecha y hora,
+/// técnicos (empleados de RRHH) y unidades. Sin fecha queda pendiente de coordinar.
+/// </summary>
+public sealed class ServiceOrder
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public int Number { get; set; }
+    public ServiceOrderStatus Status { get; set; } = ServiceOrderStatus.Pending;
+    public Guid? CustomerId { get; set; }
+    public string CustomerName { get; set; } = "";
+    public Guid? SalesOrderId { get; set; }
+    public string? SalesOrderNumber { get; set; }
+    public string? Location { get; set; }
+    public string Description { get; set; } = "";
+    public DateTime? StartUtc { get; set; }
+    public DateTime? EndUtc { get; set; }
+    /// <summary>Empleados de RRHH asignados (personas de la flota).</summary>
+    public Guid[] EmployeeIds { get; set; } = [];
+    public Guid[] VehicleIds { get; set; } = [];
+    public string? WorkPerformed { get; set; }
+    public string? Observations { get; set; }
+    public DateTime? CompletedAtUtc { get; set; }
+    public string? CreatedBy { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 }
