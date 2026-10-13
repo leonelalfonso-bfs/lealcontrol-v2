@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type {
   FleetDocType, Vehicle, VehicleDocument, VehicleDocumentWrite, VehicleMeterReading, VehicleType, VehicleWrite
 } from "../api/types";
+import { VehicleMaintenanceSection } from "../components/fleet/VehicleMaintenanceSection";
 import { todayAr } from "../lib/dates";
 import {
   DOC_TYPES, METER_TYPES, VEHICLE_STATUSES, VEHICLE_TYPES, civilDate, daysText, defaultMeterFor, docTypeLabel,
@@ -335,6 +336,8 @@ export function FleetVehicleFormPage() {
               </div>
             )}
           </section>
+
+          <VehicleMaintenanceSection vehicle={vehicle} onVehicleChanged={() => load(vehicle.id)} />
 
           {vehicle.meterType !== "None" && (
             <section className="card pad stack" style={{ gap: 14 }}>

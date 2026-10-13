@@ -46,11 +46,15 @@ Hecho el 8/10/2026:
 - Comunicaciones etapa 1 (oportunidad, descartar, enviar documentos);
 - Flota 1a y 1b.
 
-1. **Permisos personalizados**, P1 a P3 ([65](auditoria-2026-10-01/65-permisos-y-avisos-plan.md)).
-2. **Avisos personales y casilla del sistema**, A1 y A2 ([65](auditoria-2026-10-01/65-permisos-y-avisos-plan.md)).
-3. **Flota 2 y 3** ([64](auditoria-2026-10-01/64-flota-plan.md)).
-4. **Comunicaciones etapa 2:** API oficial de Meta con coexistencia, cuando LealControl tenga CUIT y sea Tech Provider; Instagram y Facebook.
-5. **Deuda técnica y requisitos para vender** ([62](auditoria-2026-10-01/62-estado-general-y-plan.md)).
+Hecho del 9 al 13/10/2026:
+- permisos personalizados P1 a P3;
+- avisos personales A1;
+- Flota 2a (personas y licencias) y 2b (mantenimiento, combustible y costos).
+
+1. **Casilla del sistema A2** ([65](auditoria-2026-10-01/65-permisos-y-avisos-plan.md)). Espera la cuenta de Brevo y el DNS de lealcontrol.com.
+2. **Flota 3:** órdenes de servicio y agenda ([64](auditoria-2026-10-01/64-flota-plan.md)).
+3. **Comunicaciones etapa 2:** API oficial de Meta con coexistencia, cuando LealControl tenga CUIT y sea Tech Provider; Instagram y Facebook.
+4. **Deuda técnica y requisitos para vender** ([62](auditoria-2026-10-01/62-estado-general-y-plan.md)).
 
 ## Reglas de trabajo
 

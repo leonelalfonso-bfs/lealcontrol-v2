@@ -66,14 +66,15 @@ public static class FleetModule
     {
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetExpirationNotices>();
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetPeopleNotices>();
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetServiceNotices>();
         services.AddTenantDbContext<FleetDbContext>(FleetDbContext.Schema);
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }
 
-    private static string Label(Vehicle v) => v.Plate.Length > 0 ? v.Plate : v.InternalCode ?? "";
+    internal static string Label(Vehicle v) => v.Plate.Length > 0 ? v.Plate : v.InternalCode ?? "";
 
-    private static string UserName(HttpContext http) =>
+    internal static string UserName(HttpContext http) =>
         http.User.FindFirst("name")?.Value ?? http.User.FindFirst(ClaimTypes.Name)?.Value ?? http.User.Identity?.Name ?? "";
 
     private static VehicleDocumentView ToView(VehicleDocument d, DateOnly today)
@@ -140,6 +141,8 @@ public static class FleetModule
     {
         var group = endpoints.MapGroup("/api/v1/fleet").WithTags("Fleet");
         group.MapFleetPeople();
+        group.MapFleetMaintenance();
+        group.MapFleetFuel();
 
         // -------------------------------------------------------------
         // UNIDADES
@@ -417,106 +420,6 @@ public static class FleetModule
                 missing = items.Count(i => i.State == ExpirationState.Missing),
                 items
             });
-        });
-
-        // -------------------------------------------------------------
-        // DRIVERS (Choferes)
-        // -------------------------------------------------------------
-        group.MapGet("/drivers", async (FleetDbContext db, ITenantContext tenant, CancellationToken ct) =>
-        {
-            var tenantId = tenant.TenantId.Value;
-            var drivers = await db.VehicleDrivers.AsNoTracking()
-                .Where(x => x.TenantId == tenantId)
-                .OrderBy(x => x.FullName)
-                .ToListAsync(ct);
-            return Results.Ok(drivers);
-        });
-
-        group.MapPost("/drivers", async (VehicleDriver body, FleetDbContext db, ITenantContext tenant, CancellationToken ct) =>
-        {
-            var tenantId = tenant.TenantId.Value;
-            body.Id = Guid.NewGuid();
-            body.TenantId = tenantId;
-            body.CreatedAtUtc = DateTime.UtcNow;
-
-            db.VehicleDrivers.Add(body);
-            await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/fleet/drivers/{body.Id}", body);
-        });
-
-        // -------------------------------------------------------------
-        // MAINTENANCE & SERVICES
-        // -------------------------------------------------------------
-        group.MapGet("/maintenances", async (Guid? vehicleId, FleetDbContext db, ITenantContext tenant, CancellationToken ct) =>
-        {
-            var tenantId = tenant.TenantId.Value;
-            var q = db.VehicleMaintenances.AsNoTracking().Where(x => x.TenantId == tenantId);
-            if (vehicleId.HasValue) q = q.Where(x => x.VehicleId == vehicleId.Value);
-
-            var items = await q.OrderByDescending(x => x.ServiceDateUtc).ToListAsync(ct);
-            return Results.Ok(items);
-        });
-
-        group.MapPost("/maintenances", async (VehicleMaintenance body, FleetDbContext db, ITenantContext tenant, CancellationToken ct) =>
-        {
-            var tenantId = tenant.TenantId.Value;
-            body.Id = Guid.NewGuid();
-            body.TenantId = tenantId;
-            body.CreatedAtUtc = DateTime.UtcNow;
-            if (body.ServiceDateUtc == default) body.ServiceDateUtc = DateTime.UtcNow;
-
-            db.VehicleMaintenances.Add(body);
-
-            // If KM at service is higher than vehicle KM, update vehicle current KM
-            var v = await db.Vehicles.FirstOrDefaultAsync(x => x.Id == body.VehicleId && x.TenantId == tenantId, ct);
-            if (v is not null && body.KmAtService > v.CurrentKilometers)
-            {
-                v.CurrentKilometers = body.KmAtService;
-            }
-
-            await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/fleet/maintenances/{body.Id}", body);
-        });
-
-        // -------------------------------------------------------------
-        // FUEL LOGS & CONSUMPTION (KM/L)
-        // -------------------------------------------------------------
-        group.MapGet("/fuel-logs", async (Guid? vehicleId, FleetDbContext db, ITenantContext tenant, CancellationToken ct) =>
-        {
-            var tenantId = tenant.TenantId.Value;
-            var q = db.VehicleFuelLogs.AsNoTracking().Where(x => x.TenantId == tenantId);
-            if (vehicleId.HasValue) q = q.Where(x => x.VehicleId == vehicleId.Value);
-
-            var logs = await q.OrderByDescending(x => x.LogDateUtc).ToListAsync(ct);
-            return Results.Ok(logs);
-        });
-
-        group.MapPost("/fuel-logs", async (VehicleFuelLog body, FleetDbContext db, ITenantContext tenant, CancellationToken ct) =>
-        {
-            var tenantId = tenant.TenantId.Value;
-            body.Id = Guid.NewGuid();
-            body.TenantId = tenantId;
-            body.CreatedAtUtc = DateTime.UtcNow;
-            if (body.LogDateUtc == default) body.LogDateUtc = DateTime.UtcNow;
-            if (body.TotalCost <= 0 && body.Liters > 0 && body.PricePerLiter > 0)
-            {
-                body.TotalCost = Math.Round(body.Liters * body.PricePerLiter, 2);
-            }
-
-            var v = await db.Vehicles.FirstOrDefaultAsync(x => x.Id == body.VehicleId && x.TenantId == tenantId, ct);
-            if (v is not null)
-            {
-                if (body.KilometersAtFueling > v.CurrentKilometers && body.Liters > 0)
-                {
-                    var deltaKm = body.KilometersAtFueling - v.CurrentKilometers;
-                    body.CalculatedKmPerLiter = Math.Round((decimal)deltaKm / body.Liters, 2);
-                    v.CurrentKilometers = body.KilometersAtFueling;
-                }
-            }
-
-            db.VehicleFuelLogs.Add(body);
-            await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/fleet/fuel-logs/{body.Id}", body);
         });
 
         return endpoints;

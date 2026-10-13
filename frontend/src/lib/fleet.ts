@@ -1,4 +1,4 @@
-import type { CredentialType, ExpirationState, FleetDocType, FleetMember, MeterType, Vehicle, VehicleStatus, VehicleType } from "../api/types";
+import type { CredentialType, ExpirationState, FleetDocType, FleetMember, MaintenanceStatus, MaintenanceType, MeterType, Vehicle, VehicleStatus, VehicleType } from "../api/types";
 
 export const VEHICLE_TYPES: { value: VehicleType; label: string }[] = [
   { value: "Pickup", label: "Camioneta" },
@@ -131,3 +131,50 @@ export function rolesText(m: Pick<FleetMember, "isDriver" | "isCargoDriver" | "i
     m.isTechnician ? "Técnico" : null
   ].filter(Boolean).join(" · ");
 }
+
+export const MAINTENANCE_TYPES: { value: MaintenanceType; label: string }[] = [
+  { value: "Preventive", label: "Service / preventivo" },
+  { value: "Corrective", label: "Reparación" },
+  { value: "Urgent", label: "Urgencia" },
+  { value: "Inspection", label: "Inspección" }
+];
+
+export const MAINTENANCE_STATUSES: { value: MaintenanceStatus; label: string }[] = [
+  { value: "Completed", label: "Hecho" },
+  { value: "InProgress", label: "En taller ahora" },
+  { value: "Scheduled", label: "Programado" },
+  { value: "Cancelled", label: "Cancelado" }
+];
+
+export const maintenanceTypeLabel = (t: MaintenanceType) => find(MAINTENANCE_TYPES, t);
+export const maintenanceStatusLabel = (s: MaintenanceStatus) => find(MAINTENANCE_STATUSES, s);
+
+export const maintenanceStatusBadge: Record<MaintenanceStatus, string> = {
+  Completed: "ok",
+  InProgress: "warn",
+  Scheduled: "",
+  Cancelled: "off"
+};
+
+/** Estado de un service del plan ("Vencido" se lee como service pasado). */
+export const serviceStateLabel: Record<ExpirationState, string> = {
+  Ok: "Al día",
+  DueSoon: "Próximo",
+  Expired: "Vencido",
+  Missing: "Sin datos"
+};
+
+/** "cada 10.000 km · 250 h · 365 días" */
+export function intervalText(p: { intervalKm?: number | null; intervalHours?: number | null; intervalDays?: number | null }): string {
+  const parts: string[] = [];
+  if (p.intervalKm) parts.push(`${p.intervalKm.toLocaleString("es-AR")} km`);
+  if (p.intervalHours) parts.push(`${p.intervalHours.toLocaleString("es-AR")} h`);
+  if (p.intervalDays) parts.push(`${p.intervalDays.toLocaleString("es-AR")} días`);
+  return parts.length ? `cada ${parts.join(" o ")}` : "—";
+}
+
+export const money = (value?: number | null) =>
+  value == null ? "—" : value.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+
+export const num = (value?: number | null, decimals = 0) =>
+  value == null ? "—" : value.toLocaleString("es-AR", { maximumFractionDigits: decimals });

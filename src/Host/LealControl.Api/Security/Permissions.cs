@@ -110,6 +110,7 @@ public static class PermissionRules
         ("/api/v1/sales/inventory/products/suppliers", Sensitive.Costs),
         ("/api/v1/sales/products/suppliers", Sensitive.Costs),
         ("/api/v1/purchases", Sensitive.Costs),
+        ("/api/v1/fleet/costs", Sensitive.Costs),
         ("/api/v1/hr/payroll", Sensitive.Salaries)
     ];
 
@@ -119,6 +120,7 @@ public static class PermissionRules
         ("/api/v1/sales/products", Sensitive.Costs, ["costPrice", "purchaseCurrency", "purchasePrice"]),
         ("/api/v1/sales/inventory", Sensitive.Costs, ["unitCostArs", "unitCostUsd", "costPrice", "purchasePrice"]),
         ("/api/v1/sales/production", Sensitive.Costs, ["unitCost", "extendedCost", "materialCost", "costPerOutputUnit", "costPrice"]),
+        ("/api/v1/fleet", Sensitive.Costs, ["totalCost", "pricePerLiter", "cost"]),
         ("/api/v1/hr", Sensitive.Salaries, ["baseSalary", "hourlyRate"])
     ];
 

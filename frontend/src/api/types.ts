@@ -1731,50 +1731,166 @@ export type NoticeSettings = {
   notices: { code: string; module: string; label: string; description: string; enabled: boolean }[];
 };
 
-export type VehicleDriver = {
+export type MaintenanceType = "Preventive" | "Corrective" | "Urgent" | "Inspection";
+export type MaintenanceStatus = "Scheduled" | "InProgress" | "Completed" | "Cancelled";
+
+/** Ítem del plan de mantenimiento con su próximo service. */
+export type MaintenancePlan = {
   id: string;
-  employeeId?: string | null;
-  fullName: string;
-  documentNumber: string;
-  phone: string;
-  email: string;
-  licenseNumber: string;
-  licenseCategory: string;
-  licenseExpirationUtc: string;
-  lintiExpirationUtc?: string | null;
-  isActive: boolean;
+  vehicleId: string;
+  title: string;
+  intervalKm?: number | null;
+  intervalHours?: number | null;
+  intervalDays?: number | null;
+  alertKm: number;
+  alertHours: number;
+  alertDays: number;
+  lastDoneDate: string;
+  lastDoneKm?: number | null;
+  lastDoneHours?: number | null;
+  /** true si todavía no hay un trabajo cargado: cuenta desde el punto de partida. */
+  lastDoneFromBaseline: boolean;
   notes?: string | null;
+  nextKm?: number | null;
+  kmLeft?: number | null;
+  nextHours?: number | null;
+  hoursLeft?: number | null;
+  nextDate?: string | null;
+  daysLeft?: number | null;
+  state: ExpirationState;
+  dueText: string;
+};
+
+export type MaintenancePlanWrite = {
+  title: string;
+  intervalKm?: number | null;
+  intervalHours?: number | null;
+  intervalDays?: number | null;
+  alertKm: number;
+  alertHours: number;
+  alertDays: number;
+  lastDoneDate?: string;
+  lastDoneKm?: number | null;
+  lastDoneHours?: number | null;
+  notes?: string;
 };
 
 export type VehicleMaintenance = {
   id: string;
   vehicleId: string;
-  type: number; // 0=Preventive, 1=Corrective, 2=Urgent, 3=Inspection
+  vehicleLabel?: string | null;
+  type: MaintenanceType;
+  status: MaintenanceStatus;
   title: string;
   description: string;
-  kmAtService: number;
-  serviceDateUtc: string;
-  workshopName: string;
+  date: string;
+  km?: number | null;
+  hours?: number | null;
+  workshop: string;
   invoiceReference?: string | null;
-  totalCost: number;
-  nextServiceKm?: number | null;
-  nextServiceDateUtc?: string | null;
-  status: number; // 0=Scheduled, 1=InProgress, 2=Completed, 3=Cancelled
+  /** No llega a quien no tiene el permiso de costos. */
+  totalCost?: number;
+  planIds: string[];
+  planTitles: string[];
+  createdBy?: string | null;
+};
+
+export type VehicleMaintenanceWrite = {
+  type: MaintenanceType;
+  status: MaintenanceStatus;
+  title: string;
+  date: string;
+  km?: number | null;
+  hours?: number | null;
+  workshop?: string;
+  invoiceReference?: string;
+  totalCost?: number;
+  description?: string;
+  planIds: string[];
+};
+
+export type ServiceDueItem = {
+  vehicleId: string;
+  vehicleLabel: string;
+  vehicleName: string;
+  vehicleStatus: VehicleStatus;
+  planId: string;
+  title: string;
+  kmLeft?: number | null;
+  hoursLeft?: number | null;
+  nextDate?: string | null;
+  daysLeft?: number | null;
+  state: ExpirationState;
+  dueText: string;
+};
+
+export type FleetMaintenanceOverview = {
+  expired: number;
+  dueSoon: number;
+  services: ServiceDueItem[];
+  inShop: VehicleMaintenance[];
+  scheduled: VehicleMaintenance[];
+  recent: VehicleMaintenance[];
 };
 
 export type VehicleFuelLog = {
   id: string;
   vehicleId: string;
-  driverId?: string | null;
-  logDateUtc: string;
-  kilometersAtFueling: number;
+  vehicleLabel: string;
+  date: string;
+  employeeId?: string | null;
+  personName?: string | null;
+  km?: number | null;
+  hours?: number | null;
   liters: number;
-  pricePerLiter: number;
-  totalCost: number;
-  gasStation: string;
+  /** Importes: no llegan a quien no tiene el permiso de costos. */
+  pricePerLiter?: number;
+  totalCost?: number;
+  station: string;
   paymentMethod: string;
-  calculatedKmPerLiter?: number | null;
+  kmPerLiter?: number | null;
+  litersPerHour?: number | null;
   notes?: string | null;
+  createdBy?: string | null;
+};
+
+export type VehicleFuelLogWrite = {
+  vehicleId: string;
+  date: string;
+  liters: number;
+  pricePerLiter?: number | null;
+  totalCost?: number | null;
+  km?: number | null;
+  hours?: number | null;
+  employeeId?: string | null;
+  station?: string;
+  paymentMethod?: string;
+  notes?: string;
+};
+
+export type VehicleCostRow = {
+  vehicleId: string;
+  vehicleLabel: string;
+  vehicleName: string;
+  vehicleType: VehicleType;
+  km: number;
+  hours: number;
+  liters: number;
+  fuelCost: number;
+  maintenanceCost: number;
+  documentsCost: number;
+  totalCost: number;
+  costPerKm?: number | null;
+  costPerHour?: number | null;
+  kmPerLiter?: number | null;
+  litersPerHour?: number | null;
+};
+
+export type FleetCosts = {
+  from: string;
+  to: string;
+  totals: { liters: number; fuelCost: number; maintenanceCost: number; documentsCost: number; totalCost: number };
+  rows: VehicleCostRow[];
 };
 
 export type UserInfo = {

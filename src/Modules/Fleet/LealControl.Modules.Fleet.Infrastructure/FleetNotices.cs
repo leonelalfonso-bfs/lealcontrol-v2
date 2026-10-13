@@ -72,3 +72,27 @@ public sealed class FleetPeopleNotices : INoticeProvider
             i.State == ExpirationState.DueSoon ? NoticeSeverity.Warning : NoticeSeverity.Critical)).ToList();
     }
 }
+
+/// <summary>Aviso: services del plan de mantenimiento vencidos o por vencer (por km, horas o fecha).</summary>
+public sealed class FleetServiceNotices : INoticeProvider
+{
+    public string Code => "fleet.services";
+    public string Module => "fleet";
+    public int MinimumLevel => 1;
+    public NoticeSensitivity Sensitivity => NoticeSensitivity.None;
+    public string Label => "Services de flota";
+    public string Description => "Services del plan de mantenimiento vencidos o próximos, por kilómetros, horas o fecha.";
+    public bool DefaultOn => true;
+
+    public async Task<IReadOnlyList<NoticeItem>> GetAsync(NoticeContext context, CancellationToken cancellationToken)
+    {
+        await using var db = new FleetDbContext(new DbContextOptionsBuilder<FleetDbContext>().UseNpgsql(context.ConnectionString).Options);
+        var items = await FleetMaintenance.ServicesDueAsync(db, context.TenantId, context.Today, cancellationToken);
+        return items.Select(i => new NoticeItem(
+            $"{i.VehicleLabel} — {i.Title}",
+            (i.State == ExpirationState.Expired ? "Service vencido: " : "Service próximo: ") + i.DueText
+                + (string.IsNullOrWhiteSpace(i.VehicleName) ? "" : $" · {i.VehicleName}"),
+            $"/flota/vehiculos/{i.VehicleId}",
+            i.State == ExpirationState.DueSoon ? NoticeSeverity.Warning : NoticeSeverity.Critical)).ToList();
+    }
+}
