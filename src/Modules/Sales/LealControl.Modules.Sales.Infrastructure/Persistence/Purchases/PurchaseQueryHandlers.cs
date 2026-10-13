@@ -666,7 +666,8 @@ public sealed class PurchaseQueryHandlers :
         var tenantId = _tenantContext.TenantId;
         if (!request.Items.Any() || request.Items.Any(x => x.Quantity <= 0 || x.UnitPrice < 0))
             return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.InvalidLines", "La factura debe contener líneas válidas."));
-        var duplicate = await _dbContext.Set<PurchaseInvoice>().AnyAsync(x => x.TenantId == tenantId && x.SupplierId == request.SupplierId && x.PointOfSale == request.PointOfSale && x.InvoiceNumber == request.InvoiceNumber && x.InvoiceType == request.InvoiceType, cancellationToken);
+        // Una factura anulada (por ejemplo, cargada con un error) no impide volver a cargarla bien.
+        var duplicate = await _dbContext.Set<PurchaseInvoice>().AnyAsync(x => x.TenantId == tenantId && x.SupplierId == request.SupplierId && x.PointOfSale == request.PointOfSale && x.InvoiceNumber == request.InvoiceNumber && x.InvoiceType == request.InvoiceType && x.Status != "Cancelled", cancellationToken);
         if (duplicate) return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.Duplicate", "Ya existe una factura con el mismo tipo, punto de venta y número para este proveedor."));
 
         var purchaseOrderId = request.PurchaseOrderId;

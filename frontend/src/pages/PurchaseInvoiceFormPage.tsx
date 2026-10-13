@@ -304,6 +304,11 @@ export function PurchaseInvoiceFormPage() {
       setError("Indicá el punto de venta y el número de factura del comprobante (sin valores por defecto).");
       return;
     }
+    const badLine = items.findIndex((it) => !(it.quantity > 0));
+    if (badLine >= 0) {
+      setError(`Revisá la cantidad del renglón ${badLine + 1}: tiene que ser mayor a cero.`);
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -594,15 +599,15 @@ export function PurchaseInvoiceFormPage() {
             </h3>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "12px" }}>
+              <table style={{ width: "100%", minWidth: 860, borderCollapse: "collapse", marginBottom: "12px" }}>
                 <thead>
                   <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", fontSize: "0.82rem", color: "var(--ink-soft)", textAlign: "left" }}>
-                    <th style={{ width: "28%", padding: "8px 4px" }}>Catálogo / Insumo</th>
-                    <th style={{ width: "28%", padding: "8px 4px" }}>Descripción / Detalle Factura</th>
-                    <th style={{ width: "9%", padding: "8px 4px", textAlign: "center" }}>Cant.</th>
-                    <th style={{ width: "14%", padding: "8px 4px", textAlign: "right" }}>Precio Neto U.</th>
-                    <th style={{ width: "11%", padding: "8px 4px", textAlign: "center" }}>Alícuota IVA</th>
-                    <th style={{ width: "10%", padding: "8px 4px", textAlign: "right" }}>Subtotal</th>
+                    <th style={{ width: "22%", padding: "8px 4px" }}>Catálogo / Insumo</th>
+                    <th style={{ width: "22%", padding: "8px 4px" }}>Descripción / Detalle Factura</th>
+                    <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>Cant.</th>
+                    <th style={{ width: "18%", padding: "8px 4px", textAlign: "right" }}>Precio Neto U.</th>
+                    <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>Alícuota IVA</th>
+                    <th style={{ width: "14%", padding: "8px 4px", textAlign: "right" }}>Subtotal</th>
                     <th style={{ width: "4%", padding: "8px 4px" }}></th>
                   </tr>
                 </thead>
@@ -632,22 +637,27 @@ export function PurchaseInvoiceFormPage() {
                       <td style={{ padding: "8px 4px" }}>
                         <input
                           type="number"
-                          step="1"
-                          min="1"
+                          step="any"
+                          min="0"
                           required
-                          value={it.quantity}
-                          onChange={(e) => handleItemChange(idx, "quantity", parseInt(e.target.value, 10) || 1)}
+                          inputMode="decimal"
+                          // Vacío mientras se escribe (antes volvía solo a 1 y no se podía borrar); admite decimales.
+                          value={it.quantity === 0 ? "" : it.quantity}
+                          onChange={(e) => handleItemChange(idx, "quantity", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                           style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "center", fontSize: "0.85rem" }}
                         />
                       </td>
                       <td style={{ padding: "8px 4px" }}>
                         <input
                           type="number"
-                          step="0.01"
+                          step="any"
                           min="0"
                           required
-                          value={it.unitPrice}
-                          onChange={(e) => handleItemChange(idx, "unitPrice", parseFloat(e.target.value) || 0)}
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          // Vacío mientras se escribe (antes quedaba un 0 adelante del importe).
+                          value={it.unitPrice === 0 ? "" : it.unitPrice}
+                          onChange={(e) => handleItemChange(idx, "unitPrice", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                           style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "right", fontFamily: "monospace", fontSize: "0.85rem" }}
                         />
                       </td>
