@@ -324,9 +324,7 @@ internal static class CommunicationsMailEndpoints
             {
                 var userId = CommunicationsEndpointHelpers.GetAuthenticatedUserId(http);
                 if (userId is null) return Results.Unauthorized();
-                var legacyThreadSuffix = $"_{userId.Value:N}";
-                query = query.Where(c => c.AssignedToUserId == userId ||
-                    (c.AssignedToUserId == null && c.ChannelType == CommunicationChannelHelper.WhatsApp && c.ThreadKey.EndsWith(legacyThreadSuffix)));
+                query = query.Where(c => c.AssignedToUserId == userId);
             }
             else if (string.Equals(folder, "Incoming", StringComparison.OrdinalIgnoreCase))
                 query = query.Where(c => db.EmailMessages.Any(m => m.ConversationId == c.Id && m.Direction == EmailDirection.Incoming));
@@ -568,7 +566,7 @@ internal static class CommunicationsMailEndpoints
             var conversation = await db.Conversations.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
             if (conversation is null) return Results.NotFound();
 
-            var phone = conversation.ParticipantPhone ?? (conversation.ChannelType == "whatsapp" ? conversation.ParticipantId.Replace("lid_", "") : null);
+            var phone = conversation.ParticipantPhone;
             var email = conversation.ParticipantEmail;
 
             if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(email))

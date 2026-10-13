@@ -50,6 +50,7 @@ Hecho del 9 al 13/10/2026:
 - permisos personalizados P1 a P3;
 - avisos personales A1;
 - Flota 2a (personas y licencias), 2b (mantenimiento, combustible y costos) y 3 (órdenes de servicio y agenda).
+- WhatsApp por Evolution API dado de baja por completo: código, tabla `whatsapp_connections`, conversaciones y mensajes de WhatsApp, variables `WHATSAPP_*` y red de Docker. El envío de documentos queda por correo. WhatsApp vuelve con la API oficial de Meta (etapa 2).
 
 1. **Casilla del sistema A2** ([65](auditoria-2026-10-01/65-permisos-y-avisos-plan.md)). Espera la cuenta de Brevo y el DNS de lealcontrol.com.
 2. **Flota, lo que sigue** ([64](auditoria-2026-10-01/64-flota-plan.md)): remito por servicio, repuestos, firmas desde el celular, informe en PDF.

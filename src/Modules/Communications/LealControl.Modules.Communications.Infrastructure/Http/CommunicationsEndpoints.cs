@@ -25,19 +25,6 @@ namespace LealControl.Modules.Communications.Infrastructure.Http;
 
 public sealed record SaveMailAccountRequest(Guid? Id, MailAccountSettings Settings, string? Secret);
 public sealed record SetMailAutoSyncRequest(bool Enabled);
-public sealed record SendWhatsAppRequest(
-    string To,
-    string Message,
-    string? MediaUrl = null,
-    string? MediaType = null,
-    string? FileName = null,
-    string? MediaBase64 = null,
-    string? MimeType = null,
-    string? RelatedEntityType = null,
-    Guid? RelatedEntityId = null,
-    Guid? UserId = null,
-    string? InstanceName = null
-);
 public sealed record ConfigureMetaChannelRequest(string ChannelType, string PageAccessToken);
 public sealed record DisconnectMetaChannelRequest(string ChannelType);
 public sealed record SendMetaMessageRequest(
@@ -64,7 +51,6 @@ public static class CommunicationsEndpoints
     {
         var group = endpoints.MapGroup("/api/v1/communications");
         group.MapCommunicationsMailEndpoints();
-        group.MapCommunicationsWhatsAppEndpoints(endpoints);
         group.MapCommunicationsMetaEndpoints(endpoints);
         return endpoints;
     }

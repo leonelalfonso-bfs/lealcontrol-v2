@@ -7,7 +7,6 @@ import { CustomerPicker } from "./pickers";
 import { QuickCustomerModal } from "./QuickCustomerModal";
 
 const CHANNEL_LABEL: Record<string, string> = {
-  whatsapp: "WhatsApp",
   email: "Correo",
   instagram: "Instagram",
   facebook: "Facebook"

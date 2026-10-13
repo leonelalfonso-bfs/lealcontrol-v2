@@ -23,7 +23,7 @@ function normalizeEmailHtml(value: string): string {
   return holder.value;
 }
 
-type ChannelType = "all" | "email" | "whatsapp" | "instagram" | "facebook";
+type ChannelType = "all" | "email" | "instagram" | "facebook";
 
 function isOwnBrand(name: string): boolean {
   if (!name) return true;
@@ -31,8 +31,7 @@ function isOwnBrand(name: string): boolean {
   return (
     n.includes("oficial") ||
     n === "usuario" ||
-    n === "desconocido" ||
-    n === "whatsapp oficial"
+    n === "desconocido"
   );
 }
 
@@ -47,14 +46,13 @@ function formatThreadDate(dateStr: string): string {
   return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
 }
 
-function getConversationChannel(c: Conversation): "whatsapp" | "instagram" | "facebook" | "email" {
+function getConversationChannel(c: Conversation): "instagram" | "facebook" | "email" {
   const ct = (c.channelType || "").toLowerCase();
-  if (ct === "whatsapp" || ct === "instagram" || ct === "facebook" || ct === "email") return ct;
+  if (ct === "instagram" || ct === "facebook" || ct === "email") return ct;
   return "email";
 }
 
 function channelLabel(ch: string): string {
-  if (ch === "whatsapp") return "WhatsApp";
   if (ch === "instagram") return "Instagram";
   if (ch === "facebook") return "Facebook";
   return "Email";
@@ -91,19 +89,19 @@ export function InboxPage() {
   const [error, setError] = useState<string | null>(null);
   const [channel, setChannel] = useState<ChannelType>("all");
 
-  // Social / WhatsApp Direct Reply State
+  // Respuesta directa en Instagram o Facebook
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
 
   // New Message Modal State
   const [newModalOpen, setNewModalOpen] = useState(false);
-  const [newChannel, setNewChannel] = useState<"whatsapp" | "instagram" | "facebook">("whatsapp");
+  const [newChannel, setNewChannel] = useState<"instagram" | "facebook">("instagram");
   const [newRecipient, setNewRecipient] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [sendingNew, setSendingNew] = useState(false);
 
   const [syncNotification, setSyncNotification] = useState<string | null>(null);
-  const [channelCounts, setChannelCounts] = useState({ email: 0, whatsapp: 0, instagram: 0, facebook: 0 });
+  const [channelCounts, setChannelCounts] = useState({ email: 0, instagram: 0, facebook: 0 });
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(() => new Set());
   const [linkCustomerOpen, setLinkCustomerOpen] = useState(false);
   const [opportunityOpen, setOpportunityOpen] = useState(false);
@@ -133,7 +131,6 @@ export function InboxPage() {
       setConversations(c);
       setChannelCounts({
         email: countsSource.filter((x) => getConversationChannel(x) === "email").length,
-        whatsapp: countsSource.filter((x) => getConversationChannel(x) === "whatsapp").length,
         instagram: countsSource.filter((x) => getConversationChannel(x) === "instagram").length,
         facebook: countsSource.filter((x) => getConversationChannel(x) === "facebook").length
       });
@@ -172,22 +169,9 @@ export function InboxPage() {
   };
 
   const syncChannels = async (showResult = false) => {
-    const syncConnectedWhatsApp = async () => {
-      const status = await api.getWhatsAppStatus();
-      if (!status.isConnected) {
-        if (showResult) throw new Error(status.error || "La línea está desconectada. Vinculala desde Canales.");
-        return { synced: 0 };
-      }
-      return api.syncWhatsAppMessages();
-    };
-    const [waResult, metaResult] = await Promise.allSettled([
-      syncConnectedWhatsApp(),
-      api.syncMetaMessages()
-    ]);
-    const waSynced = waResult.status === "fulfilled" ? waResult.value.synced : 0;
+    const [metaResult] = await Promise.allSettled([api.syncMetaMessages()]);
     const metaSynced = metaResult.status === "fulfilled" ? metaResult.value.synced : 0;
     const warnings = [
-      ...(waResult.status === "rejected" ? [`WhatsApp: ${(waResult.reason as Error).message}`] : []),
       ...(metaResult.status === "rejected" ? [`Instagram/Facebook: ${(metaResult.reason as Error).message}`] : []),
       ...(metaResult.status === "fulfilled"
         ? (metaResult.value.channels || []).filter((channel) => channel.error).map((channel) => `${channel.channel}: ${channel.error}`)
@@ -195,8 +179,8 @@ export function InboxPage() {
     ];
 
     if (showResult && warnings.length > 0) setError(warnings.join(" | "));
-    if (waSynced + metaSynced > 0 || (showResult && warnings.length === 0)) {
-      setSyncNotification(`Sincronización: ${waSynced} WhatsApp, ${metaSynced} Instagram/Facebook.`);
+    if (metaSynced > 0 || (showResult && warnings.length === 0)) {
+      setSyncNotification(`Sincronización: ${metaSynced} Instagram/Facebook.`);
     }
 
     await loadConversations();
@@ -323,7 +307,6 @@ export function InboxPage() {
     const ch = getConversationChannel(c);
     if (ch === "instagram") return "Contacto de Instagram";
     if (ch === "facebook") return "Contacto de Facebook";
-    if (ch === "whatsapp") return "Contacto de WhatsApp";
     return c.participantId || "Contacto";
   };
 
@@ -335,7 +318,6 @@ export function InboxPage() {
   }, [activeMessages.length, activeNotes.length, activeActivities.length, selectedConversationId, activeConversation]);
 
   const countEmail = channelCounts.email;
-  const countWa = channelCounts.whatsapp;
   const countIg = channelCounts.instagram;
   const countFb = channelCounts.facebook;
 
@@ -401,14 +383,13 @@ export function InboxPage() {
     try {
       const ch = getConversationChannel(activeConversation);
       const isEmail = ch === "email";
-      const isWa = ch === "whatsapp";
       const name = getConversationDisplayName(activeConversation);
       const lead = await api.captureLead({
         name: isEmail ? (activeConversation.participantEmail?.split("@")[1] || name) : name,
         contactName: name,
         email: isEmail ? activeConversation.participantEmail || activeConversation.participantId : undefined,
-        phone: isWa ? activeConversation.participantPhone || activeConversation.participantId.replace(/^lid_/, "") : undefined,
-        source: isWa ? "WhatsApp" : ch === "instagram" ? "Instagram" : ch === "facebook" ? "Facebook" : "Email",
+        phone: activeConversation.participantPhone || undefined,
+        source: ch === "instagram" ? "Instagram" : ch === "facebook" ? "Facebook" : "Email",
         description: `Conversación por ${ch}: ${activeConversation.lastMessagePreview || ""}`,
         assignedTo: null
       });
@@ -470,35 +451,7 @@ export function InboxPage() {
 
     try {
       const participantId = activeConversation.participantId;
-      if (ch === "whatsapp") {
-        const targetPhone = participantId.replace(/^lid_/, "");
-        const res = pendingAudio
-          ? await api.sendWhatsAppMessage({
-              to: targetPhone,
-              message: replyText.trim(),
-              mediaBase64: pendingAudio.base64,
-              mediaType: "audio",
-              mimeType: pendingAudio.mimeType,
-              fileName: pendingAudio.fileName,
-              relatedEntityType: lastMsg?.relatedEntityType || undefined,
-              relatedEntityId: lastMsg?.relatedEntityId || undefined,
-              userId: user?.id
-            })
-          : await api.sendWhatsAppMessage({
-              to: targetPhone,
-              message: replyText.trim(),
-              relatedEntityType: lastMsg?.relatedEntityType || undefined,
-              relatedEntityId: lastMsg?.relatedEntityId || undefined,
-              userId: user?.id
-            });
-        if (res.success) {
-          setReplyText("");
-          setPendingAudio(null);
-          await syncChannels();
-        } else {
-          alert("No se pudo enviar el WhatsApp: " + (res.error || "Error"));
-        }
-      } else if (ch === "instagram" || ch === "facebook") {
+      if (ch === "instagram" || ch === "facebook") {
         let mediaUrl: string | undefined;
         if (pendingAudio) {
           const blob = await (await fetch(`data:${pendingAudio.mimeType};base64,${pendingAudio.base64}`)).blob();
@@ -536,34 +489,18 @@ export function InboxPage() {
     setSendingNew(true);
 
     try {
-      if (newChannel === "whatsapp") {
-        const res = await api.sendWhatsAppMessage({
-          to: newRecipient.trim(),
-          message: newMessage.trim(),
-          userId: user?.id
-        });
-        if (res.success) {
-          setNewRecipient("");
-          setNewMessage("");
-          setNewModalOpen(false);
-          await loadConversations();
-        } else {
-          alert("Error al enviar WhatsApp: " + (res.error || "Error"));
-        }
+      const res = await api.sendMetaMessage({
+        channelType: newChannel,
+        recipientId: newRecipient.trim(),
+        message: newMessage.trim()
+      });
+      if (res.success) {
+        setNewRecipient("");
+        setNewMessage("");
+        setNewModalOpen(false);
+        await loadConversations();
       } else {
-        const res = await api.sendMetaMessage({
-          channelType: newChannel,
-          recipientId: newRecipient.trim(),
-          message: newMessage.trim()
-        });
-        if (res.success) {
-          setNewRecipient("");
-          setNewMessage("");
-          setNewModalOpen(false);
-          await loadConversations();
-        } else {
-          alert(`Error al enviar ${newChannel}: ` + (res.error || "Error"));
-        }
+        alert(`Error al enviar ${newChannel}: ` + (res.error || "Error"));
       }
     } catch (err: any) {
       alert("Error: " + err.message);
@@ -668,7 +605,7 @@ export function InboxPage() {
         <div>
           <span className="eyebrow">COMUNICACIONES</span>
           <h1>Bandeja Omnicanal</h1>
-          <p className="muted">Conversaciones y chats de WhatsApp, Instagram, Facebook y Email unificados con el CRM.</p>
+          <p className="muted">Correo, Instagram y Facebook en una sola bandeja, unificados con el CRM.</p>
         </div>
         <div className="toolbar" style={{ display: "flex", gap: 8 }}>
           <button className="btn btn-outline" onClick={() => void handleForceSyncOmni()} disabled={busy} style={{ color: "#0d9488", borderColor: "#0d9488", fontWeight: 700 }}>
@@ -705,11 +642,6 @@ export function InboxPage() {
           <span>✉</span>
           <b>Email</b>
           <small>{countEmail}</small>
-        </button>
-        <button className={channel === "whatsapp" ? "selected" : ""} onClick={() => setChannel("whatsapp")}>
-          <span>💬</span>
-          <b>WhatsApp</b>
-          <small>{countWa}</small>
         </button>
         <button className={channel === "instagram" ? "selected" : ""} onClick={() => setChannel("instagram")}>
           <span>📸</span>
@@ -760,8 +692,8 @@ export function InboxPage() {
             <strong>{conversations.filter((c) => !c.assignedToUserId).length}</strong>
           </button>
           <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-            <Link to="/configuracion/comunicaciones?canal=mensajeria" style={{ fontSize: "0.8rem", color: "#0d9488", fontWeight: 700 }}>
-              📲 Conectar Canales
+            <Link to="/configuracion/comunicaciones" style={{ fontSize: "0.8rem", color: "#0d9488", fontWeight: 700 }}>
+              ⚙ Cuentas y canales
             </Link>
             <Link to="/comunicaciones/plantillas" style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
               📝 Plantillas de respuesta
@@ -788,7 +720,7 @@ export function InboxPage() {
           <div style={{ overflowY: "auto", flex: 1 }}>
           {visibleConversations.map((c) => {
             const ch = getConversationChannel(c);
-            const icon = ch === "whatsapp" ? "💬" : ch === "instagram" ? "📸" : ch === "facebook" ? "📘" : "✉️";
+            const icon = ch === "instagram" ? "📸" : ch === "facebook" ? "📘" : "✉️";
             const isActive = selectedConversationId === c.id;
             const displayName = getConversationDisplayName(c);
 
@@ -825,9 +757,7 @@ export function InboxPage() {
                     justifyContent: "center",
                     fontSize: "1.3rem",
                     background:
-                      ch === "whatsapp"
-                        ? "#dcfce7"
-                        : ch === "instagram"
+                      ch === "instagram"
                         ? "#fce7f3"
                         : ch === "facebook"
                         ? "#dbeafe"
@@ -895,8 +825,8 @@ export function InboxPage() {
               {folder === "All" && channel === "all" && !searchDebounced ? (
                 <>
                   <strong style={{ display: "block", marginBottom: 8 }}>Todavía no hay conversaciones</strong>
-                  <span>Conectá un canal o configurá una casilla de correo para empezar.</span>
-                  <div style={{ marginTop: 12 }}><Link to="/configuracion/comunicaciones?canal=mensajeria">Configurar canales →</Link></div>
+                  <span>Configurá una casilla de correo para empezar.</span>
+                  <div style={{ marginTop: 12 }}><Link to="/configuracion/comunicaciones">Configurar correo →</Link></div>
                 </>
               ) : "No hay conversaciones en este filtro."}
             </div>
@@ -914,7 +844,7 @@ export function InboxPage() {
                 <div className="inbox-thread-identity">
                   <div className="inbox-thread-title">
                     <span aria-hidden="true" style={{ fontSize: "1.2rem" }}>
-                      {getConversationChannel(activeConversation) === "whatsapp" ? "💬" : getConversationChannel(activeConversation) === "instagram" ? "📸" : getConversationChannel(activeConversation) === "facebook" ? "📘" : "✉️"}
+                      {getConversationChannel(activeConversation) === "instagram" ? "📸" : getConversationChannel(activeConversation) === "facebook" ? "📘" : "✉️"}
                     </span>
                     <h2>{activeDisplayName}</h2>
                   </div>
@@ -1037,13 +967,11 @@ export function InboxPage() {
                           padding: "10px 14px",
                           borderRadius: isOutgoing ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
                           background: isOutgoing
-                            ? ch === "whatsapp"
-                              ? "#dcf8c6"
-                              : ch === "instagram"
+                            ? ch === "instagram"
                               ? "#fce7f3"
                               : "#dbeafe"
                             : "#ffffff",
-                          color: isOutgoing && ch === "whatsapp" ? "#064e3b" : "var(--ink)",
+                          color: "var(--ink)",
                           boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                           border: isOutgoing ? "none" : "1px solid rgba(0,0,0,0.06)",
                           fontSize: "0.92rem",
@@ -1184,10 +1112,10 @@ export function InboxPage() {
                   <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Canal</div>
                   <strong>{channelLabel(getConversationChannel(activeConversation))}</strong>
                 </div>
-                {(activeConversation.participantPhone || getConversationChannel(activeConversation) === "whatsapp") && (
+                {activeConversation.participantPhone && (
                   <div className="inbox-context-field">
                     <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Teléfono</div>
-                    <strong>{activeConversation.participantPhone || activeConversation.participantId.replace(/^lid_/, "")}</strong>
+                    <strong>{activeConversation.participantPhone}</strong>
                   </div>
                 )}
                 {(activeConversation.participantEmail || getConversationChannel(activeConversation) === "email") && (
@@ -1360,22 +1288,19 @@ export function InboxPage() {
                   onChange={(e) => setNewChannel(e.target.value as any)}
                   style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
                 >
-                  <option value="whatsapp">💬 WhatsApp</option>
                   <option value="instagram">📸 Instagram Direct</option>
                   <option value="facebook">📘 Facebook Messenger</option>
                 </select>
               </label>
 
               <label>
-                {newChannel === "whatsapp"
-                  ? "Número de Teléfono *"
-                  : newChannel === "instagram"
+                {newChannel === "instagram"
                   ? "ID de Usuario de Instagram (PSID) *"
                   : "ID de Usuario de Facebook (PSID) *"}
                 <input
                   type="text"
                   required
-                  placeholder={newChannel === "whatsapp" ? "Ej: 5493415551234" : "Ej: 1234567890"}
+                  placeholder="Ej: 1234567890"
                   value={newRecipient}
                   onChange={(e) => setNewRecipient(e.target.value)}
                   style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}

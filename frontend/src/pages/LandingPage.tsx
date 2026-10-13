@@ -268,11 +268,11 @@ export function LandingPage() {
                   <span className="badge primary" style={{ marginBottom: 12 }}>Ventas & Facturación</span>
                   <h3 style={{ fontSize: "1.8rem", fontWeight: 800, marginBottom: 12 }}>📊 Facturación Electrónica ARCA (AFIP)</h3>
                   <p style={{ color: "#475569", lineHeight: 1.6, marginBottom: 20 }}>
-                    Emisión instantánea de Facturas A, B, C, MiPyME con CAE directo por web service. Presupuestos con envío automático a WhatsApp y remitos electrónicos.
+                    Emisión instantánea de Facturas A, B, C, MiPyME con CAE directo por web service. Presupuestos con envío por correo y remitos electrónicos.
                   </p>
                   <ul style={{ listStyle: "none", padding: 0, margin: "0 0 24px", display: "flex", flexDirection: "column", gap: 10, fontSize: "0.9rem" }}>
                     <li>✅ Facturación directa con CAE de ARCA (AFIP)</li>
-                    <li>✅ Envío de presupuestos y facturas por WhatsApp</li>
+                    <li>✅ Envío de presupuestos y facturas por correo</li>
                     <li>✅ Remitos de entrega vinculados con stock</li>
                     <li>✅ Libro IVA Ventas digital (RG 4597)</li>
                   </ul>

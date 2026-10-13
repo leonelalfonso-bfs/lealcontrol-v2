@@ -107,7 +107,7 @@ Orden de trabajo:
 
 En cada carpeta del VPS: `.env` propio. **No commitear `.env`.** En pruebas v2: `PUBLIC_WEB_ORIGIN=https://v2.lealcontrol.com`. En prod erp: `https://erp.lealcontrol.com`. JWT y password de Postgres **distintos**.
 
-La API no arranca en estos compose sin `JWT_SECRET`. También exige `POSTGRES_PASSWORD`, `PUBLIC_WEB_ORIGIN`, `WHATSAPP_GATEWAY_APIKEY` y `WHATSAPP_WEBHOOK_SECRET`.
+La API no arranca en estos compose sin `JWT_SECRET`. También exige `POSTGRES_PASSWORD` y `PUBLIC_WEB_ORIGIN`.
 
 SuperAdmin inicial: solo si existe `SUPERADMIN_BOOTSTRAP_PASSWORD`.
 

@@ -17,7 +17,6 @@ type Summary = {
 };
 
 function channelIcon(ch: string) {
-  if (ch === "whatsapp") return "💬";
   if (ch === "instagram") return "📸";
   if (ch === "facebook") return "📘";
   return "✉️";
