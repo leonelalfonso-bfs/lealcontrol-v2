@@ -54,9 +54,10 @@ Hecho del 9 al 13/10/2026:
 
 1. **Casilla del sistema A2** ([65](auditoria-2026-10-01/65-permisos-y-avisos-plan.md)). Espera la cuenta de Brevo y el DNS de lealcontrol.com.
 2. **Manuales de Ayuda:** cada módulo que se toque termina con su Ayuda como manual del circuito completo (Flota ya está, con `components/help/HelpManual.tsx`).
-3. **Comunicaciones etapa 2:** API oficial de Meta con coexistencia, cuando LealControl tenga CUIT y sea Tech Provider; Instagram y Facebook.
-4. **Deuda técnica y requisitos para vender** ([62](auditoria-2026-10-01/62-estado-general-y-plan.md)).
-5. **App móvil** (firmas del técnico y del cliente, Flota 4b): al final, cuando el resto ande perfecto.
+3. **Contabilidad** ([67](auditoria-2026-10-01/67-contabilidad-diagnostico.md)): C0 urgente (retirar el Libro IVA Digital falso y validar asientos), después C1 (contabilizar Ventas y Compras).
+4. **Comunicaciones etapa 2:** API oficial de Meta con coexistencia, cuando LealControl tenga CUIT y sea Tech Provider; Instagram y Facebook.
+5. **Deuda técnica y requisitos para vender** ([62](auditoria-2026-10-01/62-estado-general-y-plan.md)).
+6. **App móvil** (firmas del técnico y del cliente, Flota 4b): al final, cuando el resto ande perfecto.
 
 ## Reglas de trabajo
 
