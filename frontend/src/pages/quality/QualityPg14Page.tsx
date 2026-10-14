@@ -14,6 +14,7 @@ import type {
   QualityPg14UnifiedAsset
 } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
+import { todayAr } from "../../lib/dates";
 import {
   CHECK_RESULT,
   EQUIPMENT_KIND,
@@ -144,7 +145,7 @@ export function QualityPg14Page() {
   const [eqStatus, setEqStatus] = useState("Active");
 
   // R05 form
-  const [cDate, setCDate] = useState(new Date().toISOString().slice(0, 10));
+  const [cDate, setCDate] = useState(todayAr());
   const [cWeight, setCWeight] = useState("1000 kg");
   const [cInstrument, setCInstrument] = useState("");
   const [cEquipmentId, setCEquipmentId] = useState("");
@@ -176,7 +177,7 @@ export function QualityPg14Page() {
   const [lSource, setLSource] = useState("StandardWeight");
   const [lAssetId, setLAssetId] = useState("");
   const [lKind, setLKind] = useState("C");
-  const [lDate, setLDate] = useState(new Date().toISOString().slice(0, 10));
+  const [lDate, setLDate] = useState(todayAr());
   const [lCert, setLCert] = useState("");
   const [lVerdict, setLVerdict] = useState("");
   const [lDt, setLDt] = useState(false);
@@ -320,7 +321,7 @@ export function QualityPg14Page() {
   };
 
   const resetCheckForm = () => {
-    setCDate(new Date().toISOString().slice(0, 10));
+    setCDate(todayAr());
     setCWeight("1000 kg");
     setCInstrument("");
     setCEquipmentId("");
@@ -348,7 +349,7 @@ export function QualityPg14Page() {
     setLSource("StandardWeight");
     setLAssetId("");
     setLKind("C");
-    setLDate(new Date().toISOString().slice(0, 10));
+    setLDate(todayAr());
     setLCert("");
     setLVerdict("");
     setLDt(false);

@@ -6,7 +6,7 @@ import { EmailComposer } from "../components/EmailComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { numberToWords } from "../utils/numberToWords";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
-import { documentLabel, isFceType, letterOf } from "../lib/documents";
+import { documentLabel, isFceType, letterOf, arcaVoucherCode } from "../lib/documents";
 import { type CompanySettings, type CustomerDetail, type Invoice } from "../api/types";
 
 const TAX_CONDITION_LABELS: Record<string, string> = {
@@ -138,28 +138,7 @@ export function InvoicePrintPage() {
     ? (isNc ? "NOTA DE CRÉDITO ELECTRÓNICA MiPyMEs (FCE)" : isNd ? "NOTA DE DÉBITO ELECTRÓNICA MiPyMEs (FCE)" : "FACTURA DE CRÉDITO ELECTRÓNICA MiPyMEs (FCE)")
     : isNc ? "NOTA DE CRÉDITO" : isNd ? "NOTA DE DÉBITO" : invoice.invoiceType === "Proforma" ? "FACTURA PROFORMA" : "FACTURA";
 
-  const afipCodes: Record<string, string> = {
-    A: "01",
-    B: "06",
-    C: "11",
-    M: "51",
-    NC_A: "03",
-    NC_B: "08",
-    NC_C: "13",
-    NC_M: "52",
-    ND_A: "02",
-    ND_B: "07",
-    ND_C: "12",
-    ND_M: "53",
-    FCE_A: "201",
-    ND_FCE_A: "202",
-    NC_FCE_A: "203",
-    FCE_B: "206",
-    ND_FCE_B: "207",
-    NC_FCE_B: "208",
-    Proforma: "00"
-  };
-  const invoiceCode = afipCodes[invoice.invoiceType] ?? "01";
+  const invoiceCode = arcaVoucherCode(invoice.invoiceType) ?? "01";
 
   // Formatted Point of Sale (5 digits) and Voucher Number (8 digits) per RG 1415 / RG 4290
   const formattedPtoVta = String(invoice.pointOfSale || 1).padStart(5, "0");

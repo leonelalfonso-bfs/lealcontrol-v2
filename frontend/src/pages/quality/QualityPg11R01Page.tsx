@@ -4,6 +4,7 @@ import { api } from "../../api/client";
 import type { QualityMethodValidation } from "../../api/types/quality";
 import { EQUIPMENT_STATUS, labelOf } from "./qualityLabels";
 
+import { todayAr } from "../../lib/dates";
 const RESULT_OPTIONS = [
   { value: "Valid", label: "Válido" },
   { value: "Conditional", label: "Condicional" },
@@ -26,7 +27,7 @@ export function QualityPg11R01Page() {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [validatedBy, setValidatedBy] = useState("");
-  const [validatedAt, setValidatedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [validatedAt, setValidatedAt] = useState(todayAr());
   const [result, setResult] = useState("Valid");
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);

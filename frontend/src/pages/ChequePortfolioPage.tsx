@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { DataTable } from "../components/ui/DataTable";
 
+import { todayAr } from "../lib/dates";
 type Cheque = {
   id: string;
   checkNumber: string;
@@ -46,7 +47,7 @@ export function ChequePortfolioPage() {
     currency: "ARS",
     issuerName: "",
     bankName: "",
-    issueDate: new Date().toISOString().slice(0, 10),
+    issueDate: todayAr(),
     dueDate: "",
     notes: ""
   });
@@ -96,7 +97,7 @@ export function ChequePortfolioPage() {
         currency: "ARS",
         issuerName: "",
         bankName: "",
-        issueDate: new Date().toISOString().slice(0, 10),
+        issueDate: todayAr(),
         dueDate: "",
         notes: ""
       });
@@ -122,7 +123,7 @@ export function ChequePortfolioPage() {
     }
   };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayAr();
   const visible = useMemo(() => {
     return rows
       .filter((x) => x.direction === tab)

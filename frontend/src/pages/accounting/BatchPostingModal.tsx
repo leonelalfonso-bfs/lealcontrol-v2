@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
+import { todayAr, addDaysAr, monthRangeAr } from "../../lib/dates";
 import type {
   UnpostedDocumentsSummary,
   BatchPostingPreview,
@@ -22,8 +23,8 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Filters
-  const today = new Date().toISOString().slice(0, 10);
-  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+  const today = todayAr();
+  const firstOfMonth = monthRangeAr().from;
 
   const [startDate, setStartDate] = useState(firstOfMonth);
   const [endDate, setEndDate] = useState(today);
@@ -55,19 +56,15 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
   if (!isOpen) return null;
 
   const handleQuickPeriod = (type: "today" | "lastWeek" | "thisMonth") => {
-    const now = new Date();
     if (type === "today") {
-      setStartDate(now.toISOString().slice(0, 10));
-      setEndDate(now.toISOString().slice(0, 10));
+      setStartDate(todayAr());
+      setEndDate(todayAr());
     } else if (type === "lastWeek") {
-      const past = new Date();
-      past.setDate(now.getDate() - 7);
-      setStartDate(past.toISOString().slice(0, 10));
-      setEndDate(now.toISOString().slice(0, 10));
+      setStartDate(addDaysAr(-7));
+      setEndDate(todayAr());
     } else if (type === "thisMonth") {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      setStartDate(first.toISOString().slice(0, 10));
-      setEndDate(now.toISOString().slice(0, 10));
+      setStartDate(monthRangeAr().from);
+      setEndDate(todayAr());
     }
   };
 

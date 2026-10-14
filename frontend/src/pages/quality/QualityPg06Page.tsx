@@ -11,6 +11,7 @@ import type {
 } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
 
+import { todayAr } from "../../lib/dates";
 type Tab = "r01" | "r02" | "r03" | "r04";
 
 const TABS: { id: Tab; label: string }[] = [
@@ -78,11 +79,11 @@ export function QualityPg06Page() {
   const [tYear, setTYear] = useState(String(currentYear));
   const [tTopic, setTTopic] = useState("");
   const [tRoles, setTRoles] = useState("");
-  const [tPlanned, setTPlanned] = useState(new Date().toISOString().slice(0, 10));
+  const [tPlanned, setTPlanned] = useState(todayAr());
   const [tNotes, setTNotes] = useState("");
   const [tPeople, setTPeople] = useState("");
   const [tType, setTType] = useState<"Internal" | "External">("Internal");
-  const [tDoneDate, setTDoneDate] = useState(new Date().toISOString().slice(0, 10));
+  const [tDoneDate, setTDoneDate] = useState(todayAr());
 
   // R02 form / detail
   const [aUserId, setAUserId] = useState("");
@@ -107,7 +108,7 @@ export function QualityPg06Page() {
   const [rRole, setRRole] = useState("");
   const [rUserId, setRUserId] = useState("");
   const [rSubId, setRSubId] = useState("");
-  const [rSince, setRSince] = useState(new Date().toISOString().slice(0, 10));
+  const [rSince, setRSince] = useState(todayAr());
   const [rUntil, setRUntil] = useState("");
   const [rNotes, setRNotes] = useState("");
 
@@ -193,7 +194,7 @@ export function QualityPg06Page() {
     if (tab === "r01" && selectedTraining) {
       setTPeople(selectedTraining.interveningPersonnel || "");
       setTType(selectedTraining.trainingType || "Internal");
-      setTDoneDate(selectedTraining.doneDate ? selectedTraining.doneDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
+      setTDoneDate(selectedTraining.doneDate ? selectedTraining.doneDate.slice(0, 10) : todayAr());
       setTNotes(selectedTraining.notes || "");
     }
   }, [tab, selectedTraining?.id]);

@@ -6,6 +6,7 @@ import { excelDate, exportToExcel, type ExcelColumn } from "../../components/Exc
 import { QualityAuditHistory } from "./QualityAuditHistory";
 import { usePresentationMode } from "../../context/PresentationModeContext";
 
+import { todayAr } from "../../lib/dates";
 const KIND_LABEL: Record<string, string> = {
   NonConformity: "No conformidad",
   NonConformingWork: "Trabajo no conforme",
@@ -57,7 +58,7 @@ function actionStatus(action: QualityCorrectiveAction) {
   if (action.effectivenessResult === "Effective") return "Eficaz";
   if (action.effectivenessResult === "NotEffective") return "No eficaz · reemplazada";
   if (!action.action || !action.implementationDate) return "Completar nueva acción";
-  return action.implementationDate.slice(0, 10) <= new Date().toISOString().slice(0, 10)
+  return action.implementationDate.slice(0, 10) <= todayAr()
     ? "Lista para verificar" : "Pendiente de implementación";
 }
 
@@ -82,7 +83,7 @@ export function QualityPg07R01Page() {
   const [kind, setKind] = useState("NonConformity");
   const [description, setDescription] = useState(searchParams.get("desc") || "");
   const [origin, setOrigin] = useState(searchParams.get("origin") || (fromComplaint ? "Complaint" : fromAudit ? "Audit" : "Internal"));
-  const [detectedAt, setDetectedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [detectedAt, setDetectedAt] = useState(todayAr());
   const [responsible, setResponsible] = useState("");
   const [immediateAction, setImmediateAction] = useState("");
   const [controls, setControls] = useState("");
@@ -417,7 +418,7 @@ export function QualityPg07R01Page() {
               const draft = actionDrafts[action.id] || { action: action.action, responsible: action.responsible, implementationDate: dateInput(action.implementationDate) };
               const evaluation = evaluationDrafts[action.id] || { result: "Pending" as const, check: "" };
               const canEvaluate = !!action.implementationDate && !!action.action &&
-                dateInput(action.implementationDate) <= new Date().toISOString().slice(0, 10);
+                dateInput(action.implementationDate) <= todayAr();
               return <article key={action.id} className="card pad" style={{ marginTop: 10, background: "#f8fafc" }}>
                 <strong>{action.replacesActionId ? "Acción sucesora" : `Causa / acción ${index + 1}`}</strong>
                 <span style={{ marginLeft: 8, color: action.effectivenessResult === "NotEffective" ? "#b91c1c" : "#475569" }}>{actionStatus(action)}</span>

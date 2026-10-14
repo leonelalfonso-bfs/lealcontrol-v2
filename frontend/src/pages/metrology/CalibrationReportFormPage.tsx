@@ -2,10 +2,12 @@ import { useEffect, useState, FormEvent, useMemo } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { api } from "../../api/client";
 import type { MetrologyEquipment, StandardWeight, MetrologyInstrument, MetrologyTestPoint, EccentricityConfig } from "../../api/types";
-import { assaysForMode, METROLOGY_ASSAYS } from "./metrologyScope";
+import { assaysForMode, METROLOGY_ASSAYS } from "./metrologyScope";
+
 import { SearchField } from "../../components/ui/SearchField";
 import { matchesSearch } from "../../lib/search";
 
+import { todayAr } from "../../lib/dates";
 export type FidelityTrial = {
   initialZero: string;
   indication: string;
@@ -93,7 +95,7 @@ export function CalibrationReportFormPage() {
   const [regulatoryProfile, setRegulatoryProfile] = useState("REGIMEN_TRANSITORIO_R2307_80");
   const [operationType, setOperationType] = useState("VPE");
   const [documentTitle, setDocumentTitle] = useState("Informe de ensayo metrológico");
-  const [calibrationDate, setCalibrationDate] = useState(new Date().toISOString().split("T")[0]);
+  const [calibrationDate, setCalibrationDate] = useState(todayAr());
   const [nextCalibrationDate, setNextCalibrationDate] = useState("");
   const [performedBy, setPerformedBy] = useState("Verificador Autorizado");
   const [ambientTemperature, setAmbientTemperature] = useState("20.0");

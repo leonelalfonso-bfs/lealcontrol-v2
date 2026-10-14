@@ -4,6 +4,7 @@ import { api } from "../../api/client";
 import type { QualityInternalAudit } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
 
+import { todayAr } from "../../lib/dates";
 const dateInput = (value?: string | null) => value?.slice(0, 10) || "";
 const dateLabel = (value?: string | null) => value ? new Date(value).toLocaleDateString("es-AR") : "—";
 const isoDate = (value: string) => new Date(`${value}T12:00:00Z`).toISOString();
@@ -26,7 +27,7 @@ export function QualityPg04Page() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
   const [programYear, setProgramYear] = useState(String(currentYear));
-  const [plannedDate, setPlannedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [plannedDate, setPlannedDate] = useState(todayAr());
   const [scope, setScope] = useState("");
   const [criteria, setCriteria] = useState("");
   const [auditor, setAuditor] = useState("");

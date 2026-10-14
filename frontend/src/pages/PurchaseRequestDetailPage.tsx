@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { type PurchaseQuotation, type PurchaseRequest, type Supplier } from "../api/types";
 import { CustomerPicker } from "../components/pickers";
 
+import { todayAr } from "../lib/dates";
 export function PurchaseRequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export function PurchaseRequestDetailPage() {
   const [selectedSupplierId, setSelectedSupplierId] = useState("");
   const [supplierName, setSupplierName] = useState("");
   const [supplierQuoteRef, setSupplierQuoteRef] = useState("");
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
+  const [issueDate, setIssueDate] = useState(todayAr());
   const [currency, setCurrency] = useState("ARS");
   const [exchangeRate, setExchangeRate] = useState(1);
   const [netAmount, setNetAmount] = useState(0);

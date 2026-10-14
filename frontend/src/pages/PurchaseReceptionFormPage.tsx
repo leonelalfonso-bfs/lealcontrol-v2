@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { type Product, type PurchaseInvoice, type PurchaseOrder, type Supplier, type Warehouse } from "../api/types";
 import { CustomerPicker, ProductPicker } from "../components/pickers";
 
+import { todayAr } from "../lib/dates";
 interface ReceptionRow {
   productId?: string;
   code: string;
@@ -36,7 +37,7 @@ export function PurchaseReceptionFormPage() {
   const [hasSupplierRemito, setHasSupplierRemito] = useState(true);
   const [supplierRemitoNumber, setSupplierRemitoNumber] = useState("");
   
-  const [receptionDate, setReceptionDate] = useState(new Date().toISOString().split("T")[0]);
+  const [receptionDate, setReceptionDate] = useState(todayAr());
   const [warehouseLocation, setWarehouseLocation] = useState("Depósito Central");
   const [receivedBy, setReceivedBy] = useState("Control de Calidad / Recepción");
   const [notes, setNotes] = useState("");

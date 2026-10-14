@@ -12,6 +12,7 @@ import type {
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
 import { CustomerPicker } from "../../components/pickers";
 
+import { todayAr } from "../../lib/dates";
 type Tab = "r01" | "r02" | "r03";
 
 const TABS: { id: Tab; label: string }[] = [
@@ -107,7 +108,7 @@ export function QualityPg05Page() {
   // R01 form / detail
   const [eSupplierId, setESupplierId] = useState("");
   const [eScope, setEScope] = useState("");
-  const [eEvaluatedAt, setEEvaluatedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [eEvaluatedAt, setEEvaluatedAt] = useState(todayAr());
   const [newCriteriaAnswers, setNewCriteriaAnswers] = useState<CriterionAnswers>({});
   const [editCriteriaAnswers, setEditCriteriaAnswers] = useState<CriterionAnswers>({});
   const [eStrengths, setEStrengths] = useState("");
@@ -119,7 +120,7 @@ export function QualityPg05Page() {
   // R03 form / detail
   const [pSupplierId, setPSupplierId] = useState("");
   const [pPeriod, setPPeriod] = useState("");
-  const [pReviewDate, setPReviewDate] = useState(new Date().toISOString().slice(0, 10));
+  const [pReviewDate, setPReviewDate] = useState(todayAr());
   const [newPerformanceCriteria, setNewPerformanceCriteria] = useState<CriterionAnswers>({});
   const [editPerformanceCriteria, setEditPerformanceCriteria] = useState<CriterionAnswers>({});
   const [pComments, setPComments] = useState("");
@@ -208,7 +209,7 @@ export function QualityPg05Page() {
   useEffect(() => {
     if (tab === "r01" && selectedEval) {
       setEScope(selectedEval.serviceScope || "");
-      setEEvaluatedAt(selectedEval.evaluatedAt ? selectedEval.evaluatedAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
+      setEEvaluatedAt(selectedEval.evaluatedAt ? selectedEval.evaluatedAt.slice(0, 10) : todayAr());
       setEditCriteriaAnswers(answersFrom(selectedEval.criteria || []));
       setEStrengths(selectedEval.strengths || "");
       setEWeaknesses(selectedEval.weaknesses || "");
@@ -221,7 +222,7 @@ export function QualityPg05Page() {
   useEffect(() => {
     if (tab === "r03" && selectedPerf) {
       setPPeriod(selectedPerf.period || "");
-      setPReviewDate(selectedPerf.reviewDate ? selectedPerf.reviewDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
+      setPReviewDate(selectedPerf.reviewDate ? selectedPerf.reviewDate.slice(0, 10) : todayAr());
       setEditPerformanceCriteria(answersFrom(selectedPerf.criteria || []));
       setPComments(selectedPerf.comments || "");
       setPReviewedBy(selectedPerf.reviewedBy || "");
