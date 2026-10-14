@@ -227,6 +227,27 @@ public sealed class ServiceOrder
     public string? WorkPerformed { get; set; }
     public string? Observations { get; set; }
     public DateTime? CompletedAtUtc { get; set; }
+    /// <summary>Remito de Ventas generado desde la orden (lleva el servicio y los repuestos del pedido).</summary>
+    public Guid? RemitoId { get; set; }
+    public string? RemitoNumber { get; set; }
+    /// <summary>Cuándo se descontó el stock de los repuestos (remito y consumo). Después ya no se editan.</summary>
+    public DateTime? StockAppliedAtUtc { get; set; }
     public string? CreatedBy { get; set; }
     public DateTime CreatedAtUtc { get; set; }
+}
+
+/// <summary>Repuesto o material usado en una orden de servicio.</summary>
+public sealed class ServiceOrderItem
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public Guid ServiceOrderId { get; set; }
+    /// <summary>Producto de Ventas; sin producto es un ítem libre (no mueve stock).</summary>
+    public Guid? ProductId { get; set; }
+    public string Code { get; set; } = "";
+    public string Description { get; set; } = "";
+    public decimal Quantity { get; set; }
+    public string Unit { get; set; } = "UN";
+    public string? SerialNumbers { get; set; }
+    public int Position { get; set; }
 }

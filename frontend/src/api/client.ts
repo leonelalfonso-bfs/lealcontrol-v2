@@ -1034,6 +1034,15 @@ export const api = {
     request<{ id: string; name: string }[]>(`/api/v1/fleet/service-orders/customers?search=${encodeURIComponent(search)}`),
   listSalesOrdersToCoordinate: (search = "") =>
     request<import("./types").SalesOrderToCoordinate[]>(`/api/v1/fleet/service-orders/sales-orders?search=${encodeURIComponent(search)}`),
+  listServiceOrderItems: (id: string) => request<import("./types").ServiceOrderItem[]>(`/api/v1/fleet/service-orders/${id}/items`),
+  saveServiceOrderItems: (id: string, items: import("./types").ServiceOrderItemWrite[]) =>
+    request<import("./types").ServiceOrderItem[]>(`/api/v1/fleet/service-orders/${id}/items`, { method: "PUT", body: JSON.stringify({ items }) }),
+  searchServiceOrderProducts: (search: string) =>
+    request<import("./types").ServiceOrderProduct[]>(`/api/v1/fleet/service-orders/products?search=${encodeURIComponent(search)}`),
+  getServiceOrderRemitoPreview: (id: string) =>
+    request<import("./types").ServiceOrderRemitoPreview>(`/api/v1/fleet/service-orders/${id}/remito-preview`),
+  createServiceOrderRemito: (id: string, lines: { orderLineId: string; quantity: number }[]) =>
+    request<{ remitoId: string; remitoNumber: string; consumed: number }>(`/api/v1/fleet/service-orders/${id}/remito`, { method: "POST", body: JSON.stringify({ lines }) }),
   getFleetAgenda: (from?: string, days = 7) =>
     request<import("./types").FleetAgenda>(`/api/v1/fleet/agenda?days=${days}${from ? `&from=${from}` : ""}`),
 

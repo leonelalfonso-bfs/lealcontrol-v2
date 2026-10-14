@@ -171,3 +171,17 @@ public sealed record ListKardexQuery(
 
 public sealed record GeneratePurchaseRequestFromStockCommand(
     string? Notes) : IRequest<Result<Guid>>;
+
+public sealed record ConsumeStockItem(Guid ProductId, decimal Quantity, string? SerialNumbers = null);
+
+/// <summary>
+/// Salida de stock por consumo (por ejemplo, repuestos usados en una orden de servicio).
+/// Una misma referencia se aplica una sola vez: repetir el pedido no vuelve a descontar.
+/// </summary>
+public sealed record ConsumeStockCommand(
+    Guid ReferenceId,
+    string ReferenceType,
+    string ReferenceNumber,
+    string Notes,
+    string? OperatorName,
+    IReadOnlyList<ConsumeStockItem> Items) : IRequest<Result<int>>;

@@ -51,6 +51,8 @@ export function FleetHelpPage() {
             <li>Al elegir el horario, el sistema muestra quién y qué está disponible. <strong>No deja asignar</strong> a una persona o unidad vencida (o que vence antes de que termine el trabajo), sin la documentación obligatoria, en taller, con taller programado o ya ocupada en ese horario.</li>
             <li>Sin fecha, la orden queda "para coordinar". Si después de programar algo vence o la unidad entra al taller, la orden lo marca y llega un aviso.</li>
             <li>La <Link to="/flota/agenda">Agenda</Link> muestra la semana con las órdenes, los vencimientos y el taller, más las órdenes sin fecha y los pedidos de venta sin coordinar.</li>
+            <li>En cada orden se cargan los <strong>repuestos y materiales</strong> usados. "Generar remito" crea el remito de Ventas con el servicio y los repuestos del pedido, y descuenta su stock; los demás productos se descuentan como <strong>consumo en servicio</strong>. Se hace una sola vez y después los repuestos quedan fijos.</li>
+            <li>El <strong>informe de servicio</strong> (botón "📄 Informe") se imprime o descarga en PDF, con lugar para la firma del técnico y del cliente.</li>
           </ul>
         </section>
 

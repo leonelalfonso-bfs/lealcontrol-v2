@@ -19,6 +19,7 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
     public DbSet<PersonCredential> PersonCredentials => Set<PersonCredential>();
     public DbSet<MaintenancePlan> MaintenancePlans => Set<MaintenancePlan>();
     public DbSet<ServiceOrder> ServiceOrders => Set<ServiceOrder>();
+    public DbSet<ServiceOrderItem> ServiceOrderItems => Set<ServiceOrderItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -78,8 +79,22 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             b.Property(x => x.WorkPerformed).HasMaxLength(4000);
             b.Property(x => x.Observations).HasMaxLength(2000);
             b.Property(x => x.CreatedBy).HasMaxLength(140);
+            b.Property(x => x.RemitoNumber).HasMaxLength(32);
             b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
             b.HasIndex(x => new { x.TenantId, x.StartUtc });
+        });
+
+        modelBuilder.Entity<ServiceOrderItem>(b =>
+        {
+            b.ToTable("ServiceOrderItems");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Code).HasMaxLength(80);
+            b.Property(x => x.Description).HasMaxLength(300);
+            b.Property(x => x.Quantity).HasPrecision(18, 3);
+            b.Property(x => x.Unit).HasMaxLength(20);
+            b.Property(x => x.SerialNumbers).HasMaxLength(300);
+            b.HasIndex(x => new { x.TenantId, x.ServiceOrderId });
+            b.HasOne<ServiceOrder>().WithMany().HasForeignKey(x => x.ServiceOrderId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<VehicleDocument>(b =>
@@ -345,6 +360,23 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             CREATE UNIQUE INDEX IF NOT EXISTS ""UX_ServiceOrders_Number"" ON fleet.""ServiceOrders"" (""TenantId"", ""Number"");
             CREATE INDEX IF NOT EXISTS ""IX_ServiceOrders_Start"" ON fleet.""ServiceOrders"" (""TenantId"", ""StartUtc"");
             CREATE INDEX IF NOT EXISTS ""IX_ServiceOrders_SalesOrder"" ON fleet.""ServiceOrders"" (""TenantId"", ""SalesOrderId"");
+            ALTER TABLE fleet.""ServiceOrders"" ADD COLUMN IF NOT EXISTS ""RemitoId"" uuid;
+            ALTER TABLE fleet.""ServiceOrders"" ADD COLUMN IF NOT EXISTS ""RemitoNumber"" character varying(32);
+            ALTER TABLE fleet.""ServiceOrders"" ADD COLUMN IF NOT EXISTS ""StockAppliedAtUtc"" timestamp with time zone;
+
+            CREATE TABLE IF NOT EXISTS fleet.""ServiceOrderItems"" (
+                ""Id"" uuid PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ServiceOrderId"" uuid NOT NULL REFERENCES fleet.""ServiceOrders""(""Id"") ON DELETE CASCADE,
+                ""ProductId"" uuid,
+                ""Code"" character varying(80) NOT NULL DEFAULT '',
+                ""Description"" character varying(300) NOT NULL,
+                ""Quantity"" numeric(18,3) NOT NULL,
+                ""Unit"" character varying(20) NOT NULL DEFAULT 'UN',
+                ""SerialNumbers"" character varying(300),
+                ""Position"" integer NOT NULL DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS ""IX_ServiceOrderItems_Order"" ON fleet.""ServiceOrderItems"" (""TenantId"", ""ServiceOrderId"");
         ", ct);
 
         // Patente y código únicos por empresa. Con datos viejos duplicados el índice no se puede

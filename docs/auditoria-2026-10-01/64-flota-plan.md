@@ -143,6 +143,22 @@ Proceso nocturno por empresa. Manda el resumen de lo vencido y por vencer a los 
   - equipos del cliente (Calidad y Metrología);
   - informe en PDF.
 
+### 4a. Repuestos, remito e informe (hecha, PR "Flota 4a")
+
+- **Repuestos y materiales** de la orden (`fleet."ServiceOrderItems"`): productos de Ventas (buscador sin precios ni costos) o materiales libres, con cantidad y número de serie. Se editan hasta que se genera el remito.
+- **Remito desde la orden** (`Host/Fleet/ServiceOrderRemito.cs`, en el host porque une Flota con Ventas):
+  - con pedido: el remito (vinculado al pedido) lleva las líneas elegidas, controladas contra el saldo, y los repuestos que están en el pedido; los demás productos se descuentan con `ConsumeStockCommand` (movimiento `Consumption`, referencia a la orden);
+  - sin pedido: el remito lleva "Servicio OS-…" y todos los repuestos;
+  - pide un cliente de la base (el remito necesita CUIT) y permiso para cargar en Ventas;
+  - el stock se mueve una sola vez: la orden guarda `RemitoId`, `RemitoNumber` y `StockAppliedAtUtc`; Ventas no repite un consumo de la misma orden, y si un intento quedó a medias se reutiliza el remito (marca `[id]` en las notas).
+- **Informe de servicio** imprimible y en PDF (`/flota/ordenes/:id/informe`), con lugar para las firmas.
+- Kardex: el tipo "Consumo en servicio".
+- Pruebas: `FleetServiceOrderRemitoApiTests`.
+
+### 4b. Firmas desde el celular (siguiente)
+
+- Pantalla para el técnico en el celular: sus órdenes del día, iniciar, terminar con el trabajo realizado, y firma del técnico y del cliente (aclaración y DNI). Las firmas salen en el informe.
+
 ### Más adelante
 
 - Firmas del técnico y del cliente desde el celular.

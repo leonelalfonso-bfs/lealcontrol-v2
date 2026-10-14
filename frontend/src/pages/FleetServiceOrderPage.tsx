@@ -2,6 +2,7 @@ import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { ResourceStatus, SalesOrderToCoordinate, ServiceOrder } from "../api/types";
+import { ServiceOrderPartsSection } from "../components/fleet/ServiceOrderPartsSection";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
 import { fromArLocalInput, rangeText, serviceOrderStatusBadge, serviceOrderStatusLabel, toArLocalInput } from "../lib/fleet";
 
@@ -165,6 +166,7 @@ export function FleetServiceOrderPage() {
         <div className="toolbar">
           <Link to="/flota/ordenes" className="btn btn-outline">← Órdenes</Link>
           <Link to="/flota/agenda" className="btn btn-outline">Agenda</Link>
+          {order && <Link to={`/flota/ordenes/${order.id}/informe`} className="btn btn-outline">📄 Informe</Link>}
         </div>
       </div>
 
@@ -257,6 +259,10 @@ export function FleetServiceOrderPage() {
           </div>
         )}
       </form>
+
+      {order && order.status !== "Pending" && (
+        <ServiceOrderPartsSection order={order} onChanged={async () => { const o = await api.getServiceOrder(order.id); setOrder(o); }} />
+      )}
 
       {order && (
         <section className="card pad stack" style={{ gap: 12 }}>

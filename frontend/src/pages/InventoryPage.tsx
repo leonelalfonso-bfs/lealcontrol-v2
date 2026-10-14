@@ -1119,6 +1119,7 @@ export function InventoryPage() {
                 <option value="TransferIn">📥 Transferencia Entrada</option>
                 <option value="SaleDelivery">📦 Remito de Venta</option>
                 <option value="SaleDeliveryReturn">↩ Devolución de Remito</option>
+                <option value="Consumption">🔧 Consumo en servicio</option>
               </select>
             </div>
           </div>
@@ -1165,6 +1166,12 @@ export function InventoryPage() {
                                 ? "📤 Salida Transferencia"
                                 : m.movementType === "TransferIn"
                                 ? "📥 Entrada Transferencia"
+                                : m.movementType === "SaleDelivery"
+                                ? "📦 Remito de Venta"
+                                : m.movementType === "SaleDeliveryReturn"
+                                ? "↩ Devolución de Remito"
+                                : m.movementType === "Consumption"
+                                ? "🔧 Consumo en servicio"
                                 : m.movementType}
                             </span>
                           </td>

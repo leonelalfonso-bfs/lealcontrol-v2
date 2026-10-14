@@ -36,7 +36,13 @@ public sealed record ServiceOrderView(
     DateTimeOffset? Start, DateTimeOffset? End, ResourceRef[] People, ResourceRef[] Vehicles,
     string? WorkPerformed, string? Observations, DateTimeOffset? CompletedAt, string? CreatedBy,
     /// <summary>Problemas actuales de lo asignado (por ejemplo, algo que venció después de programar).</summary>
-    string[] Problems);
+    string[] Problems,
+    Guid? RemitoId = null, string? RemitoNumber = null, DateTimeOffset? StockAppliedAt = null);
+
+public sealed record ServiceOrderItemWrite(Guid? ProductId, string? Code, string? Description, decimal Quantity, string? Unit = null, string? SerialNumbers = null);
+public sealed record SaveServiceOrderItemsRequest(ServiceOrderItemWrite[] Items);
+public sealed record ServiceOrderItemView(Guid Id, Guid? ProductId, string Code, string Description, decimal Quantity, string Unit, string? SerialNumbers);
+public sealed record ProductOption(Guid Id, string Code, string Name, string Unit, string Type, bool TrackStock, bool HasSerialNumber, decimal Stock);
 
 public sealed record AgendaEvent(string Date, string Kind, string Title, string? Detail, string Link);
 
@@ -184,7 +190,8 @@ public static class FleetServiceOrders
         o.EmployeeIds.Select(id => new ResourceRef(id, s.Employees.TryGetValue(id, out var e) ? e.FullName : "?")).ToArray(),
         o.VehicleIds.Select(id => new ResourceRef(id, s.Vehicles.TryGetValue(id, out var v) ? FleetModule.Label(v) : "?")).ToArray(),
         o.WorkPerformed, o.Observations, Utc(o.CompletedAtUtc), o.CreatedBy,
-        o.EndUtc >= s.NowUtc.AddDays(-1) ? s.Problems(o) : []);
+        o.EndUtc >= s.NowUtc.AddDays(-1) ? s.Problems(o) : [],
+        o.RemitoId, o.RemitoNumber, Utc(o.StockAppliedAtUtc));
 
     // -------------------------------------------------------------
     // Lecturas de Ventas y CRM (misma base de la empresa; sin depender de esos módulos)
@@ -246,6 +253,21 @@ public static class FleetServiceOrders
             .GroupBy(o => o.SalesOrderId!.Value).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count, ct);
         return list.Select(x => new SalesOrderToCoordinate(x.Id, x.Number, x.CustomerId, x.Customer, x.Status, x.Created, counts.GetValueOrDefault(x.Id))).ToList();
     }
+
+    private static ServiceOrderItemView ToItemView(ServiceOrderItem i) =>
+        new(i.Id, i.ProductId, i.Code, i.Description, i.Quantity, i.Unit, i.SerialNumbers);
+
+    private static Task<List<ProductOption>> ProductsAsync(FleetDbContext db, Guid tenantId, string? search, Guid[]? ids, CancellationToken ct) =>
+        QueryAsync(db, @"
+            SELECT p.""Id"", p.""Code"", p.""Name"", p.""BaseUnit"", p.""Type"", p.""TrackStock"", p.""HasSerialNumber"", p.""Stock""
+            FROM sales.products p
+            WHERE p.""TenantId"" = @t AND (@ids IS NOT NULL OR p.""IsActive"")
+              AND (@ids IS NULL OR p.""Id"" = ANY(@ids))
+              AND (@q = '' OR p.""Code"" ILIKE '%' || @q || '%' OR p.""Name"" ILIKE '%' || @q || '%')
+            ORDER BY p.""Name"" LIMIT 30",
+            r => new ProductOption(r.GetGuid(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4), r.GetBoolean(5), r.GetBoolean(6), r.GetDecimal(7)), ct,
+            ("t", NpgsqlTypes.NpgsqlDbType.Uuid, tenantId), ("q", NpgsqlTypes.NpgsqlDbType.Text, (search ?? "").Trim()),
+            ("ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Uuid, ids));
 
     private static async Task<int> NextNumberAsync(FleetDbContext db, Guid tenantId, CancellationToken ct) =>
         (await db.ServiceOrders.Where(o => o.TenantId == tenantId).MaxAsync(o => (int?)o.Number, ct) ?? 0) + 1;
@@ -448,6 +470,59 @@ public static class FleetServiceOrders
             await db.SaveChangesAsync(ct);
             return await ViewAsync(db, tenantId, o, clock, ct);
         });
+
+        // Repuestos y materiales usados. Se editan hasta que se genera el remito (ahí se descuenta el stock).
+        group.MapGet("/service-orders/{id:guid}/items", async (Guid id, FleetDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var items = await db.ServiceOrderItems.AsNoTracking()
+                .Where(i => i.TenantId == tenantId && i.ServiceOrderId == id).OrderBy(i => i.Position).ToListAsync(ct);
+            return Results.Ok(items.Select(ToItemView));
+        });
+
+        group.MapPut("/service-orders/{id:guid}/items", async (Guid id, SaveServiceOrderItemsRequest req, FleetDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var o = await db.ServiceOrders.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+            if (o is null) return Results.NotFound(new { detail = "Orden no encontrada." });
+            if (o.StockAppliedAtUtc is not null) return Problem($"Ya se generó el remito {o.RemitoNumber} y se descontó el stock: los repuestos no se cambian.");
+            if (o.Status == ServiceOrderStatus.Cancelled) return Problem("La orden está cancelada.");
+            var items = req.Items ?? [];
+            if (items.Length > 200) return Problem("Demasiados ítems.");
+            foreach (var i in items)
+            {
+                if (i.Quantity <= 0 || i.Quantity > 1_000_000) return Problem("Las cantidades tienen que ser mayores a cero.");
+                if (i.ProductId is null && string.IsNullOrWhiteSpace(i.Description)) return Problem("Cada ítem necesita un producto o una descripción.");
+                if ((i.Description ?? "").Trim().Length > 300 || (i.SerialNumbers ?? "").Trim().Length > 300 || (i.Code ?? "").Trim().Length > 80)
+                    return Problem("Descripción, código o número de serie demasiado largos.");
+            }
+            var productIds = items.Where(i => i.ProductId is not null).Select(i => i.ProductId!.Value).Distinct().ToArray();
+            var products = productIds.Length == 0 ? [] : await ProductsAsync(db, tenantId, null, productIds, ct);
+            if (products.Count != productIds.Length) return Problem("Hay productos que no existen.");
+            var byId = products.ToDictionary(p => p.Id);
+
+            db.ServiceOrderItems.RemoveRange(await db.ServiceOrderItems.Where(i => i.TenantId == tenantId && i.ServiceOrderId == id).ToListAsync(ct));
+            var position = 0;
+            foreach (var i in items)
+            {
+                var product = i.ProductId is { } pid ? byId[pid] : null;
+                db.ServiceOrderItems.Add(new ServiceOrderItem
+                {
+                    Id = Guid.NewGuid(), TenantId = tenantId, ServiceOrderId = id, ProductId = product?.Id,
+                    Code = product?.Code ?? (i.Code ?? "").Trim(),
+                    Description = string.IsNullOrWhiteSpace(i.Description) ? product!.Name : i.Description.Trim(),
+                    Quantity = i.Quantity, Unit = product?.Unit ?? (string.IsNullOrWhiteSpace(i.Unit) ? "UN" : i.Unit.Trim()),
+                    SerialNumbers = string.IsNullOrWhiteSpace(i.SerialNumbers) ? null : i.SerialNumbers.Trim(), Position = position++
+                });
+            }
+            await db.SaveChangesAsync(ct);
+            var saved = await db.ServiceOrderItems.AsNoTracking().Where(x => x.TenantId == tenantId && x.ServiceOrderId == id).OrderBy(x => x.Position).ToListAsync(ct);
+            return Results.Ok(saved.Select(ToItemView));
+        });
+
+        // Buscador de productos de Ventas para cargar repuestos (sin precios ni costos).
+        group.MapGet("/service-orders/products", async (string? search, FleetDbContext db, ITenantContext tenant, CancellationToken ct) =>
+            Results.Ok(await ProductsAsync(db, tenant.TenantId.Value, search, null, ct)));
 
         // Agenda: órdenes del período, vencimientos, talleres programados, órdenes sin fecha y pedidos sin coordinar.
         group.MapGet("/agenda", async (string? from, int? days, FleetDbContext db, ITenantContext tenant, TimeProvider clock, CancellationToken ct) =>
