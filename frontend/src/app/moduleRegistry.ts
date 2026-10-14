@@ -374,7 +374,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/contabilidad/mayor", label: "Libro Mayor", icon: "🔍" },
       { path: "/contabilidad/sumas-saldos", label: "Sumas y Saldos", icon: "⚖️" },
       { path: "/contabilidad/conciliacion", label: "Conciliación tesorería", icon: "🏦" },
-      { path: "/contabilidad/portal-estudio", label: "Cierres & IVA Digital", icon: "🏢" }
+      { path: "/contabilidad/portal-estudio", label: "Cierres y períodos", icon: "🏢" },
+      { path: "/contabilidad/ayuda", label: "Ayuda Contabilidad", icon: "💡" }
     ]
   },
   {

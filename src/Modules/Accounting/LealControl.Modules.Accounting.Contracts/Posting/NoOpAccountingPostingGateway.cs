@@ -15,4 +15,10 @@ public sealed class NoOpAccountingPostingGateway : IAccountingPostingGateway
         string reason,
         CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    public Task<IReadOnlySet<string>> FilterUnpublishedAsync(
+        string sourceModule,
+        IReadOnlyCollection<string> sourceDocumentIds,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
 }

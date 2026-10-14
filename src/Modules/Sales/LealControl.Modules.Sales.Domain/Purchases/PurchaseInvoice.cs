@@ -234,7 +234,8 @@ public sealed class PurchaseInvoice : Entity<Guid>
         Iva105 = _items.Where(i => Math.Abs(i.VatRate - 10.5m) < 0.01m).Sum(i => i.VatAmount);
         Iva27 = _items.Where(i => Math.Abs(i.VatRate - 27.0m) < 0.01m).Sum(i => i.VatAmount);
         ExemptAmount = _items.Where(i => i.VatRate == 0).Sum(i => i.NetSubtotal);
-        Total = Subtotal + Iva21 + Iva105 + Iva27 + ExemptAmount + IibbPerception + IvaPerception + OtherTaxes;
+        // El exento ya está dentro del Subtotal (es la suma de todos los netos): no se vuelve a sumar.
+        Total = Subtotal + Iva21 + Iva105 + Iva27 + IibbPerception + IvaPerception + OtherTaxes;
     }
 }
 

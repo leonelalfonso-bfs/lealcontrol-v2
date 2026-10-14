@@ -241,7 +241,7 @@ export function JournalTemplateFormPage() {
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="ej. AM-VTA-01"
+                placeholder="ej. AM-VTA-FAC"
                 style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 800, fontSize: "0.92rem" }}
               />
             </div>

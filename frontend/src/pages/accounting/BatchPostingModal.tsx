@@ -2,14 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 import { todayAr, addDaysAr, monthRangeAr } from "../../lib/dates";
-import type {
-  UnpostedDocumentsSummary,
-  BatchPostingPreview,
-  BatchPostingExecuteResponse
-} from "../../api/types";
+import type { BatchPostingPreview, BatchPostingExecuteResponse } from "../../api/types";
 
-const BATCH_POSTING_DISABLED =
-  "La contabilización en lote está en reconstrucción y no generará asientos hasta conectar documentos reales.";
+/** yyyy-mm-dd → dd/mm/yyyy, sin pasar por Date (que lo corre un día por la zona horaria). */
+const dayLabel = (iso: string) => iso.split("-").reverse().join("/");
 
 interface BatchPostingModalProps {
   isOpen: boolean;
@@ -31,10 +27,8 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
   const [includeSales, setIncludeSales] = useState(true);
   const [includePurchases, setIncludePurchases] = useState(true);
   const [includeFinance, setIncludeFinance] = useState(true);
-  const [includeInventory, setIncludeInventory] = useState(false);
 
   // Data & States
-  const [summary, setSummary] = useState<UnpostedDocumentsSummary | null>(null);
   const [preview, setPreview] = useState<BatchPostingPreview | null>(null);
   const [result, setResult] = useState<BatchPostingExecuteResponse | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -47,9 +41,6 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
       setStep(1);
       setError(null);
       setConfirmed(false);
-      api.getUnpostedDocumentsSummary()
-        .then(setSummary)
-        .catch((err) => console.error("Error al obtener resumen de pendientes:", err));
     }
   }, [isOpen]);
 
@@ -73,7 +64,6 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
     if (includeSales) list.push("Sales");
     if (includePurchases) list.push("Purchases");
     if (includeFinance) list.push("Finance");
-    if (includeInventory) list.push("Inventory");
     return list;
   };
 
@@ -113,8 +103,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
       const res = await api.executeBatchPosting({
         periodStart: startDate,
         periodEnd: endDate,
-        modules: getSelectedModules(),
-        executedBy: "Contador"
+        modules: getSelectedModules()
       });
       setResult(res);
       setStep(4);
@@ -215,22 +204,10 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
           {/* ============================================================ */}
           {step === 1 && (
             <div>
-              <div
-                className="alert"
-                style={{
-                  marginBottom: 16,
-                  background: "#fffbeb",
-                  color: "#92400e",
-                  border: "1px solid #fde68a",
-                  padding: "10px 14px",
-                  borderRadius: 6,
-                  fontSize: "0.85rem"
-                }}
-              >
-                ⚠️ {BATCH_POSTING_DISABLED}
-              </div>
               <p style={{ margin: "0 0 16px", fontSize: "0.88rem", color: "#475569" }}>
-                Seleccione el período de fechas y los módulos operativos que desea contabilizar en el Libro Diario.
+                Elegí el período y los módulos. En la vista previa el sistema trae las facturas de venta autorizadas por ARCA,
+                las facturas de proveedor y los cobros y pagos del período que todavía no se contabilizaron, y muestra los asientos
+                que va a generar. Nada se graba hasta que confirmes.
               </p>
 
               {/* Período */}
@@ -281,39 +258,24 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem" }}>
                     <input type="checkbox" checked={includeSales} onChange={(e) => setIncludeSales(e.target.checked)} />
-                    <span>🛒 <strong>Ventas</strong> ({summary?.salesPendingCount ?? 0} comprobantes)</span>
+                    <span>🛒 <strong>Ventas</strong> (facturas y notas)</span>
                   </label>
 
                   <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem" }}>
                     <input type="checkbox" checked={includePurchases} onChange={(e) => setIncludePurchases(e.target.checked)} />
-                    <span>📦 <strong>Compras</strong> ({summary?.purchasesPendingCount ?? 0} comprobantes)</span>
+                    <span>📦 <strong>Compras</strong> (facturas de proveedor y notas)</span>
                   </label>
 
                   <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem" }}>
                     <input type="checkbox" checked={includeFinance} onChange={(e) => setIncludeFinance(e.target.checked)} />
-                    <span>💳 <strong>Finanzas & Cobranzas</strong> ({summary?.financePendingCount ?? 0} recibos/pagos)</span>
+                    <span>💳 <strong>Finanzas</strong> (cobros y pagos)</span>
                   </label>
 
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem" }}>
-                    <input type="checkbox" checked={includeInventory} onChange={(e) => setIncludeInventory(e.target.checked)} />
-                    <span>🏭 <strong>Inventario & Ajustes</strong> ({summary?.inventoryPendingCount ?? 0} movimientos)</span>
-                  </label>
                 </div>
               </div>
 
-              {/* Resumen Box */}
-              <div style={{ border: "2px dashed #0d9488", background: "#f0fdfa", padding: 14, borderRadius: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontSize: "0.84rem", color: "#0f766e", fontWeight: 700 }}>DOCUMENTOS PENDIENTES DE CONTABILIZAR:</div>
-                    <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#0f766e" }}>
-                      {summary?.totalPendingCount ?? 0} documentos detectados
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right", fontSize: "0.78rem", color: "#666" }}>
-                    Período: {new Date(startDate).toLocaleDateString("es-AR")} al {new Date(endDate).toLocaleDateString("es-AR")}
-                  </div>
-                </div>
+              <div className="muted" style={{ fontSize: "0.8rem" }}>
+                Período: {dayLabel(startDate)} al {dayLabel(endDate)}
               </div>
             </div>
           )}
@@ -323,13 +285,23 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
           {/* ============================================================ */}
           {step === 2 && preview && (
             <div>
-              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "10px 14px", borderRadius: 8, marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: "1.4rem" }}>✓</span>
-                <div style={{ fontSize: "0.85rem", color: "#166534" }}>
-                  <strong>Validaciones de Asientos Modelos completadas con éxito.</strong>
-                  <div>Partida doble balanceada: Total Debe = Total Haber verificado.</div>
+              {preview.documentsCount === 0 ? (
+                <div className="alert" style={{ marginBottom: 16 }}>
+                  No hay comprobantes pendientes de contabilizar en el período elegido.
                 </div>
-              </div>
+              ) : preview.isBalanced && preview.warnings.length === 0 && preview.unmappedDocuments.length === 0 ? (
+                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "10px 14px", borderRadius: 8, marginBottom: 16, fontSize: "0.85rem", color: "#166534" }}>
+                  <strong>✓ Todos los comprobantes tienen asiento modelo y cada asiento cuadra (Debe = Haber).</strong>
+                </div>
+              ) : (
+                <div style={{ background: "#fffbeb", border: "1px solid #fde68a", padding: "10px 14px", borderRadius: 8, marginBottom: 16, fontSize: "0.85rem", color: "#92400e" }}>
+                  <strong>⚠️ Revisá antes de confirmar:</strong> los comprobantes con problemas quedan pendientes, con el motivo, y el resto se contabiliza.
+                  <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                    {preview.unmappedDocuments.map((d) => <li key={d}>Sin asiento modelo: {d}</li>)}
+                    {preview.warnings.map((w) => <li key={w}>{w}</li>)}
+                  </ul>
+                </div>
+              )}
 
               {/* Métricas Resumen */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 18 }}>
@@ -437,7 +409,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
               <div style={{ background: "#f0fdf4", border: "2px solid #22c55e", padding: 18, borderRadius: 8, textAlign: "center", marginBottom: 20 }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: 6 }}>🎉</div>
                 <h3 style={{ margin: "0 0 4px", fontSize: "1.3rem", color: "#166534", fontWeight: 800 }}>
-                  ¡Contabilización Completada con Éxito!
+                  {result.errorsCount === 0 ? "Contabilización terminada" : "Contabilización terminada con avisos"}
                 </h3>
                 <div style={{ fontSize: "0.85rem", color: "#15803d" }}>
                   Lote Nº: <strong>{result.batchNumber}</strong>
@@ -453,8 +425,17 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                   <li>✓ <strong>{result.documentsProcessed}</strong> comprobantes marcados como contabilizados.</li>
                   <li>✓ Asientos generados: <strong>{result.entryNumbers.slice(0, 5).join(", ")}{result.entryNumbers.length > 5 ? "..." : ""}</strong></li>
                   <li>✓ Total Débitos / Créditos: <strong>${result.totalDebit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong></li>
-                  <li>✓ Tiempo de procesamiento: <strong>{result.durationSeconds} segundos</strong>.</li>
                 </ul>
+                {result.exceptions.length > 0 && (
+                  <>
+                    <div style={{ fontWeight: 700, fontSize: "0.86rem", color: "#92400e", margin: "12px 0 4px" }}>
+                      QUEDARON PENDIENTES ({result.errorsCount}):
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: "0.82rem", color: "#92400e" }}>
+                      {result.exceptions.map((x) => <li key={x}>{x}</li>)}
+                    </ul>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -496,17 +477,11 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
               <button
                 type="button"
                 onClick={handleExecuteBatch}
-                disabled
-                title={BATCH_POSTING_DISABLED}
+                disabled={!confirmed || preview?.estimatedEntriesCount === 0}
                 className="btn"
-                style={{
-                  background: "#cbd5e1",
-                  color: "#fff",
-                  fontWeight: 800,
-                  cursor: "not-allowed"
-                }}
+                style={{ background: "#dc2626", color: "#fff", fontWeight: 800 }}
               >
-                🔴 CONTABILIZAR AHORA (deshabilitado)
+                🔴 Contabilizar ahora
               </button>
             </>
           )}
@@ -517,7 +492,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate("/contabilidad/diario");
+                  navigate("/contabilidad/asientos");
                 }}
                 className="btn ghost"
               >

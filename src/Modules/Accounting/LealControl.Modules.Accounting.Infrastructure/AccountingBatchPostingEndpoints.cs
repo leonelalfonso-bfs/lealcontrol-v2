@@ -18,6 +18,18 @@ namespace LealControl.Modules.Accounting.Infrastructure;
 
 internal static class AccountingBatchPostingEndpoints
 {
+    /// <summary>
+    /// Antes de mostrar o ejecutar un lote, Ventas y Compras publican en la cola los comprobantes del
+    /// período que todavía no publicaron (y revierten los anulados).
+    /// </summary>
+    private static async Task PublishFromSourcesAsync(
+        IEnumerable<IAccountingDocumentSource> sources, DateTime periodStart, DateTime periodEnd, CancellationToken ct)
+    {
+        var (start, end) = BatchPostProcessor.PeriodBounds(periodStart, periodEnd);
+        foreach (var source in sources)
+            await source.PublishPendingAsync(start, end, ct);
+    }
+
     public static RouteGroupBuilder MapAccountingBatchPostingEndpoints(this RouteGroupBuilder group)
     {
         // ====================================================================
@@ -104,23 +116,35 @@ internal static class AccountingBatchPostingEndpoints
             BatchPostingPreviewRequest req,
             ITenantContext tenantContext,
             AccountingDbContext db,
+            IEnumerable<IAccountingDocumentSource> sources,
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            await using (await db.LockPostingRunAsync(tenantId, ct))
+                await PublishFromSourcesAsync(sources, req.PeriodStart, req.PeriodEnd, ct);
             var result = await BatchPostProcessor.PreviewAsync(req, tenantId, db, ct);
             return Results.Ok(result);
         });
 
         group.MapPost("/batch-post/execute", async (
             BatchPostingExecuteRequest req,
+            HttpContext http,
             ITenantContext tenantContext,
             AccountingDbContext db,
             ILoggerFactory loggerFactory,
+            IEnumerable<IAccountingDocumentSource> sources,
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
             var logger = loggerFactory.CreateLogger("BatchPostExecute");
-            var result = await BatchPostProcessor.ExecuteAsync(req, tenantId, db, logger, ct);
+            // El lote lo firma el usuario conectado, no lo que mande la pantalla.
+            req = req with { ExecutedBy = http.User.FindFirst("name")?.Value ?? http.User.FindFirst("email")?.Value ?? "Usuario" };
+            BatchPostingExecuteResponse result;
+            await using (await db.LockPostingRunAsync(tenantId, ct))
+            {
+                await PublishFromSourcesAsync(sources, req.PeriodStart, req.PeriodEnd, ct);
+                result = await BatchPostProcessor.ExecuteAsync(req, tenantId, db, logger, ct);
+            }
             if (result.Status == "Failed")
                 return Results.Conflict(result);
             return Results.Ok(result);

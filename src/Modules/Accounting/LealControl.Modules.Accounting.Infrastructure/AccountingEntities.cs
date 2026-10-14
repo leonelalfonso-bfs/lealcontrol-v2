@@ -234,7 +234,7 @@ public sealed class AccountingBatchRun : Entity<Guid>
     public TenantId TenantId { get; set; }
     public string BatchNumber { get; set; } = string.Empty; // e.g. BATCH-2026-0001
     public DateTime ExecutedAtUtc { get; set; } = DateTime.UtcNow;
-    public string ExecutedBy { get; set; } = "contador@empresa.com";
+    public string ExecutedBy { get; set; } = string.Empty;
     public DateTime PeriodStart { get; set; }
     public DateTime PeriodEnd { get; set; }
     public string ModulesIncluded { get; set; } = "Sales,Purchases"; // Comma-separated
@@ -435,7 +435,7 @@ public sealed record BatchPostingExecuteRequest(
     List<string> Modules,
     string? BranchId,
     string? Currency,
-    string ExecutedBy
+    string? ExecutedBy = null
 );
 
 public sealed record BatchPostingExecuteResponse(

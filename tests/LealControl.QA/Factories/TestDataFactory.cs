@@ -52,6 +52,27 @@ public static class TestDataFactory
             $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}: {body}");
     }
 
+    /// <summary>
+    /// Simula que ARCA autorizó la factura (en QA no se habla con ARCA): solo las autorizadas se contabilizan.
+    /// </summary>
+    public static async Task AuthorizeInvoiceAsync(QaTestContext context, Guid invoiceId)
+    {
+        var db = context.GetService<SalesDbContext>();
+        await db.Database.ExecuteSqlInterpolatedAsync($"""UPDATE sales.invoices SET "Status" = 'Authorized' WHERE "Id" = {invoiceId}""");
+    }
+
+    /// <summary>
+    /// Contabiliza como lo hace el usuario: el botón "Contabilizar" sobre el día del comprobante,
+    /// que trae lo de Ventas y Compras a la cola y lo asienta con los asientos modelo.
+    /// </summary>
+    public static Task<HttpResponseMessage> PostToAccountingAsync(QaTestContext context, DateTime documentDate, string module) =>
+        context.HttpClient.PostAsJsonAsync("/api/v1/accounting/batch-post/execute", new
+        {
+            periodStart = documentDate.Date.AddDays(-1),
+            periodEnd = documentDate.Date.AddDays(1),
+            modules = new[] { module }
+        });
+
     public static async Task<CreatedCustomer> CreateCustomerAsync(QaTestContext context, string? prefix = null)
     {
         var num = Interlocked.Increment(ref _customerCounter);

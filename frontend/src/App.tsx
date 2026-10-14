@@ -10,6 +10,7 @@ import { useCommunicationsBrowserNotifications } from "./hooks/useCommunications
 import {
   AccountFormPage,
   AccountingDashboardPage,
+  AccountingHelpPage,
   AccountingStudyPortalPage,
   BankReconciliationPage,
   CalibrationReportFormPage,
@@ -520,6 +521,7 @@ export function App() {
               <Route path="/contabilidad/sumas-saldos" element={<TrialBalancePage />} />
               <Route path="/contabilidad/conciliacion" element={<BankReconciliationPage />} />
               <Route path="/contabilidad/portal-estudio" element={<AccountingStudyPortalPage />} />
+              <Route path="/contabilidad/ayuda" element={<AccountingHelpPage />} />
 
               {/* Metrology & Quality Professional Routes */}
               <Route path="/metrologia" element={<MetrologyDashboardPage />} />

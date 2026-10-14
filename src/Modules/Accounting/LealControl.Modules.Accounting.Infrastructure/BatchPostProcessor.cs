@@ -53,6 +53,7 @@ public static class BatchPostProcessor
     {
         await db.EnsureAccountingTablesAsync(ct);
         await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
+        await db.SeedDefaultJournalTemplatesAsync(tenantId, ct);
 
         var pending = await LoadPendingDocumentsAsync(db, tenantId, req.PeriodStart, req.PeriodEnd, req.Modules, ct);
         if (pending.Count == 0)
@@ -157,6 +158,7 @@ public static class BatchPostProcessor
         var sw = Stopwatch.StartNew();
         await db.EnsureAccountingTablesAsync(ct);
         await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
+        await db.SeedDefaultJournalTemplatesAsync(tenantId, ct);
         // Los meses cerrados con candado no se tocan: esos documentos quedan con el motivo.
         var lockedMonths = (await db.Periods.AsNoTracking()
                 .Where(p => p.TenantId == tenantId && p.Status == "Locked")
@@ -246,13 +248,17 @@ public static class BatchPostProcessor
             }
         }
 
+        // Dos lotes en el mismo segundo: el segundo lleva sufijo (la numeración está bloqueada).
         var batchNumber = $"BATCH-{DateTime.UtcNow:yyyyMMdd-HHmmss}";
+        var baseBatchNumber = batchNumber;
+        for (var suffix = 2; await db.BatchRuns.AnyAsync(r => r.TenantId == tenantId && r.BatchNumber == batchNumber, ct); suffix++)
+            batchNumber = $"{baseBatchNumber}-{suffix}";
         var batchRun = new AccountingBatchRun
         {
             TenantId = tenantId,
             BatchNumber = batchNumber,
             ExecutedAtUtc = DateTime.UtcNow,
-            ExecutedBy = req.ExecutedBy ?? "contador@empresa.com",
+            ExecutedBy = req.ExecutedBy ?? "Usuario",
             PeriodStart = req.PeriodStart.Kind == DateTimeKind.Unspecified
                 ? DateTime.SpecifyKind(req.PeriodStart, DateTimeKind.Utc)
                 : req.PeriodStart.ToUniversalTime(),
@@ -347,14 +353,26 @@ public static class BatchPostProcessor
         });
     }
 
-    private static async Task<List<AccountingPendingDocument>> LoadPendingDocumentsAsync(
-        AccountingDbContext db, TenantId tenantId,
-        DateTime periodStart, DateTime periodEnd, List<string>? modules, CancellationToken ct)
+    /// <summary>
+    /// Límites del período en UTC. Si el fin es una fecha sin hora (lo que manda la pantalla), incluye
+    /// todo ese día: antes quedaban afuera los comprobantes del último día que tenían hora.
+    /// </summary>
+    internal static (DateTime Start, DateTime End) PeriodBounds(DateTime periodStart, DateTime periodEnd)
     {
         var start = periodStart.Kind == DateTimeKind.Unspecified
             ? DateTime.SpecifyKind(periodStart, DateTimeKind.Utc) : periodStart.ToUniversalTime();
         var end = periodEnd.Kind == DateTimeKind.Unspecified
             ? DateTime.SpecifyKind(periodEnd, DateTimeKind.Utc) : periodEnd.ToUniversalTime();
+        if (end.TimeOfDay == TimeSpan.Zero)
+            end = end.AddDays(1).AddTicks(-1);
+        return (start, end);
+    }
+
+    private static async Task<List<AccountingPendingDocument>> LoadPendingDocumentsAsync(
+        AccountingDbContext db, TenantId tenantId,
+        DateTime periodStart, DateTime periodEnd, List<string>? modules, CancellationToken ct)
+    {
+        var (start, end) = PeriodBounds(periodStart, periodEnd);
 
         var query = db.PendingDocuments
             .Where(d => d.TenantId == tenantId

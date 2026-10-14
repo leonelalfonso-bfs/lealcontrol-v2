@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
-using LealControl.Modules.Accounting.Infrastructure;
 using LealControl.Modules.Finance.Infrastructure;
 using LealControl.Modules.Sales.Application.Purchases;
 using LealControl.QA.Auditors;
@@ -126,15 +125,7 @@ public sealed class QaPurchase003Scenario : ITestScenario
                 actual: $"${invoice.Iva21:N2}");
 
             // Contabilizar factura original
-            await context.HttpClient.PostAsJsonAsync("/api/v1/accounting/auto-post/purchase", new AutoPostPurchaseRequest(
-                PurchaseId: invoice.Id,
-                InvoiceNumber: invoice.FormattedNumber,
-                SupplierName: invoice.SupplierName,
-                Date: invoice.IssueDate,
-                NetAmount: invoice.Subtotal,
-                VatAmount: invoice.Iva21 + invoice.Iva105 + invoice.Iva27,
-                TotalAmount: invoice.Total,
-                InvoiceType: invoice.InvoiceType));
+            await TestDataFactory.PostToAccountingAsync(context, invoice.IssueDate, "Purchases");
 
             // Saldo adeudado inicial = $121.000
             await supplierAuditor.AuditSupplierBalanceAsync(context, scenario, supplier.Id, expectedBalance: invoiceTotal);
@@ -196,15 +187,7 @@ public sealed class QaPurchase003Scenario : ITestScenario
                 actual: $"${nc.Iva21:N2}");
 
             // Contabilizar Nota de Crédito
-            var postNcRes = await context.HttpClient.PostAsJsonAsync("/api/v1/accounting/auto-post/purchase", new AutoPostPurchaseRequest(
-                PurchaseId: nc.Id,
-                InvoiceNumber: nc.FormattedNumber,
-                SupplierName: nc.SupplierName,
-                Date: nc.IssueDate,
-                NetAmount: nc.Subtotal,
-                VatAmount: nc.Iva21 + nc.Iva105 + nc.Iva27,
-                TotalAmount: nc.Total,
-                InvoiceType: nc.InvoiceType));
+            var postNcRes = await TestDataFactory.PostToAccountingAsync(context, nc.IssueDate, "Purchases");
 
             var postNcBody = await postNcRes.Content.ReadAsStringAsync();
             scenario.AddCheck(

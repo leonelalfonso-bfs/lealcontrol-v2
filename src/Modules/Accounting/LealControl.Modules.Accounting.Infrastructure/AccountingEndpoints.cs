@@ -41,9 +41,6 @@ public sealed record CreateCostCenterRequest(string Code, string Name, string? C
 public sealed record LockPeriodRequest(int Year, int Month, bool Lock, string? User);
 public sealed record UpdateAccountingSettingsRequest(bool AutoPostOnConfirm);
 public sealed record FinanceAccountMappingItemRequest(Guid FinancialAccountId, string LedgerAccountCode);
-public sealed record AutoPostInvoiceRequest(Guid InvoiceId, string InvoiceNumber, string CustomerName, DateTime Date, decimal NetAmount, decimal VatAmount, decimal TotalAmount, string? InvoiceType = null);
-public sealed record AutoPostPurchaseRequest(Guid PurchaseId, string InvoiceNumber, string SupplierName, DateTime Date, decimal NetAmount, decimal VatAmount, decimal TotalAmount, string? InvoiceType = null);
-public sealed record AutoPostReceiptRequest(Guid ReceiptId, string ReceiptNumber, string CustomerName, DateTime Date, decimal Amount, string? PaymentMethod);
 public sealed record UploadBankStatementRequest(string? BankName, string? AccountNumber, string? Currency, DateTime PeriodStartDate, DateTime PeriodEndDate, decimal InitialBalance, decimal FinalBalance, List<UploadBankStatementLineRequest> Lines);
 public sealed record UploadBankStatementLineRequest(DateTime TransactionDate, string Description, string? ReferenceNumber, decimal Debit, decimal Credit, decimal Balance);
 public sealed record QuickPostBankFeeRequest(string FeeType);

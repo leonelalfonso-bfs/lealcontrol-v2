@@ -1197,14 +1197,6 @@ export const api = {
   lockFiscalPeriod: (body: { year: number; month: number; lock: boolean; user?: string }) =>
     request<FiscalPeriod>("/api/v1/accounting/periods/lock", { method: "POST", body: JSON.stringify(body) }),
 
-  // Auto-Posting Triggers
-  autoPostInvoice: (body: { invoiceId: string; invoiceNumber: string; customerName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number; invoiceType?: string | null }) =>
-    request<JournalEntry>("/api/v1/accounting/auto-post/invoice", { method: "POST", body: JSON.stringify(body) }),
-  autoPostPurchase: (body: { purchaseId: string; invoiceNumber: string; supplierName: string; date: string; netAmount: number; vatAmount: number; totalAmount: number; invoiceType?: string | null }) =>
-    request<JournalEntry>("/api/v1/accounting/auto-post/purchase", { method: "POST", body: JSON.stringify(body) }),
-  autoPostReceipt: (body: { receiptId: string; receiptNumber: string; customerName: string; date: string; amount: number; paymentMethod?: string }) =>
-    request<JournalEntry>("/api/v1/accounting/auto-post/receipt", { method: "POST", body: JSON.stringify(body) }),
-
   // Bank Reconciliation
   getTreasuryReconciliation: () =>
     request<{ message: string; financeReconciliationPath: string; rows: Array<{
@@ -1238,7 +1230,7 @@ export const api = {
     request<import("./types").UnpostedDocumentsSummary>("/api/v1/accounting/batch-post/pending-summary"),
   previewBatchPosting: (body: { periodStart?: string; periodEnd?: string; modules?: string[]; branchId?: string; currency?: string }) =>
     request<import("./types").BatchPostingPreview>("/api/v1/accounting/batch-post/preview", { method: "POST", body: JSON.stringify(body) }),
-  executeBatchPosting: (body: { periodStart?: string; periodEnd?: string; modules?: string[]; branchId?: string; currency?: string; executedBy?: string }) =>
+  executeBatchPosting: (body: { periodStart?: string; periodEnd?: string; modules?: string[]; branchId?: string; currency?: string }) =>
     request<import("./types").BatchPostingExecuteResponse>("/api/v1/accounting/batch-post/execute", { method: "POST", body: JSON.stringify(body) }),
   listBatchRuns: () =>
     request<import("./types").BatchPostingRun[]>("/api/v1/accounting/batch-runs"),
