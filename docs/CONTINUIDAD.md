@@ -56,7 +56,6 @@ Hecho del 9 al 13/10/2026:
 2. **Manuales de Ayuda:** cada módulo que se toque termina con su Ayuda como manual del circuito completo (Flota ya está, con `components/help/HelpManual.tsx`).
 3. **Comunicaciones etapa 2:** API oficial de Meta con coexistencia, cuando LealControl tenga CUIT y sea Tech Provider; Instagram y Facebook.
 4. **Deuda técnica y requisitos para vender** ([62](auditoria-2026-10-01/62-estado-general-y-plan.md)).
-
 5. **App móvil** (firmas del técnico y del cliente, Flota 4b): al final, cuando el resto ande perfecto.
 
 ## Reglas de trabajo
