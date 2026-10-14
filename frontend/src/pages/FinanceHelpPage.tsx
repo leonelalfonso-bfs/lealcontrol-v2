@@ -54,6 +54,10 @@ export function FinanceHelpPage() {
           <Step title="3. ¿Qué cancela? El importe se aplica solo a las facturas pendientes, en orden; podés ajustarlo a mano o “Volver a aplicar automáticamente”. Lo que sobra queda a cuenta." />
           <Step title="Revisá el resumen y guardá: se emite el recibo y la factura queda cobrada (o con cobro parcial)." />
         </Steps>
+        <Tip>
+          Si el cliente pagó en dólares, elegí “Pagó en: Dólares” y completá la “Cotización del día” (sugiere la del BNA). Con esa cotización
+          Contabilidad lo pasa a pesos y registra la diferencia contra la cotización de la factura.
+        </Tip>
         <Tip>Un recibo mal cargado se anula con “Anular recibo” (nivel Aprobar) y la factura vuelve a quedar pendiente.</Tip>
       </ManualPart>
 

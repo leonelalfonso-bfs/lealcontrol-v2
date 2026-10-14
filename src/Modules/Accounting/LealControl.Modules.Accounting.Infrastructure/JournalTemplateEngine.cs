@@ -19,7 +19,7 @@ public sealed record ResolvedAccountingAccount(Guid Id, string Code, string Name
 
 public static class JournalTemplateEngine
 {
-    private const decimal BalanceTolerance = 0.01m;
+    private const decimal RoundingTolerance = 0.01m;
 
     public static JournalEntry Render(
         JournalTemplate template,
@@ -31,6 +31,13 @@ public static class JournalTemplateEngine
         if (template is null) throw new ArgumentNullException(nameof(template));
         if (document is null) throw new ArgumentNullException(nameof(document));
         if (accounts is null) throw new ArgumentNullException(nameof(accounts));
+
+        // El libro va en pesos: un comprobante en otra moneda se convierte a su cotización.
+        var foreign = !string.Equals(document.Currency, "ARS", StringComparison.OrdinalIgnoreCase);
+        if (foreign && document.ExchangeRate <= 1m)
+            throw new InvalidOperationException(
+                $"{document.DocumentType} {document.DocumentNumber} está en {document.Currency} y no tiene cotización: no se puede pasar a pesos.");
+        var rate = foreign ? document.ExchangeRate : 1m;
 
         var entry = new JournalEntry
         {
@@ -52,8 +59,8 @@ public static class JournalTemplateEngine
             if (!IsConditionMet(line.Condition, document))
                 continue;
 
-            var amount = ResolveAmountSourceAmount(line.AmountSource, document);
-            amount = Math.Abs(amount);
+            var original = Math.Abs(ResolveAmountSourceAmount(line.AmountSource, document));
+            var amount = Math.Round(original * rate, 2, MidpointRounding.AwayFromZero);
 
             // Si la condición está metida pero el monto viene vacío,
             // dejamos que el balance falle más abajo (más trazable).
@@ -87,16 +94,28 @@ public static class JournalTemplateEngine
                 AccountName = resolvedAccount.Name,
                 Debit = debit,
                 Credit = credit,
-                Currency = document.Currency,
-                ExchangeRate = document.ExchangeRate > 0 ? document.ExchangeRate : 1m,
+                Currency = foreign ? document.Currency.ToUpperInvariant() : "ARS",
+                ExchangeRate = rate,
+                OriginalAmount = foreign ? original : null,
                 Memo = memo
             });
+        }
+
+        // Al pasar a pesos cada línea se redondea por separado: los centavos que sobran por redondeo
+        // (uno por línea como mucho) van a la línea más grande del lado corto, y el asiento cuadra exacto.
+        var residual = entry.Lines.Sum(l => l.Debit) - entry.Lines.Sum(l => l.Credit);
+        if (foreign && residual != 0m && Math.Abs(residual) <= RoundingTolerance * entry.Lines.Count)
+        {
+            if (residual > 0m)
+                entry.Lines.Where(l => l.Credit > 0m).OrderByDescending(l => l.Credit).First().Credit += residual;
+            else
+                entry.Lines.Where(l => l.Debit > 0m).OrderByDescending(l => l.Debit).First().Debit -= residual;
         }
 
         entry.TotalDebit = entry.Lines.Sum(l => l.Debit);
         entry.TotalCredit = entry.Lines.Sum(l => l.Credit);
 
-        if (Math.Abs(entry.TotalDebit - entry.TotalCredit) > BalanceTolerance)
+        if (entry.TotalDebit != entry.TotalCredit)
         {
             throw new InvalidOperationException(
                 $"Asiento desbalanceado (render). Debe {entry.TotalDebit:N2} / Haber {entry.TotalCredit:N2} | " +

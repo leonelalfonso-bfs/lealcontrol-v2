@@ -29,6 +29,7 @@ public static class AccountingEndpoints
         group.MapAccountingTemplatesEndpoints();
         group.MapAccountingBatchPostingEndpoints();
         VatBooks.VatBookEndpoints.MapVatBookEndpoints(group);
+        FxRevaluation.FxRevaluationEndpoints.MapFxRevaluationEndpoints(group);
 
         return endpoints;
     }

@@ -1159,6 +1159,10 @@ export const api = {
     const query = q.toString() ? `?${q.toString()}` : "";
     return request<GeneralLedgerRow[]>(`/api/v1/accounting/general-ledger${query}`);
   },
+  previewFxRevaluation: (body: { date: string; rate: number }) =>
+    request<import("./types").FxRevaluationPreview>("/api/v1/accounting/fx-revaluation/preview", { method: "POST", body: JSON.stringify(body) }),
+  postFxRevaluation: (body: { date: string; rate: number }) =>
+    request<{ id: string; entryNumber: number; net: number }>("/api/v1/accounting/fx-revaluation", { method: "POST", body: JSON.stringify(body) }),
   getVatBooks: (year: number, month: number) =>
     request<import("./types").VatBooks>(`/api/v1/accounting/vat-books?year=${year}&month=${month}`),
   downloadArcaVatBook: (year: number, month: number) =>

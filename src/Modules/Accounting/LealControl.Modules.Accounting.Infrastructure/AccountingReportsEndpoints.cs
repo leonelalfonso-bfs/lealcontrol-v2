@@ -79,7 +79,10 @@ internal static class AccountingReportsEndpoints
                               line.Debit,
                               line.Credit,
                               line.Memo,
-                              line.CostCenterName
+                              line.CostCenterName,
+                              line.Currency,
+                              line.ExchangeRate,
+                              line.OriginalAmount
                           })
                     .OrderBy(x => x.Date)
                     .ThenBy(x => x.EntryNumber)
@@ -105,7 +108,11 @@ internal static class AccountingReportsEndpoints
                         m.Credit,
                         RunningBalance = runningBalance,
                         m.Memo,
-                        m.CostCenterName
+                        m.CostCenterName,
+                        // Dato informativo: los importes del mayor están en pesos.
+                        m.Currency,
+                        m.ExchangeRate,
+                        m.OriginalAmount
                     });
                 }
 

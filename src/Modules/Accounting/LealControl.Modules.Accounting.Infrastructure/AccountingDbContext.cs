@@ -274,6 +274,8 @@ public sealed class AccountingDbContext : DbContext
                 ""Memo"" character varying(500)
             );",
 
+            @"ALTER TABLE accounting.journal_entry_lines ADD COLUMN IF NOT EXISTS ""OriginalAmount"" numeric(18,2);",
+
             @"CREATE INDEX IF NOT EXISTS ""IX_journal_entry_lines_Tenant_AccountId"" ON accounting.journal_entry_lines (""TenantId"", ""AccountId"");",
 
             @"CREATE TABLE IF NOT EXISTS accounting.cost_centers (
@@ -692,6 +694,7 @@ public sealed class AccountingDbContext : DbContext
         collection.Lines.Add(new JournalTemplateLine { TemplateId = collection.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "1.1.01.001", AccountName = "Caja Central Administración", DebitCredit = "Debit", AmountSource = "PaymentAmount", Condition = "Always" });
         collection.Lines.Add(new JournalTemplateLine { TemplateId = collection.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.03.002", AccountName = "Retenciones y Percepciones IIBB", DebitCredit = "Debit", AmountSource = "Withholdings", Condition = "IfHasWithholding" });
         collection.Lines.Add(new JournalTemplateLine { TemplateId = collection.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "1.1.02.001", AccountName = "Deudores por Ventas (Clientes)", DebitCredit = "Credit", AmountSource = "Total", Condition = "Always" });
+        AddCollectionExchangeLines(collection);
 
         var payment = new JournalTemplate
         {
@@ -720,6 +723,8 @@ public sealed class AccountingDbContext : DbContext
         public const string SalesCreditNote = "AM-VTA-NC";
         public const string PurchaseInvoice = "AM-CMP-FAC";
         public const string PurchaseCreditNote = "AM-CMP-NC";
+        public const string SalesFxDebitNote = "AM-VTA-DC-ND";
+        public const string SalesFxCreditNote = "AM-VTA-DC-NC";
         /// <summary>Versiones anteriores, incompletas (solo IVA 21 %): se desactivan al instalar las nuevas.</summary>
         public static readonly string[] Superseded = ["AM-VTA-01", "AM-VTA-02", "AM-VTA-03", "AM-CMP-01", "AM-CMP-02"];
     }
@@ -748,6 +753,16 @@ public sealed class AccountingDbContext : DbContext
             JournalTemplates.Add(template);
             installed = true;
         }
+        // Empresas que ya tenían el modelo de cobros: se le agregan las líneas de diferencia de cambio.
+        var collectionTemplate = await JournalTemplates.Include(t => t.Lines)
+            .FirstOrDefaultAsync(t => t.TenantId == tenantId && t.Code == "AM-FIN-01", ct);
+        if (collectionTemplate is not null && !collectionTemplate.Lines.Any(l => l.AmountSource == AccountingAmountSources.ExchangeGain))
+        {
+            AddCollectionExchangeLines(collectionTemplate);
+            foreach (var line in collectionTemplate.Lines.Skip(collectionTemplate.Lines.Count - 2))
+                Entry(line).State = EntityState.Added;
+            collectionTemplate.UpdatedAtUtc = DateTime.UtcNow;
+        }
         if (installed)
         {
             foreach (var old in existing.Where(t => StandardTemplates.Superseded.Contains(t.Code) && t.Status == "Active"))
@@ -757,6 +772,17 @@ public sealed class AccountingDbContext : DbContext
             }
         }
         await SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Cobro en dólares de facturas en dólares: la diferencia entre la cotización de la factura y la del cobro
+    /// va a diferencia de cambio positiva o negativa.
+    /// </summary>
+    private static void AddCollectionExchangeLines(JournalTemplate collection)
+    {
+        var next = collection.Lines.Count == 0 ? 1 : collection.Lines.Max(l => l.OrderIndex) + 1;
+        collection.Lines.Add(new JournalTemplateLine { TemplateId = collection.Id, TenantId = collection.TenantId, OrderIndex = next, AccountCode = "4.2.03", AccountName = "Diferencia de Cambio Positiva", DebitCredit = "Credit", AmountSource = AccountingAmountSources.ExchangeGain, Condition = "IfHasExchangeGain" });
+        collection.Lines.Add(new JournalTemplateLine { TemplateId = collection.Id, TenantId = collection.TenantId, OrderIndex = next + 1, AccountCode = "5.3.04", AccountName = "Diferencia de Cambio Negativa", DebitCredit = "Debit", AmountSource = AccountingAmountSources.ExchangeLoss, Condition = "IfHasExchangeLoss" });
     }
 
     private static IEnumerable<JournalTemplate> BuildStandardDocumentTemplates(TenantId tenantId)
@@ -816,6 +842,15 @@ public sealed class AccountingDbContext : DbContext
             "Facturas A, B, C y de Crédito Electrónica, y notas de débito: deudores contra ventas por alícuota, IVA débito y percepciones.", sale);
         yield return Template(StandardTemplates.SalesCreditNote, "Nota de crédito de venta", "Sales", "CreditNote", "Ventas",
             "Notas de crédito de venta: el asiento de la factura, invertido.", Flip(sale));
+        // Notas por diferencia de cambio: el neto va a diferencia de cambio (positiva o negativa), no a Ventas.
+        (string, string, string, string)[] FxNet((string Account, string Name, string Side, string Source)[] lines, string account, string name) =>
+            lines.Select(l => l.Account == "4.1.01" ? (account, name, l.Side, l.Source) : (l.Account, l.Name, l.Side, l.Source)).ToArray();
+        yield return Template(StandardTemplates.SalesFxDebitNote, "Nota de débito por diferencia de cambio", "Sales", "DebitNote", "Ventas",
+            "Nota de débito al cliente por la diferencia de cambio de un cobro en dólares: el neto es diferencia de cambio positiva.",
+            FxNet(sale, "4.2.03", "Diferencia de Cambio Positiva"));
+        yield return Template(StandardTemplates.SalesFxCreditNote, "Nota de crédito por diferencia de cambio", "Sales", "CreditNote", "Ventas",
+            "Nota de crédito al cliente por la diferencia de cambio de un cobro en dólares: el neto es diferencia de cambio negativa.",
+            FxNet(Flip(sale), "5.3.04", "Diferencia de Cambio Negativa"));
         yield return Template(StandardTemplates.PurchaseInvoice, "Factura o nota de débito de compra", "Purchases", AccountingDocumentTypes.All, "Compras",
             "Facturas y notas de débito de proveedores: compras por alícuota, IVA crédito, percepciones sufridas y otros tributos contra proveedores.", purchase);
         yield return Template(StandardTemplates.PurchaseCreditNote, "Nota de crédito de compra", "Purchases", "CreditNote", "Compras",

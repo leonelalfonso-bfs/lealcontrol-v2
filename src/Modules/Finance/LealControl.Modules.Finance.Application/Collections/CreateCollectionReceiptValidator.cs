@@ -31,6 +31,11 @@ public static class CreateCollectionReceiptValidator
                 FinanceErrors.ReceiptImputationExceedsCollection(totalImputedAmount, totalLinesAmount));
         }
 
+        if (currency != "ARS" && body.PaymentExchangeRate is not > 1m)
+        {
+            return Result.Failure<ValidatedCollectionReceipt>(FinanceErrors.ReceiptForeignRateRequired);
+        }
+
         if (body.InvoiceCurrency is not null
             && body.InvoiceCurrency.Trim().ToUpperInvariant() != currency
             && (!body.InvoiceAmount.HasValue

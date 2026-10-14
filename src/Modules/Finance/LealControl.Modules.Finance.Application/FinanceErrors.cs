@@ -12,6 +12,9 @@ public static class FinanceErrors
         "Finance.Receipt.DescriptionRequired",
         "La descripción del recibo es obligatoria.");
 
+    public static readonly Error ReceiptForeignRateRequired = Error.Validation(
+        "Finance.Receipt.ForeignRateRequired", "Un cobro en dólares necesita la cotización del día para pasarlo a pesos.");
+
     public static readonly Error ReceiptForeignInvoiceRatesRequired = Error.Validation(
         "Finance.Receipt.ForeignInvoiceRatesRequired",
         "Para imputar un comprobante en otra moneda indicá importe y cotizaciones de emisión y cobro.");

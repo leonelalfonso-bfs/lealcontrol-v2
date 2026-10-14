@@ -92,6 +92,11 @@ internal static class AccountingJournalEndpoints
                 CostCenter? costCenter = null;
                 if (l.CostCenterId is { } ccId && !costCenters.TryGetValue(ccId, out costCenter))
                     return Problem($"Línea {i}: el centro de costo no existe.");
+                // Debe y Haber van en pesos; una línea en otra moneda guarda además el importe original.
+                var currency = string.IsNullOrWhiteSpace(l.Currency) ? "ARS" : l.Currency.Trim().ToUpperInvariant();
+                var foreign = currency != "ARS";
+                if (foreign && l.ExchangeRate <= 1m)
+                    return Problem($"Línea {i}: una línea en {currency} necesita la cotización.");
                 lines.Add(new JournalEntryLine
                 {
                     TenantId = tenantId,
@@ -100,8 +105,9 @@ internal static class AccountingJournalEndpoints
                     AccountName = account.Name,
                     Debit = l.Debit,
                     Credit = l.Credit,
-                    Currency = string.IsNullOrWhiteSpace(l.Currency) ? "ARS" : l.Currency.Trim(),
-                    ExchangeRate = l.ExchangeRate > 0 ? l.ExchangeRate : 1,
+                    Currency = currency,
+                    ExchangeRate = foreign ? l.ExchangeRate : 1m,
+                    OriginalAmount = foreign ? Math.Round((l.Debit + l.Credit) / l.ExchangeRate, 2, MidpointRounding.AwayFromZero) : null,
                     CostCenterId = costCenter?.Id,
                     CostCenterCode = costCenter?.Code,
                     CostCenterName = costCenter?.Name,
