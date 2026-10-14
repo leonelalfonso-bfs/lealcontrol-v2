@@ -11,6 +11,7 @@ const SECTIONS = [
   { id: "anulaciones", title: "Anulaciones y notas de crédito" },
   { id: "reportes", title: "Libro Diario, Mayor y Sumas y Saldos" },
   { id: "libros-iva", title: "Libros IVA y Libro IVA Digital de ARCA" },
+  { id: "moneda-extranjera", title: "Moneda extranjera y diferencias de cambio" },
   { id: "cierres", title: "Cierre de meses y de ejercicio" },
   { id: "problemas", title: "Cuando el sistema no te deja" }
 ];
@@ -98,7 +99,8 @@ export function AccountingHelpPage() {
           <li><strong>AM-VTA-NC</strong> (notas de crédito de venta): el mismo asiento, invertido.</li>
           <li><strong>AM-CMP-FAC</strong> (facturas y notas de débito de compra): Compras por alícuota, IVA Crédito, percepciones sufridas y otros tributos al Debe; Proveedores al Haber.</li>
           <li><strong>AM-CMP-NC</strong> (notas de crédito de proveedor): el mismo asiento, invertido.</li>
-          <li><strong>AM-FIN-01 y AM-FIN-02</strong>: cobros y pagos de Finanzas.</li>
+          <li><strong>AM-VTA-DC-ND y AM-VTA-DC-NC</strong>: notas de débito y crédito por diferencia de cambio (el neto va a diferencia de cambio).</li>
+          <li><strong>AM-FIN-01 y AM-FIN-02</strong>: cobros y pagos de Finanzas. El de cobros incluye la diferencia de cambio de los cobros en dólares.</li>
         </ul>
         <Steps>
           <Step title="Para usar otras cuentas (por ejemplo, separar ventas de servicios), entrá al modelo y cambiá la cuenta de la línea.">
@@ -160,7 +162,36 @@ export function AccountingHelpPage() {
         <Tip>Las facturas de proveedor B y C no discriminan IVA: van en el libro, pero no suman crédito fiscal ni llevan registro de alícuotas.</Tip>
       </ManualPart>
 
-      <ManualPart id="cierres" title="10. Cierre de meses y de ejercicio">
+      <ManualPart id="moneda-extranjera" title="10. Moneda extranjera y diferencias de cambio">
+        <p style={{ margin: 0 }}>
+          <strong>El libro va siempre en pesos.</strong> Cada comprobante en dólares se convierte a su cotización y la línea guarda el importe en
+          dólares y la cotización, que el Libro Mayor muestra debajo del concepto.
+        </p>
+        <ul style={{ margin: 0, display: "grid", gap: 6 }}>
+          <li>
+            <strong>Cobro en pesos de una factura en dólares:</strong> la diferencia de cambio se documenta con una nota de débito o crédito
+            desde la cuenta corriente del cliente. Esa nota se contabiliza contra Diferencia de Cambio Positiva (4.2.03) o Negativa (5.3.04),
+            no contra Ventas.
+          </li>
+          <li>
+            <strong>Cobro en dólares de una factura en dólares:</strong> no lleva nota. Deudores se cancela a la cotización de la factura y la
+            diferencia con la cotización del cobro va directo a diferencia de cambio.
+          </li>
+          <li>
+            <strong>Compras en dólares pagadas en pesos:</strong> la diferencia la documenta el proveedor con su nota de débito o crédito, que se
+            carga en Compras. Mientras no llegue, queda como saldo en Proveedores.
+          </li>
+        </ul>
+        <Steps>
+          <Step title="Para que caja y bancos en dólares se revalúen: en el Plan de Cuentas, esas cuentas van con moneda USD, y en el mapeo cada caja o banco en dólares de Finanzas apunta a su cuenta en USD." />
+          <Step title="A fin de mes: Cierres y períodos → “Revaluación de moneda extranjera” → fecha de cierre y cotización de cierre → “👁️ Ver diferencias”.">
+            Para cada cuenta en dólares muestra el saldo en dólares, el saldo en pesos en libros, el valor revaluado y la diferencia.
+          </Step>
+          <Step title="“Registrar asiento de revaluación”: la diferencia va contra diferencia de cambio. Se hace una vez por mes y antes de cerrar el mes con candado." />
+        </Steps>
+      </ManualPart>
+
+      <ManualPart id="cierres" title="11. Cierre de meses y de ejercicio">
         <Steps>
           <Step title="Contabilizá el mes completo y revisá Sumas y Saldos." />
           <Step title="Cierres y períodos → elegí el año → “🔒 Cerrar con Candado” en el mes.">
@@ -175,13 +206,15 @@ export function AccountingHelpPage() {
         </Steps>
       </ManualPart>
 
-      <ManualPart id="problemas" title="11. Cuando el sistema no te deja">
+      <ManualPart id="problemas" title="12. Cuando el sistema no te deja">
         <Troubleshooting rows={[
           [<>Una factura de venta no aparece al contabilizar</>, <>Solo entran las autorizadas por ARCA y con fecha dentro del período. Si está en borrador, autorizala en Ventas.</>],
           [<>“Sin asiento modelo” en la vista previa</>, <>Ese tipo de comprobante no tiene un modelo activo: activalo o creá uno en Asientos Modelos.</>],
           [<>“Período … cerrado: no se contabiliza”</>, <>El mes del comprobante tiene candado. Reabrilo en Cierres y períodos, contabilizá y volvé a cerrarlo.</>],
           [<>Una venta no aparece en el Libro IVA Ventas</>, <>Solo van las que tienen CAE. Revisá en Ventas que esté autorizada y la fecha del comprobante.</>],
           [<>“… necesita CUIT” al exportar a ARCA</>, <>Una factura de compra no se edita: anulala en Compras (“Anular”) y cargala de nuevo con el CUIT del proveedor o con el tipo correcto.</>],
+          [<>“… está en USD y no tiene cotización”</>, <>Es un cobro o pago en dólares cargado sin cotización: anulalo en Finanzas y cargalo de nuevo con la cotización del día.</>],
+          [<>“… ya tiene revaluación”</>, <>Ese mes ya se revaluó: buscá el asiento en el Libro Diario (origen Revaluation).</>],
           [<>Un cobro o pago queda con error</>, <>Falta el mapeo de esa caja o banco: Plan de Cuentas → Mapeo cuenta financiera.</>],
           [<>“Asiento desbalanceado” o cuenta inexistente</>, <>Una línea del asiento modelo apunta a una cuenta que no existe o no es imputable: corregila en el modelo.</>],
           [<>“no imputable”, “uno solo” o “desbalanceado” en un asiento manual</>, <>Usá cuentas imputables, un solo lado por línea y que Debe y Haber cuadren.</>]

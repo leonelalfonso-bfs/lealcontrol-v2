@@ -157,7 +157,8 @@ public static class FinanceSchema
         ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""SuggestedCounterpartyType"" varchar(16);
 
         ALTER TABLE finance.""CollectionReceipts"" ADD COLUMN IF NOT EXISTS ""AdvanceAmount"" numeric(18,2) NOT NULL DEFAULT 0;
-        ALTER TABLE finance.""CollectionReceipts"" ADD COLUMN IF NOT EXISTS ""ExchangeDifferenceAmount"" numeric(18,2);
+        -- Copia de SuggestedAdjustmentArs que nadie leía: se retira.
+        ALTER TABLE finance.""CollectionReceipts"" DROP COLUMN IF EXISTS ""ExchangeDifferenceAmount"";
         ALTER TABLE finance.""CollectionReceipts"" ADD COLUMN IF NOT EXISTS ""VoidReason"" varchar(500);
         ALTER TABLE finance.""CollectionReceipts"" ADD COLUMN IF NOT EXISTS ""VoidedAtUtc"" timestamptz;
         ALTER TABLE finance.""CollectionReceiptImputations"" ADD COLUMN IF NOT EXISTS ""Status"" varchar(20) NOT NULL DEFAULT 'Active';

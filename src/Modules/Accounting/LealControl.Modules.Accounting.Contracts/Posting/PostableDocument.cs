@@ -87,7 +87,8 @@ public static class AccountingAmountSources
     public const string RetentionAmount = "RetentionAmount";
     public const string ImputedAmount = "ImputedAmount";
     public const string AdvanceAmount = "AdvanceAmount";
-    public const string ExchangeDifference = "ExchangeDifference";
+    public const string ExchangeGain = "ExchangeGain"; // Diferencia de cambio positiva realizada en el cobro
+    public const string ExchangeLoss = "ExchangeLoss"; // Diferencia de cambio negativa realizada en el cobro
     public const string BankFee = "BankFee";
     public const string MovementAmount = "MovementAmount";
     public const string RejectionFees = "RejectionFees";

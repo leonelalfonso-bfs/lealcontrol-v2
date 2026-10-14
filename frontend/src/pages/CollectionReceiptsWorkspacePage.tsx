@@ -99,6 +99,8 @@ export function CollectionReceiptsWorkspacePage() {
   const [rateOverride, setRateOverride] = useState<Record<string, number>>({});
   const [rateTypeOverride, setRateTypeOverride] = useState<Record<string, RateType>>({});
   const [rateEditor, setRateEditor] = useState<string | null>(null);
+  // Cobro en dólares: cotización del día para pasarlo a pesos en Contabilidad (por defecto, la del BNA).
+  const [usdRateInput, setUsdRateInput] = useState("");
 
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
@@ -228,6 +230,8 @@ export function CollectionReceiptsWorkspacePage() {
     : currency === "USD" ? row.pendingUsd
     : row.isUsd ? round2(row.pendingUsd * paymentRateOf(row)) : row.pendingArs;
 
+  const usdRate = Number(usdRateInput.replace(",", ".")) || bnaRates.Divisa?.previous?.sell || 0;
+
   const totalReceived = useMemo(() => round2(lines.reduce((s, l) => s + (Number(l.amount) || 0), 0)), [lines]);
 
   const applied = useMemo(() => {
@@ -293,6 +297,7 @@ export function CollectionReceiptsWorkspacePage() {
     : totalApplied > totalReceived + 0.01 ? `Las facturas marcadas superan lo recibido en ${money(totalApplied - totalReceived, currency)}.`
     : lines.some((l) => l.method === "Cheque" && !l.chequeId) ? "Elegí el cheque recibido (o crealo)."
     : lines.some((l) => (l.method === "BankTransfer" || l.method === "Cash") && !l.accountId) ? "Elegí la cuenta donde ingresó el dinero."
+    : currency === "USD" && usdRate <= 1 ? "Indicá la cotización del dólar del día."
     : null;
 
   const handleSave = async () => {
@@ -314,7 +319,9 @@ export function CollectionReceiptsWorkspacePage() {
             invoiceTotal: row.invoice.total,
             amountImputed: amount
           };
-          if (!(row.isUsd && currency === "ARS")) return base;
+          // En dólares, la cotización de la factura sirve para la diferencia de cambio realizada.
+          if (currency === "USD") return row.isUsd ? { ...base, invoiceExchangeRate: row.invoiceRate } : base;
+          if (!row.isUsd) return base;
           const rate = paymentRateOf(row);
           return { ...base, amountUsd: round2(amount / rate), invoiceExchangeRate: row.invoiceRate, paymentExchangeRate: rate };
         });
@@ -329,8 +336,10 @@ export function CollectionReceiptsWorkspacePage() {
         invoiceId: firstUsd?.invoiceId,
         invoiceAmount: firstUsd?.amountUsd,
         invoiceCurrency: firstUsd ? "USD" : undefined,
-        invoiceExchangeRate: firstUsd?.invoiceExchangeRate,
-        paymentExchangeRate: firstUsd?.paymentExchangeRate,
+        invoiceExchangeRate: currency === "USD"
+          ? (imputations.find((i) => "invoiceExchangeRate" in i) as { invoiceExchangeRate?: number } | undefined)?.invoiceExchangeRate
+          : firstUsd?.invoiceExchangeRate,
+        paymentExchangeRate: currency === "USD" ? usdRate : firstUsd?.paymentExchangeRate,
         lines: lines.map((l) => ({
           method: l.method,
           amount: Number(l.amount) || 0,
@@ -416,6 +425,13 @@ export function CollectionReceiptsWorkspacePage() {
                   ))}
                 </div>
               </div>
+              {currency === "USD" && (
+                <label>
+                  Cotización del día ($ por USD)
+                  <input inputMode="decimal" value={usdRateInput} placeholder={bnaRates.Divisa?.previous?.sell ? String(bnaRates.Divisa.previous.sell) : "Ej. 1050,50"}
+                    onChange={(e) => setUsdRateInput(e.target.value)} />
+                </label>
+              )}
             </div>
           </section>
 

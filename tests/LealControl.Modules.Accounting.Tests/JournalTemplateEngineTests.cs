@@ -209,13 +209,13 @@ public sealed class JournalTemplateEngineTests
         var template = Template("AM-FIN-FX", "Finance", "CollectionReceipt",
             Line("1.1.01.002", "Debit", AccountingAmountSources.BankAmount),
             Line("1.1.02.001", "Credit", AccountingAmountSources.ImputedAmount),
-            Line("4.2.01", "Credit", AccountingAmountSources.ExchangeDifference, "IfHasExchangeDifference"));
+            Line("4.2.01", "Credit", AccountingAmountSources.ExchangeGain, "IfHasExchangeGain"));
 
         var entry = JournalTemplateEngine.Render(template, Doc("Finance", "CollectionReceipt", new()
         {
             [AccountingAmountSources.BankAmount] = 1050m,
             [AccountingAmountSources.ImputedAmount] = 1000m,
-            [AccountingAmountSources.ExchangeDifference] = 50m,
+            [AccountingAmountSources.ExchangeGain] = 50m,
             [AccountingAmountSources.Total] = 1050m
         }), Tenant, Accounts);
 
@@ -254,5 +254,50 @@ public sealed class JournalTemplateEngineTests
         }), Tenant, Accounts);
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*desbalanceado*");
+    }
+
+    private static PostableDocument ForeignDoc(decimal rate, Dictionary<string, decimal> amounts) =>
+        new("Finance", "CollectionReceipt", Guid.NewGuid().ToString(), "RC-1", DateTime.UtcNow, "USD", rate,
+            null, null, null, null, amounts, new Dictionary<string, string>());
+
+    [Fact]
+    public void Foreign_currency_documents_are_posted_in_pesos_with_the_original_amount()
+    {
+        var template = Template("AM-FIN-01", "Finance", "CollectionReceipt",
+            Line("1.1.01.007", "Debit", "PaymentAmount"),
+            Line("1.1.02.001", "Credit", "Total"));
+
+        var entry = JournalTemplateEngine.Render(template, ForeignDoc(1050.5m, new() { ["Total"] = 121m }), Tenant, Accounts);
+
+        entry.Lines.Should().OnlyContain(l => l.Currency == "USD" && l.ExchangeRate == 1050.5m && l.OriginalAmount == 121m);
+        entry.TotalDebit.Should().Be(127110.5m);
+        entry.TotalCredit.Should().Be(127110.5m);
+    }
+
+    [Fact]
+    public void Rounding_cents_after_conversion_are_absorbed_so_the_entry_balances_exactly()
+    {
+        // A 1,1: el total (1 USD) da 1,10, pero cada tercio redondea a 0,37 y suman 1,11.
+        var template = Template("FX", "Finance", "CollectionReceipt",
+            Line("A", "Debit", "Total"),
+            Line("B", "Credit", "Net21"),
+            Line("C", "Credit", "Net105"),
+            Line("D", "Credit", "Net27"));
+
+        var entry = JournalTemplateEngine.Render(template,
+            ForeignDoc(1.1m, new() { ["Total"] = 1m, ["Net21"] = 0.3333m, ["Net105"] = 0.3333m, ["Net27"] = 0.3334m }), Tenant, Accounts);
+
+        entry.TotalCredit.Should().Be(1.11m);
+        entry.TotalDebit.Should().Be(entry.TotalCredit);
+    }
+
+    [Fact]
+    public void A_foreign_document_without_exchange_rate_is_not_posted()
+    {
+        var template = Template("AM-FIN-01", "Finance", "CollectionReceipt", Line("A", "Debit", "Total"), Line("B", "Credit", "Total"));
+
+        var act = () => JournalTemplateEngine.Render(template, ForeignDoc(1m, new() { ["Total"] = 10m }), Tenant, Accounts);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*no tiene cotización*");
     }
 }

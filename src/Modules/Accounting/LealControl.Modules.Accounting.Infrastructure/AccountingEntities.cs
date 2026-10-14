@@ -70,6 +70,8 @@ public sealed class JournalEntryLine : Entity<Guid>
     public decimal Credit { get; set; }
     public string Currency { get; set; } = "ARS";
     public decimal ExchangeRate { get; set; } = 1;
+    /// <summary>Importe en la moneda original (null en pesos). Debe y Haber siempre están en pesos.</summary>
+    public decimal? OriginalAmount { get; set; }
     public Guid? CostCenterId { get; set; }
     public string? CostCenterCode { get; set; }
     public string? CostCenterName { get; set; }
@@ -475,4 +477,3 @@ public sealed record UpdateMappingRequest(
 
 public sealed record YearEndClosingRequest(int Year, DateTime ClosingDate);
 public sealed record AutoPostPayrollRequest(DateTime Date, string PeriodDescription, decimal TotalGrossSalaries, decimal TotalEmployerContributions, decimal TotalNetSalaries, decimal TotalSocialSecurityToPay, Guid? CostCenterId);
-public sealed record ExchangeDifferenceRequest(DateTime Date, decimal UsdExchangeRate, string AccountCode);

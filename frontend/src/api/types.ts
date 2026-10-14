@@ -2508,3 +2508,22 @@ export type VatBookRow = {
 export type VatBook = { rows: VatBookRow[]; totals: VatBookRow };
 
 export type VatBooks = { year: number; month: number; sales: VatBook; purchases: VatBook; problems: string[] };
+
+export type FxRevaluationRow = {
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  currency: string;
+  foreignBalance: number;
+  bookBalance: number;
+  revaluedBalance: number;
+  difference: number;
+};
+
+export type FxRevaluationPreview = {
+  date: string;
+  rate: number;
+  rows: FxRevaluationRow[];
+  netDifference: number;
+  existingEntryNumber: number | null;
+};

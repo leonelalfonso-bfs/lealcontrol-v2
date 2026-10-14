@@ -261,6 +261,12 @@ export function GeneralLedgerPage() {
                         {m.memo && m.memo !== m.concept && (
                           <div className="muted" style={{ fontSize: "0.75rem" }}>{m.memo}</div>
                         )}
+                        {m.currency && m.currency !== "ARS" && m.originalAmount != null && m.originalAmount !== 0 && (
+                          <div className="muted" style={{ fontSize: "0.75rem" }}>
+                            {m.currency} {Number(m.originalAmount).toLocaleString("es-AR", { minimumFractionDigits: 2 })} a ${" "}
+                            {Number(m.exchangeRate).toLocaleString("es-AR")}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td>

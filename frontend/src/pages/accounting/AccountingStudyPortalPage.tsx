@@ -1,5 +1,6 @@
 import React, { useEffect, useState, FormEvent } from "react";
 import { AccountingTabs } from "../../components/accounting/AccountingTabs";
+import { FxRevaluationCard } from "../../components/accounting/FxRevaluationCard";
 import { api } from "../../api/client";
 
 import { todayAr } from "../../lib/dates";
@@ -185,6 +186,8 @@ export function AccountingStudyPortalPage() {
             </button>
           </form>
         </div>
+
+        <FxRevaluationCard />
 
         {/* Asistente 2: Devengamiento de Sueldos F.931 */}
         <div className="card pad" style={{ border: "1px solid #0d9488", background: "rgba(13, 148, 136, 0.02)" }}>

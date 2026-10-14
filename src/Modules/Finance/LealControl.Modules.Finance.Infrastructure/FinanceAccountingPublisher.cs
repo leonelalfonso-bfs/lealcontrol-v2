@@ -22,7 +22,19 @@ internal static class FinanceAccountingPublisher
     {
         try
         {
-            var amounts = BuildReceiptAmounts(receipt, lines);
+            // Cobro en dólares de facturas en dólares: la diferencia entre la cotización de cada factura y la
+            // del cobro es diferencia de cambio realizada (no hay nota que la documente).
+            var realizedDifferenceArs = 0m;
+            if (receipt.Currency != "ARS" && receipt.PaymentExchangeRate is > 1m)
+            {
+                var imputations = await db.CollectionReceiptImputations.AsNoTracking()
+                    .Where(i => i.ReceiptId == receipt.Id && i.TenantId == receipt.TenantId && i.Status == "Active"
+                                && i.AmountUsd == null && i.InvoiceExchangeRate > 1m)
+                    .Select(i => new { i.AmountImputed, i.InvoiceExchangeRate })
+                    .ToListAsync(ct);
+                realizedDifferenceArs = imputations.Sum(i => Math.Round(i.AmountImputed * (receipt.PaymentExchangeRate.Value - i.InvoiceExchangeRate!.Value), 2));
+            }
+            var amounts = BuildReceiptAmounts(receipt, lines, realizedDifferenceArs);
             var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (receipt.AccountId != Guid.Empty)
                 tags["FinancialAccountId"] = receipt.AccountId.ToString();
@@ -157,7 +169,7 @@ internal static class FinanceAccountingPublisher
     }
 
     private static Dictionary<string, decimal> BuildReceiptAmounts(
-        CollectionReceipt receipt, IReadOnlyList<CollectionReceiptLine> lines)
+        CollectionReceipt receipt, IReadOnlyList<CollectionReceiptLine> lines, decimal realizedDifferenceArs)
     {
         decimal bank = 0, cash = 0, cheque = 0, retention = 0;
         foreach (var line in lines)
@@ -193,8 +205,15 @@ internal static class FinanceAccountingPublisher
             [AccountingAmountSources.ImputedAmount] = imputed,
             [AccountingAmountSources.AdvanceAmount] = receipt.AdvanceAmount
         };
-        if (receipt.ExchangeDifferenceAmount is { } fx && fx != 0)
-            amounts[AccountingAmountSources.ExchangeDifference] = fx;
+        // Los importes van en la moneda del recibo; la diferencia (en pesos) se expresa en esa moneda para que,
+        // a la cotización del cobro, Deudores se cancele al valor de las facturas.
+        if (realizedDifferenceArs != 0m && receipt.PaymentExchangeRate is > 1m)
+        {
+            var difference = realizedDifferenceArs / receipt.PaymentExchangeRate.Value;
+            amounts[AccountingAmountSources.Total] = receipt.Amount - difference;
+            amounts[AccountingAmountSources.ExchangeGain] = Math.Max(difference, 0m);
+            amounts[AccountingAmountSources.ExchangeLoss] = Math.Max(-difference, 0m);
+        }
         return amounts;
     }
 

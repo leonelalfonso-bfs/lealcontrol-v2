@@ -75,7 +75,10 @@ internal sealed class SalesAccountingDocumentSource(
             invoice.IssueDate,
             "ARS", 1m,
             "Customer", invoice.CustomerId, invoice.CustomerName,
-            isCreditNote ? "AM-VTA-NC" : "AM-VTA-FAC",
+            // Las notas que documentan una diferencia de cambio van a su propio asiento modelo.
+            invoice.ExchangeDifferenceImputationId is not null
+                ? isCreditNote ? "AM-VTA-DC-NC" : "AM-VTA-DC-ND"
+                : isCreditNote ? "AM-VTA-NC" : "AM-VTA-FAC",
             amounts,
             Tags(invoice.InvoiceType, invoice.Currency, invoice.ExchangeRate, invoice.Total));
     }

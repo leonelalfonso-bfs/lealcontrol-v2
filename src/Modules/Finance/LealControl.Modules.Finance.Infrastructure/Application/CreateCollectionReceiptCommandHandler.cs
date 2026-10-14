@@ -72,7 +72,6 @@ internal sealed class CreateCollectionReceiptCommandHandler
             PaymentExchangeRate = body.PaymentExchangeRate,
             SuggestedAdjustmentArs = body.SuggestedAdjustmentArs,
             SuggestedAdjustmentType = body.SuggestedAdjustmentType?.Trim(),
-            ExchangeDifferenceAmount = body.SuggestedAdjustmentArs,
             ReceiptDateUtc = body.ReceiptDateUtc,
             Description = description,
             Status = "Confirmed",
@@ -224,6 +223,9 @@ internal sealed class CreateCollectionReceiptCommandHandler
         {
             decimal? usd = imp.AmountUsd is > 0m && imp.InvoiceExchangeRate is > 0m && imp.PaymentExchangeRate is > 0m
                 ? Math.Round(imp.AmountUsd.Value, 2) : null;
+            // Cobro en dólares de una factura en dólares: no hay nota que documentar, pero la cotización de la
+            // factura queda guardada para contabilizar la diferencia de cambio realizada.
+            var sameForeignCurrency = usd is null && currency != "ARS" && imp.InvoiceExchangeRate is > 1m;
             _db.CollectionReceiptImputations.Add(new CollectionReceiptImputation
             {
                 Id = Guid.NewGuid(),
@@ -234,8 +236,8 @@ internal sealed class CreateCollectionReceiptCommandHandler
                 InvoiceTotal = imp.InvoiceTotal,
                 AmountImputed = imp.AmountImputed,
                 AmountUsd = usd,
-                InvoiceExchangeRate = usd is null ? null : imp.InvoiceExchangeRate,
-                PaymentExchangeRate = usd is null ? null : imp.PaymentExchangeRate,
+                InvoiceExchangeRate = usd is not null || sameForeignCurrency ? imp.InvoiceExchangeRate : null,
+                PaymentExchangeRate = usd is not null ? imp.PaymentExchangeRate : sameForeignCurrency ? body.PaymentExchangeRate : null,
                 // Diferencia de cambio realizada sobre los USD cancelados; se recalcula acá, no se confía en el cliente.
                 ExchangeDifferenceArs = usd is null ? null
                     : Math.Round(usd.Value * (imp.PaymentExchangeRate!.Value - imp.InvoiceExchangeRate!.Value), 2),

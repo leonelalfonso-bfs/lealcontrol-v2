@@ -123,6 +123,7 @@ public sealed class PermissionLevelsApiTests : IAsyncLifetime
     [InlineData("POST", "/api/v1/accounting/auto-post/payroll", "accounting", PermissionLevel.Approve)]
     [InlineData("POST", "/api/v1/accounting/batch-post/execute", "accounting", PermissionLevel.Approve)]
     [InlineData("POST", "/api/v1/accounting/year-end-closing", "accounting", PermissionLevel.Approve)]
+    [InlineData("POST", "/api/v1/accounting/fx-revaluation", "accounting", PermissionLevel.Approve)]
     [InlineData("PUT", "/api/v1/sales/products/1", "inventory", PermissionLevel.Edit)]
     [InlineData("PATCH", "/api/v1/sales/production/orders/1/status", "inventory", PermissionLevel.Edit)]
     [InlineData("PUT", "/api/v1/hr/settings", "hr", PermissionLevel.Admin)]

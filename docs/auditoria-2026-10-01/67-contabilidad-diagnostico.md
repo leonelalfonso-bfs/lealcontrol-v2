@@ -124,11 +124,32 @@ Hoy Contabilidad sirve para asientos manuales y para ver cobros y pagos. No refl
   - `ArcaVatBookExportTests`: diseño de registro campo por campo.
   - `AccountingVatBooksApiTests`: libros en pesos con nota de crédito y dólares, borrador excluido, compra C sin alícuotas, exportación rechazada si falta un CUIT.
 
-### C3. Moneda extranjera y diferencias de cambio
+### C3. Moneda extranjera y diferencias de cambio (hecha, PR "Contabilidad C3")
 
-- Libro mayor y balances en pesos, con la moneda original como dato informativo.
-- Diferencia de cambio automática en cobros y pagos de comprobantes en dólares.
-- Revaluación de saldos en moneda extranjera al cierre de mes.
+- **El libro va en pesos.**
+  - El motor convierte cada comprobante en otra moneda a su cotización.
+  - Debe y Haber siempre en pesos; la línea guarda moneda, cotización e importe original (`OriginalAmount`), y el Libro Mayor lo muestra como dato.
+  - Los centavos de redondeo de la conversión van a la línea más grande, y el asiento cuadra exacto (antes se toleraba un centavo de diferencia).
+  - Un comprobante en dólares sin cotización queda pendiente con el motivo.
+  - Los asientos manuales aceptan líneas en dólares con su cotización.
+- **Cobros en dólares:**
+  - Finanzas exige la cotización del día; la pantalla de cobros la pide y sugiere la del BNA.
+  - Cada factura en dólares cancelada guarda su cotización.
+  - Contabilidad cancela Deudores a la cotización de la factura y la diferencia realizada va a diferencia de cambio (líneas nuevas en AM-FIN-01, también para las empresas existentes).
+  - Antes un cobro en dólares se asentaba con importes en dólares mezclados con pesos.
+- **Cobros en pesos de facturas en dólares:** como antes, la diferencia se documenta con nota de débito o crédito desde la cuenta corriente. Esas notas ahora se contabilizan con sus propios modelos (AM-VTA-DC-ND y AM-VTA-DC-NC): el neto va a Diferencia de Cambio Positiva o Negativa, no a Ventas.
+- **Revaluación de fin de mes** (Cierres y períodos → "Revaluación de moneda extranjera"):
+  - Las cuentas del plan con moneda USD (caja y bancos en dólares) se valúan a la cotización de cierre.
+  - La diferencia va contra diferencia de cambio, sin cambiar el saldo en dólares.
+  - Una vez por mes; respeta el candado; pide permiso de Aprobar.
+- **Fuera de alcance, a propósito:**
+  - Los créditos y deudas en dólares no se revalúan: su diferencia se documenta con notas, y revaluarlos la contaría dos veces.
+  - Las órdenes de pago son siempre en pesos. La diferencia de un pago de una compra en dólares la documenta el proveedor con su nota.
+- **Prolijidad:** se retiró la columna `ExchangeDifferenceAmount` de los recibos (copia de `SuggestedAdjustmentArs` que nadie leía) y el registro `ExchangeDifferenceRequest` sin uso.
+- **Ayuda:** sección "Moneda extranjera y diferencias de cambio" en Contabilidad, y cobro en dólares en Finanzas.
+- **Pruebas:**
+  - `AccountingForeignCurrencyApiTests`: cobro en dólares con diferencia realizada; revaluación y su repetición rechazada; nota por diferencia de cambio; línea manual en dólares.
+  - En el motor: conversión, centavos de redondeo y falta de cotización.
 
 ### C4. Cierre de ejercicio completo
 
