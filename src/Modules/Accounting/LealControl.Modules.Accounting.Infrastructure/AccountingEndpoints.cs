@@ -28,6 +28,7 @@ public static class AccountingEndpoints
         group.MapAccountingPeriodsEndpoints();
         group.MapAccountingTemplatesEndpoints();
         group.MapAccountingBatchPostingEndpoints();
+        VatBooks.VatBookEndpoints.MapVatBookEndpoints(group);
 
         return endpoints;
     }

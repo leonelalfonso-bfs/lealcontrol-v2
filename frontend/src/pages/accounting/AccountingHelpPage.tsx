@@ -10,6 +10,7 @@ const SECTIONS = [
   { id: "manuales", title: "Asientos manuales" },
   { id: "anulaciones", title: "Anulaciones y notas de crédito" },
   { id: "reportes", title: "Libro Diario, Mayor y Sumas y Saldos" },
+  { id: "libros-iva", title: "Libros IVA y Libro IVA Digital de ARCA" },
   { id: "cierres", title: "Cierre de meses y de ejercicio" },
   { id: "problemas", title: "Cuando el sistema no te deja" }
 ];
@@ -137,7 +138,29 @@ export function AccountingHelpPage() {
         </ul>
       </ManualPart>
 
-      <ManualPart id="cierres" title="9. Cierre de meses y de ejercicio">
+      <ManualPart id="libros-iva" title="9. Libros IVA y Libro IVA Digital de ARCA">
+        <p style={{ margin: 0 }}>
+          Los <Link to="/contabilidad/libros-iva">Libros IVA</Link> salen de los <strong>comprobantes</strong>, no de los asientos: Ventas muestra
+          lo emitido con CAE y Compras las facturas de proveedor vigentes, aunque todavía no se hayan contabilizado.
+        </p>
+        <Steps>
+          <Step title="Contabilidad → Libros IVA → elegí el mes (por defecto, el anterior).">
+            Pestañas Ventas y Compras: neto e IVA por alícuota, exento, percepciones, otros tributos y total, en pesos. Los comprobantes en
+            dólares se convierten a su cotización y las notas de crédito restan.
+          </Step>
+          <Step title="“📥 Excel” descarga el libro que estás viendo, con los totales del mes." />
+          <Step title="Si arriba aparece “No se puede exportar a ARCA…”, corregí esos comprobantes.">
+            Por ejemplo, una factura A o M de proveedor necesita el CUIT del proveedor: anulala y cargala de nuevo.
+          </Step>
+          <Step title="“📤 Libro IVA Digital (ARCA)” descarga un .zip con cuatro archivos: comprobantes y alícuotas de ventas, y comprobantes y alícuotas de compras." />
+          <Step title="En ARCA: Portal IVA → Libro IVA Digital → el período → Ventas y Compras → importá cada archivo en su lugar.">
+            Revisá que ARCA no marque errores y que los totales coincidan con los de la pantalla antes de presentar la declaración.
+          </Step>
+        </Steps>
+        <Tip>Las facturas de proveedor B y C no discriminan IVA: van en el libro, pero no suman crédito fiscal ni llevan registro de alícuotas.</Tip>
+      </ManualPart>
+
+      <ManualPart id="cierres" title="10. Cierre de meses y de ejercicio">
         <Steps>
           <Step title="Contabilizá el mes completo y revisá Sumas y Saldos." />
           <Step title="Cierres y períodos → elegí el año → “🔒 Cerrar con Candado” en el mes.">
@@ -152,11 +175,13 @@ export function AccountingHelpPage() {
         </Steps>
       </ManualPart>
 
-      <ManualPart id="problemas" title="10. Cuando el sistema no te deja">
+      <ManualPart id="problemas" title="11. Cuando el sistema no te deja">
         <Troubleshooting rows={[
           [<>Una factura de venta no aparece al contabilizar</>, <>Solo entran las autorizadas por ARCA y con fecha dentro del período. Si está en borrador, autorizala en Ventas.</>],
           [<>“Sin asiento modelo” en la vista previa</>, <>Ese tipo de comprobante no tiene un modelo activo: activalo o creá uno en Asientos Modelos.</>],
           [<>“Período … cerrado: no se contabiliza”</>, <>El mes del comprobante tiene candado. Reabrilo en Cierres y períodos, contabilizá y volvé a cerrarlo.</>],
+          [<>Una venta no aparece en el Libro IVA Ventas</>, <>Solo van las que tienen CAE. Revisá en Ventas que esté autorizada y la fecha del comprobante.</>],
+          [<>“… necesita CUIT” al exportar a ARCA</>, <>Una factura de compra no se edita: anulala en Compras (“Anular”) y cargala de nuevo con el CUIT del proveedor o con el tipo correcto.</>],
           [<>Un cobro o pago queda con error</>, <>Falta el mapeo de esa caja o banco: Plan de Cuentas → Mapeo cuenta financiera.</>],
           [<>“Asiento desbalanceado” o cuenta inexistente</>, <>Una línea del asiento modelo apunta a una cuenta que no existe o no es imputable: corregila en el modelo.</>],
           [<>“no imputable”, “uno solo” o “desbalanceado” en un asiento manual</>, <>Usá cuentas imputables, un solo lado por línea y que Debe y Haber cuadren.</>]

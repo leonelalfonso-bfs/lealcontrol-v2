@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { AccountingTabs } from "../../components/accounting/AccountingTabs";
 import { api } from "../../api/client";
 import type { UnpostedDocumentsSummary } from "../../api/types";
 import { BatchPostingModal } from "./BatchPostingModal";
@@ -93,33 +94,7 @@ export function AccountingDashboardPage() {
         </div>
       </div>
 
-      {/* Nav Tabs */}
-      <div className="tab-row" style={{ display: "flex", gap: 8, overflowX: "auto", borderBottom: "1px solid var(--surface-border)", paddingBottom: 6 }}>
-        <Link to="/contabilidad" className="tab-btn active">
-          📊 Tablero & P&L
-        </Link>
-        <Link to="/contabilidad/modelos" className="tab-btn">
-          ⚙️ Asientos Modelos
-        </Link>
-        <Link to="/contabilidad/plan-cuentas" className="tab-btn">
-          🌳 Plan de Cuentas ({accountsCount})
-        </Link>
-        <Link to="/contabilidad/asientos" className="tab-btn">
-          📖 Libro Diario
-        </Link>
-        <Link to="/contabilidad/mayor" className="tab-btn">
-          🔍 Libro Mayor
-        </Link>
-        <Link to="/contabilidad/sumas-saldos" className="tab-btn">
-          ⚖️ Sumas y Saldos (8 Col.)
-        </Link>
-        <Link to="/contabilidad/conciliacion" className="tab-btn">
-          🏦 Conciliación Bancaria
-        </Link>
-        <Link to="/contabilidad/portal-estudio" className="tab-btn">
-          🏢 Cierres y períodos
-        </Link>
-      </div>
+      <AccountingTabs />
 
       {loading ? (
         <div className="card pad" style={{ textAlign: "center", padding: "40px" }}>

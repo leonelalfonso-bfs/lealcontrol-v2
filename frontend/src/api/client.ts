@@ -1159,6 +1159,17 @@ export const api = {
     const query = q.toString() ? `?${q.toString()}` : "";
     return request<GeneralLedgerRow[]>(`/api/v1/accounting/general-ledger${query}`);
   },
+  getVatBooks: (year: number, month: number) =>
+    request<import("./types").VatBooks>(`/api/v1/accounting/vat-books?year=${year}&month=${month}`),
+  downloadArcaVatBook: (year: number, month: number) =>
+    requestBlob(`/api/v1/accounting/vat-books/arca?year=${year}&month=${month}`).then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `libro-iva-digital-${year}${String(month).padStart(2, "0")}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }),
   getTrialBalance: (params?: { startDate?: string; endDate?: string }) => {
     const q = new URLSearchParams();
     if (params?.startDate) q.set("startDate", params.startDate);

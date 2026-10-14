@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { AccountingTabs } from "../../components/accounting/AccountingTabs";
 import { api } from "../../api/client";
 
 interface TreasuryRow {
@@ -53,14 +54,7 @@ export function BankReconciliationPage() {
         </div>
       </div>
 
-      <div className="tabs-row" style={{ marginBottom: 16 }}>
-        <Link to="/contabilidad" className="tab-btn">Tablero</Link>
-        <Link to="/contabilidad/plan-cuentas" className="tab-btn">Plan de Cuentas</Link>
-        <Link to="/contabilidad/asientos" className="tab-btn">Libro Diario</Link>
-        <Link to="/contabilidad/mayor" className="tab-btn">Libro Mayor</Link>
-        <Link to="/contabilidad/sumas-saldos" className="tab-btn">Sumas y Saldos</Link>
-        <Link to="/contabilidad/conciliacion" className="tab-btn active">Conciliación</Link>
-      </div>
+      <AccountingTabs />
 
       {error && <div className="alert">{error}</div>}
       {message && !error && <p className="muted">{message}</p>}
