@@ -155,9 +155,12 @@ Proceso nocturno por empresa. Manda el resumen de lo vencido y por vencer a los 
 - Kardex: el tipo "Consumo en servicio".
 - Pruebas: `FleetServiceOrderRemitoApiTests`.
 
-### 4b. Firmas desde el celular (siguiente)
+- **Manual de Ayuda** de Flota reescrito como manual de instrucciones del circuito completo (`components/help/HelpManual.tsx`, piezas comunes para los manuales de todos los módulos).
+
+### 4b. Firmas desde el celular (al final, con la app móvil)
 
 - Pantalla para el técnico en el celular: sus órdenes del día, iniciar, terminar con el trabajo realizado, y firma del técnico y del cliente (aclaración y DNI). Las firmas salen en el informe.
+- Se encara cuando el resto ande perfecto: requiere app móvil (el dueño usa iPhone y todavía no tiene cuenta de desarrollador de Apple; Android no lo puede probar por ahora).
 
 ### Más adelante
 

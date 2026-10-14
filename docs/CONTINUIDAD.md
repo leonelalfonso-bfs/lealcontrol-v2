@@ -53,9 +53,11 @@ Hecho del 9 al 13/10/2026:
 - WhatsApp por Evolution API dado de baja por completo: código, tabla `whatsapp_connections`, conversaciones y mensajes de WhatsApp, variables `WHATSAPP_*` y red de Docker. El envío de documentos queda por correo. WhatsApp vuelve con la API oficial de Meta (etapa 2).
 
 1. **Casilla del sistema A2** ([65](auditoria-2026-10-01/65-permisos-y-avisos-plan.md)). Espera la cuenta de Brevo y el DNS de lealcontrol.com.
-2. **Flota, lo que sigue** ([64](auditoria-2026-10-01/64-flota-plan.md)): remito por servicio, repuestos, firmas desde el celular, informe en PDF.
+2. **Manuales de Ayuda:** cada módulo que se toque termina con su Ayuda como manual del circuito completo (Flota ya está, con `components/help/HelpManual.tsx`).
 3. **Comunicaciones etapa 2:** API oficial de Meta con coexistencia, cuando LealControl tenga CUIT y sea Tech Provider; Instagram y Facebook.
 4. **Deuda técnica y requisitos para vender** ([62](auditoria-2026-10-01/62-estado-general-y-plan.md)).
+
+5. **App móvil** (firmas del técnico y del cliente, Flota 4b): al final, cuando el resto ande perfecto.
 
 ## Reglas de trabajo
 
