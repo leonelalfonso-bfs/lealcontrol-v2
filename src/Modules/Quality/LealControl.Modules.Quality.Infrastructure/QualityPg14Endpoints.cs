@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Time;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Metrology.Contracts;
 using Microsoft.AspNetCore.Builder;
@@ -1341,12 +1342,12 @@ internal static class QualityPg14Endpoints
     private static bool IsOverdue(QualityMaintenancePlanItem r) =>
         r.Status == QualityMaintenanceStatuses.Active
         && ((r.NextDue.HasValue && r.NextDue.Value < DateTime.UtcNow)
-            || PlannedMonthDates(r).Any(date => date < DateTime.UtcNow.Date));
+            || PlannedMonthDates(r).Any(date => date < ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow)));
 
     private static bool IsDueSoon(QualityMaintenancePlanItem r) =>
         r.Status == QualityMaintenanceStatuses.Active
         && ((r.NextDue.HasValue && r.NextDue.Value < DateTime.UtcNow.AddDays(30))
-            || PlannedMonthDates(r).Any(date => date < DateTime.UtcNow.Date.AddDays(30)));
+            || PlannedMonthDates(r).Any(date => date < ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow).AddDays(30)));
 
     private static IEnumerable<DateTime> PlannedMonthDates(QualityMaintenancePlanItem r)
     {
@@ -1390,7 +1391,7 @@ internal static class QualityPg14Endpoints
     private static object[] BuildCheckSchedule(IReadOnlyList<MetrologyCatalogAsset> assets,
         IReadOnlyList<QualityIntermediateCheck> checks)
     {
-        var now = DateTime.UtcNow.Date;
+        var now = ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow);
         return assets.Where(a => a.Source == "StandardWeight").Select(asset =>
         {
             var last = checks.Where(c => c.TargetWeightId == asset.Id && c.Status == QualityIntermediateCheckStatuses.Completed)

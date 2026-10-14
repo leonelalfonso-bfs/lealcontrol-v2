@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Time;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -15,10 +16,9 @@ public sealed record PlanDue(int? NextKm, int? KmLeft, decimal? NextHours, decim
 public static partial class FleetRules
 {
     public static readonly CultureInfo Ar = CultureInfo.GetCultureInfo("es-AR");
-    private static readonly TimeSpan ArgentinaOffset = TimeSpan.FromHours(-3);
 
     /// <summary>Día civil de Argentina (UTC-3, sin horario de verano).</summary>
-    public static DateOnly TodayInArgentina(DateTimeOffset utcNow) => DateOnly.FromDateTime(utcNow.ToOffset(ArgentinaOffset).DateTime);
+    public static DateOnly TodayInArgentina(DateTimeOffset utcNow) => ArgentinaTime.Today(utcNow);
 
     /// <summary>Las fechas civiles se guardan a las 12:00 UTC: en cualquier huso siguen siendo el mismo día.</summary>
     public static DateTime ToStoredDate(DateOnly date) => new(date.Year, date.Month, date.Day, 12, 0, 0, DateTimeKind.Utc);
