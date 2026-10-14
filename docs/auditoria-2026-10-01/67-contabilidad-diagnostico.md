@@ -36,7 +36,7 @@ Hoy Contabilidad sirve para asientos manuales y para ver cobros y pagos. No refl
 ### Importantes
 
 4. **Asientos manuales sin validar la cuenta:** se acepta el código y el nombre que manda la pantalla, sin verificar que la cuenta exista, sea imputable y esté activa. Además se tolera un centavo de diferencia entre debe y haber, y el "creado por" lo informa la pantalla y no el usuario conectado.
-5. **Numeración de asientos:** se calcula como el máximo más uno, sin índice único. Dos asientos simultáneos pueden repetir número, y la numeración no sigue el orden de las fechas, que es lo que exige el Libro Diario.
+5. **Numeración de asientos:** se calcula como el máximo más uno. Hay índice único, así que el número no se repite, pero dos asientos simultáneos (o la reversión de varios documentos juntos) terminan en error. Además, la numeración no sigue el orden de las fechas, que es lo que exige el Libro Diario.
 6. **Cierre de ejercicio limitado:**
    - solo año calendario (no admite cierres en junio, por ejemplo);
    - se puede ejecutar dos veces;
@@ -51,14 +51,27 @@ Hoy Contabilidad sirve para asientos manuales y para ver cobros y pagos. No refl
 10. **Plan de cuentas inicial con bancos de ejemplo** ("Banco Galicia C/C", "Banco Macro C/C"): deberían salir de las cuentas reales de Finanzas.
 11. **El estado de resultados** usa prefijos fijos de cuenta (4.1 ventas, 5.1 costo, 5.2 gastos, 5.3 financieros): si el plan cambia, el reporte se desarma.
 
+## Decisiones del dueño (14/10/2026)
+
+1. **Contador interno y estudio externo:** tiene que servir para los dos (permisos y exportaciones pensados para ambos).
+2. **Contabilizar es una acción explícita:** la administración carga en Finanzas, Ventas y Compras, y después alguien toca **"contabilizar"**. Ventas y Compras publican en la cola, y se asienta por lote revisado (`AutoPostOnConfirm` apagado), igual que hoy Finanzas.
+3. **Fecha de cierre de ejercicio por empresa:** el producto es multiempresa, así que se configura en cada una.
+4. **Ajuste por inflación:** sí, porque en Argentina es un tema recurrente. Pasa a ser una entrega propia (C6).
+
 ## Propuesta de entregas
 
-### C0. Seguridad contable (chica, urgente)
+### C0. Seguridad contable (hecha, PR "Contabilidad C0")
 
 - **Retirar el Libro IVA Digital falso** hasta tener el real (C2).
 - Validar los asientos manuales: la cuenta tiene que existir, ser imputable y estar activa; debe y haber cuadran al centavo, sin montos negativos ni líneas con los dos lados; el autor sale del usuario conectado.
 - Numeración única, con un índice único y reintento.
 - La contabilización automática también respeta el candado del período.
+- **Además:**
+  - el lote controla el candado documento por documento: antes comparaba rangos de meses y podía frenar un lote entero o dejar pasar meses cerrados;
+  - el asiento de sueldos tiene que cuadrar y respeta el candado;
+  - el cierre de ejercicio no se puede ejecutar dos veces;
+  - un error al grabar ya no deja asientos a medias.
+- **Cómo quedó:** `LockEntryNumberingAsync` toma la numeración con un bloqueo por empresa dentro de la transacción; `IsPeriodLockedAsync` controla el candado. Pruebas en `AccountingSafetyApiTests`, entre ellas diez asientos simultáneos con números seguidos.
 
 ### C1. Contabilizar Ventas y Compras (el corazón)
 
@@ -66,7 +79,8 @@ Hoy Contabilidad sirve para asientos manuales y para ver cobros y pagos. No refl
 - **Compras** publica al **registrar la factura del proveedor**: neto, IVA por alícuota y percepciones (IVA, IIBB, Ganancias). Al anular se revierte.
 - **Todo en pesos:** las facturas en dólares se convierten a la cotización del comprobante, y la moneda y el importe original quedan guardados en la línea.
 - Asientos modelo completos para cada tipo (los de fábrica cubren solo factura A y B, la nota de crédito A, y la factura y la nota de crédito A de compra).
-- **Decisión tuya:** ¿contabilizar en el momento, o que el contador lo haga por lote? Está la opción `AutoPostOnConfirm` por empresa.
+- Se contabiliza **por lote**, cuando alguien toca "contabilizar" (decisión 2).
+- Termina con el **manual de Ayuda de Contabilidad**.
 
 ### C2. Libros IVA reales
 
@@ -81,7 +95,7 @@ Hoy Contabilidad sirve para asientos manuales y para ver cobros y pagos. No refl
 
 ### C4. Cierre de ejercicio completo
 
-- Fecha de cierre de ejercicio por empresa.
+- Fecha de cierre de ejercicio por empresa (decisión 3).
 - Refundición, cierre y **apertura** del ejercicio siguiente. Que no se pueda cerrar dos veces y que cierre los períodos.
 - **Libro Diario** numerado en orden cronológico, imprimible y exportable.
 
@@ -90,14 +104,13 @@ Hoy Contabilidad sirve para asientos manuales y para ver cobros y pagos. No refl
 - Costo de ventas desde los remitos y el consumo en servicio (con el costo del stock).
 - Sueldos automáticos desde la liquidación de RRHH.
 - Amortizaciones de bienes de uso.
-- Ajuste por inflación (RT 6), si las empresas lo aplican.
 - Unificar la conciliación bancaria en Finanzas y retirar la duplicada.
 
+### C6. Ajuste por inflación (RT 6)
+
+- Índices FACPCE (IPIM y empalmes) cargados por mes.
+- Marcar las partidas no monetarias (la marca por cuenta ya existe).
+- Asientos de ajuste del ejercicio y RECPAM.
+- Estados contables en moneda homogénea.
+
 Cada entrega termina con su manual de Ayuda ([regla](../CONTINUIDAD.md)).
-
-## Preguntas para decidir antes de C1
-
-1. ¿Quién usa Contabilidad? ¿Un contador interno, o un estudio externo que entra a revisar y exportar?
-2. ¿Contabilización inmediata al autorizar o registrar, o por lote revisado por el contador?
-3. ¿Fecha de cierre de ejercicio de cada empresa?
-4. ¿Alguna empresa aplica ajuste por inflación contable?

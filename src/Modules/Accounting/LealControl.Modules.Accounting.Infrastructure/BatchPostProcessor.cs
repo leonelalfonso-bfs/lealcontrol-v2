@@ -157,19 +157,11 @@ public static class BatchPostProcessor
         var sw = Stopwatch.StartNew();
         await db.EnsureAccountingTablesAsync(ct);
         await db.SeedDefaultChartOfAccountsAsync(tenantId, ct);
-
-        var isLocked = await db.Periods.AnyAsync(p =>
-            p.TenantId == tenantId
-            && p.Status == "Locked"
-            && ((req.PeriodStart.Year == p.Year && req.PeriodStart.Month <= p.Month)
-                || (req.PeriodEnd.Year == p.Year && req.PeriodEnd.Month >= p.Month)), ct);
-
-        if (isLocked)
-        {
-            return new BatchPostingExecuteResponse(
-                Guid.Empty, "", 0, 0, 0, 0, 0, "Failed", 0,
-                [], [$"El período seleccionado contiene meses cerrados con candado contable."]);
-        }
+        // Los meses cerrados con candado no se tocan: esos documentos quedan con el motivo.
+        var lockedMonths = (await db.Periods.AsNoTracking()
+                .Where(p => p.TenantId == tenantId && p.Status == "Locked")
+                .Select(p => new { p.Year, p.Month }).ToListAsync(ct))
+            .Select(p => (p.Year, p.Month)).ToHashSet();
 
         var pending = await LoadPendingDocumentsAsync(db, tenantId, req.PeriodStart, req.PeriodEnd, req.Modules, ct);
         if (pending.Count == 0)
@@ -185,9 +177,9 @@ public static class BatchPostProcessor
         var accounts = await db.Accounts.Where(a => a.TenantId == tenantId).ToListAsync(ct);
         var resolver = new DbAccountResolver(accounts);
 
-        var maxNumber = await db.JournalEntries
-            .Where(j => j.TenantId == tenantId)
-            .MaxAsync(j => (int?)j.EntryNumber, ct) ?? 0;
+        // Todo el lote toma números correlativos con la numeración bloqueada hasta grabar.
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        var maxNumber = await db.LockEntryNumberingAsync(tenantId, ct);
 
         int entriesGenerated = 0, errorsCount = 0;
         decimal totalDebit = 0, totalCredit = 0;
@@ -204,6 +196,15 @@ public static class BatchPostProcessor
                 pendingDoc.UpdatedAtUtc = DateTime.UtcNow;
                 errorsCount++;
                 exceptions.Add($"{pendingDoc.DocumentNumber}: payload inválido.");
+                continue;
+            }
+            if (lockedMonths.Contains((pendingDoc.DocumentDateUtc.Year, pendingDoc.DocumentDateUtc.Month)))
+            {
+                pendingDoc.Status = AccountingPendingDocumentStatuses.Error;
+                pendingDoc.LastError = $"Período {pendingDoc.DocumentDateUtc.Month:D2}/{pendingDoc.DocumentDateUtc.Year} cerrado: no se contabiliza.";
+                pendingDoc.UpdatedAtUtc = DateTime.UtcNow;
+                errorsCount++;
+                exceptions.Add($"{pendingDoc.DocumentNumber}: período {pendingDoc.DocumentDateUtc.Month:D2}/{pendingDoc.DocumentDateUtc.Year} cerrado.");
                 continue;
             }
 
@@ -270,6 +271,7 @@ public static class BatchPostProcessor
 
         db.BatchRuns.Add(batchRun);
         await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
         sw.Stop();
 
         return new BatchPostingExecuteResponse(

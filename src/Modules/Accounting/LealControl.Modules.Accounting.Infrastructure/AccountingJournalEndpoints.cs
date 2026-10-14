@@ -48,79 +48,97 @@ internal static class AccountingJournalEndpoints
 
         group.MapPost("/journal-entries", async (
             CreateJournalEntryRequest req,
+            HttpContext http,
             ITenantContext tenantContext,
             AccountingDbContext db,
             CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            static IResult Problem(string message) => Results.BadRequest(new { message });
 
-            // Check if period is locked
-            var date = req.Date != default ? req.Date : DateTime.UtcNow;
-            var isLocked = await db.Periods.AnyAsync(p =>
-                p.TenantId == tenantId &&
-                p.Year == date.Year &&
-                p.Month == date.Month &&
-                p.Status == "Locked", ct);
+            if (string.IsNullOrWhiteSpace(req.Concept)) return Problem("Indicá el concepto del asiento.");
+            if (req.Lines is null || req.Lines.Count < 2) return Problem("Un asiento contable requiere al menos 2 líneas (partida doble).");
+            var entryType = string.IsNullOrWhiteSpace(req.EntryType) ? "Standard" : req.EntryType.Trim();
+            if (entryType is not ("Standard" or "Adjustment" or "Opening"))
+                return Problem("Un asiento manual es común, de ajuste o de apertura.");
 
-            if (isLocked)
+            var date = req.Date != default ? DateTime.SpecifyKind(req.Date, DateTimeKind.Utc) : DateTime.UtcNow;
+            if (await db.IsPeriodLockedAsync(tenantId, date, ct))
+                return Problem($"El período fiscal {date.Month:D2}/{date.Year} se encuentra cerrado con candado contable.");
+
+            // Las cuentas se toman de la base (no del nombre que manda la pantalla): imputables y activas.
+            var accountIds = req.Lines.Select(l => l.AccountId).Where(id => id != Guid.Empty).ToHashSet();
+            var accountCodes = req.Lines.Where(l => l.AccountId == Guid.Empty).Select(l => (l.AccountCode ?? "").Trim()).ToHashSet();
+            var accounts = await db.Accounts.AsNoTracking()
+                .Where(a => a.TenantId == tenantId && (accountIds.Contains(a.Id) || accountCodes.Contains(a.Code)))
+                .ToListAsync(ct);
+            var costCenterIds = req.Lines.Where(l => l.CostCenterId is not null).Select(l => l.CostCenterId!.Value).ToHashSet();
+            var costCenters = await db.CostCenters.AsNoTracking()
+                .Where(c => c.TenantId == tenantId && costCenterIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, ct);
+
+            var lines = new List<JournalEntryLine>();
+            foreach (var (l, i) in req.Lines.Select((l, i) => (l, i + 1)))
             {
-                return Results.BadRequest(new { message = $"El período fiscal {date.Month:D2}/{date.Year} se encuentra cerrado con candado contable." });
+                var account = l.AccountId != Guid.Empty
+                    ? accounts.FirstOrDefault(a => a.Id == l.AccountId)
+                    : accounts.FirstOrDefault(a => a.Code == (l.AccountCode ?? "").Trim());
+                if (account is null) return Problem($"Línea {i}: la cuenta no existe.");
+                if (!account.IsDirectPosting) return Problem($"Línea {i}: la cuenta {account.Code} {account.Name} es de agrupación, no imputable.");
+                if (!account.IsActive) return Problem($"Línea {i}: la cuenta {account.Code} {account.Name} está inactiva.");
+                if (l.Debit < 0 || l.Credit < 0) return Problem($"Línea {i}: los importes no pueden ser negativos.");
+                if ((l.Debit > 0) == (l.Credit > 0)) return Problem($"Línea {i}: cargá el importe en el debe o en el haber (uno solo).");
+                if (decimal.Round(l.Debit, 2) != l.Debit || decimal.Round(l.Credit, 2) != l.Credit)
+                    return Problem($"Línea {i}: los importes van con hasta dos decimales.");
+                CostCenter? costCenter = null;
+                if (l.CostCenterId is { } ccId && !costCenters.TryGetValue(ccId, out costCenter))
+                    return Problem($"Línea {i}: el centro de costo no existe.");
+                lines.Add(new JournalEntryLine
+                {
+                    TenantId = tenantId,
+                    AccountId = account.Id,
+                    AccountCode = account.Code,
+                    AccountName = account.Name,
+                    Debit = l.Debit,
+                    Credit = l.Credit,
+                    Currency = string.IsNullOrWhiteSpace(l.Currency) ? "ARS" : l.Currency.Trim(),
+                    ExchangeRate = l.ExchangeRate > 0 ? l.ExchangeRate : 1,
+                    CostCenterId = costCenter?.Id,
+                    CostCenterCode = costCenter?.Code,
+                    CostCenterName = costCenter?.Name,
+                    Memo = string.IsNullOrWhiteSpace(l.Memo) ? null : l.Memo.Trim()
+                });
             }
 
-            if (req.Lines == null || req.Lines.Count < 2)
-            {
-                return Results.BadRequest(new { message = "Un asiento contable requiere al menos 2 líneas (partida doble)." });
-            }
-
-            var totalDebit = req.Lines.Sum(l => l.Debit);
-            var totalCredit = req.Lines.Sum(l => l.Credit);
-
-            if (Math.Abs(totalDebit - totalCredit) > 0.01m)
-            {
-                return Results.BadRequest(new { message = $"El asiento está desbalanceado. Debe: {totalDebit:N2} | Haber: {totalCredit:N2} | Dif: {totalDebit - totalCredit:N2}" });
-            }
-
-            var maxNumber = await db.JournalEntries.Where(j => j.TenantId == tenantId).MaxAsync(j => (int?)j.EntryNumber, ct) ?? 0;
+            var totalDebit = lines.Sum(l => l.Debit);
+            var totalCredit = lines.Sum(l => l.Credit);
+            if (totalDebit != totalCredit)
+                return Problem($"El asiento está desbalanceado. Debe: {totalDebit:N2} | Haber: {totalCredit:N2} | Dif: {totalDebit - totalCredit:N2}");
 
             var entry = new JournalEntry
             {
                 TenantId = tenantId,
-                EntryNumber = maxNumber + 1,
                 Date = date,
                 Concept = req.Concept.Trim(),
-                EntryType = req.EntryType ?? "Standard",
-                SourceModule = req.SourceModule ?? "Manual",
-                SourceDocumentId = req.SourceDocumentId,
+                EntryType = entryType,
+                SourceModule = "Manual",
                 Status = "Posted",
                 TotalDebit = totalDebit,
                 TotalCredit = totalCredit,
-                CreatedBy = req.CreatedBy ?? "Usuario",
+                // El autor es el usuario conectado, no lo que informe la pantalla.
+                CreatedBy = http.User.FindFirst("name")?.Value ?? http.User.FindFirst("email")?.Value ?? "Usuario",
                 CreatedAtUtc = DateTime.UtcNow
             };
-
-            foreach (var lineReq in req.Lines)
+            foreach (var line in lines)
             {
-                entry.Lines.Add(new JournalEntryLine
-                {
-                    JournalEntryId = entry.Id,
-                    TenantId = tenantId,
-                    AccountId = lineReq.AccountId,
-                    AccountCode = lineReq.AccountCode.Trim(),
-                    AccountName = lineReq.AccountName.Trim(),
-                    Debit = lineReq.Debit,
-                    Credit = lineReq.Credit,
-                    Currency = lineReq.Currency ?? "ARS",
-                    ExchangeRate = lineReq.ExchangeRate > 0 ? lineReq.ExchangeRate : 1,
-                    CostCenterId = lineReq.CostCenterId,
-                    CostCenterCode = lineReq.CostCenterCode,
-                    CostCenterName = lineReq.CostCenterName,
-                    Memo = lineReq.Memo
-                });
+                line.JournalEntryId = entry.Id;
+                entry.Lines.Add(line);
             }
 
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            entry.EntryNumber = await db.LockEntryNumberingAsync(tenantId, ct) + 1;
             db.JournalEntries.Add(entry);
             await db.SaveChangesAsync(ct);
-
+            await tx.CommitAsync(ct);
             return Results.Created($"/api/v1/accounting/journal-entries/{entry.Id}", entry);
         });
 

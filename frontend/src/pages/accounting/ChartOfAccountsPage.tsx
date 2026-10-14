@@ -90,7 +90,7 @@ export function ChartOfAccountsPage() {
           🏦 Conciliación Bancaria
         </Link>
         <Link to="/contabilidad/portal-estudio" className="tab-btn">
-          🏢 Cierres & IVA Digital (ARCA)
+          🏢 Cierres y períodos
         </Link>
       </div>
 

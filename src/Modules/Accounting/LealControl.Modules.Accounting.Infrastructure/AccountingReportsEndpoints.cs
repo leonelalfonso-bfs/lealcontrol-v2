@@ -438,6 +438,10 @@ internal static class AccountingReportsEndpoints
             var mapping = await db.GetOrCreateMappingAsync(tenantId, ct);
 
             var closingDate = req.ClosingDate != default ? req.ClosingDate : new DateTime(req.Year, 12, 31, 23, 59, 59, DateTimeKind.Utc);
+            if (await db.JournalEntries.AnyAsync(e => e.TenantId == tenantId && e.EntryType == "Closing" && e.Date.Year == req.Year, ct))
+                return Results.BadRequest(new { message = $"El ejercicio {req.Year} ya tiene asiento de cierre." });
+            if (await db.IsPeriodLockedAsync(tenantId, closingDate, ct))
+                return Results.BadRequest(new { message = $"El período {closingDate.Month:D2}/{closingDate.Year} está cerrado con candado: abrilo para registrar el cierre." });
 
             // Fetch all entries for that year
             var entriesQuery = db.JournalEntries.AsNoTracking().Where(j => j.TenantId == tenantId && j.Date.Year == req.Year && j.Date <= closingDate);
@@ -470,12 +474,9 @@ internal static class AccountingReportsEndpoints
                 })
                 .ToList();
 
-            var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
-
             var refundicionEntry = new JournalEntry
             {
                 TenantId = tenantId,
-                EntryNumber = maxNumber + 1,
                 Date = closingDate,
                 Concept = $"Asiento de Refundición de Cuentas de Resultado - Ejercicio {req.Year}",
                 EntryType = "Closing",
@@ -550,8 +551,11 @@ internal static class AccountingReportsEndpoints
 
             if (refundicionEntry.Lines.Count > 0)
             {
+                await using var tx = await db.Database.BeginTransactionAsync(ct);
+                refundicionEntry.EntryNumber = await db.LockEntryNumberingAsync(tenantId, ct) + 1;
                 db.JournalEntries.Add(refundicionEntry);
                 await db.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
             }
 
             return Results.Ok(new
@@ -585,14 +589,18 @@ internal static class AccountingReportsEndpoints
 
             var totalDebit = req.TotalGrossSalaries + req.TotalEmployerContributions;
             var totalCredit = req.TotalNetSalaries + req.TotalSocialSecurityToPay;
-
-            var maxNumber = await db.JournalEntries.Where(e => e.TenantId == tenantId).MaxAsync(e => (int?)e.EntryNumber, ct) ?? 0;
+            if (req.TotalGrossSalaries < 0 || req.TotalEmployerContributions < 0 || req.TotalNetSalaries < 0 || req.TotalSocialSecurityToPay < 0)
+                return Results.BadRequest(new { message = "Los importes no pueden ser negativos." });
+            if (totalDebit <= 0 || totalDebit != totalCredit)
+                return Results.BadRequest(new { message = $"El asiento de sueldos no cuadra: bruto + contribuciones ({totalDebit:N2}) tiene que ser igual a neto + cargas a pagar ({totalCredit:N2})." });
+            var payrollDate = req.Date != default ? DateTime.SpecifyKind(req.Date, DateTimeKind.Utc) : DateTime.UtcNow;
+            if (await db.IsPeriodLockedAsync(tenantId, payrollDate, ct))
+                return Results.BadRequest(new { message = $"El período {payrollDate.Month:D2}/{payrollDate.Year} está cerrado con candado contable." });
 
             var entry = new JournalEntry
             {
                 TenantId = tenantId,
-                EntryNumber = maxNumber + 1,
-                Date = req.Date != default ? req.Date : DateTime.UtcNow,
+                Date = payrollDate,
                 Concept = $"Devengamiento Sueldos y Cargas Sociales - {req.PeriodDescription}",
                 EntryType = "Automated",
                 SourceModule = "Payroll",
@@ -657,8 +665,11 @@ internal static class AccountingReportsEndpoints
                 Memo = $"Aportes y contribuciones F.931 {req.PeriodDescription}"
             });
 
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            entry.EntryNumber = await db.LockEntryNumberingAsync(tenantId, ct) + 1;
             db.JournalEntries.Add(entry);
             await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
 
             return Results.Created($"/api/v1/accounting/journal-entries/{entry.Id}", new { message = "Asiento de sueldos generado con éxito.", entryId = entry.Id, entryNumber = entry.EntryNumber });
         });
@@ -726,63 +737,6 @@ internal static class AccountingReportsEndpoints
             });
         });
 
-
-        // ====================================================================
-        // 14. Reportes Oficiales IVA Digital (ARCA RG 4597)
-        // ====================================================================
-        group.MapGet("/reports/iva-digital-sales", async (
-            [FromQuery] int year,
-            [FromQuery] int month,
-            ITenantContext tenantContext,
-            AccountingDbContext db,
-            CancellationToken ct) =>
-        {
-            var tenantId = tenantContext.TenantId;
-            var entries = await db.JournalEntries
-                .AsNoTracking()
-                .Include(j => j.Lines)
-                .Where(j => j.TenantId == tenantId && j.SourceModule == "Sales" && j.Date.Year == year && j.Date.Month == month)
-                .OrderBy(j => j.Date)
-                .ToListAsync(ct);
-
-            var sb = new StringBuilder();
-            foreach (var e in entries)
-            {
-                var net = e.Lines.Where(l => l.AccountCode.StartsWith("4.")).Sum(l => l.Credit);
-                var vat = e.Lines.Where(l => l.AccountCode.StartsWith("2.1.02")).Sum(l => l.Credit);
-                sb.AppendLine($"{e.Date:yyyyMMdd}|001|00001|{e.EntryNumber:D8}|{e.EntryNumber:D8}|80|30000000007|CLIENTE GENERAL|{e.TotalDebit:F2}|0.00|0.00|0.00|0.00|{net:F2}|{vat:F2}|0.00|0.00|0.00|PES|1.000000|1|0");
-            }
-
-            var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-            return Results.File(bytes, "text/plain", $"LIBRO_IVA_DIGITAL_VENTAS_{year}_{month:D2}.txt");
-        });
-
-        group.MapGet("/reports/iva-digital-purchases", async (
-            [FromQuery] int year,
-            [FromQuery] int month,
-            ITenantContext tenantContext,
-            AccountingDbContext db,
-            CancellationToken ct) =>
-        {
-            var tenantId = tenantContext.TenantId;
-            var entries = await db.JournalEntries
-                .AsNoTracking()
-                .Include(j => j.Lines)
-                .Where(j => j.TenantId == tenantId && j.SourceModule == "Purchases" && j.Date.Year == year && j.Date.Month == month)
-                .OrderBy(j => j.Date)
-                .ToListAsync(ct);
-
-            var sb = new StringBuilder();
-            foreach (var e in entries)
-            {
-                var net = e.Lines.Where(l => l.AccountCode.StartsWith("5.")).Sum(l => l.Debit);
-                var vat = e.Lines.Where(l => l.AccountCode.StartsWith("1.1.03")).Sum(l => l.Debit);
-                sb.AppendLine($"{e.Date:yyyyMMdd}|001|00001|{e.EntryNumber:D8}|{e.EntryNumber:D8}|80|30000000007|PROVEEDOR GENERAL|{e.TotalCredit:F2}|0.00|0.00|0.00|0.00|{net:F2}|{vat:F2}|0.00|0.00|0.00|PES|1.000000|1|0");
-            }
-
-            var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-            return Results.File(bytes, "text/plain", $"LIBRO_IVA_DIGITAL_COMPRAS_{year}_{month:D2}.txt");
-        });
 
         return group;
     }
