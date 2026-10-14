@@ -203,6 +203,7 @@ export const FleetServiceOrdersPage = named(() => import("../pages/FleetServiceO
 export const FleetServiceOrderPage = named(() => import("../pages/FleetServiceOrderPage"), "FleetServiceOrderPage");
 export const FleetAgendaPage = named(() => import("../pages/FleetAgendaPage"), "FleetAgendaPage");
 export const FleetServiceOrderReportPage = named(() => import("../pages/FleetServiceOrderReportPage"), "FleetServiceOrderReportPage");
+export const ConfigurationHelpPage = named(() => import("../pages/ConfigurationHelpPage"), "ConfigurationHelpPage");
 export const FleetHelpPage = named(() => import("../pages/FleetHelpPage"), "FleetHelpPage");
 export const DirectoryHelpPage = named(() => import("../pages/DirectoryHelpPage"), "DirectoryHelpPage");
 export const SalesHelpPage = named(() => import("../pages/SalesHelpPage"), "SalesHelpPage");

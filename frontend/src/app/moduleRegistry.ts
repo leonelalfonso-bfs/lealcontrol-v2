@@ -443,7 +443,8 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/configuracion/documentos", label: "Documentos", icon: "📄" },
       { path: "/configuracion/comunicaciones", label: "Comunicaciones", icon: "✉️" },
       { path: "/configuracion/usuarios", label: "Usuarios y permisos", icon: "👥" },
-      { path: "/configuracion/respaldo", label: "Respaldo", icon: "💾" }
+      { path: "/configuracion/respaldo", label: "Respaldo", icon: "💾" },
+      { path: "/configuracion/ayuda", label: "Ayuda Configuración", icon: "💡" }
     ]
   }
 ];
