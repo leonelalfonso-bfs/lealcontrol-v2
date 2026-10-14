@@ -47,6 +47,7 @@ import {
   FleetServiceOrderPage,
   FleetAgendaPage,
   FleetServiceOrderReportPage,
+  ConfigurationHelpPage,
   FleetVehicleFormPage,
   FleetVehiclesListPage,
   GeneralLedgerPage,
@@ -596,7 +597,7 @@ export function App() {
               {/* Direcciones viejas: el retorno de OAuth del correo puede traer ?oauth=… */}
               <Route path="/configuracion/plantillas" element={<RedirectKeepingQuery to="/configuracion/documentos" />} />
               <Route path="/configuracion/correo" element={<RedirectKeepingQuery to="/configuracion/comunicaciones" />} />
-              <Route path="/configuracion/ayuda" element={<Navigate to="/configuracion" replace />} />
+              <Route path="/configuracion/ayuda" element={<ConfigurationHelpPage />} />
               <Route path="/comunicaciones" element={communicationsEnabled && hasCommunications ? <InboxPage /> : <Navigate to="/" replace />} />
               <Route path="/comunicaciones/canales" element={<Navigate to="/configuracion/comunicaciones?canal=mensajeria" replace />} />
               <Route path="/comunicaciones/plantillas" element={communicationsEnabled && hasCommunications ? <ReplyTemplatesPage /> : <Navigate to="/" replace />} />

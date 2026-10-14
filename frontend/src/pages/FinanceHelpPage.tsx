@@ -1,77 +1,119 @@
-import React from "react";
 import { Link } from "react-router-dom";
+import { HelpManual, ManualPart, Step, Steps, Tip, Troubleshooting } from "../components/help/HelpManual";
 
+const SECTIONS = [
+  { id: "para-que", title: "Para qué sirve y quién puede hacer qué" },
+  { id: "puesta-en-marcha", title: "Puesta en marcha (una sola vez)" },
+  { id: "cobros", title: "Cobrar a un cliente" },
+  { id: "pagos", title: "Pagar a un proveedor" },
+  { id: "cheques", title: "Cartera de cheques" },
+  { id: "bancos", title: "Bancos, extractos y conceptos" },
+  { id: "cuentas", title: "Cuentas corrientes" },
+  { id: "cashflow", title: "Disponibilidad y cash flow" },
+  { id: "problemas", title: "Cuando el sistema no te deja" }
+];
+
+/** Ayuda de Finanzas: manual de instrucciones de cobros, pagos, cheques y bancos. */
 export function FinanceHelpPage() {
   return (
-    <div className="workspace-page">
-      <div className="page-head">
-        <div>
-          <h1>Guía & Documentación: Finanzas & Tesorería</h1>
-          <p className="muted">Gestión de cuentas bancarias, eCheqs, cuentas corrientes, recibos de cobro y Cashflow</p>
-        </div>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <Link to="/finanzas/bancos" className="btn btn-outline">
-            🏦 Cuentas & Bancos
-          </Link>
-          <Link to="/finanzas/conceptos" className="btn btn-primary" style={{ background: "#0d9488" }}>
-            🏷️ Conceptos y reglas
-          </Link>
-          <Link to="/finanzas/echeqs" className="btn btn-outline">
-            🎫 Cartera de eCheqs
-          </Link>
-        </div>
-      </div>
+    <HelpManual
+      eyebrow="FINANZAS · MANUAL"
+      title="Ayuda de Finanzas"
+      intro="Cómo registrar cobros y pagos, manejar los cheques, importar los extractos del banco y tener al día las cuentas corrientes de clientes y proveedores."
+      sections={SECTIONS}
+      actions={<><Link to="/finanzas/cobranzas" className="btn">Registrar cobro</Link><Link to="/finanzas/cuenta-corriente" className="btn btn-outline">Cuentas corrientes</Link></>}
+    >
+      <ManualPart id="para-que" title="1. Para qué sirve y quién puede hacer qué">
+        <p style={{ margin: 0 }}>
+          Finanzas registra <strong>lo que entra</strong> (recibos de cobro) y <strong>lo que sale</strong> (órdenes de pago), los <strong>cheques</strong> en cartera,
+          las <strong>cuentas bancarias y cajas</strong> con sus extractos, y calcula las <strong>cuentas corrientes</strong> y el <strong>cash flow</strong>.
+        </p>
+        <ul style={{ margin: 0 }}>
+          <li>Para entrar a Finanzas hace falta el permiso <strong>Importes y saldos</strong>.</li>
+          <li><strong>Cargar</strong>: registra cobros, pagos, cheques y movimientos. <strong>Aprobar</strong>: además anula, deposita cheques y concilia.</li>
+        </ul>
+      </ManualPart>
 
-      <div style={{ display: "grid", gap: "24px", maxWidth: "900px" }}>
-        {/* Card 1: Bancos, Cajas & Disponibilidad */}
-        <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>1. Cuentas Financieras, Bancos & Cajas</h2>
-          <p>
-            Control centralizado de saldos en moneda nacional y extranjera:
-          </p>
-          <ul>
-            <li><strong>Múltiples Cuentas y Monedas:</strong> Creación de Cuentas Corrientes Bancarias (ARS / USD), Cajas de Ahorro, Cajas de Efectivo en Planta y Billeteras Virtuales.</li>
-            <li><strong>Transferencias entre Cuentas:</strong> Registro de movimientos de fondos internos con comprobación automática de saldo de origen.</li>
-            <li><strong>Importación de Extractos Bancarios:</strong> Carga de extractos en formato CSV / Excel para conciliación bancaria asistida.</li>
-          </ul>
-        </section>
+      <ManualPart id="puesta-en-marcha" title="2. Puesta en marcha (una sola vez)">
+        <Steps>
+          <Step title="Cuentas: Finanzas → Disponibilidad → “+ Nueva cuenta”.">
+            Una por cada banco, caja, billetera virtual o inversión. Elegí si se lleva <em>con extracto bancario (CSV)</em> o <em>manual</em> (movimientos uno a uno).
+          </Step>
+          <Step title="Conceptos y reglas: Finanzas → Conceptos y reglas.">
+            Los conceptos clasifican cada movimiento (alquiler, sueldos, impuestos…). Las reglas los reconocen solos por el texto del extracto (“contiene”, “comienza con”…).
+          </Step>
+          <Step title="La cuenta para transferencias que sale en las facturas se elige en Configuración → Cobros y bancos." />
+        </Steps>
+      </ManualPart>
 
-        <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>2. Conceptos, reglas y conciliación</h2>
-          <p>Los movimientos importados conservan su información original y se clasifican antes de usarse en los circuitos operativos.</p>
-          <ul>
-            <li><strong>Conceptos de tesorería:</strong> son comunes a bancos, cajas, billeteras y plataformas; no dependen de Contabilidad.</li>
-            <li><strong>Reglas automáticas:</strong> sugieren un concepto por leyenda, cuenta y tipo de movimiento. Nunca confirman por sí solas.</li>
-            <li><strong>Estados separados:</strong> clasificación, conciliación y contabilización son procesos distintos y auditables.</li>
-          </ul>
-        </section>
+      <ManualPart id="cobros" title="3. Cobrar a un cliente">
+        <Steps>
+          <Step title="Desde la factura (“💵 Cobrar”) o en Finanzas → Recibos de cobro.">La pantalla “Registrar cobro” tiene tres preguntas.</Step>
+          <Step title="1. ¿Quién pagó? Elegí el cliente." />
+          <Step title="2. ¿Cómo pagó? Agregá los medios: transferencia, efectivo, cheque (“+ Cargar un cheque nuevo” o uno ya cargado) y retenciones que te hicieron (Ganancias, Ingresos Brutos…)." />
+          <Step title="3. ¿Qué cancela? El importe se aplica solo a las facturas pendientes, en orden; podés ajustarlo a mano o “Volver a aplicar automáticamente”. Lo que sobra queda a cuenta." />
+          <Step title="Revisá el resumen y guardá: se emite el recibo y la factura queda cobrada (o con cobro parcial)." />
+        </Steps>
+        <Tip>Un recibo mal cargado se anula con “Anular recibo” (nivel Aprobar) y la factura vuelve a quedar pendiente.</Tip>
+      </ManualPart>
 
-        {/* Card 3: Cartera de Cheques & eCheqs */}
-        <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>3. Cartera de eCheqs & Cheques Físicos</h2>
-          <p>
-            Ciclo de vida completo de valores recibidos y emitidos:
-          </p>
-          <ul>
-            <li><strong>Ingreso en Recibos de Cobro:</strong> Carga de cheques recibidos de clientes con N° de Cheque, eCheq ID, CMC7, Banco Emisor, CUIT y Fecha de Pago.</li>
-            <li><strong>Estados del Cheque:</strong> *En Cartera (Disponible) ➔ Depositado ➔ Acreditado*, o *Entregado a Proveedor (Endoso)*, *Rechazado* o *Vencido*.</li>
-            <li><strong>Uso como Medio de Pago:</strong> Pago a proveedores utilizando eCheqs en cartera con seguimiento del endosatario.</li>
-          </ul>
-        </section>
+      <ManualPart id="pagos" title="4. Pagar a un proveedor">
+        <Steps>
+          <Step title="Desde la factura de compra (“💳 Pagar”) o en Finanzas → Órdenes de pago → “💳 + Nueva Orden de Pago”." />
+          <Step title="1. Proveedor y fecha." />
+          <Step title="2. Facturas a cancelar: marcalas (o “✓ Imputar todas”)." />
+          <Step title="3. Medios de pago: “+ Transferencia”, “+ Cheque Propio”, “+ Cheque Cartera” (endosar uno recibido), “+ Efectivo” o “+ Retención” (Ganancias, IIBB, SUSS).">
+            Cada transferencia necesita su cuenta y su cartera (concepto de egreso).
+          </Step>
+          <Step title="4. Resumen: los medios tienen que sumar lo mismo que lo imputado. Guardá e imprimí la orden de pago (“🖨️ Imprimir OP”)." />
+        </Steps>
+      </ManualPart>
 
-        {/* Card 3: Cuentas Corrientes & Recibos de Cobro */}
-        <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>4. Cuentas Corrientes & Recibos de Cobro</h2>
-          <p>
-            Gestión de créditos comerciales y retenciones impositivas:
-          </p>
-          <ul>
-            <li><strong>Resumen de Cuenta Corriente:</strong> Estado de deuda de clientes y pagos pendientes a proveedores con detalle de facturas adeudadas y antigüedad de saldos.</li>
-            <li><strong>Recibos de Cobro Multimedio:</strong> Asignación de cobros a facturas combinando Transferencias, Efectivo, eCheqs y Retenciones impositivas (Retención IIBB, Ganancias, IVA).</li>
-            <li><strong>Cashflow Proyectado:</strong> Proyección de ingresos por cobranzas estimadas vs. egresos por compras y sueldos.</li>
-          </ul>
-        </section>
-      </div>
-    </div>
+      <ManualPart id="cheques" title="5. Cartera de cheques">
+        <ul style={{ margin: 0, display: "grid", gap: 6 }}>
+          <li>Los cheques recibidos en un cobro entran solos a la <Link to="/finanzas/echeqs">Cartera de cheques</Link>. También se pueden importar (“⇧ Importar recibidos / emitidos”).</li>
+          <li>Desde la cartera: <strong>Depositar</strong> (elegís la cuenta), <strong>Rechazar</strong> (las facturas que cancelaba vuelven a quedar pendientes y, si estaba depositado, se descuenta de la cuenta con los gastos) o <strong>Anular</strong>. Un cheque de cartera también se usa para pagar a un proveedor.</li>
+          <li>Los avisos personales muestran los cheques próximos a depositar.</li>
+        </ul>
+      </ManualPart>
+
+      <ManualPart id="bancos" title="6. Bancos, extractos y conceptos">
+        <Steps>
+          <Step title="En Bancos y cajas, abrí la cuenta y tocá “Importar extracto CSV”.">
+            La primera vez mapeá las columnas (fecha, descripción, importe o débito/crédito) y guardá el perfil: los próximos extractos se leen solos.
+            Hay una plantilla para descargar si el banco no exporta CSV.
+          </Step>
+          <Step title="“⚙ Aplicar Reglas”: los movimientos se clasifican por concepto. Lo que no reconoce queda “⏳ Sin identificar” para revisar." />
+          <Step title="Conciliación (Extracto ↔ Sistema): el sistema sugiere qué movimiento del banco corresponde a cada cobro o pago; confirmá con “Conciliar”." />
+        </Steps>
+        <Tip>Una cuenta manual se carga con “+ Cargar movimiento”. Una “+ Expectativa manual” anota algo que va a entrar o salir y se empareja sola al importar el extracto.</Tip>
+      </ManualPart>
+
+      <ManualPart id="cuentas" title="7. Cuentas corrientes">
+        <ul style={{ margin: 0, display: "grid", gap: 6 }}>
+          <li><Link to="/finanzas/cuenta-corriente">Cuentas corrientes</Link> calcula el saldo de cada cliente (a cobrar) y proveedor (a pagar), con su detalle de comprobantes, cobros y pagos.</li>
+          <li>“Ver cuenta” abre el detalle: desde ahí “Registrar cobro”, “Emitir orden de pago”, “Descargar PDF”, “✉ Email” (estado de cuenta al cliente) o “📥 Descargar Excel”.</li>
+          <li>“🔄 Cuentas Mixtas” muestra a quienes son cliente y proveedor a la vez, para compensar.</li>
+        </ul>
+      </ManualPart>
+
+      <ManualPart id="cashflow" title="8. Disponibilidad y cash flow">
+        <p style={{ margin: 0 }}>
+          <Link to="/finanzas">Disponibilidad</Link> muestra el saldo de cada cuenta. <Link to="/finanzas/cashflow">Cash flow</Link> proyecta en un calendario
+          lo que va a entrar y salir: facturas por cobrar y pagar, cheques y expectativas.
+        </p>
+      </ManualPart>
+
+      <ManualPart id="problemas" title="9. Cuando el sistema no te deja">
+        <Troubleshooting rows={[
+          [<>“Los medios de pago (…) no coinciden con el total imputado…”</>, <>Ajustá los medios o las facturas hasta que la diferencia sea cero.</>],
+          [<>“Elegí la cartera (concepto) para cada transferencia bancaria vinculada”</>, <>Elegí la cartera de egreso en cada transferencia.</>],
+          [<>“Este movimiento ya está conciliado con un recibo u orden de pago. No se puede reclasificar.”</>, <>Es correcto: ese movimiento ya está explicado. Si fue un error, anulá el recibo o la orden de pago.</>],
+          [<>“No se reconocieron las columnas…” al importar</>, <>Abrí la cuenta y usá el asistente de mapeo, o la plantilla LealControl.</>],
+          [<>“Creá una cuenta bancaria primero” (cheques)</>, <>Creá la cuenta en Disponibilidad → “+ Nueva cuenta”.</>],
+          [<>No veo Finanzas en el menú</>, <>Te falta el permiso Importes y saldos (Configuración → Usuarios y permisos).</>]
+        ]} />
+      </ManualPart>
+    </HelpManual>
   );
 }

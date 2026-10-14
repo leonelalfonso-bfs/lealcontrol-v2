@@ -64,7 +64,7 @@ public static class PermissionCatalog
         new("fleet", "Flota", "Unidades, vencimientos, mantenimiento y combustible"),
         new("quality", "Calidad", "Sistema de gestión, documentos y registros"),
         new("metrology", "Metrología", "Equipos, pesas patrón e informes"),
-        new("communications", "Comunicaciones", "Bandeja de correo y WhatsApp"),
+        new("communications", "Comunicaciones", "Bandeja de correo y plantillas de respuesta"),
         new("grains", "Cereales", "Contratos y balanza"),
         new(Administration, "Configuración y usuarios", "Datos de la empresa, ARCA, usuarios y permisos")
     ];
