@@ -117,7 +117,7 @@ export function AccountingDashboardPage() {
           🏦 Conciliación Bancaria
         </Link>
         <Link to="/contabilidad/portal-estudio" className="tab-btn">
-          🏢 Cierres & IVA Digital
+          🏢 Cierres y períodos
         </Link>
       </div>
 

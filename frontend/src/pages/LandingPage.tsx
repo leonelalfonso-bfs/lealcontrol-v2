@@ -249,7 +249,7 @@ export function LandingPage() {
                   <span className="badge primary" style={{ marginBottom: 12 }}>Módulo Destacado</span>
                   <h3 style={{ fontSize: "1.8rem", fontWeight: 800, marginBottom: 12 }}>🏛️ Contabilidad Profesional & P&L en Vivo</h3>
                   <p style={{ color: "#475569", lineHeight: 1.6, marginBottom: 20 }}>
-                    Motor de asientos automáticos por venta, compra y cobranza. Libro Diario, Libro Mayor, Sumas y Saldos a 8 Columnas y Portal para Estudios Contables con exportación de Libro IVA Digital para ARCA.
+                    Asientos modelo configurables, contabilización de cobranzas y pagos, Libro Diario, Libro Mayor, Sumas y Saldos a 8 columnas y Portal para Estudios Contables.
                   </p>
                   <ul style={{ listStyle: "none", padding: 0, margin: "0 0 24px", display: "flex", flexDirection: "column", gap: 10, fontSize: "0.9rem" }}>
                     <li>✅ Plan de 77 cuentas estándar argentinas</li>

@@ -248,9 +248,7 @@ export function JournalEntryFormPage() {
               >
                 <option value="Standard">Operativo / Estándar</option>
                 <option value="Opening">Asiento de Apertura</option>
-                <option value="Closing">Asiento de Cierre de Ejercicio</option>
                 <option value="Adjustment">Asiento de Ajuste / Regularización</option>
-                <option value="InflationAdjustment">Ajuste por Inflación (RT 6)</option>
               </select>
             </div>
 

@@ -99,6 +99,15 @@ public sealed class AccountingPostingGateway(
                     await db.SaveChangesAsync(cancellationToken);
                     return;
                 }
+                if (await db.IsPeriodLockedAsync(tenantId, pendingRow.DocumentDateUtc, cancellationToken))
+                {
+                    pendingRow.Status = AccountingPendingDocumentStatuses.Error;
+                    pendingRow.LastError = $"Período {pendingRow.DocumentDateUtc.Month:D2}/{pendingRow.DocumentDateUtc.Year} cerrado: no se contabiliza.";
+                    pendingRow.JournalEntryId = null;
+                    pendingRow.UpdatedAtUtc = DateTime.UtcNow;
+                    await db.SaveChangesAsync(cancellationToken);
+                    return;
+                }
 
                 var templates = await db.JournalTemplates
                     .AsNoTracking()
@@ -126,22 +135,22 @@ public sealed class AccountingPostingGateway(
 
                 var overrides = await FinanceAccountMappingHelper.ResolveAmountSourceAccountsAsync(document, tenantId, db, cancellationToken);
                 var entry = JournalTemplateEngine.Render(selection.Template, document, tenantId, resolver, overrides);
-                var maxNumber = await db.JournalEntries
-                    .Where(j => j.TenantId == tenantId)
-                    .MaxAsync(j => (int?)j.EntryNumber, cancellationToken) ?? 0;
-
-                entry.EntryNumber = maxNumber + 1;
-                db.JournalEntries.Add(entry);
-
-                pendingRow.Status = AccountingPendingDocumentStatuses.Posted;
-                pendingRow.LastError = null;
-                pendingRow.JournalEntryId = entry.Id;
-                pendingRow.UpdatedAtUtc = DateTime.UtcNow;
-
-                await db.SaveChangesAsync(cancellationToken);
+                await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
+                {
+                    entry.EntryNumber = await db.LockEntryNumberingAsync(tenantId, cancellationToken) + 1;
+                    db.JournalEntries.Add(entry);
+                    pendingRow.Status = AccountingPendingDocumentStatuses.Posted;
+                    pendingRow.LastError = null;
+                    pendingRow.JournalEntryId = entry.Id;
+                    pendingRow.UpdatedAtUtc = DateTime.UtcNow;
+                    await db.SaveChangesAsync(cancellationToken);
+                    await tx.CommitAsync(cancellationToken);
+                }
             }
             catch (Exception ex)
             {
+                // Un asiento que no se pudo grabar no se reintenta junto con el error.
+                db.DiscardUnsavedEntries();
                 pendingRow.Status = AccountingPendingDocumentStatuses.Error;
                 pendingRow.LastError = ex.Message.Length > 990 ? ex.Message[..990] : ex.Message;
                 pendingRow.JournalEntryId = null;
@@ -213,7 +222,8 @@ public sealed class AccountingPostingGateway(
                         && x.SourceModule == sourceModule
                         && x.SourceDocumentId == sourceDocumentId)
             .ToListAsync(cancellationToken);
-
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
+        int? lastNumber = null;
         foreach (var row in pending)
         {
             if (row.Status == AccountingPendingDocumentStatuses.Pending
@@ -277,14 +287,14 @@ public sealed class AccountingPostingGateway(
                 continue;
             }
 
-            var maxNumber = await db.JournalEntries
-                .Where(j => j.TenantId == tenantId)
-                .MaxAsync(j => (int?)j.EntryNumber, cancellationToken) ?? 0;
+            transaction ??= await db.Database.BeginTransactionAsync(cancellationToken);
+            lastNumber ??= await db.LockEntryNumberingAsync(tenantId, cancellationToken);
+            lastNumber++;
 
             var reversal = new JournalEntry
             {
                 TenantId = tenantId,
-                EntryNumber = maxNumber + 1,
+                EntryNumber = lastNumber.Value,
                 Date = DateTime.UtcNow,
                 Concept = string.IsNullOrWhiteSpace(reason)
                     ? $"Reversión asiento {original.EntryNumber}"
@@ -327,6 +337,11 @@ public sealed class AccountingPostingGateway(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            await transaction.DisposeAsync();
+        }
         logger.LogInformation(
             "ReverseAsync {Module}/{DocId}: {Count} pendientes marcados Skipped. Motivo: {Reason}",
             sourceModule, sourceDocumentId, pending.Count, reason);

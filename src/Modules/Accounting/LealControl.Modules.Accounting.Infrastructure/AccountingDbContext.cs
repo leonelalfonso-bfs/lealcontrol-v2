@@ -469,6 +469,31 @@ public sealed class AccountingDbContext : DbContext
         }
     }
 
+    /// <summary>
+    /// Numeración correlativa de asientos por empresa. Bloquea la numeración hasta el fin de la
+    /// transacción en curso (obligatoria) y devuelve el último número usado: así dos asientos
+    /// simultáneos nunca toman el mismo número.
+    /// </summary>
+    public async Task<int> LockEntryNumberingAsync(TenantId tenantId, CancellationToken ct = default)
+    {
+        if (Database.CurrentTransaction is null)
+            throw new InvalidOperationException("La numeración de asientos se toma dentro de una transacción.");
+        await Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(hashtextextended({0}, 0))",
+            ["accounting.journal-number:" + tenantId.Value.ToString("N")], ct);
+        return await JournalEntries.Where(j => j.TenantId == tenantId).MaxAsync(j => (int?)j.EntryNumber, ct) ?? 0;
+    }
+
+    /// <summary>True si el mes de esa fecha está cerrado con candado.</summary>
+    public Task<bool> IsPeriodLockedAsync(TenantId tenantId, DateTime date, CancellationToken ct = default) =>
+        Periods.AnyAsync(p => p.TenantId == tenantId && p.Year == date.Year && p.Month == date.Month && p.Status == "Locked", ct);
+
+    /// <summary>Descarta los asientos agregados y no guardados (por ejemplo, después de un error al grabar).</summary>
+    public void DiscardUnsavedEntries()
+    {
+        foreach (var e in ChangeTracker.Entries().Where(e => e.State == EntityState.Added && e.Entity is JournalEntry or JournalEntryLine).ToList())
+            e.State = EntityState.Detached;
+    }
+
     public async Task SeedDefaultChartOfAccountsAsync(TenantId tenantId, CancellationToken ct = default)
     {
         var hasAccounts = await Accounts.AnyAsync(a => a.TenantId == tenantId, ct);

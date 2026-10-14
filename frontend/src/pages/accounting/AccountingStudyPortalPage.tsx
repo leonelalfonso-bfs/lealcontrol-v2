@@ -8,7 +8,6 @@ export function AccountingStudyPortalPage() {
   const [costCenters, setCostCenters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -131,7 +130,7 @@ export function AccountingStudyPortalPage() {
       <div className="page-head">
         <div>
           <h1>🏢 Portal para Estudios Contables & Cierres Fiscales</h1>
-          <p className="muted">Bloqueo de meses auditados, Asistente de Cierre Anual, Asiento de Sueldos y exportación oficial de Libro IVA Digital para ARCA</p>
+          <p className="muted">Bloqueo de meses auditados, asistente de cierre anual y asiento de sueldos</p>
         </div>
       </div>
 
@@ -156,7 +155,7 @@ export function AccountingStudyPortalPage() {
           🏦 Conciliación Bancaria
         </Link>
         <Link to="/contabilidad/portal-estudio" className="tab-btn active">
-          🏢 Cierres & IVA Digital (ARCA)
+          🏢 Cierres y períodos
         </Link>
       </div>
 
@@ -271,62 +270,19 @@ export function AccountingStudyPortalPage() {
         </div>
       </div>
 
-      {/* ARCA Export Box */}
-      <div className="card pad" style={{ border: "1px solid var(--accent)", background: "rgba(37, 99, 235, 0.03)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <div style={{ fontSize: "32px" }}>🏛️</div>
-          <div>
-            <h3 style={{ margin: 0 }}>Generación de Libro IVA Digital Oficial (ARCA / AFIP)</h3>
-            <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
-              Archivos planos .TXT con diseño de registro según RG 4597/2019 listos para importar al portal de AFIP.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid-3" style={{ gap: 14, alignItems: "flex-end", maxWidth: "600px" }}>
-          <label>
-            Año Fiscal:
-            <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}>
-              <option value={2026}>2026</option>
-              <option value={2025}>2025</option>
-            </select>
-          </label>
-
-          <label>
-            Mes Fiscal:
-            <select value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}>
-              {months.map((m) => (
-                <option key={m.num} value={m.num}>
-                  {String(m.num).padStart(2, "0")} - {m.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="row" style={{ gap: 12, marginTop: 18 }}>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => window.open(`/api/v1/accounting/reports/iva-digital-sales?year=${selectedYear}&month=${selectedMonth}`, "_blank")}
-          >
-            📥 Descargar IVA Digital Ventas (.TXT)
-          </button>
-          <button
-            type="button"
-            className="btn ghost"
-            onClick={() => window.open(`/api/v1/accounting/reports/iva-digital-purchases?year=${selectedYear}&month=${selectedMonth}`, "_blank")}
-          >
-            📥 Descargar IVA Digital Compras (.TXT)
-          </button>
-        </div>
-      </div>
-
       {/* Fiscal Year Periods Locking Table */}
       <div className="card pad">
         <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div>
-            <h3 style={{ margin: 0 }}>🔒 Candado Fiscal & Cierre de Períodos Mensuales (Año {selectedYear})</h3>
+            <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              🔒 Candado Fiscal & Cierre de Períodos Mensuales
+              <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))} style={{ width: "auto" }}>
+                {[0, 1, 2].map((back) => {
+                  const y = new Date().getFullYear() - back;
+                  return <option key={y} value={y}>{y}</option>;
+                })}
+              </select>
+            </h3>
             <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
               Al bloquear un período, el sistema impide agregar o alterar comprobantes y asientos de dicho mes.
             </p>
