@@ -1917,6 +1917,21 @@ export type ServiceOrder = {
   completedAt?: string | null;
   createdBy?: string | null;
   problems: string[];
+  remitoId?: string | null;
+  remitoNumber?: string | null;
+  stockAppliedAt?: string | null;
+};
+
+export type ServiceOrderItem = { id: string; productId?: string | null; code: string; description: string; quantity: number; unit: string; serialNumbers?: string | null };
+export type ServiceOrderItemWrite = { productId?: string | null; code?: string; description?: string; quantity: number; unit?: string; serialNumbers?: string };
+export type ServiceOrderProduct = { id: string; code: string; name: string; unit: string; type: string; trackStock: boolean; hasSerialNumber: boolean; stock: number };
+export type ServiceOrderRemitoPreview = {
+  ready: boolean;
+  problem?: string | null;
+  salesOrderId?: string | null;
+  salesOrderNumber?: string | null;
+  orderLines: { id: string; productId?: string | null; description: string; ordered: number; delivered: number; pending: number }[];
+  items: { id: string; productId?: string | null; description: string; quantity: number; serialNumbers?: string | null; destination: "remito" | "consumption" | "none" }[];
 };
 
 export type ServiceOrderWrite = {

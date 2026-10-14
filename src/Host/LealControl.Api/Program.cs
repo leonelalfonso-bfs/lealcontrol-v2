@@ -428,6 +428,7 @@ try
     app.MapFinanceModule();
     app.MapHumanResourcesModule();
     app.MapFleetModule();
+    LealControl.Api.Fleet.ServiceOrderRemitoEndpoints.MapServiceOrderRemito(app);
     LealControl.Api.Security.PermissionEndpoints.MapPermissionEndpoints(app);
     LealControl.Api.Notices.NoticeEndpoints.MapPersonalNotices(app);
     app.MapAccountingModule();
