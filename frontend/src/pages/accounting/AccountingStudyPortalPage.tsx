@@ -2,6 +2,7 @@ import React, { useEffect, useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 
+import { todayAr } from "../../lib/dates";
 export function AccountingStudyPortalPage() {
   const [periods, setPeriods] = useState<any[]>([]);
   const [costCenters, setCostCenters] = useState<any[]>([]);
@@ -17,7 +18,7 @@ export function AccountingStudyPortalPage() {
   const [closingLoading, setClosingLoading] = useState(false);
 
   // Payroll Devengamiento Assistant State
-  const [payrollDate, setPayrollDate] = useState(new Date().toISOString().split("T")[0]);
+  const [payrollDate, setPayrollDate] = useState(todayAr());
   const [payrollPeriod, setPayrollPeriod] = useState("Agosto 2026");
   const [grossSalaries, setGrossSalaries] = useState<number>(10000000);
   const [employerContrib, setEmployerContrib] = useState<number>(2400000);

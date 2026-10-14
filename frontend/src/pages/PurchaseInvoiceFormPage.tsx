@@ -6,6 +6,7 @@ import { type InvoiceOcrResult } from "../api/automationApi";
 import { type Product, type PurchaseArcaVoucher, type PurchaseOrder, type PurchaseReception, type Supplier } from "../api/types";
 import { CustomerPicker, ProductPicker } from "../components/pickers";
 
+import { todayAr, addDaysAr } from "../lib/dates";
 interface InvoiceRow {
   productId?: string;
   code: string;
@@ -40,10 +41,8 @@ export function PurchaseInvoiceFormPage() {
   const [supplierName, setSupplierName] = useState("");
   const [supplierDocument, setSupplierDocument] = useState("");
   const [supplierTaxCondition, setSupplierTaxCondition] = useState("ResponsableInscripto");
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
-  const [dueDate, setDueDate] = useState(
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
-  );
+  const [issueDate, setIssueDate] = useState(todayAr());
+  const [dueDate, setDueDate] = useState(addDaysAr(30));
   const [currency, setCurrency] = useState("ARS");
   const [exchangeRate, setExchangeRate] = useState(1);
   const [iibbPerception, setIibbPerception] = useState(0);

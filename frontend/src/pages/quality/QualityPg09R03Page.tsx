@@ -5,6 +5,7 @@ import type { CalibrationReport } from "../../api/types";
 import type { QualitySatisfactionSurvey } from "../../api/types/quality";
 import { excelDate, exportToExcel, type ExcelColumn } from "../../components/ExcelTools";
 
+import { todayAr } from "../../lib/dates";
 const STATUS_LABEL: Record<string, string> = {
   Draft: "Borrador",
   Received: "Recibida",
@@ -74,7 +75,7 @@ export function QualityPg09R03Page() {
   const [filter, setFilter] = useState<Filter>("all");
 
   const [customerName, setCustomerName] = useState("");
-  const [surveyDate, setSurveyDate] = useState(new Date().toISOString().slice(0, 10));
+  const [surveyDate, setSurveyDate] = useState(todayAr());
   const [certificateNumber, setCertificateNumber] = useState("");
   const [calibrationReportId, setCalibrationReportId] = useState("");
   const [channel, setChannel] = useState("Other");
@@ -207,7 +208,7 @@ export function QualityPg09R03Page() {
       setScoreOverall("");
       setComments("");
       setNotes("");
-      setSurveyDate(new Date().toISOString().slice(0, 10));
+      setSurveyDate(todayAr());
       setSelectedId(created.id);
       load();
     } catch (err) {

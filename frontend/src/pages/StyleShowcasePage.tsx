@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useTheme, LIGHT_THEME, DARK_THEME } from "../context/ThemeContext";
 
+import { todayAr } from "../lib/dates";
 export const StyleShowcasePage: React.FC = () => {
   const { mode, setMode, isDark, currentConfig } = useTheme();
 
@@ -348,7 +349,7 @@ export const StyleShowcasePage: React.FC = () => {
 
               <label>
                 Fecha de Emisión
-                <input type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+                <input type="date" defaultValue={todayAr()} />
               </label>
             </div>
 

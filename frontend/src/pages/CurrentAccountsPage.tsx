@@ -12,6 +12,7 @@ import { EmailComposer } from "../components/EmailComposer";
 import type { CompanySettings } from "../api/types";
 import "./collections.css";
 
+import { todayAr } from "../lib/dates";
 type TabMode = "customers" | "suppliers" | "dual";
 
 /** NC = reduce deuda; ND = aumenta; factura normal = aumenta. */
@@ -299,7 +300,7 @@ export function CurrentAccountsPage() {
         const html2pdf = await loadHtml2Pdf();
         await html2pdf().set({
           margin: [8, 8, 10, 8] as [number, number, number, number],
-          filename: `Estado_de_cuenta_${name.replace(/[^\w]+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`,
+          filename: `Estado_de_cuenta_${name.replace(/[^\w]+/g, "_")}_${todayAr()}.pdf`,
           image: { type: "jpeg" as const, quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, logging: false },
           jsPDF: { unit: "mm" as const, format: "a4", orientation: "portrait" as const },
@@ -416,7 +417,7 @@ export function CurrentAccountsPage() {
         </div>
 
         {sendVia && (() => {
-          const fileName = `Estado_de_cuenta_${name.replace(/[^\w]+/g, "_")}_${new Date().toISOString().slice(0, 10)}.pdf`;
+          const fileName = `Estado_de_cuenta_${name.replace(/[^\w]+/g, "_")}_${todayAr()}.pdf`;
           const sender = company?.tradeName || company?.legalName || "";
           const balanceText = `$ ${finalBalance.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
           const documentPdf = { elementId: "account-statement-sheet", fileName };

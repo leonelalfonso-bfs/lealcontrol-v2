@@ -6,6 +6,7 @@ import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { numberToWords } from "../utils/numberToWords";
 import { type CompanySettings, type PurchaseInvoice, type Supplier } from "../api/types";
 
+import { arcaVoucherCode } from "../lib/documents";
 export function PurchaseInvoicePrintPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -83,19 +84,6 @@ export function PurchaseInvoicePrintPage() {
   const totalIva = invoice.iva21 + invoice.iva105 + invoice.iva27;
   const hasStockItems = invoice.items && invoice.items.some((i) => !!i.productId);
   const isReceived = !!invoice.purchaseReceptionId;
-
-  const letterCodeMap: Record<string, string> = {
-    A: "COD. 01",
-    B: "COD. 06",
-    C: "COD. 11",
-    M: "COD. 51",
-    NC_A: "COD. 03",
-    NC_B: "COD. 08",
-    NC_C: "COD. 13",
-    ND_A: "COD. 02",
-    ND_B: "COD. 07",
-    ND_C: "COD. 12"
-  };
 
   const invoiceTypeTitle =
     invoice.invoiceType.startsWith("NC")
@@ -258,7 +246,7 @@ export function PurchaseInvoicePrintPage() {
           >
             <span style={{ fontSize: "20px", fontWeight: "900", lineHeight: "1" }}>{letterDisplay}</span>
             <span style={{ fontSize: "7px", fontWeight: "bold", color: "#475569" }}>
-              {letterCodeMap[invoice.invoiceType] || "COD. 01"}
+              COD. {arcaVoucherCode(invoice.invoiceType) ?? "01"}
             </span>
           </div>
 

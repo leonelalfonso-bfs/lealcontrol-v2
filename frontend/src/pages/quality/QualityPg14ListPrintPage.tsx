@@ -5,6 +5,7 @@ import type { CompanySettings } from "../../api/types";
 import type { QualityPg14CalibrationProgramRow, QualityPg14UnifiedAsset } from "../../api/types/quality";
 import { loadHtml2Pdf } from "../../utils/loadHtml2Pdf";
 
+import { todayAr } from "../../lib/dates";
 const SOURCE: Record<string, string> = { StandardWeight: "Pesa", Instrument: "Instrumento", QualityEquipment: "Auxiliar" };
 const date = (value?: string | null) => value ? new Date(value).toLocaleDateString("es-AR") : "—";
 const cell: CSSProperties = { border: "1px solid #cbd5e1", padding: "5px 6px", fontSize: 10, verticalAlign: "top", overflowWrap: "anywhere" };
@@ -45,7 +46,7 @@ export function QualityPg14ListPrintPage() {
     try {
       const html2pdf = await loadHtml2Pdf();
       await html2pdf().set({
-        margin: [8, 8, 8, 8], filename: `${code}_${new Date().toISOString().slice(0, 10)}.pdf`,
+        margin: [8, 8, 8, 8], filename: `${code}_${todayAr()}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },

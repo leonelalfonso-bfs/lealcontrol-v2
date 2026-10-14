@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { type CustomerDetail, type CustomerSummary, type ProductSummary, type RemitoWrite } from "../api/types";
 import { ProductPicker } from "../components/pickers";
 
+import { todayAr } from "../lib/dates";
 interface RemitoLineItem {
   productId?: string;
   code: string;
@@ -38,7 +39,7 @@ export function RemitoFormPage() {
   const [customerDocument, setCustomerDocument] = useState("");
   const [locationId, setLocationId] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split("T")[0]);
+  const [deliveryDate, setDeliveryDate] = useState(todayAr());
   const [warehouse, setWarehouse] = useState("Depósito Central");
   const [carrierName, setCarrierName] = useState("");
   const [driverLicense, setDriverLicense] = useState("");

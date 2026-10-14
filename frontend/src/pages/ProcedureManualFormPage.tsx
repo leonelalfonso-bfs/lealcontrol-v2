@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { type ProcedureManual } from "../api/types";
 
+import { todayAr } from "../lib/dates";
 const AREAS = [
   "Metrología",
   "Calidad",
@@ -22,7 +23,7 @@ export function ProcedureManualFormPage() {
   const [title, setTitle] = useState("");
   const [area, setArea] = useState(AREAS[0]);
   const [version, setVersion] = useState("v1.0");
-  const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().slice(0, 10));
+  const [effectiveDate, setEffectiveDate] = useState(todayAr());
   const [status, setStatus] = useState("Vigente");
   const [description, setDescription] = useState("");
   const [documentUrl, setDocumentUrl] = useState("");
@@ -47,7 +48,7 @@ export function ProcedureManualFormPage() {
           setTitle(current.title);
           setArea(current.area);
           setVersion(current.version);
-          setEffectiveDate(current.effectiveDate ? current.effectiveDate.slice(0, 10) : new Date().toISOString().slice(0, 10));
+          setEffectiveDate(current.effectiveDate ? current.effectiveDate.slice(0, 10) : todayAr());
           setStatus(current.status);
           setDescription(current.description || "");
           setDocumentUrl(current.documentUrl || "");

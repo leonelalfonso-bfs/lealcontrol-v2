@@ -2,6 +2,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../../api/client";
 
+import { todayAr } from "../../lib/dates";
 interface EntryLineDraft {
   accountId: string;
   accountCode: string;
@@ -25,7 +26,7 @@ export function JournalEntryFormPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Form State
-  const [entryDate, setEntryDate] = useState(new Date().toISOString().split("T")[0]);
+  const [entryDate, setEntryDate] = useState(todayAr());
   const [concept, setConcept] = useState("");
   const [entryType, setEntryType] = useState("Standard");
   const [series, setSeries] = useState("General");

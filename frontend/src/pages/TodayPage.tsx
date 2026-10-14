@@ -11,6 +11,7 @@ import { withCollections, type ReceiptForImputation } from "../lib/receivables";
 import "../styles/instrumento.css";
 import "./today.css";
 
+import { todayAr } from "../lib/dates";
 type Range = "month" | "quarter" | "year";
 type Receipt = Awaited<ReturnType<typeof api.listCollectionReceipts>>[number];
 type MetrologySummary = Awaited<ReturnType<typeof api.getMetrologyDashboard>>;
@@ -106,7 +107,7 @@ function greeting() {
   return h < 12 ? "Buen día" : h < 20 ? "Buenas tardes" : "Buenas noches";
 }
 
-const DONE_KEY = () => `ins-today-done-${new Date().toISOString().slice(0, 10)}`;
+const DONE_KEY = () => `ins-today-done-${todayAr()}`;
 function readDone(): string[] {
   try {
     return JSON.parse(localStorage.getItem(DONE_KEY()) || "[]");

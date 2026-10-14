@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../../api/client";
 
+import { todayAr } from "../../lib/dates";
 export function GeneralLedgerPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialAccount = searchParams.get("accountCode") || "1.1.01.002";
@@ -74,7 +75,7 @@ export function GeneralLedgerPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `LIBRO_MAYOR_${acc.code || selectedAccountCode}_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `LIBRO_MAYOR_${acc.code || selectedAccountCode}_${todayAr()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

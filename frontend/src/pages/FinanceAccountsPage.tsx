@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { Modal } from "../components/ui/Modal";
 import { exportToExcel, type ExcelColumn } from "../components/ExcelTools";
 
+import { todayAr, addDaysAr, monthRangeAr } from "../lib/dates";
 type Account = {
   id: string;
   name: string;
@@ -143,7 +144,7 @@ export function FinanceAccountsPage() {
   const [manualForm, setManualForm] = useState({
     kind: "Credit" as "Credit" | "Debit",
     amount: "",
-    operationDate: new Date().toISOString().slice(0, 10),
+    operationDate: todayAr(),
     description: "",
     externalReference: ""
   });
@@ -231,7 +232,7 @@ export function FinanceAccountsPage() {
       setManualForm({
         kind: "Credit",
         amount: "",
-        operationDate: new Date().toISOString().slice(0, 10),
+        operationDate: todayAr(),
         description: "",
         externalReference: ""
       });
@@ -619,7 +620,7 @@ export function FinanceAccountsPage() {
   const handleExportExcel = () => {
     if (!selectedAccount) return;
 
-    const fileName = `extracto-${selectedAccount.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${new Date().toISOString().slice(0, 10)}`;
+    const fileName = `extracto-${selectedAccount.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${todayAr()}`;
 
     const columns: ExcelColumn<Movement>[] = [
       {
@@ -678,24 +679,16 @@ export function FinanceAccountsPage() {
   };
 
   const setDatePreset = (preset: "thisMonth" | "lastMonth" | "last30Days" | "all") => {
-    const today = new Date();
     if (preset === "all") {
       setStartDate("");
       setEndDate("");
-    } else if (preset === "thisMonth") {
-      const first = new Date(today.getFullYear(), today.getMonth(), 1);
-      const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      setStartDate(first.toISOString().slice(0, 10));
-      setEndDate(last.toISOString().slice(0, 10));
-    } else if (preset === "lastMonth") {
-      const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      const last = new Date(today.getFullYear(), today.getMonth(), 0);
-      setStartDate(first.toISOString().slice(0, 10));
-      setEndDate(last.toISOString().slice(0, 10));
+    } else if (preset === "thisMonth" || preset === "lastMonth") {
+      const range = monthRangeAr(preset === "lastMonth" ? 1 : 0);
+      setStartDate(range.from);
+      setEndDate(range.to);
     } else if (preset === "last30Days") {
-      const prev = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-      setStartDate(prev.toISOString().slice(0, 10));
-      setEndDate(today.toISOString().slice(0, 10));
+      setStartDate(addDaysAr(-30));
+      setEndDate(todayAr());
     }
   };
 

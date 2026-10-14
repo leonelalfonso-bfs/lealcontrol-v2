@@ -4,6 +4,7 @@ import { api } from "../../api/client";
 import type { QualityInstitutionalNote } from "../../api/types/quality";
 import { EQUIPMENT_STATUS, labelOf } from "./qualityLabels";
 
+import { todayAr } from "../../lib/dates";
 export function QualityMc01R05Page() {
   const [rows, setRows] = useState<QualityInstitutionalNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,7 +17,7 @@ export function QualityMc01R05Page() {
   const [body, setBody] = useState("");
   const [issuedBy, setIssuedBy] = useState("");
   const [audience, setAudience] = useState("");
-  const [issuedAt, setIssuedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [issuedAt, setIssuedAt] = useState(todayAr());
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
 

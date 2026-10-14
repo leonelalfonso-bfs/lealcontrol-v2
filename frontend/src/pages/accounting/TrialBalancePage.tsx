@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../api/client";
 
+import { todayAr } from "../../lib/dates";
 export function TrialBalancePage() {
   const [balance, setBalance] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -26,7 +27,7 @@ export function TrialBalancePage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `BALANCE_SUMAS_Y_SALDOS_8_COLUMNAS_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `BALANCE_SUMAS_Y_SALDOS_8_COLUMNAS_${todayAr()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
