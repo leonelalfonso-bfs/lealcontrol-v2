@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
-using LealControl.Modules.Accounting.Infrastructure;
 using LealControl.Modules.Finance.Infrastructure;
 using LealControl.Modules.Sales.Application.Invoices;
 using LealControl.QA.Auditors;
@@ -118,14 +117,8 @@ public sealed class QaSale003Scenario : ITestScenario
                 actual: $"${invoice.Iva21:N2}");
 
             // Contabilizar Factura
-            await context.HttpClient.PostAsJsonAsync("/api/v1/accounting/auto-post/invoice", new AutoPostInvoiceRequest(
-                InvoiceId: invoice.Id,
-                InvoiceNumber: invoice.FormattedNumber,
-                CustomerName: invoice.CustomerName,
-                Date: invoice.IssueDate,
-                NetAmount: invoice.Subtotal,
-                VatAmount: invoice.Iva21 + invoice.Iva105 + invoice.Iva27,
-                TotalAmount: invoice.Total));
+            await TestDataFactory.AuthorizeInvoiceAsync(context, invoice.Id);
+            await TestDataFactory.PostToAccountingAsync(context, invoice.IssueDate, "Sales");
 
             // Validar stock tras factura (90 unidades)
             await stockAuditor.AuditProductStockAsync(context, scenario, product.Id, stockAfterSale);
@@ -184,14 +177,8 @@ public sealed class QaSale003Scenario : ITestScenario
                 actual: $"${nc.Iva21:N2}");
 
             // Contabilizar Nota de Crédito
-            var postNcRes = await context.HttpClient.PostAsJsonAsync("/api/v1/accounting/auto-post/invoice", new AutoPostInvoiceRequest(
-                InvoiceId: nc.Id,
-                InvoiceNumber: nc.FormattedNumber,
-                CustomerName: nc.CustomerName,
-                Date: nc.IssueDate,
-                NetAmount: nc.Subtotal,
-                VatAmount: nc.Iva21 + nc.Iva105 + nc.Iva27,
-                TotalAmount: nc.Total));
+            await TestDataFactory.AuthorizeInvoiceAsync(context, nc.Id);
+            var postNcRes = await TestDataFactory.PostToAccountingAsync(context, nc.IssueDate, "Sales");
 
             scenario.AddCheck(
                 name: "Contabilización de Nota de Crédito responde 200/201",

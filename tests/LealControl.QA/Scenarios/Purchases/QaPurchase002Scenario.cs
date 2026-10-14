@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
-using LealControl.Modules.Accounting.Infrastructure;
 using LealControl.Modules.Finance.Infrastructure;
 using LealControl.Modules.Sales.Application.Purchases;
 using LealControl.QA.Auditors;
@@ -156,16 +155,7 @@ public sealed class QaPurchase002Scenario : ITestScenario
                 actual: $"${invoice.Iva21:N2}");
 
             // 2.3 Contabilización automática
-            var postPayload = new AutoPostPurchaseRequest(
-                PurchaseId: invoice.Id,
-                InvoiceNumber: invoice.FormattedNumber,
-                SupplierName: invoice.SupplierName,
-                Date: invoice.IssueDate,
-                NetAmount: invoice.Subtotal,
-                VatAmount: invoice.Iva21 + invoice.Iva105 + invoice.Iva27,
-                TotalAmount: invoice.Total);
-
-            var postRes = await context.HttpClient.PostAsJsonAsync("/api/v1/accounting/auto-post/purchase", postPayload);
+            var postRes = await TestDataFactory.PostToAccountingAsync(context, invoice.IssueDate, "Purchases");
             scenario.AddCheck(
                 name: "Contabilización de compra a crédito responde 200/201",
                 module: "Accounting",

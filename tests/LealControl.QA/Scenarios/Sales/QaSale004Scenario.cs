@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
-using LealControl.Modules.Accounting.Infrastructure;
 using LealControl.Modules.Finance.Infrastructure;
 using LealControl.Modules.Sales.Application.Invoices;
 using LealControl.QA.Auditors;
@@ -119,16 +118,8 @@ public sealed class QaSale004Scenario : ITestScenario
             }
 
             // 2.2 Asiento Contable Automático
-            var postPayload = new AutoPostInvoiceRequest(
-                InvoiceId: invoice.Id,
-                InvoiceNumber: invoice.FormattedNumber,
-                CustomerName: invoice.CustomerName,
-                Date: invoice.IssueDate,
-                NetAmount: invoice.Subtotal,
-                VatAmount: invoice.Iva21 + invoice.Iva105 + invoice.Iva27,
-                TotalAmount: invoice.Total);
-
-            var postRes = await context.HttpClient.PostAsJsonAsync("/api/v1/accounting/auto-post/invoice", postPayload);
+            await TestDataFactory.AuthorizeInvoiceAsync(context, invoice.Id);
+            var postRes = await TestDataFactory.PostToAccountingAsync(context, invoice.IssueDate, "Sales");
             scenario.AddCheck(
                 name: "Contabilización automática de factura multi-alícuota responde 200 OK",
                 module: "Accounting",

@@ -73,6 +73,9 @@ public static class AccountingAmountSources
     public const string Vat105 = "Vat105";
     public const string Vat27 = "Vat27";
     public const string TotalVat = "TotalVat";
+    public const string PerceptionIibb = "PerceptionIibb"; // Percepción de IIBB (practicada en ventas, sufrida en compras)
+    public const string PerceptionVat = "PerceptionVat"; // Percepción de IVA sufrida
+    public const string OtherTaxes = "OtherTaxes"; // Otros tributos de la factura de compra
     // Usados por plantillas seed actuales del módulo Contabilidad (finance/sales).
     public const string PaymentAmount = "PaymentAmount"; // Importe neto de cobro/pago
     public const string Withholdings = "Withholdings"; // Retenciones/percepciones sufridas o practicadas

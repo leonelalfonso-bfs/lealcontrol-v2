@@ -73,14 +73,36 @@ Hoy Contabilidad sirve para asientos manuales y para ver cobros y pagos. No refl
   - un error al grabar ya no deja asientos a medias.
 - **Cómo quedó:** `LockEntryNumberingAsync` toma la numeración con un bloqueo por empresa dentro de la transacción; `IsPeriodLockedAsync` controla el candado. Pruebas en `AccountingSafetyApiTests`, entre ellas diez asientos simultáneos con números seguidos.
 
-### C1. Contabilizar Ventas y Compras (el corazón)
+### C1. Contabilizar Ventas y Compras (hecha, PR "Contabilidad C1")
 
-- **Ventas** publica al **autorizar en ARCA**: facturas A y B, FCE y sus notas, con neto y IVA por alícuota, exento y percepciones. Al anular se revierte.
-- **Compras** publica al **registrar la factura del proveedor**: neto, IVA por alícuota y percepciones (IVA, IIBB, Ganancias). Al anular se revierte.
-- **Todo en pesos:** las facturas en dólares se convierten a la cotización del comprobante, y la moneda y el importe original quedan guardados en la línea.
-- Asientos modelo completos para cada tipo (los de fábrica cubren solo factura A y B, la nota de crédito A, y la factura y la nota de crédito A de compra).
-- Se contabiliza **por lote**, cuando alguien toca "contabilizar" (decisión 2).
-- Termina con el **manual de Ayuda de Contabilidad**.
+- **Cómo entra lo de Ventas y Compras:** al tocar "Contabilizar" (vista previa o ejecución), Contabilidad les pide a Ventas y Compras que publiquen en la cola los comprobantes del período que faltan (`IAccountingDocumentSource`). Así nada se asienta solo (decisión 2) y lo cargado antes de usar Contabilidad entra la primera vez que se contabiliza ese período.
+  - **Ventas:** facturas, notas de débito y de crédito **autorizadas por ARCA** (también FCE). No entran borradores, rechazadas ni proformas.
+  - **Compras:** facturas y notas de proveedor registradas.
+  - **Anuladas:** si ya estaban publicadas, se sacan de la cola o se contra-asientan.
+- **Todo en pesos:** cada importe se convierte a la cotización del comprobante y se redondea por separado; el total es la suma de las partes, así el asiento cuadra al centavo. La moneda, la cotización y el total originales quedan como datos del documento.
+- **Asientos modelo de fábrica nuevos**, con todas las alícuotas (21, 10,5 y 27 %), exento y percepciones; cada línea solo aparece si el comprobante tiene ese importe:
+  - AM-VTA-FAC y AM-VTA-NC (ventas);
+  - AM-CMP-FAC y AM-CMP-NC (compras: también percepciones de IVA e IIBB sufridas y otros tributos).
+  - Los anteriores (AM-VTA-01/02/03 y AM-CMP-01/02, solo IVA 21 %) quedan inactivos en cada empresa al instalarse los nuevos. Se agregaron las cuentas 5.1.03 "Compras de Mercaderías, Insumos y Servicios" y 5.2.09 "Impuestos y Tasas".
+- **La ventana "Contabilizar" ahora funciona:** el botón estaba deshabilitado ("en reconstrucción"). La vista previa muestra los avisos reales (comprobantes sin modelo, asientos que no cuadran) en lugar de un "validado con éxito" fijo. Se quitaron la casilla de Inventario (no publica nada todavía) y los contadores que no incluían Ventas ni Compras; el enlace final iba a una ruta inexistente.
+- **Concurrencia:**
+  - un "Contabilizar" a la vez por empresa (`LockPostingRunAsync`), así dos personas no publican ni asientan lo mismo;
+  - el número de lote ya no choca si hay dos lotes en el mismo segundo;
+  - el lote lo firma el usuario conectado, no la pantalla.
+- **El período incluye el último día completo:** antes quedaban afuera los comprobantes del día "hasta" que tenían hora.
+- **Se borraron** los endpoints `auto-post/invoice`, `auto-post/purchase` y `auto-post/receipt`. Ninguna pantalla los usaba, publicaban solo neto e IVA 21 %, y además **encendían solos la contabilización automática de la empresa**. Los escenarios QA ahora contabilizan por el circuito real.
+- **El cierre de ejercicio** pide permiso de Aprobar, como contabilizar y cerrar meses.
+- **Bug de Compras corregido:** el total de la factura de proveedor sumaba dos veces el exento (ya estaba dentro del subtotal), lo que inflaba la deuda con el proveedor. Las facturas viejas con exento quedan con el total mal hasta corregirlas: ver el conteo en el PR.
+- **Manual de Ayuda de Contabilidad** (`/contabilidad/ayuda`): el circuito completo, de los comprobantes al cierre.
+- **Pruebas:** `AccountingSalesPurchasesPostingApiTests` cubre:
+  - venta con tres alícuotas y exento;
+  - venta en dólares;
+  - borrador excluido;
+  - compra con percepciones;
+  - sin duplicados;
+  - anulación con contra-asiento;
+  - nota de crédito;
+  - modelos viejos retirados.
 
 ### C2. Libros IVA reales
 

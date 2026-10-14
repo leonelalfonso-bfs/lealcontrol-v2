@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Accounting.Contracts.Posting;
 using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Modules.Accounting.Infrastructure;
@@ -483,6 +484,34 @@ public sealed class AccountingDbContext : DbContext
         return await JournalEntries.Where(j => j.TenantId == tenantId).MaxAsync(j => (int?)j.EntryNumber, ct) ?? 0;
     }
 
+    /// <summary>
+    /// Un "contabilizar" a la vez por empresa: traer los comprobantes de Ventas y Compras y asentar el
+    /// lote quedan en fila, así dos personas no publican ni asientan lo mismo. Se libera al descartarlo.
+    /// </summary>
+    public async Task<IAsyncDisposable> LockPostingRunAsync(TenantId tenantId, CancellationToken ct = default)
+    {
+        // La conexión queda abierta hasta liberar: el bloqueo es de la sesión y abarca varias transacciones.
+        await Database.OpenConnectionAsync(ct);
+        var key = "accounting.posting-run:" + tenantId.Value.ToString("N");
+        await Database.ExecuteSqlRawAsync("SELECT pg_advisory_lock(hashtextextended({0}, 0))", [key], ct);
+        return new PostingRunLock(this, key);
+    }
+
+    private sealed class PostingRunLock(AccountingDbContext db, string key) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_unlock(hashtextextended({0}, 0))", [key], CancellationToken.None);
+            }
+            finally
+            {
+                await db.Database.CloseConnectionAsync();
+            }
+        }
+    }
+
     /// <summary>True si el mes de esa fecha está cerrado con candado.</summary>
     public Task<bool> IsPeriodLockedAsync(TenantId tenantId, DateTime date, CancellationToken ct = default) =>
         Periods.AnyAsync(p => p.TenantId == tenantId && p.Year == date.Year && p.Month == date.Month && p.Status == "Locked", ct);
@@ -579,6 +608,7 @@ public sealed class AccountingDbContext : DbContext
             new(Guid.NewGuid(), tenantId, "5.1", "Costo de Mercaderías y Servicios Vendidos", "Expense", 2, "5", false),
             new(Guid.NewGuid(), tenantId, "5.1.01", "Costo de Mercaderías Vendidas (CMV)", "Expense", 3, "5.1", true),
             new(Guid.NewGuid(), tenantId, "5.1.02", "Costo de Insumos & Repuestos Utilizados", "Expense", 3, "5.1", true),
+            new(Guid.NewGuid(), tenantId, "5.1.03", "Compras de Mercaderías, Insumos y Servicios", "Expense", 3, "5.1", true),
 
             new(Guid.NewGuid(), tenantId, "5.2", "Gastos de Administración & Operaciones", "Expense", 2, "5", false),
             new(Guid.NewGuid(), tenantId, "5.2.01", "Sueldos y Jornales del Personal", "Expense", 3, "5.2", true),
@@ -589,6 +619,7 @@ public sealed class AccountingDbContext : DbContext
             new(Guid.NewGuid(), tenantId, "5.2.06", "Servicios Públicos (Energía Eléctrica, Gas, Comunicaciones)", "Expense", 3, "5.2", true),
             new(Guid.NewGuid(), tenantId, "5.2.07", "Seguros de Vehículos e Instalaciones", "Expense", 3, "5.2", true),
             new(Guid.NewGuid(), tenantId, "5.2.08", "Amortización de Bienes de Uso", "Expense", 3, "5.2", true),
+            new(Guid.NewGuid(), tenantId, "5.2.09", "Impuestos y Tasas", "Expense", 3, "5.2", true),
 
             new(Guid.NewGuid(), tenantId, "5.3", "Gastos Financieros & Bancarios", "Expense", 2, "5", false),
             new(Guid.NewGuid(), tenantId, "5.3.01", "Comisiones & Gastos Bancarios", "Expense", 3, "5.3", true),
@@ -643,76 +674,11 @@ public sealed class AccountingDbContext : DbContext
         var hasTemplates = await JournalTemplates.AnyAsync(t => t.TenantId == tenantId, ct);
         if (hasTemplates)
         {
-            await EnsurePurchaseCreditNoteTemplateAsync(tenantId, ct);
+            await EnsureStandardDocumentTemplatesAsync(tenantId, ct);
             return;
         }
 
-        var t1 = new JournalTemplate
-        {
-            TenantId = tenantId,
-            Code = "AM-VTA-01",
-            Name = "Factura A de Venta en Cta Cte",
-            SourceModule = "Sales",
-            DocumentType = "InvoiceA",
-            EntrySeries = "Ventas",
-            Description = "Modelo estándar para Factura A de venta a clientes en cuenta corriente con discriminación de IVA y percepciones.",
-            Status = "Active"
-        };
-        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "1.1.02.001", AccountName = "Deudores por Ventas (Clientes)", DebitCredit = "Debit", AmountSource = "Total", Condition = "Always" });
-        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "4.1.01", AccountName = "Venta de Mercaderías & Bienes", DebitCredit = "Credit", AmountSource = "Net21", Condition = "IfHasVat21" });
-        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "4.1.01", AccountName = "Venta de Mercaderías (10.5%)", DebitCredit = "Credit", AmountSource = "Net105", Condition = "IfHasVat105" });
-        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 4, AccountCode = "4.1.01", AccountName = "Venta de Mercaderías Exentas", DebitCredit = "Credit", AmountSource = "NetExempt", Condition = "Always" });
-        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 5, AccountCode = "2.1.02.001", AccountName = "IVA Débito Fiscal (Ventas 21%)", DebitCredit = "Credit", AmountSource = "Vat21", Condition = "IfHasVat21" });
-        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 6, AccountCode = "2.1.02.001", AccountName = "IVA Débito Fiscal (Ventas 10.5%)", DebitCredit = "Credit", AmountSource = "Vat105", Condition = "IfHasVat105" });
-        t1.Lines.Add(new JournalTemplateLine { TemplateId = t1.Id, TenantId = tenantId, OrderIndex = 7, AccountCode = "2.1.02.005", AccountName = "Impuesto a los Ingresos Brutos a Pagar", DebitCredit = "Credit", AmountSource = "PerceptionIibb", Condition = "IfHasPerceptionIibb" });
-
-        var t2 = new JournalTemplate
-        {
-            TenantId = tenantId,
-            Code = "AM-VTA-02",
-            Name = "Factura B/C de Venta a Consumidor Final",
-            SourceModule = "Sales",
-            DocumentType = "InvoiceB",
-            EntrySeries = "Ventas",
-            Description = "Modelo para Facturas B o C a consumidores finales y monotributistas.",
-            Status = "Active"
-        };
-        t2.Lines.Add(new JournalTemplateLine { TemplateId = t2.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "1.1.02.001", AccountName = "Deudores por Ventas (Clientes)", DebitCredit = "Debit", AmountSource = "Total", Condition = "Always" });
-        t2.Lines.Add(new JournalTemplateLine { TemplateId = t2.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "4.1.01", AccountName = "Venta de Mercaderías & Bienes", DebitCredit = "Credit", AmountSource = "Net21", Condition = "Always" });
-        t2.Lines.Add(new JournalTemplateLine { TemplateId = t2.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "2.1.02.001", AccountName = "IVA Débito Fiscal (Ventas)", DebitCredit = "Credit", AmountSource = "Vat21", Condition = "IfHasVat21" });
-
-        var t3 = new JournalTemplate
-        {
-            TenantId = tenantId,
-            Code = "AM-VTA-03",
-            Name = "Nota de Crédito de Venta",
-            SourceModule = "Sales",
-            DocumentType = "CreditNoteA",
-            EntrySeries = "Ventas",
-            Description = "Modelo para Notas de Crédito de ventas (anulación o bonificación).",
-            Status = "Active"
-        };
-        t3.Lines.Add(new JournalTemplateLine { TemplateId = t3.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "1.1.02.001", AccountName = "Deudores por Ventas (Clientes)", DebitCredit = "Credit", AmountSource = "Total", Condition = "Always" });
-        t3.Lines.Add(new JournalTemplateLine { TemplateId = t3.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "4.1.01", AccountName = "Venta de Mercaderías & Bienes", DebitCredit = "Debit", AmountSource = "Net21", Condition = "Always" });
-        t3.Lines.Add(new JournalTemplateLine { TemplateId = t3.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "2.1.02.001", AccountName = "IVA Débito Fiscal (Ventas)", DebitCredit = "Debit", AmountSource = "Vat21", Condition = "IfHasVat21" });
-
-        var t4 = new JournalTemplate
-        {
-            TenantId = tenantId,
-            Code = "AM-CMP-01",
-            Name = "Factura de Compra a Proveedores",
-            SourceModule = "Purchases",
-            DocumentType = "InvoiceA",
-            EntrySeries = "Compras",
-            Description = "Modelo para registro de Facturas A y B de compras de mercaderías e insumos.",
-            Status = "Active"
-        };
-        t4.Lines.Add(new JournalTemplateLine { TemplateId = t4.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "5.1.01", AccountName = "Costo de Mercaderías Vendidas (CMV)", DebitCredit = "Debit", AmountSource = "Net21", Condition = "Always" });
-        t4.Lines.Add(new JournalTemplateLine { TemplateId = t4.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.03.001", AccountName = "IVA Crédito Fiscal (Compras)", DebitCredit = "Debit", AmountSource = "Vat21", Condition = "IfHasVat21" });
-        t4.Lines.Add(new JournalTemplateLine { TemplateId = t4.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "1.1.03.002", AccountName = "Retenciones y Percepciones IIBB", DebitCredit = "Debit", AmountSource = "PerceptionIibb", Condition = "IfHasPerceptionIibb" });
-        t4.Lines.Add(new JournalTemplateLine { TemplateId = t4.Id, TenantId = tenantId, OrderIndex = 4, AccountCode = "2.1.01.001", AccountName = "Proveedores de Mercaderías & Servicios", DebitCredit = "Credit", AmountSource = "Total", Condition = "Always" });
-
-        var t5 = new JournalTemplate
+        var collection = new JournalTemplate
         {
             TenantId = tenantId,
             Code = "AM-FIN-01",
@@ -723,11 +689,11 @@ public sealed class AccountingDbContext : DbContext
             Description = "Modelo para imputación contable de cobranzas con valores y retenciones sufridas.",
             Status = "Active"
         };
-        t5.Lines.Add(new JournalTemplateLine { TemplateId = t5.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "1.1.01.001", AccountName = "Caja Central Administración", DebitCredit = "Debit", AmountSource = "PaymentAmount", Condition = "Always" });
-        t5.Lines.Add(new JournalTemplateLine { TemplateId = t5.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.03.002", AccountName = "Retenciones y Percepciones IIBB", DebitCredit = "Debit", AmountSource = "Withholdings", Condition = "IfHasWithholding" });
-        t5.Lines.Add(new JournalTemplateLine { TemplateId = t5.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "1.1.02.001", AccountName = "Deudores por Ventas (Clientes)", DebitCredit = "Credit", AmountSource = "Total", Condition = "Always" });
+        collection.Lines.Add(new JournalTemplateLine { TemplateId = collection.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "1.1.01.001", AccountName = "Caja Central Administración", DebitCredit = "Debit", AmountSource = "PaymentAmount", Condition = "Always" });
+        collection.Lines.Add(new JournalTemplateLine { TemplateId = collection.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.03.002", AccountName = "Retenciones y Percepciones IIBB", DebitCredit = "Debit", AmountSource = "Withholdings", Condition = "IfHasWithholding" });
+        collection.Lines.Add(new JournalTemplateLine { TemplateId = collection.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "1.1.02.001", AccountName = "Deudores por Ventas (Clientes)", DebitCredit = "Credit", AmountSource = "Total", Condition = "Always" });
 
-        var t6 = new JournalTemplate
+        var payment = new JournalTemplate
         {
             TenantId = tenantId,
             Code = "AM-FIN-02",
@@ -738,48 +704,121 @@ public sealed class AccountingDbContext : DbContext
             Description = "Modelo para pagos a proveedores desde banco o caja con retenciones emitidas.",
             Status = "Active"
         };
-        t6.Lines.Add(new JournalTemplateLine { TemplateId = t6.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "2.1.01.001", AccountName = "Proveedores de Mercaderías & Servicios", DebitCredit = "Debit", AmountSource = "Total", Condition = "Always" });
-        t6.Lines.Add(new JournalTemplateLine { TemplateId = t6.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.01.002", AccountName = "Banco Galicia C/C", DebitCredit = "Credit", AmountSource = "PaymentAmount", Condition = "Always" });
-        t6.Lines.Add(new JournalTemplateLine { TemplateId = t6.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "2.1.02.006", AccountName = "Retenciones Impositivas Practicadas a Pagar", DebitCredit = "Credit", AmountSource = "Withholdings", Condition = "IfHasWithholding" });
+        payment.Lines.Add(new JournalTemplateLine { TemplateId = payment.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "2.1.01.001", AccountName = "Proveedores de Mercaderías & Servicios", DebitCredit = "Debit", AmountSource = "Total", Condition = "Always" });
+        payment.Lines.Add(new JournalTemplateLine { TemplateId = payment.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.01.002", AccountName = "Banco Galicia C/C", DebitCredit = "Credit", AmountSource = "PaymentAmount", Condition = "Always" });
+        payment.Lines.Add(new JournalTemplateLine { TemplateId = payment.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "2.1.02.006", AccountName = "Retenciones Impositivas Practicadas a Pagar", DebitCredit = "Credit", AmountSource = "Withholdings", Condition = "IfHasWithholding" });
 
-        var t7 = BuildPurchaseCreditNoteTemplate(tenantId);
-
-        JournalTemplates.AddRange(t1, t2, t3, t4, t5, t6, t7);
+        JournalTemplates.AddRange(collection, payment);
         await SaveChangesAsync(ct);
+        await EnsureStandardDocumentTemplatesAsync(tenantId, ct);
+    }
+
+    /// <summary>Códigos de los asientos modelo de fábrica para comprobantes de Ventas y Compras.</summary>
+    public static class StandardTemplates
+    {
+        public const string SalesInvoice = "AM-VTA-FAC";
+        public const string SalesCreditNote = "AM-VTA-NC";
+        public const string PurchaseInvoice = "AM-CMP-FAC";
+        public const string PurchaseCreditNote = "AM-CMP-NC";
+        /// <summary>Versiones anteriores, incompletas (solo IVA 21 %): se desactivan al instalar las nuevas.</summary>
+        public static readonly string[] Superseded = ["AM-VTA-01", "AM-VTA-02", "AM-VTA-03", "AM-CMP-01", "AM-CMP-02"];
     }
 
     /// <summary>
-    /// Garantiza el asiento modelo de NC de proveedor aunque el tenant ya tenga plantillas seedadas
-    /// (versiones anteriores no incluían AM-CMP-02 → auto-post NC devolvía 400).
+    /// Garantiza las cuentas y los asientos modelo de fábrica para facturas, notas de débito y notas de
+    /// crédito de Ventas y Compras: todas las alícuotas (21, 10,5 y 27 %), exento y percepciones.
+    /// No modifica lo que cada empresa ya personalizó.
     /// </summary>
-    public async Task EnsurePurchaseCreditNoteTemplateAsync(TenantId tenantId, CancellationToken ct = default)
+    public async Task EnsureStandardDocumentTemplatesAsync(TenantId tenantId, CancellationToken ct = default)
     {
-        var exists = await JournalTemplates.AnyAsync(
-            t => t.TenantId == tenantId && t.Code == "AM-CMP-02", ct);
-        if (exists) return;
+        if (await Accounts.AnyAsync(a => a.TenantId == tenantId, ct))
+        {
+            var codes = await Accounts.Where(a => a.TenantId == tenantId).Select(a => a.Code).ToListAsync(ct);
+            if (!codes.Contains("5.1.03"))
+                Accounts.Add(new Account(Guid.NewGuid(), tenantId, "5.1.03", "Compras de Mercaderías, Insumos y Servicios", "Expense", 3, "5.1", true));
+            if (!codes.Contains("5.2.09"))
+                Accounts.Add(new Account(Guid.NewGuid(), tenantId, "5.2.09", "Impuestos y Tasas", "Expense", 3, "5.2", true));
+        }
 
-        var template = BuildPurchaseCreditNoteTemplate(tenantId);
-        JournalTemplates.Add(template);
+        var existing = await JournalTemplates.Where(t => t.TenantId == tenantId).ToListAsync(ct);
+        var installed = false;
+        foreach (var template in BuildStandardDocumentTemplates(tenantId))
+        {
+            if (existing.Any(t => t.Code == template.Code)) continue;
+            JournalTemplates.Add(template);
+            installed = true;
+        }
+        if (installed)
+        {
+            foreach (var old in existing.Where(t => StandardTemplates.Superseded.Contains(t.Code) && t.Status == "Active"))
+            {
+                old.Status = "Inactive";
+                old.UpdatedAtUtc = DateTime.UtcNow;
+            }
+        }
         await SaveChangesAsync(ct);
     }
 
-    private static JournalTemplate BuildPurchaseCreditNoteTemplate(TenantId tenantId)
+    private static IEnumerable<JournalTemplate> BuildStandardDocumentTemplates(TenantId tenantId)
     {
-        var t = new JournalTemplate
+        JournalTemplate Template(string code, string name, string module, string docType, string series, string description,
+            params (string Account, string Name, string Side, string Source)[] lines)
         {
-            TenantId = tenantId,
-            Code = "AM-CMP-02",
-            Name = "Nota de Crédito de Compra a Proveedores",
-            SourceModule = "Purchases",
-            DocumentType = "CreditNoteA",
-            EntrySeries = "Compras",
-            Description = "Modelo para Notas de Crédito de proveedores (NC_A/NC-A): invierte el asiento de la factura de compra.",
-            Status = "Active"
-        };
-        // Invertido respecto de AM-CMP-01: crédito en gasto/IVA, débito en proveedores.
-        t.Lines.Add(new JournalTemplateLine { TemplateId = t.Id, TenantId = tenantId, OrderIndex = 1, AccountCode = "5.1.01", AccountName = "Costo de Mercaderías Vendidas (CMV)", DebitCredit = "Credit", AmountSource = "Net21", Condition = "Always" });
-        t.Lines.Add(new JournalTemplateLine { TemplateId = t.Id, TenantId = tenantId, OrderIndex = 2, AccountCode = "1.1.03.001", AccountName = "IVA Crédito Fiscal (Compras)", DebitCredit = "Credit", AmountSource = "Vat21", Condition = "IfHasVat21" });
-        t.Lines.Add(new JournalTemplateLine { TemplateId = t.Id, TenantId = tenantId, OrderIndex = 3, AccountCode = "2.1.01.001", AccountName = "Proveedores de Mercaderías & Servicios", DebitCredit = "Debit", AmountSource = "Total", Condition = "Always" });
-        return t;
+            var t = new JournalTemplate
+            {
+                TenantId = tenantId, Code = code, Name = name, SourceModule = module, DocumentType = docType,
+                EntrySeries = series, Description = description, Status = "Active"
+            };
+            var order = 1;
+            foreach (var (account, accountName, side, source) in lines)
+            {
+                t.Lines.Add(new JournalTemplateLine
+                {
+                    TemplateId = t.Id, TenantId = tenantId, OrderIndex = order++, AccountCode = account, AccountName = accountName,
+                    DebitCredit = side, AmountSource = source,
+                    // El total siempre; cada alícuota, solo si el comprobante la tiene.
+                    Condition = source == "Total" ? "Always" : $"IfHas{source}"
+                });
+            }
+            return t;
+        }
+        static (string, string, string, string)[] Flip((string Account, string Name, string Side, string Source)[] lines) =>
+            lines.Select(l => (l.Account, l.Name, l.Side == "Debit" ? "Credit" : "Debit", l.Source)).ToArray();
+
+        (string, string, string, string)[] sale =
+        [
+            ("1.1.02.001", "Deudores por Ventas (Clientes)", "Debit", "Total"),
+            ("4.1.01", "Ventas gravadas 21%", "Credit", "Net21"),
+            ("4.1.01", "Ventas gravadas 10,5%", "Credit", "Net105"),
+            ("4.1.01", "Ventas gravadas 27%", "Credit", "Net27"),
+            ("4.1.01", "Ventas exentas o no gravadas", "Credit", "NetExempt"),
+            ("2.1.02.001", "IVA Débito Fiscal 21%", "Credit", "Vat21"),
+            ("2.1.02.001", "IVA Débito Fiscal 10,5%", "Credit", "Vat105"),
+            ("2.1.02.001", "IVA Débito Fiscal 27%", "Credit", "Vat27"),
+            ("2.1.02.005", "Percepción de Ingresos Brutos a Pagar", "Credit", "PerceptionIibb")
+        ];
+        (string, string, string, string)[] purchase =
+        [
+            ("5.1.03", "Compras gravadas 21%", "Debit", "Net21"),
+            ("5.1.03", "Compras gravadas 10,5%", "Debit", "Net105"),
+            ("5.1.03", "Compras gravadas 27%", "Debit", "Net27"),
+            ("5.1.03", "Compras exentas o no gravadas", "Debit", "NetExempt"),
+            ("1.1.03.001", "IVA Crédito Fiscal 21%", "Debit", "Vat21"),
+            ("1.1.03.001", "IVA Crédito Fiscal 10,5%", "Debit", "Vat105"),
+            ("1.1.03.001", "IVA Crédito Fiscal 27%", "Debit", "Vat27"),
+            ("1.1.03.004", "Percepciones de IVA Sufridas", "Debit", "PerceptionVat"),
+            ("1.1.03.002", "Percepciones de Ingresos Brutos Sufridas", "Debit", "PerceptionIibb"),
+            ("5.2.09", "Otros tributos", "Debit", "OtherTaxes"),
+            ("2.1.01.001", "Proveedores de Mercaderías & Servicios", "Credit", "Total")
+        ];
+
+        yield return Template(StandardTemplates.SalesInvoice, "Factura o nota de débito de venta", "Sales", AccountingDocumentTypes.All, "Ventas",
+            "Facturas A, B, C y de Crédito Electrónica, y notas de débito: deudores contra ventas por alícuota, IVA débito y percepciones.", sale);
+        yield return Template(StandardTemplates.SalesCreditNote, "Nota de crédito de venta", "Sales", "CreditNote", "Ventas",
+            "Notas de crédito de venta: el asiento de la factura, invertido.", Flip(sale));
+        yield return Template(StandardTemplates.PurchaseInvoice, "Factura o nota de débito de compra", "Purchases", AccountingDocumentTypes.All, "Compras",
+            "Facturas y notas de débito de proveedores: compras por alícuota, IVA crédito, percepciones sufridas y otros tributos contra proveedores.", purchase);
+        yield return Template(StandardTemplates.PurchaseCreditNote, "Nota de crédito de compra", "Purchases", "CreditNote", "Compras",
+            "Notas de crédito de proveedores: el asiento de la factura de compra, invertido.", Flip(purchase));
     }
 }

@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<LealControl.Modules.Sales.Infrastructure.Fiscal.FiscalReservationService>();
         services.AddScoped<LealControl.Modules.Sales.Infrastructure.Fiscal.FiscalVoucherRecoveryService>();
         services.AddScoped<LealControl.Modules.Sales.Infrastructure.Fiscal.FiscalAuthorizationService>();
+        services.AddScoped<LealControl.Modules.Accounting.Contracts.Posting.IAccountingDocumentSource, Accounting.SalesAccountingDocumentSource>();
         services.AddScoped<IQuoteRepository, QuoteRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();

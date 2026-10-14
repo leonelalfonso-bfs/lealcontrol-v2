@@ -9,7 +9,7 @@ namespace LealControl.Modules.Accounting.Infrastructure;
 
 /// <summary>
 /// Encola <see cref="PostableDocument"/> en accounting.pending_documents.
-/// El asiento real se genera en batch-post / auto-post (motor de plantillas).
+/// El asiento real se genera en el lote (batch-post) con el motor de plantillas.
 /// </summary>
 public sealed class AccountingPostingGateway(
     AccountingDbContext db,
@@ -201,6 +201,25 @@ public sealed class AccountingPostingGateway(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlySet<string>> FilterUnpublishedAsync(
+        string sourceModule,
+        IReadOnlyCollection<string> sourceDocumentIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (sourceDocumentIds.Count == 0) return new HashSet<string>();
+        await db.EnsureAccountingTablesAsync(cancellationToken);
+        var tenantId = tenant.TenantId;
+        var ids = sourceDocumentIds.Distinct().ToList();
+        // Ya publicado = está en la cola (en cualquier estado, también revertido) o tiene asiento.
+        var queued = await db.PendingDocuments.AsNoTracking()
+            .Where(x => x.TenantId == tenantId && x.SourceModule == sourceModule && ids.Contains(x.SourceDocumentId))
+            .Select(x => x.SourceDocumentId).ToListAsync(cancellationToken);
+        var posted = await db.JournalEntries.AsNoTracking()
+            .Where(j => j.TenantId == tenantId && j.SourceModule == sourceModule && j.SourceDocumentId != null && ids.Contains(j.SourceDocumentId))
+            .Select(j => j.SourceDocumentId!).ToListAsync(cancellationToken);
+        return ids.Except(queued).Except(posted).ToHashSet();
     }
 
     public async Task ReverseAsync(

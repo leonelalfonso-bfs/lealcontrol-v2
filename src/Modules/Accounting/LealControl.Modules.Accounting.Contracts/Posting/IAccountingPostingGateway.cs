@@ -13,4 +13,13 @@ public interface IAccountingPostingGateway
         string sourceDocumentId,
         string reason,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// De esos documentos, los que todavía no están en la cola contable (ni asentados).
+    /// Sirve para publicar solo lo nuevo sin recorrer la cola entera.
+    /// </summary>
+    Task<IReadOnlySet<string>> FilterUnpublishedAsync(
+        string sourceModule,
+        IReadOnlyCollection<string> sourceDocumentIds,
+        CancellationToken cancellationToken = default);
 }
