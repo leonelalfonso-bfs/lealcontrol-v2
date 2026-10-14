@@ -5,41 +5,107 @@ on:
   push:
     branches: [staging, main, "staging/**"]
 
+# Un push nuevo al mismo PR cancela la corrida anterior; en main se corre todo siempre
+# (el deploy a producción espera a que este workflow termine bien).
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  NODE_VERSION: "22"
+
 jobs:
-  build-and-test:
+  frontend:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-node@v7
         with:
-          dotnet-version: "10.0.x"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Restore and test with coverage
-        run: |
-          dotnet restore
-          dotnet test --no-restore --configuration Release \
-            --collect:"XPlat Code Coverage" \
-            --results-directory ./TestResults \
-            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
-
-      - name: Upload coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-results
-          path: TestResults/**/coverage.cobertura.xml
-          if-no-files-found: warn
 
       - name: Frontend build
         working-directory: frontend
         run: |
           npm ci
           npm run build
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Todos los proyectos de prueba menos el de integración (ese se reparte abajo).
+      - name: Test
+        run: |
+          dotnet restore
+          for project in $(ls tests/*/*.csproj | grep -v IntegrationTests); do
+            dotnet test "$project" --no-restore --configuration Release \
+              --collect:"XPlat Code Coverage" --results-directory ./TestResults \
+              -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+          done
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-unit
+          path: TestResults/**/coverage.cobertura.xml
+          if-no-files-found: warn
+
+  # Las pruebas de integración corren de a una (cada clase levanta su PostgreSQL), así que se
+  # reparten por clase entre varias máquinas: mismo resultado, en una fracción del tiempo.
+  integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      SHARDS: 4
+      TEST_DIR: tests/LealControl.Modules.Crm.IntegrationTests
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Elegir las clases de esta parte
+        id: shard
+        run: |
+          classes=$(grep -lE '\[(Fact|Theory)' "$TEST_DIR"/*.cs \
+            | xargs grep -hE '^\s*(public |internal )?((sealed|static|partial) )*class [A-Za-z0-9_]+' \
+            | sed -E 's/.*class ([A-Za-z0-9_]+).*/\1/' | sort -u)
+          total=$(echo "$classes" | wc -l)
+          mine=$(echo "$classes" | awk -v s=${{ matrix.shard }} -v n=$SHARDS '(NR - 1) % n == s')
+          # Si el reparto falla, que el CI falle (no que pase en verde sin correr pruebas).
+          [ "$total" -ge "$SHARDS" ] && [ -n "$mine" ] || { echo "No se encontraron clases de prueba para esta parte."; exit 1; }
+          echo "Parte ${{ matrix.shard }}: $(echo "$mine" | wc -l) de $total clases"
+          echo "$mine"
+          filter=$(echo "$mine" | sed 's/.*/FullyQualifiedName~.&./' | paste -sd '|')
+          echo "filter=$filter" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: |
+          dotnet test "$TEST_DIR" --configuration Release --filter "${{ steps.shard.outputs.filter }}" \
+            --collect:"XPlat Code Coverage" --results-directory ./TestResults \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-integration-${{ matrix.shard }}
+          path: TestResults/**/coverage.cobertura.xml
+          if-no-files-found: warn
