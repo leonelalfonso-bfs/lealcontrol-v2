@@ -141,7 +141,8 @@ public sealed class FleetServiceOrderRemitoApiTests : IAsyncLifetime
         var saved = await Json(await client.GetAsync($"/api/v1/sales/remitos/{remito.GetProperty("remitoId").GetGuid()}"));
         Assert.Equal(JsonValueKind.Null, saved.GetProperty("orderId").ValueKind);
         Assert.Equal("20123456786", saved.GetProperty("customerDocument").GetString());
-        Assert.StartsWith("Servicio OS-", saved.GetProperty("items")[0].GetProperty("description").GetString());
+        // El orden de los ítems no está garantizado: se busca la línea del servicio entre todas.
+        Assert.Contains(saved.GetProperty("items").EnumerateArray(), i => i.GetProperty("description").GetString()!.StartsWith("Servicio OS-"));
         Assert.Equal(7m, await StockAsync(client, filter));
     }
 }
