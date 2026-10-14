@@ -104,10 +104,25 @@ Hoy Contabilidad sirve para asientos manuales y para ver cobros y pagos. No refl
   - nota de crédito;
   - modelos viejos retirados.
 
-### C2. Libros IVA reales
+### C2. Libros IVA reales (hecha, PR "Contabilidad C2")
 
-- **Libro IVA Ventas y Compras** armados desde los **comprobantes fiscales**, no desde los asientos. Con pantalla, totales por alícuota y exportación a Excel.
-- **Exportación Libro IVA Digital de ARCA** en el formato oficial de ancho fijo (comprobantes y alícuotas, ventas y compras), validada con el aplicativo de ARCA en homologación antes de usarla.
+- **Contabilidad → Libros IVA** (`/contabilidad/libros-iva`): Libro IVA Ventas y Compras del mes armados desde los **comprobantes fiscales**, no desde los asientos (`IVatBookSource`, que implementa Ventas, igual que en C1).
+  - **Ventas:** lo emitido con CAE. **Compras:** las facturas de proveedor vigentes.
+  - En pesos (cada comprobante a su cotización); las notas de crédito restan.
+  - Neto e IVA por alícuota (21, 10,5, 27 y otras), exento, percepciones de IVA e IIBB, otros tributos y total, con totales del mes.
+  - Exportación a Excel.
+- **Exportación al Libro IVA Digital de ARCA** (`/vat-books/arca`): un .zip con los cuatro archivos de importación (comprobantes y alícuotas de ventas y de compras), con el diseño de registro de ancho fijo (RG 4597: 266, 62, 325 y 84 posiciones).
+  - Importes en la moneda del comprobante, con su código (PES, DOL) y cotización.
+  - Un comprobante todo exento lleva operación "E" y un registro de alícuota 0 %.
+  - Las compras B y C no discriminan IVA: van sin alícuotas y sin crédito fiscal computable.
+  - Texto en ASCII y mayúsculas, sin acentos.
+- **Antes de exportar se controla** lo que ARCA rechazaría y se muestra en pantalla: tipo de comprobante sin código, alícuota inexistente, moneda sin código, cotización fuera de formato, compra A o M sin CUIT del proveedor.
+- **Pendiente: validarlo con el importador real de ARCA.** Antes de presentar la primera declaración, importar un mes en el Libro IVA Digital y comparar totales. Las pruebas cubren cada campo en su posición, pero no reemplazan esa validación.
+- **Prolijidad:** las siete pantallas de Contabilidad tenían su propia barra de pestañas, con nombres distintos. Ahora usan una sola (`AccountingTabs`), que suma Asientos Modelos y Libros IVA.
+- **Ayuda:** sección "Libros IVA y Libro IVA Digital de ARCA".
+- **Pruebas:**
+  - `ArcaVatBookExportTests`: diseño de registro campo por campo.
+  - `AccountingVatBooksApiTests`: libros en pesos con nota de crédito y dólares, borrador excluido, compra C sin alícuotas, exportación rechazada si falta un CUIT.
 
 ### C3. Moneda extranjera y diferencias de cambio
 

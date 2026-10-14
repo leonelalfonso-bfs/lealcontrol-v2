@@ -23,6 +23,32 @@ public static class FiscalVoucherCodes
         _ => null
     };
 
+    /// <summary>
+    /// Código ARCA de cualquier comprobante, también los recibidos de proveedores (C y M incluidos),
+    /// como se informa en el Libro IVA Digital.
+    /// </summary>
+    public static int? Any(string invoiceType) => For(invoiceType) ?? invoiceType switch
+    {
+        "C" => 11,
+        "ND_C" => 12,
+        "NC_C" => 13,
+        "M" => 51,
+        "ND_M" => 52,
+        "NC_M" => 53,
+        "FCE_C" => 211,
+        "ND_FCE_C" => 212,
+        "NC_FCE_C" => 213,
+        _ => null
+    };
+
+    /// <summary>Tipo de documento ARCA del receptor o emisor: 80 CUIT, 96 DNI, 99 sin identificar.</summary>
+    public static int DocumentType(string document) => document.Length switch
+    {
+        11 => 80,
+        7 or 8 => 96,
+        _ => 99
+    };
+
     public static bool IsFce(string invoiceType) => invoiceType.Contains("FCE_", StringComparison.Ordinal);
 
     /// <summary>Tipo de la factura sin el prefijo de nota: "NC_FCE_A" → "FCE_A", "ND_B" → "B".</summary>

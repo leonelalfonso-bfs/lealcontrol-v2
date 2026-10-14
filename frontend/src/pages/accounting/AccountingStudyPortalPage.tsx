@@ -1,5 +1,5 @@
 import React, { useEffect, useState, FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { AccountingTabs } from "../../components/accounting/AccountingTabs";
 import { api } from "../../api/client";
 
 import { todayAr } from "../../lib/dates";
@@ -134,30 +134,7 @@ export function AccountingStudyPortalPage() {
         </div>
       </div>
 
-      {/* Nav Tabs */}
-      <div className="tab-row">
-        <Link to="/contabilidad" className="tab-btn">
-          📊 Tablero Ejecutivo & P&L
-        </Link>
-        <Link to="/contabilidad/plan-cuentas" className="tab-btn">
-          🌳 Plan de Cuentas
-        </Link>
-        <Link to="/contabilidad/asientos" className="tab-btn">
-          📖 Libro Diario
-        </Link>
-        <Link to="/contabilidad/mayor" className="tab-btn">
-          🔍 Libro Mayor
-        </Link>
-        <Link to="/contabilidad/sumas-saldos" className="tab-btn">
-          ⚖️ Sumas y Saldos
-        </Link>
-        <Link to="/contabilidad/conciliacion" className="tab-btn">
-          🏦 Conciliación Bancaria
-        </Link>
-        <Link to="/contabilidad/portal-estudio" className="tab-btn active">
-          🏢 Cierres y períodos
-        </Link>
-      </div>
+      <AccountingTabs />
 
       {msg && <div className="alert ok">{msg}</div>}
       {error && <div className="alert">{error}</div>}

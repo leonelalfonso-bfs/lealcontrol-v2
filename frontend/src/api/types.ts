@@ -2481,3 +2481,30 @@ export type PaymentOrderWriteRequest = {
     amountImputed: number;
   }>;
 };
+
+/** Una línea del Libro IVA en pesos (las notas de crédito, en negativo). */
+export type VatBookRow = {
+  date: string;
+  voucher: string;
+  counterpartyDocument: string;
+  counterpartyName: string;
+  currency: string;
+  exchangeRate: number;
+  net21: number;
+  vat21: number;
+  net105: number;
+  vat105: number;
+  net27: number;
+  vat27: number;
+  netOther: number;
+  vatOther: number;
+  exempt: number;
+  perceptionVat: number;
+  perceptionIibb: number;
+  otherTaxes: number;
+  total: number;
+};
+
+export type VatBook = { rows: VatBookRow[]; totals: VatBookRow };
+
+export type VatBooks = { year: number; month: number; sales: VatBook; purchases: VatBook; problems: string[] };
