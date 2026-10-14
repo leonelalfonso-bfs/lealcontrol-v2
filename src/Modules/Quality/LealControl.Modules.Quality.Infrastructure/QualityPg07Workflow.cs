@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Time;
 using System.Text.Json;
 
 namespace LealControl.Modules.Quality.Infrastructure;
@@ -114,7 +115,7 @@ public static class QualityPg07Status
         record.Status = QualityPg07Workflow.CurrentActions(actions).Any(a =>
             a.EffectivenessResult == "Pending"
             && a.ImplementationDate.HasValue
-            && a.ImplementationDate.Value.Date <= DateTime.UtcNow.Date)
+            && a.ImplementationDate.Value.Date <= ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow))
             ? QualityNonConformityStatuses.EffectivenessCheck
             : QualityNonConformityStatuses.ActionPending;
     }

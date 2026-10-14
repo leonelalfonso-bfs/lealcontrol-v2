@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Time;
 using System.Globalization;
 
 namespace LealControl.Modules.Sales.Infrastructure.Fiscal;
@@ -10,7 +11,7 @@ public static class FiscalExchangeRateDate
 {
     public static string? For(string issueDate, DateTimeOffset nowUtc)
     {
-        var today = nowUtc.ToOffset(TimeSpan.FromHours(-3)).ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+        var today = ArgentinaTime.Now(nowUtc).ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         return string.CompareOrdinal(issueDate, today) < 0 ? issueDate : null;
     }
 }

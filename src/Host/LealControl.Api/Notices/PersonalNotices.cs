@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Time;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -86,9 +87,7 @@ public sealed class NoticeCenter(
 
     public IReadOnlyList<INoticeProvider> Providers { get; } = providers.OrderBy(p => p.Module).ThenBy(p => p.Label).ToList();
 
-    public DateOnly Today => FleetToday(clock.GetUtcNow());
-
-    private static DateOnly FleetToday(DateTimeOffset utc) => DateOnly.FromDateTime(utc.ToOffset(TimeSpan.FromHours(-3)).DateTime);
+    public DateOnly Today => ArgentinaTime.Today(clock.GetUtcNow());
 
     public static bool Allows(UserPermissions permissions, INoticeProvider provider) =>
         permissions.LevelOf(provider.Module) >= (PermissionLevel)provider.MinimumLevel && provider.Sensitivity switch
@@ -354,7 +353,7 @@ public sealed class NoticeDigestBackgroundService(IServiceProvider services, ICo
         var mailer = scope.ServiceProvider.GetRequiredService<SystemMailer>();
         if (!mailer.IsConfigured) return;
         var clock = scope.ServiceProvider.GetRequiredService<TimeProvider>();
-        if (clock.GetUtcNow().ToOffset(TimeSpan.FromHours(-3)).Hour < SendHour) return;
+        if (ArgentinaTime.Now(clock.GetUtcNow()).Hour < SendHour) return;
 
         var master = scope.ServiceProvider.GetRequiredService<MasterDbContext>();
         var connections = scope.ServiceProvider.GetRequiredService<ITenantConnectionProvider>();

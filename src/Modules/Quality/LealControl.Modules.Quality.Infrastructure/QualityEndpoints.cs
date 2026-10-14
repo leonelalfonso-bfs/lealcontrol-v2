@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Time;
 using System.Security.Claims;
 using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Security;
@@ -1494,7 +1495,7 @@ public static class QualityEndpoints
                 return Results.Conflict(new { message = "La acción ya fue evaluada." });
             if (!action.ImplementationDate.HasValue || string.IsNullOrWhiteSpace(action.Action))
                 return Results.BadRequest(new { message = "Primero completá la acción y su fecha de implementación." });
-            if (action.ImplementationDate.Value.Date > DateTime.UtcNow.Date)
+            if (action.ImplementationDate.Value.Date > ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow))
                 return Results.BadRequest(new { message = "La eficacia se verifica desde la fecha de implementación." });
             var result = req.Result?.Trim();
             if (result is not ("Pending" or "Effective" or "NotEffective"))
@@ -1675,7 +1676,7 @@ public static class QualityEndpoints
                     entity.ExecutedDate = req.ExecutedDate ?? entity.ExecutedDate;
                     if (!entity.ExecutedDate.HasValue)
                         return Results.BadRequest(new { message = "Indicá la fecha de realización." });
-                    if (entity.ExecutedDate.Value.Date > DateTime.UtcNow.Date)
+                    if (entity.ExecutedDate.Value.Date > ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow))
                         return Results.BadRequest(new { message = "La fecha de realización no puede ser futura." });
                     entity.Status = QualityInternalAuditStatuses.Done;
                 }
@@ -1689,7 +1690,7 @@ public static class QualityEndpoints
             }
             else if (req.ExecutedDate.HasValue && InternalAuditDisplayStatus(entity) == QualityInternalAuditStatuses.Done)
             {
-                if (req.ExecutedDate.Value.Date > DateTime.UtcNow.Date)
+                if (req.ExecutedDate.Value.Date > ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow))
                     return Results.BadRequest(new { message = "La fecha de realización no puede ser futura." });
                 entity.ExecutedDate = req.ExecutedDate;
             }
@@ -2382,7 +2383,7 @@ public static class QualityEndpoints
         if (n.Status is QualityNonConformityStatuses.Closed or QualityNonConformityStatuses.Cancelled)
             return false;
         var due = QualityPg07Workflow.NextImplementationDate(QualityPg07Workflow.Actions(n));
-        return due.HasValue && DateTime.UtcNow.Date > due.Value.Date;
+        return due.HasValue && ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow) > due.Value.Date;
     }
 
     private static object ToNonConformityDto(QualityNonConformity n) => new

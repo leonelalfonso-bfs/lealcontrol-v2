@@ -1,3 +1,4 @@
+using LealControl.BuildingBlocks.Time;
 using LealControl.BuildingBlocks.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -59,7 +60,7 @@ public static class FinanceExtras
         {
             var tenantId = tenant.TenantId.Value;
             var horizon = Math.Clamp(days ?? 30, 7, 365);
-            var today = DateTime.UtcNow.Date;
+            var today = ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow);
             var limit = today.AddDays(horizon);
 
             var accounts = await db.Accounts.AsNoTracking().Where(x => x.TenantId == tenantId && x.IsActive).ToListAsync(ct);
