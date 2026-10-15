@@ -108,7 +108,7 @@ public sealed class FleetMaintenanceApiTests : IAsyncLifetime
         var truck = await VehicleAsync(admin, "Truck", "AF456GH", 100000);
         var employee = (await Json(await admin.PostAsJsonAsync("/api/v1/hr/employees", new
         {
-            firstName = "Juan", lastName = "Gómez", documentNumber = "30111222", cuil = "20301112223", hireDate = "2020-01-01T00:00:00Z"
+            firstName = "Juan", lastName = "Gómez", documentNumber = "30111222", cuil = "20301112220", hireDate = "2020-01-01T00:00:00Z"
         }))).GetProperty("id").GetGuid();
 
         using (var notMember = await admin.PostAsJsonAsync("/api/v1/fleet/fuel-logs", new { vehicleId = truck, liters = 100m, km = 100500, employeeId = employee }))

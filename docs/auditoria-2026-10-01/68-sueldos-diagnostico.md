@@ -111,21 +111,39 @@ Cada entrega termina con su **manual de Ayuda**. Desde S3 se **compara con los r
 - **La pantalla de liquidación** explica que está en reconstrucción y por qué, con las etapas.
 - **La Ayuda de RRHH** prometía un Libro de Sueldos "listo para AFIP" y un presentismo que no existía. Se rehízo como manual de lo que funciona: legajos, documentos, EPP, organigrama, manuales y el estado de sueldos.
 
-### S1. Empleador, parámetros legales y legajo completo
+### S1. Empleador, parámetros legales y legajo completo (hecha, PR "Sueldos S1")
 
-- **Datos del empleador:**
-  - CUIT de la empresa, MiPyME sí o no, actividad (código ARCA);
-  - ART (aseguradora, alícuota y fijo), seguro de vida obligatorio;
-  - ID FAL.
-- **Parámetros con vigencia por mes**, cargados por el sistema con su norma y editables:
-  - topes de ANSES, alícuotas de aportes y contribuciones, detracción, FAL;
-  - escalas de Ganancias (para S7).
-- **Legajo completo:**
-  - CUIL validado;
-  - códigos de la seguridad social (modalidad de contratación, situación de revista, condición, actividad, zona);
-  - obra social (código RNOS), convenio y categoría (de la lista del convenio, no texto libre), afiliado o no al sindicato;
-  - jornada, familiares a cargo;
-  - historial de cambios de categoría y sueldo.
+- **Datos del empleador** (RRHH → Configuración de sueldos):
+  - MiPyME y comercio o servicios, que definen la contribución del 18 % o del 20,40 % y el FAL del 2,5 % o del 1 %;
+  - código de actividad, ART (alícuota variable y suma fija), seguro de vida obligatorio e ID FAL;
+  - la razón social y el CUIT se muestran desde la configuración de la empresa.
+- **Parámetros legales con vigencia por mes**, cada uno con su norma:
+  - aportes 11/3/3, contribuciones 18 y 20,40, obra social 6, detracción $ 7.003,68;
+  - FAL 2,5 y 1 desde 11/2026;
+  - topes de ANSES de 06 a 10/2026 (resoluciones 139, 186, 232, 257 y 284/2026).
+  - **Cómo funcionan:**
+    - Los trae el sistema (se siembran en cada base; nunca se borran).
+    - La empresa puede cargar un valor con su norma, que a igual mes reemplaza al del sistema; puede borrar solo los suyos.
+    - Si falta el tope de ANSES del mes, se usa el anterior y se avisa.
+- **Legajo:**
+  - CUIL validado con su dígito verificador;
+  - afiliado al sindicato;
+  - códigos de situación de revista, condición, actividad, modalidad, siniestrado y localidad;
+  - obra social (código RNOS) y adherentes, cónyuge e hijos, jornada parcial con horas.
+  - Los códigos se guardan como número editable, con los valores confirmados en documentos oficiales: la situación de revista de la guía 15 del Libro de Sueldos, condición 1 y 2, modalidad 8 y 102. Las tablas completas de ARCA viven dentro de su aplicativo: lo demás se carga con el código que indique el estudio.
+- **Fuentes del diseño del Libro de Sueldos** (para S5): Guía 15 "Interfaz de liquidación" de ARCA.
+  - Topes: mensual de 30 días, de aguinaldo de 180.
+  - Conceptos de aguinaldo 120000–129999 solo en junio y diciembre; aguinaldo proporcional con el 120003.
+  - Adelanto vacacional 150000 con tope propio.
+  - Fecha de pago obligatoria; CBU si se acredita en cuenta.
+- **Producción al 15/10/2026:** 1 legajo, y 1 período y 1 recibo de la liquidación vieja (seguramente de prueba). En S3 se propone borrarlos, con OK.
+- **Ayuda de RRHH:** datos de seguridad social del legajo y configuración de sueldos.
+- **Pruebas:** `PayrollConfigurationApiTests` cubre:
+  - topes de octubre con su norma, FAL desde noviembre;
+  - aviso de tope faltante y carga de la empresa que lo reemplaza;
+  - borrado solo de lo propio;
+  - empleador validado;
+  - CUIL inválido y jornada parcial sin horas rechazados.
 
 ### S2. Convenios configurables
 

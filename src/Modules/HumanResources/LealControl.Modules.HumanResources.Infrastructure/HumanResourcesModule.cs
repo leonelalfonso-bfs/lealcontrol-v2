@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LealControl.Modules.HumanResources.Infrastructure;
 
@@ -65,6 +66,27 @@ public sealed class Employee
     public string? PhotoPath { get; set; }
     public string? Notes { get; set; }
     public DateTime CreatedAtUtc { get; set; }
+
+    // Seguridad social (ARCA: Libro de Sueldos Digital y F.931). Códigos de las tablas de SICOSS / Declaración en línea.
+    public bool IsUnionMember { get; set; }
+    /// <summary>Situación de revista (1 = Activo).</summary>
+    public int SocialSecuritySituation { get; set; } = 1;
+    /// <summary>Condición (1 = Servicios comunes mayor de 18 años, 2 = Jubilado).</summary>
+    public int SocialSecurityCondition { get; set; } = 1;
+    /// <summary>Actividad del trabajador; vacía, la del empleador.</summary>
+    public int? SocialSecurityActivity { get; set; }
+    /// <summary>Modalidad de contratación (8 = A tiempo completo indeterminado).</summary>
+    public int ContractModalityCode { get; set; } = 8;
+    /// <summary>Código de siniestrado según la Ley de Riesgos del Trabajo (0 = no incapacitado).</summary>
+    public int CasualtyCode { get; set; }
+    public string? LocalityCode { get; set; }
+    /// <summary>Código de la obra social en el RNOS (6 dígitos).</summary>
+    public string? HealthInsuranceCode { get; set; }
+    public int HealthInsuranceAdherents { get; set; }
+    public bool HasSpouse { get; set; }
+    public int ChildrenCount { get; set; }
+    public bool PartTime { get; set; }
+    public decimal? WeeklyHours { get; set; }
 }
 
 public sealed class OrganizationPosition
@@ -225,6 +247,8 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
     public DbSet<PayrollPeriod> PayrollPeriods => Set<PayrollPeriod>();
     public DbSet<PayrollSlip> PayrollSlips => Set<PayrollSlip>();
     public DbSet<PayrollSlipLine> PayrollSlipLines => Set<PayrollSlipLine>();
+    public DbSet<Payroll.PayrollEmployerSettings> PayrollEmployerSettings => Set<Payroll.PayrollEmployerSettings>();
+    public DbSet<Payroll.PayrollLegalParameter> PayrollLegalParameters => Set<Payroll.PayrollLegalParameter>();
     public DbSet<EmployeeTimeTracking> TimeTrackings => Set<EmployeeTimeTracking>();
     public DbSet<EppDelivery> EppDeliveries => Set<EppDelivery>();
 
@@ -280,6 +304,29 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.Property(x => x.DocumentUrl).HasColumnType("text");
             b.HasIndex(x => new { x.TenantId, x.Code });
             b.HasIndex(x => new { x.TenantId, x.Area });
+        });
+
+        modelBuilder.Entity<Payroll.PayrollEmployerSettings>(b =>
+        {
+            b.ToTable("PayrollEmployerSettings");
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => x.TenantId).IsUnique();
+            b.Property(x => x.ArtInsurer).HasMaxLength(120);
+            b.Property(x => x.ArtContractNumber).HasMaxLength(60);
+            b.Property(x => x.FalId).HasMaxLength(60);
+            b.Property(x => x.ArtVariablePercent).HasPrecision(9, 4);
+            b.Property(x => x.ArtFixedAmount).HasPrecision(18, 2);
+            b.Property(x => x.LifeInsurancePremium).HasPrecision(18, 2);
+        });
+
+        modelBuilder.Entity<Payroll.PayrollLegalParameter>(b =>
+        {
+            b.ToTable("PayrollLegalParameters");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Key).HasMaxLength(60).IsRequired();
+            b.Property(x => x.Norm).HasMaxLength(160).IsRequired();
+            b.Property(x => x.Value).HasPrecision(18, 4);
+            b.HasIndex(x => new { x.TenantId, x.Key, x.ValidFrom });
         });
 
         modelBuilder.Entity<PayrollConcept>(b =>
@@ -534,6 +581,49 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
         ";
 
         await Database.ExecuteSqlRawAsync(sql, ct);
+        await Database.ExecuteSqlRawAsync(@"
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""IsUnionMember"" boolean NOT NULL DEFAULT false;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""SocialSecuritySituation"" integer NOT NULL DEFAULT 1;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""SocialSecurityCondition"" integer NOT NULL DEFAULT 1;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""SocialSecurityActivity"" integer;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""ContractModalityCode"" integer NOT NULL DEFAULT 8;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""CasualtyCode"" integer NOT NULL DEFAULT 0;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""LocalityCode"" character varying(20);
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""HealthInsuranceCode"" character varying(6);
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""HealthInsuranceAdherents"" integer NOT NULL DEFAULT 0;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""HasSpouse"" boolean NOT NULL DEFAULT false;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""ChildrenCount"" integer NOT NULL DEFAULT 0;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""PartTime"" boolean NOT NULL DEFAULT false;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""WeeklyHours"" numeric(5,2);
+
+            CREATE TABLE IF NOT EXISTS hr.""PayrollEmployerSettings"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""IsMiPyme"" boolean NOT NULL DEFAULT true,
+                ""IsCommerceOrServices"" boolean NOT NULL DEFAULT true,
+                ""ActivityCode"" integer,
+                ""ArtInsurer"" character varying(120),
+                ""ArtContractNumber"" character varying(60),
+                ""ArtVariablePercent"" numeric(9,4) NOT NULL DEFAULT 0,
+                ""ArtFixedAmount"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""LifeInsurancePremium"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""FalId"" character varying(60),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PayrollEmployerSettings_Tenant"" ON hr.""PayrollEmployerSettings"" (""TenantId"");
+
+            CREATE TABLE IF NOT EXISTS hr.""PayrollLegalParameters"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid,
+                ""Key"" character varying(60) NOT NULL,
+                ""ValidFrom"" timestamp with time zone NOT NULL,
+                ""Value"" numeric(18,4) NOT NULL,
+                ""Norm"" character varying(160) NOT NULL,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ""IX_PayrollLegalParameters_Key"" ON hr.""PayrollLegalParameters"" (""TenantId"", ""Key"", ""ValidFrom"");
+        ", ct);
+        await Payroll.PayrollLegalSeed.EnsureAsync(this, ct);
     }
 }
 
@@ -542,6 +632,7 @@ public static class HumanResourcesModule
     public static IServiceCollection AddHumanResourcesModule(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddTenantDbContext<HumanResourcesDbContext>(HumanResourcesDbContext.Schema);
+        services.TryAddSingleton(TimeProvider.System);
 
         return services;
     }
@@ -628,9 +719,11 @@ public static class HumanResourcesModule
                 body.BaseSalary = 0;
                 body.HourlyRate = 0;
             }
+            if (Payroll.EmployeeRules.Validate(body) is { } invalid) return Results.BadRequest(new { message = invalid });
             body.Id = Guid.NewGuid();
             body.TenantId = tenantId;
             body.CreatedAtUtc = DateTime.UtcNow;
+            if (!body.PartTime) body.WeeklyHours = null;
 
             db.Employees.Add(body);
             await db.SaveChangesAsync(ct);
@@ -642,6 +735,7 @@ public static class HumanResourcesModule
             var tenantId = tenant.TenantId.Value;
             var emp = await db.Employees.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
             if (emp is null) return Results.NotFound("Empleado no encontrado");
+            if (Payroll.EmployeeRules.Validate(body) is { } invalid) return Results.BadRequest(new { message = invalid });
 
             emp.FileNumber = body.FileNumber.Trim();
             emp.FirstName = body.FirstName.Trim();
@@ -671,6 +765,19 @@ public static class HumanResourcesModule
             emp.UnionCct = body.UnionCct;
             emp.UnionCategory = body.UnionCategory;
             emp.HealthInsurance = body.HealthInsurance;
+            emp.IsUnionMember = body.IsUnionMember;
+            emp.SocialSecuritySituation = body.SocialSecuritySituation;
+            emp.SocialSecurityCondition = body.SocialSecurityCondition;
+            emp.SocialSecurityActivity = body.SocialSecurityActivity;
+            emp.ContractModalityCode = body.ContractModalityCode;
+            emp.CasualtyCode = body.CasualtyCode;
+            emp.LocalityCode = string.IsNullOrWhiteSpace(body.LocalityCode) ? null : body.LocalityCode.Trim();
+            emp.HealthInsuranceCode = string.IsNullOrWhiteSpace(body.HealthInsuranceCode) ? null : body.HealthInsuranceCode.Trim();
+            emp.HealthInsuranceAdherents = body.HealthInsuranceAdherents;
+            emp.HasSpouse = body.HasSpouse;
+            emp.ChildrenCount = body.ChildrenCount;
+            emp.PartTime = body.PartTime;
+            emp.WeeklyHours = body.PartTime ? body.WeeklyHours : null;
             // Quien no ve sueldos no los recibe en pantalla: se conserva el que había.
             var sensitive = http.RequestServices.GetService<LealControl.BuildingBlocks.Security.ISensitiveDataAccess>();
             if (sensitive?.CanSeeSalaries != false)
@@ -927,6 +1034,8 @@ public static class HumanResourcesModule
             await db.SaveChangesAsync(ct);
             return Results.Created($"/api/v1/hr/time-tracking/{body.Id}", body);
         });
+
+        Payroll.PayrollConfigurationEndpoints.MapPayrollConfigurationEndpoints(group);
 
         // La liquidación de sueldos se está rehaciendo (nota 68): el cálculo anterior inventaba sueldos y el
         // Libro de Sueldos Digital no era el de ARCA. Las tablas de períodos, conceptos y recibos se conservan

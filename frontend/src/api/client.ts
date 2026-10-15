@@ -917,6 +917,15 @@ export const api = {
   createEppDelivery: (body: Partial<import("./types").EppDelivery>) =>
     request<import("./types").EppDelivery>("/api/v1/hr/epps", { method: "POST", body: JSON.stringify(body) }),
 
+  // Sueldos: configuración (nota 68, S1)
+  getPayrollEmployerSettings: () => request<import("./types").PayrollEmployerSettings>("/api/v1/hr/payroll/settings"),
+  savePayrollEmployerSettings: (body: import("./types").PayrollEmployerSettings) =>
+    request<import("./types").PayrollEmployerSettings>("/api/v1/hr/payroll/settings", { method: "PUT", body: JSON.stringify(body) }),
+  getPayrollParameters: (month: string) => request<import("./types").PayrollParameters>(`/api/v1/hr/payroll/parameters?month=${month}`),
+  addPayrollParameter: (body: { key: string; validFrom: string; value: number; norm: string }) =>
+    request<unknown>("/api/v1/hr/payroll/settings/parameters", { method: "POST", body: JSON.stringify(body) }),
+  deletePayrollParameter: (id: string) => request<void>(`/api/v1/hr/payroll/settings/parameters/${id}`, { method: "DELETE" }),
+
   // ==========================================
   // FLEET (GESTIÃ“N DE FLOTA)
   // ==========================================
