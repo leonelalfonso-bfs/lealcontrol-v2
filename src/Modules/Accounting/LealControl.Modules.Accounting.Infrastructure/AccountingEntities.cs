@@ -102,6 +102,41 @@ public sealed class CostCenter : Entity<Guid>
     }
 }
 
+/// <summary>Bien de uso amortizable en línea recta por meses (el mes de alta cuenta entero).</summary>
+public sealed class FixedAsset : Entity<Guid>
+{
+    public TenantId TenantId { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public DateTime AcquisitionDate { get; set; }
+    public decimal Cost { get; set; }
+    public decimal ResidualValue { get; set; }
+    public int UsefulLifeMonths { get; set; }
+    public string AssetAccountCode { get; set; } = string.Empty;
+    public string AccumulatedAccountCode { get; set; } = string.Empty;
+    public string ExpenseAccountCode { get; set; } = "5.2.08";
+    public decimal AccumulatedDepreciation { get; set; }
+    /// <summary>Último mes amortizado (último día del mes).</summary>
+    public DateTime? DepreciatedThrough { get; set; }
+    public string Status { get; set; } = "Active"; // Active, Disposed
+    public DateTime? DisposedAt { get; set; }
+    public string? Notes { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public FixedAsset() : base(Guid.NewGuid()) { }
+
+    public decimal MonthlyDepreciation => UsefulLifeMonths > 0 ? Math.Round((Cost - ResidualValue) / UsefulLifeMonths, 2, MidpointRounding.AwayFromZero) : 0m;
+
+    /// <summary>Amortización acumulada que corresponde al cierre del mes de esa fecha (hasta la baja, si la hubo).</summary>
+    public decimal AccumulatedAt(DateTime monthEnd)
+    {
+        var until = DisposedAt is { } disposed && disposed < monthEnd ? disposed : monthEnd;
+        var months = (until.Year - AcquisitionDate.Year) * 12 + until.Month - AcquisitionDate.Month + 1;
+        if (months <= 0) return 0m;
+        return Math.Min(Cost - ResidualValue, months >= UsefulLifeMonths ? Cost - ResidualValue : MonthlyDepreciation * months);
+    }
+}
+
 public sealed class FiscalYearPeriod : Entity<Guid>
 {
     public TenantId TenantId { get; set; }
@@ -112,45 +147,6 @@ public sealed class FiscalYearPeriod : Entity<Guid>
     public string? LockedBy { get; set; }
 
     public FiscalYearPeriod() : base(Guid.NewGuid()) { }
-}
-
-public sealed class BankStatement : Entity<Guid>
-{
-    public TenantId TenantId { get; set; }
-    public string BankName { get; set; } = "Banco Galicia"; // Banco Galicia, Banco Macro, Santander, BBVA, Nación, MercadoPago
-    public string AccountNumber { get; set; } = string.Empty;
-    public string Currency { get; set; } = "ARS";
-    public DateTime PeriodStartDate { get; set; }
-    public DateTime PeriodEndDate { get; set; }
-    public decimal InitialBalance { get; set; }
-    public decimal FinalBalance { get; set; }
-    public string Status { get; set; } = "Open"; // Open, InProgress, Reconciled
-    public int TotalLines { get; set; }
-    public int ReconciledLines { get; set; }
-    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
-
-    public List<BankStatementLine> Lines { get; set; } = new();
-
-    public BankStatement() : base(Guid.NewGuid()) { }
-}
-
-public sealed class BankStatementLine : Entity<Guid>
-{
-    public Guid BankStatementId { get; set; }
-    public TenantId TenantId { get; set; }
-    public DateTime TransactionDate { get; set; }
-    public string Description { get; set; } = string.Empty;
-    public string? ReferenceNumber { get; set; }
-    public decimal Debit { get; set; } // Débitos / Salidas de dinero
-    public decimal Credit { get; set; } // Créditos / Entradas de dinero
-    public decimal Balance { get; set; }
-    public bool IsReconciled { get; set; } = false;
-    public Guid? MatchedJournalEntryId { get; set; }
-    public Guid? MatchedJournalEntryLineId { get; set; }
-    public string? MatchType { get; set; } // ExactAmount, ReferenceMatch, Manual, AutoPosted
-    public string? MatchNotes { get; set; }
-
-    public BankStatementLine() : base(Guid.NewGuid()) { }
 }
 
 public sealed class AccountingMapping : Entity<Guid>

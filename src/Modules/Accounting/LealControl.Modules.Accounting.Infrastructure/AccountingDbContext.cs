@@ -20,9 +20,8 @@ public sealed class AccountingDbContext : DbContext
     public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
     public DbSet<JournalEntryLine> JournalEntryLines => Set<JournalEntryLine>();
     public DbSet<CostCenter> CostCenters => Set<CostCenter>();
+    public DbSet<FixedAsset> FixedAssets => Set<FixedAsset>();
     public DbSet<FiscalYearPeriod> Periods => Set<FiscalYearPeriod>();
-    public DbSet<BankStatement> BankStatements => Set<BankStatement>();
-    public DbSet<BankStatementLine> BankStatementLines => Set<BankStatementLine>();
     public DbSet<AccountingMapping> Mappings => Set<AccountingMapping>();
     public DbSet<JournalTemplate> JournalTemplates => Set<JournalTemplate>();
     public DbSet<JournalTemplateLine> JournalTemplateLines => Set<JournalTemplateLine>();
@@ -99,32 +98,6 @@ public sealed class AccountingDbContext : DbContext
             b.HasIndex(x => new { x.TenantId, x.Year, x.Month }).IsUnique();
         });
 
-        modelBuilder.Entity<BankStatement>(b =>
-        {
-            b.ToTable("bank_statements", "accounting");
-            b.HasKey(x => x.Id);
-            b.Property(x => x.BankName).HasMaxLength(120).IsRequired();
-            b.Property(x => x.AccountNumber).HasMaxLength(64);
-            b.Property(x => x.Currency).HasMaxLength(10).HasDefaultValue("ARS");
-            b.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Open");
-            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
-            b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.BankStatementId).OnDelete(DeleteBehavior.Cascade);
-            b.HasIndex(x => new { x.TenantId, x.BankName });
-        });
-
-        modelBuilder.Entity<BankStatementLine>(b =>
-        {
-            b.ToTable("bank_statement_lines", "accounting");
-            b.HasKey(x => x.Id);
-            b.Property(x => x.Description).HasMaxLength(255).IsRequired();
-            b.Property(x => x.ReferenceNumber).HasMaxLength(128);
-            b.Property(x => x.MatchType).HasMaxLength(64);
-            b.Property(x => x.MatchNotes).HasMaxLength(255);
-            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
-            b.HasIndex(x => new { x.TenantId, x.TransactionDate });
-            b.HasIndex(x => new { x.TenantId, x.IsReconciled });
-        });
-
         modelBuilder.Entity<AccountingMapping>(b =>
         {
             b.ToTable("mappings", "accounting");
@@ -191,6 +164,22 @@ public sealed class AccountingDbContext : DbContext
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.SourceModule, x.SourceDocumentId });
             b.HasIndex(x => new { x.TenantId, x.Status, x.DocumentDateUtc });
+        });
+
+        modelBuilder.Entity<FixedAsset>(b =>
+        {
+            b.ToTable("fixed_assets", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            b.Property(x => x.AssetAccountCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.AccumulatedAccountCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.ExpenseAccountCode).HasMaxLength(32).IsRequired();
+            b.Property(x => x.Status).HasMaxLength(16).IsRequired();
+            b.Property(x => x.Notes).HasMaxLength(500);
+            b.Ignore(x => x.MonthlyDepreciation);
+            b.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
         });
 
         modelBuilder.Entity<AccountingTenantSettings>(b =>
@@ -302,38 +291,9 @@ public sealed class AccountingDbContext : DbContext
 
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_periods_Tenant_Year_Month"" ON accounting.periods (""TenantId"", ""Year"", ""Month"");",
 
-            @"CREATE TABLE IF NOT EXISTS accounting.bank_statements (
-                ""Id"" uuid NOT NULL PRIMARY KEY,
-                ""TenantId"" uuid NOT NULL,
-                ""BankName"" character varying(120) NOT NULL,
-                ""AccountNumber"" character varying(64),
-                ""Currency"" character varying(10) NOT NULL DEFAULT 'ARS',
-                ""PeriodStartDate"" timestamp with time zone NOT NULL,
-                ""PeriodEndDate"" timestamp with time zone NOT NULL,
-                ""InitialBalance"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""FinalBalance"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""Status"" character varying(32) NOT NULL DEFAULT 'Open',
-                ""TotalLines"" integer NOT NULL DEFAULT 0,
-                ""ReconciledLines"" integer NOT NULL DEFAULT 0,
-                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
-            );",
-
-            @"CREATE TABLE IF NOT EXISTS accounting.bank_statement_lines (
-                ""Id"" uuid NOT NULL PRIMARY KEY,
-                ""BankStatementId"" uuid NOT NULL REFERENCES accounting.bank_statements(""Id"") ON DELETE CASCADE,
-                ""TenantId"" uuid NOT NULL,
-                ""TransactionDate"" timestamp with time zone NOT NULL,
-                ""Description"" character varying(255) NOT NULL,
-                ""ReferenceNumber"" character varying(128),
-                ""Debit"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""Credit"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""Balance"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""IsReconciled"" boolean NOT NULL DEFAULT false,
-                ""MatchedJournalEntryId"" uuid,
-                ""MatchedJournalEntryLineId"" uuid,
-                ""MatchType"" character varying(64),
-                ""MatchNotes"" character varying(255)
-            );",
+            // Los extractos bancarios viven en Finanzas: se retiran las tablas que quedaron de Contabilidad.
+            @"DROP TABLE IF EXISTS accounting.bank_statement_lines;",
+            @"DROP TABLE IF EXISTS accounting.bank_statements;",
 
             @"CREATE TABLE IF NOT EXISTS accounting.mappings (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
@@ -449,6 +409,28 @@ public sealed class AccountingDbContext : DbContext
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_tenant_settings_Tenant"" ON accounting.tenant_settings (""TenantId"");",
 
             @"ALTER TABLE accounting.tenant_settings ADD COLUMN IF NOT EXISTS ""FiscalYearEndMonth"" integer NOT NULL DEFAULT 12;",
+
+            @"CREATE TABLE IF NOT EXISTS accounting.fixed_assets (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Code"" character varying(32) NOT NULL,
+                ""Name"" character varying(160) NOT NULL,
+                ""AcquisitionDate"" timestamp with time zone NOT NULL,
+                ""Cost"" numeric(18,2) NOT NULL,
+                ""ResidualValue"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""UsefulLifeMonths"" integer NOT NULL,
+                ""AssetAccountCode"" character varying(32) NOT NULL,
+                ""AccumulatedAccountCode"" character varying(32) NOT NULL,
+                ""ExpenseAccountCode"" character varying(32) NOT NULL,
+                ""AccumulatedDepreciation"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""DepreciatedThrough"" timestamp with time zone,
+                ""Status"" character varying(16) NOT NULL DEFAULT 'Active',
+                ""DisposedAt"" timestamp with time zone,
+                ""Notes"" character varying(500),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_fixed_assets_Tenant_Code"" ON accounting.fixed_assets (""TenantId"", ""Code"");",
 
             @"CREATE TABLE IF NOT EXISTS accounting.finance_account_mapping (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
@@ -567,6 +549,8 @@ public sealed class AccountingDbContext : DbContext
             new(Guid.NewGuid(), tenantId, "1.2.01.002", "Maquinarias, Balanzas & Equipos", "Asset", 4, "1.2.01", true),
             new(Guid.NewGuid(), tenantId, "1.2.01.003", "Instalaciones & Silos", "Asset", 4, "1.2.01", true),
             new(Guid.NewGuid(), tenantId, "1.2.01.004", "Amortización Acumulada Rodados (-)", "Asset", 4, "1.2.01", true),
+            new(Guid.NewGuid(), tenantId, "1.2.01.005", "Amortización Acumulada Maquinarias & Equipos (-)", "Asset", 4, "1.2.01", true),
+            new(Guid.NewGuid(), tenantId, "1.2.01.006", "Amortización Acumulada Instalaciones (-)", "Asset", 4, "1.2.01", true),
 
             // 2. PASIVO
             new(Guid.NewGuid(), tenantId, "2", "PASIVO", "Liability", 1, null, false),
@@ -745,6 +729,10 @@ public sealed class AccountingDbContext : DbContext
                 Accounts.Add(new Account(Guid.NewGuid(), tenantId, "5.1.03", "Compras de Mercaderías, Insumos y Servicios", "Expense", 3, "5.1", true));
             if (!codes.Contains("5.2.09"))
                 Accounts.Add(new Account(Guid.NewGuid(), tenantId, "5.2.09", "Impuestos y Tasas", "Expense", 3, "5.2", true));
+            if (!codes.Contains("1.2.01.005"))
+                Accounts.Add(new Account(Guid.NewGuid(), tenantId, "1.2.01.005", "Amortización Acumulada Maquinarias & Equipos (-)", "Asset", 4, "1.2.01", true));
+            if (!codes.Contains("1.2.01.006"))
+                Accounts.Add(new Account(Guid.NewGuid(), tenantId, "1.2.01.006", "Amortización Acumulada Instalaciones (-)", "Asset", 4, "1.2.01", true));
         }
 
         var existing = await JournalTemplates.Where(t => t.TenantId == tenantId).ToListAsync(ct);

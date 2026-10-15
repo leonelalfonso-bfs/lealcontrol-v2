@@ -85,30 +85,6 @@ internal static class AccountingPeriodsEndpoints
             });
         });
 
-        group.MapGet("/bank-statements", () =>
-            Results.Json(new { message = extractMovedToFinance }, statusCode: 410));
-
-        group.MapGet("/bank-statements/{id:guid}", (Guid id) =>
-        {
-            _ = id;
-            return Results.Json(new { message = extractMovedToFinance }, statusCode: 410);
-        });
-
-        group.MapPost("/bank-statements/upload", () =>
-            Results.Json(new { message = extractMovedToFinance }, statusCode: 410));
-
-        group.MapPost("/bank-statements/{id:guid}/auto-match", (Guid id) =>
-        {
-            _ = id;
-            return Results.Json(new { message = extractMovedToFinance }, statusCode: 410);
-        });
-
-        group.MapPost("/bank-statements/lines/{lineId:guid}/quick-post", (Guid lineId) =>
-        {
-            _ = lineId;
-            return Results.Json(new { message = extractMovedToFinance + " Confirmá el concepto COMISION en Finanzas." }, statusCode: 410);
-        });
-
         // ====================================================================
         // 12. Period Lock & ARCA Digital VAT
         // ====================================================================

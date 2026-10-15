@@ -2555,3 +2555,53 @@ export type JournalBookEntry = {
 };
 
 export type JournalBook = { from: string; to: string; entries: JournalBookEntry[]; totalDebit: number; totalCredit: number };
+
+export type InventoryValuationLine = {
+  productId: string;
+  code: string;
+  name: string;
+  quantity: number;
+  unitCostArs: number;
+  valueArs: number;
+  costSource: "LastPurchase" | "ProductCost" | "Missing";
+};
+
+export type InventoryValuationPreview = {
+  date: string;
+  lines: InventoryValuationLine[];
+  inventoryValue: number;
+  bookBalance: number;
+  difference: number;
+  withoutCost: number;
+  existingEntryNumber: number | null;
+};
+
+export type FixedAssetInput = {
+  code: string;
+  name: string;
+  acquisitionDate: string;
+  cost: number;
+  residualValue: number;
+  usefulLifeMonths: number;
+  assetAccountCode: string;
+  accumulatedAccountCode: string;
+  expenseAccountCode?: string;
+  notes?: string;
+};
+
+export type FixedAsset = FixedAssetInput & {
+  id: string;
+  accumulatedDepreciation: number;
+  depreciatedThrough: string | null;
+  status: "Active" | "Disposed";
+  disposedAt: string | null;
+  monthlyDepreciation: number;
+  bookValue: number;
+};
+
+export type DepreciationPreview = {
+  date: string;
+  rows: { assetId: string; code: string; name: string; expenseAccountCode: string; accumulatedAccountCode: string; amount: number }[];
+  total: number;
+  existingEntryNumber: number | null;
+};

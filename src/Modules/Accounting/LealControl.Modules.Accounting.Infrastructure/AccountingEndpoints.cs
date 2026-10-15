@@ -31,6 +31,8 @@ public static class AccountingEndpoints
         VatBooks.VatBookEndpoints.MapVatBookEndpoints(group);
         FxRevaluation.FxRevaluationEndpoints.MapFxRevaluationEndpoints(group);
         FiscalYears.FiscalYearEndpoints.MapFiscalYearEndpoints(group);
+        Inventory.InventoryValuationEndpoints.MapInventoryValuationEndpoints(group);
+        FixedAssets.FixedAssetEndpoints.MapFixedAssetEndpoints(group);
 
         return endpoints;
     }
