@@ -99,11 +99,17 @@ Sancionada el 27/02/2026 y publicada el 06/03/2026.
 
 Cada entrega termina con su **manual de Ayuda**. Desde S3 se **compara con los recibos del estudio** del mismo mes antes de darla por buena.
 
-### S0. Sacar lo falso (como C0 en Contabilidad)
+### S0. Sacar lo falso (hecha, PR "Sueldos S0")
 
-- Retirar el cálculo actual (sueldo inventado, aportes sin tope) y el Libro de Sueldos Digital falso.
-- La pantalla de liquidación queda indicando que está en reconstrucción, sin rutas rotas.
-- El legajo, los documentos, el organigrama y la firma del recibo se mantienen.
+- **Se retiraron de la API de RRHH:**
+  - el cálculo (sueldo inventado, aportes sin tope);
+  - el Libro de Sueldos Digital falso;
+  - la planilla bancaria;
+  - los endpoints de períodos, conceptos y recibos que la pantalla llamaba con rutas equivocadas.
+- **Las tablas** de períodos, conceptos y recibos **se conservan** hasta S3, que decide con conteo previo.
+- **Se retiró el "asistente de convenios con IA" (Gemini):** solo lo usaba esa pantalla y proponía escalas sin control. Si en S2 conviene leer escalas desde el PDF del acuerdo, se rehace con revisión humana. El lector de facturas con IA sigue.
+- **La pantalla de liquidación** explica que está en reconstrucción y por qué, con las etapas.
+- **La Ayuda de RRHH** prometía un Libro de Sueldos "listo para AFIP" y un presentismo que no existía. Se rehízo como manual de lo que funciona: legajos, documentos, EPP, organigrama, manuales y el estado de sueldos.
 
 ### S1. Empleador, parámetros legales y legajo completo
 

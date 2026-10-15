@@ -171,8 +171,8 @@ export function HumanResourcesDashboardPage() {
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", background: "var(--surface-sunken)" }}
             >
               <div>
-                <strong style={{ color: "var(--text-main)", display: "block" }}>💰 Liquidación de Sueldos & Libro Digital</strong>
-                <span className="muted" style={{ fontSize: "0.82rem" }}>Cálculo automático de haberes, recibos digitales y exportación LSD / Bancos.</span>
+                <strong style={{ color: "var(--text-main)", display: "block" }}>💰 Liquidación de Sueldos</strong>
+                <span className="muted" style={{ fontSize: "0.82rem" }}>En reconstrucción: ley vigente y convenios configurables.</span>
               </div>
               <span>➔</span>
             </Link>

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Routing;
 
 namespace LealControl.Api.Automation;
 
-public record AnalyzeCctRequest(string CctNumber, string? Base64Document, string? MimeType);
 public record ExtractInvoiceOcrRequest(string Base64Document, string MimeType);
 
 public static class AutomationEndpoints
@@ -22,22 +21,6 @@ public static class AutomationEndpoints
         {
             var (success, message) = await client.TestConnectionAsync(ct);
             return success ? Results.Ok(new { status = "Healthy", message }) : Results.Problem(message);
-        });
-
-        group.MapPost("/cct/analyze", async (AnalyzeCctRequest request, GeminiApiClient client, CancellationToken ct) =>
-        {
-            if (string.IsNullOrWhiteSpace(request.CctNumber))
-            {
-                return Results.BadRequest(new { error = "Debe especificar el número o denominación del CCT." });
-            }
-
-            var result = await client.AnalyzeCctAgreementAsync(request.CctNumber, request.Base64Document, request.MimeType, ct);
-            if (result == null)
-            {
-                return Results.Problem("No se pudo obtener el análisis del convenio desde Gemini.");
-            }
-
-            return Results.Ok(result);
         });
 
         group.MapPost("/invoice/ocr", async (ExtractInvoiceOcrRequest request, GeminiApiClient client, CancellationToken ct) =>
