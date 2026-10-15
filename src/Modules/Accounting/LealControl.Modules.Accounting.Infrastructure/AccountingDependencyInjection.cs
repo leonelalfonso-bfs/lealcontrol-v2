@@ -22,6 +22,7 @@ public static class AccountingDependencyInjection
     public static IServiceCollection AddNoOpAccountingPostingGateway(this IServiceCollection services)
     {
         services.TryAddScoped<IAccountingPostingGateway, NoOpAccountingPostingGateway>();
+        services.TryAddSingleton(TimeProvider.System);
         return services;
     }
 }

@@ -151,11 +151,33 @@ Hoy Contabilidad sirve para asientos manuales y para ver cobros y pagos. No refl
   - `AccountingForeignCurrencyApiTests`: cobro en dólares con diferencia realizada; revaluación y su repetición rechazada; nota por diferencia de cambio; línea manual en dólares.
   - En el motor: conversión, centavos de redondeo y falta de cotización.
 
-### C4. Cierre de ejercicio completo
+### C4. Cierre de ejercicio completo (hecha, PR "Contabilidad C4")
 
-- Fecha de cierre de ejercicio por empresa (decisión 3).
-- Refundición, cierre y **apertura** del ejercicio siguiente. Que no se pueda cerrar dos veces y que cierre los períodos.
-- **Libro Diario** numerado en orden cronológico, imprimible y exportable.
+- **Mes de cierre por empresa** (decisión 3): en Cierres y períodos → "Ejercicios y cierre anual". El ejercicio va del día siguiente al cierre anterior al último día de ese mes. Se cambia solo mientras no haya ejercicios cerrados.
+- **Cerrar ejercicio** genera tres asientos (origen `FiscalYear`):
+  - **refundición:** cuentas de resultado contra Resultado del Ejercicio;
+  - **cierre:** todas las cuentas patrimoniales en cero, también su saldo en moneda extranjera;
+  - **apertura**, al día siguiente: el cierre invertido, con el resultado pasado a Resultados no Asignados.
+- **Al cerrar:**
+  - todos los meses del ejercicio quedan con candado, y no se pueden reabrir sueltos;
+  - se cierra en orden y nunca un ejercicio que no terminó;
+  - primero se traen los comprobantes de Ventas y Compras: si queda alguno sin contabilizar, no se cierra;
+  - todo dentro del candado de "un contabilizar a la vez".
+- **Reabrir:** solo el último ejercicio cerrado. Borra sus tres asientos de cierre y abre sus meses.
+- **Reemplaza** al asistente anterior: era solo la refundición, por año calendario, con años fijos en pantalla y sin cierre ni apertura.
+- **Libro Diario** (`/contabilidad/libro-diario`): asientos del período en orden de fecha, con número de orden correlativo que reinicia en cada ejercicio, listo para imprimir o guardar en PDF y exportar a Excel. La lista de trabajo pasó a llamarse "Asientos". El número interno del asiento no se toca.
+- **Prolijidad:**
+  - el candado de un mes lo firma el usuario conectado (antes, la pantalla mandaba "Contador Auditor");
+  - el asiento de sueldos ya no trae importes de ejemplo cargados;
+  - Contabilidad registra su propio reloj.
+- **Ayuda:** cierre de ejercicio y Libro Diario.
+- **Pruebas:** `AccountingFiscalYearApiTests` cubre:
+  - los tres asientos, con dólares que siguen en el ejercicio nuevo;
+  - el candado y la repetición rechazada;
+  - el Libro Diario numerado;
+  - la reapertura;
+  - el mes de cierre en junio;
+  - el cierre frenado por una venta sin contabilizar.
 
 ### C5. Integraciones restantes (con el contador)
 

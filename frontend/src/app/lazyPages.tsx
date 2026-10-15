@@ -205,6 +205,7 @@ export const FleetAgendaPage = named(() => import("../pages/FleetAgendaPage"), "
 export const FleetServiceOrderReportPage = named(() => import("../pages/FleetServiceOrderReportPage"), "FleetServiceOrderReportPage");
 export const ConfigurationHelpPage = named(() => import("../pages/ConfigurationHelpPage"), "ConfigurationHelpPage");
 export const FleetHelpPage = named(() => import("../pages/FleetHelpPage"), "FleetHelpPage");
+export const JournalBookPage = named(() => import("../pages/accounting/JournalBookPage"), "JournalBookPage");
 export const VatBooksPage = named(() => import("../pages/accounting/VatBooksPage"), "VatBooksPage");
 export const AccountingHelpPage = named(() => import("../pages/accounting/AccountingHelpPage"), "AccountingHelpPage");
 export const DirectoryHelpPage = named(() => import("../pages/DirectoryHelpPage"), "DirectoryHelpPage");

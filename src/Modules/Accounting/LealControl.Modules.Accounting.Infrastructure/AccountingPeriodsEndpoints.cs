@@ -120,9 +120,15 @@ internal static class AccountingPeriodsEndpoints
             return Results.Ok(periods);
         });
 
-        group.MapPost("/periods/lock", async (LockPeriodRequest req, ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
+        group.MapPost("/periods/lock", async (LockPeriodRequest req, HttpContext http, ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenantContext.TenantId;
+            if (req.Month is < 1 or > 12 || req.Year is < 2000 or > 2100)
+                return Results.BadRequest(new { message = "Elegí un mes válido." });
+            // Los meses de un ejercicio cerrado se reabren reabriendo el ejercicio, no sueltos.
+            if (!req.Lock && await FiscalYears.FiscalYears.IsInClosedYearAsync(db, tenantId, new DateTime(req.Year, req.Month, 1, 0, 0, 0, DateTimeKind.Utc), ct))
+                return Results.BadRequest(new { message = "Ese mes es de un ejercicio cerrado: para modificarlo, reabrí el ejercicio." });
+            var user = http.User.FindFirst("name")?.Value ?? http.User.FindFirst("email")?.Value ?? "Usuario";
             var period = await db.Periods.FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Year == req.Year && p.Month == req.Month, ct);
             if (period == null)
             {
@@ -133,7 +139,7 @@ internal static class AccountingPeriodsEndpoints
                     Month = req.Month,
                     Status = req.Lock ? "Locked" : "Open",
                     LockedAtUtc = req.Lock ? DateTime.UtcNow : null,
-                    LockedBy = req.Lock ? req.User ?? "Contador" : null
+                    LockedBy = req.Lock ? user : null
                 };
                 db.Periods.Add(period);
             }
@@ -141,7 +147,7 @@ internal static class AccountingPeriodsEndpoints
             {
                 period.Status = req.Lock ? "Locked" : "Open";
                 period.LockedAtUtc = req.Lock ? DateTime.UtcNow : null;
-                period.LockedBy = req.Lock ? req.User ?? "Contador" : null;
+                period.LockedBy = req.Lock ? user : null;
             }
 
             await db.SaveChangesAsync(ct);

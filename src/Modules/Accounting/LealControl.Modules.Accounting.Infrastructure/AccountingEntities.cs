@@ -269,6 +269,9 @@ public sealed class AccountingTenantSettings : Entity<Guid>
 
     public bool AutoPostOnConfirm { get; set; } = false;
 
+    /// <summary>Mes de cierre del ejercicio (1 a 12): el ejercicio termina el último día de ese mes.</summary>
+    public int FiscalYearEndMonth { get; set; } = 12;
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 
@@ -475,5 +478,4 @@ public sealed record UpdateMappingRequest(
     string SalariesPayableAccountCode,
     string SocialSecurityPayableAccountCode);
 
-public sealed record YearEndClosingRequest(int Year, DateTime ClosingDate);
 public sealed record AutoPostPayrollRequest(DateTime Date, string PeriodDescription, decimal TotalGrossSalaries, decimal TotalEmployerContributions, decimal TotalNetSalaries, decimal TotalSocialSecurityToPay, Guid? CostCenterId);

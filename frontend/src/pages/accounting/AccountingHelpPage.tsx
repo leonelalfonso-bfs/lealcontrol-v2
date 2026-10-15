@@ -9,7 +9,7 @@ const SECTIONS = [
   { id: "modelos", title: "Asientos modelo" },
   { id: "manuales", title: "Asientos manuales" },
   { id: "anulaciones", title: "Anulaciones y notas de crédito" },
-  { id: "reportes", title: "Libro Diario, Mayor y Sumas y Saldos" },
+  { id: "reportes", title: "Asientos, Libro Diario, Mayor y Sumas y Saldos" },
   { id: "libros-iva", title: "Libros IVA y Libro IVA Digital de ARCA" },
   { id: "moneda-extranjera", title: "Moneda extranjera y diferencias de cambio" },
   { id: "cierres", title: "Cierre de meses y de ejercicio" },
@@ -24,7 +24,7 @@ export function AccountingHelpPage() {
       title="Ayuda de Contabilidad"
       intro="Cómo pasar lo que la administración carga en Ventas, Compras y Finanzas al Libro Diario, revisarlo y cerrar los períodos. Sirve tanto para el contador de la empresa como para el estudio contable externo."
       sections={SECTIONS}
-      actions={<><Link to="/contabilidad" className="btn">Tablero</Link><Link to="/contabilidad/asientos" className="btn btn-outline">Libro Diario</Link></>}
+      actions={<><Link to="/contabilidad" className="btn">Tablero</Link><Link to="/contabilidad/libro-diario" className="btn btn-outline">Libro Diario</Link></>}
     >
       <ManualPart id="para-que" title="1. Para qué sirve y quién puede hacer qué">
         <p style={{ margin: 0 }}>
@@ -84,7 +84,7 @@ export function AccountingHelpPage() {
             Los asientos se graban con número correlativo y el lote queda registrado con tu usuario. Los comprobantes con problemas quedan
             pendientes, con el motivo, y no frenan al resto.
           </Step>
-          <Step title="“📖 Ver en Libro Diario” para ver los asientos generados." />
+          <Step title="“📖 Ver en Libro Diario” abre la lista de asientos con los recién generados." />
         </Steps>
         <Tip>Contabilizar dos veces el mismo período no duplica nada: cada comprobante se asienta una sola vez.</Tip>
       </ManualPart>
@@ -113,7 +113,7 @@ export function AccountingHelpPage() {
 
       <ManualPart id="manuales" title="6. Asientos manuales">
         <Steps>
-          <Step title="Libro Diario → “➕ Asiento Manual”.">Fecha, concepto y tipo: Estándar, Ajuste o Apertura.</Step>
+          <Step title="Asientos → “➕ Nuevo Asiento Manual”.">Fecha, concepto y tipo: Estándar, Ajuste o Apertura.</Step>
           <Step title="Cargá las líneas: cada una con una cuenta imputable y activa, y un importe en el Debe o en el Haber (no en los dos).">
             Debe y Haber tienen que cuadrar al centavo. El asiento queda a nombre del usuario conectado.
           </Step>
@@ -131,9 +131,13 @@ export function AccountingHelpPage() {
         </ul>
       </ManualPart>
 
-      <ManualPart id="reportes" title="8. Libro Diario, Mayor y Sumas y Saldos">
+      <ManualPart id="reportes" title="8. Asientos, Libro Diario, Mayor y Sumas y Saldos">
         <ul style={{ margin: 0, display: "grid", gap: 6 }}>
-          <li><Link to="/contabilidad/asientos">Libro Diario</Link>: todos los asientos, con su origen (Ventas, Compras, Finanzas o Manual).</li>
+          <li><Link to="/contabilidad/asientos">Asientos</Link>: la lista de trabajo, con el origen de cada uno (Ventas, Compras, Finanzas o Manual) y la carga de asientos manuales.</li>
+          <li>
+            <Link to="/contabilidad/libro-diario">Libro Diario</Link>: los asientos de un período en orden de fecha, con un número de orden correlativo
+            que empieza en 1 en cada ejercicio. “🖨️ Imprimir / PDF” lo deja listo para imprimir o guardar, y “📥 Excel” lo exporta.
+          </li>
           <li><Link to="/contabilidad/mayor">Libro Mayor</Link>: los movimientos y el saldo de una cuenta.</li>
           <li><Link to="/contabilidad/sumas-saldos">Sumas y Saldos</Link>: el balance de 8 columnas.</li>
           <li><Link to="/contabilidad/conciliacion">Conciliación tesorería</Link>: el saldo de cada caja y banco en Finanzas contra su cuenta del mayor.</li>
@@ -197,8 +201,17 @@ export function AccountingHelpPage() {
           <Step title="Cierres y períodos → elegí el año → “🔒 Cerrar con Candado” en el mes.">
             Con el mes cerrado no se puede cargar, contabilizar ni revertir nada con esa fecha. “🔓 Reabrir Mes” lo vuelve a abrir.
           </Step>
-          <Step title="Al terminar el ejercicio: “⚡ Ejecutar Asiento de Refundición de Resultados”.">
-            Cancela las cuentas de resultado contra el resultado del ejercicio. Se puede ejecutar una sola vez por año.
+          <Step title="Una sola vez: en “Ejercicios y cierre anual”, elegí el mes en que cierra el ejercicio de la empresa (por ejemplo, diciembre o junio).">
+            Se cambia solo mientras no haya ejercicios cerrados.
+          </Step>
+          <Step title="Terminado el ejercicio, contabilizá todo lo que falte y tocá “Cerrar ejercicio”.">
+            El sistema genera tres asientos: la <strong>refundición</strong> (las cuentas de resultado contra Resultado del Ejercicio), el{" "}
+            <strong>cierre</strong> (todas las cuentas patrimoniales en cero) y la <strong>apertura</strong> del ejercicio siguiente, al día
+            siguiente, con el resultado pasado a Resultados no Asignados. Todos los meses del ejercicio quedan cerrados con candado.
+          </Step>
+          <Step title="Los ejercicios se cierran en orden, del más viejo al más nuevo, y no se cierra uno que no terminó." />
+          <Step title="Para corregir algo de un ejercicio cerrado: “Reabrir” (solo el último cerrado).">
+            Borra sus tres asientos de cierre y abre sus meses; después se vuelve a cerrar.
           </Step>
           <Step title="Sueldos: “📝 Contabilizar Asiento de Sueldos y F.931” con los totales de la liquidación.">
             Los importes tienen que cuadrar: brutos más contribuciones igual a netos más cargas a pagar.
@@ -214,7 +227,9 @@ export function AccountingHelpPage() {
           [<>Una venta no aparece en el Libro IVA Ventas</>, <>Solo van las que tienen CAE. Revisá en Ventas que esté autorizada y la fecha del comprobante.</>],
           [<>“… necesita CUIT” al exportar a ARCA</>, <>Una factura de compra no se edita: anulala en Compras (“Anular”) y cargala de nuevo con el CUIT del proveedor o con el tipo correcto.</>],
           [<>“… está en USD y no tiene cotización”</>, <>Es un cobro o pago en dólares cargado sin cotización: anulalo en Finanzas y cargalo de nuevo con la cotización del día.</>],
-          [<>“… ya tiene revaluación”</>, <>Ese mes ya se revaluó: buscá el asiento en el Libro Diario (origen Revaluation).</>],
+          [<>“Hay N comprobante(s) del ejercicio sin contabilizar”</>, <>Contabilizá el período del ejercicio (“🔴 ► CONTABILIZAR”) y volvé a cerrar.</>],
+          [<>“Ese mes es de un ejercicio cerrado…”</>, <>Los meses de un ejercicio cerrado se abren reabriendo el ejercicio, no de a uno.</>],
+          [<>“… ya tiene revaluación”</>, <>Ese mes ya se revaluó: buscá el asiento en Asientos (origen Revaluation).</>],
           [<>Un cobro o pago queda con error</>, <>Falta el mapeo de esa caja o banco: Plan de Cuentas → Mapeo cuenta financiera.</>],
           [<>“Asiento desbalanceado” o cuenta inexistente</>, <>Una línea del asiento modelo apunta a una cuenta que no existe o no es imputable: corregila en el modelo.</>],
           [<>“no imputable”, “uno solo” o “desbalanceado” en un asiento manual</>, <>Usá cuentas imputables, un solo lado por línea y que Debe y Haber cuadren.</>]

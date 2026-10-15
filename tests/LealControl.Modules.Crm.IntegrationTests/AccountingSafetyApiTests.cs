@@ -7,7 +7,8 @@ namespace LealControl.Modules.Crm.IntegrationTests;
 
 /// <summary>
 /// Contabilidad C0: asientos manuales validados contra el plan de cuentas, numeración única aun
-/// con asientos simultáneos, candado de período y sin el Libro IVA Digital falso.
+/// con asientos simultáneos, candado de período y sin el Libro IVA Digital falso. (El cierre de
+/// ejercicio se prueba en AccountingFiscalYearApiTests.)
 /// </summary>
 public sealed class AccountingSafetyApiTests : IAsyncLifetime
 {
@@ -96,19 +97,5 @@ public sealed class AccountingSafetyApiTests : IAsyncLifetime
             Assert.Equal(HttpStatusCode.NotFound, sales.StatusCode);
         using (var purchases = await client.GetAsync("/api/v1/accounting/reports/iva-digital-purchases?year=2026&month=9"))
             Assert.Equal(HttpStatusCode.NotFound, purchases.StatusCode);
-    }
-
-    [Fact]
-    public async Task A_fiscal_year_is_closed_only_once()
-    {
-        using var client = _factory.CreateAuthenticatedClient();
-        var accounts = (await Json(await client.GetAsync("/api/v1/accounting/accounts"))).EnumerateArray().ToList();
-        var cash = accounts.Single(a => a.GetProperty("code").GetString() == "1.1.01.001");
-        var income = accounts.First(a => a.GetProperty("accountType").GetString() == "Income" && a.GetProperty("isDirectPosting").GetBoolean());
-        await Json(await client.PostAsJsonAsync("/api/v1/accounting/journal-entries", Entry("2025-06-10", Line(cash, 500, 0), Line(income, 0, 500))));
-
-        await Json(await client.PostAsJsonAsync("/api/v1/accounting/year-end-closing", new { year = 2025, closingDate = "2025-12-31T12:00:00Z" }));
-        Assert.Contains("ya tiene asiento de cierre", await RejectedAsync(
-            await client.PostAsJsonAsync("/api/v1/accounting/year-end-closing", new { year = 2025, closingDate = "2025-12-31T12:00:00Z" })));
     }
 }

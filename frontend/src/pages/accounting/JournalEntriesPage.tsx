@@ -51,7 +51,7 @@ export function JournalEntriesPage() {
     <div className="stack" style={{ gap: 20 }}>
       <div className="page-head">
         <div>
-          <h1>📖 Libro Diario de Asientos Contables</h1>
+          <h1>📖 Asientos contables</h1>
           <p className="muted">Registraciones de partida doble, asientos automáticos y manuales</p>
         </div>
         <div className="row" style={{ gap: 10 }}>

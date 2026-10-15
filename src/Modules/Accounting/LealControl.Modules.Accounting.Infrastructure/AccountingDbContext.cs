@@ -448,6 +448,8 @@ public sealed class AccountingDbContext : DbContext
 
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_tenant_settings_Tenant"" ON accounting.tenant_settings (""TenantId"");",
 
+            @"ALTER TABLE accounting.tenant_settings ADD COLUMN IF NOT EXISTS ""FiscalYearEndMonth"" integer NOT NULL DEFAULT 12;",
+
             @"CREATE TABLE IF NOT EXISTS accounting.finance_account_mapping (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
                 ""TenantId"" uuid NOT NULL,

@@ -2527,3 +2527,31 @@ export type FxRevaluationPreview = {
   netDifference: number;
   existingEntryNumber: number | null;
 };
+
+export type FiscalYearStatus = {
+  start: string;
+  end: string;
+  label: string;
+  status: "Open" | "Closed";
+  closingEntryNumbers: number[];
+  result: number;
+  pendingDocuments: number;
+};
+
+export type FiscalYears = { fiscalYearEndMonth: number; years: FiscalYearStatus[] };
+
+export type JournalBookEntry = {
+  order: number;
+  fiscalYear: string;
+  id: string;
+  entryNumber: number;
+  date: string;
+  concept: string;
+  entryType: string;
+  sourceModule: string;
+  totalDebit: number;
+  totalCredit: number;
+  lines: { accountCode: string; accountName: string; debit: number; credit: number; memo?: string | null; currency: string; originalAmount?: number | null }[];
+};
+
+export type JournalBook = { from: string; to: string; entries: JournalBookEntry[]; totalDebit: number; totalCredit: number };
