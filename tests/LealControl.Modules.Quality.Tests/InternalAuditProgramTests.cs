@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using LealControl.BuildingBlocks.Time;
 using Xunit;
 
 namespace LealControl.Modules.Quality.Tests;
@@ -41,15 +42,16 @@ public sealed class InternalAuditProgramTests : IClassFixture<QualityWebApplicat
         var doneWithoutDate = await client.PutAsJsonAsync($"/api/v1/quality/records/pg04/{id}", new { status = "Done" });
         Assert.Equal(HttpStatusCode.BadRequest, doneWithoutDate.StatusCode);
 
+        var todayAr = ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow);
         var future = await client.PutAsJsonAsync($"/api/v1/quality/records/pg04/{id}", new
         {
-            status = "Done", executedDate = DateTime.UtcNow.AddDays(2)
+            status = "Done", executedDate = todayAr.AddDays(2)
         });
         Assert.Equal(HttpStatusCode.BadRequest, future.StatusCode);
 
         var done = await client.PutAsJsonAsync($"/api/v1/quality/records/pg04/{id}", new
         {
-            status = "Done", executedDate = DateTime.UtcNow
+            status = "Done", executedDate = todayAr
         });
         Assert.Equal(HttpStatusCode.OK, done.StatusCode);
         Assert.Equal("Done", (await done.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("status").GetString());
