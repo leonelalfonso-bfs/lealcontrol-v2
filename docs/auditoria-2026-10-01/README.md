@@ -10,6 +10,7 @@ Punto de entrada vigente: [CONTINUIDAD](../CONTINUIDAD.md). Contiene el estado p
 - [61 Encendido de la emisión en producción](61-encendido-produccion-arca.md).
 - [62 Diagnóstico general y plan](62-estado-general-y-plan.md).
 - [67 Contabilidad: diagnóstico y plan](67-contabilidad-diagnostico.md): las facturas no se contabilizan y el Libro IVA Digital es falso; entregas C0 a C6, todas hechas.
+- [68 Sueldos: diagnóstico y plan](68-sueldos-diagnostico.md): la liquidación de RRHH es una maqueta (sueldos inventados, Libro de Sueldos falso); marco legal 2026 (Ley 27.802, FAL) y entregas S0 a S7, con convenios configurables (primero UECARA).
 - [66 Padrón: errores de negocio cuando faltan datos](66-padron-errores-de-negocio.md): muestra el motivo que informa ARCA en lugar de "sin razón social".
 
 Los informes 09 a 53 documentan cómo se construyó ARCA; su estado actual está resumido en el 59.
