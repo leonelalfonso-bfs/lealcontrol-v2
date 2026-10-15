@@ -926,6 +926,33 @@ export const api = {
     request<unknown>("/api/v1/hr/payroll/settings/parameters", { method: "POST", body: JSON.stringify(body) }),
   deletePayrollParameter: (id: string) => request<void>(`/api/v1/hr/payroll/settings/parameters/${id}`, { method: "DELETE" }),
 
+  // Sueldos: convenios colectivos (nota 68, S2)
+  listAgreements: () => request<import("./types").AgreementSummary[]>("/api/v1/hr/payroll/agreements"),
+  createAgreement: (body: import("./types").AgreementInput) =>
+    request<import("./types").Agreement>("/api/v1/hr/payroll/agreements", { method: "POST", body: JSON.stringify(body) }),
+  installUecara: () => request<import("./types").Agreement>("/api/v1/hr/payroll/agreements/templates/uecara", { method: "POST" }),
+  getAgreement: (id: string) => request<import("./types").AgreementDetail>(`/api/v1/hr/payroll/agreements/${id}`),
+  updateAgreement: (id: string, body: import("./types").AgreementInput) =>
+    request<import("./types").Agreement>(`/api/v1/hr/payroll/agreements/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteAgreement: (id: string) => request<void>(`/api/v1/hr/payroll/agreements/${id}`, { method: "DELETE" }),
+  addAgreementCategory: (id: string, body: { group: string; name: string; sortOrder: number }) =>
+    request<import("./types").AgreementCategory>(`/api/v1/hr/payroll/agreements/${id}/categories`, { method: "POST", body: JSON.stringify(body) }),
+  deleteAgreementCategory: (id: string, categoryId: string) =>
+    request<void>(`/api/v1/hr/payroll/agreements/${id}/categories/${categoryId}`, { method: "DELETE" }),
+  getAgreementScales: (id: string, month: string) =>
+    request<import("./types").AgreementScaleRow[]>(`/api/v1/hr/payroll/agreements/${id}/scales?month=${month}`),
+  pasteAgreementScales: (id: string, body: { month: string; source: string; text: string }) =>
+    request<{ saved: number }>(`/api/v1/hr/payroll/agreements/${id}/scales/paste`, { method: "POST", body: JSON.stringify(body) }),
+  increaseAgreementScales: (id: string, body: { month: string; percent: number; source: string; roundToPesos: boolean }) =>
+    request<{ saved: number }>(`/api/v1/hr/payroll/agreements/${id}/scales/increase`, { method: "POST", body: JSON.stringify(body) }),
+  addAgreementRule: (id: string, body: import("./types").AgreementRuleInput) =>
+    request<import("./types").AgreementRule>(`/api/v1/hr/payroll/agreements/${id}/rules`, { method: "POST", body: JSON.stringify(body) }),
+  updateAgreementRule: (id: string, ruleId: string, body: import("./types").AgreementRuleInput) =>
+    request<import("./types").AgreementRule>(`/api/v1/hr/payroll/agreements/${id}/rules/${ruleId}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteAgreementRule: (id: string, ruleId: string) => request<void>(`/api/v1/hr/payroll/agreements/${id}/rules/${ruleId}`, { method: "DELETE" }),
+  simulateAgreement: (id: string, body: { categoryId: string; zone: string; month: string; seniorityFrom: string; unionMember: boolean; flags: string[] }) =>
+    request<import("./types").AgreementSimulation>(`/api/v1/hr/payroll/agreements/${id}/simulate`, { method: "POST", body: JSON.stringify(body) }),
+
   // ==========================================
   // FLEET (GESTIÃ“N DE FLOTA)
   // ==========================================

@@ -10,6 +10,7 @@ const SECTIONS = [
   { id: "manuales", title: "Manuales de procedimientos" },
   { id: "seguridad-social", title: "Datos de seguridad social del legajo" },
   { id: "configuracion", title: "Configuración de sueldos" },
+  { id: "convenios", title: "Convenios colectivos" },
   { id: "sueldos", title: "Liquidación de sueldos" }
 ];
 
@@ -106,7 +107,31 @@ export function HumanResourcesHelpPage() {
         </Steps>
       </ManualPart>
 
-      <ManualPart id="sueldos" title="9. Liquidación de sueldos">
+      <ManualPart id="convenios" title="9. Convenios colectivos">
+        <p style={{ margin: 0 }}>
+          Cada convenio se configura con sus datos: categorías (por grupo), zonas si las tiene, la escala de cada mes y sus reglas
+          (adicionales, descuentos sindicales y contribuciones del empleador). Sirve para cualquier convenio; UECARA viene como plantilla.
+        </p>
+        <Steps>
+          <Step title="RRHH → Convenios colectivos → “Cargar UECARA (CCT 660/13)” o “➕ Nuevo convenio”.">
+            UECARA trae sus 16 categorías, las zonas I a V, la escala de septiembre de 2026 publicada y sus reglas: antigüedad por año (desde el
+            mes siguiente), adicionales por zona desfavorable, títulos, fallo de caja, asistencia perfecta, cuota sindical y aportes solidarios.
+            <strong> Verificá la escala contra el acuerdo homologado y un recibo del estudio.</strong>
+          </Step>
+          <Step title="Escala salarial: elegí el mes y usá “Generar escala del mes” con el aumento del acuerdo (por ejemplo, 1,8 %), o pegá la escala desde una planilla.">
+            Para pegar: una fila por categoría y zona, con categoría, zona, básico y, si hay, la suma no remunerativa. Si una fila está mal, no
+            se carga nada y se indica cuál corregir. Cada valor queda con su fuente.
+          </Step>
+          <Step title="Reglas: tipo (adicional, descuento o contribución), cálculo (% del básico, % de la remuneración, monto fijo, por año de antigüedad), a quién aplica (todos, afiliados, no afiliados), zonas, grupos, marca del colaborador y vigencia.">
+            Cuando un monto cambia por paritaria, cargá una regla nueva con el mismo código desde el mes del cambio y cerrá la anterior con
+            “hasta”. El aporte solidario de los no afiliados no puede pasar del 2 % (Ley 27.802).
+          </Step>
+          <Step title="Simulador: elegí categoría, zona, antigüedad, afiliación y marcas, y verificá el resultado contra el recibo del estudio." />
+          <Step title="En el legajo (“💼 2. Contrato & Convenio” → “📜 Convenio colectivo”): convenio, categoría, zona y los adicionales que dependen del colaborador (título, fallo de caja)." />
+        </Steps>
+      </ManualPart>
+
+      <ManualPart id="sueldos" title="10. Liquidación de sueldos">
         <p style={{ margin: 0 }}>
           La <Link to="/rrhh/liquidaciones">liquidación de sueldos</Link> se está rehaciendo para que cumpla la ley vigente (incluida la Ley
           27.802) y sirva para cualquier convenio. Mientras tanto, los sueldos se liquidan como hasta ahora (estudio contable) y el asiento

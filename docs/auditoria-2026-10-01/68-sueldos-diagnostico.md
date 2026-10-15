@@ -145,16 +145,40 @@ Cada entrega termina con su **manual de Ayuda**. Desde S3 se **compara con los r
   - empleador validado;
   - CUIL inválido y jornada parcial sin horas rechazados.
 
-### S2. Convenios configurables
+### S2. Convenios configurables (hecha, PR "Sueldos S2")
 
-- **Convenio:**
-  - categorías (y zonas, si las tiene), con escalas por vigencia que se cargan o pegan desde la planilla del acuerdo;
-  - sumas no remunerativas por categoría y mes.
-- **Adicionales por fórmula:**
-  - porcentaje del básico, monto fijo, monto por año de antigüedad (con "desde el mes siguiente" si corresponde), por día u hora;
-  - divisor de la hora.
-- **Aportes y contribuciones sindicales:** cuota de afiliados, solidario de no afiliados (tope legal del 2 %), contribuciones del empleador a fondos del convenio.
-- **UECARA cargado como primer convenio**, con su escala vigente.
+- **Modelo genérico** (RRHH → Convenios colectivos). Ninguna regla de un convenio está escrita en el código.
+  - **Convenio:** número, sindicato, divisor de la hora y zonas.
+  - **Categorías** por grupo.
+  - **Escalas por mes** (básico y suma no remunerativa por categoría y zona, con su fuente):
+    - se **pegan** desde una planilla, todo o nada, con el error de cada fila;
+    - o se **generan** con el % de aumento del acuerdo sobre la escala anterior, redondeando a pesos o no.
+  - **Reglas con vigencia** (desde y hasta):
+    - adicional (remunerativo o no), descuento al trabajador o contribución del empleador;
+    - cálculo: % del básico, % de la remuneración, monto fijo, $ o % por año de antigüedad, con la opción "el año que se cumple en el mes se cobra desde el siguiente";
+    - filtros por zonas, grupos, afiliación y una marca del colaborador (título, fallo de caja) o del mes (asistencia perfecta, que en S3 sale de las novedades).
+  - **Controles:**
+    - el aporte solidario de los no afiliados no puede pasar del 2 % (Ley 27.802);
+    - el simulador avisa si la suma de los solidarios lo supera, como pasa con UECARA (1 % más el extraordinario del 1,5 %, que la Comisión del acuerdo mantuvo vigente): confirmarlo con el estudio.
+  - **Simulador:** lo que fija el convenio para una categoría, zona, antigüedad, afiliación y marcas en un mes. Avisa si falta la escala del mes.
+- **UECARA (CCT 660/13) como plantilla de datos:**
+  - 16 categorías en 5 grupos y zonas I a V;
+  - escala de septiembre de 2026 (acuerdo del 22/09/2026, Anexo I, valores publicados **a verificar con el homologado**);
+  - antigüedad $ 13.844 por año desde el mes siguiente;
+  - zona III 11,5 %, zona IV del 60 al 80 % según el grupo, zona V 100 %;
+  - títulos A, B y C, fallo de caja, asistencia perfecta 10 %;
+  - cuota sindical 2 %, solidario 1 % y extraordinario 1,5 %.
+  - Queda afuera el adicional por traslado de más de 100 km: se carga como regla si hace falta.
+- **Legajo:** convenio, categoría y zona (controlados contra el convenio) y las marcas del colaborador. El texto de convenio y categoría se completa solo. Fuera de convenio rige el básico pactado.
+- **Retiro:** S0 había retirado el "asistente de convenios con IA"; no se volvió a usar.
+- **Ayuda de RRHH:** sección de convenios colectivos.
+- **Pruebas:** `PayrollAgreementsApiTests` cubre:
+  - el caso UECARA: auxiliar administrativo de zona II, con antigüedad desde el mes siguiente, título B, solidarios y aviso del tope;
+  - afiliado en zona IV con el 80 % del grupo;
+  - aumento del 1,8 % redondeado;
+  - pegado todo o nada;
+  - tope del 2 %;
+  - legajo con zona controlada y marcas.
 
 ### S3. Liquidación mensual
 
