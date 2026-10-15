@@ -137,6 +137,18 @@ public sealed class FixedAsset : Entity<Guid>
     }
 }
 
+/// <summary>Índice de precios de un mes (serie FACPCE: IPC nacional empalmado con IPIM) para reexpresar.</summary>
+public sealed class InflationIndex : Entity<Guid>
+{
+    public TenantId TenantId { get; set; }
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public decimal Value { get; set; }
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public InflationIndex() : base(Guid.NewGuid()) { }
+}
+
 public sealed class FiscalYearPeriod : Entity<Guid>
 {
     public TenantId TenantId { get; set; }

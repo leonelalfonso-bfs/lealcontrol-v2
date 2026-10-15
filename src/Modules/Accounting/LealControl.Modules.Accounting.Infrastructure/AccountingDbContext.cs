@@ -21,6 +21,7 @@ public sealed class AccountingDbContext : DbContext
     public DbSet<JournalEntryLine> JournalEntryLines => Set<JournalEntryLine>();
     public DbSet<CostCenter> CostCenters => Set<CostCenter>();
     public DbSet<FixedAsset> FixedAssets => Set<FixedAsset>();
+    public DbSet<InflationIndex> InflationIndices => Set<InflationIndex>();
     public DbSet<FiscalYearPeriod> Periods => Set<FiscalYearPeriod>();
     public DbSet<AccountingMapping> Mappings => Set<AccountingMapping>();
     public DbSet<JournalTemplate> JournalTemplates => Set<JournalTemplate>();
@@ -164,6 +165,15 @@ public sealed class AccountingDbContext : DbContext
             b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
             b.HasIndex(x => new { x.TenantId, x.SourceModule, x.SourceDocumentId });
             b.HasIndex(x => new { x.TenantId, x.Status, x.DocumentDateUtc });
+        });
+
+        modelBuilder.Entity<InflationIndex>(b =>
+        {
+            b.ToTable("inflation_indices", "accounting");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.Property(x => x.Value).HasPrecision(18, 6);
+            b.HasIndex(x => new { x.TenantId, x.Year, x.Month }).IsUnique();
         });
 
         modelBuilder.Entity<FixedAsset>(b =>
@@ -432,6 +442,17 @@ public sealed class AccountingDbContext : DbContext
 
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_fixed_assets_Tenant_Code"" ON accounting.fixed_assets (""TenantId"", ""Code"");",
 
+            @"CREATE TABLE IF NOT EXISTS accounting.inflation_indices (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Year"" integer NOT NULL,
+                ""Month"" integer NOT NULL,
+                ""Value"" numeric(18,6) NOT NULL,
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_inflation_indices_Tenant_Month"" ON accounting.inflation_indices (""TenantId"", ""Year"", ""Month"");",
+
             @"CREATE TABLE IF NOT EXISTS accounting.finance_account_mapping (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
                 ""TenantId"" uuid NOT NULL,
@@ -590,6 +611,7 @@ public sealed class AccountingDbContext : DbContext
             new(Guid.NewGuid(), tenantId, "4.2.01", "Descuentos Obtenidos por Pronto Pago", "Income", 3, "4.2", true),
             new(Guid.NewGuid(), tenantId, "4.2.02", "Intereses Ganados", "Income", 3, "4.2", true),
             new(Guid.NewGuid(), tenantId, "4.2.03", "Diferencia de Cambio Positiva", "Income", 3, "4.2", true),
+            new(Guid.NewGuid(), tenantId, "4.2.04", "Resultado por Exposición a la Inflación (RECPAM)", "Income", 3, "4.2", true),
 
             // 5. EGRESOS / GASTOS
             new(Guid.NewGuid(), tenantId, "5", "EGRESOS Y GASTOS", "Expense", 1, null, false),
@@ -731,6 +753,8 @@ public sealed class AccountingDbContext : DbContext
                 Accounts.Add(new Account(Guid.NewGuid(), tenantId, "5.2.09", "Impuestos y Tasas", "Expense", 3, "5.2", true));
             if (!codes.Contains("1.2.01.005"))
                 Accounts.Add(new Account(Guid.NewGuid(), tenantId, "1.2.01.005", "Amortización Acumulada Maquinarias & Equipos (-)", "Asset", 4, "1.2.01", true));
+            if (!codes.Contains("4.2.04"))
+                Accounts.Add(new Account(Guid.NewGuid(), tenantId, "4.2.04", "Resultado por Exposición a la Inflación (RECPAM)", "Income", 3, "4.2", true));
             if (!codes.Contains("1.2.01.006"))
                 Accounts.Add(new Account(Guid.NewGuid(), tenantId, "1.2.01.006", "Amortización Acumulada Instalaciones (-)", "Asset", 4, "1.2.01", true));
         }

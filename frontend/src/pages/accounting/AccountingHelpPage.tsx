@@ -14,6 +14,7 @@ const SECTIONS = [
   { id: "moneda-extranjera", title: "Moneda extranjera y diferencias de cambio" },
   { id: "existencias", title: "Existencias y costo de ventas" },
   { id: "bienes-de-uso", title: "Bienes de uso y amortizaciones" },
+  { id: "inflacion", title: "Ajuste por inflación" },
   { id: "cierres", title: "Cierre de meses y de ejercicio" },
   { id: "problemas", title: "Cuando el sistema no te deja" }
 ];
@@ -235,7 +236,30 @@ export function AccountingHelpPage() {
         <Tip>Con amortizaciones registradas, el costo, el valor residual, la vida útil y la fecha de alta ya no se pueden cambiar.</Tip>
       </ManualPart>
 
-      <ManualPart id="cierres" title="13. Cierre de meses y de ejercicio">
+      <ManualPart id="inflacion" title="13. Ajuste por inflación">
+        <p style={{ margin: 0 }}>
+          Reexpresa a moneda de cierre (RT 6, método simplificado) las cuentas <strong>no monetarias</strong>. Cada movimiento se multiplica por
+          índice del mes de cierre / índice de su mes, y la diferencia va contra <strong>RECPAM</strong> (4.2.04). Las cuentas monetarias (caja,
+          bancos, créditos y deudas) no se ajustan: su pérdida de poder de compra es justamente el RECPAM.
+        </p>
+        <Steps>
+          <Step title="Contabilidad → Ajuste por inflación → “1. Índices FACPCE”: copiá de la planilla de la FACPCE el mes y el valor y pegalos (una fila por mes) → “Guardar índices”.">
+            Sirven “2026-03”, “03/2026” y valores con coma o con punto. Hacen falta los índices de todos los meses con movimientos del ejercicio
+            (y el del cierre anterior, si el ejercicio anterior está cerrado).
+          </Step>
+          <Step title="“2. Cuentas no monetarias”: “Marcar las cuentas sugeridas” y revisalas con el contador en el Plan de Cuentas (casilla “Ajusta por inflación”).">
+            La sugerencia marca bienes de cambio, bienes de uso, patrimonio neto y resultados, salvo los financieros.
+          </Step>
+          <Step title="“3. Ajuste del mes”: último día del mes → “👁️ Calcular” → “Registrar asiento”.">
+            Muestra por cuenta el saldo histórico, el reexpresado y el ajuste, y el RECPAM. Se puede ajustar todos los meses o solo al cierre del
+            ejercicio: cada corrida registra solo lo que falta respecto de los ajustes ya hechos en el ejercicio.
+          </Step>
+          <Step title="Al cerrar el ejercicio, los saldos ajustados pasan a la apertura: el ejercicio siguiente parte de ellos." />
+        </Steps>
+        <Tip>Con el ajuste registrado, Sumas y Saldos, el Mayor y el Estado de Resultados quedan en moneda de cierre (moneda homogénea).</Tip>
+      </ManualPart>
+
+      <ManualPart id="cierres" title="14. Cierre de meses y de ejercicio">
         <Steps>
           <Step title="Contabilizá el mes completo y revisá Sumas y Saldos." />
           <Step title="Cierres y períodos → elegí el año → “🔒 Cerrar con Candado” en el mes.">
@@ -260,7 +284,7 @@ export function AccountingHelpPage() {
         </Steps>
       </ManualPart>
 
-      <ManualPart id="problemas" title="14. Cuando el sistema no te deja">
+      <ManualPart id="problemas" title="15. Cuando el sistema no te deja">
         <Troubleshooting rows={[
           [<>Una factura de venta no aparece al contabilizar</>, <>Solo entran las autorizadas por ARCA y con fecha dentro del período. Si está en borrador, autorizala en Ventas.</>],
           [<>“Sin asiento modelo” en la vista previa</>, <>Ese tipo de comprobante no tiene un modelo activo: activalo o creá uno en Asientos Modelos.</>],
@@ -272,6 +296,8 @@ export function AccountingHelpPage() {
           [<>“Ese mes es de un ejercicio cerrado…”</>, <>Los meses de un ejercicio cerrado se abren reabriendo el ejercicio, no de a uno.</>],
           [<>“… ya tiene ajuste de existencias” o “… ya tiene amortización”</>, <>Ese mes ya se registró: buscá el asiento en Asientos (origen Inventory o Depreciation).</>],
           [<>“El bien ya tiene amortizaciones…”</>, <>Solo se pueden cambiar el nombre, las cuentas y las notas. Si el alta estaba mal, dalo de baja y cargalo de nuevo con otro código.</>],
+          [<>“Faltan los índices de …”</>, <>Cargá en “Índices FACPCE” los meses que lista y volvé a calcular.</>],
+          [<>“… ya tiene ajuste por inflación”</>, <>Ese mes ya se ajustó: el siguiente mes registra la diferencia acumulada.</>],
           [<>“… ya tiene revaluación”</>, <>Ese mes ya se revaluó: buscá el asiento en Asientos (origen Revaluation).</>],
           [<>Un cobro o pago queda con error</>, <>Falta el mapeo de esa caja o banco: Plan de Cuentas → Mapeo cuenta financiera.</>],
           [<>“Asiento desbalanceado” o cuenta inexistente</>, <>Una línea del asiento modelo apunta a una cuenta que no existe o no es imputable: corregila en el modelo.</>],

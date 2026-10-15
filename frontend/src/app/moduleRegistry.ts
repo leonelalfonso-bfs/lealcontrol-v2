@@ -376,6 +376,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/contabilidad/sumas-saldos", label: "Sumas y Saldos", icon: "⚖️" },
       { path: "/contabilidad/libros-iva", label: "Libros IVA", icon: "🧾" },
       { path: "/contabilidad/bienes-de-uso", label: "Bienes de uso", icon: "🏗️" },
+      { path: "/contabilidad/ajuste-inflacion", label: "Ajuste por inflación", icon: "📈" },
       { path: "/contabilidad/conciliacion", label: "Conciliación tesorería", icon: "🏦" },
       { path: "/contabilidad/portal-estudio", label: "Cierres y períodos", icon: "🏢" },
       { path: "/contabilidad/ayuda", label: "Ayuda Contabilidad", icon: "💡" }
