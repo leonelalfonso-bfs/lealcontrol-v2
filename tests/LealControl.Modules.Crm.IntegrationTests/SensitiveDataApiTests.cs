@@ -101,7 +101,7 @@ public sealed class SensitiveDataApiTests : IAsyncLifetime
         using var admin = _factory.CreateAuthenticatedClient();
         var employee = await Json(await admin.PostAsJsonAsync("/api/v1/hr/employees", new
         {
-            firstName = "Ana", lastName = "Pérez", documentNumber = "30111222", cuil = "27301112223", baseSalary = 900000m, hourlyRate = 5000m
+            firstName = "Ana", lastName = "Pérez", documentNumber = "30111222", cuil = "27301112225", baseSalary = 900000m, hourlyRate = 5000m
         }));
         var id = employee.GetProperty("id").GetGuid();
 

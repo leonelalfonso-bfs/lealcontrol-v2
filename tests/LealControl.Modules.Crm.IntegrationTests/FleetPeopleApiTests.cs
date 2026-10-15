@@ -23,7 +23,7 @@ public sealed class FleetPeopleApiTests : IAsyncLifetime
     private static async Task<Guid> EmployeeAsync(HttpClient client, string first, string last) =>
         (await Json(await client.PostAsJsonAsync("/api/v1/hr/employees", new
         {
-            firstName = first, lastName = last, documentNumber = "30111222", cuil = "20301112223", hireDate = "2020-01-01T00:00:00Z"
+            firstName = first, lastName = last, documentNumber = "30111222", cuil = "20301112220", hireDate = "2020-01-01T00:00:00Z"
         }))).GetProperty("id").GetGuid();
 
     [Fact]

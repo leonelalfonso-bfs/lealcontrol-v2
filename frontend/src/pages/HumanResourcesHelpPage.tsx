@@ -8,7 +8,9 @@ const SECTIONS = [
   { id: "epp", title: "Entrega de elementos de protección (EPP)" },
   { id: "organigrama", title: "Organigrama y descripción de puestos" },
   { id: "manuales", title: "Manuales de procedimientos" },
-  { id: "sueldos", title: "Sueldos" }
+  { id: "seguridad-social", title: "Datos de seguridad social del legajo" },
+  { id: "configuracion", title: "Configuración de sueldos" },
+  { id: "sueldos", title: "Liquidación de sueldos" }
 ];
 
 /** Ayuda de RRHH: manual de legajos, documentos, EPP, organigrama y manuales; estado de la liquidación. */
@@ -74,7 +76,37 @@ export function HumanResourcesHelpPage() {
         </Steps>
       </ManualPart>
 
-      <ManualPart id="sueldos" title="7. Sueldos">
+      <ManualPart id="seguridad-social" title="7. Datos de seguridad social del legajo">
+        <p style={{ margin: 0 }}>
+          En “💼 2. Contrato & Convenio”, la sección “🏛️ Seguridad social (ARCA)” guarda los datos que pide ARCA en el Libro de Sueldos
+          Digital y el F.931. Son códigos de las tablas de ARCA (SICOSS / Declaración en línea); si no sabés alguno, pedíselo al estudio.
+        </p>
+        <ul style={{ margin: 0, display: "grid", gap: 4 }}>
+          <li><strong>Situación de revista:</strong> 1 Activo, o la licencia que corresponda en el mes.</li>
+          <li><strong>Condición:</strong> 1 Servicios comunes mayor de 18 años; 2 Jubilado.</li>
+          <li><strong>Modalidad de contratación:</strong> 8 a tiempo completo indeterminado; 102 eventual.</li>
+          <li><strong>Actividad:</strong> vacía, se usa la de la empresa. <strong>Siniestrado:</strong> 0 si no tiene incapacidad.</li>
+          <li><strong>Obra social:</strong> el código de 6 dígitos del RNOS, y los adherentes.</li>
+          <li><strong>Familia y jornada:</strong> cónyuge e hijos a cargo, afiliado al sindicato, jornada parcial con sus horas semanales.</li>
+        </ul>
+        <Tip>El CUIL se controla con su dígito verificador: si no lo acepta, revisá los 11 números.</Tip>
+      </ManualPart>
+
+      <ManualPart id="configuracion" title="8. Configuración de sueldos">
+        <Steps>
+          <Step title="RRHH → Configuración de sueldos → “Empleador”.">
+            Indicá si la empresa es MiPyME y si su actividad es de comercio o servicios: de eso salen la contribución patronal (18 % o 20,40 %)
+            y el Fondo de Asistencia Laboral desde noviembre de 2026 (2,5 % o 1 %). Completá la ART (alícuota y suma fija), el seguro de vida
+            obligatorio y el ID FAL.
+          </Step>
+          <Step title="“Parámetros legales vigentes”: elegí el mes para ver cada valor, desde cuándo rige y su norma.">
+            Los aportes, las contribuciones, la detracción, el FAL y los topes de ANSES los trae el sistema.
+          </Step>
+          <Step title="Si aparece “Falta el valor de …”, es un tope de ANSES del mes que el sistema todavía no trae: cargalo en “Cargar un valor nuevo” con su resolución." />
+        </Steps>
+      </ManualPart>
+
+      <ManualPart id="sueldos" title="9. Liquidación de sueldos">
         <p style={{ margin: 0 }}>
           La <Link to="/rrhh/liquidaciones">liquidación de sueldos</Link> se está rehaciendo para que cumpla la ley vigente (incluida la Ley
           27.802) y sirva para cualquier convenio. Mientras tanto, los sueldos se liquidan como hasta ahora (estudio contable) y el asiento

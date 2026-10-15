@@ -193,6 +193,7 @@ export const ProcedureManualFormPage = named(() => import("../pages/ProcedureMan
 export const EmployeesListPage = named(() => import("../pages/EmployeesListPage"), "EmployeesListPage");
 export const EmployeeFormPage = named(() => import("../pages/EmployeeFormPage"), "EmployeeFormPage");
 export const PayrollListPage = named(() => import("../pages/PayrollListPage"), "PayrollListPage");
+export const PayrollSettingsPage = named(() => import("../pages/PayrollSettingsPage"), "PayrollSettingsPage");
 export const HumanResourcesHelpPage = named(() => import("../pages/HumanResourcesHelpPage"), "HumanResourcesHelpPage");
 export const FleetVehiclesListPage = named(() => import("../pages/FleetVehiclesListPage"), "FleetVehiclesListPage");
 export const FleetVehicleFormPage = named(() => import("../pages/FleetVehicleFormPage"), "FleetVehicleFormPage");

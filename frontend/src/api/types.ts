@@ -1430,6 +1430,23 @@ export type Employee = {
   photoPath?: string | null;
   notes?: string | null;
   createdAtUtc: string;
+} & EmployeeSocialSecurity;
+
+/** Datos del legajo que pide ARCA (Libro de Sueldos Digital y F.931). */
+export type EmployeeSocialSecurity = {
+  isUnionMember: boolean;
+  socialSecuritySituation: number;
+  socialSecurityCondition: number;
+  socialSecurityActivity: number | null;
+  contractModalityCode: number;
+  casualtyCode: number;
+  localityCode: string | null;
+  healthInsuranceCode: string | null;
+  healthInsuranceAdherents: number;
+  hasSpouse: boolean;
+  childrenCount: number;
+  partTime: boolean;
+  weeklyHours: number | null;
 };
 
 export type EppDelivery = {
@@ -2563,4 +2580,22 @@ export type InflationPreview = {
   recpam: number;
   missingIndices: string[];
   existingEntryNumber: number | null;
+};
+
+export type PayrollEmployerSettings = {
+  isMiPyme: boolean;
+  isCommerceOrServices: boolean;
+  activityCode: number | null;
+  artInsurer: string | null;
+  artContractNumber: string | null;
+  artVariablePercent: number;
+  artFixedAmount: number;
+  lifeInsurancePremium: number;
+  falId: string | null;
+};
+
+export type PayrollParameters = {
+  month: string;
+  resolved: { key: string; name: string; value: number | null; validFrom: string | null; norm: string | null; fromCompany: boolean; warning: string | null }[];
+  history: { id: string; key: string; validFrom: string; value: number; norm: string; fromCompany: boolean }[];
 };

@@ -53,7 +53,7 @@ public sealed class FleetServiceOrdersApiTests : IAsyncLifetime
             await Json(await client.PostAsJsonAsync($"/api/v1/fleet/vehicles/{pickup}/documents", new { documentType = doc, expirationDate = "2027-06-30" }));
         var employee = (await Json(await client.PostAsJsonAsync("/api/v1/hr/employees", new
         {
-            firstName = "Juan", lastName = "Gómez", documentNumber = "30111222", cuil = "20301112223", hireDate = "2020-01-01T00:00:00Z"
+            firstName = "Juan", lastName = "Gómez", documentNumber = "30111222", cuil = "20301112220", hireDate = "2020-01-01T00:00:00Z"
         }))).GetProperty("id").GetGuid();
         var member = await Json(await client.PostAsJsonAsync("/api/v1/fleet/people", new { employeeId = employee, isDriver = true, isTechnician = true }));
         await Json(await client.PostAsJsonAsync($"/api/v1/fleet/people/{member.GetProperty("id").GetGuid()}/credentials",

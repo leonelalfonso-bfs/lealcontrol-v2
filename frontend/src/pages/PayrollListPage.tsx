@@ -30,7 +30,9 @@ export function PayrollListPage() {
           <li>Retención de Ganancias de cuarta categoría.</li>
         </ol>
         <p className="muted" style={{ margin: 0 }}>
-          El legajo de cada colaborador se completa en <Link to="/rrhh/empleados">Colaboradores & Legajos</Link>. El asiento de sueldos del mes
+          Ya está lista la primera etapa: los datos del empleador y los parámetros legales en{" "}
+          <Link to="/rrhh/sueldos/configuracion">Configuración de sueldos</Link>, y los datos de la seguridad social en el legajo de cada
+          colaborador (<Link to="/rrhh/empleados">Colaboradores & Legajos</Link>). El asiento de sueldos del mes
           se registra a mano en Contabilidad → Cierres y períodos.
         </p>
       </div>

@@ -2,7 +2,7 @@ import { useEffect, useState, FormEvent, ChangeEvent } from "react";
 import { usePermissions } from "../context/PermissionsContext";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { provinces, type Employee, type EppDelivery, type EmployeeDocument } from "../api/types";
+import { provinces, type Employee, type EmployeeSocialSecurity, type EppDelivery, type EmployeeDocument } from "../api/types";
 import { digitsOnly } from "../lib/arContact";
 import { todayAr } from "../lib/dates";
 
@@ -24,6 +24,14 @@ const EGRESO_DOC_TYPES = [
   { id: "CertificadoArt80", label: "📜 Certificado de Trabajo (Art. 80 LCT)", description: "Certificado de trabajo y constancia de aportes Art. 80" },
   { id: "CertificadoAfip57", label: "📊 Certificado Remuneraciones (AFIP PS 6.2)", description: "Formulario oficial AFIP de servicios y remuneraciones históricas" },
   { id: "TelegramaRenunciaDespido", label: "✉️ Telegrama de Renuncia / Copia CD", description: "Constancia fehaciente de desvinculación laboral" }
+];
+
+/** Situaciones de revista de la guía 15 del Libro de Sueldos Digital de ARCA. */
+const SITUATIONS: [number, string][] = [
+  [1, "Activo"], [5, "Licencia por maternidad"], [6, "Suspensiones otras causales"], [10, "Licencia por excedencia"],
+  [11, "Licencia por maternidad Down"], [12, "Licencia por vacaciones"], [13, "Licencia sin goce de haberes"], [14, "Reserva de puesto"],
+  [33, "Licencia por fuerza mayor (art. 221 LCT)"], [44, "Conservación del empleo por accidente o enfermedad inculpable (art. 211 LCT)"],
+  [45, "Suspensiones por causas disciplinarias"]
 ];
 
 export function EmployeeFormPage() {
@@ -69,6 +77,12 @@ export function EmployeeFormPage() {
   const [workplaceLocation, setWorkplaceLocation] = useState("Planta Central");
   const [unionCct, setUnionCct] = useState("Comercio 130/75");
   const [unionCategory, setUnionCategory] = useState("Administrativo A");
+  const [social, setSocial] = useState<EmployeeSocialSecurity>({
+    isUnionMember: false, socialSecuritySituation: 1, socialSecurityCondition: 1, socialSecurityActivity: null,
+    contractModalityCode: 8, casualtyCode: 0, localityCode: null, healthInsuranceCode: null, healthInsuranceAdherents: 0,
+    hasSpouse: false, childrenCount: 0, partTime: false, weeklyHours: null
+  });
+  const setSs = <K extends keyof EmployeeSocialSecurity>(key: K, value: EmployeeSocialSecurity[K]) => setSocial((s) => ({ ...s, [key]: value }));
   const [healthInsurance, setHealthInsurance] = useState("OSECAC");
   const [baseSalary, setBaseSalary] = useState<number>(750000);
   const [hourlyRate, setHourlyRate] = useState<number>(0);
@@ -132,6 +146,12 @@ export function EmployeeFormPage() {
       setWorkplaceLocation(emp.workplaceLocation);
       setUnionCct(emp.unionCct);
       setUnionCategory(emp.unionCategory);
+      setSocial({
+        isUnionMember: emp.isUnionMember, socialSecuritySituation: emp.socialSecuritySituation, socialSecurityCondition: emp.socialSecurityCondition,
+        socialSecurityActivity: emp.socialSecurityActivity, contractModalityCode: emp.contractModalityCode, casualtyCode: emp.casualtyCode,
+        localityCode: emp.localityCode, healthInsuranceCode: emp.healthInsuranceCode, healthInsuranceAdherents: emp.healthInsuranceAdherents,
+        hasSpouse: emp.hasSpouse, childrenCount: emp.childrenCount, partTime: emp.partTime, weeklyHours: emp.weeklyHours
+      });
       setHealthInsurance(emp.healthInsurance);
       setBaseSalary(emp.baseSalary ?? 0);
       setHourlyRate(emp.hourlyRate ?? 0);
@@ -205,6 +225,7 @@ export function EmployeeFormPage() {
         workplaceLocation: workplaceLocation.trim(),
         unionCct: unionCct.trim(),
         unionCategory: unionCategory.trim(),
+        ...social,
         healthInsurance: healthInsurance.trim(),
         baseSalary: Number(baseSalary) || 0,
         hourlyRate: Number(hourlyRate) || 0,
@@ -661,6 +682,79 @@ export function EmployeeFormPage() {
                 <option value={2}>Egresado / Baja</option>
               </select>
             </label>
+          </div>
+
+          <h3 style={{ fontSize: "1rem", margin: "8px 0 0" }}>🏛️ Seguridad social (ARCA)</h3>
+          <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+            Códigos de las tablas de ARCA (SICOSS / Declaración en línea) que se informan en el Libro de Sueldos Digital y el F.931.
+          </p>
+          <div className="grid-3">
+            <label>
+              Situación de revista
+              <select value={social.socialSecuritySituation} onChange={(e) => setSs("socialSecuritySituation", Number(e.target.value))}>
+                {SITUATIONS.map(([code, label]) => <option key={code} value={code}>{code} — {label}</option>)}
+                {!SITUATIONS.some(([code]) => code === social.socialSecuritySituation) && <option value={social.socialSecuritySituation}>{social.socialSecuritySituation}</option>}
+              </select>
+            </label>
+            <label>
+              Condición
+              <select value={social.socialSecurityCondition} onChange={(e) => setSs("socialSecurityCondition", Number(e.target.value))}>
+                <option value={1}>1 — Servicios comunes, mayor de 18 años</option>
+                <option value={2}>2 — Jubilado</option>
+                {![1, 2].includes(social.socialSecurityCondition) && <option value={social.socialSecurityCondition}>{social.socialSecurityCondition}</option>}
+              </select>
+            </label>
+            <label>
+              Modalidad de contratación (código)
+              <input type="number" min={0} max={999} value={social.contractModalityCode} onChange={(e) => setSs("contractModalityCode", Number(e.target.value))} />
+              <span className="muted" style={{ fontSize: "0.72rem" }}>8 = a tiempo completo indeterminado; 102 = eventual.</span>
+            </label>
+            <label>
+              Actividad (código)
+              <input type="number" min={0} max={999} value={social.socialSecurityActivity ?? ""} placeholder="La de la empresa"
+                onChange={(e) => setSs("socialSecurityActivity", e.target.value === "" ? null : Number(e.target.value))} />
+            </label>
+            <label>
+              Código de siniestrado (LRT)
+              <input type="number" min={0} max={99} value={social.casualtyCode} onChange={(e) => setSs("casualtyCode", Number(e.target.value))} />
+            </label>
+            <label>
+              Localidad (código ARCA)
+              <input value={social.localityCode ?? ""} onChange={(e) => setSs("localityCode", e.target.value || null)} />
+            </label>
+            <label>
+              Obra social (código RNOS)
+              <input inputMode="numeric" maxLength={6} value={social.healthInsuranceCode ?? ""} placeholder="6 dígitos"
+                onChange={(e) => setSs("healthInsuranceCode", e.target.value || null)} />
+            </label>
+            <label>
+              Adherentes de obra social
+              <input type="number" min={0} max={99} value={social.healthInsuranceAdherents} onChange={(e) => setSs("healthInsuranceAdherents", Number(e.target.value))} />
+            </label>
+            <label>
+              Hijos a cargo
+              <input type="number" min={0} max={30} value={social.childrenCount} onChange={(e) => setSs("childrenCount", Number(e.target.value))} />
+            </label>
+          </div>
+          <div className="row" style={{ gap: 20, flexWrap: "wrap" }}>
+            <label style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <input type="checkbox" checked={social.isUnionMember} onChange={(e) => setSs("isUnionMember", e.target.checked)} />
+              Afiliado al sindicato
+            </label>
+            <label style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <input type="checkbox" checked={social.hasSpouse} onChange={(e) => setSs("hasSpouse", e.target.checked)} />
+              Cónyuge a cargo
+            </label>
+            <label style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <input type="checkbox" checked={social.partTime} onChange={(e) => setSs("partTime", e.target.checked)} />
+              Jornada parcial
+            </label>
+            {social.partTime && (
+              <label style={{ maxWidth: 180 }}>
+                Horas semanales
+                <input type="number" min={1} max={47} step="0.5" value={social.weeklyHours ?? ""} onChange={(e) => setSs("weeklyHours", e.target.value === "" ? null : Number(e.target.value))} />
+              </label>
+            )}
           </div>
         </div>
       )}
