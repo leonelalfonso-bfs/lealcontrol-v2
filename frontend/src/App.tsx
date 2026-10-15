@@ -134,6 +134,8 @@ import {
   PaymentOrdersPage,
   PayrollListPage,
   PayrollSettingsPage,
+  AgreementsPage,
+  AgreementDetailPage,
   PositionJobDescriptionPage,
   ProcedureManualFormPage,
   ProcedureManualsPage,
@@ -286,7 +288,7 @@ export function App() {
   ]);
   const hiddenItems = new Set<string>([
     ...(sensitive && !sensitive.costs ? ["/produccion/costos"] : []),
-    ...(sensitive && !sensitive.salaries ? ["/rrhh/liquidaciones", "/rrhh/sueldos/configuracion"] : [])
+    ...(sensitive && !sensitive.salaries ? ["/rrhh/liquidaciones", "/rrhh/sueldos/configuracion", "/rrhh/convenios"] : [])
   ]);
   const modules = allMods
     .filter((m) => m.id === "inicio" || allowedModuleIds.includes(m.id))
@@ -485,6 +487,8 @@ export function App() {
               <Route path="/rrhh/empleados/:id" element={<EmployeeFormPage />} />
               <Route path="/rrhh/liquidaciones" element={<PayrollListPage />} />
               <Route path="/rrhh/sueldos/configuracion" element={<PayrollSettingsPage />} />
+              <Route path="/rrhh/convenios" element={<AgreementsPage />} />
+              <Route path="/rrhh/convenios/:id" element={<AgreementDetailPage />} />
               <Route path="/rrhh/ayuda" element={<HumanResourcesHelpPage />} />
 
               {/* Fleet Management Routes */}

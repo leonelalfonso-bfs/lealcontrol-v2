@@ -2,7 +2,7 @@ import { useEffect, useState, FormEvent, ChangeEvent } from "react";
 import { usePermissions } from "../context/PermissionsContext";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { provinces, type Employee, type EmployeeSocialSecurity, type EppDelivery, type EmployeeDocument } from "../api/types";
+import { provinces, type AgreementDetail, type AgreementSummary, type Employee, type EmployeeSocialSecurity, type EppDelivery, type EmployeeDocument } from "../api/types";
 import { digitsOnly } from "../lib/arContact";
 import { todayAr } from "../lib/dates";
 
@@ -80,8 +80,19 @@ export function EmployeeFormPage() {
   const [social, setSocial] = useState<EmployeeSocialSecurity>({
     isUnionMember: false, socialSecuritySituation: 1, socialSecurityCondition: 1, socialSecurityActivity: null,
     contractModalityCode: 8, casualtyCode: 0, localityCode: null, healthInsuranceCode: null, healthInsuranceAdherents: 0,
-    hasSpouse: false, childrenCount: 0, partTime: false, weeklyHours: null
+    hasSpouse: false, childrenCount: 0, partTime: false, weeklyHours: null,
+    agreementId: null, agreementCategoryId: null, agreementZone: null, agreementFlags: null
   });
+  const [agreements, setAgreements] = useState<AgreementSummary[]>([]);
+  const [agreementDetail, setAgreementDetail] = useState<AgreementDetail | null>(null);
+  useEffect(() => {
+    if (!seesSalaries) return;
+    api.listAgreements().then(setAgreements).catch(() => setAgreements([]));
+  }, [seesSalaries]);
+  useEffect(() => {
+    if (!seesSalaries || !social.agreementId) { setAgreementDetail(null); return; }
+    api.getAgreement(social.agreementId).then(setAgreementDetail).catch(() => setAgreementDetail(null));
+  }, [seesSalaries, social.agreementId]);
   const setSs = <K extends keyof EmployeeSocialSecurity>(key: K, value: EmployeeSocialSecurity[K]) => setSocial((s) => ({ ...s, [key]: value }));
   const [healthInsurance, setHealthInsurance] = useState("OSECAC");
   const [baseSalary, setBaseSalary] = useState<number>(750000);
@@ -150,7 +161,8 @@ export function EmployeeFormPage() {
         isUnionMember: emp.isUnionMember, socialSecuritySituation: emp.socialSecuritySituation, socialSecurityCondition: emp.socialSecurityCondition,
         socialSecurityActivity: emp.socialSecurityActivity, contractModalityCode: emp.contractModalityCode, casualtyCode: emp.casualtyCode,
         localityCode: emp.localityCode, healthInsuranceCode: emp.healthInsuranceCode, healthInsuranceAdherents: emp.healthInsuranceAdherents,
-        hasSpouse: emp.hasSpouse, childrenCount: emp.childrenCount, partTime: emp.partTime, weeklyHours: emp.weeklyHours
+        hasSpouse: emp.hasSpouse, childrenCount: emp.childrenCount, partTime: emp.partTime, weeklyHours: emp.weeklyHours,
+        agreementId: emp.agreementId, agreementCategoryId: emp.agreementCategoryId, agreementZone: emp.agreementZone, agreementFlags: emp.agreementFlags
       });
       setHealthInsurance(emp.healthInsurance);
       setBaseSalary(emp.baseSalary ?? 0);
@@ -683,6 +695,61 @@ export function EmployeeFormPage() {
               </select>
             </label>
           </div>
+
+          {seesSalaries && (
+            <>
+              <h3 style={{ fontSize: "1rem", margin: "8px 0 0" }}>📜 Convenio colectivo</h3>
+              <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+                Con convenio, el básico sale de la escala de la categoría y la zona. Sin convenio, rige el sueldo básico pactado de arriba.
+                Los convenios se cargan en <Link to="/rrhh/convenios">RRHH → Convenios colectivos</Link>.
+              </p>
+              <div className="grid-3">
+                <label>
+                  Convenio
+                  <select value={social.agreementId ?? ""} onChange={(e) => setSocial((s) => ({ ...s, agreementId: e.target.value || null, agreementCategoryId: null, agreementZone: null }))}>
+                    <option value="">Fuera de convenio</option>
+                    {agreements.map((a) => <option key={a.id} value={a.id}>{a.union} {a.code} — {a.name}</option>)}
+                  </select>
+                </label>
+                {agreementDetail && (
+                  <label>
+                    Categoría
+                    <select value={social.agreementCategoryId ?? ""} onChange={(e) => setSs("agreementCategoryId", e.target.value || null)} required>
+                      <option value="">Elegí…</option>
+                      {agreementDetail.categories.map((c) => <option key={c.id} value={c.id}>{c.group ? `${c.group} · ` : ""}{c.name}</option>)}
+                    </select>
+                  </label>
+                )}
+                {agreementDetail?.agreement.zones && (
+                  <label>
+                    Zona
+                    <select value={social.agreementZone ?? ""} onChange={(e) => setSs("agreementZone", e.target.value || null)} required>
+                      <option value="">Elegí…</option>
+                      {agreementDetail.agreement.zones.split(",").map((z) => <option key={z} value={z}>{z}</option>)}
+                    </select>
+                  </label>
+                )}
+              </div>
+              {agreementDetail && (() => {
+                const flags = [...new Set(agreementDetail.rules.map((r) => r.requiresFlag).filter((f): f is string => !!f && f !== "asistencia-perfecta"))];
+                const current = (social.agreementFlags ?? "").split(",").filter(Boolean);
+                return flags.length > 0 && (
+                  <div className="row" style={{ gap: 16, flexWrap: "wrap" }}>
+                    <span className="muted" style={{ fontSize: "0.82rem" }}>Adicionales que dependen del colaborador:</span>
+                    {flags.map((f) => (
+                      <label key={f} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <input type="checkbox" checked={current.includes(f)} onChange={(e) => {
+                          const next = e.target.checked ? [...current, f] : current.filter((x) => x !== f);
+                          setSs("agreementFlags", next.length ? next.join(",") : null);
+                        }} />
+                        {agreementDetail.rules.find((r) => r.requiresFlag === f)?.name ?? f}
+                      </label>
+                    ))}
+                  </div>
+                );
+              })()}
+            </>
+          )}
 
           <h3 style={{ fontSize: "1rem", margin: "8px 0 0" }}>🏛️ Seguridad social (ARCA)</h3>
           <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>

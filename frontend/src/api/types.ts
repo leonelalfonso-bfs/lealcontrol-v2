@@ -1447,6 +1447,10 @@ export type EmployeeSocialSecurity = {
   childrenCount: number;
   partTime: boolean;
   weeklyHours: number | null;
+  agreementId: string | null;
+  agreementCategoryId: string | null;
+  agreementZone: string | null;
+  agreementFlags: string | null;
 };
 
 export type EppDelivery = {
@@ -2598,4 +2602,37 @@ export type PayrollParameters = {
   month: string;
   resolved: { key: string; name: string; value: number | null; validFrom: string | null; norm: string | null; fromCompany: boolean; warning: string | null }[];
   history: { id: string; key: string; validFrom: string; value: number; norm: string; fromCompany: boolean }[];
+};
+
+export type AgreementInput = { code: string; name: string; union: string; hourDivisor: number; zones: string; notes?: string | null };
+export type Agreement = AgreementInput & { id: string; createdAtUtc: string };
+export type AgreementSummary = Agreement & { employees: number };
+export type AgreementCategory = { id: string; agreementId: string; group: string; name: string; sortOrder: number };
+export type AgreementRuleInput = {
+  type: "Addition" | "EmployeeDeduction" | "EmployerContribution";
+  code: string;
+  name: string;
+  basis: "PercentOfBasic" | "PercentOfGross" | "Fixed" | "FixedPerSeniorityYear" | "PercentOfBasicPerSeniorityYear";
+  value: number;
+  remunerative: boolean;
+  appliesTo: "All" | "UnionMembers" | "NonMembers";
+  zones: string;
+  groups: string;
+  requiresFlag: string | null;
+  seniorityFromNextMonth: boolean;
+  validFrom: string;
+  validTo: string | null;
+};
+export type AgreementRule = Omit<AgreementRuleInput, "validFrom" | "validTo"> & { id: string; validFrom: string; validTo: string | null };
+export type AgreementDetail = { agreement: Agreement; categories: AgreementCategory[]; rules: AgreementRule[]; scaleMonths: string[] };
+export type AgreementScaleRow = { categoryId: string; zone: string; basic: number; nonRemunerative: number; validFrom: string; source: string; isCurrentMonth: boolean };
+export type AgreementSimulation = {
+  basic: number;
+  seniorityYears: number;
+  lines: { code: string; name: string; type: string; remunerative: boolean; amount: number; detail: string }[];
+  remunerative: number;
+  nonRemunerative: number;
+  employeeDeductions: number;
+  employerContributions: number;
+  warnings: string[];
 };

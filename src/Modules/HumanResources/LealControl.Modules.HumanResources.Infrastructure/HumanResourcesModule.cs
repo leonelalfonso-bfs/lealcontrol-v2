@@ -87,6 +87,13 @@ public sealed class Employee
     public int ChildrenCount { get; set; }
     public bool PartTime { get; set; }
     public decimal? WeeklyHours { get; set; }
+
+    // Convenio colectivo (nota 68, S2). Sin convenio, rige el sueldo pactado del legajo.
+    public Guid? AgreementId { get; set; }
+    public Guid? AgreementCategoryId { get; set; }
+    public string? AgreementZone { get; set; }
+    /// <summary>Marcas del empleado que piden las reglas del convenio (por ejemplo, "titulo-a,fallo-caja").</summary>
+    public string? AgreementFlags { get; set; }
 }
 
 public sealed class OrganizationPosition
@@ -249,6 +256,10 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
     public DbSet<PayrollSlipLine> PayrollSlipLines => Set<PayrollSlipLine>();
     public DbSet<Payroll.PayrollEmployerSettings> PayrollEmployerSettings => Set<Payroll.PayrollEmployerSettings>();
     public DbSet<Payroll.PayrollLegalParameter> PayrollLegalParameters => Set<Payroll.PayrollLegalParameter>();
+    public DbSet<Payroll.CollectiveAgreement> CollectiveAgreements => Set<Payroll.CollectiveAgreement>();
+    public DbSet<Payroll.AgreementCategory> AgreementCategories => Set<Payroll.AgreementCategory>();
+    public DbSet<Payroll.AgreementScale> AgreementScales => Set<Payroll.AgreementScale>();
+    public DbSet<Payroll.AgreementRule> AgreementRules => Set<Payroll.AgreementRule>();
     public DbSet<EmployeeTimeTracking> TimeTrackings => Set<EmployeeTimeTracking>();
     public DbSet<EppDelivery> EppDeliveries => Set<EppDelivery>();
 
@@ -327,6 +338,56 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.Property(x => x.Norm).HasMaxLength(160).IsRequired();
             b.Property(x => x.Value).HasPrecision(18, 4);
             b.HasIndex(x => new { x.TenantId, x.Key, x.ValidFrom });
+        });
+
+        modelBuilder.Entity<Payroll.CollectiveAgreement>(b =>
+        {
+            b.ToTable("CollectiveAgreements");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Code).HasMaxLength(30).IsRequired();
+            b.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            b.Property(x => x.Union).HasMaxLength(120);
+            b.Property(x => x.Zones).HasMaxLength(120);
+            b.Property(x => x.Notes).HasMaxLength(1000);
+            b.Property(x => x.HourDivisor).HasPrecision(9, 2);
+            b.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
+        });
+        modelBuilder.Entity<Payroll.AgreementCategory>(b =>
+        {
+            b.ToTable("AgreementCategories");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Group).HasMaxLength(120);
+            b.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            b.HasIndex(x => new { x.AgreementId, x.Name }).IsUnique();
+            b.HasOne<Payroll.CollectiveAgreement>().WithMany().HasForeignKey(x => x.AgreementId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<Payroll.AgreementScale>(b =>
+        {
+            b.ToTable("AgreementScales");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Zone).HasMaxLength(20);
+            b.Property(x => x.Source).HasMaxLength(300);
+            b.Property(x => x.Basic).HasPrecision(18, 2);
+            b.Property(x => x.NonRemunerative).HasPrecision(18, 2);
+            b.HasIndex(x => new { x.AgreementId, x.CategoryId, x.Zone, x.ValidFrom }).IsUnique();
+            b.HasOne<Payroll.CollectiveAgreement>().WithMany().HasForeignKey(x => x.AgreementId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<Payroll.AgreementCategory>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<Payroll.AgreementRule>(b =>
+        {
+            b.ToTable("AgreementRules");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Type).HasMaxLength(30).IsRequired();
+            b.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            b.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            b.Property(x => x.Basis).HasMaxLength(40).IsRequired();
+            b.Property(x => x.AppliesTo).HasMaxLength(20).IsRequired();
+            b.Property(x => x.Zones).HasMaxLength(120);
+            b.Property(x => x.Groups).HasMaxLength(500);
+            b.Property(x => x.RequiresFlag).HasMaxLength(60);
+            b.Property(x => x.Value).HasPrecision(18, 4);
+            b.HasIndex(x => new { x.AgreementId, x.Type });
+            b.HasOne<Payroll.CollectiveAgreement>().WithMany().HasForeignKey(x => x.AgreementId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<PayrollConcept>(b =>
@@ -622,6 +683,67 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL
             );
             CREATE INDEX IF NOT EXISTS ""IX_PayrollLegalParameters_Key"" ON hr.""PayrollLegalParameters"" (""TenantId"", ""Key"", ""ValidFrom"");
+
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""AgreementId"" uuid;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""AgreementCategoryId"" uuid;
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""AgreementZone"" character varying(20);
+            ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""AgreementFlags"" character varying(300);
+
+            CREATE TABLE IF NOT EXISTS hr.""CollectiveAgreements"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Code"" character varying(30) NOT NULL,
+                ""Name"" character varying(160) NOT NULL,
+                ""Union"" character varying(120) NOT NULL DEFAULT '',
+                ""HourDivisor"" numeric(9,2) NOT NULL DEFAULT 200,
+                ""Zones"" character varying(120) NOT NULL DEFAULT '',
+                ""Notes"" character varying(1000),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_CollectiveAgreements_Tenant_Code"" ON hr.""CollectiveAgreements"" (""TenantId"", ""Code"");
+
+            CREATE TABLE IF NOT EXISTS hr.""AgreementCategories"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""AgreementId"" uuid NOT NULL REFERENCES hr.""CollectiveAgreements""(""Id"") ON DELETE CASCADE,
+                ""Group"" character varying(120) NOT NULL DEFAULT '',
+                ""Name"" character varying(160) NOT NULL,
+                ""SortOrder"" integer NOT NULL DEFAULT 0
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_AgreementCategories_Name"" ON hr.""AgreementCategories"" (""AgreementId"", ""Name"");
+
+            CREATE TABLE IF NOT EXISTS hr.""AgreementScales"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""AgreementId"" uuid NOT NULL REFERENCES hr.""CollectiveAgreements""(""Id"") ON DELETE CASCADE,
+                ""CategoryId"" uuid NOT NULL REFERENCES hr.""AgreementCategories""(""Id"") ON DELETE CASCADE,
+                ""Zone"" character varying(20) NOT NULL DEFAULT '',
+                ""ValidFrom"" timestamp with time zone NOT NULL,
+                ""Basic"" numeric(18,2) NOT NULL,
+                ""NonRemunerative"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""Source"" character varying(300) NOT NULL DEFAULT ''
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_AgreementScales_Key"" ON hr.""AgreementScales"" (""AgreementId"", ""CategoryId"", ""Zone"", ""ValidFrom"");
+
+            CREATE TABLE IF NOT EXISTS hr.""AgreementRules"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""AgreementId"" uuid NOT NULL REFERENCES hr.""CollectiveAgreements""(""Id"") ON DELETE CASCADE,
+                ""Type"" character varying(30) NOT NULL,
+                ""Code"" character varying(20) NOT NULL,
+                ""Name"" character varying(160) NOT NULL,
+                ""Basis"" character varying(40) NOT NULL,
+                ""Value"" numeric(18,4) NOT NULL,
+                ""Remunerative"" boolean NOT NULL DEFAULT true,
+                ""AppliesTo"" character varying(20) NOT NULL DEFAULT 'All',
+                ""Zones"" character varying(120) NOT NULL DEFAULT '',
+                ""Groups"" character varying(500) NOT NULL DEFAULT '',
+                ""RequiresFlag"" character varying(60),
+                ""SeniorityFromNextMonth"" boolean NOT NULL DEFAULT false,
+                ""ValidFrom"" timestamp with time zone NOT NULL,
+                ""ValidTo"" timestamp with time zone
+            );
+            CREATE INDEX IF NOT EXISTS ""IX_AgreementRules_Agreement"" ON hr.""AgreementRules"" (""AgreementId"", ""Type"");
         ", ct);
         await Payroll.PayrollLegalSeed.EnsureAsync(this, ct);
     }
@@ -724,6 +846,9 @@ public static class HumanResourcesModule
             body.TenantId = tenantId;
             body.CreatedAtUtc = DateTime.UtcNow;
             if (!body.PartTime) body.WeeklyHours = null;
+            body.AgreementFlags = Payroll.EmployeeRules.CleanFlags(body.AgreementFlags);
+            if (await Payroll.EmployeeRules.ValidateAgreementAsync(db, tenantId, body, ct) is { } badAgreement)
+                return Results.BadRequest(new { message = badAgreement });
 
             db.Employees.Add(body);
             await db.SaveChangesAsync(ct);
@@ -778,6 +903,12 @@ public static class HumanResourcesModule
             emp.ChildrenCount = body.ChildrenCount;
             emp.PartTime = body.PartTime;
             emp.WeeklyHours = body.PartTime ? body.WeeklyHours : null;
+            emp.AgreementId = body.AgreementId;
+            emp.AgreementCategoryId = body.AgreementId is null ? null : body.AgreementCategoryId;
+            emp.AgreementZone = body.AgreementId is null ? null : body.AgreementZone;
+            emp.AgreementFlags = Payroll.EmployeeRules.CleanFlags(body.AgreementFlags);
+            if (await Payroll.EmployeeRules.ValidateAgreementAsync(db, tenantId, emp, ct) is { } badAgreement)
+                return Results.BadRequest(new { message = badAgreement });
             // Quien no ve sueldos no los recibe en pantalla: se conserva el que había.
             var sensitive = http.RequestServices.GetService<LealControl.BuildingBlocks.Security.ISensitiveDataAccess>();
             if (sensitive?.CanSeeSalaries != false)
@@ -1036,6 +1167,7 @@ public static class HumanResourcesModule
         });
 
         Payroll.PayrollConfigurationEndpoints.MapPayrollConfigurationEndpoints(group);
+        Payroll.AgreementEndpoints.MapAgreementEndpoints(group);
 
         // La liquidación de sueldos se está rehaciendo (nota 68): el cálculo anterior inventaba sueldos y el
         // Libro de Sueldos Digital no era el de ARCA. Las tablas de períodos, conceptos y recibos se conservan
