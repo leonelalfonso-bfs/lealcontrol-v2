@@ -1432,58 +1432,6 @@ export type Employee = {
   createdAtUtc: string;
 };
 
-export type PayrollPeriod = {
-  id: string;
-  periodMonth: number;
-  periodYear: number;
-  periodType: number; // 0=Monthly, 1=FirstFortnight, 2=SecondFortnight, 3=SacFirstHalf, 4=SacSecondHalf, 5=FinalSettlement
-  paymentDateUtc: string;
-  bankDepositDateUtc?: string | null;
-  status: number; // 0=Draft, 1=Calculating, 2=Closed, 3=Exported
-  notes: string;
-  createdAtUtc: string;
-};
-
-export type PayrollSlipLine = {
-  id: string;
-  payrollSlipId: string;
-  conceptCode: string;
-  conceptName: string;
-  type: number; // 0=Remunerative, 1=NonRemunerative, 2=Deduction, 3=CompanyContribution
-  quantity: number;
-  unit: string;
-  baseAmount: number;
-  percentage: number;
-  remunerativeAmount: number;
-  nonRemunerativeAmount: number;
-  deductionAmount: number;
-};
-
-export type PayrollSlip = {
-  id: string;
-  payrollPeriodId: string;
-  employeeId: string;
-  employeeName?: string;
-  fileNumber?: string;
-  cuil?: string;
-  jobTitle?: string;
-  unionCct?: string;
-  bankName?: string;
-  cbu?: string;
-  receiptNumber: string;
-  totalGrossRemunerative: number;
-  totalNonRemunerative: number;
-  totalDeductions: number;
-  netPay: number;
-  netPayWords: string;
-  signedByCompanyUtc?: string | null;
-  signedByEmployeeUtc?: string | null;
-  signatureHashSha256?: string | null;
-  status: string;
-  createdAtUtc: string;
-  lines?: PayrollSlipLine[];
-};
-
 export type EppDelivery = {
   id: string;
   employeeId: string;

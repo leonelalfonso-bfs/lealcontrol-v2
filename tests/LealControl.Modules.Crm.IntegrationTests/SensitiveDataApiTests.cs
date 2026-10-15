@@ -113,6 +113,9 @@ public sealed class SensitiveDataApiTests : IAsyncLifetime
         Assert.DoesNotContain("baseSalary", list);
         Assert.DoesNotContain("hourlyRate", list);
         Assert.Equal(HttpStatusCode.Forbidden, (await clerk.GetAsync("/api/v1/hr/payroll/periods")).StatusCode);
+        // La liquidación anterior se retiró (nota 68, S0): ni el cálculo ni el Libro de Sueldos falso responden.
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PostAsync($"/api/v1/hr/payroll/periods/{Guid.NewGuid()}/calculate", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"/api/v1/hr/payroll/export-lsd/{Guid.NewGuid()}")).StatusCode);
 
         var body = JsonNode.Parse(await clerk.GetStringAsync($"/api/v1/hr/employees/{id}"))!.AsObject();
         body["notes"] = "Actualizado por legajos";

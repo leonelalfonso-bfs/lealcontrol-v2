@@ -917,20 +917,6 @@ export const api = {
   createEppDelivery: (body: Partial<import("./types").EppDelivery>) =>
     request<import("./types").EppDelivery>("/api/v1/hr/epps", { method: "POST", body: JSON.stringify(body) }),
 
-  // Payroll
-  listPayrollPeriods: () =>
-    request<import("./types").PayrollPeriod[]>("/api/v1/hr/payroll/periods"),
-  createPayrollPeriod: (body: Partial<import("./types").PayrollPeriod>) =>
-    request<import("./types").PayrollPeriod>("/api/v1/hr/payroll/periods", { method: "POST", body: JSON.stringify(body) }),
-  calculatePayroll: (periodId: string) =>
-    request<{ periodId: string; employeesCalculated: number; totalNetToPay: number }>(`/api/v1/hr/payroll/calculate/${periodId}`, { method: "POST" }),
-  listPayrollSlips: (periodId: string) =>
-    request<import("./types").PayrollSlip[]>(`/api/v1/hr/payroll/slips/${periodId}`),
-  getPayrollSlipDetail: (slipId: string) =>
-    request<{ slip: import("./types").PayrollSlip; employee: import("./types").Employee; period: import("./types").PayrollPeriod }>(`/api/v1/hr/payroll/slips/detail/${slipId}`),
-  signPayrollSlipByEmployee: (slipId: string) =>
-    request<{ message: string; signedAt: string }>(`/api/v1/hr/payroll/slips/${slipId}/sign-employee`, { method: "POST" }),
-
   // ==========================================
   // FLEET (GESTIÃ“N DE FLOTA)
   // ==========================================

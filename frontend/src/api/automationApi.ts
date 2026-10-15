@@ -1,19 +1,3 @@
-export interface CctCategoryProposal {
-  category: string;
-  basicSalary: number;
-  nonRemunerativeAmount: number;
-  hourlyRate: number;
-}
-
-export interface CctAnalysisResult {
-  cctNumber: string;
-  unionName: string;
-  effectivePeriod: string;
-  percentageIncrease: number;
-  summary: string;
-  salaryScales: CctCategoryProposal[];
-}
-
 export interface InvoiceOcrItem {
   code: string;
   description: string;
@@ -97,25 +81,6 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const automationApi = {
   async getStatus(): Promise<{ status: string; message: string }> {
     return request<{ status: string; message: string }>("/api/v1/automation/status");
-  },
-
-  async analyzeCct(cctNumber: string, file?: File): Promise<CctAnalysisResult> {
-    let base64Document: string | undefined;
-    let mimeType: string | undefined;
-
-    if (file) {
-      base64Document = await fileToBase64(file);
-      mimeType = file.type;
-    }
-
-    return request<CctAnalysisResult>("/api/v1/automation/cct/analyze", {
-      method: "POST",
-      body: JSON.stringify({
-        cctNumber,
-        base64Document,
-        mimeType
-      })
-    });
   },
 
   async extractInvoiceOcr(file: File): Promise<InvoiceOcrResult> {

@@ -1,111 +1,86 @@
-import React from "react";
 import { Link } from "react-router-dom";
+import { HelpManual, ManualPart, Step, Steps, Tip } from "../components/help/HelpManual";
 
+const SECTIONS = [
+  { id: "para-que", title: "Para qué sirve" },
+  { id: "legajo", title: "Alta y legajo de un colaborador" },
+  { id: "documentos", title: "Legajo digital: documentos de ingreso y egreso" },
+  { id: "epp", title: "Entrega de elementos de protección (EPP)" },
+  { id: "organigrama", title: "Organigrama y descripción de puestos" },
+  { id: "manuales", title: "Manuales de procedimientos" },
+  { id: "sueldos", title: "Sueldos" }
+];
+
+/** Ayuda de RRHH: manual de legajos, documentos, EPP, organigrama y manuales; estado de la liquidación. */
 export function HumanResourcesHelpPage() {
   return (
-    <div className="workspace-page">
-      <div className="page-head">
-        <div>
-          <h1>Guía & Documentación: Recursos Humanos & Liquidación</h1>
-          <p className="muted">Manual operativo conforme a LCT 20.744, convenios CCT y Libro de Sueldos Digital AFIP</p>
-        </div>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <Link to="/rrhh/empleados" className="btn btn-outline">
-            👥 Nómina de Colaboradores
-          </Link>
-          <Link to="/rrhh/liquidaciones" className="btn btn-primary" style={{ background: "#0d9488" }}>
-            💰 Liquidación de Sueldos
-          </Link>
-        </div>
-      </div>
+    <HelpManual
+      eyebrow="RECURSOS HUMANOS · MANUAL"
+      title="Ayuda de RRHH"
+      intro="Cómo llevar el legajo de cada colaborador con su documentación, las entregas de elementos de protección, el organigrama con la descripción de cada puesto y los manuales de procedimientos."
+      sections={SECTIONS}
+      actions={<><Link to="/rrhh/empleados" className="btn">Colaboradores</Link><Link to="/rrhh/organigrama" className="btn btn-outline">Organigrama</Link></>}
+    >
+      <ManualPart id="para-que" title="1. Para qué sirve">
+        <p style={{ margin: 0 }}>
+          RRHH guarda todo lo de cada colaborador en un solo lugar: datos personales, contrato y convenio, cuenta bancaria, documentación
+          y entregas de EPP. También el organigrama y los manuales de la empresa. Los sueldos de cada persona solo los ve quien tiene el
+          permiso de <strong>sueldos</strong>.
+        </p>
+      </ManualPart>
 
-      <div style={{ display: "grid", gap: "24px", maxWidth: "900px" }}>
-        {/* Card 1: Legajo 360 */}
-        <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>1. Legajos Digitales 360° del Colaborador</h2>
-          <p>
-            El legajo digital unificado concentra toda la información contractual, impositiva y médica del trabajador:
-          </p>
-          <ul>
-            <li><strong>Datos Fiscales & Personales:</strong> CUIL (con validación de dígito verificador), DNI, fecha de nacimiento, estado civil y foto.</li>
-            <li><strong>Encuadre Sindical / CCT:</strong> Permite configurar el convenio correspondiente (*Comercio 130/75, UOM 260/75, UOCRA 76/75, Camioneros, etc.*) y su categoría profesional.</li>
-            <li><strong>Bancarización:</strong> CBU de 22 dígitos del banco donde se depositan los sueldos para exportación masiva.</li>
-            <li><strong>Resolución SRT 299/2011 (EPP):</strong> Constancia digital de entrega de calzado de seguridad, ropa de trabajo y protección con número de certificado IRAM.</li>
-          </ul>
-        </section>
+      <ManualPart id="legajo" title="2. Alta y legajo de un colaborador">
+        <Steps>
+          <Step title="RRHH → Colaboradores & Legajos → “+ Nuevo Colaborador”." />
+          <Step title="“👤 1. Datos Personales”: nombre, DNI, CUIL, fecha de nacimiento, domicilio y contacto de emergencia." />
+          <Step title="“💼 2. Contrato & Convenio”: fecha de ingreso, modalidad, puesto, área, convenio, categoría, obra social y sueldo básico." />
+          <Step title="“🏦 3. Datos Bancarios”: banco, CBU (22 dígitos) y alias de la cuenta sueldo." />
+          <Step title="Guardá. El legajo queda en la lista con su estado (activo, licencia o baja)." />
+        </Steps>
+      </ManualPart>
 
-        {/* Card 2: Motor de Liquidación Multi-Convenio */}
-        <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>2. Motor de Liquidación & Fórmulas Salariales</h2>
-          <p>
-            El sistema calcula de forma automatizada los haberes y deducciones obligatorias de ley en Argentina:
-          </p>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Concepto</th>
-                  <th>Tipo</th>
-                  <th>Base de Cálculo / Alícuota</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>100 - Sueldo Básico</strong></td>
-                  <td>Remunerativo</td>
-                  <td>Básico mensual del legajo / 30 días</td>
-                </tr>
-                <tr>
-                  <td><strong>110 - Antigüedad</strong></td>
-                  <td>Remunerativo</td>
-                  <td>1% por año de antigüedad reconocida (según CCT)</td>
-                </tr>
-                <tr>
-                  <td><strong>120 - Presentismo</strong></td>
-                  <td>Remunerativo</td>
-                  <td>8.33% sobre (Básico + Antigüedad)</td>
-                </tr>
-                <tr>
-                  <td><strong>300 - Jubilación (SIPA)</strong></td>
-                  <td>Deducción Ley 24.241</td>
-                  <td><strong>11.0%</strong> sobre Total Bruto Remunerativo</td>
-                </tr>
-                <tr>
-                  <td><strong>301 - INSSJyP (PAMI)</strong></td>
-                  <td>Deducción Ley 19.032</td>
-                  <td><strong>3.0%</strong> sobre Total Bruto Remunerativo</td>
-                </tr>
-                <tr>
-                  <td><strong>302 - Obra Social</strong></td>
-                  <td>Deducción Ley 23.660</td>
-                  <td><strong>3.0%</strong> sobre Total Bruto Remunerativo</td>
-                </tr>
-                <tr>
-                  <td><strong>303 - Cuota Sindical</strong></td>
-                  <td>Deducción Gremio</td>
-                  <td><strong>2.0%</strong> aporte sindical paritario</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+      <ManualPart id="documentos" title="3. Legajo digital: documentos de ingreso y egreso">
+        <Steps>
+          <Step title="En el legajo, “📂 4. Legajo Digital”: subí cada documento en su casillero.">
+            Ingreso: CV, DNI, constancia de CUIL, alta temprana, examen preocupacional, cargas de familia, domicilio, títulos, constancia de CBU
+            y licencias. Egreso: recibo de liquidación final firmado, certificado de trabajo (art. 80), certificado de servicios y telegrama.
+          </Step>
+          <Step title="El contador del encabezado muestra cuántos documentos de ingreso están presentados." />
+        </Steps>
+      </ManualPart>
 
-        {/* Card 3: Salidas Oficiales AFIP y Bancos */}
-        <section className="card pad stack">
-          <h2 style={{ margin: "0 0 10px 0", color: "#0d9488" }}>3. Salidas de Cumplimiento Legal (AFIP & Bancos)</h2>
-          <ul>
-            <li>
-              <strong>Libro de Sueldos Digital AFIP (F.931):</strong> Botón <code>📥 TXT AFIP (LSD F.931)</code> en la pantalla de liquidaciones. Genera el archivo plano oficial con los 4 registros (Carátula, Datos Trabajador, Conceptos y Bases de Seguridad Social) para subir directo al servicio de AFIP.
-            </li>
-            <li>
-              <strong>Acreditación Bancaria de Haberes:</strong> Botón <code>🏦 TXT Bancario (Haberes)</code> con CBU, CUIL, Nombre y Neto a pagar para procesar el pago masivo en el Homebanking corporativo.
-            </li>
-            <li>
-              <strong>Recibo de Sueldo Oficial (Art. 140 LCT):</strong> Con firma digital patronal y Hash criptográfico SHA-256 (Ley 25.506), listo para imprimir en PDF.
-            </li>
-          </ul>
-        </section>
-      </div>
-    </div>
+      <ManualPart id="epp" title="4. Entrega de elementos de protección (EPP)">
+        <Steps>
+          <Step title="En el legajo, “🛡️ 5. Entrega de EPP” → “+ Registrar Entrega de EPP”: elemento, cantidad, fecha y certificación." />
+          <Step title="Cada entrega queda registrada como constancia (Resolución SRT 299/2011)." />
+        </Steps>
+      </ManualPart>
+
+      <ManualPart id="organigrama" title="5. Organigrama y descripción de puestos">
+        <Steps>
+          <Step title="RRHH → Organigrama & Puestos → “➕ Nuevo Puesto en Organigrama”.">
+            Nombre del puesto, área, a quién reporta, quién lo ocupa y nivel.
+          </Step>
+          <Step title="Completá la misión, las responsabilidades, los requisitos, las competencias y los indicadores." />
+          <Step title="“📄 Ver Descripción” muestra la descripción del puesto lista para imprimir." />
+        </Steps>
+      </ManualPart>
+
+      <ManualPart id="manuales" title="6. Manuales de procedimientos">
+        <Steps>
+          <Step title="RRHH → Manuales de Procedimientos → “➕ Nuevo Procedimiento / Instructivo”.">
+            Código, título, área, versión, fecha de vigencia, estado (vigente, en revisión u obsoleto) y el documento.
+          </Step>
+        </Steps>
+      </ManualPart>
+
+      <ManualPart id="sueldos" title="7. Sueldos">
+        <p style={{ margin: 0 }}>
+          La <Link to="/rrhh/liquidaciones">liquidación de sueldos</Link> se está rehaciendo para que cumpla la ley vigente (incluida la Ley
+          27.802) y sirva para cualquier convenio. Mientras tanto, los sueldos se liquidan como hasta ahora (estudio contable) y el asiento
+          de sueldos del mes se registra en Contabilidad → Cierres y períodos.
+        </p>
+      </ManualPart>
+    </HelpManual>
   );
 }
