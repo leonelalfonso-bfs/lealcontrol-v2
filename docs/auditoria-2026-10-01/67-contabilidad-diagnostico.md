@@ -207,11 +207,23 @@ Decisiones del dueño (15/10/2026):
   - amortización con puesta al día;
   - baja y datos bloqueados.
 
-### C6. Ajuste por inflación (RT 6)
+### C6. Ajuste por inflación (hecha, PR "Contabilidad C6")
 
-- Índices FACPCE (IPIM y empalmes) cargados por mes.
-- Marcar las partidas no monetarias (la marca por cuenta ya existe).
-- Asientos de ajuste del ejercicio y RECPAM.
-- Estados contables en moneda homogénea.
+- **Índices FACPCE por mes** (`/contabilidad/ajuste-inflacion`): se pegan desde la planilla de la FACPCE (mes y valor, en cualquiera de los formatos habituales) y se actualizan por mes. Se guardan por empresa.
+- **Partidas no monetarias:** la marca por cuenta ya existía en el plan de cuentas. Ahora un botón sugiere:
+  - bienes de cambio, bienes de uso, patrimonio neto y resultados (salvo los financieros, que se presentan netos del RECPAM);
+  - el contador la revisa.
+- **Asiento de ajuste:**
+  - Cada movimiento de una cuenta marcada se reexpresa con índice de cierre / índice de su mes; el ajuste va contra RECPAM (cuenta nueva 4.2.04).
+  - Dentro del ejercicio, cada corrida registra solo lo que falta respecto de los ajustes ya hechos: sirve mensual o solo al cierre.
+  - Con el ejercicio anterior cerrado, parte de la apertura, ya en moneda del cierre anterior.
+  - Una vez por mes; respeta el candado; pide permiso de Aprobar; avisa qué índices faltan.
+- **Moneda homogénea:** con el ajuste registrado, los reportes (Sumas y Saldos, Mayor, Resultados) quedan en moneda de cierre. El cierre de ejercicio lleva los saldos ajustados a la apertura.
+- **A revisar con el contador antes del primer uso real:**
+  - qué cuentas marcar;
+  - la serie de índices;
+  - si ajustar todos los meses o solo al cierre.
+- **Ayuda:** sección "Ajuste por inflación".
+- **Pruebas:** `AccountingInflationApiTests` con el caso de libro (capital, compra de mercadería y venta con índices 100/110/121: RECPAM 160) y el mes siguiente con el ajuste incremental. Un segundo caso cruza un cierre de ejercicio y parte de la apertura (RECPAM 80).
 
 Cada entrega termina con su manual de Ayuda ([regla](../CONTINUIDAD.md)).

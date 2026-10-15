@@ -10,6 +10,7 @@ const TABS = [
   { to: "/contabilidad/sumas-saldos", label: "⚖️ Sumas y Saldos" },
   { to: "/contabilidad/libros-iva", label: "🧾 Libros IVA" },
   { to: "/contabilidad/bienes-de-uso", label: "🏗️ Bienes de uso" },
+  { to: "/contabilidad/ajuste-inflacion", label: "📈 Ajuste por inflación" },
   { to: "/contabilidad/conciliacion", label: "🏦 Conciliación tesorería" },
   { to: "/contabilidad/portal-estudio", label: "🏢 Cierres y períodos" }
 ];

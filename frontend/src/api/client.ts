@@ -1178,6 +1178,15 @@ export const api = {
     request<import("./types").DepreciationPreview>("/api/v1/accounting/fixed-assets/depreciation/preview", { method: "POST", body: JSON.stringify({ date }) }),
   postDepreciation: (date: string) =>
     request<{ id: string; entryNumber: number; total: number }>("/api/v1/accounting/fixed-assets/depreciation", { method: "POST", body: JSON.stringify({ date }) }),
+  listInflationIndices: () => request<{ year: number; month: number; value: number }[]>("/api/v1/accounting/inflation-indices"),
+  saveInflationIndices: (rows: { year: number; month: number; value: number }[]) =>
+    request<{ saved: number }>("/api/v1/accounting/inflation-indices", { method: "PUT", body: JSON.stringify(rows) }),
+  suggestInflationAccounts: () =>
+    request<{ marked: number; total: number }>("/api/v1/accounting/inflation-adjustment/suggest-accounts", { method: "POST" }),
+  previewInflationAdjustment: (date: string) =>
+    request<import("./types").InflationPreview>("/api/v1/accounting/inflation-adjustment/preview", { method: "POST", body: JSON.stringify({ date }) }),
+  postInflationAdjustment: (date: string) =>
+    request<{ id: string; entryNumber: number; recpam: number }>("/api/v1/accounting/inflation-adjustment", { method: "POST", body: JSON.stringify({ date }) }),
   getVatBooks: (year: number, month: number) =>
     request<import("./types").VatBooks>(`/api/v1/accounting/vat-books?year=${year}&month=${month}`),
   downloadArcaVatBook: (year: number, month: number) =>

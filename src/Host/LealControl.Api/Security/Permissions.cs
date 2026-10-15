@@ -69,7 +69,7 @@ public static class PermissionRules
     private static readonly HashSet<string> ApproveSegments = new(StringComparer.OrdinalIgnoreCase)
     {
         "authorize-arca", "recover-arca", "apply-arca-rate", "authorize", "approve", "void", "cancel", "reject", "deposit", "reconcile",
-        "lock", "unlock", "revert", "confirm", "quick-post", "execute", "fiscal-years", "fx-revaluation", "inventory-valuation", "depreciation"
+        "lock", "unlock", "revert", "confirm", "quick-post", "execute", "fiscal-years", "fx-revaluation", "inventory-valuation", "depreciation", "inflation-adjustment"
     };
 
     private static readonly HashSet<string> AdminSegments = new(StringComparer.OrdinalIgnoreCase) { "settings", "config", "configuration" };

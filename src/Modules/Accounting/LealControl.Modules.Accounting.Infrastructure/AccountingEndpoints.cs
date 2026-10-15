@@ -33,6 +33,7 @@ public static class AccountingEndpoints
         FiscalYears.FiscalYearEndpoints.MapFiscalYearEndpoints(group);
         Inventory.InventoryValuationEndpoints.MapInventoryValuationEndpoints(group);
         FixedAssets.FixedAssetEndpoints.MapFixedAssetEndpoints(group);
+        Inflation.InflationEndpoints.MapInflationEndpoints(group);
 
         return endpoints;
     }

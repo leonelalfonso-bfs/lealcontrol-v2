@@ -2605,3 +2605,14 @@ export type DepreciationPreview = {
   total: number;
   existingEntryNumber: number | null;
 };
+
+export type InflationPreview = {
+  date: string;
+  fiscalYear: string;
+  closingIndex: number;
+  markedAccounts: number;
+  rows: { accountCode: string; accountName: string; historical: number; restated: number; adjustment: number }[];
+  recpam: number;
+  missingIndices: string[];
+  existingEntryNumber: number | null;
+};
