@@ -179,12 +179,33 @@ Hoy Contabilidad sirve para asientos manuales y para ver cobros y pagos. No refl
   - el mes de cierre en junio;
   - el cierre frenado por una venta sin contabilizar.
 
-### C5. Integraciones restantes (con el contador)
+### C5. Integraciones restantes (hecha, PR "Contabilidad C5")
 
-- Costo de ventas desde los remitos y el consumo en servicio (con el costo del stock).
-- Sueldos automáticos desde la liquidación de RRHH.
-- Amortizaciones de bienes de uso.
-- Unificar la conciliación bancaria en Finanzas y retirar la duplicada.
+Decisiones del dueño (15/10/2026):
+- costo de ventas por diferencia de inventario;
+- sueldos con asiento manual hasta que RRHH liquide de verdad;
+- registro simple de bienes de uso.
+
+- **Costo de ventas por diferencia de inventario** (Cierres y períodos → "Existencias y costo de ventas"):
+  - El stock a fin de mes se valúa al último costo de compra en pesos; si no hay compras, al costo cargado en el producto. Si no hay ninguno, vale cero y se avisa.
+  - La cuenta Mercaderías se ajusta a ese valor contra CMV (5.1.01). Con las compras en "Compras" (C1), el costo del período es Compras + existencia inicial − existencia final.
+  - Una vez por mes, respeta el candado y pide permiso de Aprobar.
+  - El stock a una fecha se reconstruye desde el stock actual, restando los movimientos posteriores. Lo implementa Inventario (`IInventoryValuationSource`).
+- **Bienes de uso** (`/contabilidad/bienes-de-uso`):
+  - Alta con costo, valor residual, vida útil en meses y cuentas. Se agregaron las amortizaciones acumuladas de Maquinarias y de Instalaciones.
+  - Amortización mensual en línea recta, con el mes de alta entero: un asiento por mes, que pone al día los meses que falten.
+  - Baja con fecha. Ya amortizado, no se cambian los datos que definen la amortización.
+  - El alta y la venta del bien se registran aparte (Ayuda).
+- **Sueldos:** queda el asiento manual de Contabilidad, que ya valida que cuadre.
+  - La liquidación de RRHH hoy es un esqueleto: inventa un sueldo de $ 750.000 si falta y no calcula contribuciones patronales.
+  - Rehacerla es un proyecto propio de RRHH; cuando esté, se conecta.
+- **Conciliación bancaria:** ya vivía en Finanzas. Se retiraron los endpoints de Contabilidad que solo respondían "se mudó", sus entidades y las tablas `accounting.bank_statements` y `bank_statement_lines` (sin uso; ver el conteo del PR).
+- **Ayuda:** existencias y costo de ventas, bienes de uso, y sueldos.
+- **Pruebas:** `AccountingInventoryAndAssetsApiTests` cubre:
+  - valuación con los tres orígenes de costo, ajuste y su repetición;
+  - CMV del mes siguiente;
+  - amortización con puesta al día;
+  - baja y datos bloqueados.
 
 ### C6. Ajuste por inflación (RT 6)
 

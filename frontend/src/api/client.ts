@@ -1163,6 +1163,21 @@ export const api = {
     request<import("./types").FxRevaluationPreview>("/api/v1/accounting/fx-revaluation/preview", { method: "POST", body: JSON.stringify(body) }),
   postFxRevaluation: (body: { date: string; rate: number }) =>
     request<{ id: string; entryNumber: number; net: number }>("/api/v1/accounting/fx-revaluation", { method: "POST", body: JSON.stringify(body) }),
+  previewInventoryValuation: (body: { date: string; usdRate?: number }) =>
+    request<import("./types").InventoryValuationPreview>("/api/v1/accounting/inventory-valuation/preview", { method: "POST", body: JSON.stringify(body) }),
+  postInventoryValuation: (body: { date: string; usdRate?: number }) =>
+    request<{ id: string; entryNumber: number; difference: number }>("/api/v1/accounting/inventory-valuation", { method: "POST", body: JSON.stringify(body) }),
+  listFixedAssets: () => request<import("./types").FixedAsset[]>("/api/v1/accounting/fixed-assets"),
+  createFixedAsset: (body: import("./types").FixedAssetInput) =>
+    request<import("./types").FixedAsset>("/api/v1/accounting/fixed-assets", { method: "POST", body: JSON.stringify(body) }),
+  updateFixedAsset: (id: string, body: import("./types").FixedAssetInput) =>
+    request<import("./types").FixedAsset>(`/api/v1/accounting/fixed-assets/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  disposeFixedAsset: (id: string, date: string) =>
+    request<import("./types").FixedAsset>(`/api/v1/accounting/fixed-assets/${id}/dispose`, { method: "POST", body: JSON.stringify({ date }) }),
+  previewDepreciation: (date: string) =>
+    request<import("./types").DepreciationPreview>("/api/v1/accounting/fixed-assets/depreciation/preview", { method: "POST", body: JSON.stringify({ date }) }),
+  postDepreciation: (date: string) =>
+    request<{ id: string; entryNumber: number; total: number }>("/api/v1/accounting/fixed-assets/depreciation", { method: "POST", body: JSON.stringify({ date }) }),
   getVatBooks: (year: number, month: number) =>
     request<import("./types").VatBooks>(`/api/v1/accounting/vat-books?year=${year}&month=${month}`),
   downloadArcaVatBook: (year: number, month: number) =>

@@ -32,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<LealControl.Modules.Sales.Infrastructure.Fiscal.FiscalAuthorizationService>();
         services.AddScoped<LealControl.Modules.Accounting.Contracts.Posting.IAccountingDocumentSource, Accounting.SalesAccountingDocumentSource>();
         services.AddScoped<LealControl.Modules.Accounting.Contracts.VatBooks.IVatBookSource, Accounting.SalesVatBookSource>();
+        services.AddScoped<LealControl.Modules.Accounting.Contracts.Inventory.IInventoryValuationSource, Accounting.SalesInventoryValuationSource>();
         services.AddScoped<IQuoteRepository, QuoteRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();

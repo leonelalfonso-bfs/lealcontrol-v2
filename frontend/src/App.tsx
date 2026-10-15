@@ -13,6 +13,7 @@ import {
   AccountingHelpPage,
   VatBooksPage,
   JournalBookPage,
+  FixedAssetsPage,
   AccountingStudyPortalPage,
   BankReconciliationPage,
   CalibrationReportFormPage,
@@ -523,6 +524,7 @@ export function App() {
               <Route path="/contabilidad/sumas-saldos" element={<TrialBalancePage />} />
               <Route path="/contabilidad/conciliacion" element={<BankReconciliationPage />} />
               <Route path="/contabilidad/portal-estudio" element={<AccountingStudyPortalPage />} />
+              <Route path="/contabilidad/bienes-de-uso" element={<FixedAssetsPage />} />
               <Route path="/contabilidad/libro-diario" element={<JournalBookPage />} />
               <Route path="/contabilidad/libros-iva" element={<VatBooksPage />} />
               <Route path="/contabilidad/ayuda" element={<AccountingHelpPage />} />

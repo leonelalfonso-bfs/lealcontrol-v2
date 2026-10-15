@@ -12,6 +12,8 @@ const SECTIONS = [
   { id: "reportes", title: "Asientos, Libro Diario, Mayor y Sumas y Saldos" },
   { id: "libros-iva", title: "Libros IVA y Libro IVA Digital de ARCA" },
   { id: "moneda-extranjera", title: "Moneda extranjera y diferencias de cambio" },
+  { id: "existencias", title: "Existencias y costo de ventas" },
+  { id: "bienes-de-uso", title: "Bienes de uso y amortizaciones" },
   { id: "cierres", title: "Cierre de meses y de ejercicio" },
   { id: "problemas", title: "Cuando el sistema no te deja" }
 ];
@@ -195,7 +197,45 @@ export function AccountingHelpPage() {
         </Steps>
       </ManualPart>
 
-      <ManualPart id="cierres" title="11. Cierre de meses y de ejercicio">
+      <ManualPart id="existencias" title="11. Existencias y costo de ventas">
+        <p style={{ margin: 0 }}>
+          El costo de ventas sale <strong>por diferencia de inventario</strong>. Las compras se contabilizan en “Compras” (5.1.03) y a fin de mes
+          se valúa el stock. La cuenta Mercaderías (1.1.04.001) se ajusta a ese valor contra Costo de Mercaderías Vendidas (5.1.01). Así, el costo
+          de ventas del mes es Compras + existencia inicial − existencia final.
+        </p>
+        <Steps>
+          <Step title="Cierres y períodos → “Existencias y costo de ventas” → fecha (último día del mes) → “👁️ Valuar existencias”.">
+            Muestra cada producto con stock a esa fecha, su costo unitario y su valor. El costo es el precio de la última factura de compra del
+            producto (en pesos); si nunca se compró, el costo cargado en el producto.
+          </Step>
+          <Step title="Si hay productos “Sin costo”, cargales el costo en el catálogo o registrá su compra: mientras tanto valen cero." />
+          <Step title="“Registrar ajuste”: una vez por mes, antes de cerrarlo con candado." />
+        </Steps>
+        <Tip>
+          Si un producto solo tiene costo en dólares (sin compras), completá la cotización del dólar para valuarlo. Solo entran los productos
+          con control de stock.
+        </Tip>
+      </ManualPart>
+
+      <ManualPart id="bienes-de-uso" title="12. Bienes de uso y amortizaciones">
+        <Steps>
+          <Step title="Contabilidad → Bienes de uso → “➕ Nuevo bien”.">
+            Código, nombre, fecha de alta, costo, valor residual, vida útil en meses y tipo de bien. El tipo propone la cuenta del bien y la de su
+            amortización acumulada (rodados, maquinarias y equipos, instalaciones). El gasto va a Amortización de Bienes de Uso (5.2.08).
+          </Step>
+          <Step title="El alta del bien no genera asiento: la compra ya se registró en Compras o con un asiento manual. Si entró por Compras, reclasificala a la cuenta del bien con un asiento manual." />
+          <Step title="Cada mes, en “Amortización del mes”: último día del mes → “👁️ Calcular” → “Registrar asiento”.">
+            La amortización es en línea recta y el mes de alta cuenta entero. Si quedaron meses sin correr, el siguiente los pone al día. Se
+            registra una vez por mes.
+          </Step>
+          <Step title="Cuando el bien se vende o se da de baja: “Baja” con la fecha. Deja de amortizarse después de ese mes.">
+            La venta o baja se registra con un asiento manual: se cancelan la cuenta del bien y su amortización acumulada, y la diferencia va a resultados.
+          </Step>
+        </Steps>
+        <Tip>Con amortizaciones registradas, el costo, el valor residual, la vida útil y la fecha de alta ya no se pueden cambiar.</Tip>
+      </ManualPart>
+
+      <ManualPart id="cierres" title="13. Cierre de meses y de ejercicio">
         <Steps>
           <Step title="Contabilizá el mes completo y revisá Sumas y Saldos." />
           <Step title="Cierres y períodos → elegí el año → “🔒 Cerrar con Candado” en el mes.">
@@ -213,13 +253,14 @@ export function AccountingHelpPage() {
           <Step title="Para corregir algo de un ejercicio cerrado: “Reabrir” (solo el último cerrado).">
             Borra sus tres asientos de cierre y abre sus meses; después se vuelve a cerrar.
           </Step>
-          <Step title="Sueldos: “📝 Contabilizar Asiento de Sueldos y F.931” con los totales de la liquidación.">
-            Los importes tienen que cuadrar: brutos más contribuciones igual a netos más cargas a pagar.
+          <Step title="Sueldos: “📝 Contabilizar Asiento de Sueldos y F.931” con los totales de la liquidación del mes.">
+            Los importes tienen que cuadrar: brutos más contribuciones igual a netos más cargas a pagar. Por ahora se cargan a mano, con los
+            totales del liquidador de sueldos; cuando RRHH liquide los sueldos, el asiento va a salir de ahí.
           </Step>
         </Steps>
       </ManualPart>
 
-      <ManualPart id="problemas" title="12. Cuando el sistema no te deja">
+      <ManualPart id="problemas" title="14. Cuando el sistema no te deja">
         <Troubleshooting rows={[
           [<>Una factura de venta no aparece al contabilizar</>, <>Solo entran las autorizadas por ARCA y con fecha dentro del período. Si está en borrador, autorizala en Ventas.</>],
           [<>“Sin asiento modelo” en la vista previa</>, <>Ese tipo de comprobante no tiene un modelo activo: activalo o creá uno en Asientos Modelos.</>],
@@ -229,6 +270,8 @@ export function AccountingHelpPage() {
           [<>“… está en USD y no tiene cotización”</>, <>Es un cobro o pago en dólares cargado sin cotización: anulalo en Finanzas y cargalo de nuevo con la cotización del día.</>],
           [<>“Hay N comprobante(s) del ejercicio sin contabilizar”</>, <>Contabilizá el período del ejercicio (“🔴 ► CONTABILIZAR”) y volvé a cerrar.</>],
           [<>“Ese mes es de un ejercicio cerrado…”</>, <>Los meses de un ejercicio cerrado se abren reabriendo el ejercicio, no de a uno.</>],
+          [<>“… ya tiene ajuste de existencias” o “… ya tiene amortización”</>, <>Ese mes ya se registró: buscá el asiento en Asientos (origen Inventory o Depreciation).</>],
+          [<>“El bien ya tiene amortizaciones…”</>, <>Solo se pueden cambiar el nombre, las cuentas y las notas. Si el alta estaba mal, dalo de baja y cargalo de nuevo con otro código.</>],
           [<>“… ya tiene revaluación”</>, <>Ese mes ya se revaluó: buscá el asiento en Asientos (origen Revaluation).</>],
           [<>Un cobro o pago queda con error</>, <>Falta el mapeo de esa caja o banco: Plan de Cuentas → Mapeo cuenta financiera.</>],
           [<>“Asiento desbalanceado” o cuenta inexistente</>, <>Una línea del asiento modelo apunta a una cuenta que no existe o no es imputable: corregila en el modelo.</>],
