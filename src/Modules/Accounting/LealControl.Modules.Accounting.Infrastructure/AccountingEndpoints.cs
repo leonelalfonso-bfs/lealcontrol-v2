@@ -30,6 +30,7 @@ public static class AccountingEndpoints
         group.MapAccountingBatchPostingEndpoints();
         VatBooks.VatBookEndpoints.MapVatBookEndpoints(group);
         FxRevaluation.FxRevaluationEndpoints.MapFxRevaluationEndpoints(group);
+        FiscalYears.FiscalYearEndpoints.MapFiscalYearEndpoints(group);
 
         return endpoints;
     }
@@ -40,8 +41,8 @@ public sealed record UpdateAccountRequest(string? Code, string Name, string? Acc
 public sealed record CreateJournalEntryRequest(DateTime Date, string Concept, string? EntryType, string? SourceModule, string? SourceDocumentId, string? CreatedBy, List<JournalEntryLineRequest> Lines);
 public sealed record JournalEntryLineRequest(Guid AccountId, string AccountCode, string AccountName, decimal Debit, decimal Credit, string? Currency, decimal ExchangeRate, Guid? CostCenterId, string? CostCenterCode, string? CostCenterName, string? Memo);
 public sealed record CreateCostCenterRequest(string Code, string Name, string? Category);
-public sealed record LockPeriodRequest(int Year, int Month, bool Lock, string? User);
-public sealed record UpdateAccountingSettingsRequest(bool AutoPostOnConfirm);
+public sealed record LockPeriodRequest(int Year, int Month, bool Lock);
+public sealed record UpdateAccountingSettingsRequest(bool? AutoPostOnConfirm, int? FiscalYearEndMonth);
 public sealed record FinanceAccountMappingItemRequest(Guid FinancialAccountId, string LedgerAccountCode);
 public sealed record UploadBankStatementRequest(string? BankName, string? AccountNumber, string? Currency, DateTime PeriodStartDate, DateTime PeriodEndDate, decimal InitialBalance, decimal FinalBalance, List<UploadBankStatementLineRequest> Lines);
 public sealed record UploadBankStatementLineRequest(DateTime TransactionDate, string Description, string? ReferenceNumber, decimal Debit, decimal Credit, decimal Balance);

@@ -1199,8 +1199,16 @@ export const api = {
     const q = year ? `?year=${year}` : "";
     return request<Record<string, unknown>>(`/api/v1/accounting/reports/cost-center-pnl${q}`);
   },
-  runYearEndClosing: (body: { year: number; closingDate?: string }) =>
-    request<JournalEntry>("/api/v1/accounting/year-end-closing", { method: "POST", body: JSON.stringify(body) }),
+  getFiscalYears: () => request<import("./types").FiscalYears>("/api/v1/accounting/fiscal-years"),
+  closeFiscalYear: (end: string) =>
+    request<{ label: string; entryNumbers: number[] }>("/api/v1/accounting/fiscal-years/close", { method: "POST", body: JSON.stringify({ end }) }),
+  reopenFiscalYear: (end: string) =>
+    request<{ label: string; removed: number }>("/api/v1/accounting/fiscal-years/reopen", { method: "POST", body: JSON.stringify({ end }) }),
+  getAccountingSettings: () => request<{ autoPostOnConfirm: boolean; fiscalYearEndMonth: number }>("/api/v1/accounting/settings"),
+  updateAccountingSettings: (body: { fiscalYearEndMonth?: number }) =>
+    request<{ autoPostOnConfirm: boolean; fiscalYearEndMonth: number }>("/api/v1/accounting/settings", { method: "PUT", body: JSON.stringify(body) }),
+  getJournalBook: (from: string, to: string) =>
+    request<import("./types").JournalBook>(`/api/v1/accounting/journal-book?from=${from}&to=${to}`),
   autoPostPayroll: (body: { date: string; periodDescription: string; totalGrossSalaries: number; totalEmployerContributions: number; totalNetSalaries: number; totalSocialSecurityToPay: number; costCenterId?: string }) =>
     request<JournalEntry>("/api/v1/accounting/auto-post/payroll", { method: "POST", body: JSON.stringify(body) }),
   listCostCenters: () =>
@@ -1209,7 +1217,7 @@ export const api = {
     request<CostCenter>("/api/v1/accounting/cost-centers", { method: "POST", body: JSON.stringify(body) }),
   listFiscalPeriods: () =>
     request<FiscalPeriod[]>("/api/v1/accounting/periods"),
-  lockFiscalPeriod: (body: { year: number; month: number; lock: boolean; user?: string }) =>
+  lockFiscalPeriod: (body: { year: number; month: number; lock: boolean }) =>
     request<FiscalPeriod>("/api/v1/accounting/periods/lock", { method: "POST", body: JSON.stringify(body) }),
 
   // Bank Reconciliation

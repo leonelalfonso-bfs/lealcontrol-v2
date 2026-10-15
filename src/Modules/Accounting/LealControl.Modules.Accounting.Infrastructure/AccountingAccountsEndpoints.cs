@@ -184,7 +184,7 @@ internal static class AccountingAccountsEndpoints
             var tenantId = tenantContext.TenantId;
             await db.EnsureAccountingTablesAsync(ct);
             var settings = await db.GetOrCreateTenantSettingsAsync(tenantId, ct);
-            return Results.Ok(new { settings.AutoPostOnConfirm });
+            return Results.Ok(new { settings.AutoPostOnConfirm, settings.FiscalYearEndMonth });
         });
 
         group.MapGet("/finance-account-mappings", async (ITenantContext tenantContext, AccountingDbContext db, CancellationToken ct) =>
@@ -240,10 +240,20 @@ internal static class AccountingAccountsEndpoints
             var tenantId = tenantContext.TenantId;
             await db.EnsureAccountingTablesAsync(ct);
             var settings = await db.GetOrCreateTenantSettingsAsync(tenantId, ct);
-            settings.AutoPostOnConfirm = req.AutoPostOnConfirm;
+            if (req.FiscalYearEndMonth is { } endMonth && endMonth != settings.FiscalYearEndMonth)
+            {
+                if (endMonth is < 1 or > 12)
+                    return Results.BadRequest(new { message = "El mes de cierre va de 1 a 12." });
+                // Con ejercicios ya cerrados, cambiar el mes desarmaría sus fechas.
+                if (await db.JournalEntries.AnyAsync(e => e.TenantId == tenantId && e.SourceModule == FiscalYears.FiscalYears.SourceModule, ct))
+                    return Results.BadRequest(new { message = "Ya hay ejercicios cerrados: el mes de cierre no se puede cambiar." });
+                settings.FiscalYearEndMonth = endMonth;
+            }
+            if (req.AutoPostOnConfirm is { } autoPost)
+                settings.AutoPostOnConfirm = autoPost;
             settings.UpdatedAtUtc = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
-            return Results.Ok(new { settings.AutoPostOnConfirm });
+            return Results.Ok(new { settings.AutoPostOnConfirm, settings.FiscalYearEndMonth });
         });
 
         return group;

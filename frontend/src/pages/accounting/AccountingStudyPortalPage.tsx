@@ -1,6 +1,7 @@
 import React, { useEffect, useState, FormEvent } from "react";
 import { AccountingTabs } from "../../components/accounting/AccountingTabs";
 import { FxRevaluationCard } from "../../components/accounting/FxRevaluationCard";
+import { FiscalYearsCard } from "../../components/accounting/FiscalYearsCard";
 import { api } from "../../api/client";
 
 import { todayAr } from "../../lib/dates";
@@ -12,18 +13,13 @@ export function AccountingStudyPortalPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Year End Closing Assistant State
-  const [closingYear, setClosingYear] = useState(new Date().getFullYear());
-  const [closingDate, setClosingDate] = useState(`${new Date().getFullYear()}-12-31`);
-  const [closingLoading, setClosingLoading] = useState(false);
-
   // Payroll Devengamiento Assistant State
   const [payrollDate, setPayrollDate] = useState(todayAr());
-  const [payrollPeriod, setPayrollPeriod] = useState("Agosto 2026");
-  const [grossSalaries, setGrossSalaries] = useState<number>(10000000);
-  const [employerContrib, setEmployerContrib] = useState<number>(2400000);
-  const [netSalaries, setNetSalaries] = useState<number>(8300000);
-  const [socialSecurityToPay, setSocialSecurityToPay] = useState<number>(4100000);
+  const [payrollPeriod, setPayrollPeriod] = useState("");
+  const [grossSalaries, setGrossSalaries] = useState<number>(0);
+  const [employerContrib, setEmployerContrib] = useState<number>(0);
+  const [netSalaries, setNetSalaries] = useState<number>(0);
+  const [socialSecurityToPay, setSocialSecurityToPay] = useState<number>(0);
   const [selectedCostCenter, setSelectedCostCenter] = useState<string>("");
   const [payrollLoading, setPayrollLoading] = useState(false);
 
@@ -51,33 +47,13 @@ export function AccountingStudyPortalPage() {
       await api.lockFiscalPeriod({
         year,
         month,
-        lock: !currentLocked,
-        user: "Contador Auditor"
+        lock: !currentLocked
       });
       const monthStr = String(month).padStart(2, "0");
       setMsg(`✓ Período ${monthStr}/${year} ${!currentLocked ? "CERRADO y BLOQUEADO con candado fiscal" : "REABIERTO para ajustes"}.`);
       loadData();
     } catch (err: any) {
       setError(err?.message || "Error al actualizar estado del período.");
-    }
-  };
-
-  const handleRunYearEndClosing = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!window.confirm(`¿Confirmás la ejecución del Cierre Anual y Refundición de Resultados para el Ejercicio ${closingYear}? Se generará el asiento de cierre correspondiente.`)) return;
-
-    try {
-      setClosingLoading(true);
-      setError(null);
-      const res = await api.runYearEndClosing({
-        year: closingYear,
-        closingDate: closingDate ? new Date(closingDate).toISOString() : undefined
-      });
-      setMsg(`✓ ${res.message} (Asiento Nº ${res.entryNumber} con ${res.linesCount} líneas procesadas).`);
-    } catch (err: any) {
-      setError(err?.message || "Error al ejecutar el cierre anual.");
-    } finally {
-      setClosingLoading(false);
     }
   };
 
@@ -142,50 +118,7 @@ export function AccountingStudyPortalPage() {
 
       {/* 2 Column Operations Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: 20 }}>
-        {/* Asistente 1: Cierre Anual & Refundición */}
-        <div className="card pad" style={{ border: "1px solid #9333ea", background: "rgba(147, 51, 234, 0.02)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-            <div style={{ fontSize: "28px" }}>🏛️</div>
-            <div>
-              <h3 style={{ margin: 0, color: "#581c87" }}>Asistente de Cierre Anual & Refundición</h3>
-              <p className="muted" style={{ margin: 0, fontSize: "12px" }}>
-                Cancela cuentas de ingresos y egresos (4 y 5) contra Resultado del Ejercicio.
-              </p>
-            </div>
-          </div>
-
-          <form onSubmit={handleRunYearEndClosing} className="stack" style={{ gap: 12 }}>
-            <div className="grid-2" style={{ gap: 10 }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>
-                Año Fiscal a Cerrar:
-                <select value={closingYear} onChange={(e) => setClosingYear(Number(e.target.value))}>
-                  <option value={2026}>2026</option>
-                  <option value={2025}>2025</option>
-                  <option value={2024}>2024</option>
-                </select>
-              </label>
-
-              <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>
-                Fecha del Asiento:
-                <input
-                  type="date"
-                  value={closingDate}
-                  onChange={(e) => setClosingDate(e.target.value)}
-                  required
-                />
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              className="btn"
-              disabled={closingLoading}
-              style={{ background: "#9333ea", color: "#fff", fontWeight: 700, marginTop: 4 }}
-            >
-              {closingLoading ? "Ejecutando Cierre..." : "⚡ Ejecutar Asiento de Refundición de Resultados"}
-            </button>
-          </form>
-        </div>
+        <FiscalYearsCard onChanged={loadData} />
 
         <FxRevaluationCard />
 
