@@ -97,6 +97,8 @@ public sealed class Payslip
     /// <summary>Base de aportes (con los topes de ANSES) y de contribuciones.</summary>
     public decimal ContributionsBase { get; set; }
     public decimal EmployeeContributionsBase { get; set; }
+    /// <summary>Detracción aplicada a la base de contribuciones (Ley 27.541 art. 22): va al Libro de Sueldos Digital.</summary>
+    public decimal Detraction { get; set; }
     // Desglose de lo que va al F.931 y a terceros, para el asiento y el Libro de Sueldos.
     public decimal EmployeeSocialSecurity { get; set; }
     public decimal UnionDeductions { get; set; }

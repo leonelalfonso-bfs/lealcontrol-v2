@@ -191,6 +191,7 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
     public DbSet<Payroll.Payslip> Payslips => Set<Payroll.Payslip>();
     public DbSet<Payroll.PayslipLine> PayslipLines => Set<Payroll.PayslipLine>();
     public DbSet<Payroll.VacationLeave> VacationLeaves => Set<Payroll.VacationLeave>();
+    public DbSet<Payroll.PayrollConceptMapping> PayrollConceptMappings => Set<Payroll.PayrollConceptMapping>();
     public DbSet<EmployeeTimeTracking> TimeTrackings => Set<EmployeeTimeTracking>();
     public DbSet<EppDelivery> EppDeliveries => Set<EppDelivery>();
 
@@ -282,6 +283,14 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.Property(x => x.ClosedBy).HasMaxLength(160);
             b.HasIndex(x => new { x.TenantId, x.Year, x.Month, x.Number }).IsUnique();
         });
+        modelBuilder.Entity<Payroll.PayrollConceptMapping>(b =>
+        {
+            b.ToTable("PayrollConceptMappings");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Code).HasMaxLength(10).IsRequired();
+            b.Property(x => x.ArcaCode).HasMaxLength(6).IsRequired();
+            b.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
+        });
         modelBuilder.Entity<Payroll.VacationLeave>(b =>
         {
             b.ToTable("VacationLeaves");
@@ -314,7 +323,7 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.Property(x => x.Warnings).HasMaxLength(4000);
             b.Property(x => x.ContentHash).HasMaxLength(64);
             foreach (var p in new[] { nameof(Payroll.Payslip.AssignedSalary), nameof(Payroll.Payslip.Remunerative), nameof(Payroll.Payslip.NonRemunerative),
-                nameof(Payroll.Payslip.Deductions), nameof(Payroll.Payslip.Net), nameof(Payroll.Payslip.ContributionsBase), nameof(Payroll.Payslip.EmployeeContributionsBase),
+                nameof(Payroll.Payslip.Deductions), nameof(Payroll.Payslip.Net), nameof(Payroll.Payslip.ContributionsBase), nameof(Payroll.Payslip.EmployeeContributionsBase), nameof(Payroll.Payslip.Detraction),
                 nameof(Payroll.Payslip.EmployeeSocialSecurity), nameof(Payroll.Payslip.UnionDeductions), nameof(Payroll.Payslip.Advances), nameof(Payroll.Payslip.Garnishments),
                 nameof(Payroll.Payslip.OtherDeductions), nameof(Payroll.Payslip.EmployerSocialSecurity), nameof(Payroll.Payslip.Fal), nameof(Payroll.Payslip.EmployerHealth),
                 nameof(Payroll.Payslip.Art), nameof(Payroll.Payslip.LifeInsurance), nameof(Payroll.Payslip.AgreementContributions) })
@@ -737,6 +746,16 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL
             );
             CREATE INDEX IF NOT EXISTS ""IX_VacationLeaves_Employee_Year"" ON hr.""VacationLeaves"" (""TenantId"", ""EmployeeId"", ""Year"");
+
+            ALTER TABLE hr.""Payslips"" ADD COLUMN IF NOT EXISTS ""Detraction"" numeric(18,2) NOT NULL DEFAULT 0;
+            CREATE TABLE IF NOT EXISTS hr.""PayrollConceptMappings"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Code"" character varying(10) NOT NULL,
+                ""ArcaCode"" character varying(6) NOT NULL,
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PayrollConceptMappings_Code"" ON hr.""PayrollConceptMappings"" (""TenantId"", ""Code"");
         ", ct);
         await Payroll.PayrollLegalSeed.EnsureAsync(this, ct);
     }
@@ -1164,6 +1183,7 @@ public static class HumanResourcesModule
         Payroll.AgreementEndpoints.MapAgreementEndpoints(group);
         Payroll.PayrollRunEndpoints.MapPayrollRunEndpoints(group);
         Payroll.VacationEndpoints.MapVacationEndpoints(group);
+        Payroll.LsdEndpoints.MapLsdEndpoints(group);
 
         return endpoints;
     }
