@@ -210,10 +210,15 @@ public static class PayrollCalculator
     /// </summary>
     public static PayrollCalculation CalculateSac(
         Employee employee, DateTime month, AgreementContext? agreement, IReadOnlyDictionary<string, decimal?> parameters,
-        PayrollEmployerSettings employer, IReadOnlyList<PayrollNovelty> novelties, IReadOnlyList<SacMonth> history)
+        PayrollEmployerSettings employer, IReadOnlyList<PayrollNovelty> novelties, IReadOnlyList<SacMonth> history,
+        bool proportional = false, IReadOnlyList<PayslipLine>? extras = null)
     {
+        // Proporcional (egreso): el semestre del mes del egreso, hasta la fecha de egreso del legajo.
+        var semesterStart = new DateTime(month.Year, month.Month <= 6 ? 1 : 7, 1, 0, 0, 0, DateTimeKind.Utc);
         var semesterEnd = new DateTime(month.Year, month.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1).AddDays(-1);
-        var semesterStart = new DateTime(month.Year, month.Month - 5, 1, 0, 0, 0, DateTimeKind.Utc);
+        // El que egresa en el semestre cobra el proporcional en su liquidación final, no en la del semestre.
+        if (!proportional && employee.TerminationDate is { } left && left.Date >= semesterStart && left.Date <= semesterEnd) return new(null, null);
+        extras ??= [];
         decimal P(string key) => parameters.TryGetValue(key, out var v) && v is { } value ? value
             : throw new InvalidOperationException($"Falta el parámetro legal {PayrollParameterKeys.Names.GetValueOrDefault(key, key)} del mes.");
 
@@ -231,11 +236,11 @@ public static class PayrollCalculator
             days += Math.Max(0m, monthDays - (record?.UnpaidLeaveDays ?? 0m));
         }
         days = Math.Min(180m, days);
-        if (days == 0m) return new(null, null);
+        if (days == 0m && extras.Count == 0) return new(null, null);
 
         var prior = novelties.Where(n => n.Kind == PayrollNoveltyKinds.SacPriorBest).Select(n => n.Amount).DefaultIfEmpty(0m).Max();
         var best = Math.Max(prior, history.Select(h => h.Remunerative).DefaultIfEmpty(0m).Max());
-        if (best <= 0m) return new(null, $"{Name(employee)}: no hay remuneraciones del semestre; cargá la mejor remuneración liquidada fuera del sistema.");
+        if (best <= 0m && days > 0m) return new(null, $"{Name(employee)}: no hay remuneraciones del semestre; cargá la mejor remuneración liquidada fuera del sistema.");
 
         var lines = new List<PayslipLine>();
         var warnings = new List<string>();
@@ -248,10 +253,17 @@ public static class PayrollCalculator
             warnings.Add($"{Name(employee)}: {string.Join(", ", missing)} no se liquidaron en el sistema; si cobró más en esos meses, cargá la mejor remuneración como novedad.");
 
         var sac = Math.Round(best / 2m * days / 180m, 2, MidpointRounding.AwayFromZero);
-        Add("SAC", $"Sueldo anual complementario {(month.Month == 6 ? "1.er" : "2.º")} semestre {month.Year}", PayslipLineKinds.Remunerative, sac, days,
-            $"$ {best:N2} / 2 × {days:0} / 180 días");
+        if (proportional)
+            Add("SACPROP", $"SAC proporcional {(month.Month <= 6 ? "1.er" : "2.º")} semestre {month.Year}", PayslipLineKinds.Remunerative, sac, days,
+                $"$ {best:N2} / 2 × {days:0} / 180 días");
+        else
+            Add("SAC", $"Sueldo anual complementario {(month.Month == 6 ? "1.er" : "2.º")} semestre {month.Year}", PayslipLineKinds.Remunerative, sac, days,
+                $"$ {best:N2} / 2 × {days:0} / 180 días");
+        foreach (var extra in extras) Add(extra.Code, extra.Name, extra.Kind, extra.Amount, extra.Quantity, extra.Detail);
+        var nonRemunerative = lines.Where(l => l.Kind == PayslipLineKinds.NonRemunerative).Sum(l => l.Amount);
 
-        var maxBase = Math.Round(P(PayrollParameterKeys.MaximumBase) / 2m, 2, MidpointRounding.AwayFromZero);
+        // El tope del SAC proporcional se proporciona por sus días (G15 del LSD, concepto 120003).
+        var maxBase = Math.Round(P(PayrollParameterKeys.MaximumBase) / 2m * (proportional ? days / 180m : 1m), 2, MidpointRounding.AwayFromZero);
         var employeeBase = Math.Min(sac, maxBase);
         if (sac > maxBase) warnings.Add($"{Name(employee)}: supera el tope del aguinaldo; los aportes se calculan sobre $ {maxBase:N2}.");
         Add("JUBIL", "Jubilación (SIPA)", PayslipLineKinds.Deduction, employeeBase * P(PayrollParameterKeys.PensionContribution) / 100m, 0m, $"{P(PayrollParameterKeys.PensionContribution):0.##} %");
@@ -302,7 +314,7 @@ public static class PayrollCalculator
             FileNumber = employee.FileNumber, Agreement = agreement is null ? "Fuera de convenio" : $"{agreement.Agreement.Union} {agreement.Agreement.Code}".Trim(),
             Category = agreement?.Category.Name ?? (string.IsNullOrWhiteSpace(employee.JobTitle) ? "Fuera de convenio" : employee.JobTitle),
             HireDate = employee.HireDate, AssignedSalary = best, DaysWorked = days,
-            Remunerative = sac, NonRemunerative = 0m, Deductions = deductions, Net = sac - deductions,
+            Remunerative = sac, NonRemunerative = nonRemunerative, Deductions = deductions, Net = sac + nonRemunerative - deductions,
             ContributionsBase = sac, EmployeeContributionsBase = employeeBase, Detraction = Math.Min(sac, detraction),
             EmployeeSocialSecurity = socialSecurity, UnionDeductions = union, Garnishments = garnishments, OtherDeductions = otherDeductions,
             EmployerSocialSecurity = totalSs - fal, Fal = fal,

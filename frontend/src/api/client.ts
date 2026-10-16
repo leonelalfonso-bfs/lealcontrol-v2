@@ -955,7 +955,7 @@ export const api = {
 
   // Sueldos: liquidación mensual (nota 68, S3)
   listPayrollRuns: () => request<import("./types").PayrollRunSummary[]>("/api/v1/hr/payroll/runs"),
-  createPayrollRun: (body: { year: number; month: number; paymentDate: string; kind?: "Monthly" | "Sac" }) =>
+  createPayrollRun: (body: { year: number; month: number; paymentDate: string; kind?: "Monthly" | "Sac" | "Final"; employeeId?: string } & Partial<import("./types").FinalSettings>) =>
     request<import("./types").PayrollRun>("/api/v1/hr/payroll/runs", { method: "POST", body: JSON.stringify(body) }),
   getPayrollRun: (id: string) => request<import("./types").PayrollRunDetail>(`/api/v1/hr/payroll/runs/${id}`),
   deletePayrollRun: (id: string) => request<void>(`/api/v1/hr/payroll/runs/${id}`, { method: "DELETE" }),
@@ -991,6 +991,9 @@ export const api = {
       a.click();
       URL.revokeObjectURL(url);
     }),
+  updateFinalSettings: (id: string, body: import("./types").FinalSettings) =>
+    request<import("./types").PayrollRun>(`/api/v1/hr/payroll/runs/${id}/final`, { method: "PUT", body: JSON.stringify(body) }),
+  getWorkCertificate: (id: string) => request<import("./types").WorkCertificate>(`/api/v1/hr/payroll/runs/${id}/certificate`),
   getPayslip: (id: string, payslipId: string) => request<import("./types").PayslipDetail>(`/api/v1/hr/payroll/runs/${id}/payslips/${payslipId}`),
   markPayslipSigned: (id: string, payslipId: string, signedAt: string) =>
     request<unknown>(`/api/v1/hr/payroll/runs/${id}/payslips/${payslipId}/signed`, { method: "POST", body: JSON.stringify({ signedAt }) }),

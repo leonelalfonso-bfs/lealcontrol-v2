@@ -23,6 +23,12 @@ public sealed class CollectiveAgreement
     /// <summary>Zonas del convenio separadas por coma ("I,II,III,IV,V"); vacío si no tiene.</summary>
     public string Zones { get; set; } = "";
     public string? Notes { get; set; }
+    /// <summary>
+    /// Tope de la base indemnizatoria (art. 245, Ley 27.802): tres veces el salario promedio del convenio, como lo
+    /// calculan y publican las partes signatarias. Null si todavía no se cargó.
+    /// </summary>
+    public decimal? SeveranceCap { get; set; }
+    public string? SeveranceCapSource { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 
     public string[] ZoneList() => Zones.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

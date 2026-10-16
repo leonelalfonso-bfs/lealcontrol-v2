@@ -16,6 +16,15 @@ public sealed class PayrollRun
     public string? LastDepositPeriod { get; set; }
     public DateTime? LastDepositDate { get; set; }
     public string? LastDepositBank { get; set; }
+    // Liquidación final (S6): un colaborador, la causa del egreso y los datos que la determinan.
+    public Guid? EmployeeId { get; set; }
+    public string? TerminationCause { get; set; }
+    /// <summary>Si el empleador otorgó el preaviso: entonces no hay indemnización sustitutiva ni integración.</summary>
+    public bool NoticeGiven { get; set; }
+    /// <summary>Gratificación pactada en un mutuo acuerdo (art. 241).</summary>
+    public decimal AgreedAmount { get; set; }
+    /// <summary>Mejor remuneración mensual del último año liquidada fuera del sistema, para el art. 245.</summary>
+    public decimal PriorBestSalary { get; set; }
     public DateTime? CalculatedAtUtc { get; set; }
     public DateTime? ClosedAtUtc { get; set; }
     public string? ClosedBy { get; set; }
@@ -27,7 +36,22 @@ public static class PayrollRunKinds
     public const string Monthly = "Monthly";
     /// <summary>Sueldo anual complementario: una por semestre, en junio o diciembre.</summary>
     public const string Sac = "Sac";
-    public static readonly string[] All = [Monthly, Sac];
+    /// <summary>Liquidación final de un colaborador que egresa.</summary>
+    public const string Final = "Final";
+    public static readonly string[] All = [Monthly, Sac, Final];
+}
+
+public static class TerminationCauses
+{
+    public const string Resignation = "Resignation";                 // renuncia (art. 240)
+    public const string DismissalWithoutCause = "DismissalWithoutCause"; // despido sin causa (art. 245)
+    public const string DismissalWithCause = "DismissalWithCause";   // despido con justa causa (art. 242)
+    public const string MutualAgreement = "MutualAgreement";         // mutuo acuerdo (art. 241)
+    public const string TrialPeriod = "TrialPeriod";                 // extinción en el período de prueba (art. 92 bis)
+    public const string FixedTermEnd = "FixedTermEnd";               // vencimiento del plazo fijo (art. 250)
+    public const string Retirement = "Retirement";                   // jubilación (art. 252)
+    public const string Death = "Death";                             // fallecimiento (art. 248)
+    public static readonly string[] All = [Resignation, DismissalWithoutCause, DismissalWithCause, MutualAgreement, TrialPeriod, FixedTermEnd, Retirement, Death];
 }
 
 public static class PayrollRunStatuses

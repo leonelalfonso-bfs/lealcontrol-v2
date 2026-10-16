@@ -2604,7 +2604,10 @@ export type PayrollParameters = {
   history: { id: string; key: string; validFrom: string; value: number; norm: string; fromCompany: boolean }[];
 };
 
-export type AgreementInput = { code: string; name: string; union: string; hourDivisor: number; zones: string; notes?: string | null };
+export type AgreementInput = {
+  code: string; name: string; union: string; hourDivisor: number; zones: string; notes?: string | null;
+  severanceCap?: number | null; severanceCapSource?: string | null;
+};
 export type Agreement = AgreementInput & { id: string; createdAtUtc: string };
 export type AgreementSummary = Agreement & { employees: number };
 export type AgreementCategory = { id: string; agreementId: string; group: string; name: string; sortOrder: number };
@@ -2641,8 +2644,20 @@ export type PayrollRun = {
   id: string; year: number; month: number; number: number; kind: string; paymentDate: string; status: "Draft" | "Closed";
   lastDepositPeriod: string | null; lastDepositDate: string | null; lastDepositBank: string | null;
   calculatedAtUtc: string | null; closedAtUtc: string | null; closedBy: string | null;
+  employeeId: string | null; terminationCause: string | null; noticeGiven: boolean; agreedAmount: number; priorBestSalary: number;
 };
-export type PayrollRunSummary = Pick<PayrollRun, "id" | "year" | "month" | "number" | "kind" | "paymentDate" | "status" | "closedAtUtc"> & { payslips: number; net: number; gross: number };
+export type FinalSettings = { terminationCause: string; noticeGiven: boolean; agreedAmount: number; priorBestSalary: number };
+export type WorkCertificate = {
+  run: PayrollRun;
+  employee: {
+    name: string; cuil: string; documentNumber: string; fileNumber: string; hireDate: string; terminationDate: string | null; jobTitle: string;
+    category: string | null; agreement: string | null; contractModalityCode: number; partTime: boolean; weeklyHours: number | null;
+  };
+  periods: { year: number; month: number; kind: string; remunerative: number; nonRemunerative: number; employeeSocialSecurity: number; employer: number }[];
+};
+export type PayrollRunSummary = Pick<PayrollRun, "id" | "year" | "month" | "number" | "kind" | "paymentDate" | "status" | "closedAtUtc" | "terminationCause"> & {
+  payslips: number; net: number; gross: number; employeeName: string | null;
+};
 export type PayrollNovelty = { id: string; employeeId: string; kind: string; quantity: number; amount: number; description: string | null };
 export type PayrollRunDetail = {
   run: PayrollRun;
