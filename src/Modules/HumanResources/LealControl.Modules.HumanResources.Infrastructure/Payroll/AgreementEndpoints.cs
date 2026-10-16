@@ -285,6 +285,7 @@ public static class AgreementEndpoints
         if (req.Type != AgreementRuleTypes.Addition && req.Basis is AgreementRuleBases.FixedPerSeniorityYear or AgreementRuleBases.PercentOfBasicPerSeniorityYear)
             return "Solo los adicionales dependen de la antigüedad.";
         if (string.IsNullOrWhiteSpace(req.Code) || string.IsNullOrWhiteSpace(req.Name)) return "Indicá el código y el nombre de la regla.";
+        if (req.Code.Trim().Length > 10) return "El código de la regla es de hasta 10 caracteres (es el código de concepto del Libro de Sueldos Digital).";
         if (req.Value < 0m) return "El valor no puede ser negativo.";
         if (req.AppliesTo is not ("All" or "UnionMembers" or "NonMembers")) return "Indicá a quién aplica.";
         if (!TryMonth(req.ValidFrom, out var from)) return "Indicá el mes desde el que rige (aaaa-mm).";

@@ -220,12 +220,29 @@ Cada entrega termina con su **manual de Ayuda**. Desde S3 se **compara con los r
 - **Quedan para después:** días adicionales por convenio, notificación impresa de vacaciones, acumulación (art. 164), no remunerativos sobre vacaciones, vacaciones no gozadas y SAC proporcional (S6), previsión contable mensual del aguinaldo.
 - **A verificar con el estudio:** tope de aportes del SAC proporcional, aplicación del 50 % de la detracción y qué conceptos del convenio entran al aguinaldo y a las vacaciones.
 
-### S5. Libro de Sueldos Digital y F.931
+### S5. Libro de Sueldos Digital y F.931 (hecha, PR "Sueldos S5")
 
-- Archivo oficial de ARCA (registros 01 a 04, y 05 si hay eventuales), con el diseño de la guía 2.1.
-- Asociación de cada concepto propio con el concepto de ARCA (Anexo II).
-- Control previo de lo que ARCA rechazaría, como en el Libro IVA.
-- Antes de presentar, **validar importando un mes real en ARCA** y compararlo con el F.931 del estudio.
+- **Diseño:** "Interfaz Usuario / Liquidación de SyJ - DJ F931" de ARCA (`LSDiseInterfazLiquidacion.pdf`, generado el 2/10/2026), y "Interfaz - Conceptos" (195 posiciones).
+- **Archivo de liquidación** por liquidación cerrada:
+  - 01 (envío SJ, período, mensual, número, base 30, cantidad de 04), 02 por recibo (legajo, CBU y forma de pago, días para proporcionar el tope, fecha de pago), 03 por renglón del recibo (cantidad, unidad H/D, importe, débito/crédito), 04 por trabajador;
+  - el 04 acumula las liquidaciones del período hasta la actual (mensual + aguinaldo en junio y diciembre);
+  - bases del 04 según SICOSS: 1, 4 y 5 = base de aportes con tope; 2, 3, 8 y 9 = base de contribuciones; 10 = 2 − detracción; 6 y 7 en cero; importe a detraer;
+  - tipo de empleador 1 (art. 19 inc. b Ley 27.541, 18 %) o 4 (inc. a, 20,40 %); ANSI (Latin-1) con CRLF.
+- **Conceptos ARCA:** propuesta por concepto (sistema y reglas de convenio), cambiable por empresa, con control de rangos del Anexo I; archivo para el módulo Conceptos. Los códigos de regla quedan en hasta 10 caracteres.
+- **Control previo** (como el Libro IVA): CUIT de la empresa, CUIL, actividad, localidad y obra social del legajo, liquidaciones anteriores del período cerradas, conceptos asociados, aguinaldo solo en junio y diciembre.
+- **Resumen para la F.931** del período: aportes, contribuciones, obra social, ART, seguro de vida, FAL y detracción.
+- **Ajustes al cálculo para que coincida con lo que valida ARCA:**
+  - las vacaciones pagadas por adelantado (150000) topean aparte, por sus días;
+  - el aguinaldo semestral usa el tope SAC entero (la mitad de la base máxima), sin proporcionar;
+  - cada recibo guarda la detracción aplicada.
+- **A validar importando un mes real en ARCA:**
+  - situación de revista 2 y 3 en "00";
+  - tipo de operación "0";
+  - remuneración bruta con los no remunerativos;
+  - bases con la base mínima cuando la remuneración es menor;
+  - FAL fuera de la F.931;
+  - conceptos no remunerativos de convenio con aportes de obra social (530000/540000), que hoy no se calculan.
+- **Quedan para después:** licencias con situación de revista por días (maternidad, sin goce) y rectificativas (envío RE).
 
 ### S6. Liquidación final
 

@@ -13,10 +13,11 @@ const SECTIONS = [
   { id: "convenios", title: "Convenios colectivos" },
   { id: "sueldos", title: "Liquidación de sueldos" },
   { id: "vacaciones", title: "Vacaciones" },
-  { id: "aguinaldo", title: "Aguinaldo" }
+  { id: "aguinaldo", title: "Aguinaldo" },
+  { id: "lsd", title: "Libro de Sueldos Digital y F.931" }
 ];
 
-/** Ayuda de RRHH: manual de legajos, documentos, EPP, organigrama y manuales; liquidación mensual, vacaciones y aguinaldo. */
+/** Ayuda de RRHH: manual de legajos, documentos, EPP, organigrama y manuales; liquidación mensual, vacaciones, aguinaldo y Libro de Sueldos Digital. */
 export function HumanResourcesHelpPage() {
   return (
     <HelpManual
@@ -176,8 +177,7 @@ export function HumanResourcesHelpPage() {
           </Step>
         </Steps>
         <Tip>
-          Todavía no hacen liquidación final, Libro de Sueldos Digital ni F.931: vienen en las próximas etapas. Hasta entonces, eso lo
-          sigue haciendo el estudio.
+          Todavía no hace la liquidación final (egresos): viene en la próxima etapa. Hasta entonces, la liquida el estudio.
         </Tip>
       </ManualPart>
 
@@ -229,6 +229,36 @@ export function HumanResourcesHelpPage() {
           </Step>
         </Steps>
         <Tip>El aguinaldo proporcional de un egreso va en la liquidación final (próxima etapa).</Tip>
+      </ManualPart>
+
+      <ManualPart id="lsd" title="13. Libro de Sueldos Digital y F.931">
+        <p style={{ margin: 0 }}>
+          Cada liquidación cerrada genera el archivo para importar en el Libro de Sueldos Digital de ARCA. Con ese archivo, ARCA arma el
+          libro y la declaración jurada F.931.
+        </p>
+        <Steps>
+          <Step title="Una sola vez: completá los datos que pide ARCA.">
+            En Configuración → Empresa, el CUIT. En Configuración de sueldos, el código de actividad. En cada legajo: CUIL, código de
+            localidad, código de obra social (6 dígitos), situación de revista, condición, modalidad de contratación, cónyuge, hijos y CBU (sin
+            CBU se informa pago en efectivo).
+          </Step>
+          <Step title="Una sola vez (y cada vez que agregues un concepto): RRHH → Conceptos ARCA → revisá la asociación y descargá “Archivo de conceptos”.">
+            Cada concepto del recibo (básico, horas extra, adicionales del convenio, descuentos) se asocia a un concepto de ARCA. El sistema
+            propone uno; si tu estudio usa otro, cambialo. En ARCA: Libro de Sueldos Digital → Conceptos → importá ese archivo.
+          </Step>
+          <Step title="Cada mes: cerrá la liquidación y, en “Libro de Sueldos Digital y F.931”, tocá “🔎 Revisar”.">
+            Lista lo que ARCA rechazaría (datos del legajo que faltan, liquidaciones anteriores del período sin cerrar, conceptos sin
+            asociar) y muestra los totales para comparar con la F.931. Si hay errores, corregilos y volvé a revisar.
+          </Step>
+          <Step title="“⬇️ Descargar” el archivo e importalo en ARCA: Liquidaciones y DDJJ → el período (o “Nuevo período”) → Importar.">
+            Si en el mes hay mensual y aguinaldo, se importan en orden: primero la 1 (mensual) y después la 2 (aguinaldo). El archivo de la 2
+            lleva los datos para la F.931 acumulados de las dos, como pide ARCA.
+          </Step>
+          <Step title="En ARCA, generá la declaración jurada y compará sus totales con los del sistema antes de presentarla y pagar el VEP." />
+        </Steps>
+        <Tip>
+          Antes de usarlo para presentar, el primer mes se valida importándolo en ARCA y comparándolo con la F.931 que hizo el estudio.
+        </Tip>
       </ManualPart>
     </HelpManual>
   );

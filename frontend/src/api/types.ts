@@ -2657,6 +2657,14 @@ export type Payslip = {
   contributionsBase: number; employeeContributionsBase: number; warnings: string | null; contentHash: string | null; signedAtUtc: string | null;
   lines: PayslipLine[];
 };
+export type LsdConcept = { code: string; name: string; kind: "Remunerative" | "NonRemunerative" | "Deduction"; arcaCode: string; defaultArcaCode: string; repeats: boolean };
+export type LsdCheck = {
+  fileName: string; errors: string[]; warnings: string[];
+  summary: {
+    workers: number; liquidations: number[]; remunerative: number; pensionContributions: number; pamiContributions: number; healthContributions: number;
+    employerSocialSecurity: number; fal: number; employerHealth: number; art: number; lifeInsurance: number; total: number; detraction: number;
+  };
+};
 export type VacationRow = {
   employeeId: string; employeeName: string; fileNumber: string; entitled: number; detail: string; taken: number; remaining: number;
   leaves: { id: string; startDate: string; endDate: string; days: number; notes: string | null }[];

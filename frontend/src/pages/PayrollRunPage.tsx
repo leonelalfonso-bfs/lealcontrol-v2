@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import type { Employee, PayrollRunDetail } from "../api/types";
+import type { Employee, LsdCheck, PayrollRunDetail } from "../api/types";
 
 const money = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const day = (iso: string | null) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
@@ -31,6 +31,7 @@ export function PayrollRunPage() {
   const [close, setClose] = useState({ lastDepositPeriod: "", lastDepositDate: "", lastDepositBank: "" });
   const [issues, setIssues] = useState<{ errors: string[]; warnings: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [lsd, setLsd] = useState<LsdCheck | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -217,6 +218,52 @@ export function PayrollRunPage() {
           </div>
         )}
       </div>
+
+      {!draft && (
+        <div className="card pad stack" style={{ gap: 10 }}>
+          <h3 style={{ margin: 0 }}>Libro de Sueldos Digital y F.931</h3>
+          <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+            Archivo para importar en ARCA → Libro de Sueldos Digital → Liquidaciones y DDJJ. Antes, los conceptos tienen que estar cargados
+            en el módulo Conceptos (<Link to="/rrhh/sueldos/conceptos">Conceptos ARCA</Link>).
+          </p>
+          <div className="row" style={{ gap: 10 }}>
+            <button type="button" className="btn ghost" disabled={busy} onClick={() => void run(async () => { setLsd(await api.checkLsd(id)); })}>🔎 Revisar</button>
+            {lsd && lsd.errors.length === 0 && (
+              <button type="button" className="btn" disabled={busy} onClick={() => void run(async () => { await api.downloadLsd(id, lsd.fileName); })}>⬇️ Descargar {lsd.fileName}</button>
+            )}
+          </div>
+          {lsd && (
+            <>
+              {lsd.errors.map((x) => <div key={x} className="alert" style={{ margin: 0 }}>❌ {x}</div>)}
+              {lsd.warnings.map((x) => <div key={x} style={{ color: "#b45309", fontSize: "0.85rem" }}>⚠️ {x}</div>)}
+              <table style={{ fontSize: "0.82rem", maxWidth: 520 }}>
+                <caption style={{ textAlign: "left", fontWeight: 700, paddingBottom: 4 }}>
+                  Para comparar con la DJ F.931 de ARCA ({lsd.summary.workers} trabajadores, liquidaciones {lsd.summary.liquidations.join(" y ")} del período)
+                </caption>
+                <tbody>
+                  {([
+                    ["Remuneraciones", lsd.summary.remunerative],
+                    ["Aportes jubilación (SIPA)", lsd.summary.pensionContributions],
+                    ["Aportes Ley 19.032 (INSSJyP)", lsd.summary.pamiContributions],
+                    ["Aportes obra social", lsd.summary.healthContributions],
+                    ["Contribuciones seguridad social", lsd.summary.employerSocialSecurity],
+                    ["Contribuciones obra social", lsd.summary.employerHealth],
+                    ["ART", lsd.summary.art],
+                    ["Seguro de vida obligatorio", lsd.summary.lifeInsurance],
+                    ["Total F.931", lsd.summary.total],
+                    ["Fondo de Asistencia Laboral (aparte)", lsd.summary.fal],
+                    ["Detracción aplicada", lsd.summary.detraction]
+                  ] as [string, number][]).map(([label, value]) => (
+                    <tr key={label} style={label === "Total F.931" ? { fontWeight: 800 } : undefined}>
+                      <td>{label}</td><td style={{ textAlign: "right" }}>{money(value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
+      )}
 
       {draft && detail.payslips.length > 0 && (
         <form className="card pad stack" style={{ gap: 10 }} onSubmit={(e) => {

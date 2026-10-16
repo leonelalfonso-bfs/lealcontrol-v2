@@ -135,6 +135,7 @@ import {
   PayrollListPage,
   PayrollSettingsPage,
   PayrollRunPage,
+  PayrollConceptsPage,
   VacationsPage,
   PayslipPrintPage,
   AgreementsPage,
@@ -291,7 +292,7 @@ export function App() {
   ]);
   const hiddenItems = new Set<string>([
     ...(sensitive && !sensitive.costs ? ["/produccion/costos"] : []),
-    ...(sensitive && !sensitive.salaries ? ["/rrhh/liquidaciones", "/rrhh/sueldos/configuracion", "/rrhh/convenios"] : [])
+    ...(sensitive && !sensitive.salaries ? ["/rrhh/liquidaciones", "/rrhh/sueldos/configuracion", "/rrhh/sueldos/conceptos", "/rrhh/convenios"] : [])
   ]);
   const modules = allMods
     .filter((m) => m.id === "inicio" || allowedModuleIds.includes(m.id))
@@ -492,6 +493,7 @@ export function App() {
               <Route path="/rrhh/liquidaciones/:id" element={<PayrollRunPage />} />
               <Route path="/rrhh/liquidaciones/:id/recibos/:pid" element={<PayslipPrintPage />} />
               <Route path="/rrhh/sueldos/configuracion" element={<PayrollSettingsPage />} />
+              <Route path="/rrhh/sueldos/conceptos" element={<PayrollConceptsPage />} />
               <Route path="/rrhh/vacaciones" element={<VacationsPage />} />
               <Route path="/rrhh/convenios" element={<AgreementsPage />} />
               <Route path="/rrhh/convenios/:id" element={<AgreementDetailPage />} />

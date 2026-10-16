@@ -971,6 +971,26 @@ export const api = {
   createVacation: (body: { employeeId: string; year: number; startDate: string; days: number; notes?: string }) =>
     request<{ id: string; warnings: string[] }>("/api/v1/hr/vacations", { method: "POST", body: JSON.stringify(body) }),
   deleteVacation: (id: string) => request<void>(`/api/v1/hr/vacations/${id}`, { method: "DELETE" }),
+  listLsdConcepts: () => request<import("./types").LsdConcept[]>("/api/v1/hr/payroll/lsd/concepts"),
+  setLsdConcept: (code: string, arcaCode: string) =>
+    request<import("./types").LsdConcept>(`/api/v1/hr/payroll/lsd/concepts/${encodeURIComponent(code)}`, { method: "PUT", body: JSON.stringify({ arcaCode }) }),
+  downloadLsdConcepts: () => requestBlob("/api/v1/hr/payroll/lsd/concepts/file").then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "conceptos-lsd.txt";
+      a.click();
+      URL.revokeObjectURL(url);
+    }),
+  checkLsd: (id: string) => request<import("./types").LsdCheck>(`/api/v1/hr/payroll/runs/${id}/lsd/check`),
+  downloadLsd: (id: string, fileName: string) => requestBlob(`/api/v1/hr/payroll/runs/${id}/lsd/file`).then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    }),
   getPayslip: (id: string, payslipId: string) => request<import("./types").PayslipDetail>(`/api/v1/hr/payroll/runs/${id}/payslips/${payslipId}`),
   markPayslipSigned: (id: string, payslipId: string, signedAt: string) =>
     request<unknown>(`/api/v1/hr/payroll/runs/${id}/payslips/${payslipId}/signed`, { method: "POST", body: JSON.stringify({ signedAt }) }),

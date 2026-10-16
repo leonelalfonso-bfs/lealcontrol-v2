@@ -305,6 +305,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/rrhh/liquidaciones", label: "Liquidación de Sueldos", icon: "💰" },
       { path: "/rrhh/convenios", label: "Convenios colectivos", icon: "📜" },
       { path: "/rrhh/sueldos/configuracion", label: "Configuración de sueldos", icon: "⚙️" },
+      { path: "/rrhh/sueldos/conceptos", label: "Conceptos ARCA (LSD)", icon: "🏛️" },
       { path: "/rrhh/ayuda", label: "Ayuda RRHH", icon: "💡" }
     ]
   },

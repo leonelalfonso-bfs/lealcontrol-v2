@@ -110,9 +110,14 @@ public static class PayrollCalculator
         if (remunerative < 0m) return new(null, $"{Name(employee)}: los descuentos por ausencias superan el sueldo del mes.");
 
         // 3. Aportes: base con los topes del mes (proporcionales a los días); en jornada parcial, sin mínimo.
+        // Las vacaciones pagadas por adelantado topean aparte, por sus días (como las valida el Libro de Sueldos Digital).
         var maxBase = P(PayrollParameterKeys.MaximumBase) * share;
         var minBase = P(PayrollParameterKeys.MinimumBase) * share;
-        var employeeBase = Math.Min(remunerative, maxBase);
+        var vacationPay = lines.Where(l => l.Code == "VACAC").Sum(l => l.Amount);
+        var vacationPaidDays = lines.Where(l => l.Code == "VACAC").Sum(l => l.Quantity);
+        var vacationMax = P(PayrollParameterKeys.MaximumBase) * vacationPaidDays / 30m;
+        var employeeBase = Math.Min(remunerative - vacationPay, maxBase) + Math.Min(vacationPay, vacationMax);
+        maxBase += vacationMax;
         if (!employee.PartTime && employeeBase < minBase)
         {
             warnings.Add($"{Name(employee)}: la remuneración está debajo de la base mínima de ANSES; los aportes y contribuciones se calculan sobre la mínima.");
@@ -152,7 +157,8 @@ public static class PayrollCalculator
 
         // 5. Contribuciones del empleador (no van al recibo).
         var contributionsBase = Math.Round(Math.Max(remunerative, employee.PartTime ? 0m : minBase), 2, MidpointRounding.AwayFromZero);
-        var deductionBase = Math.Max(0m, contributionsBase - P(PayrollParameterKeys.Deduction) * share);
+        var detraction = Math.Round(Math.Min(contributionsBase, P(PayrollParameterKeys.Deduction) * share), 2, MidpointRounding.AwayFromZero);
+        var deductionBase = contributionsBase - detraction;
         var rate = employer.IsMiPyme || !employer.IsCommerceOrServices ? P(PayrollParameterKeys.EmployerGeneral) : P(PayrollParameterKeys.EmployerCommerceLarge);
         var totalSs = Math.Round(deductionBase * rate / 100m, 2, MidpointRounding.AwayFromZero);
         var falRate = parameters.GetValueOrDefault(employer.IsMiPyme ? PayrollParameterKeys.FalMiPyme : PayrollParameterKeys.FalGeneral) ?? 0m;
@@ -177,7 +183,7 @@ public static class PayrollCalculator
             HireDate = employee.HireDate, AssignedSalary = agreementResult?.Basic ?? employee.BaseSalary, DaysWorked = days,
             Remunerative = remunerative, NonRemunerative = nonRemunerative, Deductions = deductions,
             Net = remunerative + nonRemunerative - deductions,
-            ContributionsBase = contributionsBase, EmployeeContributionsBase = employeeBase,
+            ContributionsBase = contributionsBase, EmployeeContributionsBase = employeeBase, Detraction = detraction,
             EmployeeSocialSecurity = socialSecurity, UnionDeductions = union, Advances = advances, Garnishments = garnishments,
             OtherDeductions = otherDeductions, EmployerSocialSecurity = totalSs - fal, Fal = fal,
             EmployerHealth = Math.Round(health, 2, MidpointRounding.AwayFromZero), Art = Math.Round(art, 2, MidpointRounding.AwayFromZero),
@@ -198,8 +204,8 @@ public static class PayrollCalculator
 
     /// <summary>
     /// Aguinaldo (Ley 23.041): la mitad de la mejor remuneración mensual del semestre, proporcional a los días trabajados
-    /// (meses de 30 días, tope 180), sin las licencias sin goce. Aportes con su propio tope (50 % de la base máxima,
-    /// proporcional) y sin mínimo; contribuciones con el 50 % de la detracción, proporcional (Ley 27.541 art. 22);
+    /// (meses de 30 días, tope 180), sin las licencias sin goce. Aportes con su propio tope (50 % de la base máxima, entero:
+    /// el Libro de Sueldos Digital solo lo proporciona en el SAC proporcional de un egreso) y sin mínimo; contribuciones con el 50 % de la detracción, proporcional (Ley 27.541 art. 22);
     /// ART solo la alícuota; sin seguro de vida. Del convenio, solo los descuentos y contribuciones en % del bruto.
     /// </summary>
     public static PayrollCalculation CalculateSac(
@@ -245,7 +251,7 @@ public static class PayrollCalculator
         Add("SAC", $"Sueldo anual complementario {(month.Month == 6 ? "1.er" : "2.º")} semestre {month.Year}", PayslipLineKinds.Remunerative, sac, days,
             $"$ {best:N2} / 2 × {days:0} / 180 días");
 
-        var maxBase = Math.Round(P(PayrollParameterKeys.MaximumBase) / 2m * days / 180m, 2, MidpointRounding.AwayFromZero);
+        var maxBase = Math.Round(P(PayrollParameterKeys.MaximumBase) / 2m, 2, MidpointRounding.AwayFromZero);
         var employeeBase = Math.Min(sac, maxBase);
         if (sac > maxBase) warnings.Add($"{Name(employee)}: supera el tope del aguinaldo; los aportes se calculan sobre $ {maxBase:N2}.");
         Add("JUBIL", "Jubilación (SIPA)", PayslipLineKinds.Deduction, employeeBase * P(PayrollParameterKeys.PensionContribution) / 100m, 0m, $"{P(PayrollParameterKeys.PensionContribution):0.##} %");
@@ -297,7 +303,7 @@ public static class PayrollCalculator
             Category = agreement?.Category.Name ?? (string.IsNullOrWhiteSpace(employee.JobTitle) ? "Fuera de convenio" : employee.JobTitle),
             HireDate = employee.HireDate, AssignedSalary = best, DaysWorked = days,
             Remunerative = sac, NonRemunerative = 0m, Deductions = deductions, Net = sac - deductions,
-            ContributionsBase = sac, EmployeeContributionsBase = employeeBase,
+            ContributionsBase = sac, EmployeeContributionsBase = employeeBase, Detraction = Math.Min(sac, detraction),
             EmployeeSocialSecurity = socialSecurity, UnionDeductions = union, Garnishments = garnishments, OtherDeductions = otherDeductions,
             EmployerSocialSecurity = totalSs - fal, Fal = fal,
             EmployerHealth = Math.Round(health, 2, MidpointRounding.AwayFromZero), Art = Math.Round(art, 2, MidpointRounding.AwayFromZero),
