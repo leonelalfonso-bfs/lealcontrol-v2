@@ -16,10 +16,12 @@ const KINDS: Record<string, { label: string; unit: "horas" | "días" | "$" | "" 
   Garnishment: { label: "Embargo judicial", unit: "$" },
   OtherRemunerative: { label: "Otro haber remunerativo", unit: "$" },
   OtherNonRemunerative: { label: "Otro haber no remunerativo", unit: "$" },
-  OtherDeduction: { label: "Otro descuento", unit: "$" }
+  OtherDeduction: { label: "Otro descuento", unit: "$" },
+  SacPriorBest: { label: "Mejor remuneración del semestre liquidada fuera del sistema", unit: "$" }
 };
+const SAC_KINDS = ["SacPriorBest", "Garnishment", "OtherDeduction"];
 
-/** Una liquidación: novedades, cálculo, recibos, cierre y reapertura (nota 68, S3). */
+/** Una liquidación (mensual o de aguinaldo): novedades, cálculo, recibos, cierre y reapertura (nota 68). */
 export function PayrollRunPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
@@ -34,6 +36,8 @@ export function PayrollRunPage() {
 
   const load = () => api.getPayrollRun(id).then(setDetail).catch((err) => setError(err.message));
   useEffect(() => { void load(); api.listEmployees().then(setEmployees).catch(() => setEmployees([])); }, [id]);
+  const runKind = detail?.run.kind;
+  useEffect(() => { if (runKind) setNovelty((n) => ({ ...n, kind: runKind === "Sac" ? "SacPriorBest" : "Overtime50" })); }, [runKind]);
 
   const run = async (action: () => Promise<string | void>) => {
     setBusy(true);
@@ -53,6 +57,8 @@ export function PayrollRunPage() {
   if (!detail) return <div className="card pad">{error ?? "Cargando…"}</div>;
   const r = detail.run;
   const draft = r.status === "Draft";
+  const sac = r.kind === "Sac";
+  const kinds = Object.entries(KINDS).filter(([k]) => (sac ? SAC_KINDS.includes(k) : k !== "SacPriorBest"));
   const name = (employeeId: string) => {
     const e = employees.find((x) => x.id === employeeId);
     return e ? `${e.lastName}, ${e.firstName}` : "—";
@@ -76,7 +82,7 @@ export function PayrollRunPage() {
     <div className="stack" style={{ gap: 20 }}>
       <div className="page-head">
         <div>
-          <h1>💰 Liquidación {String(r.month).padStart(2, "0")}/{r.year}</h1>
+          <h1>💰 {sac ? `Aguinaldo ${r.month === 6 ? "1.er" : "2.º"} semestre ${r.year}` : `Liquidación ${String(r.month).padStart(2, "0")}/${r.year}`}</h1>
           <p className="muted">
             {draft ? "Borrador" : `Cerrada el ${day(r.closedAtUtc)} por ${r.closedBy}`} · pago el {day(r.paymentDate)}
             {draft && !r.calculatedAtUtc && " · falta calcular (o hubo errores)"}
@@ -111,7 +117,13 @@ export function PayrollRunPage() {
 
       {/* Novedades */}
       <div className="card pad stack" style={{ gap: 12 }}>
-        <h3 style={{ margin: 0 }}>Novedades del mes</h3>
+        <h3 style={{ margin: 0 }}>{sac ? "Novedades del aguinaldo" : "Novedades del mes"}</h3>
+        {sac && (
+          <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+            El aguinaldo toma la mejor remuneración de los meses del semestre cerrados en el sistema. Si algún mes lo liquidó el estudio
+            y fue mayor, cargalo como “Mejor remuneración del semestre liquidada fuera del sistema”.
+          </p>
+        )}
         {detail.novelties.length > 0 && (
           <table style={{ fontSize: "0.82rem" }}>
             <tbody>
@@ -140,7 +152,7 @@ export function PayrollRunPage() {
             </label>
             <label style={{ minWidth: 220 }}>Novedad
               <select value={novelty.kind} onChange={(e) => setNovelty({ ...novelty, kind: e.target.value })}>
-                {Object.entries(KINDS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                {kinds.map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
               </select>
             </label>
             {KINDS[novelty.kind].unit && (

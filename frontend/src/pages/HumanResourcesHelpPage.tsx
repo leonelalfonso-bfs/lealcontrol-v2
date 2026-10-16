@@ -11,10 +11,12 @@ const SECTIONS = [
   { id: "seguridad-social", title: "Datos de seguridad social del legajo" },
   { id: "configuracion", title: "Configuración de sueldos" },
   { id: "convenios", title: "Convenios colectivos" },
-  { id: "sueldos", title: "Liquidación de sueldos" }
+  { id: "sueldos", title: "Liquidación de sueldos" },
+  { id: "vacaciones", title: "Vacaciones" },
+  { id: "aguinaldo", title: "Aguinaldo" }
 ];
 
-/** Ayuda de RRHH: manual de legajos, documentos, EPP, organigrama y manuales; y liquidación mensual de sueldos. */
+/** Ayuda de RRHH: manual de legajos, documentos, EPP, organigrama y manuales; liquidación mensual, vacaciones y aguinaldo. */
 export function HumanResourcesHelpPage() {
   return (
     <HelpManual
@@ -174,9 +176,59 @@ export function HumanResourcesHelpPage() {
           </Step>
         </Steps>
         <Tip>
-          Todavía no hacen aguinaldo, vacaciones, liquidación final, Libro de Sueldos Digital ni F.931: vienen en las próximas etapas.
-          Hasta entonces, esos conceptos los sigue liquidando el estudio.
+          Todavía no hacen liquidación final, Libro de Sueldos Digital ni F.931: vienen en las próximas etapas. Hasta entonces, eso lo
+          sigue haciendo el estudio.
         </Tip>
+      </ManualPart>
+
+      <ManualPart id="vacaciones" title="11. Vacaciones">
+        <p style={{ margin: 0 }}>
+          En <Link to="/rrhh/vacaciones">RRHH → Vacaciones</Link> se registran los tramos de cada colaborador. La liquidación los toma sola:
+          no se cargan como novedad.
+        </p>
+        <Steps>
+          <Step title="Elegí el año de las vacaciones: las de 2026 se gozan de octubre de 2026 a abril de 2027.">
+            Para cada colaborador se ven los días que corresponden, los tomados y los que quedan. Los días salen de la antigüedad al 31 de
+            diciembre (art. 150): hasta 5 años, 14 días corridos; más de 5 y hasta 10, 21; más de 10 y hasta 20, 28; más de 20, 35. Si
+            ingresó en el año y no llegó a trabajar la mitad de los días hábiles, corresponde un día cada 20 trabajados (art. 151).
+          </Step>
+          <Step title="Registrá el tramo: colaborador, fecha de inicio y días corridos. En la nota, la fecha en que se lo notificaste.">
+            Se pueden dividir por acuerdo en tramos de al menos 7 días corridos; el último puede ser el saldo (Ley 27.802). Fuera del período
+            de octubre a abril se avisa que hace falta acuerdo. El aviso al trabajador es con 30 días de anticipación, por escrito.
+          </Step>
+          <Step title="La liquidación del mes en que empieza el tramo paga todos sus días por adelantado.">
+            Cada día vale el sueldo del mes dividido 25 (art. 155), más el promedio de los variables (horas extra y otros haberes
+            remunerativos) de los meses cerrados del último semestre. Cada mes descuenta, a sueldo dividido 30, los días de vacaciones que
+            caen en él: si el tramo sigue en el mes siguiente, ese mes descuenta los días que quedan.
+          </Step>
+          <Step title="Si la liquidación del mes ya está cerrada, el tramo no se carga ni se borra: reabrila primero.">
+            Al cargar o borrar un tramo, la liquidación en borrador de esos meses queda para volver a calcular.
+          </Step>
+        </Steps>
+      </ManualPart>
+
+      <ManualPart id="aguinaldo" title="12. Aguinaldo">
+        <Steps>
+          <Step title="Cerrá primero la liquidación mensual de junio (o de diciembre).">
+            El aguinaldo toma la mejor remuneración mensual del semestre de los meses cerrados en el sistema.
+          </Step>
+          <Step title="Liquidación de Sueldos → tipo “Aguinaldo” → mes junio o diciembre → “➕ Nueva liquidación”.">
+            Es una liquidación aparte, con su recibo, la número 2 del mes.
+          </Step>
+          <Step title="Si algún mes del semestre lo liquidó el estudio, cargá la novedad “Mejor remuneración del semestre liquidada fuera del sistema”.">
+            Al calcular, el sistema avisa qué meses del semestre no encontró. En el aguinaldo también se cargan embargos y otros descuentos.
+          </Step>
+          <Step title="“🧮 Calcular”.">
+            Aguinaldo = mejor remuneración / 2 × días trabajados en el semestre / 180, con meses de 30 días y sin las licencias sin goce. Los
+            aportes tienen su propio tope (la mitad de la base máxima, proporcional a los días) y no tienen mínimo. Las contribuciones
+            detraen la mitad de la detracción mensual, proporcional. La ART va solo con la alícuota y el seguro de vida no se paga. Del
+            convenio, solo se aplican los descuentos y contribuciones en porcentaje (cuota sindical, solidarios).
+          </Step>
+          <Step title="Revisá, cerrá con el último depósito, imprimí los recibos y contabilizá: es el mismo circuito de la liquidación mensual.">
+            Con el aguinaldo cerrado, la mensual de ese mes no se reabre: primero se reabre el aguinaldo.
+          </Step>
+        </Steps>
+        <Tip>El aguinaldo proporcional de un egreso va en la liquidación final (próxima etapa).</Tip>
       </ManualPart>
     </HelpManual>
   );

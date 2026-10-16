@@ -190,6 +190,7 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
     public DbSet<Payroll.PayrollNovelty> PayrollNovelties => Set<Payroll.PayrollNovelty>();
     public DbSet<Payroll.Payslip> Payslips => Set<Payroll.Payslip>();
     public DbSet<Payroll.PayslipLine> PayslipLines => Set<Payroll.PayslipLine>();
+    public DbSet<Payroll.VacationLeave> VacationLeaves => Set<Payroll.VacationLeave>();
     public DbSet<EmployeeTimeTracking> TimeTrackings => Set<EmployeeTimeTracking>();
     public DbSet<EppDelivery> EppDeliveries => Set<EppDelivery>();
 
@@ -280,6 +281,15 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.Property(x => x.LastDepositBank).HasMaxLength(120);
             b.Property(x => x.ClosedBy).HasMaxLength(160);
             b.HasIndex(x => new { x.TenantId, x.Year, x.Month, x.Number }).IsUnique();
+        });
+        modelBuilder.Entity<Payroll.VacationLeave>(b =>
+        {
+            b.ToTable("VacationLeaves");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Notes).HasMaxLength(300);
+            b.Ignore(x => x.EndDate);
+            b.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.TenantId, x.EmployeeId, x.Year });
         });
         modelBuilder.Entity<Payroll.PayrollNovelty>(b =>
         {
@@ -715,6 +725,18 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
                 ""Amount"" numeric(18,2) NOT NULL,
                 ""Detail"" character varying(300)
             );
+
+            CREATE TABLE IF NOT EXISTS hr.""VacationLeaves"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""EmployeeId"" uuid NOT NULL REFERENCES hr.""Employees""(""Id"") ON DELETE CASCADE,
+                ""Year"" integer NOT NULL,
+                ""StartDate"" timestamp with time zone NOT NULL,
+                ""Days"" integer NOT NULL,
+                ""Notes"" character varying(300),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ""IX_VacationLeaves_Employee_Year"" ON hr.""VacationLeaves"" (""TenantId"", ""EmployeeId"", ""Year"");
         ", ct);
         await Payroll.PayrollLegalSeed.EnsureAsync(this, ct);
     }
@@ -1141,10 +1163,7 @@ public static class HumanResourcesModule
         Payroll.PayrollConfigurationEndpoints.MapPayrollConfigurationEndpoints(group);
         Payroll.AgreementEndpoints.MapAgreementEndpoints(group);
         Payroll.PayrollRunEndpoints.MapPayrollRunEndpoints(group);
-
-        // La liquidación de sueldos se está rehaciendo (nota 68): el cálculo anterior inventaba sueldos y el
-        // Libro de Sueldos Digital no era el de ARCA. Las tablas de períodos, conceptos y recibos se conservan
-        // hasta la nueva liquidación (S3).
+        Payroll.VacationEndpoints.MapVacationEndpoints(group);
 
         return endpoints;
     }

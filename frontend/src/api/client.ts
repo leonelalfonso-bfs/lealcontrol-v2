@@ -955,7 +955,7 @@ export const api = {
 
   // Sueldos: liquidación mensual (nota 68, S3)
   listPayrollRuns: () => request<import("./types").PayrollRunSummary[]>("/api/v1/hr/payroll/runs"),
-  createPayrollRun: (body: { year: number; month: number; paymentDate: string }) =>
+  createPayrollRun: (body: { year: number; month: number; paymentDate: string; kind?: "Monthly" | "Sac" }) =>
     request<import("./types").PayrollRun>("/api/v1/hr/payroll/runs", { method: "POST", body: JSON.stringify(body) }),
   getPayrollRun: (id: string) => request<import("./types").PayrollRunDetail>(`/api/v1/hr/payroll/runs/${id}`),
   deletePayrollRun: (id: string) => request<void>(`/api/v1/hr/payroll/runs/${id}`, { method: "DELETE" }),
@@ -967,6 +967,10 @@ export const api = {
   closePayrollRun: (id: string, body: { lastDepositPeriod: string; lastDepositDate: string; lastDepositBank: string }) =>
     request<unknown>(`/api/v1/hr/payroll/runs/${id}/close`, { method: "POST", body: JSON.stringify(body) }),
   reopenPayrollRun: (id: string) => request<unknown>(`/api/v1/hr/payroll/runs/${id}/reopen`, { method: "POST" }),
+  listVacations: (year: number) => request<import("./types").VacationRow[]>(`/api/v1/hr/vacations?year=${year}`),
+  createVacation: (body: { employeeId: string; year: number; startDate: string; days: number; notes?: string }) =>
+    request<{ id: string; warnings: string[] }>("/api/v1/hr/vacations", { method: "POST", body: JSON.stringify(body) }),
+  deleteVacation: (id: string) => request<void>(`/api/v1/hr/vacations/${id}`, { method: "DELETE" }),
   getPayslip: (id: string, payslipId: string) => request<import("./types").PayslipDetail>(`/api/v1/hr/payroll/runs/${id}/payslips/${payslipId}`),
   markPayslipSigned: (id: string, payslipId: string, signedAt: string) =>
     request<unknown>(`/api/v1/hr/payroll/runs/${id}/payslips/${payslipId}/signed`, { method: "POST", body: JSON.stringify({ signedAt }) }),
