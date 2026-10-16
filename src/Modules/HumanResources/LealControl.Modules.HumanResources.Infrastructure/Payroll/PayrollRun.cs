@@ -1,6 +1,6 @@
 namespace LealControl.Modules.HumanResources.Infrastructure.Payroll;
 
-/// <summary>Una liquidación mensual (nota 68, S3). Borrador mientras se cargan novedades; cerrada, queda fija.</summary>
+/// <summary>Una liquidación: mensual (S3) o de aguinaldo (S4). Borrador mientras se cargan novedades; cerrada, queda fija.</summary>
 public sealed class PayrollRun
 {
     public Guid Id { get; set; }
@@ -25,6 +25,9 @@ public sealed class PayrollRun
 public static class PayrollRunKinds
 {
     public const string Monthly = "Monthly";
+    /// <summary>Sueldo anual complementario: una por semestre, en junio o diciembre.</summary>
+    public const string Sac = "Sac";
+    public static readonly string[] All = [Monthly, Sac];
 }
 
 public static class PayrollRunStatuses
@@ -61,11 +64,15 @@ public static class PayrollNoveltyKinds
     public const string OtherRemunerative = "OtherRemunerative"; // $
     public const string OtherNonRemunerative = "OtherNonRemunerative"; // $
     public const string OtherDeduction = "OtherDeduction";       // $
+    /// <summary>Aguinaldo: mejor remuneración del semestre liquidada fuera del sistema (meses que liquidó el estudio).</summary>
+    public const string SacPriorBest = "SacPriorBest";           // $
 
     public static readonly string[] Hours = [Overtime50, Overtime100];
     public static readonly string[] Days = [Absence, UnpaidLeave, PaidLeave];
-    public static readonly string[] Amounts = [Advance, Garnishment, OtherRemunerative, OtherNonRemunerative, OtherDeduction];
+    public static readonly string[] Amounts = [Advance, Garnishment, OtherRemunerative, OtherNonRemunerative, OtherDeduction, SacPriorBest];
     public static readonly string[] All = [.. Hours, .. Days, NoPerfectAttendance, .. Amounts];
+    /// <summary>Las que admite una liquidación de aguinaldo; SacPriorBest solo va en esas.</summary>
+    public static readonly string[] ForSac = [SacPriorBest, Garnishment, OtherDeduction];
 }
 
 /// <summary>Recibo de un colaborador en una liquidación, con los datos del legajo al momento de liquidar.</summary>

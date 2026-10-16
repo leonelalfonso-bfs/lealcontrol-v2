@@ -135,6 +135,7 @@ import {
   PayrollListPage,
   PayrollSettingsPage,
   PayrollRunPage,
+  VacationsPage,
   PayslipPrintPage,
   AgreementsPage,
   AgreementDetailPage,
@@ -491,6 +492,7 @@ export function App() {
               <Route path="/rrhh/liquidaciones/:id" element={<PayrollRunPage />} />
               <Route path="/rrhh/liquidaciones/:id/recibos/:pid" element={<PayslipPrintPage />} />
               <Route path="/rrhh/sueldos/configuracion" element={<PayrollSettingsPage />} />
+              <Route path="/rrhh/vacaciones" element={<VacationsPage />} />
               <Route path="/rrhh/convenios" element={<AgreementsPage />} />
               <Route path="/rrhh/convenios/:id" element={<AgreementDetailPage />} />
               <Route path="/rrhh/ayuda" element={<HumanResourcesHelpPage />} />

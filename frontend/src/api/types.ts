@@ -2657,4 +2657,8 @@ export type Payslip = {
   contributionsBase: number; employeeContributionsBase: number; warnings: string | null; contentHash: string | null; signedAtUtc: string | null;
   lines: PayslipLine[];
 };
+export type VacationRow = {
+  employeeId: string; employeeName: string; fileNumber: string; entitled: number; detail: string; taken: number; remaining: number;
+  leaves: { id: string; startDate: string; endDate: string; days: number; notes: string | null }[];
+};
 export type PayslipDetail = { run: PayrollRun; payslip: Payslip; intact: boolean };

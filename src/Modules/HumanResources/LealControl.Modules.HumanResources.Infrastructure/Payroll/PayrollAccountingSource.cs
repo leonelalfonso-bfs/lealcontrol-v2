@@ -37,8 +37,8 @@ internal sealed class PayrollAccountingSource(HumanResourcesDbContext db, ITenan
             };
             amounts[AccountingAmountSources.Total] = amounts[AccountingAmountSources.GrossSalaries] + amounts[AccountingAmountSources.EmployerCharges];
             await gateway.PostAsync(new PostableDocument(
-                AccountingSourceModules.Payroll, AccountingDocumentTypes.Payroll, run.Id.ToString(), $"Sueldos {run.Month:D2}/{run.Year}",
-                AccrualDate(run), "ARS", 1m, null, null, $"Liquidación {run.Month:D2}/{run.Year} ({p.Count} recibos)", "AM-SUE-01",
+                AccountingSourceModules.Payroll, AccountingDocumentTypes.Payroll, run.Id.ToString(), $"{(run.Kind == PayrollRunKinds.Sac ? "Aguinaldo" : "Sueldos")} {run.Month:D2}/{run.Year}",
+                AccrualDate(run), "ARS", 1m, null, null, $"Liquidación {(run.Kind == PayrollRunKinds.Sac ? "de aguinaldo " : "")}{run.Month:D2}/{run.Year} ({p.Count} recibos)", "AM-SUE-01",
                 amounts, new Dictionary<string, string> { ["Payslips"] = p.Count.ToString() }), cancellationToken);
             published++;
         }

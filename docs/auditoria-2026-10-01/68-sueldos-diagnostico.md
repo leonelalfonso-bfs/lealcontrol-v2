@@ -203,13 +203,22 @@ Cada entrega termina con su **manual de Ayuda**. Desde S3 se **compara con los r
   - vacaciones (S4).
 - **Validación pendiente:** comparar un mes completo con los recibos del estudio.
 
-### S4. Aguinaldo y vacaciones
+### S4. Aguinaldo y vacaciones (hecha, PR "Sueldos S4")
 
-- **Aguinaldo:** 50 % de la mejor remuneración mensual, normal y habitual del semestre, proporcional, en junio y diciembre.
-- **Vacaciones:**
-  - días según la antigüedad y el convenio;
-  - valor por día = sueldo / 25 (art. 155), con los variables promediados;
-  - fraccionamiento y pago adelantado.
+- **Aguinaldo** (Ley 23.041), liquidación aparte de tipo "Sac" en junio o diciembre, número 2 del mes:
+  - mejor remuneración de los meses cerrados del semestre (o la cargada como novedad si la liquidó el estudio) / 2 × días / 180;
+  - días por meses de 30, sin licencias sin goce, tope 180;
+  - exige la mensual del mes cerrada; con el aguinaldo cerrado no se reabre la mensual;
+  - aportes con tope = 50 % de la base máxima × días / 180 (Decreto 433/94), sin mínimo;
+  - contribuciones con el 50 % de la detracción, proporcional (Ley 27.541 art. 22); ART solo alícuota; sin seguro de vida;
+  - del convenio, solo descuentos y contribuciones en % del bruto.
+- **Vacaciones** (registro en RRHH → Vacaciones, sin importes):
+  - días por antigüedad al 31/12 (art. 150) y un día cada 20 si no trabajó la mitad de los hábiles (art. 151; los feriados no se descuentan);
+  - tramos de al menos 7 días salvo el saldo, sin superposición; aviso fuera de octubre-abril (Ley 27.802);
+  - pago adelantado en el mes de inicio: (sueldo + promedio de variables de los meses cerrados del último semestre) / 25 por día;
+  - cada mes descuenta a sueldo / 30 los días que caen en él.
+- **Quedan para después:** días adicionales por convenio, notificación impresa de vacaciones, acumulación (art. 164), no remunerativos sobre vacaciones, vacaciones no gozadas y SAC proporcional (S6), previsión contable mensual del aguinaldo.
+- **A verificar con el estudio:** tope de aportes del SAC proporcional, aplicación del 50 % de la detracción y qué conceptos del convenio entran al aguinaldo y a las vacaciones.
 
 ### S5. Libro de Sueldos Digital y F.931
 

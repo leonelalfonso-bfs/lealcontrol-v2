@@ -195,6 +195,7 @@ export const EmployeeFormPage = named(() => import("../pages/EmployeeFormPage"),
 export const PayrollListPage = named(() => import("../pages/PayrollListPage"), "PayrollListPage");
 export const AgreementsPage = named(() => import("../pages/AgreementsPage"), "AgreementsPage");
 export const AgreementDetailPage = named(() => import("../pages/AgreementDetailPage"), "AgreementDetailPage");
+export const VacationsPage = named(() => import("../pages/VacationsPage"), "VacationsPage");
 export const PayrollRunPage = named(() => import("../pages/PayrollRunPage"), "PayrollRunPage");
 export const PayslipPrintPage = named(() => import("../pages/PayslipPrintPage"), "PayslipPrintPage");
 export const PayrollSettingsPage = named(() => import("../pages/PayrollSettingsPage"), "PayrollSettingsPage");

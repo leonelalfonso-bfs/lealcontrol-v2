@@ -301,6 +301,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/rrhh/empleados", label: "Colaboradores & Legajos", icon: "👤" },
       { path: "/rrhh/organigrama", label: "Organigrama & Puestos", icon: "🏢" },
       { path: "/rrhh/manuales", label: "Manuales de Procedimientos", icon: "📖" },
+      { path: "/rrhh/vacaciones", label: "Vacaciones", icon: "🏖️" },
       { path: "/rrhh/liquidaciones", label: "Liquidación de Sueldos", icon: "💰" },
       { path: "/rrhh/convenios", label: "Convenios colectivos", icon: "📜" },
       { path: "/rrhh/sueldos/configuracion", label: "Configuración de sueldos", icon: "⚙️" },
