@@ -7,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Modules.HumanResources.Infrastructure.Payroll;
 
-public sealed record AgreementRequest(string Code, string Name, string Union, decimal HourDivisor, string? Zones, string? Notes);
+public sealed record AgreementRequest(string Code, string Name, string Union, decimal HourDivisor, string? Zones, string? Notes,
+    decimal? SeveranceCap = null, string? SeveranceCapSource = null);
 public sealed record CategoryRequest(string Group, string Name, int SortOrder);
 public sealed record ScalePasteRequest(string Month, string Source, string Text);
 public sealed record ScaleIncreaseRequest(string Month, decimal Percent, string Source, bool RoundToPesos);
@@ -30,7 +31,7 @@ public static class AgreementEndpoints
             var list = await db.CollectiveAgreements.AsNoTracking().Where(a => a.TenantId == t).OrderBy(a => a.Name).ToListAsync(ct);
             var employees = await db.Employees.AsNoTracking().Where(e => e.TenantId == t && e.AgreementId != null)
                 .GroupBy(e => e.AgreementId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key!.Value, x => x.Count, ct);
-            return Results.Ok(list.Select(a => new { a.Id, a.Code, a.Name, a.Union, a.HourDivisor, a.Zones, a.Notes, Employees = employees.GetValueOrDefault(a.Id) }));
+            return Results.Ok(list.Select(a => new { a.Id, a.Code, a.Name, a.Union, a.HourDivisor, a.Zones, a.Notes, a.SeveranceCap, a.SeveranceCapSource, Employees = employees.GetValueOrDefault(a.Id) }));
         });
 
         group.MapPost(root, async (AgreementRequest req, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>
@@ -264,6 +265,7 @@ public static class AgreementEndpoints
     {
         if (string.IsNullOrWhiteSpace(req.Code) || string.IsNullOrWhiteSpace(req.Name)) return "Indicá el número y el nombre del convenio.";
         if (req.HourDivisor is <= 0m or > 400m) return "El divisor de la hora va de 1 a 400.";
+        if (req.SeveranceCap is < 0m) return "El tope indemnizatorio no puede ser negativo.";
         return null;
     }
 
@@ -275,6 +277,8 @@ public static class AgreementEndpoints
         a.HourDivisor = req.HourDivisor;
         a.Zones = string.Join(",", (req.Zones ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
         a.Notes = string.IsNullOrWhiteSpace(req.Notes) ? null : req.Notes.Trim();
+        a.SeveranceCap = req.SeveranceCap is > 0m ? req.SeveranceCap : null;
+        a.SeveranceCapSource = string.IsNullOrWhiteSpace(req.SeveranceCapSource) ? null : req.SeveranceCapSource.Trim();
     }
 
     private static string? ApplyRule(AgreementRule rule, RuleRequest req)

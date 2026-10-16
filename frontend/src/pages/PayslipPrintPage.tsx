@@ -49,7 +49,7 @@ export function PayslipPrintPage() {
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontWeight: 800 }}>RECIBO DE HABERES — {label}</div>
-          <div>Período: {period}{run.kind === "Sac" ? ` · Aguinaldo ${run.month === 6 ? "1.er" : "2.º"} semestre` : ""}</div>
+          <div>Período: {period}{run.kind === "Sac" ? ` · Aguinaldo ${run.month === 6 ? "1.er" : "2.º"} semestre` : run.kind === "Final" ? " · Liquidación final" : ""}</div>
           <div>Fecha de pago: {day(run.paymentDate)}</div>
           <div>Lugar de pago: {company?.fiscalCity ?? "—"}</div>
         </div>

@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import type { Employee, LsdCheck, PayrollRunDetail } from "../api/types";
+import type { Employee, FinalSettings, LsdCheck, PayrollRunDetail } from "../api/types";
+import { TERMINATION_CAUSES } from "../lib/payrollLabels";
 
 const money = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const day = (iso: string | null) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
@@ -32,6 +33,7 @@ export function PayrollRunPage() {
   const [issues, setIssues] = useState<{ errors: string[]; warnings: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
   const [lsd, setLsd] = useState<LsdCheck | null>(null);
+  const [finalForm, setFinalForm] = useState<FinalSettings | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +61,9 @@ export function PayrollRunPage() {
   const r = detail.run;
   const draft = r.status === "Draft";
   const sac = r.kind === "Sac";
-  const kinds = Object.entries(KINDS).filter(([k]) => (sac ? SAC_KINDS.includes(k) : k !== "SacPriorBest"));
+  const final = r.kind === "Final";
+  const kinds = Object.entries(KINDS).filter(([k]) => (sac ? SAC_KINDS.includes(k) : final || k !== "SacPriorBest"));
+  const people = final ? employees.filter((e) => e.id === r.employeeId) : employees.filter((e) => e.status !== 2);
   const name = (employeeId: string) => {
     const e = employees.find((x) => x.id === employeeId);
     return e ? `${e.lastName}, ${e.firstName}` : "—";
@@ -83,7 +87,9 @@ export function PayrollRunPage() {
     <div className="stack" style={{ gap: 20 }}>
       <div className="page-head">
         <div>
-          <h1>💰 {sac ? `Aguinaldo ${r.month === 6 ? "1.er" : "2.º"} semestre ${r.year}` : `Liquidación ${String(r.month).padStart(2, "0")}/${r.year}`}</h1>
+          <h1>💰 {sac ? `Aguinaldo ${r.month === 6 ? "1.er" : "2.º"} semestre ${r.year}`
+            : final ? `Liquidación final · ${people[0] ? `${people[0].lastName}, ${people[0].firstName}` : ""}`
+            : `Liquidación ${String(r.month).padStart(2, "0")}/${r.year}`}</h1>
           <p className="muted">
             {draft ? "Borrador" : `Cerrada el ${day(r.closedAtUtc)} por ${r.closedBy}`} · pago el {day(r.paymentDate)}
             {draft && !r.calculatedAtUtc && " · falta calcular (o hubo errores)"}
@@ -116,9 +122,46 @@ export function PayrollRunPage() {
         </div>
       )}
 
+      {final && (
+        <div className="card pad stack" style={{ gap: 10 }}>
+          <h3 style={{ margin: 0 }}>Egreso</h3>
+          <div className="muted" style={{ fontSize: "0.85rem" }}>
+            Egreso el {day(people[0]?.terminationDate ?? null)} · {TERMINATION_CAUSES[r.terminationCause ?? ""] ?? r.terminationCause}
+            {r.terminationCause === "DismissalWithoutCause" && (r.noticeGiven ? " · con preaviso otorgado" : " · sin preaviso")}
+            {r.agreedAmount > 0 && ` · gratificación pactada $ ${money(r.agreedAmount)}`}
+            {r.priorBestSalary > 0 && ` · mejor sueldo liquidado afuera $ ${money(r.priorBestSalary)}`}
+          </div>
+          {draft && !finalForm && (
+            <div><button type="button" className="btn ghost compact" onClick={() => setFinalForm({
+              terminationCause: r.terminationCause ?? "DismissalWithoutCause", noticeGiven: r.noticeGiven, agreedAmount: r.agreedAmount, priorBestSalary: r.priorBestSalary
+            })}>Cambiar datos del egreso</button></div>
+          )}
+          {finalForm && (
+            <form className="row" style={{ gap: 10, flexWrap: "wrap", alignItems: "flex-end" }} onSubmit={(e) => {
+              e.preventDefault();
+              void run(async () => { await api.updateFinalSettings(id, finalForm); setFinalForm(null); return "✓ Datos del egreso actualizados. Recalculá la liquidación."; });
+            }}>
+              <label style={{ minWidth: 240 }}>Causa
+                <select value={finalForm.terminationCause} onChange={(e) => setFinalForm({ ...finalForm, terminationCause: e.target.value })}>
+                  {Object.entries(TERMINATION_CAUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </label>
+              <label className="row" style={{ gap: 6, alignItems: "center" }}>
+                <input type="checkbox" checked={finalForm.noticeGiven} onChange={(e) => setFinalForm({ ...finalForm, noticeGiven: e.target.checked })} /> Se otorgó el preaviso
+              </label>
+              <label style={{ maxWidth: 180 }}>Gratificación pactada $<input type="number" min={0} step="0.01" value={finalForm.agreedAmount} onChange={(e) => setFinalForm({ ...finalForm, agreedAmount: Number(e.target.value) || 0 })} /></label>
+              <label style={{ maxWidth: 220 }}>Mejor sueldo liquidado afuera $<input type="number" min={0} step="0.01" value={finalForm.priorBestSalary} onChange={(e) => setFinalForm({ ...finalForm, priorBestSalary: Number(e.target.value) || 0 })} /></label>
+              <button type="submit" className="btn" disabled={busy}>Guardar</button>
+              <button type="button" className="btn ghost" onClick={() => setFinalForm(null)}>Cancelar</button>
+            </form>
+          )}
+          {!draft && <div><Link to={`/rrhh/liquidaciones/${id}/certificado`} className="btn ghost compact">📄 Certificado de trabajo (art. 80)</Link></div>}
+        </div>
+      )}
+
       {/* Novedades */}
       <div className="card pad stack" style={{ gap: 12 }}>
-        <h3 style={{ margin: 0 }}>{sac ? "Novedades del aguinaldo" : "Novedades del mes"}</h3>
+        <h3 style={{ margin: 0 }}>{sac ? "Novedades del aguinaldo" : final ? "Novedades de la liquidación final" : "Novedades del mes"}</h3>
         {sac && (
           <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
             El aguinaldo toma la mejor remuneración de los meses del semestre cerrados en el sistema. Si algún mes lo liquidó el estudio
@@ -148,7 +191,7 @@ export function PayrollRunPage() {
             <label style={{ minWidth: 200 }}>Colaborador
               <select value={novelty.employeeId} onChange={(e) => setNovelty({ ...novelty, employeeId: e.target.value })} required>
                 <option value="">Elegí…</option>
-                {employees.filter((e) => e.status !== 2).map((e) => <option key={e.id} value={e.id}>{e.lastName}, {e.firstName}</option>)}
+                {people.map((e) => <option key={e.id} value={e.id}>{e.lastName}, {e.firstName}</option>)}
               </select>
             </label>
             <label style={{ minWidth: 220 }}>Novedad

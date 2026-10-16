@@ -85,11 +85,14 @@ export function AgreementDetailPage() {
       <div className="page-head">
         <div>
           <h1>📜 {a.union} {a.code}</h1>
-          <p className="muted">{a.name} · divisor de la hora {a.hourDivisor} · {a.zones ? `zonas ${a.zones}` : "sin zonas"}</p>
+          <p className="muted">
+            {a.name} · divisor de la hora {a.hourDivisor} · {a.zones ? `zonas ${a.zones}` : "sin zonas"} ·{" "}
+            {a.severanceCap ? `tope indemnizatorio $ ${a.severanceCap.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "sin tope indemnizatorio cargado"}
+          </p>
         </div>
         <div className="row" style={{ gap: 10 }}>
           <Link to="/rrhh/convenios" className="btn ghost">← Convenios</Link>
-          <button type="button" className="btn ghost" onClick={() => setHeader({ code: a.code, name: a.name, union: a.union, hourDivisor: a.hourDivisor, zones: a.zones, notes: a.notes ?? "" })}>Editar datos</button>
+          <button type="button" className="btn ghost" onClick={() => setHeader({ code: a.code, name: a.name, union: a.union, hourDivisor: a.hourDivisor, zones: a.zones, notes: a.notes ?? "", severanceCap: a.severanceCap ?? null, severanceCapSource: a.severanceCapSource ?? "" })}>Editar datos</button>
           <button type="button" className="btn ghost" disabled={busy} onClick={() => {
             if (!window.confirm(`¿Borrar el convenio ${a.code} con sus categorías, escalas y reglas?`)) return;
             void run(async () => { await api.deleteAgreement(id); navigate("/rrhh/convenios"); });
@@ -112,6 +115,10 @@ export function AgreementDetailPage() {
             <label>Sindicato<input value={header.union} onChange={(e) => setHeader({ ...header, union: e.target.value })} /></label>
             <label>Divisor de la hora<input type="number" min={1} max={400} value={header.hourDivisor} onChange={(e) => setHeader({ ...header, hourDivisor: Number(e.target.value) })} /></label>
             <label>Zonas (separadas por coma)<input value={header.zones} onChange={(e) => setHeader({ ...header, zones: e.target.value })} /></label>
+            <label>Tope indemnizatorio (art. 245) $
+              <input type="number" min={0} step="0.01" value={header.severanceCap ?? ""} onChange={(e) => setHeader({ ...header, severanceCap: e.target.value ? Number(e.target.value) : null })} />
+            </label>
+            <label>Fuente del tope<input value={header.severanceCapSource ?? ""} placeholder="Resolución o publicación de las partes" onChange={(e) => setHeader({ ...header, severanceCapSource: e.target.value })} /></label>
           </div>
           <label>Notas<textarea rows={3} value={header.notes ?? ""} onChange={(e) => setHeader({ ...header, notes: e.target.value })} /></label>
           <div className="row" style={{ gap: 10 }}>

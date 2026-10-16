@@ -281,6 +281,9 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.Property(x => x.LastDepositPeriod).HasMaxLength(7);
             b.Property(x => x.LastDepositBank).HasMaxLength(120);
             b.Property(x => x.ClosedBy).HasMaxLength(160);
+            b.Property(x => x.TerminationCause).HasMaxLength(40);
+            b.Property(x => x.AgreedAmount).HasPrecision(18, 2);
+            b.Property(x => x.PriorBestSalary).HasPrecision(18, 2);
             b.HasIndex(x => new { x.TenantId, x.Year, x.Month, x.Number }).IsUnique();
         });
         modelBuilder.Entity<Payroll.PayrollConceptMapping>(b =>
@@ -355,6 +358,8 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.Property(x => x.Union).HasMaxLength(120);
             b.Property(x => x.Zones).HasMaxLength(120);
             b.Property(x => x.Notes).HasMaxLength(1000);
+            b.Property(x => x.SeveranceCap).HasPrecision(18, 2);
+            b.Property(x => x.SeveranceCapSource).HasMaxLength(300);
             b.Property(x => x.HourDivisor).HasPrecision(9, 2);
             b.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
         });
@@ -748,6 +753,13 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             CREATE INDEX IF NOT EXISTS ""IX_VacationLeaves_Employee_Year"" ON hr.""VacationLeaves"" (""TenantId"", ""EmployeeId"", ""Year"");
 
             ALTER TABLE hr.""Payslips"" ADD COLUMN IF NOT EXISTS ""Detraction"" numeric(18,2) NOT NULL DEFAULT 0;
+            ALTER TABLE hr.""CollectiveAgreements"" ADD COLUMN IF NOT EXISTS ""SeveranceCap"" numeric(18,2);
+            ALTER TABLE hr.""CollectiveAgreements"" ADD COLUMN IF NOT EXISTS ""SeveranceCapSource"" character varying(300);
+            ALTER TABLE hr.""PayrollRuns"" ADD COLUMN IF NOT EXISTS ""EmployeeId"" uuid;
+            ALTER TABLE hr.""PayrollRuns"" ADD COLUMN IF NOT EXISTS ""TerminationCause"" character varying(40);
+            ALTER TABLE hr.""PayrollRuns"" ADD COLUMN IF NOT EXISTS ""NoticeGiven"" boolean NOT NULL DEFAULT false;
+            ALTER TABLE hr.""PayrollRuns"" ADD COLUMN IF NOT EXISTS ""AgreedAmount"" numeric(18,2) NOT NULL DEFAULT 0;
+            ALTER TABLE hr.""PayrollRuns"" ADD COLUMN IF NOT EXISTS ""PriorBestSalary"" numeric(18,2) NOT NULL DEFAULT 0;
             CREATE TABLE IF NOT EXISTS hr.""PayrollConceptMappings"" (
                 ""Id"" uuid NOT NULL PRIMARY KEY,
                 ""TenantId"" uuid NOT NULL,

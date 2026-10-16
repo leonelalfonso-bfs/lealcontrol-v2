@@ -244,12 +244,21 @@ Cada entrega termina con su **manual de Ayuda**. Desde S3 se **compara con los r
   - conceptos no remunerativos de convenio con aportes de obra social (530000/540000), que hoy no se calculan.
 - **Quedan para después:** licencias con situación de revista por días (maternidad, sin goce) y rectificativas (envío RE).
 
-### S6. Liquidación final
+### S6. Liquidación final (hecha, PR "Sueldos S6")
 
-- Renuncia, despido sin causa, fin de contrato y mutuo acuerdo.
-- Indemnización art. 245 con la Ley 27.802 (base sin aguinaldo ni vacaciones, tope y piso), preaviso, integración del mes de despido.
-- Vacaciones no gozadas y aguinaldo proporcional.
-- Certificado de trabajo (art. 80) y constancia de aportes.
+- **Texto oficial** de la Ley 27.802 (argentina.gob.ar): art. 51 (nuevo art. 245), art. 48 (preaviso, art. 231 inc. b), art. 50 (mutuo acuerdo), art. 52 (fallecimiento, art. 248 → 247), art. 25 (certificados del art. 80, 45 días hábiles). No cambió los arts. 92 bis, 232, 233, 156, 247 ni 250. Rige para los egresos desde el 6/3/2026.
+- **Liquidación de tipo "Final"**, una por colaborador, en el mes de la fecha de egreso del legajo; la mensual del mes ya no lo incluye.
+  Causas: despido sin causa, renuncia, con justa causa, mutuo acuerdo, período de prueba, plazo fijo, jubilación, fallecimiento.
+- **Cálculo** (`FinalSettlementCalculator`):
+  - días del mes (salvo que la mensual cerrada ya los haya pagado) + SAC proporcional (120003, tope proporcional), con aportes;
+  - vacaciones no gozadas: días por antigüedad × días trabajados en el año / 365, menos lo gozado, a sueldo / 25 con promedio de variables, más su SAC;
+  - art. 245: mejor remuneración mensual del último año sin SAC, vacaciones ni premios no mensuales (incluye no remunerativos del convenio); variables habituales (6+ meses) promediados (6 meses o año, el mayor); tope del convenio (nuevo dato del convenio; fuera de convenio, el más favorable de la empresa) con piso del 67 %; mínimo un sueldo; la mitad por fallecimiento o plazo fijo de más de un año;
+  - preaviso 1 o 2 meses (nada en prueba, 6 meses) con su SAC; integración por los días que faltan del mes (sobre los días del mes calendario) con su SAC;
+  - gratificación del mutuo acuerdo;
+  - todo lo indemnizatorio no remunerativo (52xxxx en el LSD).
+- **Certificado de trabajo** (art. 80) imprimible con las remuneraciones y aportes liquidados en el sistema.
+- **A verificar con el estudio:** no remunerativos del convenio en la base del 245, integración sobre días del mes calendario, período de prueba del convenio (si lo extiende), vacaciones pendientes del año anterior (se toman del registro).
+- **Fuera de alcance:** indemnizaciones agravadas y casos especiales (embarazo, matrimonio, tutela sindical, incapacidad art. 212, fuerza mayor art. 247 por causa económica), multas y actualización judicial (art. 276).
 
 ### S7. Ganancias de cuarta categoría
 

@@ -37,7 +37,16 @@ public static class LsdConcepts
         ("HE100", "Horas extra al 100 %", PayslipLineKinds.Remunerative, "130002", false),
         ("OTROREM", "Otros haberes remunerativos", PayslipLineKinds.Remunerative, "170000", true),
         ("SAC", "Sueldo anual complementario", PayslipLineKinds.Remunerative, "120000", false),
+        ("SACPROP", "SAC proporcional", PayslipLineKinds.Remunerative, "120003", false),
         ("OTRONR", "Otros haberes no remunerativos", PayslipLineKinds.NonRemunerative, "550000", true),
+        ("VACNG", "Vacaciones no gozadas", PayslipLineKinds.NonRemunerative, "520012", false),
+        ("SACVACNG", "SAC sobre vacaciones no gozadas", PayslipLineKinds.NonRemunerative, "520018", false),
+        ("INDANT", "Indemnización por antigüedad", PayslipLineKinds.NonRemunerative, "520014", false),
+        ("PREAV", "Indemnización sustitutiva del preaviso", PayslipLineKinds.NonRemunerative, "520015", false),
+        ("SACPREAV", "SAC sobre el preaviso", PayslipLineKinds.NonRemunerative, "520017", false),
+        ("INTEG", "Integración del mes de despido", PayslipLineKinds.NonRemunerative, "520016", false),
+        ("SACINTEG", "SAC sobre la integración del mes", PayslipLineKinds.NonRemunerative, "520017", false),
+        ("GRATCESE", "Gratificación por cese (mutuo acuerdo)", PayslipLineKinds.NonRemunerative, "520010", false),
         ("JUBIL", "Jubilación (SIPA)", PayslipLineKinds.Deduction, "810000", false),
         ("LEY19032", "Ley 19.032 (INSSJyP)", PayslipLineKinds.Deduction, "810001", false),
         ("OBRASOC", "Obra social", PayslipLineKinds.Deduction, "810002", false),
@@ -148,7 +157,7 @@ public static class Lsd
         var employeeIds = payslips.Select(p => p.EmployeeId).Distinct().ToList();
         var employees = await db.Employees.AsNoTracking().Where(e => employeeIds.Contains(e.Id)).ToDictionaryAsync(e => e.Id, ct);
         var concepts = (await LsdConcepts.ListAsync(db, t, ct)).ToDictionary(c => c.Code);
-        var monthlyIds = periodRuns.Where(r => r.Kind == PayrollRunKinds.Monthly).Select(r => r.Id).ToHashSet();
+        var monthlyIds = periodRuns.Where(r => r.Kind != PayrollRunKinds.Sac).Select(r => r.Id).ToHashSet();
 
         var sb = new StringBuilder();
         var line = (string s, int length) =>
@@ -165,7 +174,7 @@ public static class Lsd
             var cbu = Digits(e.Cbu);
             var payment = cbu.Length == 22 ? '3' : '1';
             if (payment == '1') warnings.Add($"{p.EmployeeName}: sin CBU de 22 dígitos en el legajo, se informa pago en efectivo.");
-            var topDays = run.Kind == PayrollRunKinds.Monthly && p.DaysWorked < 30m ? (int)p.DaysWorked : 0;
+            var topDays = run.Kind != PayrollRunKinds.Sac && p.DaysWorked > 0m && p.DaysWorked < 30m ? (int)p.DaysWorked : 0;
             line("02" + Text(Digits(p.Cuil), 11) + Text(p.FileNumber, 10) + Text("", 50) + Text(payment == '3' ? cbu : "", 22) + Number(topDays, 3)
                 + Date(run.PaymentDate) + Text("", 8) + payment, 115);
             foreach (var l in p.Lines.Where(l => l.Kind != PayslipLineKinds.Employer).OrderBy(l => l.Order))

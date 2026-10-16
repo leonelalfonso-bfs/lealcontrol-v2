@@ -14,10 +14,11 @@ const SECTIONS = [
   { id: "sueldos", title: "Liquidación de sueldos" },
   { id: "vacaciones", title: "Vacaciones" },
   { id: "aguinaldo", title: "Aguinaldo" },
-  { id: "lsd", title: "Libro de Sueldos Digital y F.931" }
+  { id: "lsd", title: "Libro de Sueldos Digital y F.931" },
+  { id: "final", title: "Liquidación final" }
 ];
 
-/** Ayuda de RRHH: manual de legajos, documentos, EPP, organigrama y manuales; liquidación mensual, vacaciones, aguinaldo y Libro de Sueldos Digital. */
+/** Ayuda de RRHH: manual de legajos, documentos, EPP, organigrama y manuales; liquidación mensual, vacaciones, aguinaldo, Libro de Sueldos Digital y liquidación final. */
 export function HumanResourcesHelpPage() {
   return (
     <HelpManual
@@ -130,6 +131,10 @@ export function HumanResourcesHelpPage() {
             “hasta”. El aporte solidario de los no afiliados no puede pasar del 2 % (Ley 27.802).
           </Step>
           <Step title="Simulador: elegí categoría, zona, antigüedad, afiliación y marcas, y verificá el resultado contra el recibo del estudio." />
+          <Step title="“Editar datos” → Tope indemnizatorio: el que publican las partes del convenio (tres veces el salario promedio, Ley 27.802), con su fuente.">
+            Se usa en la liquidación final para limitar la base del art. 245. Para los colaboradores fuera de convenio se usa el tope más
+            favorable de los convenios de la empresa.
+          </Step>
           <Step title="En el legajo (“💼 2. Contrato & Convenio” → “📜 Convenio colectivo”): convenio, categoría, zona y los adicionales que dependen del colaborador (título, fallo de caja)." />
         </Steps>
       </ManualPart>
@@ -176,9 +181,6 @@ export function HumanResourcesHelpPage() {
             cierra y se contabiliza de nuevo. Un borrador se puede borrar con sus novedades.
           </Step>
         </Steps>
-        <Tip>
-          Todavía no hace la liquidación final (egresos): viene en la próxima etapa. Hasta entonces, la liquida el estudio.
-        </Tip>
       </ManualPart>
 
       <ManualPart id="vacaciones" title="11. Vacaciones">
@@ -258,6 +260,41 @@ export function HumanResourcesHelpPage() {
         </Steps>
         <Tip>
           Antes de usarlo para presentar, el primer mes se valida importándolo en ARCA y comparándolo con la F.931 que hizo el estudio.
+        </Tip>
+      </ManualPart>
+
+      <ManualPart id="final" title="14. Liquidación final">
+        <Steps>
+          <Step title="En el legajo, cargá la fecha de egreso (último día trabajado) y el estado “Desvinculado”.">
+            El aguinaldo del semestre ya no lo incluye (cobra el proporcional en la final) y, al crear su liquidación final, la mensual de
+            ese mes tampoco: los días del mes van en la final.
+          </Step>
+          <Step title="Liquidación de Sueldos → tipo “Liquidación final” → colaborador, causa del egreso y fecha de pago → “➕ Nueva liquidación”.">
+            Causas: despido sin causa, renuncia, despido con justa causa, mutuo acuerdo (con la gratificación pactada), fin del período de
+            prueba, vencimiento del plazo fijo, jubilación y fallecimiento. En el despido sin causa marcá si se otorgó el preaviso. Si
+            algún mes del último año lo liquidó el estudio y fue mayor, cargá ese sueldo en “Mejor sueldo del año liquidado afuera”.
+          </Step>
+          <Step title="Novedades: horas extra, inasistencias, embargos u otros conceptos de los días del mes, como en la mensual." />
+          <Step title="“🧮 Calcular”. El recibo final trae, según corresponda:">
+            <ul style={{ margin: "4px 0 0" }}>
+              <li><strong>Días trabajados del mes</strong> y <strong>SAC proporcional</strong> del semestre, con aportes (si la mensual del mes ya lo liquidó, no repite los días).</li>
+              <li><strong>Vacaciones no gozadas</strong> (art. 156): los días del año proporcionales a lo trabajado, menos los ya gozados, a sueldo / 25, con su SAC.</li>
+              <li><strong>Indemnización por antigüedad</strong> (art. 245, Ley 27.802): un sueldo por año o fracción de más de 3 meses. La base es la mejor remuneración mensual del último año sin aguinaldo, vacaciones ni premios no mensuales; las horas extra y otros variables entran promediados si se cobraron al menos 6 meses. Con el tope del convenio, sin bajar del 67 % de esa base. La mitad por fallecimiento y por fin de un plazo fijo de más de un año.</li>
+              <li><strong>Preaviso</strong> no otorgado: 1 mes (hasta 5 años de antigüedad) o 2 meses, con su SAC; nada en el período de prueba (6 meses).</li>
+              <li><strong>Integración del mes de despido</strong>: los días que faltan hasta fin de mes, con su SAC.</li>
+            </ul>
+            Las indemnizaciones, el preaviso, la integración y las vacaciones no gozadas no llevan aportes. Los avisos indican, por
+            ejemplo, si el convenio no tiene tope cargado o si el egreso fue en el período de prueba.
+          </Step>
+          <Step title="Revisá contra el cálculo del estudio, cerrá, imprimí el recibo y contabilizá: es el mismo circuito que la mensual." />
+          <Step title="Con la liquidación cerrada, “📄 Certificado de trabajo (art. 80)”: datos de la relación, función y remuneraciones y aportes liquidados en el sistema.">
+            Se entrega dentro de los 45 días hábiles del egreso. Completá a mano las capacitaciones realizadas.
+          </Step>
+          <Step title="Importá la liquidación final en el Libro de Sueldos Digital como las demás: es una liquidación más del período." />
+        </Steps>
+        <Tip>
+          No calcula las indemnizaciones agravadas ni las de casos especiales (embarazo, matrimonio, representantes gremiales,
+          incapacidad, fuerza mayor): esos casos se liquidan con el estudio.
         </Tip>
       </ManualPart>
     </HelpManual>
