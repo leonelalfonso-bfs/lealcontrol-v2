@@ -14,7 +14,7 @@ const SECTIONS = [
   { id: "sueldos", title: "Liquidación de sueldos" }
 ];
 
-/** Ayuda de RRHH: manual de legajos, documentos, EPP, organigrama y manuales; estado de la liquidación. */
+/** Ayuda de RRHH: manual de legajos, documentos, EPP, organigrama y manuales; y liquidación mensual de sueldos. */
 export function HumanResourcesHelpPage() {
   return (
     <HelpManual
@@ -133,10 +133,50 @@ export function HumanResourcesHelpPage() {
 
       <ManualPart id="sueldos" title="10. Liquidación de sueldos">
         <p style={{ margin: 0 }}>
-          La <Link to="/rrhh/liquidaciones">liquidación de sueldos</Link> se está rehaciendo para que cumpla la ley vigente (incluida la Ley
-          27.802) y sirva para cualquier convenio. Mientras tanto, los sueldos se liquidan como hasta ahora (estudio contable) y el asiento
-          de sueldos del mes se registra en Contabilidad → Cierres y períodos.
+          Cada mes se liquida una vez: se cargan las novedades, se calcula, se revisa, se cierra con los datos del último depósito y se
+          entregan los recibos para firmar. Requiere la configuración de sueldos (punto 8) y, para los colaboradores en convenio, el convenio
+          con la escala del mes (punto 9).
         </p>
+        <Steps>
+          <Step title="RRHH → Liquidación de Sueldos → elegí el mes y la fecha de pago → “➕ Nueva liquidación”.">
+            Hay una sola liquidación mensual por mes. Entran todos los colaboradores que trabajaron en el mes; los que ingresaron o egresaron
+            en el mes, por los días trabajados.
+          </Step>
+          <Step title="Novedades del mes: colaborador, tipo de novedad y cantidad o importe → “Agregar”.">
+            Horas extra al 50 % y al 100 % (en horas), inasistencias injustificadas y licencias sin goce (en días, descuentan el sueldo y hacen
+            perder la asistencia perfecta), licencias pagas (en días, no descuentan), “pierde la asistencia perfecta”, adelantos, embargos y
+            otros haberes o descuentos (en pesos, con detalle).
+          </Step>
+          <Step title="“🧮 Calcular”.">
+            Calcula cada recibo: básico de la escala y adicionales del convenio (o el sueldo del legajo si está fuera de convenio), horas extra
+            sobre el valor hora, inasistencias, aportes (jubilación 11 %, Ley 19.032 3 %, obra social 3 %) con los topes de la base, cuota
+            sindical y solidarios, adelantos y embargos. También calcula lo del empleador: contribuciones con la detracción, FAL (desde
+            noviembre de 2026), obra social 6 %, ART y seguro de vida. Si falta un parámetro legal del mes, no calcula. Si un colaborador
+            tiene un error (sin escala del mes, sin sueldo, neto negativo), lo lista y la liquidación no se puede cerrar hasta corregirlo y
+            volver a calcular; los avisos (por ejemplo, un embargo mayor al 20 %) no frenan.
+          </Step>
+          <Step title="Revisá los recibos y los totales. Si cambiás una novedad, volvé a calcular.">
+            El total “a pagar por F.931” es aportes más contribuciones, ART y seguro de vida. Compará el primer mes contra el recibo del estudio.
+          </Step>
+          <Step title="“Cerrar liquidación” con el período, la fecha y el banco del último depósito de aportes.">
+            El art. 140 de la LCT exige ese dato en el recibo. Al cerrar, cada recibo queda fijo con su huella (SHA-256): si alguien lo
+            modificara después, el recibo lo avisa.
+          </Step>
+          <Step title="“Recibo” en cada colaborador → “🖨️ Imprimir”: sale original y duplicado.">
+            Tiene los datos del empleador (de la configuración de la empresa), del trabajador, el período, los haberes con y sin aportes, los
+            descuentos, el neto en números y en letras, el último depósito, la fecha y lugar de pago y las firmas.
+          </Step>
+          <Step title="Cuando el trabajador firma, “Marcar como firmado” con la fecha de la firma." />
+          <Step title="Contabilidad → “🔴 ► CONTABILIZAR” con el módulo Sueldos: la liquidación cerrada genera el asiento AM-SUE-01." />
+          <Step title="Para corregir una liquidación cerrada: “Reabrir”.">
+            Vuelve a borrador, borra las huellas y firmas, y si ya estaba contabilizada genera el contra-asiento. Se corrige, se calcula, se
+            cierra y se contabiliza de nuevo. Un borrador se puede borrar con sus novedades.
+          </Step>
+        </Steps>
+        <Tip>
+          Todavía no hacen aguinaldo, vacaciones, liquidación final, Libro de Sueldos Digital ni F.931: vienen en las próximas etapas.
+          Hasta entonces, esos conceptos los sigue liquidando el estudio.
+        </Tip>
       </ManualPart>
     </HelpManual>
   );

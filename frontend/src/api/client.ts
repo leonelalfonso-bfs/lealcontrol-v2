@@ -953,6 +953,24 @@ export const api = {
   simulateAgreement: (id: string, body: { categoryId: string; zone: string; month: string; seniorityFrom: string; unionMember: boolean; flags: string[] }) =>
     request<import("./types").AgreementSimulation>(`/api/v1/hr/payroll/agreements/${id}/simulate`, { method: "POST", body: JSON.stringify(body) }),
 
+  // Sueldos: liquidación mensual (nota 68, S3)
+  listPayrollRuns: () => request<import("./types").PayrollRunSummary[]>("/api/v1/hr/payroll/runs"),
+  createPayrollRun: (body: { year: number; month: number; paymentDate: string }) =>
+    request<import("./types").PayrollRun>("/api/v1/hr/payroll/runs", { method: "POST", body: JSON.stringify(body) }),
+  getPayrollRun: (id: string) => request<import("./types").PayrollRunDetail>(`/api/v1/hr/payroll/runs/${id}`),
+  deletePayrollRun: (id: string) => request<void>(`/api/v1/hr/payroll/runs/${id}`, { method: "DELETE" }),
+  addPayrollNovelty: (id: string, body: { employeeId: string; kind: string; quantity: number; amount: number; description?: string }) =>
+    request<unknown>(`/api/v1/hr/payroll/runs/${id}/novelties`, { method: "POST", body: JSON.stringify(body) }),
+  deletePayrollNovelty: (id: string, noveltyId: string) => request<void>(`/api/v1/hr/payroll/runs/${id}/novelties/${noveltyId}`, { method: "DELETE" }),
+  calculatePayrollRun: (id: string) =>
+    request<{ calculated: number; errors: string[]; warnings: string[] }>(`/api/v1/hr/payroll/runs/${id}/calculate`, { method: "POST" }),
+  closePayrollRun: (id: string, body: { lastDepositPeriod: string; lastDepositDate: string; lastDepositBank: string }) =>
+    request<unknown>(`/api/v1/hr/payroll/runs/${id}/close`, { method: "POST", body: JSON.stringify(body) }),
+  reopenPayrollRun: (id: string) => request<unknown>(`/api/v1/hr/payroll/runs/${id}/reopen`, { method: "POST" }),
+  getPayslip: (id: string, payslipId: string) => request<import("./types").PayslipDetail>(`/api/v1/hr/payroll/runs/${id}/payslips/${payslipId}`),
+  markPayslipSigned: (id: string, payslipId: string, signedAt: string) =>
+    request<unknown>(`/api/v1/hr/payroll/runs/${id}/payslips/${payslipId}/signed`, { method: "POST", body: JSON.stringify({ signedAt }) }),
+
   // ==========================================
   // FLEET (GESTIÃ“N DE FLOTA)
   // ==========================================

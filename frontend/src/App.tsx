@@ -134,6 +134,8 @@ import {
   PaymentOrdersPage,
   PayrollListPage,
   PayrollSettingsPage,
+  PayrollRunPage,
+  PayslipPrintPage,
   AgreementsPage,
   AgreementDetailPage,
   PositionJobDescriptionPage,
@@ -486,6 +488,8 @@ export function App() {
               <Route path="/rrhh/empleados/nuevo" element={<EmployeeFormPage />} />
               <Route path="/rrhh/empleados/:id" element={<EmployeeFormPage />} />
               <Route path="/rrhh/liquidaciones" element={<PayrollListPage />} />
+              <Route path="/rrhh/liquidaciones/:id" element={<PayrollRunPage />} />
+              <Route path="/rrhh/liquidaciones/:id/recibos/:pid" element={<PayslipPrintPage />} />
               <Route path="/rrhh/sueldos/configuracion" element={<PayrollSettingsPage />} />
               <Route path="/rrhh/convenios" element={<AgreementsPage />} />
               <Route path="/rrhh/convenios/:id" element={<AgreementDetailPage />} />

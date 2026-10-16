@@ -2636,3 +2636,25 @@ export type AgreementSimulation = {
   employerContributions: number;
   warnings: string[];
 };
+
+export type PayrollRun = {
+  id: string; year: number; month: number; number: number; kind: string; paymentDate: string; status: "Draft" | "Closed";
+  lastDepositPeriod: string | null; lastDepositDate: string | null; lastDepositBank: string | null;
+  calculatedAtUtc: string | null; closedAtUtc: string | null; closedBy: string | null;
+};
+export type PayrollRunSummary = Pick<PayrollRun, "id" | "year" | "month" | "number" | "kind" | "paymentDate" | "status" | "closedAtUtc"> & { payslips: number; net: number; gross: number };
+export type PayrollNovelty = { id: string; employeeId: string; kind: string; quantity: number; amount: number; description: string | null };
+export type PayrollRunDetail = {
+  run: PayrollRun;
+  novelties: PayrollNovelty[];
+  payslips: { id: string; employeeId: string; employeeName: string; category: string; daysWorked: number; remunerative: number; nonRemunerative: number; deductions: number; net: number; employerCost: number; warnings: string | null; signedAtUtc: string | null }[];
+  totals: { remunerative: number; nonRemunerative: number; deductions: number; net: number; employerCost: number; f931: number };
+};
+export type PayslipLine = { id: string; order: number; code: string; name: string; kind: "Remunerative" | "NonRemunerative" | "Deduction" | "Employer"; quantity: number; amount: number; detail: string | null };
+export type Payslip = {
+  id: string; employeeId: string; employeeName: string; cuil: string; fileNumber: string; agreement: string; category: string; hireDate: string;
+  assignedSalary: number; daysWorked: number; remunerative: number; nonRemunerative: number; deductions: number; net: number;
+  contributionsBase: number; employeeContributionsBase: number; warnings: string | null; contentHash: string | null; signedAtUtc: string | null;
+  lines: PayslipLine[];
+};
+export type PayslipDetail = { run: PayrollRun; payslip: Payslip; intact: boolean };

@@ -27,6 +27,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
   const [includeSales, setIncludeSales] = useState(true);
   const [includePurchases, setIncludePurchases] = useState(true);
   const [includeFinance, setIncludeFinance] = useState(true);
+  const [includePayroll, setIncludePayroll] = useState(true);
 
   // Data & States
   const [preview, setPreview] = useState<BatchPostingPreview | null>(null);
@@ -64,6 +65,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
     if (includeSales) list.push("Sales");
     if (includePurchases) list.push("Purchases");
     if (includeFinance) list.push("Finance");
+    if (includePayroll) list.push("Payroll");
     return list;
   };
 
@@ -269,6 +271,11 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                   <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem" }}>
                     <input type="checkbox" checked={includeFinance} onChange={(e) => setIncludeFinance(e.target.checked)} />
                     <span>💳 <strong>Finanzas</strong> (cobros y pagos)</span>
+                  </label>
+
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem" }}>
+                    <input type="checkbox" checked={includePayroll} onChange={(e) => setIncludePayroll(e.target.checked)} />
+                    <span>👥 <strong>Sueldos</strong> (liquidaciones cerradas)</span>
                   </label>
 
                 </div>
