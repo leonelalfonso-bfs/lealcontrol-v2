@@ -125,7 +125,8 @@ public static class AgreementCalculator
 
     public static AgreementComputation Compute(
         AgreementCategory category, string zone, DateTime month, DateTime seniorityFrom, bool unionMember,
-        IReadOnlyCollection<string> flags, IReadOnlyList<AgreementScale> scales, IReadOnlyList<AgreementRule> rules)
+        IReadOnlyCollection<string> flags, IReadOnlyList<AgreementScale> scales, IReadOnlyList<AgreementRule> rules,
+        decimal? chargeBase = null)
     {
         var first = new DateTime(month.Year, month.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var warnings = new List<string>();
@@ -172,12 +173,15 @@ public static class AgreementCalculator
             if (amount != 0m) lines.Add(new(r.Code, r.Name, r.Type, r.Remunerative, amount, detail));
         }
 
+        // En la liquidación, los descuentos y contribuciones se calculan sobre el bruto final del mes
+        // (con horas extra, ausencias y proporcionales), que llega como chargeBase.
         var remunerative = lines.Where(l => l.Remunerative).Sum(l => l.Amount);
+        var gross = chargeBase ?? remunerative;
         foreach (var r in active.Where(r => r.Type != AgreementRuleTypes.Addition).OrderBy(r => r.Type).ThenBy(r => r.Code))
         {
             var (amount, detail) = r.Basis switch
             {
-                AgreementRuleBases.PercentOfGross => (remunerative * r.Value / 100m, $"{r.Value:0.##} % de la remuneración"),
+                AgreementRuleBases.PercentOfGross => (gross * r.Value / 100m, $"{r.Value:0.##} % de la remuneración"),
                 AgreementRuleBases.PercentOfBasic => (basic * r.Value / 100m, $"{r.Value:0.##} % del básico"),
                 AgreementRuleBases.Fixed => (r.Value, "Monto fijo"),
                 _ => (0m, "")

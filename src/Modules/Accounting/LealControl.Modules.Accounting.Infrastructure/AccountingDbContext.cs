@@ -551,6 +551,7 @@ public sealed class AccountingDbContext : DbContext
             new(Guid.NewGuid(), tenantId, "1.1.02", "Créditos por Ventas", "Asset", 3, "1.1", false),
             new(Guid.NewGuid(), tenantId, "1.1.02.001", "Deudores por Ventas (Clientes)", "Asset", 4, "1.1.02", true),
             new(Guid.NewGuid(), tenantId, "1.1.02.002", "Cheques Rechazados a Cobrar", "Asset", 4, "1.1.02", true),
+            new(Guid.NewGuid(), tenantId, "1.1.02.003", "Anticipos de Sueldos al Personal", "Asset", 4, "1.1.02", true),
 
             new(Guid.NewGuid(), tenantId, "1.1.03", "Otros Créditos Fiscales", "Asset", 3, "1.1", false),
             new(Guid.NewGuid(), tenantId, "1.1.03.001", "IVA Crédito Fiscal (Compras)", "Asset", 4, "1.1.03", true),
@@ -588,6 +589,8 @@ public sealed class AccountingDbContext : DbContext
             new(Guid.NewGuid(), tenantId, "2.1.02.004", "Sueldos y Jornales a Pagar", "Liability", 4, "2.1.02", true),
             new(Guid.NewGuid(), tenantId, "2.1.02.005", "Impuesto a los Ingresos Brutos a Pagar", "Liability", 4, "2.1.02", true),
             new(Guid.NewGuid(), tenantId, "2.1.02.006", "Retenciones Impositivas Practicadas a Pagar", "Liability", 4, "2.1.02", true),
+            new(Guid.NewGuid(), tenantId, "2.1.02.007", "Cuotas y Aportes Sindicales a Pagar", "Liability", 4, "2.1.02", true),
+            new(Guid.NewGuid(), tenantId, "2.1.02.008", "Embargos Judiciales a Depositar", "Liability", 4, "2.1.02", true),
 
             new(Guid.NewGuid(), tenantId, "2.1.03", "Deudas Financieras & Bancarias", "Liability", 3, "2.1", false),
             new(Guid.NewGuid(), tenantId, "2.1.03.001", "Préstamos Bancarios & Descubiertos", "Liability", 4, "2.1.03", true),
@@ -733,6 +736,7 @@ public sealed class AccountingDbContext : DbContext
         public const string PurchaseCreditNote = "AM-CMP-NC";
         public const string SalesFxDebitNote = "AM-VTA-DC-ND";
         public const string SalesFxCreditNote = "AM-VTA-DC-NC";
+        public const string Payroll = "AM-SUE-01";
         /// <summary>Versiones anteriores, incompletas (solo IVA 21 %): se desactivan al instalar las nuevas.</summary>
         public static readonly string[] Superseded = ["AM-VTA-01", "AM-VTA-02", "AM-VTA-03", "AM-CMP-01", "AM-CMP-02"];
     }
@@ -753,6 +757,12 @@ public sealed class AccountingDbContext : DbContext
                 Accounts.Add(new Account(Guid.NewGuid(), tenantId, "5.2.09", "Impuestos y Tasas", "Expense", 3, "5.2", true));
             if (!codes.Contains("1.2.01.005"))
                 Accounts.Add(new Account(Guid.NewGuid(), tenantId, "1.2.01.005", "Amortización Acumulada Maquinarias & Equipos (-)", "Asset", 4, "1.2.01", true));
+            if (!codes.Contains("1.1.02.003"))
+                Accounts.Add(new Account(Guid.NewGuid(), tenantId, "1.1.02.003", "Anticipos de Sueldos al Personal", "Asset", 4, "1.1.02", true));
+            if (!codes.Contains("2.1.02.007"))
+                Accounts.Add(new Account(Guid.NewGuid(), tenantId, "2.1.02.007", "Cuotas y Aportes Sindicales a Pagar", "Liability", 4, "2.1.02", true));
+            if (!codes.Contains("2.1.02.008"))
+                Accounts.Add(new Account(Guid.NewGuid(), tenantId, "2.1.02.008", "Embargos Judiciales a Depositar", "Liability", 4, "2.1.02", true));
             if (!codes.Contains("4.2.04"))
                 Accounts.Add(new Account(Guid.NewGuid(), tenantId, "4.2.04", "Resultado por Exposición a la Inflación (RECPAM)", "Income", 3, "4.2", true));
             if (!codes.Contains("1.2.01.006"))
@@ -865,6 +875,17 @@ public sealed class AccountingDbContext : DbContext
         yield return Template(StandardTemplates.SalesFxCreditNote, "Nota de crédito por diferencia de cambio", "Sales", "CreditNote", "Ventas",
             "Nota de crédito al cliente por la diferencia de cambio de un cobro en dólares: el neto es diferencia de cambio negativa.",
             FxNet(Flip(sale), "5.3.04", "Diferencia de Cambio Negativa"));
+        // Liquidación de sueldos de RRHH (devengamiento del mes).
+        yield return Template(StandardTemplates.Payroll, "Liquidación de sueldos", "Payroll", AccountingDocumentTypes.Payroll, "Sueldos",
+            "Devengamiento de la liquidación mensual: sueldos y cargas sociales contra sueldos a pagar, F.931, sindicatos, anticipos y embargos.",
+            ("5.2.01", "Sueldos y Jornales del Personal", "Debit", AccountingAmountSources.GrossSalaries),
+            ("5.2.02", "Contribuciones Patronales & Cargas Sociales", "Debit", AccountingAmountSources.EmployerCharges),
+            ("2.1.02.004", "Sueldos y Jornales a Pagar", "Credit", AccountingAmountSources.NetSalaries),
+            ("2.1.02.003", "Cargas Sociales / F.931 a Pagar", "Credit", AccountingAmountSources.SocialSecurityToPay),
+            ("2.1.02.007", "Cuotas y Aportes Sindicales a Pagar", "Credit", AccountingAmountSources.UnionToPay),
+            ("1.1.02.003", "Anticipos de Sueldos al Personal", "Credit", AccountingAmountSources.SalaryAdvances),
+            ("2.1.02.008", "Embargos Judiciales a Depositar", "Credit", AccountingAmountSources.GarnishmentsToPay),
+            ("5.2.01", "Otros descuentos al personal", "Credit", AccountingAmountSources.OtherSalaryDeductions));
         yield return Template(StandardTemplates.PurchaseInvoice, "Factura o nota de débito de compra", "Purchases", AccountingDocumentTypes.All, "Compras",
             "Facturas y notas de débito de proveedores: compras por alícuota, IVA crédito, percepciones sufridas y otros tributos contra proveedores.", purchase);
         yield return Template(StandardTemplates.PurchaseCreditNote, "Nota de crédito de compra", "Purchases", "CreditNote", "Compras",

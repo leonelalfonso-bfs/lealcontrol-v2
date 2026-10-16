@@ -17,9 +17,6 @@ namespace LealControl.Modules.HumanResources.Infrastructure;
 
 public enum EmployeeStatus { Active, Leave, Terminated }
 public enum ContractType { Indefinite, FixedTerm, Eventual, TrialPeriod, Internship }
-public enum ConceptType { Remunerative, NonRemunerative, Deduction, CompanyContribution }
-public enum PeriodType { Monthly, FirstFortnight, SecondFortnight, SacFirstHalf, SacSecondHalf, FinalSettlement }
-public enum PayrollPeriodStatus { Draft, Calculating, Closed, Exported }
 
 public sealed class Employee
 {
@@ -144,73 +141,6 @@ public sealed class ProcedureManual
     public DateTime CreatedAtUtc { get; set; }
 }
 
-public sealed class PayrollConcept
-{
-    public Guid Id { get; set; }
-    public Guid TenantId { get; set; }
-    public string Code { get; set; } = ""; // Ej: 100, 110, 300, 301
-    public string Name { get; set; } = ""; // Ej: Sueldo Básico, Antigüedad
-    public ConceptType Type { get; set; }
-    public string? CalculationFormula { get; set; } // Formula o variable
-    public decimal DefaultPercentage { get; set; } // Ej: 11% para Jubilación
-    public bool IsSystemDefault { get; set; }
-    public bool PrintOnReceipt { get; set; } = true;
-    public string? LsdCodeAfip { get; set; } // Código oficial Libro Sueldos Digital
-}
-
-public sealed class PayrollPeriod
-{
-    public Guid Id { get; set; }
-    public Guid TenantId { get; set; }
-    public int PeriodMonth { get; set; }
-    public int PeriodYear { get; set; }
-    public PeriodType PeriodType { get; set; } = PeriodType.Monthly;
-    public DateTime PaymentDateUtc { get; set; }
-    public DateTime? BankDepositDateUtc { get; set; }
-    public PayrollPeriodStatus Status { get; set; } = PayrollPeriodStatus.Draft;
-    public string Notes { get; set; } = "";
-    public DateTime CreatedAtUtc { get; set; }
-}
-
-public sealed class PayrollSlip
-{
-    public Guid Id { get; set; }
-    public Guid TenantId { get; set; }
-    public Guid PayrollPeriodId { get; set; }
-    public Guid EmployeeId { get; set; }
-    public string ReceiptNumber { get; set; } = "";
-    
-    public decimal TotalGrossRemunerative { get; set; }
-    public decimal TotalNonRemunerative { get; set; }
-    public decimal TotalDeductions { get; set; }
-    public decimal NetPay { get; set; }
-    public string NetPayWords { get; set; } = "";
-    
-    public DateTime? SignedByCompanyUtc { get; set; }
-    public DateTime? SignedByEmployeeUtc { get; set; }
-    public string? SignatureHashSha256 { get; set; }
-    public string Status { get; set; } = "Issued"; // Issued, Signed, Paid
-    public DateTime CreatedAtUtc { get; set; }
-
-    public List<PayrollSlipLine> Lines { get; set; } = [];
-}
-
-public sealed class PayrollSlipLine
-{
-    public Guid Id { get; set; }
-    public Guid PayrollSlipId { get; set; }
-    public string ConceptCode { get; set; } = "";
-    public string ConceptName { get; set; } = "";
-    public ConceptType Type { get; set; }
-    public decimal Quantity { get; set; }
-    public string Unit { get; set; } = "Días";
-    public decimal BaseAmount { get; set; }
-    public decimal Percentage { get; set; }
-    public decimal RemunerativeAmount { get; set; }
-    public decimal NonRemunerativeAmount { get; set; }
-    public decimal DeductionAmount { get; set; }
-}
-
 public sealed class EmployeeTimeTracking
 {
     public Guid Id { get; set; }
@@ -250,16 +180,16 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
     public DbSet<OrganizationPosition> Positions => Set<OrganizationPosition>();
     public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
     public DbSet<ProcedureManual> ProcedureManuals => Set<ProcedureManual>();
-    public DbSet<PayrollConcept> PayrollConcepts => Set<PayrollConcept>();
-    public DbSet<PayrollPeriod> PayrollPeriods => Set<PayrollPeriod>();
-    public DbSet<PayrollSlip> PayrollSlips => Set<PayrollSlip>();
-    public DbSet<PayrollSlipLine> PayrollSlipLines => Set<PayrollSlipLine>();
     public DbSet<Payroll.PayrollEmployerSettings> PayrollEmployerSettings => Set<Payroll.PayrollEmployerSettings>();
     public DbSet<Payroll.PayrollLegalParameter> PayrollLegalParameters => Set<Payroll.PayrollLegalParameter>();
     public DbSet<Payroll.CollectiveAgreement> CollectiveAgreements => Set<Payroll.CollectiveAgreement>();
     public DbSet<Payroll.AgreementCategory> AgreementCategories => Set<Payroll.AgreementCategory>();
     public DbSet<Payroll.AgreementScale> AgreementScales => Set<Payroll.AgreementScale>();
     public DbSet<Payroll.AgreementRule> AgreementRules => Set<Payroll.AgreementRule>();
+    public DbSet<Payroll.PayrollRun> PayrollRuns => Set<Payroll.PayrollRun>();
+    public DbSet<Payroll.PayrollNovelty> PayrollNovelties => Set<Payroll.PayrollNovelty>();
+    public DbSet<Payroll.Payslip> Payslips => Set<Payroll.Payslip>();
+    public DbSet<Payroll.PayslipLine> PayslipLines => Set<Payroll.PayslipLine>();
     public DbSet<EmployeeTimeTracking> TimeTrackings => Set<EmployeeTimeTracking>();
     public DbSet<EppDelivery> EppDeliveries => Set<EppDelivery>();
 
@@ -340,6 +270,63 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.HasIndex(x => new { x.TenantId, x.Key, x.ValidFrom });
         });
 
+        modelBuilder.Entity<Payroll.PayrollRun>(b =>
+        {
+            b.ToTable("PayrollRuns");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Kind).HasMaxLength(20).IsRequired();
+            b.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            b.Property(x => x.LastDepositPeriod).HasMaxLength(7);
+            b.Property(x => x.LastDepositBank).HasMaxLength(120);
+            b.Property(x => x.ClosedBy).HasMaxLength(160);
+            b.HasIndex(x => new { x.TenantId, x.Year, x.Month, x.Number }).IsUnique();
+        });
+        modelBuilder.Entity<Payroll.PayrollNovelty>(b =>
+        {
+            b.ToTable("PayrollNovelties");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Kind).HasMaxLength(40).IsRequired();
+            b.Property(x => x.Description).HasMaxLength(200);
+            b.Property(x => x.Quantity).HasPrecision(9, 2);
+            b.Property(x => x.Amount).HasPrecision(18, 2);
+            b.HasOne<Payroll.PayrollRun>().WithMany().HasForeignKey(x => x.RunId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.RunId, x.EmployeeId });
+        });
+        modelBuilder.Entity<Payroll.Payslip>(b =>
+        {
+            b.ToTable("Payslips");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.EmployeeName).HasMaxLength(250).IsRequired();
+            b.Property(x => x.Cuil).HasMaxLength(30);
+            b.Property(x => x.FileNumber).HasMaxLength(40);
+            b.Property(x => x.Agreement).HasMaxLength(160);
+            b.Property(x => x.Category).HasMaxLength(160);
+            b.Property(x => x.Warnings).HasMaxLength(4000);
+            b.Property(x => x.ContentHash).HasMaxLength(64);
+            foreach (var p in new[] { nameof(Payroll.Payslip.AssignedSalary), nameof(Payroll.Payslip.Remunerative), nameof(Payroll.Payslip.NonRemunerative),
+                nameof(Payroll.Payslip.Deductions), nameof(Payroll.Payslip.Net), nameof(Payroll.Payslip.ContributionsBase), nameof(Payroll.Payslip.EmployeeContributionsBase),
+                nameof(Payroll.Payslip.EmployeeSocialSecurity), nameof(Payroll.Payslip.UnionDeductions), nameof(Payroll.Payslip.Advances), nameof(Payroll.Payslip.Garnishments),
+                nameof(Payroll.Payslip.OtherDeductions), nameof(Payroll.Payslip.EmployerSocialSecurity), nameof(Payroll.Payslip.Fal), nameof(Payroll.Payslip.EmployerHealth),
+                nameof(Payroll.Payslip.Art), nameof(Payroll.Payslip.LifeInsurance), nameof(Payroll.Payslip.AgreementContributions) })
+                b.Property(p).HasPrecision(18, 2);
+            b.Property(x => x.DaysWorked).HasPrecision(5, 2);
+            b.Ignore(x => x.EmployerCost);
+            b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.PayslipId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<Payroll.PayrollRun>().WithMany().HasForeignKey(x => x.RunId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.RunId, x.EmployeeId }).IsUnique();
+        });
+        modelBuilder.Entity<Payroll.PayslipLine>(b =>
+        {
+            b.ToTable("PayslipLines");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            b.Property(x => x.Kind).HasMaxLength(20).IsRequired();
+            b.Property(x => x.Detail).HasMaxLength(300);
+            b.Property(x => x.Quantity).HasPrecision(9, 2);
+            b.Property(x => x.Amount).HasPrecision(18, 2);
+        });
+
         modelBuilder.Entity<Payroll.CollectiveAgreement>(b =>
         {
             b.ToTable("CollectiveAgreements");
@@ -388,49 +375,6 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.Property(x => x.Value).HasPrecision(18, 4);
             b.HasIndex(x => new { x.AgreementId, x.Type });
             b.HasOne<Payroll.CollectiveAgreement>().WithMany().HasForeignKey(x => x.AgreementId).OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<PayrollConcept>(b =>
-        {
-            b.ToTable("PayrollConcepts");
-            b.HasKey(x => x.Id);
-            b.Property(x => x.Code).HasMaxLength(30).IsRequired();
-            b.Property(x => x.Name).HasMaxLength(160).IsRequired();
-            b.Property(x => x.DefaultPercentage).HasPrecision(8, 4);
-            b.HasIndex(x => new { x.TenantId, x.Code });
-        });
-
-        modelBuilder.Entity<PayrollPeriod>(b =>
-        {
-            b.ToTable("PayrollPeriods");
-            b.HasKey(x => x.Id);
-            b.HasIndex(x => new { x.TenantId, x.PeriodYear, x.PeriodMonth, x.PeriodType });
-        });
-
-        modelBuilder.Entity<PayrollSlip>(b =>
-        {
-            b.ToTable("PayrollSlips");
-            b.HasKey(x => x.Id);
-            b.Property(x => x.ReceiptNumber).HasMaxLength(40).IsRequired();
-            b.Property(x => x.TotalGrossRemunerative).HasPrecision(18, 2);
-            b.Property(x => x.TotalNonRemunerative).HasPrecision(18, 2);
-            b.Property(x => x.TotalDeductions).HasPrecision(18, 2);
-            b.Property(x => x.NetPay).HasPrecision(18, 2);
-            b.HasIndex(x => new { x.TenantId, x.PayrollPeriodId, x.EmployeeId });
-        });
-
-        modelBuilder.Entity<PayrollSlipLine>(b =>
-        {
-            b.ToTable("PayrollSlipLines");
-            b.HasKey(x => x.Id);
-            b.Property(x => x.ConceptCode).HasMaxLength(30).IsRequired();
-            b.Property(x => x.ConceptName).HasMaxLength(160).IsRequired();
-            b.Property(x => x.Quantity).HasPrecision(10, 2);
-            b.Property(x => x.BaseAmount).HasPrecision(18, 2);
-            b.Property(x => x.Percentage).HasPrecision(8, 4);
-            b.Property(x => x.RemunerativeAmount).HasPrecision(18, 2);
-            b.Property(x => x.NonRemunerativeAmount).HasPrecision(18, 2);
-            b.Property(x => x.DeductionAmount).HasPrecision(18, 2);
         });
 
         modelBuilder.Entity<EmployeeTimeTracking>(b =>
@@ -549,65 +493,6 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
                 ""Description"" text NOT NULL DEFAULT '',
                 ""DocumentUrl"" text,
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS hr.""PayrollConcepts"" (
-                ""Id"" uuid PRIMARY KEY,
-                ""TenantId"" uuid NOT NULL,
-                ""Code"" character varying(30) NOT NULL,
-                ""Name"" character varying(160) NOT NULL,
-                ""Type"" integer NOT NULL,
-                ""CalculationFormula"" character varying(250),
-                ""DefaultPercentage"" numeric(8,4) NOT NULL DEFAULT 0,
-                ""IsSystemDefault"" boolean NOT NULL DEFAULT false,
-                ""PrintOnReceipt"" boolean NOT NULL DEFAULT true,
-                ""LsdCodeAfip"" character varying(30)
-            );
-
-            CREATE TABLE IF NOT EXISTS hr.""PayrollPeriods"" (
-                ""Id"" uuid PRIMARY KEY,
-                ""TenantId"" uuid NOT NULL,
-                ""PeriodMonth"" integer NOT NULL,
-                ""PeriodYear"" integer NOT NULL,
-                ""PeriodType"" integer NOT NULL DEFAULT 0,
-                ""PaymentDateUtc"" timestamp with time zone NOT NULL,
-                ""BankDepositDateUtc"" timestamp with time zone,
-                ""Status"" integer NOT NULL DEFAULT 0,
-                ""Notes"" character varying(500) NOT NULL DEFAULT '',
-                ""CreatedAtUtc"" timestamp with time zone NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS hr.""PayrollSlips"" (
-                ""Id"" uuid PRIMARY KEY,
-                ""TenantId"" uuid NOT NULL,
-                ""PayrollPeriodId"" uuid NOT NULL REFERENCES hr.""PayrollPeriods""(""Id"") ON DELETE CASCADE,
-                ""EmployeeId"" uuid NOT NULL REFERENCES hr.""Employees""(""Id"") ON DELETE CASCADE,
-                ""ReceiptNumber"" character varying(40) NOT NULL,
-                ""TotalGrossRemunerative"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""TotalNonRemunerative"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""TotalDeductions"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""NetPay"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""NetPayWords"" character varying(250) NOT NULL DEFAULT '',
-                ""SignedByCompanyUtc"" timestamp with time zone,
-                ""SignedByEmployeeUtc"" timestamp with time zone,
-                ""SignatureHashSha256"" character varying(128),
-                ""Status"" character varying(30) NOT NULL DEFAULT 'Issued',
-                ""CreatedAtUtc"" timestamp with time zone NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS hr.""PayrollSlipLines"" (
-                ""Id"" uuid PRIMARY KEY,
-                ""PayrollSlipId"" uuid NOT NULL REFERENCES hr.""PayrollSlips""(""Id"") ON DELETE CASCADE,
-                ""ConceptCode"" character varying(30) NOT NULL,
-                ""ConceptName"" character varying(160) NOT NULL,
-                ""Type"" integer NOT NULL,
-                ""Quantity"" numeric(10,2) NOT NULL DEFAULT 1,
-                ""Unit"" character varying(20) NOT NULL DEFAULT 'Días',
-                ""BaseAmount"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""Percentage"" numeric(8,4) NOT NULL DEFAULT 0,
-                ""RemunerativeAmount"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""NonRemunerativeAmount"" numeric(18,2) NOT NULL DEFAULT 0,
-                ""DeductionAmount"" numeric(18,2) NOT NULL DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS hr.""TimeTrackings"" (
@@ -744,6 +629,92 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
                 ""ValidTo"" timestamp with time zone
             );
             CREATE INDEX IF NOT EXISTS ""IX_AgreementRules_Agreement"" ON hr.""AgreementRules"" (""AgreementId"", ""Type"");
+
+            -- Liquidación anterior (inventaba sueldos), retirada en la nota 68: sus tablas se borran.
+            DROP TABLE IF EXISTS hr.""PayrollSlipLines"";
+            DROP TABLE IF EXISTS hr.""PayrollSlips"";
+            DROP TABLE IF EXISTS hr.""PayrollPeriods"";
+            DROP TABLE IF EXISTS hr.""PayrollConcepts"";
+
+            CREATE TABLE IF NOT EXISTS hr.""PayrollRuns"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Year"" integer NOT NULL,
+                ""Month"" integer NOT NULL,
+                ""Number"" integer NOT NULL DEFAULT 1,
+                ""Kind"" character varying(20) NOT NULL,
+                ""PaymentDate"" timestamp with time zone NOT NULL,
+                ""Status"" character varying(20) NOT NULL,
+                ""LastDepositPeriod"" character varying(7),
+                ""LastDepositDate"" timestamp with time zone,
+                ""LastDepositBank"" character varying(120),
+                ""CalculatedAtUtc"" timestamp with time zone,
+                ""ClosedAtUtc"" timestamp with time zone,
+                ""ClosedBy"" character varying(160),
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PayrollRuns_Period"" ON hr.""PayrollRuns"" (""TenantId"", ""Year"", ""Month"", ""Number"");
+
+            CREATE TABLE IF NOT EXISTS hr.""PayrollNovelties"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RunId"" uuid NOT NULL REFERENCES hr.""PayrollRuns""(""Id"") ON DELETE CASCADE,
+                ""EmployeeId"" uuid NOT NULL,
+                ""Kind"" character varying(40) NOT NULL,
+                ""Quantity"" numeric(9,2) NOT NULL DEFAULT 0,
+                ""Amount"" numeric(18,2) NOT NULL DEFAULT 0,
+                ""Description"" character varying(200)
+            );
+            CREATE INDEX IF NOT EXISTS ""IX_PayrollNovelties_Run"" ON hr.""PayrollNovelties"" (""RunId"", ""EmployeeId"");
+
+            CREATE TABLE IF NOT EXISTS hr.""Payslips"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""RunId"" uuid NOT NULL REFERENCES hr.""PayrollRuns""(""Id"") ON DELETE CASCADE,
+                ""EmployeeId"" uuid NOT NULL,
+                ""EmployeeName"" character varying(250) NOT NULL,
+                ""Cuil"" character varying(30) NOT NULL DEFAULT '',
+                ""FileNumber"" character varying(40) NOT NULL DEFAULT '',
+                ""Agreement"" character varying(160) NOT NULL DEFAULT '',
+                ""Category"" character varying(160) NOT NULL DEFAULT '',
+                ""HireDate"" timestamp with time zone NOT NULL,
+                ""AssignedSalary"" numeric(18,2) NOT NULL,
+                ""DaysWorked"" numeric(5,2) NOT NULL,
+                ""Remunerative"" numeric(18,2) NOT NULL,
+                ""NonRemunerative"" numeric(18,2) NOT NULL,
+                ""Deductions"" numeric(18,2) NOT NULL,
+                ""Net"" numeric(18,2) NOT NULL,
+                ""ContributionsBase"" numeric(18,2) NOT NULL,
+                ""EmployeeContributionsBase"" numeric(18,2) NOT NULL,
+                ""EmployeeSocialSecurity"" numeric(18,2) NOT NULL,
+                ""UnionDeductions"" numeric(18,2) NOT NULL,
+                ""Advances"" numeric(18,2) NOT NULL,
+                ""Garnishments"" numeric(18,2) NOT NULL,
+                ""OtherDeductions"" numeric(18,2) NOT NULL,
+                ""EmployerSocialSecurity"" numeric(18,2) NOT NULL,
+                ""Fal"" numeric(18,2) NOT NULL,
+                ""EmployerHealth"" numeric(18,2) NOT NULL,
+                ""Art"" numeric(18,2) NOT NULL,
+                ""LifeInsurance"" numeric(18,2) NOT NULL,
+                ""AgreementContributions"" numeric(18,2) NOT NULL,
+                ""Warnings"" character varying(4000),
+                ""ContentHash"" character varying(64),
+                ""SignedAtUtc"" timestamp with time zone,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_Payslips_Run_Employee"" ON hr.""Payslips"" (""RunId"", ""EmployeeId"");
+
+            CREATE TABLE IF NOT EXISTS hr.""PayslipLines"" (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""PayslipId"" uuid NOT NULL REFERENCES hr.""Payslips""(""Id"") ON DELETE CASCADE,
+                ""Order"" integer NOT NULL,
+                ""Code"" character varying(20) NOT NULL,
+                ""Name"" character varying(200) NOT NULL,
+                ""Kind"" character varying(20) NOT NULL,
+                ""Quantity"" numeric(9,2) NOT NULL DEFAULT 0,
+                ""Amount"" numeric(18,2) NOT NULL,
+                ""Detail"" character varying(300)
+            );
         ", ct);
         await Payroll.PayrollLegalSeed.EnsureAsync(this, ct);
     }
@@ -755,6 +726,7 @@ public static class HumanResourcesModule
     {
         services.AddTenantDbContext<HumanResourcesDbContext>(HumanResourcesDbContext.Schema);
         services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<LealControl.Modules.Accounting.Contracts.Posting.IAccountingDocumentSource, Payroll.PayrollAccountingSource>();
 
         return services;
     }
@@ -1168,6 +1140,7 @@ public static class HumanResourcesModule
 
         Payroll.PayrollConfigurationEndpoints.MapPayrollConfigurationEndpoints(group);
         Payroll.AgreementEndpoints.MapAgreementEndpoints(group);
+        Payroll.PayrollRunEndpoints.MapPayrollRunEndpoints(group);
 
         // La liquidación de sueldos se está rehaciendo (nota 68): el cálculo anterior inventaba sueldos y el
         // Libro de Sueldos Digital no era el de ARCA. Las tablas de períodos, conceptos y recibos se conservan

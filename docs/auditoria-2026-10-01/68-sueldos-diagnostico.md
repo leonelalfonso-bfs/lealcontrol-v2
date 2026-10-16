@@ -106,7 +106,7 @@ Cada entrega termina con su **manual de Ayuda**. Desde S3 se **compara con los r
   - el Libro de Sueldos Digital falso;
   - la planilla bancaria;
   - los endpoints de períodos, conceptos y recibos que la pantalla llamaba con rutas equivocadas.
-- **Las tablas** de períodos, conceptos y recibos **se conservan** hasta S3, que decide con conteo previo.
+- **Las tablas** de períodos, conceptos y recibos **se conservaron** hasta S3, que las borró (ver S3).
 - **Se retiró el "asistente de convenios con IA" (Gemini):** solo lo usaba esa pantalla y proponía escalas sin control. Si en S2 conviene leer escalas desde el PDF del acuerdo, se rehace con revisión humana. El lector de facturas con IA sigue.
 - **La pantalla de liquidación** explica que está en reconstrucción y por qué, con las etapas.
 - **La Ayuda de RRHH** prometía un Libro de Sueldos "listo para AFIP" y un presentismo que no existía. Se rehízo como manual de lo que funciona: legajos, documentos, EPP, organigrama, manuales y el estado de sueldos.
@@ -180,20 +180,28 @@ Cada entrega termina con su **manual de Ayuda**. Desde S3 se **compara con los r
   - tope del 2 %;
   - legajo con zona controlada y marcas.
 
-### S3. Liquidación mensual
+### S3. Liquidación mensual (hecha, PR "Sueldos S3")
 
-- **Novedades del mes por empleado:**
-  - horas extra al 50 % y al 100 %, banco de horas;
-  - ausencias, licencias (enfermedad, vacaciones, especiales);
-  - adelantos, embargos y conceptos fijos.
-- **Cálculo:**
-  - básico, adicionales del convenio, horas extra, feriados;
-  - proporcionales por ingreso o egreso en el mes;
-  - aportes con los topes del mes y aportes sindicales;
-  - contribuciones (18 %, obra social 6 %, FAL desde noviembre de 2026, detracción, ART, seguro de vida).
-- **Recibo legal** (art. 140 LCT) en PDF, con firma digital del empleado (Ley 27.802).
-- **Cierre del período y asiento contable automático:** reemplaza al asiento manual de Contabilidad (C5).
-- **Validación:** comparar un mes completo con los recibos del estudio.
+- **Liquidación del mes** (una mensual por mes): borrador → calcular → cerrar → contabilizar; reabrir con contra-asiento.
+- **Novedades por empleado:**
+  - horas extra al 50 % y al 100 % (valor hora = remuneración mensual / divisor del convenio);
+  - inasistencias y licencias sin goce (descuentan 1/30 por día y hacen perder la asistencia perfecta), licencias pagas, "pierde asistencia";
+  - adelantos, embargos (aviso si pasan el 20 %), otros haberes remunerativos y no remunerativos, otros descuentos.
+- **Cálculo** (`PayrollCalculator`):
+  - básico y reglas del convenio (o sueldo del legajo), proporcional por ingreso o egreso en el mes (días/30);
+  - aportes 11 / 3 / 3 sobre la base con tope máximo y mínimo del mes (el mínimo no se aplica a tiempo parcial);
+  - cuota sindical y solidarios recalculados sobre la remuneración final;
+  - contribuciones con detracción proporcional, FAL descontado de las contribuciones (desde 11/2026), obra social 6 %, ART (% + fijo) y seguro de vida.
+  - Un colaborador con error (sin escala, sin sueldo, neto negativo) se lista y **bloquea el cierre**.
+- **Recibo** (art. 140 LCT): original y duplicado, neto en letras, último depósito de aportes (obligatorio para cerrar), huella SHA-256 que avisa si el recibo cambió y registro de la fecha de firma.
+- **Asiento AM-SUE-01** por el módulo Sueldos de "Contabilizar". El asiento manual de sueldos de Cierres (C5) queda para cuando liquida el estudio.
+- **Se borraron las tablas de la liquidación vieja** (períodos, conceptos, recibos y líneas): en producción, 1 período y 1 recibo de prueba.
+- **Quedan para después:**
+  - banco de horas y feriados trabajados;
+  - conceptos fijos mensuales por empleado (hoy se cargan como novedad cada mes);
+  - firma digital del recibo (hoy se registra la fecha de firma en papel);
+  - vacaciones (S4).
+- **Validación pendiente:** comparar un mes completo con los recibos del estudio.
 
 ### S4. Aguinaldo y vacaciones
 

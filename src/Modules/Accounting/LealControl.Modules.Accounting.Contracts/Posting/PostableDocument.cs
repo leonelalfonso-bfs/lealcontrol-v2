@@ -87,6 +87,15 @@ public static class AccountingAmountSources
     public const string RetentionAmount = "RetentionAmount";
     public const string ImputedAmount = "ImputedAmount";
     public const string AdvanceAmount = "AdvanceAmount";
+    // Sueldos (liquidación de RRHH).
+    public const string GrossSalaries = "GrossSalaries";             // haberes remunerativos y no remunerativos
+    public const string EmployerCharges = "EmployerCharges";         // contribuciones, FAL, ART, seguro de vida y del convenio
+    public const string NetSalaries = "NetSalaries";                 // neto a pagar
+    public const string SocialSecurityToPay = "SocialSecurityToPay"; // F.931: aportes + contribuciones + ART + seguro de vida
+    public const string UnionToPay = "UnionToPay";                   // cuotas, solidarios y contribuciones al sindicato
+    public const string SalaryAdvances = "SalaryAdvances";           // adelantos recuperados
+    public const string GarnishmentsToPay = "GarnishmentsToPay";     // embargos a depositar
+    public const string OtherSalaryDeductions = "OtherSalaryDeductions";
     public const string ExchangeGain = "ExchangeGain"; // Diferencia de cambio positiva realizada en el cobro
     public const string ExchangeLoss = "ExchangeLoss"; // Diferencia de cambio negativa realizada en el cobro
     public const string BankFee = "BankFee";

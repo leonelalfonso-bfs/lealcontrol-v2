@@ -62,6 +62,7 @@ export function AccountingHelpPage() {
           <li><strong>Ventas</strong>: entran las facturas, notas de débito y notas de crédito <strong>autorizadas por ARCA</strong> (con CAE). Los borradores, rechazados y proformas no se contabilizan.</li>
           <li><strong>Compras</strong>: entran las facturas y notas de proveedor registradas (no las anuladas).</li>
           <li><strong>Finanzas</strong>: entran los recibos de cobro y las órdenes de pago.</li>
+          <li><strong>Sueldos</strong>: entra cada liquidación de RRHH <strong>cerrada</strong>, con fecha del último día del mes liquidado.</li>
           <li>
             <strong>Todo en pesos</strong>: un comprobante en dólares se convierte a la cotización del propio comprobante. La moneda, la cotización y el
             total originales quedan guardados como dato del documento.
@@ -76,7 +77,7 @@ export function AccountingHelpPage() {
       <ManualPart id="contabilizar" title="4. Contabilizar un período">
         <Steps>
           <Step title="Contabilidad → Tablero → “🔴 ► CONTABILIZAR”." />
-          <Step title="Elegí el período (Hoy, Últ. Semana, Mes Actual o fechas a mano) y los módulos: Ventas, Compras y Finanzas.">
+          <Step title="Elegí el período (Hoy, Últ. Semana, Mes Actual o fechas a mano) y los módulos: Ventas, Compras, Finanzas y Sueldos.">
             Lo normal es contabilizar el mes completo antes de cerrarlo.
           </Step>
           <Step title="“👁️ Vista Previa de Asientos →”.">
@@ -104,6 +105,7 @@ export function AccountingHelpPage() {
           <li><strong>AM-CMP-NC</strong> (notas de crédito de proveedor): el mismo asiento, invertido.</li>
           <li><strong>AM-VTA-DC-ND y AM-VTA-DC-NC</strong>: notas de débito y crédito por diferencia de cambio (el neto va a diferencia de cambio).</li>
           <li><strong>AM-FIN-01 y AM-FIN-02</strong>: cobros y pagos de Finanzas. El de cobros incluye la diferencia de cambio de los cobros en dólares.</li>
+          <li><strong>AM-SUE-01</strong> (liquidación de sueldos): Sueldos y Jornales (5.2.01) y Cargas Sociales (5.2.02) al Debe; Sueldos a Pagar (2.1.02.004), Cargas Sociales a Pagar (2.1.02.003), Cuotas y Aportes Sindicales (2.1.02.007), Anticipos de Sueldos (1.1.02.003) y Embargos Judiciales a Depositar (2.1.02.008) al Haber.</li>
         </ul>
         <Steps>
           <Step title="Para usar otras cuentas (por ejemplo, separar ventas de servicios), entrá al modelo y cambiá la cuenta de la línea.">
@@ -278,8 +280,8 @@ export function AccountingHelpPage() {
             Borra sus tres asientos de cierre y abre sus meses; después se vuelve a cerrar.
           </Step>
           <Step title="Sueldos: “📝 Contabilizar Asiento de Sueldos y F.931” con los totales de la liquidación del mes.">
-            Los importes tienen que cuadrar: brutos más contribuciones igual a netos más cargas a pagar. Por ahora se cargan a mano, con los
-            totales del liquidador de sueldos; cuando RRHH liquide los sueldos, el asiento va a salir de ahí.
+            Solo cuando los sueldos se liquidan afuera (estudio contable). Los importes tienen que cuadrar: brutos más contribuciones igual a
+            netos más cargas a pagar. Si el mes se liquidó en RRHH, no lo cargues a mano: el asiento sale al contabilizar el módulo Sueldos.
           </Step>
         </Steps>
       </ManualPart>
