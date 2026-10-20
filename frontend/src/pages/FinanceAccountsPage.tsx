@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { fileToBase64, fileToText } from "../lib/files";
 import { api } from "../api/client";
 import { Modal } from "../components/ui/Modal";
 import { exportToExcel, type ExcelColumn } from "../components/ExcelTools";
@@ -112,6 +113,8 @@ export function FinanceAccountsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importCsv, setImportCsv] = useState("");
   const [importFileName, setImportFileName] = useState("");
+  const [importBase64, setImportBase64] = useState("");
+  const importSource = () => (importBase64 ? { fileBase64: importBase64, fileName: importFileName } : { csvContent: importCsv });
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [importSummary, setImportSummary] = useState<any | null>(null);
   const [importRequiresMapping, setImportRequiresMapping] = useState(false);
@@ -258,6 +261,10 @@ export function FinanceAccountsPage() {
     setImportHeaders(preview.headers || []);
     setImportPreview(preview.rows || []);
     setImportSummary(preview.summary || null);
+    if (preview.bank) {
+      setSuccessMsg(`Extracto de ${preview.bank} reconocido: no hace falta mapear columnas.`);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    }
     if (preview.requiresMapping && (preview.headers || []).length) {
       const headers: string[] = preview.headers;
       const guess = (names: string[]) => {
@@ -278,7 +285,7 @@ export function FinanceAccountsPage() {
   };
 
   const saveColumnProfileAndPreview = async () => {
-    if (!selectedAccount || !importCsv.trim()) return;
+    if (!selectedAccount || (!importBase64 && !importCsv.trim())) return;
     if (columnMap.date === "") {
       setError("Indicá la columna de Fecha.");
       return;
@@ -306,7 +313,7 @@ export function FinanceAccountsPage() {
           balance: toIdx(columnMap.balance)
         }
       });
-      const preview = await api.previewFinanceBankImport(selectedAccount.id, importCsv);
+      const preview = await api.previewFinanceBankImport(selectedAccount.id, importSource());
       applyPreviewResult(preview);
       setSuccessMsg("Perfil de columnas guardado. Los próximos extractos usarán este mapeo.");
       setTimeout(() => setSuccessMsg(null), 4000);
@@ -504,31 +511,27 @@ export function FinanceAccountsPage() {
   };
 
   // CSV Import handlers
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setImportFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      setImportCsv(text);
-      if (selectedAccount && text.trim()) {
-        try {
-          setImportLoading(true);
-          const preview = await api.previewFinanceBankImport(selectedAccount.id, text);
-          applyPreviewResult(preview);
-        } catch (err: any) {
-          setError(err.message || "Error al previsualizar extracto.");
-        } finally {
-          setImportLoading(false);
-        }
-      }
-    };
-    reader.readAsText(file, "ISO-8859-1"); // Standard encoding for Argentina bank CSVs
+    const base64 = await fileToBase64(file);
+    setImportBase64(base64);
+    setImportCsv(/\.xlsx?$/i.test(file.name) ? "" : await fileToText(file));
+    if (!selectedAccount) return;
+    try {
+      setImportLoading(true);
+      const preview = await api.previewFinanceBankImport(selectedAccount.id, { fileBase64: base64, fileName: file.name });
+      applyPreviewResult(preview);
+    } catch (err: any) {
+      setError(err.message || "Error al previsualizar extracto.");
+    } finally {
+      setImportLoading(false);
+    }
   };
 
   const handleConfirmImport = async () => {
-    if (!selectedAccount || !importCsv.trim()) return;
+    if (!selectedAccount || (!importBase64 && !importCsv.trim())) return;
     if (importRequiresMapping) {
       setError("Primero mapeá las columnas del CSV y guardá el perfil.");
       return;
@@ -536,10 +539,11 @@ export function FinanceAccountsPage() {
     setImportLoading(true);
     setError(null);
     try {
-      const res = await api.confirmFinanceBankImport(selectedAccount.id, importCsv, importFileName || undefined);
+      const res = await api.confirmFinanceBankImport(selectedAccount.id, importSource());
       setShowImportModal(false);
       setImportCsv("");
       setImportFileName("");
+      setImportBase64("");
       setImportPreview([]);
       setImportSummary(null);
       setImportRequiresMapping(false);
@@ -744,6 +748,7 @@ export function FinanceAccountsPage() {
                     setShowImportModal(true);
                     setImportCsv("");
                     setImportFileName("");
+                    setImportBase64("");
                     setImportPreview([]);
                     setImportSummary(null);
                     setImportRequiresMapping(false);
@@ -1295,7 +1300,7 @@ export function FinanceAccountsPage() {
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={importLoading || !importCsv.trim() || importRequiresMapping}
+                disabled={importLoading || (!importBase64 && !importCsv.trim()) || importRequiresMapping}
                 onClick={handleConfirmImport}
                 style={{ fontWeight: 700 }}
               >
@@ -1324,7 +1329,7 @@ export function FinanceAccountsPage() {
                   <strong>Seleccionar archivo CSV:</strong>
                   <input
                     type="file"
-                    accept=".csv,.txt"
+                    accept=".csv,.txt,.xls,.xlsx"
                     onChange={handleFileChange}
                     style={{ marginTop: 6, display: "block" }}
                   />
@@ -1338,9 +1343,10 @@ export function FinanceAccountsPage() {
                     onChange={async (e) => {
                       const text = e.target.value;
                       setImportCsv(text);
+                      setImportBase64("");
                       if (text.trim()) {
                         try {
-                          const preview = await api.previewFinanceBankImport(selectedAccount.id, text);
+                          const preview = await api.previewFinanceBankImport(selectedAccount.id, { csvContent: text });
                           applyPreviewResult(preview);
                         } catch {
                           setImportPreview([]);

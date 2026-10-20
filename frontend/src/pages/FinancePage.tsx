@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
+import { fileToBase64, fileToText } from "../lib/files";
 
 type Account = {
   id: string;
@@ -30,6 +31,7 @@ export function FinancePage() {
   const [error, setError] = useState<string | null>(null);
   const [accountId, setAccountId] = useState("");
   const [csv, setCsv] = useState("");
+  const [file, setFile] = useState<{ fileBase64: string; fileName: string } | null>(null);
   const [preview, setPreview] = useState<ImportRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [showAccountForm, setShowAccountForm] = useState(false);
@@ -57,14 +59,18 @@ export function FinancePage() {
     void load();
   }, []);
 
-  const readFile = async (file: File) => setCsv(await file.text());
+  const readFile = async (f: File) => {
+    setFile({ fileBase64: await fileToBase64(f), fileName: f.name });
+    setCsv(/\.xlsx?$/i.test(f.name) ? "" : await fileToText(f));
+  };
+  const source = () => (file ? file : { csvContent: csv });
 
   const doPreview = async () => {
-    if (!accountId || !csv.trim()) return setError("Elegí una cuenta y cargá un CSV.");
+    if (!accountId || (!file && !csv.trim())) return setError("Elegí una cuenta y cargá el extracto.");
     setBusy(true);
     setError(null);
     try {
-      const result = await api.previewFinanceBankImport(accountId, csv);
+      const result = await api.previewFinanceBankImport(accountId, source());
       if (result.requiresMapping) {
         setPreview([]);
         setError("No se reconocieron las columnas. Abrí la cuenta y usá el asistente de mapeo, o descargá la plantilla LealControl.");
@@ -81,9 +87,10 @@ export function FinancePage() {
   const confirm = async () => {
     setBusy(true);
     try {
-      const result = await api.confirmFinanceBankImport(accountId, csv);
+      const result = await api.confirmFinanceBankImport(accountId, source());
       setPreview([]);
       setCsv("");
+      setFile(null);
       await load();
       alert(
         `Importados: ${result.imported}. Duplicados: ${result.duplicates}. Rechazadas: ${result.rejected}` +
@@ -257,7 +264,7 @@ export function FinancePage() {
             <input
               ref={fileRef}
               type="file"
-              accept=".csv,.txt"
+              accept=".csv,.txt,.xls,.xlsx"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) void readFile(file);
@@ -267,13 +274,13 @@ export function FinancePage() {
         </div>
         <textarea
           value={csv}
-          onChange={(e) => setCsv(e.target.value)}
+          onChange={(e) => { setFile(null); setCsv(e.target.value); }}
           rows={5}
           placeholder={"Fecha;Importe;Descripción;Referencia\n15/08/2026;125000;Transferencia recibida;TRX-001"}
           style={{ width: "100%", marginTop: 14 }}
         />
         <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 14 }}>
-          <button className="btn btn-outline" disabled={busy || !csv.trim()} onClick={() => void doPreview()}>
+          <button className="btn btn-outline" disabled={busy || (!file && !csv.trim())} onClick={() => void doPreview()}>
             Vista previa
           </button>
           {preview.length > 0 && (

@@ -186,12 +186,13 @@ export const api = {
     delimiter?: string;
     dateFormat?: string;
   }) => request<BankImportProfile>("/api/v1/finance/imports/bank/profiles", { method: "PUT", body: JSON.stringify(body) }),
-  previewFinanceBankImport: (accountId: string, csvContent: string, profileId?: string) =>
+  /** El archivo va tal como lo baja el banco (CSV o Excel): el servidor reconoce Galicia, Santander y BBVA. */
+  previewFinanceBankImport: (accountId: string, source: import("./types/finance").BankImportSource, profileId?: string) =>
     request<BankImportPreviewResult>("/api/v1/finance/imports/bank/preview", {
       method: "POST",
-      body: JSON.stringify({ accountId, csvContent, profileId: profileId || null })
+      body: JSON.stringify({ accountId, ...source, profileId: profileId || null })
     }),
-  confirmFinanceBankImport: (accountId: string, csvContent: string, fileName?: string, profileId?: string) =>
+  confirmFinanceBankImport: (accountId: string, source: import("./types/finance").BankImportSource, profileId?: string) =>
     request<{
       imported: number;
       updated?: number;
@@ -201,7 +202,7 @@ export const api = {
       suggestedMatches?: unknown[];
     }>("/api/v1/finance/imports/bank/confirm", {
       method: "POST",
-      body: JSON.stringify({ accountId, csvContent, fileName: fileName || null, profileId: profileId || null })
+      body: JSON.stringify({ accountId, ...source, profileId: profileId || null })
     }),
   listFinanceMovements: (accountId: string) => request<{ id: string; operationDateUtc: string; kind: string; amount: number; currency: string; description: string; externalReference?: string; transferId?: string; reconciliationStatus: number; linkedEntityType?: string; linkedEntityId?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements`),
     listCollectionAvailableMovements: (accountId?: string, conceptId?: string) => {

@@ -15,7 +15,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Modules.Finance.Infrastructure;
 
-public sealed record BankImportRequest(Guid AccountId, string CsvContent, string? FileName = null, Guid? ProfileId = null);
+/// <summary>El archivo va en FileBase64 tal como lo baja el banco (CSV o Excel); CsvContent queda para texto ya leído.</summary>
+public sealed record BankImportRequest(Guid AccountId, string? CsvContent = null, string? FileName = null, Guid? ProfileId = null, string? FileBase64 = null);
 public sealed record BankImportRow(
     DateTime OperationDateUtc,
     decimal Amount,
@@ -23,7 +24,10 @@ public sealed record BankImportRow(
     string Description,
     string? ExternalReference,
     decimal? ReportedBalance,
-    string? Error = null);
+    string? Error = null,
+    string? CounterpartyTaxId = null,
+    string? CounterpartyName = null,
+    string? BankCode = null);
 public sealed record ReconcileMovementRequest(string EntityType, Guid EntityId);
 
 public sealed record BankColumnMap(
@@ -164,7 +168,7 @@ public static class FinanceImport
                 return Results.NotFound("Cuenta financiera inexistente.");
 
             var profile = await ResolveProfileAsync(db, tenantId, request.AccountId, request.ProfileId, ct);
-            var parseResult = ParseWithOptions(request.CsvContent, profile);
+            var (parseResult, bank) = ParseRequest(request, profile);
             if (parseResult.RequiresMapping)
             {
                 return Results.Ok(new
@@ -182,6 +186,7 @@ public static class FinanceImport
             return Results.Ok(new
             {
                 RequiresMapping = false,
+                Bank = bank,
                 Headers = parseResult.Headers,
                 HasProfile = profile is not null,
                 ProfileId = profile?.Id,
@@ -204,7 +209,7 @@ public static class FinanceImport
             if (account.BookingMode == FinancialAccountBookingMode.Manual)
                 return Results.BadRequest("Esta cuenta es de carga manual. No admite importación de extractos.");
 
-            var fileHash = ComputeFileHash(request.CsvContent);
+            var fileHash = ComputeFileHash(request);
             var priorImport = await db.BankStatementImports.AsNoTracking()
                 .Where(x => x.TenantId == tenantId && x.AccountId == request.AccountId && x.FileHash == fileHash)
                 .Select(x => new { x.CreatedAtUtc })
@@ -218,7 +223,7 @@ public static class FinanceImport
             }
 
             var profile = await ResolveProfileAsync(db, tenantId, request.AccountId, request.ProfileId, ct);
-            var parseResult = ParseWithOptions(request.CsvContent, profile);
+            var (parseResult, _) = ParseRequest(request, profile);
             if (parseResult.RequiresMapping)
                 return Results.BadRequest("No se reconocieron las columnas del CSV. Guardá un perfil de mapeo o usá la plantilla LealControl.");
 
@@ -288,6 +293,9 @@ public static class FinanceImport
                     Description = row.Description,
                     ExternalReference = row.ExternalReference,
                     ReportedBalance = row.ReportedBalance,
+                    CounterpartyTaxId = row.CounterpartyTaxId,
+                    CounterpartyName = row.CounterpartyName,
+                    BankCode = row.BankCode,
                     Origin = FinancialMovementOrigin.Imported,
                     ImportId = importId,
                     CreatedAtUtc = DateTime.UtcNow
@@ -863,7 +871,7 @@ public static class FinanceImport
     private static bool TryParseDate(string dateRaw, string[] formats, out DateTime date) =>
         DateTime.TryParseExact(dateRaw, formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out date);
 
-    private static List<List<string>> ReadCsvRecords(string content, char delimiter)
+    internal static List<List<string>> ReadCsvRecords(string content, char delimiter)
     {
         var result = new List<List<string>>();
         var row = new List<string>();
@@ -942,6 +950,26 @@ public static class FinanceImport
 
     public static string ComputeFileHash(string csvContent) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(csvContent))).ToLowerInvariant();
+
+    private static string ComputeFileHash(BankImportRequest request) =>
+        request.FileBase64 is { Length: > 0 } b64
+            ? Convert.ToHexString(SHA256.HashData(Convert.FromBase64String(b64))).ToLowerInvariant()
+            : ComputeFileHash(request.CsvContent ?? "");
+
+    /// <summary>Un banco conocido por su formato (Galicia, Santander, BBVA); si no, el importador genérico con perfil.</summary>
+    private static (ParseOutcome Outcome, string? Bank) ParseRequest(BankImportRequest request, BankImportProfile? profile)
+    {
+        if (request.FileBase64 is { Length: > 0 } b64)
+        {
+            byte[] bytes;
+            try { bytes = Convert.FromBase64String(b64); }
+            catch (FormatException) { return (new ParseOutcome([], [], RequiresMapping: true), null); }
+            if (BankStatementFormats.TryParse(bytes, request.FileName) is { } known)
+                return (new ParseOutcome(known.Rows, [], RequiresMapping: false), known.Bank);
+            return (ParseWithOptions(BankStatementFormats.DecodeText(bytes), profile), null);
+        }
+        return (ParseWithOptions(request.CsvContent ?? "", profile), null);
+    }
 
     public static string NormalizeReference(string? reference) =>
         string.IsNullOrWhiteSpace(reference) ? "" : reference.Trim().ToUpperInvariant();

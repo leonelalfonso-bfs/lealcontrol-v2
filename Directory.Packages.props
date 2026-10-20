@@ -5,6 +5,7 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="ExcelDataReader" Version="3.7.0" />
     <PackageVersion Include="MailKit" Version="4.17.0" />
     <!-- La trae MailKit; 10.0.0 a 10.0.12 tienen CVE-2026-84008 (denegación de servicio). -->
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
