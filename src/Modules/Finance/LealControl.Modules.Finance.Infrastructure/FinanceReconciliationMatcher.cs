@@ -15,7 +15,7 @@ internal sealed record ReconciliationMatchSuggestion(
 
 internal static class FinanceReconciliationMatcher
 {
-    private static readonly TimeSpan DateTolerance = TimeSpan.FromDays(2);
+    private static readonly TimeSpan DateTolerance = FinanceReconciliationTray.DateTolerance;
 
     public static async Task<List<ReconciliationMatchSuggestion>> FindSuggestionsAsync(
         FinanceDbContext db,
@@ -76,60 +76,6 @@ internal static class FinanceReconciliationMatcher
         }
 
         return suggestions;
-    }
-
-    public static async Task<(bool Ok, string? Error)> ConfirmMatchAsync(
-        FinanceDbContext db,
-        Guid tenantId,
-        Guid importedMovementId,
-        Guid systemMovementId,
-        CancellationToken ct)
-    {
-        var imported = await db.Movements.SingleOrDefaultAsync(
-            x => x.Id == importedMovementId && x.TenantId == tenantId, ct);
-        var system = await db.Movements.SingleOrDefaultAsync(
-            x => x.Id == systemMovementId && x.TenantId == tenantId, ct);
-
-        if (imported is null || system is null)
-        {
-            return (false, "Uno de los movimientos no existe.");
-        }
-
-        if (imported.Origin != FinancialMovementOrigin.Imported)
-        {
-            return (false, "El movimiento del extracto debe ser de origen Imported.");
-        }
-
-        if (system.Origin != FinancialMovementOrigin.System)
-        {
-            return (false, "El movimiento del sistema debe ser de origen System.");
-        }
-
-        if (system.ReconciliationStatus != FinancialReconciliationStatus.PendingBank)
-        {
-            return (false, "El movimiento del sistema no está pendiente de respaldo bancario.");
-        }
-
-        if (imported.AccountId != system.AccountId || imported.Kind != system.Kind || imported.Amount != system.Amount)
-        {
-            return (false, "Los movimientos no coinciden en cuenta, tipo o importe.");
-        }
-
-        var impRef = FinanceImport.NormalizeReference(imported.ExternalReference);
-        var sysRef = FinanceImport.NormalizeReference(system.ExternalReference);
-        if (!string.IsNullOrEmpty(impRef) && !string.IsNullOrEmpty(sysRef) && impRef != sysRef)
-        {
-            return (false, "Las referencias externas no coinciden.");
-        }
-
-        if (Math.Abs((imported.OperationDateUtc.Date - system.OperationDateUtc.Date).TotalDays) > DateTolerance.TotalDays)
-        {
-            return (false, "Las fechas están fuera de la tolerancia de match (±2 días).");
-        }
-
-        FinanceImport.ApplyMatchInMemory(imported, system);
-        await db.SaveChangesAsync(ct);
-        return (true, null);
     }
 
     public static async Task<(bool Ok, string? Error)> UnmatchAsync(

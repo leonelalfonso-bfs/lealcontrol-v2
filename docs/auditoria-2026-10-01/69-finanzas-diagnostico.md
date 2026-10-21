@@ -137,6 +137,21 @@ Los archivos quedan en la PC del dueño; no se suben al repositorio.
 - Validado contra los archivos reales: Galicia 286 renglones con el saldo continuo en 285 de 285, Santander 5 y BBVA 14, sin errores.
 - Credicoop queda pendiente: llega el 21/10.
 
+**F1b (hecha):**
+- **Bandeja de conciliación** por cuenta, con la acción sugerida para cada movimiento y confirmación masiva:
+  - pago o cobro del sistema: ±5 días, desempatando por el CUIT del banco contra el del proveedor o cliente y por la fecha más cercana;
+  - eCheq por número;
+  - crear OP o recibo precargado;
+  - gasto o impuesto;
+  - sin identificar.
+- **Clasificación de fábrica** de los textos del banco cuando no hay regla propia: impuesto al cheque, SIRCREB, IVA, percepciones, comisiones, intereses, FIMA y haberes.
+  - Sobre el extracto real de Galicia, 255 de 286 renglones quedan clasificados o con contraparte. Los 31 restantes (débitos automáticos, compras con débito, VEP, Visa) necesitan una regla de la empresa.
+- Se retiraron la consulta y la conciliación uno a uno anteriores.
+- **Queda:**
+  - uno contra varios (una transferencia que paga varias OP);
+  - Credicoop;
+  - propuesta de imputación de facturas al crear la OP desde el débito.
+
 
 1. **Formatos de extracto incorporados.**
    - Galicia y Santander tal como bajan del home banking; Credicoop y BBVA cuando lleguen.
