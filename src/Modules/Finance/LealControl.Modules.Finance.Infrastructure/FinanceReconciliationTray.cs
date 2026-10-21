@@ -224,7 +224,7 @@ public static partial class FinanceReconciliationTray
         {
             try
             {
-                var rows = await db.Database.SqlQuery<CustomerTaxIdRow>($@"SELECT ""Id"", ""TaxId"" FROM crm.""Customers"" WHERE ""TenantId"" = {tenantId} AND ""Id"" = ANY({customerIds.ToArray()})").ToListAsync(ct);
+                var rows = await db.Database.SqlQuery<CustomerTaxIdRow>($@"SELECT ""Id"", document_number AS ""TaxId"" FROM crm.customers WHERE ""TenantId"" = {tenantId} AND ""Id"" = ANY({customerIds.ToArray()})").ToListAsync(ct);
                 customerTaxIds = rows.Where(r => r.TaxId != null).ToDictionary(r => r.Id, r => Digits(r.TaxId));
             }
             catch (Npgsql.PostgresException)

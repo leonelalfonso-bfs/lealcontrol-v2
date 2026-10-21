@@ -138,6 +138,27 @@ export function FinanceHelpPage() {
         </Steps>
       </ManualPart>
 
+      <ManualPart id="sufridas" title="6 ter. Retenciones y percepciones sufridas (Convenio Multilateral · SIFERE)">
+        <Steps>
+          <Step title="Una vez: Finanzas → Retenciones y percepciones sufridas → elegí la jurisdicción de las percepciones de IIBB.">
+            Es la que se usa para las percepciones de IIBB de las facturas de compra que no tengan otra elegida (en general, la
+            provincia del proveedor que percibe). Se puede cambiar factura por factura en el detalle.
+          </Step>
+          <Step title="Al registrar un recibo de cobro con medio “Retención” de IIBB, elegí la jurisdicción (901 CABA, 902 Buenos Aires, 921 Santa Fe…).">
+            Cargá también el número de certificado (por ejemplo 0001-00012345): de ahí salen la sucursal y el número de constancia
+            que pide SIFERE. Las retenciones de Ganancias, IVA y SUSS se listan igual, para controlar, pero no van a SIFERE.
+          </Step>
+          <Step title="Las percepciones de IIBB e IVA salen solas de las facturas de compra; las notas de crédito restan." />
+          <Step title="Lo que cobra el banco (SIRCREB y percepción de IVA) aparece cuando el extracto se importa y se clasifica en la conciliación.">
+            Es solo para control: las recaudaciones bancarias se toman en SIFERE desde el padrón de SIRCREB y no se exportan.
+          </Step>
+          <Step title="Elegí el período → revisá los totales por impuesto y jurisdicción → completá las jurisdicciones que falten en el detalle.">
+            Si falta una jurisdicción o el CUIT de un agente, el aviso de arriba dice cuál y los archivos no se generan hasta corregirlo.
+          </Step>
+          <Step title="“⬇️ SIFERE retenciones” y “⬇️ SIFERE percepciones” → en SIFERE WEB, importá cada archivo en la declaración jurada del mes." />
+        </Steps>
+      </ManualPart>
+
       <ManualPart id="cuentas" title="7. Cuentas corrientes">
         <ul style={{ margin: 0, display: "grid", gap: 6 }}>
           <li><Link to="/finanzas/cuenta-corriente">Cuentas corrientes</Link> calcula el saldo de cada cliente (a cobrar) y proveedor (a pagar), con su detalle de comprobantes, cobros y pagos.</li>

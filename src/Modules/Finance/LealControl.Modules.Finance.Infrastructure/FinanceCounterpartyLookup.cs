@@ -22,20 +22,12 @@ internal static partial class FinanceCounterpartyLookup
         if (string.IsNullOrWhiteSpace(cuit)) return null;
         try
         {
-            if (kind == FinancialMovementKind.Credit)
-            {
-                var ids = await db.Database.SqlQueryRaw<Guid>(
-                    @"SELECT ""Id"" FROM crm.""Customers"" WHERE ""TenantId"" = {0} AND REPLACE(REPLACE(""TaxId"", '-', ''), ' ', '') = {1} LIMIT 2",
-                    tenantId, cuit).ToListAsync(ct);
-                if (ids.Count == 1) return (ids[0], "Customer");
-            }
-            else
-            {
-                var ids = await db.Database.SqlQueryRaw<Guid>(
-                    @"SELECT ""Id"" FROM crm.""Suppliers"" WHERE ""TenantId"" = {0} AND REPLACE(REPLACE(""TaxId"", '-', ''), ' ', '') = {1} LIMIT 2",
-                    tenantId, cuit).ToListAsync(ct);
-                if (ids.Count == 1) return (ids[0], "Supplier");
-            }
+            // Clientes y proveedores viven en crm.customers (marcas IsCustomer / IsSupplier, CUIT en document_number).
+            var ids = await db.Database.SqlQueryRaw<Guid>(
+                @"SELECT ""Id"" AS ""Value"" FROM crm.customers WHERE ""TenantId"" = {0} AND (CASE WHEN {2} THEN ""IsCustomer"" ELSE ""IsSupplier"" END)
+                  AND REPLACE(REPLACE(document_number, '-', ''), ' ', '') = {1} LIMIT 2",
+                tenantId, cuit, kind == FinancialMovementKind.Credit).ToListAsync(ct);
+            if (ids.Count == 1) return (ids[0], kind == FinancialMovementKind.Credit ? "Customer" : "Supplier");
         }
         catch
         {

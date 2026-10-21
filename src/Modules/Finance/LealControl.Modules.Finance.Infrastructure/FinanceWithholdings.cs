@@ -18,6 +18,8 @@ public sealed class WithholdingSettings
     public Guid TenantId { get; set; }
     public bool IsAgent { get; set; }
     public DateTime? AgentSince { get; set; }
+    /// <summary>Jurisdicción de IIBB por defecto para las percepciones sufridas (sede de la empresa).</summary>
+    public string? DefaultJurisdiction { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
 }
 

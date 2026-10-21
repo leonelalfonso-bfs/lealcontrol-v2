@@ -181,6 +181,22 @@ Los archivos quedan en la PC del dueño; no se suben al repositorio.
   - el tipo de comprobante.
 - **Queda para después:** escala de honorarios (régimen 116), notas de crédito que ajustan retenciones, consulta del padrón de exclusiones de ARCA, y retenciones de IVA, SUSS e IIBB.
 
+**F3 retenciones y percepciones sufridas (hecha, base):**
+- **Una sola vista** (Finanzas → Retenciones y percepciones sufridas) que junta tres orígenes:
+  - las retenciones que hacen los clientes, de los renglones "Retención" de los recibos;
+  - las percepciones de IIBB e IVA de las facturas de compra (las notas de crédito restan);
+  - lo que cobra el banco y la conciliación clasificó: SIRCREB y percepción de IVA, solo para control.
+- **Jurisdicción del Convenio Multilateral (901–924):**
+  - en el recibo, para la retención de IIBB;
+  - por defecto para las percepciones de compras, editable factura por factura.
+- **Archivos para SIFERE:**
+  - retenciones, de 79 posiciones;
+  - percepciones, de 51 posiciones.
+  - Si falta una jurisdicción o un CUIT, no se generan y se avisa cuál.
+- **Corrección de paso:** la búsqueda del cliente o proveedor por el CUIT que trae el banco apuntaba a tablas inexistentes y nunca encontraba a nadie. Ahora busca en `crm.customers`, con una prueba de punta a punta.
+- **A validar con la primera importación en SIFERE:** el tipo y la letra del comprobante en percepciones, y el armado de sucursal y constancia a partir del número de certificado.
+- **Queda para después:** importar los padrones de percepción y retención de ARBA y AGIP, y el archivo de SIRCREB.
+
 
 1. **Formatos de extracto incorporados.**
    - Galicia y Santander tal como bajan del home banking; Credicoop y BBVA cuando lleguen.

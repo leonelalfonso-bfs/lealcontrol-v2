@@ -13,7 +13,8 @@ public sealed record CollectionReceiptLineInput(
     Guid? ConceptId,
     string? RetentionType,
     string? RetentionCertificate,
-    string? Notes);
+    string? Notes,
+    string? Jurisdiction = null);
 
 public sealed record CollectionReceiptImputationInput(
     Guid InvoiceId,
