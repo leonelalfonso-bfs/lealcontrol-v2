@@ -16,8 +16,8 @@ export function QualityMaintenanceProgramPrintPage() {
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   useEffect(() => {
-    Promise.all([api.listQualityPg14R06(), api.getCompanySettings().catch(() => null)])
-      .then(([list, settings]) => { setRows(list.rows.filter((row) => row.programYear === year && row.status !== "Cancelled")); setCompany(settings); })
+    Promise.all([api.listQualityPg14R06(year), api.getCompanySettings().catch(() => null)])
+      .then(([list, settings]) => { setRows(list.rows.filter((row) => row.status !== "Cancelled" && row.months.replace(/-/g, "") !== "")); setCompany(settings); })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
   }, [year]);
@@ -43,10 +43,10 @@ export function QualityMaintenanceProgramPrintPage() {
       <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12 }}><tbody><tr>
         <td style={{ ...cell, width: "22%", textAlign: "center" }}>{company?.logoUrl && <img src={company.logoUrl} alt="Logo" crossOrigin="anonymous" style={{ maxHeight: 44, maxWidth: 125, objectFit: "contain" }} />}<div style={{ fontWeight: 700 }}>{name}</div></td>
         <td style={{ ...cell, textAlign: "center" }}><strong style={{ fontSize: 15 }}>PG14-R06 · Programa de mantenimiento preventivo {year}</strong><div>Sistema de Gestión de Calidad · ISO/IEC 17025</div></td>
-        <td style={{ ...cell, width: "18%" }}>P = planificado<br />D = realizado<br />Filas: {rows.length}</td>
+        <td style={{ ...cell, width: "18%" }}>P = Programado<br />R = Realizado<br />Filas: {rows.length}</td>
       </tr></tbody></table>
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}><thead><tr><th style={{ ...cell, width: "10%" }}>Activo</th><th style={{ ...cell, width: "16%" }}>Descripción</th><th style={{ ...cell, width: "20%" }}>Actividad</th>{months.map((m, index) => <th key={index} style={{ ...cell, textAlign: "center", width: "3%" }}>{m}</th>)}<th style={cell}>Observaciones</th></tr></thead>
-        <tbody>{rows.map((row) => <tr key={row.id} style={{ breakInside: "avoid" }}><td style={cell}>{row.assetSource === "StandardWeight" ? "Pesa" : row.assetSource === "Instrument" ? "Termómetro" : "Equipo"} · {row.equipmentCode}</td><td style={cell}>{row.equipmentDescription}</td><td style={cell}>{row.activity}</td>{months.map((_, index) => <td key={index} style={{ ...cell, textAlign: "center", fontWeight: 700, color: row.months?.[index] === "D" ? "#166534" : "#b45309" }}>{row.months?.[index] === "-" ? "" : row.months?.[index]}</td>)}<td style={cell}>{row.notes || ""}</td></tr>)}
+        <tbody>{rows.map((row) => <tr key={row.id} style={{ breakInside: "avoid" }}><td style={cell}>{row.assetSource === "StandardWeight" ? "Pesa" : row.assetSource === "Instrument" ? "Termómetro" : "Equipo"} · {row.equipmentCode}</td><td style={cell}>{row.equipmentDescription}</td><td style={cell}>{row.activity}</td>{months.map((_, index) => <td key={index} style={{ ...cell, textAlign: "center", fontWeight: 700, color: row.months?.[index] === "R" ? "#166534" : "#b45309" }}>{row.months?.[index] === "-" ? "" : row.months?.[index]}</td>)}<td style={cell}>{row.notes || ""}</td></tr>)}
         {!rows.length && <tr><td style={cell} colSpan={16}>Sin actividades para {year}.</td></tr>}</tbody>
       </table>
       <p style={{ color: "#64748b", fontSize: 9, marginTop: 12 }}>COPIA NO CONTROLADA · Generado desde el SGC · {new Date().toLocaleString("es-AR")}</p>

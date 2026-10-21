@@ -2592,14 +2592,16 @@ export const api = {
       method: "DELETE"
     }),
 
-  listQualityPg14R06: () =>
+  listQualityPg14R06: (year: number) =>
     request<{
       code: string;
       title: string;
+      programYear: number;
+      years: number[];
       activeCount?: number;
       overdueCount?: number;
       rows: import("./types/quality").QualityMaintenancePlanItem[];
-    }>("/api/v1/quality/records/pg14/r06"),
+    }>(`/api/v1/quality/records/pg14/r06?year=${year}`),
 
   getQualityMaintenancePlanItem: (id: string) =>
     request<import("./types/quality").QualityMaintenancePlanItem>(`/api/v1/quality/records/pg14/r06/${id}`),
@@ -2608,10 +2610,9 @@ export const api = {
     equipmentId: string;
     assetSource: string;
     activity: string;
-    programYear?: number;
-    months?: string;
+    /** Mes de la primera ejecución: desde ahí se programan 24 meses según la frecuencia. */
+    firstDate: string;
     frequency?: string;
-    nextDue?: string;
     responsible?: string;
     notes?: string;
   }) =>
@@ -2624,13 +2625,10 @@ export const api = {
     id: string,
     body: {
       activity?: string;
-      programYear?: number;
-      months?: string;
+      year?: number;
       month?: number;
-      monthValue?: "-" | "P" | "D";
+      monthValue?: "-" | "P" | "R";
       frequency?: string;
-      nextDue?: string | null;
-      lastDone?: string | null;
       responsible?: string;
       status?: string;
       notes?: string;
@@ -2640,6 +2638,16 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(body)
     }),
+
+  listCalibrationCertificates: () =>
+    request<{ rows: import("./types/quality").QualityCalibrationCertificate[]; missing: { number: string; laboratory: string; calibrationDate?: string | null; expirationDate?: string | null; assets: number }[] }>(
+      "/api/v1/quality/records/pg17/certificates"),
+  getCalibrationCertificate: (number: string) =>
+    request<import("./types/quality").QualityCalibrationCertificate>(`/api/v1/quality/records/pg17/certificates/by-number/${encodeURIComponent(number)}`),
+  saveCalibrationCertificate: (body: { number: string; laboratory?: string; calibrationDate?: string | null; expirationDate?: string | null; fileId?: string | null; notes?: string }) =>
+    request<{ id: string; number: string }>("/api/v1/quality/records/pg17/certificates", { method: "POST", body: JSON.stringify(body) }),
+  deleteCalibrationCertificate: (id: string) =>
+    request<void>(`/api/v1/quality/records/pg17/certificates/${id}`, { method: "DELETE" }),
 
   cancelQualityMaintenancePlanItem: (id: string) =>
     request<import("./types/quality").QualityMaintenancePlanItem>(`/api/v1/quality/records/pg14/r06/${id}`, {

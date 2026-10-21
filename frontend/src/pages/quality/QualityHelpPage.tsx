@@ -256,22 +256,36 @@ export function QualityHelpPage() {
           </p>
           <ul>
             <li>
-              <strong>R04 Listado</strong> — pesas + instrumentos (Metrología) + auxiliares (Calidad). Excel.
+              <strong>Número interno EQ-0001</strong> — una sola numeración para pesas, termómetros y equipos auxiliares.
+              Se asigna sola al dar de alta el equipo y se puede corregir a mano en su ficha (no se repite entre equipos).
+              En todos los listados se ven los dos números: el interno y la identificación grabada o el número de serie.
+            </li>
+            <li>
+              <strong>R04 Listado</strong> — pesas, termómetros (Metrología) y auxiliares (Calidad), ordenados por número
+              interno. Cada equipo tiene su botón “Hoja de vida” y el certificado lleva a Trazabilidad. Excel.
             </li>
             <li>
               <strong>R03 Programa de calibraciones</strong> — vencimientos ordenados. Excel.
             </li>
             <li>
-              <strong>R02 Etiqueta</strong> — impresión de etiqueta de equipo calibrado (pesas/instrumentos).
+              <strong>R02 Etiqueta</strong> — impresión de etiqueta de equipo calibrado (pesas y termómetros).
             </li>
             <li>
-              <strong>R01 Hoja de vida</strong> — historial HV por activo (calibraciones, verificaciones, mantenimientos).
+              <strong>R01 Hoja de vida</strong> — historial de cada equipo: calibraciones, verificaciones intermedias (las
+              del R05 completadas aparecen solas), mantenimientos preventivos (los meses realizados del R06) y correctivos.
             </li>
             <li>
-              <strong>Equipos auxiliares (EQ)</strong> — camión, acoplado, autoelevador.
+              <strong>Equipos auxiliares</strong> — camión, acoplado, autoelevador, con el mismo número EQ.
             </li>
             <li>
-              <strong>R05 Verificación intermedia</strong> · <strong>R06 Mantenimiento preventivo</strong> — con PDF.
+              <strong>R05 Verificación intermedia</strong> — método ABBA; al completarla queda en la hoja de vida de la pesa.
+            </li>
+            <li>
+              <strong>R06 Mantenimiento preventivo</strong> — al crear el ítem se elige el equipo (también termómetros), la
+              frecuencia (mensual, trimestral, semestral, anual o cada 2 años) y el mes de la primera ejecución: el sistema
+              programa los próximos 24 meses aunque crucen de año. La grilla se ve por año y cada mes se toca para cambiarlo:
+              vacío → <strong>P = Programado</strong> → <strong>R = Realizado</strong> (queda en la hoja de vida) → vacío.
+              El próximo vencimiento es el primer mes programado sin realizar.
             </li>
           </ul>
           <p>
@@ -283,6 +297,27 @@ export function QualityHelpPage() {
             Tip: las pesas se cargan desde certificados PDF en Metrología (importación SIPEL); el listado PG14 las
             consume automáticamente.
           </p>
+        </Section>
+
+        <Section title="8 bis. Trazabilidad de las calibraciones (PG17)">
+          <p>
+            <Link to="/calidad/trazabilidad">Calidad → Trazabilidad</Link> lista los certificados de calibración en sí: número,
+            laboratorio, fecha de calibración, vencimiento (vigente, por vencer en 60 días o vencido), el PDF para descargar y
+            los equipos que cubre (con su número interno y su identificación).
+          </p>
+          <ul>
+            <li>
+              Al importar un certificado PDF en Metrología → Pesas, el certificado se registra solo en Trazabilidad con su PDF.
+            </li>
+            <li>
+              Los equipos se vinculan por el número de certificado que tiene cada pesa o termómetro: desde la pesa, el número
+              de certificado lleva al certificado; desde el certificado, el número interno lleva al equipo.
+            </li>
+            <li>
+              Si un equipo tiene un certificado que todavía no está en Trazabilidad, aparece arriba para cargarlo con su PDF.
+            </li>
+            <li>Un certificado con equipos no se borra: es la evidencia de su calibración.</li>
+          </ul>
         </Section>
 
         <Section title="9. Flujo recomendado del día a día">

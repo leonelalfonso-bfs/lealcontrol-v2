@@ -273,6 +273,7 @@ public sealed class MetrologyDbContext : DbContext
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_weights_Tenant_Code"" ON metrology.standard_weights (""TenantId"", ""Code"");",
 
             @"ALTER TABLE metrology.standard_weights ADD COLUMN IF NOT EXISTS ""NormalizedId"" character varying(64) NOT NULL DEFAULT '';",
+            @"ALTER TABLE metrology.standard_weights ADD COLUMN IF NOT EXISTS ""InternalCode"" character varying(20) NOT NULL DEFAULT '';",
             @"ALTER TABLE metrology.standard_weights ADD COLUMN IF NOT EXISTS ""Manufacturer"" character varying(160) NOT NULL DEFAULT '';",
             @"ALTER TABLE metrology.standard_weights ADD COLUMN IF NOT EXISTS ""LotName"" character varying(160) NOT NULL DEFAULT '';",
             @"ALTER TABLE metrology.standard_weights ADD COLUMN IF NOT EXISTS ""ErrorAsFound"" numeric(18,6);",
@@ -382,5 +383,8 @@ public sealed class MetrologyDbContext : DbContext
                 _logger.LogWarning(ex, "Notice on executing DDL statement");
             }
         }
+        // Instruments se crea más abajo en la lista; el número interno se agrega cuando ya existen las dos tablas.
+        await Database.ExecuteSqlRawAsync(@"ALTER TABLE metrology.instruments ADD COLUMN IF NOT EXISTS ""InternalCode"" character varying(20) NOT NULL DEFAULT '';", ct);
+        await EquipmentNumbering.AssignMissingAsync(this, ct);
     }
 }

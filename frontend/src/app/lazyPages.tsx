@@ -292,6 +292,7 @@ export const QualitySatisfactionSurveyPrintPage = named(
   "QualitySatisfactionSurveyPrintPage"
 );
 export const QualityPg14Page = named(() => import("../pages/quality/QualityPg14Page"), "QualityPg14Page");
+export const QualityTraceabilityPage = named(() => import("../pages/quality/QualityTraceabilityPage"), "QualityTraceabilityPage");
 export const QualityIntermediateCheckPrintPage = named(
   () => import("../pages/quality/QualityIntermediateCheckPrintPage"),
   "QualityIntermediateCheckPrintPage"

@@ -33,6 +33,7 @@ function fmt(d?: string | null) {
 export function QualityEquipmentLogPrintPage() {
   const { source = "", assetId = "" } = useParams();
   const navigate = useNavigate();
+  const [asset, setAsset] = useState<{ code: string; description: string } | null>(null);
   const [rows, setRows] = useState<QualityEquipmentLogEntry[]>([]);
   const [company, setCompany] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +49,7 @@ export function QualityEquipmentLogPrintPage() {
     ])
       .then(([list, settings]) => {
         setRows((list.rows || []).filter((r) => r.status !== "Cancelled"));
+        setAsset(list.asset ?? null);
         setCompany(settings);
       })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)))
@@ -57,11 +59,11 @@ export function QualityEquipmentLogPrintPage() {
   const header = useMemo(() => {
     const first = rows[0];
     return {
-      code: first?.assetCode || "—",
-      description: first?.assetDescription || "—",
+      code: asset?.code || first?.assetCode || "—",
+      description: asset?.description || first?.assetDescription || "—",
       sourceLabel: SOURCE_LABEL[source] || source
     };
-  }, [rows, source]);
+  }, [rows, source, asset]);
 
   const downloadPdf = async () => {
     const el = document.getElementById("pg14-r01-sheet");

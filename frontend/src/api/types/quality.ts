@@ -656,8 +656,11 @@ export interface QualityMaintenancePlanItem {
   equipmentCode?: string;
   equipmentDescription?: string;
   activity: string;
+  /** Año pedido y sus 12 meses: "P" programado, "R" realizado, "-" sin programar. */
   programYear: number;
   months: string;
+  /** Todos los meses programados o realizados, con su año. */
+  schedule?: { year: number; month: number; status: "P" | "R" }[];
   frequency: string;
   nextDue?: string | null;
   lastDone?: string | null;
@@ -692,6 +695,8 @@ export interface QualityEquipmentLogEntry {
 }
 
 export interface QualityEquipmentLogListResponse {
+  /** El equipo pedido, con su número interno actual: "EQ-0003 (1051)". */
+  asset?: { code: string; description: string } | null;
   code: string;
   title: string;
   recordKind?: string;
@@ -737,6 +742,22 @@ export interface QualityPg14UnifiedAsset {
   extra?: string | null;
   deepLinkPath?: string | null;
   isExpired?: boolean;
+  /** Número interno de PG14 (EQ-0001), común a pesas, termómetros y equipos auxiliares. */
+  internalCode?: string;
+}
+
+/** PG17 — certificado de calibración con sus equipos. */
+export interface QualityCalibrationCertificate {
+  id: string;
+  number: string;
+  laboratory: string;
+  calibrationDate?: string | null;
+  expirationDate?: string | null;
+  fileId?: string | null;
+  fileName?: string | null;
+  notes?: string;
+  status: "Vigente" | "PorVencer" | "Vencido" | "SinVencimiento";
+  assets: { id: string; source: string; kind: string; internalCode: string; code: string; serialNumber: string; description: string; deepLinkPath?: string | null; expirationDate?: string | null }[];
 }
 
 export interface QualityPg14R04Response {

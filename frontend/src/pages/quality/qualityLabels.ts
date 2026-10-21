@@ -67,6 +67,7 @@ export const FREQUENCY_LABEL: Record<string, string> = {
   Quarterly: "Trimestral",
   Semiannual: "Semestral",
   Annual: "Anual",
+  Biennial: "Cada 2 años",
   Yearly: "Anual",
   Weekly: "Semanal",
   Daily: "Diaria"

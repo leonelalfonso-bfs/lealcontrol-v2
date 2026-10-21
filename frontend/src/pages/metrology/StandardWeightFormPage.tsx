@@ -27,6 +27,7 @@ export function StandardWeightFormPage() {
   const [unitEc, setUnitEc] = useState("g");
   const [factorK, setFactorK] = useState("2");
   const [certificateNumber, setCertificateNumber] = useState("");
+  const [internalCode, setInternalCode] = useState("");
   const [traceabilityLab, setTraceabilityLab] = useState("Laboratorio Acreditado");
   const [calibrationDate, setCalibrationDate] = useState(todayAr());
   const [expirationDate, setExpirationDate] = useState(addDaysAr(365));
@@ -53,6 +54,7 @@ export function StandardWeightFormPage() {
             setUnitEc(w.unitEc || "g");
             setFactorK(String(w.factorK || 2));
             setCertificateNumber(w.certificateNumber || "");
+            setInternalCode(w.internalCode || "");
             setTraceabilityLab(w.traceabilityLab || "Laboratorio Acreditado");
             setCalibrationDate(w.calibrationDate ? w.calibrationDate.slice(0, 10) : "");
             setExpirationDate(w.expirationDate ? w.expirationDate.slice(0, 10) : "");
@@ -105,6 +107,7 @@ export function StandardWeightFormPage() {
         unitEc,
         factorK: parseFloat(factorK) || 2,
         certificateNumber: certificateNumber.trim(),
+        internalCode: internalCode.trim() || undefined,
         traceabilityLab: traceabilityLab.trim(),
         calibrationDate: calibrationDate ? new Date(calibrationDate).toISOString() : null,
         expirationDate: expirationDate ? new Date(expirationDate).toISOString() : null,
@@ -299,6 +302,16 @@ export function StandardWeightFormPage() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 16 }}>
+            <div>
+              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>N.º interno (PG14)</label>
+              <input
+                type="text"
+                value={internalCode}
+                onChange={(e) => setInternalCode(e.target.value)}
+                placeholder="Se asigna solo: EQ-0001"
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem", fontWeight: 700 }}
+              />
+            </div>
             <div>
               <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>N° de Certificado</label>
               <input

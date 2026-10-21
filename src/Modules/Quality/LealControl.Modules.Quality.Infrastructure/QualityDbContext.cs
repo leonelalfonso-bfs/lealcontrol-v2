@@ -36,6 +36,8 @@ public sealed class QualityDbContext : DbContext
     public DbSet<QualityEquipment> Equipments => Set<QualityEquipment>();
     public DbSet<QualityIntermediateCheck> IntermediateChecks => Set<QualityIntermediateCheck>();
     public DbSet<QualityMaintenancePlanItem> MaintenancePlanItems => Set<QualityMaintenancePlanItem>();
+    public DbSet<QualityMaintenanceMonth> MaintenanceMonths => Set<QualityMaintenanceMonth>();
+    public DbSet<QualityCalibrationCertificate> CalibrationCertificates => Set<QualityCalibrationCertificate>();
     public DbSet<QualityEquipmentLogEntry> EquipmentLogEntries => Set<QualityEquipmentLogEntry>();
     public DbSet<QualityAuditEvent> AuditEvents => Set<QualityAuditEvent>();
     public DbSet<QualityPresentationSession> PresentationSessions => Set<QualityPresentationSession>();
@@ -488,17 +490,37 @@ public sealed class QualityDbContext : DbContext
             b.HasIndex(x => new { x.TenantId, x.EquipmentId });
         });
 
+        modelBuilder.Entity<QualityCalibrationCertificate>(b =>
+        {
+            b.ToTable("calibration_certificates", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.Property(x => x.Number).HasMaxLength(80).IsRequired();
+            b.Property(x => x.Laboratory).HasMaxLength(200);
+            b.Property(x => x.Notes).HasMaxLength(2000);
+            b.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+        });
+
+        modelBuilder.Entity<QualityMaintenanceMonth>(b =>
+        {
+            b.ToTable("maintenance_months", Schema);
+            b.HasKey(x => x.Id);
+            b.Property(x => x.TenantId).HasConversion(v => v.Value, v => new TenantId(v));
+            b.Property(x => x.Status).HasMaxLength(1).IsRequired();
+            b.HasOne<QualityMaintenancePlanItem>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => new { x.ItemId, x.Year, x.Month }).IsUnique();
+        });
+
         modelBuilder.Entity<QualityMaintenancePlanItem>(b =>
         {
             b.ToTable("maintenance_plan_items", Schema);
             b.HasKey(x => x.Id);
             b.Property(x => x.RecordCode).HasMaxLength(32).IsRequired();
             b.Property(x => x.Number).HasMaxLength(32).IsRequired();
-            b.Property(x => x.EquipmentCode).HasMaxLength(32);
+            b.Property(x => x.EquipmentCode).HasMaxLength(64);
             b.Property(x => x.AssetSource).HasMaxLength(40).HasDefaultValue(QualityEquipmentLogAssetSources.QualityEquipment);
             b.Property(x => x.EquipmentDescription).HasMaxLength(300);
             b.Property(x => x.Activity).HasMaxLength(500).IsRequired();
-            b.Property(x => x.Months).HasMaxLength(12);
             b.Property(x => x.Frequency).HasMaxLength(40).HasDefaultValue(QualityMaintenanceFrequencies.Monthly);
             b.Property(x => x.Responsible).HasMaxLength(160);
             b.Property(x => x.Status).HasMaxLength(40).HasDefaultValue(QualityMaintenanceStatuses.Active);
@@ -1126,8 +1148,44 @@ public sealed class QualityDbContext : DbContext
                 ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
             );",
             @"ALTER TABLE quality.maintenance_plan_items ADD COLUMN IF NOT EXISTS ""AssetSource"" character varying(40) NOT NULL DEFAULT 'QualityEquipment';",
-            @"ALTER TABLE quality.maintenance_plan_items ADD COLUMN IF NOT EXISTS ""ProgramYear"" integer NOT NULL DEFAULT 0;",
-            @"ALTER TABLE quality.maintenance_plan_items ADD COLUMN IF NOT EXISTS ""Months"" character varying(12) NOT NULL DEFAULT '------------';",
+            @"CREATE TABLE IF NOT EXISTS quality.maintenance_months (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""ItemId"" uuid NOT NULL REFERENCES quality.maintenance_plan_items(""Id"") ON DELETE CASCADE,
+                ""Year"" integer NOT NULL,
+                ""Month"" integer NOT NULL,
+                ""Status"" character varying(1) NOT NULL
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_mm_Item_Year_Month"" ON quality.maintenance_months (""ItemId"", ""Year"", ""Month"");",
+            @"CREATE TABLE IF NOT EXISTS quality.calibration_certificates (
+                ""Id"" uuid NOT NULL PRIMARY KEY,
+                ""TenantId"" uuid NOT NULL,
+                ""Number"" character varying(80) NOT NULL,
+                ""Laboratory"" character varying(200) NOT NULL DEFAULT '',
+                ""CalibrationDate"" timestamp with time zone,
+                ""ExpirationDate"" timestamp with time zone,
+                ""FileId"" uuid,
+                ""Notes"" character varying(2000) NOT NULL DEFAULT '',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now()
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_cert_Tenant_Number"" ON quality.calibration_certificates (""TenantId"", ""Number"");",
+            // "EQ-0001 (identificación)" del equipo, con el número interno de PG14.
+            @"ALTER TABLE quality.maintenance_plan_items ALTER COLUMN ""EquipmentCode"" TYPE character varying(64);",
+            // La grilla vieja (un año por ítem: ProgramYear + Months con P/D) pasa a meses con su año; después se borran las columnas.
+            @"DO $$ BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'quality' AND table_name = 'maintenance_plan_items' AND column_name = 'Months') THEN
+                    INSERT INTO quality.maintenance_months (""Id"", ""TenantId"", ""ItemId"", ""Year"", ""Month"", ""Status"")
+                    SELECT gen_random_uuid(), i.""TenantId"", i.""Id"",
+                           CASE WHEN i.""ProgramYear"" > 0 THEN i.""ProgramYear"" ELSE EXTRACT(YEAR FROM i.""CreatedAtUtc"")::int END,
+                           m.n, CASE WHEN substr(i.""Months"", m.n, 1) = 'D' THEN 'R' ELSE 'P' END
+                    FROM quality.maintenance_plan_items i CROSS JOIN generate_series(1, 12) AS m(n)
+                    WHERE substr(i.""Months"", m.n, 1) IN ('P', 'D')
+                    ON CONFLICT DO NOTHING;
+                    ALTER TABLE quality.maintenance_plan_items DROP COLUMN ""Months"";
+                    ALTER TABLE quality.maintenance_plan_items DROP COLUMN IF EXISTS ""ProgramYear"";
+                END IF;
+            END $$;",
             @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_quality_mp_Tenant_Number"" ON quality.maintenance_plan_items (""TenantId"", ""Number"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_mp_Tenant_Equipment"" ON quality.maintenance_plan_items (""TenantId"", ""EquipmentId"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_quality_mp_Tenant_Status_NextDue"" ON quality.maintenance_plan_items (""TenantId"", ""Status"", ""NextDue"");",
@@ -1183,7 +1241,11 @@ public sealed class QualityDbContext : DbContext
                 ""ClientIp"" character varying(64) NOT NULL DEFAULT '',
                 ""UserAgent"" character varying(400) NOT NULL DEFAULT ''
             );",
-            @"CREATE INDEX IF NOT EXISTS ""IX_quality_presentation_Tenant_User_Ended"" ON quality.presentation_sessions (""TenantId"", ""StartedByUserId"", ""EndedAtUtc"");"
+            @"CREATE INDEX IF NOT EXISTS ""IX_quality_presentation_Tenant_User_Ended"" ON quality.presentation_sessions (""TenantId"", ""StartedByUserId"", ""EndedAtUtc"");",
+            // Equipos auxiliares: "EQ 001" pasa a "EQ-0001" (numeración única de PG14 con pesas y termómetros), también en los registros.
+            @"UPDATE quality.equipments SET ""Code"" = 'EQ-' || lpad(substring(""Code"" from '(\d+)$'), 4, '0') WHERE ""Code"" ~ '^EQ ?[0-9]+$';",
+            @"UPDATE quality.maintenance_plan_items SET ""EquipmentCode"" = 'EQ-' || lpad(substring(""EquipmentCode"" from '(\d+)$'), 4, '0') WHERE ""AssetSource"" = 'QualityEquipment' AND ""EquipmentCode"" ~ '^EQ ?[0-9]+$';",
+            @"UPDATE quality.equipment_log_entries SET ""AssetCode"" = 'EQ-' || lpad(substring(""AssetCode"" from '(\d+)$'), 4, '0') WHERE ""AssetSource"" = 'QualityEquipment' AND ""AssetCode"" ~ '^EQ ?[0-9]+$';",
         };
 
         foreach (var sql in statements)

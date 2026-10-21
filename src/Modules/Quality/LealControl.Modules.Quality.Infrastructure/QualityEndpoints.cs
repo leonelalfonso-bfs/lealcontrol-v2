@@ -41,6 +41,7 @@ public static class QualityEndpoints
         group.MapPg08Records();
         group.MapPg09Records();
         group.MapPg14Records();
+        group.MapTraceabilityRecords();
         group.MapPresentationMode();
 
         group.MapGet("/dashboard", async (

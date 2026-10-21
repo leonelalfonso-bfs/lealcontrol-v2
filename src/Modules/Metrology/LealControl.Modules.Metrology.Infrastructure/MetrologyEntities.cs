@@ -76,6 +76,8 @@ public sealed class StandardWeight : Entity<Guid>
 {
     public TenantId TenantId { get; set; }
     public string Code { get; set; } = string.Empty; // e.g. 04, 1051, 1676, PAT-500-01
+    /// <summary>Número interno de PG14 (EQ-0001), compartido con termómetros y equipos auxiliares.</summary>
+    public string InternalCode { get; set; } = string.Empty;
     public string NormalizedId { get; set; } = string.Empty; // e.g. 04, 1051, 1676
     public string SerialNumber { get; set; } = string.Empty;
     public string Manufacturer { get; set; } = string.Empty; // e.g. BITAR HNOS. S.H., Sipel S.R.L.
@@ -104,7 +106,9 @@ public sealed class StandardWeight : Entity<Guid>
 public sealed class MetrologyInstrument : Entity<Guid>
 {
     public TenantId TenantId { get; set; }
-    public string Code { get; set; } = string.Empty; // e.g. EQ 001
+    public string Code { get; set; } = string.Empty; // identificación del instrumento
+    /// <summary>Número interno de PG14 (EQ-0001), compartido con pesas y equipos auxiliares.</summary>
+    public string InternalCode { get; set; } = string.Empty;
     public string Kind { get; set; } = MetrologyInstrumentKinds.Thermometer;
     public string Description { get; set; } = string.Empty;
     public string Brand { get; set; } = string.Empty;
@@ -345,7 +349,8 @@ public record StandardWeightWriteDto(
     DateTime? CalibrationDate,
     DateTime? ExpirationDate,
     string? Status,
-    string? Notes
+    string? Notes,
+    string? InternalCode = null
 );
 
 public record StandardWeightBulkImportItem(
@@ -505,7 +510,8 @@ public record MetrologyInstrumentWriteDto(
     DateTime? CalibrationDate = null,
     DateTime? ExpirationDate = null,
     string? Status = null,
-    string? Notes = null
+    string? Notes = null,
+    string? InternalCode = null
 );
 
 public record MetrologyTestPointDto(
