@@ -50,6 +50,24 @@ const METHOD_LABELS: Record<PaymentLine["method"], string> = {
 
 const newLineId = () => Math.random().toString(36).substring(2, 9);
 
+/** Factura o facturas (hasta 4, de la más vieja a la más nueva) cuyo total suma exactamente el importe; null si no hay. */
+function invoicesForAmount(invoices: PurchaseInvoice[], amount: number): string[] | null {
+  const cents = (n: number) => Math.round(n * 100);
+  const target = cents(amount);
+  const sorted = [...invoices].sort((a, b) => a.issueDate.localeCompare(b.issueDate)).slice(0, 15);
+  const search = (start: number, remaining: number, chosen: PurchaseInvoice[]): string[] | null => {
+    if (remaining === 0 && chosen.length > 0) return chosen.map((i) => i.id);
+    if (remaining < 0 || chosen.length === 4) return null;
+    for (let i = start; i < sorted.length; i++) {
+      const found = search(i + 1, remaining - cents(sorted[i].total || 0), [...chosen, sorted[i]]);
+      if (found) return found;
+    }
+    return null;
+  };
+  const single = sorted.find((i) => cents(i.total || 0) === target);
+  return single ? [single.id] : search(0, target, []);
+}
+
 export function PaymentOrderFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -92,6 +110,7 @@ export function PaymentOrderFormPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   const loadAvailableMovements = async (accountId?: string, conceptId?: string) => {
     setLoadingMovements(true);
@@ -212,7 +231,11 @@ export function PaymentOrderFormPage() {
       amountImputed: inv.total || 0
     }));
 
-    setImputations(rows);
+    // Desde la conciliación (débito del banco con importe): propone la factura o las facturas pendientes que suman ese importe.
+    const target = initialMovementId && initialAmount && selectedSupplierId === initialSupplierId ? Number(initialAmount) : 0;
+    const proposal = target > 0 ? invoicesForAmount(rows.filter((r) => r.invoice.status === "Recorded").map((r) => r.invoice), target) : null;
+    setImputations(proposal ? rows.map((r) => (proposal.includes(r.invoice.id) ? { ...r, selected: true } : r)) : rows);
+    if (proposal) setInfo(`Se propusieron ${proposal.length} factura(s) que suman el importe del débito del banco. Revisalas antes de guardar.`);
   }, [selectedSupplierId, purchaseInvoices]);
 
   const selectedSupplier = useMemo(
@@ -491,6 +514,7 @@ export function PaymentOrderFormPage() {
       </div>
 
       {error && <div className="alert">{error}</div>}
+      {info && <div className="alert ok">{info}</div>}
 
       <div className="grid-2" style={{ gap: 20, alignItems: "start" }}>
         {/* Left Column: Supplier & Invoices to Impute */}

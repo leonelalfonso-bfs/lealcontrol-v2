@@ -147,10 +147,11 @@ Los archivos quedan en la PC del dueño; no se suben al repositorio.
 - **Clasificación de fábrica** de los textos del banco cuando no hay regla propia: impuesto al cheque, SIRCREB, IVA, percepciones, comisiones, intereses, FIMA y haberes.
   - Sobre el extracto real de Galicia, 255 de 286 renglones quedan clasificados o con contraparte. Los 31 restantes (débitos automáticos, compras con débito, VEP, Visa) necesitan una regla de la empresa.
 - Se retiraron la consulta y la conciliación uno a uno anteriores.
-- **Queda:**
-  - uno contra varios (una transferencia que paga varias OP);
-  - Credicoop;
-  - propuesta de imputación de facturas al crear la OP desde el débito.
+
+**F1c (hecha):**
+- **Uno contra varios:** una transferencia contra 2 a 5 pagos o cobros del sistema del mismo CUIT que suman su importe (±5 días).
+- **Orden de pago desde el débito:** propone la factura pendiente del proveedor de ese importe, o hasta cuatro que lo sumen.
+- **Queda:** el formato de Credicoop, cuando el dueño mande el archivo.
 
 
 1. **Formatos de extracto incorporados.**

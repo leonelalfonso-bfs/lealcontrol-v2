@@ -9,7 +9,7 @@ type Row = ReconciliationTray["rows"][number];
 const money = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const day = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
 const isDebit = (r: Row) => r.kind === "Debit" || r.kind === 1;
-const CONFIRMABLE = ["Match", "Cheque", "Classified"];
+const CONFIRMABLE = ["Match", "MatchMany", "Cheque", "Classified"];
 
 /** Bandeja de conciliación (nota 69, F1b): cada movimiento del extracto con su acción sugerida; se confirman todas juntas. */
 export function FinanceReconciliationPage() {
@@ -49,7 +49,7 @@ export function FinanceReconciliationPage() {
     return c;
   }, [tray]);
   const rows = (tray?.rows ?? []).filter((r) => filter === "all" || r.suggestion.type === filter
-    || (filter === "Create" && r.suggestion.type.startsWith("Create")));
+    || (filter === "Create" && r.suggestion.type.startsWith("Create")) || (filter === "Match" && r.suggestion.type === "MatchMany"));
 
   const confirm = async () => {
     if (!tray) return;
@@ -61,6 +61,7 @@ export function FinanceReconciliationPage() {
       const result = await api.confirmReconciliationTray({
         accountId,
         matches: chosen.flatMap((r) => (r.suggestion.type === "Match" ? [{ importedId: r.id, systemId: r.suggestion.systemId }] : [])),
+        matchesMany: chosen.flatMap((r) => (r.suggestion.type === "MatchMany" ? [{ importedId: r.id, systemIds: r.suggestion.systemIds }] : [])),
         cheques: chosen.flatMap((r) => (r.suggestion.type === "Cheque" ? [{ importedId: r.id, chequeId: r.suggestion.chequeId }] : [])),
         classify: chosen.filter((r) => r.suggestion.type === "Classified").map((r) => r.id)
       });
@@ -79,6 +80,7 @@ export function FinanceReconciliationPage() {
     const query = `movementId=${r.id}&accountId=${accountId}&amount=${r.amount}`;
     switch (s.type) {
       case "Match": return <span>Conciliar con <strong>{s.label}</strong> <span className="muted">({day(s.operationDateUtc)})</span></span>;
+      case "MatchMany": return <span>Paga varias juntas: <strong>{s.label}</strong></span>;
       case "Cheque": return <span>Es el <strong>{s.label}</strong></span>;
       case "Classified": return <span>Gasto / impuesto del banco: <strong>{s.label}</strong></span>;
       case "CreatePayment": return <Link className="btn compact" to={`/finanzas/pagos/nueva?supplierId=${s.counterpartyId}&${query}`}>💳 Crear orden de pago</Link>;
@@ -117,7 +119,7 @@ export function FinanceReconciliationPage() {
           <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
             {[
               ["all", `Todos (${tray.rows.length})`],
-              ["Match", `Pagos y cobros (${counts.Match ?? 0})`],
+              ["Match", `Pagos y cobros (${(counts.Match ?? 0) + (counts.MatchMany ?? 0)})`],
               ["Cheque", `eCheq (${counts.Cheque ?? 0})`],
               ["Classified", `Gastos e impuestos (${counts.Classified ?? 0})`],
               ["Create", `Crear OP o recibo (${(counts.CreatePayment ?? 0) + (counts.CreateReceipt ?? 0)})`],

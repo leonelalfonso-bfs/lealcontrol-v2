@@ -221,7 +221,7 @@ export const api = {
   reconcileFinanceMovement: (movementId: string, body: { entityType: string; entityId: string }) => request(`/api/v1/finance/movements/${movementId}/reconcile`, { method: "POST", body: JSON.stringify(body) }),
   getReconciliationTray: (accountId: string) =>
     request<import("./types/finance").ReconciliationTray>(`/api/v1/finance/reconciliation/tray?accountId=${accountId}`),
-  confirmReconciliationTray: (body: { accountId: string; matches: { importedId: string; systemId: string }[]; cheques: { importedId: string; chequeId: string }[]; classify: string[] }) =>
+  confirmReconciliationTray: (body: { accountId: string; matches: { importedId: string; systemId: string }[]; matchesMany: { importedId: string; systemIds: string[] }[]; cheques: { importedId: string; chequeId: string }[]; classify: string[] }) =>
     request<{ matched: number; cheques: number; classified: number; errors: string[] }>("/api/v1/finance/reconciliation/tray/confirm", { method: "POST", body: JSON.stringify(body) }),
   listReceivedCheques: () => request<ReceivedCheque[]>("/api/v1/finance/echeqs"),
   importReceivedCheques: (csvContent: string) => request<{ imported: number; duplicates: number }>("/api/v1/finance/echeqs/import", { method: "POST", body: JSON.stringify({ csvContent }) }),

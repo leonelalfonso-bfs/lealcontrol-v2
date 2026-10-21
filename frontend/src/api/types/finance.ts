@@ -207,6 +207,7 @@ export type CashFlowProjection = {
 /** Bandeja de conciliación (nota 69, F1b): cada movimiento del extracto sin conciliar con su acción sugerida. */
 export type ReconciliationSuggestion =
   | { type: "Match"; systemId: string; label: string; operationDateUtc: string }
+  | { type: "MatchMany"; systemIds: string[]; label: string }
   | { type: "Cheque"; chequeId: string; label: string; paymentOrderId?: string | null }
   | { type: "CreatePayment" | "CreateReceipt"; counterpartyId: string }
   | { type: "Classified"; conceptId: string; label: string }

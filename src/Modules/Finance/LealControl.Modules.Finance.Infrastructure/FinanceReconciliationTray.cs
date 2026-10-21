@@ -10,11 +10,13 @@ namespace LealControl.Modules.Finance.Infrastructure;
 
 public sealed record TrayMatch(Guid ImportedId, Guid SystemId);
 public sealed record TrayCheque(Guid ImportedId, Guid ChequeId);
-public sealed record ConfirmTrayRequest(Guid AccountId, List<TrayMatch>? Matches, List<TrayCheque>? Cheques, List<Guid>? Classify);
+public sealed record TrayMatchMany(Guid ImportedId, List<Guid> SystemIds);
+public sealed record ConfirmTrayRequest(Guid AccountId, List<TrayMatch>? Matches, List<TrayCheque>? Cheques, List<Guid>? Classify, List<TrayMatchMany>? MatchesMany = null);
 
 /// <summary>
 /// Bandeja de conciliación (nota 69, F1b): para cada movimiento del extracto sin conciliar, la acción sugerida, en este orden:
-/// 1) conciliar con un cobro o pago del sistema (mismo importe, ±5 días; entre varios, el del mismo CUIT y la fecha más cercana);
+/// 1) conciliar con un cobro o pago del sistema (mismo importe, ±5 días; entre varios, el del mismo CUIT y la fecha más cercana),
+///    o con varios del mismo CUIT que suman el importe (una transferencia que paga varias órdenes);
 /// 2) un eCheq emitido por su número; 3) crear la orden de pago o el recibo del proveedor o cliente del CUIT;
 /// 4) un gasto, impuesto o inversión ya clasificado; 5) sin identificar. Las sugerencias se confirman todas juntas.
 /// </summary>
@@ -83,6 +85,15 @@ public static partial class FinanceReconciliationTray
                     usedSystem.Add(candidates[0].Id);
                     suggestion = new { Type = "Match", SystemId = candidates[0].Id, Label = labels.GetValueOrDefault(candidates[0].Id, candidates[0].Description), candidates[0].OperationDateUtc };
                 }
+                else if (m.CounterpartyTaxId is { } partyTaxId && SubsetSum(system
+                        .Where(s => !usedSystem.Contains(s.Id) && s.Kind == m.Kind && s.Amount < m.Amount
+                            && systemTaxIds.GetValueOrDefault(s.Id) == partyTaxId
+                            && Math.Abs((s.OperationDateUtc.Date - m.OperationDateUtc.Date).TotalDays) <= DateTolerance.TotalDays)
+                        .OrderBy(s => s.OperationDateUtc).Take(12).ToList(), m.Amount) is { } group)
+                {
+                    foreach (var s in group) usedSystem.Add(s.Id);
+                    suggestion = new { Type = "MatchMany", SystemIds = group.Select(s => s.Id), Label = string.Join(" + ", group.Select(s => labels.GetValueOrDefault(s.Id, s.Description))) };
+                }
                 else if (m.Kind == FinancialMovementKind.Debit && ChequeNumberIn(m.Description) is { } number
                     && cheques.FirstOrDefault(c => !usedCheques.Contains(c.Id) && Numeric(c.CheckNumber) == number && c.Amount == m.Amount) is { } cheque)
                 {
@@ -107,6 +118,7 @@ public static partial class FinanceReconciliationTray
         {
             var tenantId = tenant.TenantId.Value;
             var ids = (body.Matches ?? []).SelectMany(x => new[] { x.ImportedId, x.SystemId })
+                .Concat((body.MatchesMany ?? []).SelectMany(x => x.SystemIds.Append(x.ImportedId)))
                 .Concat((body.Cheques ?? []).Select(x => x.ImportedId)).Concat(body.Classify ?? []).ToList();
             var movements = await db.Movements.Where(x => x.TenantId == tenantId && x.AccountId == body.AccountId && ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
             int matched = 0, chequesLinked = 0, classified = 0;
@@ -125,6 +137,26 @@ public static partial class FinanceReconciliationTray
                 }
                 FinanceImport.ApplyMatchInMemory(imp, sys);
                 matched++;
+            }
+
+            foreach (var group in body.MatchesMany ?? [])
+            {
+                var parts = group.SystemIds.Select(id => movements.GetValueOrDefault(id)).ToList();
+                if (!movements.TryGetValue(group.ImportedId, out var imp) || imp.Origin != FinancialMovementOrigin.Imported || parts.Count < 2
+                    || parts.Any(p => p is null || p.Origin != FinancialMovementOrigin.System || p.ReconciliationStatus != FinancialReconciliationStatus.PendingBank || p.Kind != imp.Kind)
+                    || parts.Sum(p => p!.Amount) != imp.Amount)
+                {
+                    errors.Add($"No se pudo conciliar el movimiento del {imp?.OperationDateUtc:dd/MM} por {imp?.Amount:N2} con varios pagos: cambiaron o no suman.");
+                    continue;
+                }
+                // El movimiento del banco queda vinculado al primero; todos los del sistema apuntan a él.
+                FinanceImport.ApplyMatchInMemory(imp, parts[0]!);
+                foreach (var p in parts.Skip(1))
+                {
+                    p!.ReconciliationStatus = FinancialReconciliationStatus.MatchedToImport;
+                    p.MatchedMovementId = imp.Id;
+                }
+                matched += parts.Count;
             }
 
             if ((body.Cheques ?? []).Count > 0)
@@ -219,6 +251,26 @@ public static partial class FinanceReconciliationTray
         return system.Where(s => s.LinkedEntityId.HasValue)
             .Select(s => (s.Id, Label: orders.GetValueOrDefault(s.LinkedEntityId!.Value) ?? receipts.GetValueOrDefault(s.LinkedEntityId!.Value)))
             .Where(x => x.Label is not null).ToDictionary(x => x.Id, x => x.Label!);
+    }
+
+    /// <summary>De 2 a 5 movimientos que suman exactamente el importe (búsqueda acotada a 12 candidatos).</summary>
+    internal static List<FinancialMovement>? SubsetSum(List<FinancialMovement> candidates, decimal target)
+    {
+        List<FinancialMovement>? found = null;
+        void Search(int start, decimal remaining, List<FinancialMovement> chosen)
+        {
+            if (found is not null) return;
+            if (remaining == 0m && chosen.Count >= 2) { found = [.. chosen]; return; }
+            if (remaining <= 0m || chosen.Count == 5) return;
+            for (var i = start; i < candidates.Count && found is null; i++)
+            {
+                chosen.Add(candidates[i]);
+                Search(i + 1, remaining - candidates[i].Amount, chosen);
+                chosen.RemoveAt(chosen.Count - 1);
+            }
+        }
+        Search(0, target, []);
+        return found;
     }
 
     private static string Digits(string? value) => new((value ?? "").Where(char.IsDigit).ToArray());

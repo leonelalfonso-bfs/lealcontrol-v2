@@ -100,9 +100,10 @@ export function FinanceHelpPage() {
           <Step title="Finanzas → Conciliación bancaria → elegí la cuenta: aparece cada movimiento del extracto sin vincular con su acción sugerida.">
             <ul style={{ margin: "4px 0 0" }}>
               <li><strong>Conciliar con una orden de pago o un recibo</strong> del sistema: mismo importe, hasta 5 días de diferencia; si hay varios, el del mismo CUIT y la fecha más cercana.</li>
+              <li><strong>Paga varias juntas</strong>: una transferencia que cancela de 2 a 5 órdenes de pago (o recibos) del mismo CUIT que suman su importe.</li>
               <li><strong>eCheq</strong>: el débito “Echeq … Nro. N” se vincula con el cheque emitido N de la cartera (cargá antes el listado de eCheq emitidos del home banking en Cartera de cheques).</li>
               <li><strong>Gasto o impuesto del banco</strong>: ya clasificado, solo falta confirmarlo.</li>
-              <li><strong>Crear orden de pago / recibo</strong>: el CUIT es de un proveedor o cliente cargado; el botón abre la orden de pago o el recibo con el proveedor, el importe y el movimiento del banco ya elegidos.</li>
+              <li><strong>Crear orden de pago / recibo</strong>: el CUIT es de un proveedor o cliente cargado; el botón abre la orden de pago o el recibo con el proveedor, el importe y el movimiento del banco ya elegidos. En la orden de pago quedan propuestas las facturas pendientes que suman el importe (una o hasta cuatro): revisalas antes de guardar.</li>
               <li><strong>Sin identificar</strong>: crear la orden de pago o el recibo a mano, o una regla en Conceptos y reglas para que la próxima vez se reconozca solo.</li>
             </ul>
           </Step>
