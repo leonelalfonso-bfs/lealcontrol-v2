@@ -7,6 +7,8 @@ export type FinanceAccount = {
   bookingMode?: "Statement" | "Manual" | string;
   balance: number;
   isActive: boolean;
+  /** CBU de la cuenta propia, para los lotes de pago por archivo. */
+  cbu?: string | null;
 };
 
 export type FinanceConcept = {
@@ -235,4 +237,15 @@ export type SufferedTaxRow = {
 export type SufferedTaxes = {
   defaultJurisdiction?: string | null; jurisdictions: Record<string, string>; rows: SufferedTaxRow[]; problems: string[];
   totals: { tax: string; kind: string; jurisdiction?: string | null; jurisdictionName?: string | null; amount: number; count: number }[];
+};
+
+/** Transferencia de una orden de pago pendiente de banco que puede ir a un lote (nota 69, F4). */
+export type PaymentBatchCandidate = {
+  movementId: string; paymentOrderId: string; orderNumber: string; supplierId?: string | null; supplierName: string; supplierTaxId: string;
+  amount: number; date: string; cbu?: string | null; problem?: string | null;
+};
+export type PaymentBatch = {
+  id: string; number: number; accountId: string; requestDate: string; consolidated: boolean; total: number; status: "Generated" | "Cancelled";
+  createdBy?: string | null; createdAtUtc: string;
+  items: { movementId: string; paymentOrderId: string; paymentOrderNumber: string; supplierName: string; supplierTaxId: string; cbu: string; amount: number }[];
 };

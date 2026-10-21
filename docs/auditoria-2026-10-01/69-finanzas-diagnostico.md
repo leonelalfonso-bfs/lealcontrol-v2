@@ -197,6 +197,22 @@ Los archivos quedan en la PC del dueño; no se suben al repositorio.
 - **A validar con la primera importación en SIFERE:** el tipo y la letra del comprobante en percepciones, y el armado de sucursal y constancia a partir del número de certificado.
 - **Queda para después:** importar los padrones de percepción y retención de ARBA y AGIP, y el archivo de SIRCREB.
 
+**F4 pagos por archivo (hecha, Interbanking):**
+- **CBU del proveedor** (validado con sus dígitos verificadores) y **CBU de cada cuenta propia**.
+- **Pantalla Finanzas → Pagos por archivo:**
+  - lista las transferencias de órdenes de pago pendientes de banco que no están en otro lote, y avisa a qué proveedor le falta el CBU o el CUIT;
+  - tildándolas, genera un **lote numerado** (fecha de pago y débito consolidado o no);
+  - el lote se puede volver a descargar o anular.
+- **Archivo con el diseño de Interbanking "por número de CBU"** (versión 1.5, 240 posiciones):
+  - un registro `*U*` con la cuenta a debitar;
+  - un registro `*M*` de TEF a proveedores por cada transferencia, con CBU, importe, observación, número de orden de pago y CUIT.
+- **Conciliación:** el débito del lote consolidado se propone contra todas sus órdenes de pago (mismo total, ±5 días). Sin consolidar, cada transferencia se concilia sola por importe y CUIT.
+- **A validar con la primera subida real:**
+  - el diseño es la versión 1.5 (2013), publicada por SIU; confirmar con Interbanking que sigue vigente;
+  - el código de la cuenta en Interbanking.
+- **Home banking de cada banco** (Galicia Office, Santander, BBVA y Credicoop): cada banco tiene su diseño propio, que no es público. Hace falta que administración pida al banco el "diseño de registro de pagos a proveedores / transferencias masivas", o un archivo de ejemplo, para sumarlo como otro formato del mismo lote.
+- **Queda para después:** lotes en dólares, el código de retención en el registro `*M*` y la transferencia por alias.
+
 
 1. **Formatos de extracto incorporados.**
    - Galicia y Santander tal como bajan del home banking; Credicoop y BBVA cuando lleguen.

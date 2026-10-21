@@ -253,6 +253,26 @@ export const api = {
       a.click();
       URL.revokeObjectURL(url);
     }),
+  listSupplierBankAccounts: () => request<{ supplierId: string; cbu: string; alias?: string | null }[]>("/api/v1/finance/payment-batches/suppliers"),
+  saveSupplierBankAccount: (supplierId: string, body: { cbu: string; alias?: string | null }) =>
+    request<unknown>(`/api/v1/finance/payment-batches/suppliers/${supplierId}`, { method: "PUT", body: JSON.stringify(body) }),
+  saveAccountCbu: (accountId: string, cbu: string | null) =>
+    request<unknown>(`/api/v1/finance/payment-batches/accounts/${accountId}`, { method: "PUT", body: JSON.stringify({ cbu }) }),
+  listPaymentBatchCandidates: (accountId: string) =>
+    request<import("./types/finance").PaymentBatchCandidate[]>(`/api/v1/finance/payment-batches/candidates?accountId=${accountId}`),
+  listPaymentBatches: () => request<import("./types/finance").PaymentBatch[]>("/api/v1/finance/payment-batches"),
+  createPaymentBatch: (body: { accountId: string; movementIds: string[]; requestDate: string; consolidated: boolean }) =>
+    request<import("./types/finance").PaymentBatch>("/api/v1/finance/payment-batches", { method: "POST", body: JSON.stringify(body) }),
+  cancelPaymentBatch: (id: string) => request<unknown>(`/api/v1/finance/payment-batches/${id}/cancel`, { method: "POST" }),
+  downloadInterbanking: (batch: { id: string; number: number }) =>
+    requestBlob(`/api/v1/finance/payment-batches/${batch.id}/interbanking`).then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `interbanking-lote-${String(batch.number).padStart(4, "0")}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }),
   getReconciliationTray: (accountId: string) =>
     request<import("./types/finance").ReconciliationTray>(`/api/v1/finance/reconciliation/tray?accountId=${accountId}`),
   confirmReconciliationTray: (body: { accountId: string; matches: { importedId: string; systemId: string }[]; matchesMany: { importedId: string; systemIds: string[] }[]; cheques: { importedId: string; chequeId: string }[]; classify: string[] }) =>
