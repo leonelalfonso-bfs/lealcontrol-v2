@@ -227,5 +227,12 @@ public static class FinanceSchema
         );
         CREATE INDEX IF NOT EXISTS ""IX_Withholdings_Supplier_Month"" ON finance.""Withholdings"" (""TenantId"", ""SupplierId"", ""RegimeCode"", ""Date"");
         CREATE INDEX IF NOT EXISTS ""IX_Withholdings_Order"" ON finance.""Withholdings"" (""PaymentOrderId"");
+
+        ALTER TABLE finance.""CollectionReceiptLines"" ADD COLUMN IF NOT EXISTS ""Jurisdiction"" varchar(3);
+        ALTER TABLE finance.""WithholdingSettings"" ADD COLUMN IF NOT EXISTS ""DefaultJurisdiction"" varchar(3);
+        CREATE TABLE IF NOT EXISTS finance.""SufferedTaxJurisdictions"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""SourceType"" varchar(20) NOT NULL, ""SourceId"" uuid NOT NULL, ""Jurisdiction"" varchar(3) NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_SufferedTaxJurisdictions_Source"" ON finance.""SufferedTaxJurisdictions"" (""TenantId"", ""SourceType"", ""SourceId"");
         ", cancellationToken);
 }

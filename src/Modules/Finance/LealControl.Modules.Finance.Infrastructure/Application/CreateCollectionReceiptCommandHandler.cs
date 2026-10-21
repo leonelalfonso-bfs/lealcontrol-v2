@@ -106,6 +106,8 @@ internal sealed class CreateCollectionReceiptCommandHandler
                     ChequeId = line.ChequeId,
                     ConceptId = line.ConceptId,
                     RetentionType = line.RetentionType?.Trim(),
+                    // Convenio Multilateral: jurisdicción de la retención de IIBB (901 a 924).
+                    Jurisdiction = SufferedTaxes.Jurisdictions.ContainsKey(line.Jurisdiction?.Trim() ?? "") ? line.Jurisdiction!.Trim() : null,
                     RetentionCertificate = line.RetentionCertificate?.Trim(),
                     Notes = line.Notes?.Trim(),
                     CreatedAtUtc = DateTime.UtcNow

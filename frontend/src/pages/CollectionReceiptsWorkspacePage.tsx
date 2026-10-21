@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
+import { JURISDICTIONS } from "../lib/jurisdictions";
 import { useCan } from "../context/PermissionsContext";
 import type { CustomerSummary, Invoice } from "../api/types";
 import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
@@ -29,6 +30,8 @@ type PaymentLine = {
   chequeId?: string;
   conceptId?: string;
   retentionType?: string;
+  /** Jurisdicción del Convenio Multilateral, para la retención de IIBB. */
+  jurisdiction?: string;
   retentionCertificate?: string;
   notes?: string;
 };
@@ -350,6 +353,7 @@ export function CollectionReceiptsWorkspacePage() {
           conceptId: l.conceptId || defaultConceptId || null,
           retentionType: l.retentionType || null,
           retentionCertificate: l.retentionCertificate || null,
+          jurisdiction: l.method === "Retention" && (l.retentionType || "IIBB") === "IIBB" ? l.jurisdiction || null : null,
           notes: l.notes || null
         })) as any,
         imputations
@@ -476,6 +480,12 @@ export function CollectionReceiptsWorkspacePage() {
                         <option value="Ganancias">Ganancias</option>
                         <option value="IVA">IVA</option>
                         <option value="SUSS">SUSS</option>
+                      </select>
+                    )}
+                    {line.method === "Retention" && (line.retentionType || "IIBB") === "IIBB" && (
+                      <select aria-label="Jurisdicción" value={line.jurisdiction || ""} onChange={(e) => updateLine(line.id, { jurisdiction: e.target.value })}>
+                        <option value="">Jurisdicción…</option>
+                        {Object.entries(JURISDICTIONS).map(([code, name]) => <option key={code} value={code}>{code} · {name}</option>)}
                       </select>
                     )}
                     <div className="cobro-amount">

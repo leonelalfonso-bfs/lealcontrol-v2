@@ -239,6 +239,20 @@ export const api = {
       a.click();
       URL.revokeObjectURL(url);
     }),
+  getSufferedTaxes: (from: string, to: string) => request<import("./types/finance").SufferedTaxes>(`/api/v1/finance/suffered?from=${from}&to=${to}`),
+  saveSufferedSettings: (defaultJurisdiction: string | null) =>
+    request<unknown>("/api/v1/finance/suffered/settings", { method: "PUT", body: JSON.stringify({ defaultJurisdiction }) }),
+  setSufferedJurisdiction: (sourceType: string, sourceId: string, jurisdiction: string) =>
+    request<unknown>("/api/v1/finance/suffered/jurisdiction", { method: "PUT", body: JSON.stringify({ sourceType, sourceId, jurisdiction }) }),
+  downloadSifere: (kind: "retenciones" | "percepciones", from: string, to: string) =>
+    requestBlob(`/api/v1/finance/suffered/sifere/${kind}?from=${from}&to=${to}`).then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `sifere-${kind}-${from}-${to}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }),
   getReconciliationTray: (accountId: string) =>
     request<import("./types/finance").ReconciliationTray>(`/api/v1/finance/reconciliation/tray?accountId=${accountId}`),
   confirmReconciliationTray: (body: { accountId: string; matches: { importedId: string; systemId: string }[]; matchesMany: { importedId: string; systemIds: string[] }[]; cheques: { importedId: string; chequeId: string }[]; classify: string[] }) =>

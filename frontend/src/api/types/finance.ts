@@ -226,3 +226,13 @@ export type ReconciliationTray = {
   pendingSystem: number;
   rows: { id: string; operationDateUtc: string; kind: "Debit" | "Credit" | number; amount: number; description: string; counterpartyTaxId?: string | null; counterpartyName?: string | null; suggestion: ReconciliationSuggestion }[];
 };
+
+/** Retención o percepción que le hicieron a la empresa (nota 69, F3). */
+export type SufferedTaxRow = {
+  source: "Receipt" | "PurchaseInvoice" | "Bank"; sourceId: string; date: string; tax: string; kind: string; jurisdiction?: string | null;
+  agentName: string; agentTaxId: string; voucher: string; amount: number; voucherType?: string | null; voucherLetter?: string | null; pointOfSale: number; number: string;
+};
+export type SufferedTaxes = {
+  defaultJurisdiction?: string | null; jurisdictions: Record<string, string>; rows: SufferedTaxRow[]; problems: string[];
+  totals: { tax: string; kind: string; jurisdiction?: string | null; jurisdictionName?: string | null; amount: number; count: number }[];
+};

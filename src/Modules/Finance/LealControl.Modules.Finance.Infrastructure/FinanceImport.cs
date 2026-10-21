@@ -509,6 +509,7 @@ public static class FinanceImport
         FinanceExtras.MapFinanceExtrasEndpoints(endpoints);
         FinanceReconciliationTray.MapReconciliationTray(endpoints);
         FinanceWithholdings.MapWithholdingEndpoints(endpoints);
+        SufferedTaxes.MapSufferedTaxEndpoints(endpoints);
         return endpoints;
     }
 

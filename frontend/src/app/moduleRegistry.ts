@@ -275,6 +275,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/finanzas/bancos", label: "Bancos y cajas", icon: "🏦" },
       { path: "/finanzas/conciliacion", label: "Conciliación bancaria", icon: "🔗" },
       { path: "/finanzas/retenciones", label: "Retenciones de Ganancias", icon: "🧾" },
+      { path: "/finanzas/sufridas", label: "Retenciones y percepciones sufridas", icon: "📥" },
       { path: "/finanzas/cuenta-corriente", label: "Cuentas corrientes", icon: "⚖️" },
       { path: "/finanzas/cobranzas", label: "Recibos de cobro", icon: "🧾" },
       { path: "/finanzas/pagos", label: "Órdenes de pago", icon: "💳" },
