@@ -84,8 +84,8 @@ export function FinanceHelpPage() {
       <ManualPart id="bancos" title="6. Bancos, extractos y conceptos">
         <Steps>
           <Step title="En Bancos y cajas, abrí la cuenta y tocá “Importar extracto”: elegí el archivo tal como lo bajaste del home banking.">
-            Los extractos de <strong>Galicia</strong> (CSV de movimientos), <strong>Santander</strong> (CSV de movimientos) y{" "}
-            <strong>BBVA</strong> (Excel “Movimientos.xls”) se reconocen solos, sin mapear columnas. Además de la fecha y el importe, guardan
+            Los extractos de <strong>Galicia</strong> (CSV de movimientos), <strong>Santander</strong> (CSV de movimientos),{" "}
+            <strong>BBVA</strong> (Excel “Movimientos.xls”) y <strong>Credicoop</strong> (CSV “saldos_y_movimientos”) se reconocen solos, sin mapear columnas. Además de la fecha y el importe, guardan
             la contraparte de cada transferencia (nombre y CUIT) y el código de operación del banco: con el CUIT, el movimiento ya queda
             sugerido para el proveedor o cliente que lo tenga cargado.
           </Step>
@@ -94,7 +94,7 @@ export function FinanceHelpPage() {
           </Step>
           <Step title="Al importar, cada movimiento se clasifica: primero por las reglas de la empresa (Conceptos y reglas) y, si ninguna lo reconoce, por los textos del banco.">
             Se reconocen solos el impuesto a los débitos y créditos, SIRCREB, IVA y percepciones, comisiones e intereses del banco,
-            suscripciones y rescates de fondos (FIMA) y acreditación de haberes. Con el CUIT de la transferencia queda sugerido el
+            suscripciones y rescates de fondos (FIMA), transferencias entre cuentas propias y acreditación de haberes. Con el CUIT de la transferencia queda sugerido el
             proveedor o cliente.
           </Step>
           <Step title="Finanzas → Conciliación bancaria → elegí la cuenta: aparece cada movimiento del extracto sin vincular con su acción sugerida.">

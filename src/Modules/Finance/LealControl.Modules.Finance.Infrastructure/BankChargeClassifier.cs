@@ -15,8 +15,13 @@ public static partial class BankChargeClassifier
         (Interest(), "INTERES_PAGADO"),
         (Subscription(), "INVERSION_SUSCRIPCION"),
         (Redemption(), "INVERSION_RESCATE"),
-        (Payroll(), "SUELDOS")
+        (Payroll(), "SUELDOS"),
+        (OwnTransfer(), "TRANSFERENCIA_PROPIA")
     ];
+
+    // Entre cuentas propias de la empresa (Credicoop "e/Ctas.Igual Tit.", Santander "Pagos Ctas Propias").
+    [GeneratedRegex(@"igual\s+tit|ctas\.?\s+propias|cuentas\s+propias", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex OwnTransfer();
 
     [GeneratedRegex(@"acreditamiento\s+de\s+haberes|pago\s+de\s+haberes", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex Payroll();
@@ -25,7 +30,7 @@ public static partial class BankChargeClassifier
     [GeneratedRegex(@"ley\s*25\.?413|imp\.?\s*(deb|cre)\.?\s*ley|impuesto\s+ley|sircreb|ing\.?\s*brutos|percep|rg\s*2408|transfisc|^iva\b|iva\s+tasa|^percepcion", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex Taxes();
 
-    [GeneratedRegex(@"^com\.?\s|comision|g\.?\s*de\s*echeq|com\s+mant|mantenimiento\s+de\s+cuenta", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^com\.?\s|comision|servicio\s+acreditaciones|g\.?\s*de\s*echeq|com\s+mant|mantenimiento\s+de\s+cuenta", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex Fees();
 
     [GeneratedRegex(@"intereses?\s+sobre\s+saldos?\s+deudor|interes(es)?\s+deudor", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
