@@ -5,6 +5,7 @@ import type { MetrologyInstrument } from "../../api/types";
 
 const emptyForm = {
   code: "",
+  internalCode: "",
   kind: "Thermometer",
   description: "Termómetro ambiental",
   brand: "",
@@ -72,7 +73,8 @@ export function MetrologyInstrumentsPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Código</th>
+                  <th>N.º interno</th>
+                  <th>Identificación</th>
                   <th>Descripción</th>
                   <th>Certificado</th>
                   <th>Calibración</th>
@@ -84,7 +86,8 @@ export function MetrologyInstrumentsPage() {
               <tbody>
                 {items.map((i) => (
                   <tr key={i.id}>
-                    <td><strong>{i.code}</strong></td>
+                    <td><strong>{i.internalCode || "—"}</strong></td>
+                    <td>{i.code}</td>
                     <td>
                       {i.description || "—"}
                       <div className="muted" style={{ fontSize: 12 }}>{[i.brand, i.model, i.serialNumber].filter(Boolean).join(" · ")}</div>
@@ -122,6 +125,7 @@ export function MetrologyInstrumentFormPage() {
       .then((item) => {
         setForm({
           code: item.code || "",
+          internalCode: item.internalCode || "",
           kind: item.kind || "Thermometer",
           description: item.description || "",
           brand: item.brand || "",
@@ -146,6 +150,7 @@ export function MetrologyInstrumentFormPage() {
     setError(null);
     const body = {
       code: form.code.trim(),
+      internalCode: form.internalCode.trim() || undefined,
       kind: form.kind,
       description: form.description.trim(),
       brand: form.brand.trim(),
@@ -180,7 +185,8 @@ export function MetrologyInstrumentFormPage() {
       {error && <div className="card pad" style={{ background: "#fef2f2", color: "#991b1b", marginTop: 12 }}>{error}</div>}
       <form className="card pad" style={{ marginTop: 16 }} onSubmit={(e) => void onSubmit(e)}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-          <label>Código<input required value={form.code} onChange={(e) => set("code", e.target.value)} placeholder="EQ 001" /></label>
+          <label>N.º interno (PG14)<input value={form.internalCode} onChange={(e) => set("internalCode", e.target.value)} placeholder="Se asigna solo: EQ-0001" /></label>
+          <label>Identificación<input required value={form.code} onChange={(e) => set("code", e.target.value)} placeholder="Grabado o etiqueta del instrumento" /></label>
           <label>Tipo
             <select value={form.kind} onChange={(e) => set("kind", e.target.value)}>
               <option value="Thermometer">Termómetro</option>

@@ -28,6 +28,7 @@ public static class MetrologyEndpoints
             configureNpgsql: b => b.MigrationsAssembly(typeof(MetrologyDbContext).Assembly.FullName));
 
         services.AddScoped<IMetrologyAssetCatalog, MetrologyAssetCatalog>();
+        services.AddScoped<IEquipmentNumbering, EquipmentNumbering>();
 
         return services;
     }
@@ -487,8 +488,12 @@ public static class MetrologyEndpoints
                     Notes = req.Notes
                 };
 
+                var (internalCode, codeError) = await EquipmentNumbering.ValidateAsync(db, tenantId.Value, req.InternalCode, null, ct);
+                if (codeError is not null) return Results.BadRequest(new { message = codeError });
+                weight.InternalCode = internalCode;
                 db.StandardWeights.Add(weight);
                 await db.SaveChangesAsync(ct);
+                await EquipmentNumbering.AssignMissingAsync(db, ct);
 
                 return Results.Created($"/api/v1/metrology/weights/{weight.Id}", weight);
             }
@@ -536,6 +541,12 @@ public static class MetrologyEndpoints
                 if (req.ExpirationDate.HasValue) weight.ExpirationDate = req.ExpirationDate;
                 if (req.Status != null) weight.Status = req.Status;
                 if (req.Notes != null) weight.Notes = req.Notes;
+                if (!string.IsNullOrWhiteSpace(req.InternalCode) && req.InternalCode.Trim() != weight.InternalCode)
+                {
+                    var (internalCode, codeError) = await EquipmentNumbering.ValidateAsync(db, tenantId.Value, req.InternalCode, weight.Id, ct);
+                    if (codeError is not null) return Results.BadRequest(new { message = codeError });
+                    weight.InternalCode = internalCode;
+                }
 
                 await db.SaveChangesAsync(ct);
                 return Results.Ok(weight);
@@ -631,6 +642,7 @@ public static class MetrologyEndpoints
                 }
 
                 await db.SaveChangesAsync(ct);
+                await EquipmentNumbering.AssignMissingAsync(db, ct);
                 return Results.Ok(new
                 {
                     success = true,
@@ -954,8 +966,12 @@ public static class MetrologyEndpoints
                 CreatedAtUtc = DateTime.UtcNow
             };
 
+            var (instrumentCode, instrumentCodeError) = await EquipmentNumbering.ValidateAsync(db, tenantId.Value, req.InternalCode, null, ct);
+            if (instrumentCodeError is not null) return Results.BadRequest(new { message = instrumentCodeError });
+            entity.InternalCode = instrumentCode;
             db.Instruments.Add(entity);
             await db.SaveChangesAsync(ct);
+            await EquipmentNumbering.AssignMissingAsync(db, ct);
             return Results.Created($"/api/v1/metrology/instruments/{entity.Id}", entity);
         });
 
@@ -992,6 +1008,12 @@ public static class MetrologyEndpoints
             if (req.ExpirationDate.HasValue) entity.ExpirationDate = req.ExpirationDate;
             if (req.Status is not null) entity.Status = string.IsNullOrWhiteSpace(req.Status) ? entity.Status : req.Status.Trim();
             if (req.Notes is not null) entity.Notes = req.Notes;
+            if (!string.IsNullOrWhiteSpace(req.InternalCode) && req.InternalCode.Trim() != entity.InternalCode)
+            {
+                var (internalCode, codeError) = await EquipmentNumbering.ValidateAsync(db, tenantId.Value, req.InternalCode, entity.Id, ct);
+                if (codeError is not null) return Results.BadRequest(new { message = codeError });
+                entity.InternalCode = internalCode;
+            }
 
             await db.SaveChangesAsync(ct);
             return Results.Ok(entity);

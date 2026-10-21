@@ -42,7 +42,7 @@ const KIND_LABEL = EQUIPMENT_KIND;
 
 const SOURCE_LABEL: Record<string, string> = {
   StandardWeight: "Pesa",
-  Instrument: "Instrumento",
+  Instrument: "Termómetro / instrumento",
   QualityEquipment: "Auxiliar"
 };
 
@@ -57,6 +57,9 @@ const CHECK_STATUS = GENERIC_RECORD_STATUS;
 const RESULT_LABEL = CHECK_RESULT;
 const FREQ_LABEL = FREQUENCY_LABEL;
 const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+const MONTH_STATUS: Record<string, string> = { P: "Programado", R: "Realizado", "-": "Sin programar" };
+/** Número interno de PG14 y la identificación del equipo, los dos a la vista: "EQ-0003 (1051)". */
+const assetLabel = (a: { internalCode?: string; code: string }) => (a.internalCode && a.internalCode !== a.code ? `${a.internalCode} (${a.code})` : a.code);
 const MP_STATUS: Record<string, string> = {
   Active: "Activo",
   Done: "Hecho",
@@ -166,11 +169,9 @@ export function QualityPg14Page() {
   const [mAssetSource, setMAssetSource] = useState("QualityEquipment");
   const [mActivity, setMActivity] = useState("");
   const [mFrequency, setMFrequency] = useState("Monthly");
-  const [mNextDue, setMNextDue] = useState("");
+  const [mFirst, setMFirst] = useState(new Date().toISOString().slice(0, 7));
   const [mResponsible, setMResponsible] = useState("");
   const [mNotes, setMNotes] = useState("");
-  const [mYear, setMYear] = useState(String(new Date().getFullYear()));
-  const [mMonths, setMMonths] = useState("------------");
   const [programYearFilter, setProgramYearFilter] = useState(new Date().getFullYear());
 
   // R01 form
@@ -228,7 +229,7 @@ export function QualityPg14Page() {
       api.listQualityPg14R03(),
       api.listQualityEquipment(),
       api.listQualityPg14R05(),
-      api.listQualityPg14R06(),
+      api.listQualityPg14R06(programYearFilter),
       api.listQualityEquipmentLogEntries()
     ])
       .then(([sum, r04, r03, eq, r05, r06, r01]) => {
@@ -250,7 +251,7 @@ export function QualityPg14Page() {
 
   useEffect(() => {
     loadAll();
-  }, []);
+  }, [programYearFilter]);
 
   useEffect(() => {
     if (tab === "equipos" && selectedEq) {
@@ -287,11 +288,8 @@ export function QualityPg14Page() {
       setMAssetSource(selectedPlan.assetSource || "QualityEquipment");
       setMActivity(selectedPlan.activity);
       setMFrequency(selectedPlan.frequency);
-      setMNextDue(selectedPlan.nextDue?.slice(0, 10) || "");
       setMResponsible(selectedPlan.responsible || "");
       setMNotes(selectedPlan.notes || "");
-      setMYear(String(selectedPlan.programYear));
-      setMMonths(selectedPlan.months || "------------");
     }
     if (tab === "r01" && selectedLog) {
       setLSource(selectedLog.assetSource);
@@ -338,11 +336,9 @@ export function QualityPg14Page() {
     setMAssetSource("QualityEquipment");
     setMActivity("");
     setMFrequency("Monthly");
-    setMNextDue("");
+    setMFirst(new Date().toISOString().slice(0, 7));
     setMResponsible("");
     setMNotes("");
-    setMYear(String(programYearFilter));
-    setMMonths("------------");
   };
 
   const resetLogForm = () => {
@@ -511,15 +507,13 @@ export function QualityPg14Page() {
         equipmentId: mEquipmentId,
         assetSource: mAssetSource,
         activity: mActivity,
-        programYear: Number(mYear),
-        months: mMonths,
+        firstDate: `${mFirst}-01`,
         frequency: mFrequency,
-        nextDue: mNextDue ? new Date(mNextDue).toISOString() : undefined,
         responsible: mResponsible || undefined,
         notes: mNotes || undefined
       });
       setMsg("Ítem de mantenimiento creado.");
-      setProgramYearFilter(Number(mYear));
+      setProgramYearFilter(Number(mFirst.slice(0, 4)));
       setShowForm(false);
       resetPlanForm();
       loadAll();
@@ -537,10 +531,8 @@ export function QualityPg14Page() {
     try {
       await api.updateQualityMaintenancePlanItem(selectedPlan.id, {
         activity: mActivity,
-        programYear: Number(mYear),
-        months: mMonths,
+        year: programYearFilter,
         frequency: mFrequency,
-        nextDue: mNextDue ? new Date(mNextDue).toISOString() : null,
         responsible: mResponsible,
         notes: mNotes
       });
@@ -662,10 +654,10 @@ export function QualityPg14Page() {
   const abbaFields = (disabled: boolean) => (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(175px,1fr))", gap: 12, marginTop: 12 }}>
       <label>Pesa objetivo (B) *<select value={cTarget} onChange={(e) => { setCTarget(e.target.value); if (e.target.value === cMaster) setCMaster(""); }} disabled={disabled} required>
-        <option value="">Seleccionar</option>{weights.map((w) => <option key={w.id} value={w.id}>{w.code} · {w.extra || w.description}</option>)}
+        <option value="">Seleccionar</option>{weights.map((w) => <option key={w.id} value={w.id}>{assetLabel(w)} · {w.extra || w.description}</option>)}
       </select></label>
       <label>Patrón maestro (A) *<select value={cMaster} onChange={(e) => setCMaster(e.target.value)} disabled={disabled} required>
-        <option value="">Seleccionar</option>{weights.filter((w) => w.id !== cTarget).map((w) => <option key={w.id} value={w.id}>{w.code} · {w.extra || w.description}{w.extra && Math.abs(Number.parseFloat(w.extra) - 1000) <= 1 && w.extra.includes("kg") ? " ★" : ""}</option>)}
+        <option value="">Seleccionar</option>{weights.filter((w) => w.id !== cTarget).map((w) => <option key={w.id} value={w.id}>{assetLabel(w)} · {w.extra || w.description}{w.extra && Math.abs(Number.parseFloat(w.extra) - 1000) <= 1 && w.extra.includes("kg") ? " ★" : ""}</option>)}
       </select>{cMaster && !checkSchedule?.find((row) => row.weightId === cMaster)?.isReferenceMass && <small style={{ color: "#b45309" }}>PG14 recomienda patrón maestro de 1000 kg.</small>}</label>
       <label>Resolución comparador (g) *<input type="number" step="0.000001" min="0.000001" value={cResolution} onChange={(e) => setCResolution(e.target.value)} disabled={disabled} required /></label>
       {([['A1', cA1, setCA1], ['B1', cB1, setCB1], ['B2', cB2, setCB2], ['A2', cA2, setCA2]] as const).map(([name, value, setter]) =>
@@ -676,11 +668,11 @@ export function QualityPg14Page() {
 
   const setMonth = async (row: QualityMaintenancePlanItem, month: number) => {
     const current = row.months?.[month - 1] || "-";
-    const next = current === "-" ? "P" : current === "P" ? "D" : "-";
+    const next = current === "-" ? "P" : current === "P" ? "R" : "-";
     setBusy(true); setError(null);
     try {
-      await api.updateQualityMaintenancePlanItem(row.id, { month, monthValue: next });
-      setMsg(`${row.number} · ${MONTHS[month - 1]}: ${next === "-" ? "sin programar" : next === "P" ? "planificado" : "realizado"}.`);
+      await api.updateQualityMaintenancePlanItem(row.id, { year: programYearFilter, month, monthValue: next });
+      setMsg(`${row.number} · ${MONTHS[month - 1]} ${programYearFilter}: ${MONTH_STATUS[next].toLowerCase()}.`);
       loadAll();
     } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
     finally { setBusy(false); }
@@ -844,7 +836,7 @@ export function QualityPg14Page() {
               <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
                 <option value="all">Todos</option>
                 <option value="StandardWeight">Pesas</option>
-                <option value="Instrument">Instrumentos</option>
+                <option value="Instrument">Termómetros / instrumentos</option>
                 <option value="QualityEquipment">Auxiliares</option>
               </select>
             </label>
@@ -863,7 +855,8 @@ export function QualityPg14Page() {
               <thead>
                 <tr>
                   <th>Origen</th>
-                  <th>Código</th>
+                  <th>N.º interno</th>
+                  <th>Identificación</th>
                   <th>Tipo</th>
                   <th>Descripción</th>
                   <th>Marca</th>
@@ -892,17 +885,19 @@ export function QualityPg14Page() {
                           {SOURCE_LABEL[r.source] || r.source}
                         </span>
                       </td>
-                      <td><strong>{r.code}</strong></td>
+                      <td><strong>{r.internalCode || "—"}</strong></td>
+                      <td>{r.source === "QualityEquipment" ? (r.serialNumber || r.extra || "—") : r.code}</td>
                       <td>{KIND_LABEL[r.kind] || r.kind}</td>
                       <td>{r.description || "—"}{r.extra ? <div style={{ color: "#64748b", fontSize: 12 }}>{r.extra}</div> : null}</td>
                       <td>{r.brandOrManufacturer || "—"}</td>
                       <td>{r.serialNumber || "—"}</td>
-                      <td>{r.certificateNumber || "—"}</td>
+                      <td>{r.certificateNumber ? <Link to={`/calidad/trazabilidad?cert=${encodeURIComponent(r.certificateNumber)}`}>{r.certificateNumber}</Link> : "—"}</td>
                       <td style={r.isExpired ? { color: "#b91c1c", fontWeight: 600 } : undefined}>
                         {fmtDate(r.expirationDate)}
                       </td>
                       <td>{labelOf(EQ_STATUS, r.status)}</td>
-                      <td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <Link to={`/calidad/registros/equipos/hoja-vida/${encodeURIComponent(r.source)}/${r.id}/pdf`} className="btn ghost compact">Hoja de vida</Link>
                         {r.deepLinkPath ? (
                           <Link to={r.deepLinkPath} className="btn ghost compact">Abrir</Link>
                         ) : null}
@@ -911,7 +906,7 @@ export function QualityPg14Page() {
                   );
                 })}
                 {filteredInventory.length === 0 && (
-                  <tr><td colSpan={10} style={{ textAlign: "center", color: "#64748b" }}>Sin equipos en el listado.</td></tr>
+                  <tr><td colSpan={12} style={{ textAlign: "center", color: "#64748b" }}>Sin equipos en el listado.</td></tr>
                 )}
               </tbody>
             </table>
@@ -929,7 +924,8 @@ export function QualityPg14Page() {
               <thead>
                 <tr>
                   <th>Origen</th>
-                  <th>Código</th>
+                  <th>N.º interno</th>
+                  <th>Identificación</th>
                   <th>Descripción</th>
                   <th>Certificado</th>
                   <th>Calibración</th>
@@ -943,7 +939,8 @@ export function QualityPg14Page() {
                   .map((r) => (
                     <tr key={`label-${r.source}-${r.id}`} style={r.isExpired ? { background: "#fef2f2" } : undefined}>
                       <td>{SOURCE_LABEL[r.source] || r.source}</td>
-                      <td><strong>{r.code}</strong></td>
+                      <td><strong>{r.internalCode || "—"}</strong></td>
+                      <td>{r.source === "QualityEquipment" ? (r.serialNumber || r.extra || "—") : r.code}</td>
                       <td>{r.description || "—"}</td>
                       <td>{r.certificateNumber || "—"}</td>
                       <td>{fmtDate(r.calibrationDate)}</td>
@@ -985,7 +982,8 @@ export function QualityPg14Page() {
               <thead>
                 <tr>
                   <th>Origen</th>
-                  <th>Código</th>
+                  <th>N.º interno</th>
+                  <th>Identificación</th>
                   <th>Descripción</th>
                   <th>Certificado</th>
                   <th>Calibración</th>
@@ -1014,7 +1012,8 @@ export function QualityPg14Page() {
                           {SOURCE_LABEL[r.source] || r.source}
                         </span>
                       </td>
-                      <td><strong>{r.code}</strong></td>
+                      <td><strong>{r.internalCode || "—"}</strong></td>
+                      <td>{r.source === "QualityEquipment" ? (r.serialNumber || r.extra || "—") : r.code}</td>
                       <td>{r.description || "—"}</td>
                       <td>{r.certificateNumber || "—"}</td>
                       <td>{fmtDate(r.calibrationDate)}</td>
@@ -1057,7 +1056,7 @@ export function QualityPg14Page() {
                 <option value="">Todos</option>
                 {inventory.map((a) => (
                   <option key={`${a.source}-${a.id}`} value={`${a.source}|${a.id}`}>
-                    {SOURCE_LABEL[a.source] || a.source} · {a.code} · {a.description || "—"}
+                    {SOURCE_LABEL[a.source] || a.source} · {assetLabel(a)} · {a.description || "—"}
                   </option>
                 ))}
               </select>
@@ -1117,7 +1116,7 @@ export function QualityPg14Page() {
                     required
                   >
                     <option value="StandardWeight">Pesa</option>
-                    <option value="Instrument">Instrumento</option>
+                    <option value="Instrument">Termómetro / instrumento</option>
                     <option value="QualityEquipment">Auxiliar</option>
                   </select>
                 </label>
@@ -1126,7 +1125,7 @@ export function QualityPg14Page() {
                   <select value={lAssetId} onChange={(e) => setLAssetId(e.target.value)} required>
                     <option value="">—</option>
                     {assetsForSource.map((a) => (
-                      <option key={a.id} value={a.id}>{a.code} · {a.description || "—"}</option>
+                      <option key={a.id} value={a.id}>{assetLabel(a)} · {a.description || "—"}</option>
                     ))}
                   </select>
                 </label>
@@ -1637,9 +1636,10 @@ export function QualityPg14Page() {
               Excel
             </button>
             <label>Año <select value={programYearFilter} onChange={(e) => { setProgramYearFilter(Number(e.target.value)); setSelectedId(null); }}>
-              {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1, ...plans.map((p) => p.programYear)].filter((y, i, all) => all.indexOf(y) === i).sort().map((year) => <option key={year} value={year}>{year}</option>)}
+              {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1, programYearFilter, ...plans.flatMap((p) => (p.schedule || []).map((m) => m.year))].filter((y, i, all) => all.indexOf(y) === i).sort().map((year) => <option key={year} value={year}>{year}</option>)}
             </select></label>
             <Link className="btn btn-outline" to={`/calidad/registros/equipos/r06/pdf?year=${programYearFilter}`}>PDF programa</Link>
+            <span className="muted" style={{ fontSize: "0.82rem" }}>P = Programado · R = Realizado · tocá el mes para cambiarlo</span>
           </div>
 
           {showForm && !selectedId && (
@@ -1659,11 +1659,11 @@ export function QualityPg14Page() {
                   <select value={mEquipmentId} onChange={(e) => setMEquipmentId(e.target.value)} required>
                     <option value="">Seleccione…</option>
                     {inventory.filter((asset) => asset.source === mAssetSource && (mAssetSource !== "Instrument" || asset.kind === "Thermometer")).map((asset) => (
-                      <option key={`${asset.source}:${asset.id}`} value={asset.id}>{asset.code} · {asset.description || asset.kind}</option>
+                      <option key={`${asset.source}:${asset.id}`} value={asset.id}>{assetLabel(asset)} · {asset.description || asset.kind}</option>
                     ))}
                   </select>
                 </label>
-                <label>Año<input type="number" min={2000} max={2100} value={mYear} onChange={(e) => setMYear(e.target.value)} required /></label>
+                <label>Primera ejecución<input type="month" value={mFirst} onChange={(e) => setMFirst(e.target.value)} required /></label>
                 <label>
                   Frecuencia
                   <select value={mFrequency} onChange={(e) => setMFrequency(e.target.value)}>
@@ -1671,10 +1671,6 @@ export function QualityPg14Page() {
                       <option key={k} value={k}>{v}</option>
                     ))}
                   </select>
-                </label>
-                <label>
-                  Próximo vencimiento
-                  <input type="date" value={mNextDue} onChange={(e) => setMNextDue(e.target.value)} />
                 </label>
                 <label>
                   Responsable
@@ -1685,9 +1681,9 @@ export function QualityPg14Page() {
                   <input value={mActivity} onChange={(e) => setMActivity(e.target.value)} required />
                 </label>
               </div>
-              <div style={{ marginTop: 12 }}><strong>Meses planificados (P)</strong><div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 6 }}>
-                {MONTHS.map((month, index) => <label key={month} style={{ display: "flex", gap: 3, alignItems: "center" }}><input type="checkbox" checked={mMonths[index] === "P"} onChange={(e) => setMMonths(mMonths.slice(0, index) + (e.target.checked ? "P" : "-") + mMonths.slice(index + 1))} />{month}</label>)}
-              </div></div>
+              <p className="muted" style={{ margin: "10px 0 0", fontSize: "0.82rem" }}>
+                Se programan los próximos 24 meses desde la primera ejecución según la frecuencia, aunque crucen de año. Después se ajusta mes a mes en la grilla.
+              </p>
               <label style={{ display: "block", marginTop: 12 }}>
                 Notas
                 <textarea value={mNotes} onChange={(e) => setMNotes(e.target.value)} rows={2} style={{ width: "100%" }} />
@@ -1725,7 +1721,7 @@ export function QualityPg14Page() {
                       <td>{r.number}</td>
                       <td>{SOURCE_LABEL[r.assetSource] || r.assetSource} · {r.equipmentCode}</td>
                       <td>{r.activity}</td>
-                      {MONTHS.map((month, index) => <td key={month}><button type="button" className="btn btn-outline compact" disabled={busy || r.status === "Cancelled"} style={{ minWidth: 30, padding: "2px 5px", color: r.months?.[index] === "D" ? "#166534" : r.months?.[index] === "P" ? "#b45309" : "#94a3b8" }} title={`${month}: ${r.months?.[index] === "D" ? "realizado" : r.months?.[index] === "P" ? "planificado" : "sin programar"}`} onClick={(event) => { event.stopPropagation(); void setMonth(r, index + 1); }}>{r.months?.[index] === "-" ? "·" : r.months?.[index] || "·"}</button></td>)}
+                      {MONTHS.map((month, index) => <td key={month}><button type="button" className="btn btn-outline compact" disabled={busy || r.status === "Cancelled"} style={{ minWidth: 30, padding: "2px 5px", color: r.months?.[index] === "R" ? "#166534" : r.months?.[index] === "P" ? "#b45309" : "#94a3b8" }} title={`${month} ${programYearFilter}: ${MONTH_STATUS[r.months?.[index] || "-"]}`} onClick={(event) => { event.stopPropagation(); void setMonth(r, index + 1); }}>{r.months?.[index] === "-" ? "·" : r.months?.[index] || "·"}</button></td>)}
                       <td>{fmtDate(r.nextDue)}{r.isOverdue ? " ⚠" : ""}</td>
                       <td>{MP_STATUS[r.status] || r.status}</td>
                     </tr>
@@ -1744,7 +1740,9 @@ export function QualityPg14Page() {
                   {SOURCE_LABEL[selectedPlan.assetSource] || selectedPlan.assetSource} · {selectedPlan.equipmentCode} · {selectedPlan.equipmentDescription}
                   {selectedPlan.isOverdue ? " · Vencido" : ""}
                 </p>
-                <p className="muted">Año {selectedPlan.programYear} · P = planificado · D = realizado. Cambiá los meses en la grilla.</p>
+                <p className="muted">
+                  Próximo: {fmtDate(selectedPlan.nextDue)} · P = Programado · R = Realizado. Cambiá los meses en la grilla de cada año.
+                </p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <label style={{ gridColumn: "1 / -1" }}>
                     Actividad
@@ -1757,10 +1755,6 @@ export function QualityPg14Page() {
                         <option key={k} value={k}>{v}</option>
                       ))}
                     </select>
-                  </label>
-                  <label>
-                    Próximo
-                    <input type="date" value={mNextDue} onChange={(e) => setMNextDue(e.target.value)} disabled={selectedPlan.status === "Cancelled"} />
                   </label>
                   <label>
                     Último hecho

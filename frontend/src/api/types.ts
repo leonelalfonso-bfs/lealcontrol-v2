@@ -2112,6 +2112,8 @@ export type StandardWeight = {
   id: string;
   tenantId: string;
   code: string;
+  /** Número interno de PG14 (EQ-0001), común a pesas, termómetros y equipos auxiliares. */
+  internalCode?: string;
   normalizedId?: string;
   serialNumber?: string | null;
   manufacturer?: string | null;
@@ -2210,6 +2212,8 @@ export type MetrologyInstrument = {
   id: string;
   tenantId: string;
   code: string;
+  /** Número interno de PG14 (EQ-0001), común a pesas, termómetros y equipos auxiliares. */
+  internalCode?: string;
   kind: string;
   description?: string | null;
   brand?: string | null;

@@ -26,6 +26,7 @@ export function StandardWeightsPage() {
   const [importStep, setImportStep] = useState<1 | 2>(1);
   const [importProgressMsg, setImportProgressMsg] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<ParsedCertificateResult | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
   const [importLotName, setImportLotName] = useState("");
   const [importRows, setImportRows] = useState<(ParsedWeightItem & { selected: boolean })[]>([]);
   const [importing, setImporting] = useState(false);
@@ -45,7 +46,7 @@ export function StandardWeightsPage() {
       lot: lotFilter || undefined
     })
       .then((data) => {
-        setWeights(data);
+        setWeights([...data].sort((a, b) => (a.internalCode || "~").localeCompare(b.internalCode || "~") || a.code.localeCompare(b.code)));
         setSelectedIds([]);
       })
       .catch((err) => console.error("Error al cargar pesas:", err))
@@ -150,6 +151,7 @@ export function StandardWeightsPage() {
       const text = await extractTextFromPdf(file, (msg) => setImportProgressMsg(msg));
       setImportProgressMsg("Analizando estructura de datos y tablas de calibración…");
       const parsed = parseCertificateText(text, file.name);
+      setImportFile(file);
 
       setImportResult(parsed);
       setImportRows(
@@ -203,7 +205,23 @@ export function StandardWeightsPage() {
     try {
       setImporting(true);
       const res = await api.bulkImportStandardWeights(payload);
-      alert(`✅ ${res.message}`);
+      // El certificado queda en Trazabilidad (PG17) con su PDF como evidencia.
+      let traceability = "";
+      if (certNum) {
+        try {
+          const uploaded = importFile ? await api.uploadQualityFile(importFile) : null;
+          await api.saveCalibrationCertificate({
+            number: certNum,
+            calibrationDate: calDate ? new Date(calDate).toISOString() : null,
+            expirationDate: expDate ? new Date(expDate).toISOString() : null,
+            fileId: uploaded?.id ?? null
+          });
+          traceability = `\nCertificado ${certNum} registrado en Trazabilidad (PG17)${uploaded ? " con su PDF" : ""}.`;
+        } catch (err: any) {
+          traceability = `\nNo se pudo registrar el certificado en Trazabilidad: ${err?.message || err}. Cargalo desde Calidad → Trazabilidad.`;
+        }
+      }
+      alert(`✅ ${res.message}${traceability}`);
       setCurrentScreen("list");
       setImportStep(1);
       setImportResult(null);
@@ -869,6 +887,7 @@ export function StandardWeightsPage() {
                           onChange={(e) => handleToggleSelectAll(e.target.checked)}
                         />
                       </th>
+                      <th>N.º interno</th>
                       <th>Identificación</th>
                       <th>Marca / N° Serie</th>
                       <th>Masa Nominal</th>
@@ -899,6 +918,7 @@ export function StandardWeightsPage() {
                               onChange={() => handleToggleRow(w.id)}
                             />
                           </td>
+                          <td><strong style={{ color: "#0f172a" }}>{w.internalCode || "—"}</strong></td>
                           <td>
                             <strong style={{ color: "#0f172a", fontSize: "0.95rem" }}>{w.code}</strong>
                             {w.lotName && (
@@ -956,9 +976,12 @@ export function StandardWeightsPage() {
                             )}
                           </td>
                           <td>
-                            <span style={{ fontFamily: "monospace", fontSize: "0.85rem", fontWeight: 600 }}>
-                              {w.certificateNumber || "—"}
-                            </span>
+                            {w.certificateNumber ? (
+                              <Link to={`/calidad/trazabilidad?cert=${encodeURIComponent(w.certificateNumber)}`} title="Ver el certificado en Trazabilidad (PG17)"
+                                style={{ fontFamily: "monospace", fontSize: "0.85rem", fontWeight: 600 }}>
+                                {w.certificateNumber}
+                              </Link>
+                            ) : "—"}
                           </td>
                           <td style={{ fontSize: "0.82rem" }}>
                             <div>{w.calibrationDate ? new Date(w.calibrationDate).toLocaleDateString("es-AR") : "—"}</div>

@@ -20,12 +20,12 @@ public sealed class MetrologyAssetCatalog : IMetrologyAssetCatalog
 
         var weights = await _db.StandardWeights.AsNoTracking()
             .Where(w => w.TenantId == tenant)
-            .OrderBy(w => w.Code)
+            .OrderBy(w => w.InternalCode).ThenBy(w => w.Code)
             .ToListAsync(cancellationToken);
 
         var instruments = await _db.Instruments.AsNoTracking()
             .Where(i => i.TenantId == tenant)
-            .OrderBy(i => i.Code)
+            .OrderBy(i => i.InternalCode).ThenBy(i => i.Code)
             .ToListAsync(cancellationToken);
 
         var result = new List<MetrologyCatalogAsset>(weights.Count + instruments.Count);
@@ -52,7 +52,8 @@ public sealed class MetrologyAssetCatalog : IMetrologyAssetCatalog
                 ExpirationDate: w.ExpirationDate,
                 Status: w.Status ?? string.Empty,
                 Extra: $"{w.NominalValue} {w.Unit} {w.AccuracyClass}".Trim(),
-                DeepLinkPath: $"/metrologia/patrones/{w.Id}"
+                DeepLinkPath: $"/metrologia/patrones/{w.Id}",
+                InternalCode: w.InternalCode
             ));
         }
 
@@ -77,7 +78,8 @@ public sealed class MetrologyAssetCatalog : IMetrologyAssetCatalog
                 ExpirationDate: i.ExpirationDate,
                 Status: i.Status ?? string.Empty,
                 Extra: string.IsNullOrWhiteSpace(i.MeasurementRange) ? null : i.MeasurementRange,
-                DeepLinkPath: $"/metrologia/instrumentos/{i.Id}"
+                DeepLinkPath: $"/metrologia/instrumentos/{i.Id}",
+                InternalCode: i.InternalCode
             ));
         }
 

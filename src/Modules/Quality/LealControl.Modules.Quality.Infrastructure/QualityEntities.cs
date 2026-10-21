@@ -1270,6 +1270,7 @@ public static class QualityMaintenanceFrequencies
     public const string Quarterly = "Quarterly";
     public const string Semiannual = "Semiannual";
     public const string Annual = "Annual";
+    public const string Biennial = "Biennial";
 }
 
 public static class QualityMaintenanceStatuses
@@ -1293,8 +1294,6 @@ public sealed class QualityMaintenancePlanItem : Entity<Guid>
     public string EquipmentCode { get; set; } = string.Empty;
     public string EquipmentDescription { get; set; } = string.Empty;
     public string Activity { get; set; } = string.Empty;
-    public int ProgramYear { get; set; }
-    public string Months { get; set; } = "------------"; // Jan..Dec: - / P / D
     public string Frequency { get; set; } = QualityMaintenanceFrequencies.Monthly;
     public DateTime? NextDue { get; set; }
     public DateTime? LastDone { get; set; }
@@ -1308,23 +1307,38 @@ public sealed class QualityMaintenancePlanItem : Entity<Guid>
 public sealed record CreateMaintenancePlanItemRequest(
     Guid EquipmentId,
     string Activity,
-    int? ProgramYear = null,
-    string? Months = null,
+    DateTime? FirstDate = null,
     string? Frequency = null,
-    DateTime? NextDue = null,
     string? Responsible = null,
     string? Notes = null,
     string? AssetSource = null);
 
+/// <summary>
+/// Un mes del programa de mantenimiento con su año (PG14-R06): P = programado, R = realizado. Antes la grilla era de
+/// un solo año por ítem y un vencimiento en otro año corría todos los meses a ese año.
+/// </summary>
+public sealed class QualityMaintenanceMonth : Entity<Guid>
+{
+    public QualityMaintenanceMonth() : base(Guid.NewGuid()) { }
+    public TenantId TenantId { get; set; }
+    public Guid ItemId { get; set; }
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public string Status { get; set; } = QualityMaintenanceMonthStatuses.Planned;
+}
+
+public static class QualityMaintenanceMonthStatuses
+{
+    public const string Planned = "P";
+    public const string Done = "R";
+}
+
 public sealed record UpdateMaintenancePlanItemRequest(
     string? Activity = null,
-    int? ProgramYear = null,
-    string? Months = null,
+    int? Year = null,
     int? Month = null,
     string? MonthValue = null,
     string? Frequency = null,
-    DateTime? NextDue = null,
-    DateTime? LastDone = null,
     string? Responsible = null,
     string? Status = null,
     string? Notes = null);

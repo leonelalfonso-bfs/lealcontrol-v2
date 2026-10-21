@@ -43,6 +43,7 @@ internal static class QualityPg14Endpoints
     {
         QualityMaintenanceFrequencies.Monthly,
         QualityMaintenanceFrequencies.Quarterly,
+        QualityMaintenanceFrequencies.Biennial,
         QualityMaintenanceFrequencies.Semiannual,
         QualityMaintenanceFrequencies.Annual
     };
@@ -98,8 +99,9 @@ internal static class QualityPg14Endpoints
             var maintenanceItems = await db.MaintenancePlanItems.AsNoTracking()
                 .Where(m => m.TenantId == tenantId && m.Status == QualityMaintenanceStatuses.Active)
                 .ToListAsync(ct);
-            var maintenanceDue = maintenanceItems.Count(IsDueSoon);
-            var maintenanceOverdue = maintenanceItems.Count(IsOverdue);
+            var maintenanceMarks = (await db.MaintenanceMonths.AsNoTracking().Where(m => m.TenantId == tenantId).ToListAsync(ct)).ToLookup(m => m.ItemId);
+            var maintenanceDue = maintenanceItems.Count(m => IsDueSoon(m, maintenanceMarks[m.Id]));
+            var maintenanceOverdue = maintenanceItems.Count(m => IsOverdue(m, maintenanceMarks[m.Id]));
             var logEntries = await db.EquipmentLogEntries.AsNoTracking()
                 .CountAsync(e => e.TenantId == tenantId && e.Status == QualityEquipmentLogStatuses.Active, ct);
 
@@ -154,7 +156,9 @@ internal static class QualityPg14Endpoints
             var rows = metrologyAssets
                 .Select(a => ToUnifiedRow(a, now))
                 .Concat(auxiliaries.Select(e => ToUnifiedRow(e, now)))
-                .OrderBy(r => SourceSortKey(r.Source))
+                // Por número interno de PG14 (EQ-0001…); los que no tienen número, al final.
+                .OrderBy(r => string.IsNullOrEmpty(r.InternalCode))
+                .ThenBy(r => r.InternalCode, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(r => r.Code, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
@@ -278,7 +282,8 @@ internal static class QualityPg14Endpoints
         a.Status,
         a.Extra,
         a.DeepLinkPath,
-        a.ExpirationDate.HasValue && a.ExpirationDate.Value.Date < now.Date
+        a.ExpirationDate.HasValue && a.ExpirationDate.Value.Date < now.Date,
+        a.InternalCode
     );
 
     private static UnifiedInventoryRow ToUnifiedRow(QualityEquipment e, DateTime now) => new(
@@ -298,7 +303,8 @@ internal static class QualityPg14Endpoints
         e.Status,
         string.IsNullOrWhiteSpace(e.Plate) ? e.Location : $"Patente {e.Plate}",
         "/calidad/registros/equipos?tab=equipos",
-        false
+        false,
+        e.Code
     );
 
     private sealed record UnifiedInventoryRow(
@@ -316,7 +322,8 @@ internal static class QualityPg14Endpoints
         string Status,
         string? Extra,
         string? DeepLinkPath,
-        bool IsExpired);
+        bool IsExpired,
+        string InternalCode = "");
 
     private static void MapEquipment(RouteGroupBuilder group)
     {
@@ -356,6 +363,7 @@ internal static class QualityPg14Endpoints
             CreateQualityEquipmentRequest req,
             ITenantContext tenant,
             QualityDbContext db,
+            IEquipmentNumbering numbering,
             HttpContext http,
             CancellationToken ct) =>
         {
@@ -377,15 +385,16 @@ internal static class QualityPg14Endpoints
             string code;
             if (!string.IsNullOrWhiteSpace(req.Code))
             {
-                code = req.Code.Trim();
-                var exists = await db.Equipments.AsNoTracking()
-                    .AnyAsync(e => e.TenantId == tenantId && e.Code == code, ct);
-                if (exists)
-                    return Results.BadRequest(new { message = $"Ya existe un equipo con código {code}." });
+                // Una sola numeración EQ-0001 para pesas, termómetros y equipos auxiliares (PG14).
+                if (EquipmentNumbers.Normalize(req.Code) is not { } normalized)
+                    return Results.BadRequest(new { message = "El número interno tiene el formato EQ-0001." });
+                code = normalized;
+                if (await numbering.IsTakenAsync(tenantId.Value, code, null, ct))
+                    return Results.BadRequest(new { message = $"El número {code} ya lo tiene otro equipo." });
             }
             else
             {
-                code = await NextEquipmentCodeAsync(db, tenantId, ct);
+                code = await numbering.NextAsync(tenantId.Value, ct);
             }
 
             var entity = new QualityEquipment
@@ -516,6 +525,7 @@ internal static class QualityPg14Endpoints
             Guid? assetId,
             ITenantContext tenant,
             QualityDbContext db,
+            IMetrologyAssetCatalog metrologyCatalog,
             CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
@@ -533,10 +543,34 @@ internal static class QualityPg14Endpoints
             if (assetId.HasValue)
                 query = query.Where(r => r.AssetId == assetId.Value);
 
-            var rows = await query
-                .OrderByDescending(r => r.EventDate)
-                .ThenByDescending(r => r.Number)
-                .ToListAsync(ct);
+            var rows = await query.ToListAsync(ct);
+            // La hoja de vida de un equipo suma sus verificaciones intermedias (R05) completadas que no tienen su evento:
+            // las anteriores al registro automático o las cargadas antes de elegir la pesa del inventario.
+            if (assetId.HasValue)
+            {
+                var checks = await db.IntermediateChecks.AsNoTracking()
+                    .Where(c => c.TenantId == tenantId && c.Status == QualityIntermediateCheckStatuses.Completed
+                        && (c.TargetWeightId == assetId || c.EquipmentId == assetId))
+                    .ToListAsync(ct);
+                foreach (var c in checks.Where(c => !rows.Any(r => r.Notes.Contains(c.Number) || r.Description.Contains(c.Number))))
+                    rows.Add(new QualityEquipmentLogEntry(c.Id)
+                    {
+                        TenantId = tenantId, RecordCode = "PG14-R05", Number = c.Number,
+                        AssetSource = c.TargetWeightId == assetId ? QualityEquipmentLogAssetSources.StandardWeight : QualityEquipmentLogAssetSources.QualityEquipment,
+                        AssetId = assetId.Value, AssetCode = c.TargetWeightCode, AssetDescription = c.WeightUsed, EventDate = c.CheckDate,
+                        Kind = QualityEquipmentLogKinds.Verification, Description = $"Verificación intermedia {c.Number}",
+                        Verdict = c.Result switch
+                        {
+                            QualityIntermediateCheckResults.Pass => QualityEquipmentLogVerdicts.Fit,
+                            QualityIntermediateCheckResults.Fail => QualityEquipmentLogVerdicts.Unfit,
+                            QualityIntermediateCheckResults.Conditional => QualityEquipmentLogVerdicts.Conditional,
+                            _ => string.Empty
+                        },
+                        Responsible = c.Responsible, EvidenceFileId = c.EvidenceFileId, Status = QualityEquipmentLogStatuses.Active,
+                        Notes = "Desde PG14-R05", CreatedAtUtc = c.CreatedAtUtc, UpdatedAtUtc = c.UpdatedAtUtc
+                    });
+            }
+            rows = rows.OrderByDescending(r => r.EventDate).ThenByDescending(r => r.Number).ToList();
 
             var active = rows.Where(r => r.Status == QualityEquipmentLogStatuses.Active).ToList();
             return Results.Ok(new
@@ -554,6 +588,11 @@ internal static class QualityPg14Endpoints
                     Baja = active.Count(r => r.Kind == QualityEquipmentLogKinds.Decommission)
                 },
                 totalActive = active.Count,
+                // El equipo de la hoja de vida, con su número interno actual (los eventos guardan el de su momento).
+                asset = assetId.HasValue && assetSource is not null
+                    && await ResolveAssetAsync(db, metrologyCatalog, tenantId, NormalizeAllowed(assetSource, AllowedLogAssetSources) ?? assetSource, assetId.Value, null, null, ct) is { } asset
+                    ? new { code = asset.Code, description = asset.Description }
+                    : null,
                 rows = rows.Select(ToLogDto)
             });
         });
@@ -1107,27 +1146,31 @@ internal static class QualityPg14Endpoints
 
     private static void MapR06(RouteGroupBuilder group)
     {
-        group.MapGet("/records/pg14/r06", async (ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
+        // El programa se ve por año: cada ítem trae sus meses de ese año (P = programado, R = realizado).
+        group.MapGet("/records/pg14/r06", async (int? year, ITenantContext tenant, QualityDbContext db, CancellationToken ct) =>
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-
-            var rows = await db.MaintenancePlanItems.AsNoTracking()
-                .Where(r => r.TenantId == tenantId)
-                .OrderBy(r => r.NextDue == null)
-                .ThenBy(r => r.NextDue)
-                .ThenBy(r => r.Number)
-                .ToListAsync(ct);
-
+            var programYear = year ?? ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow).Year;
+            var items = await db.MaintenancePlanItems.AsNoTracking().Where(r => r.TenantId == tenantId).ToListAsync(ct);
+            var marks = (await db.MaintenanceMonths.AsNoTracking().Where(m => m.TenantId == tenantId).ToListAsync(ct))
+                .ToLookup(m => m.ItemId);
+            // Entran los ítems con meses en ese año y los activos todavía sin programar.
+            var rows = items
+                .Where(r => marks[r.Id].Any(m => m.Year == programYear) || (r.Status == QualityMaintenanceStatuses.Active && !marks[r.Id].Any()))
+                .OrderBy(r => r.EquipmentCode).ThenBy(r => r.Number)
+                .ToList();
             return Results.Ok(new
             {
                 code = "PG14-R06",
                 title = "Programa de mantenimiento preventivo",
                 recordKind = QualityRecordKinds.Structured,
                 generatedAtUtc = DateTime.UtcNow,
+                programYear,
+                years = marks.SelectMany(g => g.Select(m => m.Year)).Append(programYear).Distinct().OrderBy(y => y),
                 activeCount = rows.Count(r => r.Status == QualityMaintenanceStatuses.Active),
-                overdueCount = rows.Count(r => IsOverdue(r)),
-                rows = rows.Select(ToMaintenanceDto)
+                overdueCount = rows.Count(r => IsOverdue(r, marks[r.Id])),
+                rows = rows.Select(r => ToMaintenanceDto(r, marks[r.Id].ToList(), programYear))
             });
         });
 
@@ -1141,7 +1184,8 @@ internal static class QualityPg14Endpoints
             var entity = await db.MaintenancePlanItems.AsNoTracking()
                 .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId, ct);
             if (entity is null) return Results.NotFound();
-            return Results.Ok(ToMaintenanceDto(entity));
+            var marks = await db.MaintenanceMonths.AsNoTracking().Where(m => m.ItemId == id).ToListAsync(ct);
+            return Results.Ok(ToMaintenanceDto(entity, marks, ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow).Year));
         });
 
         group.MapPost("/records/pg14/r06", async (
@@ -1154,12 +1198,10 @@ internal static class QualityPg14Endpoints
         {
             var tenantId = tenant.TenantId;
             await db.EnsureQualityTablesAsync(ct);
-
             if (req.EquipmentId == Guid.Empty)
                 return Results.BadRequest(new { message = "Seleccione un activo del listado." });
             if (string.IsNullOrWhiteSpace(req.Activity))
                 return Results.BadRequest(new { message = "La actividad es obligatoria." });
-
             var source = string.IsNullOrWhiteSpace(req.AssetSource)
                 ? QualityEquipmentLogAssetSources.QualityEquipment
                 : NormalizeAllowed(req.AssetSource, AllowedLogAssetSources);
@@ -1174,23 +1216,19 @@ internal static class QualityPg14Endpoints
                 if (instrument?.Kind != "Thermometer")
                     return Results.BadRequest(new { message = "Seleccione un termómetro del listado." });
             }
-
             var frequency = string.IsNullOrWhiteSpace(req.Frequency)
                 ? QualityMaintenanceFrequencies.Monthly
                 : NormalizeAllowed(req.Frequency, AllowedFrequencies);
             if (frequency is null)
-                return Results.BadRequest(new { message = "Frecuencia inválida. Use Monthly, Quarterly, Semiannual o Annual." });
-
-            var year = req.ProgramYear ?? DateTime.UtcNow.Year;
-            if (year < 2000 || year > 2100 || !ValidMonths(req.Months) || req.Months?.Contains('D') == true)
-                return Results.BadRequest(new { message = "Año o programación mensual inválidos. Al crear, use solo meses planificados (P)." });
+                return Results.BadRequest(new { message = "Frecuencia inválida." });
+            if (req.FirstDate is not { } first || first.Year is < 2000 or > 2100)
+                return Results.BadRequest(new { message = "Indicá el mes de la primera ejecución." });
             var number = await NextNumberAsync(
                 db.MaintenancePlanItems.AsNoTracking()
                     .Where(r => r.TenantId == tenantId)
                     .Select(r => r.Number),
-                $"MP-{year}-",
+                $"MP-{first.Year}-",
                 ct);
-
             var entity = new QualityMaintenancePlanItem
             {
                 TenantId = tenantId,
@@ -1201,22 +1239,25 @@ internal static class QualityPg14Endpoints
                 EquipmentCode = resolved.Value.Code,
                 EquipmentDescription = resolved.Value.Description,
                 Activity = req.Activity.Trim(),
-                ProgramYear = year,
-                Months = req.Months ?? "------------",
                 Frequency = frequency,
-                NextDue = req.NextDue,
                 Responsible = req.Responsible?.Trim() ?? string.Empty,
                 Status = QualityMaintenanceStatuses.Active,
                 Notes = req.Notes?.Trim() ?? string.Empty,
                 CreatedAtUtc = DateTime.UtcNow,
                 UpdatedAtUtc = DateTime.UtcNow
             };
-
+            // Programa los meses desde la primera ejecución según la frecuencia, por 24 meses (cruzando años).
+            var marks = new List<QualityMaintenanceMonth>();
+            var start = new DateTime(first.Year, first.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            for (var date = start; date < start.AddMonths(24) || marks.Count == 0; date = AdvanceByFrequency(date, frequency))
+                marks.Add(new QualityMaintenanceMonth { TenantId = tenantId, ItemId = entity.Id, Year = date.Year, Month = date.Month });
+            Recompute(entity, marks);
             db.MaintenancePlanItems.Add(entity);
+            db.MaintenanceMonths.AddRange(marks);
             QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.MaintenancePlanItem, entity.Id, "MaintenancePlanItemCreated",
-                $"Plan {entity.Number} creado para {entity.EquipmentCode}.", null, ToMaintenanceDto(entity), http);
+                $"Plan {entity.Number} creado para {entity.EquipmentCode}.", null, ToMaintenanceDto(entity, marks, start.Year), http);
             await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/quality/records/pg14/r06/{entity.Id}", ToMaintenanceDto(entity));
+            return Results.Created($"/api/v1/quality/records/pg14/r06/{entity.Id}", ToMaintenanceDto(entity, marks, start.Year));
         });
 
         group.MapPut("/records/pg14/r06/{id:guid}", async (
@@ -1232,8 +1273,9 @@ internal static class QualityPg14Endpoints
             if (entity is null) return Results.NotFound();
             if (entity.Status == QualityMaintenanceStatuses.Cancelled)
                 return Results.BadRequest(new { message = "El ítem está anulado; no se puede editar." });
-
-            var before = ToMaintenanceDto(entity);
+            var marks = await db.MaintenanceMonths.Where(m => m.ItemId == id).ToListAsync(ct);
+            var year = req.Year ?? ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow).Year;
+            var before = ToMaintenanceDto(entity, marks, year);
 
             if (req.Activity is not null)
             {
@@ -1241,61 +1283,44 @@ internal static class QualityPg14Endpoints
                     return Results.BadRequest(new { message = "La actividad es obligatoria." });
                 entity.Activity = req.Activity.Trim();
             }
-
             if (req.Frequency is not null)
             {
                 var frequency = NormalizeAllowed(req.Frequency, AllowedFrequencies);
                 if (frequency is null)
-                    return Results.BadRequest(new { message = "Frecuencia inválida. Use Monthly, Quarterly, Semiannual o Annual." });
+                    return Results.BadRequest(new { message = "Frecuencia inválida." });
                 entity.Frequency = frequency;
             }
-
-            if (req.ProgramYear.HasValue)
-            {
-                if (req.ProgramYear.Value < 2000 || req.ProgramYear.Value > 2100)
-                    return Results.BadRequest(new { message = "Año inválido." });
-                entity.ProgramYear = req.ProgramYear.Value;
-            }
-            if (req.Months is not null)
-            {
-                if (!ValidMonths(req.Months)) return Results.BadRequest(new { message = "Programación mensual inválida." });
-                var current = entity.Months.Length == 12 ? entity.Months : "------------";
-                if (req.Months.Where((value, index) => value == 'D' && current[index] != 'D').Any())
-                    return Results.BadRequest(new { message = "Marque meses realizados de a uno para registrar la hoja de vida." });
-                entity.Months = req.Months;
-            }
+            // Un mes de un año: "P" programado, "R" realizado (va a la hoja de vida) o "-" sin programar.
             if (req.Month.HasValue)
             {
-                if (req.Month.Value is < 1 or > 12 || req.MonthValue is not ("P" or "D" or "-"))
-                    return Results.BadRequest(new { message = "Mes o estado inválido. Use P, D o -." });
-                var month = req.Month.Value;
-                var current = entity.Months.Length == 12 ? entity.Months : "------------";
-                var previous = current[month - 1];
-                var chars = current.ToCharArray();
-                chars[month - 1] = req.MonthValue[0];
-                entity.Months = new string(chars);
-                if (previous != 'D' && req.MonthValue == "D")
+                if (req.Month.Value is < 1 or > 12 || year is < 2000 or > 2100 || req.MonthValue is not ("P" or "R" or "-"))
+                    return Results.BadRequest(new { message = "Mes, año o estado inválido. Use P (programado), R (realizado) o -." });
+                var mark = marks.FirstOrDefault(m => m.Year == year && m.Month == req.Month.Value);
+                var wasDone = mark?.Status == QualityMaintenanceMonthStatuses.Done;
+                if (req.MonthValue == "-")
                 {
-                    var doneDate = new DateTime(entity.ProgramYear > 0 ? entity.ProgramYear : DateTime.UtcNow.Year,
-                        month, 15, 0, 0, 0, DateTimeKind.Utc);
-                    entity.LastDone = doneDate;
-                    await TryCreateMaintenanceLogAsync(db, tenantId, entity, doneDate, http, ct);
+                    if (mark is not null)
+                    {
+                        db.MaintenanceMonths.Remove(mark);
+                        marks.Remove(mark);
+                    }
+                }
+                else
+                {
+                    if (mark is null)
+                    {
+                        mark = new QualityMaintenanceMonth { TenantId = tenantId, ItemId = id, Year = year, Month = req.Month.Value };
+                        db.MaintenanceMonths.Add(mark);
+                        marks.Add(mark);
+                    }
+                    mark.Status = req.MonthValue;
+                    if (!wasDone && req.MonthValue == QualityMaintenanceMonthStatuses.Done)
+                        await TryCreateMaintenanceLogAsync(db, tenantId, entity,
+                            new DateTime(year, req.Month.Value, 15, 0, 0, 0, DateTimeKind.Utc), http, ct);
                 }
             }
-
-            if (req.NextDue.HasValue) entity.NextDue = req.NextDue;
             if (req.Responsible is not null) entity.Responsible = req.Responsible.Trim();
             if (req.Notes is not null) entity.Notes = req.Notes.Trim();
-
-            if (req.LastDone.HasValue)
-            {
-                entity.LastDone = req.LastDone.Value;
-                // Prefer keep Active and advance NextDue from LastDone by frequency
-                entity.NextDue = AdvanceByFrequency(req.LastDone.Value, entity.Frequency);
-                if (entity.Status != QualityMaintenanceStatuses.Done)
-                    entity.Status = QualityMaintenanceStatuses.Active;
-            }
-
             if (req.Status is not null)
             {
                 var st = NormalizeAllowed(req.Status, AllowedMaintenanceStatuses);
@@ -1303,12 +1328,12 @@ internal static class QualityPg14Endpoints
                     return Results.BadRequest(new { message = "Estado inválido. Use Active, Done o Cancelled." });
                 entity.Status = st;
             }
-
+            Recompute(entity, marks);
             entity.UpdatedAtUtc = DateTime.UtcNow;
             QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.MaintenancePlanItem, entity.Id, "MaintenancePlanItemUpdated",
-                $"Plan {entity.Number} actualizado ({entity.Status}).", before, ToMaintenanceDto(entity), http);
+                $"Plan {entity.Number} actualizado ({entity.Status}).", before, ToMaintenanceDto(entity, marks, year), http);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(ToMaintenanceDto(entity));
+            return Results.Ok(ToMaintenanceDto(entity, marks, year));
         });
 
         group.MapDelete("/records/pg14/r06/{id:guid}", async (
@@ -1321,16 +1346,30 @@ internal static class QualityPg14Endpoints
             var tenantId = tenant.TenantId;
             var entity = await db.MaintenancePlanItems.FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId, ct);
             if (entity is null) return Results.NotFound();
-
-            var before = ToMaintenanceDto(entity);
+            var marks = await db.MaintenanceMonths.AsNoTracking().Where(m => m.ItemId == id).ToListAsync(ct);
+            var year = ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow).Year;
+            var before = ToMaintenanceDto(entity, marks, year);
             entity.Status = QualityMaintenanceStatuses.Cancelled;
             entity.UpdatedAtUtc = DateTime.UtcNow;
             QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.MaintenancePlanItem, entity.Id, "MaintenancePlanItemCancelled",
-                $"Plan {entity.Number} anulado.", before, ToMaintenanceDto(entity), http);
+                $"Plan {entity.Number} anulado.", before, ToMaintenanceDto(entity, marks, year), http);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(ToMaintenanceDto(entity));
+            return Results.Ok(ToMaintenanceDto(entity, marks, year));
         });
     }
+
+    /// <summary>Próximo vencimiento = primer mes programado sin realizar; último realizado = el R más reciente.</summary>
+    private static void Recompute(QualityMaintenancePlanItem item, IEnumerable<QualityMaintenanceMonth> marks)
+    {
+        var list = marks.ToList();
+        item.NextDue = list.Where(m => m.Status == QualityMaintenanceMonthStatuses.Planned)
+            .Select(m => (DateTime?)MonthEnd(m)).OrderBy(d => d).FirstOrDefault();
+        item.LastDone = list.Where(m => m.Status == QualityMaintenanceMonthStatuses.Done)
+            .Select(m => (DateTime?)new DateTime(m.Year, m.Month, 15, 0, 0, 0, DateTimeKind.Utc)).OrderByDescending(d => d).FirstOrDefault();
+    }
+
+    private static DateTime MonthEnd(QualityMaintenanceMonth m) =>
+        new(m.Year, m.Month, DateTime.DaysInMonth(m.Year, m.Month), 0, 0, 0, DateTimeKind.Utc);
 
     private static string? NormalizeAllowed(string? value, HashSet<string> allowed)
     {
@@ -1339,24 +1378,13 @@ internal static class QualityPg14Endpoints
         return allowed.Contains(trimmed) ? trimmed : null;
     }
 
-    private static bool IsOverdue(QualityMaintenancePlanItem r) =>
+    private static bool IsOverdue(QualityMaintenancePlanItem r, IEnumerable<QualityMaintenanceMonth> marks) =>
         r.Status == QualityMaintenanceStatuses.Active
-        && ((r.NextDue.HasValue && r.NextDue.Value < DateTime.UtcNow)
-            || PlannedMonthDates(r).Any(date => date < ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow)));
+        && marks.Any(m => m.Status == QualityMaintenanceMonthStatuses.Planned && MonthEnd(m) < ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow));
 
-    private static bool IsDueSoon(QualityMaintenancePlanItem r) =>
+    private static bool IsDueSoon(QualityMaintenancePlanItem r, IEnumerable<QualityMaintenanceMonth> marks) =>
         r.Status == QualityMaintenanceStatuses.Active
-        && ((r.NextDue.HasValue && r.NextDue.Value < DateTime.UtcNow.AddDays(30))
-            || PlannedMonthDates(r).Any(date => date < ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow).AddDays(30)));
-
-    private static IEnumerable<DateTime> PlannedMonthDates(QualityMaintenancePlanItem r)
-    {
-        if (r.ProgramYear is < 2000 or > 2100 || r.Months.Length != 12) yield break;
-        for (var month = 1; month <= 12; month++)
-            if (r.Months[month - 1] == 'P')
-                yield return new DateTime(r.ProgramYear, month,
-                    DateTime.DaysInMonth(r.ProgramYear, month), 0, 0, 0, DateTimeKind.Utc);
-    }
+        && marks.Any(m => m.Status == QualityMaintenanceMonthStatuses.Planned && MonthEnd(m) < ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow).AddDays(30));
 
     private static DateTime AdvanceByFrequency(DateTime from, string frequency) =>
         frequency switch
@@ -1364,6 +1392,7 @@ internal static class QualityPg14Endpoints
             QualityMaintenanceFrequencies.Quarterly => from.AddMonths(3),
             QualityMaintenanceFrequencies.Semiannual => from.AddMonths(6),
             QualityMaintenanceFrequencies.Annual => from.AddYears(1),
+            QualityMaintenanceFrequencies.Biennial => from.AddYears(2),
             _ => from.AddMonths(1)
         };
 
@@ -1375,9 +1404,6 @@ internal static class QualityPg14Endpoints
     private static decimal? MeanDifference(decimal? a1, decimal? b1, decimal? b2, decimal? a2) =>
         a1.HasValue && b1.HasValue && b2.HasValue && a2.HasValue
             ? ((b1.Value - a1.Value) + (b2.Value - a2.Value)) / 2m : null;
-
-    private static bool ValidMonths(string? months) => months is null
-        || (months.Length == 12 && months.All(ch => ch is '-' or 'P' or 'D'));
 
     private static bool IsReferenceMass(MetrologyCatalogAsset asset)
     {
@@ -1470,7 +1496,8 @@ internal static class QualityPg14Endpoints
         r.UpdatedAtUtc
     };
 
-    private static object ToMaintenanceDto(QualityMaintenancePlanItem r) => new
+    /// <summary>months: los 12 meses del año pedido (P, R o -); schedule: todos los meses programados, con su año.</summary>
+    private static object ToMaintenanceDto(QualityMaintenancePlanItem r, IReadOnlyCollection<QualityMaintenanceMonth> marks, int year) => new
     {
         r.Id,
         r.RecordCode,
@@ -1480,14 +1507,15 @@ internal static class QualityPg14Endpoints
         r.EquipmentCode,
         r.EquipmentDescription,
         r.Activity,
-        ProgramYear = r.ProgramYear > 0 ? r.ProgramYear : r.CreatedAtUtc.Year,
-        r.Months,
+        ProgramYear = year,
+        Months = new string(Enumerable.Range(1, 12).Select(m => marks.FirstOrDefault(x => x.Year == year && x.Month == m)?.Status[0] ?? '-').ToArray()),
+        Schedule = marks.OrderBy(m => m.Year).ThenBy(m => m.Month).Select(m => new { m.Year, m.Month, m.Status }),
         r.Frequency,
         r.NextDue,
         r.LastDone,
         r.Responsible,
         r.Status,
-        isOverdue = IsOverdue(r),
+        isOverdue = IsOverdue(r, marks),
         r.Notes,
         r.CreatedAtUtc,
         r.UpdatedAtUtc
@@ -1540,7 +1568,7 @@ internal static class QualityPg14Endpoints
         var match = assets.FirstOrDefault(a => a.Id == assetId && a.Source == source);
         if (match is null) return null;
         return (
-            string.IsNullOrWhiteSpace(assetCode) ? match.Code : assetCode.Trim(),
+            string.IsNullOrWhiteSpace(assetCode) ? match.Label : assetCode.Trim(),
             string.IsNullOrWhiteSpace(assetDescription) ? match.Description : assetDescription.Trim());
     }
 
@@ -1611,24 +1639,6 @@ internal static class QualityPg14Endpoints
         db.EquipmentLogEntries.Add(log);
         QualityAudit.Record(db, tenantId, QualityAuditEntityTypes.EquipmentLogEntry, log.Id, "EquipmentLogEntryFromCheck",
             $"Evento {log.Number} (V) desde verificación {check.Number}.", null, ToLogDto(log), http);
-    }
-
-    private static async Task<string> NextEquipmentCodeAsync(QualityDbContext db, TenantId tenantId, CancellationToken ct)
-    {
-        var codes = await db.Equipments.AsNoTracking()
-            .Where(e => e.TenantId == tenantId && e.Code.StartsWith("EQ "))
-            .Select(e => e.Code)
-            .ToListAsync(ct);
-
-        var max = 0;
-        foreach (var code in codes)
-        {
-            var suffix = code.Length > 3 ? code[3..].Trim() : string.Empty;
-            if (int.TryParse(suffix, out var n) && n > max)
-                max = n;
-        }
-
-        return $"EQ {(max + 1):D3}";
     }
 
     private static async Task<string> NextNumberAsync(
