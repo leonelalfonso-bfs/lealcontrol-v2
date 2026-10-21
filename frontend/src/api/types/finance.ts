@@ -203,3 +203,16 @@ export type CashFlowProjection = {
   horizonDays: number;
   flows: Array<{ date: string; amount: number; label?: string }>;
 };
+
+/** Bandeja de conciliación (nota 69, F1b): cada movimiento del extracto sin conciliar con su acción sugerida. */
+export type ReconciliationSuggestion =
+  | { type: "Match"; systemId: string; label: string; operationDateUtc: string }
+  | { type: "Cheque"; chequeId: string; label: string; paymentOrderId?: string | null }
+  | { type: "CreatePayment" | "CreateReceipt"; counterpartyId: string }
+  | { type: "Classified"; conceptId: string; label: string }
+  | { type: "Unknown" };
+export type ReconciliationTray = {
+  accountId: string;
+  pendingSystem: number;
+  rows: { id: string; operationDateUtc: string; kind: "Debit" | "Credit" | number; amount: number; description: string; counterpartyTaxId?: string | null; counterpartyName?: string | null; suggestion: ReconciliationSuggestion }[];
+};

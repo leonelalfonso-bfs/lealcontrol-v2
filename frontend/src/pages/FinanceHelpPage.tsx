@@ -92,8 +92,21 @@ export function FinanceHelpPage() {
           <Step title="Otro banco: la primera vez mapeá las columnas (fecha, descripción, importe o débito/crédito) y guardá el perfil; los próximos extractos se leen solos.">
             Hay una plantilla para descargar si el banco no exporta CSV. Un mismo archivo no se importa dos veces.
           </Step>
-          <Step title="“⚙ Aplicar Reglas”: los movimientos se clasifican por concepto. Lo que no reconoce queda “⏳ Sin identificar” para revisar." />
-          <Step title="Conciliación (Extracto ↔ Sistema): el sistema sugiere qué movimiento del banco corresponde a cada cobro o pago; confirmá con “Conciliar”." />
+          <Step title="Al importar, cada movimiento se clasifica: primero por las reglas de la empresa (Conceptos y reglas) y, si ninguna lo reconoce, por los textos del banco.">
+            Se reconocen solos el impuesto a los débitos y créditos, SIRCREB, IVA y percepciones, comisiones e intereses del banco,
+            suscripciones y rescates de fondos (FIMA) y acreditación de haberes. Con el CUIT de la transferencia queda sugerido el
+            proveedor o cliente.
+          </Step>
+          <Step title="Finanzas → Conciliación bancaria → elegí la cuenta: aparece cada movimiento del extracto sin vincular con su acción sugerida.">
+            <ul style={{ margin: "4px 0 0" }}>
+              <li><strong>Conciliar con una orden de pago o un recibo</strong> del sistema: mismo importe, hasta 5 días de diferencia; si hay varios, el del mismo CUIT y la fecha más cercana.</li>
+              <li><strong>eCheq</strong>: el débito “Echeq … Nro. N” se vincula con el cheque emitido N de la cartera (cargá antes el listado de eCheq emitidos del home banking en Cartera de cheques).</li>
+              <li><strong>Gasto o impuesto del banco</strong>: ya clasificado, solo falta confirmarlo.</li>
+              <li><strong>Crear orden de pago / recibo</strong>: el CUIT es de un proveedor o cliente cargado; el botón abre la orden de pago o el recibo con el proveedor, el importe y el movimiento del banco ya elegidos.</li>
+              <li><strong>Sin identificar</strong>: crear la orden de pago o el recibo a mano, o una regla en Conceptos y reglas para que la próxima vez se reconozca solo.</li>
+            </ul>
+          </Step>
+          <Step title="Revisá las sugerencias tildadas (podés destildar las que no correspondan) y tocá “✓ Confirmar”: se concilian todas juntas." />
         </Steps>
         <Tip>Una cuenta manual se carga con “+ Cargar movimiento”. Una “+ Expectativa manual” anota algo que va a entrar o salir y se empareja sola al importar el extracto.</Tip>
       </ManualPart>

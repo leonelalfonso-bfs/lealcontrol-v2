@@ -158,6 +158,18 @@ public static class FinanceConcepts
         var match = rules.FirstOrDefault(x => FinanceConceptMatching.RuleMatches(movement, x.rule));
         if (match is null)
         {
+            // Sin regla propia: los gastos, impuestos e inversiones que el banco nombra siempre igual se reconocen solos.
+            var known = movement.Kind == FinancialMovementKind.Debit || movement.Description.Contains("rescate", StringComparison.OrdinalIgnoreCase)
+                ? BankChargeClassifier.Classify(movement.Description) : null;
+            var builtIn = known is null ? null : await db.FinancialConcepts.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.Code == known && x.IsActive, ct);
+            if (builtIn is not null)
+            {
+                movement.ConceptId = builtIn.Id;
+                movement.ClassificationStatus = FinancialClassificationStatus.Suggested;
+                movement.ClassifiedAtUtc = DateTime.UtcNow;
+                return;
+            }
             movement.ClassificationStatus = FinancialClassificationStatus.PendingIdentification;
             return;
         }

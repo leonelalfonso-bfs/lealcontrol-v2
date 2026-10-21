@@ -56,7 +56,7 @@ public static class FinanceImport
         16/03/2026;Debito;500,00;Comision mantenimiento;;99500,00
         """;
 
-    private static readonly TimeSpan MatchDateTolerance = TimeSpan.FromDays(2);
+    private static readonly TimeSpan MatchDateTolerance = FinanceReconciliationTray.DateTolerance;
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     public static IEndpointRouteBuilder MapFinanceImportEndpoints(this IEndpointRouteBuilder endpoints)
@@ -507,6 +507,7 @@ public static class FinanceImport
         FinanceEcheqs.MapFinanceEcheqEndpoints(endpoints);
         FinancePayments.MapFinancePaymentEndpoints(endpoints);
         FinanceExtras.MapFinanceExtrasEndpoints(endpoints);
+        FinanceReconciliationTray.MapReconciliationTray(endpoints);
         return endpoints;
     }
 

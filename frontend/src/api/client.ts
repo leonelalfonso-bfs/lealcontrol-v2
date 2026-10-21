@@ -219,22 +219,10 @@ export const api = {
   },
   listFinanceMovementDetails: (accountId: string) => request<{ id: string; operationDateUtc: string; description: string; externalReference?: string; kind: string; amount: number; currency: string; reportedBalance?: number; systemBalance: number; difference?: number; reconciliationStatus: string; stage?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements-detail`),
   reconcileFinanceMovement: (movementId: string, body: { entityType: string; entityId: string }) => request(`/api/v1/finance/movements/${movementId}/reconcile`, { method: "POST", body: JSON.stringify(body) }),
-  getFinanceReconciliation: (accountId: string, from?: string, to?: string) => {
-    const params = new URLSearchParams({ accountId });
-    if (from) params.set("from", from);
-    if (to) params.set("to", to);
-    return request<FinanceReconciliationResult>(`/api/v1/finance/reconciliation?${params.toString()}`);
-  },
-  matchFinanceReconciliation: (importedMovementId: string, systemMovementId: string) =>
-    request("/api/v1/finance/reconciliation/match", {
-      method: "POST",
-      body: JSON.stringify({ importedMovementId, systemMovementId })
-    }),
-  unmatchFinanceReconciliation: (importedMovementId: string) =>
-    request("/api/v1/finance/reconciliation/unmatch", {
-      method: "POST",
-      body: JSON.stringify({ importedMovementId })
-    }),
+  getReconciliationTray: (accountId: string) =>
+    request<import("./types/finance").ReconciliationTray>(`/api/v1/finance/reconciliation/tray?accountId=${accountId}`),
+  confirmReconciliationTray: (body: { accountId: string; matches: { importedId: string; systemId: string }[]; cheques: { importedId: string; chequeId: string }[]; classify: string[] }) =>
+    request<{ matched: number; cheques: number; classified: number; errors: string[] }>("/api/v1/finance/reconciliation/tray/confirm", { method: "POST", body: JSON.stringify(body) }),
   listReceivedCheques: () => request<ReceivedCheque[]>("/api/v1/finance/echeqs"),
   importReceivedCheques: (csvContent: string) => request<{ imported: number; duplicates: number }>("/api/v1/finance/echeqs/import", { method: "POST", body: JSON.stringify({ csvContent }) }),
   importIssuedCheques: (csvContent: string) => request<{ imported: number; duplicates: number }>("/api/v1/finance/echeqs/import-issued", { method: "POST", body: JSON.stringify({ csvContent }) }),
