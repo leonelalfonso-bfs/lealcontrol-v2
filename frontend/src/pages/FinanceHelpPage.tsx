@@ -83,9 +83,14 @@ export function FinanceHelpPage() {
 
       <ManualPart id="bancos" title="6. Bancos, extractos y conceptos">
         <Steps>
-          <Step title="En Bancos y cajas, abrí la cuenta y tocá “Importar extracto CSV”.">
-            La primera vez mapeá las columnas (fecha, descripción, importe o débito/crédito) y guardá el perfil: los próximos extractos se leen solos.
-            Hay una plantilla para descargar si el banco no exporta CSV.
+          <Step title="En Bancos y cajas, abrí la cuenta y tocá “Importar extracto”: elegí el archivo tal como lo bajaste del home banking.">
+            Los extractos de <strong>Galicia</strong> (CSV de movimientos), <strong>Santander</strong> (CSV de movimientos) y{" "}
+            <strong>BBVA</strong> (Excel “Movimientos.xls”) se reconocen solos, sin mapear columnas. Además de la fecha y el importe, guardan
+            la contraparte de cada transferencia (nombre y CUIT) y el código de operación del banco: con el CUIT, el movimiento ya queda
+            sugerido para el proveedor o cliente que lo tenga cargado.
+          </Step>
+          <Step title="Otro banco: la primera vez mapeá las columnas (fecha, descripción, importe o débito/crédito) y guardá el perfil; los próximos extractos se leen solos.">
+            Hay una plantilla para descargar si el banco no exporta CSV. Un mismo archivo no se importa dos veces.
           </Step>
           <Step title="“⚙ Aplicar Reglas”: los movimientos se clasifican por concepto. Lo que no reconoce queda “⏳ Sin identificar” para revisar." />
           <Step title="Conciliación (Extracto ↔ Sistema): el sistema sugiere qué movimiento del banco corresponde a cada cobro o pago; confirmá con “Conciliar”." />

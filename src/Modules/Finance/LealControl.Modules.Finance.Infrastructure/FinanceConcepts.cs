@@ -126,7 +126,8 @@ public static class FinanceConcepts
 
     public static async Task ApplySuggestionAsync(FinanceDbContext db, Guid tenantId, FinancialMovement movement, CancellationToken ct)
     {
-        var cuit = FinanceCounterpartyLookup.ExtractCuit(movement.Description);
+        // El CUIT que trae el banco en el renglón (Galicia, Santander) vale más que uno escrito en la descripción.
+        var cuit = movement.CounterpartyTaxId ?? FinanceCounterpartyLookup.ExtractCuit(movement.Description);
         if (cuit is not null)
         {
             var resolved = await FinanceCounterpartyLookup.TryResolveUniqueAsync(db, tenantId, cuit, movement.Kind, ct);

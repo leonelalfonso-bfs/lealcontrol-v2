@@ -155,6 +155,9 @@ public static class FinanceSchema
 
         ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""SuggestedCounterpartyId"" uuid;
         ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""SuggestedCounterpartyType"" varchar(16);
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""CounterpartyTaxId"" varchar(11);
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""CounterpartyName"" varchar(160);
+        ALTER TABLE finance.""FinancialMovements"" ADD COLUMN IF NOT EXISTS ""BankCode"" varchar(20);
 
         ALTER TABLE finance.""CollectionReceipts"" ADD COLUMN IF NOT EXISTS ""AdvanceAmount"" numeric(18,2) NOT NULL DEFAULT 0;
         -- Copia de SuggestedAdjustmentArs que nadie leía: se retira.

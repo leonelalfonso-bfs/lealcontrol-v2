@@ -78,7 +78,10 @@ export type BankImportPreviewRow = {
   matchedSystemExternalReference?: string;
 };
 
+export type BankImportSource = { csvContent?: string; fileBase64?: string; fileName?: string };
 export type BankImportPreviewResult = {
+  /** Banco reconocido por el formato del archivo (Galicia, Santander, BBVA); null si se usó el importador genérico. */
+  bank?: string | null;
   requiresMapping?: boolean;
   headers?: string[];
   hasProfile?: boolean;
