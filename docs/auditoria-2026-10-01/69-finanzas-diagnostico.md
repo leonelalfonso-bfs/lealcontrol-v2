@@ -157,6 +157,30 @@ Los archivos quedan en la PC del dueño; no se suben al repositorio.
   - validado contra el archivo real: 20 renglones, saldo continuo en 19 de 19, todos clasificados o con contraparte.
 - **F1 completa.**
 
+**F2 retenciones de Ganancias (hecha, base):**
+- El dueño todavía no es agente: se va a inscribir cuando el sistema lo soporte. Tiene SICORE y paga sobre todo productos y algo de servicios.
+- **Regímenes configurables** por empresa: código SICORE, mínimo no sujeto mensual, alícuotas de inscripto y no inscripto, retención mínima y fuente.
+  - Iniciales: 078 bienes ($ 224.000, 2 % / 10 %) y 094 servicios ($ 67.170, 2 % / 28 %), retención mínima $ 240.
+  - **A confirmar con el estudio contra el Anexo VIII vigente:** las fuentes secundarias no coinciden.
+- **Perfil de cada proveedor:** condición, régimen y certificado de exclusión hasta una fecha.
+- **Cálculo en la orden de pago**, recalculado en el servidor al guardar:
+  - base sin IVA ni percepciones;
+  - acumulado del mes por proveedor y régimen;
+  - retención mínima.
+- **Registro** de cada pago (también los que dan cero, porque acumulan).
+- **Certificado** numerado RG-0001.
+- **Anulación** con la orden de pago.
+- **Archivo para SICORE**, con el formato estándar del instructivo v52 (144 posiciones):
+  - comprobante 06;
+  - impuesto 217;
+  - operación 1;
+  - condición 01/02;
+  - documento 80.
+- **A validar con la primera importación en SICORE:**
+  - si la "base de cálculo" va acumulada del mes (así se informa) o solo la del pago;
+  - el tipo de comprobante.
+- **Queda para después:** escala de honorarios (régimen 116), notas de crédito que ajustan retenciones, consulta del padrón de exclusiones de ARCA, y retenciones de IVA, SUSS e IIBB.
+
 
 1. **Formatos de extracto incorporados.**
    - Galicia y Santander tal como bajan del home banking; Credicoop y BBVA cuando lleguen.

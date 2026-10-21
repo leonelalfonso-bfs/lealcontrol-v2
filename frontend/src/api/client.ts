@@ -219,6 +219,26 @@ export const api = {
   },
   listFinanceMovementDetails: (accountId: string) => request<{ id: string; operationDateUtc: string; description: string; externalReference?: string; kind: string; amount: number; currency: string; reportedBalance?: number; systemBalance: number; difference?: number; reconciliationStatus: string; stage?: string }[]>(`/api/v1/finance/accounts/${accountId}/movements-detail`),
   reconcileFinanceMovement: (movementId: string, body: { entityType: string; entityId: string }) => request(`/api/v1/finance/movements/${movementId}/reconcile`, { method: "POST", body: JSON.stringify(body) }),
+  getWithholdingSettings: () => request<import("./types/finance").WithholdingSettings>("/api/v1/finance/withholdings/settings"),
+  saveWithholdingSettings: (body: { isAgent: boolean; agentSince?: string | null }) =>
+    request<unknown>("/api/v1/finance/withholdings/settings", { method: "PUT", body: JSON.stringify(body) }),
+  saveWithholdingRegime: (body: Omit<import("./types/finance").WithholdingRegime, "id">) =>
+    request<import("./types/finance").WithholdingRegime>("/api/v1/finance/withholdings/regimes", { method: "PUT", body: JSON.stringify(body) }),
+  saveSupplierWithholdingProfile: (supplierId: string, body: { condition: string; regimeCode: string; excludedUntil?: string | null }) =>
+    request<unknown>(`/api/v1/finance/withholdings/suppliers/${supplierId}`, { method: "PUT", body: JSON.stringify(body) }),
+  previewWithholding: (body: { supplierId: string; date: string; amount: number; imputations: { purchaseInvoiceId: string; amountImputed: number }[] }) =>
+    request<import("./types/finance").WithholdingPreview>("/api/v1/finance/withholdings/preview", { method: "POST", body: JSON.stringify(body) }),
+  listWithholdings: (from: string, to: string) => request<import("./types/finance").Withholding[]>(`/api/v1/finance/withholdings?from=${from}&to=${to}`),
+  getWithholding: (id: string) => request<import("./types/finance").Withholding>(`/api/v1/finance/withholdings/${id}`),
+  downloadSicore: (from: string, to: string) =>
+    requestBlob(`/api/v1/finance/withholdings/sicore?from=${from}&to=${to}`).then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `sicore-retenciones-${from}-${to}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }),
   getReconciliationTray: (accountId: string) =>
     request<import("./types/finance").ReconciliationTray>(`/api/v1/finance/reconciliation/tray?accountId=${accountId}`),
   confirmReconciliationTray: (body: { accountId: string; matches: { importedId: string; systemId: string }[]; matchesMany: { importedId: string; systemIds: string[] }[]; cheques: { importedId: string; chequeId: string }[]; classify: string[] }) =>

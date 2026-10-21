@@ -84,6 +84,8 @@ internal static class FinanceVoid
         db.PaymentOrderImputations.RemoveRange(await db.PaymentOrderImputations.Where(x => x.PaymentOrderId == id && x.TenantId == tenantId).ToListAsync(ct));
 
         order.Status = "Voided";
+        // Las retenciones de la orden se anulan: dejan de acumular en el mes y no van a SICORE.
+        foreach (var w in await db.Withholdings.Where(x => x.TenantId == tenantId && x.PaymentOrderId == id).ToListAsync(ct)) w.Status = "Voided";
         order.VoidReason = body.Reason.Trim();
         order.VoidedAtUtc = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);

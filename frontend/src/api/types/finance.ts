@@ -78,6 +78,15 @@ export type BankImportPreviewRow = {
   matchedSystemExternalReference?: string;
 };
 
+export type WithholdingRegime = { id: string; code: string; name: string; nonTaxableAmount: number; rateRegistered: number; rateUnregistered: number; minimumWithholding: number; source: string; isActive: boolean };
+export type SupplierWithholdingProfile = { supplierId: string; condition: "Inscripto" | "NoInscripto" | "Monotributo" | "Exento"; regimeCode: string; excludedUntil?: string | null };
+export type WithholdingSettings = { isAgent: boolean; agentSince?: string | null; regimes: WithholdingRegime[]; profiles: SupplierWithholdingProfile[] };
+export type WithholdingPreview = { applies: false } | { applies: true; code: string; regimeName: string; condition: string; base: number; priorBase: number; priorWithheld: number; rate: number; amount: number; detail: string };
+export type Withholding = {
+  id: string; paymentOrderId: string; paymentOrderNumber: string; supplierId: string; supplierName: string; supplierTaxId: string; condition: string;
+  regimeCode: string; regimeName: string; date: string; paymentAmount: number; base: number; priorBase: number; priorWithheld: number;
+  nonTaxableAmount: number; rate: number; amount: number; certificateNumber?: string | null; status: string;
+};
 export type BankImportSource = { csvContent?: string; fileBase64?: string; fileName?: string };
 export type BankImportPreviewResult = {
   /** Banco reconocido por el formato del archivo (Galicia, Santander, BBVA); null si se usó el importador genérico. */

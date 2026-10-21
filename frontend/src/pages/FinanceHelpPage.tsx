@@ -8,6 +8,7 @@ const SECTIONS = [
   { id: "pagos", title: "Pagar a un proveedor" },
   { id: "cheques", title: "Cartera de cheques" },
   { id: "bancos", title: "Bancos, extractos y conceptos" },
+  { id: "retenciones", title: "Retenciones de Ganancias" },
   { id: "cuentas", title: "Cuentas corrientes" },
   { id: "cashflow", title: "Disponibilidad y cash flow" },
   { id: "problemas", title: "Cuando el sistema no te deja" }
@@ -110,6 +111,31 @@ export function FinanceHelpPage() {
           <Step title="Revisá las sugerencias tildadas (podés destildar las que no correspondan) y tocá “✓ Confirmar”: se concilian todas juntas." />
         </Steps>
         <Tip>Una cuenta manual se carga con “+ Cargar movimiento”. Una “+ Expectativa manual” anota algo que va a entrar o salir y se empareja sola al importar el extracto.</Tip>
+      </ManualPart>
+
+      <ManualPart id="retenciones" title="6 bis. Retenciones de Ganancias (RG 830)">
+        <Steps>
+          <Step title="Una vez: Finanzas → Retenciones de Ganancias → tildá “La empresa es agente de retención” y la fecha desde la que retiene.">
+            Antes, confirmá con el estudio los regímenes (código de SICORE, mínimo no sujeto del mes, alícuotas y retención mínima)
+            contra el Anexo VIII vigente de la RG 830. Vienen cargados 078 (bienes) y 094 (servicios); se pueden editar y agregar otros.
+          </Step>
+          <Step title="Para cada proveedor al que se le retiene: condición (inscripto, no inscripto, monotributista, exento) y régimen.">
+            Monotributistas y exentos no tienen retención. Si el proveedor presenta un certificado de exclusión de ARCA, cargá la fecha
+            hasta la que vale: hasta ese día no se retiene. Los proveedores sin condición cargada no tienen retención.
+          </Step>
+          <Step title="En la orden de pago, al elegir el proveedor y las facturas, la retención se calcula sola y aparece como medio de pago “Retención”.">
+            Base: lo pagado sin IVA ni percepciones (cada factura en proporción a su neto). Inscripto: los pagos del mes al mismo
+            proveedor y régimen se suman, se resta el mínimo no sujeto, se aplica la alícuota y se descuenta lo ya retenido en el mes;
+            si da menos que la retención mínima, no se retiene (y el pago igual acumula). No inscripto: alícuota sobre el pago, sin mínimo.
+            Ajustá la transferencia por el neto. Al guardar, el sistema la vuelve a calcular: si no coincide, avisa cuánto corresponde.
+          </Step>
+          <Step title="Retenciones de Ganancias → “Certificado” en cada retención: imprimilo y entregalo al proveedor con la orden de pago." />
+          <Step title="Para presentar: elegí el período (quincena o mes) → “⬇️ Archivo SICORE” → en SICORE, importá el archivo con el formato estándar.">
+            Lleva una retención por renglón: orden de pago, impuesto 217, régimen, base, fecha, condición, importe retenido y CUIT. Si a
+            un proveedor le falta el CUIT, el sistema avisa antes de generar el archivo. El total a depositar figura al pie del listado.
+          </Step>
+          <Step title="Si se anula la orden de pago, su retención se anula: deja de acumular en el mes y no va a SICORE." />
+        </Steps>
       </ManualPart>
 
       <ManualPart id="cuentas" title="7. Cuentas corrientes">

@@ -199,5 +199,33 @@ public static class FinanceSchema
           ""CreatedAtUtc"" timestamptz NOT NULL, ""UpdatedAtUtc"" timestamptz
         );
         CREATE INDEX IF NOT EXISTS ""IX_BankImportProfiles_Tenant_Account"" ON finance.""BankImportProfiles"" (""TenantId"", ""AccountId"");
+
+        CREATE TABLE IF NOT EXISTS finance.""WithholdingSettings"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""IsAgent"" boolean NOT NULL DEFAULT false,
+          ""AgentSince"" timestamptz, ""UpdatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_WithholdingSettings_Tenant"" ON finance.""WithholdingSettings"" (""TenantId"");
+        CREATE TABLE IF NOT EXISTS finance.""WithholdingRegimes"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""Code"" varchar(3) NOT NULL, ""Name"" varchar(200) NOT NULL,
+          ""NonTaxableAmount"" numeric(18,2) NOT NULL, ""RateRegistered"" numeric(9,4) NOT NULL, ""RateUnregistered"" numeric(9,4) NOT NULL,
+          ""MinimumWithholding"" numeric(18,2) NOT NULL, ""Source"" varchar(300) NOT NULL DEFAULT '', ""IsActive"" boolean NOT NULL DEFAULT true
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_WithholdingRegimes_Tenant_Code"" ON finance.""WithholdingRegimes"" (""TenantId"", ""Code"");
+        CREATE TABLE IF NOT EXISTS finance.""SupplierWithholdingProfiles"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""SupplierId"" uuid NOT NULL, ""Condition"" varchar(20) NOT NULL,
+          ""RegimeCode"" varchar(3) NOT NULL, ""ExcludedUntil"" timestamptz, ""UpdatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_SupplierWithholdingProfiles_Supplier"" ON finance.""SupplierWithholdingProfiles"" (""TenantId"", ""SupplierId"");
+        CREATE TABLE IF NOT EXISTS finance.""Withholdings"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""PaymentOrderId"" uuid NOT NULL, ""PaymentOrderNumber"" varchar(40) NOT NULL,
+          ""SupplierId"" uuid NOT NULL, ""SupplierName"" varchar(200) NOT NULL, ""SupplierTaxId"" varchar(20) NOT NULL DEFAULT '',
+          ""Condition"" varchar(20) NOT NULL, ""RegimeCode"" varchar(3) NOT NULL, ""RegimeName"" varchar(200) NOT NULL,
+          ""Date"" timestamptz NOT NULL, ""PaymentAmount"" numeric(18,2) NOT NULL, ""Base"" numeric(18,2) NOT NULL,
+          ""PriorBase"" numeric(18,2) NOT NULL, ""PriorWithheld"" numeric(18,2) NOT NULL, ""NonTaxableAmount"" numeric(18,2) NOT NULL,
+          ""Rate"" numeric(9,4) NOT NULL, ""Amount"" numeric(18,2) NOT NULL, ""CertificateNumber"" varchar(40),
+          ""Status"" varchar(20) NOT NULL DEFAULT 'Active', ""CreatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ""IX_Withholdings_Supplier_Month"" ON finance.""Withholdings"" (""TenantId"", ""SupplierId"", ""RegimeCode"", ""Date"");
+        CREATE INDEX IF NOT EXISTS ""IX_Withholdings_Order"" ON finance.""Withholdings"" (""PaymentOrderId"");
         ", cancellationToken);
 }
