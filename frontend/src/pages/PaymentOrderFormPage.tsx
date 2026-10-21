@@ -261,6 +261,31 @@ export function PaymentOrderFormPage() {
   const totalOrderAmount = totalImputed > 0 ? totalImputed : totalPaymentLines;
   const difference = totalImputed > 0 ? totalPaymentLines - totalImputed : 0;
 
+  // Retención de Ganancias (RG 830): se calcula sola con el proveedor, las facturas y la fecha; el servidor la vuelve a calcular.
+  const [withholding, setWithholding] = useState<{ amount: number; detail: string; code: string } | null>(null);
+  const imputedKey = imputations.filter((i) => i.selected).map((i) => `${i.invoice.id}:${i.amountImputed}`).join("|");
+  const baseAmount = totalImputed > 0 ? totalImputed : lines.filter((l) => l.retentionType !== "GAN").reduce((s, l) => s + (Number(l.amount) || 0), 0);
+  useEffect(() => {
+    if (!selectedSupplierId || baseAmount <= 0) { setWithholding(null); return; }
+    const timer = setTimeout(() => {
+      api.previewWithholding({
+        supplierId: selectedSupplierId, date: new Date(paymentDate).toISOString(), amount: baseAmount,
+        imputations: imputations.filter((i) => i.selected).map((i) => ({ purchaseInvoiceId: i.invoice.id, amountImputed: Number(i.amountImputed) || 0 }))
+      }).then((res) => {
+        const amount = res.applies ? res.amount : 0;
+        setWithholding(res.applies ? { amount, detail: res.detail, code: res.code } : null);
+        setLines((prev) => {
+          const others = prev.filter((l) => l.retentionType !== "GAN");
+          const current = prev.find((l) => l.retentionType === "GAN");
+          if (amount <= 0) return current ? others : prev;
+          if (current?.amount === amount) return prev;
+          return [...others, { id: current?.id || newLineId(), method: "Retention", amount, currency: "ARS", retentionType: "GAN", notes: `Ganancias RG 830 · régimen ${res.applies ? res.code : ""}` }];
+        });
+      }).catch(() => setWithholding(null));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [selectedSupplierId, paymentDate, imputedKey, baseAmount]);
+
   // Handlers for Imputations
   const toggleSelectInvoice = (idx: number) => {
     setImputations((prev) => {
@@ -515,6 +540,12 @@ export function PaymentOrderFormPage() {
 
       {error && <div className="alert">{error}</div>}
       {info && <div className="alert ok">{info}</div>}
+      {withholding && (
+        <div className="alert ok">
+          Retención de Ganancias (RG 830, régimen {withholding.code}): <strong>{money(withholding.amount)}</strong> · {withholding.detail}
+          {withholding.amount > 0 && " Ya está agregada como medio de pago: ajustá la transferencia por el neto."}
+        </div>
+      )}
 
       <div className="grid-2" style={{ gap: 20, alignItems: "start" }}>
         {/* Left Column: Supplier & Invoices to Impute */}

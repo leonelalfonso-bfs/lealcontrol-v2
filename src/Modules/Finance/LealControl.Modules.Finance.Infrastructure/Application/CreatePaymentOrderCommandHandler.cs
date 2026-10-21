@@ -49,7 +49,35 @@ internal sealed class CreatePaymentOrderCommandHandler
         var supplierName = snapshot.SupplierName;
 
         var orderId = Guid.NewGuid();
+
+        // Retención de Ganancias (RG 830): el servidor la vuelve a calcular y el renglón de retención tiene que coincidir.
+        var ganLines = lines.Where(l => string.Equals(l.RetentionType?.Trim(), FinanceWithholdings.RetentionType, StringComparison.OrdinalIgnoreCase)).ToList();
+        var withholding = body.SupplierId is { } supplierForTax
+            ? await FinanceWithholdings.ComputeAsync(_db, tenantId, supplierForTax, body.PaymentDateUtc, totalLinesAmount,
+                imputations.Select(i => new WithholdingImputation(i.PurchaseInvoiceId, i.AmountImputed)).ToList(), null, ct)
+            : null;
+        var expected = withholding?.Result.Amount ?? 0m;
+        if (Math.Abs(ganLines.Sum(l => l.Amount) - expected) > 0.01m)
+            return Result.Failure<CreatedPaymentOrderDto>(Error.Validation("PaymentOrder.Withholding",
+                expected > 0
+                    ? $"Corresponde retener Ganancias por $ {WithholdingCalculator.M(expected)} ({withholding!.Value.Result.Detail}). Recalculá la retención."
+                    : "A este pago no le corresponde retención de Ganancias: sacá el renglón de retención."));
+
         var number = await FinanceDocumentSequences.NextNumberAsync(_db, tenantId, "OP", "OP-0001", ct);
+        string? certificate = null;
+        if (withholding is { } w)
+        {
+            if (w.Result.Amount > 0)
+                certificate = await FinanceDocumentSequences.NextNumberAsync(_db, tenantId, "RETGAN", "RG-0001", ct);
+            _db.Withholdings.Add(new Withholding
+            {
+                Id = Guid.NewGuid(), TenantId = tenantId, PaymentOrderId = orderId, PaymentOrderNumber = number, SupplierId = body.SupplierId!.Value,
+                SupplierName = supplierName, SupplierTaxId = body.SupplierTaxId?.Trim() ?? "", Condition = w.Profile.Condition,
+                RegimeCode = w.Regime.Code, RegimeName = w.Regime.Name, Date = body.PaymentDateUtc, PaymentAmount = totalLinesAmount,
+                Base = w.Result.Base, PriorBase = w.Result.PriorBase, PriorWithheld = w.Result.PriorWithheld, NonTaxableAmount = w.Result.NonTaxable,
+                Rate = w.Result.Rate, Amount = w.Result.Amount, CertificateNumber = certificate, Status = "Active", CreatedAtUtc = DateTime.UtcNow
+            });
+        }
 
         var order = new PaymentOrder
         {
@@ -88,7 +116,8 @@ internal sealed class CreatePaymentOrderCommandHandler
                 ChequeId = line.ChequeId,
                 ConceptId = line.ConceptId,
                 RetentionType = line.RetentionType?.Trim(),
-                RetentionCertificate = line.RetentionCertificate?.Trim(),
+                RetentionCertificate = string.Equals(line.RetentionType?.Trim(), FinanceWithholdings.RetentionType, StringComparison.OrdinalIgnoreCase)
+                    ? certificate : line.RetentionCertificate?.Trim(),
                 Notes = line.Notes?.Trim(),
                 CreatedAtUtc = DateTime.UtcNow
             });

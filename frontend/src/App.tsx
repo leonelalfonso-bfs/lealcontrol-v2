@@ -44,6 +44,8 @@ import {
   FinanceHelpPage,
   FinancePage,
   FinanceReconciliationPage,
+  FinanceWithholdingsPage,
+  FinanceWithholdingCertificatePage,
   FleetFuelLogsPage,
   FleetHelpPage,
   FleetMaintenancePage,
@@ -466,6 +468,8 @@ export function App() {
               <Route path="/finanzas" element={<FinancePage />} />
               <Route path="/finanzas/bancos" element={<FinanceAccountsPage />} />
               <Route path="/finanzas/conciliacion" element={<FinanceReconciliationPage />} />
+              <Route path="/finanzas/retenciones" element={<FinanceWithholdingsPage />} />
+              <Route path="/finanzas/retenciones/:id/certificado" element={<FinanceWithholdingCertificatePage />} />
               <Route path="/finanzas/conceptos" element={<FinanceConceptsPage />} />
               <Route path="/finanzas/echeqs" element={<ChequePortfolioPage />} />
               <Route path="/finanzas/cobranzas" element={<CollectionReceiptsWorkspacePage />} />
