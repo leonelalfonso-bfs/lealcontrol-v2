@@ -135,7 +135,6 @@ Los archivos quedan en la PC del dueño; no se suben al repositorio.
 - El movimiento guarda CUIT y nombre de la contraparte y el código de operación.
 - La sugerencia de proveedor o cliente usa ese CUIT.
 - Validado contra los archivos reales: Galicia 286 renglones con el saldo continuo en 285 de 285, Santander 5 y BBVA 14, sin errores.
-- Credicoop queda pendiente: llega el 21/10.
 
 **F1b (hecha):**
 - **Bandeja de conciliación** por cuenta, con la acción sugerida para cada movimiento y confirmación masiva:
@@ -147,10 +146,16 @@ Los archivos quedan en la PC del dueño; no se suben al repositorio.
 - **Clasificación de fábrica** de los textos del banco cuando no hay regla propia: impuesto al cheque, SIRCREB, IVA, percepciones, comisiones, intereses, FIMA y haberes.
   - Sobre el extracto real de Galicia, 255 de 286 renglones quedan clasificados o con contraparte. Los 31 restantes (débitos automáticos, compras con débito, VEP, Visa) necesitan una regla de la empresa.
 - Se retiraron la consulta y la conciliación uno a uno anteriores.
-- **Queda:**
-  - uno contra varios (una transferencia que paga varias OP);
-  - Credicoop;
-  - propuesta de imputación de facturas al crear la OP desde el débito.
+
+**F1c (hecha):**
+- **Uno contra varios:** una transferencia contra 2 a 5 pagos o cobros del sistema del mismo CUIT que suman su importe (±5 días).
+- **Orden de pago desde el débito:** propone la factura pendiente del proveedor de ese importe, o hasta cuatro que lo sumen.
+- **Credicoop:**
+  - CSV con coma y punto decimal, del más nuevo al más viejo;
+  - la transferencia recibida trae "Ord.:<CUIT>-<razón social>";
+  - las propias ("e/Ctas.Igual Tit.") se clasifican como transferencia propia;
+  - validado contra el archivo real: 20 renglones, saldo continuo en 19 de 19, todos clasificados o con contraparte.
+- **F1 completa.**
 
 
 1. **Formatos de extracto incorporados.**

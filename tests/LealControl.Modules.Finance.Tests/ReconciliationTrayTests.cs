@@ -96,4 +96,48 @@ public sealed class ReconciliationTrayTests : IClassFixture<FinanceWebApplicatio
             linked.BankMovementId.Should().NotBeNull();
         });
     }
+
+    [Fact]
+    public async Task One_transfer_paying_several_orders_of_the_same_supplier_is_matched_with_all()
+    {
+        var tenantId = FinanceWebApplicationFactory.DemoTenantId;
+        var client = _factory.CreateAuthenticatedClient(tenantId);
+        var accountId = Guid.NewGuid();
+        var movements = new List<Guid>();
+        await _factory.WithDbAsync(async db =>
+        {
+            db.Accounts.Add(new FinancialAccount { Id = accountId, TenantId = tenantId, Name = $"Galicia {accountId:N}"[..20], Currency = "ARS", Type = FinancialAccountType.Bank, IsActive = true, CreatedAtUtc = DateTime.UtcNow });
+            // Tres OP del mismo proveedor (30.000, 20.000 y 45.000) y una de otro por 20.000: la transferencia de 50.000 paga las dos primeras.
+            foreach (var (cuit, amount) in new[] { ("27301112225", 30000m), ("27301112225", 20000m), ("27301112225", 45000m), ("30712345671", 20000m) })
+            {
+                var orderId = Guid.NewGuid();
+                var movementId = Guid.NewGuid();
+                movements.Add(movementId);
+                db.PaymentOrders.Add(new PaymentOrder { Id = orderId, TenantId = tenantId, SupplierName = "Proveedor", SupplierTaxId = cuit, OrderNumber = $"OP-{orderId:N}"[..20], Amount = amount, Currency = "ARS", PaymentDateUtc = new DateTime(2026, 10, 2, 0, 0, 0, DateTimeKind.Utc), Status = "Issued", CreatedAtUtc = DateTime.UtcNow });
+                db.Movements.Add(new FinancialMovement { Id = movementId, TenantId = tenantId, AccountId = accountId, Kind = FinancialMovementKind.Debit, Amount = amount, Currency = "ARS", OperationDateUtc = new DateTime(2026, 10, 2, 0, 0, 0, DateTimeKind.Utc), Description = "Pago OP", Origin = FinancialMovementOrigin.System, ReconciliationStatus = FinancialReconciliationStatus.PendingBank, LinkedEntityType = "PaymentOrder", LinkedEntityId = orderId, CreatedAtUtc = DateTime.UtcNow });
+            }
+            await db.SaveChangesAsync();
+        });
+        var csv = "\"Fecha\";\"Descripción\";\"Origen\";\"Débitos\";\"Créditos\";\"Grupo de Conceptos\";\"Concepto\";\"Número de Terminal\";\"Observaciones Cliente\";\"Número de Comprobante\";\"Leyendas Adicionales1\";\"Leyendas Adicionales2\";\"Leyendas Adicionales3\";\"Leyendas Adicionales4\";\"Tipo de Movimiento\";\"Saldo\"\n"
+            + "\"03/10/2026\";\"Trf Inmed Proveed\";\"\";\"50000,00\";\"0\";\"\";\"\";\"\";\"\";\"22222222\";\"Proveedor\";\"27301112225\";\"FACTURAS\";\"\";\"Imputado\";\"950000,00\";\n";
+        (await client.PostAsJsonAsync("/api/v1/finance/imports/bank/confirm", new { accountId, fileBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(csv)), fileName = "Extracto_CC.csv" }))
+            .IsSuccessStatusCode.Should().BeTrue();
+
+        var tray = await client.GetFromJsonAsync<JsonElement>($"/api/v1/finance/reconciliation/tray?accountId={accountId}");
+        var row = tray.GetProperty("rows").EnumerateArray().Single();
+        var suggestion = row.GetProperty("suggestion");
+        suggestion.GetProperty("type").GetString().Should().Be("MatchMany");
+        var systemIds = suggestion.GetProperty("systemIds").EnumerateArray().Select(x => x.GetGuid()).ToList();
+        systemIds.Should().BeEquivalentTo(new[] { movements[0], movements[1] });
+
+        var confirm = await client.PostAsJsonAsync("/api/v1/finance/reconciliation/tray/confirm", new
+        {
+            accountId, matches = Array.Empty<object>(), cheques = Array.Empty<object>(), classify = Array.Empty<Guid>(),
+            matchesMany = new[] { new { importedId = row.GetProperty("id").GetGuid(), systemIds } }
+        });
+        (await confirm.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("matched").GetInt32().Should().Be(2);
+        var after = await client.GetFromJsonAsync<JsonElement>($"/api/v1/finance/reconciliation/tray?accountId={accountId}");
+        after.GetProperty("rows").EnumerateArray().Should().BeEmpty();
+        after.GetProperty("pendingSystem").GetInt32().Should().Be(2);
+    }
 }

@@ -159,8 +159,9 @@ public static class FinanceConcepts
         if (match is null)
         {
             // Sin regla propia: los gastos, impuestos e inversiones que el banco nombra siempre igual se reconocen solos.
-            var known = movement.Kind == FinancialMovementKind.Debit || movement.Description.Contains("rescate", StringComparison.OrdinalIgnoreCase)
-                ? BankChargeClassifier.Classify(movement.Description) : null;
+            // Los créditos solo se clasifican si son rescates o transferencias propias (un impuesto o gasto siempre es débito).
+            var known = BankChargeClassifier.Classify(movement.Description) is { } code
+                && (movement.Kind == FinancialMovementKind.Debit || code is "INVERSION_RESCATE" or "TRANSFERENCIA_PROPIA") ? code : null;
             var builtIn = known is null ? null : await db.FinancialConcepts.AsNoTracking()
                 .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.Code == known && x.IsActive, ct);
             if (builtIn is not null)

@@ -45,6 +45,8 @@ internal static partial class BankStatementFormats
             return new("Galicia", Galicia(text));
         if (lines.Any(l => l.StartsWith("Fecha;Suc. Origen;Desc. Sucursal;Cod. Operativo", StringComparison.OrdinalIgnoreCase)))
             return new("Santander", Santander(lines));
+        if (lines.Length > 0 && lines[0].TrimStart('\uFEFF').StartsWith("Fecha,Concepto,Nro.Cpbte.,", StringComparison.OrdinalIgnoreCase))
+            return new("Credicoop", Credicoop(text));
         return null;
     }
 
@@ -116,6 +118,35 @@ internal static partial class BankStatementFormats
         }
         return rows;
     }
+
+    // Credicoop: "Fecha,Concepto,Nro.Cpbte.,Débito,Crédito,Saldo,Cód." con punto decimal, del más nuevo al más viejo.
+    // Las transferencias recibidas traen "Ord.:<CUIT>-<razón social>"; las propias, "e/Ctas.Igual Tit." con el CUIT propio.
+    private static List<BankImportRow> Credicoop(string text)
+    {
+        var rows = new List<BankImportRow>();
+        foreach (var c in FinanceImport.ReadCsvRecords(text.TrimStart('\uFEFF'), ',').Skip(1))
+        {
+            if (c.All(string.IsNullOrWhiteSpace)) continue;
+            string Cell(int i) => i < c.Count ? c[i].Trim() : "";
+            if (!DateTime.TryParseExact(Cell(0), "dd/MM/yyyy", Ar, DateTimeStyles.None, out var d))
+            {
+                rows.Add(new(default, 0, FinancialMovementKind.Debit, string.Join(" | ", c), null, null, "Fecha inválida."));
+                continue;
+            }
+            var concept = Cell(1);
+            var own = concept.Contains("Igual Tit", StringComparison.OrdinalIgnoreCase);
+            var ordering = CredicoopOrdering().Match(concept);
+            var taxId = own ? null : ordering.Success ? ordering.Groups[1].Value : CuitRegex().Match(concept) is { Success: true } m ? m.Value : null;
+            var party = !own && ordering.Success ? NullIfEmpty(ordering.Groups[2].Value.Trim()) : null;
+            var voucher = Cell(2);
+            rows.Add(Row(d, Math.Abs(Invariant(Cell(3))), Math.Abs(Invariant(Cell(4))), concept, voucher is "" or "0" ? null : voucher,
+                decimal.TryParse(Cell(5), NumberStyles.Float, CultureInfo.InvariantCulture, out var balance) ? balance : null, taxId, party, NullIfEmpty(Cell(6))));
+        }
+        return rows;
+    }
+
+    [GeneratedRegex(@"Ord\.:\s*(\d{11})-(.+)$", RegexOptions.IgnoreCase)]
+    private static partial Regex CredicoopOrdering();
 
     // BBVA (.xls): títulos (Empresa, Cuenta, Saldo...) y la tabla "Fecha, Fecha Valor, Concepto, Codigo, Número Documento,
     // Oficina, Crédito, Débito, Detalle"; los débitos vienen en negativo.

@@ -64,6 +64,32 @@ public sealed class BankStatementFormatsTests
     }
 
     [Fact]
+    public void Credicoop_reads_the_ordering_cuit_and_own_transfers()
+    {
+        var text = "Fecha,Concepto,Nro.Cpbte.,Débito,Crédito,Saldo,Cód.\r\n"
+            + "30/09/2026,Reg. de Recaudacion SIRCREB-Convenio,0,11792.76,0.00,500000.00,SCECO\r\n"
+            + "30/09/2026,Transf. Interbanking - Distinto Titular Ord.:30712345671-CLIENTE EJEMPLO SA,123456,0.00,250000.70,511792.76,00974\r\n"
+            + "29/09/2026,Transf.Inmediata e/Ctas.Igual Tit.O/Bco 30715342215-VAR-EMPRESA CBU Destino: 0000000000000000000000,555,100000.00,0.00,261792.06,01273\r\n";
+
+        var result = BankStatementFormats.TryParse(Encoding.GetEncoding("ISO-8859-1").GetBytes(text), "saldos_y_movimientos.csv");
+
+        result!.Bank.Should().Be("Credicoop");
+        result.Rows.Should().HaveCount(3);
+        result.Rows[0].Kind.Should().Be(FinancialMovementKind.Debit);
+        result.Rows[0].Amount.Should().Be(11792.76m);
+        result.Rows[0].ExternalReference.Should().BeNull();
+        result.Rows[0].BankCode.Should().Be("SCECO");
+        result.Rows[1].Kind.Should().Be(FinancialMovementKind.Credit);
+        result.Rows[1].Amount.Should().Be(250000.70m);
+        result.Rows[1].CounterpartyTaxId.Should().Be("30712345671");
+        result.Rows[1].CounterpartyName.Should().Be("CLIENTE EJEMPLO SA");
+        result.Rows[1].ReportedBalance.Should().Be(511792.76m);
+        result.Rows[2].CounterpartyTaxId.Should().BeNull();               // transferencia entre cuentas propias
+        BankChargeClassifier.Classify(result.Rows[2].Description).Should().Be("TRANSFERENCIA_PROPIA");
+        BankChargeClassifier.Classify("Servicio acreditaciones automaticas SERV ACRED AUTOMATIC").Should().Be("COMISION");
+    }
+
+    [Fact]
     public void An_unknown_file_falls_back_to_the_generic_importer()
     {
         BankStatementFormats.TryParse(Encoding.UTF8.GetBytes("Fecha;Importe\n01/10/2026;100\n"), "otro.csv").Should().BeNull();
