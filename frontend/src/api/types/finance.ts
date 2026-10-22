@@ -209,12 +209,6 @@ export type FinanceReconciliationResult = {
   suggestedMatches: FinanceReconciliationMatch[];
 };
 
-export type CashFlowProjection = {
-  availableToday: number;
-  horizonDays: number;
-  flows: Array<{ date: string; amount: number; label?: string }>;
-};
-
 /** Bandeja de conciliación (nota 69, F1b): cada movimiento del extracto sin conciliar con su acción sugerida. */
 export type ReconciliationSuggestion =
   | { type: "Match"; systemId: string; label: string; operationDateUtc: string }

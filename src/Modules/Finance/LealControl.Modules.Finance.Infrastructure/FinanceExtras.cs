@@ -56,59 +56,6 @@ public static class FinanceExtras
             return Results.Ok(new { systemBalance, countedAmount = body.CountedAmount, difference = diff, movementId = movement.Id });
         });
 
-        group.MapGet("/cash-flow/projection", async (int? days, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
-        {
-            var tenantId = tenant.TenantId.Value;
-            var horizon = Math.Clamp(days ?? 30, 7, 365);
-            var today = ArgentinaTime.TodayAsUtcDate(DateTimeOffset.UtcNow);
-            var limit = today.AddDays(horizon);
-
-            var accounts = await db.Accounts.AsNoTracking().Where(x => x.TenantId == tenantId && x.IsActive).ToListAsync(ct);
-            var balances = await db.Movements.AsNoTracking().Where(x => x.TenantId == tenantId)
-                .GroupBy(x => x.AccountId)
-                .Select(g => new { AccountId = g.Key, Net = g.Sum(x => x.Kind == FinancialMovementKind.Credit ? x.Amount : -x.Amount) })
-                .ToDictionaryAsync(x => x.AccountId, x => x.Net, ct);
-
-            var availableToday = accounts.Sum(a => a.OpeningBalance + balances.GetValueOrDefault(a.Id));
-
-            var cheques = await db.ReceivedCheques.AsNoTracking()
-                .Where(x => x.TenantId == tenantId && x.DueDateUtc != null && x.DueDateUtc >= today && x.DueDateUtc <= limit)
-                .ToListAsync(ct);
-
-            var paymentOrders = await db.PaymentOrders.AsNoTracking()
-                .Where(x => x.TenantId == tenantId && x.Status == "Confirmed" && x.PaymentDateUtc >= today && x.PaymentDateUtc <= limit)
-                .ToListAsync(ct);
-
-            var flows = new List<object>();
-            foreach (var ch in cheques.Where(x => x.Status is ReceivedChequeStatus.Available or ReceivedChequeStatus.Deposited or ReceivedChequeStatus.Presented or ReceivedChequeStatus.Issued))
-            {
-                flows.Add(new
-                {
-                    date = ch.DueDateUtc!.Value,
-                    kind = ch.Direction == ChequeDirection.Received ? "Ingreso" : "Egreso",
-                    source = ch.Direction == ChequeDirection.Received ? "Cheque recibido" : "Cheque emitido (a pagar)",
-                    detail = $"{ch.CheckNumber} · {ch.IssuerName ?? ch.BankName ?? ""}",
-                    amount = ch.Amount,
-                    currency = ch.Currency
-                });
-            }
-            foreach (var op in paymentOrders)
-            {
-                flows.Add(new
-                {
-                    date = op.PaymentDateUtc,
-                    kind = "Egreso",
-                    source = "Orden de pago",
-                    detail = $"{op.OrderNumber} · {op.SupplierName}",
-                    amount = op.Amount,
-                    currency = op.Currency
-                });
-            }
-
-            flows = flows.OrderBy(x => ((DateTime)x.GetType().GetProperty("date")!.GetValue(x)!)).ToList();
-            return Results.Ok(new { availableToday, horizonDays = horizon, flows });
-        });
-
         return endpoints;
     }
 }

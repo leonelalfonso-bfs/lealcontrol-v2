@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import type { InvestmentFund } from "../api/types/finance";
 import { fileToBase64, fileToText } from "../lib/files";
 
 type Account = {
@@ -28,6 +30,7 @@ const isManual = (a: Account) => (a.bookingMode || "Statement") === "Manual";
 
 export function FinancePage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [funds, setFunds] = useState<InvestmentFund[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [accountId, setAccountId] = useState("");
   const [csv, setCsv] = useState("");
@@ -57,6 +60,7 @@ export function FinancePage() {
 
   useEffect(() => {
     void load();
+    api.listInvestmentFunds().then(setFunds).catch(() => setFunds([]));
   }, []);
 
   const readFile = async (f: File) => {
@@ -235,6 +239,17 @@ export function FinancePage() {
               {account.type} · {account.currency} · {isManual(account) ? "Manual" : "Extracto"}
             </small>
           </div>
+        ))}
+        {funds.map((fund) => (
+          <Link className="card pad" key={fund.id} to="/finanzas/fondos" style={{ color: "inherit", textDecoration: "none" }}>
+            <span className="muted">{fund.name}</span>
+            <strong style={{ display: "block", marginTop: 10, fontSize: "1.55rem" }}>
+              {fund.valuation != null ? money(fund.valuation, fund.currency) : "Sin valuar"}
+            </strong>
+            <small className="muted">
+              Fondo común · {fund.currency} · {fund.units.toLocaleString("es-AR", { maximumFractionDigits: 2 })} cuotapartes
+            </small>
+          </Link>
         ))}
       </div>
 

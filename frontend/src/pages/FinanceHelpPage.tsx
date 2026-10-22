@@ -215,8 +215,9 @@ export function FinanceHelpPage() {
 
       <ManualPart id="cashflow" title="8. Disponibilidad y cash flow">
         <p style={{ margin: 0 }}>
-          <Link to="/finanzas">Disponibilidad</Link> muestra el saldo de cada cuenta. <Link to="/finanzas/cashflow">Cash flow</Link> proyecta en un calendario
-          lo que va a entrar y salir: facturas por cobrar y pagar, cheques y expectativas.
+          <Link to="/finanzas">Disponibilidad</Link> muestra el saldo de cada cuenta y la valuación de cada fondo común de inversión. <Link to="/finanzas/cashflow">Cash flow</Link> proyecta en un calendario
+          lo que va a entrar y salir: facturas por cobrar y pagar, cheques y órdenes de pago. El punto de partida son los saldos en pesos más
+          los fondos comunes en pesos, porque se rescatan en el día.
         </p>
       </ManualPart>
 
