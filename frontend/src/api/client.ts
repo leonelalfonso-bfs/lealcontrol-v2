@@ -273,6 +273,11 @@ export const api = {
       a.click();
       URL.revokeObjectURL(url);
     }),
+  listInvestmentFunds: () => request<import("./types/finance").InvestmentFund[]>("/api/v1/finance/funds"),
+  importInvestmentFunds: (body: { fileBase64: string; fileName: string }) =>
+    request<{ rows: number; created: number; updated: number; unchanged: number }>("/api/v1/finance/funds/import", { method: "POST", body: JSON.stringify(body) }),
+  saveInvestmentFund: (id: string, body: { accountId: string | null; openingUnits: number; openingDate: string | null; openingCost: number; lastUnitValue: number | null; lastUnitValueDate: string | null }) =>
+    request<unknown>(`/api/v1/finance/funds/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   getReconciliationTray: (accountId: string) =>
     request<import("./types/finance").ReconciliationTray>(`/api/v1/finance/reconciliation/tray?accountId=${accountId}`),
   confirmReconciliationTray: (body: { accountId: string; matches: { importedId: string; systemId: string }[]; matchesMany: { importedId: string; systemIds: string[] }[]; cheques: { importedId: string; chequeId: string }[]; classify: string[] }) =>

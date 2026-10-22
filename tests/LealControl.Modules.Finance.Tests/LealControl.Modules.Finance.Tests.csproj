@@ -23,4 +23,7 @@
     <ProjectReference Include="..\..\src\Modules\Finance\LealControl.Modules.Finance.Application\LealControl.Modules.Finance.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Finance\LealControl.Modules.Finance.Infrastructure\LealControl.Modules.Finance.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="TestData\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

@@ -273,6 +273,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
     items: [
       { path: "/finanzas", label: "Disponibilidad", icon: "💵" },
       { path: "/finanzas/bancos", label: "Bancos y cajas", icon: "🏦" },
+      { path: "/finanzas/fondos", label: "Fondos comunes de inversión", icon: "📈" },
       { path: "/finanzas/conciliacion", label: "Conciliación bancaria", icon: "🔗" },
       { path: "/finanzas/retenciones", label: "Retenciones de Ganancias", icon: "🧾" },
       { path: "/finanzas/sufridas", label: "Retenciones y percepciones sufridas", icon: "📥" },

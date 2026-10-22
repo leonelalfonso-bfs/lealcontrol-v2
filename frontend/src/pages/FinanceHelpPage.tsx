@@ -182,6 +182,29 @@ export function FinanceHelpPage() {
         </Steps>
       </ManualPart>
 
+      <ManualPart id="fondos" title="6 quinquies. Fondos comunes de inversión (FCI)">
+        <Steps>
+          <Step title="En el home banking de Galicia: Inversiones → Fondos → Movimientos → elegí el período y descargá el Excel (uno por moneda).">
+            Trae el número de operación, el fondo, las fechas, el tipo (agregar o retirar), el importe, las cuotapartes, su valor y el estado.
+          </Step>
+          <Step title="Finanzas → Fondos comunes de inversión → “📥 Importar movimientos de fondos” → elegí el archivo.">
+            Cada fondo se crea solo la primera vez. Se puede volver a importar un período: no duplica y actualiza las operaciones
+            que estaban pendientes.
+          </Step>
+          <Step title="Una vez por fondo: elegí la cuenta bancaria y cargá la tenencia inicial → “Guardar”.">
+            La tenencia inicial son las cuotapartes que había el día anterior a la primera operación importada, con lo que costaron
+            (o su valuación de ese día). Sin ella la tenencia puede dar negativa, porque faltan las suscripciones anteriores.
+          </Step>
+          <Step title="La valuación usa el último valor de cuotaparte importado; si querés valuar a otra fecha, cargá el valor del día.">
+            Rendimiento = valuación − aportado neto (tenencia inicial + suscripciones − rescates).
+          </Step>
+          <Step title="La columna “Extracto” muestra si cada suscripción o rescate figura en el extracto importado de la cuenta.">
+            Se busca el mismo importe y sentido, con hasta 2 días de diferencia, en un renglón de suscripción o rescate de fondos.
+            “No figura” indica que falta importar el extracto o que la operación no pasó por esa cuenta.
+          </Step>
+        </Steps>
+      </ManualPart>
+
       <ManualPart id="cuentas" title="7. Cuentas corrientes">
         <ul style={{ margin: 0, display: "grid", gap: 6 }}>
           <li><Link to="/finanzas/cuenta-corriente">Cuentas corrientes</Link> calcula el saldo de cada cliente (a cobrar) y proveedor (a pagar), con su detalle de comprobantes, cobros y pagos.</li>

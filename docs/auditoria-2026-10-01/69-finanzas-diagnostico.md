@@ -213,6 +213,23 @@ Los archivos quedan en la PC del dueño; no se suben al repositorio.
 - **Home banking de cada banco** (Galicia Office, Santander, BBVA y Credicoop): cada banco tiene su diseño propio, que no es público. Hace falta que administración pida al banco el "diseño de registro de pagos a proveedores / transferencias masivas", o un archivo de ejemplo, para sumarlo como otro formato del mismo lote.
 - **Queda para después:** lotes en dólares, el código de retención en el registro `*M*` y la transferencia por alias.
 
+**F5 fondos comunes de inversión (hecha, base):**
+- **Formato real:** el Excel de movimientos de FIMA del home banking de Galicia, uno por moneda. Trae: Id operación, Fondo - Clase, fechas de solicitud y liquidación, Agregar/Retirar, monto, cuotapartes, valor de la cuotaparte, cuentas y estado.
+  - Validado con el archivo del dueño: 31 operaciones de FIMA Premium $, y en todas cuotapartes × valor da el importe (diferencia máxima $ 0,84 por redondeo).
+- **Importación sin duplicar** (por Id de operación): actualiza las pendientes y crea el fondo la primera vez.
+- **Por fondo:**
+  - cuenta bancaria vinculada;
+  - **tenencia inicial** (cuotapartes, fecha y costo);
+  - último valor de cuotaparte, tomado de la última operación o cargado a mano;
+  - tenencia actual, valuación, aportado neto y rendimiento.
+- **Control contra el extracto:** cada suscripción o rescate liquidado se busca en el extracto de la cuenta, con mismo importe y sentido, ±2 días y un texto que el clasificador reconoce como suscripción o rescate.
+  - El extracto de Galicia trae "Nro Operacion: N", que es el mismo Id; hoy no se guarda, porque cambiar la descripción del extracto rompería la deduplicación de lo ya importado.
+- **Observación:** el listado en dólares trae un rescate de USD 5.000 del 05/08/2025 todavía "Pendiente"; conviene revisarlo con el banco.
+- **Queda para después:**
+  - sumar la valuación de los fondos en Disponibilidad y en el cash flow;
+  - asiento contable del rendimiento (resultado por tenencia) cuando se cierre el mes;
+  - otros bancos y sociedades gerentes.
+
 
 1. **Formatos de extracto incorporados.**
    - Galicia y Santander tal como bajan del home banking; Credicoop y BBVA cuando lleguen.

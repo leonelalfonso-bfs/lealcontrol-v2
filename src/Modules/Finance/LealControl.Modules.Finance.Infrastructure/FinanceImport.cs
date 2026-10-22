@@ -511,6 +511,7 @@ public static class FinanceImport
         FinanceWithholdings.MapWithholdingEndpoints(endpoints);
         SufferedTaxes.MapSufferedTaxEndpoints(endpoints);
         PaymentBatches.MapPaymentBatchEndpoints(endpoints);
+        InvestmentFunds.MapInvestmentFundEndpoints(endpoints);
         return endpoints;
     }
 
