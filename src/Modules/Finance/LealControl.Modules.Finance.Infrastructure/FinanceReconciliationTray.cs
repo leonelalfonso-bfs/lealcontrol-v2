@@ -59,6 +59,7 @@ public static partial class FinanceReconciliationTray
                     && x.Status != ReceivedChequeStatus.Cancelled && x.Status != ReceivedChequeStatus.Rejected)
                 .ToListAsync(ct);
             var concepts = await db.FinancialConcepts.AsNoTracking().Where(x => x.TenantId == tenantId).ToDictionaryAsync(x => x.Id, ct);
+            var batches = await PaymentBatches.ConsolidatedPendingAsync(db, tenantId, accountId, ct);
 
             var usedSystem = new HashSet<Guid>();
             var usedCheques = new HashSet<Guid>();
@@ -84,6 +85,13 @@ public static partial class FinanceReconciliationTray
                 {
                     usedSystem.Add(candidates[0].Id);
                     suggestion = new { Type = "Match", SystemId = candidates[0].Id, Label = labels.GetValueOrDefault(candidates[0].Id, candidates[0].Description), candidates[0].OperationDateUtc };
+                }
+                else if (m.Kind == FinancialMovementKind.Debit && batches.FirstOrDefault(b => b.Batch.Total == m.Amount
+                        && b.MovementIds.All(id => !usedSystem.Contains(id))
+                        && Math.Abs((b.Batch.RequestDate.Date - m.OperationDateUtc.Date).TotalDays) <= DateTolerance.TotalDays) is { Batch: not null } batch)
+                {
+                    foreach (var id in batch.MovementIds) usedSystem.Add(id);
+                    suggestion = new { Type = "MatchMany", SystemIds = batch.MovementIds, Label = $"Lote de pagos {batch.Batch.Number:0000} ({batch.MovementIds.Count} transferencias)" };
                 }
                 else if (m.CounterpartyTaxId is { } partyTaxId && SubsetSum(system
                         .Where(s => !usedSystem.Contains(s.Id) && s.Kind == m.Kind && s.Amount < m.Amount

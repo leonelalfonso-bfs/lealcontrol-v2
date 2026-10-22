@@ -159,6 +159,29 @@ export function FinanceHelpPage() {
         </Steps>
       </ManualPart>
 
+      <ManualPart id="lotes" title="6 quater. Pagos por archivo (Interbanking)">
+        <Steps>
+          <Step title="Una vez por cuenta: Finanzas → Pagos por archivo → elegí la cuenta bancaria → cargá su CBU → “Guardar CBU”.">
+            Es la cuenta que se debita. El sistema controla los dígitos verificadores del CBU.
+          </Step>
+          <Step title="Emití las órdenes de pago como siempre, con medio “Transferencia” desde esa cuenta.">
+            Quedan pendientes de banco y aparecen en “Transferencias pendientes”.
+          </Step>
+          <Step title="Si a un proveedor le falta el CBU, cargalo ahí mismo en su renglón → “Guardar”. Queda guardado para los próximos pagos." />
+          <Step title="Tildá las transferencias, elegí la fecha de pago y si el débito es consolidado → “Generar lote”.">
+            Se descarga el archivo con el diseño de Interbanking por CBU (TEF a proveedores). “Débito consolidado” tiene que
+            coincidir con lo que elijas en Interbanking al confeccionar la transferencia. Una transferencia que ya está en un
+            lote no se ofrece de nuevo.
+          </Step>
+          <Step title="En Interbanking: Transferencias → importar archivo → tipo Proveedores, por CBU → revisá y enviá a firmar.">
+            Si hay que corregir algo, anulá el lote en el sistema: sus transferencias vuelven a quedar disponibles.
+          </Step>
+          <Step title="Cuando importes el extracto, la conciliación reconoce el débito del lote consolidado y propone las órdenes de pago juntas.">
+            Si el débito no es consolidado, cada transferencia se concilia sola por importe y CUIT, como cualquier pago.
+          </Step>
+        </Steps>
+      </ManualPart>
+
       <ManualPart id="cuentas" title="7. Cuentas corrientes">
         <ul style={{ margin: 0, display: "grid", gap: 6 }}>
           <li><Link to="/finanzas/cuenta-corriente">Cuentas corrientes</Link> calcula el saldo de cada cliente (a cobrar) y proveedor (a pagar), con su detalle de comprobantes, cobros y pagos.</li>

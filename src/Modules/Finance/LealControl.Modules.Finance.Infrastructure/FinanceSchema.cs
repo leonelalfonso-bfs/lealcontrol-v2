@@ -234,5 +234,23 @@ public static class FinanceSchema
           ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""SourceType"" varchar(20) NOT NULL, ""SourceId"" uuid NOT NULL, ""Jurisdiction"" varchar(3) NOT NULL
         );
         CREATE UNIQUE INDEX IF NOT EXISTS ""IX_SufferedTaxJurisdictions_Source"" ON finance.""SufferedTaxJurisdictions"" (""TenantId"", ""SourceType"", ""SourceId"");
+
+        ALTER TABLE finance.""FinancialAccounts"" ADD COLUMN IF NOT EXISTS ""Cbu"" varchar(22);
+        CREATE TABLE IF NOT EXISTS finance.""SupplierBankAccounts"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""SupplierId"" uuid NOT NULL, ""Cbu"" varchar(22) NOT NULL, ""Alias"" varchar(40), ""UpdatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_SupplierBankAccounts_Supplier"" ON finance.""SupplierBankAccounts"" (""TenantId"", ""SupplierId"");
+        CREATE TABLE IF NOT EXISTS finance.""PaymentBatches"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""Number"" integer NOT NULL, ""AccountId"" uuid NOT NULL, ""AccountCbu"" varchar(22) NOT NULL,
+          ""RequestDate"" timestamptz NOT NULL, ""Consolidated"" boolean NOT NULL, ""Total"" numeric(18,2) NOT NULL, ""Status"" varchar(20) NOT NULL,
+          ""CreatedBy"" varchar(120), ""CreatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_PaymentBatches_Number"" ON finance.""PaymentBatches"" (""TenantId"", ""Number"");
+        CREATE TABLE IF NOT EXISTS finance.""PaymentBatchItems"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""BatchId"" uuid NOT NULL REFERENCES finance.""PaymentBatches"" (""Id"") ON DELETE CASCADE,
+          ""MovementId"" uuid NOT NULL, ""PaymentOrderId"" uuid NOT NULL, ""PaymentOrderNumber"" varchar(40) NOT NULL, ""SupplierName"" varchar(200) NOT NULL,
+          ""SupplierTaxId"" varchar(11) NOT NULL, ""Cbu"" varchar(22) NOT NULL, ""Amount"" numeric(18,2) NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ""IX_PaymentBatchItems_Movement"" ON finance.""PaymentBatchItems"" (""MovementId"");
         ", cancellationToken);
 }
