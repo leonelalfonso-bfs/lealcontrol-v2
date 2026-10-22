@@ -176,6 +176,7 @@ export const ProductionReportsPage = named(() => import("../pages/ProductionRepo
 export const FinancePage = named(() => import("../pages/FinancePage"), "FinancePage");
 export const FinanceAccountsPage = named(() => import("../pages/FinanceAccountsPage"), "FinanceAccountsPage");
 export const FinanceWithholdingsPage = named(() => import("../pages/FinanceWithholdingsPage"), "FinanceWithholdingsPage");
+export const FinanceInvestmentFundsPage = named(() => import("../pages/FinanceInvestmentFundsPage"), "FinanceInvestmentFundsPage");
 export const FinancePaymentBatchesPage = named(() => import("../pages/FinancePaymentBatchesPage"), "FinancePaymentBatchesPage");
 export const FinanceSufferedTaxesPage = named(() => import("../pages/FinanceSufferedTaxesPage"), "FinanceSufferedTaxesPage");
 export const FinanceWithholdingCertificatePage = named(() => import("../pages/FinanceWithholdingCertificatePage"), "FinanceWithholdingCertificatePage");

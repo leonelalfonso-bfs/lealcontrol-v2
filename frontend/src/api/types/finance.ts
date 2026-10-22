@@ -249,3 +249,10 @@ export type PaymentBatch = {
   createdBy?: string | null; createdAtUtc: string;
   items: { movementId: string; paymentOrderId: string; paymentOrderNumber: string; supplierName: string; supplierTaxId: string; cbu: string; amount: number }[];
 };
+
+/** Fondo común de inversión con su tenencia y operaciones (nota 69, F5). */
+export type InvestmentFund = {
+  id: string; name: string; currency: string; accountId?: string | null; openingUnits: number; openingDate?: string | null; openingCost: number;
+  lastUnitValue?: number | null; lastUnitValueDate?: string | null; units: number; contributed: number; valuation?: number | null; result?: number | null;
+  operations: { id: string; externalId: string; kind: "Subscription" | "Redemption"; requestDate: string; settlementDate: string; amount: number; units: number; unitValue?: number | null; status: string; inBank?: boolean | null }[];
+};

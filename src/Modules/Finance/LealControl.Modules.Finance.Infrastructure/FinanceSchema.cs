@@ -252,5 +252,19 @@ public static class FinanceSchema
           ""SupplierTaxId"" varchar(11) NOT NULL, ""Cbu"" varchar(22) NOT NULL, ""Amount"" numeric(18,2) NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ""IX_PaymentBatchItems_Movement"" ON finance.""PaymentBatchItems"" (""MovementId"");
+
+        CREATE TABLE IF NOT EXISTS finance.""InvestmentFunds"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""Name"" varchar(120) NOT NULL, ""Currency"" varchar(8) NOT NULL, ""AccountId"" uuid,
+          ""OpeningUnits"" numeric(20,6) NOT NULL DEFAULT 0, ""OpeningDate"" timestamptz, ""OpeningCost"" numeric(18,2) NOT NULL DEFAULT 0,
+          ""LastUnitValue"" numeric(18,6), ""LastUnitValueDate"" timestamptz, ""CreatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_InvestmentFunds_Name"" ON finance.""InvestmentFunds"" (""TenantId"", ""Name"", ""Currency"");
+        CREATE TABLE IF NOT EXISTS finance.""InvestmentFundOperations"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""FundId"" uuid NOT NULL REFERENCES finance.""InvestmentFunds"" (""Id"") ON DELETE CASCADE,
+          ""ExternalId"" varchar(40) NOT NULL, ""Kind"" varchar(20) NOT NULL, ""RequestDate"" timestamptz NOT NULL, ""SettlementDate"" timestamptz NOT NULL,
+          ""Amount"" numeric(18,2) NOT NULL, ""Units"" numeric(20,6) NOT NULL, ""UnitValue"" numeric(18,6), ""Status"" varchar(30) NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_InvestmentFundOperations_External"" ON finance.""InvestmentFundOperations"" (""TenantId"", ""ExternalId"");
+        CREATE INDEX IF NOT EXISTS ""IX_InvestmentFundOperations_Fund"" ON finance.""InvestmentFundOperations"" (""FundId"");
         ", cancellationToken);
 }
