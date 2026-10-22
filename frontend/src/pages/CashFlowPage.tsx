@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { Invoice, PurchaseInvoice } from "../api/types";
+import type { InvestmentFund } from "../api/types/finance";
 import { todayAr } from "../lib/dates";
 
 type Account = { id: string; name: string; currency: string; balance: number };
@@ -16,6 +17,7 @@ export function CashFlowPage() {
   const [purchases, setPurchases] = useState<PurchaseInvoice[]>([]);
   const [cheques, setCheques] = useState<Cheque[]>([]);
   const [paymentOrders, setPaymentOrders] = useState<any[]>([]);
+  const [funds, setFunds] = useState<InvestmentFund[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(30);
   const today = todayAr();
@@ -36,6 +38,7 @@ export function CashFlowPage() {
         setPaymentOrders(ops);
       })
       .catch((e) => setError(e.message));
+    api.listInvestmentFunds().then(setFunds).catch(() => setFunds([]));
   }, []);
 
   const flows = useMemo<Flow[]>(() => {
@@ -60,7 +63,10 @@ export function CashFlowPage() {
     ].sort((a, b) => a.date.localeCompare(b.date));
   }, [invoices, purchases, cheques, paymentOrders, days, today]);
 
-  const available = accounts.filter((x) => x.currency === "ARS").reduce((s, x) => s + x.balance, 0);
+  const cash = accounts.filter((x) => x.currency === "ARS").reduce((s, x) => s + x.balance, 0);
+  // Los fondos en pesos (FIMA Premium y similares) se rescatan en el día: cuentan como disponibilidad.
+  const fci = funds.filter((f) => f.currency === "ARS").reduce((s, f) => s + (f.valuation ?? 0), 0);
+  const available = cash + fci;
   const inflows = flows.filter((x) => x.kind === "Ingreso").reduce((s, x) => s + x.amount, 0);
   const outflows = flows.filter((x) => x.kind === "Egreso").reduce((s, x) => s + x.amount, 0);
   let running = available;
@@ -86,7 +92,7 @@ export function CashFlowPage() {
       </div>
       {error && <div className="alert">{error}</div>}
       <div className="grid-3">
-        <section className="card pad"><span className="eyebrow">DISPONIBILIDAD HOY</span><h2>{money(available)}</h2><p className="muted">Bancos, cajas y billeteras ARS.</p></section>
+        <section className="card pad"><span className="eyebrow">DISPONIBILIDAD HOY</span><h2>{money(available)}</h2><p className="muted">{fci > 0 ? `Bancos, cajas y billeteras ${money(cash)} + fondos comunes ${money(fci)}.` : "Bancos, cajas y billeteras ARS."}</p></section>
         <section className="card pad"><span className="eyebrow">INGRESOS PROYECTADOS</span><h2 style={{ color: "#4f9d72" }}>{money(inflows)}</h2><p className="muted">Facturas y cheques recibidos.</p></section>
         <section className="card pad"><span className="eyebrow">EGRESOS PROYECTADOS</span><h2 style={{ color: "#c55b4f" }}>{money(outflows)}</h2><p className="muted">Compras, cheques emitidos y OP.</p></section>
       </div>

@@ -225,10 +225,12 @@ Los archivos quedan en la PC del dueño; no se suben al repositorio.
 - **Control contra el extracto:** cada suscripción o rescate liquidado se busca en el extracto de la cuenta, con mismo importe y sentido, ±2 días y un texto que el clasificador reconoce como suscripción o rescate.
   - El extracto de Galicia trae "Nro Operacion: N", que es el mismo Id; hoy no se guarda, porque cambiar la descripción del extracto rompería la deduplicación de lo ya importado.
 - **Observación:** el listado en dólares trae un rescate de USD 5.000 del 05/08/2025 todavía "Pendiente"; conviene revisarlo con el banco.
-- **Queda para después:**
-  - sumar la valuación de los fondos en Disponibilidad y en el cash flow;
-  - asiento contable del rendimiento (resultado por tenencia) cuando se cierre el mes;
-  - otros bancos y sociedades gerentes.
+- **Disponibilidad y cash flow (F5b):** Disponibilidad muestra cada fondo con su valuación. El cash flow arranca de los saldos en pesos más los fondos en pesos (los money market se rescatan en el día). Se quitó `GET /finance/cash-flow/projection`, que no usaba ninguna pantalla.
+- **Contabilidad, pendiente:** el plan de cuentas de fábrica no tiene una cuenta de inversiones (FCI) y el asiento modelo que indica el concepto de suscripción y rescate (`AM-FIN-20`) no existe. Hoy esos movimientos no tienen asiento propio. Antes de contabilizar el rendimiento hay que definir con el estudio:
+  - la cuenta de Inversiones transitorias – FCI;
+  - el asiento de suscripción y rescate (banco contra FCI);
+  - el resultado por tenencia de fin de mes (valuación a la cuotaparte del último día, contra Resultados financieros).
+- **Queda para después:** otros bancos y sociedades gerentes.
 
 
 1. **Formatos de extracto incorporados.**
