@@ -107,7 +107,6 @@ Cada entrega termina con su **manual de Ayuda**. Desde S3 se **compara con los r
   - la planilla bancaria;
   - los endpoints de períodos, conceptos y recibos que la pantalla llamaba con rutas equivocadas.
 - **Las tablas** de períodos, conceptos y recibos **se conservaron** hasta S3, que las borró (ver S3).
-- **Se retiró el "asistente de convenios con IA" (Gemini):** solo lo usaba esa pantalla y proponía escalas sin control. Si en S2 conviene leer escalas desde el PDF del acuerdo, se rehace con revisión humana. El lector de facturas con IA sigue.
 - **La pantalla de liquidación** explica que está en reconstrucción y por qué, con las etapas.
 - **La Ayuda de RRHH** prometía un Libro de Sueldos "listo para AFIP" y un presentismo que no existía. Se rehízo como manual de lo que funciona: legajos, documentos, EPP, organigrama, manuales y el estado de sueldos.
 
@@ -170,7 +169,6 @@ Cada entrega termina con su **manual de Ayuda**. Desde S3 se **compara con los r
   - cuota sindical 2 %, solidario 1 % y extraordinario 1,5 %.
   - Queda afuera el adicional por traslado de más de 100 km: se carga como regla si hace falta.
 - **Legajo:** convenio, categoría y zona (controlados contra el convenio) y las marcas del colaborador. El texto de convenio y categoría se completa solo. Fuera de convenio rige el básico pactado.
-- **Retiro:** S0 había retirado el "asistente de convenios con IA"; no se volvió a usar.
 - **Ayuda de RRHH:** sección de convenios colectivos.
 - **Pruebas:** `PayrollAgreementsApiTests` cubre:
   - el caso UECARA: auxiliar administrativo de zona II, con antigüedad desde el mes siguiente, título B, solidarios y aviso del tope;

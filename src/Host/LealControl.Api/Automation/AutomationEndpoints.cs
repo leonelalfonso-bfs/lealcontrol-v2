@@ -1,58 +1,15 @@
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
 namespace LealControl.Api.Automation;
 
-public record ExtractInvoiceOcrRequest(string Base64Document, string MimeType);
-
 public static class AutomationEndpoints
 {
     public static IEndpointRouteBuilder MapAutomationEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/automation")
-                       .WithTags("Automation & AI")
-                       .RequireAuthorization("RequireAdmin");
-
-        group.MapGet("/status", async (GeminiApiClient client, CancellationToken ct) =>
-        {
-            var (success, message) = await client.TestConnectionAsync(ct);
-            return success ? Results.Ok(new { status = "Healthy", message }) : Results.Problem(message);
-        });
-
-        group.MapPost("/invoice/ocr", async (ExtractInvoiceOcrRequest request, GeminiApiClient client, CancellationToken ct) =>
-        {
-            if (string.IsNullOrWhiteSpace(request.Base64Document))
-            {
-                return Results.BadRequest(new { error = "Debe enviar el archivo del comprobante en Base64." });
-            }
-
-            var (result, error) = await client.ExtractInvoiceOcrAsync(request.Base64Document, request.MimeType, ct);
-            return result is null
-                ? Results.Problem(title: "No se pudo leer el comprobante", detail: error, statusCode: StatusCodes.Status502BadGateway)
-                : Results.Ok(result);
-        });
-
-        group.MapGet("/diagnostic", async (LealDiagnosticService service, CancellationToken ct) =>
-        {
-            var report = await service.GenerateDiagnosticAsync(ct);
-            return Results.Ok(report);
-        });
-
-        group.MapPost("/ask-leal", async (AskLealRequest request, AskLealService service, CancellationToken ct) =>
-        {
-            if (string.IsNullOrWhiteSpace(request.Message))
-            {
-                return Results.BadRequest(new { error = "Debe enviar una consulta." });
-            }
-
-            var response = await service.AskAsync(request, ct);
-            return Results.Ok(response);
-        });
-
         // Informe BCRA lo usa Comercial al dar de alta un cliente: alcanza con estar logueado.
         app.MapGet("/api/v1/automation/bcra/{cuit}", async (string cuit, BcraApiClient client, CancellationToken ct) =>
         {
@@ -65,7 +22,7 @@ public static class AutomationEndpoints
             {
                 return Results.BadRequest(new { error = ex.Message });
             }
-        }).RequireAuthorization();
+        }).WithTags("BCRA").RequireAuthorization();
 
         return app;
     }
