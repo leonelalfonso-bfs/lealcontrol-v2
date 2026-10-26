@@ -645,7 +645,6 @@ export function App() {
           </main>
       </AppShell>
 
-        {/* Asistente Copiloto Modal */}
         {exitPresentationOpen && (
           <div className="modal-backdrop" role="presentation" onClick={() => setExitPresentationOpen(false)}>
             <div

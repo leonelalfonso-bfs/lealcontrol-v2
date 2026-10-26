@@ -192,7 +192,7 @@
 
 **Archivo:** `src/Host/LealControl.Api/appsettings.json`
 
-**Estado actual:** Ya se removió la API key de Gemini. Eso está bien. Pero sigue habiendo una connection string local con usuario/password dev.
+**Estado actual:** Hay una connection string local con usuario/password dev.
 
 **Qué significa:** Para desarrollo puede tolerarse, pero la configuración base no debería contener secretos reales. Si `leal/leal` es solo dev local, el riesgo es bajo; si se reutiliza en servidor, es riesgo alto.
 

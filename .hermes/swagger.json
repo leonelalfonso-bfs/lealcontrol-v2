@@ -6,66 +6,10 @@
     "version": "v1"
   },
   "paths": {
-    "/api/v1/automation/status": {
-      "get": {
-        "tags": [
-          "Automation & AI"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/automation/cct/analyze": {
-      "post": {
-        "tags": [
-          "Automation & AI"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AnalyzeCctRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/automation/invoice/ocr": {
-      "post": {
-        "tags": [
-          "Automation & AI"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ExtractInvoiceOcrRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/v1/automation/bcra/{cuit}": {
       "get": {
         "tags": [
-          "Automation & AI"
+          "BCRA"
         ],
         "parameters": [
           {
@@ -77,40 +21,6 @@
             }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/automation/diagnostic": {
-      "get": {
-        "tags": [
-          "Automation & AI"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/automation/ask-leal": {
-      "post": {
-        "tags": [
-          "Automation & AI"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AskLealRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "OK"
@@ -4800,23 +4710,6 @@
         "type": "integer",
         "format": "int32"
       },
-      "AskLealRequest": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "nullable": true
-          },
-          "history": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ChatMessageDto"
-            },
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
       "BankImportRequest": {
         "type": "object",
         "properties": {
@@ -4860,20 +4753,6 @@
           "assignedTo": {
             "type": "string",
             "format": "uuid",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "ChatMessageDto": {
-        "type": "object",
-        "properties": {
-          "role": {
-            "type": "string",
-            "nullable": true
-          },
-          "content": {
-            "type": "string",
             "nullable": true
           }
         },
@@ -6107,20 +5986,6 @@
           "createdAtUtc": {
             "type": "string",
             "format": "date-time"
-          }
-        },
-        "additionalProperties": false
-      },
-      "ExtractInvoiceOcrRequest": {
-        "type": "object",
-        "properties": {
-          "base64Document": {
-            "type": "string",
-            "nullable": true
-          },
-          "mimeType": {
-            "type": "string",
-            "nullable": true
           }
         },
         "additionalProperties": false

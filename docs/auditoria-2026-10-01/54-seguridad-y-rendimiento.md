@@ -14,7 +14,6 @@ Prueba que reproduce el ataque: `CrossTenantSwitchSecurityTests`. También cubre
 
 ### Otros cambios
 
-- Clave de Gemini escrita en el código como valor por defecto en `GeminiApiClient` y `AskLealService`. **El repositorio es público: hay que rotarla en Google AI Studio.** Ahora se lee solo de `GEMINI_API_KEY` y viaja en el header `x-goog-api-key`, no en la URL. Los compose pasan la variable.
 - Listar usuarios de una empresa sin usuarios ya no crea `admin@lealcontrol.com`, `ventas@…` y `servicio@…`.
 - `/health` (anónimo) ya no devuelve el mensaje de las excepciones; el detalle queda en el log.
 - Hashes heredados (SHA-256 con sal fija) se reemplazan por PBKDF2 en el primer login válido.
@@ -42,12 +41,11 @@ Requisito del nginx del host: debe enviar `X-Forwarded-For` (con `$proxy_add_x_f
 
 ## Despliegue
 
-1. Rotar la clave de Gemini y agregar `GEMINI_API_KEY=<nueva>` al `.env` de staging y de producción.
-2. Verificar que el nginx del host envíe `X-Forwarded-For` al puerto del contenedor web.
-3. Staging: `git pull`, luego `docker compose -f docker-compose.staging.yml --env-file .env up -d --build`. Incluye `postgres`: el contenedor de base se recrea por el cambio de parámetros, unos segundos sin servicio y con los datos intactos en el volumen.
-4. Comprobar: `/health` en Healthy; login multiempresa (volver a iniciar sesión); pantallas de Calidad y Metrología; `docker compose exec postgres psql -U <user> -d <db> -c "show shared_buffers"` devuelve el valor nuevo.
-5. Medir consultas lentas reales: `CREATE EXTENSION IF NOT EXISTS pg_stat_statements;` en cada base y luego `SELECT calls, round(mean_exec_time) ms, left(query, 120) FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 20;`.
-6. Producción: el mismo procedimiento con `docker-compose.prod.yml`, después de validar staging.
+1. Verificar que el nginx del host envíe `X-Forwarded-For` al puerto del contenedor web.
+2. Staging: `git pull`, luego `docker compose -f docker-compose.staging.yml --env-file .env up -d --build`. Incluye `postgres`: el contenedor de base se recrea por el cambio de parámetros, unos segundos sin servicio y con los datos intactos en el volumen.
+3. Comprobar: `/health` en Healthy; login multiempresa (volver a iniciar sesión); pantallas de Calidad y Metrología; `docker compose exec postgres psql -U <user> -d <db> -c "show shared_buffers"` devuelve el valor nuevo.
+4. Medir consultas lentas reales: `CREATE EXTENSION IF NOT EXISTS pg_stat_statements;` en cada base y luego `SELECT calls, round(mean_exec_time) ms, left(query, 120) FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 20;`.
+5. Producción: el mismo procedimiento con `docker-compose.prod.yml`, después de validar staging.
 
 ## Validación
 

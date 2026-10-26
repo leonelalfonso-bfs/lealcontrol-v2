@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { api, type PurchaseArcaCheck } from "../api/client";
 import { type PurchaseInvoice } from "../api/types";
 import { type PurchaseReception } from "../api/types";
-import { InvoiceOcrUploadModal } from "../components/InvoiceOcrUploadModal";
 import { SearchField } from "../components/ui/SearchField";
 import { matchesSearch, parseSearch } from "../lib/search";
 
@@ -11,7 +10,6 @@ const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
 
 export function PurchaseInvoicesPage() {
-  const navigate = useNavigate();
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
   const [receptions, setReceptions] = useState<PurchaseReception[]>([]);
   const [paymentOrders, setPaymentOrders] = useState<any[]>([]);
@@ -23,7 +21,6 @@ export function PurchaseInvoicesPage() {
   const [selectedType, setSelectedType] = useState<string>("All");
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
   const [paymentFilter, setPaymentFilter] = useState<string>("All");
-  const [showOcrModal, setShowOcrModal] = useState<boolean>(false);
   const [arcaChecks, setArcaChecks] = useState<Record<string, PurchaseArcaCheck>>({});
   const [arcaBusy, setArcaBusy] = useState<string | null>(null);
   const [arcaMsg, setArcaMsg] = useState<string | null>(null);
@@ -180,14 +177,6 @@ export function PurchaseInvoicesPage() {
           <button type="button" className="btn btn-outline" disabled={arcaBusy !== null} onClick={() => void checkPending()}
             title="Confirma en ARCA que cada factura del mes pasado y de este mes existe con ese CAE, número, fecha y total">
             {arcaBusy === "all" ? "Constatando…" : "🔎 Constatar en ARCA"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => setShowOcrModal(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
-          >
-            📸 Subir PDF / Factura IA (OCR)
           </button>
           <Link to="/compras/facturas/nueva" className="btn btn-primary">
             ＋ Cargar Factura Manual
@@ -633,14 +622,6 @@ export function PurchaseInvoicesPage() {
         )}
       </div>
 
-      {/* Invoice OCR Modal */}
-      <InvoiceOcrUploadModal
-        isOpen={showOcrModal}
-        onClose={() => setShowOcrModal(false)}
-        onApplyInvoice={() => {
-          navigate("/compras/facturas/nueva");
-        }}
-      />
     </div>
   );
 }

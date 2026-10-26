@@ -75,9 +75,7 @@ export function PurchaseHelpPage() {
         <Steps>
           <Step title="Desde la recepción (“🧾 Facturar”), la factura se vincula sola y no vuelve a sumar stock." />
           <Step title="Si cargás la factura por otro lado (“＋ Cargar Factura Manual”) y la mercadería ya entró, elegí la recepción en “Recepción ya ingresada (evita duplicar stock)”, o después en el listado con “Vincular recepción…”." />
-          <Step title="Completá tipo, punto de venta y número (sin valores por defecto), fechas, CAE, renglones con su IVA y percepciones.">
-            “📷 Extraer con IA (Foto / PDF)” lee los datos de una foto o PDF de la factura para que los revises.
-          </Step>
+          <Step title="Completá tipo, punto de venta y número (sin valores por defecto), fechas, CAE, renglones con su IVA y percepciones." />
         </Steps>
         <Tip warn>El sistema no deja cargar dos veces la misma factura: mismo proveedor, tipo, punto de venta y número.</Tip>
       </ManualPart>
