@@ -378,10 +378,13 @@ export function PurchaseInvoicesPage() {
                           const label = check?.outcome === "Approved" ? { text: "✓ Constatada en ARCA", color: "#047857" }
                             : check?.outcome === "Rejected" ? { text: "✗ ARCA no la reconoce", color: "#b91c1c" }
                             : check?.outcome === "NotCheckable" ? { text: "No se puede constatar", color: "#92400e" }
-                            : check?.outcome === "Unavailable" ? { text: "ARCA no respondió", color: "#64748b" } : null;
+                            : check?.outcome === "Unavailable" ? { text: "No se pudo consultar", color: "#64748b" } : null;
                           return (
                             <div style={{ fontSize: "0.72rem", marginTop: 4 }}>
                               {label && <span title={`${check!.detail} · ${new Date(check!.checkedAt).toLocaleString("es-AR")}`} style={{ color: label.color, fontWeight: 600 }}>{label.text}</span>}
+                              {check && check.outcome !== "Approved" && (
+                                <div style={{ color: "#64748b", maxWidth: 220, margin: "2px auto 0", lineHeight: 1.3 }}>{check.detail}</div>
+                              )}
                               {check?.outcome !== "Approved" && (
                                 <button type="button" className="btn ghost compact" style={{ marginLeft: 4 }} disabled={arcaBusy !== null} onClick={() => void checkOne(inv.id)}>
                                   {arcaBusy === inv.id ? "…" : check ? "Reintentar" : "Constatar"}
