@@ -105,7 +105,8 @@ export function PurchaseHelpPage() {
           <Step title="En la columna CAE de cada factura queda el resultado; pasá el mouse para ver el detalle y la fecha de la consulta.">
             “✓ Constatada en ARCA”: está todo bien. “✗ ARCA no la reconoce”: algún dato no coincide (el detalle dice cuál, por
             ejemplo el importe o el CAE); revisá la factura contra el PDF y, si el error es del proveedor, pedile que la corrija.
-            “No se puede constatar”: falta el CAE o el CUIT del proveedor. “ARCA no respondió”: probá más tarde con “Reintentar”.
+            “No se puede constatar”: falta el CAE o el CUIT del proveedor. “No se pudo consultar”: debajo dice el motivo (por ejemplo, que
+            el certificado todavía no tiene habilitada la constatación, o que ARCA no responde); corregilo y usá “Reintentar”.
           </Step>
           <Step title="Una factura también se puede constatar sola, con “Constatar” en su renglón." />
         </Steps>

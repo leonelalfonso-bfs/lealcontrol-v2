@@ -30,13 +30,10 @@ public static class AutomationEndpoints
                 return Results.BadRequest(new { error = "Debe enviar el archivo del comprobante en Base64." });
             }
 
-            var result = await client.ExtractInvoiceOcrAsync(request.Base64Document, request.MimeType, ct);
-            if (result == null)
-            {
-                return Results.Problem("No se pudo extraer la información del comprobante.");
-            }
-
-            return Results.Ok(result);
+            var (result, error) = await client.ExtractInvoiceOcrAsync(request.Base64Document, request.MimeType, ct);
+            return result is null
+                ? Results.Problem(title: "No se pudo leer el comprobante", detail: error, statusCode: StatusCodes.Status502BadGateway)
+                : Results.Ok(result);
         });
 
         group.MapGet("/diagnostic", async (LealDiagnosticService service, CancellationToken ct) =>

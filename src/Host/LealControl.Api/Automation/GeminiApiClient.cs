@@ -112,11 +112,14 @@ public sealed class GeminiApiClient
         }
     }
 
-    public async Task<InvoiceOcrResultDto?> ExtractInvoiceOcrAsync(
+    /// <summary>Lee el comprobante con Gemini; si no puede, devuelve el motivo para mostrarlo al usuario.</summary>
+    public async Task<(InvoiceOcrResultDto? Result, string? Error)> ExtractInvoiceOcrAsync(
         string base64Document, 
         string mimeType, 
         CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(_apiKey))
+            return (null, "Falta configurar la clave de Gemini (GEMINI_API_KEY) en el servidor.");
         try
         {
             var prompt = @"
@@ -193,25 +196,58 @@ Si algún dato no es legible o no está presente, usa valores razonables o vací
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("Gemini API error in Invoice OCR: {StatusCode} {Response}", response.StatusCode, responseString);
-                return null;
+                return (null, OcrHttpError((int)response.StatusCode, responseString));
             }
 
             using var doc = JsonDocument.Parse(responseString);
             var root = doc.RootElement;
-            var text = root.GetProperty("candidates")[0]
-                           .GetProperty("content")
-                           .GetProperty("parts")[0]
-                           .GetProperty("text")
-                           .GetString();
+            var text = root.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0
+                && candidates[0].TryGetProperty("content", out var c) && c.TryGetProperty("parts", out var p) && p.GetArrayLength() > 0
+                && p[0].TryGetProperty("text", out var t) ? t.GetString() : null;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                _logger.LogError("Gemini Invoice OCR without text: {Response}", responseString.Length > 2000 ? responseString[..2000] : responseString);
+                return (null, "Gemini no devolvió datos del comprobante: el archivo puede estar ilegible, protegido o ser demasiado grande.");
+            }
 
-            if (string.IsNullOrWhiteSpace(text)) return null;
-
-            return JsonSerializer.Deserialize<InvoiceOcrResultDto>(text, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            try
+            {
+                var result = JsonSerializer.Deserialize<InvoiceOcrResultDto>(text, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return result is null ? (null, "Gemini devolvió una respuesta vacía.") : (result, null);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Gemini Invoice OCR returned invalid JSON: {Text}", text.Length > 2000 ? text[..2000] : text);
+                return (null, "Gemini devolvió los datos en un formato que no se pudo leer. Probá de nuevo o cargá la factura a mano.");
+            }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
             _logger.LogError(ex, "Error processing Invoice OCR with Gemini");
-            return null;
+            return (null, ex is TaskCanceledException && !ct.IsCancellationRequested
+                ? "Gemini tardó demasiado en responder. Probá de nuevo."
+                : "No se pudo conectar con Gemini. Probá de nuevo más tarde.");
         }
+    }
+
+    /// <summary>Motivo legible de un error HTTP de Gemini (sin la clave ni el documento).</summary>
+    internal string OcrHttpError(int status, string body)
+    {
+        string? message = null;
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("error", out var e) && e.TryGetProperty("message", out var m)) message = m.GetString();
+        }
+        catch (JsonException) { }
+        var detail = message is { Length: > 0 } ? $": {(message.Length > 300 ? message[..300] : message)}" : "";
+        return status switch
+        {
+            400 when message?.Contains("API key", StringComparison.OrdinalIgnoreCase) == true => "La clave de Gemini configurada en el servidor no es válida.",
+            401 or 403 => $"Gemini rechazó la clave configurada en el servidor{detail}",
+            404 => $"El modelo de Gemini \"{_model}\" no existe o no está disponible para esta clave (Gemini:Model){detail}",
+            429 => "Se alcanzó el límite de uso de Gemini. Probá de nuevo en unos minutos.",
+            _ => $"Gemini respondió con error {status}{detail}"
+        };
     }
 }
