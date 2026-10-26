@@ -154,6 +154,9 @@ async function requestBlob(path: string): Promise<Blob> {
   return response.blob();
 }
 
+/** Último resultado de constatar una factura de compra en ARCA (wscdc). */
+export type PurchaseArcaCheck = { purchaseInvoiceId: string; outcome: "Approved" | "Rejected" | "NotCheckable" | "Unavailable"; detail: string; checkedAt: string };
+
 export const api = {
   listFinanceAccounts: () => request<FinanceAccount[]>("/api/v1/finance/accounts"),
   listFinanceConcepts: () => request<FinanceConcept[]>("/api/v1/finance/concepts"),
@@ -858,6 +861,11 @@ export const api = {
     const q = params.toString();
     return request<import("./types").PurchaseInvoice[]>(`/api/v1/purchases/invoices${q ? `?${q}` : ""}`);
   },
+  listPurchaseArcaChecks: () => request<PurchaseArcaCheck[]>("/api/v1/purchases/invoices/arca-checks"),
+  checkPurchaseInvoiceInArca: (id: string) => request<PurchaseArcaCheck>(`/api/v1/purchases/invoices/${id}/arca-check`, { method: "POST" }),
+  checkPurchaseInvoicesInArca: (from: string, to: string) =>
+    request<{ checked: number; approved: number; rejected: number; notCheckable: number; unavailable?: string | null; rows: PurchaseArcaCheck[] }>(
+      "/api/v1/purchases/invoices/arca-check", { method: "POST", body: JSON.stringify({ from, to }) }),
   getPurchaseInvoice: (id: string) => request<import("./types").PurchaseInvoice>(`/api/v1/purchases/invoices/${id}`),
   createPurchaseInvoice: (body: import("./types").PurchaseInvoiceWrite) =>
     request<import("./types").PurchaseInvoice>("/api/v1/purchases/invoices", { method: "POST", body: JSON.stringify(body) }),

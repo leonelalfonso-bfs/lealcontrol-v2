@@ -182,6 +182,8 @@ public static class PurchaseEndpoints
             return result.ToHttp();
         });
 
+        purchases.MapPurchaseArcaChecks();
+
         purchases.MapGet("/orders/{id:guid}/reconciliation", async (Guid id, SalesDbContext db, ITenantContext tenant, CancellationToken ct) =>
         {
             var order = await db.Set<PurchaseOrder>().Include(x => x.Items).AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId, ct);

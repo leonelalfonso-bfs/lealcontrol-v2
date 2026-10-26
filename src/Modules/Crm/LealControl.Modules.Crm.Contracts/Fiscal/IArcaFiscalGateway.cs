@@ -21,10 +21,23 @@ public interface IArcaFiscalGateway
         string receiverCuit, DateOnly issueDate, CancellationToken cancellationToken) =>
         Task.FromResult(new ArcaFceObligation(false, false, 0m, "Consulta de FCE no disponible."));
 
+    // Constatación de un comprobante recibido de un proveedor (wscdc): si ARCA lo reconoce con esos datos.
+    Task<ArcaVoucherCheck> VerifyReceivedVoucherAsync(ArcaReceivedVoucher voucher, CancellationToken cancellationToken) =>
+        Task.FromResult(new ArcaVoucherCheck(ArcaVoucherCheckOutcome.Unavailable, "Constatación no disponible."));
+
     Task<ArcaFiscalVoucherObservation> GetVoucherAsync(
         int pointOfSale, int voucherType, long number, string expectedIssuerCuit,
         bool expectedProduction, CancellationToken cancellationToken);
 }
+
+/// <summary>Datos del comprobante recibido tal como los pide ComprobanteConstatar (modo CAE).</summary>
+public sealed record ArcaReceivedVoucher(
+    string IssuerCuit, int PointOfSale, int VoucherType, long Number, DateOnly IssueDate, decimal Total, string Cae);
+
+/// <summary>Approved: ARCA lo reconoce. Rejected: no existe o algún dato no coincide. Unavailable: no se pudo consultar.</summary>
+public enum ArcaVoucherCheckOutcome { Approved, Rejected, Unavailable }
+
+public sealed record ArcaVoucherCheck(ArcaVoucherCheckOutcome Outcome, string Detail);
 
 public sealed record ArcaFceObligation(bool Ok, bool Obligated, decimal MinimumAmount, string Detail);
 
