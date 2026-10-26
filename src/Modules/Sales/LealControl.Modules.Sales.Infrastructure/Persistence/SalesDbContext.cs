@@ -167,6 +167,16 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
                 ""LotNumber"" character varying(200)
             );
 
+            CREATE SCHEMA IF NOT EXISTS purchases;
+            CREATE TABLE IF NOT EXISTS purchases.purchase_invoice_arca_checks (
+                purchase_invoice_id uuid PRIMARY KEY,
+                tenant_id uuid NOT NULL,
+                outcome character varying(20) NOT NULL,
+                detail character varying(500) NOT NULL,
+                checked_at timestamp with time zone NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ix_purchase_invoice_arca_checks_tenant ON purchases.purchase_invoice_arca_checks (tenant_id);
+
             ALTER TABLE sales.quote_lines ADD COLUMN IF NOT EXISTS ""TechnicalDetail"" text;
 
             ALTER TABLE sales.""StockItems"" ADD COLUMN IF NOT EXISTS ""WarehouseId"" uuid;

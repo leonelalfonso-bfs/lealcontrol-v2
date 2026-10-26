@@ -13,10 +13,12 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
     private readonly ArcaWsfeClient _wsfe;
     private readonly WsfeCaeTransport _cae;
     private readonly WsfecredClient _wsfecred;
+    private readonly WscdcClient _wscdc;
 
     public ArcaFiscalGateway(CrmDbContext db, ITenantContext tenant,
-        ArcaWsaaClient wsaa, ArcaWsfeClient wsfe, WsfeCaeTransport cae, WsfecredClient wsfecred)
+        ArcaWsaaClient wsaa, ArcaWsfeClient wsfe, WsfeCaeTransport cae, WsfecredClient wsfecred, WscdcClient wscdc)
     {
+        _wscdc = wscdc;
         _db = db;
         _tenant = tenant;
         _wsaa = wsaa;
@@ -101,6 +103,14 @@ internal sealed class ArcaFiscalGateway : IArcaFiscalGateway
             return new(false, false, 0m, auth.Detail);
         return await _wsfecred.GetObligationAsync(auth.Token!, auth.Sign!, auth.IssuerCuit,
             auth.Production, receiverCuit, issueDate, cancellationToken);
+    }
+
+    public async Task<ArcaVoucherCheck> VerifyReceivedVoucherAsync(ArcaReceivedVoucher voucher, CancellationToken cancellationToken)
+    {
+        var auth = await AuthenticateAsync(null, null, cancellationToken, "wscdc");
+        if (!auth.Ok)
+            return new(ArcaVoucherCheckOutcome.Unavailable, auth.Detail);
+        return await _wscdc.VerifyAsync(auth.Token!, auth.Sign!, auth.IssuerCuit, auth.Production, voucher, cancellationToken);
     }
 
     private async Task<Auth> AuthenticateAsync(

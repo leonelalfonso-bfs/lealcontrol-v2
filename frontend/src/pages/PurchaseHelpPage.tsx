@@ -92,6 +92,29 @@ export function PurchaseHelpPage() {
         </Steps>
       </ManualPart>
 
+      <ManualPart id="constatar" title="6 bis. Constatar las facturas recibidas en ARCA">
+        <Steps>
+          <Step title="Una vez: en ARCA, con clave fiscal → Administrador de Relaciones → Nueva relación → ARCA → WebServices → “Constatación de Comprobantes” → elegí el mismo certificado (alias) que usa el sistema para facturar.">
+            Es el mismo certificado que ya está cargado en Configuración → ARCA; solo hay que habilitarle este servicio. Mientras
+            no esté habilitado, la constatación avisa “ARCA no autorizó el acceso a wscdc”.
+          </Step>
+          <Step title="Compras → Facturas de compra → “🔎 Constatar en ARCA”.">
+            Revisa, de a una, las facturas del mes pasado y de este mes que todavía no quedaron constatadas. ARCA confirma que el
+            comprobante existe con ese CAE, CUIT del proveedor, tipo, punto de venta, número, fecha, total y que la empresa es la receptora.
+          </Step>
+          <Step title="En la columna CAE de cada factura queda el resultado; pasá el mouse para ver el detalle y la fecha de la consulta.">
+            “✓ Constatada en ARCA”: está todo bien. “✗ ARCA no la reconoce”: algún dato no coincide (el detalle dice cuál, por
+            ejemplo el importe o el CAE); revisá la factura contra el PDF y, si el error es del proveedor, pedile que la corrija.
+            “No se puede constatar”: falta el CAE o el CUIT del proveedor. “ARCA no respondió”: probá más tarde con “Reintentar”.
+          </Step>
+          <Step title="Una factura también se puede constatar sola, con “Constatar” en su renglón." />
+        </Steps>
+        <p className="muted" style={{ margin: "8px 0 0" }}>
+          El sistema no entra a la página de ARCA ni guarda la clave fiscal: usa el servicio oficial de constatación con el certificado de la empresa.
+          Los comprobantes recibidos se siguen trayendo con el archivo de Mis Comprobantes.
+        </p>
+      </ManualPart>
+
       <ManualPart id="pago" title="7. Pago y cuenta corriente">
         <p style={{ margin: 0 }}>
           La factura queda en la cuenta corriente del proveedor como <em>Pendiente</em>. Se paga con una <strong>orden de pago</strong> en Finanzas

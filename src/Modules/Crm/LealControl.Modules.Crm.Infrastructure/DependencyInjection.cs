@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<ArcaWsaaClient>();
         services.AddScoped<ArcaWsfeClient>();
         services.AddScoped<WsfecredClient>();
+        services.AddScoped<WscdcClient>();
         services.AddScoped<WsfeCaeTransport>();
         services.AddScoped<LealControl.Modules.Crm.Contracts.Fiscal.IArcaFiscalGateway, ArcaFiscalGateway>();
         services.AddScoped<ArcaPadronClient>();

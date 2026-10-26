@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api } from "../api/client";
+import { api, type PurchaseArcaCheck } from "../api/client";
 import { type PurchaseInvoice } from "../api/types";
 import { type PurchaseReception } from "../api/types";
 import { InvoiceOcrUploadModal } from "../components/InvoiceOcrUploadModal";
@@ -24,6 +24,46 @@ export function PurchaseInvoicesPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
   const [paymentFilter, setPaymentFilter] = useState<string>("All");
   const [showOcrModal, setShowOcrModal] = useState<boolean>(false);
+  const [arcaChecks, setArcaChecks] = useState<Record<string, PurchaseArcaCheck>>({});
+  const [arcaBusy, setArcaBusy] = useState<string | null>(null);
+  const [arcaMsg, setArcaMsg] = useState<string | null>(null);
+
+  const loadArcaChecks = () => api.listPurchaseArcaChecks()
+    .then((rows) => setArcaChecks(Object.fromEntries(rows.map((r) => [r.purchaseInvoiceId, r]))))
+    .catch(() => setArcaChecks({}));
+
+  const checkOne = async (id: string) => {
+    setArcaBusy(id);
+    try {
+      const r = await api.checkPurchaseInvoiceInArca(id);
+      setArcaChecks((prev) => ({ ...prev, [id]: r }));
+    } catch (err: any) {
+      setError(err.message || "No se pudo constatar en ARCA.");
+    } finally {
+      setArcaBusy(null);
+    }
+  };
+
+  // Las del mes anterior y el actual que todavía no quedaron constatadas.
+  const checkPending = async () => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
+    setArcaBusy("all");
+    setArcaMsg(null);
+    try {
+      const r = await api.checkPurchaseInvoicesInArca(`${from}T00:00:00Z`, now.toISOString());
+      setArcaMsg(r.unavailable
+        ? `ARCA no respondió: ${r.unavailable}`
+        : r.checked === 0
+          ? "✓ No quedan facturas por constatar desde el mes pasado."
+          : `✓ ${r.checked} constatadas: ${r.approved} correctas, ${r.rejected} que ARCA no reconoce, ${r.notCheckable} sin CAE o sin CUIT.`);
+      await loadArcaChecks();
+    } catch (err: any) {
+      setError(err.message || "No se pudo constatar en ARCA.");
+    } finally {
+      setArcaBusy(null);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -46,6 +86,7 @@ export function PurchaseInvoicesPage() {
 
   useEffect(() => {
     void loadData();
+    void loadArcaChecks();
   }, []);
 
   // Enrich purchase invoices with payment and days calculations
@@ -136,6 +177,10 @@ export function PurchaseInvoicesPage() {
           </p>
         </div>
         <div className="toolbar">
+          <button type="button" className="btn btn-outline" disabled={arcaBusy !== null} onClick={() => void checkPending()}
+            title="Confirma en ARCA que cada factura del mes pasado y de este mes existe con ese CAE, número, fecha y total">
+            {arcaBusy === "all" ? "Constatando…" : "🔎 Constatar en ARCA"}
+          </button>
           <button
             type="button"
             className="btn btn-outline"
@@ -150,6 +195,7 @@ export function PurchaseInvoicesPage() {
         </div>
       </div>
 
+      {arcaMsg && <div className="alert" style={{ marginBottom: 16 }}>{arcaMsg}</div>}
       {error && (
         <div className="alert" style={{ background: "#fee2e2", color: "#991b1b", borderColor: "#f87171", marginBottom: 16 }}>
           ⚠️ {error}
@@ -322,11 +368,28 @@ export function PurchaseInvoicesPage() {
                       <td style={{ padding: "12px 8px", textAlign: "center" }}>
                         {inv.cae ? (
                           <span style={{ fontSize: "0.8rem", fontFamily: "monospace", padding: "2px 6px", background: "#ecfdf5", color: "#047857", borderRadius: "4px" }}>
-                            ✓ {inv.cae}
+                            {inv.cae}
                           </span>
                         ) : (
                           <span style={{ color: "#94a3b8" }}>—</span>
                         )}
+                        {inv.status !== "Cancelled" && (() => {
+                          const check = arcaChecks[inv.id];
+                          const label = check?.outcome === "Approved" ? { text: "✓ Constatada en ARCA", color: "#047857" }
+                            : check?.outcome === "Rejected" ? { text: "✗ ARCA no la reconoce", color: "#b91c1c" }
+                            : check?.outcome === "NotCheckable" ? { text: "No se puede constatar", color: "#92400e" }
+                            : check?.outcome === "Unavailable" ? { text: "ARCA no respondió", color: "#64748b" } : null;
+                          return (
+                            <div style={{ fontSize: "0.72rem", marginTop: 4 }}>
+                              {label && <span title={`${check!.detail} · ${new Date(check!.checkedAt).toLocaleString("es-AR")}`} style={{ color: label.color, fontWeight: 600 }}>{label.text}</span>}
+                              {check?.outcome !== "Approved" && (
+                                <button type="button" className="btn ghost compact" style={{ marginLeft: 4 }} disabled={arcaBusy !== null} onClick={() => void checkOne(inv.id)}>
+                                  {arcaBusy === inv.id ? "…" : check ? "Reintentar" : "Constatar"}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Estado de Pago y Días sin pagar */}
