@@ -64,6 +64,9 @@ public sealed class PaymentBatchTests : IClassFixture<FinanceWebApplicationFacto
         created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
         var batch = await created.Content.ReadFromJsonAsync<JsonElement>();
         batch.GetProperty("total").GetDecimal().Should().Be(350000.25m);
+        // Una orden que está en un lote generado no se anula suelta.
+        var orderA = await _factory.WithDbAsync(db => Task.FromResult(db.Movements.Single(m => m.Id == movements[supplierA]).LinkedEntityId!.Value));
+        (await client.PostAsJsonAsync($"/api/v1/finance/payments/{orderA}/void", new { reason = "Prueba" })).StatusCode.Should().Be(HttpStatusCode.Conflict);
         // Ya en un lote: no se vuelven a ofrecer.
         (await client.GetFromJsonAsync<JsonElement>($"/api/v1/finance/payment-batches/candidates?accountId={accountId}")).GetArrayLength().Should().Be(1);
 

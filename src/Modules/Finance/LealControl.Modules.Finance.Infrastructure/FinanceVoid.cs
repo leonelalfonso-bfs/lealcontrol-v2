@@ -21,14 +21,7 @@ internal static class FinanceVoid
             return Results.Conflict("No se puede anular: el período contable está cerrado.");
 
         var lines = await db.CollectionReceiptLines.Where(x => x.ReceiptId == id && x.TenantId == tenantId).ToListAsync(ct);
-        var movementIds = lines.Where(x => x.BankMovementId.HasValue).Select(x => x.BankMovementId!.Value).ToList();
-        var movements = await db.Movements.Where(x => x.TenantId == tenantId && (movementIds.Contains(x.Id) || (x.LinkedEntityType == "CollectionReceipt" && x.LinkedEntityId == id))).ToListAsync(ct);
-        foreach (var m in movements)
-        {
-            m.ReconciliationStatus = FinancialReconciliationStatus.Available;
-            m.LinkedEntityType = null;
-            m.LinkedEntityId = null;
-        }
+        await ReleaseMovementsAsync(db, tenantId, "CollectionReceipt", id, lines.Where(x => x.BankMovementId.HasValue).Select(x => x.BankMovementId!.Value).ToList(), ct);
 
         var cheques = await db.ReceivedCheques.Where(x => x.TenantId == tenantId && x.CollectionReceiptId == id).ToListAsync(ct);
         foreach (var ch in cheques)
@@ -49,8 +42,30 @@ internal static class FinanceVoid
         return Results.Ok(new { receipt.Id, receipt.Status, receipt.VoidReason });
     }
 
+    /// <summary>
+    /// Movimientos del documento que se anula. Los que generó el propio documento (efectivo, billetera, transferencia que el banco
+    /// todavía no debitó o ya conciliada) se borran, así el saldo vuelve; los del extracto quedan disponibles para reclasificar.
+    /// </summary>
+    private static async Task ReleaseMovementsAsync(FinanceDbContext db, Guid tenantId, string entityType, Guid id, List<Guid> chosenIds, CancellationToken ct)
+    {
+        var movements = await db.Movements.Where(x => x.TenantId == tenantId && (chosenIds.Contains(x.Id) || (x.LinkedEntityType == entityType && x.LinkedEntityId == id))).ToListAsync(ct);
+        foreach (var m in movements)
+        {
+            if (m.Origin == FinancialMovementOrigin.System && !chosenIds.Contains(m.Id))
+            {
+                db.Movements.Remove(m);
+                continue;
+            }
+            m.ReconciliationStatus = FinancialReconciliationStatus.Available;
+            m.LinkedEntityType = null;
+            m.LinkedEntityId = null;
+            m.MatchedMovementId = null;
+        }
+    }
+
+    /// <param name="fromExpenseReport">La rendición, al reabrirse, anula las órdenes de sus facturas A.</param>
     public static async Task<IResult> VoidPaymentOrderAsync(
-        Guid id, VoidFinanceDocumentRequest body, FinanceDbContext db, Guid tenantId, CancellationToken ct)
+        Guid id, VoidFinanceDocumentRequest body, FinanceDbContext db, Guid tenantId, CancellationToken ct, bool fromExpenseReport = false)
     {
         if (string.IsNullOrWhiteSpace(body.Reason))
             return Results.BadRequest("El motivo de anulación es obligatorio.");
@@ -62,15 +77,13 @@ internal static class FinanceVoid
         if (await FinanceAccountingGuard.IsPeriodClosedAsync(tenantId, order.PaymentDateUtc, ct))
             return Results.Conflict("No se puede anular: el período contable está cerrado.");
 
+        if (!fromExpenseReport && await db.ExpenseReportLines.AnyAsync(l => l.TenantId == tenantId && l.PaymentOrderId == id, ct))
+            return Results.Conflict("La orden paga una factura A de una rendición aprobada: reabrí la rendición.");
+        if (await db.PaymentBatchItems.AnyAsync(i => i.TenantId == tenantId && i.PaymentOrderId == id && db.PaymentBatches.Any(b => b.Id == i.BatchId && b.Status == "Generated"), ct))
+            return Results.Conflict("La orden está en un lote de pagos por archivo: anulá primero el lote.");
+
         var lines = await db.PaymentOrderLines.Where(x => x.PaymentOrderId == id && x.TenantId == tenantId).ToListAsync(ct);
-        var movementIds = lines.Where(x => x.BankMovementId.HasValue).Select(x => x.BankMovementId!.Value).ToList();
-        var movements = await db.Movements.Where(x => x.TenantId == tenantId && (movementIds.Contains(x.Id) || (x.LinkedEntityType == "PaymentOrder" && x.LinkedEntityId == id))).ToListAsync(ct);
-        foreach (var m in movements)
-        {
-            m.ReconciliationStatus = FinancialReconciliationStatus.Available;
-            m.LinkedEntityType = null;
-            m.LinkedEntityId = null;
-        }
+        await ReleaseMovementsAsync(db, tenantId, "PaymentOrder", id, lines.Where(x => x.BankMovementId.HasValue).Select(x => x.BankMovementId!.Value).ToList(), ct);
 
         var chequeIds = lines.Where(x => x.ChequeId.HasValue).Select(x => x.ChequeId!.Value).ToList();
         var cheques = await db.ReceivedCheques.Where(x => x.TenantId == tenantId && chequeIds.Contains(x.Id)).ToListAsync(ct);

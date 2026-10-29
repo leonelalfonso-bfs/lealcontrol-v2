@@ -369,10 +369,7 @@ public static class ExpenseReports
             var movements = await db.Movements.Where(m => movementIds.Contains(m.Id)).ToListAsync(ct);
             foreach (var line in report.Lines.Where(l => l.PaymentOrderId.HasValue))
             {
-                // El egreso de la billetera que hizo la orden: anularla solo lo desvincula, acá se borra.
-                movements.AddRange(await db.Movements.Where(m => m.AccountId == report.WalletAccountId && m.Origin == FinancialMovementOrigin.System
-                    && m.LinkedEntityType == "PaymentOrder" && m.LinkedEntityId == line.PaymentOrderId).ToListAsync(ct));
-                await FinanceVoid.VoidPaymentOrderAsync(line.PaymentOrderId!.Value, new VoidFinanceDocumentRequest($"Rendición {report.Number} reabierta"), db, t, ct);
+                await FinanceVoid.VoidPaymentOrderAsync(line.PaymentOrderId!.Value, new VoidFinanceDocumentRequest($"Rendición {report.Number} reabierta"), db, t, ct, fromExpenseReport: true);
                 if (await db.PaymentOrders.AnyAsync(o => o.Id == line.PaymentOrderId && o.Status != "Voided", ct))
                     return Results.Conflict(new { message = $"No se pudo anular la orden de pago de {line.SupplierName} {line.VoucherNumber}." });
                 line.PaymentOrderId = null;

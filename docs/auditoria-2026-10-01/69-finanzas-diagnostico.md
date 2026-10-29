@@ -293,5 +293,10 @@ Respuestas del dueño:
 - que la ficha del vehículo en Flota lea los combustibles y mantenimientos de las rendiciones, en lugar de cargarlos dos veces;
 - el asiento contable de los conceptos de gasto, a definir con el estudio.
 
-**Problema encontrado de paso, que ya existía:** al anular una orden de pago pagada en efectivo (caja o billetera), el egreso de la cuenta queda: se desvincula, pero no se borra, y el saldo de la caja no vuelve. La rendición lo corrige para sus propias órdenes, pero el caso general sigue abierto.
+**Anulación de órdenes de pago y recibos (corregido el 29/10):**
+- **Antes:** al anular, el egreso o el ingreso de efectivo quedaba desvinculado pero no se borraba, y el saldo de la caja no volvía.
+- **Ahora:**
+  - el movimiento que generó el documento se borra (efectivo, billetera, o transferencia todavía no debitada o ya conciliada);
+  - el del extracto queda disponible para reclasificar;
+  - no se puede anular sola una orden que está en un lote de Interbanking generado o en una rendición aprobada.
 
