@@ -838,6 +838,10 @@ public static class MetrologyEndpoints
             return Results.Ok(new { activityMode = settings.ActivityMode });
         });
 
+        // Informe de báscula camionera: resultados, requisitos y avisos calculados a partir de los datos de campo.
+        group.MapPost("/truck-scale/evaluate", ([FromQuery] DateTime? testDate, TruckScaleData data) =>
+            Results.Ok(TruckScaleEvaluator.Evaluate(data, testDate ?? DateTime.UtcNow)));
+
         group.MapPost("/calculate-rules", (MetrologyRulesCalculationRequest req) =>
         {
             var standard = string.IsNullOrWhiteSpace(req.StandardApplied) ? "Res25_2025" : req.StandardApplied;
