@@ -280,6 +280,29 @@ export const api = {
     request<{ rows: number; created: number; updated: number; unchanged: number }>("/api/v1/finance/funds/import", { method: "POST", body: JSON.stringify(body) }),
   saveInvestmentFund: (id: string, body: { accountId: string | null; openingUnits: number; openingDate: string | null; openingCost: number; lastUnitValue: number | null; lastUnitValueDate: string | null }) =>
     request<unknown>(`/api/v1/finance/funds/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  listExpenseWallets: () => request<import("./types/finance").ExpenseWallet[]>("/api/v1/finance/expense-reports/wallets"),
+  createExpenseWallet: (body: { employeeId: string; openingBalance: number }) =>
+    request<{ id: string; name: string }>("/api/v1/finance/expense-reports/wallets", { method: "POST", body: JSON.stringify(body) }),
+  getExpensePolicy: () => request<import("./types/finance").ExpensePolicy>("/api/v1/finance/expense-reports/policy"),
+  saveExpensePolicy: (body: import("./types/finance").ExpensePolicy) =>
+    request<unknown>("/api/v1/finance/expense-reports/policy", { method: "PUT", body: JSON.stringify(body) }),
+  listExpenseReports: (employeeId?: string) =>
+    request<import("./types/finance").ExpenseReportSummary[]>(`/api/v1/finance/expense-reports${employeeId ? `?employeeId=${employeeId}` : ""}`),
+  getExpenseReport: (id: string) => request<import("./types/finance").ExpenseReport>(`/api/v1/finance/expense-reports/${id}`),
+  createExpenseReport: (body: { employeeId: string; weekStart: string; vehicleId?: string | null; serviceOrderId?: string | null; notes?: string | null }) =>
+    request<import("./types/finance").ExpenseReport>("/api/v1/finance/expense-reports", { method: "POST", body: JSON.stringify(body) }),
+  updateExpenseReport: (id: string, body: { employeeId: string; weekStart: string; vehicleId?: string | null; serviceOrderId?: string | null; notes?: string | null }) =>
+    request<import("./types/finance").ExpenseReport>(`/api/v1/finance/expense-reports/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  saveExpenseLine: (reportId: string, lineId: string | null, body: import("./types/finance").ExpenseLineInput) =>
+    request<import("./types/finance").ExpenseReport>(`/api/v1/finance/expense-reports/${reportId}/lines${lineId ? `/${lineId}` : ""}`, { method: lineId ? "PUT" : "POST", body: JSON.stringify(body) }),
+  deleteExpenseLine: (reportId: string, lineId: string) =>
+    request<import("./types/finance").ExpenseReport>(`/api/v1/finance/expense-reports/${reportId}/lines/${lineId}`, { method: "DELETE" }),
+  listExpensePurchaseCandidates: (supplierTaxId?: string | null, search?: string) =>
+    request<{ id: string; supplierName: string; supplierDocument: string; formattedNumber: string; total: number; invoiceType: string }[]>(
+      `/api/v1/finance/expense-reports/purchase-candidates?supplierTaxId=${encodeURIComponent(supplierTaxId ?? "")}&search=${encodeURIComponent(search ?? "")}`),
+  approveExpenseReport: (id: string, usdRate: number | null) =>
+    request<import("./types/finance").ExpenseReport>(`/api/v1/finance/expense-reports/${id}/approve`, { method: "POST", body: JSON.stringify({ usdRate }) }),
+  reopenExpenseReport: (id: string) => request<import("./types/finance").ExpenseReport>(`/api/v1/finance/expense-reports/${id}/reopen`, { method: "POST" }),
   getReconciliationTray: (accountId: string) =>
     request<import("./types/finance").ReconciliationTray>(`/api/v1/finance/reconciliation/tray?accountId=${accountId}`),
   confirmReconciliationTray: (body: { accountId: string; matches: { importedId: string; systemId: string }[]; matchesMany: { importedId: string; systemIds: string[] }[]; cheques: { importedId: string; chequeId: string }[]; classify: string[] }) =>

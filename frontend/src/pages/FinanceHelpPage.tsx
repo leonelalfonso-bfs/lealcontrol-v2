@@ -205,6 +205,32 @@ export function FinanceHelpPage() {
         </Steps>
       </ManualPart>
 
+      <ManualPart id="viaticos" title="6 sexies. Viáticos y rendiciones de gastos">
+        <Steps>
+          <Step title="Una vez por empleado: Finanzas → Viáticos y rendiciones → “Nueva billetera para…” → elegí el empleado y cargá el saldo actual de su planilla.">
+            La billetera es una cuenta de Finanzas del tipo Billetera vinculada al empleado de RRHH: su saldo aparece también en Disponibilidad.
+          </Step>
+          <Step title="Para darle viáticos: “💸 Depositar viáticos” → cuenta de origen, fecha e importe.">
+            Es una transferencia entre cuentas: sale del banco y entra a la billetera. El débito del extracto se concilia como cualquier transferencia.
+          </Step>
+          <Step title="“＋ Rendición” abre la rendición de la semana. Elegí el vehículo (sale la patente en la planilla) y, si corresponde, la orden de servicio del viaje.">
+            La rendición queda abierta: en viajes largos se va cargando día a día y se ve el saldo que quedaría al aprobarla.
+          </Step>
+          <Step title="“＋ Gasto” por cada comprobante: fecha, categoría (hospedaje, comida, refrigerio, combustible, taxis, ferretería, mantenimiento del vehículo u otros), proveedor, comprobante e importe.">
+            En comida, refrigerio y hospedaje indicá cuántas personas cubre: el tope se multiplica. Si un gasto supera el tope de la política
+            al dólar billete vendedor del Banco Nación, se marca con ⚠; se puede cargar igual (hay zonas donde el tope queda corto).
+          </Step>
+          <Step title="Factura A a nombre de la empresa: tiene que estar en Compras (cargada a mano o importada de Mis Comprobantes). En el gasto, elegila en “Factura en Compras”.">
+            Así el crédito de IVA se toma una sola vez: al aprobar, el sistema la paga con una orden de pago desde la billetera, y queda saldada en Compras.
+            Mientras falte vincular alguna, la rendición no se puede aprobar.
+          </Step>
+          <Step title="“✓ Aprobar”: los gastos salen de la billetera (uno por comprobante, con el concepto de su categoría) y se guarda el dólar usado para los topes.">
+            Si algún gasto supera el tope, el sistema pregunta antes de aprobar. “Reabrir” devuelve los gastos a la billetera y anula los pagos de las facturas A.
+          </Step>
+          <Step title="“🖨️ Planilla” imprime la FS 7.1 901 R2: días por categoría, total rendido, anticipos de la semana, saldo, comprobantes y firmas." />
+        </Steps>
+      </ManualPart>
+
       <ManualPart id="cuentas" title="7. Cuentas corrientes">
         <ul style={{ margin: 0, display: "grid", gap: 6 }}>
           <li><Link to="/finanzas/cuenta-corriente">Cuentas corrientes</Link> calcula el saldo de cada cliente (a cobrar) y proveedor (a pagar), con su detalle de comprobantes, cobros y pagos.</li>

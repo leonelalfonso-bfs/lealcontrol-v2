@@ -259,3 +259,39 @@ Los archivos quedan en la PC del dueño; no se suben al repositorio.
 Cada etapa lleva su Ayuda como manual del circuito completo y pruebas con importes calculados a mano.
 
 Fuentes: [Programa Tango Gestión 2026 (UNC)](https://secretariaextension.eco.unc.edu.ar/images/Programas_2026/Programa_Tango_Gestión_2026_.pdf), [Colppy: conciliación bancaria](https://intercom.help/Colppy/es/articles/4047961-conciliacion-bancaria), [Colppy: retención ARBA](https://intercom.help/Colppy/es/articles/1273216-calculo-de-retencion-de-impuesto-a-los-libb-provincia-de-buenos-aires-arba), [Colppy: retención AGIP](https://intercom.help/Colppy/es/articles/9670254-calculo-automatico-de-retencion-de-agip), [Sistemas de gestión 2026](https://www.developargentina.com/blog/sistemas-gestion-comercial-argentina-2026), [Mercado Pago: conciliación](https://mercadopago.cl/developers/en/docs/links-and-debts/conciliation).
+
+## Viáticos y rendiciones de gastos (29/10/2026)
+
+Hoy el control se lleva en un Excel por empleado ("Billetera <nombre> 2026"):
+- **Ingresos:** las transferencias de viáticos de la empresa.
+- **Egresos:** un comprobante por renglón, con la categoría escrita en la descripción.
+- **Saldo corrido.**
+- **Rendición semanal:** se hace en la planilla FS 7.1 901 R2, con días por categoría, anticipos, saldo, firmas y los topes en dólares.
+
+Respuestas del dueño:
+- carga administración, y más adelante podría precargar el empleado;
+- las facturas A van a Compras por el crédito de IVA;
+- la tarjeta de débito no se usa;
+- el dólar billete se toma automático, y pasarse del tope avisa pero no bloquea.
+
+**Hecho:**
+- **Billetera:** es una cuenta de Finanzas del tipo Billetera, ya existente, con `EmployeeId`. Se crea con el saldo de la planilla. Los depósitos son la transferencia entre cuentas de siempre.
+- **Rendición:**
+  - se rinde por semana, que arranca en lunes;
+  - lleva el vehículo de Flota y, si hay, la orden de servicio del técnico;
+  - queda abierta mientras dura el viaje.
+- **Gastos:** cada uno tiene categoría de la planilla, personas, proveedor, comprobante, importe y litros. Las facturas A se vinculan a la factura de Compras y no se aprueba hasta que lo estén.
+- **Al aprobar:**
+  - las facturas A se pagan con una orden de pago desde la billetera, así Compras queda saldada y el gasto no se duplica;
+  - el resto se descuenta como un egreso por comprobante, con concepto por categoría: VIATICOS, COMBUSTIBLE, MANTENIMIENTO_VEHICULOS, FERRETERIA y OTROS_GASTOS.
+- **Reabrir** anula todo eso.
+- **Topes:** se configuran en dólares. Se comparan contra el billete vendedor del BNA que ya usa Ventas, se avisan al cargar y al aprobar, y se guarda la cotización usada.
+- **Planilla FS 7.1 901 R2** imprimible.
+
+**Para después:**
+- la precarga por parte del empleado, con su usuario, y la revisión de administración;
+- que la ficha del vehículo en Flota lea los combustibles y mantenimientos de las rendiciones, en lugar de cargarlos dos veces;
+- el asiento contable de los conceptos de gasto, a definir con el estudio.
+
+**Problema encontrado de paso, que ya existía:** al anular una orden de pago pagada en efectivo (caja o billetera), el egreso de la cuenta queda: se desvincula, pero no se borra, y el saldo de la caja no vuelve. La rendición lo corrige para sus propias órdenes, pero el caso general sigue abierto.
+

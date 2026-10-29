@@ -266,5 +266,27 @@ public static class FinanceSchema
         );
         CREATE UNIQUE INDEX IF NOT EXISTS ""IX_InvestmentFundOperations_External"" ON finance.""InvestmentFundOperations"" (""TenantId"", ""ExternalId"");
         CREATE INDEX IF NOT EXISTS ""IX_InvestmentFundOperations_Fund"" ON finance.""InvestmentFundOperations"" (""FundId"");
+
+        ALTER TABLE finance.""FinancialAccounts"" ADD COLUMN IF NOT EXISTS ""EmployeeId"" uuid;
+        CREATE TABLE IF NOT EXISTS finance.""ExpenseReports"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""Number"" varchar(40) NOT NULL, ""WalletAccountId"" uuid NOT NULL, ""EmployeeId"" uuid NOT NULL,
+          ""EmployeeName"" varchar(200) NOT NULL, ""WeekStart"" timestamptz NOT NULL, ""VehicleId"" uuid, ""VehiclePlate"" varchar(30),
+          ""ServiceOrderId"" uuid, ""ServiceOrderLabel"" varchar(240), ""UsdRate"" numeric(18,4), ""Status"" varchar(20) NOT NULL,
+          ""Notes"" varchar(1000), ""ApprovedBy"" varchar(120), ""ApprovedAtUtc"" timestamptz, ""CreatedAtUtc"" timestamptz NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ""IX_ExpenseReports_Employee"" ON finance.""ExpenseReports"" (""TenantId"", ""EmployeeId"", ""WeekStart"");
+        CREATE TABLE IF NOT EXISTS finance.""ExpenseReportLines"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""ReportId"" uuid NOT NULL REFERENCES finance.""ExpenseReports"" (""Id"") ON DELETE CASCADE,
+          ""Date"" timestamptz NOT NULL, ""Category"" varchar(30) NOT NULL, ""People"" integer NOT NULL DEFAULT 1, ""SupplierName"" varchar(200) NOT NULL,
+          ""SupplierTaxId"" varchar(11), ""VoucherType"" varchar(20) NOT NULL, ""VoucherNumber"" varchar(40), ""Amount"" numeric(18,2) NOT NULL,
+          ""Liters"" numeric(12,3), ""Detail"" varchar(500), ""PurchaseInvoiceId"" uuid, ""MovementId"" uuid, ""PaymentOrderId"" uuid
+        );
+        CREATE INDEX IF NOT EXISTS ""IX_ExpenseReportLines_Report"" ON finance.""ExpenseReportLines"" (""ReportId"");
+        CREATE INDEX IF NOT EXISTS ""IX_ExpenseReportLines_Purchase"" ON finance.""ExpenseReportLines"" (""PurchaseInvoiceId"");
+        CREATE TABLE IF NOT EXISTS finance.""ExpensePolicies"" (
+          ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""MealUsd"" numeric(12,2) NOT NULL, ""SnackUsd"" numeric(12,2) NOT NULL,
+          ""LodgingOneUsd"" numeric(12,2) NOT NULL, ""LodgingTwoUsd"" numeric(12,2) NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ""IX_ExpensePolicies_Tenant"" ON finance.""ExpensePolicies"" (""TenantId"");
         ", cancellationToken);
 }

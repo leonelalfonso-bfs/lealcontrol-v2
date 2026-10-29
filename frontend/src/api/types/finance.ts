@@ -250,3 +250,24 @@ export type InvestmentFund = {
   lastUnitValue?: number | null; lastUnitValueDate?: string | null; units: number; contributed: number; valuation?: number | null; result?: number | null;
   operations: { id: string; externalId: string; kind: "Subscription" | "Redemption"; requestDate: string; settlementDate: string; amount: number; units: number; unitValue?: number | null; status: string; inBank?: boolean | null }[];
 };
+
+/** Billetera de viáticos de un empleado (cuenta financiera del tipo Billetera). */
+export type ExpenseWallet = { id: string; name: string; employeeId: string; isActive: boolean; balance: number; openReports: number; pendingAmount: number };
+export type ExpensePolicy = { mealUsd: number; snackUsd: number; lodgingOneUsd: number; lodgingTwoUsd: number };
+export type ExpenseCategory = "Lodging" | "Meal" | "Snack" | "Fuel" | "Taxi" | "Hardware" | "VehicleMaintenance" | "Other";
+export type ExpenseVoucherType = "A" | "B" | "C" | "Ticket" | "Recibo" | "SinComprobante";
+export type ExpenseLine = {
+  id: string; date: string; category: ExpenseCategory; categoryName: string; people: number; supplierName: string; supplierTaxId?: string | null;
+  voucherType: ExpenseVoucherType; voucherNumber?: string | null; amount: number; liters?: number | null; detail?: string | null;
+  purchaseInvoiceId?: string | null; purchaseInvoiceNumber?: string | null; movementId?: string | null; paymentOrderId?: string | null;
+};
+export type ExpenseLineInput = Omit<ExpenseLine, "id" | "categoryName" | "purchaseInvoiceNumber" | "movementId" | "paymentOrderId">;
+/** Rendición de gastos (planilla FS 7.1 901 R2). */
+export type ExpenseReport = {
+  id: string; number: string; walletAccountId: string; walletName: string; employeeId: string; employeeName: string; weekStart: string;
+  vehicleId?: string | null; vehiclePlate?: string | null; serviceOrderId?: string | null; serviceOrderLabel?: string | null; usdRate?: number | null;
+  status: "Open" | "Approved"; notes?: string | null; approvedBy?: string | null; approvedAtUtc?: string | null; createdAtUtc: string;
+  total: number; advances: { operationDateUtc: string; amount: number; description: string }[]; advancesTotal: number; walletBalance: number; balanceAfter: number;
+  policy: ExpensePolicy; problems: string[]; lines: ExpenseLine[];
+};
+export type ExpenseReportSummary = { id: string; number: string; employeeId: string; employeeName: string; weekStart: string; vehiclePlate?: string | null; serviceOrderLabel?: string | null; status: "Open" | "Approved"; total: number; lines: number };
