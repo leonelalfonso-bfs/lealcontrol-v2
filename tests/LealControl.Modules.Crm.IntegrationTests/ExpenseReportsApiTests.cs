@@ -81,6 +81,10 @@ public sealed class ExpenseReportsApiTests : IAsyncLifetime
         var wallets = await Json(await client.GetAsync("/api/v1/finance/expense-reports/wallets"));
         Assert.Equal("Billetera Ojeda, Pedro", Assert.Single(wallets.EnumerateArray()).GetProperty("name").GetString());
 
+        // La orden de pago de la factura A no se anula suelta: se reabre la rendición.
+        var hotelOrder = approved.GetProperty("lines").EnumerateArray().Single(l => l.GetProperty("voucherType").GetString() == "A").GetProperty("paymentOrderId").GetGuid();
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync($"/api/v1/finance/payments/{hotelOrder}/void", new { reason = "Prueba" })).StatusCode);
+
         // Reabrirla devuelve el saldo y anula el pago de la factura (que sigue vinculada al renglón).
         var reopened = await Json(await client.PostAsync($"/api/v1/finance/expense-reports/{id}/reopen", null));
         Assert.Equal("Open", reopened.GetProperty("status").GetString());
