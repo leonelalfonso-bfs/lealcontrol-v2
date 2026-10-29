@@ -280,6 +280,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/finanzas/cuenta-corriente", label: "Cuentas corrientes", icon: "⚖️" },
       { path: "/finanzas/cobranzas", label: "Recibos de cobro", icon: "🧾" },
       { path: "/finanzas/pagos", label: "Órdenes de pago", icon: "💳" },
+      { path: "/finanzas/billeteras", label: "Viáticos y rendiciones", icon: "👛" },
       { path: "/finanzas/lotes-de-pago", label: "Pagos por archivo (Interbanking)", icon: "📤" },
       { path: "/finanzas/echeqs", label: "Cartera de cheques", icon: "🎫" },
       { path: "/finanzas/conceptos", label: "Conceptos y reglas", icon: "🏷️" },

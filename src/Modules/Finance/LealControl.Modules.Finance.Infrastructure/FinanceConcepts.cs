@@ -81,6 +81,11 @@ public static class FinanceConcepts
         new("SUELDOS", "Sueldos y cargas sociales", FinancialConceptDirection.Expense, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Personal", "AM-FIN-40"),
         new("PRESTAMO_RECIBIDO", "Préstamo recibido", FinancialConceptDirection.Income, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Financiación"),
         new("PAGO_PRESTAMO", "Pago de préstamo", FinancialConceptDirection.Expense, FinancialConceptUsableIn.PaymentOrder, FinancialConceptCounterpartyType.None, false, false, "Financiación", "AM-FIN-10"),
+        new("VIATICOS", "Viáticos y movilidad", FinancialConceptDirection.Expense, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Viáticos y movilidad"),
+        new("COMBUSTIBLE", "Combustible", FinancialConceptDirection.Expense, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Vehículos"),
+        new("MANTENIMIENTO_VEHICULOS", "Mantenimiento de vehículos", FinancialConceptDirection.Expense, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Vehículos"),
+        new("FERRETERIA", "Ferretería e insumos", FinancialConceptDirection.Expense, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Gastos generales"),
+        new("OTROS_GASTOS", "Otros gastos", FinancialConceptDirection.Expense, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Gastos generales"),
         new("AJUSTE", "Ajuste o diferencia", FinancialConceptDirection.Both, FinancialConceptUsableIn.MovementOnly, FinancialConceptCounterpartyType.None, false, false, "Ajustes", "AM-FIN-90")
     ];
 

@@ -49,6 +49,9 @@ import {
   FinanceSufferedTaxesPage,
   FinancePaymentBatchesPage,
   FinanceInvestmentFundsPage,
+  FinanceWalletsPage,
+  FinanceExpenseReportPage,
+  FinanceExpenseReportPrintPage,
   FleetFuelLogsPage,
   FleetHelpPage,
   FleetMaintenancePage,
@@ -475,6 +478,9 @@ export function App() {
               <Route path="/finanzas/sufridas" element={<FinanceSufferedTaxesPage />} />
               <Route path="/finanzas/lotes-de-pago" element={<FinancePaymentBatchesPage />} />
               <Route path="/finanzas/fondos" element={<FinanceInvestmentFundsPage />} />
+              <Route path="/finanzas/billeteras" element={<FinanceWalletsPage />} />
+              <Route path="/finanzas/rendiciones/:id" element={<FinanceExpenseReportPage />} />
+              <Route path="/finanzas/rendiciones/:id/imprimir" element={<FinanceExpenseReportPrintPage />} />
               <Route path="/finanzas/retenciones/:id/certificado" element={<FinanceWithholdingCertificatePage />} />
               <Route path="/finanzas/conceptos" element={<FinanceConceptsPage />} />
               <Route path="/finanzas/echeqs" element={<ChequePortfolioPage />} />

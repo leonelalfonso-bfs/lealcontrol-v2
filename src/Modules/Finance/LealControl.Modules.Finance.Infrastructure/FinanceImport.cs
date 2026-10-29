@@ -512,6 +512,7 @@ public static class FinanceImport
         SufferedTaxes.MapSufferedTaxEndpoints(endpoints);
         PaymentBatches.MapPaymentBatchEndpoints(endpoints);
         InvestmentFunds.MapInvestmentFundEndpoints(endpoints);
+        ExpenseReports.MapExpenseReportEndpoints(endpoints);
         return endpoints;
     }
 
