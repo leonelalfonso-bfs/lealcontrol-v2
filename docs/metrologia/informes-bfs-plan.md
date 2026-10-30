@@ -29,7 +29,7 @@ EURAMET cg-18. Los datos reales de clientes del paquete no se suben al repositor
    - la emisión la hace el director técnico, con el endpoint de aprobación existente, que recalcula y bloquea los patrones vencidos;
    - una enmienda copia los datos;
    - se creó la Ayuda de Metrología.
-3. **Impresión:** el PDF con el formato aprobado:
+3. **Impresión** (hecho): el PDF con el formato aprobado:
    - encabezado con logo, empresa y recuadro del número;
    - franja con las fechas y el resultado;
    - secciones numeradas;
@@ -38,6 +38,9 @@ EURAMET cg-18. Los datos reales de clientes del paquete no se suben al repositor
    - marca de agua;
    - anexo con el procedimiento y las referencias.
 
-   El logo, la firma y la marca de agua se suben en la configuración de la empresa: no se versionan.
+   - El logo es el de la configuración de la empresa y también se usa como marca de agua.
+   - Cada director técnico carga su firma en Metrología → Firmas de informes (`metrology.signatories`).
+   - El informe sale con la firma de quien lo emite (`ApprovedByUserId`, `ApprovedAtUtc`), y sin firma cargada no se emite.
+   - El PDF sale desde el navegador, con "Guardar como PDF".
 
 **Después:** las plantas de hormigón (boca con 4 instrumentos, CIRSOC 201, agua informativa) y los pesómetros (BW500, anexo de fotos), sobre el mismo esquema.

@@ -157,6 +157,9 @@ async function requestBlob(path: string): Promise<Blob> {
 /** Último resultado de constatar una factura de compra en ARCA (wscdc). */
 export type PurchaseArcaCheck = { purchaseInvoiceId: string; outcome: "Approved" | "Rejected" | "NotCheckable" | "Unavailable"; detail: string; checkedAt: string };
 
+/** Responsable técnico que firma informes de Metrología. */
+export type MetrologySignatory = { userId: string; fullName: string; title?: string | null; license?: string | null; hasSignature: boolean; updatedAtUtc: string };
+
 export const api = {
   listFinanceAccounts: () => request<FinanceAccount[]>("/api/v1/finance/accounts"),
   listFinanceConcepts: () => request<FinanceConcept[]>("/api/v1/finance/concepts"),
@@ -1555,6 +1558,12 @@ export const api = {
   saveCalibrationReport: (body: Record<string, unknown>) =>
     request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) }),
 
+  listMetrologySignatories: () => request<MetrologySignatory[]>("/api/v1/metrology/signatories"),
+  getMySignatory: () => request<MetrologySignatory | undefined>("/api/v1/metrology/signatories/me"),
+  saveMySignatory: (body: { fullName: string; title?: string | null; license?: string | null; signatureBase64?: string | null }) =>
+    request<MetrologySignatory>("/api/v1/metrology/signatories/me", { method: "PUT", body: JSON.stringify(body) }),
+  /** Imagen de la firma como URL local (la API pide autenticación, no se puede usar la ruta directa en un img). */
+  signatoryImageUrl: (userId: string) => requestBlob(`/api/v1/metrology/signatories/${userId}/signature`).then((blob) => URL.createObjectURL(blob)),
   getTruckScaleReport: (id: string) => request<import("./types/truckScale").TruckScaleReport>(`/api/v1/metrology/reports/${id}/truck-scale`),
   createTruckScaleReport: (body: import("./types/truckScale").TruckScaleInput) =>
     request<import("./types/truckScale").TruckScaleReport>("/api/v1/metrology/reports/truck-scale", { method: "POST", body: JSON.stringify(body) }),

@@ -153,7 +153,10 @@ export function TruckScaleReportPage() {
           <h1>{report ? `Informe ${report.number}` : "Nuevo informe de calibración"}</h1>
           <p className="muted">{report ? (locked ? "Emitido: para corregirlo hay que emitir una enmienda." : "Borrador: se puede seguir cargando.") : "Elegí el equipo y cargá las lecturas; el resultado se calcula solo."}</p>
         </div>
-        <Link className="btn ghost" to="/metrologia/informes">← Informes</Link>
+        <div className="toolbar">
+          {report && <Link className="btn ghost" to={`/metrologia/informes/camionera/${report.id}/imprimir`}>🖨️ {locked ? "Informe" : "Vista previa"}</Link>}
+          <Link className="btn ghost" to="/metrologia/informes">← Informes</Link>
+        </div>
       </div>
 
       {error && <div className="alert">{error}</div>}

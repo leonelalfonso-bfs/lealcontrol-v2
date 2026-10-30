@@ -19,6 +19,8 @@ import {
   BankReconciliationPage,
   CalibrationReportFormPage,
   TruckScaleReportPage,
+  TruckScaleReportPrintPage,
+  MetrologySignatoriesPage,
   MetrologyHelpPage,
   CalibrationReportPrintPage,
   CalibrationReportsPage,
@@ -582,6 +584,8 @@ export function App() {
               <Route path="/metrologia/ensayos/nuevo" element={<CalibrationReportFormPage />} />
               <Route path="/metrologia/informes/camionera/nuevo" element={<TruckScaleReportPage />} />
               <Route path="/metrologia/ayuda" element={<MetrologyHelpPage />} />
+              <Route path="/metrologia/informes/camionera/:id/imprimir" element={<TruckScaleReportPrintPage />} />
+              <Route path="/metrologia/firmas" element={<MetrologySignatoriesPage />} />
               <Route path="/metrologia/informes/camionera/:id" element={<TruckScaleReportPage />} />
               <Route path="/metrologia/informes" element={<CalibrationReportsPage />} />
               <Route path="/metrologia/informes/:id/imprimir" element={<CalibrationReportPrintPage />} />

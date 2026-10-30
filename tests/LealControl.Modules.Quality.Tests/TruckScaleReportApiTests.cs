@@ -66,9 +66,18 @@ public sealed class TruckScaleReportApiTests : IClassFixture<QualityWebApplicati
         // Con un patrón vencido no se emite; sin él, sí.
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync($"/api/v1/metrology/reports/{id}/approve", null)).StatusCode);
         await Json(await client.PutAsJsonAsync($"/api/v1/metrology/reports/{id}/truck-scale", Input(weights)));
+        // Sin firma cargada no se emite; con la firma, sale con el nombre de quien emite.
+        var noSignature = await client.PostAsync($"/api/v1/metrology/reports/{id}/approve", null);
+        Assert.Equal(HttpStatusCode.BadRequest, noSignature.StatusCode);
+        Assert.Contains("firma", await noSignature.Content.ReadAsStringAsync());
+        await Json(await client.PutAsJsonAsync("/api/v1/metrology/signatories/me", new { fullName = "Ing. Responsable", title = "Responsable técnico", license = (string?)null,
+            signatureBase64 = "data:image/png;base64," + Convert.ToBase64String(new byte[] { 0x89, 0x50, 0x4E, 0x47, 1, 2, 3 }) }));
         await Json(await client.PostAsync($"/api/v1/metrology/reports/{id}/approve", null));
         var issued = await Json(await client.GetAsync($"/api/v1/metrology/reports/{id}/truck-scale"));
         Assert.Equal("Issued", issued.GetProperty("reportStatus").GetString());
+        Assert.Equal("Ing. Responsable", issued.GetProperty("approvedBy").GetString());
+        var signature = await client.GetAsync($"/api/v1/metrology/signatories/{issued.GetProperty("approvedByUserId").GetGuid()}/signature");
+        Assert.Equal("image/png", signature.Content.Headers.ContentType?.MediaType);
         Assert.StartsWith("2027-07-21", issued.GetProperty("nextCalibrationDate").GetString());
         Assert.Equal(HttpStatusCode.Conflict, (await client.PutAsJsonAsync($"/api/v1/metrology/reports/{id}/truck-scale", Input(weights))).StatusCode);
 

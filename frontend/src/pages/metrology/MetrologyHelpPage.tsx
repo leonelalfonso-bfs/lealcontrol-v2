@@ -6,7 +6,7 @@ const SECTIONS = [
   { id: "antes", title: "Antes de empezar" },
   { id: "camionera", title: "Informe de báscula camionera, paso a paso" },
   { id: "resultados", title: "Cómo se calculan los resultados" },
-  { id: "emision", title: "Emisión y correcciones" },
+  { id: "emision", title: "Emisión, firma y correcciones" },
   { id: "problemas", title: "Cuando el sistema no te deja" }
 ];
 
@@ -64,9 +64,13 @@ export function MetrologyHelpPage() {
         </ul>
       </ManualPart>
 
-      <ManualPart id="emision" title="5. Emisión y correcciones">
+      <ManualPart id="emision" title="5. Emisión, firma y correcciones">
         <Steps>
-          <Step title="El responsable técnico abre el informe y toca “✓ Emitir”. Se recalcula todo y queda emitido con su nombre." />
+          <Step title="Una vez, cada responsable técnico: Metrología → Firmas de informes → aclaración, cargo, matrícula y la imagen de su firma (PNG con fondo transparente)." />
+          <Step title="El responsable técnico abre el informe y toca “✓ Emitir”. Se recalcula todo y queda emitido con su firma, su aclaración y la fecha de emisión.">
+            Sin firma cargada no se puede emitir. El informe sale con la firma de quien lo emite.
+          </Step>
+          <Step title="“🖨️ Informe” abre el informe con el formato BFS: “Imprimir / guardar PDF” y elegí “Guardar como PDF”. Antes de emitir, la vista previa dice BORRADOR." />
           <Step title="Para corregir un informe emitido: Informes → “Enmendar (PG09 R2)”. El original queda sustituido y la enmienda se carga y emite de nuevo." />
         </Steps>
       </ManualPart>
@@ -76,7 +80,9 @@ export function MetrologyHelpPage() {
           ["“Completá en la ficha del equipo la capacidad máxima y la división de verificación”", "Faltan Máx. o e en el equipo: corregilo en Gestión de Equipos."],
           ["“El patrón … venció el …”", "Destildá esa pesa o cargá su certificado nuevo en Pesas Patrón."],
           ["“El informe ya está emitido”", "No se edita: emití una enmienda."],
-          ["No aparece “✓ Emitir”", "Solo lo ve un responsable técnico (director técnico) y con el informe ya guardado."]
+          ["No aparece “✓ Emitir”", "Solo lo ve un responsable técnico (director técnico) y con el informe ya guardado."],
+          ["“Cargá tu firma en Metrología → Firmas antes de emitir”", "Subí la imagen de tu firma en Firmas de informes."],
+          ["El PDF sale sin logo", "Cargá el logo de la empresa en Configuración → Empresa."]
         ]} />
       </ManualPart>
     </HelpManual>

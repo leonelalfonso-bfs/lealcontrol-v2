@@ -19,6 +19,7 @@ public sealed class MetrologyDbContext : DbContext
     public DbSet<StandardWeight> StandardWeights => Set<StandardWeight>();
     public DbSet<MetrologyInstrument> Instruments => Set<MetrologyInstrument>();
     public DbSet<CalibrationReport> CalibrationReports => Set<CalibrationReport>();
+    public DbSet<MetrologySignatory> Signatories => Set<MetrologySignatory>();
     public DbSet<MetrologyTenantSettings> TenantSettings => Set<MetrologyTenantSettings>();
 
     public MetrologyDbContext(DbContextOptions<MetrologyDbContext> options)
@@ -98,12 +99,24 @@ public sealed class MetrologyDbContext : DbContext
             b.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
         });
 
+        modelBuilder.Entity<MetrologySignatory>(b =>
+        {
+            b.ToTable("signatories", "metrology");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.FullName).HasMaxLength(160);
+            b.Property(x => x.Title).HasMaxLength(160);
+            b.Property(x => x.License).HasMaxLength(80);
+            b.Property(x => x.SignatureContentType).HasMaxLength(40);
+            b.HasIndex(x => new { x.TenantId, x.UserId }).IsUnique();
+        });
+
         modelBuilder.Entity<CalibrationReport>(b =>
         {
             b.ToTable("calibration_reports", "metrology");
             b.HasKey(x => x.Id);
             b.Property(x => x.CertificateNumber).HasMaxLength(64).IsRequired();
             b.Property(x => x.ReportKind).HasMaxLength(20).HasDefaultValue("Generic");
+            b.Property(x => x.ApprovedByUserId);
             b.Property(x => x.ServiceNumber).HasMaxLength(20);
             b.Property(x => x.RemitoNumber).HasMaxLength(40);
             b.Property(x => x.OrderReference).HasMaxLength(80);
@@ -351,6 +364,14 @@ public sealed class MetrologyDbContext : DbContext
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""RemitoNumber"" character varying(40);",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""OrderReference"" character varying(80);",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ProcedureCode"" character varying(40);",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ApprovedByUserId"" uuid;",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ApprovedAtUtc"" timestamp with time zone;",
+            @"CREATE TABLE IF NOT EXISTS metrology.signatories (
+                ""Id"" uuid NOT NULL PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""UserId"" uuid NOT NULL, ""FullName"" character varying(160) NOT NULL,
+                ""Title"" character varying(160), ""License"" character varying(80), ""SignatureContentType"" character varying(40), ""Signature"" bytea,
+                ""UpdatedAtUtc"" timestamp with time zone NOT NULL
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_signatories_Tenant_User"" ON metrology.signatories (""TenantId"", ""UserId"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_reports_Tenant_Supersedes"" ON metrology.calibration_reports (""TenantId"", ""SupersedesReportId"");",
 
             @"CREATE TABLE IF NOT EXISTS metrology.tenant_settings (

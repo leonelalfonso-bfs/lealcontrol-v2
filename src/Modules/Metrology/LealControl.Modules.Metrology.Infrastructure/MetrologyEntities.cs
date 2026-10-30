@@ -208,6 +208,10 @@ public sealed class CalibrationReport : Entity<Guid>
 
     /// <summary>Generic (informe de ensayo genérico) o TruckScale (báscula camionera, paquete Informes BFS).</summary>
     public string ReportKind { get; set; } = "Generic";
+    /// <summary>Usuario que emitió (firma) el informe: su firma sale de <see cref="MetrologySignatory"/>.</summary>
+    public Guid? ApprovedByUserId { get; set; }
+    /// <summary>Fecha de emisión.</summary>
+    public DateTime? ApprovedAtUtc { get; set; }
     /// <summary>Datos de campo del informe de camionera (<see cref="TruckScaleInput"/>); el resultado se calcula siempre.</summary>
     public string? TruckScaleDataJson { get; set; }
     public string? ServiceNumber { get; set; }

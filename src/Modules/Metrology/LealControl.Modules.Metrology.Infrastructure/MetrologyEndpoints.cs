@@ -840,6 +840,7 @@ public static class MetrologyEndpoints
 
         // Informe de báscula camionera: resultados, requisitos y avisos calculados a partir de los datos de campo.
         group.MapTruckScaleReportEndpoints();
+        group.MapSignatoryEndpoints();
         group.MapPost("/truck-scale/evaluate", ([FromQuery] DateTime? testDate, TruckScaleData data) =>
             Results.Ok(TruckScaleEvaluator.Evaluate(data, testDate ?? DateTime.UtcNow)));
 
@@ -1194,6 +1195,20 @@ public static class MetrologyEndpoints
             {
                 return Results.BadRequest(new { message = blocked });
             }
+            var approverId = MetrologySignatories.UserId(http.User);
+            if (report.ReportKind == "TruckScale")
+            {
+                // El informe sale con la firma de quien lo emite: tiene que haberla cargado antes.
+                var signatory = approverId is null ? null : await db.Signatories.AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.TenantId == tenantId.Value && s.UserId == approverId && s.Signature != null, ct);
+                if (signatory is null)
+                {
+                    return Results.BadRequest(new { message = "Cargá tu firma en Metrología → Firmas antes de emitir." });
+                }
+                approver = signatory.FullName;
+            }
+            report.ApprovedByUserId = approverId;
+            report.ApprovedAtUtc = DateTime.UtcNow;
             report.ApprovedBy = approver;
             report.ReportStatus = "Issued";
             await db.SaveChangesAsync(ct);

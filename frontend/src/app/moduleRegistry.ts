@@ -414,6 +414,7 @@ export const MODULE_REGISTRY: readonly ModuleDefinition[] = [
       { path: "/metrologia/instrumentos", label: "Termómetros / Auxiliares", icon: "🌡️" },
       { path: "/metrologia/ensayos/nuevo", label: "Nuevo Ensayo", icon: "📝" },
       { path: "/metrologia/informes/camionera/nuevo", label: "Informe de camionera", icon: "🚛" },
+      { path: "/metrologia/firmas", label: "Firmas de informes", icon: "✍️" },
       { path: "/metrologia/informes", label: "Informes de Ensayo", icon: "📋" },
       { path: "/metrologia/ayuda", label: "Ayuda Metrología", icon: "💡" }
     ]
