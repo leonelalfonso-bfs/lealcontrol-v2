@@ -33,7 +33,7 @@ public sealed class QuoteCrmRevisionOrderApiTests : IAsyncLifetime
 
         object Body(decimal price) => new
         {
-            customerId = customer, locationId = (Guid?)null, contactId = (Guid?)null, opportunityId = (Guid?)null, currency = "ARS",
+            customerId = customer, locationId = (Guid?)null, contactId = (Guid?)null, opportunityId = (Guid?)null, currency = "USD_BILLETE",
             exchangeRateUsdBillete = 1500m, exchangeRateUsdDivisa = 1480m, discountPercent = 0m, validDays = 15, paymentTerms = "Contado",
             paymentMethod = (string?)null, deliveryTimeDays = (int?)null, transportation = (string?)null, warranty = (string?)null, notes = (string?)null,
             ownerName = "Vendedor", lines = new[] { new { description = "Calibración de báscula", quantity = 1m, unitPrice = price, discountPercent = 0m, taxRate = 21m, isOptional = false, currencyCode = "ARS" } }
@@ -46,6 +46,7 @@ public sealed class QuoteCrmRevisionOrderApiTests : IAsyncLifetime
         var opportunity = (await Json(await client.GetAsync($"/api/v1/crm/customers/{customer}/opportunities"))).EnumerateArray().Single();
         Assert.Equal(opportunityId, opportunity.GetProperty("id").GetGuid());
         Assert.Equal("Proposal", opportunity.GetProperty("stage").GetString());
+        Assert.Equal("USD", opportunity.GetProperty("currency").GetString());
 
         // Guardar sin cambios no es revisión nueva; cambiar el precio sí.
         Assert.Equal(1, (await Json(await client.PutAsJsonAsync($"/api/v1/sales/quotes/{id}", Body(100000m)))).GetProperty("revision").GetInt32());
