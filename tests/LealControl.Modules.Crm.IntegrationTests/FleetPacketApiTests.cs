@@ -59,8 +59,15 @@ public sealed class FleetPacketApiTests : IAsyncLifetime
             documentType = "AltaTemprana", category = "Ingreso", fileName = "alta.pdf", fileUrl = "data:application/pdf;base64," + Convert.ToBase64String(Encoding.ASCII.GetBytes("%PDF-1.4 ALTA"))
         }));
 
-        var preview = (await Json(await client.GetAsync($"/api/v1/fleet/packet/preview?employeeIds={employee}&vehicleIds={vehicle}"))).EnumerateArray().ToList();
-        Assert.Equal(4, preview.Count);
+        // Documentación de la empresa: ART con vencimiento y un procedimiento sin vencimiento (el título es obligatorio).
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/v1/fleet/company-documents", new { category = "WorkProcedure", alertDaysBefore = 30 })).StatusCode);
+        var art = (await Json(await client.PostAsJsonAsync("/api/v1/fleet/company-documents", new { category = "Art", number = "123", issuer = "ART SA", expirationDate = "2026-12-31", alertDaysBefore = 30 }))).GetProperty("id").GetGuid();
+        await Json(await client.PostAsJsonAsync("/api/v1/fleet/company-documents", new { category = "WorkProcedure", title = "Procedimiento de calibración en planta", alertDaysBefore = 30 }));
+        await Json(await client.PostAsync($"/api/v1/fleet/company-documents/{art}/file", Pdf("art.pdf", "ART")));
+
+        var preview = (await Json(await client.GetAsync($"/api/v1/fleet/packet/preview?employeeIds={employee}&vehicleIds={vehicle}&company=true"))).EnumerateArray().ToList();
+        Assert.Equal(6, preview.Count);
+        Assert.Equal("Empresa", preview[0].GetProperty("ownerName").GetString());
         Assert.False(preview.Single(p => p.GetProperty("label").GetString() == "Seguro").GetProperty("hasFile").GetBoolean());
 
         var zip = await client.PostAsJsonAsync("/api/v1/fleet/packet", new { items = preview.Select(p => new { source = p.GetProperty("source").GetString(), id = p.GetProperty("id").GetGuid() }) });
@@ -71,6 +78,7 @@ public sealed class FleetPacketApiTests : IAsyncLifetime
         Assert.Contains("Gómez, Juan - DNI 30111222/Licencia de conducir B1 - vence 10-01-2029.pdf", names);
         Assert.Contains("Gómez, Juan - DNI 30111222/Alta temprana.pdf", names);
         Assert.Contains("AE123BC Toyota Hilux/VTV - RTO - vence 22-08-2028.pdf", names);
+        Assert.Contains("Empresa/ART – certificado de cobertura - vence 31-12-2026.pdf", names);
         using var index = new StreamReader(archive.GetEntry("Indice.txt")!.Open());
         Assert.Contains("Seguro - vence 30/06/2027 - Vigente - SIN ARCHIVO", await index.ReadToEndAsync());
     }

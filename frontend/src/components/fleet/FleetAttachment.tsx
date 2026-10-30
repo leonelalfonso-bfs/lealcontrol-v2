@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import { api } from "../../api/client";
+import { api, type FleetFileKind } from "../../api/client";
 
 /** Archivo escaneado de un vencimiento o credencial: verlo, subirlo o reemplazarlo (PDF, JPG o PNG). */
-export function FleetAttachment({ kind, id, fileName, onChanged }: { kind: "documents" | "credentials"; id: string; fileName?: string | null; onChanged: () => void }) {
+export function FleetAttachment({ kind, id, fileName, onChanged }: { kind: FleetFileKind; id: string; fileName?: string | null; onChanged: () => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   return (

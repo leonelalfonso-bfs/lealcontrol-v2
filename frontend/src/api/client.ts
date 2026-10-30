@@ -162,9 +162,17 @@ export type MetrologySignatory = { userId: string; fullName: string; title?: str
 
 /** Documento que puede ir en el legajo para ingreso a planta. */
 export type FleetPacketItem = {
-  source: "Credential" | "HrDocument" | "VehicleDocument"; id: string; ownerType: "Person" | "Vehicle"; ownerId: string; ownerName: string;
+  source: "Credential" | "HrDocument" | "VehicleDocument" | "CompanyDocument"; id: string; ownerType: "Person" | "Vehicle" | "Company"; ownerId: string; ownerName: string;
   label: string; number?: string | null; expirationDate?: string | null; state: "Vigente" | "Por vencer" | "Vencido"; hasFile: boolean;
 };
+
+export type FleetFileKind = "documents" | "credentials" | "company-documents";
+/** Documentación de la empresa para ingreso a planta (ART, seguros, procedimientos, capacitaciones). */
+export type CompanyDocument = {
+  id: string; category: string; categoryLabel: string; title: string; number: string; issuer?: string | null; issueDate?: string | null; expirationDate?: string | null;
+  alertDaysBefore: number; isActive: boolean; daysRemaining?: number | null; state: "Ok" | "DueSoon" | "Expired" | "Missing"; fileName?: string | null;
+};
+export type CompanyDocumentWrite = { category: string; title?: string; number?: string; issuer?: string; issueDate?: string | null; expirationDate?: string | null; alertDaysBefore: number };
 
 export const api = {
   listFinanceAccounts: () => request<FinanceAccount[]>("/api/v1/finance/accounts"),
@@ -1110,7 +1118,7 @@ export const api = {
     request<import("./types").VehicleDocument>(`/api/v1/fleet/documents/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteVehicleDocument: (id: string) => request<void>(`/api/v1/fleet/documents/${id}`, { method: "DELETE" }),
   /** Escaneo (PDF o imagen) de un vencimiento de unidad o de una credencial de persona. */
-  uploadFleetFile: async (kind: "documents" | "credentials", id: string, file: File) => {
+  uploadFleetFile: async (kind: FleetFileKind, id: string, file: File) => {
     const form = new FormData();
     form.append("file", file);
     const token = localStorage.getItem("leal_token");
@@ -1127,10 +1135,14 @@ export const api = {
     }
     return response.json() as Promise<{ fileName: string }>;
   },
-  openFleetFile: (kind: "documents" | "credentials", id: string) =>
+  openFleetFile: (kind: FleetFileKind, id: string) =>
     requestBlob(`/api/v1/fleet/${kind}/${id}/file`).then((blob) => window.open(URL.createObjectURL(blob), "_blank")),
-  fleetPacketPreview: (employeeIds: string[], vehicleIds: string[]) =>
-    request<FleetPacketItem[]>(`/api/v1/fleet/packet/preview?employeeIds=${employeeIds.join(",")}&vehicleIds=${vehicleIds.join(",")}`),
+  fleetPacketPreview: (employeeIds: string[], vehicleIds: string[], company: boolean) =>
+    request<FleetPacketItem[]>(`/api/v1/fleet/packet/preview?employeeIds=${employeeIds.join(",")}&vehicleIds=${vehicleIds.join(",")}&company=${company}`),
+  listCompanyDocuments: (history = false) => request<CompanyDocument[]>(`/api/v1/fleet/company-documents${history ? "?history=true" : ""}`),
+  saveCompanyDocument: (id: string | null, body: CompanyDocumentWrite) =>
+    request<CompanyDocument>(`/api/v1/fleet/company-documents${id ? `/${id}` : ""}`, { method: id ? "PUT" : "POST", body: JSON.stringify(body) }),
+  archiveCompanyDocument: (id: string) => request<unknown>(`/api/v1/fleet/company-documents/${id}/archive`, { method: "POST" }),
   downloadFleetPacket: async (items: { source: string; id: string }[]) => {
     const token = localStorage.getItem("leal_token");
     const tenantId = localStorage.getItem("leal_tenant_id");
