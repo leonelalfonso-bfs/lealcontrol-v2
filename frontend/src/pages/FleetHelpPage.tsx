@@ -181,11 +181,14 @@ export function FleetHelpPage() {
             y el anterior queda en el historial.
           </Step>
           <Step title="Los documentos de la persona que están en su legajo de RRHH (DNI, alta temprana, preocupacional…) se suman solos: no hace falta cargarlos de nuevo en Flota." />
+          <Step title="Flota → Documentación de la empresa: ART (certificado de cobertura), seguro de vida obligatorio, responsabilidad civil, procedimientos de trabajo, capacitaciones y programa de seguridad.">
+            Cada uno con número, emisor, vencimiento (vacío si no vence) y su archivo. Los que vencen avisan como el resto; los que ya no se usan se archivan.
+          </Step>
           <Step title="Flota → Legajo para ingreso a planta → tildá las personas y las unidades. Desde una orden de servicio, “📦 Legajo para el cliente” ya trae las asignadas.">
             Aparece cada documento con su vencimiento y estado. Van tildados los que tienen archivo y no están vencidos; los vencidos y los que no
             tienen archivo se avisan arriba.
           </Step>
-          <Step title="“⬇️ Descargar ZIP”: una carpeta por persona (con su DNI) y por unidad (con su patente), y un Indice.txt con todo lo enviado y lo que falta." />
+          <Step title="“⬇️ Descargar ZIP”: una carpeta “Empresa” (si está tildado “Incluir la documentación de la empresa”), una por persona (con su DNI) y otra por unidad (con su patente), y un Indice.txt con todo lo enviado y lo que falta." />
         </Steps>
       </ManualPart>
 

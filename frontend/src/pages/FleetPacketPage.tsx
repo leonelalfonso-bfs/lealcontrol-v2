@@ -14,6 +14,7 @@ export function FleetPacketPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [people, setPeople] = useState<string[]>(() => params.get("employees")?.split(",").filter(Boolean) ?? []);
   const [units, setUnits] = useState<string[]>(() => params.get("vehicles")?.split(",").filter(Boolean) ?? []);
+  const [company, setCompany] = useState(true);
   const [items, setItems] = useState<FleetPacketItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
@@ -25,13 +26,13 @@ export function FleetPacketPage() {
     api.listVehicles().then(setVehicles).catch(() => setVehicles([]));
   }, []);
   useEffect(() => {
-    if (people.length === 0 && units.length === 0) { setItems([]); return; }
-    api.fleetPacketPreview(people, units).then((list) => {
+    if (people.length === 0 && units.length === 0 && !company) { setItems([]); return; }
+    api.fleetPacketPreview(people, units, company).then((list) => {
       setItems(list);
       // Por defecto va todo lo que tiene archivo y no está vencido.
       setSelected(new Set(list.filter((i) => i.hasFile && i.state !== "Vencido").map(key)));
     }).catch((err) => setError(err.message));
-  }, [people, units]);
+  }, [people, units, company]);
 
   const toggle = (list: string[], set: (v: string[]) => void, id: string) => set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   const owners = useMemo(() => [...new Map(items.map((i) => [i.ownerId, i])).values()], [items]);
@@ -50,7 +51,12 @@ export function FleetPacketPage() {
       </div>
       {error && <div className="alert">{error}</div>}
 
-      <input placeholder="Buscar persona o unidad" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 360 }} />
+      <div className="row" style={{ gap: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <input placeholder="Buscar persona o unidad" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 360 }} />
+        <label className="row" style={{ gap: 6, alignItems: "center" }}>
+          <input type="checkbox" checked={company} onChange={(e) => setCompany(e.target.checked)} /> Incluir la documentación de la empresa (<Link to="/flota/empresa">ver</Link>)
+        </label>
+      </div>
       <div className="grid-2">
         <div className="card pad stack" style={{ gap: 4, maxHeight: 300, overflow: "auto" }}>
           <strong>Personas ({people.length})</strong>
@@ -88,13 +94,13 @@ export function FleetPacketPage() {
           )}
           {owners.map((o) => (
             <div key={o.ownerId}>
-              <div style={{ fontWeight: 700, margin: "6px 0 2px" }}>{o.ownerType === "Person" ? "👤" : "🚚"} {o.ownerName}</div>
+              <div style={{ fontWeight: 700, margin: "6px 0 2px" }}>{o.ownerType === "Person" ? "👤" : o.ownerType === "Company" ? "🏢" : "🚚"} {o.ownerName}</div>
               <table style={{ fontSize: "0.85rem" }}>
                 <tbody>
                   {items.filter((i) => i.ownerId === o.ownerId).map((i) => (
                     <tr key={key(i)}>
                       <td style={{ width: 30 }}><input type="checkbox" disabled={!i.hasFile} checked={selected.has(key(i))} onChange={() => setSelected((prev) => { const n = new Set(prev); if (n.has(key(i))) n.delete(key(i)); else n.add(key(i)); return n; })} /></td>
-                      <td>{i.label}{i.number ? <span className="muted"> · N° {i.number}</span> : null}<span className="muted" style={{ fontSize: "0.75rem" }}> · {i.source === "HrDocument" ? "legajo RRHH" : "Flota"}</span></td>
+                      <td>{i.label}{i.number ? <span className="muted"> · N° {i.number}</span> : null}<span className="muted" style={{ fontSize: "0.75rem" }}> · {i.source === "HrDocument" ? "legajo RRHH" : i.source === "CompanyDocument" ? "empresa" : "Flota"}</span></td>
                       <td>{i.expirationDate ? `vence ${day(i.expirationDate)}` : "—"}</td>
                       <td style={{ color: STATE_COLOR[i.state], fontWeight: 700 }}>{i.state}</td>
                       <td>{i.hasFile ? "📎" : <span style={{ color: "#A1271B" }}>sin archivo</span>}</td>

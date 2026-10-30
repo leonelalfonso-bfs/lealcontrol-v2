@@ -37,7 +37,7 @@ public static class FleetFiles
         _ => type
     };
 
-    private static async Task<IResult> SaveFileAsync(IFormFile? file, Guid tenantId, IFileStorage storage, Action<string, string, string> assign, CancellationToken ct)
+    internal static async Task<IResult> SaveFileAsync(IFormFile? file, Guid tenantId, IFileStorage storage, Action<string, string, string> assign, CancellationToken ct)
     {
         if (file is null || file.Length == 0) return Results.BadRequest(new { detail = "Elegí un archivo." });
         if (file.Length > MaxBytes) return Results.BadRequest(new { detail = "El archivo supera los 15 MB." });
@@ -49,7 +49,7 @@ public static class FleetFiles
         return Results.Ok(new { fileName = Path.GetFileName(file.FileName) });
     }
 
-    private static async Task<IResult> OpenAsync(string? key, string? name, string? type, IFileStorage storage, CancellationToken ct)
+    internal static async Task<IResult> OpenAsync(string? key, string? name, string? type, IFileStorage storage, CancellationToken ct)
     {
         if (key is null) return Results.NotFound(new { detail = "No tiene archivo cargado." });
         var content = await storage.OpenReadAsync(key, ct);
@@ -74,9 +74,18 @@ public static class FleetFiles
         };
 
     /// <summary>Documentos vigentes (no reemplazados) de las personas y unidades elegidas.</summary>
-    public static async Task<List<PacketItem>> PreviewAsync(FleetDbContext db, Guid tenantId, Guid[] employeeIds, Guid[] vehicleIds, DateOnly today, CancellationToken ct)
+    public static async Task<List<PacketItem>> PreviewAsync(FleetDbContext db, Guid tenantId, Guid[] employeeIds, Guid[] vehicleIds, DateOnly today, CancellationToken ct, bool includeCompany = false)
     {
         var items = new List<PacketItem>();
+        if (includeCompany)
+        {
+            foreach (var d in await db.CompanyDocuments.AsNoTracking().Where(d => d.TenantId == tenantId && d.IsActive).ToListAsync(ct))
+            {
+                var view = FleetCompanyDocuments.ToView(d, today);
+                items.Add(new("CompanyDocument", d.Id, "Company", Guid.Empty, "Empresa", FleetCompanyDocuments.Label(d), string.IsNullOrWhiteSpace(d.Number) ? null : d.Number,
+                    view.ExpirationDate, view.State == ExpirationState.Expired ? "Vencido" : view.State == ExpirationState.DueSoon ? "Por vencer" : "Vigente", d.FileStorageKey is not null));
+            }
+        }
         var employees = await FleetPeople.EmployeesAsync(db, tenantId, ct);
         var credentials = await db.PersonCredentials.AsNoTracking().Where(c => c.TenantId == tenantId && c.IsActive && employeeIds.Contains(c.EmployeeId)).ToListAsync(ct);
         foreach (var c in credentials)
@@ -102,7 +111,7 @@ public static class FleetFiles
                 d.DocumentType == FleetDocType.Other && !string.IsNullOrWhiteSpace(d.Title) ? d.Title : FleetRules.DocumentLabel(d.DocumentType),
                 d.PolicyOrDocNumber, expiration.ToString("yyyy-MM-dd"), State(expiration, d.AlertDaysBefore, today), d.FileStorageKey is not null));
         }
-        return items.OrderBy(i => i.OwnerType == "Person" ? 0 : 1).ThenBy(i => i.OwnerName).ThenBy(i => i.Label).ToList();
+        return items.OrderBy(i => i.OwnerType switch { "Company" => 0, "Person" => 1, _ => 2 }).ThenBy(i => i.OwnerName).ThenBy(i => i.Label).ToList();
     }
 
     private static string Safe(string name)
@@ -147,10 +156,10 @@ public static class FleetFiles
             return c is null ? Results.NotFound() : await OpenAsync(c.FileStorageKey, c.FileName, c.FileContentType, storage, ct);
         });
 
-        group.MapGet("/packet/preview", async (string? employeeIds, string? vehicleIds, FleetDbContext db, ITenantContext tenant, TimeProvider clock, CancellationToken ct) =>
+        group.MapGet("/packet/preview", async (string? employeeIds, string? vehicleIds, bool? company, FleetDbContext db, ITenantContext tenant, TimeProvider clock, CancellationToken ct) =>
         {
             Guid[] Parse(string? s) => (s ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => Guid.TryParse(x, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).ToArray();
-            return Results.Ok(await PreviewAsync(db, tenant.TenantId.Value, Parse(employeeIds), Parse(vehicleIds), FleetRules.TodayInArgentina(clock.GetUtcNow()), ct));
+            return Results.Ok(await PreviewAsync(db, tenant.TenantId.Value, Parse(employeeIds), Parse(vehicleIds), FleetRules.TodayInArgentina(clock.GetUtcNow()), ct, company == true));
         });
 
         // ZIP con una carpeta por persona y por unidad, y un índice con lo que va y lo que falta.
@@ -161,12 +170,14 @@ public static class FleetFiles
             var today = FleetRules.TodayInArgentina(clock.GetUtcNow());
             var credentialIds = req.Items.Where(i => i.Source == "Credential").Select(i => i.Id).ToList();
             var documentIds = req.Items.Where(i => i.Source == "VehicleDocument").Select(i => i.Id).ToList();
+            var companyIds = req.Items.Where(i => i.Source == "CompanyDocument").Select(i => i.Id).ToList();
+            var companyDocs = await db.CompanyDocuments.AsNoTracking().Where(d => d.TenantId == t && companyIds.Contains(d.Id)).ToListAsync(ct);
             var credentials = await db.PersonCredentials.AsNoTracking().Where(c => c.TenantId == t && credentialIds.Contains(c.Id)).ToListAsync(ct);
             var documents = await db.VehicleDocuments.AsNoTracking().Where(d => d.TenantId == t && documentIds.Contains(d.Id)).ToListAsync(ct);
             var hrIds = req.Items.Where(i => i.Source == "HrDocument").Select(i => i.Id).ToHashSet();
             var allEmployees = await FleetPeople.EmployeesAsync(db, t, ct);
             var hr = (await HrDocumentsAsync(db, t, [.. allEmployees.Keys], ct)).Where(d => hrIds.Contains(d.Id)).ToList();
-            var preview = await PreviewAsync(db, t, [.. credentials.Select(c => c.EmployeeId).Concat(hr.Select(h => h.EmployeeId)).Distinct()], [.. documents.Select(d => d.VehicleId).Distinct()], today, ct);
+            var preview = await PreviewAsync(db, t, [.. credentials.Select(c => c.EmployeeId).Concat(hr.Select(h => h.EmployeeId)).Distinct()], [.. documents.Select(d => d.VehicleId).Distinct()], today, ct, companyDocs.Count > 0);
             var chosen = preview.Where(p => req.Items.Any(i => i.Source == p.Source && i.Id == p.Id)).ToList();
 
             var buffer = new MemoryStream();
@@ -178,7 +189,7 @@ public static class FleetFiles
                 var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 async Task AddAsync(PacketItem item, Func<Task<(Stream? Stream, string Extension)>> open)
                 {
-                    var folder = Safe(item.OwnerType == "Person"
+                    var folder = item.OwnerType == "Company" ? "Empresa" : Safe(item.OwnerType == "Person"
                         ? $"{item.OwnerName}{(allEmployees.GetValueOrDefault(item.OwnerId)?.DocumentNumber is { Length: > 0 } dni ? $" - DNI {dni}" : "")}"
                         : item.OwnerName);
                     var line = $"[{folder}] {item.Label}{(item.Number is { Length: > 0 } n ? $" N° {n}" : "")}{(item.ExpirationDate is { } e ? $" - vence {DateOnly.Parse(e, CultureInfo.InvariantCulture):dd/MM/yyyy}" : "")} - {item.State}";
@@ -207,6 +218,10 @@ public static class FleetFiles
                         case "VehicleDocument":
                             var d = documents.First(x => x.Id == item.Id);
                             await AddAsync(item, async () => d.FileStorageKey is null ? (null, "") : ((await storage.OpenReadAsync(d.FileStorageKey, ct))?.Stream, Extension(d.FileName, d.FileContentType)));
+                            break;
+                        case "CompanyDocument":
+                            var cd = companyDocs.First(x => x.Id == item.Id);
+                            await AddAsync(item, async () => cd.FileStorageKey is null ? (null, "") : ((await storage.OpenReadAsync(cd.FileStorageKey, ct))?.Stream, Extension(cd.FileName, cd.FileContentType)));
                             break;
                         case "HrDocument":
                             var h = hr.First(x => x.Id == item.Id);
