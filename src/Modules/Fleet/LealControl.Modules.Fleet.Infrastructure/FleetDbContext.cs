@@ -10,7 +10,6 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
 {
     public const string Schema = "fleet";
     public DbSet<Vehicle> Vehicles => Set<Vehicle>();
-    public DbSet<CompanyDocument> CompanyDocuments => Set<CompanyDocument>();
     public DbSet<VehicleDocument> VehicleDocuments => Set<VehicleDocument>();
     public DbSet<VehicleDriver> VehicleDrivers => Set<VehicleDriver>();
     public DbSet<VehicleMaintenance> VehicleMaintenances => Set<VehicleMaintenance>();
@@ -98,19 +97,6 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             b.HasOne<ServiceOrder>().WithMany().HasForeignKey(x => x.ServiceOrderId).OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<CompanyDocument>(b =>
-        {
-            b.ToTable("CompanyDocuments");
-            b.HasKey(x => x.Id);
-            b.Property(x => x.Category).HasMaxLength(30);
-            b.Property(x => x.Title).HasMaxLength(160);
-            b.Property(x => x.Number).HasMaxLength(80);
-            b.Property(x => x.Issuer).HasMaxLength(160);
-            b.Property(x => x.FileStorageKey).HasMaxLength(300);
-            b.Property(x => x.FileName).HasMaxLength(200);
-            b.Property(x => x.FileContentType).HasMaxLength(100);
-            b.HasIndex(x => x.TenantId);
-        });
         modelBuilder.Entity<VehicleDocument>(b =>
         {
             b.ToTable("VehicleDocuments");
@@ -383,14 +369,6 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             ALTER TABLE fleet.""PersonCredentials"" ADD COLUMN IF NOT EXISTS ""FileStorageKey"" character varying(300);
             ALTER TABLE fleet.""PersonCredentials"" ADD COLUMN IF NOT EXISTS ""FileName"" character varying(200);
             ALTER TABLE fleet.""PersonCredentials"" ADD COLUMN IF NOT EXISTS ""FileContentType"" character varying(100);
-            CREATE TABLE IF NOT EXISTS fleet.""CompanyDocuments"" (
-                ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""Category"" character varying(30) NOT NULL, ""Title"" character varying(160) NOT NULL,
-                ""Number"" character varying(80) NOT NULL, ""Issuer"" character varying(160), ""IssueDateUtc"" timestamp with time zone,
-                ""ExpirationDateUtc"" timestamp with time zone, ""AlertDaysBefore"" integer NOT NULL DEFAULT 30, ""FileStorageKey"" character varying(300),
-                ""FileName"" character varying(200), ""FileContentType"" character varying(100), ""IsActive"" boolean NOT NULL DEFAULT true,
-                ""CreatedAtUtc"" timestamp with time zone NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS ""IX_CompanyDocuments_Tenant"" ON fleet.""CompanyDocuments"" (""TenantId"");
 
             CREATE TABLE IF NOT EXISTS fleet.""ServiceOrderItems"" (
                 ""Id"" uuid PRIMARY KEY,

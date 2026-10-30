@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { HrTabs } from "../components/hr/HrTabs";
 import { api } from "../api/client";
 import { type HrDashboardSummary } from "../api/types";
 
@@ -31,27 +32,7 @@ export function HumanResourcesDashboardPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="tab-row">
-        <Link to="/rrhh" className="tab-btn active">
-          📊 Tablero RRHH
-        </Link>
-        <Link to="/rrhh/empleados" className="tab-btn">
-          👤 Colaboradores & Legajos ({summary?.totalEmployees ?? "..."})
-        </Link>
-        <Link to="/rrhh/organigrama" className="tab-btn">
-          🏢 Organigrama & Puestos ({summary?.positionsCount ?? "..."})
-        </Link>
-        <Link to="/rrhh/manuales" className="tab-btn">
-          📖 Manuales de Procedimientos ({summary?.manualsCount ?? "..."})
-        </Link>
-        <Link to="/rrhh/liquidaciones" className="tab-btn">
-          💰 Liquidación de Sueldos
-        </Link>
-        <Link to="/rrhh/ayuda" className="tab-btn">
-          💡 Ayuda RRHH
-        </Link>
-      </div>
+      <HrTabs />
 
       {error && <div className="alert">{error}</div>}
 

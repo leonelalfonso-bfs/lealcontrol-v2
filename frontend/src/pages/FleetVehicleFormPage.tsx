@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import type {
   FleetDocType, Vehicle, VehicleDocument, VehicleDocumentWrite, VehicleMeterReading, VehicleType, VehicleWrite
 } from "../api/types";
-import { FleetAttachment } from "../components/fleet/FleetAttachment";
+import { FileAttachment } from "../components/FileAttachment";
 import { VehicleMaintenanceSection } from "../components/fleet/VehicleMaintenanceSection";
 import { todayAr } from "../lib/dates";
 import {
@@ -316,7 +316,7 @@ export function FleetVehicleFormPage() {
                           : <span className="badge off">Renovado</span>}</td>
                         <td>{d.number || "—"}</td>
                         <td>{d.issuer || "—"}</td>
-                        <td><FleetAttachment kind="documents" id={d.id} fileName={d.fileName} onChanged={() => id && void load(id)} /></td>
+                        <td><FileAttachment path={`/api/v1/fleet/documents/${d.id}/file`} fileName={d.fileName} onChanged={() => id && void load(id)} /></td>
                         <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                           {d.isActive && d.documentType !== "Other" && (
                             <button type="button" className="btn btn-outline compact" onClick={() => {
