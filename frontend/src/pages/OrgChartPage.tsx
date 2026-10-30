@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { HrTabs } from "../components/hr/HrTabs";
 import { api } from "../api/client";
 import { type Employee, type OrganizationPosition } from "../api/types";
 
@@ -74,27 +75,7 @@ export function OrgChartPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="tab-row">
-        <Link to="/rrhh" className="tab-btn">
-          📊 Tablero RRHH
-        </Link>
-        <Link to="/rrhh/empleados" className="tab-btn">
-          👤 Colaboradores & Legajos ({employees.length})
-        </Link>
-        <Link to="/rrhh/organigrama" className="tab-btn active">
-          🏢 Organigrama & Puestos ({positions.length})
-        </Link>
-        <Link to="/rrhh/manuales" className="tab-btn">
-          📖 Manuales de Procedimientos
-        </Link>
-        <Link to="/rrhh/liquidaciones" className="tab-btn">
-          💰 Liquidación de Sueldos
-        </Link>
-        <Link to="/rrhh/ayuda" className="tab-btn">
-          💡 Ayuda RRHH
-        </Link>
-      </div>
+      <HrTabs />
 
       {error && <div className="alert">{error}</div>}
 

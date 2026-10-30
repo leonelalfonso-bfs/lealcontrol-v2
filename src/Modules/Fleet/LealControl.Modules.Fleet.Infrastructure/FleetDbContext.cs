@@ -369,7 +369,6 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             ALTER TABLE fleet.""PersonCredentials"" ADD COLUMN IF NOT EXISTS ""FileStorageKey"" character varying(300);
             ALTER TABLE fleet.""PersonCredentials"" ADD COLUMN IF NOT EXISTS ""FileName"" character varying(200);
             ALTER TABLE fleet.""PersonCredentials"" ADD COLUMN IF NOT EXISTS ""FileContentType"" character varying(100);
-            DROP TABLE IF EXISTS fleet.""CompanyDocuments"";
 
             CREATE TABLE IF NOT EXISTS fleet.""ServiceOrderItems"" (
                 ""Id"" uuid PRIMARY KEY,

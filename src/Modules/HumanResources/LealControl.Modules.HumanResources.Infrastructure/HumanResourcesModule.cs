@@ -574,6 +574,24 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL
             );
             CREATE INDEX IF NOT EXISTS ""IX_CompanyDocuments_Tenant"" ON hr.""CompanyDocuments"" (""TenantId"");
+            -- La documentación de la empresa estuvo unos días en Flota: se pasa a RRHH (con sus archivos) y se borra la tabla vieja.
+            DO $$
+            BEGIN
+                IF to_regclass('fleet.""CompanyDocuments""') IS NOT NULL THEN
+                    INSERT INTO hr.""CompanyDocuments"" (""Id"", ""TenantId"", ""Category"", ""Title"", ""Number"", ""Issuer"", ""IssueDate"", ""ExpirationDate"",
+                        ""AlertDaysBefore"", ""FileStorageKey"", ""FileName"", ""FileContentType"", ""IsActive"", ""CreatedAtUtc"")
+                    SELECT ""Id"", ""TenantId"", ""Category"",
+                        CASE WHEN ""Title"" <> '' THEN ""Title"" ELSE CASE ""Category""
+                            WHEN 'Art' THEN 'ART – certificado de cobertura' WHEN 'LifeInsurance' THEN 'Seguro de vida obligatorio'
+                            WHEN 'Liability' THEN 'Seguro de responsabilidad civil' WHEN 'WorkProcedure' THEN 'Procedimiento de trabajo'
+                            WHEN 'Training' THEN 'Capacitación' WHEN 'SafetyProgram' THEN 'Programa de seguridad / higiene' ELSE 'Otro' END END,
+                        ""Number"", ""Issuer"", ""IssueDateUtc"", ""ExpirationDateUtc"", ""AlertDaysBefore"", ""FileStorageKey"", ""FileName"", ""FileContentType"",
+                        ""IsActive"", ""CreatedAtUtc""
+                    FROM fleet.""CompanyDocuments""
+                    ON CONFLICT (""Id"") DO NOTHING;
+                    DROP TABLE fleet.""CompanyDocuments"";
+                END IF;
+            END $$;
             ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""IsUnionMember"" boolean NOT NULL DEFAULT false;
             ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""SocialSecuritySituation"" integer NOT NULL DEFAULT 1;
             ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""SocialSecurityCondition"" integer NOT NULL DEFAULT 1;
