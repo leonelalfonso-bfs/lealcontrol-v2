@@ -18,6 +18,8 @@ import {
   AccountingStudyPortalPage,
   BankReconciliationPage,
   CalibrationReportFormPage,
+  TruckScaleReportPage,
+  MetrologyHelpPage,
   CalibrationReportPrintPage,
   CalibrationReportsPage,
   CashFlowPage,
@@ -578,6 +580,9 @@ export function App() {
               <Route path="/metrologia/instrumentos/nuevo" element={<MetrologyInstrumentFormPage />} />
               <Route path="/metrologia/instrumentos/:id" element={<MetrologyInstrumentFormPage />} />
               <Route path="/metrologia/ensayos/nuevo" element={<CalibrationReportFormPage />} />
+              <Route path="/metrologia/informes/camionera/nuevo" element={<TruckScaleReportPage />} />
+              <Route path="/metrologia/ayuda" element={<MetrologyHelpPage />} />
+              <Route path="/metrologia/informes/camionera/:id" element={<TruckScaleReportPage />} />
               <Route path="/metrologia/informes" element={<CalibrationReportsPage />} />
               <Route path="/metrologia/informes/:id/imprimir" element={<CalibrationReportPrintPage />} />
 

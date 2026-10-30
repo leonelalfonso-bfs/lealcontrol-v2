@@ -103,6 +103,11 @@ public sealed class MetrologyDbContext : DbContext
             b.ToTable("calibration_reports", "metrology");
             b.HasKey(x => x.Id);
             b.Property(x => x.CertificateNumber).HasMaxLength(64).IsRequired();
+            b.Property(x => x.ReportKind).HasMaxLength(20).HasDefaultValue("Generic");
+            b.Property(x => x.ServiceNumber).HasMaxLength(20);
+            b.Property(x => x.RemitoNumber).HasMaxLength(40);
+            b.Property(x => x.OrderReference).HasMaxLength(80);
+            b.Property(x => x.ProcedureCode).HasMaxLength(40);
             b.Property(x => x.EquipmentCode).HasMaxLength(32);
             b.Property(x => x.CustomerName).HasMaxLength(160);
             b.Property(x => x.Location).HasMaxLength(200);
@@ -340,6 +345,12 @@ public sealed class MetrologyDbContext : DbContext
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""AmendmentReason"" character varying(2000);",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""FinalTemperatureCelsius"" numeric(18,2);",
             @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""FinalTimeLocal"" character varying(16);",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ReportKind"" character varying(20) NOT NULL DEFAULT 'Generic';",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""TruckScaleDataJson"" text;",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ServiceNumber"" character varying(20);",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""RemitoNumber"" character varying(40);",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""OrderReference"" character varying(80);",
+            @"ALTER TABLE metrology.calibration_reports ADD COLUMN IF NOT EXISTS ""ProcedureCode"" character varying(40);",
             @"CREATE INDEX IF NOT EXISTS ""IX_reports_Tenant_Supersedes"" ON metrology.calibration_reports (""TenantId"", ""SupersedesReportId"");",
 
             @"CREATE TABLE IF NOT EXISTS metrology.tenant_settings (

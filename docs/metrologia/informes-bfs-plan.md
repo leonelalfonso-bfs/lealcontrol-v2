@@ -19,10 +19,16 @@ EURAMET cg-18. Los datos reales de clientes del paquete no se suben al repositor
    - los avisos: patrón vencido, masa de patrones insuficiente, escalones que no suman y lecturas incoherentes.
 
    Endpoint: `POST /api/v1/metrology/truck-scale/evaluate`.
-2. **Carga:** el informe de camionera queda guardado en el informe de calibración existente, como un tipo nuevo. Así se conservan la numeración, la reemisión y los vínculos con Calidad (PG12, PG16 y PG17). Además:
+2. **Carga** (hecho): el informe de camionera queda guardado en el informe de calibración existente, como un tipo nuevo. Así se conservan la numeración, la reemisión y los vínculos con Calidad (PG12, PG16 y PG17). Además:
    - los datos del instrumento salen del equipo del cliente y los patrones del maestro de pesas, con los vencidos bloqueados;
    - la pantalla sirve para el celular en campo, con el cálculo en vivo;
    - la numeración es única por servicio e instrumento.
+
+   Además:
+   - la pantalla es `/metrologia/informes/camionera/:id`, con respaldo en el equipo mientras se carga;
+   - la emisión la hace el director técnico, con el endpoint de aprobación existente, que recalcula y bloquea los patrones vencidos;
+   - una enmienda copia los datos;
+   - se creó la Ayuda de Metrología.
 3. **Impresión:** el PDF con el formato aprobado:
    - encabezado con logo, empresa y recuadro del número;
    - franja con las fechas y el resultado;

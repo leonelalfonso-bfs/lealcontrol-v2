@@ -1555,6 +1555,13 @@ export const api = {
   saveCalibrationReport: (body: Record<string, unknown>) =>
     request<import("./types").CalibrationReport>("/api/v1/metrology/reports", { method: "POST", body: JSON.stringify(body) }),
 
+  getTruckScaleReport: (id: string) => request<import("./types/truckScale").TruckScaleReport>(`/api/v1/metrology/reports/${id}/truck-scale`),
+  createTruckScaleReport: (body: import("./types/truckScale").TruckScaleInput) =>
+    request<import("./types/truckScale").TruckScaleReport>("/api/v1/metrology/reports/truck-scale", { method: "POST", body: JSON.stringify(body) }),
+  updateTruckScaleReport: (id: string, body: import("./types/truckScale").TruckScaleInput) =>
+    request<import("./types/truckScale").TruckScaleReport>(`/api/v1/metrology/reports/${id}/truck-scale`, { method: "PUT", body: JSON.stringify(body) }),
+  evaluateTruckScale: (data: import("./types/truckScale").TruckScaleData, testDate: string) =>
+    request<import("./types/truckScale").TruckScaleEvaluation>(`/api/v1/metrology/truck-scale/evaluate?testDate=${encodeURIComponent(testDate)}`, { method: "POST", body: JSON.stringify(data) }),
   approveCalibrationReport: (id: string) =>
     request<import("./types").CalibrationReport>(`/api/v1/metrology/reports/${id}/approve`, { method: "POST", body: "{}" }),
 

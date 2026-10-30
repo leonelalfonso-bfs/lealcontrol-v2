@@ -1,3 +1,10 @@
+using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Quality.Contracts;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+
 namespace LealControl.Modules.Metrology.Infrastructure;
 
 /// <summary>Datos de campo de un informe de calibración de báscula camionera (modelo del paquete "Informes BFS").</summary>
@@ -202,4 +209,159 @@ public static class TruckScaleEvaluator
 
     private static string N(decimal v) => v.ToString("#,##0.##", System.Globalization.CultureInfo.GetCultureInfo("es-AR"));
     private static string P(decimal v) => $"{(v * 100).ToString("0.0", System.Globalization.CultureInfo.GetCultureInfo("es-AR"))} %";
+}
+
+/// <summary>Lo que carga el técnico (en campo o en oficina). Instrumento y patrones salen de los maestros, no se tipean.</summary>
+public sealed record TruckScaleInput(
+    Guid EquipmentId, string Standard, string ServiceNumber, string? RemitoNumber, string? OrderReference, string ProcedureCode,
+    DateTime CalibrationDate, DateTime? NextCalibrationDate, string PerformedBy, int Modules, List<Guid> WeightIds,
+    TruckScaleSubstitution? Substitution, List<TruckScaleInspectionItem> Inspection, List<TruckScaleLoadStep> Weighing,
+    TruckScaleRepeatability? Repeatability, TruckScaleEccentricity? Eccentricity, TruckScaleZero? Zero, List<TruckScaleMobility> Mobility,
+    List<string> Observations, decimal? TemperatureCelsius, Guid? ThermometerInstrumentId);
+
+/// <summary>Alta, edición, cálculo y aprobación del informe de báscula camionera sobre el informe de calibración existente.</summary>
+public static class TruckScaleReportEndpoints
+{
+    private static readonly System.Text.Json.JsonSerializerOptions Json = new(System.Text.Json.JsonSerializerDefaults.Web);
+
+    public static string StandardCode(string standard) => standard == "25/2025" ? "Res25_2025" : "Res2307_80";
+
+    /// <summary>Datos para el cálculo: instrumento desde el equipo del cliente y patrones desde el maestro de pesas (agrupados por masa y certificado).</summary>
+    public static async Task<TruckScaleData> BuildDataAsync(MetrologyDbContext db, LealControl.BuildingBlocks.Tenancy.TenantId tenantId, MetrologyEquipment equipment, TruckScaleInput input, CancellationToken ct)
+    {
+        var ids = input.WeightIds.Distinct().ToList();
+        var weights = await db.StandardWeights.AsNoTracking().Where(w => w.TenantId == tenantId && ids.Contains(w.Id)).ToListAsync(ct);
+        var sets = weights.GroupBy(w => (w.NominalValue, w.CertificateNumber, w.ExpirationDate))
+            .OrderByDescending(g => g.Key.NominalValue)
+            .Select(g => new TruckScaleWeightSet(g.Key.NominalValue, g.Count(),
+                string.Join(" · ", g.Select(w => string.IsNullOrWhiteSpace(w.Code) ? w.SerialNumber : w.Code).OrderBy(c => c)), g.Key.CertificateNumber, g.Key.ExpirationDate))
+            .ToList();
+        return new TruckScaleData
+        {
+            Standard = input.Standard == "25/2025" ? "25/2025" : "2307",
+            Instrument = new TruckScaleInstrument
+            {
+                Max = equipment.MaxCapacity, E = equipment.VerificationIntervalE, D = equipment.DivisionD, AccuracyClass = equipment.AccuracyClass,
+                Unit = equipment.Unit, Indication = equipment.IndicationType.StartsWith("Anal", StringComparison.OrdinalIgnoreCase) ? "analogica" : "digital",
+                Supports = equipment.LoadCellsCount, Modules = input.Modules
+            },
+            Weights = sets, Substitution = input.Substitution, Inspection = input.Inspection, Weighing = input.Weighing, Repeatability = input.Repeatability,
+            Eccentricity = input.Eccentricity, Zero = input.Zero, Mobility = input.Mobility, Observations = input.Observations
+        };
+    }
+
+    private static void Apply(CalibrationReport report, TruckScaleInput input, TruckScaleEvaluation evaluation)
+    {
+        report.ReportKind = "TruckScale";
+        report.TruckScaleDataJson = System.Text.Json.JsonSerializer.Serialize(input, Json);
+        report.ServiceNumber = input.ServiceNumber.Trim();
+        report.RemitoNumber = string.IsNullOrWhiteSpace(input.RemitoNumber) ? null : input.RemitoNumber.Trim();
+        report.OrderReference = string.IsNullOrWhiteSpace(input.OrderReference) ? null : input.OrderReference.Trim();
+        report.ProcedureCode = input.ProcedureCode.Trim();
+        report.DocumentTitle = "Informe de calibración";
+        report.StandardApplied = StandardCode(evaluation.Standard);
+        report.CalibrationDate = DateTime.SpecifyKind(input.CalibrationDate.Date, DateTimeKind.Utc);
+        report.ExpirationDate = input.NextCalibrationDate is { } next ? DateTime.SpecifyKind(next.Date, DateTimeKind.Utc) : report.CalibrationDate.AddYears(1);
+        report.PerformedBy = input.PerformedBy.Trim();
+        report.TemperatureCelsius = input.TemperatureCelsius ?? report.TemperatureCelsius;
+        report.ThermometerInstrumentId = input.ThermometerInstrumentId;
+        report.Verdict = evaluation.Conforming ? "Approved" : "Rejected";
+        report.MaxObservedError = evaluation.Weighing.Count == 0 ? 0 : evaluation.Weighing.Max(s => Math.Max(Math.Abs(s.AscendingError), Math.Abs(s.DescendingError ?? 0)));
+        report.MaxAllowedError = evaluation.Weighing.Count == 0 ? 0 : evaluation.Weighing.Max(s => s.Mpe);
+    }
+
+    private static string? Validate(TruckScaleInput input, MetrologyEquipment equipment)
+    {
+        if (string.IsNullOrWhiteSpace(input.ServiceNumber)) return "Falta el número de servicio.";
+        if (string.IsNullOrWhiteSpace(input.PerformedBy)) return "Falta quién realizó el ensayo.";
+        if (equipment.MaxCapacity <= 0 || equipment.VerificationIntervalE <= 0) return "Completá en la ficha del equipo la capacidad máxima y la división de verificación (e).";
+        return null;
+    }
+
+    private static async Task<object> ViewAsync(MetrologyDbContext db, CalibrationReport report, MetrologyEquipment equipment, CancellationToken ct)
+    {
+        var input = System.Text.Json.JsonSerializer.Deserialize<TruckScaleInput>(report.TruckScaleDataJson!, Json)!;
+        var data = await BuildDataAsync(db, report.TenantId, equipment, input, ct);
+        return new
+        {
+            report.Id, Number = report.CertificateNumber, report.ReportStatus, report.ApprovedBy, report.EquipmentId, report.EquipmentCode, report.EquipmentDescription,
+            report.CustomerId, report.CustomerName, report.Location, report.ServiceNumber, report.RemitoNumber, report.OrderReference, report.ProcedureCode,
+            report.CalibrationDate, NextCalibrationDate = report.ExpirationDate, report.PerformedBy, report.CreatedAtUtc, report.SupersedesReportId,
+            Equipment = new
+            {
+                equipment.Code, equipment.Description, equipment.Location, equipment.PlatformType, equipment.Brand, equipment.Model, equipment.SerialNumber,
+                equipment.Indicator1Brand, equipment.Indicator1Model, equipment.Indicator1SerialNumber, equipment.ApprovalCode, equipment.PlatformApprovalCode,
+                equipment.LoadCellsCount, equipment.MaxCapacity, equipment.VerificationIntervalE, equipment.DivisionD, equipment.AccuracyClass, equipment.Unit, equipment.IndicationType
+            },
+            Input = input, Data = data, Evaluation = TruckScaleEvaluator.Evaluate(data, report.CalibrationDate)
+        };
+    }
+
+    public static void MapTruckScaleReportEndpoints(this RouteGroupBuilder group)
+    {
+        group.MapPost("/reports/truck-scale", async (TruckScaleInput input, ITenantContext tenantContext, MetrologyDbContext db, IQualityDocumentSnapshotProvider snapshots, CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureMetrologyTablesAsync(ct);
+            var equipment = await db.Equipments.FirstOrDefaultAsync(e => e.Id == input.EquipmentId && e.TenantId == tenantId, ct);
+            if (equipment is null) return Results.BadRequest(new { message = "El instrumento especificado no existe." });
+            if (Validate(input, equipment) is { } error) return Results.BadRequest(new { message = error });
+            // Número único servicio-instrumento: 2601-1, 2601-2…
+            var service = input.ServiceNumber.Trim();
+            var taken = await db.CalibrationReports.Where(r => r.TenantId == tenantId && r.ServiceNumber == service).Select(r => r.CertificateNumber).ToListAsync(ct);
+            var n = 1;
+            while (taken.Contains($"{service}-{n}")) n++;
+            var data = await BuildDataAsync(db, tenantId, equipment, input, ct);
+            var evaluation = TruckScaleEvaluator.Evaluate(data, input.CalibrationDate);
+            var request = new CalibrationReportWriteDto($"{service}-{n}", equipment.Id, StandardCode(data.Standard), "InService", input.CalibrationDate, input.NextCalibrationDate,
+                input.TemperatureCelsius ?? 20m, 50m, 1013.25m, input.PerformedBy, null, evaluation.Conforming ? "Approved" : "Rejected", 0, 0, 0, "{}", "[]", "[]", "[]", "[]", null, null,
+                RegulatoryProfile: data.Standard == "25/2025" ? MetrologyRegulatoryProfiles.Ipna25 : MetrologyRegulatoryProfiles.Transitional2307,
+                DocumentTitle: "Informe de calibración", ThermometerInstrumentId: input.ThermometerInstrumentId);
+            var result = await MetrologyEndpoints.CreateReportAsync(request, tenantContext, db, snapshots, ct, report => Apply(report, input, evaluation));
+            if (result is not Microsoft.AspNetCore.Http.HttpResults.Created<CalibrationReport> created) return result;
+            return Results.Created($"/api/v1/metrology/reports/{created.Value!.Id}", await ViewAsync(db, created.Value, equipment, ct));
+        });
+
+        group.MapPut("/reports/{id:guid}/truck-scale", async (Guid id, TruckScaleInput input, ITenantContext tenantContext, MetrologyDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureMetrologyTablesAsync(ct);
+            var report = await db.CalibrationReports.FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId && r.ReportKind == "TruckScale", ct);
+            if (report is null) return Results.NotFound(new { message = "Informe de camionera no encontrado." });
+            if (report.ReportStatus != "Draft") return Results.Conflict(new { message = "El informe ya está emitido: para corregirlo, emití una enmienda." });
+            var equipment = await db.Equipments.FirstAsync(e => e.Id == report.EquipmentId, ct);
+            if (input.EquipmentId != report.EquipmentId) return Results.BadRequest(new { message = "No se puede cambiar el instrumento de un informe." });
+            if (input.ServiceNumber.Trim() != report.ServiceNumber) return Results.BadRequest(new { message = "No se puede cambiar el número de servicio de un informe." });
+            if (Validate(input, equipment) is { } error) return Results.BadRequest(new { message = error });
+            var data = await BuildDataAsync(db, tenantId, equipment, input, ct);
+            Apply(report, input, TruckScaleEvaluator.Evaluate(data, input.CalibrationDate));
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(await ViewAsync(db, report, equipment, ct));
+        });
+
+        group.MapGet("/reports/{id:guid}/truck-scale", async (Guid id, ITenantContext tenantContext, MetrologyDbContext db, CancellationToken ct) =>
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureMetrologyTablesAsync(ct);
+            var report = await db.CalibrationReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId && r.ReportKind == "TruckScale", ct);
+            if (report is null) return Results.NotFound(new { message = "Informe de camionera no encontrado." });
+            var equipment = await db.Equipments.AsNoTracking().FirstAsync(e => e.Id == report.EquipmentId, ct);
+            return Results.Ok(await ViewAsync(db, report, equipment, ct));
+        });
+    }
+
+    /// <summary>Al aprobar: no se emite con patrones vencidos a la fecha del ensayo, y el dictamen se recalcula.</summary>
+    public static async Task<string?> CheckBeforeApprovalAsync(MetrologyDbContext db, CalibrationReport report, CancellationToken ct)
+    {
+        if (report.ReportKind != "TruckScale" || report.TruckScaleDataJson is null) return null;
+        var input = System.Text.Json.JsonSerializer.Deserialize<TruckScaleInput>(report.TruckScaleDataJson, Json)!;
+        var equipment = await db.Equipments.AsNoTracking().FirstAsync(e => e.Id == report.EquipmentId, ct);
+        var data = await BuildDataAsync(db, report.TenantId, equipment, input, ct);
+        if (data.Weights.Count == 0) return "Elegí los patrones utilizados.";
+        var evaluation = TruckScaleEvaluator.Evaluate(data, report.CalibrationDate);
+        var expired = evaluation.Warnings.Where(w => w.StartsWith("El patrón", StringComparison.Ordinal)).ToList();
+        if (expired.Count > 0) return string.Join(" ", expired);
+        Apply(report, input, evaluation);
+        return null;
+    }
 }

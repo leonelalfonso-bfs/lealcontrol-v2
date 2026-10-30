@@ -2138,6 +2138,8 @@ export type StandardWeight = {
 
 export type CalibrationReport = {
   id: string;
+  /** Generic o TruckScale (informe de camionera con su propia carga). */
+  reportKind?: string;
   tenantId: string;
   reportNumber: string;
   certificateType: string;
