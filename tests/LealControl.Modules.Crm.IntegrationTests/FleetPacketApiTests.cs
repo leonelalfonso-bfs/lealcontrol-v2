@@ -60,10 +60,10 @@ public sealed class FleetPacketApiTests : IAsyncLifetime
         }));
 
         // Documentación de la empresa: ART con vencimiento y un procedimiento sin vencimiento (el título es obligatorio).
-        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/v1/fleet/company-documents", new { category = "WorkProcedure", alertDaysBefore = 30 })).StatusCode);
-        var art = (await Json(await client.PostAsJsonAsync("/api/v1/fleet/company-documents", new { category = "Art", number = "123", issuer = "ART SA", expirationDate = "2026-12-31", alertDaysBefore = 30 }))).GetProperty("id").GetGuid();
-        await Json(await client.PostAsJsonAsync("/api/v1/fleet/company-documents", new { category = "WorkProcedure", title = "Procedimiento de calibración en planta", alertDaysBefore = 30 }));
-        await Json(await client.PostAsync($"/api/v1/fleet/company-documents/{art}/file", Pdf("art.pdf", "ART")));
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/v1/hr/company-documents", new { category = "WorkProcedure", alertDaysBefore = 30 })).StatusCode);
+        var art = (await Json(await client.PostAsJsonAsync("/api/v1/hr/company-documents", new { category = "Art", number = "123", issuer = "ART SA", expirationDate = "2026-12-31", alertDaysBefore = 30 }))).GetProperty("id").GetGuid();
+        await Json(await client.PostAsJsonAsync("/api/v1/hr/company-documents", new { category = "WorkProcedure", title = "Procedimiento de calibración en planta", alertDaysBefore = 30 }));
+        await Json(await client.PostAsync($"/api/v1/hr/company-documents/{art}/file", Pdf("art.pdf", "ART")));
 
         var preview = (await Json(await client.GetAsync($"/api/v1/fleet/packet/preview?employeeIds={employee}&vehicleIds={vehicle}&company=true"))).EnumerateArray().ToList();
         Assert.Equal(6, preview.Count);

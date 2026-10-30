@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { CredentialType, FleetMember, PersonCredential, PersonCredentialWrite } from "../api/types";
-import { FleetAttachment } from "../components/fleet/FleetAttachment";
+import { FileAttachment } from "../components/FileAttachment";
 import { CREDENTIAL_TYPES, civilDate, credentialLabel, daysText, requiredCredentials, rolesText, stateBadge, stateLabel } from "../lib/fleet";
 
 const EMPTY = (type: CredentialType = "DrivingLicense"): PersonCredentialWrite => ({
@@ -170,7 +170,7 @@ export function FleetPersonPage() {
                     <td>{civilDate(c.expirationDate)} {c.isActive && <span className="muted">({daysText(c.daysRemaining)})</span>}</td>
                     <td>{c.isActive ? <span className={`badge ${stateBadge[c.state]}`}>{stateLabel[c.state]}</span> : <span className="badge off">Renovada</span>}</td>
                     <td>{c.number || "—"}</td>
-                    <td><FleetAttachment kind="credentials" id={c.id} fileName={c.fileName} onChanged={() => void load()} /></td>
+                    <td><FileAttachment path={`/api/v1/fleet/credentials/${c.id}/file`} fileName={c.fileName} onChanged={() => void load()} /></td>
                     <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                       {c.isActive && c.type !== "Other" && (
                         <button type="button" className="btn btn-outline compact" onClick={() => {

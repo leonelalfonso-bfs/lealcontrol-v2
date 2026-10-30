@@ -8,6 +8,7 @@ const SECTIONS = [
   { id: "epp", title: "Entrega de elementos de protección (EPP)" },
   { id: "organigrama", title: "Organigrama y descripción de puestos" },
   { id: "manuales", title: "Manuales de procedimientos" },
+  { id: "documentacion-empresa", title: "Documentación de la empresa (ingreso a planta)" },
   { id: "seguridad-social", title: "Datos de seguridad social del legajo" },
   { id: "configuracion", title: "Configuración de sueldos" },
   { id: "convenios", title: "Convenios colectivos" },
@@ -78,6 +79,16 @@ export function HumanResourcesHelpPage() {
           <Step title="RRHH → Manuales de Procedimientos → “➕ Nuevo Procedimiento / Instructivo”.">
             Código, título, área, versión, fecha de vigencia, estado (vigente, en revisión u obsoleto) y el documento.
           </Step>
+        </Steps>
+      </ManualPart>
+
+      <ManualPart id="documentacion-empresa" title="6 bis. Documentación de la empresa (ingreso a planta)">
+        <Steps>
+          <Step title="RRHH → Documentación de la empresa → “＋ Documento”: ART (certificado de cobertura), seguro de vida obligatorio, responsabilidad civil, procedimientos de trabajo, capacitaciones o programa de seguridad.">
+            Cargá número o póliza, emisor, emisión y vencimiento (vacío si no vence, como un procedimiento). Después “📎 Subir” el archivo.
+          </Step>
+          <Step title="Lo que vence avisa con la anticipación elegida (aviso “Documentación de la empresa”). Lo que ya no se usa se archiva; “Ver también los archivados” lo muestra." />
+          <Step title="Flota → Legajo para ingreso a planta, con “Incluir la documentación de la empresa”: el ZIP lleva una carpeta Empresa con estos documentos, junto a las personas y las unidades." />
         </Steps>
       </ManualPart>
 
