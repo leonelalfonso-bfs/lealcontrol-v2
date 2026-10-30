@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
+import { savePdfAs } from "../utils/savePdfAs";
 import { api } from "../api/client";
 import { EmailComposer } from "../components/EmailComposer";
 import { QuoteDocument } from "../components/QuoteDocument";
@@ -100,7 +101,8 @@ export const QuotePrintPage: React.FC = () => {
       };
 
       const html2pdf = await loadHtml2Pdf();
-      await html2pdf().set(opt).from(element).save();
+      const blob: Blob = await html2pdf().set(opt).from(element).outputPdf("blob");
+      await savePdfAs(blob, filename);
     } catch (err: unknown) {
       console.error("Error al generar PDF:", err);
       alert("Hubo un error al generar el archivo PDF.");

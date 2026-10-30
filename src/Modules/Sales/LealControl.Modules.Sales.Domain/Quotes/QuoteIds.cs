@@ -15,7 +15,8 @@ public enum QuoteStatus
     Draft = 1,
     Sent = 2,
     Accepted = 3,
-    Ordered = 3,
+    // Valor propio: antes compartía el 3 con Aceptado y un presupuesto con pedido seguía ofreciendo "Generar pedido".
+    Ordered = 7,
     Rejected = 4,
     Expired = 5,
     Cancelled = 6

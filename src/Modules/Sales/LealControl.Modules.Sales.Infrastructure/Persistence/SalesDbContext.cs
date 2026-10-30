@@ -167,6 +167,11 @@ public sealed class SalesDbContext : DbContext, ISalesUnitOfWork
                 ""LotNumber"" character varying(200)
             );
 
+            -- Pedido de venta compartía el valor con Aceptado: los presupuestos con pedido quedaron como Aceptado.
+            UPDATE sales.quotes q SET ""Status"" = 'Ordered'
+            WHERE q.""Status"" = 'Accepted'
+              AND EXISTS (SELECT 1 FROM sales.orders o WHERE o.""QuoteId"" = q.""Id"" AND o.""Status"" <> 'Cancelled');
+
             CREATE SCHEMA IF NOT EXISTS purchases;
             CREATE TABLE IF NOT EXISTS purchases.purchase_invoice_arca_checks (
                 purchase_invoice_id uuid PRIMARY KEY,

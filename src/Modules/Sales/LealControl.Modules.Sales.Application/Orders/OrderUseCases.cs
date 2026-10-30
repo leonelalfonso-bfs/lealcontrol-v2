@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Results;
 using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Crm.Contracts.Opportunities;
 using LealControl.Modules.Sales.Application.Abstractions;
 using LealControl.Modules.Sales.Application.Orders.Models;
 using LealControl.Modules.Sales.Domain.Orders;
@@ -148,13 +149,16 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
     private readonly IOrderRepository _orderRepository;
     private readonly ISalesUnitOfWork _unitOfWork;
     private readonly ITenantContext _tenantContext;
+    private readonly IOpportunityQuoteSync _crm;
 
     public CreateOrderFromQuoteCommandHandler(
         IQuoteRepository quoteRepository,
         IOrderRepository orderRepository,
         ISalesUnitOfWork unitOfWork,
-        ITenantContext tenantContext)
+        ITenantContext tenantContext,
+        IOpportunityQuoteSync crm)
     {
+        _crm = crm;
         _quoteRepository = quoteRepository;
         _orderRepository = orderRepository;
         _unitOfWork = unitOfWork;
@@ -248,6 +252,8 @@ internal sealed class CreateOrderFromQuoteCommandHandler : IRequestHandler<Creat
 
         await _orderRepository.AddAsync(order, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        // El pedido gana la oportunidad del CRM.
+        if (quote.OpportunityId is { } opportunityId) await _crm.MarkWonAsync(opportunityId, cancellationToken);
 
         return Result.Success(order.ToDto());
     }

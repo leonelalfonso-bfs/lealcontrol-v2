@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IActivityRepository, ActivityRepository>();
         services.AddScoped<ICustomerDirectory, CustomerDirectory>();
         services.AddScoped<IOpportunityLookup, OpportunityLookup>();
+        services.AddScoped<IOpportunityQuoteSync, OpportunityQuoteSync>();
 
         services.AddHttpClient("arca", client =>
         {
