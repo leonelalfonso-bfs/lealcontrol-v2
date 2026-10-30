@@ -284,7 +284,7 @@ public static class TruckScaleReportEndpoints
         var data = await BuildDataAsync(db, report.TenantId, equipment, input, ct);
         return new
         {
-            report.Id, Number = report.CertificateNumber, report.ReportStatus, report.ApprovedBy, report.EquipmentId, report.EquipmentCode, report.EquipmentDescription,
+            report.Id, Number = report.CertificateNumber, report.ReportStatus, report.ApprovedBy, report.ApprovedByUserId, report.ApprovedAtUtc, report.EquipmentId, report.EquipmentCode, report.EquipmentDescription,
             report.CustomerId, report.CustomerName, report.Location, report.ServiceNumber, report.RemitoNumber, report.OrderReference, report.ProcedureCode,
             report.CalibrationDate, NextCalibrationDate = report.ExpirationDate, report.PerformedBy, report.CreatedAtUtc, report.SupersedesReportId,
             Equipment = new

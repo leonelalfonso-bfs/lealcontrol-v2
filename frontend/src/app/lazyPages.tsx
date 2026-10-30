@@ -263,6 +263,8 @@ export const StandardWeightFormPage = named(() => import("../pages/metrology/Sta
 export const StandardWeightsPrintPage = named(() => import("../pages/metrology/StandardWeightsPrintPage"), "StandardWeightsPrintPage");
 export const CalibrationReportsPage = named(() => import("../pages/metrology/CalibrationReportsPage"), "CalibrationReportsPage");
 export const MetrologyHelpPage = named(() => import("../pages/metrology/MetrologyHelpPage"), "MetrologyHelpPage");
+export const TruckScaleReportPrintPage = named(() => import("../pages/metrology/TruckScaleReportPrintPage"), "TruckScaleReportPrintPage");
+export const MetrologySignatoriesPage = named(() => import("../pages/metrology/MetrologySignatoriesPage"), "MetrologySignatoriesPage");
 export const TruckScaleReportPage = named(() => import("../pages/metrology/TruckScaleReportPage"), "TruckScaleReportPage");
 export const CalibrationReportFormPage = named(() => import("../pages/metrology/CalibrationReportFormPage"), "CalibrationReportFormPage");
 export const CalibrationReportPrintPage = named(() => import("../pages/metrology/CalibrationReportPrintPage"), "CalibrationReportPrintPage");

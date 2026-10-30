@@ -27,7 +27,7 @@ export type TruckScaleEvaluation = {
   totalStandardsMass: number; conforming: boolean; notTested: string[]; observations: string[]; warnings: string[];
 };
 export type TruckScaleReport = {
-  id: string; number: string; reportStatus: string; approvedBy?: string | null; equipmentId: string; equipmentCode: string; equipmentDescription: string;
+  id: string; number: string; reportStatus: string; approvedBy?: string | null; approvedByUserId?: string | null; approvedAtUtc?: string | null; equipmentId: string; equipmentCode: string; equipmentDescription: string;
   customerId?: string | null; customerName: string; location: string; serviceNumber: string; remitoNumber?: string | null; orderReference?: string | null; procedureCode: string;
   calibrationDate: string; nextCalibrationDate?: string | null; performedBy: string; createdAtUtc: string; supersedesReportId?: string | null;
   equipment: {
