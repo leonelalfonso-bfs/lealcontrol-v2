@@ -9,6 +9,7 @@ const SECTIONS = [
   { id: "organigrama", title: "Organigrama y descripción de puestos" },
   { id: "manuales", title: "Manuales de procedimientos" },
   { id: "documentacion-empresa", title: "Documentación de la empresa (ingreso a planta)" },
+  { id: "legajo-planta", title: "Legajo para ingreso a planta" },
   { id: "seguridad-social", title: "Datos de seguridad social del legajo" },
   { id: "configuracion", title: "Configuración de sueldos" },
   { id: "convenios", title: "Convenios colectivos" },
@@ -95,7 +96,17 @@ export function HumanResourcesHelpPage() {
             Cargá número o póliza, emisor, emisión y vencimiento (vacío si no vence, como un procedimiento). Después “📎 Subir” el archivo.
           </Step>
           <Step title="Lo que vence avisa con la anticipación elegida (aviso “Documentación de la empresa”). Lo que ya no se usa se archiva; “Ver también los archivados” lo muestra." />
-          <Step title="Flota → Legajo para ingreso a planta, con “Incluir la documentación de la empresa”: el ZIP lleva una carpeta Empresa con estos documentos, junto a las personas y las unidades." />
+        </Steps>
+      </ManualPart>
+
+      <ManualPart id="legajo-planta" title="6 ter. Legajo para ingreso a planta">
+        <Steps>
+          <Step title="RRHH → Legajo para ingreso a planta → tildá las personas y, si van con vehículo, las unidades. Desde una orden de servicio de Flota, “📦 Legajo para el cliente” ya trae las asignadas." />
+          <Step title="Se juntan solos: la documentación de la empresa (casilla “Incluir…”), el legajo de RRHH de cada persona (DNI, alta temprana, preocupacional…), sus credenciales de Flota (licencia, LINTI, apto) y los vencimientos de cada unidad (VTV, seguro, cédula…).">
+            Aparece cada documento con su vencimiento y estado. Van tildados los que tienen archivo y no están vencidos; los vencidos y los que no
+            tienen archivo se avisan arriba.
+          </Step>
+          <Step title="“⬇️ Descargar ZIP”: una carpeta Empresa, una por persona (con su DNI) y una por unidad (con su patente), y un Indice.txt con lo enviado y lo que falta, listo para mandar al cliente." />
         </Steps>
       </ManualPart>
 

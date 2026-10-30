@@ -8,8 +8,8 @@ using Xunit;
 
 namespace LealControl.Modules.Crm.IntegrationTests;
 
-/// <summary>Archivos de los vencimientos de Flota y legajo para ingreso a planta (personas y unidades en un ZIP).</summary>
-public sealed class FleetPacketApiTests : IAsyncLifetime
+/// <summary>Archivos de los vencimientos de Flota y legajo para ingreso a planta en RRHH (empresa, personas y unidades en un ZIP).</summary>
+public sealed class PlantAccessPacketApiTests : IAsyncLifetime
 {
     private readonly CrmWebApplicationFactory _factory = new();
     public Task InitializeAsync() => _factory.InitializeAsync();
@@ -65,12 +65,12 @@ public sealed class FleetPacketApiTests : IAsyncLifetime
         await Json(await client.PostAsJsonAsync("/api/v1/hr/company-documents", new { category = "WorkProcedure", title = "Procedimiento de calibración en planta", alertDaysBefore = 30 }));
         await Json(await client.PostAsync($"/api/v1/hr/company-documents/{art}/file", Pdf("art.pdf", "ART")));
 
-        var preview = (await Json(await client.GetAsync($"/api/v1/fleet/packet/preview?employeeIds={employee}&vehicleIds={vehicle}&company=true"))).EnumerateArray().ToList();
+        var preview = (await Json(await client.GetAsync($"/api/v1/hr/plant-packet/preview?employeeIds={employee}&vehicleIds={vehicle}&company=true"))).EnumerateArray().ToList();
         Assert.Equal(6, preview.Count);
         Assert.Equal("Empresa", preview[0].GetProperty("ownerName").GetString());
         Assert.False(preview.Single(p => p.GetProperty("label").GetString() == "Seguro").GetProperty("hasFile").GetBoolean());
 
-        var zip = await client.PostAsJsonAsync("/api/v1/fleet/packet", new { items = preview.Select(p => new { source = p.GetProperty("source").GetString(), id = p.GetProperty("id").GetGuid() }) });
+        var zip = await client.PostAsJsonAsync($"/api/v1/hr/plant-packet?employeeIds={employee}&vehicleIds={vehicle}", new { items = preview.Select(p => new { source = p.GetProperty("source").GetString(), id = p.GetProperty("id").GetGuid() }) });
         Assert.True(zip.IsSuccessStatusCode, await zip.Content.ReadAsStringAsync());
         Assert.Equal("application/zip", zip.Content.Headers.ContentType?.MediaType);
         using var archive = new ZipArchive(await zip.Content.ReadAsStreamAsync());

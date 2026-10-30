@@ -10,7 +10,7 @@ const SECTIONS = [
   { id: "combustible", title: "Combustible" },
   { id: "costos", title: "Costos por unidad" },
   { id: "avisos", title: "Avisos" },
-  { id: "legajo", title: "Documentos escaneados y legajo para ingreso a planta" },
+  { id: "legajo", title: "Documentos escaneados" },
   { id: "problemas", title: "Cuando el sistema no te deja" },
   { id: "estados", title: "Qué significa cada estado" }
 ];
@@ -174,19 +174,13 @@ export function FleetHelpPage() {
         </p>
       </ManualPart>
 
-      <ManualPart id="legajo" title="8 bis. Documentos escaneados y legajo para ingreso a planta">
+      <ManualPart id="legajo" title="8 bis. Documentos escaneados">
         <Steps>
           <Step title="En cada vencimiento de la unidad (VTV, seguro, cédula…) y en cada credencial de la persona (licencia, LINTI, apto…): “📎 Subir” el PDF o la foto.">
             Se aceptan PDF, JPG o PNG de hasta 15 MB. “📎 Ver” lo abre; “Cambiar” lo reemplaza. Al renovar, el nuevo vencimiento lleva su propio archivo
             y el anterior queda en el historial.
           </Step>
-          <Step title="Los documentos de la persona que están en su legajo de RRHH (DNI, alta temprana, preocupacional…) se suman solos: no hace falta cargarlos de nuevo en Flota." />
-          <Step title="La documentación de la empresa (ART, seguros, procedimientos, capacitaciones) se carga en RRHH → Documentación de la empresa y se suma al legajo." />
-          <Step title="Flota → Legajo para ingreso a planta → tildá las personas y las unidades. Desde una orden de servicio, “📦 Legajo para el cliente” ya trae las asignadas.">
-            Aparece cada documento con su vencimiento y estado. Van tildados los que tienen archivo y no están vencidos; los vencidos y los que no
-            tienen archivo se avisan arriba.
-          </Step>
-          <Step title="“⬇️ Descargar ZIP”: una carpeta “Empresa” (si está tildado “Incluir la documentación de la empresa”), una por persona (con su DNI) y otra por unidad (con su patente), y un Indice.txt con todo lo enviado y lo que falta." />
+          <Step title="Estos archivos van al legajo para ingreso a planta, que se arma en RRHH → Legajo para ingreso a planta. Desde una orden de servicio, “📦 Legajo para el cliente” lo abre con las personas y unidades asignadas." />
         </Steps>
       </ManualPart>
 

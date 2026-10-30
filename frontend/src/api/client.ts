@@ -161,7 +161,7 @@ export type PurchaseArcaCheck = { purchaseInvoiceId: string; outcome: "Approved"
 export type MetrologySignatory = { userId: string; fullName: string; title?: string | null; license?: string | null; hasSignature: boolean; updatedAtUtc: string };
 
 /** Documento que puede ir en el legajo para ingreso a planta. */
-export type FleetPacketItem = {
+export type PlantPacketItem = {
   source: "Credential" | "HrDocument" | "VehicleDocument" | "CompanyDocument"; id: string; ownerType: "Person" | "Vehicle" | "Company"; ownerId: string; ownerName: string;
   label: string; number?: string | null; expirationDate?: string | null; state: "Vigente" | "Por vencer" | "Vencido"; hasFile: boolean;
 };
@@ -1142,19 +1142,19 @@ export const api = {
     return response.json() as Promise<{ fileName: string }>;
   },
   openAttachedFile: (path: string) => requestBlob(path).then((blob) => window.open(URL.createObjectURL(blob), "_blank")),
-  fleetPacketPreview: (employeeIds: string[], vehicleIds: string[], company: boolean) =>
-    request<FleetPacketItem[]>(`/api/v1/fleet/packet/preview?employeeIds=${employeeIds.join(",")}&vehicleIds=${vehicleIds.join(",")}&company=${company}`),
+  plantPacketPreview: (employeeIds: string[], vehicleIds: string[], company: boolean) =>
+    request<PlantPacketItem[]>(`/api/v1/hr/plant-packet/preview?employeeIds=${employeeIds.join(",")}&vehicleIds=${vehicleIds.join(",")}&company=${company}`),
   listCompanyDocuments: (history = false) => request<CompanyDocument[]>(`/api/v1/hr/company-documents${history ? "?history=true" : ""}`),
   saveCompanyDocument: (id: string | null, body: CompanyDocumentWrite) =>
     request<CompanyDocument>(`/api/v1/hr/company-documents${id ? `/${id}` : ""}`, { method: id ? "PUT" : "POST", body: JSON.stringify(body) }),
   archiveCompanyDocument: (id: string) => request<unknown>(`/api/v1/hr/company-documents/${id}/archive`, { method: "POST" }),
-  downloadFleetPacket: async (items: { source: string; id: string }[]) => {
+  downloadPlantPacket: async (employeeIds: string[], vehicleIds: string[], items: { source: string; id: string }[]) => {
     const token = localStorage.getItem("leal_token");
     const tenantId = localStorage.getItem("leal_tenant_id");
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers.Authorization = `Bearer ${token}`;
     if (tenantId) headers["X-Tenant-Id"] = tenantId;
-    const response = await fetch("/api/v1/fleet/packet", { method: "POST", headers, body: JSON.stringify({ items }) });
+    const response = await fetch(`/api/v1/hr/plant-packet?employeeIds=${employeeIds.join(",")}&vehicleIds=${vehicleIds.join(",")}`, { method: "POST", headers, body: JSON.stringify({ items }) });
     if (!response.ok) throw new Error(`No se pudo armar el legajo (${response.status})`);
     const url = URL.createObjectURL(await response.blob());
     const a = document.createElement("a");

@@ -221,7 +221,7 @@ export const FleetAgendaPage = named(() => import("../pages/FleetAgendaPage"), "
 export const FleetServiceOrderReportPage = named(() => import("../pages/FleetServiceOrderReportPage"), "FleetServiceOrderReportPage");
 export const ConfigurationHelpPage = named(() => import("../pages/ConfigurationHelpPage"), "ConfigurationHelpPage");
 export const CompanyDocumentsPage = named(() => import("../pages/CompanyDocumentsPage"), "CompanyDocumentsPage");
-export const FleetPacketPage = named(() => import("../pages/FleetPacketPage"), "FleetPacketPage");
+export const PlantAccessPacketPage = named(() => import("../pages/PlantAccessPacketPage"), "PlantAccessPacketPage");
 export const FleetHelpPage = named(() => import("../pages/FleetHelpPage"), "FleetHelpPage");
 export const InflationAdjustmentPage = named(() => import("../pages/accounting/InflationAdjustmentPage"), "InflationAdjustmentPage");
 export const FixedAssetsPage = named(() => import("../pages/accounting/FixedAssetsPage"), "FixedAssetsPage");
