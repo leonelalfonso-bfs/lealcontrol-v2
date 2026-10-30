@@ -48,7 +48,7 @@ public sealed record SaveVehicleDocumentRequest(
 public sealed record VehicleDocumentView(
     Guid Id, Guid VehicleId, FleetDocType DocumentType, string Title, string Number, string? Issuer,
     string? IssueDate, string ExpirationDate, int AlertDaysBefore, decimal Cost, bool IsActive,
-    int DaysRemaining, ExpirationState State);
+    int DaysRemaining, ExpirationState State, string? FileName = null);
 
 public sealed record VehicleView(
     Guid Id, string Plate, string? InternalCode, string Label, string Brand, string Model, int Year,
@@ -84,7 +84,7 @@ public static class FleetModule
         var (state, days) = FleetRules.Evaluate(expiration, d.AlertDaysBefore, today);
         return new VehicleDocumentView(d.Id, d.VehicleId, d.DocumentType, d.Title, d.PolicyOrDocNumber, d.IssuerCompany,
             d.IssueDateUtc == default ? null : FleetRules.FromStoredDate(d.IssueDateUtc).ToString("yyyy-MM-dd"),
-            expiration.ToString("yyyy-MM-dd"), d.AlertDaysBefore, d.Cost, d.IsActive, days, d.IsActive ? state : ExpirationState.Ok);
+            expiration.ToString("yyyy-MM-dd"), d.AlertDaysBefore, d.Cost, d.IsActive, days, d.IsActive ? state : ExpirationState.Ok, d.FileName);
     }
 
     /// <summary>Vencidos, por vencer y faltantes de cada unidad (sin las dadas de baja).</summary>
@@ -142,6 +142,7 @@ public static class FleetModule
     {
         var group = endpoints.MapGroup("/api/v1/fleet").WithTags("Fleet");
         group.MapFleetPeople();
+        group.MapFleetFiles();
         group.MapFleetMaintenance();
         group.MapFleetFuel();
         group.MapFleetServiceOrders();

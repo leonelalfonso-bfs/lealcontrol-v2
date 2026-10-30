@@ -196,7 +196,6 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
                 ""ExpirationDateUtc"" timestamp with time zone NOT NULL,
                 ""Cost"" numeric(18,2) NOT NULL DEFAULT 0,
                 ""AlertDaysBefore"" integer NOT NULL DEFAULT 30,
-                ""FileAttachmentUrl"" text,
                 ""IsActive"" boolean NOT NULL DEFAULT true,
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL
             );
@@ -363,6 +362,13 @@ public sealed class FleetDbContext(DbContextOptions<FleetDbContext> options) : D
             ALTER TABLE fleet.""ServiceOrders"" ADD COLUMN IF NOT EXISTS ""RemitoId"" uuid;
             ALTER TABLE fleet.""ServiceOrders"" ADD COLUMN IF NOT EXISTS ""RemitoNumber"" character varying(32);
             ALTER TABLE fleet.""ServiceOrders"" ADD COLUMN IF NOT EXISTS ""StockAppliedAtUtc"" timestamp with time zone;
+            ALTER TABLE fleet.""VehicleDocuments"" ADD COLUMN IF NOT EXISTS ""FileStorageKey"" character varying(300);
+            ALTER TABLE fleet.""VehicleDocuments"" ADD COLUMN IF NOT EXISTS ""FileName"" character varying(200);
+            ALTER TABLE fleet.""VehicleDocuments"" ADD COLUMN IF NOT EXISTS ""FileContentType"" character varying(100);
+            ALTER TABLE fleet.""VehicleDocuments"" DROP COLUMN IF EXISTS ""FileAttachmentUrl"";
+            ALTER TABLE fleet.""PersonCredentials"" ADD COLUMN IF NOT EXISTS ""FileStorageKey"" character varying(300);
+            ALTER TABLE fleet.""PersonCredentials"" ADD COLUMN IF NOT EXISTS ""FileName"" character varying(200);
+            ALTER TABLE fleet.""PersonCredentials"" ADD COLUMN IF NOT EXISTS ""FileContentType"" character varying(100);
 
             CREATE TABLE IF NOT EXISTS fleet.""ServiceOrderItems"" (
                 ""Id"" uuid PRIMARY KEY,

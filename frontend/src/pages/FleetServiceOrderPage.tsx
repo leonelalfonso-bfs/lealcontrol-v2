@@ -167,6 +167,9 @@ export function FleetServiceOrderPage() {
           <Link to="/flota/ordenes" className="btn btn-outline">← Órdenes</Link>
           <Link to="/flota/agenda" className="btn btn-outline">Agenda</Link>
           {order && <Link to={`/flota/ordenes/${order.id}/informe`} className="btn btn-outline">📄 Informe</Link>}
+          {order && (order.people.length > 0 || order.vehicles.length > 0) && (
+            <Link to={`/flota/legajo?employees=${order.people.map((p) => p.id).join(",")}&vehicles=${order.vehicles.map((v) => v.id).join(",")}`} className="btn btn-outline">📦 Legajo para el cliente</Link>
+          )}
         </div>
       </div>
 

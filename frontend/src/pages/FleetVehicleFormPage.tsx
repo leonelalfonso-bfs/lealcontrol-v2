@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type {
   FleetDocType, Vehicle, VehicleDocument, VehicleDocumentWrite, VehicleMeterReading, VehicleType, VehicleWrite
 } from "../api/types";
+import { FleetAttachment } from "../components/fleet/FleetAttachment";
 import { VehicleMaintenanceSection } from "../components/fleet/VehicleMaintenanceSection";
 import { todayAr } from "../lib/dates";
 import {
@@ -303,7 +304,7 @@ export function FleetVehicleFormPage() {
               <div className="table-wrap">
                 <table>
                   <thead>
-                    <tr><th>Tipo</th><th>Vence</th><th>Estado</th><th>Número</th><th>Emisor</th><th style={{ textAlign: "right" }}>Acciones</th></tr>
+                    <tr><th>Tipo</th><th>Vence</th><th>Estado</th><th>Número</th><th>Emisor</th><th>Archivo</th><th style={{ textAlign: "right" }}>Acciones</th></tr>
                   </thead>
                   <tbody>
                     {documents.map((d) => (
@@ -315,6 +316,7 @@ export function FleetVehicleFormPage() {
                           : <span className="badge off">Renovado</span>}</td>
                         <td>{d.number || "—"}</td>
                         <td>{d.issuer || "—"}</td>
+                        <td><FleetAttachment kind="documents" id={d.id} fileName={d.fileName} onChanged={() => id && void load(id)} /></td>
                         <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                           {d.isActive && d.documentType !== "Other" && (
                             <button type="button" className="btn btn-outline compact" onClick={() => {

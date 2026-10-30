@@ -1572,6 +1572,8 @@ export type VehicleWrite = {
 
 export type VehicleDocument = {
   id: string;
+  /** Nombre del archivo escaneado, si se cargó. */
+  fileName?: string | null;
   vehicleId: string;
   documentType: FleetDocType;
   title: string;
@@ -1655,6 +1657,8 @@ export type FleetMemberWrite = {
 
 export type PersonCredential = {
   id: string;
+  /** Nombre del archivo escaneado, si se cargó. */
+  fileName?: string | null;
   employeeId: string;
   type: CredentialType;
   category?: string | null;

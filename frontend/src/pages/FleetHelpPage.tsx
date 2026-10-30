@@ -10,6 +10,7 @@ const SECTIONS = [
   { id: "combustible", title: "Combustible" },
   { id: "costos", title: "Costos por unidad" },
   { id: "avisos", title: "Avisos" },
+  { id: "legajo", title: "Documentos escaneados y legajo para ingreso a planta" },
   { id: "problemas", title: "Cuando el sistema no te deja" },
   { id: "estados", title: "Qué significa cada estado" }
 ];
@@ -171,6 +172,21 @@ export function FleetHelpPage() {
           En <Link to="/mi-perfil/avisos">Mi perfil → Mis avisos</Link> cada persona elige qué avisos de Flota quiere ver (y recibir por correo):
           vencimientos de unidades, licencias y credenciales, services, y órdenes de servicio con problemas. También aparecen en la campanita del menú.
         </p>
+      </ManualPart>
+
+      <ManualPart id="legajo" title="8 bis. Documentos escaneados y legajo para ingreso a planta">
+        <Steps>
+          <Step title="En cada vencimiento de la unidad (VTV, seguro, cédula…) y en cada credencial de la persona (licencia, LINTI, apto…): “📎 Subir” el PDF o la foto.">
+            Se aceptan PDF, JPG o PNG de hasta 15 MB. “📎 Ver” lo abre; “Cambiar” lo reemplaza. Al renovar, el nuevo vencimiento lleva su propio archivo
+            y el anterior queda en el historial.
+          </Step>
+          <Step title="Los documentos de la persona que están en su legajo de RRHH (DNI, alta temprana, preocupacional…) se suman solos: no hace falta cargarlos de nuevo en Flota." />
+          <Step title="Flota → Legajo para ingreso a planta → tildá las personas y las unidades. Desde una orden de servicio, “📦 Legajo para el cliente” ya trae las asignadas.">
+            Aparece cada documento con su vencimiento y estado. Van tildados los que tienen archivo y no están vencidos; los vencidos y los que no
+            tienen archivo se avisan arriba.
+          </Step>
+          <Step title="“⬇️ Descargar ZIP”: una carpeta por persona (con su DNI) y por unidad (con su patente), y un Indice.txt con todo lo enviado y lo que falta." />
+        </Steps>
       </ManualPart>
 
       <ManualPart id="problemas" title="9. Cuando el sistema no te deja">

@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { CredentialType, FleetMember, PersonCredential, PersonCredentialWrite } from "../api/types";
+import { FleetAttachment } from "../components/fleet/FleetAttachment";
 import { CREDENTIAL_TYPES, civilDate, credentialLabel, daysText, requiredCredentials, rolesText, stateBadge, stateLabel } from "../lib/fleet";
 
 const EMPTY = (type: CredentialType = "DrivingLicense"): PersonCredentialWrite => ({
@@ -161,7 +162,7 @@ export function FleetPersonPage() {
         {credentials.length === 0 ? <p className="muted" style={{ margin: 0 }}>No hay credenciales cargadas.</p> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Credencial</th><th>Vence</th><th>Estado</th><th>Número</th><th style={{ textAlign: "right" }}>Acciones</th></tr></thead>
+              <thead><tr><th>Credencial</th><th>Vence</th><th>Estado</th><th>Número</th><th>Archivo</th><th style={{ textAlign: "right" }}>Acciones</th></tr></thead>
               <tbody>
                 {credentials.map((c) => (
                   <tr key={c.id} style={c.isActive ? undefined : { opacity: 0.55 }}>
@@ -169,6 +170,7 @@ export function FleetPersonPage() {
                     <td>{civilDate(c.expirationDate)} {c.isActive && <span className="muted">({daysText(c.daysRemaining)})</span>}</td>
                     <td>{c.isActive ? <span className={`badge ${stateBadge[c.state]}`}>{stateLabel[c.state]}</span> : <span className="badge off">Renovada</span>}</td>
                     <td>{c.number || "—"}</td>
+                    <td><FleetAttachment kind="credentials" id={c.id} fileName={c.fileName} onChanged={() => void load()} /></td>
                     <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                       {c.isActive && c.type !== "Other" && (
                         <button type="button" className="btn btn-outline compact" onClick={() => {
