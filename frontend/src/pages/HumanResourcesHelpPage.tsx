@@ -66,6 +66,10 @@ export function HumanResourcesHelpPage() {
 
       <ManualPart id="organigrama" title="5. Organigrama y descripción de puestos">
         <Steps>
+          <Step title="Primero, las áreas: en Organigrama & Puestos, “Áreas de la empresa” → “＋ Agregar área”. Cada empresa define las suyas.">
+            Las áreas agrupan los puestos y los manuales. Renombrar un área actualiza los puestos y manuales que la usan; solo se puede
+            borrar si no tiene ninguno.
+          </Step>
           <Step title="RRHH → Organigrama & Puestos → “➕ Nuevo Puesto en Organigrama”.">
             Nombre del puesto, área, a quién reporta, quién lo ocupa y nivel.
           </Step>
@@ -77,7 +81,10 @@ export function HumanResourcesHelpPage() {
       <ManualPart id="manuales" title="6. Manuales de procedimientos">
         <Steps>
           <Step title="RRHH → Manuales de Procedimientos → “➕ Nuevo Procedimiento / Instructivo”.">
-            Código, título, área, versión, fecha de vigencia, estado (vigente, en revisión u obsoleto) y el documento.
+            Código, título, área, versión, fecha de vigencia y estado (vigente, en revisión u obsoleto).
+          </Step>
+          <Step title="Al guardarlo queda abierto: “📎 Subir” el documento (PDF, Word o imagen, hasta 25 MB). “📎 Ver” lo abre y “Cambiar” lo reemplaza.">
+            Si además el original está en una carpeta compartida, se puede cargar el enlace externo (opcional).
           </Step>
         </Steps>
       </ManualPart>

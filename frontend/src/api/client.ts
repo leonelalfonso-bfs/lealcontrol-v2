@@ -173,6 +173,9 @@ export type CompanyDocument = {
 };
 export type CompanyDocumentWrite = { category: string; title?: string; number?: string; issuer?: string; issueDate?: string | null; expirationDate?: string | null; alertDaysBefore: number };
 
+/** Área de la empresa en RRHH, con cuántos puestos y manuales la usan. */
+export type HrArea = { id: string; name: string; sortOrder: number; positions: number; manuals: number };
+
 export const api = {
   listFinanceAccounts: () => request<FinanceAccount[]>("/api/v1/finance/accounts"),
   listFinanceConcepts: () => request<FinanceConcept[]>("/api/v1/finance/concepts"),
@@ -993,6 +996,10 @@ export const api = {
     request<void>(`/api/v1/hr/documents/${id}`, { method: "DELETE" }),
 
   // Manuales de Procedimientos
+  listHrAreas: () => request<HrArea[]>("/api/v1/hr/areas"),
+  saveHrArea: (id: string | null, body: { name: string; sortOrder: number }) =>
+    request<unknown>(`/api/v1/hr/areas${id ? `/${id}` : ""}`, { method: id ? "PUT" : "POST", body: JSON.stringify(body) }),
+  deleteHrArea: (id: string) => request<void>(`/api/v1/hr/areas/${id}`, { method: "DELETE" }),
   listProcedureManuals: (area?: string) => {
     const q = area && area !== "ALL" ? `?area=${encodeURIComponent(area)}` : "";
     return request<import("./types").ProcedureManual[]>(`/api/v1/hr/manuals${q}`);

@@ -137,7 +137,11 @@ public sealed class ProcedureManual
     public DateTime EffectiveDate { get; set; } = DateTime.UtcNow;
     public string Status { get; set; } = "Vigente"; // Vigente, EnRevisión, Obsoleto
     public string Description { get; set; } = "";
+    /// <summary>Enlace externo opcional (Drive, SharePoint…); el documento se sube como archivo.</summary>
     public string? DocumentUrl { get; set; }
+    public string? FileStorageKey { get; set; }
+    public string? FileName { get; set; }
+    public string? FileContentType { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 }
 
@@ -180,6 +184,7 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
     public DbSet<OrganizationPosition> Positions => Set<OrganizationPosition>();
     public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
     public DbSet<CompanyDocument> CompanyDocuments => Set<CompanyDocument>();
+    public DbSet<HrArea> Areas => Set<HrArea>();
     public DbSet<ProcedureManual> ProcedureManuals => Set<ProcedureManual>();
     public DbSet<Payroll.PayrollEmployerSettings> PayrollEmployerSettings => Set<Payroll.PayrollEmployerSettings>();
     public DbSet<Payroll.PayrollLegalParameter> PayrollLegalParameters => Set<Payroll.PayrollLegalParameter>();
@@ -226,6 +231,13 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.HasIndex(x => new { x.TenantId, x.Department });
         });
 
+        modelBuilder.Entity<HrArea>(b =>
+        {
+            b.ToTable("Areas");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Name).HasMaxLength(80).IsRequired();
+            b.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+        });
         modelBuilder.Entity<CompanyDocument>(b =>
         {
             b.ToTable("CompanyDocuments");
@@ -574,6 +586,13 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
                 ""CreatedAtUtc"" timestamp with time zone NOT NULL
             );
             CREATE INDEX IF NOT EXISTS ""IX_CompanyDocuments_Tenant"" ON hr.""CompanyDocuments"" (""TenantId"");
+            CREATE TABLE IF NOT EXISTS hr.""Areas"" (
+                ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""Name"" character varying(80) NOT NULL, ""SortOrder"" integer NOT NULL DEFAULT 0
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_Areas_Tenant_Name"" ON hr.""Areas"" (""TenantId"", ""Name"");
+            ALTER TABLE hr.""ProcedureManuals"" ADD COLUMN IF NOT EXISTS ""FileStorageKey"" character varying(300);
+            ALTER TABLE hr.""ProcedureManuals"" ADD COLUMN IF NOT EXISTS ""FileName"" character varying(200);
+            ALTER TABLE hr.""ProcedureManuals"" ADD COLUMN IF NOT EXISTS ""FileContentType"" character varying(100);
             -- La documentación de la empresa estuvo unos días en Flota: se pasa a RRHH (con sus archivos) y se borra la tabla vieja.
             DO $$
             BEGIN
@@ -829,6 +848,7 @@ public static class HumanResourcesModule
     {
         var group = endpoints.MapGroup("/api/v1/hr").WithTags("HumanResources");
         group.MapCompanyDocuments();
+        group.MapHrAreas();
 
         // -------------------------------------------------------------
         // DASHBOARD SUMMARY
@@ -1144,6 +1164,8 @@ public static class HumanResourcesModule
             body.Id = Guid.NewGuid();
             body.TenantId = tenantId;
             body.CreatedAtUtc = DateTime.UtcNow;
+            // El archivo solo se carga por su endpoint.
+            (body.FileStorageKey, body.FileName, body.FileContentType) = (null, null, null);
 
             db.ProcedureManuals.Add(body);
             await db.SaveChangesAsync(ct);
@@ -1167,6 +1189,31 @@ public static class HumanResourcesModule
 
             await db.SaveChangesAsync(ct);
             return Results.Ok(manual);
+        });
+
+        group.MapPost("/manuals/{id:guid}/file", async (Guid id, IFormFile? file, HumanResourcesDbContext db, ITenantContext tenant, LealControl.BuildingBlocks.Storage.IFileStorage storage, CancellationToken ct) =>
+        {
+            var tenantId = tenant.TenantId.Value;
+            var manual = await db.ProcedureManuals.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
+            if (manual is null) return Results.NotFound(new { detail = "Manual no encontrado." });
+            if (file is null || file.Length == 0) return Results.BadRequest(new { detail = "Elegí un archivo." });
+            if (file.Length > 25 * 1024 * 1024) return Results.BadRequest(new { detail = "El archivo supera los 25 MB." });
+            var type = file.ContentType?.ToLowerInvariant() ?? "";
+            string[] allowed = ["application/pdf", "image/jpeg", "image/png", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+            if (!allowed.Contains(type)) return Results.BadRequest(new { detail = "Solo PDF, Word, JPG o PNG." });
+            await using var stream = file.OpenReadStream();
+            var stored = await storage.SaveAsync("hr", tenantId, file.FileName, type, stream, ct);
+            (manual.FileStorageKey, manual.FileName, manual.FileContentType) = (stored.StorageKey, System.IO.Path.GetFileName(file.FileName), type);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { fileName = manual.FileName });
+        }).DisableAntiforgery();
+
+        group.MapGet("/manuals/{id:guid}/file", async (Guid id, HumanResourcesDbContext db, ITenantContext tenant, LealControl.BuildingBlocks.Storage.IFileStorage storage, CancellationToken ct) =>
+        {
+            var manual = await db.ProcedureManuals.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, ct);
+            if (manual?.FileStorageKey is null) return Results.NotFound(new { detail = "No tiene archivo cargado." });
+            var content = await storage.OpenReadAsync(manual.FileStorageKey, ct);
+            return content is null ? Results.NotFound(new { detail = "No se encontró el archivo." }) : Results.File(content.Stream, manual.FileContentType ?? content.ContentType, manual.FileName ?? content.FileName);
         });
 
         group.MapDelete("/manuals/{id:guid}", async (Guid id, HumanResourcesDbContext db, ITenantContext tenant, CancellationToken ct) =>

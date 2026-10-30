@@ -1,18 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api } from "../api/client";
+import { api, type HrArea } from "../api/client";
 import { type Employee, type OrganizationPosition } from "../api/types";
 
-const DEPARTMENTS = [
-  "Dirección & Gerencia General",
-  "Metrología & Laboratorio",
-  "Calidad & Asuntos Regulatorios",
-  "Comercial & Ventas",
-  "Taller & Servicio Técnico",
-  "Logística & Flota",
-  "Administración & Finanzas",
-  "Recursos Humanos"
-];
 
 export function OrganizationPositionFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +17,9 @@ export function OrganizationPositionFormPage() {
 
   // Form state
   const [title, setTitle] = useState("");
-  const [department, setDepartment] = useState(DEPARTMENTS[0]);
+  const [areas, setAreas] = useState<HrArea[]>([]);
+  const [department, setDepartment] = useState("");
+  useEffect(() => { api.listHrAreas().then(setAreas).catch(() => setAreas([])); }, []);
   const [reportsToPositionId, setReportsToPositionId] = useState<string>("");
   const [assignedEmployeeId, setAssignedEmployeeId] = useState<string>("");
   const [mission, setMission] = useState("");
@@ -176,7 +168,9 @@ export function OrganizationPositionFormPage() {
             <label>
               Departamento / Área de la Empresa *
               <select value={department} onChange={(e) => setDepartment(e.target.value)} required>
-                {DEPARTMENTS.map((d) => (
+                {!department && <option value="">Elegí un área…</option>}
+                {department && !areas.some((a) => a.name === department) && <option value={department}>{department}</option>}
+                {areas.map((a) => a.name).map((d) => (
                   <option key={d} value={d}>
                     {d}
                   </option>

@@ -1,18 +1,10 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api } from "../api/client";
+import { api, type HrArea } from "../api/client";
+import { FileAttachment } from "../components/FileAttachment";
 import { type ProcedureManual } from "../api/types";
 
 import { todayAr } from "../lib/dates";
-const AREAS = [
-  "Metrología",
-  "Calidad",
-  "Ventas",
-  "Taller",
-  "Logística",
-  "Administración",
-  "RRHH"
-];
 
 export function ProcedureManualFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +13,10 @@ export function ProcedureManualFormPage() {
 
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
-  const [area, setArea] = useState(AREAS[0]);
+  const [areas, setAreas] = useState<HrArea[]>([]);
+  const [area, setArea] = useState("");
+  const [fileName, setFileName] = useState<string | null>(null);
+  useEffect(() => { api.listHrAreas().then(setAreas).catch(() => setAreas([])); }, []);
   const [version, setVersion] = useState("v1.0");
   const [effectiveDate, setEffectiveDate] = useState(todayAr());
   const [status, setStatus] = useState("Vigente");
@@ -52,6 +47,7 @@ export function ProcedureManualFormPage() {
           setStatus(current.status);
           setDescription(current.description || "");
           setDocumentUrl(current.documentUrl || "");
+          setFileName(current.fileName ?? null);
         }
       } catch (err: any) {
         setError(err?.message || "Error al cargar procedimiento.");
@@ -87,7 +83,10 @@ export function ProcedureManualFormPage() {
       if (isEditing && id) {
         await api.updateProcedureManual(id, payload);
       } else {
-        await api.createProcedureManual(payload);
+        // Al crearlo se queda en el manual para subir el archivo.
+        const created = await api.createProcedureManual(payload);
+        navigate(`/rrhh/manuales/${created.id}`, { replace: true });
+        return;
       }
       navigate("/rrhh/manuales");
     } catch (err: any) {
@@ -164,9 +163,11 @@ export function ProcedureManualFormPage() {
             <label>
               Área Responsable *
               <select value={area} onChange={(e) => setArea(e.target.value)} required>
-                {AREAS.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
+                {!area && <option value="">Elegí un área…</option>}
+                {area && !areas.some((a) => a.name === area) && <option value={area}>{area}</option>}
+                {areas.map((a) => (
+                  <option key={a.id} value={a.name}>
+                    {a.name}
                   </option>
                 ))}
               </select>
@@ -230,14 +231,21 @@ export function ProcedureManualFormPage() {
             />
           </label>
 
+          <div className="stack" style={{ gap: 4 }}>
+            <strong style={{ fontSize: "0.85rem" }}>Documento (PDF, Word o imagen)</strong>
+            {isEditing && id ? (
+              <FileAttachment path={`/api/v1/hr/manuals/${id}/file`} fileName={fileName} onChanged={() => void api.listProcedureManuals().then((list) => setFileName(list.find((m) => m.id === id)?.fileName ?? null))} />
+            ) : <small className="muted">Guardá el manual y después subí el archivo.</small>}
+          </div>
+
           <label>
-            Enlace al Documento Completo (URL / PDF / Documento en la Nube)
+            Enlace externo (opcional)
             <input
               value={documentUrl}
               onChange={(e) => setDocumentUrl(e.target.value)}
-              placeholder="https://docs.google.com/... o https://drive.google.com/..."
+              placeholder="https://drive.google.com/..."
             />
-            <small className="muted">Podés pegar el link directo al archivo PDF o carpeta de red donde se encuentra el manual original.</small>
+            <small className="muted">Solo si además el original está en una carpeta compartida.</small>
           </label>
         </div>
 
