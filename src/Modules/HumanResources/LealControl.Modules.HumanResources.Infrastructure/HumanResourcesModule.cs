@@ -179,6 +179,7 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<OrganizationPosition> Positions => Set<OrganizationPosition>();
     public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
+    public DbSet<CompanyDocument> CompanyDocuments => Set<CompanyDocument>();
     public DbSet<ProcedureManual> ProcedureManuals => Set<ProcedureManual>();
     public DbSet<Payroll.PayrollEmployerSettings> PayrollEmployerSettings => Set<Payroll.PayrollEmployerSettings>();
     public DbSet<Payroll.PayrollLegalParameter> PayrollLegalParameters => Set<Payroll.PayrollLegalParameter>();
@@ -225,6 +226,19 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
             b.HasIndex(x => new { x.TenantId, x.Department });
         });
 
+        modelBuilder.Entity<CompanyDocument>(b =>
+        {
+            b.ToTable("CompanyDocuments");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Category).HasMaxLength(30);
+            b.Property(x => x.Title).HasMaxLength(160);
+            b.Property(x => x.Number).HasMaxLength(80);
+            b.Property(x => x.Issuer).HasMaxLength(160);
+            b.Property(x => x.FileStorageKey).HasMaxLength(300);
+            b.Property(x => x.FileName).HasMaxLength(200);
+            b.Property(x => x.FileContentType).HasMaxLength(100);
+            b.HasIndex(x => x.TenantId);
+        });
         modelBuilder.Entity<EmployeeDocument>(b =>
         {
             b.ToTable("EmployeeDocuments");
@@ -552,6 +566,14 @@ public sealed class HumanResourcesDbContext(DbContextOptions<HumanResourcesDbCon
 
         await Database.ExecuteSqlRawAsync(sql, ct);
         await Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS hr.""CompanyDocuments"" (
+                ""Id"" uuid PRIMARY KEY, ""TenantId"" uuid NOT NULL, ""Category"" character varying(30) NOT NULL, ""Title"" character varying(160) NOT NULL,
+                ""Number"" character varying(80) NOT NULL, ""Issuer"" character varying(160), ""IssueDate"" timestamp with time zone,
+                ""ExpirationDate"" timestamp with time zone, ""AlertDaysBefore"" integer NOT NULL DEFAULT 30, ""FileStorageKey"" character varying(300),
+                ""FileName"" character varying(200), ""FileContentType"" character varying(100), ""IsActive"" boolean NOT NULL DEFAULT true,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ""IX_CompanyDocuments_Tenant"" ON hr.""CompanyDocuments"" (""TenantId"");
             ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""IsUnionMember"" boolean NOT NULL DEFAULT false;
             ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""SocialSecuritySituation"" integer NOT NULL DEFAULT 1;
             ALTER TABLE hr.""Employees"" ADD COLUMN IF NOT EXISTS ""SocialSecurityCondition"" integer NOT NULL DEFAULT 1;
@@ -779,6 +801,7 @@ public static class HumanResourcesModule
     {
         services.AddTenantDbContext<HumanResourcesDbContext>(HumanResourcesDbContext.Schema);
         services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, CompanyDocumentNotices>();
         services.AddScoped<LealControl.Modules.Accounting.Contracts.Posting.IAccountingDocumentSource, Payroll.PayrollAccountingSource>();
 
         return services;
@@ -787,6 +810,7 @@ public static class HumanResourcesModule
     public static IEndpointRouteBuilder MapHumanResourcesModule(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/v1/hr").WithTags("HumanResources");
+        group.MapCompanyDocuments();
 
         // -------------------------------------------------------------
         // DASHBOARD SUMMARY

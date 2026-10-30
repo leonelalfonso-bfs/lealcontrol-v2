@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type CompanyDocument, type CompanyDocumentWrite } from "../api/client";
-import { FleetAttachment } from "../components/fleet/FleetAttachment";
+import { FileAttachment } from "../components/FileAttachment";
 
 const CATEGORIES: Record<string, string> = {
   Art: "ART – certificado de cobertura", LifeInsurance: "Seguro de vida obligatorio", Liability: "Seguro de responsabilidad civil",
   WorkProcedure: "Procedimiento de trabajo", Training: "Capacitación", SafetyProgram: "Programa de seguridad / higiene", Other: "Otro"
 };
 const STATE: Record<CompanyDocument["state"], { text: string; color: string }> = {
-  Ok: { text: "Vigente", color: "#2E6B1F" }, DueSoon: { text: "Por vencer", color: "#9A5B00" }, Expired: { text: "Vencido", color: "#A1271B" }, Missing: { text: "—", color: "#64748b" }
+  Ok: { text: "Vigente", color: "#2E6B1F" }, DueSoon: { text: "Por vencer", color: "#9A5B00" }, Expired: { text: "Vencido", color: "#A1271B" }
 };
 const day = (iso?: string | null) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "Sin vencimiento");
 const EMPTY: CompanyDocumentWrite = { category: "Art", title: "", number: "", issuer: "", issueDate: "", expirationDate: "", alertDaysBefore: 30 };
 
 /** Documentación de la empresa que piden los clientes para el ingreso a planta, con sus vencimientos y el archivo escaneado. */
-export function FleetCompanyDocumentsPage() {
+export function CompanyDocumentsPage() {
   const [docs, setDocs] = useState<CompanyDocument[]>([]);
   const [history, setHistory] = useState(false);
   const [form, setForm] = useState<CompanyDocumentWrite | null>(null);
@@ -33,6 +33,7 @@ export function FleetCompanyDocumentsPage() {
         </div>
         <div className="toolbar">
           <Link to="/flota/legajo" className="btn btn-outline">📦 Legajo para ingreso a planta</Link>
+          <Link to="/rrhh/ayuda#documentacion-empresa" className="btn btn-outline">💡 Ayuda</Link>
           <button type="button" className="btn" onClick={() => { setEditingId(null); setForm({ ...EMPTY }); }}>＋ Documento</button>
         </div>
       </div>
@@ -82,7 +83,7 @@ export function FleetCompanyDocumentsPage() {
                   <td>{d.issuer || "—"}</td>
                   <td>{day(d.expirationDate)}</td>
                   <td style={{ color: STATE[d.state].color, fontWeight: 700 }}>{d.isActive ? (d.expirationDate ? STATE[d.state].text : "Vigente") : "Archivado"}</td>
-                  <td><FleetAttachment kind="company-documents" id={d.id} fileName={d.fileName} onChanged={() => void load()} /></td>
+                  <td><FileAttachment path={`/api/v1/hr/company-documents/${d.id}/file`} fileName={d.fileName} onChanged={() => void load()} /></td>
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                     <button type="button" className="btn btn-outline compact" onClick={() => {
                       setEditingId(d.id);

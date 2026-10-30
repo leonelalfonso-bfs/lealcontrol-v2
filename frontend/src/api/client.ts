@@ -166,11 +166,10 @@ export type FleetPacketItem = {
   label: string; number?: string | null; expirationDate?: string | null; state: "Vigente" | "Por vencer" | "Vencido"; hasFile: boolean;
 };
 
-export type FleetFileKind = "documents" | "credentials" | "company-documents";
 /** Documentación de la empresa para ingreso a planta (ART, seguros, procedimientos, capacitaciones). */
 export type CompanyDocument = {
   id: string; category: string; categoryLabel: string; title: string; number: string; issuer?: string | null; issueDate?: string | null; expirationDate?: string | null;
-  alertDaysBefore: number; isActive: boolean; daysRemaining?: number | null; state: "Ok" | "DueSoon" | "Expired" | "Missing"; fileName?: string | null;
+  alertDaysBefore: number; isActive: boolean; daysRemaining?: number | null; state: "Ok" | "DueSoon" | "Expired"; fileName?: string | null;
 };
 export type CompanyDocumentWrite = { category: string; title?: string; number?: string; issuer?: string; issueDate?: string | null; expirationDate?: string | null; alertDaysBefore: number };
 
@@ -1117,8 +1116,8 @@ export const api = {
   updateVehicleDocument: (id: string, body: import("./types").VehicleDocumentWrite) =>
     request<import("./types").VehicleDocument>(`/api/v1/fleet/documents/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteVehicleDocument: (id: string) => request<void>(`/api/v1/fleet/documents/${id}`, { method: "DELETE" }),
-  /** Escaneo (PDF o imagen) de un vencimiento de unidad o de una credencial de persona. */
-  uploadFleetFile: async (kind: FleetFileKind, id: string, file: File) => {
+  /** Sube el escaneo (PDF o imagen) de un documento a su ruta de archivo en la API. */
+  uploadAttachedFile: async (path: string, file: File) => {
     const form = new FormData();
     form.append("file", file);
     const token = localStorage.getItem("leal_token");
@@ -1126,7 +1125,7 @@ export const api = {
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
     if (tenantId) headers["X-Tenant-Id"] = tenantId;
-    const response = await fetch(`/api/v1/fleet/${kind}/${id}/file`, { method: "POST", headers, body: form });
+    const response = await fetch(path, { method: "POST", headers, body: form });
     if (!response.ok) {
       const text = await response.text();
       let message = text;
@@ -1135,14 +1134,13 @@ export const api = {
     }
     return response.json() as Promise<{ fileName: string }>;
   },
-  openFleetFile: (kind: FleetFileKind, id: string) =>
-    requestBlob(`/api/v1/fleet/${kind}/${id}/file`).then((blob) => window.open(URL.createObjectURL(blob), "_blank")),
+  openAttachedFile: (path: string) => requestBlob(path).then((blob) => window.open(URL.createObjectURL(blob), "_blank")),
   fleetPacketPreview: (employeeIds: string[], vehicleIds: string[], company: boolean) =>
     request<FleetPacketItem[]>(`/api/v1/fleet/packet/preview?employeeIds=${employeeIds.join(",")}&vehicleIds=${vehicleIds.join(",")}&company=${company}`),
-  listCompanyDocuments: (history = false) => request<CompanyDocument[]>(`/api/v1/fleet/company-documents${history ? "?history=true" : ""}`),
+  listCompanyDocuments: (history = false) => request<CompanyDocument[]>(`/api/v1/hr/company-documents${history ? "?history=true" : ""}`),
   saveCompanyDocument: (id: string | null, body: CompanyDocumentWrite) =>
-    request<CompanyDocument>(`/api/v1/fleet/company-documents${id ? `/${id}` : ""}`, { method: id ? "PUT" : "POST", body: JSON.stringify(body) }),
-  archiveCompanyDocument: (id: string) => request<unknown>(`/api/v1/fleet/company-documents/${id}/archive`, { method: "POST" }),
+    request<CompanyDocument>(`/api/v1/hr/company-documents${id ? `/${id}` : ""}`, { method: id ? "PUT" : "POST", body: JSON.stringify(body) }),
+  archiveCompanyDocument: (id: string) => request<unknown>(`/api/v1/hr/company-documents/${id}/archive`, { method: "POST" }),
   downloadFleetPacket: async (items: { source: string; id: string }[]) => {
     const token = localStorage.getItem("leal_token");
     const tenantId = localStorage.getItem("leal_tenant_id");

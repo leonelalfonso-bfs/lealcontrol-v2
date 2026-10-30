@@ -26,6 +26,19 @@ public static class FleetFiles
     private const long MaxBytes = 15 * 1024 * 1024;
     private static readonly string[] Allowed = ["application/pdf", "image/jpeg", "image/png"];
 
+    /// <summary>Documentación de la empresa: es de RRHH (hr.CompanyDocuments) y acá solo se lee para el legajo.</summary>
+    private sealed record CompanyDocumentRow(Guid Id, string Title, string Number, DateTime? ExpirationDate, int AlertDaysBefore, string? FileStorageKey, string? FileName, string? FileContentType);
+
+    private static async Task<List<CompanyDocumentRow>> CompanyDocumentsAsync(FleetDbContext db, Guid tenantId, CancellationToken ct)
+    {
+        var exists = await db.Database.SqlQuery<bool>($"""SELECT to_regclass('hr."CompanyDocuments"') IS NOT NULL AS "Value" """).SingleAsync(ct);
+        if (!exists) return [];
+        return await db.Database.SqlQuery<CompanyDocumentRow>($"""
+            SELECT "Id", "Title", "Number", "ExpirationDate", "AlertDaysBefore", "FileStorageKey", "FileName", "FileContentType"
+            FROM hr."CompanyDocuments" WHERE "TenantId" = {tenantId} AND "IsActive"
+            """).ToListAsync(ct);
+    }
+
     private sealed record HrDocumentRow(Guid Id, Guid EmployeeId, string DocumentType, string FileName, string? FileUrl, DateTime? ExpiryDate);
 
     /// <summary>Nombres de los documentos del legajo de RRHH (los mismos que muestra su pantalla).</summary>
@@ -79,11 +92,11 @@ public static class FleetFiles
         var items = new List<PacketItem>();
         if (includeCompany)
         {
-            foreach (var d in await db.CompanyDocuments.AsNoTracking().Where(d => d.TenantId == tenantId && d.IsActive).ToListAsync(ct))
+            foreach (var d in await CompanyDocumentsAsync(db, tenantId, ct))
             {
-                var view = FleetCompanyDocuments.ToView(d, today);
-                items.Add(new("CompanyDocument", d.Id, "Company", Guid.Empty, "Empresa", FleetCompanyDocuments.Label(d), string.IsNullOrWhiteSpace(d.Number) ? null : d.Number,
-                    view.ExpirationDate, view.State == ExpirationState.Expired ? "Vencido" : view.State == ExpirationState.DueSoon ? "Por vencer" : "Vigente", d.FileStorageKey is not null));
+                DateOnly? expiration = d.ExpirationDate is { } x ? DateOnly.FromDateTime(x) : null;
+                items.Add(new("CompanyDocument", d.Id, "Company", Guid.Empty, "Empresa", d.Title, string.IsNullOrWhiteSpace(d.Number) ? null : d.Number,
+                    expiration?.ToString("yyyy-MM-dd"), State(expiration, d.AlertDaysBefore, today), d.FileStorageKey is not null));
             }
         }
         var employees = await FleetPeople.EmployeesAsync(db, tenantId, ct);
@@ -171,7 +184,7 @@ public static class FleetFiles
             var credentialIds = req.Items.Where(i => i.Source == "Credential").Select(i => i.Id).ToList();
             var documentIds = req.Items.Where(i => i.Source == "VehicleDocument").Select(i => i.Id).ToList();
             var companyIds = req.Items.Where(i => i.Source == "CompanyDocument").Select(i => i.Id).ToList();
-            var companyDocs = await db.CompanyDocuments.AsNoTracking().Where(d => d.TenantId == t && companyIds.Contains(d.Id)).ToListAsync(ct);
+            var companyDocs = (await CompanyDocumentsAsync(db, t, ct)).Where(d => companyIds.Contains(d.Id)).ToList();
             var credentials = await db.PersonCredentials.AsNoTracking().Where(c => c.TenantId == t && credentialIds.Contains(c.Id)).ToListAsync(ct);
             var documents = await db.VehicleDocuments.AsNoTracking().Where(d => d.TenantId == t && documentIds.Contains(d.Id)).ToListAsync(ct);
             var hrIds = req.Items.Where(i => i.Source == "HrDocument").Select(i => i.Id).ToHashSet();

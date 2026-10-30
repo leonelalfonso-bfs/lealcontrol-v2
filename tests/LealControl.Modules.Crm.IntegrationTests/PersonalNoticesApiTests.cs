@@ -47,7 +47,7 @@ public sealed class PersonalNoticesApiTests : IAsyncLifetime
     public async Task Each_user_only_gets_the_notices_their_profile_allows()
     {
         using var admin = _factory.CreateAuthenticatedClient();
-        Assert.Equal(["finance.cheques-to-deposit", "fleet.company-documents", "fleet.expirations", "fleet.people-credentials", "fleet.service-orders", "fleet.services", "sales.overdue-invoices", "sales.quotes-expiring"],
+        Assert.Equal(["finance.cheques-to-deposit", "fleet.expirations", "fleet.people-credentials", "fleet.service-orders", "fleet.services", "hr.company-documents", "sales.overdue-invoices", "sales.quotes-expiring"],
             Codes(await Json(await admin.GetAsync("/api/v1/notices/settings"))));
 
         using var seller = await UserAsync(admin, "Vendedor", new Dictionary<string, string> { ["sales"] = "Edit" }, amounts: true);

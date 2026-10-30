@@ -66,7 +66,6 @@ public static class FleetModule
     {
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetExpirationNotices>();
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetPeopleNotices>();
-        services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetCompanyDocumentNotices>();
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetServiceNotices>();
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, FleetServiceOrderNotices>();
         services.AddTenantDbContext<FleetDbContext>(FleetDbContext.Schema);
@@ -144,7 +143,6 @@ public static class FleetModule
         var group = endpoints.MapGroup("/api/v1/fleet").WithTags("Fleet");
         group.MapFleetPeople();
         group.MapFleetFiles();
-        group.MapFleetCompanyDocuments();
         group.MapFleetMaintenance();
         group.MapFleetFuel();
         group.MapFleetServiceOrders();

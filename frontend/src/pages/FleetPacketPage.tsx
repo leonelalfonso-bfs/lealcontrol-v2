@@ -54,7 +54,7 @@ export function FleetPacketPage() {
       <div className="row" style={{ gap: 16, flexWrap: "wrap", alignItems: "center" }}>
         <input placeholder="Buscar persona o unidad" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 360 }} />
         <label className="row" style={{ gap: 6, alignItems: "center" }}>
-          <input type="checkbox" checked={company} onChange={(e) => setCompany(e.target.checked)} /> Incluir la documentación de la empresa (<Link to="/flota/empresa">ver</Link>)
+          <input type="checkbox" checked={company} onChange={(e) => setCompany(e.target.checked)} /> Incluir la documentación de la empresa (<Link to="/rrhh/documentacion-empresa">ver</Link>)
         </label>
       </div>
       <div className="grid-2">
