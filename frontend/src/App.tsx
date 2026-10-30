@@ -58,6 +58,7 @@ import {
   FinanceExpenseReportPrintPage,
   FleetFuelLogsPage,
   FleetHelpPage,
+  FleetPacketPage,
   FleetMaintenancePage,
   FleetCostsPage,
   FleetServiceOrdersPage,
@@ -537,6 +538,7 @@ export function App() {
               <Route path="/flota/ordenes/:id" element={<FleetServiceOrderPage />} />
               <Route path="/flota/ordenes/:id/informe" element={<FleetServiceOrderReportPage />} />
               <Route path="/flota/ayuda" element={<FleetHelpPage />} />
+              <Route path="/flota/legajo" element={<FleetPacketPage />} />
 
               {/* Grains & Agriculture Brokerage Routes */}
               <Route path="/cereales" element={<GrainsDashboardPage />} />

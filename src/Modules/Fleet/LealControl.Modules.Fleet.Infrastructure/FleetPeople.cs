@@ -26,7 +26,7 @@ public sealed record SavePersonCredentialRequest(
 
 public sealed record PersonCredentialView(
     Guid Id, Guid EmployeeId, CredentialType Type, string? Category, string Number, string? Issuer, string? IssueDate,
-    string ExpirationDate, int AlertDaysBefore, bool IsActive, int DaysRemaining, ExpirationState State);
+    string ExpirationDate, int AlertDaysBefore, bool IsActive, int DaysRemaining, ExpirationState State, string? FileName = null);
 
 public sealed record FleetMemberView(
     Guid Id, Guid EmployeeId, string FullName, string FileNumber, string DocumentNumber, string JobTitle, bool EmployeeActive,
@@ -60,7 +60,7 @@ public static class FleetPeople
         var (state, days) = FleetRules.Evaluate(expiration, c.AlertDaysBefore, today);
         return new PersonCredentialView(c.Id, c.EmployeeId, c.Type, c.Category, c.Number, c.Issuer,
             c.IssueDateUtc == default ? null : FleetRules.FromStoredDate(c.IssueDateUtc).ToString("yyyy-MM-dd"),
-            expiration.ToString("yyyy-MM-dd"), c.AlertDaysBefore, c.IsActive, days, c.IsActive ? state : ExpirationState.Ok);
+            expiration.ToString("yyyy-MM-dd"), c.AlertDaysBefore, c.IsActive, days, c.IsActive ? state : ExpirationState.Ok, c.FileName);
     }
 
     /// <summary>Vencidas, por vencer y faltantes de cada persona (solo empleados activos).</summary>

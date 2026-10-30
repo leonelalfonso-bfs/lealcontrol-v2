@@ -71,7 +71,10 @@ public sealed class VehicleDocument
     public DateTime ExpirationDateUtc { get; set; }
     public decimal Cost { get; set; }
     public int AlertDaysBefore { get; set; } = 30;
-    public string? FileAttachmentUrl { get; set; }
+    /// <summary>Archivo escaneado (PDF o imagen) en el almacenamiento de archivos.</summary>
+    public string? FileStorageKey { get; set; }
+    public string? FileName { get; set; }
+    public string? FileContentType { get; set; }
     /// <summary>False cuando se renovó (hay uno más nuevo del mismo tipo).</summary>
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; }
@@ -200,6 +203,9 @@ public sealed class PersonCredential
     public DateTime ExpirationDateUtc { get; set; }
     public int AlertDaysBefore { get; set; } = 30;
     public bool IsActive { get; set; } = true;
+    public string? FileStorageKey { get; set; }
+    public string? FileName { get; set; }
+    public string? FileContentType { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 }
 

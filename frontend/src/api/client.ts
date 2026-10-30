@@ -160,6 +160,12 @@ export type PurchaseArcaCheck = { purchaseInvoiceId: string; outcome: "Approved"
 /** Responsable técnico que firma informes de Metrología. */
 export type MetrologySignatory = { userId: string; fullName: string; title?: string | null; license?: string | null; hasSignature: boolean; updatedAtUtc: string };
 
+/** Documento que puede ir en el legajo para ingreso a planta. */
+export type FleetPacketItem = {
+  source: "Credential" | "HrDocument" | "VehicleDocument"; id: string; ownerType: "Person" | "Vehicle"; ownerId: string; ownerName: string;
+  label: string; number?: string | null; expirationDate?: string | null; state: "Vigente" | "Por vencer" | "Vencido"; hasFile: boolean;
+};
+
 export const api = {
   listFinanceAccounts: () => request<FinanceAccount[]>("/api/v1/finance/accounts"),
   listFinanceConcepts: () => request<FinanceConcept[]>("/api/v1/finance/concepts"),
@@ -1103,6 +1109,43 @@ export const api = {
   updateVehicleDocument: (id: string, body: import("./types").VehicleDocumentWrite) =>
     request<import("./types").VehicleDocument>(`/api/v1/fleet/documents/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteVehicleDocument: (id: string) => request<void>(`/api/v1/fleet/documents/${id}`, { method: "DELETE" }),
+  /** Escaneo (PDF o imagen) de un vencimiento de unidad o de una credencial de persona. */
+  uploadFleetFile: async (kind: "documents" | "credentials", id: string, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const token = localStorage.getItem("leal_token");
+    const tenantId = localStorage.getItem("leal_tenant_id");
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    if (tenantId) headers["X-Tenant-Id"] = tenantId;
+    const response = await fetch(`/api/v1/fleet/${kind}/${id}/file`, { method: "POST", headers, body: form });
+    if (!response.ok) {
+      const text = await response.text();
+      let message = text;
+      try { message = JSON.parse(text).detail ?? text; } catch { /* texto plano */ }
+      throw new Error(message || `Error (${response.status})`);
+    }
+    return response.json() as Promise<{ fileName: string }>;
+  },
+  openFleetFile: (kind: "documents" | "credentials", id: string) =>
+    requestBlob(`/api/v1/fleet/${kind}/${id}/file`).then((blob) => window.open(URL.createObjectURL(blob), "_blank")),
+  fleetPacketPreview: (employeeIds: string[], vehicleIds: string[]) =>
+    request<FleetPacketItem[]>(`/api/v1/fleet/packet/preview?employeeIds=${employeeIds.join(",")}&vehicleIds=${vehicleIds.join(",")}`),
+  downloadFleetPacket: async (items: { source: string; id: string }[]) => {
+    const token = localStorage.getItem("leal_token");
+    const tenantId = localStorage.getItem("leal_tenant_id");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    if (tenantId) headers["X-Tenant-Id"] = tenantId;
+    const response = await fetch("/api/v1/fleet/packet", { method: "POST", headers, body: JSON.stringify({ items }) });
+    if (!response.ok) throw new Error(`No se pudo armar el legajo (${response.status})`);
+    const url = URL.createObjectURL(await response.blob());
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Legajo ingreso a planta ${new Date().toISOString().slice(0, 10)}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
   getFleetExpirations: () => request<import("./types").FleetExpirations>("/api/v1/fleet/expirations"),
   listFleetPeople: () => request<import("./types").FleetMember[]>("/api/v1/fleet/people"),
   listFleetAvailableEmployees: () =>
