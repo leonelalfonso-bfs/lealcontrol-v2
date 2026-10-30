@@ -839,6 +839,7 @@ public static class MetrologyEndpoints
         });
 
         // Informe de báscula camionera: resultados, requisitos y avisos calculados a partir de los datos de campo.
+        group.MapTruckScaleReportEndpoints();
         group.MapPost("/truck-scale/evaluate", ([FromQuery] DateTime? testDate, TruckScaleData data) =>
             Results.Ok(TruckScaleEvaluator.Evaluate(data, testDate ?? DateTime.UtcNow)));
 
@@ -1154,166 +1155,8 @@ public static class MetrologyEndpoints
             }
         });
 
-        group.MapPost("/reports", async (
-            CalibrationReportWriteDto req,
-            ITenantContext tenantContext,
-            MetrologyDbContext db,
-            IQualityDocumentSnapshotProvider snapshots,
-            CancellationToken ct) =>
-        {
-            try
-            {
-                var tenantId = tenantContext.TenantId;
-                await db.EnsureMetrologyTablesAsync(ct);
-                var equipment = await db.Equipments.FirstOrDefaultAsync(e => e.Id == req.EquipmentId && e.TenantId == tenantId, ct);
-                if (equipment == null) return Results.BadRequest(new { message = "El instrumento especificado no existe." });
-
-                // Generate report number if not provided: {OP}-{yyyy}-{MM}-{nnnn}
-                var profile = MetrologyRegulatoryProfiles.Resolve(req.RegulatoryProfile, equipment.ApplicableStandard);
-                var operationType = MetrologyRegulatoryProfiles.NormalizeOperationType(req.OperationType);
-                if (!profile.Operations.ContainsKey(operationType))
-                {
-                    return Results.BadRequest(new { message = "La operación seleccionada no corresponde al perfil reglamentario." });
-                }
-
-                var activity = await db.TenantSettings.AsNoTracking()
-                    .FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
-                if (!MetrologyRegulatoryProfiles.IsOperationAllowed(activity?.ActivityMode, operationType))
-                {
-                    return Results.BadRequest(new
-                    {
-                        message = "El alcance de laboratorio de ensayos solo admite verificación periódica y verificación primitiva."
-                    });
-                }
-
-                var standard = profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "Res2307_80" : "Res25_2025";
-                var certNumber = !string.IsNullOrWhiteSpace(req.CertificateNumber)
-                    ? req.CertificateNumber.Trim()
-                    : await NextOperationReportNumberAsync(db, tenantId, operationType, req.CalibrationDate, ct);
-
-                var expirationDate = req.ExpirationDate; // Sin vencimiento automático en el informe.
-                var documentTitle = string.IsNullOrWhiteSpace(req.DocumentTitle)
-                    ? "Informe de ensayo metrológico"
-                    : req.DocumentTitle.Trim();
-
-                var instructionCode = MetrologySgcLinkage.ResolveInstructionCode(equipment);
-                var procedureCodes = MetrologySgcLinkage.ProcedureCodesFor(instructionCode);
-                var externalCodes = MetrologySgcLinkage.ExternalCodesFor(standard);
-                var asOf = req.CalibrationDate.Kind == DateTimeKind.Unspecified
-                    ? DateTime.SpecifyKind(req.CalibrationDate, DateTimeKind.Utc)
-                    : req.CalibrationDate.ToUniversalTime();
-
-                Guid? thermometerId = req.ThermometerInstrumentId;
-                MetrologyInstrument? thermometer = null;
-                if (thermometerId.HasValue && thermometerId.Value != Guid.Empty)
-                {
-                    thermometer = await db.Instruments.AsNoTracking()
-                        .FirstOrDefaultAsync(i => i.Id == thermometerId.Value && i.TenantId == tenantId, ct);
-                    if (thermometer is null)
-                    {
-                        return Results.BadRequest(new { message = "El termómetro indicado no existe." });
-                    }
-
-                    if (thermometer.ExpirationDate.HasValue && thermometer.ExpirationDate.Value.Date < asOf.Date)
-                    {
-                        return Results.BadRequest(new { message = $"El certificado del termómetro {thermometer.Code} está vencido." });
-                    }
-                }
-
-                IReadOnlyList<QualityDocumentSnapshot> procedureSnapshots;
-                try
-                {
-                    procedureSnapshots = await snapshots.GetCurrentSnapshotsAsync(
-                        tenantId.Value, procedureCodes, asOf, ct);
-                }
-                catch
-                {
-                    procedureSnapshots = Array.Empty<QualityDocumentSnapshot>();
-                }
-
-                // Si el catálogo aún no tiene el documento, dejamos al menos el código pedido.
-                var missing = procedureCodes
-                    .Where(c => procedureSnapshots.All(s => !string.Equals(s.Code, c, StringComparison.OrdinalIgnoreCase)))
-                    .Select(c => new QualityDocumentSnapshot(c, c, "(pendiente de carga en Calidad)", 0, Guid.Empty, null));
-                var allSnapshots = procedureSnapshots.Concat(missing).ToList();
-
-                var finalTime = string.IsNullOrWhiteSpace(req.FinalTimeLocal) ? null : req.FinalTimeLocal.Trim();
-
-                var report = new CalibrationReport
-                {
-                    TenantId = tenantId,
-                    CertificateNumber = certNumber,
-                    EquipmentId = equipment.Id,
-                    EquipmentCode = equipment.Code,
-                    EquipmentDescription = equipment.Description,
-                    CustomerId = equipment.CustomerId,
-                    CustomerName = equipment.CustomerName,
-                    Location = equipment.Location,
-                    StandardApplied = standard,
-                    CalibrationType = req.CalibrationType ?? "InService",
-                    RegulatoryProfile = profile.Code,
-                    OperationType = operationType,
-                    DocumentTitle = documentTitle,
-                    RegulatoryStatus = string.IsNullOrWhiteSpace(req.RegulatoryStatus)
-                        ? profile.RegulatoryStatus
-                        : req.RegulatoryStatus.Trim(),
-                    RegulatoryNotice = string.IsNullOrWhiteSpace(req.RegulatoryNotice)
-                        ? string.Empty
-                        : req.RegulatoryNotice.Trim(),
-                    TestPlanVersion = string.IsNullOrWhiteSpace(req.TestPlanVersion)
-                        ? (profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "MET-2307-1" : "MET-25-1")
-                        : req.TestPlanVersion.Trim(),
-                    // C2: el técnico genera borrador; el DT aprueba y firma.
-                    ReportStatus = string.IsNullOrWhiteSpace(req.ReportStatus) ? "Draft" : req.ReportStatus.Trim(),
-                    CalibrationDate = req.CalibrationDate,
-                    ExpirationDate = expirationDate,
-                    TemperatureCelsius = req.TemperatureCelsius,
-                    RelativeHumidityPercent = req.RelativeHumidityPercent,
-                    AtmosphericPressureHpa = req.AtmosphericPressureHpa,
-                    PerformedBy = req.PerformedBy?.Trim() ?? "Verificador Autorizado",
-                    ApprovedBy = string.Empty,
-                    Verdict = req.Verdict ?? "Approved",
-                    MaxObservedError = req.MaxObservedError,
-                    MaxAllowedError = req.MaxAllowedError,
-                    ExpandedUncertaintyK2 = req.ExpandedUncertaintyK2,
-                    FinalTemperatureCelsius = req.FinalTemperatureCelsius,
-                    FinalTimeLocal = finalTime,
-                    VisualInspectionJson = req.VisualInspectionJson ?? "{}",
-                    RepeatabilityTestJson = req.RepeatabilityTestJson ?? "[]",
-                    EccentricityTestJson = req.EccentricityTestJson ?? "[]",
-                    LinearityTestJson = req.LinearityTestJson ?? "[]",
-                    WeightsUsedJson = req.WeightsUsedJson ?? "[]",
-                    Observations = req.Observations,
-                    SealsPlaced = req.SealsPlaced,
-                    InstructionCode = instructionCode,
-                    ThermometerInstrumentId = thermometer?.Id,
-                    ProcedureSnapshotJson = MetrologySgcLinkage.SerializeSnapshots(allSnapshots),
-                    ExternalDocumentCodesJson = MetrologySgcLinkage.SerializeCodes(externalCodes),
-                    CreatedAtUtc = DateTime.UtcNow
-                };
-
-                if (string.Equals(report.ReportStatus, "Issued", StringComparison.OrdinalIgnoreCase))
-                {
-                    // No permitir emitir con firma DT vacía desde el alta: forzar Draft.
-                    report.ReportStatus = "Draft";
-                }
-
-                db.CalibrationReports.Add(report);
-
-                // Update equipment calibration dates
-                equipment.LastCalibrationDate = report.CalibrationDate;
-                equipment.NextCalibrationDate = report.ExpirationDate;
-                equipment.Status = report.Verdict == "Approved" ? "Active" : "Maintenance";
-
-                await db.SaveChangesAsync(ct);
-
-                return Results.Created($"/api/v1/metrology/reports/{report.Id}", report);
-            }
-            catch (Exception ex)
-            {
-                return Results.Problem(detail: ex.Message, statusCode: 500);
-            }
-        });
+        group.MapPost("/reports", (CalibrationReportWriteDto req, ITenantContext tenantContext, MetrologyDbContext db,
+            IQualityDocumentSnapshotProvider snapshots, CancellationToken ct) => CreateReportAsync(req, tenantContext, db, snapshots, ct));
 
         group.MapPost("/reports/{id:guid}/approve", async (
             Guid id,
@@ -1347,6 +1190,10 @@ public static class MetrologyEndpoints
                 ?? http.User.FindFirst("full_name")?.Value
                 ?? "Director Técnico";
 
+            if (await TruckScaleReportEndpoints.CheckBeforeApprovalAsync(db, report, ct) is { } blocked)
+            {
+                return Results.BadRequest(new { message = blocked });
+            }
             report.ApprovedBy = approver;
             report.ReportStatus = "Issued";
             await db.SaveChangesAsync(ct);
@@ -1443,6 +1290,12 @@ public static class MetrologyEndpoints
                     ExternalDocumentCodesJson = original.ExternalDocumentCodesJson,
                     SupersedesReportId = original.Id,
                     AmendmentReason = req.AmendmentReason.Trim(),
+                    ReportKind = original.ReportKind,
+                    TruckScaleDataJson = original.TruckScaleDataJson,
+                    ServiceNumber = original.ServiceNumber,
+                    RemitoNumber = original.RemitoNumber,
+                    OrderReference = original.OrderReference,
+                    ProcedureCode = original.ProcedureCode,
                     CreatedAtUtc = DateTime.UtcNow
                 };
 
@@ -1532,6 +1385,165 @@ public static class MetrologyEndpoints
     /// Genera el siguiente número de informe: {OP}-{yyyy}-{MM}-{nnnn}
     /// contando informes del tenant con el mismo prefijo año-mes.
     /// </summary>
+    /// <summary>Alta de un informe (borrador) con su vínculo SGC; <paramref name="configure"/> completa los datos de un tipo de informe.</summary>
+    internal static async Task<IResult> CreateReportAsync(CalibrationReportWriteDto req, ITenantContext tenantContext, MetrologyDbContext db,
+        IQualityDocumentSnapshotProvider snapshots, CancellationToken ct, Action<CalibrationReport>? configure = null)
+    {
+        try
+        {
+            var tenantId = tenantContext.TenantId;
+            await db.EnsureMetrologyTablesAsync(ct);
+            var equipment = await db.Equipments.FirstOrDefaultAsync(e => e.Id == req.EquipmentId && e.TenantId == tenantId, ct);
+            if (equipment == null) return Results.BadRequest(new { message = "El instrumento especificado no existe." });
+
+            // Generate report number if not provided: {OP}-{yyyy}-{MM}-{nnnn}
+            var profile = MetrologyRegulatoryProfiles.Resolve(req.RegulatoryProfile, equipment.ApplicableStandard);
+            var operationType = MetrologyRegulatoryProfiles.NormalizeOperationType(req.OperationType);
+            if (!profile.Operations.ContainsKey(operationType))
+            {
+                return Results.BadRequest(new { message = "La operación seleccionada no corresponde al perfil reglamentario." });
+            }
+
+            var activity = await db.TenantSettings.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.TenantId == tenantId, ct);
+            if (!MetrologyRegulatoryProfiles.IsOperationAllowed(activity?.ActivityMode, operationType))
+            {
+                return Results.BadRequest(new
+                {
+                    message = "El alcance de laboratorio de ensayos solo admite verificación periódica y verificación primitiva."
+                });
+            }
+
+            var standard = profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "Res2307_80" : "Res25_2025";
+            var certNumber = !string.IsNullOrWhiteSpace(req.CertificateNumber)
+                ? req.CertificateNumber.Trim()
+                : await NextOperationReportNumberAsync(db, tenantId, operationType, req.CalibrationDate, ct);
+
+            var expirationDate = req.ExpirationDate; // Sin vencimiento automático en el informe.
+            var documentTitle = string.IsNullOrWhiteSpace(req.DocumentTitle)
+                ? "Informe de ensayo metrológico"
+                : req.DocumentTitle.Trim();
+
+            var instructionCode = MetrologySgcLinkage.ResolveInstructionCode(equipment);
+            var procedureCodes = MetrologySgcLinkage.ProcedureCodesFor(instructionCode);
+            var externalCodes = MetrologySgcLinkage.ExternalCodesFor(standard);
+            var asOf = req.CalibrationDate.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(req.CalibrationDate, DateTimeKind.Utc)
+                : req.CalibrationDate.ToUniversalTime();
+
+            Guid? thermometerId = req.ThermometerInstrumentId;
+            MetrologyInstrument? thermometer = null;
+            if (thermometerId.HasValue && thermometerId.Value != Guid.Empty)
+            {
+                thermometer = await db.Instruments.AsNoTracking()
+                    .FirstOrDefaultAsync(i => i.Id == thermometerId.Value && i.TenantId == tenantId, ct);
+                if (thermometer is null)
+                {
+                    return Results.BadRequest(new { message = "El termómetro indicado no existe." });
+                }
+
+                if (thermometer.ExpirationDate.HasValue && thermometer.ExpirationDate.Value.Date < asOf.Date)
+                {
+                    return Results.BadRequest(new { message = $"El certificado del termómetro {thermometer.Code} está vencido." });
+                }
+            }
+
+            IReadOnlyList<QualityDocumentSnapshot> procedureSnapshots;
+            try
+            {
+                procedureSnapshots = await snapshots.GetCurrentSnapshotsAsync(
+                    tenantId.Value, procedureCodes, asOf, ct);
+            }
+            catch
+            {
+                procedureSnapshots = Array.Empty<QualityDocumentSnapshot>();
+            }
+
+            // Si el catálogo aún no tiene el documento, dejamos al menos el código pedido.
+            var missing = procedureCodes
+                .Where(c => procedureSnapshots.All(s => !string.Equals(s.Code, c, StringComparison.OrdinalIgnoreCase)))
+                .Select(c => new QualityDocumentSnapshot(c, c, "(pendiente de carga en Calidad)", 0, Guid.Empty, null));
+            var allSnapshots = procedureSnapshots.Concat(missing).ToList();
+
+            var finalTime = string.IsNullOrWhiteSpace(req.FinalTimeLocal) ? null : req.FinalTimeLocal.Trim();
+
+            var report = new CalibrationReport
+            {
+                TenantId = tenantId,
+                CertificateNumber = certNumber,
+                EquipmentId = equipment.Id,
+                EquipmentCode = equipment.Code,
+                EquipmentDescription = equipment.Description,
+                CustomerId = equipment.CustomerId,
+                CustomerName = equipment.CustomerName,
+                Location = equipment.Location,
+                StandardApplied = standard,
+                CalibrationType = req.CalibrationType ?? "InService",
+                RegulatoryProfile = profile.Code,
+                OperationType = operationType,
+                DocumentTitle = documentTitle,
+                RegulatoryStatus = string.IsNullOrWhiteSpace(req.RegulatoryStatus)
+                    ? profile.RegulatoryStatus
+                    : req.RegulatoryStatus.Trim(),
+                RegulatoryNotice = string.IsNullOrWhiteSpace(req.RegulatoryNotice)
+                    ? string.Empty
+                    : req.RegulatoryNotice.Trim(),
+                TestPlanVersion = string.IsNullOrWhiteSpace(req.TestPlanVersion)
+                    ? (profile.Code == MetrologyRegulatoryProfiles.Transitional2307 ? "MET-2307-1" : "MET-25-1")
+                    : req.TestPlanVersion.Trim(),
+                // C2: el técnico genera borrador; el DT aprueba y firma.
+                ReportStatus = string.IsNullOrWhiteSpace(req.ReportStatus) ? "Draft" : req.ReportStatus.Trim(),
+                CalibrationDate = req.CalibrationDate,
+                ExpirationDate = expirationDate,
+                TemperatureCelsius = req.TemperatureCelsius,
+                RelativeHumidityPercent = req.RelativeHumidityPercent,
+                AtmosphericPressureHpa = req.AtmosphericPressureHpa,
+                PerformedBy = req.PerformedBy?.Trim() ?? "Verificador Autorizado",
+                ApprovedBy = string.Empty,
+                Verdict = req.Verdict ?? "Approved",
+                MaxObservedError = req.MaxObservedError,
+                MaxAllowedError = req.MaxAllowedError,
+                ExpandedUncertaintyK2 = req.ExpandedUncertaintyK2,
+                FinalTemperatureCelsius = req.FinalTemperatureCelsius,
+                FinalTimeLocal = finalTime,
+                VisualInspectionJson = req.VisualInspectionJson ?? "{}",
+                RepeatabilityTestJson = req.RepeatabilityTestJson ?? "[]",
+                EccentricityTestJson = req.EccentricityTestJson ?? "[]",
+                LinearityTestJson = req.LinearityTestJson ?? "[]",
+                WeightsUsedJson = req.WeightsUsedJson ?? "[]",
+                Observations = req.Observations,
+                SealsPlaced = req.SealsPlaced,
+                InstructionCode = instructionCode,
+                ThermometerInstrumentId = thermometer?.Id,
+                ProcedureSnapshotJson = MetrologySgcLinkage.SerializeSnapshots(allSnapshots),
+                ExternalDocumentCodesJson = MetrologySgcLinkage.SerializeCodes(externalCodes),
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            if (string.Equals(report.ReportStatus, "Issued", StringComparison.OrdinalIgnoreCase))
+            {
+                // No permitir emitir con firma DT vacía desde el alta: forzar Draft.
+                report.ReportStatus = "Draft";
+            }
+
+            configure?.Invoke(report);
+            db.CalibrationReports.Add(report);
+
+            // Update equipment calibration dates
+            equipment.LastCalibrationDate = report.CalibrationDate;
+            equipment.NextCalibrationDate = report.ExpirationDate;
+            equipment.Status = report.Verdict == "Approved" ? "Active" : "Maintenance";
+
+            await db.SaveChangesAsync(ct);
+
+            return Results.Created($"/api/v1/metrology/reports/{report.Id}", report);
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(detail: ex.Message, statusCode: 500);
+        }
+    }
+
     private static async Task<string> NextOperationReportNumberAsync(
         MetrologyDbContext db,
         TenantId tenantId,

@@ -113,9 +113,12 @@ export function CalibrationReportsPage() {
           </p>
         </div>
 
-        <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
-          Nuevo Ensayo
-        </Link>
+        <div className="toolbar">
+          <Link to="/metrologia/informes/camionera/nuevo" className="btn">🚛 Informe de camionera</Link>
+          <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+            Nuevo Ensayo
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -228,9 +231,15 @@ export function CalibrationReportsPage() {
                             {busyId === r.id ? "…" : "Enmendar (PG09 R2)"}
                           </button>
                         )}
-                        <Link to={`/metrologia/informes/${r.id}/imprimir`} className="btn ghost compact" target="_blank" title="Imprimir / trazabilidad">
-                          Ver / Imprimir
-                        </Link>
+                        {r.reportKind === "TruckScale" ? (
+                          <Link to={`/metrologia/informes/camionera/${r.id}`} className="btn ghost compact" title="Cargar o ver el informe de camionera">
+                            {r.reportStatus === "Draft" ? "Cargar" : "Ver"}
+                          </Link>
+                        ) : (
+                          <Link to={`/metrologia/informes/${r.id}/imprimir`} className="btn ghost compact" target="_blank" title="Imprimir / trazabilidad">
+                            Ver / Imprimir
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   );
