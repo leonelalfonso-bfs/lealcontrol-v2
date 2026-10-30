@@ -163,15 +163,18 @@ internal sealed class CreateQuoteCommandHandler : IRequestHandler<CreateQuoteCom
     private readonly IQuoteRepository _quotes;
     private readonly ITenantContext _tenant;
     private readonly IClock _clock;
+    private readonly IOpportunityQuoteSync _crm;
 
     public CreateQuoteCommandHandler(
         IQuoteRepository quotes,
         ITenantContext tenant,
-        IClock clock)
+        IClock clock,
+        IOpportunityQuoteSync crm)
     {
         _quotes = quotes;
         _tenant = tenant;
         _clock = clock;
+        _crm = crm;
     }
 
     public async Task<Result<QuoteDto>> Handle(CreateQuoteCommand request, CancellationToken cancellationToken)
@@ -233,7 +236,16 @@ internal sealed class CreateQuoteCommandHandler : IRequestHandler<CreateQuoteCom
 
         _quotes.Add(quote);
         var persisted = await PersistQuoteAsync(quote, renumberOnCollision: true, cancellationToken);
-        return persisted ?? Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));
+        if (persisted is not null) return persisted;
+
+        // Hecho sin pasar por el CRM: abre la oportunidad, así el presupuesto queda en el embudo del cliente.
+        if (quote.OpportunityId is null
+            && await _crm.OpenForQuoteAsync(quote.CustomerId, $"Presupuesto {quote.QuoteNumber}", quote.Total, quote.Currency, quote.OwnerName, cancellationToken) is { } opportunityId)
+        {
+            quote.AttachOpportunity(opportunityId);
+            await _quotes.SaveAsync(cancellationToken);
+        }
+        return Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));
     }
 
     private async Task<Result<QuoteDto>?> PersistQuoteAsync(
@@ -293,6 +305,7 @@ internal sealed class UpdateQuoteCommandHandler : IRequestHandler<UpdateQuoteCom
             return Result<QuoteDto>.Failure(SalesErrors.LineDescriptionRequired);
         }
 
+        var before = quote.ContentSignature();
         var updateResult = quote.UpdateDetails(
             request.Model.CustomerId,
             request.Model.LocationId,
@@ -336,6 +349,9 @@ internal sealed class UpdateQuoteCommandHandler : IRequestHandler<UpdateQuoteCom
                 return Result<QuoteDto>.Failure(lineAdd.Error);
             }
         }
+
+        // Guardar sin cambios (por ejemplo, antes de generar el pedido) no es una nueva revisión.
+        if (quote.ContentSignature() != before) quote.NextRevision(_clock.UtcNow);
 
         var persisted = await PersistQuoteAsync(cancellationToken);
         return persisted ?? Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));
@@ -424,12 +440,14 @@ internal sealed class RejectQuoteCommandHandler : IRequestHandler<RejectQuoteCom
     private readonly IQuoteRepository _quotes;
     private readonly ISalesUnitOfWork _unitOfWork;
     private readonly IClock _clock;
+    private readonly IOpportunityQuoteSync _crm;
 
-    public RejectQuoteCommandHandler(IQuoteRepository quotes, ISalesUnitOfWork unitOfWork, IClock clock)
+    public RejectQuoteCommandHandler(IQuoteRepository quotes, ISalesUnitOfWork unitOfWork, IClock clock, IOpportunityQuoteSync crm)
     {
         _quotes = quotes;
         _unitOfWork = unitOfWork;
         _clock = clock;
+        _crm = crm;
     }
 
     public async Task<Result<QuoteDto>> Handle(RejectQuoteCommand request, CancellationToken cancellationToken)
@@ -447,6 +465,7 @@ internal sealed class RejectQuoteCommandHandler : IRequestHandler<RejectQuoteCom
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (quote.OpportunityId is { } rejectedOpportunity) await _crm.MarkLostAsync(rejectedOpportunity, $"Presupuesto {quote.QuoteNumber} rechazado", cancellationToken);
         return Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));
     }
 }
@@ -610,14 +629,17 @@ internal sealed class CancelQuoteCommandHandler : IRequestHandler<CancelQuoteCom
     private readonly ISalesUnitOfWork _unitOfWork;
     private readonly ITenantContext _tenant;
     private readonly IClock _clock;
+    private readonly IOpportunityQuoteSync _crm;
 
     public CancelQuoteCommandHandler(
         IQuoteRepository quotes,
         IOrderRepository orders,
         ISalesUnitOfWork unitOfWork,
         ITenantContext tenant,
-        IClock clock)
+        IClock clock,
+        IOpportunityQuoteSync crm)
     {
+        _crm = crm;
         _quotes = quotes;
         _orders = orders;
         _unitOfWork = unitOfWork;
@@ -646,6 +668,7 @@ internal sealed class CancelQuoteCommandHandler : IRequestHandler<CancelQuoteCom
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (quote.OpportunityId is { } cancelledOpportunity) await _crm.MarkLostAsync(cancelledOpportunity, $"Presupuesto {quote.QuoteNumber} anulado", cancellationToken);
         return Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));
     }
 }

@@ -74,7 +74,10 @@ export function SalesHelpPage() {
           <li>Desde el mismo formulario podés dar de alta un cliente, una planta, un contacto o un producto nuevo (“+ Alta Rápida”, “+ Crear Producto Nuevo”).</li>
           <li>Un renglón <strong>Opcional</strong> no suma al total: sirve para ofrecer alternativas. Al pasar a pedido se usan los obligatorios.</li>
           <li>“Marcar Enviado” lleva el control de lo enviado; “Anular” lo deja en el listado como anulado; “Eliminar” lo borra.</li>
-          <li>Cada cambio importante genera una nueva <strong>revisión</strong> (Rev.).</li>
+          <li>Cada vez que se guarda con un cambio que ve el cliente (renglones, precios, condiciones, notas) sube la <strong>revisión</strong> (Rev. 2, 3…). Guardar sin cambios no la sube.</li>
+          <li>Un presupuesto hecho desde Ventas, sin pasar por el CRM, abre solo una <strong>oportunidad</strong> del cliente en etapa Propuesta: queda en el embudo y en la ficha del cliente. Al generar el pedido la oportunidad se gana; si el presupuesto se rechaza o se anula, se pierde.</li>
+          <li>Al generar el pedido, el presupuesto pasa a <strong>Pedido de venta</strong> y deja de ofrecer “Generar pedido”.</li>
+          <li>“Descargar PDF” pregunta dónde guardarlo (en Chrome y Edge): así va directo a la carpeta del cliente. En otros navegadores se descarga como siempre.</li>
         </ul>
       </ManualPart>
 

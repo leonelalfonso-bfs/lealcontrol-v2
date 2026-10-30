@@ -6,6 +6,7 @@ import { EmailComposer } from "../components/EmailComposer";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { numberToWords } from "../utils/numberToWords";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
+import { savePdfAs } from "../utils/savePdfAs";
 import { documentLabel, isFceType, letterOf, arcaVoucherCode } from "../lib/documents";
 import { type CompanySettings, type CustomerDetail, type Invoice } from "../api/types";
 
@@ -99,10 +100,8 @@ export function InvoicePrintPage() {
         pagebreak: { mode: ["avoid-all", "css"] }
       };
 
-      await html2pdf()
-        .set(opt)
-        .from(element)
-        .save();
+      const blob: Blob = await html2pdf().set(opt).from(element).outputPdf("blob");
+      await savePdfAs(blob, filename);
     } catch (err: unknown) {
       console.error(err);
     } finally {

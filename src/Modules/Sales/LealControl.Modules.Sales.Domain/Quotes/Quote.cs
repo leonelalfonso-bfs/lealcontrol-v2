@@ -246,6 +246,27 @@ public sealed class Quote : AggregateRoot<QuoteId>
         return Result.Success();
     }
 
+    /// <summary>Oportunidad del CRM que abrió el presupuesto hecho sin pasar por el CRM.</summary>
+    public void AttachOpportunity(Guid opportunityId)
+    {
+        OpportunityId ??= opportunityId;
+    }
+
+    /// <summary>Lo que se le muestra al cliente: si cambia al editar, es una nueva revisión.</summary>
+    public string ContentSignature() => string.Join("|", new object?[]
+    {
+        CustomerId, LocationId, ContactId, Currency, ExchangeRateUsdBillete, ExchangeRateUsdDivisa, DiscountPercent, ValidDays, PaymentTerms,
+        PaymentMethod, DeliveryTimeDays, DeliveryTimeText, Transportation, Warranty, Notes, OwnerName
+    }.Concat(_lines.SelectMany(l => new object?[] { l.ProductId, l.Description, l.Quantity, l.UnitPrice, l.DiscountPercent, l.TaxRate, l.IsOptional, l.TechnicalDetail }))
+        // 100000 y 100000.0000 (como vuelve de la base) son el mismo importe.
+        .Select(v => v is decimal d ? d.ToString("G29", System.Globalization.CultureInfo.InvariantCulture) : v?.ToString()));
+
+    public void NextRevision(DateTime utcNow)
+    {
+        Revision++;
+        UpdatedAtUtc = utcNow;
+    }
+
     public Result MarkSent(DateTime utcNow)
     {
         if (Status != QuoteStatus.Draft)

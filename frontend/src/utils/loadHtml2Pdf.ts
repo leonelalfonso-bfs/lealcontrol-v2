@@ -5,6 +5,7 @@ type Html2PdfChain = {
   toPdf: () => Html2PdfChain;
   get: (key: "pdf" | string) => Promise<any>;
   save: () => Promise<void>;
+  outputPdf: (type: "blob") => Promise<Blob>;
 };
 
 export type Html2PdfFactory = () => Html2PdfChain;
