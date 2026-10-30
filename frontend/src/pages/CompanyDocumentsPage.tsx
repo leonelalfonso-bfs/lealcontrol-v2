@@ -32,7 +32,7 @@ export function CompanyDocumentsPage() {
           <p className="muted">ART, seguro de vida obligatorio, responsabilidad civil, procedimientos de trabajo y capacitaciones: con vencimiento, aviso y archivo, para el legajo de ingreso a planta.</p>
         </div>
         <div className="toolbar">
-          <Link to="/flota/legajo" className="btn btn-outline">📦 Legajo para ingreso a planta</Link>
+          <Link to="/rrhh/legajo-ingreso-planta" className="btn btn-outline">📦 Legajo para ingreso a planta</Link>
           <Link to="/rrhh/ayuda#documentacion-empresa" className="btn btn-outline">💡 Ayuda</Link>
           <button type="button" className="btn" onClick={() => { setEditingId(null); setForm({ ...EMPTY }); }}>＋ Documento</button>
         </div>

@@ -849,6 +849,7 @@ public static class HumanResourcesModule
         var group = endpoints.MapGroup("/api/v1/hr").WithTags("HumanResources");
         group.MapCompanyDocuments();
         group.MapHrAreas();
+        group.MapPlantAccessPacket();
 
         // -------------------------------------------------------------
         // DASHBOARD SUMMARY

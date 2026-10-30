@@ -1,21 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { api, type FleetPacketItem } from "../api/client";
+import { api, type PlantPacketItem } from "../api/client";
 import type { Employee, Vehicle } from "../api/types";
 
 const day = (iso?: string | null) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
-const STATE_COLOR: Record<FleetPacketItem["state"], string> = { Vigente: "#2E6B1F", "Por vencer": "#9A5B00", Vencido: "#A1271B" };
+const STATE_COLOR: Record<PlantPacketItem["state"], string> = { Vigente: "#2E6B1F", "Por vencer": "#9A5B00", Vencido: "#A1271B" };
 const key = (i: { source: string; id: string }) => `${i.source}:${i.id}`;
 
 /** Legajo para ingreso a planta: documentos de las personas (RRHH y Flota) y de las unidades elegidas, en un ZIP para enviar al cliente. */
-export function FleetPacketPage() {
+export function PlantAccessPacketPage() {
   const [params] = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [people, setPeople] = useState<string[]>(() => params.get("employees")?.split(",").filter(Boolean) ?? []);
   const [units, setUnits] = useState<string[]>(() => params.get("vehicles")?.split(",").filter(Boolean) ?? []);
   const [company, setCompany] = useState(true);
-  const [items, setItems] = useState<FleetPacketItem[]>([]);
+  const [items, setItems] = useState<PlantPacketItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export function FleetPacketPage() {
   }, []);
   useEffect(() => {
     if (people.length === 0 && units.length === 0 && !company) { setItems([]); return; }
-    api.fleetPacketPreview(people, units, company).then((list) => {
+    api.plantPacketPreview(people, units, company).then((list) => {
       setItems(list);
       // Por defecto va todo lo que tiene archivo y no está vencido.
       setSelected(new Set(list.filter((i) => i.hasFile && i.state !== "Vencido").map(key)));
@@ -47,7 +47,7 @@ export function FleetPacketPage() {
           <h1>📦 Legajo para ingreso a planta</h1>
           <p className="muted">Elegí las personas y las unidades: se arma un ZIP con una carpeta por cada una y sus documentos vigentes, para enviar al cliente.</p>
         </div>
-        <Link to="/flota/ayuda#legajo" className="btn btn-outline">💡 Ayuda</Link>
+        <Link to="/rrhh/ayuda#legajo-planta" className="btn btn-outline">💡 Ayuda</Link>
       </div>
       {error && <div className="alert">{error}</div>}
 
@@ -83,7 +83,7 @@ export function FleetPacketPage() {
             <strong>Documentos ({selected.size} de {items.length})</strong>
             <button type="button" className="btn" disabled={busy || selected.size === 0} onClick={() => {
               setBusy(true); setError(null);
-              api.downloadFleetPacket(items.filter((i) => selected.has(key(i))).map((i) => ({ source: i.source, id: i.id })))
+              api.downloadPlantPacket(people, units, items.filter((i) => selected.has(key(i))).map((i) => ({ source: i.source, id: i.id })))
                 .catch((err) => setError(err.message)).finally(() => setBusy(false));
             }}>{busy ? "Armando…" : "⬇️ Descargar ZIP"}</button>
           </div>
