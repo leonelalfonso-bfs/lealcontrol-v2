@@ -1504,6 +1504,8 @@ export type ProcedureManual = {
   status: "Vigente" | "EnRevisión" | "Obsoleto" | string;
   description: string;
   documentUrl?: string | null;
+  /** Nombre del archivo subido, si tiene. */
+  fileName?: string | null;
   createdAtUtc: string;
 };
 

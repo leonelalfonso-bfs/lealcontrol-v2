@@ -1,23 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { HrTabs } from "../components/hr/HrTabs";
-import { api } from "../api/client";
+import { api, type HrArea } from "../api/client";
+import { FileAttachment } from "../components/FileAttachment";
 import { type ProcedureManual } from "../api/types";
 
-const AREAS = [
-  { id: "ALL", label: "Todas las Áreas" },
-  { id: "Metrología", label: "⚖️ Metrología & Laboratorio" },
-  { id: "Calidad", label: "🛡️ Calidad & Procesos (ISO)" },
-  { id: "Ventas", label: "💼 Comercial & Ventas" },
-  { id: "Taller", label: "🔧 Taller & Servicio Técnico" },
-  { id: "Logística", label: "🚚 Logística & Flota" },
-  { id: "Administración", label: "📊 Administración & Finanzas" },
-  { id: "RRHH", label: "👥 Recursos Humanos" }
-];
 
 export function ProcedureManualsPage() {
   const [manuals, setManuals] = useState<ProcedureManual[]>([]);
   const [selectedArea, setSelectedArea] = useState("ALL");
+  const [areaList, setAreaList] = useState<HrArea[]>([]);
+  const AREAS = [{ id: "ALL", label: "Todas las áreas" }, ...areaList.map((a) => ({ id: a.name, label: a.name }))];
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +31,7 @@ export function ProcedureManualsPage() {
   useEffect(() => {
     load();
   }, [selectedArea]);
+  useEffect(() => { api.listHrAreas().then(setAreaList).catch(() => setAreaList([])); }, []);
 
   const handleDelete = async (m: ProcedureManual) => {
     if (!window.confirm(`¿Eliminar el manual "${m.code} - ${m.title}"?`)) return;
@@ -167,16 +161,17 @@ export function ProcedureManualsPage() {
                     </td>
                     <td style={{ textAlign: "right" }}>
                       <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
+                        <FileAttachment path={`/api/v1/hr/manuals/${m.id}/file`} fileName={m.fileName} onChanged={() => void load()} />
                         {m.documentUrl && (
                           <a
                             href={m.documentUrl}
                             target="_blank"
                             rel="noreferrer"
                             className="btn ghost compact"
-                            title="Ver documento adjunto"
+                            title="Abrir el enlace externo"
                             style={{ padding: "3px 8px", fontSize: "0.75rem", color: "#8b5cf6" }}
                           >
-                            👁️ Ver
+                            🔗 Enlace
                           </a>
                         )}
                         <Link

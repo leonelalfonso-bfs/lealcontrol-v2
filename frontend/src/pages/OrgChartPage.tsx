@@ -1,34 +1,30 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { HrTabs } from "../components/hr/HrTabs";
-import { api } from "../api/client";
+import { api, type HrArea } from "../api/client";
+import { HrAreasEditor } from "../components/hr/HrAreasEditor";
 import { type Employee, type OrganizationPosition } from "../api/types";
 
-const DEPARTMENTS = [
-  "Dirección & Gerencia General",
-  "Metrología & Laboratorio",
-  "Calidad & Asuntos Regulatorios",
-  "Comercial & Ventas",
-  "Taller & Servicio Técnico",
-  "Logística & Flota",
-  "Administración & Finanzas",
-  "Recursos Humanos"
-];
 
 export function OrgChartPage() {
   const navigate = useNavigate();
   const [positions, setPositions] = useState<OrganizationPosition[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [areas, setAreas] = useState<HrArea[]>([]);
+  // Las áreas configuradas, y al final las que usa algún puesto y ya no están en la lista.
+  const DEPARTMENTS = [...areas.map((a) => a.name), ...[...new Set(positions.map((p) => p.department))].filter((d) => !areas.some((a) => a.name === d))];
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [posList, empList] = await Promise.all([
+      const [posList, empList, areaList] = await Promise.all([
         api.listPositions(),
-        api.listEmployees()
+        api.listEmployees(),
+        api.listHrAreas()
       ]);
+      setAreas(areaList || []);
       setPositions(posList || []);
       setEmployees(empList || []);
       setError(null);
@@ -78,6 +74,8 @@ export function OrgChartPage() {
       <HrTabs />
 
       {error && <div className="alert">{error}</div>}
+
+      <HrAreasEditor areas={areas} onChanged={() => void load()} />
 
       {/* Organigrama Grid by Department */}
       <div className="stack" style={{ gap: 20 }}>
