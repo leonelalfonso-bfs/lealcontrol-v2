@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
+import { CustomerLocationForm } from "../components/crm/CustomerLocationForm";
 import { label, provinces, provinceLabel, type Activity, type Contact, type Conversation, type CustomerDetail, type FiscalRate, type Location, type Opportunity, type Quote } from "../api/types";
 import { buildWhatsAppUrl, formatCuitDisplay } from "../lib/arContact";
 import { EmailComposer } from "../components/EmailComposer";
@@ -520,11 +521,11 @@ export function CustomerDetailPage() {
           {customer.locations.length === 0 && <p className="muted">No hay plantas cargadas.</p>}
 
           <hr style={{ margin: "24px 0", borderColor: "var(--surface-border)" }} />
-          <LocationForm
+          <CustomerLocationForm
             customerId={customer.id}
             initialData={editingLocation}
             onCancel={() => setEditingLocation(null)}
-            onSaved={refresh}
+            onSaved={() => void refresh()}
           />
         </section>
       )}
@@ -730,79 +731,6 @@ export function CustomerDetailPage() {
         onClose={() => setShowBcraModal(false)}
       />
     </div>
-  );
-}
-
-function LocationForm({
-  customerId,
-  initialData,
-  onCancel,
-  onSaved
-}: {
-  customerId: string;
-  initialData: Location | null;
-  onCancel: () => void;
-  onSaved: () => void;
-}) {
-  const [name, setName] = useState(initialData?.name ?? "");
-  const [street, setStreet] = useState(initialData?.address.street ?? "");
-  const [city, setCity] = useState(initialData?.address.city ?? "San Lorenzo");
-  const [province, setProvince] = useState(initialData?.address.province ?? "SantaFe");
-  const [postalCode, setPostalCode] = useState(initialData?.address.postalCode ?? "2200");
-  const [phone, setPhone] = useState(initialData?.phone ?? "");
-
-  useEffect(() => {
-    if (initialData) {
-      setName(initialData.name);
-      setStreet(initialData.address.street);
-      setCity(initialData.address.city);
-      setProvince(initialData.address.province);
-      setPostalCode(initialData.address.postalCode);
-      setPhone(initialData.phone ?? "");
-    } else {
-      setName("");
-      setStreet("");
-      setCity("San Lorenzo");
-      setProvince("SantaFe");
-      setPostalCode("2200");
-      setPhone("");
-    }
-  }, [initialData]);
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    const body = { name, street, city, province, postalCode, phone: phone || undefined };
-    if (initialData) {
-      await api.updateLocation(customerId, initialData.id, body);
-    } else {
-      await api.addLocation(customerId, body);
-    }
-    onSaved();
-  };
-
-  return (
-    <form onSubmit={submit} style={{ marginTop: 16, display: "grid", gap: 12 }}>
-      <h4 style={{ margin: 0 }}>{initialData ? "✏️ Editar Planta / Sucursal" : "+ Registrar Nueva Planta / Sucursal"}</h4>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <label>Nombre de la Planta / Depósito *<input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Ej. Planta San Lorenzo" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-        <label>Calle y Número *<input value={street} onChange={(e) => setStreet(e.target.value)} required placeholder="Av. Interurbana 4500" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
-        <label>Ciudad *<input value={city} onChange={(e) => setCity(e.target.value)} required style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-        <label>Provincia *
-          <select value={province} onChange={(e) => setProvince(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }}>
-            {provinces.map((p) => <option key={p} value={p}>{provinceLabel(p)}</option>)}
-          </select>
-        </label>
-        <label>Código Postal *<input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} required style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-      </div>
-      <label>Teléfono Directo de Planta<input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="3414123456" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-      
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-        {initialData && <button type="button" className="btn btn-outline" onClick={onCancel}>Cancelar</button>}
-        <button className="btn btn-primary">{initialData ? "Guardar Cambios" : "Agregar Planta"}</button>
-      </div>
-    </form>
   );
 }
 

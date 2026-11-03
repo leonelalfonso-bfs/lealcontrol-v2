@@ -1,6 +1,6 @@
 import React, { useState, useEffect, FormEvent } from "react";
 import { api } from "../api/client";
-import { provinces, type CustomerDetail, type CustomerWrite } from "../api/types";
+import { provinceLabel, provinces, type CustomerDetail, type CustomerWrite } from "../api/types";
 import { digitsOnly, formatCuitDisplay, isValidCuitChecksum } from "../lib/arContact";
 
 interface DraftLocation {
@@ -558,7 +558,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                     >
                       {provinces.map((p) => (
                         <option key={p} value={p}>
-                          {p}
+                          {provinceLabel(p)}
                         </option>
                       ))}
                     </select>

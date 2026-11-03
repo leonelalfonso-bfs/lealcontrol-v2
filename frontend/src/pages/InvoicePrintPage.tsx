@@ -8,7 +8,7 @@ import { numberToWords } from "../utils/numberToWords";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { savePdfAs } from "../utils/savePdfAs";
 import { documentLabel, isFceType, letterOf, arcaVoucherCode } from "../lib/documents";
-import { type CompanySettings, type CustomerDetail, type Invoice } from "../api/types";
+import { provinceLabel, type CompanySettings, type CustomerDetail, type Invoice } from "../api/types";
 
 const TAX_CONDITION_LABELS: Record<string, string> = {
   ResponsableInscripto: "IVA Responsable Inscripto",
@@ -401,7 +401,7 @@ export function InvoicePrintPage() {
                     <strong>Condición frente al IVA:</strong> {taxConditionLabel(invoice.customerTaxCondition || customer?.taxCondition) || "—"}
                   </div>
                   <div style={{ fontSize: "10px", color: "#475569" }}>
-                    <strong>Domicilio Comercial:</strong> {invoice.customerAddress || (customer?.fiscalAddress ? [customer.fiscalAddress.street, customer.fiscalAddress.city, customer.fiscalAddress.province].filter(Boolean).join(", ") : "—")}
+                    <strong>Domicilio Comercial:</strong> {invoice.customerAddress || (customer?.fiscalAddress ? [customer.fiscalAddress.street, customer.fiscalAddress.city, provinceLabel(customer.fiscalAddress.province)].filter(Boolean).join(", ") : "—")}
                   </div>
                 </td>
                 <td style={{ width: "42%", verticalAlign: "top", textAlign: "right", borderLeft: "1px dashed #cbd5e1", paddingLeft: "10px" }}>

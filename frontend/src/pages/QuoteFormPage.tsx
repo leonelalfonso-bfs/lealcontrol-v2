@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
+import { CustomerLocationForm } from "../components/crm/CustomerLocationForm";
 import {
   provinces,
   type CustomerDetail,
@@ -83,13 +84,6 @@ export const QuoteFormPage: React.FC = () => {
   // Secondary Mini Modals for existing customer (Plant/Contact)
   const [showNewLocationModal, setShowNewLocationModal] = useState(false);
   const [showNewContactModal, setShowNewContactModal] = useState(false);
-  const [newLocName, setNewLocName] = useState("");
-  const [newLocStreet, setNewLocStreet] = useState("");
-  const [newLocCity, setNewLocCity] = useState("");
-  const [newLocProvince, setNewLocProvince] = useState<string>("SantaFe");
-  const [newLocPostalCode, setNewLocPostalCode] = useState("");
-  const [newLocPhone, setNewLocPhone] = useState("");
-  const [newLocNotes, setNewLocNotes] = useState("");
 
   const [newConName, setNewConName] = useState("");
   const [newConRole, setNewConRole] = useState("Commercial");
@@ -267,42 +261,7 @@ export const QuoteFormPage: React.FC = () => {
     }
   };
 
-  // Plant / Location Creation for existing customer
-  const handleCreateLocation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerId) return;
-    if (!newLocName.trim()) return;
 
-    try {
-      const body = {
-        name: newLocName.trim(),
-        address: {
-          street: newLocStreet.trim() || selectedCustomerDetail?.fiscalAddress?.street || "Calle Principal",
-          city: newLocCity.trim() || selectedCustomerDetail?.fiscalAddress?.city || "San Lorenzo",
-          province: newLocProvince || "SantaFe",
-          postalCode: newLocPostalCode.trim() || "2200",
-          country: "Argentina"
-        },
-        phone: newLocPhone.trim() || undefined,
-        notes: newLocNotes.trim() || undefined
-      };
-
-      const updatedCust = await api.addLocation(customerId, body);
-      setSelectedCustomerDetail(updatedCust);
-
-      const newlyCreatedLoc = updatedCust.locations.find((l) => l.name === newLocName.trim()) || updatedCust.locations[updatedCust.locations.length - 1];
-      if (newlyCreatedLoc) {
-        setLocationId(newlyCreatedLoc.id);
-      }
-
-      setShowNewLocationModal(false);
-      setNewLocName("");
-      setNewLocStreet("");
-      setNewLocCity("");
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Error al crear planta");
-    }
-  };
 
   // Contact Creation for existing customer
   const handleCreateContact = async (e: React.FormEvent) => {
@@ -1185,28 +1144,22 @@ export const QuoteFormPage: React.FC = () => {
         categories={categories}
       />
 
-      {/* Mini Modal: Nueva Planta para Cliente Seleccionado */}
-      {showNewLocationModal && (
+      {/* Mini Modal: Nueva Planta para Cliente Seleccionado (el mismo formulario que la ficha del cliente) */}
+      {showNewLocationModal && customerId && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div className="card pad stack" style={{ width: "520px", background: "white" }}>
+          <div className="card pad stack" style={{ width: "620px", background: "white" }}>
             <h3 style={{ margin: 0 }}>Nueva Planta / Destino para {selectedCustomerDetail?.tradeName || selectedCustomerDetail?.legalName}</h3>
-            <form onSubmit={handleCreateLocation} className="stack">
-              <label>Nombre de la Planta * <input type="text" required placeholder="Ej: Planta Sur, Silo 4" value={newLocName} onChange={(e) => setNewLocName(e.target.value)} /></label>
-              <label>Calle / Ruta <input type="text" placeholder="Ruta 11 km 320" value={newLocStreet} onChange={(e) => setNewLocStreet(e.target.value)} /></label>
-              <div className="grid-2">
-                <label>Ciudad <input type="text" placeholder="Rosario" value={newLocCity} onChange={(e) => setNewLocCity(e.target.value)} /></label>
-                <label>
-                  Provincia
-                    <select value={newLocProvince} onChange={(e) => setNewLocProvince(e.target.value)}>
-                      {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                </label>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
-                <button type="button" onClick={() => setShowNewLocationModal(false)} className="btn ghost">Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ background: "#0d9488" }}>Guardar Planta</button>
-              </div>
-            </form>
+            <CustomerLocationForm
+              customerId={customerId}
+              initialData={null}
+              alwaysCancelable
+              onCancel={() => setShowNewLocationModal(false)}
+              onSaved={(customer, location) => {
+                setSelectedCustomerDetail(customer);
+                if (location) setLocationId(location.id);
+                setShowNewLocationModal(false);
+              }}
+            />
           </div>
         </div>
       )}
