@@ -1,4 +1,4 @@
-import { currencyMeta, label, type CompanySettings, type CustomerDetail, type Order, type PurchaseOrder, type Remito, type Supplier } from "../api/types";
+import { currencyMeta, label, provinceLabel, type CompanySettings, type CustomerDetail, type Order, type PurchaseOrder, type Remito, type Supplier } from "../api/types";
 import { DEFAULT_DOCUMENT_TEMPLATES, useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { CommercialDocument, CommercialSection, documentCuit, documentDate, documentMoney } from "./CommercialDocumentParts";
 
@@ -29,7 +29,7 @@ export function OrderDocument({ order, customer, company }: { order: Order; cust
   const contact = customer?.contacts.find((item) => item.id === order.contactId);
   return <CommercialDocument id="order-pdf-sheet" company={company} title="Pedido de venta" eyebrow="CONFIRMACIÓN COMERCIAL" number={order.orderNumber} badge={label(order.status)}
     meta={<Recipient heading="CLIENTE" name={customer?.legalName || "Cliente"} document={customer?.documentNumber}
-      address={[customer?.fiscalAddress?.street, customer?.fiscalAddress?.city, customer?.fiscalAddress?.province].filter(Boolean).join(" · ")}
+      address={[customer?.fiscalAddress?.street, customer?.fiscalAddress?.city, customer?.fiscalAddress?.province && provinceLabel(customer.fiscalAddress.province)].filter(Boolean).join(" · ")}
       meta={[{ label: "EMISIÓN", value: documentDate(order.createdAtUtc) }, { label: "MONEDA", value: curr.label }, { label: "ORIGEN", value: order.quoteNumber ? `Presupuesto ${order.quoteNumber}` : "Pedido directo" }]} />}>
     <CommercialSection index="01" title="Detalle del pedido" description="Productos y servicios confirmados">
       <table className="quote-document__items"><thead><tr><th>ÍTEM / DESCRIPCIÓN</th><th>CANT.</th><th>PRECIO UNIT.</th><th>DESC.</th><th>IVA</th><th>IMPORTE</th></tr></thead><tbody>
@@ -55,7 +55,7 @@ export function RemitoDocument({ remito, customer, company }: { remito: Remito; 
   const { settings } = useDocumentTemplate();
   return <CommercialDocument id="remito-pdf-sheet" company={company} title="Remito" eyebrow={settings.remito.headerTitle} number={remito.remitoNumber} badge="R · COD. 91"
     meta={<Recipient heading="DESTINATARIO" name={remito.customerName || customer?.legalName || "Cliente"} document={remito.customerDocument || customer?.documentNumber}
-      address={settings.remito.showRecipientAddress ? [customer?.fiscalAddress?.street, customer?.fiscalAddress?.city, customer?.fiscalAddress?.province].filter(Boolean).join(" · ") : ""}
+      address={settings.remito.showRecipientAddress ? [customer?.fiscalAddress?.street, customer?.fiscalAddress?.city, customer?.fiscalAddress?.province && provinceLabel(customer.fiscalAddress.province)].filter(Boolean).join(" · ") : ""}
       meta={[{ label: "EMISIÓN", value: documentDate(remito.issueDate) }, { label: "ENTREGA", value: documentDate(remito.deliveryDate) }, { label: "ESTADO", value: label(remito.status) }]} />}>
     <CommercialSection index="01" title="Detalle de entrega" description="Mercadería y cantidades despachadas"><table className="quote-document__items commercial-document__delivery-items"><thead><tr><th>ÍTEM / DESCRIPCIÓN</th><th>CÓDIGO</th><th>CANT.</th><th>UNIDAD</th></tr></thead><tbody>
       {remito.items.map((item, index) => <tr key={item.id}><td><span className="quote-document__item-index">{String(index + 1).padStart(2, "0")}</span><strong>{item.description}</strong></td><td>{item.code || "—"}</td><td>{item.quantity.toLocaleString("es-AR")}</td><td>{item.unitMeasure || "u"}</td></tr>)}
@@ -80,7 +80,7 @@ export function PurchaseOrderDocument({ order, supplier, company }: { order: Pur
     : settings.purchaseOrder.billingInstructions;
   return <CommercialDocument id="purchase-order-pdf-sheet" company={company} title="Orden de compra" eyebrow={settings.purchaseOrder.headerTitle} number={order.orderNumber} badge={label(order.status)}
     meta={<Recipient heading="PROVEEDOR" name={order.supplierName || supplier?.legalName || "Proveedor"} document={order.supplierDocument || supplier?.documentNumber}
-      address={supplier?.address ? [supplier.address.street, supplier.address.city, supplier.address.province].filter(Boolean).join(" · ") : ""}
+      address={supplier?.address ? [supplier.address.street, supplier.address.city, supplier.address.province && provinceLabel(supplier.address.province)].filter(Boolean).join(" · ") : ""}
       meta={[{ label: "EMISIÓN", value: documentDate(order.issueDate) }, { label: "ENTREGA", value: order.expectedDeliveryDate ? documentDate(order.expectedDeliveryDate) : "A coordinar" }, { label: "MONEDA", value: order.currency }]} />}>
     <CommercialSection index="01" title="Productos y servicios" description="Detalle de lo solicitado al proveedor"><table className="quote-document__items"><thead><tr><th>ÍTEM / DESCRIPCIÓN</th><th>CANT.</th><th>PRECIO UNIT.</th><th>DESC.</th><th>IVA</th><th>IMPORTE</th></tr></thead><tbody>
       {order.items.map((item, index) => <tr key={item.id}><td><span className="quote-document__item-index">{String(index + 1).padStart(2, "0")}</span><strong>{item.description}</strong>{item.code && <small>Código {item.code}</small>}</td><td>{item.quantity.toLocaleString("es-AR")}</td><td>{documentMoney(item.unitPrice)}</td><td>{item.discountPercent ? `${item.discountPercent}%` : "—"}</td><td>{item.taxRate}%</td><td className="quote-document__item-total">{documentMoney(item.total)}</td></tr>)}

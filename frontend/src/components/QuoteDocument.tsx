@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { useDocumentTemplate } from "../context/DocumentTemplateContext";
-import { currencyMeta, label, type CompanySettings, type Contact, type CustomerDetail, type Location, type Product, type Quote } from "../api/types";
+import { currencyMeta, label, provinceLabel, type CompanySettings, type Contact, type CustomerDetail, type Location, type Product, type Quote } from "../api/types";
 import { plainToRich, richTextIsEmpty } from "../utils/richText";
 import "./quoteDocument.css";
 
@@ -43,9 +43,9 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
     .filter((value, index, all) => all.indexOf(value) === index)
     .join(" // ");
   const reachLine = [company?.email, phoneLine, company?.website].filter(Boolean).join(" | ");
-  const customerCity = [customer?.fiscalAddress?.city, customer?.fiscalAddress?.province].filter(Boolean).join(", ");
+  const customerCity = [customer?.fiscalAddress?.city, customer?.fiscalAddress?.province && provinceLabel(customer.fiscalAddress.province)].filter(Boolean).join(", ");
   const deliveryAddress = deliveryLocation?.address?.street
-    ? [deliveryLocation.address.street, deliveryLocation.address.city, deliveryLocation.address.province].filter(Boolean).join(" - ")
+    ? [deliveryLocation.address.street, deliveryLocation.address.city, deliveryLocation.address.province && provinceLabel(deliveryLocation.address.province)].filter(Boolean).join(" - ")
     : "";
   const curr = currencyMeta[quote.currency] ?? { label: quote.currency, detail: "", symbol: "$" };
   const subtotal = quote.subtotal;
