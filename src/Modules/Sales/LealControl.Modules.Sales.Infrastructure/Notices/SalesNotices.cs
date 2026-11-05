@@ -81,10 +81,10 @@ public sealed class ExpiringQuoteNotices : INoticeProvider
         var tenant = new TenantId(context.TenantId);
         var quotes = await db.Quotes.AsNoTracking()
             .Where(q => q.TenantId == tenant && q.Status == QuoteStatus.Sent)
-            .Select(q => new { q.Id, q.QuoteNumber, q.Revision, q.CreatedAtUtc, q.ValidDays })
+            .Select(q => new { q.Id, q.QuoteNumber, q.Revision, q.RevisionDateUtc, q.ValidDays })
             .ToListAsync(cancellationToken);
         var items = quotes
-            .Select(q => new { Quote = q, Expires = DateOnly.FromDateTime(q.CreatedAtUtc.AddHours(-3)).AddDays(q.ValidDays) })
+            .Select(q => new { Quote = q, Expires = DateOnly.FromDateTime(q.RevisionDateUtc.AddHours(-3)).AddDays(q.ValidDays) })
             .Select(x => new { x.Quote, x.Expires, Days = x.Expires.DayNumber - context.Today.DayNumber })
             .Where(x => x.Days is >= -3 and <= 3)
             .OrderBy(x => x.Days)

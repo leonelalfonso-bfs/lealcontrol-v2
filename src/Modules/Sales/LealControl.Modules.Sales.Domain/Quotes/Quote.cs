@@ -32,6 +32,7 @@ public sealed class Quote : AggregateRoot<QuoteId>
         ValidDays = 15;
         CreatedAtUtc = createdAtUtc;
         UpdatedAtUtc = createdAtUtc;
+        RevisionDateUtc = createdAtUtc;
     }
 
     public TenantId TenantId { get; private set; }
@@ -47,6 +48,9 @@ public sealed class Quote : AggregateRoot<QuoteId>
     }
 
     public int Revision { get; private set; }
+
+    /// <summary>Fecha de la revisión vigente: es la fecha del presupuesto y desde ella corre la validez.</summary>
+    public DateTime RevisionDateUtc { get; private set; }
 
     public Guid CustomerId { get; private set; }
 
@@ -264,6 +268,7 @@ public sealed class Quote : AggregateRoot<QuoteId>
     public void NextRevision(DateTime utcNow)
     {
         Revision++;
+        RevisionDateUtc = utcNow;
         UpdatedAtUtc = utcNow;
     }
 

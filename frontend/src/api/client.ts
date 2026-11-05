@@ -16,6 +16,7 @@
   ProductCategory,
   PipelineReport,
   Quote,
+  QuoteRevisionSummary,
   QuoteWrite
 } from "./types";
 import type {
@@ -498,6 +499,8 @@ export const api = {
   listHistoricalQuotes: () => request<HistoricalQuote[]>("/api/v1/sales/quotes/historical"),
   getHistoricalQuote: (id: string) => request<HistoricalQuoteDetail>(`/api/v1/sales/quotes/historical/${id}`),
   getQuote: (id: string) => request<Quote>(`/api/v1/sales/quotes/${id}`),
+  listQuoteRevisions: (id: string) => request<QuoteRevisionSummary[]>(`/api/v1/sales/quotes/${id}/revisions`),
+  getQuoteRevision: (id: string, revision: number) => request<Quote>(`/api/v1/sales/quotes/${id}/revisions/${revision}`),
   createQuote: (body: QuoteWrite) =>
     request<Quote>("/api/v1/sales/quotes", { method: "POST", body: JSON.stringify(body) }),
   updateQuote: (id: string, body: QuoteWrite) =>

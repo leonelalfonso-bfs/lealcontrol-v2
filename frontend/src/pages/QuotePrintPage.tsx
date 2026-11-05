@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 import { savePdfAs } from "../utils/savePdfAs";
 import { api } from "../api/client";
@@ -19,6 +19,8 @@ import {
 
 export const QuotePrintPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const revisionParam = Number(searchParams.get("rev")) || null;
   const navigate = useNavigate();
   const { settings } = useDocumentTemplate();
 
@@ -42,7 +44,7 @@ export const QuotePrintPage: React.FC = () => {
       try {
         setLoading(true);
         const [q, prods, companySettings] = await Promise.all([
-          api.getQuote(id),
+          revisionParam ? api.getQuoteRevision(id, revisionParam) : api.getQuote(id),
           api.listProducts().catch(() => [] as Product[]),
           api.getCompanySettings().catch(() => null)
         ]);
@@ -81,7 +83,7 @@ export const QuotePrintPage: React.FC = () => {
     };
 
     loadQuoteData();
-  }, [id]);
+  }, [id, revisionParam]);
 
   const handleDownloadPdf = async () => {
     const element = document.getElementById("quote-pdf-sheet");
@@ -189,7 +191,7 @@ export const QuotePrintPage: React.FC = () => {
           </button>
           }
 
-          {quote.status !== "Cancelled" && (
+          {!revisionParam && quote.status !== "Cancelled" && (
             <button
               type="button"
               onClick={() => void handleCancelQuote()}
@@ -198,7 +200,7 @@ export const QuotePrintPage: React.FC = () => {
               Anular
             </button>
           )}
-          {quote.status !== "Cancelled" && (
+          {!revisionParam && quote.status !== "Cancelled" && (
             <button
               type="button"
               onClick={() => void handleDeleteQuote()}
@@ -218,9 +220,11 @@ export const QuotePrintPage: React.FC = () => {
             🖨️ Imprimir
           </button>
 
-          <button type="button" className="btn btn-outline" onClick={() => setShowEmail(true)} style={{ padding: "8px 14px" }}>
-            ✉ Email
-          </button>
+          {!revisionParam && (
+            <button type="button" className="btn btn-outline" onClick={() => setShowEmail(true)} style={{ padding: "8px 14px" }}>
+              ✉ Email
+            </button>
+          )}
 
           {showEmail && (
             <EmailComposer
@@ -271,6 +275,7 @@ export const QuotePrintPage: React.FC = () => {
           assignedContact={assignedContact}
           productsMap={productsMap}
           includeTechnicalOffer={includeTechnicalOffer}
+          superseded={Boolean(revisionParam)}
         />
       </div>
 

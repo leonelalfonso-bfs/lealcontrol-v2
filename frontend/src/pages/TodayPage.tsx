@@ -368,8 +368,8 @@ export function TodayPage() {
     quotes
       .filter((q) => q.status === "Sent")
       .forEach((q) => {
-        // Días calendario: se compara la fecha de vencimiento contra hoy, sin la hora.
-        const created = parseDate(q.createdAtUtc?.slice(0, 10))?.getTime();
+        // Días calendario desde la revisión vigente: se compara la fecha de vencimiento contra hoy, sin la hora.
+        const created = parseDate((q.revisionDateUtc ?? q.createdAtUtc)?.slice(0, 10))?.getTime();
         if (created === undefined) return;
         const expires = created + (q.validDays || 15) * DAY_MS;
         const days = Math.round((expires - t0) / DAY_MS);

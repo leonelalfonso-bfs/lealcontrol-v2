@@ -114,7 +114,11 @@ public sealed record QuoteDto(
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
     IReadOnlyList<QuoteLineDto> Lines,
-    string? DeliveryTimeText);
+    string? DeliveryTimeText,
+    DateTime? RevisionDateUtc = null);
+
+/// <summary>Revisión reemplazada de un presupuesto: cómo era cuando se le mandó al cliente.</summary>
+public sealed record QuoteRevisionSummary(int Revision, DateTime RevisionDateUtc, decimal Total, string Currency, DateTime ReplacedAtUtc);
 
 internal static class QuoteMappings
 {
@@ -155,7 +159,8 @@ internal static class QuoteMappings
             l.CurrencyCode,
             l.LineSubtotal,
             l.TechnicalDetail)).ToList(),
-        quote.DeliveryTimeText);
+        quote.DeliveryTimeText,
+        quote.RevisionDateUtc);
 }
 
 internal sealed class CreateQuoteCommandHandler : IRequestHandler<CreateQuoteCommand, Result<QuoteDto>>
@@ -306,6 +311,7 @@ internal sealed class UpdateQuoteCommandHandler : IRequestHandler<UpdateQuoteCom
         }
 
         var before = quote.ContentSignature();
+        var previous = QuoteMappings.ToDto(quote);
         var updateResult = quote.UpdateDetails(
             request.Model.CustomerId,
             request.Model.LocationId,
@@ -351,7 +357,13 @@ internal sealed class UpdateQuoteCommandHandler : IRequestHandler<UpdateQuoteCom
         }
 
         // Guardar sin cambios (por ejemplo, antes de generar el pedido) no es una nueva revisión.
-        if (quote.ContentSignature() != before) quote.NextRevision(_clock.UtcNow);
+        if (quote.ContentSignature() != before)
+        {
+            // La revisión que se reemplaza queda guardada tal como era, para verla o reimprimirla.
+            _quotes.AddRevision(quote.TenantId, quote.Id.Value, previous.Revision, previous.RevisionDateUtc ?? previous.CreatedAtUtc, previous.Total, previous.Currency,
+                System.Text.Json.JsonSerializer.Serialize(previous, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)), _clock.UtcNow);
+            quote.NextRevision(_clock.UtcNow);
+        }
 
         var persisted = await PersistQuoteAsync(cancellationToken);
         return persisted ?? Result<QuoteDto>.Success(QuoteMappings.ToDto(quote));

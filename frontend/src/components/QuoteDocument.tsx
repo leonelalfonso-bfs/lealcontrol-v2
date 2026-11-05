@@ -12,6 +12,8 @@ type Props = {
   assignedContact: Contact | null;
   productsMap: Record<string, Product>;
   includeTechnicalOffer: boolean;
+  /** Revisión vieja abierta desde el historial: lleva la marca para que no se confunda con la vigente. */
+  superseded?: boolean;
 };
 
 const money = (value: number) => value.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -30,7 +32,7 @@ function optionalAmount(line: { quantity: number; unitPrice: number; discountPer
   return Math.round(line.quantity * line.unitPrice * (1 - (line.discountPercent || 0) / 100) * 100) / 100;
 }
 
-export function QuoteDocument({ quote, company, customer, deliveryLocation, assignedContact, productsMap, includeTechnicalOffer }: Props) {
+export function QuoteDocument({ quote, company, customer, deliveryLocation, assignedContact, productsMap, includeTechnicalOffer, superseded = false }: Props) {
   const { settings } = useDocumentTemplate();
   const accent = settings.primaryColor || "#3a82f6";
   const sheetStyle = { "--document-accent": accent } as CSSProperties;
@@ -56,7 +58,7 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
   const includedLines = quote.lines.filter((line) => !line.isOptional);
   const taxRates = [...new Set(includedLines.map((line) => line.taxRate))];
   const taxLabel = taxRates.length === 1 ? `IVA ${taxRates[0]}%` : "IVA";
-  const date = new Date(quote.createdAtUtc).toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
+  const date = new Date(quote.revisionDateUtc ?? quote.createdAtUtc).toLocaleDateString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" });
   const exchangeRate = quote.currency === "USD_BILLETE" ? quote.exchangeRateUsdBillete
     : quote.currency === "USD_DIVISA" ? quote.exchangeRateUsdDivisa : 0;
   const technicalItems = quote.lines.map((line, index) => {
@@ -128,7 +130,9 @@ export function QuoteDocument({ quote, company, customer, deliveryLocation, assi
 
   return (
     <article id="quote-pdf-sheet" className={`quote-document quote-sheet quote-document--${settings.templateStyle}`} style={sheetStyle}>
-      {quote.status === "Cancelled" && <div className="quote-document__cancelled">ANULADO</div>}
+      {superseded
+        ? <div className="quote-document__cancelled">REVISIÓN REEMPLAZADA</div>
+        : quote.status === "Cancelled" && <div className="quote-document__cancelled">ANULADO</div>}
       {masthead}
       {clientCard}
 

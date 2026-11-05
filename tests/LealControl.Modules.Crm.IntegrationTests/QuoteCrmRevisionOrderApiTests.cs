@@ -6,7 +6,7 @@ namespace LealControl.Modules.Crm.IntegrationTests;
 
 /// <summary>
 /// Presupuesto hecho desde Ventas: abre la oportunidad en el CRM, cada cambio sube la revisión (guardar sin cambios no),
-/// y el pedido lo deja como "Pedido de venta" y gana la oportunidad.
+/// la revisión vieja queda guardada para consultarla, y el pedido lo deja como "Pedido de venta" y gana la oportunidad.
 /// </summary>
 public sealed class QuoteCrmRevisionOrderApiTests : IAsyncLifetime
 {
@@ -50,7 +50,16 @@ public sealed class QuoteCrmRevisionOrderApiTests : IAsyncLifetime
 
         // Guardar sin cambios no es revisión nueva; cambiar el precio sí.
         Assert.Equal(1, (await Json(await client.PutAsJsonAsync($"/api/v1/sales/quotes/{id}", Body(100000m)))).GetProperty("revision").GetInt32());
-        Assert.Equal(2, (await Json(await client.PutAsJsonAsync($"/api/v1/sales/quotes/{id}", Body(110000m)))).GetProperty("revision").GetInt32());
+        var revised = await Json(await client.PutAsJsonAsync($"/api/v1/sales/quotes/{id}", Body(110000m)));
+        Assert.Equal(2, revised.GetProperty("revision").GetInt32());
+        Assert.True(revised.GetProperty("revisionDateUtc").GetDateTime() > quote.GetProperty("revisionDateUtc").GetDateTime());
+
+        // La revisión reemplazada queda guardada como estaba: el precio viejo.
+        var revisions = (await Json(await client.GetAsync($"/api/v1/sales/quotes/{id}/revisions"))).EnumerateArray().ToList();
+        Assert.Equal(1, Assert.Single(revisions).GetProperty("revision").GetInt32());
+        var old = await Json(await client.GetAsync($"/api/v1/sales/quotes/{id}/revisions/1"));
+        Assert.Equal(1, old.GetProperty("revision").GetInt32());
+        Assert.Equal(100000m, old.GetProperty("lines")[0].GetProperty("unitPrice").GetDecimal());
 
         await Json(await client.PostAsJsonAsync($"/api/v1/sales/orders/from-quote/{id}", new { includeOptionalLineIds = Array.Empty<Guid>() }));
         Assert.Equal("Ordered", (await Json(await client.GetAsync($"/api/v1/sales/quotes/{id}"))).GetProperty("status").GetString());
