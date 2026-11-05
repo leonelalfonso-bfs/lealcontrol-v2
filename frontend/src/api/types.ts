@@ -216,10 +216,20 @@ export type QuoteLine = {
   technicalDetail?: string | null;
 };
 
+export type QuoteRevisionSummary = {
+  revision: number;
+  revisionDateUtc: string;
+  total: number;
+  currency: string;
+  replacedAtUtc: string;
+};
+
 export type Quote = {
   id: string;
   quoteNumber: string;
   revision: number;
+  /** Fecha de la revisión vigente: es la fecha del presupuesto y desde ella corre la validez. */
+  revisionDateUtc?: string | null;
   customerId: string;
   locationId?: string | null;
   contactId?: string | null;

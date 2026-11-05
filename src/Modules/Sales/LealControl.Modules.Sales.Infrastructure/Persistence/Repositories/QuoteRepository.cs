@@ -1,6 +1,7 @@
 using LealControl.BuildingBlocks.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Sales.Application.Abstractions;
+using LealControl.Modules.Sales.Application.Quotes;
 using LealControl.Modules.Sales.Domain.Quotes;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -10,6 +11,8 @@ namespace LealControl.Modules.Sales.Infrastructure.Persistence.Repositories;
 internal sealed class QuoteRepository : IQuoteRepository
 {
     private readonly SalesDbContext _db;
+
+    private readonly List<(Guid TenantId, Guid QuoteId, int Revision, DateTime RevisionDateUtc, decimal Total, string Currency, string Snapshot, DateTime ReplacedAtUtc)> _pendingRevisions = [];
 
     public QuoteRepository(SalesDbContext db) => _db = db;
 
@@ -176,6 +179,17 @@ internal sealed class QuoteRepository : IQuoteRepository
                     || string.Equals(pg.TableName, "quotes", StringComparison.OrdinalIgnoreCase));
             throw new QuotePersistenceException(ToSaveMessage(pg), collision);
         }
+
+        // La revisión reemplazada se guarda recién cuando el presupuesto quedó guardado con la nueva.
+        foreach (var r in _pendingRevisions)
+        {
+            await _db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO sales.quote_revisions ("Id", "TenantId", "QuoteId", "Revision", "RevisionDateUtc", "Total", "Currency", "SnapshotJson", "ReplacedAtUtc")
+                VALUES ({Guid.NewGuid()}, {r.TenantId}, {r.QuoteId}, {r.Revision}, {r.RevisionDateUtc}, {r.Total}, {r.Currency}, {r.Snapshot}::jsonb, {r.ReplacedAtUtc})
+                ON CONFLICT ("QuoteId", "Revision") DO NOTHING
+                """, cancellationToken);
+        }
+        _pendingRevisions.Clear();
     }
 
     private static string ToSaveMessage(PostgresException? pg)
@@ -198,6 +212,23 @@ internal sealed class QuoteRepository : IQuoteRepository
     }
 
     public void Add(Quote quote) => _db.Quotes.Add(quote);
+
+    public void AddRevision(TenantId tenantId, Guid quoteId, int revision, DateTime revisionDateUtc, decimal total, string currency, string snapshotJson, DateTime replacedAtUtc) =>
+        _pendingRevisions.Add((tenantId.Value, quoteId, revision, revisionDateUtc, total, currency, snapshotJson, replacedAtUtc));
+
+    public async Task<IReadOnlyList<QuoteRevisionSummary>> ListRevisionsAsync(TenantId tenantId, Guid quoteId, CancellationToken cancellationToken = default) =>
+        await _db.Database.SqlQuery<QuoteRevisionSummary>($"""
+            SELECT "Revision", "RevisionDateUtc", "Total", "Currency", "ReplacedAtUtc"
+            FROM sales.quote_revisions
+            WHERE "TenantId" = {tenantId.Value} AND "QuoteId" = {quoteId}
+            ORDER BY "Revision" DESC
+            """).ToListAsync(cancellationToken);
+
+    public async Task<string?> GetRevisionSnapshotAsync(TenantId tenantId, Guid quoteId, int revision, CancellationToken cancellationToken = default) =>
+        (await _db.Database.SqlQuery<string>($"""
+            SELECT "SnapshotJson" AS "Value" FROM sales.quote_revisions
+            WHERE "TenantId" = {tenantId.Value} AND "QuoteId" = {quoteId} AND "Revision" = {revision}
+            """).ToListAsync(cancellationToken)).FirstOrDefault();
 
     public void Remove(Quote quote) => _db.Quotes.Remove(quote);
 }

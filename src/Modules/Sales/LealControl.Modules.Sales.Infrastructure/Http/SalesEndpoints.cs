@@ -122,6 +122,18 @@ public static class SalesEndpoints
             return result.ToHttp();
         });
 
+        // Revisiones reemplazadas: solo consulta, se ven e imprimen tal como se mandaron.
+        sales.MapGet("/quotes/{id:guid}/revisions", async (Guid id, LealControl.Modules.Sales.Application.Abstractions.IQuoteRepository quotes, ITenantContext tenant, CancellationToken cancellationToken) =>
+            Results.Ok(await quotes.ListRevisionsAsync(tenant.TenantId, id, cancellationToken)));
+
+        sales.MapGet("/quotes/{id:guid}/revisions/{revision:int}", async (Guid id, int revision, LealControl.Modules.Sales.Application.Abstractions.IQuoteRepository quotes, ITenantContext tenant, CancellationToken cancellationToken) =>
+        {
+            var snapshot = await quotes.GetRevisionSnapshotAsync(tenant.TenantId, id, revision, cancellationToken);
+            return snapshot is null
+                ? Results.NotFound(new { detail = "No se encontró esa revisión." })
+                : Results.Content(snapshot, "application/json");
+        });
+
         sales.MapPost("/quotes", async (QuoteWriteModel body, ISender sender, CancellationToken cancellationToken) =>
         {
             var result = await sender.Send(new CreateQuoteCommand(body), cancellationToken);

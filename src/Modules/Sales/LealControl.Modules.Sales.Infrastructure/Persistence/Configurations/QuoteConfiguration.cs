@@ -26,6 +26,7 @@ internal sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
         builder.Property(x => x.Warranty).HasMaxLength(2000);
         builder.Property(x => x.Notes).HasMaxLength(8000);
         builder.Property(x => x.OwnerName).HasMaxLength(120);
+        builder.Property(x => x.RevisionDateUtc);
 
         builder.Ignore(x => x.Subtotal);
         builder.Ignore(x => x.Total);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { CustomerLocationForm } from "../components/crm/CustomerLocationForm";
 import {
@@ -10,6 +10,7 @@ import {
   type Product,
   type ProductCategory,
   type QuoteLineWrite,
+  type QuoteRevisionSummary,
   type QuoteWrite
 } from "../api/types";
 import { TechnicalDetailEditor } from "../components/TechnicalDetailEditor";
@@ -49,6 +50,7 @@ export const QuoteFormPage: React.FC = () => {
   const [currency, setCurrency] = useState("ARS");
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [validDays, setValidDays] = useState<number>(15);
+  const [revisions, setRevisions] = useState<QuoteRevisionSummary[]>([]);
   const [paymentTerms, setPaymentTerms] = useState("50% anticipo, saldo contra entrega");
   const [paymentMethod, setPaymentMethod] = useState("Transferencia Bancaria");
   const [deliveryTimeDays, setDeliveryTimeDays] = useState<number | null>(15);
@@ -140,6 +142,7 @@ export const QuoteFormPage: React.FC = () => {
 
         if (isEditing && id) {
           const q = await api.getQuote(id);
+          void api.listQuoteRevisions(id).then(setRevisions).catch(() => setRevisions([]));
           setQuoteStatus(q.status);
           setQuoteNumber(q.quoteNumber);
           setCustomerId(q.customerId);
@@ -530,6 +533,27 @@ export const QuoteFormPage: React.FC = () => {
       )}
 
       {error && <div className="alert">{error}</div>}
+
+      {revisions.length > 0 && id && (
+        <section className="card pad stack">
+          <h3>Revisiones anteriores</h3>
+          <div className="muted">Cada cambio guardado sube la revisión. Las anteriores quedan como se mandaron, solo para consulta.</div>
+          <table className="table">
+            <thead><tr><th>Rev.</th><th>Fecha</th><th>Total</th><th>Reemplazada el</th><th /></tr></thead>
+            <tbody>
+              {revisions.map((r) => (
+                <tr key={r.revision}>
+                  <td>{r.revision}</td>
+                  <td>{new Date(r.revisionDateUtc).toLocaleDateString("es-AR")}</td>
+                  <td>{r.currency.startsWith("USD") ? "USD" : "$"} {r.total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td>
+                  <td>{new Date(r.replacedAtUtc).toLocaleString("es-AR")}</td>
+                  <td><Link to={`/presupuestos/${id}/imprimir?rev=${r.revision}`}>Ver / imprimir</Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       <form onSubmit={(e) => handleSubmit(e, false)} className="stack">
         {/* Card 1: Cliente, Plantas & Contactos */}
