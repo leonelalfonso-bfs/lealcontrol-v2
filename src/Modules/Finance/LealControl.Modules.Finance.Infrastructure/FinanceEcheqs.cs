@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Modules.Finance.Infrastructure;
 
-public sealed record CreateReceivedChequeRequest(string CheckNumber, decimal Amount, string Currency, DateTime? IssueDateUtc, DateTime? DueDateUtc, string? IssuerName, string? IssuerTaxId, string? BankName, string? Notes, ChequeDirection Direction = ChequeDirection.Received);
+public sealed record CreateReceivedChequeRequest(string CheckNumber, decimal Amount, string Currency, DateTime? IssueDateUtc, DateTime? DueDateUtc, string? IssuerName, string? IssuerTaxId, string? BankName, string? Notes, ChequeDirection Direction = ChequeDirection.Received, Guid? SupplierId = null);
 public sealed record ImportReceivedChequesRequest(string CsvContent);
 public sealed record ImportIssuedChequesRequest(string CsvContent);
 public sealed record LinkChequeMovementRequest(Guid AccountId, Guid MovementId, bool IsCredit);
@@ -15,6 +15,7 @@ public sealed record UseChequeForPaymentRequest(string Reference);
 public sealed record DepositChequeRequest(Guid BankAccountId, DateTime DepositDateUtc);
 public sealed record RejectChequeRequest(DateTime RejectDateUtc, decimal? Fees, string? Note);
 public sealed record CancelChequeRequest(string Reason);
+public sealed record AssignChequeSupplierRequest(Guid? SupplierId);
 
 public static class FinanceEcheqs
 {
@@ -48,6 +49,7 @@ public static class FinanceEcheqs
                 Status = direction == ChequeDirection.Issued ? ReceivedChequeStatus.Issued : ReceivedChequeStatus.Available,
                 CreatedAtUtc = DateTime.UtcNow
             };
+            if (direction == ChequeDirection.Issued) item.SupplierId = body.SupplierId ?? await SupplierByCuitAsync(db, item.TenantId, item.IssuerTaxId, ct);
             db.ReceivedCheques.Add(item); await db.SaveChangesAsync(ct); return Results.Created($"/api/v1/finance/echeqs/{item.Id}", item);
         });
         group.MapPost("/import", async (ImportReceivedChequesRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
@@ -71,10 +73,22 @@ public static class FinanceEcheqs
                 var c = raw.Split(';'); if (c.Length < 13) continue; var number = c[0].Trim(); var amount = ParseMoney(c[6]); if (string.IsNullOrWhiteSpace(number) || amount <= 0) continue;
                 var echeqId = c.Length > 10 ? c[10].Trim() : null;
                 if (await db.ReceivedCheques.AnyAsync(x => x.TenantId == tenantId && x.Direction == ChequeDirection.Issued && x.CheckNumber == number && x.Amount == amount && x.EcheqId == echeqId, ct)) { duplicates++; continue; }
-                db.ReceivedCheques.Add(new ReceivedCheque { Id = Guid.NewGuid(), TenantId = tenantId, CheckNumber = number, EcheqId = echeqId, Cmc7 = c.Length > 11 ? c[11].Trim() : null, Amount = amount, Currency = "ARS", DueDateUtc = ParseDate(c[4]), IssueDateUtc = ParseDate(c[5]), Direction = ChequeDirection.Issued, Status = ReceivedChequeStatus.Issued, BankName = c.Length > 9 ? c[9].Trim() : null, ReceivedFrom = c.Length > 1 ? c[1].Trim() : null, IssuerTaxId = c.Length > 3 ? c[3].Trim() : null, IssuerName = c.Length > 17 ? c[17].Trim() : null, Notes = c.Length > 12 ? c[12].Trim() : null, CreatedAtUtc = DateTime.UtcNow });
+                var taxId = c.Length > 3 ? c[3].Trim() : null;
+                db.ReceivedCheques.Add(new ReceivedCheque { Id = Guid.NewGuid(), TenantId = tenantId, CheckNumber = number, EcheqId = echeqId, Cmc7 = c.Length > 11 ? c[11].Trim() : null, Amount = amount, Currency = "ARS", DueDateUtc = ParseDate(c[4]), IssueDateUtc = ParseDate(c[5]), Direction = ChequeDirection.Issued, Status = ReceivedChequeStatus.Issued, BankName = c.Length > 9 ? c[9].Trim() : null, ReceivedFrom = c.Length > 1 ? c[1].Trim() : null, IssuerTaxId = taxId, IssuerName = c.Length > 17 ? c[17].Trim() : null, Notes = c.Length > 12 ? c[12].Trim() : null, SupplierId = await SupplierByCuitAsync(db, tenantId, taxId, ct), CreatedAtUtc = DateTime.UtcNow });
                 imported++;
             }
             await db.SaveChangesAsync(ct); return Results.Ok(new { imported, duplicates });
+        });
+        // Cheque propio cargado o importado del banco: a qué proveedor se le entregó. Con el proveedor se genera la orden de pago.
+        group.MapPost("/{id:guid}/supplier", async (Guid id, AssignChequeSupplierRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+        {
+            var cheque = await db.ReceivedCheques.SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, ct);
+            if (cheque is null) return Results.NotFound("Cheque inexistente.");
+            if (cheque.Direction != ChequeDirection.Issued) return Results.BadRequest("Solo aplica a cheques emitidos.");
+            if (cheque.PaymentOrderId.HasValue) return Results.Conflict("El cheque ya está en una orden de pago: el proveedor es el de la orden.");
+            cheque.SupplierId = body.SupplierId;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(cheque);
         });
         group.MapPost("/{id:guid}/link-movement", async (Guid id, LinkChequeMovementRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
         {
@@ -193,4 +207,12 @@ public static class FinanceEcheqs
     }
     private static decimal ParseMoney(string value) { var n = value.Trim().Replace("$", "").Replace(".", "").Replace(",", "."); return decimal.TryParse(n, NumberStyles.Any, CultureInfo.InvariantCulture, out var amount) ? amount : 0; }
     private static DateTime? ParseDate(string value) => DateTime.TryParseExact(value.Trim(), "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date) ? date.ToUniversalTime() : null;
+
+    /// <summary>Proveedor con ese CUIT, si hay uno solo (el CUIT del beneficiario viene en el archivo del banco).</summary>
+    private static async Task<Guid?> SupplierByCuitAsync(FinanceDbContext db, Guid tenantId, string? taxId, CancellationToken ct)
+    {
+        var cuit = new string((taxId ?? "").Where(char.IsDigit).ToArray());
+        if (cuit.Length != 11) return null;
+        return (await FinanceCounterpartyLookup.TryResolveUniqueAsync(db, tenantId, cuit, FinancialMovementKind.Debit, ct))?.Id;
+    }
 }

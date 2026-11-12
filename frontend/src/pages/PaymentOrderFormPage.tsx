@@ -72,6 +72,7 @@ export function PaymentOrderFormPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialSupplierId = searchParams.get("supplierId");
+  const initialChequeId = searchParams.get("chequeId");
   const initialMovementId = searchParams.get("movementId");
   const initialAccountId = searchParams.get("accountId");
   const initialAmount = searchParams.get("amount");
@@ -168,7 +169,7 @@ export function PaymentOrderFormPage() {
         setOwnCheques(
           allCheques.filter(
             (c) =>
-              c.direction === "Issued" &&
+              c.direction === "Issued" && !c.paymentOrderId &&
               (c.status === "Issued" || c.status === "Available" || c.status === "Emitido")
           )
         );
@@ -199,6 +200,17 @@ export function PaymentOrderFormPage() {
           ]);
           if (initialAccountId) setMovementAccountFilter(initialAccountId);
           void loadAvailableMovements(initialAccountId || "", defaultConceptId);
+        } else if (initialChequeId) {
+          // Desde la cartera: el cheque propio ya asignado al proveedor entra como medio de pago.
+          const chq = allCheques.find((c) => c.id === initialChequeId && c.direction === "Issued" && !c.paymentOrderId);
+          setLines(chq ? [{
+            id: newLineId(),
+            method: "ChequeOwn",
+            amount: chq.amount,
+            currency: chq.currency || "ARS",
+            chequeId: chq.id,
+            notes: `Cheque propio N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+          }] : []);
         } else {
           setLines([]);
           if (defaultConceptId) {
