@@ -148,4 +148,41 @@ public sealed class ReconciliationTrayTests : IClassFixture<FinanceWebApplicatio
         after.GetProperty("rows").EnumerateArray().Should().BeEmpty();
         after.GetProperty("pendingSystem").GetInt32().Should().Be(2);
     }
+
+    [Fact]
+    public async Task Bank_debit_marked_as_transfer_credits_the_other_own_account()
+    {
+        var tenantId = FinanceWebApplicationFactory.DemoTenantId;
+        var client = _factory.CreateAuthenticatedClient(tenantId);
+        var (bankId, walletId) = (Guid.NewGuid(), Guid.NewGuid());
+        await _factory.WithDbAsync(async db =>
+        {
+            db.Accounts.Add(new FinancialAccount { Id = bankId, TenantId = tenantId, Name = $"Banco {bankId:N}"[..20], Currency = "ARS", Type = FinancialAccountType.Bank, IsActive = true, CreatedAtUtc = DateTime.UtcNow });
+            db.Accounts.Add(new FinancialAccount { Id = walletId, TenantId = tenantId, Name = "Viáticos Empleado", Currency = "ARS", Type = FinancialAccountType.Cash, BookingMode = FinancialAccountBookingMode.Manual, EmployeeId = Guid.NewGuid(), IsActive = true, CreatedAtUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        });
+        var csv = "\"Fecha\";\"Descripción\";\"Origen\";\"Débitos\";\"Créditos\";\"Grupo de Conceptos\";\"Concepto\";\"Número de Terminal\";\"Observaciones Cliente\";\"Número de Comprobante\";\"Leyendas Adicionales1\";\"Leyendas Adicionales2\";\"Leyendas Adicionales3\";\"Leyendas Adicionales4\";\"Tipo de Movimiento\";\"Saldo\"\n"
+            + "\"03/11/2026\";\"Trf Inmed Proveed\";\"\";\"100000,00\";\"0\";\"\";\"\";\"\";\"\";\"33333333\";\"Empleado Viajante\";\"20111222333\";\"VARIOS\";\"\";\"Imputado\";\"900000,00\";\n";
+        (await client.PostAsJsonAsync("/api/v1/finance/imports/bank/confirm", new { accountId = bankId, fileBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(csv)), fileName = "Extracto_transf.csv" })).EnsureSuccessStatusCode();
+        var tray = await client.GetFromJsonAsync<JsonElement>($"/api/v1/finance/reconciliation/tray?accountId={bankId}");
+        var importedId = tray.GetProperty("rows").EnumerateArray().Single().GetProperty("id").GetGuid();
+
+        var confirm = await client.PostAsJsonAsync("/api/v1/finance/reconciliation/tray/confirm", new
+        {
+            accountId = bankId, matches = Array.Empty<object>(), cheques = Array.Empty<object>(), classify = Array.Empty<Guid>(),
+            transfers = new[] { new { importedId, otherAccountId = walletId } }
+        });
+        (await confirm.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("transfers").GetInt32().Should().Be(1);
+
+        await _factory.WithDbAsync(async db =>
+        {
+            var imported = db.Movements.Single(m => m.Id == importedId);
+            imported.ReconciliationStatus.Should().Be(FinancialReconciliationStatus.Reconciled);
+            var credit = db.Movements.Single(m => m.AccountId == walletId);
+            credit.Kind.Should().Be(FinancialMovementKind.Credit);
+            credit.Amount.Should().Be(100000m);
+            credit.TransferId.Should().Be(imported.TransferId!.Value);
+        });
+        (await client.GetFromJsonAsync<JsonElement>($"/api/v1/finance/reconciliation/tray?accountId={bankId}")).GetProperty("rows").GetArrayLength().Should().Be(0);
+    }
 }
