@@ -11,14 +11,16 @@ namespace LealControl.Modules.Finance.Infrastructure;
 public sealed record TrayMatch(Guid ImportedId, Guid SystemId);
 public sealed record TrayCheque(Guid ImportedId, Guid ChequeId);
 public sealed record TrayMatchMany(Guid ImportedId, List<Guid> SystemIds);
-public sealed record ConfirmTrayRequest(Guid AccountId, List<TrayMatch>? Matches, List<TrayCheque>? Cheques, List<Guid>? Classify, List<TrayMatchMany>? MatchesMany = null);
+public sealed record TrayTransfer(Guid ImportedId, Guid OtherAccountId);
+public sealed record ConfirmTrayRequest(Guid AccountId, List<TrayMatch>? Matches, List<TrayCheque>? Cheques, List<Guid>? Classify, List<TrayMatchMany>? MatchesMany = null, List<TrayTransfer>? Transfers = null);
 
 /// <summary>
 /// Bandeja de conciliación (nota 69, F1b): para cada movimiento del extracto sin conciliar, la acción sugerida, en este orden:
 /// 1) conciliar con un cobro o pago del sistema (mismo importe, ±5 días; entre varios, el del mismo CUIT y la fecha más cercana),
 ///    o con varios del mismo CUIT que suman el importe (una transferencia que paga varias órdenes);
 /// 2) un eCheq emitido por su número; 3) crear la orden de pago o el recibo del proveedor o cliente del CUIT;
-/// 4) un gasto, impuesto o inversión ya clasificado; 5) sin identificar. Las sugerencias se confirman todas juntas.
+/// 4) una transferencia a la billetera de viáticos del empleado del CUIT; 5) un gasto, impuesto o inversión ya clasificado; 6) sin identificar.
+/// Cualquier movimiento sin conciliar se puede marcar a mano como transferencia con otra cuenta propia (banco, caja o billetera). Las sugerencias se confirman todas juntas.
 /// </summary>
 public static partial class FinanceReconciliationTray
 {
@@ -60,6 +62,7 @@ public static partial class FinanceReconciliationTray
                 .ToListAsync(ct);
             var concepts = await db.FinancialConcepts.AsNoTracking().Where(x => x.TenantId == tenantId).ToDictionaryAsync(x => x.Id, ct);
             var batches = await PaymentBatches.ConsolidatedPendingAsync(db, tenantId, accountId, ct);
+            var wallets = await WalletsByCuilAsync(db, tenantId, ct);
 
             var usedSystem = new HashSet<Guid>();
             var usedCheques = new HashSet<Guid>();
@@ -108,6 +111,9 @@ public static partial class FinanceReconciliationTray
                     usedCheques.Add(cheque.Id);
                     suggestion = new { Type = "Cheque", ChequeId = cheque.Id, Label = $"eCheq {cheque.CheckNumber} a {cheque.ReceivedFrom ?? cheque.IssuerName}", cheque.PaymentOrderId };
                 }
+                else if (m.Kind == FinancialMovementKind.Debit && m.CounterpartyTaxId is { } employeeCuil
+                    && wallets.TryGetValue(Digits(employeeCuil), out var wallet) && wallet.Id != accountId)
+                    suggestion = new { Type = "Transfer", AccountId = wallet.Id, Label = wallet.Name };
                 else if (m.SuggestedCounterpartyId is { } partyId && m.SuggestedCounterpartyType is "Supplier" or "Customer")
                     suggestion = new { Type = m.SuggestedCounterpartyType == "Supplier" ? "CreatePayment" : "CreateReceipt", CounterpartyId = partyId };
                 else if (m.ConceptId is { } conceptId && concepts.TryGetValue(conceptId, out var concept)
@@ -133,9 +139,9 @@ public static partial class FinanceReconciliationTray
             var tenantId = tenant.TenantId.Value;
             var ids = (body.Matches ?? []).SelectMany(x => new[] { x.ImportedId, x.SystemId })
                 .Concat((body.MatchesMany ?? []).SelectMany(x => x.SystemIds.Append(x.ImportedId)))
-                .Concat((body.Cheques ?? []).Select(x => x.ImportedId)).Concat(body.Classify ?? []).ToList();
+                .Concat((body.Cheques ?? []).Select(x => x.ImportedId)).Concat((body.Transfers ?? []).Select(x => x.ImportedId)).Concat(body.Classify ?? []).ToList();
             var movements = await db.Movements.Where(x => x.TenantId == tenantId && x.AccountId == body.AccountId && ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
-            int matched = 0, chequesLinked = 0, classified = 0;
+            int matched = 0, chequesLinked = 0, classified = 0, transfers = 0;
             var errors = new List<string>();
 
             foreach (var pair in body.Matches ?? [])
@@ -171,6 +177,42 @@ public static partial class FinanceReconciliationTray
                     p.MatchedMovementId = imp.Id;
                 }
                 matched += parts.Count;
+            }
+
+            if ((body.Transfers ?? []).Count > 0)
+            {
+                await FinanceConcepts.EnsureBaseConceptsAsync(db, tenantId, ct);
+                var transferConceptId = await db.FinancialConcepts.Where(x => x.TenantId == tenantId && x.Code == "TRANSFERENCIA_PROPIA").Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct);
+                var otherIds = body.Transfers!.Select(x => x.OtherAccountId).Append(body.AccountId).ToList();
+                var accounts = await db.Accounts.Where(x => x.TenantId == tenantId && otherIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+                foreach (var pair in body.Transfers!)
+                {
+                    if (!movements.TryGetValue(pair.ImportedId, out var imp) || imp.Origin != FinancialMovementOrigin.Imported || imp.ReconciliationStatus == FinancialReconciliationStatus.Reconciled
+                        || pair.OtherAccountId == body.AccountId || !accounts.TryGetValue(pair.OtherAccountId, out var other) || !other.IsActive || other.Currency != imp.Currency)
+                    {
+                        errors.Add($"No se pudo registrar la transferencia del {imp?.OperationDateUtc:dd/MM}: la cuenta no existe, está inactiva o es de otra moneda.");
+                        continue;
+                    }
+                    // La otra punta queda en la otra cuenta; si es un banco, se concilia con su propio extracto.
+                    var transferId = Guid.NewGuid();
+                    var own = accounts.GetValueOrDefault(body.AccountId)?.Name ?? "cuenta";
+                    var counterpart = new FinancialMovement
+                    {
+                        Id = Guid.NewGuid(), TenantId = tenantId, AccountId = other.Id,
+                        Kind = imp.Kind == FinancialMovementKind.Debit ? FinancialMovementKind.Credit : FinancialMovementKind.Debit,
+                        Amount = imp.Amount, Currency = imp.Currency, OperationDateUtc = imp.OperationDateUtc,
+                        Description = imp.Kind == FinancialMovementKind.Debit ? $"Transferencia desde {own}" : $"Transferencia hacia {own}",
+                        ExternalReference = $"TRANSFER:{transferId}", TransferId = transferId, ConceptId = transferConceptId, CreatedAtUtc = DateTime.UtcNow
+                    };
+                    FinanceSystemMovementHelper.ApplySystemDefaults(counterpart, other);
+                    db.Movements.Add(counterpart);
+                    imp.TransferId = transferId;
+                    imp.ConceptId = transferConceptId;
+                    imp.ReconciliationStatus = FinancialReconciliationStatus.Reconciled;
+                    imp.ClassificationStatus = FinancialClassificationStatus.Confirmed;
+                    imp.ClassifiedAtUtc = DateTime.UtcNow;
+                    transfers++;
+                }
             }
 
             if ((body.Cheques ?? []).Count > 0)
@@ -216,7 +258,7 @@ public static partial class FinanceReconciliationTray
             }
 
             await db.SaveChangesAsync(ct);
-            return Results.Ok(new { Matched = matched, Cheques = chequesLinked, Classified = classified, Errors = errors });
+            return Results.Ok(new { Matched = matched, Cheques = chequesLinked, Transfers = transfers, Classified = classified, Errors = errors });
         });
 
         return endpoints;
@@ -265,6 +307,22 @@ public static partial class FinanceReconciliationTray
         return system.Where(s => s.LinkedEntityId.HasValue)
             .Select(s => (s.Id, Label: orders.GetValueOrDefault(s.LinkedEntityId!.Value) ?? receipts.GetValueOrDefault(s.LinkedEntityId!.Value)))
             .Where(x => x.Label is not null).ToDictionary(x => x.Id, x => x.Label!);
+    }
+
+    private sealed record EmployeeCuilRow(Guid Id, string Cuil);
+
+    /// <summary>Billeteras de viáticos activas por CUIL del empleado (de RRHH), para reconocer la transferencia al empleado.</summary>
+    private static async Task<Dictionary<string, FinancialAccount>> WalletsByCuilAsync(FinanceDbContext db, Guid tenantId, CancellationToken ct)
+    {
+        var wallets = await db.Accounts.AsNoTracking().Where(x => x.TenantId == tenantId && x.IsActive && x.EmployeeId != null).ToListAsync(ct);
+        if (wallets.Count == 0) return [];
+        if (!await db.Database.SqlQuery<bool>($"""SELECT to_regclass('hr."Employees"') IS NOT NULL AS "Value" """).SingleAsync(ct)) return [];
+        var ids = wallets.Select(w => w.EmployeeId!.Value).ToArray();
+        var cuils = await db.Database.SqlQuery<EmployeeCuilRow>($"""SELECT "Id", COALESCE("Cuil", '') AS "Cuil" FROM hr."Employees" WHERE "TenantId" = {tenantId} AND "Id" = ANY({ids})""").ToListAsync(ct);
+        return cuils.Select(c => (Cuil: Digits(c.Cuil), Wallets: wallets.Where(w => w.EmployeeId == c.Id).ToList()))
+            .Where(x => x.Cuil.Length == 11 && x.Wallets.Count == 1)
+            .GroupBy(x => x.Cuil).Where(g => g.Count() == 1)
+            .ToDictionary(g => g.Key, g => g.Single().Wallets[0]);
     }
 
     /// <summary>De 2 a 5 movimientos que suman exactamente el importe (búsqueda acotada a 12 candidatos).</summary>

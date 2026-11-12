@@ -218,6 +218,7 @@ export type ReconciliationSuggestion =
   | { type: "Cheque"; chequeId: string; label: string; paymentOrderId?: string | null }
   | { type: "CreatePayment" | "CreateReceipt"; counterpartyId: string }
   | { type: "Classified"; conceptId: string; label: string }
+  | { type: "Transfer"; accountId: string; label: string }
   | { type: "Unknown" };
 export type ReconciliationTray = {
   accountId: string;

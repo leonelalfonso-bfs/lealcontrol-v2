@@ -9,11 +9,12 @@ type Row = ReconciliationTray["rows"][number];
 const money = (n: number) => n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const day = (iso: string) => iso.slice(0, 10).split("-").reverse().join("/");
 const isDebit = (r: Row) => r.kind === "Debit" || r.kind === 1;
-const CONFIRMABLE = ["Match", "MatchMany", "Cheque", "Classified"];
+const CONFIRMABLE = ["Match", "MatchMany", "Cheque", "Transfer", "Classified"];
 
 /** Bandeja de conciliación (nota 69, F1b): cada movimiento del extracto con su acción sugerida; se confirman todas juntas. */
 export function FinanceReconciliationPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [allAccounts, setAllAccounts] = useState<Account[]>([]);
   const [accountId, setAccountId] = useState("");
   const [tray, setTray] = useState<ReconciliationTray | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -24,6 +25,7 @@ export function FinanceReconciliationPage() {
 
   useEffect(() => {
     api.listFinanceAccounts().then((rows) => {
+      setAllAccounts(rows.filter((a: Account & { isActive?: boolean }) => a.isActive !== false));
       const banks = rows.filter((a: Account) => a.type !== "Cash");
       setAccounts(banks);
       if (banks.length > 0) setAccountId(banks[0].id);
@@ -63,9 +65,10 @@ export function FinanceReconciliationPage() {
         matches: chosen.flatMap((r) => (r.suggestion.type === "Match" ? [{ importedId: r.id, systemId: r.suggestion.systemId }] : [])),
         matchesMany: chosen.flatMap((r) => (r.suggestion.type === "MatchMany" ? [{ importedId: r.id, systemIds: r.suggestion.systemIds }] : [])),
         cheques: chosen.flatMap((r) => (r.suggestion.type === "Cheque" ? [{ importedId: r.id, chequeId: r.suggestion.chequeId }] : [])),
+        transfers: chosen.flatMap((r) => (r.suggestion.type === "Transfer" ? [{ importedId: r.id, otherAccountId: r.suggestion.accountId }] : [])),
         classify: chosen.filter((r) => r.suggestion.type === "Classified").map((r) => r.id)
       });
-      setMsg(`✓ Conciliados ${result.matched} pagos y cobros, ${result.cheques} cheques y ${result.classified} gastos o impuestos del banco.`
+      setMsg(`✓ Conciliados ${result.matched} pagos y cobros, ${result.cheques} cheques, ${result.transfers} transferencias entre cuentas y ${result.classified} gastos o impuestos del banco.`
         + (result.errors.length ? ` ${result.errors.join(" ")}` : ""));
       await load();
     } catch (err) {
@@ -80,6 +83,26 @@ export function FinanceReconciliationPage() {
     if (!option || !tray) return;
     setTray({ ...tray, rows: tray.rows.map((x) => (x.id === r.id ? { ...x, suggestion: { type: "Cheque", ...option } } : x)) });
     setSelected(new Set(selected).add(r.id));
+  };
+
+  const chooseTransfer = (r: Row, otherId: string) => {
+    const other = allAccounts.find((a) => a.id === otherId);
+    if (!other || !tray) return;
+    setTray({ ...tray, rows: tray.rows.map((x) => (x.id === r.id ? { ...x, suggestion: { type: "Transfer", accountId: other.id, label: other.name } } : x)) });
+    setSelected(new Set(selected).add(r.id));
+  };
+
+  // Cualquier movimiento sin conciliar puede ser una transferencia con otra cuenta propia (banco, caja o billetera de viáticos).
+  const transferPicker = (r: Row) => {
+    const currency = accounts.find((a) => a.id === accountId)?.currency;
+    const options = allAccounts.filter((a) => a.id !== accountId && a.currency === currency);
+    if (options.length === 0 || ["Match", "MatchMany", "Cheque", "Transfer"].includes(r.suggestion.type)) return null;
+    return (
+      <select className="compact" value="" onChange={(e) => chooseTransfer(r, e.target.value)} aria-label="Transferencia entre cuentas propias">
+        <option value="">{isDebit(r) ? "Transferencia a cuenta propia…" : "Transferencia desde cuenta propia…"}</option>
+        {options.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+      </select>
+    );
   };
 
   const chequePicker = (r: Row) => {
@@ -101,6 +124,7 @@ export function FinanceReconciliationPage() {
       case "Match": return <span>Conciliar con <strong>{s.label}</strong> <span className="muted">({day(s.operationDateUtc)})</span></span>;
       case "MatchMany": return <span>Paga varias juntas: <strong>{s.label}</strong></span>;
       case "Cheque": return <span>Es el <strong>{s.label}</strong></span>;
+      case "Transfer": return <span>Transferencia {isDebit(r) ? "a" : "desde"} <strong>{s.label}</strong></span>;
       case "Classified": return <span>Gasto / impuesto del banco: <strong>{s.label}</strong></span>;
       case "CreatePayment": return <Link className="btn compact" to={`/finanzas/pagos/nueva?supplierId=${s.counterpartyId}&${query}`}>💳 Crear orden de pago</Link>;
       case "CreateReceipt": return <Link className="btn compact" to={`/finanzas/cobranzas?customerId=${s.counterpartyId}&${query}`}>🧾 Crear recibo</Link>;
@@ -139,7 +163,8 @@ export function FinanceReconciliationPage() {
             {[
               ["all", `Todos (${tray.rows.length})`],
               ["Match", `Pagos y cobros (${(counts.Match ?? 0) + (counts.MatchMany ?? 0)})`],
-              ["Cheque", `eCheq (${counts.Cheque ?? 0})`],
+              ["Cheque", `Cheques (${counts.Cheque ?? 0})`],
+              ["Transfer", `Entre cuentas (${counts.Transfer ?? 0})`],
               ["Classified", `Gastos e impuestos (${counts.Classified ?? 0})`],
               ["Create", `Crear OP o recibo (${(counts.CreatePayment ?? 0) + (counts.CreateReceipt ?? 0)})`],
               ["Unknown", `Sin identificar (${counts.Unknown ?? 0})`]
@@ -178,7 +203,7 @@ export function FinanceReconciliationPage() {
                     </td>
                     <td style={{ textAlign: "right" }}>{isDebit(r) ? money(r.amount) : ""}</td>
                     <td style={{ textAlign: "right" }}>{isDebit(r) ? "" : money(r.amount)}</td>
-                    <td><div className="row" style={{ gap: 6, flexWrap: "wrap" }}>{action(r)}{chequePicker(r)}</div></td>
+                    <td><div className="row" style={{ gap: 6, flexWrap: "wrap" }}>{action(r)}{chequePicker(r)}{transferPicker(r)}</div></td>
                   </tr>
                 ))}
                 {rows.length === 0 && <tr><td colSpan={6} className="muted" style={{ padding: 16 }}>No hay movimientos pendientes.</td></tr>}
