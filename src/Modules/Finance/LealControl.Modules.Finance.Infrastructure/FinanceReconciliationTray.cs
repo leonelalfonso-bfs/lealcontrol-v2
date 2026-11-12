@@ -24,10 +24,10 @@ public static partial class FinanceReconciliationTray
 {
     public static readonly TimeSpan DateTolerance = TimeSpan.FromDays(5);
 
-    [GeneratedRegex(@"echeq.*?(?:nro\.?:?|n[º°]\.?|#)\s*0*(\d{1,12})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:cheq|chq).*?(?:nro\.?:?|n[º°]\.?|#)\s*0*(\d{1,12})\b", RegexOptions.IgnoreCase)]
     private static partial Regex EcheqNumber();
 
-    /// <summary>Número de cheque que nombra el banco ("Echeq 48 Hs. Nro. 345", "Echeq Galicia Nro: 345").</summary>
+    /// <summary>Número de cheque que nombra el banco ("Echeq 48 Hs. Nro. 345", "Echeq Galicia Nro: 345", "Cheque pagado Nro 345").</summary>
     public static long? ChequeNumberIn(string description) =>
         EcheqNumber().Match(description ?? "") is { Success: true } m && long.TryParse(m.Groups[1].Value, out var n) ? n : null;
 
@@ -63,7 +63,7 @@ public static partial class FinanceReconciliationTray
 
             var usedSystem = new HashSet<Guid>();
             var usedCheques = new HashSet<Guid>();
-            var rows = new List<object>();
+            var suggested = new List<(FinancialMovement Movement, object? Suggestion)>();
             foreach (var m in imported)
             {
                 object? suggestion = null;
@@ -113,12 +113,18 @@ public static partial class FinanceReconciliationTray
                 else if (m.ConceptId is { } conceptId && concepts.TryGetValue(conceptId, out var concept)
                     && concept.UsableIn is FinancialConceptUsableIn.MovementOnly or FinancialConceptUsableIn.Transfer)
                     suggestion = new { Type = "Classified", ConceptId = conceptId, Label = concept.Name };
-                rows.Add(new
-                {
-                    m.Id, m.OperationDateUtc, m.Kind, m.Amount, m.Description, m.CounterpartyTaxId, m.CounterpartyName,
-                    Suggestion = suggestion ?? new { Type = "Unknown" }
-                });
+                suggested.Add((m, suggestion));
             }
+            // Débito que el banco no nombra como cheque: se ofrecen los cheques emitidos sin debitar del mismo importe para elegirlo a mano.
+            var rows = suggested.Select(x => new
+            {
+                x.Movement.Id, x.Movement.OperationDateUtc, x.Movement.Kind, x.Movement.Amount, x.Movement.Description, x.Movement.CounterpartyTaxId, x.Movement.CounterpartyName,
+                Suggestion = x.Suggestion ?? new { Type = "Unknown" },
+                ChequeOptions = x.Movement.Kind == FinancialMovementKind.Debit
+                    ? cheques.Where(c => !usedCheques.Contains(c.Id) && c.Amount == x.Movement.Amount)
+                        .Select(c => new { ChequeId = c.Id, Label = $"Cheque {c.CheckNumber} a {c.IssuerName ?? c.ReceivedFrom}", c.PaymentOrderId }).ToList()
+                    : []
+            }).ToList();
             return Results.Ok(new { AccountId = accountId, Rows = rows, PendingSystem = system.Count(s => !usedSystem.Contains(s.Id)) });
         });
 
