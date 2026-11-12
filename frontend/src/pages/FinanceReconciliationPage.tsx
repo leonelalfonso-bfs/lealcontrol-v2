@@ -65,7 +65,7 @@ export function FinanceReconciliationPage() {
         cheques: chosen.flatMap((r) => (r.suggestion.type === "Cheque" ? [{ importedId: r.id, chequeId: r.suggestion.chequeId }] : [])),
         classify: chosen.filter((r) => r.suggestion.type === "Classified").map((r) => r.id)
       });
-      setMsg(`✓ Conciliados ${result.matched} pagos y cobros, ${result.cheques} eCheq y ${result.classified} gastos o impuestos del banco.`
+      setMsg(`✓ Conciliados ${result.matched} pagos y cobros, ${result.cheques} cheques y ${result.classified} gastos o impuestos del banco.`
         + (result.errors.length ? ` ${result.errors.join(" ")}` : ""));
       await load();
     } catch (err) {
@@ -73,6 +73,25 @@ export function FinanceReconciliationPage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const chooseCheque = (r: Row, chequeId: string) => {
+    const option = r.chequeOptions?.find((o) => o.chequeId === chequeId);
+    if (!option || !tray) return;
+    setTray({ ...tray, rows: tray.rows.map((x) => (x.id === r.id ? { ...x, suggestion: { type: "Cheque", ...option } } : x)) });
+    setSelected(new Set(selected).add(r.id));
+  };
+
+  const chequePicker = (r: Row) => {
+    const taken = new Set((tray?.rows ?? []).flatMap((x) => (x.suggestion.type === "Cheque" ? [x.suggestion.chequeId] : [])));
+    const options = (r.chequeOptions ?? []).filter((o) => !taken.has(o.chequeId));
+    if (options.length === 0 || ["Match", "MatchMany", "Cheque"].includes(r.suggestion.type)) return null;
+    return (
+      <select className="compact" value="" onChange={(e) => chooseCheque(r, e.target.value)} aria-label="Es un cheque emitido">
+        <option value="">Es un cheque emitido…</option>
+        {options.map((o) => <option key={o.chequeId} value={o.chequeId}>{o.label}</option>)}
+      </select>
+    );
   };
 
   const action = (r: Row) => {
@@ -159,7 +178,7 @@ export function FinanceReconciliationPage() {
                     </td>
                     <td style={{ textAlign: "right" }}>{isDebit(r) ? money(r.amount) : ""}</td>
                     <td style={{ textAlign: "right" }}>{isDebit(r) ? "" : money(r.amount)}</td>
-                    <td>{action(r)}</td>
+                    <td><div className="row" style={{ gap: 6, flexWrap: "wrap" }}>{action(r)}{chequePicker(r)}</div></td>
                   </tr>
                 ))}
                 {rows.length === 0 && <tr><td colSpan={6} className="muted" style={{ padding: 16 }}>No hay movimientos pendientes.</td></tr>}

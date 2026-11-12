@@ -222,7 +222,9 @@ export type ReconciliationSuggestion =
 export type ReconciliationTray = {
   accountId: string;
   pendingSystem: number;
-  rows: { id: string; operationDateUtc: string; kind: "Debit" | "Credit" | number; amount: number; description: string; counterpartyTaxId?: string | null; counterpartyName?: string | null; suggestion: ReconciliationSuggestion }[];
+  rows: { id: string; operationDateUtc: string; kind: "Debit" | "Credit" | number; amount: number; description: string; counterpartyTaxId?: string | null; counterpartyName?: string | null; suggestion: ReconciliationSuggestion;
+    /** Cheques emitidos sin debitar del mismo importe, para elegir a mano cuando el banco no nombra el cheque. */
+    chequeOptions?: { chequeId: string; label: string; paymentOrderId?: string | null }[] }[];
 };
 
 /** Retención o percepción que le hicieron a la empresa (nota 69, F3). */

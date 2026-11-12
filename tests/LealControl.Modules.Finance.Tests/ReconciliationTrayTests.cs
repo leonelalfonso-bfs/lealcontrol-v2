@@ -28,6 +28,8 @@ public sealed class ReconciliationTrayTests : IClassFixture<FinanceWebApplicatio
         BankChargeClassifier.Classify("Trf Inmed Proveed · Proveedor SA").Should().BeNull();
         FinanceReconciliationTray.ChequeNumberIn("Echeq 48 Hs. Nro.      345").Should().Be(345);
         FinanceReconciliationTray.ChequeNumberIn("Echeq Galicia Nro: 00000414").Should().Be(414);
+        FinanceReconciliationTray.ChequeNumberIn("Cheque pagado Nro 438").Should().Be(438);
+        FinanceReconciliationTray.ChequeNumberIn("Trf Inmed Proveed Nro 123").Should().BeNull();
     }
 
     [Fact]
@@ -37,7 +39,7 @@ public sealed class ReconciliationTrayTests : IClassFixture<FinanceWebApplicatio
         var client = _factory.CreateAuthenticatedClient(tenantId);
         var accountId = Guid.NewGuid();
         var (orderA, orderB, chequeId) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
-        Guid movementB = Guid.NewGuid();
+        Guid movementB = Guid.NewGuid(), manualChequeId = Guid.NewGuid();
         await _factory.WithDbAsync(async db =>
         {
             db.Accounts.Add(new FinancialAccount { Id = accountId, TenantId = tenantId, Name = $"Galicia {accountId:N}"[..20], Currency = "ARS", Type = FinancialAccountType.Bank, IsActive = true, CreatedAtUtc = DateTime.UtcNow });
@@ -48,6 +50,8 @@ public sealed class ReconciliationTrayTests : IClassFixture<FinanceWebApplicatio
                 db.Movements.Add(new FinancialMovement { Id = movementId, TenantId = tenantId, AccountId = accountId, Kind = FinancialMovementKind.Debit, Amount = 100000m, Currency = "ARS", OperationDateUtc = new DateTime(2026, 10, day, 0, 0, 0, DateTimeKind.Utc), Description = "Pago OP", Origin = FinancialMovementOrigin.System, ReconciliationStatus = FinancialReconciliationStatus.PendingBank, LinkedEntityType = "PaymentOrder", LinkedEntityId = id, CreatedAtUtc = DateTime.UtcNow });
             }
             db.ReceivedCheques.Add(new ReceivedCheque { Id = chequeId, TenantId = tenantId, CheckNumber = "00000345", Amount = 64024.84m, Direction = ChequeDirection.Issued, Status = ReceivedChequeStatus.Issued, ReceivedFrom = "Proveedor eCheq", CreatedAtUtc = DateTime.UtcNow });
+            // Cheque que el banco no nombra: se ofrece para elegirlo a mano en el débito del mismo importe.
+            db.ReceivedCheques.Add(new ReceivedCheque { Id = manualChequeId, TenantId = tenantId, CheckNumber = "777", Amount = 1000m, Direction = ChequeDirection.Issued, Status = ReceivedChequeStatus.Issued, IssuerName = "Proveedor Cheque Físico", CreatedAtUtc = DateTime.UtcNow });
             await db.SaveChangesAsync();
         });
 
@@ -68,6 +72,10 @@ public sealed class ReconciliationTrayTests : IClassFixture<FinanceWebApplicatio
         var transfer = Row("Trf Inmed Proveed").GetProperty("suggestion");
         transfer.GetProperty("type").GetString().Should().Be("Match");
         transfer.GetProperty("systemId").GetGuid().Should().Be(movementB);
+        var option = Row("Deb. Autom").GetProperty("chequeOptions").EnumerateArray().Single();
+        option.GetProperty("chequeId").GetGuid().Should().Be(manualChequeId);
+        option.GetProperty("label").GetString().Should().Be("Cheque 777 a Proveedor Cheque Físico");
+        Row("Echeq").GetProperty("chequeOptions").EnumerateArray().Should().BeEmpty();
         var cheque = Row("Echeq").GetProperty("suggestion");
         cheque.GetProperty("type").GetString().Should().Be("Cheque");
         cheque.GetProperty("chequeId").GetGuid().Should().Be(chequeId);
