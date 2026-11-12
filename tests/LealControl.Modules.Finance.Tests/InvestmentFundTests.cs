@@ -56,7 +56,7 @@ public sealed class InvestmentFundTests : IClassFixture<FinanceWebApplicationFac
         var fima = funds.Single(f => f.GetProperty("currency").GetString() == "ARS");
         (await client.PutAsJsonAsync($"/api/v1/finance/funds/{fima.GetProperty("id").GetGuid()}", new
         {
-            accountId, openingUnits = 20000m, openingDate = "2026-10-19T00:00:00Z", openingCost = 1900000m, lastUnitValue = 100m, lastUnitValueDate = "2026-10-21T00:00:00Z"
+            accountId, openingUnits = 20000m, openingDate = "2026-10-19", openingCost = 1900000m, lastUnitValue = 100m, lastUnitValueDate = "2026-10-21"
         })).IsSuccessStatusCode.Should().BeTrue();
 
         fima = (await client.GetFromJsonAsync<JsonElement>("/api/v1/finance/funds")).EnumerateArray().Single(f => f.GetProperty("currency").GetString() == "ARS");

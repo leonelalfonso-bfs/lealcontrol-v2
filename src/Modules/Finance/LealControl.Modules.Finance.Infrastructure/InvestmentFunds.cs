@@ -87,6 +87,9 @@ public static class InvestmentFunds
     }
 
     private static string Text(object? value) => Convert.ToString(value, CultureInfo.InvariantCulture)?.Trim() ?? "";
+    // Los <input type="date"> llegan sin zona (Kind=Unspecified) y Npgsql solo acepta UTC en timestamptz.
+    private static DateTime Day(DateTime value) => DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
+
     private static DateTime Date(object? value) => value is DateTime d ? DateTime.SpecifyKind(d.Date, DateTimeKind.Utc)
         : DateTime.SpecifyKind(DateTime.ParseExact(Text(value), "dd/MM/yyyy", CultureInfo.InvariantCulture), DateTimeKind.Utc);
     private static decimal Number(object? value) => value switch
@@ -193,8 +196,8 @@ public static class InvestmentFunds
             if (req.AccountId is { } accountId && !await db.Accounts.AnyAsync(a => a.Id == accountId && a.TenantId == t && a.Currency == fund.Currency, ct))
                 return Results.BadRequest(new { message = $"La cuenta tiene que ser en {fund.Currency}." });
             if (req.OpeningUnits < 0 || req.OpeningCost < 0 || req.LastUnitValue <= 0) return Results.BadRequest(new { message = "Revisá los importes." });
-            (fund.AccountId, fund.OpeningUnits, fund.OpeningDate, fund.OpeningCost) = (req.AccountId, req.OpeningUnits, req.OpeningDate?.Date, req.OpeningCost);
-            if (req.LastUnitValue is { } v) (fund.LastUnitValue, fund.LastUnitValueDate) = (v, (req.LastUnitValueDate ?? DateTime.UtcNow).Date);
+            (fund.AccountId, fund.OpeningUnits, fund.OpeningDate, fund.OpeningCost) = (req.AccountId, req.OpeningUnits, req.OpeningDate is { } d ? Day(d) : null, req.OpeningCost);
+            if (req.LastUnitValue is { } v) (fund.LastUnitValue, fund.LastUnitValueDate) = (v, Day(req.LastUnitValueDate ?? DateTime.UtcNow));
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { fund.Id });
         });
