@@ -196,7 +196,8 @@ export function FinanceHelpPage() {
           </Step>
           <Step title="Una vez por fondo: elegí la cuenta bancaria y cargá la tenencia inicial → “Guardar”.">
             La tenencia inicial son las cuotapartes que había el día anterior a la primera operación importada, con lo que costaron
-            (o su valuación de ese día). Sin ella la tenencia puede dar negativa, porque faltan las suscripciones anteriores.
+            (o su valuación de ese día). Sin ella la tenencia puede dar negativa, porque faltan las suscripciones anteriores. Lo más simple es usar la “Posición al …” del resumen de la cuenta
+            comitente: cuotapartes, esa fecha en “al día” y el saldo valorizado como costo. Solo suman las operaciones liquidadas después de esa fecha.
           </Step>
           <Step title="La valuación usa el último valor de cuotaparte importado; si querés valuar a otra fecha, cargá el valor del día.">
             Rendimiento = valuación − aportado neto (tenencia inicial + suscripciones − rescates).
