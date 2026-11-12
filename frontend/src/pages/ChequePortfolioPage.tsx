@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
+import type { CustomerSummary } from "../api/types";
+import { CustomerPicker } from "../components/pickers";
 import { DataTable } from "../components/ui/DataTable";
 
 import { todayAr } from "../lib/dates";
@@ -14,6 +17,8 @@ type Cheque = {
   status: string;
   direction: string;
   notes?: string;
+  supplierId?: string | null;
+  paymentOrderId?: string | null;
 };
 
 type Account = { id: string; name: string; currency: string };
@@ -35,6 +40,8 @@ const labels: Record<string, string> = {
 export function ChequePortfolioPage() {
   const [rows, setRows] = useState<Cheque[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [suppliers, setSuppliers] = useState<CustomerSummary[]>([]);
+  const navigate = useNavigate();
   const [tab, setTab] = useState<"Received" | "Issued">("Received");
   const [statusFilter, setStatusFilter] = useState("");
   const [onlyOverdue, setOnlyOverdue] = useState(false);
@@ -46,6 +53,7 @@ export function ChequePortfolioPage() {
     amount: "",
     currency: "ARS",
     issuerName: "",
+    supplierId: "",
     bankName: "",
     issueDate: todayAr(),
     dueDate: "",
@@ -58,6 +66,21 @@ export function ChequePortfolioPage() {
     const [c, a] = await Promise.all([api.listReceivedCheques(), api.listFinanceAccounts()]);
     setRows(c);
     setAccounts(a.filter((x) => x.currency === "ARS"));
+  };
+
+  useEffect(() => { void api.listAllCustomers("supplier").then((s) => setSuppliers(s.filter((x) => x.isSupplier))).catch(() => setSuppliers([])); }, []);
+
+  const assignSupplier = async (cheque: Cheque, supplierId: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.assignChequeSupplier(cheque.id, supplierId || null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo asignar el proveedor.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   useEffect(() => { void load().catch((e) => setError(e.message)); }, []);
@@ -83,7 +106,8 @@ export function ChequePortfolioPage() {
         checkNumber: form.checkNumber.trim(),
         amount,
         currency: form.currency || "ARS",
-        issuerName: form.issuerName.trim() || null,
+        issuerName: form.issuerName.trim() || (tab === "Issued" ? suppliers.find((s) => s.id === form.supplierId)?.legalName : "") || null,
+        supplierId: tab === "Issued" && form.supplierId ? form.supplierId : null,
         bankName: form.bankName.trim() || null,
         issueDateUtc: new Date(`${form.issueDate}T12:00:00Z`).toISOString(),
         dueDateUtc: new Date(`${form.dueDate}T12:00:00Z`).toISOString(),
@@ -96,6 +120,7 @@ export function ChequePortfolioPage() {
         amount: "",
         currency: "ARS",
         issuerName: "",
+        supplierId: "",
         bankName: "",
         issueDate: todayAr(),
         dueDate: "",
@@ -213,10 +238,17 @@ export function ChequePortfolioPage() {
                 <option value="USD">USD</option>
               </select>
             </label>
-            <label>
-              Titular / librador
-              <input value={form.issuerName} onChange={(e) => setForm((f) => ({ ...f, issuerName: e.target.value }))} />
-            </label>
+            {tab === "Issued" ? (
+              <label style={{ minWidth: 260 }}>
+                Proveedor (a quién se entrega)
+                <CustomerPicker role="supplier" compact options={suppliers} value={form.supplierId} onChange={(id) => setForm((f) => ({ ...f, supplierId: id }))} />
+              </label>
+            ) : (
+              <label>
+                Titular / librador
+                <input value={form.issuerName} onChange={(e) => setForm((f) => ({ ...f, issuerName: e.target.value }))} />
+              </label>
+            )}
             <label>
               Banco
               <input value={form.bankName} onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))} />
@@ -268,6 +300,15 @@ export function ChequePortfolioPage() {
             columns={[
               { key: "checkNumber", header: "Número", render: (x) => <strong>{x.checkNumber}</strong> },
               { key: "issuerName", header: "Titular", render: (x) => x.issuerName || "—" },
+              ...(tab === "Issued" ? [{
+                key: "supplierId",
+                header: "Entregado a (proveedor)",
+                render: (x: Cheque) => x.paymentOrderId || x.status === "Cancelled"
+                  ? suppliers.find((s) => s.id === x.supplierId)?.legalName || "—"
+                  : <CustomerPicker role="supplier" compact options={suppliers} value={x.supplierId ?? ""} disabled={busy}
+                      placeholder="Asignar proveedor" aria-label={`Proveedor del cheque ${x.checkNumber}`}
+                      onChange={(id) => void assignSupplier(x, id)} />
+              }] : []),
               { key: "bankName", header: "Banco", render: (x) => x.bankName || "—" },
               { key: "dueDateUtc", header: "Vencimiento", render: (x) => x.dueDateUtc ? new Date(x.dueDateUtc).toLocaleDateString("es-AR") : "—" },
               { key: "amount", header: "Importe", render: (x) => money(x.amount, x.currency) },
@@ -277,6 +318,9 @@ export function ChequePortfolioPage() {
                 header: "Acciones",
                 render: (x) => (
                   <div className="toolbar" style={{ gap: 4 }}>
+                    {tab === "Issued" && x.supplierId && !x.paymentOrderId && x.status === "Issued" && (
+                      <button className="btn btn-sm" disabled={busy} onClick={() => navigate(`/finanzas/ordenes-pago/nueva?supplierId=${x.supplierId}&chequeId=${x.id}`)}>Orden de pago</button>
+                    )}
                     {tab === "Received" && x.status === "Available" && <button className="btn btn-sm" disabled={busy} onClick={() => void deposit(x)}>Depositar</button>}
                     {tab === "Received" && ["Available", "Deposited", "Presented"].includes(x.status) && <button className="btn btn-sm btn-outline" disabled={busy} onClick={() => void reject(x)}>Rechazar</button>}
                     {!["UsedForPayment", "Credited", "Debited", "Cancelled"].includes(x.status) && <button className="btn btn-sm ghost" disabled={busy} onClick={() => void cancel(x)}>Anular</button>}

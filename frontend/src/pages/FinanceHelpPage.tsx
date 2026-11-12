@@ -78,6 +78,8 @@ export function FinanceHelpPage() {
         <ul style={{ margin: 0, display: "grid", gap: 6 }}>
           <li>Los cheques recibidos en un cobro entran solos a la <Link to="/finanzas/echeqs">Cartera de cheques</Link>. También se pueden importar (“⇧ Importar recibidos / emitidos”).</li>
           <li>Desde la cartera: <strong>Depositar</strong> (elegís la cuenta), <strong>Rechazar</strong> (las facturas que cancelaba vuelven a quedar pendientes y, si estaba depositado, se descuenta de la cuenta con los gastos) o <strong>Anular</strong>. Un cheque de cartera también se usa para pagar a un proveedor.</li>
+          <li><strong>Cheques emitidos</strong> (cargados a mano o importados del home banking): en la columna “Entregado a (proveedor)” se elige a quién se le dio. Al importar, si el CUIT del beneficiario coincide con un único proveedor, se asigna solo.</li>
+          <li>Con el proveedor asignado aparece <strong>Orden de pago</strong>: abre la orden con ese proveedor y el cheque ya cargado como medio de pago; solo falta imputar las facturas. Un cheque entra en una sola orden, y desde ahí el proveedor es el de la orden.</li>
           <li>Los avisos personales muestran los cheques próximos a depositar.</li>
         </ul>
       </ManualPart>

@@ -63,6 +63,11 @@ internal sealed class CreatePaymentOrderCommandHandler
                     ? $"Corresponde retener Ganancias por $ {WithholdingCalculator.M(expected)} ({withholding!.Value.Result.Detail}). Recalculá la retención."
                     : "A este pago no le corresponde retención de Ganancias: sacá el renglón de retención."));
 
+        // Un cheque propio se entrega en una sola orden de pago.
+        var chequeIds = (body.Lines ?? []).Where(l => l.ChequeId.HasValue).Select(l => l.ChequeId!.Value).ToList();
+        if (chequeIds.Count > 0 && await _db.ReceivedCheques.AnyAsync(x => x.TenantId == tenantId && chequeIds.Contains(x.Id) && x.PaymentOrderId != null, ct))
+            return Result.Failure<CreatedPaymentOrderDto>(Error.Validation("PaymentOrder.Cheque", "Uno de los cheques ya está en otra orden de pago."));
+
         var number = await FinanceDocumentSequences.NextNumberAsync(_db, tenantId, "OP", "OP-0001", ct);
         string? certificate = null;
         if (withholding is { } w)
@@ -182,7 +187,7 @@ internal sealed class CreatePaymentOrderCommandHandler
                         cheque.Status = ReceivedChequeStatus.Issued;
                         cheque.SupplierId = body.SupplierId;
                         cheque.PaymentOrderId = orderId;
-                        cheque.BankAccountId = line.AccountId;
+                        cheque.BankAccountId = line.AccountId ?? cheque.BankAccountId;
                     }
                     else
                     {

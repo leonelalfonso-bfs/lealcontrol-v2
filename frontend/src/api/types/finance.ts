@@ -140,6 +140,8 @@ export type ReceivedCheque = {
   status: string;
   direction: string;
   notes?: string;
+  supplierId?: string | null;
+  paymentOrderId?: string | null;
 };
 
 export type CollectionReceiptDetail = {

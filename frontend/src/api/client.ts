@@ -364,6 +364,7 @@ export const api = {
   financeTransfer: (body: { fromAccountId: string; toAccountId: string; amount: number; currency: string; operationDateUtc: string; description: string }) => request("/api/v1/finance/transfers", { method: "POST", body: JSON.stringify(body) }),
   depositCheque: (id: string, body: { bankAccountId: string; depositDateUtc: string }) => request(`/api/v1/finance/echeqs/${id}/deposit`, { method: "POST", body: JSON.stringify(body) }),
   rejectCheque: (id: string, body: { rejectDateUtc: string; fees?: number; note?: string }) => request(`/api/v1/finance/echeqs/${id}/reject`, { method: "POST", body: JSON.stringify(body) }),
+  assignChequeSupplier: (id: string, supplierId: string | null) => request(`/api/v1/finance/echeqs/${id}/supplier`, { method: "POST", body: JSON.stringify({ supplierId }) }),
   cancelCheque: (id: string, reason: string) => request(`/api/v1/finance/echeqs/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }),
   listCustomers: (search = "", role = "customer") =>
     request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=50&search=${encodeURIComponent(search)}${role ? `&role=${encodeURIComponent(role)}` : ""}`),
