@@ -129,9 +129,9 @@ function sharedRequest<T>(path: string, ttlMs: number): Promise<T> {
 }
 
 /** Todas las páginas del directorio (clientes, proveedores o ambos con role ""): sin cortes en 50 o 200. */
-async function requestAllDirectory(role: string): Promise<CustomerSummary[]> {
+async function requestAllDirectory(role: string, search = ""): Promise<CustomerSummary[]> {
   const pageSize = 100;
-  const url = (page: number) => `/api/v1/crm/customers?page=${page}&pageSize=${pageSize}&role=${encodeURIComponent(role)}`;
+  const url = (page: number) => `/api/v1/crm/customers?page=${page}&pageSize=${pageSize}&role=${encodeURIComponent(role)}&search=${encodeURIComponent(search)}`;
   const first = await request<Paged<CustomerSummary>>(url(1));
   const pageCount = Math.ceil((first.total ?? first.totalCount ?? first.items.length) / pageSize);
   const rest = await Promise.all(
@@ -368,7 +368,7 @@ export const api = {
   cancelCheque: (id: string, reason: string) => request(`/api/v1/finance/echeqs/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }),
   listCustomers: (search = "", role = "customer") =>
     request<Paged<CustomerSummary>>(`/api/v1/crm/customers?page=1&pageSize=50&search=${encodeURIComponent(search)}${role ? `&role=${encodeURIComponent(role)}` : ""}`),
-  listAllCustomers: (role = "customer"): Promise<CustomerSummary[]> => requestAllDirectory(role),
+  listAllCustomers: (role = "customer", search = ""): Promise<CustomerSummary[]> => requestAllDirectory(role, search),
   getCustomer: (id: string) => request<CustomerDetail>(`/api/v1/crm/customers/${id}`),
   createCustomer: (body: CustomerWrite) =>
     request<CustomerDetail>("/api/v1/crm/customers", { method: "POST", body: JSON.stringify(body) }),

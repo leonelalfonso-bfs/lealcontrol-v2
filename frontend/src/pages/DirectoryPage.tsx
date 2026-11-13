@@ -16,8 +16,8 @@ export function DirectoryPage() {
 
   const load = (term = search) => {
     setLoading(true);
-    api.listCustomers(term, "all")
-      .then((page) => setItems(page.items))
+    api.listAllCustomers("all", term)
+      .then(setItems)
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   };

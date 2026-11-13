@@ -96,17 +96,13 @@ export function CustomersPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<CustomerSummary[]>([]);
-  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const load = (term = search) => {
     api
-      .listCustomers(term, "customer")
-      .then((page) => {
-        setItems(page.items);
-        setTotal(page.total ?? 0);
-      })
+      .listAllCustomers("customer", term)
+      .then(setItems)
       .catch((e: Error) => setError(e.message));
   };
 
@@ -140,7 +136,7 @@ export function CustomersPage() {
       <div className="page-head">
         <div>
           <h1>Clientes</h1>
-          <div className="muted">{total} en este tenant</div>
+          <div className="muted">{items.length} en este tenant</div>
         </div>
         <div className="toolbar">
           <ExcelToolbar
@@ -197,7 +193,7 @@ export function CustomersPage() {
           value={search}
           onChange={setSearch}
           onSearch={(term) => load(term)}
-          resultCount={total}
+          resultCount={items.length}
           placeholder="Buscar por razón social, CUIT, email o teléfono"
           style={{ flex: "1 1 320px", maxWidth: 520 }}
         />
