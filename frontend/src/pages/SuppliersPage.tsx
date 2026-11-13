@@ -101,10 +101,8 @@ export function SuppliersPage() {
   const load = (term = search) => {
     setLoading(true);
     api
-      .listCustomers(term, "supplier")
-      .then((page) => {
-        setItems(page.items);
-      })
+      .listAllCustomers("supplier", term)
+      .then(setItems)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   };
