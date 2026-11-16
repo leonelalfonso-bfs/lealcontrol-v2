@@ -435,6 +435,7 @@ try
     app.MapPublicWebhookEndpoints();
     app.MapGet("/api/v1/public/features", async (ICommunicationsInboxSettings settings, CancellationToken ct) =>
         Results.Ok(new { communicationsInboxEnabled = await settings.IsEnabledAsync(ct) })).AllowAnonymous();
+    LealControl.Api.Branding.TenantLogoEndpoint.MapTenantLogo(app);
     app.MapSuperAdminModule();
     app.MapTenantBackupSelfService();
 
