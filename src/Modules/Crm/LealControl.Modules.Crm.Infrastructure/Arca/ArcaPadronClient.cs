@@ -85,9 +85,10 @@ internal sealed class ArcaPadronClient
                 var businessErrors = ReadBusinessErrors(body);
                 if (!string.IsNullOrWhiteSpace(businessErrors))
                     return Result<ArcaCuitLookupResult>.Failure(
-                        Error.Failure("Crm.Arca.PadronBusinessError",
-                            "ARCA no emite la constancia de este CUIT (" + businessErrors.TrimEnd('.') + "). " +
-                            "Es la situación fiscal del contribuyente, no un error del sistema: cargá los datos a mano."));
+                        Error.Failure("Crm.Arca.PadronBusinessError", "ARCA respondió: " + businessErrors +
+                            (businessErrors.Contains("requerimientos", StringComparison.OrdinalIgnoreCase)
+                                ? " ARCA no emite la constancia mientras el contribuyente no los conteste: cargá los datos a mano."
+                                : "")));
                 return Result<ArcaCuitLookupResult>.Failure(
                     Error.NotFound(
                         "Crm.Arca.NotFound",
