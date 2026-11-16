@@ -18,8 +18,7 @@ public sealed record TenantMembership(
     string Email,
     string Role,
     string? AllowedModulesJson,
-    bool IsTechnicalDirector = false,
-    string? LogoUrl = null);
+    bool IsTechnicalDirector = false);
 
 public static class MultiTenantAuthResolver
 {
@@ -85,7 +84,7 @@ public static class MultiTenantAuthResolver
 
     public static List<TenantSummaryDto> ToSummaries(IEnumerable<TenantMembership> memberships) =>
         memberships
-            .Select(m => new TenantSummaryDto(m.TenantId, m.LegalName, m.TradeName, m.DocumentNumber, m.LogoUrl))
+            .Select(m => new TenantSummaryDto(m.TenantId, m.LegalName, m.TradeName, m.DocumentNumber))
             .ToList();
 
     public static AuthResponse ToAuthResponse(TenantMembership active, IReadOnlyList<TenantMembership> all) =>
@@ -101,7 +100,7 @@ public static class MultiTenantAuthResolver
                 active.IsTechnicalDirector,
                 all.Select(m => m.TenantId)),
             new UserDto(active.UserId, active.FullName, active.Email, active.Role, active.AllowedModulesJson, active.IsTechnicalDirector),
-            new TenantSummaryDto(active.TenantId, active.LegalName, active.TradeName, active.DocumentNumber, active.LogoUrl),
+            new TenantSummaryDto(active.TenantId, active.LegalName, active.TradeName, active.DocumentNumber),
             ToSummaries(all));
 
     private static async Task<List<(Guid Id, string Name, string DbName)>> ListDedicatedTenantsAsync(
@@ -188,7 +187,7 @@ public static class MultiTenantAuthResolver
                     legacyHashUserIds.Add(userId);
                 }
 
-                var (legalName, tradeName, docNumber, logoUrl) = await ResolveTenantLabelsAsync(
+                var (legalName, tradeName, docNumber) = await ResolveTenantLabelsAsync(
                     connectionString, tenantId, cancellationToken);
 
                 results.Add(new TenantMembership(
@@ -201,8 +200,7 @@ public static class MultiTenantAuthResolver
                     emailLower,
                     role,
                     allowedModulesJson,
-                    isTechnicalDirector,
-                    logoUrl));
+                    isTechnicalDirector));
             }
 
             // Hash heredado (SHA-256 con sal fija): se reemplaza por PBKDF2 en el primer login válido.
@@ -266,7 +264,7 @@ public static class MultiTenantAuthResolver
         return null;
     }
 
-    private static async Task<(string LegalName, string? TradeName, string DocumentNumber, string? LogoUrl)> ResolveTenantLabelsAsync(
+    private static async Task<(string LegalName, string? TradeName, string DocumentNumber)> ResolveTenantLabelsAsync(
         string connectionString,
         Guid tenantId,
         CancellationToken cancellationToken)
@@ -275,7 +273,6 @@ public static class MultiTenantAuthResolver
         string? legalName = null;
         string? tradeName = null;
         var documentNumber = string.Empty;
-        string? logoUrl = null;
         string? catalogName = null;
 
         try
@@ -283,7 +280,7 @@ public static class MultiTenantAuthResolver
             await using var conn = new NpgsqlConnection(connectionString);
             await conn.OpenAsync(cancellationToken);
 
-            (companyName, legalName, tradeName, documentNumber, logoUrl) =
+            (companyName, legalName, tradeName, documentNumber) =
                 await ReadCompanySettingsAsync(conn, tenantId, cancellationToken);
 
             try
@@ -304,18 +301,18 @@ public static class MultiTenantAuthResolver
         }
 
         var (legal, trade) = ChooseCompanyLabels(companyName, legalName, tradeName, catalogName);
-        return (legal, trade, documentNumber, logoUrl);
+        return (legal, trade, documentNumber);
     }
 
-    private static async Task<(string? CompanyName, string? LegalName, string? TradeName, string DocumentNumber, string? LogoUrl)> ReadCompanySettingsAsync(
+    // Sin el logo: viaja embebido (MB) y en el login/me no se usa; la barra lo toma de company/settings.
+    private static async Task<(string? CompanyName, string? LegalName, string? TradeName, string DocumentNumber)> ReadCompanySettingsAsync(
         NpgsqlConnection conn,
         Guid tenantId,
         CancellationToken cancellationToken)
     {
         string[][] attempts =
         [
-            ["CompanyName", "LegalName", "TradeName", "DocumentNumber", "LogoUrl"],
-            ["LegalName", "TradeName", "DocumentNumber", "LogoUrl"],
+            ["CompanyName", "LegalName", "TradeName", "DocumentNumber"],
             ["CompanyName", "TradeName", "DocumentNumber"],
             ["LegalName", "TradeName", "DocumentNumber"]
         ];
@@ -330,7 +327,7 @@ public static class MultiTenantAuthResolver
                 cmd.Parameters.AddWithValue("id", tenantId);
                 await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
                 if (!await reader.ReadAsync(cancellationToken))
-                    return (null, null, null, string.Empty, null);
+                    return (null, null, null, string.Empty);
 
                 string? Read(string column)
                 {
@@ -342,8 +339,7 @@ public static class MultiTenantAuthResolver
                     columns.Contains("CompanyName") ? Read("CompanyName") : null,
                     columns.Contains("LegalName") ? Read("LegalName") : null,
                     columns.Contains("TradeName") ? Read("TradeName") : null,
-                    (columns.Contains("DocumentNumber") ? Read("DocumentNumber") : null) ?? string.Empty,
-                    columns.Contains("LogoUrl") ? Read("LogoUrl") : null);
+                    (columns.Contains("DocumentNumber") ? Read("DocumentNumber") : null) ?? string.Empty);
             }
             catch
             {
@@ -351,6 +347,6 @@ public static class MultiTenantAuthResolver
             }
         }
 
-        return (null, null, null, string.Empty, null);
+        return (null, null, null, string.Empty);
     }
 }

@@ -199,7 +199,6 @@ public static class AuthEndpoints
             var docNumber = !string.IsNullOrWhiteSpace(tenantSettings?.DocumentNumber)
                 ? tenantSettings.DocumentNumber
                 : activeMembership?.DocumentNumber ?? "";
-            var logoUrl = tenantSettings?.LogoUrl ?? activeMembership?.LogoUrl;
 
             UserDto? userDto = null;
             if (user != null)
@@ -221,7 +220,7 @@ public static class AuthEndpoints
                 ? MultiTenantAuthResolver.ToSummaries(memberships)
                 : new List<TenantSummaryDto>
                 {
-                    new(tenantId.Value, tenantName, tradeName, docNumber, logoUrl)
+                    new(tenantId.Value, tenantName, tradeName, docNumber)
                 };
 
             if (userDto is null)
@@ -234,7 +233,7 @@ public static class AuthEndpoints
             return Results.Ok(new
             {
                 User = userDto,
-                Tenant = new TenantSummaryDto(tenantId.Value, tenantName, tradeName, docNumber, logoUrl),
+                Tenant = new TenantSummaryDto(tenantId.Value, tenantName, tradeName, docNumber),
                 AvailableTenants = availableTenants
             });
         });
@@ -283,7 +282,7 @@ public static class AuthEndpoints
             var list = await db.CompanySettings
                 .AsNoTracking()
                 .Where(s => s.TenantId == tenantId)
-                .Select(s => new TenantSummaryDto(s.TenantId.Value, s.LegalName, s.TradeName, s.DocumentNumber, s.LogoUrl))
+                .Select(s => new TenantSummaryDto(s.TenantId.Value, s.LegalName, s.TradeName, s.DocumentNumber))
                 .ToListAsync(ct);
 
             return Results.Ok(list);
@@ -489,5 +488,5 @@ public sealed record LoginRequest(string Email, string Password, Guid? TenantId)
 public sealed record RegisterTenantRequest(string CompanyName, string? Cuit, string? Phone, string? AdminFullName, string Email, string Password);
 public sealed record SwitchTenantRequest(Guid TenantId);
 public sealed record UserDto(Guid Id, string FullName, string Email, string Role, string? AllowedModulesJson = null, bool IsTechnicalDirector = false);
-public sealed record TenantSummaryDto(Guid Id, string LegalName, string? TradeName, string DocumentNumber, string? LogoUrl = null);
+public sealed record TenantSummaryDto(Guid Id, string LegalName, string? TradeName, string DocumentNumber);
 public sealed record AuthResponse(string Token, UserDto User, TenantSummaryDto Tenant, IReadOnlyList<TenantSummaryDto> AvailableTenants);

@@ -139,11 +139,7 @@ export function LoginPage() {
             <div className="login-tenants">
               {tenantChoices.map((tenant) => (
                 <button key={tenant.id} type="button" disabled={loading} onClick={() => handleTenantPick(tenant.id)} className="login-tenant">
-                  {tenant.logoUrl ? (
-                    <img className="login-tenant-logo" src={tenant.logoUrl} alt="" />
-                  ) : (
-                    <span className="login-tenant-mark" aria-hidden="true">{tenantTitle(tenant).slice(0, 2).toUpperCase()}</span>
-                  )}
+                  <span className="login-tenant-mark" aria-hidden="true">{tenantTitle(tenant).slice(0, 2).toUpperCase()}</span>
                   <span className="login-tenant-copy">
                     <strong>{tenantTitle(tenant)}</strong>
                     {tenantLegalLine(tenant) && <span>{tenantLegalLine(tenant)}</span>}
