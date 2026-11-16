@@ -223,7 +223,8 @@ internal sealed class ListProductsQueryHandler : IRequestHandler<ListProductsQue
 
         var dtos = products.Select(p => ProductMappings.ToDto(
             p,
-            p.CategoryId.HasValue && catDict.TryGetValue(p.CategoryId.Value, out var cName) ? cName : null
+            p.CategoryId.HasValue && catDict.TryGetValue(p.CategoryId.Value, out var cName) ? cName : null,
+            withImage: false
         )).ToList();
 
         return Result<IReadOnlyList<ProductDto>>.Success(dtos);

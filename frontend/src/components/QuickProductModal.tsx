@@ -1,4 +1,5 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
+import { shrinkImage } from "../utils/shrinkImage";
 import { api } from "../api/client";
 import { type Product, type ProductCategory, type ProductWrite } from "../api/types";
 
@@ -62,11 +63,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImagePath(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    void shrinkImage(file, 1200).then(setImagePath).catch((err: Error) => setError(err.message));
   };
 
   const handleSubmit = async (e: FormEvent) => {

@@ -39,6 +39,7 @@ export function ConfigurationHelpPage() {
       <ManualPart id="empresa" title="2. Empresa">
         <p style={{ margin: 0 }}>
           Logo, razón social y nombre de fantasía, CUIT, condición frente al IVA, Ingresos Brutos, inicio de actividades, domicilio fiscal, teléfono, correo y web.
+          El logo (y las fotos de productos) se achican solos al subirlos: viajan en cada inicio de sesión y en cada presupuesto.
           Salen en facturas, presupuestos, remitos y demás documentos. Tocá guardar al terminar.
         </p>
       </ManualPart>
