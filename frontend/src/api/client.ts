@@ -128,16 +128,12 @@ function sharedRequest<T>(path: string, ttlMs: number): Promise<T> {
   return promise;
 }
 
-/** Todas las páginas del directorio (clientes, proveedores o ambos con role ""): sin cortes en 50 o 200. */
+/** Todo el directorio en un solo pedido (role "" = clientes y proveedores), sin cortes de página. */
 async function requestAllDirectory(role: string, search = ""): Promise<CustomerSummary[]> {
-  const pageSize = 100;
-  const url = (page: number) => `/api/v1/crm/customers?page=${page}&pageSize=${pageSize}&role=${encodeURIComponent(role)}&search=${encodeURIComponent(search)}`;
-  const first = await request<Paged<CustomerSummary>>(url(1));
-  const pageCount = Math.ceil((first.total ?? first.totalCount ?? first.items.length) / pageSize);
-  const rest = await Promise.all(
-    Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) => request<Paged<CustomerSummary>>(url(index + 2)))
+  const page = await request<Paged<CustomerSummary>>(
+    `/api/v1/crm/customers?all=true&role=${encodeURIComponent(role)}&search=${encodeURIComponent(search)}`
   );
-  return [first, ...rest].flatMap((page) => page.items);
+  return page.items;
 }
 
 async function requestBlob(path: string): Promise<Blob> {

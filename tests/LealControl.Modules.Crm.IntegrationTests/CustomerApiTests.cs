@@ -20,6 +20,28 @@ public sealed class CustomerApiTests : IClassFixture<CrmWebApplicationFactory>
     }
 
     [Fact]
+    public async Task All_flag_returns_whole_directory_in_one_response()
+    {
+        var client = _factory.CreateAuthenticatedClient();
+        for (var i = 0; i < 3; i++)
+        {
+            var dni = Random.Shared.Next(10_000_000, 99_999_999).ToString();
+            (await client.PostAsJsonAsync("/api/v1/crm/customers", new
+            {
+                legalName = $"Directorio {dni}", documentType = "Dni", documentNumber = dni, taxCondition = "ConsumidorFinal",
+                iibbRegime = "NoInscripto", isCustomer = true, isSupplier = false
+            })).IsSuccessStatusCode.Should().BeTrue();
+        }
+
+        var paged = await client.GetFromJsonAsync<System.Text.Json.JsonElement>("/api/v1/crm/customers?pageSize=1&role=");
+        var all = await client.GetFromJsonAsync<System.Text.Json.JsonElement>("/api/v1/crm/customers?all=true&role=");
+        var total = paged.GetProperty("total").GetInt32();
+        total.Should().BeGreaterThanOrEqualTo(3);
+        all.GetProperty("items").GetArrayLength().Should().Be(total);
+        all.GetProperty("total").GetInt32().Should().Be(total);
+    }
+
+    [Fact]
     public async Task Register_and_get_customer()
     {
         var client = _factory.CreateAuthenticatedClient();
