@@ -125,7 +125,7 @@ export function FinanceReconciliationPage() {
       case "MatchMany": return <span>Paga varias juntas: <strong>{s.label}</strong></span>;
       case "Cheque": return <span>Es el <strong>{s.label}</strong></span>;
       case "Transfer": return <span>Transferencia {isDebit(r) ? "a" : "desde"} <strong>{s.label}</strong></span>;
-      case "Classified": return <span>Gasto / impuesto del banco: <strong>{s.label}</strong></span>;
+      case "Classified": return <span>{s.investment ? "Inversión (FCI)" : "Gasto / impuesto del banco"}: <strong>{s.label}</strong></span>;
       case "CreatePayment": return <Link className="btn compact" to={`/finanzas/pagos/nueva?supplierId=${s.counterpartyId}&${query}`}>💳 Crear orden de pago</Link>;
       case "CreateReceipt": return <Link className="btn compact" to={`/finanzas/cobranzas?customerId=${s.counterpartyId}&${query}`}>🧾 Crear recibo</Link>;
       default: return (
@@ -165,7 +165,7 @@ export function FinanceReconciliationPage() {
               ["Match", `Pagos y cobros (${(counts.Match ?? 0) + (counts.MatchMany ?? 0)})`],
               ["Cheque", `Cheques (${counts.Cheque ?? 0})`],
               ["Transfer", `Entre cuentas (${counts.Transfer ?? 0})`],
-              ["Classified", `Gastos e impuestos (${counts.Classified ?? 0})`],
+              ["Classified", `Gastos, impuestos e inversiones (${counts.Classified ?? 0})`],
               ["Create", `Crear OP o recibo (${(counts.CreatePayment ?? 0) + (counts.CreateReceipt ?? 0)})`],
               ["Unknown", `Sin identificar (${counts.Unknown ?? 0})`]
             ].map(([key, label]) => (

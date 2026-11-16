@@ -67,5 +67,17 @@ public sealed class InvestmentFundTests : IClassFixture<FinanceWebApplicationFac
         var ops = fima.GetProperty("operations").EnumerateArray().ToDictionary(o => o.GetProperty("externalId").GetString()!, o => o.GetProperty("inBank"));
         ops["900000002"].GetBoolean().Should().BeTrue();
         ops["900000003"].GetBoolean().Should().BeFalse();
+
+        // En la bandeja el rescate se sugiere como inversión y al confirmarlo sale de la bandeja.
+        var tray = await client.GetFromJsonAsync<JsonElement>($"/api/v1/finance/reconciliation/tray?accountId={accountId}");
+        var rescue = tray.GetProperty("rows").EnumerateArray().Single(r => r.GetProperty("description").GetString()!.Contains("Rescate Fima"));
+        rescue.GetProperty("suggestion").GetProperty("investment").GetBoolean().Should().BeTrue();
+        var confirmed = await client.PostAsJsonAsync("/api/v1/finance/reconciliation/tray/confirm", new
+        {
+            accountId, matches = Array.Empty<object>(), cheques = Array.Empty<object>(), classify = new[] { rescue.GetProperty("id").GetGuid() }
+        });
+        (await confirmed.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("classified").GetInt32().Should().Be(1);
+        (await client.GetFromJsonAsync<JsonElement>($"/api/v1/finance/reconciliation/tray?accountId={accountId}"))
+            .GetProperty("rows").EnumerateArray().Should().NotContain(r => r.GetProperty("description").GetString()!.Contains("Rescate Fima"));
     }
 }

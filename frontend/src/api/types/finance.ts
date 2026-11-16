@@ -217,7 +217,7 @@ export type ReconciliationSuggestion =
   | { type: "MatchMany"; systemIds: string[]; label: string }
   | { type: "Cheque"; chequeId: string; label: string; paymentOrderId?: string | null }
   | { type: "CreatePayment" | "CreateReceipt"; counterpartyId: string }
-  | { type: "Classified"; conceptId: string; label: string }
+  | { type: "Classified"; conceptId: string; label: string; investment?: boolean }
   | { type: "Transfer"; accountId: string; label: string }
   | { type: "Unknown" };
 export type ReconciliationTray = {
