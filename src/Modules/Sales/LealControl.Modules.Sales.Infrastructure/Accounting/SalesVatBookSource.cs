@@ -1,6 +1,7 @@
 using LealControl.BuildingBlocks.Tenancy;
 using LealControl.Modules.Accounting.Contracts.VatBooks;
 using LealControl.Modules.Sales.Domain.Invoices;
+using LealControl.Modules.Sales.Domain.Purchases;
 using LealControl.Modules.Sales.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -39,7 +40,7 @@ internal sealed class SalesVatBookSource(SalesDbContext db, ITenantContext tenan
     {
         var tenantId = tenant.TenantId;
         var invoices = await db.PurchaseInvoices.AsNoTracking().Include(i => i.Items)
-            .Where(i => i.TenantId == tenantId && i.Status != "Cancelled"
+            .Where(i => i.TenantId == tenantId && i.Status != "Cancelled" && i.InvoiceType != PurchaseInvoice.NonFiscalType
                         && i.IssueDate >= fromUtc && i.IssueDate <= toUtc)
             .OrderBy(i => i.IssueDate).ThenBy(i => i.SupplierName)
             .ToListAsync(cancellationToken);

@@ -79,7 +79,10 @@ public sealed class PurchaseInvoice : Entity<Guid>
     }
 
     public TenantId TenantId { get; private set; }
-    public string InvoiceType { get; private set; } = "A"; // A, B, C, M, NC_A, NC_B, ND_A, ND_B
+    public string InvoiceType { get; private set; } = "A"; // A, B, C, M, NC_A, NC_B, ND_A, ND_B, X
+
+    /// <summary>Compra sin factura (comprobante X): no es fiscal, no va al Libro IVA ni se constata en ARCA.</summary>
+    public const string NonFiscalType = "X";
     public int PointOfSale { get; private set; } = 1;
     public long InvoiceNumber { get; private set; } = 1;
     public string FormattedNumber { get; private set; } = string.Empty;

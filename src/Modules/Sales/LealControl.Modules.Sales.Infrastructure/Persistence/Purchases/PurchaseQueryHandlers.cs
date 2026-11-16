@@ -666,6 +666,21 @@ public sealed class PurchaseQueryHandlers :
         var tenantId = _tenantContext.TenantId;
         if (!request.Items.Any() || request.Items.Any(x => x.Quantity <= 0 || x.UnitPrice < 0))
             return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.InvalidLines", "La factura debe contener líneas válidas."));
+        if (request.InvoiceType == PurchaseInvoice.NonFiscalType)
+        {
+            // Compra sin factura: sin IVA, sin percepciones ni CAE. Sin número, toma el siguiente interno.
+            var number = request.InvoiceNumber;
+            if (number < 1)
+                number = (await _dbContext.Set<PurchaseInvoice>()
+                    .Where(x => x.TenantId == tenantId && x.InvoiceType == PurchaseInvoice.NonFiscalType)
+                    .MaxAsync(x => (long?)x.InvoiceNumber, cancellationToken) ?? 0) + 1;
+            request = request with
+            {
+                PointOfSale = Math.Max(request.PointOfSale, 0), InvoiceNumber = number,
+                IibbPerception = 0, IvaPerception = 0, OtherTaxes = 0, Cae = null, CaeDueDate = null,
+                Items = request.Items.Select(i => i with { VatRate = 0 }).ToList()
+            };
+        }
         // Una factura anulada (por ejemplo, cargada con un error) no impide volver a cargarla bien.
         var duplicate = await _dbContext.Set<PurchaseInvoice>().AnyAsync(x => x.TenantId == tenantId && x.SupplierId == request.SupplierId && x.PointOfSale == request.PointOfSale && x.InvoiceNumber == request.InvoiceNumber && x.InvoiceType == request.InvoiceType && x.Status != "Cancelled", cancellationToken);
         if (duplicate) return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.Duplicate", "Ya existe una factura con el mismo tipo, punto de venta y número para este proveedor."));

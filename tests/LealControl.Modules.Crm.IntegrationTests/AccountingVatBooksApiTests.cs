@@ -70,6 +70,12 @@ public sealed class AccountingVatBooksApiTests : IAsyncLifetime
         await SaleAsync(client, "A", "ARS", 1m, withCae: false, null, Item(999m, 21m)); // borrador: no va al libro
         await PurchaseAsync(client, "A", 501, "30111222333", Item(1000m, 21m));
         await PurchaseAsync(client, "C", 502, "20123456786", Item(300m, 0m));
+        // Compra sin factura (X): aunque llegue con IVA y percepción, se guarda sin ellos, se numera sola y no va al libro.
+        await PurchaseAsync(client, "X", 0, "30111222333", Item(500m, 21m));
+        var nonFiscal = (await Json(await client.GetAsync("/api/v1/purchases/invoices"))).EnumerateArray()
+            .Single(p => p.GetProperty("invoiceType").GetString() == "X");
+        Assert.Equal(500m, nonFiscal.GetProperty("total").GetDecimal());
+        Assert.Equal(1, nonFiscal.GetProperty("invoiceNumber").GetInt64());
 
         var books = await Json(await client.GetAsync("/api/v1/accounting/vat-books?year=2026&month=9"));
         Assert.Empty(books.GetProperty("problems").EnumerateArray());
