@@ -1958,7 +1958,6 @@ export type TenantInfo = {
   legalName: string;
   tradeName?: string | null;
   documentNumber: string;
-  logoUrl?: string | null;
 };
 
 export type AuthResponse = {
