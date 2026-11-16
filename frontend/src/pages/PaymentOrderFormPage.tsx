@@ -201,15 +201,17 @@ export function PaymentOrderFormPage() {
           if (initialAccountId) setMovementAccountFilter(initialAccountId);
           void loadAvailableMovements(initialAccountId || "", defaultConceptId);
         } else if (initialChequeId) {
-          // Desde la cartera: el cheque propio ya asignado al proveedor entra como medio de pago.
-          const chq = allCheques.find((c) => c.id === initialChequeId && c.direction === "Issued" && !c.paymentOrderId);
+          // Desde la cartera: el cheque propio ya asignado al proveedor, o uno recibido para endosar, entra como medio de pago.
+          const chq = allCheques.find((c) => c.id === initialChequeId
+            && ((c.direction === "Issued" && !c.paymentOrderId) || (c.direction === "Received" && c.status === "Available")));
+          const own = chq?.direction === "Issued";
           setLines(chq ? [{
             id: newLineId(),
-            method: "ChequeOwn",
+            method: own ? "ChequeOwn" : "ChequeThirdParty",
             amount: chq.amount,
             currency: chq.currency || "ARS",
             chequeId: chq.id,
-            notes: `Cheque propio N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+            notes: `${own ? "Cheque propio" : "Endoso cheque"} N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
           }] : []);
         } else {
           setLines([]);

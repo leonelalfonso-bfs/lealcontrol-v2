@@ -110,8 +110,8 @@ export function FinanceReconciliationPage() {
     const options = (r.chequeOptions ?? []).filter((o) => !taken.has(o.chequeId));
     if (options.length === 0 || ["Match", "MatchMany", "Cheque"].includes(r.suggestion.type)) return null;
     return (
-      <select className="compact" value="" onChange={(e) => chooseCheque(r, e.target.value)} aria-label="Es un cheque emitido">
-        <option value="">Es un cheque emitido…</option>
+      <select className="compact" value="" onChange={(e) => chooseCheque(r, e.target.value)} aria-label={isDebit(r) ? "Es un cheque emitido" : "Es un cheque recibido depositado"}>
+        <option value="">{isDebit(r) ? "Es un cheque emitido…" : "Es un cheque de cartera depositado…"}</option>
         {options.map((o) => <option key={o.chequeId} value={o.chequeId}>{o.label}</option>)}
       </select>
     );

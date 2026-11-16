@@ -315,6 +315,7 @@ public static class FinanceImport
                 }
             }
 
+            await FinanceEcheqs.CreditMatchedDepositsAsync(db, tenantId, ct);
             var allForBalance = await db.Movements
                 .Where(x => x.TenantId == tenantId && x.AccountId == request.AccountId)
                 .ToListAsync(ct);
