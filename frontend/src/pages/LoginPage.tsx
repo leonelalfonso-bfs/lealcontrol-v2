@@ -6,6 +6,13 @@ import type { TenantInfo } from "../api/types";
 import { tenantLegalLine, tenantTitle } from "../utils/tenantLabel";
 import "./login-page.css";
 
+/** Logo de la empresa como imagen aparte (cacheada por el navegador); sin logo, las iniciales. */
+function TenantLogo({ tenant }: { tenant: TenantInfo }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <span className="login-tenant-mark" aria-hidden="true">{tenantTitle(tenant).slice(0, 2).toUpperCase()}</span>;
+  return <img className="login-tenant-logo" src={`/api/v1/public/tenants/${tenant.id}/logo`} alt="" onError={() => setFailed(true)} />;
+}
+
 export function LoginPage() {
   const { applySession, login } = useAuth();
   const navigate = useNavigate();
@@ -139,7 +146,7 @@ export function LoginPage() {
             <div className="login-tenants">
               {tenantChoices.map((tenant) => (
                 <button key={tenant.id} type="button" disabled={loading} onClick={() => handleTenantPick(tenant.id)} className="login-tenant">
-                  <span className="login-tenant-mark" aria-hidden="true">{tenantTitle(tenant).slice(0, 2).toUpperCase()}</span>
+                  <TenantLogo tenant={tenant} />
                   <span className="login-tenant-copy">
                     <strong>{tenantTitle(tenant)}</strong>
                     {tenantLegalLine(tenant) && <span>{tenantLegalLine(tenant)}</span>}
