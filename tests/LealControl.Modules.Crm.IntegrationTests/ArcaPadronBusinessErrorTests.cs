@@ -32,6 +32,19 @@ public sealed class ArcaPadronBusinessErrorTests
     }
 
     [Fact]
+    public async Task Pending_requirements_explains_that_data_must_be_loaded_by_hand()
+    {
+        using var transport = new Transport("<Envelope><Body><personaReturn><errorConstancia>" +
+            "<error>La CUIT registra requerimientos de ARCA pendientes de respuesta.</error><idPersona>20123456786</idPersona>" +
+            "</errorConstancia></personaReturn></Body></Envelope>");
+        var client = new ArcaPadronClient(transport, NullLogger<ArcaPadronClient>.Instance);
+        var result = await client.GetPersonaAsync("fake-token", "fake-sign", "20123456786", "30715489629", false, default);
+        Assert.False(result.IsSuccess);
+        Assert.StartsWith("ARCA respondió: La CUIT registra requerimientos", result.Error.Message);
+        Assert.Contains("cargá los datos a mano", result.Error.Message);
+    }
+
+    [Fact]
     public async Task Optional_tax_block_error_does_not_discard_available_person_data()
     {
         using var transport = new Transport("<Envelope><Body><personaReturn>" +

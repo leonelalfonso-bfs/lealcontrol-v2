@@ -29,7 +29,8 @@ internal sealed class GetCustomerQueryHandler : IRequestHandler<GetCustomerQuery
     }
 }
 
-public sealed record ListCustomersQuery(string? Search, bool? OnlyActive, string? Role, int Page, int PageSize)
+/// <param name="All">Todo el directorio en una sola respuesta (selectores, contadores, exportar): sin páginas.</param>
+public sealed record ListCustomersQuery(string? Search, bool? OnlyActive, string? Role, int Page, int PageSize, bool All = false)
     : IRequest<Result<PagedResult<CustomerSummary>>>;
 
 internal sealed class ListCustomersQueryHandler
@@ -56,16 +57,18 @@ internal sealed class ListCustomersQueryHandler
             request.Search,
             request.OnlyActive,
             request.Role,
-            page.Skip,
-            page.Take,
+            request.All ? 0 : page.Skip,
+            request.All ? int.MaxValue : page.Take,
             cancellationToken);
 
-        var total = await _customers.CountAsync(
-            _tenant.TenantId,
-            request.Search,
-            request.OnlyActive,
-            request.Role,
-            cancellationToken);
+        var total = request.All
+            ? items.Count
+            : await _customers.CountAsync(
+                _tenant.TenantId,
+                request.Search,
+                request.OnlyActive,
+                request.Role,
+                cancellationToken);
 
         var summaries = items.Select(c => new CustomerSummary(
             c.Id.Value,
@@ -81,7 +84,7 @@ internal sealed class ListCustomersQueryHandler
             c.Phone?.Value)).ToList();
 
         return Result<PagedResult<CustomerSummary>>.Success(
-            new PagedResult<CustomerSummary>(summaries, total, page.NormalizedPage, page.Take));
+            new PagedResult<CustomerSummary>(summaries, total, request.All ? 1 : page.NormalizedPage, request.All ? summaries.Count : page.Take));
     }
 }
 
