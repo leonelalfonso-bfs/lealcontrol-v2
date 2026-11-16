@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { shrinkImage } from "../utils/shrinkImage";
 import { usePermissions } from "../context/PermissionsContext";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
@@ -49,11 +50,7 @@ export const ProductFormPage: React.FC = () => {
       alert("La imagen no debe superar los 5MB.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImagePath(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    void shrinkImage(file, 1200).then(setImagePath).catch((err: Error) => alert(err.message));
   };
 
   // Prices & 3 Currencies

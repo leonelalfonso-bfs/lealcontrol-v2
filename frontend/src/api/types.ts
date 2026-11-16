@@ -412,7 +412,9 @@ export type Product = {
   type: "DirectSale" | "Product" | "Service" | "Kit" | "Manufactured" | "Consumable" | "SparePart" | "RawMaterial" | string;
   categoryId?: string | null;
   categoryName?: string | null;
+  /** En listados viene vacía: la foto se pide aparte con api.withProductImages. */
   imagePath?: string | null;
+  hasImage?: boolean;
   saleCurrency: "ARS" | "USD_BILLETE" | "USD_DIVISA";
   basePrice: number;
   purchaseCurrency: "ARS" | "USD_BILLETE" | "USD_DIVISA";

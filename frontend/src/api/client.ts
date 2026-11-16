@@ -454,6 +454,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ stage: "Lost", lostReason: reason })
     }),
+  /** Completa la foto de los productos que la tienen (el listado viene sin fotos para no pesar MB). */
+  withProductImages: async (products: Product[]): Promise<Product[]> => {
+    const ids = products.filter((p) => p.hasImage && !p.imagePath).map((p) => p.id);
+    if (ids.length === 0) return products;
+    const chunks = Array.from({ length: Math.ceil(ids.length / 100) }, (_, i) => ids.slice(i * 100, i * 100 + 100));
+    const maps = await Promise.all(chunks.map((c) => request<Record<string, string>>(`/api/v1/sales/products/images?ids=${c.join(",")}`)));
+    const images: Record<string, string> = Object.assign({}, ...maps);
+    return products.map((p) => (images[p.id] ? { ...p, imagePath: images[p.id] } : p));
+  },
   listProducts: (search = "", productType = "", categoryId = "", onlyActive = true) => {
     const params = new URLSearchParams();
     if (search) params.append("search", search);

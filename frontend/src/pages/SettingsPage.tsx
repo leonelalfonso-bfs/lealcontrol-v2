@@ -1,4 +1,5 @@
 import { FormEvent, ChangeEvent, useEffect, useState } from "react";
+import { shrinkImage } from "../utils/shrinkImage";
 import { api } from "../api/client";
 import { provinces, type CompanySettings } from "../api/types";
 import { UsersAndPermissions } from "../components/permissions/UsersAndPermissions";
@@ -71,12 +72,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
   const handleLogoUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setSetting("logoUrl", base64);
-    };
-    reader.readAsDataURL(file);
+    void shrinkImage(file, 600).then((logo) => setSetting("logoUrl", logo)).catch((err: Error) => alert(err.message));
   };
 
   const handleCrtFileUpload = (e: ChangeEvent<HTMLInputElement>) => {

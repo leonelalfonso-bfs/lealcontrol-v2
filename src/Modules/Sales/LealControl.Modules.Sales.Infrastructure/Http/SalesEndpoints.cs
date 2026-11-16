@@ -348,6 +348,19 @@ public static class SalesEndpoints
             return result.ToHttp();
         });
 
+        // Fotos de productos aparte del listado: { id: dataUrl } solo para los ids pedidos.
+        sales.MapGet("/products/images", async (string? ids, ITenantContext tenant, SalesDbContext db, CancellationToken ct) =>
+        {
+            var wanted = (ids ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => Guid.TryParse(x, out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).Distinct().Take(200)
+                .Select(g => new ProductId(g)).ToList();
+            if (wanted.Count == 0) return Results.Ok(new Dictionary<Guid, string>());
+            var rows = await db.Products.AsNoTracking()
+                .Where(p => p.TenantId == tenant.TenantId && wanted.Contains(p.Id) && p.ImagePath != null && p.ImagePath != "")
+                .Select(p => new { p.Id, p.ImagePath }).ToListAsync(ct);
+            return Results.Ok(rows.ToDictionary(r => r.Id.Value, r => r.ImagePath!));
+        });
+
         sales.MapGet("/products/{id:guid}", async (Guid id, ISender sender, CancellationToken cancellationToken) =>
         {
             var result = await sender.Send(new GetProductQuery(id), cancellationToken);

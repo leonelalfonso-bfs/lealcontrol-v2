@@ -31,7 +31,8 @@ public sealed record ProductDto(
     bool IsActive,
     IReadOnlyDictionary<string, string> CustomAttributes,
     DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc);
+    DateTime UpdatedAtUtc,
+    bool HasImage = false);
 
 public sealed record ProductWriteModel(
     string Code,
@@ -75,7 +76,11 @@ public sealed record ProductCategoryWriteModel(
 
 public static class ProductMappings
 {
-    public static ProductDto ToDto(Product product, string? categoryName = null) => new(
+    /// <summary>
+    /// En listados va sin la foto embebida (data:...): con fotos de varios MB por producto, la lista pesaba decenas de MB.
+    /// Las fotos se piden aparte con /products/images?ids=… solo donde se muestran.
+    /// </summary>
+    public static ProductDto ToDto(Product product, string? categoryName = null, bool withImage = true) => new(
         product.Id.Value,
         product.Code,
         product.Name,
@@ -84,7 +89,7 @@ public static class ProductMappings
         product.Type.ToString(),
         product.CategoryId?.Value,
         categoryName,
-        product.ImagePath,
+        withImage || product.ImagePath?.StartsWith("data:", StringComparison.Ordinal) != true ? product.ImagePath : null,
         product.SaleCurrency.ToString(),
         product.BasePrice,
         product.PurchaseCurrency.ToString(),
@@ -101,7 +106,8 @@ public static class ProductMappings
         product.IsActive,
         product.CustomAttributes,
         product.CreatedAtUtc,
-        product.UpdatedAtUtc);
+        product.UpdatedAtUtc,
+        !string.IsNullOrWhiteSpace(product.ImagePath));
 
     public static ProductCategoryDto ToDto(ProductCategory category) => new(
         category.Id.Value,

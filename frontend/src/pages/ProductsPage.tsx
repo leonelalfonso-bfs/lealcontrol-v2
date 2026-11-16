@@ -51,6 +51,8 @@ export const ProductsPage: React.FC = () => {
       ]);
       setProducts(prodsData);
       setCategories(catsData);
+      // Las fotos llegan después, sin frenar la lista.
+      void api.withProductImages(prodsData).then((withImages) => setProducts((current) => (current === prodsData ? withImages : current))).catch(() => undefined);
       if (ratesData) setRates(ratesData);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error al cargar el catálogo");

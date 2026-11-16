@@ -55,7 +55,9 @@ export const QuotePrintPage: React.FC = () => {
 
         // Build products lookup dictionary
         const pMap: Record<string, Product> = {};
-        prods.forEach((p) => {
+        const lineKeys = new Set(q.lines.flatMap((l) => [l.productId ?? "", l.description.toUpperCase()]));
+        const used = await api.withProductImages(prods.filter((p) => lineKeys.has(p.id) || (p.code && lineKeys.has(p.code.toUpperCase())))).catch(() => []);
+        [...prods, ...used].forEach((p) => {
           pMap[p.id] = p;
           if (p.code) pMap[p.code.toUpperCase()] = p;
         });
