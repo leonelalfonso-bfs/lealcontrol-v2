@@ -96,6 +96,8 @@ export function FinanceReconciliationPage() {
   const transferPicker = (r: Row) => {
     const currency = accounts.find((a) => a.id === accountId)?.currency;
     const options = allAccounts.filter((a) => a.id !== accountId && a.currency === currency);
+    // Suscripción o rescate de FCI: la otra punta es el fondo (Fondos de inversión), no una cuenta propia.
+    if (r.suggestion.type === "Classified" && r.suggestion.investment) return null;
     if (options.length === 0 || ["Match", "MatchMany", "Cheque", "Transfer"].includes(r.suggestion.type)) return null;
     return (
       <select className="compact" value="" onChange={(e) => chooseTransfer(r, e.target.value)} aria-label="Transferencia entre cuentas propias">
