@@ -119,9 +119,11 @@ public static partial class FinanceReconciliationTray
                     suggestion = new { Type = "Transfer", AccountId = wallet.Id, Label = wallet.Name };
                 else if (m.SuggestedCounterpartyId is { } partyId && m.SuggestedCounterpartyType is "Supplier" or "Customer")
                     suggestion = new { Type = m.SuggestedCounterpartyType == "Supplier" ? "CreatePayment" : "CreateReceipt", CounterpartyId = partyId };
+                // Gasto/impuesto del banco, o suscripción/rescate de FCI (la otra punta está en Fondos de inversión).
+                // Una transferencia propia no se sugiere así: necesita la otra cuenta (selector "Transferencia…").
                 else if (m.ConceptId is { } conceptId && concepts.TryGetValue(conceptId, out var concept)
-                    && concept.UsableIn is FinancialConceptUsableIn.MovementOnly or FinancialConceptUsableIn.Transfer)
-                    suggestion = new { Type = "Classified", ConceptId = conceptId, Label = concept.Name };
+                    && (concept.UsableIn == FinancialConceptUsableIn.MovementOnly || IsInvestment(concept)))
+                    suggestion = new { Type = "Classified", ConceptId = conceptId, Label = concept.Name, Investment = IsInvestment(concept) };
                 suggested.Add((m, suggestion));
             }
             // Débito que el banco no nombra como cheque: se ofrecen los cheques emitidos sin debitar del mismo importe para elegirlo a mano.
@@ -283,6 +285,14 @@ public static partial class FinanceReconciliationTray
                     // Igual que la clasificación manual: un gasto o impuesto del banco no espera un cobro ni un pago.
                     if (concept.UsableIn == FinancialConceptUsableIn.MovementOnly && m.ReconciliationStatus != FinancialReconciliationStatus.Reconciled)
                         m.ReconciliationStatus = FinancialReconciliationStatus.Excluded;
+                    // Suscripción o rescate de FCI: queda conciliado; la tenencia la lleva Fondos de inversión.
+                    else if (IsInvestment(concept))
+                        m.ReconciliationStatus = FinancialReconciliationStatus.Reconciled;
+                    else
+                    {
+                        errors.Add($"El movimiento del {m.OperationDateUtc:dd/MM} ({concept.Name}) necesita la otra cuenta: usá “Transferencia…”.");
+                        continue;
+                    }
                     classified++;
                 }
             }
@@ -294,6 +304,8 @@ public static partial class FinanceReconciliationTray
 
         return endpoints;
     }
+
+    private static bool IsInvestment(FinancialConcept concept) => concept.Code.StartsWith("INVERSION_", StringComparison.Ordinal);
 
     /// <summary>CUIT de la contraparte de cada pago o cobro del sistema (orden de pago: proveedor; recibo: cliente).</summary>
     private static async Task<Dictionary<Guid, string>> SystemTaxIdsAsync(FinanceDbContext db, Guid tenantId, List<FinancialMovement> system, CancellationToken ct)
