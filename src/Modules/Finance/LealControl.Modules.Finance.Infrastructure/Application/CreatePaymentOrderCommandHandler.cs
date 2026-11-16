@@ -191,7 +191,10 @@ internal sealed class CreatePaymentOrderCommandHandler
                     }
                     else
                     {
+                        // Endoso de un cheque de cartera: queda registrado a qué proveedor y en qué orden.
                         cheque.Status = ReceivedChequeStatus.UsedForPayment;
+                        cheque.SupplierId = body.SupplierId;
+                        cheque.PaymentOrderId = orderId;
                     }
                     cheque.Notes = string.IsNullOrWhiteSpace(cheque.Notes)
                         ? $"Entregado en OP {number} a {supplierName}"

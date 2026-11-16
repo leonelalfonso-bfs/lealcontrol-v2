@@ -185,4 +185,73 @@ public sealed class ReconciliationTrayTests : IClassFixture<FinanceWebApplicatio
         });
         (await client.GetFromJsonAsync<JsonElement>($"/api/v1/finance/reconciliation/tray?accountId={bankId}")).GetProperty("rows").GetArrayLength().Should().Be(0);
     }
+
+    [Fact]
+    public async Task Received_cheque_with_customer_is_credited_from_the_statement_or_endorsed_to_a_supplier()
+    {
+        var tenantId = FinanceWebApplicationFactory.DemoTenantId;
+        var client = _factory.CreateAuthenticatedClient(tenantId);
+        var bankId = Guid.NewGuid();
+        await _factory.WithDbAsync(async db =>
+        {
+            db.Accounts.Add(new FinancialAccount { Id = bankId, TenantId = tenantId, Name = "Banco Cartera", Currency = "ARS", Type = FinancialAccountType.Bank, IsActive = true, CreatedAtUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        });
+        var customerId = Guid.NewGuid();
+        async Task<Guid> ChequeAsync(string number, decimal amount, Guid? customer = null)
+        {
+            var res = await client.PostAsJsonAsync("/api/v1/finance/echeqs", new
+            {
+                checkNumber = number, amount, currency = "ARS", issuerName = "Librador SA", customerId = customer,
+                issueDateUtc = new DateTime(2026, 10, 20, 0, 0, 0, DateTimeKind.Utc), dueDateUtc = new DateTime(2026, 11, 3, 0, 0, 0, DateTimeKind.Utc), direction = "Received"
+            });
+            res.EnsureSuccessStatusCode();
+            return (await res.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        }
+        var deposited = await ChequeAsync("7101", 51111.11m, customerId);
+        var portfolio = await ChequeAsync("7102", 52222.22m);
+        var endorsed = await ChequeAsync("7103", 53333.33m);
+
+        // Cliente asignado desde la cartera.
+        var assigned = await client.PostAsJsonAsync($"/api/v1/finance/echeqs/{portfolio}/customer", new { customerId });
+        (await assigned.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("customerId").GetGuid().Should().Be(customerId);
+
+        // Uno se deposita desde la cartera; el otro el banco lo acredita sin que se haya marcado el depósito.
+        (await client.PostAsJsonAsync($"/api/v1/finance/echeqs/{deposited}/deposit", new { bankAccountId = bankId, depositDateUtc = new DateTime(2026, 11, 3, 12, 0, 0, DateTimeKind.Utc) })).EnsureSuccessStatusCode();
+        var csv = "\"Fecha\";\"Descripción\";\"Origen\";\"Débitos\";\"Créditos\";\"Grupo de Conceptos\";\"Concepto\";\"Número de Terminal\";\"Observaciones Cliente\";\"Número de Comprobante\";\"Leyendas Adicionales1\";\"Leyendas Adicionales2\";\"Leyendas Adicionales3\";\"Leyendas Adicionales4\";\"Tipo de Movimiento\";\"Saldo\"\n"
+            + "\"04/11/2026\";\"Deposito de cheques\";\"\";\"0\";\"51111,11\";\"\";\"\";\"\";\"\";\"1\";\"\";\"\";\"\";\"\";\"Imputado\";\"51111,11\";\n"
+            + "\"04/11/2026\";\"Deposito de cheques\";\"\";\"0\";\"52222,22\";\"\";\"\";\"\";\"\";\"2\";\"\";\"\";\"\";\"\";\"Imputado\";\"103333,33\";\n";
+        (await client.PostAsJsonAsync("/api/v1/finance/imports/bank/confirm", new { accountId = bankId, fileBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(csv)), fileName = "Extracto_cheques.csv" })).EnsureSuccessStatusCode();
+
+        var tray = await client.GetFromJsonAsync<JsonElement>($"/api/v1/finance/reconciliation/tray?accountId={bankId}");
+        var row = tray.GetProperty("rows").EnumerateArray().Single();
+        row.GetProperty("chequeOptions").EnumerateArray().Select(o => o.GetProperty("chequeId").GetGuid()).Should().Contain(portfolio);
+        var confirm = await client.PostAsJsonAsync("/api/v1/finance/reconciliation/tray/confirm", new
+        {
+            accountId = bankId, matches = Array.Empty<object>(), classify = Array.Empty<Guid>(),
+            cheques = new[] { new { importedId = row.GetProperty("id").GetGuid(), chequeId = portfolio } }
+        });
+        confirm.EnsureSuccessStatusCode();
+
+        // Endoso: el cheque de cartera paga una orden y queda a nombre del proveedor.
+        var supplierId = Guid.NewGuid();
+        var order = await client.PostAsJsonAsync("/api/v1/finance/payments", new
+        {
+            supplierId, supplierName = "Proveedor Endoso SA", paymentDateUtc = DateTime.UtcNow, currency = "ARS", amount = 53333.33m,
+            lines = new object[] { new { method = "ChequeThirdParty", amount = 53333.33m, currency = "ARS", chequeId = endorsed } }
+        });
+        order.StatusCode.Should().Be(System.Net.HttpStatusCode.Created, await order.Content.ReadAsStringAsync());
+
+        await _factory.WithDbAsync(async db =>
+        {
+            var byId = db.ReceivedCheques.Where(x => x.Id == deposited || x.Id == portfolio || x.Id == endorsed).ToDictionary(x => x.Id);
+            byId[deposited].Status.Should().Be(ReceivedChequeStatus.Credited);
+            byId[deposited].CustomerId.Should().Be(customerId);
+            byId[portfolio].Status.Should().Be(ReceivedChequeStatus.Credited);
+            byId[portfolio].BankAccountId.Should().Be(bankId);
+            byId[endorsed].Status.Should().Be(ReceivedChequeStatus.UsedForPayment);
+            byId[endorsed].SupplierId.Should().Be(supplierId);
+            await Task.CompletedTask;
+        });
+    }
 }

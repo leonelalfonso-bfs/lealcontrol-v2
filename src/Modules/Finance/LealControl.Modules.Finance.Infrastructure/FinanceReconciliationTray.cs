@@ -60,6 +60,9 @@ public static partial class FinanceReconciliationTray
                 .Where(x => x.TenantId == tenantId && x.Direction == ChequeDirection.Issued && x.BankMovementId == null
                     && x.Status != ReceivedChequeStatus.Cancelled && x.Status != ReceivedChequeStatus.Rejected)
                 .ToListAsync(ct);
+            var portfolio = await db.ReceivedCheques.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.Direction == ChequeDirection.Received && x.Status == ReceivedChequeStatus.Available)
+                .ToListAsync(ct);
             var concepts = await db.FinancialConcepts.AsNoTracking().Where(x => x.TenantId == tenantId).ToDictionaryAsync(x => x.Id, ct);
             var batches = await PaymentBatches.ConsolidatedPendingAsync(db, tenantId, accountId, ct);
             var wallets = await WalletsByCuilAsync(db, tenantId, ct);
@@ -126,10 +129,12 @@ public static partial class FinanceReconciliationTray
             {
                 x.Movement.Id, x.Movement.OperationDateUtc, x.Movement.Kind, x.Movement.Amount, x.Movement.Description, x.Movement.CounterpartyTaxId, x.Movement.CounterpartyName,
                 Suggestion = x.Suggestion ?? new { Type = "Unknown" },
+                // Crédito: los cheques recibidos en cartera del mismo importe (depositados sin pasar por "Depositar").
                 ChequeOptions = x.Movement.Kind == FinancialMovementKind.Debit
                     ? cheques.Where(c => !usedCheques.Contains(c.Id) && c.Amount == x.Movement.Amount)
                         .Select(c => new { ChequeId = c.Id, Label = $"Cheque {c.CheckNumber} a {c.IssuerName ?? c.ReceivedFrom}", c.PaymentOrderId }).ToList()
-                    : []
+                    : portfolio.Where(c => c.Amount == x.Movement.Amount && c.Currency == x.Movement.Currency)
+                        .Select(c => new { ChequeId = c.Id, Label = $"Cheque {c.CheckNumber} de {c.ReceivedFrom ?? c.IssuerName}", PaymentOrderId = (Guid?)null }).ToList()
             }).ToList();
             return Results.Ok(new { AccountId = accountId, Rows = rows, PendingSystem = system.Count(s => !usedSystem.Contains(s.Id)) });
         });
@@ -220,8 +225,33 @@ public static partial class FinanceReconciliationTray
                 var chequeIds = body.Cheques!.Select(x => x.ChequeId).ToList();
                 var cheques = await db.ReceivedCheques.Where(x => x.TenantId == tenantId && chequeIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
                 var issuedConcept = await db.FinancialConcepts.AsNoTracking().FirstOrDefaultAsync(x => x.TenantId == tenantId && x.Code == "CHEQUE_EMITIDO", ct);
+                await FinanceConcepts.EnsureBaseConceptsAsync(db, tenantId, ct);
+                var depositedConcept = await db.FinancialConcepts.AsNoTracking().FirstOrDefaultAsync(x => x.TenantId == tenantId && x.Code == "CHEQUE_DEPOSITADO", ct);
                 foreach (var pair in body.Cheques!)
                 {
+                    // Crédito del banco = cheque recibido de la cartera que se depositó sin registrarlo antes en el sistema.
+                    if (movements.TryGetValue(pair.ImportedId, out var credit) && credit.Kind == FinancialMovementKind.Credit
+                        && cheques.TryGetValue(pair.ChequeId, out var received))
+                    {
+                        if (received.Direction != ChequeDirection.Received || received.Status != ReceivedChequeStatus.Available || received.Amount != credit.Amount)
+                        {
+                            errors.Add($"No se pudo vincular el cheque del {credit.OperationDateUtc:dd/MM}: ya no está en cartera o no coincide.");
+                            continue;
+                        }
+                        received.BankAccountId = body.AccountId;
+                        received.BankMovementId = credit.Id;
+                        received.Status = ReceivedChequeStatus.Credited;
+                        received.DepositedAtUtc = credit.OperationDateUtc;
+                        received.CreditedAtUtc = credit.OperationDateUtc;
+                        credit.ReconciliationStatus = FinancialReconciliationStatus.Reconciled;
+                        credit.LinkedEntityType = "ReceivedCheque";
+                        credit.LinkedEntityId = received.Id;
+                        if (depositedConcept is not null) credit.ConceptId = depositedConcept.Id;
+                        credit.ClassificationStatus = FinancialClassificationStatus.Confirmed;
+                        credit.ClassifiedAtUtc = DateTime.UtcNow;
+                        chequesLinked++;
+                        continue;
+                    }
                     if (!movements.TryGetValue(pair.ImportedId, out var imp) || !cheques.TryGetValue(pair.ChequeId, out var cheque)
                         || cheque.BankMovementId is not null || cheque.Amount != imp.Amount || imp.Kind != FinancialMovementKind.Debit)
                     {
@@ -257,6 +287,7 @@ public static partial class FinanceReconciliationTray
                 }
             }
 
+            await FinanceEcheqs.CreditMatchedDepositsAsync(db, tenantId, ct);
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { Matched = matched, Cheques = chequesLinked, Transfers = transfers, Classified = classified, Errors = errors });
         });

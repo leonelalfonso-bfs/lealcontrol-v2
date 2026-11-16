@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Modules.Finance.Infrastructure;
 
-public sealed record CreateReceivedChequeRequest(string CheckNumber, decimal Amount, string Currency, DateTime? IssueDateUtc, DateTime? DueDateUtc, string? IssuerName, string? IssuerTaxId, string? BankName, string? Notes, ChequeDirection Direction = ChequeDirection.Received, Guid? SupplierId = null);
+public sealed record CreateReceivedChequeRequest(string CheckNumber, decimal Amount, string Currency, DateTime? IssueDateUtc, DateTime? DueDateUtc, string? IssuerName, string? IssuerTaxId, string? BankName, string? Notes, ChequeDirection Direction = ChequeDirection.Received, Guid? SupplierId = null, Guid? CustomerId = null);
 public sealed record ImportReceivedChequesRequest(string CsvContent);
 public sealed record ImportIssuedChequesRequest(string CsvContent);
 public sealed record LinkChequeMovementRequest(Guid AccountId, Guid MovementId, bool IsCredit);
@@ -16,6 +16,7 @@ public sealed record DepositChequeRequest(Guid BankAccountId, DateTime DepositDa
 public sealed record RejectChequeRequest(DateTime RejectDateUtc, decimal? Fees, string? Note);
 public sealed record CancelChequeRequest(string Reason);
 public sealed record AssignChequeSupplierRequest(Guid? SupplierId);
+public sealed record AssignChequeCustomerRequest(Guid? CustomerId);
 
 public static class FinanceEcheqs
 {
@@ -50,6 +51,7 @@ public static class FinanceEcheqs
                 CreatedAtUtc = DateTime.UtcNow
             };
             if (direction == ChequeDirection.Issued) item.SupplierId = body.SupplierId ?? await SupplierByCuitAsync(db, item.TenantId, item.IssuerTaxId, ct);
+            else item.CustomerId = body.CustomerId ?? await CustomerByCuitAsync(db, item.TenantId, item.IssuerTaxId, ct);
             db.ReceivedCheques.Add(item); await db.SaveChangesAsync(ct); return Results.Created($"/api/v1/finance/echeqs/{item.Id}", item);
         });
         group.MapPost("/import", async (ImportReceivedChequesRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
@@ -60,7 +62,7 @@ public static class FinanceEcheqs
             {
                 var c = raw.Split(';'); if (c.Length < 9) continue; var number = c[0].Trim(); var amount = ParseMoney(c[6]); if (string.IsNullOrWhiteSpace(number) || amount <= 0) continue;
                 var echeqId = c.Length > 9 ? c[9].Trim() : null; if (await db.ReceivedCheques.AnyAsync(x => x.TenantId == tenantId && x.Direction == ChequeDirection.Received && x.CheckNumber == number && x.Amount == amount && x.EcheqId == echeqId, ct)) { duplicates++; continue; }
-                db.ReceivedCheques.Add(new ReceivedCheque { Id = Guid.NewGuid(), TenantId = tenantId, CheckNumber = number, EcheqId = echeqId, Cmc7 = c.Length > 10 ? c[10].Trim() : null, Amount = amount, Currency = "ARS", DueDateUtc = ParseDate(c[4]), IssueDateUtc = ParseDate(c[5]), Direction = ChequeDirection.Received, Status = ReceivedChequeStatus.Available, BankName = c[8].Trim(), ReceivedFrom = c.Length > 2 ? c[2].Trim() : null, IssuerTaxId = c.Length > 3 ? c[3].Trim() : null, IssuerName = c.Length > 16 ? c[16].Trim() : null, Notes = c.Length > 11 ? c[11].Trim() : null, CreatedAtUtc = DateTime.UtcNow }); imported++;
+                db.ReceivedCheques.Add(new ReceivedCheque { Id = Guid.NewGuid(), TenantId = tenantId, CheckNumber = number, EcheqId = echeqId, Cmc7 = c.Length > 10 ? c[10].Trim() : null, Amount = amount, Currency = "ARS", DueDateUtc = ParseDate(c[4]), IssueDateUtc = ParseDate(c[5]), Direction = ChequeDirection.Received, Status = ReceivedChequeStatus.Available, BankName = c[8].Trim(), ReceivedFrom = c.Length > 2 ? c[2].Trim() : null, IssuerTaxId = c.Length > 3 ? c[3].Trim() : null, IssuerName = c.Length > 16 ? c[16].Trim() : null, Notes = c.Length > 11 ? c[11].Trim() : null, CustomerId = await CustomerByCuitAsync(db, tenantId, c.Length > 3 ? c[3] : null, ct), CreatedAtUtc = DateTime.UtcNow }); imported++;
             }
             await db.SaveChangesAsync(ct); return Results.Ok(new { imported, duplicates });
         });
@@ -87,6 +89,17 @@ public static class FinanceEcheqs
             if (cheque.Direction != ChequeDirection.Issued) return Results.BadRequest("Solo aplica a cheques emitidos.");
             if (cheque.PaymentOrderId.HasValue) return Results.Conflict("El cheque ya está en una orden de pago: el proveedor es el de la orden.");
             cheque.SupplierId = body.SupplierId;
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(cheque);
+        });
+        // Cheque recibido: qué cliente lo entregó. Si vino en un recibo de cobranza, el cliente es el del recibo.
+        group.MapPost("/{id:guid}/customer", async (Guid id, AssignChequeCustomerRequest body, FinanceDbContext db, LealControl.BuildingBlocks.Tenancy.ITenantContext tenant, CancellationToken ct) =>
+        {
+            var cheque = await db.ReceivedCheques.SingleOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId.Value, ct);
+            if (cheque is null) return Results.NotFound("Cheque inexistente.");
+            if (cheque.Direction != ChequeDirection.Received) return Results.BadRequest("Solo aplica a cheques recibidos.");
+            if (cheque.CollectionReceiptId.HasValue) return Results.Conflict("El cheque vino en un recibo de cobranza: el cliente es el del recibo.");
+            cheque.CustomerId = body.CustomerId;
             await db.SaveChangesAsync(ct);
             return Results.Ok(cheque);
         });
@@ -119,8 +132,9 @@ public static class FinanceEcheqs
                 Id = Guid.NewGuid(), TenantId = tenantId, AccountId = body.BankAccountId,
                 Kind = FinancialMovementKind.Credit, Amount = cheque.Amount, Currency = cheque.Currency,
                 OperationDateUtc = body.DepositDateUtc,
+                // Sin referencia: el extracto trae el número de la boleta de depósito, no el del cheque,
+                // y una referencia distinta impedía emparejar el crédito al importar.
                 Description = $"Depósito cheque N° {cheque.CheckNumber}",
-                ExternalReference = cheque.CheckNumber,
                 ConceptId = conceptId,
                 LinkedEntityType = "ReceivedCheque", LinkedEntityId = cheque.Id,
                 CreatedAtUtc = DateTime.UtcNow
@@ -209,6 +223,36 @@ public static class FinanceEcheqs
     private static DateTime? ParseDate(string value) => DateTime.TryParseExact(value.Trim(), "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date) ? date.ToUniversalTime() : null;
 
     /// <summary>Proveedor con ese CUIT, si hay uno solo (el CUIT del beneficiario viene en el archivo del banco).</summary>
+    private static async Task<Guid?> CustomerByCuitAsync(FinanceDbContext db, Guid tenantId, string? taxId, CancellationToken ct)
+    {
+        var cuit = new string((taxId ?? "").Where(char.IsDigit).ToArray());
+        if (cuit.Length != 11) return null;
+        return (await FinanceCounterpartyLookup.TryResolveUniqueAsync(db, tenantId, cuit, FinancialMovementKind.Credit, ct))?.Id;
+    }
+
+    /// <summary>
+    /// El depósito de un cheque recibido queda como movimiento del sistema pendiente de banco; cuando se concilia con
+    /// el crédito del extracto (al importar o desde la bandeja), el cheque pasa a acreditado.
+    /// </summary>
+    internal static async Task CreditMatchedDepositsAsync(FinanceDbContext db, Guid tenantId, CancellationToken ct)
+    {
+        var deposits = db.ChangeTracker.Entries<FinancialMovement>()
+            .Select(e => e.Entity)
+            .Where(m => m.Origin == FinancialMovementOrigin.System && m.LinkedEntityType == "ReceivedCheque"
+                && m.LinkedEntityId.HasValue && m.ReconciliationStatus == FinancialReconciliationStatus.MatchedToImport && m.Kind == FinancialMovementKind.Credit)
+            .ToList();
+        if (deposits.Count == 0) return;
+        var ids = deposits.Select(m => m.LinkedEntityId!.Value).ToList();
+        var cheques = await db.ReceivedCheques.Where(x => x.TenantId == tenantId && ids.Contains(x.Id) && x.Status == ReceivedChequeStatus.Deposited).ToListAsync(ct);
+        foreach (var cheque in cheques)
+        {
+            var deposit = deposits.First(m => m.LinkedEntityId == cheque.Id);
+            var credit = db.ChangeTracker.Entries<FinancialMovement>().Select(e => e.Entity).FirstOrDefault(m => m.Id == deposit.MatchedMovementId);
+            cheque.Status = ReceivedChequeStatus.Credited;
+            cheque.CreditedAtUtc = credit?.OperationDateUtc ?? deposit.OperationDateUtc;
+        }
+    }
+
     private static async Task<Guid?> SupplierByCuitAsync(FinanceDbContext db, Guid tenantId, string? taxId, CancellationToken ct)
     {
         var cuit = new string((taxId ?? "").Where(char.IsDigit).ToArray());
