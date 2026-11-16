@@ -281,12 +281,15 @@ export function PurchaseInvoiceFormPage() {
     setItems(items.filter((_, i) => i !== index));
   };
 
+  // Compra sin factura (X): no es fiscal, va sin IVA, percepciones ni CAE.
+  const isX = invoiceType === "X";
+  const vatOf = (it: { vatRate: number }) => (isX ? 0 : it.vatRate);
   const subtotalNeto = items.reduce((acc, it) => acc + it.quantity * it.unitPrice, 0);
-  const iva21 = items.filter((it) => Math.abs(it.vatRate - 21) < 0.1).reduce((acc, it) => acc + it.quantity * it.unitPrice * 0.21, 0);
-  const iva105 = items.filter((it) => Math.abs(it.vatRate - 10.5) < 0.1).reduce((acc, it) => acc + it.quantity * it.unitPrice * 0.105, 0);
-  const iva27 = items.filter((it) => Math.abs(it.vatRate - 27) < 0.1).reduce((acc, it) => acc + it.quantity * it.unitPrice * 0.27, 0);
+  const iva21 = items.filter((it) => Math.abs(vatOf(it) - 21) < 0.1).reduce((acc, it) => acc + it.quantity * it.unitPrice * 0.21, 0);
+  const iva105 = items.filter((it) => Math.abs(vatOf(it) - 10.5) < 0.1).reduce((acc, it) => acc + it.quantity * it.unitPrice * 0.105, 0);
+  const iva27 = items.filter((it) => Math.abs(vatOf(it) - 27) < 0.1).reduce((acc, it) => acc + it.quantity * it.unitPrice * 0.27, 0);
   const totalIva = iva21 + iva105 + iva27;
-  const grandTotal = subtotalNeto + totalIva + Number(iibbPerception) + Number(ivaPerception) + Number(otherTaxes);
+  const grandTotal = subtotalNeto + totalIva + (isX ? 0 : Number(iibbPerception) + Number(ivaPerception) + Number(otherTaxes));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -296,7 +299,7 @@ export function PurchaseInvoiceFormPage() {
     }
     const pos = Number(pointOfSale);
     const invNum = Number(invoiceNumber);
-    if (!Number.isFinite(pos) || pos < 1 || !Number.isFinite(invNum) || invNum < 1) {
+    if (!isX && (!Number.isFinite(pos) || pos < 1 || !Number.isFinite(invNum) || invNum < 1)) {
       setError("Indicá el punto de venta y el número de factura del comprobante (sin valores por defecto).");
       return;
     }
@@ -312,8 +315,8 @@ export function PurchaseInvoiceFormPage() {
 
       const payload = {
         invoiceType,
-        pointOfSale: pos,
-        invoiceNumber: invNum,
+        pointOfSale: Number.isFinite(pos) ? pos : 0,
+        invoiceNumber: Number.isFinite(invNum) ? invNum : 0,
         purchaseOrderId: purchaseOrderId || null,
         purchaseReceptionId: purchaseReceptionId || null,
         supplierId: selectedSupplierId || "00000000-0000-0000-0000-000000000000",
@@ -324,10 +327,10 @@ export function PurchaseInvoiceFormPage() {
         dueDate: new Date(dueDate).toISOString(),
         currency,
         exchangeRate: Number(exchangeRate),
-        iibbPerception: Number(iibbPerception),
-        ivaPerception: Number(ivaPerception),
-        otherTaxes: Number(otherTaxes),
-        cae: cae || null,
+        iibbPerception: isX ? 0 : Number(iibbPerception),
+        ivaPerception: isX ? 0 : Number(ivaPerception),
+        otherTaxes: isX ? 0 : Number(otherTaxes),
+        cae: isX ? null : cae || null,
         caeDueDate: caeDueDate ? new Date(caeDueDate).toISOString() : null,
         notes,
         arcaVoucherId: arcaVoucherId || null,
@@ -337,7 +340,7 @@ export function PurchaseInvoiceFormPage() {
           description: it.description,
           quantity: Number(it.quantity),
           unitPrice: Number(it.unitPrice),
-          vatRate: Number(it.vatRate)
+          vatRate: vatOf(it)
         }))
       };
 
@@ -400,7 +403,13 @@ export function PurchaseInvoiceFormPage() {
                   <option value="NC_B">Nota de Crédito B (08)</option>
                   <option value="ND_A">Nota de Débito A (02)</option>
                   <option value="ND_B">Nota de Débito B (07)</option>
+                  <option value="X">Compra sin factura (X)</option>
                 </select>
+                {isX && (
+                  <small className="muted" style={{ display: "block", marginTop: 4 }}>
+                    No es fiscal: sin IVA ni CAE, no va al Libro IVA. Número opcional (si lo dejás vacío se numera solo).
+                  </small>
+                )}
               </div>
 
               <div>
@@ -616,7 +625,8 @@ export function PurchaseInvoiceFormPage() {
                       </td>
                       <td style={{ padding: "8px 4px" }}>
                         <select
-                          value={it.vatRate}
+                          value={vatOf(it)}
+                          disabled={isX}
                           onChange={(e) => handleItemChange(idx, "vatRate", parseFloat(e.target.value))}
                           style={{ width: "100%", padding: "6px 4px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
                         >
@@ -696,7 +706,8 @@ export function PurchaseInvoiceFormPage() {
                 <input
                   type="number"
                   step="0.01"
-                  value={iibbPerception}
+                  value={isX ? 0 : iibbPerception}
+                  disabled={isX}
                   onChange={(e) => setIibbPerception(parseFloat(e.target.value) || 0)}
                   style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "right", fontFamily: "monospace" }}
                 />
@@ -709,7 +720,8 @@ export function PurchaseInvoiceFormPage() {
                 <input
                   type="number"
                   step="0.01"
-                  value={otherTaxes}
+                  value={isX ? 0 : otherTaxes}
+                  disabled={isX}
                   onChange={(e) => setOtherTaxes(parseFloat(e.target.value) || 0)}
                   style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "right", fontFamily: "monospace" }}
                 />
@@ -740,7 +752,7 @@ export function PurchaseInvoiceFormPage() {
               )}
 
               {/* CAE Field */}
-              <div style={{ marginBottom: "12px", background: "#f8fafc", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+              {!isX && <div style={{ marginBottom: "12px", background: "#f8fafc", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
                 <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "2px" }}>
                   CAE / CAI Autorización ARCA
                 </label>
@@ -751,7 +763,7 @@ export function PurchaseInvoiceFormPage() {
                   onChange={(e) => setCae(e.target.value)}
                   style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontSize: "0.85rem" }}
                 />
-              </div>
+              </div>}
 
               <button
                 type="submit"

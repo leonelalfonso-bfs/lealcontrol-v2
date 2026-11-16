@@ -76,6 +76,10 @@ export function PurchaseHelpPage() {
           <Step title="Desde la recepción (“🧾 Facturar”), la factura se vincula sola y no vuelve a sumar stock." />
           <Step title="Si cargás la factura por otro lado (“＋ Cargar Factura Manual”) y la mercadería ya entró, elegí la recepción en “Recepción ya ingresada (evita duplicar stock)”, o después en el listado con “Vincular recepción…”." />
           <Step title="Completá tipo, punto de venta y número (sin valores por defecto), fechas, CAE, renglones con su IVA y percepciones." />
+          <Step title="Compra sin factura: tipo “Compra sin factura (X)”.">
+            Registra la deuda con el proveedor, el stock y el gasto, pero no es fiscal: va sin IVA, sin percepciones ni CAE, no entra al
+            Libro IVA Compras ni se constata en ARCA. El número es opcional (vacío = se numera solo). En el listado se filtra con el tipo X.
+          </Step>
         </Steps>
         <Tip warn>El sistema no deja cargar dos veces la misma factura: mismo proveedor, tipo, punto de venta y número.</Tip>
       </ManualPart>

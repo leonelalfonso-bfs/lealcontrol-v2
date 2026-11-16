@@ -90,6 +90,8 @@ export function PurchaseInvoicePrintPage() {
       ? "NOTA DE CRÉDITO"
       : invoice.invoiceType.startsWith("ND")
       ? "NOTA DE DÉBITO"
+      : invoice.invoiceType === "X"
+      ? "COMPRA SIN FACTURA"
       : "FACTURA DE PROVEEDOR";
 
   const letterDisplay = invoice.invoiceType.replace(/^(NC_|ND_)/, "") || "A";
@@ -246,7 +248,7 @@ export function PurchaseInvoicePrintPage() {
           >
             <span style={{ fontSize: "20px", fontWeight: "900", lineHeight: "1" }}>{letterDisplay}</span>
             <span style={{ fontSize: "7px", fontWeight: "bold", color: "#475569" }}>
-              COD. {arcaVoucherCode(invoice.invoiceType) ?? "01"}
+              {invoice.invoiceType === "X" ? "NO FISCAL" : `COD. ${arcaVoucherCode(invoice.invoiceType) ?? "01"}`}
             </span>
           </div>
 

@@ -244,12 +244,14 @@ export function PurchaseInvoicesPage() {
             style={{ width: 160 }}
           >
             <option value="All">Todos los Tipos</option>
-            <option value="Factura A">Factura A</option>
-            <option value="Factura B">Factura B</option>
-            <option value="Factura C">Factura C</option>
-            <option value="Factura M">Factura M</option>
-            <option value="Nota de Débito A">Nota de Débito A</option>
-            <option value="Nota de Crédito A">Nota de Crédito A</option>
+            <option value="A">Factura A</option>
+            <option value="B">Factura B</option>
+            <option value="C">Factura C</option>
+            <option value="M">Factura M</option>
+            <option value="ND_A">Nota de Débito A</option>
+            <option value="NC_A">Nota de Crédito A</option>
+            <option value="NC_B">Nota de Crédito B</option>
+            <option value="X">Compra sin factura (X)</option>
           </select>
 
           {/* Payment Status Filter */}
