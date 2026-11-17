@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { CustomerSummary } from "../api/types";
 import { CustomerPicker } from "../components/pickers";
 import { DataTable } from "../components/ui/DataTable";
+import { Modal } from "../components/ui/Modal";
 
 import { todayAr } from "../lib/dates";
 type Cheque = {
@@ -323,10 +324,20 @@ export function ChequePortfolioPage() {
           </div>
         </section>
       )}
-      {depositing && (
-        <section className="card pad" style={{ marginBottom: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Depositar cheque N° {depositing.cheque.checkNumber} · {money(depositing.cheque.amount, depositing.cheque.currency)}</h3>
-          <div className="toolbar" style={{ flexWrap: "wrap", gap: 10, alignItems: "flex-end" }}>
+      <Modal
+        open={!!depositing}
+        onClose={() => setDepositing(null)}
+        title={depositing ? `Depositar cheque N° ${depositing.cheque.checkNumber} · ${money(depositing.cheque.amount, depositing.cheque.currency)}` : ""}
+        contentStyle={{ maxWidth: 520 }}
+        footer={
+          <>
+            <button className="btn btn-outline" disabled={busy} onClick={() => setDepositing(null)}>Cancelar</button>
+            <button className="btn" disabled={busy || !depositing?.date} onClick={() => void confirmDeposit()}>Depositar</button>
+          </>
+        }
+      >
+        {depositing && (
+          <div className="stack" style={{ display: "grid", gap: 12 }}>
             <label>
               Cuenta bancaria
               <select value={depositing.accountId} onChange={(e) => setDepositing({ ...depositing, accountId: e.target.value })}>
@@ -337,12 +348,10 @@ export function ChequePortfolioPage() {
               Fecha del depósito
               <input type="date" value={depositing.date} onChange={(e) => setDepositing({ ...depositing, date: e.target.value })} />
             </label>
-            <button className="btn" disabled={busy || !depositing.date} onClick={() => void confirmDeposit()}>Depositar</button>
-            <button className="btn btn-outline" disabled={busy} onClick={() => setDepositing(null)}>Cancelar</button>
+            <p className="muted" style={{ margin: 0 }}>Queda “Depositado”. Cuando importes el extracto, el crédito se empareja solo y el cheque pasa a “Acreditado”.</p>
           </div>
-          <p className="muted" style={{ marginBottom: 0 }}>Queda “Depositado”. Cuando importes el extracto, la bandeja de conciliación empareja el crédito y el cheque pasa a “Acreditado”.</p>
-        </section>
-      )}
+        )}
+      </Modal>
       {overdueCount > 0 && <div className="alert" style={{ background: "rgba(245,158,11,0.15)" }}>⚠ {overdueCount} cheque(s) vencido(s) en cartera.</div>}
       <section className="card pad">
         <div className="toolbar" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
