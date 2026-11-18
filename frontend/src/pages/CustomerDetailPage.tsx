@@ -870,29 +870,33 @@ function EquipmentForm({ customerId, locations, onCreated }: { customerId: strin
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    await api.addEquipment(customerId, {
-      internalCode,
-      equipmentType,
-      brand,
-      model,
-      serialNumber,
-      maxCapacity: maxCapacity || undefined,
-      divisionScale: divisionScale || undefined,
-      locationId: locationId || undefined,
-      status: "Active",
-      lastCalibrationDate: lastCalibrationDate ? new Date(lastCalibrationDate).toISOString() : undefined,
-      calibrationIntervalMonths: calibrationIntervalMonths || undefined,
-      customAttributes: Object.keys(customAttributes).length > 0 ? customAttributes : undefined
-    });
-    setInternalCode("");
-    setBrand("");
-    setModel("");
-    setSerialNumber("");
-    setMaxCapacity("");
-    setDivisionScale("");
-    setLastCalibrationDate("");
-    setCustomAttributes({});
-    onCreated();
+    try {
+      await api.addEquipment(customerId, {
+        internalCode,
+        equipmentType,
+        brand,
+        model,
+        serialNumber,
+        maxCapacity: maxCapacity || undefined,
+        divisionScale: divisionScale || undefined,
+        locationId: locationId || undefined,
+        status: "Active",
+        lastCalibrationDate: lastCalibrationDate ? new Date(lastCalibrationDate).toISOString() : undefined,
+        calibrationIntervalMonths: calibrationIntervalMonths || undefined,
+        customAttributes: Object.keys(customAttributes).length > 0 ? customAttributes : undefined
+      });
+      setInternalCode("");
+      setBrand("");
+      setModel("");
+      setSerialNumber("");
+      setMaxCapacity("");
+      setDivisionScale("");
+      setLastCalibrationDate("");
+      setCustomAttributes({});
+      onCreated();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "No se pudo guardar el equipo.");
+    }
   };
 
   return (

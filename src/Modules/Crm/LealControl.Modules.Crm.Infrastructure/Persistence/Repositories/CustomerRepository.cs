@@ -22,6 +22,7 @@ internal sealed class CustomerRepository : ICustomerRepository
         _db.Customers
             .Include(x => x.Locations)
             .Include(x => x.Contacts)
+            .Include(x => x.Equipments)
             .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
