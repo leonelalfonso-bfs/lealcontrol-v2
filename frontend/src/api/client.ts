@@ -928,6 +928,8 @@ export const api = {
     request<import("./types").ExpenseCategory>(
       body.id ? `/api/v1/purchases/expense-categories/${body.id}` : "/api/v1/purchases/expense-categories",
       { method: body.id ? "PUT" : "POST", body: JSON.stringify(body) }),
+  categorizePurchaseInvoice: (id: string, lines: { itemId: string; expenseCategoryId: string | null }[]) =>
+    request<unknown>(`/api/v1/purchases/invoices/${id}/expense-categories`, { method: "PUT", body: JSON.stringify({ lines }) }),
   createPurchaseInvoice: (body: import("./types").PurchaseInvoiceWrite) =>
     request<import("./types").PurchaseInvoice>("/api/v1/purchases/invoices", { method: "POST", body: JSON.stringify(body) }),
   cancelPurchaseInvoice: (id: string, reason?: string) =>
