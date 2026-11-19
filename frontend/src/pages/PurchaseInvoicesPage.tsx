@@ -342,6 +342,11 @@ export function PurchaseInvoicesPage() {
                       </td>
                       <td style={{ padding: "12px 8px", fontSize: "0.88rem" }}>
                         <div>{new Date(inv.issueDate).toLocaleDateString("es-AR")}</div>
+                        {inv.imputationPeriod && inv.imputationPeriod.slice(0, 7) !== inv.issueDate.slice(0, 7) && (
+                          <small style={{ display: "block", fontSize: "0.75rem", color: "#7c3aed" }}>
+                            Imputada a {inv.imputationPeriod.slice(5, 7)}/{inv.imputationPeriod.slice(0, 4)}
+                          </small>
+                        )}
                         <small className="muted" style={{ fontSize: "0.75rem", color: inv.daysOverdue > 0 ? "#dc2626" : "inherit" }}>
                           Vto: {new Date(inv.dueDate).toLocaleDateString("es-AR")}
                         </small>
@@ -580,6 +585,30 @@ export function PurchaseInvoicesPage() {
                           >
                             👁️ Ver
                           </Link>
+                          {inv.status !== "Cancelled" && (
+                            <button
+                              type="button"
+                              className="btn btn-outline compact"
+                              style={{ fontSize: "0.78rem", padding: "4px 10px", fontWeight: 600 }}
+                              title="Libro IVA Compras y asiento: a qué mes se imputa"
+                              onClick={() => {
+                                const current = (inv.imputationPeriod ?? inv.issueDate).slice(0, 7);
+                                const value = window.prompt("Período de imputación (AAAA-MM):", current);
+                                if (!value || value === current) return;
+                                if (!/^\d{4}-\d{2}$/.test(value.trim())) return setError("Escribí el período como AAAA-MM, por ejemplo 2026-11.");
+                                void (async () => {
+                                  try {
+                                    await api.setPurchaseImputationPeriod(inv.id, `${value.trim()}-01T00:00:00Z`);
+                                    await loadData();
+                                  } catch (err: any) {
+                                    setError(err.message || "No se pudo cambiar el período.");
+                                  }
+                                })();
+                              }}
+                            >
+                              📅 Período
+                            </button>
+                          )}
                           {inv.status !== "Cancelled" && (
                             <button
                               type="button"

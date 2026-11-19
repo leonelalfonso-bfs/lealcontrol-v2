@@ -106,7 +106,8 @@ public sealed record PurchaseInvoiceDto(
     string Status,
     string? Notes,
     DateTime CreatedAtUtc,
-    IReadOnlyList<PurchaseInvoiceItemDto> Items);
+    IReadOnlyList<PurchaseInvoiceItemDto> Items,
+    DateTime? ImputationPeriod = null);
 
 public sealed record PurchaseArcaVoucherDto(
     Guid Id,
@@ -229,7 +230,8 @@ public sealed record CreatePurchaseInvoiceCommand(
     DateTime? CaeDueDate,
     string? Notes,
     Guid? ArcaVoucherId,
-    IReadOnlyList<PurchaseInvoiceItemWrite> Items) : IRequest<Result<PurchaseInvoiceDto>>;
+    IReadOnlyList<PurchaseInvoiceItemWrite> Items,
+    DateTime? ImputationPeriod = null) : IRequest<Result<PurchaseInvoiceDto>>;
 
 public sealed record ListPurchaseInvoicesQuery(
     string? Search = null,

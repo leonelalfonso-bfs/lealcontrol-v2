@@ -290,7 +290,7 @@ export function AccountingHelpPage() {
         <Troubleshooting rows={[
           [<>Una factura de venta no aparece al contabilizar</>, <>Solo entran las autorizadas por ARCA y con fecha dentro del período. Si está en borrador, autorizala en Ventas.</>],
           [<>“Sin asiento modelo” en la vista previa</>, <>Ese tipo de comprobante no tiene un modelo activo: activalo o creá uno en Asientos Modelos.</>],
-          [<>“Período … cerrado: no se contabiliza”</>, <>El mes del comprobante tiene candado. Reabrilo en Cierres y períodos, contabilizá y volvé a cerrarlo.</>],
+          [<>“Período … cerrado: no se contabiliza”</>, <>El mes del comprobante tiene candado. Si es una compra, en Compras → Facturas usá “📅 Período” para imputarla a un mes abierto (las nuevas ya se imputan solas al primer mes abierto). Si es otra cosa, reabrí el mes en Cierres y períodos, contabilizá y volvé a cerrarlo.</>],
           [<>Una venta no aparece en el Libro IVA Ventas</>, <>Solo van las que tienen CAE. Revisá en Ventas que esté autorizada y la fecha del comprobante.</>],
           [<>“… necesita CUIT” al exportar a ARCA</>, <>Una factura de compra no se edita: anulala en Compras (“Anular”) y cargala de nuevo con el CUIT del proveedor o con el tipo correcto.</>],
           [<>“… está en USD y no tiene cotización”</>, <>Es un cobro o pago en dólares cargado sin cotización: anulalo en Finanzas y cargalo de nuevo con la cotización del día.</>],

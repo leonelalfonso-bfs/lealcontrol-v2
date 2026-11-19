@@ -113,6 +113,41 @@ public sealed class AccountingVatBooksApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Purchase_from_a_closed_month_is_imputed_to_the_first_open_month()
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        await Json(await client.PostAsJsonAsync("/api/v1/accounting/periods/lock", new { year = 2026, month = 8, @lock = true }));
+
+        var suggestion = await Json(await client.GetAsync("/api/v1/purchases/invoices/imputation-period?issueDate=2026-08-20"));
+        Assert.StartsWith("2026-09-01", suggestion.GetProperty("period").GetString());
+        Assert.True(suggestion.GetProperty("issueMonthLocked").GetBoolean());
+
+        object Purchase(long number, string? period) => new
+        {
+            invoiceType = "A", pointOfSale = 7, invoiceNumber = number, supplierId = Guid.NewGuid(), supplierName = "Proveedor SA",
+            supplierDocument = "30111222333", supplierTaxCondition = "ResponsableInscripto",
+            issueDate = "2026-08-20T00:00:00Z", dueDate = "2026-09-20T00:00:00Z", currency = "ARS", exchangeRate = 1m,
+            iibbPerception = 0m, ivaPerception = 0m, otherTaxes = 0m, imputationPeriod = period, items = new[] { Item(1000m, 21m) }
+        };
+        // Sin período: va al primer mes abierto. Pedir el mes cerrado se rechaza.
+        var created = await Json(await client.PostAsJsonAsync("/api/v1/purchases/invoices", Purchase(801, null)));
+        Assert.StartsWith("2026-09-01", created.GetProperty("imputationPeriod").GetString());
+        var refused = await client.PostAsJsonAsync("/api/v1/purchases/invoices", Purchase(802, "2026-08-01T00:00:00Z"));
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+
+        async Task<int> PurchasesIn(int month) =>
+            (await Json(await client.GetAsync($"/api/v1/accounting/vat-books?year=2026&month={month}"))).GetProperty("purchases").GetProperty("rows").GetArrayLength();
+        Assert.Equal(0, await PurchasesIn(8));
+        Assert.Equal(1, await PurchasesIn(9));
+
+        // Se puede mover a otro mes abierto mientras no tenga asiento.
+        var id = created.GetProperty("id").GetGuid();
+        await Json(await client.PutAsJsonAsync($"/api/v1/purchases/invoices/{id}/imputation-period", new { period = "2026-10-01T00:00:00Z" }));
+        Assert.Equal(0, await PurchasesIn(9));
+        Assert.Equal(1, await PurchasesIn(10));
+    }
+
+    [Fact]
     public async Task Export_is_refused_when_a_voucher_cannot_be_informed()
     {
         using var client = _factory.CreateAuthenticatedClient();

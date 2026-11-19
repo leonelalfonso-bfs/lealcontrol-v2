@@ -76,6 +76,10 @@ export function PurchaseHelpPage() {
           <Step title="Desde la recepción (“🧾 Facturar”), la factura se vincula sola y no vuelve a sumar stock." />
           <Step title="Si cargás la factura por otro lado (“＋ Cargar Factura Manual”) y la mercadería ya entró, elegí la recepción en “Recepción ya ingresada (evita duplicar stock)”, o después en el listado con “Vincular recepción…”." />
           <Step title="Completá tipo, punto de venta y número (sin valores por defecto), fechas, CAE, renglones con su IVA y percepciones." />
+          <Step title="Período de imputación: a qué mes va la compra en el Libro IVA Compras y en el asiento.">
+            Por defecto, el mes de la factura. Si Contabilidad ya cerró ese mes, se imputa sola al primer mes abierto (la factura conserva su fecha).
+            Se puede elegir otro mes abierto, nunca anterior al de la factura. Ya cargada, “📅 Período” en el listado la cambia mientras no tenga asiento.
+          </Step>
           <Step title="Compra sin factura: tipo “Compra sin factura (X)”.">
             Registra la deuda con el proveedor, el stock y el gasto, pero no es fiscal: va sin IVA, sin percepciones ni CAE, no entra al
             Libro IVA Compras ni se constata en ARCA. El número es opcional (vacío = se numera solo). En el listado se filtra con el tipo X.

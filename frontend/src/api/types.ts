@@ -1168,11 +1168,15 @@ export type PurchaseInvoice = {
   caeDueDate?: string | null;
   status: string;
   notes?: string | null;
+  /** Mes al que se imputa (Libro IVA Compras y asiento), primer día del mes. */
+  imputationPeriod?: string | null;
   createdAtUtc: string;
   items: PurchaseInvoiceItem[];
 };
 
 export type PurchaseInvoiceWrite = {
+  /** Vacío: el mes de la factura o, si está cerrado, el primer mes abierto. */
+  imputationPeriod?: string | null;
   invoiceType: string;
   pointOfSale: number;
   invoiceNumber: number;

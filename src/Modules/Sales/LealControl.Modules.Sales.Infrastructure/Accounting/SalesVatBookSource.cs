@@ -40,8 +40,9 @@ internal sealed class SalesVatBookSource(SalesDbContext db, ITenantContext tenan
     {
         var tenantId = tenant.TenantId;
         var invoices = await db.PurchaseInvoices.AsNoTracking().Include(i => i.Items)
+            // Compras: por período de imputación (una factura de un mes ya cerrado va al primer mes abierto).
             .Where(i => i.TenantId == tenantId && i.Status != "Cancelled" && i.InvoiceType != PurchaseInvoice.NonFiscalType
-                        && i.IssueDate >= fromUtc && i.IssueDate <= toUtc)
+                        && i.ImputationPeriod >= fromUtc && i.ImputationPeriod <= toUtc)
             .OrderBy(i => i.IssueDate).ThenBy(i => i.SupplierName)
             .ToListAsync(cancellationToken);
 

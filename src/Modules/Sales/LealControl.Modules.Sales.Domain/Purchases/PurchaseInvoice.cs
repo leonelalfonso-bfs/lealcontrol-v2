@@ -59,6 +59,7 @@ public sealed class PurchaseInvoice : Entity<Guid>
         SupplierDocument = supplierDocument;
         SupplierTaxCondition = supplierTaxCondition;
         IssueDate = issueDate;
+        ImputationPeriod = MonthOf(issueDate);
         DueDate = dueDate;
         Currency = currency;
         ExchangeRate = exchangeRate;
@@ -93,6 +94,26 @@ public sealed class PurchaseInvoice : Entity<Guid>
     public string SupplierDocument { get; private set; } = string.Empty;
     public string SupplierTaxCondition { get; private set; } = "ResponsableInscripto";
     public DateTime IssueDate { get; private set; }
+
+    /// <summary>
+    /// Mes al que se imputa la compra (Libro IVA Compras y asiento), como primer día del mes. Por defecto el de la
+    /// factura; si ese mes está cerrado en Contabilidad, el primer mes abierto. Nunca anterior al de la factura.
+    /// </summary>
+    public DateTime ImputationPeriod { get; private set; }
+
+    /// <summary>Fecha del asiento: la de la factura si se imputa a su mes; si no, el primer día del mes imputado.</summary>
+    public DateTime AccountingDate => ImputationPeriod > MonthOf(IssueDate) ? ImputationPeriod : IssueDate;
+
+    public static DateTime MonthOf(DateTime date) => new(date.Year, date.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    /// <summary>Imputa a otro mes; devuelve el motivo si no se puede.</summary>
+    public string? ImputeTo(DateTime period)
+    {
+        var month = MonthOf(period);
+        if (month < MonthOf(IssueDate)) return "El período de imputación no puede ser anterior al mes de la factura.";
+        ImputationPeriod = month;
+        return null;
+    }
     public DateTime DueDate { get; private set; }
     public string Currency { get; private set; } = "ARS";
     public decimal ExchangeRate { get; private set; } = 1.0m;

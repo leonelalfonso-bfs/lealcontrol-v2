@@ -21,4 +21,10 @@ public sealed class NoOpAccountingPostingGateway : IAccountingPostingGateway
         IReadOnlyCollection<string> sourceDocumentIds,
         CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
+
+    public Task<IReadOnlySet<DateOnly>> LockedMonthsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlySet<DateOnly>>(new HashSet<DateOnly>());
+
+    public Task<bool> IsPostedAsync(string sourceModule, string sourceDocumentId, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
 }
