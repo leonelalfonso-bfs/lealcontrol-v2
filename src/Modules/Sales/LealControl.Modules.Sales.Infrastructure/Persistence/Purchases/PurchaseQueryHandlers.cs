@@ -83,6 +83,18 @@ public sealed class PurchaseInvoiceItemConfiguration : IEntityTypeConfiguration<
     }
 }
 
+public sealed class ExpenseCategoryConfiguration : IEntityTypeConfiguration<ExpenseCategory>
+{
+    public void Configure(EntityTypeBuilder<ExpenseCategory> builder)
+    {
+        builder.ToTable("expense_categories", "purchases");
+        builder.HasKey(c => c.Id);
+        builder.Ignore(c => c.Label);
+        builder.Property(c => c.TenantId).HasConversion(id => id.Value, value => new TenantId(value));
+        builder.HasIndex(c => new { c.TenantId, c.Code }).IsUnique();
+    }
+}
+
 public sealed class PurchaseArcaVoucherConfiguration : IEntityTypeConfiguration<PurchaseArcaVoucher>
 {
     public void Configure(EntityTypeBuilder<PurchaseArcaVoucher> builder)
@@ -702,7 +714,7 @@ public sealed class PurchaseQueryHandlers :
             request = request with
             {
                 PointOfSale = Math.Max(request.PointOfSale, 0), InvoiceNumber = number,
-                IibbPerception = 0, IvaPerception = 0, OtherTaxes = 0, Cae = null, CaeDueDate = null,
+                IibbPerception = 0, IvaPerception = 0, OtherTaxes = 0, InternalTaxes = 0, GananciasPerception = 0, MunicipalTaxes = 0, Cae = null, CaeDueDate = null,
                 Items = request.Items.Select(i => i with { VatRate = 0 }).ToList()
             };
         }
@@ -780,7 +792,11 @@ public sealed class PurchaseQueryHandlers :
             request.OtherTaxes,
             request.Cae,
             request.CaeDueDate,
-            request.Notes);
+            request.Notes,
+            request.SupplierProvince,
+            request.InternalTaxes,
+            request.GananciasPerception,
+            request.MunicipalTaxes);
 
         var (period, imputationError) = ResolveImputation(invoice.IssueDate, request.ImputationPeriod, await _accounting.LockedMonthsAsync(cancellationToken));
         if ((imputationError ?? invoice.ImputeTo(period)) is { } imputationFailure)
@@ -794,7 +810,8 @@ public sealed class PurchaseQueryHandlers :
                 it.Description,
                 it.Quantity,
                 it.UnitPrice,
-                it.VatRate);
+                it.VatRate,
+                it.ExpenseCategoryId);
         }
 
         _dbContext.Set<PurchaseInvoice>().Add(invoice);
@@ -1276,8 +1293,13 @@ public sealed class PurchaseQueryHandlers :
                 it.VatRate,
                 it.NetSubtotal,
                 it.VatAmount,
-                it.Total)).ToList(),
-            i.ImputationPeriod);
+                it.Total,
+                it.ExpenseCategoryId)).ToList(),
+            i.ImputationPeriod,
+            i.SupplierProvince,
+            i.InternalTaxes,
+            i.GananciasPerception,
+            i.MunicipalTaxes);
 
     // Purchase Requests Handlers
     public async Task<Result<IReadOnlyList<PurchaseRequestDto>>> Handle(ListPurchaseRequestsQuery request, CancellationToken cancellationToken)

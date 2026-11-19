@@ -54,8 +54,8 @@ public static class ArcaVatBookExport
         Amount(v.Exempt),
         Amount(v.PerceptionVat), // percepciones o pagos a cuenta de impuestos nacionales
         Amount(v.PerceptionIibb),
-        Amount(0m),            // percepciones municipales
-        Amount(0m),            // impuestos internos
+        Amount(v.MunicipalTaxes),
+        Amount(v.InternalTaxes),
         Text(v.CurrencyCode, 3), Rate(v.ExchangeRate),
         Num(RateCount(v, purchase: false), 1), OperationCode(v),
         Amount(v.OtherTaxes),
@@ -73,10 +73,10 @@ public static class ArcaVatBookExport
         Amount(0m),            // conceptos que no integran el neto gravado
         Amount(v.Exempt),
         Amount(v.PerceptionVat),
-        Amount(0m),            // percepciones de otros impuestos nacionales
+        Amount(v.PerceptionGanancias), // percepciones de otros impuestos nacionales
         Amount(v.PerceptionIibb),
-        Amount(0m),            // percepciones municipales
-        Amount(0m),            // impuestos internos
+        Amount(v.MunicipalTaxes),
+        Amount(v.InternalTaxes),
         Text(v.CurrencyCode, 3), Rate(v.ExchangeRate),
         Num(RateCount(v, purchase: true), 1), OperationCode(v),
         Amount(v.DiscriminatesVat ? v.Rates.Sum(r => r.Vat) : 0m), // crédito fiscal computable

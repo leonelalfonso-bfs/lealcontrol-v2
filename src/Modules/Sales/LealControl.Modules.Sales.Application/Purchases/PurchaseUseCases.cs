@@ -74,7 +74,8 @@ public sealed record PurchaseInvoiceItemDto(
     decimal VatRate,
     decimal NetSubtotal,
     decimal VatAmount,
-    decimal Total);
+    decimal Total,
+    Guid? ExpenseCategoryId = null);
 
 public sealed record PurchaseInvoiceDto(
     Guid Id,
@@ -107,7 +108,11 @@ public sealed record PurchaseInvoiceDto(
     string? Notes,
     DateTime CreatedAtUtc,
     IReadOnlyList<PurchaseInvoiceItemDto> Items,
-    DateTime? ImputationPeriod = null);
+    DateTime? ImputationPeriod = null,
+    string? SupplierProvince = null,
+    decimal InternalTaxes = 0,
+    decimal GananciasPerception = 0,
+    decimal MunicipalTaxes = 0);
 
 public sealed record PurchaseArcaVoucherDto(
     Guid Id,
@@ -207,7 +212,8 @@ public sealed record PurchaseInvoiceItemWrite(
     string Description,
     decimal Quantity,
     decimal UnitPrice,
-    decimal VatRate);
+    decimal VatRate,
+    Guid? ExpenseCategoryId = null);
 
 public sealed record CreatePurchaseInvoiceCommand(
     string InvoiceType,
@@ -231,7 +237,11 @@ public sealed record CreatePurchaseInvoiceCommand(
     string? Notes,
     Guid? ArcaVoucherId,
     IReadOnlyList<PurchaseInvoiceItemWrite> Items,
-    DateTime? ImputationPeriod = null) : IRequest<Result<PurchaseInvoiceDto>>;
+    DateTime? ImputationPeriod = null,
+    string? SupplierProvince = null,
+    decimal InternalTaxes = 0,
+    decimal GananciasPerception = 0,
+    decimal MunicipalTaxes = 0) : IRequest<Result<PurchaseInvoiceDto>>;
 
 public sealed record ListPurchaseInvoicesQuery(
     string? Search = null,

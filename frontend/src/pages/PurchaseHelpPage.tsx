@@ -76,6 +76,19 @@ export function PurchaseHelpPage() {
           <Step title="Desde la recepción (“🧾 Facturar”), la factura se vincula sola y no vuelve a sumar stock." />
           <Step title="Si cargás la factura por otro lado (“＋ Cargar Factura Manual”) y la mercadería ya entró, elegí la recepción en “Recepción ya ingresada (evita duplicar stock)”, o después en el listado con “Vincular recepción…”." />
           <Step title="Completá tipo, punto de venta y número (sin valores por defecto), fechas, CAE, renglones con su IVA y percepciones." />
+          <Step title="Rubro de cada renglón (Producto/Gasto del Libro IVA Compras).">
+            Elegí el rubro en la columna “Rubro”; el ⚙ abre la lista para dar de alta los rubros con los mismos códigos que usa el estudio
+            (PAP, GMR, SEG…). Un renglón nuevo copia el rubro del anterior. Un comprobante con dos rubros (por ejemplo, gastos bancarios e
+            impuestos) se carga en dos renglones.
+          </Step>
+          <Step title="Tributos, cada uno en su casilla: Percepción IVA, IIBB, Ganancias, impuestos internos, municipales y otros.">
+            Así salen en su columna del Libro IVA Compras y en su campo del Libro IVA Digital. La jurisdicción del libro es la provincia
+            fiscal del proveedor.
+          </Step>
+          <Step title="Tique factura y comprobantes de bancos o seguros: tipos “Tique factura A/B” y “Otros comp. RG 1415”.">
+            “Otros comp. RG 1415, con IVA” es para resúmenes de banco, pólizas y servicios que discriminan IVA (suma crédito fiscal); “sin IVA”
+            para los que no. No tienen CAE, así que no se constatan en ARCA.
+          </Step>
           <Step title="Período de imputación: a qué mes va la compra en el Libro IVA Compras y en el asiento.">
             Por defecto, el mes de la factura. Si Contabilidad ya cerró ese mes, se imputa sola al primer mes abierto (la factura conserva su fecha).
             Se puede elegir otro mes abierto, nunca anterior al de la factura. Ya cargada, “📅 Período” en el listado la cambia mientras no tenga asiento.

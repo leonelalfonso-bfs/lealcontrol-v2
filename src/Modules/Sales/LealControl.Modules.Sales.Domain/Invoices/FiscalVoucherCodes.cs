@@ -38,6 +38,11 @@ public static class FiscalVoucherCodes
         "FCE_C" => 211,
         "ND_FCE_C" => 212,
         "NC_FCE_C" => 213,
+        // Recibidos sin CAE: tique factura de controlador fiscal y los exceptuados de la RG 1415
+        // (bancos, seguros, servicios públicos). OC_A discrimina IVA; OC_B no.
+        "TF_A" => 81,
+        "TF_B" => 82,
+        "OC_A" or "OC_B" => 99,
         _ => null
     };
 
@@ -48,6 +53,10 @@ public static class FiscalVoucherCodes
         7 or 8 => 96,
         _ => 99
     };
+
+    /// <summary>Tique factura u otro comprobante de la RG 1415: no tienen CAE, no se constatan en ARCA.</summary>
+    public static bool IsWithoutCae(string invoiceType) =>
+        invoiceType.StartsWith("TF_", StringComparison.Ordinal) || invoiceType.StartsWith("OC_", StringComparison.Ordinal);
 
     public static bool IsFce(string invoiceType) => invoiceType.Contains("FCE_", StringComparison.Ordinal);
 

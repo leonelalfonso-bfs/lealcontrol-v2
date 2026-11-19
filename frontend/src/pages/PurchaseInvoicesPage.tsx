@@ -251,6 +251,10 @@ export function PurchaseInvoicesPage() {
             <option value="ND_A">Nota de Débito A</option>
             <option value="NC_A">Nota de Crédito A</option>
             <option value="NC_B">Nota de Crédito B</option>
+            <option value="TF_A">Tique factura A</option>
+            <option value="TF_B">Tique factura B</option>
+            <option value="OC_A">Otros comp. RG 1415 (con IVA)</option>
+            <option value="OC_B">Otros comp. RG 1415 (sin IVA)</option>
             <option value="X">Compra sin factura (X)</option>
           </select>
 

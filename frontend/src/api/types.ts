@@ -1137,7 +1137,11 @@ export type PurchaseInvoiceItem = {
   netSubtotal: number;
   vatAmount: number;
   total: number;
+  expenseCategoryId?: string | null;
 };
+
+/** Rubro de compra o gasto (Producto/Gasto del Libro IVA Compras). */
+export type ExpenseCategory = { id: string; code: string; name: string; isActive: boolean };
 
 export type PurchaseInvoice = {
   id: string;
@@ -1170,6 +1174,10 @@ export type PurchaseInvoice = {
   notes?: string | null;
   /** Mes al que se imputa (Libro IVA Compras y asiento), primer día del mes. */
   imputationPeriod?: string | null;
+  supplierProvince?: string | null;
+  internalTaxes?: number;
+  gananciasPerception?: number;
+  municipalTaxes?: number;
   createdAtUtc: string;
   items: PurchaseInvoiceItem[];
 };
@@ -1193,6 +1201,10 @@ export type PurchaseInvoiceWrite = {
   iibbPerception: number;
   ivaPerception: number;
   otherTaxes: number;
+  internalTaxes: number;
+  gananciasPerception: number;
+  municipalTaxes: number;
+  supplierProvince?: string | null;
   cae?: string | null;
   caeDueDate?: string | null;
   notes?: string | null;
@@ -1204,6 +1216,7 @@ export type PurchaseInvoiceWrite = {
     quantity: number;
     unitPrice: number;
     vatRate: number;
+    expenseCategoryId?: string | null;
   }>;
 };
 
@@ -2499,6 +2512,17 @@ export type VatBookRow = {
   perceptionIibb: number;
   otherTaxes: number;
   total: number;
+  /** Lo que lee el estudio (Compras): imputación, documento, condición, jurisdicción y rubros. */
+  accountingDate?: string | null;
+  documentType: string;
+  taxCondition: string;
+  jurisdiction: string;
+  categories: string;
+  net25: number;
+  vat25: number;
+  perceptionGanancias: number;
+  internalTaxes: number;
+  municipalTaxes: number;
 };
 
 export type VatBook = { rows: VatBookRow[]; totals: VatBookRow };

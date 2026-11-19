@@ -92,9 +92,13 @@ export function PurchaseInvoicePrintPage() {
       ? "NOTA DE DÉBITO"
       : invoice.invoiceType === "X"
       ? "COMPRA SIN FACTURA"
+      : invoice.invoiceType.startsWith("TF_")
+      ? "TIQUE FACTURA"
+      : invoice.invoiceType.startsWith("OC_")
+      ? "OTROS COMP. FISCALES (RG 1415)"
       : "FACTURA DE PROVEEDOR";
 
-  const letterDisplay = invoice.invoiceType.replace(/^(NC_|ND_)/, "") || "A";
+  const letterDisplay = invoice.invoiceType.replace(/^(NC_|ND_|TF_)/, "").replace(/^OC_[AB]$/, "—") || "A";
 
   return (
     <div style={{ background: "#f1f5f9", minHeight: "100vh", padding: "20px" }}>
@@ -497,6 +501,19 @@ export function PurchaseInvoicePrintPage() {
                     </td>
                   </tr>
                 )}
+
+                {([
+                  ["Percepción Ganancias", invoice.gananciasPerception],
+                  ["Impuestos internos", invoice.internalTaxes],
+                  ["Impuestos municipales", invoice.municipalTaxes]
+                ] as const).filter(([, v]) => (v ?? 0) > 0).map(([label, v]) => (
+                  <tr key={label}>
+                    <td style={{ color: "#475569" }}>{label}:</td>
+                    <td style={{ textAlign: "right", fontFamily: "monospace" }}>
+                      {currSymbol}{(v ?? 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
 
                 {invoice.otherTaxes > 0 && (
                   <tr>

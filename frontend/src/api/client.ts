@@ -923,6 +923,11 @@ export const api = {
     request<{ period: string; issueMonthLocked: boolean; lockedMonths: string[] }>(`/api/v1/purchases/invoices/imputation-period?issueDate=${issueDate}`),
   setPurchaseImputationPeriod: (id: string, period: string) =>
     request<{ id: string; imputationPeriod: string }>(`/api/v1/purchases/invoices/${id}/imputation-period`, { method: "PUT", body: JSON.stringify({ period }) }),
+  listExpenseCategories: () => request<import("./types").ExpenseCategory[]>("/api/v1/purchases/expense-categories"),
+  saveExpenseCategory: (body: { id?: string; code: string; name: string; isActive?: boolean }) =>
+    request<import("./types").ExpenseCategory>(
+      body.id ? `/api/v1/purchases/expense-categories/${body.id}` : "/api/v1/purchases/expense-categories",
+      { method: body.id ? "PUT" : "POST", body: JSON.stringify(body) }),
   createPurchaseInvoice: (body: import("./types").PurchaseInvoiceWrite) =>
     request<import("./types").PurchaseInvoice>("/api/v1/purchases/invoices", { method: "POST", body: JSON.stringify(body) }),
   cancelPurchaseInvoice: (id: string, reason?: string) =>
