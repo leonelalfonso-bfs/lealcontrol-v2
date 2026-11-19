@@ -79,7 +79,6 @@ export function PurchaseInvoiceFormPage() {
   const [gananciasPerception, setGananciasPerception] = useState(0);
   const [internalTaxes, setInternalTaxes] = useState(0);
   const [municipalTaxes, setMunicipalTaxes] = useState(0);
-  const [supplierProvince, setSupplierProvince] = useState("");
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [cae, setCae] = useState("");
@@ -268,7 +267,6 @@ export function PurchaseInvoiceFormPage() {
       setSupplierName(sup.legalName || sup.tradeName || "");
       setSupplierDocument(sup.documentNumber || "");
       setSupplierTaxCondition(sup.taxCondition || "ResponsableInscripto");
-      setSupplierProvince(sup.fiscalProvince || "");
     }
     if (purchaseReceptionId) {
       const rec = availableReceptions.find((r) => r.id === purchaseReceptionId);
@@ -375,7 +373,6 @@ export function PurchaseInvoiceFormPage() {
         gananciasPerception: isX ? 0 : Number(gananciasPerception),
         internalTaxes: isX ? 0 : Number(internalTaxes),
         municipalTaxes: isX ? 0 : Number(municipalTaxes),
-        supplierProvince: supplierProvince || null,
         cae: isX ? null : cae || null,
         caeDueDate: caeDueDate ? new Date(caeDueDate).toISOString() : null,
         notes,

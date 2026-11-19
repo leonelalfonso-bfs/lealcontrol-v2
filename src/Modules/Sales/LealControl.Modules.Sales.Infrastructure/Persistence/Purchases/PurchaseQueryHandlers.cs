@@ -772,6 +772,14 @@ public sealed class PurchaseQueryHandlers :
             }
         }
 
+        // Jurisdicción del Libro IVA Compras: la provincia fiscal del proveedor en el directorio, al momento de la carga.
+        var supplierProvince = string.IsNullOrWhiteSpace(request.SupplierProvince)
+            ? (await _dbContext.Database.SqlQueryRaw<string>(
+                    @"SELECT fiscal_province AS ""Value"" FROM crm.customers WHERE ""Id"" = {0} AND ""TenantId"" = {1}",
+                    request.SupplierId, tenantId.Value)
+                .ToListAsync(cancellationToken)).FirstOrDefault()
+            : request.SupplierProvince;
+
         var invoice = PurchaseInvoice.Create(
             tenantId,
             request.InvoiceType,
@@ -793,7 +801,7 @@ public sealed class PurchaseQueryHandlers :
             request.Cae,
             request.CaeDueDate,
             request.Notes,
-            request.SupplierProvince,
+            supplierProvince,
             request.InternalTaxes,
             request.GananciasPerception,
             request.MunicipalTaxes);

@@ -5,6 +5,7 @@ import { type PurchaseInvoice } from "../api/types";
 import { type PurchaseReception } from "../api/types";
 import { SearchField } from "../components/ui/SearchField";
 import { matchesSearch, parseSearch } from "../lib/search";
+import { paidOf } from "../lib/purchasePayments";
 
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
@@ -91,25 +92,7 @@ export function PurchaseInvoicesPage() {
     const now = new Date().getTime();
 
     return invoices.map((inv) => {
-      // Find matching payment orders for this invoice
-      // Solo lo imputado a esta factura por id; voided no cuenta.
-      const activeOrders = paymentOrders.filter((po: any) => !["voided", "cancelled", "anulado"].includes(String(po.status || "").toLowerCase()));
-      const imputedPaid = activeOrders
-        .flatMap((po: any) => po.imputations ?? [])
-        .filter((imp: any) => imp.invoiceId === inv.id)
-        .reduce((sum: number, imp: any) => sum + (Number(imp.amount) || 0), 0);
-      const pastPaid = imputedPaid + activeOrders
-        .filter((po: any) => !po.imputations?.length && po.invoicesSummary && po.invoicesSummary.includes(inv.formattedNumber) && po.supplierId === inv.supplierId)
-        .reduce((sum: number, po: any) => {
-          if (inv.currency === "USD") {
-            if (po.currency === "USD") return sum + Number(po.amount);
-            if (po.exchangeRate && po.exchangeRate > 0) return sum + (Number(po.amount) / Number(po.exchangeRate));
-            if (inv.exchangeRate && inv.exchangeRate > 0) return sum + (Number(po.amount) / Number(inv.exchangeRate));
-          }
-          return sum + (Number(po.amount) || 0);
-        }, 0);
-
-      const totalPagado = pastPaid;
+      const totalPagado = paidOf(inv, paymentOrders);
       const saldoPendiente = Math.max(0, inv.total - totalPagado);
       const isPaid = totalPagado >= inv.total - 0.01 && inv.total > 0;
       const isPartial = totalPagado > 0.01 && saldoPendiente > 0.01;
