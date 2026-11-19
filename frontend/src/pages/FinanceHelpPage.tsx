@@ -66,7 +66,10 @@ export function FinanceHelpPage() {
         <Steps>
           <Step title="Desde la factura de compra (“💳 Pagar”) o en Finanzas → Órdenes de pago → “💳 + Nueva Orden de Pago”." />
           <Step title="1. Proveedor y fecha." />
-          <Step title="2. Facturas a cancelar: marcalas (o “✓ Imputar todas”)." />
+          <Step title="2. Facturas a cancelar: marcalas (o “✓ Imputar todas”).">
+            Aparecen solo las del proveedor con saldo pendiente; el monto propuesto es lo que falta pagar (en un pago parcial, el saldo
+            figura debajo del total).
+          </Step>
           <Step title="3. Medios de pago: “+ Transferencia”, “+ Cheque Propio”, “+ Cheque Cartera” (endosar uno recibido), “+ Efectivo” o “+ Retención” (Ganancias, IIBB, SUSS).">
             Cada transferencia necesita su cuenta y su cartera (concepto de egreso).
           </Step>

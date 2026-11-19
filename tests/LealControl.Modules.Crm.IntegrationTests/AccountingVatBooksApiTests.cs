@@ -175,7 +175,7 @@ public sealed class AccountingVatBooksApiTests : IAsyncLifetime
         Assert.StartsWith("Otros comp. RG 1415", row.GetProperty("voucher").GetString());
         Assert.Equal("CUIT", row.GetProperty("documentType").GetString());
         Assert.Equal("RESPONSABLE INSCRIPTO", row.GetProperty("taxCondition").GetString());
-        Assert.Equal("Santa Fe", row.GetProperty("jurisdiction").GetString());
+        Assert.Equal("SANTA FE", row.GetProperty("jurisdiction").GetString());
         Assert.Equal("[GBA] COM Y GTOS BANCARIOS; [IMP] OTROS IMPUESTOS", row.GetProperty("categories").GetString());
         Assert.Equal(40m, row.GetProperty("perceptionGanancias").GetDecimal());
         Assert.Equal(2m, row.GetProperty("internalTaxes").GetDecimal());
@@ -185,6 +185,32 @@ public sealed class AccountingVatBooksApiTests : IAsyncLifetime
 
         using var export = await client.GetAsync("/api/v1/accounting/vat-books/arca?year=2026&month=9");
         Assert.Equal(HttpStatusCode.OK, export.StatusCode);
+    }
+
+    [Fact]
+    public async Task Purchase_takes_the_jurisdiction_from_the_supplier_in_the_directory()
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        var created = await client.PostAsJsonAsync("/api/v1/crm/customers", new
+        {
+            legalName = "Proveedor Ficticio Entrerriano SRL", documentType = "Cuit", documentNumber = "30712345671",
+            taxCondition = "ResponsableInscripto", iibbRegime = "ConvenioMultilateral", isCustomer = false, isSupplier = true,
+            fiscalStreet = "Calle 1", fiscalCity = "Paraná", fiscalProvince = "EntreRios", fiscalPostalCode = "3100"
+        });
+        Assert.True(created.IsSuccessStatusCode, await created.Content.ReadAsStringAsync());
+        var supplierId = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+        await Json(await client.PostAsJsonAsync("/api/v1/purchases/invoices", new
+        {
+            invoiceType = "A", pointOfSale = 2, invoiceNumber = 77, supplierId, supplierName = "Proveedor Ficticio Entrerriano SRL",
+            supplierDocument = "30712345671", supplierTaxCondition = "ResponsableInscripto",
+            issueDate = "2026-09-05T00:00:00Z", dueDate = "2026-09-05T00:00:00Z", currency = "ARS", exchangeRate = 1m,
+            iibbPerception = 0m, ivaPerception = 0m, otherTaxes = 0m, items = new[] { Item(100m, 21m) }
+        }));
+
+        var row = (await Json(await client.GetAsync("/api/v1/accounting/vat-books?year=2026&month=9")))
+            .GetProperty("purchases").GetProperty("rows")[0];
+        Assert.Equal("ENTRE RIOS", row.GetProperty("jurisdiction").GetString());
     }
 
     [Fact]

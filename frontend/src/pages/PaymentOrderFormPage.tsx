@@ -7,6 +7,7 @@ import { Modal } from "../components/ui/Modal";
 
 import { CustomerPicker } from "../components/pickers";
 import { todayAr } from "../lib/dates";
+import { pendingOf } from "../lib/purchasePayments";
 
 type Account = {
   id: string;
@@ -31,8 +32,11 @@ type PaymentLine = {
   notes?: string;
 };
 
+/** Factura con su saldo pendiente de pago. */
+type PendingInvoice = PurchaseInvoice & { pending: number };
+
 type ImputationRow = {
-  invoice: PurchaseInvoice;
+  invoice: PendingInvoice;
   selected: boolean;
   amountImputed: number;
 };
@@ -50,21 +54,21 @@ const METHOD_LABELS: Record<PaymentLine["method"], string> = {
 
 const newLineId = () => Math.random().toString(36).substring(2, 9);
 
-/** Factura o facturas (hasta 4, de la más vieja a la más nueva) cuyo total suma exactamente el importe; null si no hay. */
-function invoicesForAmount(invoices: PurchaseInvoice[], amount: number): string[] | null {
+/** Factura o facturas (hasta 4, de la más vieja a la más nueva) cuyo saldo suma exactamente el importe; null si no hay. */
+function invoicesForAmount(invoices: PendingInvoice[], amount: number): string[] | null {
   const cents = (n: number) => Math.round(n * 100);
   const target = cents(amount);
   const sorted = [...invoices].sort((a, b) => a.issueDate.localeCompare(b.issueDate)).slice(0, 15);
-  const search = (start: number, remaining: number, chosen: PurchaseInvoice[]): string[] | null => {
+  const search = (start: number, remaining: number, chosen: PendingInvoice[]): string[] | null => {
     if (remaining === 0 && chosen.length > 0) return chosen.map((i) => i.id);
     if (remaining < 0 || chosen.length === 4) return null;
     for (let i = start; i < sorted.length; i++) {
-      const found = search(i + 1, remaining - cents(sorted[i].total || 0), [...chosen, sorted[i]]);
+      const found = search(i + 1, remaining - cents(sorted[i].pending), [...chosen, sorted[i]]);
       if (found) return found;
     }
     return null;
   };
-  const single = sorted.find((i) => cents(i.total || 0) === target);
+  const single = sorted.find((i) => cents(i.pending) === target);
   return single ? [single.id] : search(0, target, []);
 }
 
@@ -87,7 +91,7 @@ export function PaymentOrderFormPage() {
   const [movementAccountFilter, setMovementAccountFilter] = useState<string>("");
   const [loadingMovements, setLoadingMovements] = useState(false);
   const [concepts, setConcepts] = useState<any[]>([]);
-  const [purchaseInvoices, setPurchaseInvoices] = useState<PurchaseInvoice[]>([]);
+  const [purchaseInvoices, setPurchaseInvoices] = useState<PendingInvoice[]>([]);
   const [createChequeLineId, setCreateChequeLineId] = useState<string | null>(null);
   const [createChequeDirection, setCreateChequeDirection] = useState<"Received" | "Issued">("Received");
   const [lineEditorOpen, setLineEditorOpen] = useState(false);
@@ -147,12 +151,13 @@ export function PaymentOrderFormPage() {
     async function init() {
       setLoading(true);
       try {
-        const [dirRes, accRes, chqRes, invRes, concRes] = await Promise.all([
+        const [dirRes, accRes, chqRes, invRes, concRes, ordersRes] = await Promise.all([
           api.listAllCustomers("supplier"),
           api.listFinanceAccounts().catch(() => [] as Account[]),
           api.listReceivedCheques().catch(() => [] as any[]),
           api.listPurchaseInvoices("", "").catch(() => [] as PurchaseInvoice[]),
-          api.listFinanceConcepts().catch(() => [] as any[])
+          api.listFinanceConcepts().catch(() => [] as any[]),
+          api.listPaymentOrders().catch(() => [] as any[])
         ]);
 
         const supps = (dirRes || []).filter((d) => d.isSupplier);
@@ -173,7 +178,11 @@ export function PaymentOrderFormPage() {
               (c.status === "Issued" || c.status === "Available" || c.status === "Emitido")
           )
         );
-        setPurchaseInvoices(invRes || []);
+        // Solo lo que falta pagar: vigentes, con saldo; el monto a imputar propuesto es ese saldo.
+        setPurchaseInvoices((invRes || [])
+          .filter((inv) => inv.status !== "Cancelled")
+          .map((inv) => ({ ...inv, pending: pendingOf(inv, ordersRes || []) }))
+          .filter((inv) => inv.pending > 0.01));
         const activeConcepts = (concRes || []).filter((c: any) => c.isActive);
         setConcepts(activeConcepts);
         const defaultPago = activeConcepts.find((c: any) => c.code === "PAGO_PROVEEDOR")
@@ -242,7 +251,7 @@ export function PaymentOrderFormPage() {
     const rows: ImputationRow[] = supplierInvoices.map((inv) => ({
       invoice: inv,
       selected: false,
-      amountImputed: inv.total || 0
+      amountImputed: inv.pending
     }));
 
     // Desde la conciliación (débito del banco con importe): propone la factura o las facturas pendientes que suman ese importe.
@@ -309,7 +318,7 @@ export function PaymentOrderFormPage() {
       next[idx] = {
         ...current,
         selected: newSelected,
-        amountImputed: newSelected ? current.invoice.total || 0 : 0
+        amountImputed: newSelected ? current.invoice.pending : 0
       };
       return next;
     });
@@ -332,7 +341,7 @@ export function PaymentOrderFormPage() {
       prev.map((r) => ({
         ...r,
         selected: true,
-        amountImputed: r.invoice.total || 0
+        amountImputed: r.invoice.pending
       }))
     );
   };
@@ -651,7 +660,7 @@ export function PaymentOrderFormPage() {
             ) : imputations.length === 0 ? (
               <div style={{ textAlign: "center", padding: 20 }}>
                 <p className="muted">
-                  Este proveedor no tiene facturas de compra cargadas en el sistema.
+                  Este proveedor no tiene facturas de compra pendientes de pago.
                 </p>
                 <small className="muted">
                   Podés emitir la Orden de Pago como <strong>Pago a Cuenta / Anticipo</strong> cargando los medios de pago a la derecha.
@@ -692,6 +701,9 @@ export function PaymentOrderFormPage() {
                         <td>{new Date(row.invoice.issueDate).toLocaleDateString("es-AR")}</td>
                         <td style={{ textAlign: "right", fontWeight: 600 }}>
                           {money(row.invoice.total || 0)}
+                          {row.invoice.pending < row.invoice.total - 0.01 && (
+                            <div className="muted" style={{ fontWeight: 400, fontSize: "0.8rem" }}>Saldo {money(row.invoice.pending)}</div>
+                          )}
                         </td>
                         <td style={{ textAlign: "right" }}>
                           <input

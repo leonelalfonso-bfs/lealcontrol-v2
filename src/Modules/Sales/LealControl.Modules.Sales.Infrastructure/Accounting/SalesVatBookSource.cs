@@ -60,12 +60,31 @@ internal sealed class SalesVatBookSource(SalesDbContext db, ITenantContext tenan
         {
             AccountingDate = i.AccountingDate,
             CounterpartyTaxCondition = i.SupplierTaxCondition,
-            Jurisdiction = i.SupplierProvince ?? "",
+            Jurisdiction = Jurisdiction(i.SupplierProvince),
             Categories = string.Join("; ", i.Items
                 .Select(x => x.ExpenseCategoryId is { } id && categories.TryGetValue(id, out var label) ? label : null)
                 .OfType<string>().Distinct().Order())
         }).ToList();
     }
+
+    /// <summary>
+    /// La provincia como la escribe el libro: "SANTA FE", "CIUDAD AUTONOMA DE BUENOS AIRES". El directorio la
+    /// guarda con el nombre del enum (SantaFe, Caba); un texto libre sale en mayúsculas.
+    /// </summary>
+    internal static string Jurisdiction(string? province) => province?.Trim() switch
+    {
+        null or "" => "",
+        "Caba" => "CIUDAD AUTONOMA DE BUENOS AIRES",
+        "TierraDelFuego" => "TIERRA DEL FUEGO",
+        "SantiagoDelEstero" => "SANTIAGO DEL ESTERO",
+        "EntreRios" => "ENTRE RIOS",
+        "Cordoba" => "CORDOBA",
+        "Neuquen" => "NEUQUEN",
+        "RioNegro" => "RIO NEGRO",
+        "Tucuman" => "TUCUMAN",
+        var p when p.All(char.IsLetter) => string.Concat(p.Select((c, i) => i > 0 && char.IsUpper(c) ? " " + c : c.ToString())).ToUpperInvariant(),
+        var p => p.ToUpperInvariant()
+    };
 
     private sealed record Taxes(decimal PerceptionVat, decimal PerceptionIibb, decimal Other, decimal PerceptionGanancias, decimal Internal, decimal Municipal)
     {
