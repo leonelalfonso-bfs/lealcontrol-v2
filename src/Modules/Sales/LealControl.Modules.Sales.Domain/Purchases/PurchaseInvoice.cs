@@ -80,7 +80,7 @@ public sealed class PurchaseInvoice : Entity<Guid>
     }
 
     public TenantId TenantId { get; private set; }
-    public string InvoiceType { get; private set; } = "A"; // A, B, C, M, NC_A, NC_B, ND_A, ND_B, X
+    public string InvoiceType { get; private set; } = "A"; // A, B, C, M, NC_*, ND_*, TF_A/TF_B (tique factura), OC_A/OC_B (otros comp. RG 1415), X
 
     /// <summary>Compra sin factura (comprobante X): no es fiscal, no va al Libro IVA ni se constata en ARCA.</summary>
     public const string NonFiscalType = "X";
@@ -93,6 +93,8 @@ public sealed class PurchaseInvoice : Entity<Guid>
     public string SupplierName { get; private set; } = string.Empty;
     public string SupplierDocument { get; private set; } = string.Empty;
     public string SupplierTaxCondition { get; private set; } = "ResponsableInscripto";
+    /// <summary>Jurisdicción (provincia) del proveedor al cargar la factura, para el Libro IVA Compras.</summary>
+    public string? SupplierProvince { get; private set; }
     public DateTime IssueDate { get; private set; }
 
     /// <summary>
@@ -125,6 +127,9 @@ public sealed class PurchaseInvoice : Entity<Guid>
     public decimal IibbPerception { get; private set; }
     public decimal IvaPerception { get; private set; }
     public decimal OtherTaxes { get; private set; }
+    public decimal InternalTaxes { get; private set; }
+    public decimal GananciasPerception { get; private set; }
+    public decimal MunicipalTaxes { get; private set; }
     public decimal Total { get; private set; }
     public string? Cae { get; private set; }
     public DateTime? CaeDueDate { get; private set; }
@@ -154,7 +159,11 @@ public sealed class PurchaseInvoice : Entity<Guid>
         decimal otherTaxes,
         string? cae,
         DateTime? caeDueDate,
-        string? notes)
+        string? notes,
+        string? supplierProvince = null,
+        decimal internalTaxes = 0,
+        decimal gananciasPerception = 0,
+        decimal municipalTaxes = 0)
     {
         var formatted = $"{pointOfSale:D4}-{invoiceNumber:D8}";
         var utcIssue = issueDate.Kind == DateTimeKind.Unspecified
@@ -171,7 +180,7 @@ public sealed class PurchaseInvoice : Entity<Guid>
                 : caeDueDate.Value.ToUniversalTime())
             : (DateTime?)null;
 
-        return new PurchaseInvoice(
+        var invoice = new PurchaseInvoice(
             Guid.NewGuid(),
             tenantId,
             invoiceType,
@@ -202,6 +211,11 @@ public sealed class PurchaseInvoice : Entity<Guid>
             "Recorded",
             notes,
             DateTime.UtcNow);
+        invoice.SupplierProvince = string.IsNullOrWhiteSpace(supplierProvince) ? null : supplierProvince.Trim();
+        invoice.InternalTaxes = internalTaxes;
+        invoice.GananciasPerception = gananciasPerception;
+        invoice.MunicipalTaxes = municipalTaxes;
+        return invoice;
     }
 
     public void AddItem(
@@ -210,7 +224,8 @@ public sealed class PurchaseInvoice : Entity<Guid>
         string description,
         decimal quantity,
         decimal unitPrice,
-        decimal vatRate)
+        decimal vatRate,
+        Guid? expenseCategoryId = null)
     {
         var net = Math.Round(quantity * unitPrice, 2);
         var vat = Math.Round(net * (vatRate / 100m), 2);
@@ -227,7 +242,8 @@ public sealed class PurchaseInvoice : Entity<Guid>
             vatRate,
             net,
             vat,
-            tot);
+            tot)
+        { ExpenseCategoryId = expenseCategoryId };
 
         _items.Add(item);
         RecalculateTotals();
@@ -259,7 +275,8 @@ public sealed class PurchaseInvoice : Entity<Guid>
         Iva27 = _items.Where(i => Math.Abs(i.VatRate - 27.0m) < 0.01m).Sum(i => i.VatAmount);
         ExemptAmount = _items.Where(i => i.VatRate == 0).Sum(i => i.NetSubtotal);
         // El exento ya está dentro del Subtotal (es la suma de todos los netos): no se vuelve a sumar.
-        Total = Subtotal + Iva21 + Iva105 + Iva27 + IibbPerception + IvaPerception + OtherTaxes;
+        Total = Subtotal + Iva21 + Iva105 + Iva27 + IibbPerception + IvaPerception + OtherTaxes
+                + InternalTaxes + GananciasPerception + MunicipalTaxes;
     }
 }
 
@@ -305,6 +322,8 @@ public sealed class PurchaseInvoiceItem : Entity<Guid>
     public decimal NetSubtotal { get; private set; }
     public decimal VatAmount { get; private set; }
     public decimal Total { get; private set; }
+    /// <summary>Rubro de compra o gasto de la línea (<see cref="ExpenseCategory"/>).</summary>
+    public Guid? ExpenseCategoryId { get; init; }
 }
 
 public sealed class PurchaseArcaVoucher : Entity<Guid>

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
-import { type Product, type PurchaseArcaVoucher, type PurchaseOrder, type PurchaseReception, type Supplier } from "../api/types";
+import { type ExpenseCategory, type Product, type PurchaseArcaVoucher, type PurchaseOrder, type PurchaseReception, type Supplier } from "../api/types";
 import { CustomerPicker, ProductPicker } from "../components/pickers";
+import { ExpenseCategoriesModal } from "../components/purchases/ExpenseCategoriesModal";
 
 import { todayAr, addDaysAr } from "../lib/dates";
 interface InvoiceRow {
@@ -12,6 +13,27 @@ interface InvoiceRow {
   quantity: number;
   unitPrice: number;
   vatRate: number;
+  expenseCategoryId?: string;
+}
+
+/** Importe de un tributo de la factura (percepciones, impuestos internos, municipales…). */
+function TaxInput({ label, value, onChange, disabled }: { label: string; value: number; onChange: (v: number) => void; disabled: boolean }) {
+  return (
+    <div style={{ marginBottom: "8px" }}>
+      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "2px" }}>
+        {label}
+        <input
+          type="number"
+          step="0.01"
+          value={disabled ? 0 : value === 0 ? "" : value}
+          placeholder="0,00"
+          disabled={disabled}
+          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "right", fontFamily: "monospace", fontWeight: "normal" }}
+        />
+      </label>
+    </div>
+  );
 }
 
 const money = (n: number, c = "ARS") =>
@@ -54,6 +76,12 @@ export function PurchaseInvoiceFormPage() {
   const [iibbPerception, setIibbPerception] = useState(0);
   const [ivaPerception, setIvaPerception] = useState(0);
   const [otherTaxes, setOtherTaxes] = useState(0);
+  const [gananciasPerception, setGananciasPerception] = useState(0);
+  const [internalTaxes, setInternalTaxes] = useState(0);
+  const [municipalTaxes, setMunicipalTaxes] = useState(0);
+  const [supplierProvince, setSupplierProvince] = useState("");
+  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [cae, setCae] = useState("");
   const [caeDueDate, setCaeDueDate] = useState("");
   const [notes, setNotes] = useState("");
@@ -69,12 +97,14 @@ export function PurchaseInvoiceFormPage() {
     async function loadData() {
       try {
         setLoading(true);
-        const [sups, prods, receptions, invoices] = await Promise.all([
+        const [sups, prods, receptions, invoices, cats] = await Promise.all([
           api.listSuppliers().catch(() => []),
           api.listProducts().catch(() => []),
           api.listPurchaseReceptions().catch(() => []),
-          api.listPurchaseInvoices().catch(() => [])
+          api.listPurchaseInvoices().catch(() => []),
+          api.listExpenseCategories().catch(() => [])
         ]);
+        setCategories(cats);
         setSuppliers(sups);
         setProducts(prods);
 
@@ -238,6 +268,7 @@ export function PurchaseInvoiceFormPage() {
       setSupplierName(sup.legalName || sup.tradeName || "");
       setSupplierDocument(sup.documentNumber || "");
       setSupplierTaxCondition(sup.taxCondition || "ResponsableInscripto");
+      setSupplierProvince(sup.fiscalProvince || "");
     }
     if (purchaseReceptionId) {
       const rec = availableReceptions.find((r) => r.id === purchaseReceptionId);
@@ -281,7 +312,7 @@ export function PurchaseInvoiceFormPage() {
   const addItemRow = () => {
     setItems([
       ...items,
-      { code: "COMPRA", description: "", quantity: 1, unitPrice: 0, vatRate: 21 }
+      { code: "COMPRA", description: "", quantity: 1, unitPrice: 0, vatRate: 21, expenseCategoryId: items[items.length - 1]?.expenseCategoryId }
     ]);
   };
 
@@ -298,7 +329,8 @@ export function PurchaseInvoiceFormPage() {
   const iva105 = items.filter((it) => Math.abs(vatOf(it) - 10.5) < 0.1).reduce((acc, it) => acc + it.quantity * it.unitPrice * 0.105, 0);
   const iva27 = items.filter((it) => Math.abs(vatOf(it) - 27) < 0.1).reduce((acc, it) => acc + it.quantity * it.unitPrice * 0.27, 0);
   const totalIva = iva21 + iva105 + iva27;
-  const grandTotal = subtotalNeto + totalIva + (isX ? 0 : Number(iibbPerception) + Number(ivaPerception) + Number(otherTaxes));
+  const taxes = Number(iibbPerception) + Number(ivaPerception) + Number(gananciasPerception) + Number(internalTaxes) + Number(municipalTaxes) + Number(otherTaxes);
+  const grandTotal = subtotalNeto + totalIva + (isX ? 0 : taxes);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -340,6 +372,10 @@ export function PurchaseInvoiceFormPage() {
         iibbPerception: isX ? 0 : Number(iibbPerception),
         ivaPerception: isX ? 0 : Number(ivaPerception),
         otherTaxes: isX ? 0 : Number(otherTaxes),
+        gananciasPerception: isX ? 0 : Number(gananciasPerception),
+        internalTaxes: isX ? 0 : Number(internalTaxes),
+        municipalTaxes: isX ? 0 : Number(municipalTaxes),
+        supplierProvince: supplierProvince || null,
         cae: isX ? null : cae || null,
         caeDueDate: caeDueDate ? new Date(caeDueDate).toISOString() : null,
         notes,
@@ -350,7 +386,8 @@ export function PurchaseInvoiceFormPage() {
           description: it.description,
           quantity: Number(it.quantity),
           unitPrice: Number(it.unitPrice),
-          vatRate: vatOf(it)
+          vatRate: vatOf(it),
+          expenseCategoryId: it.expenseCategoryId || null
         }))
       };
 
@@ -413,6 +450,10 @@ export function PurchaseInvoiceFormPage() {
                   <option value="NC_B">Nota de Crédito B (08)</option>
                   <option value="ND_A">Nota de Débito A (02)</option>
                   <option value="ND_B">Nota de Débito B (07)</option>
+                  <option value="TF_A">Tique factura A (081)</option>
+                  <option value="TF_B">Tique factura B (082)</option>
+                  <option value="OC_A">Otros comp. RG 1415, con IVA (099)</option>
+                  <option value="OC_B">Otros comp. RG 1415, sin IVA (099)</option>
                   <option value="X">Compra sin factura (X)</option>
                 </select>
                 {isX && (
@@ -594,11 +635,17 @@ export function PurchaseInvoiceFormPage() {
               <table style={{ width: "100%", minWidth: 860, borderCollapse: "collapse", marginBottom: "12px" }}>
                 <thead>
                   <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", fontSize: "0.82rem", color: "var(--ink-soft)", textAlign: "left" }}>
-                    <th style={{ width: "22%", padding: "8px 4px" }}>Catálogo / Insumo</th>
-                    <th style={{ width: "22%", padding: "8px 4px" }}>Descripción / Detalle Factura</th>
+                    <th style={{ width: "18%", padding: "8px 4px" }}>Catálogo / Insumo</th>
+                    <th style={{ width: "18%", padding: "8px 4px" }}>Descripción / Detalle Factura</th>
                     <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>Cant.</th>
                     <th style={{ width: "18%", padding: "8px 4px", textAlign: "right" }}>Precio Neto U.</th>
                     <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>Alícuota IVA</th>
+                    <th style={{ width: "14%", padding: "8px 4px" }}>
+                      Rubro{" "}
+                      <button type="button" className="btn ghost" style={{ padding: "0 6px", fontSize: "0.75rem" }} onClick={() => setCategoriesOpen(true)} title="Administrar rubros">
+                        ⚙
+                      </button>
+                    </th>
                     <th style={{ width: "14%", padding: "8px 4px", textAlign: "right" }}>Subtotal</th>
                     <th style={{ width: "4%", padding: "8px 4px" }}></th>
                   </tr>
@@ -666,6 +713,19 @@ export function PurchaseInvoiceFormPage() {
                           <option value="0">0% (Exento)</option>
                         </select>
                       </td>
+                      <td style={{ padding: "8px 4px" }}>
+                        <select
+                          aria-label={`Rubro del renglón ${idx + 1}`}
+                          value={it.expenseCategoryId || ""}
+                          onChange={(e) => handleItemChange(idx, "expenseCategoryId", e.target.value || undefined)}
+                          style={{ width: "100%", padding: "6px 4px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
+                        >
+                          <option value="">—</option>
+                          {categories.filter((c) => c.isActive || c.id === it.expenseCategoryId).map((c) => (
+                            <option key={c.id} value={c.id}>{c.code} · {c.name}</option>
+                          ))}
+                        </select>
+                      </td>
                       <td style={{ padding: "8px 4px", textAlign: "right", fontWeight: 600, fontSize: "0.85rem" }}>
                         {money(it.quantity * it.unitPrice)}
                       </td>
@@ -729,32 +789,13 @@ export function PurchaseInvoiceFormPage() {
                 </div>
               )}
 
-              <div style={{ borderTop: "1px solid var(--surface-border)", paddingTop: "8px", marginTop: "8px", marginBottom: "8px" }}>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "2px" }}>
-                  Percepción Ingresos Brutos (IIBB)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={isX ? 0 : iibbPerception}
-                  disabled={isX}
-                  onChange={(e) => setIibbPerception(parseFloat(e.target.value) || 0)}
-                  style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "right", fontFamily: "monospace" }}
-                />
-              </div>
-
-              <div style={{ marginBottom: "8px" }}>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "2px" }}>
-                  Percepción IVA / Ganancias / Otros
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={isX ? 0 : otherTaxes}
-                  disabled={isX}
-                  onChange={(e) => setOtherTaxes(parseFloat(e.target.value) || 0)}
-                  style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "right", fontFamily: "monospace" }}
-                />
+              <div style={{ borderTop: "1px solid var(--surface-border)", paddingTop: "8px", marginTop: "8px" }}>
+                <TaxInput label="Percepción IVA" value={ivaPerception} onChange={setIvaPerception} disabled={isX} />
+                <TaxInput label="Percepción Ingresos Brutos (IIBB)" value={iibbPerception} onChange={setIibbPerception} disabled={isX} />
+                <TaxInput label="Percepción Ganancias" value={gananciasPerception} onChange={setGananciasPerception} disabled={isX} />
+                <TaxInput label="Impuestos internos" value={internalTaxes} onChange={setInternalTaxes} disabled={isX} />
+                <TaxInput label="Impuestos municipales" value={municipalTaxes} onChange={setMunicipalTaxes} disabled={isX} />
+                <TaxInput label="Otros tributos" value={otherTaxes} onChange={setOtherTaxes} disabled={isX} />
               </div>
 
               <div style={{ borderTop: "2px solid var(--surface-border)", paddingTop: "10px", display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
@@ -808,6 +849,7 @@ export function PurchaseInvoiceFormPage() {
         </div>
       </form>
 
+      <ExpenseCategoriesModal open={categoriesOpen} onClose={() => setCategoriesOpen(false)} categories={categories} onChange={setCategories} />
     </div>
   );
 }

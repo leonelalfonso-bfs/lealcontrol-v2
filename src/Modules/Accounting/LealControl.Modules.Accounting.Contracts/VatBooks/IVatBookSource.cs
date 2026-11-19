@@ -14,6 +14,8 @@ public interface IVatBookSource
 /// <summary>
 /// Un comprobante tal como se informa a ARCA: importes en la moneda del comprobante (positivos también en
 /// las notas de crédito), con su cotización. <see cref="Total"/> es la suma de las partes.
+/// <see cref="AccountingDate"/>, condición, jurisdicción y rubros son para el libro que lee el estudio;
+/// ARCA no los pide.
 /// </summary>
 public sealed record VatBookVoucher(
     DateTime Date,
@@ -34,7 +36,14 @@ public sealed record VatBookVoucher(
     decimal PerceptionIibb,
     decimal OtherTaxes,
     decimal Total,
-    DateTime? PaymentDueDate);
+    DateTime? PaymentDueDate,
+    DateTime AccountingDate,
+    string CounterpartyTaxCondition,
+    string Jurisdiction,
+    string Categories,
+    decimal PerceptionGanancias = 0,
+    decimal InternalTaxes = 0,
+    decimal MunicipalTaxes = 0);
 
 /// <summary>Neto gravado e IVA de una alícuota (21, 10,5, 27, 5 o 2,5 %).</summary>
 public sealed record VatBookRate(decimal Rate, decimal Net, decimal Vat);

@@ -11,7 +11,9 @@ export const baseTypeOf = (type: string) => type.replace(/^(NC_|ND_)/, "");
 /** Nombre legible del comprobante. */
 export function documentLabel(type: string): string {
   if (type === "Proforma") return "Proforma";
+  if (type.startsWith("OC_")) return type === "OC_A" ? "Otros comp. RG 1415 (con IVA)" : "Otros comp. RG 1415 (sin IVA)";
   const letter = letterOf(type);
+  if (type.startsWith("TF_")) return `Tique factura ${letter}`;
   const fce = isFceType(type);
   const kind = type.startsWith("NC_") ? "Nota de Crédito" : type.startsWith("ND_") ? "Nota de Débito" : "Factura";
   if (!fce) return `${kind} ${letter}`;
@@ -29,6 +31,7 @@ const ARCA_VOUCHER_CODES: Record<string, string> = {
   ND_A: "02", ND_B: "07", ND_C: "12", ND_M: "53",
   FCE_A: "201", ND_FCE_A: "202", NC_FCE_A: "203",
   FCE_B: "206", ND_FCE_B: "207", NC_FCE_B: "208",
+  TF_A: "081", TF_B: "082", OC_A: "099", OC_B: "099",
   Proforma: "00"
 };
 

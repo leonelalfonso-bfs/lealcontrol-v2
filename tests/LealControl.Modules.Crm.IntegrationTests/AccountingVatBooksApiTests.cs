@@ -148,6 +148,46 @@ public sealed class AccountingVatBooksApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Purchase_book_carries_what_the_accountant_reads()
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        var bank = await Json(await client.PostAsJsonAsync("/api/v1/purchases/expense-categories", new { code = "gba", name = "Com y gtos bancarios" }));
+        var taxes = await Json(await client.PostAsJsonAsync("/api/v1/purchases/expense-categories", new { code = "IMP", name = "Otros impuestos" }));
+        var duplicate = await client.PostAsJsonAsync("/api/v1/purchases/expense-categories", new { code = "GBA", name = "Repetido" });
+        Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
+
+        // Un comprobante de banco (exceptuado de la RG 1415): IVA discriminado, percepción de Ganancias y dos rubros.
+        await Json(await client.PostAsJsonAsync("/api/v1/purchases/invoices", new
+        {
+            invoiceType = "OC_A", pointOfSale = 0, invoiceNumber = 845615, supplierId = Guid.NewGuid(), supplierName = "Banco Ficticio SA",
+            supplierDocument = "30111222333", supplierTaxCondition = "ResponsableInscripto", supplierProvince = "Santa Fe",
+            issueDate = "2026-09-02T00:00:00Z", dueDate = "2026-09-02T00:00:00Z", currency = "ARS", exchangeRate = 1m,
+            iibbPerception = 10m, ivaPerception = 5m, otherTaxes = 0m, gananciasPerception = 40m, internalTaxes = 2m, municipalTaxes = 3m,
+            items = new object[]
+            {
+                new { code = "COM", description = "Comisiones", quantity = 1m, unitPrice = 100m, vatRate = 21m, expenseCategoryId = bank.GetProperty("id").GetGuid() },
+                new { code = "SEL", description = "Sellos", quantity = 1m, unitPrice = 20m, vatRate = 0m, expenseCategoryId = taxes.GetProperty("id").GetGuid() }
+            }
+        }));
+
+        var row = (await Json(await client.GetAsync("/api/v1/accounting/vat-books?year=2026&month=9")))
+            .GetProperty("purchases").GetProperty("rows")[0];
+        Assert.StartsWith("Otros comp. RG 1415", row.GetProperty("voucher").GetString());
+        Assert.Equal("CUIT", row.GetProperty("documentType").GetString());
+        Assert.Equal("RESPONSABLE INSCRIPTO", row.GetProperty("taxCondition").GetString());
+        Assert.Equal("Santa Fe", row.GetProperty("jurisdiction").GetString());
+        Assert.Equal("[GBA] COM Y GTOS BANCARIOS; [IMP] OTROS IMPUESTOS", row.GetProperty("categories").GetString());
+        Assert.Equal(40m, row.GetProperty("perceptionGanancias").GetDecimal());
+        Assert.Equal(2m, row.GetProperty("internalTaxes").GetDecimal());
+        Assert.Equal(3m, row.GetProperty("municipalTaxes").GetDecimal());
+        Assert.Equal(100m + 21m + 20m + 10m + 5m + 40m + 2m + 3m, row.GetProperty("total").GetDecimal());
+        Assert.StartsWith("2026-09-02", row.GetProperty("accountingDate").GetString());
+
+        using var export = await client.GetAsync("/api/v1/accounting/vat-books/arca?year=2026&month=9");
+        Assert.Equal(HttpStatusCode.OK, export.StatusCode);
+    }
+
+    [Fact]
     public async Task Export_is_refused_when_a_voucher_cannot_be_informed()
     {
         using var client = _factory.CreateAuthenticatedClient();

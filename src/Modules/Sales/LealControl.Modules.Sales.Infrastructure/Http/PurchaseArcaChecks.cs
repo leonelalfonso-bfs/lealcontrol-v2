@@ -23,6 +23,7 @@ public static class PurchaseArcaChecks
     public static (ArcaReceivedVoucher? Voucher, string? Problem) ToVoucher(PurchaseInvoice invoice)
     {
         if (invoice.InvoiceType == PurchaseInvoice.NonFiscalType) return (null, "Compra sin factura (X): no se constata en ARCA.");
+        if (FiscalVoucherCodes.IsWithoutCae(invoice.InvoiceType)) return (null, "Tique factura u otro comprobante de la RG 1415: no tiene CAE, no se constata en ARCA.");
         var type = FiscalVoucherCodes.Any(invoice.InvoiceType);
         if (type is null) return (null, $"El tipo {invoice.InvoiceType} no se puede constatar.");
         var cae = new string((invoice.Cae ?? "").Where(char.IsAsciiDigit).ToArray());
@@ -66,7 +67,7 @@ public static class PurchaseArcaChecks
                 @"SELECT purchase_invoice_id AS ""Value"" FROM purchases.purchase_invoice_arca_checks WHERE tenant_id = {0} AND outcome = 'Approved'",
                 tenant.TenantId.Value).ToListAsync(ct);
             var invoices = await db.Set<PurchaseInvoice>().AsNoTracking()
-                .Where(x => x.TenantId == tenant.TenantId && x.Status != "Cancelled" && x.InvoiceType != PurchaseInvoice.NonFiscalType && x.IssueDate >= req.From && x.IssueDate <= req.To && !approved.Contains(x.Id))
+                .Where(x => x.TenantId == tenant.TenantId && x.Status != "Cancelled" && x.InvoiceType != PurchaseInvoice.NonFiscalType && !x.InvoiceType.StartsWith("TF_") && !x.InvoiceType.StartsWith("OC_") && x.IssueDate >= req.From && x.IssueDate <= req.To && !approved.Contains(x.Id))
                 .OrderBy(x => x.IssueDate).Take(200).ToListAsync(ct);
             var rows = new List<CheckRow>();
             foreach (var invoice in invoices)

@@ -159,7 +159,11 @@ export function AccountingHelpPage() {
             Pestañas Ventas y Compras: neto e IVA por alícuota, exento, percepciones, otros tributos y total, en pesos. Los comprobantes en
             dólares se convierten a su cotización y las notas de crédito restan.
           </Step>
-          <Step title="“📥 Excel” descarga el libro que estás viendo, con los totales del mes." />
+          <Step title="“📥 Excel” descarga el libro que estás viendo, con los totales del mes.">
+            Compras sale con las columnas del libro del estudio: fecha de imputación contable, fecha, comprobante, razón social, tipo y número
+            de documento, condición, jurisdicción, Producto/Gasto (rubros), no gravados, neto e IVA por alícuota, percepciones de IVA e IIBB,
+            impuestos internos, percepción de Ganancias, municipales y total.
+          </Step>
           <Step title="Si arriba aparece “No se puede exportar a ARCA…”, corregí esos comprobantes.">
             Por ejemplo, una factura A o M de proveedor necesita el CUIT del proveedor: anulala y cargala de nuevo.
           </Step>
@@ -169,6 +173,10 @@ export function AccountingHelpPage() {
           </Step>
         </Steps>
         <Tip>Las facturas de proveedor B y C no discriminan IVA: van en el libro, pero no suman crédito fiscal ni llevan registro de alícuotas.</Tip>
+        <Tip>
+          En el asiento de la compra, impuestos internos, percepción de Ganancias y municipales van por ahora a la cuenta de otros tributos
+          del asiento modelo.
+        </Tip>
       </ManualPart>
 
       <ManualPart id="moneda-extranjera" title="10. Moneda extranjera y diferencias de cambio">

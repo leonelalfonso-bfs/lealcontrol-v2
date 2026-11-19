@@ -92,7 +92,8 @@ internal sealed class SalesAccountingDocumentSource(
             invoice.Iva21, invoice.Iva105, invoice.Iva27,
             (AccountingAmountSources.PerceptionIibb, invoice.IibbPerception),
             (AccountingAmountSources.PerceptionVat, invoice.IvaPerception),
-            (AccountingAmountSources.OtherTaxes, invoice.OtherTaxes));
+            // Impuestos internos, percepción de Ganancias y municipales van, por ahora, a la cuenta de otros tributos.
+            (AccountingAmountSources.OtherTaxes, invoice.OtherTaxes + invoice.InternalTaxes + invoice.GananciasPerception + invoice.MunicipalTaxes));
         var isCreditNote = invoice.InvoiceType.StartsWith("NC_", StringComparison.OrdinalIgnoreCase);
         return new PostableDocument(
             AccountingSourceModules.Purchases,

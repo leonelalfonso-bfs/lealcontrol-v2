@@ -31,8 +31,11 @@ internal sealed class SalesVatBookSource(SalesDbContext db, ITenantContext tenan
             return Voucher(i.IssueDate, i.InvoiceType, voucherType, i.PointOfSale, i.InvoiceNumber,
                 document, i.CustomerName, i.Currency, i.ExchangeRate,
                 i.Items.Select(x => (x.VatRate, x.NetSubtotal, x.VatAmount)).ToList(),
-                perceptionVat: 0m, perceptionIibb: i.IibbPerception, otherTaxes: 0m,
-                informsDue ? i.DueDate : null);
+                new Taxes(0m, i.IibbPerception, 0m, 0m, 0m, 0m),
+                informsDue ? i.DueDate : null) with
+            {
+                AccountingDate = i.IssueDate, CounterpartyTaxCondition = i.CustomerTaxCondition
+            };
         }).ToList();
     }
 
@@ -45,37 +48,56 @@ internal sealed class SalesVatBookSource(SalesDbContext db, ITenantContext tenan
                         && i.ImputationPeriod >= fromUtc && i.ImputationPeriod <= toUtc)
             .OrderBy(i => i.IssueDate).ThenBy(i => i.SupplierName)
             .ToListAsync(cancellationToken);
+        var categories = await db.Set<ExpenseCategory>().AsNoTracking().Where(c => c.TenantId == tenantId)
+            .ToDictionaryAsync(c => c.Id, c => c.Label, cancellationToken);
 
         return invoices.Select(i => Voucher(i.IssueDate, i.InvoiceType, FiscalVoucherCodes.Any(i.InvoiceType) ?? 0,
             i.PointOfSale, i.InvoiceNumber, FiscalVoucherCodes.ReceiverDocument(i.SupplierDocument), i.SupplierName,
             i.Currency, i.ExchangeRate,
             i.Items.Select(x => (x.VatRate, x.NetSubtotal, x.VatAmount)).ToList(),
-            i.IvaPerception, i.IibbPerception, i.OtherTaxes, null)).ToList();
+            new Taxes(i.IvaPerception, i.IibbPerception, i.OtherTaxes, i.GananciasPerception, i.InternalTaxes, i.MunicipalTaxes),
+            null) with
+        {
+            AccountingDate = i.AccountingDate,
+            CounterpartyTaxCondition = i.SupplierTaxCondition,
+            Jurisdiction = i.SupplierProvince ?? "",
+            Categories = string.Join("; ", i.Items
+                .Select(x => x.ExpenseCategoryId is { } id && categories.TryGetValue(id, out var label) ? label : null)
+                .OfType<string>().Distinct().Order())
+        }).ToList();
+    }
+
+    private sealed record Taxes(decimal PerceptionVat, decimal PerceptionIibb, decimal Other, decimal PerceptionGanancias, decimal Internal, decimal Municipal)
+    {
+        public decimal Sum => PerceptionVat + PerceptionIibb + Other + PerceptionGanancias + Internal + Municipal;
     }
 
     private static VatBookVoucher Voucher(
         DateTime date, string invoiceType, int voucherType, int pointOfSale, long number,
         string document, string name, string currency, decimal exchangeRate,
-        IReadOnlyList<(decimal VatRate, decimal Net, decimal Vat)> items,
-        decimal perceptionVat, decimal perceptionIibb, decimal otherTaxes, DateTime? paymentDue)
+        IReadOnlyList<(decimal VatRate, decimal Net, decimal Vat)> items, Taxes taxes, DateTime? paymentDue)
     {
         var rates = items.Where(i => i.VatRate != 0m)
             .GroupBy(i => i.VatRate)
             .Select(g => new VatBookRate(g.Key, g.Sum(i => i.Net), g.Sum(i => i.Vat)))
             .OrderByDescending(r => r.Rate).ToList();
         var exempt = items.Where(i => i.VatRate == 0m).Sum(i => i.Net);
-        var total = rates.Sum(r => r.Net + r.Vat) + exempt + perceptionVat + perceptionIibb + otherTaxes;
+        var total = rates.Sum(r => r.Net + r.Vat) + exempt + taxes.Sum;
         var letter = FiscalVoucherCodes.BaseType(invoiceType).Replace("FCE_", "")[^1..];
         var isCreditNote = invoiceType.StartsWith("NC_", StringComparison.Ordinal);
         var kind = isCreditNote ? "NC" : invoiceType.StartsWith("ND_", StringComparison.Ordinal) ? "ND" : "FC";
         if (FiscalVoucherCodes.IsFce(invoiceType)) kind += " FCE";
+        var label = invoiceType.StartsWith("TF_", StringComparison.Ordinal) ? $"Tique factura {letter} {pointOfSale:D5}-{number:D8}"
+            : invoiceType.StartsWith("OC_", StringComparison.Ordinal) ? $"Otros comp. RG 1415 {pointOfSale:D5}-{number:D8}"
+            : $"{kind} {letter} {pointOfSale:D5}-{number:D8}";
         return new VatBookVoucher(
-            date, voucherType, $"{kind} {letter} {pointOfSale:D4}-{number:D8}", isCreditNote,
+            date, voucherType, label, isCreditNote,
             // B y C no discriminan IVA: el comprador no lo computa como crédito fiscal.
             DiscriminatesVat: letter is "A" or "M",
             pointOfSale, number, FiscalVoucherCodes.DocumentType(document), document, name,
             currency switch { "ARS" => "PES", "USD" => "DOL", "EUR" => "060", _ => currency },
             string.Equals(currency, "ARS", StringComparison.OrdinalIgnoreCase) || exchangeRate <= 0 ? 1m : exchangeRate,
-            rates, exempt, perceptionVat, perceptionIibb, otherTaxes, total, paymentDue);
+            rates, exempt, taxes.PerceptionVat, taxes.PerceptionIibb, taxes.Other, total, paymentDue,
+            date, "", "", "", taxes.PerceptionGanancias, taxes.Internal, taxes.Municipal);
     }
 }

@@ -87,6 +87,30 @@ public static class PurchaseEndpoints
             return result.ToHttp();
         });
 
+        // Rubros de compra/gasto (Producto/Gasto del Libro IVA Compras).
+        purchases.MapGet("/expense-categories", async (SalesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+            Results.Ok(await db.Set<ExpenseCategory>().AsNoTracking().Where(c => c.TenantId == tenant.TenantId)
+                .OrderBy(c => c.Code).Select(c => new { c.Id, c.Code, c.Name, c.IsActive }).ToListAsync(ct)));
+
+        purchases.MapPost("/expense-categories", async (ExpenseCategoryRequest body, SalesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            if (await ValidateCategoryAsync(body, null, db, tenant, ct) is { } invalid) return invalid;
+            var category = ExpenseCategory.Create(tenant.TenantId, body.Code, body.Name);
+            db.Add(category);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { category.Id, category.Code, category.Name, category.IsActive });
+        });
+
+        purchases.MapPut("/expense-categories/{id:guid}", async (Guid id, ExpenseCategoryRequest body, SalesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var category = await db.Set<ExpenseCategory>().FirstOrDefaultAsync(c => c.Id == id && c.TenantId == tenant.TenantId, ct);
+            if (category is null) return Results.NotFound(new { detail = "Rubro no encontrado." });
+            if (await ValidateCategoryAsync(body, id, db, tenant, ct) is { } invalid) return invalid;
+            category.Update(body.Code, body.Name, body.IsActive ?? category.IsActive);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new { category.Id, category.Code, category.Name, category.IsActive });
+        });
+
         // Período sugerido para una factura de esa fecha: su mes, o el primer mes abierto si está cerrado.
         purchases.MapGet("/invoices/imputation-period", async (DateTime issueDate, IAccountingPostingGateway accounting, CancellationToken ct) =>
         {
@@ -238,4 +262,16 @@ public static class PurchaseEndpoints
     public sealed record RejectRequest(string Reason);
     public sealed record CancelPurchaseBody(string? Reason);
     public sealed record LinkReceptionBody(Guid ReceptionId);
+
+    private static async Task<IResult?> ValidateCategoryAsync(ExpenseCategoryRequest body, Guid? id, SalesDbContext db, ITenantContext tenant, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(body.Code) || string.IsNullOrWhiteSpace(body.Name))
+            return Results.BadRequest(new { detail = "El rubro necesita código y nombre." });
+        var code = body.Code.Trim().ToUpperInvariant();
+        if (code.Length > 12) return Results.BadRequest(new { detail = "El código del rubro va hasta 12 caracteres." });
+        var taken = await db.Set<ExpenseCategory>().AnyAsync(c => c.TenantId == tenant.TenantId && c.Code == code && c.Id != id, ct);
+        return taken ? Results.BadRequest(new { detail = $"Ya existe el rubro {code}." }) : null;
+    }
 }
+
+public sealed record ExpenseCategoryRequest(string Code, string Name, bool? IsActive = null);

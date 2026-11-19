@@ -12,13 +12,29 @@ public sealed class ArcaVatBookExportTests
     private static VatBookVoucher Voucher(
         int type = 1, bool discriminates = true, string currency = "PES", decimal rate = 1m,
         IReadOnlyList<VatBookRate>? rates = null, decimal exempt = 0m, decimal perceptionVat = 0m,
-        decimal perceptionIibb = 0m, decimal otherTaxes = 0m, string name = "Peñarol Ñandú S.A.", string document = "30715489629")
+        decimal perceptionIibb = 0m, decimal otherTaxes = 0m, string name = "Peñarol Ñandú S.A.", string document = "30715489629",
+        decimal perceptionGanancias = 0m, decimal internalTaxes = 0m, decimal municipalTaxes = 0m)
     {
         rates ??= [new VatBookRate(21m, 1000m, 210m), new VatBookRate(10.5m, 200m, 21m)];
-        var total = rates.Sum(r => r.Net + r.Vat) + exempt + perceptionVat + perceptionIibb + otherTaxes;
+        var total = rates.Sum(r => r.Net + r.Vat) + exempt + perceptionVat + perceptionIibb + otherTaxes
+                    + perceptionGanancias + internalTaxes + municipalTaxes;
         return new VatBookVoucher(new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc), type, "FC A 0003-00000042",
             type is 3 or 8, discriminates, 3, 42, document.Length == 11 ? 80 : 99, document, name, currency, rate,
-            rates, exempt, perceptionVat, perceptionIibb, otherTaxes, total, null);
+            rates, exempt, perceptionVat, perceptionIibb, otherTaxes, total, null,
+            new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc), "ResponsableInscripto", "", "",
+            perceptionGanancias, internalTaxes, municipalTaxes);
+    }
+
+    [Fact]
+    public void Purchase_voucher_reports_ganancias_municipal_and_internal_taxes_in_their_fields()
+    {
+        var line = ArcaVatBookExport.PurchaseVoucher(Voucher(perceptionGanancias: 17.5m, municipalTaxes: 3m, internalTaxes: 8.25m));
+
+        Assert.Equal(ArcaVatBookExport.PurchaseVoucherLength, line.Length);
+        Assert.Equal("000000000001750", Field(line, 165, 15)); // percepciones de otros impuestos nacionales
+        Assert.Equal("000000000000300", Field(line, 195, 15)); // municipales
+        Assert.Equal("000000000000825", Field(line, 210, 15)); // internos
+        Assert.Equal("000000000145975", Field(line, 105, 15)); // total: 1431 + 17,50 + 3 + 8,25
     }
 
     // Posiciones de 1 en adelante, como en el diseño de ARCA.

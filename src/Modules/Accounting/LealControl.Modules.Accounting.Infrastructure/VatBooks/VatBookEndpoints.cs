@@ -57,13 +57,24 @@ internal static class VatBookEndpoints
             decimal Ars(decimal amount) => sign * Math.Round(amount * v.ExchangeRate, 2, MidpointRounding.AwayFromZero);
             decimal Net(decimal rate) => Ars(v.Rates.Where(r => r.Rate == rate).Sum(r => r.Net));
             decimal Vat(decimal rate) => Ars(v.Rates.Where(r => r.Rate == rate).Sum(r => r.Vat));
-            var other = v.Rates.Where(r => r.Rate is not (21m or 10.5m or 27m)).ToList();
+            var other = v.Rates.Where(r => r.Rate is not (21m or 10.5m or 27m or 2.5m)).ToList();
             var row = new VatBookRow(
                 v.Date, v.VoucherLabel, v.CounterpartyDocument, v.CounterpartyName, v.CurrencyCode == "PES" ? "ARS" : v.CurrencyCode,
                 v.ExchangeRate,
                 Net(21m), Vat(21m), Net(10.5m), Vat(10.5m), Net(27m), Vat(27m),
                 Ars(other.Sum(r => r.Net)), Ars(other.Sum(r => r.Vat)),
-                Ars(v.Exempt), Ars(v.PerceptionVat), Ars(v.PerceptionIibb), Ars(v.OtherTaxes), 0m);
+                Ars(v.Exempt), Ars(v.PerceptionVat), Ars(v.PerceptionIibb), Ars(v.OtherTaxes), 0m)
+            {
+                AccountingDate = v.AccountingDate,
+                DocumentType = v.CounterpartyDocumentType switch { 80 => "CUIT", 96 => "DNI", _ => "Sin identificar" },
+                TaxCondition = TaxConditionLabel(v.CounterpartyTaxCondition),
+                Jurisdiction = v.Jurisdiction,
+                Categories = v.Categories,
+                Net25 = Net(2.5m), Vat25 = Vat(2.5m),
+                PerceptionGanancias = Ars(v.PerceptionGanancias),
+                InternalTaxes = Ars(v.InternalTaxes),
+                MunicipalTaxes = Ars(v.MunicipalTaxes)
+            };
             return row with { Total = Sum(row) };
         }).ToList();
 
@@ -71,22 +82,55 @@ internal static class VatBookEndpoints
             rows.Sum(r => r.Net21), rows.Sum(r => r.Vat21), rows.Sum(r => r.Net105), rows.Sum(r => r.Vat105),
             rows.Sum(r => r.Net27), rows.Sum(r => r.Vat27), rows.Sum(r => r.NetOther), rows.Sum(r => r.VatOther),
             rows.Sum(r => r.Exempt), rows.Sum(r => r.PerceptionVat), rows.Sum(r => r.PerceptionIibb), rows.Sum(r => r.OtherTaxes),
-            rows.Sum(r => r.Total));
+            rows.Sum(r => r.Total))
+        {
+            Net25 = rows.Sum(r => r.Net25), Vat25 = rows.Sum(r => r.Vat25),
+            PerceptionGanancias = rows.Sum(r => r.PerceptionGanancias),
+            InternalTaxes = rows.Sum(r => r.InternalTaxes),
+            MunicipalTaxes = rows.Sum(r => r.MunicipalTaxes)
+        };
         return new VatBook(rows, totals);
     }
 
     private static decimal Sum(VatBookRow r) =>
-        r.Net21 + r.Vat21 + r.Net105 + r.Vat105 + r.Net27 + r.Vat27 + r.NetOther + r.VatOther +
-        r.Exempt + r.PerceptionVat + r.PerceptionIibb + r.OtherTaxes;
+        r.Net21 + r.Vat21 + r.Net105 + r.Vat105 + r.Net27 + r.Vat27 + r.Net25 + r.Vat25 + r.NetOther + r.VatOther +
+        r.Exempt + r.PerceptionVat + r.PerceptionIibb + r.OtherTaxes + r.PerceptionGanancias + r.InternalTaxes + r.MunicipalTaxes;
+
+    /// <summary>Condición frente al IVA como la escribe el libro: "RESPONSABLE INSCRIPTO", "MONOTRIBUTISTA"…</summary>
+    private static string TaxConditionLabel(string condition) => condition switch
+    {
+        "ResponsableInscripto" => "RESPONSABLE INSCRIPTO",
+        "Monotributo" or "Monotributista" => "MONOTRIBUTISTA",
+        "Exento" => "EXENTO",
+        "ConsumidorFinal" => "CONSUMIDOR FINAL",
+        "NoResponsable" => "NO RESPONSABLE",
+        "" => "",
+        _ => condition.ToUpperInvariant()
+    };
 }
 
 public sealed record VatBooksResponse(int Year, int Month, VatBook Sales, VatBook Purchases, IReadOnlyList<string> Problems);
 
 public sealed record VatBook(IReadOnlyList<VatBookRow> Rows, VatBookRow Totals);
 
-/// <summary>Una línea del Libro IVA, en pesos (negativa en las notas de crédito).</summary>
+/// <summary>
+/// Una línea del Libro IVA, en pesos (negativa en las notas de crédito). <see cref="NetOther"/> es el 5 %
+/// (el 2,5 % tiene columna propia); <see cref="Exempt"/>, los conceptos no gravados y exentos.
+/// </summary>
 public sealed record VatBookRow(
     DateTime Date, string Voucher, string CounterpartyDocument, string CounterpartyName, string Currency, decimal ExchangeRate,
     decimal Net21, decimal Vat21, decimal Net105, decimal Vat105, decimal Net27, decimal Vat27,
     decimal NetOther, decimal VatOther, decimal Exempt, decimal PerceptionVat, decimal PerceptionIibb, decimal OtherTaxes,
-    decimal Total);
+    decimal Total)
+{
+    public DateTime? AccountingDate { get; init; }
+    public string DocumentType { get; init; } = "";
+    public string TaxCondition { get; init; } = "";
+    public string Jurisdiction { get; init; } = "";
+    public string Categories { get; init; } = "";
+    public decimal Net25 { get; init; }
+    public decimal Vat25 { get; init; }
+    public decimal PerceptionGanancias { get; init; }
+    public decimal InternalTaxes { get; init; }
+    public decimal MunicipalTaxes { get; init; }
+}
