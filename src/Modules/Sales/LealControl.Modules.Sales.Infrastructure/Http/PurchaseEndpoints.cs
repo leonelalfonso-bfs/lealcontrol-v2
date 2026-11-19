@@ -111,6 +111,24 @@ public static class PurchaseEndpoints
             return Results.Ok(new { category.Id, category.Code, category.Name, category.IsActive });
         });
 
+        // Rubro de cada renglón de una factura ya cargada (por ejemplo, las anteriores al catálogo de rubros).
+        purchases.MapPut("/invoices/{id:guid}/expense-categories", async (Guid id, CategorizeLinesRequest body, SalesDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var invoice = await db.Set<PurchaseInvoice>().Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId, ct);
+            if (invoice is null) return Results.NotFound(new { detail = "Factura de compra no encontrada." });
+            var requested = body.Lines.Where(l => l.ExpenseCategoryId is not null).Select(l => l.ExpenseCategoryId!.Value).Distinct().ToList();
+            var known = await db.Set<ExpenseCategory>().CountAsync(c => c.TenantId == tenant.TenantId && requested.Contains(c.Id), ct);
+            if (known != requested.Count) return Results.BadRequest(new { detail = "Alguno de los rubros no existe." });
+            foreach (var line in body.Lines)
+            {
+                if (invoice.Items.FirstOrDefault(i => i.Id == line.ItemId) is not { } item)
+                    return Results.BadRequest(new { detail = "El renglón no es de esta factura." });
+                item.Categorize(line.ExpenseCategoryId);
+            }
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(invoice.Items.Select(i => new { i.Id, i.ExpenseCategoryId }));
+        });
+
         // Período sugerido para una factura de esa fecha: su mes, o el primer mes abierto si está cerrado.
         purchases.MapGet("/invoices/imputation-period", async (DateTime issueDate, IAccountingPostingGateway accounting, CancellationToken ct) =>
         {
@@ -273,5 +291,9 @@ public static class PurchaseEndpoints
         return taken ? Results.BadRequest(new { detail = $"Ya existe el rubro {code}." }) : null;
     }
 }
+
+public sealed record CategorizeLinesRequest(IReadOnlyList<CategorizeLine> Lines);
+
+public sealed record CategorizeLine(Guid ItemId, Guid? ExpenseCategoryId);
 
 public sealed record ExpenseCategoryRequest(string Code, string Name, bool? IsActive = null);

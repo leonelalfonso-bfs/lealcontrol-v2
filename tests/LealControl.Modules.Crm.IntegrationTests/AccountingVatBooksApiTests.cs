@@ -214,6 +214,30 @@ public sealed class AccountingVatBooksApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Rubro_can_be_assigned_to_an_invoice_already_loaded()
+    {
+        using var client = _factory.CreateAuthenticatedClient();
+        var category = await Json(await client.PostAsJsonAsync("/api/v1/purchases/expense-categories", new { code = "PAP", name = "Papeleria" }));
+        var invoice = await Json(await client.PostAsJsonAsync("/api/v1/purchases/invoices", new
+        {
+            invoiceType = "A", pointOfSale = 4, invoiceNumber = 545, supplierId = Guid.NewGuid(), supplierName = "Librería Ficticia",
+            supplierDocument = "30111222333", supplierTaxCondition = "ResponsableInscripto",
+            issueDate = "2026-09-01T00:00:00Z", dueDate = "2026-09-01T00:00:00Z", currency = "ARS", exchangeRate = 1m,
+            iibbPerception = 0m, ivaPerception = 0m, otherTaxes = 0m, items = new[] { Item(100m, 21m) }
+        }));
+        var itemId = invoice.GetProperty("items")[0].GetProperty("id").GetGuid();
+        var url = $"/api/v1/purchases/invoices/{invoice.GetProperty("id").GetGuid()}/expense-categories";
+
+        var unknown = await client.PutAsJsonAsync(url, new { lines = new[] { new { itemId, expenseCategoryId = Guid.NewGuid() } } });
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        await Json(await client.PutAsJsonAsync(url, new { lines = new[] { new { itemId, expenseCategoryId = category.GetProperty("id").GetGuid() } } }));
+
+        var row = (await Json(await client.GetAsync("/api/v1/accounting/vat-books?year=2026&month=9")))
+            .GetProperty("purchases").GetProperty("rows")[0];
+        Assert.Equal("[PAP] PAPELERIA", row.GetProperty("categories").GetString());
+    }
+
+    [Fact]
     public async Task Export_is_refused_when_a_voucher_cannot_be_informed()
     {
         using var client = _factory.CreateAuthenticatedClient();

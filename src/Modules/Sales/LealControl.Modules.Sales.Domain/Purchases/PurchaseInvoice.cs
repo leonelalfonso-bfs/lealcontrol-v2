@@ -242,8 +242,8 @@ public sealed class PurchaseInvoice : Entity<Guid>
             vatRate,
             net,
             vat,
-            tot)
-        { ExpenseCategoryId = expenseCategoryId };
+            tot);
+        item.Categorize(expenseCategoryId);
 
         _items.Add(item);
         RecalculateTotals();
@@ -323,7 +323,10 @@ public sealed class PurchaseInvoiceItem : Entity<Guid>
     public decimal VatAmount { get; private set; }
     public decimal Total { get; private set; }
     /// <summary>Rubro de compra o gasto de la línea (<see cref="ExpenseCategory"/>).</summary>
-    public Guid? ExpenseCategoryId { get; init; }
+    public Guid? ExpenseCategoryId { get; private set; }
+
+    /// <summary>El rubro no cambia importes ni asiento: se puede asignar también a facturas ya cargadas.</summary>
+    public void Categorize(Guid? expenseCategoryId) => ExpenseCategoryId = expenseCategoryId;
 }
 
 public sealed class PurchaseArcaVoucher : Entity<Guid>

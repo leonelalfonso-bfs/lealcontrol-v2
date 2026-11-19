@@ -79,7 +79,8 @@ export function PurchaseHelpPage() {
           <Step title="Rubro de cada renglón (Producto/Gasto del Libro IVA Compras).">
             Elegí el rubro en la columna “Rubro”; el ⚙ abre la lista para dar de alta los rubros con los mismos códigos que usa el estudio
             (PAP, GMR, SEG…). Un renglón nuevo copia el rubro del anterior. Un comprobante con dos rubros (por ejemplo, gastos bancarios e
-            impuestos) se carga en dos renglones.
+            impuestos) se carga en dos renglones. A una factura ya cargada se le asigna con “🏷 Rubro” en el listado (muestra ✓ cuando
+            todos sus renglones tienen rubro); no cambia importes ni el asiento.
           </Step>
           <Step title="Tributos, cada uno en su casilla: Percepción IVA, IIBB, Ganancias, impuestos internos, municipales y otros.">
             Así salen en su columna del Libro IVA Compras y en su campo del Libro IVA Digital. La jurisdicción del libro es la provincia

@@ -6,6 +6,7 @@ import { type PurchaseReception } from "../api/types";
 import { SearchField } from "../components/ui/SearchField";
 import { matchesSearch, parseSearch } from "../lib/search";
 import { paidOf } from "../lib/purchasePayments";
+import { InvoiceCategoriesModal } from "../components/purchases/InvoiceCategoriesModal";
 
 const money = (n: number, c = "ARS") =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: c }).format(n || 0);
@@ -16,6 +17,7 @@ export function PurchaseInvoicesPage() {
   const [paymentOrders, setPaymentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [categorizing, setCategorizing] = useState<PurchaseInvoice | null>(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -596,6 +598,17 @@ export function PurchaseInvoicesPage() {
                               📅 Período
                             </button>
                           )}
+                          {inv.status !== "Cancelled" && inv.invoiceType !== "X" && (
+                            <button
+                              type="button"
+                              className="btn btn-outline compact"
+                              style={{ fontSize: "0.78rem", padding: "4px 10px", fontWeight: 600 }}
+                              title="Rubro de cada renglón (Producto/Gasto del Libro IVA Compras)"
+                              onClick={() => setCategorizing(inv)}
+                            >
+                              🏷 Rubro{inv.items.length > 0 && inv.items.every((i) => i.expenseCategoryId) ? " ✓" : ""}
+                            </button>
+                          )}
                           {inv.status !== "Cancelled" && (
                             <button
                               type="button"
@@ -640,6 +653,7 @@ export function PurchaseInvoicesPage() {
         )}
       </div>
 
+      <InvoiceCategoriesModal invoice={categorizing} onClose={() => setCategorizing(null)} onSaved={() => void loadData()} />
     </div>
   );
 }
