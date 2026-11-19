@@ -365,4 +365,22 @@ public sealed class AccountingPostingGateway(
             "ReverseAsync {Module}/{DocId}: {Count} pendientes marcados Skipped. Motivo: {Reason}",
             sourceModule, sourceDocumentId, pending.Count, reason);
     }
+
+    public async Task<IReadOnlySet<DateOnly>> LockedMonthsAsync(CancellationToken cancellationToken = default)
+    {
+        await db.EnsureAccountingTablesAsync(cancellationToken);
+        var tenantId = tenant.TenantId;
+        var months = await db.Periods.AsNoTracking()
+            .Where(p => p.TenantId == tenantId && p.Status == "Locked")
+            .Select(p => new { p.Year, p.Month }).ToListAsync(cancellationToken);
+        return months.Select(m => new DateOnly(m.Year, m.Month, 1)).ToHashSet();
+    }
+
+    public async Task<bool> IsPostedAsync(string sourceModule, string sourceDocumentId, CancellationToken cancellationToken = default)
+    {
+        await db.EnsureAccountingTablesAsync(cancellationToken);
+        var tenantId = tenant.TenantId;
+        return await db.JournalEntries.AsNoTracking()
+            .AnyAsync(j => j.TenantId == tenantId && j.SourceModule == sourceModule && j.SourceDocumentId == sourceDocumentId, cancellationToken);
+    }
 }

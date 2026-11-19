@@ -3,7 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Security;
 using LealControl.BuildingBlocks.Results;
+using LealControl.Modules.Accounting.Contracts.Posting;
 using LealControl.Modules.Sales.Application.Purchases;
+using LealControl.Modules.Sales.Infrastructure.Accounting;
+using LealControl.Modules.Sales.Infrastructure.Persistence.Purchases;
 using LealControl.Modules.Sales.Domain.Purchases;
 using LealControl.Modules.Sales.Infrastructure.Persistence;
 using LealControl.BuildingBlocks.Tenancy;
@@ -82,6 +85,38 @@ public static class PurchaseEndpoints
         {
             var result = await sender.Send(new ListPurchaseInvoicesQuery(search, status), ct);
             return result.ToHttp();
+        });
+
+        // Período sugerido para una factura de esa fecha: su mes, o el primer mes abierto si está cerrado.
+        purchases.MapGet("/invoices/imputation-period", async (DateTime issueDate, IAccountingPostingGateway accounting, CancellationToken ct) =>
+        {
+            var locked = await accounting.LockedMonthsAsync(ct);
+            var (period, _) = PurchaseQueryHandlers.ResolveImputation(issueDate, null, locked);
+            return Results.Ok(new
+            {
+                Period = period,
+                IssueMonthLocked = period != PurchaseInvoice.MonthOf(issueDate),
+                LockedMonths = locked.OrderBy(m => m).Select(m => m.ToString("yyyy-MM"))
+            });
+        });
+
+        // Cambiar el período de una compra cargada (por ejemplo, la de un mes que después se cerró).
+        purchases.MapPut("/invoices/{id:guid}/imputation-period", async (Guid id, ImputationPeriodRequest body, SalesDbContext db, ITenantContext tenant,
+            IAccountingPostingGateway accounting, CancellationToken ct) =>
+        {
+            var invoice = await db.Set<PurchaseInvoice>().Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenant.TenantId, ct);
+            if (invoice is null) return Results.NotFound(new { detail = "Factura de compra no encontrada." });
+            if (invoice.Status == "Cancelled") return Results.BadRequest(new { detail = "La factura está anulada." });
+            if (await accounting.IsPostedAsync(AccountingSourceModules.Purchases, id.ToString(), ct))
+                return Results.Conflict(new { detail = "La factura ya tiene asiento: para moverla de período, anulala y volvé a cargarla." });
+            var (period, error) = PurchaseQueryHandlers.ResolveImputation(invoice.IssueDate, body.Period, await accounting.LockedMonthsAsync(ct));
+            if ((error ?? invoice.ImputeTo(period)) is { } failure) return Results.BadRequest(new { detail = failure });
+            await db.SaveChangesAsync(ct);
+            // Si ya estaba en la cola contable, se actualiza su fecha; si no, se publica al contabilizar el período.
+            var unpublished = await accounting.FilterUnpublishedAsync(AccountingSourceModules.Purchases, [id.ToString()], ct);
+            if (!unpublished.Contains(id.ToString()))
+                await accounting.PostAsync(SalesAccountingDocumentSource.PurchaseDocument(invoice), ct);
+            return Results.Ok(new { invoice.Id, invoice.ImputationPeriod });
         });
 
         purchases.MapGet("/invoices/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
@@ -198,6 +233,7 @@ public static class PurchaseEndpoints
     }
 
     public sealed record UpdateStatusRequest(string Status);
+    public sealed record ImputationPeriodRequest(DateTime Period);
     public sealed record ImportArcaRequest(string CsvContent);
     public sealed record RejectRequest(string Reason);
     public sealed record CancelPurchaseBody(string? Reason);

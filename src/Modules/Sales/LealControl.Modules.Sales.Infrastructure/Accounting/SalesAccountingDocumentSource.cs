@@ -25,9 +25,12 @@ internal sealed class SalesAccountingDocumentSource(
             .Where(i => i.TenantId == tenantId && i.IssueDate >= fromUtc && i.IssueDate <= toUtc
                         && (i.Status == "Authorized" || i.Status == "Cancelled") && i.InvoiceType != "Proforma")
             .ToListAsync(cancellationToken);
-        var purchases = await db.PurchaseInvoices.AsNoTracking().Include(i => i.Items)
-            .Where(i => i.TenantId == tenantId && i.IssueDate >= fromUtc && i.IssueDate <= toUtc)
-            .ToListAsync(cancellationToken);
+        // Compras: por fecha contable (la de la factura, o el primer día del mes de imputación si es posterior).
+        var purchases = (await db.PurchaseInvoices.AsNoTracking().Include(i => i.Items)
+            .Where(i => i.TenantId == tenantId && ((i.IssueDate >= fromUtc && i.IssueDate <= toUtc)
+                                                   || (i.ImputationPeriod >= fromUtc && i.ImputationPeriod <= toUtc)))
+            .ToListAsync(cancellationToken))
+            .Where(i => i.AccountingDate >= fromUtc && i.AccountingDate <= toUtc).ToList();
 
         var published = 0;
         published += await PublishAsync(AccountingSourceModules.Sales,
@@ -83,7 +86,7 @@ internal sealed class SalesAccountingDocumentSource(
             Tags(invoice.InvoiceType, invoice.Currency, invoice.ExchangeRate, invoice.Total));
     }
 
-    private static PostableDocument PurchaseDocument(PurchaseInvoice invoice)
+    internal static PostableDocument PurchaseDocument(PurchaseInvoice invoice)
     {
         var amounts = Amounts(invoice.Currency, invoice.ExchangeRate, invoice.Items.Select(i => (i.VatRate, i.NetSubtotal)).ToList(),
             invoice.Iva21, invoice.Iva105, invoice.Iva27,
@@ -96,7 +99,7 @@ internal sealed class SalesAccountingDocumentSource(
             DocumentType(invoice.InvoiceType),
             invoice.Id.ToString(),
             $"{invoice.InvoiceType} {invoice.FormattedNumber}",
-            invoice.IssueDate,
+            invoice.AccountingDate,
             "ARS", 1m,
             "Supplier", invoice.SupplierId, invoice.SupplierName,
             isCreditNote ? "AM-CMP-NC" : "AM-CMP-FAC",

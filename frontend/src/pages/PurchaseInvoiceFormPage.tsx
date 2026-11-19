@@ -39,6 +39,15 @@ export function PurchaseInvoiceFormPage() {
   const [supplierDocument, setSupplierDocument] = useState("");
   const [supplierTaxCondition, setSupplierTaxCondition] = useState("ResponsableInscripto");
   const [issueDate, setIssueDate] = useState(todayAr());
+  // Período de imputación (AAAA-MM): el mes de la factura o, si Contabilidad lo cerró, el primer mes abierto.
+  const [imputationPeriod, setImputationPeriod] = useState("");
+  const [lockedMonths, setLockedMonths] = useState<string[]>([]);
+  useEffect(() => {
+    if (!issueDate) return;
+    void api.getPurchaseImputationPeriod(issueDate)
+      .then((r) => { setImputationPeriod(r.period.slice(0, 7)); setLockedMonths(r.lockedMonths); })
+      .catch(() => setImputationPeriod(issueDate.slice(0, 7)));
+  }, [issueDate]);
   const [dueDate, setDueDate] = useState(addDaysAr(30));
   const [currency, setCurrency] = useState("ARS");
   const [exchangeRate, setExchangeRate] = useState(1);
@@ -324,6 +333,7 @@ export function PurchaseInvoiceFormPage() {
         supplierDocument,
         supplierTaxCondition,
         issueDate: new Date(issueDate).toISOString(),
+        imputationPeriod: imputationPeriod ? `${imputationPeriod}-01T00:00:00Z` : null,
         dueDate: new Date(dueDate).toISOString(),
         currency,
         exchangeRate: Number(exchangeRate),
@@ -499,7 +509,7 @@ export function PurchaseInvoiceFormPage() {
               </p>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "16px", marginBottom: "16px" }}>
               <div>
                 <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
                   CUIT Emisor *
@@ -525,6 +535,26 @@ export function PurchaseInvoiceFormPage() {
                   onChange={(e) => setIssueDate(e.target.value)}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
                 />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                  Período de imputación
+                </label>
+                <input
+                  type="month"
+                  value={imputationPeriod}
+                  min={issueDate.slice(0, 7)}
+                  onChange={(e) => setImputationPeriod(e.target.value)}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                />
+                <small className="muted" style={{ display: "block", marginTop: 4 }}>
+                  {lockedMonths.includes(issueDate.slice(0, 7))
+                    ? `El mes de la factura está cerrado: va al Libro IVA y al asiento de ${imputationPeriod.split("-").reverse().join("/")}.`
+                    : lockedMonths.includes(imputationPeriod)
+                      ? "Ese mes está cerrado en Contabilidad: elegí uno abierto."
+                      : "Libro IVA Compras y asiento."}
+                </small>
               </div>
 
               <div>

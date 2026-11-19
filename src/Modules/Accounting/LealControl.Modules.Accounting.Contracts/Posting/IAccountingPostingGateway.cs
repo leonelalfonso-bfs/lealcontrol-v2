@@ -22,4 +22,10 @@ public interface IAccountingPostingGateway
         string sourceModule,
         IReadOnlyCollection<string> sourceDocumentIds,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Meses cerrados con candado (primer día de cada mes). Compras imputa al primer mes abierto.</summary>
+    Task<IReadOnlySet<DateOnly>> LockedMonthsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>True si el documento ya tiene asiento en el Libro Diario.</summary>
+    Task<bool> IsPostedAsync(string sourceModule, string sourceDocumentId, CancellationToken cancellationToken = default);
 }

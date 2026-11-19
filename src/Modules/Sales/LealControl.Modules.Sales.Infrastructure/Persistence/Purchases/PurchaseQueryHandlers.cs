@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using LealControl.BuildingBlocks.Domain;
 using LealControl.BuildingBlocks.Results;
 using LealControl.BuildingBlocks.Tenancy;
+using LealControl.Modules.Accounting.Contracts.Posting;
 using LealControl.Modules.Sales.Application.Purchases;
 using LealControl.Modules.Sales.Domain.Inventory;
 using LealControl.Modules.Sales.Domain.Purchases;
@@ -67,6 +68,7 @@ public sealed class PurchaseInvoiceConfiguration : IEntityTypeConfiguration<Purc
     {
         builder.ToTable("purchase_invoices", "purchases");
         builder.HasKey(i => i.Id);
+        builder.Ignore(i => i.AccountingDate);
         builder.Property(i => i.TenantId).HasConversion(id => id.Value, value => new TenantId(value));
         builder.HasMany(i => i.Items).WithOne().HasForeignKey(it => it.PurchaseInvoiceId).OnDelete(DeleteBehavior.Cascade);
     }
@@ -151,11 +153,34 @@ public sealed class PurchaseQueryHandlers :
 {
     private readonly SalesDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
+    private readonly IAccountingPostingGateway _accounting;
 
-    public PurchaseQueryHandlers(SalesDbContext dbContext, ITenantContext tenantContext)
+    public PurchaseQueryHandlers(SalesDbContext dbContext, ITenantContext tenantContext, IAccountingPostingGateway accounting)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
+        _accounting = accounting;
+    }
+
+    /// <summary>
+    /// Período de imputación de una compra: el pedido (si está abierto y no es anterior a la factura) o, por defecto,
+    /// el mes de la factura salteando los meses cerrados en Contabilidad. Devuelve el motivo si no se puede.
+    /// </summary>
+    internal static (DateTime Period, string? Error) ResolveImputation(DateTime issueDate, DateTime? requested, IReadOnlySet<DateOnly> locked)
+    {
+        static bool IsLocked(IReadOnlySet<DateOnly> l, DateTime m) => l.Contains(new DateOnly(m.Year, m.Month, 1));
+        var issueMonth = PurchaseInvoice.MonthOf(issueDate);
+        if (requested is { } r)
+        {
+            var month = PurchaseInvoice.MonthOf(r);
+            if (month < issueMonth) return (month, "El período de imputación no puede ser anterior al mes de la factura.");
+            return IsLocked(locked, month)
+                ? (month, $"El período {month:MM/yyyy} está cerrado en Contabilidad: elegí un mes abierto.")
+                : (month, null);
+        }
+        var open = issueMonth;
+        while (IsLocked(locked, open)) open = open.AddMonths(1);
+        return (open, null);
     }
 
     // Purchase Orders Handlers
@@ -757,6 +782,10 @@ public sealed class PurchaseQueryHandlers :
             request.CaeDueDate,
             request.Notes);
 
+        var (period, imputationError) = ResolveImputation(invoice.IssueDate, request.ImputationPeriod, await _accounting.LockedMonthsAsync(cancellationToken));
+        if ((imputationError ?? invoice.ImputeTo(period)) is { } imputationFailure)
+            return Result<PurchaseInvoiceDto>.Failure(Error.Validation("Purchases.Invoice.ImputationPeriod", imputationFailure));
+
         foreach (var it in request.Items)
         {
             invoice.AddItem(
@@ -1247,7 +1276,8 @@ public sealed class PurchaseQueryHandlers :
                 it.VatRate,
                 it.NetSubtotal,
                 it.VatAmount,
-                it.Total)).ToList());
+                it.Total)).ToList(),
+            i.ImputationPeriod);
 
     // Purchase Requests Handlers
     public async Task<Result<IReadOnlyList<PurchaseRequestDto>>> Handle(ListPurchaseRequestsQuery request, CancellationToken cancellationToken)

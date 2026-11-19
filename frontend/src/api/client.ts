@@ -919,6 +919,10 @@ export const api = {
     request<{ checked: number; approved: number; rejected: number; notCheckable: number; unavailable?: string | null; rows: PurchaseArcaCheck[] }>(
       "/api/v1/purchases/invoices/arca-check", { method: "POST", body: JSON.stringify({ from, to }) }),
   getPurchaseInvoice: (id: string) => request<import("./types").PurchaseInvoice>(`/api/v1/purchases/invoices/${id}`),
+  getPurchaseImputationPeriod: (issueDate: string) =>
+    request<{ period: string; issueMonthLocked: boolean; lockedMonths: string[] }>(`/api/v1/purchases/invoices/imputation-period?issueDate=${issueDate}`),
+  setPurchaseImputationPeriod: (id: string, period: string) =>
+    request<{ id: string; imputationPeriod: string }>(`/api/v1/purchases/invoices/${id}/imputation-period`, { method: "PUT", body: JSON.stringify({ period }) }),
   createPurchaseInvoice: (body: import("./types").PurchaseInvoiceWrite) =>
     request<import("./types").PurchaseInvoice>("/api/v1/purchases/invoices", { method: "POST", body: JSON.stringify(body) }),
   cancelPurchaseInvoice: (id: string, reason?: string) =>
