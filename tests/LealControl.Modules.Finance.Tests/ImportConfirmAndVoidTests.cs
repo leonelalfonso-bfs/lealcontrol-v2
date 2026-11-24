@@ -157,7 +157,7 @@ public sealed class ImportConfirmAndVoidTests : IClassFixture<FinanceWebApplicat
         preview.GetProperty("keptAsPending").GetInt32().Should().Be(1);
 
         ((int)(await client.PostAsJsonAsync($"/api/v1/finance/accounts/{accountId}/reset-statement", new { confirmName = "otra" })).StatusCode).Should().Be(400);
-        (await client.PostAsJsonAsync($"/api/v1/finance/accounts/{accountId}/reset-statement", new { confirmName = "banco a reiniciar" })).EnsureSuccessStatusCode();
+        (await client.PostAsJsonAsync($"/api/v1/finance/accounts/{accountId}/reset-statement", new { confirmName = "banco a reiniciar", openingBalance = 250m })).EnsureSuccessStatusCode();
 
         await _factory.WithDbAsync(async db =>
         {
@@ -165,6 +165,7 @@ public sealed class ImportConfirmAndVoidTests : IClassFixture<FinanceWebApplicat
             left.Id.Should().Be(collected);
             left.Origin.Should().Be(FinancialMovementOrigin.System);
             left.ReconciliationStatus.Should().Be(FinancialReconciliationStatus.PendingBank);
+            (await db.Accounts.SingleAsync(x => x.Id == accountId)).OpeningBalance.Should().Be(250m);
         });
 
         // El mismo archivo se puede volver a subir y el cobro se empareja solo.

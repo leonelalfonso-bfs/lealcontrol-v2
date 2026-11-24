@@ -103,7 +103,8 @@ export function FinanceHelpPage() {
             antes como pendiente, al volver imputado se actualiza su fecha en lugar de duplicarse.
           </Step>
           <Step title="“♻ Reiniciar extracto” borra lo importado de la cuenta para volver a cargarlo desde cero.">
-            Antes de confirmar muestra cuántos movimientos se borran y pide escribir el nombre de la cuenta. Los que tienen un cobro, pago,
+            Antes de confirmar muestra cuántos movimientos se borran, deja corregir el saldo inicial de la cuenta (el saldo del banco antes
+            del primer renglón que vas a cargar) y pide escribir el nombre de la cuenta. Los que tienen un cobro, pago,
             cheque o transferencia vinculado quedan como pendientes de banco y se emparejan solos al reimportar; recibos, órdenes de pago,
             cheques y asientos no se tocan. Se pierden las clasificaciones hechas a mano de los que se borran. Después se puede volver a
             subir el mismo archivo.

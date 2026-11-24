@@ -7,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LealControl.Modules.Finance.Infrastructure;
 
-public sealed record ResetStatementRequest(string ConfirmName);
+/// <summary><paramref name="OpeningBalance"/>: saldo del banco antes del primer renglón del extracto que se va a cargar.</summary>
+public sealed record ResetStatementRequest(string ConfirmName, decimal? OpeningBalance = null);
 
 /// <summary>
 /// Volver a cargar el extracto de una cuenta desde cero: borra los movimientos importados y los lotes de
@@ -42,6 +43,8 @@ internal static class FinanceAccountReset
                 return Results.BadRequest("Escribí el nombre exacto de la cuenta para confirmar.");
 
             await using var tx = await db.Database.BeginTransactionAsync(ct);
+            if (body.OpeningBalance is { } opening)
+                (await db.Accounts.SingleAsync(x => x.Id == accountId && x.TenantId == tenantId, ct)).OpeningBalance = opening;
             foreach (var (system, imported) in plan.Unmatched)
             {
                 system.ReconciliationStatus = FinancialReconciliationStatus.PendingBank;
@@ -64,7 +67,7 @@ internal static class FinanceAccountReset
         });
     }
 
-    public sealed record ResetSummary(string AccountName, int Imported, int Deleted, int KeptAsPending, int SystemBackToPending, int Imports, DateTime? From, DateTime? To);
+    public sealed record ResetSummary(string AccountName, decimal OpeningBalance, int Imported, int Deleted, int KeptAsPending, int SystemBackToPending, int Imports, DateTime? From, DateTime? To);
 
     private sealed record Plan(ResetSummary Summary, List<FinancialMovement> Deleted, List<FinancialMovement> Kept, List<(FinancialMovement System, Guid Imported)> Unmatched);
 
@@ -93,7 +96,7 @@ internal static class FinanceAccountReset
         var deleted = imported.Where(x => !keptIds.Contains(x.Id)).ToList();
         var imports = await db.BankStatementImports.CountAsync(x => x.TenantId == tenantId && x.AccountId == accountId, ct);
 
-        var summary = new ResetSummary(account.Name, imported.Count, deleted.Count, kept.Count, matchedSystem.Count, imports,
+        var summary = new ResetSummary(account.Name, account.OpeningBalance, imported.Count, deleted.Count, kept.Count, matchedSystem.Count, imports,
             imported.Count == 0 ? null : imported.Min(x => x.OperationDateUtc), imported.Count == 0 ? null : imported.Max(x => x.OperationDateUtc));
         return new Plan(summary, deleted, kept, matchedSystem.Select(x => (x, x.MatchedMovementId!.Value)).ToList());
     }
