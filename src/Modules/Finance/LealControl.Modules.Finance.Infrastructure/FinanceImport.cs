@@ -531,6 +531,7 @@ public static class FinanceImport
         InvestmentFunds.MapInvestmentFundEndpoints(endpoints);
         ExpenseReports.MapExpenseReportEndpoints(endpoints);
         FinanceAccountReset.MapAccountResetEndpoints(endpoints);
+        FinanceTreasuryReset.MapTreasuryResetEndpoints(endpoints);
         return endpoints;
     }
 

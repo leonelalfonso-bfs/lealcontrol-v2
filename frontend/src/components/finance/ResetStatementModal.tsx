@@ -65,8 +65,8 @@ export function ResetStatementModal({ account, onClose, onDone }: {
       footer={
         <>
           <button type="button" className="btn ghost" onClick={onClose}>Cancelar</button>
-          <button type="button" className="btn danger" onClick={() => void confirm()} disabled={!matches || busy || !summary || summary.imported === 0}>
-            {busy ? "Borrando…" : `Borrar ${summary?.deleted ?? ""} movimientos`}
+          <button type="button" className="btn danger" onClick={() => void confirm()} disabled={!matches || busy || !summary}>
+            {busy ? "Guardando…" : summary?.imported === 0 ? "Guardar saldo inicial" : `Borrar ${summary?.deleted ?? ""} movimientos`}
           </button>
         </>
       }
@@ -74,10 +74,11 @@ export function ResetStatementModal({ account, onClose, onDone }: {
       {error && <div className="alert">{error}</div>}
       {!summary ? (
         <p className="muted">Calculando…</p>
-      ) : summary.imported === 0 ? (
-        <p className="muted">La cuenta no tiene movimientos importados.</p>
       ) : (
         <div className="stack" style={{ gap: 10, fontSize: "0.9rem" }}>
+          {summary.imported === 0 ? (
+            <p className="muted" style={{ margin: 0 }}>La cuenta no tiene movimientos importados: solo se guarda el saldo inicial.</p>
+          ) : (<>
           <p style={{ margin: 0 }}>
             Hay <strong>{summary.imported}</strong> movimientos importados del extracto
             {summary.from && <> ({businessDate(summary.from)} al {businessDate(summary.to)})</>}, en {summary.imports} importación(es).
@@ -93,6 +94,7 @@ export function ResetStatementModal({ account, onClose, onDone }: {
             <li>Recibos, órdenes de pago, cheques y asientos no se tocan. Después podés volver a subir el mismo archivo.</li>
           </ul>
           <p className="muted" style={{ margin: 0 }}>Se pierden las clasificaciones confirmadas a mano de los movimientos que se borran. No se puede deshacer.</p>
+          </>)}
           <label style={{ fontWeight: 600 }}>
             Saldo inicial de la cuenta
             <input type="number" step="0.01" value={opening} onChange={(e) => setOpening(e.target.value)} style={{ width: "100%" }} />
