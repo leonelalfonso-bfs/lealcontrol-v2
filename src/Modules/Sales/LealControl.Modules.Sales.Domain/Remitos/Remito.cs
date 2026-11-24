@@ -88,6 +88,13 @@ public sealed class Remito : Entity<Guid>
         InvoiceNumber = invoiceNumber;
     }
 
+    /// <summary>La factura que lo facturaba se borró (un borrador sin CAE): el remito vuelve a estar por facturar.</summary>
+    public void ClearInvoice()
+    {
+        InvoiceId = null;
+        InvoiceNumber = null;
+    }
+
     public static Remito Create(
         TenantId tenantId,
         string remitoNumber,

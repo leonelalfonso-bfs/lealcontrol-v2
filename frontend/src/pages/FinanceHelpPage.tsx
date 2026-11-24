@@ -109,10 +109,13 @@ export function FinanceHelpPage() {
             cheques y asientos no se tocan. Se pierden las clasificaciones hechas a mano de los que se borran. Después se puede volver a
             subir el mismo archivo.
           </Step>
-          <Step title="“⚠ Reiniciar Tesorería” (solo administradores, en Bancos y Cajas) borra todo lo operativo para recargarlo desde cero.">
-            Movimientos de todas las cuentas, importaciones, cheques, recibos, órdenes de pago, retenciones, anticipos, lotes de pago y
-            operaciones de FCI. Los asientos de recibos y órdenes se revierten; las rendiciones aprobadas vuelven a abiertas. Quedan las
-            cuentas, conceptos, reglas, fondos y la numeración. Muestra los totales antes y pide escribir BORRAR TESORERIA. Después, en cada
+          <Step title="“⚠ Reiniciar Compras y Finanzas” (solo administradores, en Bancos y Cajas) borra todo lo operativo para recargarlo desde cero.">
+            Compras completo (solicitudes, cotizaciones, órdenes, recepciones, facturas de proveedor y comprobantes importados de ARCA), los
+            comprobantes de venta sin CAE, y Tesorería: movimientos de todas las cuentas, importaciones, cheques, recibos, órdenes de pago,
+            retenciones, anticipos, lotes de pago y operaciones de FCI. Los asientos se revierten, el stock baja en lo recibido y vuelve lo
+            que descontaron los borradores de venta; las rendiciones aprobadas vuelven a abiertas. No se tocan facturas con CAE, presupuestos,
+            pedidos, remitos, clientes, proveedores ni productos; quedan las cuentas, conceptos, reglas, fondos y la numeración. Muestra los
+            totales antes y pide escribir BORRAR COMPRAS Y FINANZAS. Después, en cada
             cuenta, “♻ Reiniciar extracto” deja cargar el saldo inicial, y se importan los extractos.
           </Step>
           <Step title="Columnas “Saldo sistema” y “Saldo extracto”: en cada renglón, el saldo que calcula el sistema y el que informa el banco.">

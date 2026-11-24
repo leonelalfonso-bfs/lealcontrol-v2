@@ -18,7 +18,8 @@ public sealed record TreasuryResetRequest(string Confirm);
 /// </summary>
 internal static class FinanceTreasuryReset
 {
-    public const string ConfirmPhrase = "BORRAR TESORERIA";
+    /// <summary>La misma frase que la parte de Compras y Ventas: la pantalla confirma las dos juntas.</summary>
+    public const string ConfirmPhrase = "BORRAR COMPRAS Y FINANZAS";
 
     public sealed record Summary(int Accounts, int Movements, int Imports, int Cheques, int Receipts, int PaymentOrders,
         int Withholdings, int Advances, int PaymentBatches, int FundOperations, int ExpenseReportsReopened);

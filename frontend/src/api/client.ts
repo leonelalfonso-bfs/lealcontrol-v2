@@ -176,6 +176,8 @@ export type HrArea = { id: string; name: string; sortOrder: number; positions: n
 export const api = {
   getTreasuryReset: () => request<{ accounts: number; movements: number; imports: number; cheques: number; receipts: number; paymentOrders: number; withholdings: number; advances: number; paymentBatches: number; fundOperations: number; expenseReportsReopened: number }>("/api/v1/finance/treasury-reset"),
   resetTreasury: (confirm: string) => request<unknown>("/api/v1/finance/treasury-reset", { method: "POST", body: JSON.stringify({ confirm }) }),
+  getPurchasesReset: () => request<{ purchaseInvoices: number; purchaseOrders: number; receptions: number; requests: number; quotations: number; arcaVouchers: number; salesDrafts: number }>("/api/v1/purchases/operational-reset"),
+  resetPurchases: (confirm: string) => request<unknown>("/api/v1/purchases/operational-reset", { method: "POST", body: JSON.stringify({ confirm }) }),
   getStatementResetPlan: (accountId: string) =>
     request<{ accountName: string; openingBalance: number; imported: number; deleted: number; keptAsPending: number; systemBackToPending: number; imports: number; from?: string | null; to?: string | null }>(
       `/api/v1/finance/accounts/${accountId}/reset-statement`),
