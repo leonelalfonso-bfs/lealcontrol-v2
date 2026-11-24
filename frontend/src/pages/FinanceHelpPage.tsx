@@ -98,6 +98,14 @@ export function FinanceHelpPage() {
             la contraparte de cada transferencia (nombre y CUIT) y el código de operación del banco: con el CUIT, el movimiento ya queda
             sugerido para el proveedor o cliente que lo tenga cargado.
           </Step>
+          <Step title="Los movimientos “Pendiente” del Galicia (por ejemplo, un echeq en proceso) no se importan.">
+            El banco los muestra con fecha y saldo provisorios; entran cuando los impute, en el próximo extracto. Si alguno se había importado
+            antes como pendiente, al volver imputado se actualiza su fecha en lugar de duplicarse.
+          </Step>
+          <Step title="Columnas “Saldo sistema” y “Saldo extracto”: en cada renglón, el saldo que calcula el sistema y el que informa el banco.">
+            En verde coinciden; en rojo hay diferencia (pasá el mouse para verla). La primera diferencia de la lista, de abajo hacia arriba, marca
+            el movimiento a revisar: uno que falta, uno duplicado o un movimiento manual que el banco no tiene.
+          </Step>
           <Step title="Otro banco: la primera vez mapeá las columnas (fecha, descripción, importe o débito/crédito) y guardá el perfil; los próximos extractos se leen solos.">
             Hay una plantilla para descargar si el banco no exporta CSV. Un mismo archivo no se importa dos veces.
           </Step>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { businessDate } from "../lib/dates";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { InvestmentFund } from "../api/types/finance";
@@ -319,7 +320,7 @@ export function FinancePage() {
               <tbody>
                 {preview.map((row, i) => (
                   <tr key={i}>
-                    <td>{new Date(row.operationDateUtc).toLocaleDateString("es-AR")}</td>
+                    <td>{businessDate(row.operationDateUtc)}</td>
                     <td>{row.kind === "Credit" ? "Ingreso" : "Egreso"}</td>
                     <td>{row.amount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td>
                     <td>{row.description}</td>

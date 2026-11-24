@@ -259,6 +259,10 @@ public static class FinanceImport
             int duplicateCount = 0;
             int matchedCount = 0;
 
+            // Orden del extracto dentro del día: el saldo de cada renglón se compara con el del banco.
+            var stamp = DateTime.UtcNow;
+            var sequence = 0;
+            var replacedPending = new HashSet<Guid>();
             foreach (var row in valid)
             {
                 var fingerprint = RowFingerprint(request.AccountId, row);
@@ -281,6 +285,18 @@ public static class FinanceImport
                     continue;
                 }
 
+                // Un movimiento que se importó cuando el banco lo tenía "Pendiente" vuelve imputado con otra fecha:
+                // mismo tipo, importe, comprobante y leyenda. Se actualiza en lugar de duplicarlo.
+                if (PendingTwin(existingImported, row, importId, replacedPending) is { } twin)
+                {
+                    replacedPending.Add(twin.Id);
+                    twin.OperationDateUtc = row.OperationDateUtc;
+                    if (row.ReportedBalance.HasValue) twin.ReportedBalance = row.ReportedBalance;
+                    twin.CreatedAtUtc = stamp.AddTicks(sequence++);
+                    updatedCount++;
+                    continue;
+                }
+
                 var movement = new FinancialMovement
                 {
                     Id = Guid.NewGuid(),
@@ -298,7 +314,7 @@ public static class FinanceImport
                     BankCode = row.BankCode,
                     Origin = FinancialMovementOrigin.Imported,
                     ImportId = importId,
-                    CreatedAtUtc = DateTime.UtcNow
+                    CreatedAtUtc = stamp.AddTicks(sequence++)
                 };
                 await FinanceConcepts.ApplySuggestionAsync(db, tenantId, movement, ct);
                 db.Movements.Add(movement);
@@ -632,8 +648,8 @@ public static class FinanceImport
             .Where(x => x.TenantId == tenantId
                         && x.AccountId == accountId
                         && x.Origin == FinancialMovementOrigin.Imported)
-            .Select(x => new { x.AccountId, x.OperationDateUtc, x.Amount, x.Kind, x.ExternalReference, x.Description })
             .ToListAsync(ct);
+        var twins = new HashSet<Guid>();
 
         var fingerprintCounts = existingImported
             .GroupBy(x => BuildFingerprint(x.AccountId, x.OperationDateUtc.Date, x.Amount, x.Kind, x.ExternalReference, x.Description))
@@ -664,6 +680,14 @@ public static class FinanceImport
             if (fingerprintCounts.TryGetValue(fp, out var remaining) && remaining > 0)
             {
                 fingerprintCounts[fp] = remaining - 1;
+                duplicates++;
+                rows.Add(PreviewRow(row, "duplicate", null, null, null, null));
+                continue;
+            }
+            // El que se había importado "Pendiente": se actualiza su fecha, no se duplica.
+            if (PendingTwin(existingImported, row, Guid.Empty, twins) is { } twin)
+            {
+                twins.Add(twin.Id);
                 duplicates++;
                 rows.Add(PreviewRow(row, "duplicate", null, null, null, null));
                 continue;
@@ -769,6 +793,25 @@ public static class FinanceImport
 
         system.ReconciliationStatus = FinancialReconciliationStatus.MatchedToImport;
         system.MatchedMovementId = imported.Id;
+    }
+
+    /// <summary>
+    /// El movimiento ya importado del que este renglón es la versión imputada: mismo tipo, importe, comprobante
+    /// (no vacío) y leyenda, con otra fecha de hasta 15 días antes, de un extracto anterior.
+    /// </summary>
+    internal static FinancialMovement? PendingTwin(IEnumerable<FinancialMovement> existing, BankImportRow row, Guid importId, ISet<Guid> used)
+    {
+        var reference = NormalizeReference(row.ExternalReference);
+        if (reference.Length == 0) return null;
+        var description = row.Description.Trim().ToLowerInvariant();
+        var candidates = existing.Where(m => m.ImportId != importId && !used.Contains(m.Id)
+                && m.Kind == row.Kind && m.Amount == row.Amount
+                && m.OperationDateUtc.Date != row.OperationDateUtc.Date
+                && m.OperationDateUtc.Date >= row.OperationDateUtc.Date.AddDays(-15) && m.OperationDateUtc.Date < row.OperationDateUtc.Date
+                && NormalizeReference(m.ExternalReference) == reference
+                && m.Description.Trim().ToLowerInvariant() == description)
+            .ToList();
+        return candidates.Count == 1 ? candidates[0] : null;
     }
 
     public static bool CountsTowardBankBalance(FinancialMovement m)

@@ -62,6 +62,7 @@ internal static partial class BankStatementFormats
         var (date, desc, debit, credit, voucher, l1, l2, l3, balance) =
             (Col("fecha"), Col("descripción"), Col("débitos"), Col("créditos"), Col("número de comprobante"),
              Col("leyendas adicionales1"), Col("leyendas adicionales2"), Col("leyendas adicionales3"), Col("saldo"));
+        var movementType = Col("tipo de movimiento");
         var rows = new List<BankImportRow>();
         foreach (var c in records.Skip(1))
         {
@@ -70,6 +71,14 @@ internal static partial class BankStatementFormats
             if (!DateTime.TryParseExact(Cell(date), "dd/MM/yyyy", Ar, DateTimeStyles.None, out var d))
             {
                 rows.Add(new(default, 0, FinancialMovementKind.Debit, string.Join(" | ", c), null, null, "Fecha inválida."));
+                continue;
+            }
+            // "Pendiente": el banco lo muestra en proceso (por ejemplo, un echeq por acreditar) con una fecha y saldo
+            // provisorios; cuando lo imputa vuelve a venir como "Imputado". Importarlo antes lo duplicaba.
+            if (string.Equals(Cell(movementType), "Pendiente", StringComparison.OrdinalIgnoreCase))
+            {
+                rows.Add(new(DateTime.SpecifyKind(d, DateTimeKind.Utc), 0, FinancialMovementKind.Debit, string.Join(" ", Cell(desc).Split(' ', StringSplitOptions.RemoveEmptyEntries)), NullIfEmpty(Cell(voucher)), null,
+                    "Pendiente en el banco (en proceso): se importa cuando el banco lo impute."));
                 continue;
             }
             var debitAmount = Amount(Cell(debit));

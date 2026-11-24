@@ -36,6 +36,20 @@ public sealed class BankStatementFormatsTests
     }
 
     [Fact]
+    public void Galicia_leaves_out_movements_still_pending_at_the_bank()
+    {
+        var csv = "\uFEFF\"Fecha\";\"Descripción\";\"Origen\";\"Débitos\";\"Créditos\";\"Grupo de Conceptos\";\"Concepto\";\"Número de Terminal\";\"Observaciones Cliente\";\"Número de Comprobante\";\"Leyendas Adicionales1\";\"Leyendas Adicionales2\";\"Leyendas Adicionales3\";\"Leyendas Adicionales4\";\"Tipo de Movimiento\";\"Saldo\"\n"
+            + "\"24/11/2026\";\"Trf Inmed Proveed\";\"\";\"1000,00\";\"0\";\"\";\"\";\"\";\"\";\"555\";\"\";\"\";\"\";\"\";\"Imputado\";\"9000,00\";\n"
+            + "\"20/11/2026\";\"Echeq Galicia Nro:     437\";\"\";\"5000,00\";\"0\";\"\";\"\";\"\";\"\";\"437\";\"\";\"\";\"\";\"\";\"Pendiente\";\"4000,00\";\n";
+
+        var result = BankStatementFormats.TryParse(Encoding.UTF8.GetBytes(csv), "Extracto_CC.csv");
+
+        result!.Rows.Should().HaveCount(2);
+        result.Rows[0].Error.Should().BeNull();
+        result.Rows[1].Error.Should().Contain("Pendiente");
+    }
+
+    [Fact]
     public void Santander_reads_both_blocks_with_debits_in_parentheses()
     {
         var text = "Movimientos del Día\r\nCuenta Corriente en Pesos Nro. 000-000000/0\r\n"
