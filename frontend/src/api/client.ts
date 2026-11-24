@@ -174,6 +174,11 @@ export type CompanyDocumentWrite = { category: string; title?: string; number?: 
 export type HrArea = { id: string; name: string; sortOrder: number; positions: number; manuals: number };
 
 export const api = {
+  getStatementResetPlan: (accountId: string) =>
+    request<{ accountName: string; openingBalance: number; imported: number; deleted: number; keptAsPending: number; systemBackToPending: number; imports: number; from?: string | null; to?: string | null }>(
+      `/api/v1/finance/accounts/${accountId}/reset-statement`),
+  resetStatement: (accountId: string, confirmName: string, openingBalance: number | null) =>
+    request<unknown>(`/api/v1/finance/accounts/${accountId}/reset-statement`, { method: "POST", body: JSON.stringify({ confirmName, openingBalance }) }),
   listFinanceAccounts: () => request<FinanceAccount[]>("/api/v1/finance/accounts"),
   listFinanceConcepts: () => request<FinanceConcept[]>("/api/v1/finance/concepts"),
   createFinanceConcept: (body: object) => request("/api/v1/finance/concepts", { method: "POST", body: JSON.stringify(body) }),

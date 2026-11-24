@@ -102,6 +102,13 @@ export function FinanceHelpPage() {
             El banco los muestra con fecha y saldo provisorios; entran cuando los impute, en el próximo extracto. Si alguno se había importado
             antes como pendiente, al volver imputado se actualiza su fecha en lugar de duplicarse.
           </Step>
+          <Step title="“♻ Reiniciar extracto” borra lo importado de la cuenta para volver a cargarlo desde cero.">
+            Antes de confirmar muestra cuántos movimientos se borran, deja corregir el saldo inicial de la cuenta (el saldo del banco antes
+            del primer renglón que vas a cargar) y pide escribir el nombre de la cuenta. Los que tienen un cobro, pago,
+            cheque o transferencia vinculado quedan como pendientes de banco y se emparejan solos al reimportar; recibos, órdenes de pago,
+            cheques y asientos no se tocan. Se pierden las clasificaciones hechas a mano de los que se borran. Después se puede volver a
+            subir el mismo archivo.
+          </Step>
           <Step title="Columnas “Saldo sistema” y “Saldo extracto”: en cada renglón, el saldo que calcula el sistema y el que informa el banco.">
             En verde coinciden; en rojo hay diferencia (pasá el mouse para verla). La primera diferencia de la lista, de abajo hacia arriba, marca
             el movimiento a revisar: uno que falta, uno duplicado o un movimiento manual que el banco no tiene.

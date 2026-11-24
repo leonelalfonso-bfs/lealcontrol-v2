@@ -530,6 +530,7 @@ public static class FinanceImport
         PaymentBatches.MapPaymentBatchEndpoints(endpoints);
         InvestmentFunds.MapInvestmentFundEndpoints(endpoints);
         ExpenseReports.MapExpenseReportEndpoints(endpoints);
+        FinanceAccountReset.MapAccountResetEndpoints(endpoints);
         return endpoints;
     }
 

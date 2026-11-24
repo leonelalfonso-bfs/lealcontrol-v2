@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { fileToBase64, fileToText } from "../lib/files";
 import { api } from "../api/client";
 import { Modal } from "../components/ui/Modal";
+import { ResetStatementModal } from "../components/finance/ResetStatementModal";
 import { exportToExcel, type ExcelColumn } from "../components/ExcelTools";
 
 import { todayAr, addDaysAr, monthRangeAr, businessDate } from "../lib/dates";
@@ -105,6 +106,7 @@ export function FinanceAccountsPage() {
 
   // Modal for rule creation & advanced classification
   const [modalMovement, setModalMovement] = useState<Movement | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
   const [modalConceptId, setModalConceptId] = useState("");
   const [modalCreateRule, setModalCreateRule] = useState(false);
   const [modalPattern, setModalPattern] = useState("");
@@ -757,6 +759,14 @@ export function FinanceAccountsPage() {
                 >
                   Importar extracto CSV
                 </button>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setResetOpen(true)}
+                  title="Borrar los movimientos importados para volver a cargar el extracto desde cero"
+                >
+                  ♻ Reiniciar extracto
+                </button>
               </>
             )}
             <button
@@ -1300,6 +1310,12 @@ export function FinanceAccountsPage() {
             </table>
           </div>
         </section>
+
+        <ResetStatementModal
+          account={resetOpen ? selectedAccount : null}
+          onClose={() => setResetOpen(false)}
+          onDone={() => void openAccount(selectedAccount)}
+        />
 
         <Modal
           open={showImportModal}
