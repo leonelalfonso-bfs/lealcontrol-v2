@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Net.Http.Json;
 using FluentAssertions;
 using LealControl.Modules.Finance.Infrastructure;
@@ -123,6 +124,55 @@ public sealed class ImportConfirmAndVoidTests : IClassFixture<FinanceWebApplicat
         {
             var movement = await db.Movements.SingleAsync(x => x.TenantId == tenantId && x.AccountId == accountId);
             movement.OperationDateUtc.Day.Should().Be(24);
+        });
+    }
+
+    [Fact]
+    public async Task Statement_reset_deletes_imports_and_keeps_what_documents_point_to()
+    {
+        var tenantId = FinanceWebApplicationFactory.DemoTenantId;
+        var client = _factory.CreateAuthenticatedClient(tenantId);
+        var accountId = Guid.NewGuid();
+        await _factory.WithDbAsync(async db =>
+        {
+            db.Accounts.Add(new FinancialAccount
+            {
+                Id = accountId, TenantId = tenantId, Name = "Banco a reiniciar", Currency = "ARS",
+                Type = FinancialAccountType.Bank, OpeningBalance = 0m, IsActive = true, CreatedAtUtc = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        });
+        const string csv = "Fecha;Descripción;Débitos;Créditos;Saldo;Número de comprobante\n10/03/2026;COBRO CLIENTE;;1000,00;1000,00;R-1\n11/03/2026;IMP DEB;6,00;;994,00;\n";
+        async Task<HttpResponseMessage> Import() => await client.PostAsJsonAsync("/api/v1/finance/imports/bank/confirm", new { accountId, csvContent = csv, fileName = "e.csv" });
+        (await Import()).EnsureSuccessStatusCode();
+
+        // El cobro quedó vinculado a un recibo: ese vínculo no se pierde.
+        Guid collected = default;
+        await _factory.WithDbAsync(async db => collected = (await db.Movements.SingleAsync(x => x.AccountId == accountId && x.Amount == 1000m)).Id);
+        (await client.PostAsJsonAsync($"/api/v1/finance/movements/{collected}/reconcile", new { entityType = "CollectionReceipt", entityId = Guid.NewGuid() })).EnsureSuccessStatusCode();
+
+        var preview = await client.GetFromJsonAsync<JsonElement>($"/api/v1/finance/accounts/{accountId}/reset-statement");
+        preview.GetProperty("imported").GetInt32().Should().Be(2);
+        preview.GetProperty("deleted").GetInt32().Should().Be(1);
+        preview.GetProperty("keptAsPending").GetInt32().Should().Be(1);
+
+        ((int)(await client.PostAsJsonAsync($"/api/v1/finance/accounts/{accountId}/reset-statement", new { confirmName = "otra" })).StatusCode).Should().Be(400);
+        (await client.PostAsJsonAsync($"/api/v1/finance/accounts/{accountId}/reset-statement", new { confirmName = "banco a reiniciar" })).EnsureSuccessStatusCode();
+
+        await _factory.WithDbAsync(async db =>
+        {
+            var left = await db.Movements.SingleAsync(x => x.AccountId == accountId);
+            left.Id.Should().Be(collected);
+            left.Origin.Should().Be(FinancialMovementOrigin.System);
+            left.ReconciliationStatus.Should().Be(FinancialReconciliationStatus.PendingBank);
+        });
+
+        // El mismo archivo se puede volver a subir y el cobro se empareja solo.
+        (await Import()).EnsureSuccessStatusCode();
+        await _factory.WithDbAsync(async db =>
+        {
+            (await db.Movements.CountAsync(x => x.AccountId == accountId && x.Origin == FinancialMovementOrigin.Imported)).Should().Be(2);
+            (await db.Movements.SingleAsync(x => x.Id == collected)).ReconciliationStatus.Should().Be(FinancialReconciliationStatus.MatchedToImport);
         });
     }
 
