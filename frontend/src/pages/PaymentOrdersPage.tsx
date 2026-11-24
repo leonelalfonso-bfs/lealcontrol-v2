@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { businessDate } from "../lib/dates";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useCan } from "../context/PermissionsContext";
@@ -146,7 +147,7 @@ export function PaymentOrdersPage() {
                     <td>
                       <strong style={{ color: "#2563eb" }}>{o.orderNumber}</strong>
                     </td>
-                    <td>{new Date(o.paymentDateUtc).toLocaleDateString("es-AR")}</td>
+                    <td>{businessDate(o.paymentDateUtc)}</td>
                     <td>
                       <strong>{o.supplierName}</strong>
                       {o.notes && (

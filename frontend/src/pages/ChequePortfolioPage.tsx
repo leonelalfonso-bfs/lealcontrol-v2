@@ -6,7 +6,7 @@ import { CustomerPicker } from "../components/pickers";
 import { DataTable } from "../components/ui/DataTable";
 import { Modal } from "../components/ui/Modal";
 
-import { todayAr } from "../lib/dates";
+import { todayAr, businessDate } from "../lib/dates";
 type Cheque = {
   id: string;
   checkNumber: string;
@@ -392,7 +392,7 @@ export function ChequePortfolioPage() {
                       onChange={(id) => void assignCustomer(x, id)} />
               }] : []),
               { key: "bankName", header: "Banco", render: (x) => x.bankName || "—" },
-              { key: "dueDateUtc", header: "Vencimiento", render: (x) => x.dueDateUtc ? new Date(x.dueDateUtc).toLocaleDateString("es-AR") : "—" },
+              { key: "dueDateUtc", header: "Vencimiento", render: (x) => x.dueDateUtc ? businessDate(x.dueDateUtc) : "—" },
               { key: "amount", header: "Importe", render: (x) => money(x.amount, x.currency) },
               { key: "status", header: "Estado", render: (x) => <span className="badge">{labels[x.status] || x.status}</span> },
               {

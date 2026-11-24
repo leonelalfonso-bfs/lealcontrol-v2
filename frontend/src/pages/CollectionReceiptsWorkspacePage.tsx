@@ -9,7 +9,7 @@ import { CustomerPicker } from "../components/pickers";
 import { withCollections, type ReceiptForImputation } from "../lib/receivables";
 import { documentLabel } from "../lib/documents";
 import "./collections.css";
-import { todayAr } from "../lib/dates";
+import { todayAr, businessDate } from "../lib/dates";
 
 type Account = {
   id: string;
@@ -833,7 +833,7 @@ export function CollectionReceiptsWorkspacePage() {
                 <span className="eyebrow">RECIBO OFICIAL DE COBRANZA</span>
                 <h2 style={{ margin: 0 }}>{selectedReceiptDetail.receiptNumber}</h2>
                 <span className="muted" style={{ fontSize: "0.82rem" }}>
-                  Fecha: {new Date(selectedReceiptDetail.receiptDateUtc).toLocaleDateString("es-AR")} · {selectedReceiptDetail.description}
+                  Fecha: {businessDate(selectedReceiptDetail.receiptDateUtc)} · {selectedReceiptDetail.description}
                 </span>
               </div>
               <button className="btn btn-outline compact" onClick={() => setSelectedReceiptDetail(null)}>

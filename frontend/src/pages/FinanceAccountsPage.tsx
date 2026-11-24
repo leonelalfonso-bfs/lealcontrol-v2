@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import { Modal } from "../components/ui/Modal";
 import { exportToExcel, type ExcelColumn } from "../components/ExcelTools";
 
-import { todayAr, addDaysAr, monthRangeAr } from "../lib/dates";
+import { todayAr, addDaysAr, monthRangeAr, businessDate } from "../lib/dates";
 type Account = {
   id: string;
   name: string;
@@ -630,7 +630,7 @@ export function FinanceAccountsPage() {
       {
         key: "operationDateUtc",
         header: "Fecha",
-        value: (row) => new Date(row.operationDateUtc).toLocaleDateString("es-AR")
+        value: (row) => businessDate(row.operationDateUtc)
       },
       {
         key: "description",
@@ -967,19 +967,20 @@ export function FinanceAccountsPage() {
                   <th>Tipo</th>
                   <th style={{ textAlign: "right" }}>Importe</th>
                   <th style={{ textAlign: "right" }}>Saldo sistema</th>
+                  <th style={{ textAlign: "right" }} title="Saldo que informa el extracto del banco en ese renglón">Saldo extracto</th>
                   <th style={{ textAlign: "center", width: "160px" }}>Acción Clasificar</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingMovements ? (
                   <tr>
-                    <td colSpan={9} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={10} className="muted" style={{ textAlign: "center", padding: 24 }}>
                       Cargando movimientos...
                     </td>
                   </tr>
                 ) : filteredMovements.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={10} className="muted" style={{ textAlign: "center", padding: 24 }}>
                       No hay movimientos que coincidan con los filtros aplicados.
                     </td>
                   </tr>
@@ -1007,7 +1008,7 @@ export function FinanceAccountsPage() {
                               : "3px solid #cbd5e1"
                         }}
                       >
-                        <td>{new Date(x.operationDateUtc).toLocaleDateString("es-AR")}</td>
+                        <td>{businessDate(x.operationDateUtc)}</td>
                         <td>
                           <strong>{mainDesc}</strong>
                           <small className="muted" style={{ display: "block", fontSize: "0.76rem" }}>
@@ -1165,6 +1166,19 @@ export function FinanceAccountsPage() {
                           }}
                         >
                           {money(x.systemBalance, x.currency)}
+                        </td>
+                        <td
+                          style={{ textAlign: "right", fontFamily: "monospace" }}
+                          title={x.reportedBalance != null && Math.abs(x.systemBalance - x.reportedBalance) > 0.01
+                            ? `Diferencia con el sistema: ${money(x.systemBalance - x.reportedBalance, x.currency)}` : undefined}
+                        >
+                          {x.reportedBalance == null ? (
+                            <span className="muted">—</span>
+                          ) : (
+                            <span style={{ color: Math.abs(x.systemBalance - x.reportedBalance) > 0.01 ? "#b91c1c" : "#047857", fontWeight: 600 }}>
+                              {money(x.reportedBalance, x.currency)}
+                            </span>
+                          )}
                         </td>
                         <td style={{ textAlign: "center" }}>
                           {isPending ? (
@@ -1439,7 +1453,7 @@ export function FinanceAccountsPage() {
                       <tbody>
                         {importPreview.slice(0, 20).map((row, idx) => (
                           <tr key={idx}>
-                            <td>{row.operationDateUtc ? new Date(row.operationDateUtc).toLocaleDateString("es-AR") : "—"}</td>
+                            <td>{row.operationDateUtc ? businessDate(row.operationDateUtc) : "—"}</td>
                             <td>
                               <strong>{row.description}</strong>
                               {row.externalReference && (
@@ -1450,7 +1464,7 @@ export function FinanceAccountsPage() {
                               {row.status === "match" && row.matchedSystemDateUtc && (
                                 <small style={{ display: "block", fontSize: "0.72rem", color: "#0369a1", marginTop: 2 }}>
                                   Matchea con movimiento del sistema del{" "}
-                                  {new Date(row.matchedSystemDateUtc).toLocaleDateString("es-AR")}
+                                  {businessDate(row.matchedSystemDateUtc)}
                                   {row.matchedSystemDescription ? ` · ${row.matchedSystemDescription}` : ""}
                                 </small>
                               )}
@@ -1520,7 +1534,7 @@ export function FinanceAccountsPage() {
               {modalMovement ? (
               <>
               <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.85rem" }}>
-                <div><strong>Fecha:</strong> {new Date(modalMovement.operationDateUtc).toLocaleDateString("es-AR")}</div>
+                <div><strong>Fecha:</strong> {businessDate(modalMovement.operationDateUtc)}</div>
                 <div><strong>Leyenda extracto:</strong> {modalMovement.description}</div>
                 <div>
                   <strong>Importe:</strong>{" "}

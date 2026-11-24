@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { businessDate } from "../lib/dates";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { PaymentOrder } from "../api/types";
@@ -93,7 +94,7 @@ export function PaymentOrderPrintPage() {
               N° {order.orderNumber}
             </h2>
             <p style={{ margin: "4px 0 0 0", fontSize: "0.95rem" }}>
-              <strong>Fecha:</strong> {new Date(order.paymentDateUtc).toLocaleDateString("es-AR")}
+              <strong>Fecha:</strong> {businessDate(order.paymentDateUtc)}
             </p>
           </div>
         </div>

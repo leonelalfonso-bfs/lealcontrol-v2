@@ -89,6 +89,44 @@ public sealed class ImportConfirmAndVoidTests : IClassFixture<FinanceWebApplicat
     }
 
     [Fact]
+    public async Task Movement_imported_while_pending_is_updated_when_it_comes_back_imputed()
+    {
+        var tenantId = FinanceWebApplicationFactory.DemoTenantId;
+        var client = _factory.CreateAuthenticatedClient(tenantId);
+        var accountId = Guid.NewGuid();
+        await _factory.WithDbAsync(async db =>
+        {
+            db.Accounts.Add(new FinancialAccount
+            {
+                Id = accountId, TenantId = tenantId, Name = "Galicia pendientes", Currency = "ARS",
+                Type = FinancialAccountType.Bank, OpeningBalance = 10000m, IsActive = true, CreatedAtUtc = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        });
+
+        // Antes se importaba el echeq "en proceso" con fecha provisoria...
+        (await client.PostAsJsonAsync("/api/v1/finance/imports/bank/confirm", new
+        {
+            accountId, fileName = "a.csv",
+            csvContent = "Fecha;Descripción;Débitos;Créditos;Saldo;Número de comprobante\n20/03/2026;Echeq Galicia Nro: 437;5000,00;;5000,00;437\n"
+        })).EnsureSuccessStatusCode();
+        // ...y el banco lo imputa días después: es el mismo movimiento, no otro.
+        var second = await client.PostAsJsonAsync("/api/v1/finance/imports/bank/confirm", new
+        {
+            accountId, fileName = "b.csv",
+            csvContent = "Fecha;Descripción;Débitos;Créditos;Saldo;Número de comprobante\n24/03/2026;Echeq Galicia Nro: 437;5000,00;;5000,00;437\n"
+        });
+        second.EnsureSuccessStatusCode();
+        (await second.Content.ReadFromJsonAsync<ImportConfirmResponse>())!.Imported.Should().Be(0);
+
+        await _factory.WithDbAsync(async db =>
+        {
+            var movement = await db.Movements.SingleAsync(x => x.TenantId == tenantId && x.AccountId == accountId);
+            movement.OperationDateUtc.Day.Should().Be(24);
+        });
+    }
+
+    [Fact]
     public async Task Void_receipt_releases_linked_movement_and_cheque()
     {
         var tenantId = FinanceWebApplicationFactory.DemoTenantId;

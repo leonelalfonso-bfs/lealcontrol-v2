@@ -18,3 +18,13 @@ export function monthRangeAr(monthsBack = 0): { from: string; to: string } {
   const last = new Date(Date.UTC(y, m - monthsBack, 0));
   return { from: first.toISOString().slice(0, 10), to: last.toISOString().slice(0, 10) };
 }
+
+/**
+ * Fecha de negocio (dd/mm/aaaa) de un valor que el backend guarda como día: medianoche UTC (extractos,
+ * vencimientos) o mediodía UTC (cargas manuales). En hora argentina la medianoche UTC cae el día
+ * anterior, así que se muestra en UTC.
+ */
+export function businessDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("es-AR", { timeZone: "UTC" });
+}

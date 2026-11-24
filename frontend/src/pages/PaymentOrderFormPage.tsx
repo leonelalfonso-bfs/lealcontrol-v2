@@ -6,7 +6,7 @@ import { QuickCreateChequeModal } from "../components/QuickCreateChequeModal";
 import { Modal } from "../components/ui/Modal";
 
 import { CustomerPicker } from "../components/pickers";
-import { todayAr } from "../lib/dates";
+import { todayAr, businessDate } from "../lib/dates";
 import { pendingOf } from "../lib/purchasePayments";
 
 type Account = {
@@ -220,7 +220,7 @@ export function PaymentOrderFormPage() {
             amount: chq.amount,
             currency: chq.currency || "ARS",
             chequeId: chq.id,
-            notes: `${own ? "Cheque propio" : "Endoso cheque"} N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+            notes: `${own ? "Cheque propio" : "Endoso cheque"} N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? businessDate(chq.dueDateUtc) : "s/d"}`
           }] : []);
         } else {
           setLines([]);
@@ -1118,7 +1118,7 @@ export function PaymentOrderFormPage() {
                   </option>
                   {filteredAvailableMovements.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {new Date(m.operationDateUtc).toLocaleDateString("es-AR")} · {money(m.amount, m.currency)} · [
+                      {businessDate(m.operationDateUtc)} · {money(m.amount, m.currency)} · [
                       {m.conceptName || m.ConceptName || "Sin clasificar"}]
                       {m.accountName ? ` · ${m.accountName}` : ""} · {m.description}
                     </option>
@@ -1140,7 +1140,7 @@ export function PaymentOrderFormPage() {
                           chequeId: e.target.value || undefined,
                           amount: chq ? chq.amount : draftLine.amount,
                           notes: chq
-                            ? `Cheque N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+                            ? `Cheque N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? businessDate(chq.dueDateUtc) : "s/d"}`
                             : ""
                         });
                         if (chq) setDraftAmountText(String(chq.amount));
@@ -1150,7 +1150,7 @@ export function PaymentOrderFormPage() {
                       {availableCheques.map((c) => (
                         <option key={c.id} value={c.id}>
                           N° {c.checkNumber} | {c.bankName || "Banco"} | Venc:{" "}
-                          {c.dueDateUtc ? new Date(c.dueDateUtc).toLocaleDateString("es-AR") : "s/d"} |{" "}
+                          {c.dueDateUtc ? businessDate(c.dueDateUtc) : "s/d"} |{" "}
                           {money(c.amount, c.currency)}
                         </option>
                       ))}
@@ -1184,7 +1184,7 @@ export function PaymentOrderFormPage() {
                           chequeId: e.target.value || undefined,
                           amount: chq ? chq.amount : draftLine.amount,
                           notes: chq
-                            ? `Cheque propio N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? new Date(chq.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+                            ? `Cheque propio N° ${chq.checkNumber} - ${chq.bankName || "Banco"} - Vto: ${chq.dueDateUtc ? businessDate(chq.dueDateUtc) : "s/d"}`
                             : draftLine.notes
                         });
                         if (chq) setDraftAmountText(String(chq.amount));
@@ -1194,7 +1194,7 @@ export function PaymentOrderFormPage() {
                       {ownCheques.map((c) => (
                         <option key={c.id} value={c.id}>
                           N° {c.checkNumber} | {c.bankName || "Banco"} | Venc:{" "}
-                          {c.dueDateUtc ? new Date(c.dueDateUtc).toLocaleDateString("es-AR") : "s/d"} |{" "}
+                          {c.dueDateUtc ? businessDate(c.dueDateUtc) : "s/d"} |{" "}
                           {money(c.amount, c.currency)}
                         </option>
                       ))}
@@ -1275,8 +1275,8 @@ export function PaymentOrderFormPage() {
             amount: Number(ch.amount),
             notes:
               createChequeDirection === "Issued"
-                ? `Cheque propio N° ${ch.checkNumber} - ${ch.bankName || "Banco"} - Vto: ${ch.dueDateUtc ? new Date(ch.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
-                : `Cheque N° ${ch.checkNumber} - ${ch.bankName || "Banco"} - Vto: ${ch.dueDateUtc ? new Date(ch.dueDateUtc).toLocaleDateString("es-AR") : "s/d"}`
+                ? `Cheque propio N° ${ch.checkNumber} - ${ch.bankName || "Banco"} - Vto: ${ch.dueDateUtc ? businessDate(ch.dueDateUtc) : "s/d"}`
+                : `Cheque N° ${ch.checkNumber} - ${ch.bankName || "Banco"} - Vto: ${ch.dueDateUtc ? businessDate(ch.dueDateUtc) : "s/d"}`
           };
           if (draftLine && createChequeLineId === draftLine.id) {
             patchDraft(chequePatch);
