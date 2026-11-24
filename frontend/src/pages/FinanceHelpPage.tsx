@@ -109,6 +109,12 @@ export function FinanceHelpPage() {
             cheques y asientos no se tocan. Se pierden las clasificaciones hechas a mano de los que se borran. Después se puede volver a
             subir el mismo archivo.
           </Step>
+          <Step title="“⚠ Reiniciar Tesorería” (solo administradores, en Bancos y Cajas) borra todo lo operativo para recargarlo desde cero.">
+            Movimientos de todas las cuentas, importaciones, cheques, recibos, órdenes de pago, retenciones, anticipos, lotes de pago y
+            operaciones de FCI. Los asientos de recibos y órdenes se revierten; las rendiciones aprobadas vuelven a abiertas. Quedan las
+            cuentas, conceptos, reglas, fondos y la numeración. Muestra los totales antes y pide escribir BORRAR TESORERIA. Después, en cada
+            cuenta, “♻ Reiniciar extracto” deja cargar el saldo inicial, y se importan los extractos.
+          </Step>
           <Step title="Columnas “Saldo sistema” y “Saldo extracto”: en cada renglón, el saldo que calcula el sistema y el que informa el banco.">
             En verde coinciden; en rojo hay diferencia (pasá el mouse para verla). La primera diferencia de la lista, de abajo hacia arriba, marca
             el movimiento a revisar: uno que falta, uno duplicado o un movimiento manual que el banco no tiene.

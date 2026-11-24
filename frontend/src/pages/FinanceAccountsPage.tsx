@@ -4,6 +4,8 @@ import { fileToBase64, fileToText } from "../lib/files";
 import { api } from "../api/client";
 import { Modal } from "../components/ui/Modal";
 import { ResetStatementModal } from "../components/finance/ResetStatementModal";
+import { TreasuryResetModal } from "../components/finance/TreasuryResetModal";
+import { useAuth } from "../context/AuthContext";
 import { exportToExcel, type ExcelColumn } from "../components/ExcelTools";
 
 import { todayAr, addDaysAr, monthRangeAr, businessDate } from "../lib/dates";
@@ -107,6 +109,9 @@ export function FinanceAccountsPage() {
   // Modal for rule creation & advanced classification
   const [modalMovement, setModalMovement] = useState<Movement | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
+  const [treasuryResetOpen, setTreasuryResetOpen] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "Admin" || user?.role === "Administrador";
   const [modalConceptId, setModalConceptId] = useState("");
   const [modalCreateRule, setModalCreateRule] = useState(false);
   const [modalPattern, setModalPattern] = useState("");
@@ -1701,8 +1706,18 @@ export function FinanceAccountsPage() {
           <button className="btn" onClick={() => setShowAccountForm((v) => !v)}>
             {showAccountForm ? "Cerrar" : "+ Nueva cuenta"}
           </button>
+          {isAdmin && (
+            <button className="btn btn-outline" onClick={() => setTreasuryResetOpen(true)} title="Borrar movimientos, cheques, recibos y órdenes de pago para recargar todo">
+              ⚠ Reiniciar Tesorería
+            </button>
+          )}
         </div>
       </div>
+      <TreasuryResetModal
+        open={treasuryResetOpen}
+        onClose={() => setTreasuryResetOpen(false)}
+        onDone={() => { setSuccessMsg("Tesorería reiniciada: corregí el saldo inicial de cada cuenta e importá los extractos."); void reloadAccounts(); }}
+      />
       {error && <div className="alert">{error}</div>}
       {successMsg && <div className="alert" style={{ background: "rgba(16,185,129,0.12)", color: "#065f46" }}>{successMsg}</div>}
       {showAccountForm && (

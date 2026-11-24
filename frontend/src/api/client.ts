@@ -174,6 +174,8 @@ export type CompanyDocumentWrite = { category: string; title?: string; number?: 
 export type HrArea = { id: string; name: string; sortOrder: number; positions: number; manuals: number };
 
 export const api = {
+  getTreasuryReset: () => request<{ accounts: number; movements: number; imports: number; cheques: number; receipts: number; paymentOrders: number; withholdings: number; advances: number; paymentBatches: number; fundOperations: number; expenseReportsReopened: number }>("/api/v1/finance/treasury-reset"),
+  resetTreasury: (confirm: string) => request<unknown>("/api/v1/finance/treasury-reset", { method: "POST", body: JSON.stringify({ confirm }) }),
   getStatementResetPlan: (accountId: string) =>
     request<{ accountName: string; openingBalance: number; imported: number; deleted: number; keptAsPending: number; systemBackToPending: number; imports: number; from?: string | null; to?: string | null }>(
       `/api/v1/finance/accounts/${accountId}/reset-statement`),
