@@ -66,6 +66,7 @@ public static class SalesEndpoints
         endpoints.MapRemitoEndpoints();
         endpoints.MapInvoiceEndpoints();
         endpoints.MapPurchaseEndpoints();
+        endpoints.MapPurchasesOperationalReset();
         var sales = endpoints.MapGroup("/api/v1/sales").RequirePolicyOnWrites("RequireSales");
 
         // Quotes Endpoints

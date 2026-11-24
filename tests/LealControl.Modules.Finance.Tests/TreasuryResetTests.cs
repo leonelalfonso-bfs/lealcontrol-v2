@@ -34,7 +34,7 @@ public sealed class TreasuryResetTests : IClassFixture<FinanceWebApplicationFact
         preview.GetProperty("cheques").GetInt32().Should().BeGreaterThan(0);
 
         ((int)(await client.PostAsJsonAsync("/api/v1/finance/treasury-reset", new { confirm = "borrar" })).StatusCode).Should().Be(400);
-        (await client.PostAsJsonAsync("/api/v1/finance/treasury-reset", new { confirm = "borrar tesoreria" })).EnsureSuccessStatusCode();
+        (await client.PostAsJsonAsync("/api/v1/finance/treasury-reset", new { confirm = "borrar compras y finanzas" })).EnsureSuccessStatusCode();
 
         await _factory.WithDbAsync(async db =>
         {

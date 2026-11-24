@@ -1707,8 +1707,8 @@ export function FinanceAccountsPage() {
             {showAccountForm ? "Cerrar" : "+ Nueva cuenta"}
           </button>
           {isAdmin && (
-            <button className="btn btn-outline" onClick={() => setTreasuryResetOpen(true)} title="Borrar movimientos, cheques, recibos y órdenes de pago para recargar todo">
-              ⚠ Reiniciar Tesorería
+            <button className="btn btn-outline" onClick={() => setTreasuryResetOpen(true)} title="Borrar Compras, Tesorería y ventas sin CAE para recargar todo">
+              ⚠ Reiniciar Compras y Finanzas
             </button>
           )}
         </div>
@@ -1716,7 +1716,7 @@ export function FinanceAccountsPage() {
       <TreasuryResetModal
         open={treasuryResetOpen}
         onClose={() => setTreasuryResetOpen(false)}
-        onDone={() => { setSuccessMsg("Tesorería reiniciada: corregí el saldo inicial de cada cuenta e importá los extractos."); void reloadAccounts(); }}
+        onDone={() => { setSuccessMsg("Compras y Finanzas reiniciadas: corregí el saldo inicial de cada cuenta e importá los extractos."); void reloadAccounts(); }}
       />
       {error && <div className="alert">{error}</div>}
       {successMsg && <div className="alert" style={{ background: "rgba(16,185,129,0.12)", color: "#065f46" }}>{successMsg}</div>}
