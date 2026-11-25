@@ -109,6 +109,10 @@ export function FinanceHelpPage() {
             cheques y asientos no se tocan. Se pierden las clasificaciones hechas a mano de los que se borran. Después se puede volver a
             subir el mismo archivo.
           </Step>
+          <Step title="“🗑 Borrar cuenta” (dentro de la cuenta, cuando no tiene movimientos) la elimina, por ejemplo una creada de más.">
+            Solo se puede si no tiene movimientos, extractos, cheques, recibos, órdenes de pago, lotes, rendiciones ni fondos FCI; si tiene
+            algo, el sistema dice qué. Se van con ella su perfil de importación, sus reglas propias y la cuenta contable asignada.
+          </Step>
           <Step title="“⚠ Reiniciar Compras y Finanzas” (solo administradores, en Bancos y Cajas) borra todo lo operativo para recargarlo desde cero.">
             Compras completo (solicitudes, cotizaciones, órdenes, recepciones, facturas de proveedor y comprobantes importados de ARCA), los
             comprobantes de venta sin CAE, y Tesorería: movimientos de todas las cuentas, importaciones, cheques, recibos, órdenes de pago,

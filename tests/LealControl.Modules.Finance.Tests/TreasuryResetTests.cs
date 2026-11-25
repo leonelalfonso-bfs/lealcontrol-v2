@@ -45,4 +45,30 @@ public sealed class TreasuryResetTests : IClassFixture<FinanceWebApplicationFact
             (await db.Accounts.AnyAsync(x => x.Id == accountId)).Should().BeTrue();
         });
     }
+
+    [Fact]
+    public async Task Account_is_deleted_only_when_nothing_is_recorded_on_it()
+    {
+        var tenantId = FinanceWebApplicationFactory.DemoTenantId;
+        var client = _factory.CreateAuthenticatedClient(tenantId);
+        Guid empty = Guid.NewGuid(), used = Guid.NewGuid();
+        await _factory.WithDbAsync(async db =>
+        {
+            foreach (var (id, name) in new[] { (empty, "Billetera de más"), (used, "Billetera usada") })
+                db.Accounts.Add(new FinancialAccount { Id = id, TenantId = tenantId, Name = name, Currency = "ARS", Type = FinancialAccountType.Bank, IsActive = true, CreatedAtUtc = DateTime.UtcNow });
+            db.Movements.Add(new FinancialMovement { Id = Guid.NewGuid(), TenantId = tenantId, AccountId = used, Kind = FinancialMovementKind.Debit, Amount = 5m, Currency = "ARS", OperationDateUtc = DateTime.UtcNow, Description = "x", CreatedAtUtc = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        });
+
+        var refused = await client.DeleteAsync($"/api/v1/finance/accounts/{used}");
+        ((int)refused.StatusCode).Should().Be(409);
+        (await refused.Content.ReadAsStringAsync()).Should().Contain("1 movimientos");
+        (await client.DeleteAsync($"/api/v1/finance/accounts/{empty}")).EnsureSuccessStatusCode();
+
+        await _factory.WithDbAsync(async db =>
+        {
+            (await db.Accounts.AnyAsync(x => x.Id == empty)).Should().BeFalse();
+            (await db.Accounts.AnyAsync(x => x.Id == used)).Should().BeTrue();
+        });
+    }
 }

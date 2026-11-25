@@ -178,6 +178,7 @@ export const api = {
   resetTreasury: (confirm: string) => request<unknown>("/api/v1/finance/treasury-reset", { method: "POST", body: JSON.stringify({ confirm }) }),
   getPurchasesReset: () => request<{ purchaseInvoices: number; purchaseOrders: number; receptions: number; requests: number; quotations: number; arcaVouchers: number; salesDrafts: number }>("/api/v1/purchases/operational-reset"),
   resetPurchases: (confirm: string) => request<unknown>("/api/v1/purchases/operational-reset", { method: "POST", body: JSON.stringify({ confirm }) }),
+  deleteFinanceAccount: (accountId: string) => request<void>(`/api/v1/finance/accounts/${accountId}`, { method: "DELETE" }),
   getStatementResetPlan: (accountId: string) =>
     request<{ accountName: string; openingBalance: number; imported: number; deleted: number; keptAsPending: number; systemBackToPending: number; imports: number; from?: string | null; to?: string | null }>(
       `/api/v1/finance/accounts/${accountId}/reset-statement`),
