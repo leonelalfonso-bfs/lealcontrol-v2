@@ -28,6 +28,40 @@ internal static class FinanceAccountReset
     {
         var group = endpoints.MapGroup("/api/v1/finance/accounts").WithTags("Finance").RequirePolicyOnWrites("RequireFinance");
 
+        // Borrar la cuenta en sí (por ejemplo, una creada de más): solo si no tiene nada registrado.
+        group.MapDelete("/{accountId:guid}", async (Guid accountId, FinanceDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        {
+            var t = tenant.TenantId.Value;
+            var account = await db.Accounts.SingleOrDefaultAsync(x => x.Id == accountId && x.TenantId == t, ct);
+            if (account is null) return Results.NotFound("Cuenta inexistente.");
+            var uses = new (string Label, int Count)[]
+            {
+                ("movimientos", await db.Movements.CountAsync(x => x.TenantId == t && x.AccountId == accountId, ct)),
+                ("importaciones de extracto", await db.BankStatementImports.CountAsync(x => x.TenantId == t && x.AccountId == accountId, ct)),
+                ("cheques", await db.ReceivedCheques.CountAsync(x => x.TenantId == t && x.BankAccountId == accountId, ct)),
+                ("recibos", await db.CollectionReceipts.CountAsync(x => x.TenantId == t && x.AccountId == accountId, ct)
+                    + await db.CollectionReceiptLines.CountAsync(x => x.TenantId == t && x.AccountId == accountId, ct)),
+                ("renglones de órdenes de pago", await db.PaymentOrderLines.CountAsync(x => x.TenantId == t && x.AccountId == accountId, ct)),
+                ("lotes de pago", await db.PaymentBatches.CountAsync(x => x.TenantId == t && x.AccountId == accountId, ct)),
+                ("rendiciones", await db.ExpenseReports.CountAsync(x => x.TenantId == t && x.WalletAccountId == accountId, ct)),
+                ("fondos FCI", await db.InvestmentFunds.CountAsync(x => x.TenantId == t && x.AccountId == accountId, ct))
+            }.Where(u => u.Count > 0).ToList();
+            if (uses.Count > 0)
+                return Results.Conflict($"No se puede borrar \"{account.Name}\": tiene {string.Join(", ", uses.Select(u => $"{u.Count} {u.Label}"))}.");
+
+            // Lo que solo existe para esta cuenta se va con ella: perfil de importación, reglas propias y cuenta contable asignada.
+            await db.BankImportProfiles.Where(x => x.TenantId == t && x.AccountId == accountId).ExecuteDeleteAsync(ct);
+            await db.FinancialConceptRules.Where(x => x.TenantId == t && x.AccountId == accountId).ExecuteDeleteAsync(ct);
+            var hasMapping = await db.Database.SqlQueryRaw<bool>(
+                @"SELECT to_regclass('accounting.finance_account_mapping') IS NOT NULL AS ""Value""").SingleAsync(ct);
+            if (hasMapping)
+                await db.Database.ExecuteSqlInterpolatedAsync(
+                    $@"DELETE FROM accounting.finance_account_mapping WHERE ""TenantId"" = {t} AND ""FinancialAccountId"" = {accountId}", ct);
+            db.Accounts.Remove(account);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        });
+
         group.MapGet("/{accountId:guid}/reset-statement", async (Guid accountId, FinanceDbContext db, ITenantContext tenant, CancellationToken ct) =>
         {
             var plan = await PlanAsync(db, tenant.TenantId.Value, accountId, ct);

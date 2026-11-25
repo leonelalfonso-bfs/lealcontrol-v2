@@ -729,6 +729,28 @@ export function FinanceAccountsPage() {
             <button className="btn btn-outline" onClick={() => setSelectedAccount(null)}>
               ← Volver a Cuentas
             </button>
+            {movements.length === 0 && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                title="Borrar esta cuenta (solo si no tiene nada registrado)"
+                onClick={() => {
+                  if (!window.confirm(`¿Borrar la cuenta "${selectedAccount.name}"? No se puede deshacer.`)) return;
+                  void (async () => {
+                    try {
+                      await api.deleteFinanceAccount(selectedAccount.id);
+                      setSelectedAccount(null);
+                      setSuccessMsg(`Cuenta "${selectedAccount.name}" borrada.`);
+                      await reloadAccounts();
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : "No se pudo borrar la cuenta.");
+                    }
+                  })();
+                }}
+              >
+                🗑 Borrar cuenta
+              </button>
+            )}
             {isManualAccount(selectedAccount) ? (
               <button
                 type="button"
