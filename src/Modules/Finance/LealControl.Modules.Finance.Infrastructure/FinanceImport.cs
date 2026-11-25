@@ -816,6 +816,37 @@ public static class FinanceImport
         return candidates.Count == 1 ? candidates[0] : null;
     }
 
+    /// <summary>
+    /// Orden del extracto: por día y, dentro del día, siguiendo la cadena de saldos del banco (saldo anterior ±
+    /// importe = saldo del renglón). La hora de importación no sirve cuando un mismo día llega en dos extractos.
+    /// Lo que no encadena (sin saldo informado, movimientos del sistema) va al final del día, por orden de carga.
+    /// </summary>
+    public static List<FinancialMovement> StatementOrder(IEnumerable<FinancialMovement> movements)
+    {
+        static decimal Signed(FinancialMovement m) => m.Kind == FinancialMovementKind.Credit ? m.Amount : -m.Amount;
+        var result = new List<FinancialMovement>();
+        decimal? balance = null;
+        foreach (var day in movements.GroupBy(m => m.OperationDateUtc.Date).OrderBy(g => g.Key))
+        {
+            var pending = day.OrderBy(m => m.CreatedAtUtc).ThenBy(m => m.Id).ToList();
+            var chained = pending.Where(m => m.ReportedBalance.HasValue).ToList();
+            // Sin saldo anterior, arranca el renglón cuyo saldo previo no es el saldo de ningún otro del día.
+            balance ??= chained.Select(m => (decimal?)(m.ReportedBalance!.Value - Signed(m)))
+                .FirstOrDefault(start => chained.All(o => o.ReportedBalance != start));
+            while (balance.HasValue && chained.FirstOrDefault(m => m.ReportedBalance == balance + Signed(m)) is { } next)
+            {
+                result.Add(next);
+                chained.Remove(next);
+                pending.Remove(next);
+                balance = next.ReportedBalance;
+            }
+            result.AddRange(pending);
+            var lastReported = pending.LastOrDefault(m => m.ReportedBalance.HasValue);
+            if (lastReported is not null) balance = lastReported.ReportedBalance;
+        }
+        return result;
+    }
+
     public static bool CountsTowardBankBalance(FinancialMovement m)
     {
         if (m.Origin != FinancialMovementOrigin.System)

@@ -172,7 +172,7 @@ public static class FinanceReceipts
             var tenantId = tenant.TenantId.Value;
             var account = await db.Accounts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == accountId && x.TenantId == tenantId, ct);
             if (account is null) return Results.NotFound("Cuenta financiera inexistente.");
-            var rows = await db.Movements.AsNoTracking().Where(x => x.AccountId == accountId && x.TenantId == tenantId).OrderBy(x => x.OperationDateUtc).ThenBy(x => x.CreatedAtUtc).ThenBy(x => x.Id).ToListAsync(ct);
+            var rows = FinanceImport.StatementOrder(await db.Movements.AsNoTracking().Where(x => x.AccountId == accountId && x.TenantId == tenantId).ToListAsync(ct));
             var conceptIds = rows.Where(x => x.ConceptId.HasValue).Select(x => x.ConceptId!.Value).Distinct().ToList();
             var concepts = await db.FinancialConcepts.AsNoTracking().Where(x => x.TenantId == tenantId && conceptIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Name, ct);
             var running = account.OpeningBalance;
