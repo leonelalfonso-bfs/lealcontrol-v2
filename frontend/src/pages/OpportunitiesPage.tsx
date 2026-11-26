@@ -9,9 +9,9 @@ const pipeline = ["Discovery", "Proposal", "Negotiation", "Won", "Lost"] as cons
 type VisualStage = (typeof pipeline)[number];
 
 const stageMeta: Record<VisualStage, { label: string; help: string }> = {
-  Discovery: { label: "Relevamiento", help: "Necesidad, alcance y próximo paso" },
-  Proposal: { label: "Propuesta", help: "Presupuesto real preparado o enviado" },
-  Negotiation: { label: "Negociación", help: "Respuesta, cambios y acuerdos" },
+  Discovery: { label: "Por cotizar", help: "Consultas y pedidos sin presupuesto todavía" },
+  Proposal: { label: "Presupuestado", help: "Presupuesto armado o enviado al cliente" },
+  Negotiation: { label: "En negociación", help: "Respuesta, ajustes de condiciones y cierre" },
   Won: { label: "Ganada", help: "Aceptación registrada" },
   Lost: { label: "Perdida", help: "Motivo registrado" }
 };

@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
 
 const steps = [
-  ["1", "Capturar el prospecto", "En CRM → Prospectos registrá empresa, contacto, origen y necesidad. Todavía no es una oportunidad: primero hay que verificar interés real."],
-  ["2", "Contactar y calificar", "Confirmá quién compra, qué necesita, en qué plazo y cuál será el próximo paso. Si califica, convertí el prospecto a cliente y abrí la oportunidad."],
-  ["3", "Abrir la oportunidad", "En CRM → Oportunidades completá necesidad, monto, fecha esperada, responsable y una próxima actividad. Eso alimenta el Centro de Pendientes."],
-  ["4", "Proponer", "Desde la oportunidad creá el presupuesto en Ventas. La propuesta debe existir, tener versión y poder enviarse por correo con el PDF adjunto."],
-  ["5", "Seguir la conversación", "En Comunicaciones → Bandeja respondé el hilo. Vinculá el cliente si hace falta. En la ficha del cliente, el historial muestra notas, correos y oportunidades juntos."],
-  ["6", "Cerrar", "Para ganar, registrá la evidencia de aceptación. Para perder, indicá el motivo. Ambos resultados quedan en el historial del cliente."],
+  ["1", "Entra la consulta (Por cotizar)", "Puede llegar por mail (la IA abre la oportunidad y vincula el cliente o crea el prospecto) o cargarse a mano en Prospectos / Oportunidades."],
+  ["2", "Vincular o dar de alta el cliente", "Desde la misma Oportunidad podés vincular un cliente existente o convertir el prospecto consultando el CUIT en ARCA en 1 clic (pasa contacto, oportunidad y mails automáticamente)."],
+  ["3", "Presupuestado", "Desde la oportunidad creá el presupuesto en Ventas. También al crear un presupuesto directo en Ventas, la oportunidad se abre sola en Presupuestado."],
+  ["4", "En negociación", "En Comunicaciones → Bandeja seguí el hilo y registrá llamadas o acuerdos en la oportunidad. A los 5 días hábiles sin respuesta se crea un llamado de seguimiento."],
+  ["5", "Cerrar (Ganada / Perdida)", "Al pasar el presupuesto a pedido la oportunidad se marca Ganada automáticamente; también podés cerrarla a mano registrando evidencia o motivo de pérdida."],
 ];
 
 export function CrmHelpPage() {

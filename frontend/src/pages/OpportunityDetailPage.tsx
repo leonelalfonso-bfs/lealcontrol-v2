@@ -1,8 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { label, type Activity, type Conversation, type Opportunity, type Quote, type TenantUser } from "../api/types";
+import { label, type Activity, type Conversation, type CustomerSummary, type Lead, type Opportunity, type Quote, type TenantUser } from "../api/types";
 import { EmailComposer } from "../components/EmailComposer";
+import { CustomerPicker } from "../components/pickers";
 
 function money(value?: number | null, currency = "ARS") {
   return value == null ? "Sin monto estimado" : `${currency} $${Number(value).toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
@@ -12,9 +13,9 @@ const pipeline = ["Discovery", "Proposal", "Negotiation", "Won", "Lost"] as cons
 type Stage = (typeof pipeline)[number];
 
 const stageLabels: Record<Stage, string> = {
-  Discovery: "Relevamiento",
-  Proposal: "Propuesta",
-  Negotiation: "Negociación",
+  Discovery: "Por cotizar",
+  Proposal: "Presupuestado",
+  Negotiation: "En negociación",
   Won: "Ganada",
   Lost: "Perdida"
 };
@@ -26,14 +27,34 @@ export function OpportunityDetailPage() {
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [customerList, setCustomerList] = useState<CustomerSummary[]>([]);
   const [customers, setCustomers] = useState<Record<string, string>>({});
+  const [leadInfo, setLeadInfo] = useState<Lead | null>(null);
   const [users, setUsers] = useState<TenantUser[]>([]);
 
-  // Stage change / Reversion Modal State
-  const [showStageModal, setShowStageModal] = useState(false);
+  // Panel integrado de cambio / reversión de etapa (sin modal flotante)
+  const [showStagePanel, setShowStagePanel] = useState(false);
   const [targetStage, setTargetStage] = useState<Stage>("Negotiation");
   const [revertReason, setRevertReason] = useState("");
   const [reverting, setReverting] = useState(false);
+
+  // Panel integrado de edición de datos comerciales
+  const [showEditPanel, setShowEditPanel] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editCurrency, setEditCurrency] = useState("ARS");
+  const [editOwnerName, setEditOwnerName] = useState("");
+  const [editCloseDate, setEditCloseDate] = useState("");
+  const [editPriority, setEditPriority] = useState("Normal");
+
+  // Panel integrado para vincular cliente existente o convertir prospecto con ARCA
+  const [linkMode, setLinkMode] = useState<"existing" | "convert">("existing");
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [convertCuit, setConvertCuit] = useState("");
+  const [convertLegalName, setConvertLegalName] = useState("");
+  const [convertTaxCondition, setConvertTaxCondition] = useState("ResponsableInscripto");
+  const [lookingUpArca, setLookingUpArca] = useState(false);
+  const [arcaFeedback, setArcaFeedback] = useState<string | null>(null);
 
   const [description, setDescription] = useState("");
   const [type, setType] = useState("Call");
@@ -45,19 +66,28 @@ export function OpportunityDetailPage() {
   const load = async () => {
     if (!id) return;
     try {
-      const [opps, quoteList, customerList, opportunityActivities, userList] = await Promise.all([
+      const [opps, quoteList, allCustomers, opportunityActivities, userList, allLeads] = await Promise.all([
         api.listOpportunities(),
         api.listQuotes(),
         api.listAllCustomers(),
         api.opportunityTimeline(id),
-        api.listTenantUsers().catch(() => [])
+        api.listTenantUsers().catch(() => []),
+        api.listLeads().catch(() => [])
       ]);
       const found = opps.find((item) => item.id === id) ?? null;
       setOpportunity(found);
       setQuotes(quoteList.filter((quote) => quote.opportunityId === id));
       setActivities(opportunityActivities);
-      setCustomers(Object.fromEntries(customerList.map((customer) => [customer.id, customer.legalName])));
+      setCustomerList(allCustomers);
+      setCustomers(Object.fromEntries(allCustomers.map((customer) => [customer.id, customer.legalName])));
       setUsers((userList || []).filter((u) => u.isActive !== false));
+      const matchedLead = found?.leadId ? allLeads.find((l) => l.id === found.leadId) ?? null : null;
+      setLeadInfo(matchedLead);
+      if (matchedLead && !found?.customerId) {
+        setConvertLegalName((prev) => prev || matchedLead.companyName || matchedLead.name || "");
+        const cuitMatch = matchedLead.description?.match(/CUIT\s*([0-9-]{11,13})/i);
+        if (cuitMatch) setConvertCuit((prev) => prev || cuitMatch[1].replace(/\D/g, ""));
+      }
       if (!found) setError("No se encontró la oportunidad.");
     } catch (e) {
       setError((e as Error).message);
@@ -118,6 +148,113 @@ export function OpportunityDetailPage() {
     }
   };
 
+  const openEditPanel = () => {
+    if (!opportunity) return;
+    setEditTitle(opportunity.title);
+    setEditAmount(opportunity.amount != null ? String(opportunity.amount) : "");
+    setEditCurrency(opportunity.currency || "ARS");
+    setEditOwnerName(opportunity.ownerName || "");
+    setEditCloseDate(opportunity.expectedCloseDate ? opportunity.expectedCloseDate.slice(0, 10) : "");
+    setEditPriority(opportunity.priority || "Normal");
+    setShowEditPanel((v) => !v);
+    setShowStagePanel(false);
+  };
+
+  const saveEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!opportunity || !editTitle.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const matchedUser = users.find((u) => u.fullName === editOwnerName);
+      await api.updateOpportunity(opportunity.id, {
+        title: editTitle.trim(),
+        amount: editAmount.trim() ? Number(editAmount.replace(",", ".")) : null,
+        currency: editCurrency,
+        ownerName: editOwnerName.trim() || null,
+        ownerId: matchedUser?.id ?? null,
+        priority: editPriority,
+        expectedCloseDate: editCloseDate ? new Date(`${editCloseDate}T12:00:00`).toISOString() : null
+      });
+      setShowEditPanel(false);
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const attachExistingCustomer = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!opportunity || !selectedCustomerId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.attachCustomerToOpportunity(opportunity.id, selectedCustomerId);
+      setSelectedCustomerId("");
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const consultArcaForLead = async () => {
+    const clean = convertCuit.replace(/\D/g, "");
+    if (clean.length !== 11) {
+      setError("Ingresá un CUIT de 11 dígitos antes de consultar ARCA.");
+      return;
+    }
+    setLookingUpArca(true);
+    setError(null);
+    setArcaFeedback(null);
+    try {
+      const res = await api.consultArcaCuit(clean);
+      if (res.legalName) setConvertLegalName(res.legalName);
+      if (res.taxCondition && ["ResponsableInscripto", "Monotributo", "Exento", "ConsumidorFinal"].includes(res.taxCondition)) {
+        setConvertTaxCondition(res.taxCondition);
+      }
+      setArcaFeedback(`ARCA confirmó: ${res.legalName} (${label(res.taxCondition)}).`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLookingUpArca(false);
+    }
+  };
+
+  const convertLeadHere = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!opportunity?.leadId) return;
+    const clean = convertCuit.replace(/\D/g, "");
+    if (clean.length !== 11) {
+      setError("El CUIT debe contener 11 dígitos numéricos.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await api.convertLead(opportunity.leadId, {
+        legalName: convertLegalName.trim(),
+        documentType: "Cuit",
+        documentNumber: clean,
+        taxCondition: convertTaxCondition,
+        iibbRegime: "Local",
+        isCustomer: true,
+        isSupplier: false,
+        email: leadInfo?.email ?? undefined,
+        phone: leadInfo?.phone ?? undefined
+      }, false);
+      setArcaFeedback(null);
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleStageReversion = async (e: FormEvent) => {
     e.preventDefault();
     if (!opportunity || !revertReason.trim()) return;
@@ -130,7 +267,7 @@ export function OpportunityDetailPage() {
         revertReason.trim(),
         { description: `[CAMBIO / REVERSIÓN DE ETAPA a ${stageLabels[targetStage]}] Motivo: ${revertReason.trim()}` }
       );
-      setShowStageModal(false);
+      setShowStagePanel(false);
       setRevertReason("");
       await load();
     } catch (err: any) {
@@ -175,13 +312,19 @@ export function OpportunityDetailPage() {
               onClose={() => setShowEmail(false)}
             />
           )}
+          {!isClosed && (
+            <button type="button" className="btn btn-outline" onClick={openEditPanel}>
+              ✏️ Editar datos
+            </button>
+          )}
           {isClosed ? (
             <button
               type="button"
               className="btn btn-outline"
               onClick={() => {
                 setTargetStage("Negotiation");
-                setShowStageModal(true);
+                setShowEditPanel(false);
+                setShowStagePanel((v) => !v);
               }}
             >
               🔄 Reabrir oportunidad
@@ -192,7 +335,8 @@ export function OpportunityDetailPage() {
               className="btn btn-outline"
               onClick={() => {
                 setTargetStage("Discovery");
-                setShowStageModal(true);
+                setShowEditPanel(false);
+                setShowStagePanel((v) => !v);
               }}
             >
               🔄 Cambiar Etapa
@@ -239,57 +383,192 @@ export function OpportunityDetailPage() {
         </div>
       </div>
 
-      {/* Modal: Cambiar / Revertir Etapa con Motivo Obligatorio */}
-      {showStageModal && (
-        <div className="modal-backdrop" onClick={() => setShowStageModal(false)}>
-          <div className="modal-card" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
-            <div className="section-head">
-              <div>
-                <span className="eyebrow">AUDITORÍA COMERCIAL</span>
-                <h2>🔄 Revertir / Cambiar Etapa</h2>
-              </div>
-              <button type="button" className="icon-button" onClick={() => setShowStageModal(false)}>
-                ×
-              </button>
+      {/* Panel integrado: Editar datos comerciales */}
+      {showEditPanel && !isClosed && (
+        <form onSubmit={saveEdit} className="card pad" style={{ marginBottom: 16 }}>
+          <div className="section-head">
+            <div>
+              <span className="eyebrow">DATOS COMERCIALES</span>
+              <h2>Editar oportunidad</h2>
             </div>
-            <p className="muted t-small">
-              Cualquier retroceso o cambio de estado exige un motivo detallado que quedará registrado en el historial de la oportunidad.
-            </p>
+            <button type="button" className="btn ghost compact" onClick={() => setShowEditPanel(false)}>Cerrar</button>
+          </div>
+          <div className="grid-3">
+            <label>
+              Título *
+              <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required maxLength={150} />
+            </label>
+            <label>
+              Monto estimado
+              <input type="number" step="0.01" min="0" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} placeholder="Sin monto" />
+            </label>
+            <label>
+              Moneda
+              <select value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)}>
+                <option value="ARS">ARS</option>
+                <option value="USD">USD</option>
+              </select>
+            </label>
+            <label>
+              Responsable / Vendedor
+              <input list="opp-owners-list" value={editOwnerName} onChange={(e) => setEditOwnerName(e.target.value)} placeholder="Sin asignar" />
+              <datalist id="opp-owners-list">
+                {users.map((u) => <option key={u.id} value={u.fullName} />)}
+              </datalist>
+            </label>
+            <label>
+              Cierre estimado
+              <input type="date" value={editCloseDate} onChange={(e) => setEditCloseDate(e.target.value)} />
+            </label>
+            <label>
+              Prioridad
+              <select value={editPriority} onChange={(e) => setEditPriority(e.target.value)}>
+                <option value="Low">Baja</option>
+                <option value="Normal">Normal</option>
+                <option value="High">Alta</option>
+                <option value="Urgent">Urgente</option>
+              </select>
+            </label>
+          </div>
+          <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+            <button type="button" className="btn btn-outline" onClick={() => setShowEditPanel(false)}>Cancelar</button>
+            <button className="btn" disabled={busy || !editTitle.trim()}>{busy ? "Guardando…" : "Guardar cambios"}</button>
+          </div>
+        </form>
+      )}
 
-            <form onSubmit={handleStageReversion} className="stack" style={{ gap: 14, marginTop: 12 }}>
+      {/* Panel integrado: Cambiar / Revertir Etapa (sin modal flotante) */}
+      {showStagePanel && (
+        <section className="card pad" style={{ marginBottom: 16 }}>
+          <div className="section-head">
+            <div>
+              <span className="eyebrow">AUDITORÍA COMERCIAL</span>
+              <h2>🔄 {isClosed ? "Reabrir oportunidad" : "Cambiar / Revertir Etapa"}</h2>
+            </div>
+            <button type="button" className="btn ghost compact" onClick={() => setShowStagePanel(false)}>
+              Cerrar
+            </button>
+          </div>
+          <p className="muted t-small">
+            Cualquier cambio o retroceso de etapa registra un motivo en el historial comercial de la oportunidad.
+          </p>
+          <form onSubmit={handleStageReversion} className="stack" style={{ gap: 12, marginTop: 12 }}>
+            <div className="grid-2">
               <label>
                 Nueva Etapa Destino *
                 <select value={targetStage} onChange={(e) => setTargetStage(e.target.value as Stage)} required>
-                  <option value="Discovery">1. Relevamiento</option>
-                  <option value="Proposal">2. Propuesta</option>
-                  <option value="Negotiation">3. Negociación</option>
+                  <option value="Discovery">1. Por cotizar</option>
+                  <option value="Proposal">2. Presupuestado</option>
+                  <option value="Negotiation">3. En negociación</option>
                   <option value="Won">4. Ganada</option>
                   <option value="Lost">5. Perdida</option>
                 </select>
               </label>
-
               <label>
-                Motivo Obligatorio de la Reversión / Cambio *
-                <textarea
+                Motivo del cambio *
+                <input
                   required
-                  rows={4}
                   value={revertReason}
                   onChange={(e) => setRevertReason(e.target.value)}
-                  placeholder="Ej: El cliente solicitó reabrir la negociación para modificar plazos y alcances..."
+                  placeholder="Ej.: El cliente pidió revisar plazos y condiciones…"
                 />
               </label>
+            </div>
+            <div className="toolbar" style={{ justifyContent: "flex-end" }}>
+              <button type="button" className="btn btn-outline" onClick={() => setShowStagePanel(false)}>
+                Cancelar
+              </button>
+              <button className="btn" disabled={reverting || !revertReason.trim()}>
+                {reverting ? "Guardando…" : "Confirmar cambio de etapa"}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
 
-              <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: 8 }}>
-                <button type="button" className="btn btn-outline" onClick={() => setShowStageModal(false)}>
-                  Cancelar
+      {/* Panel integrado: Vincular cliente existente o convertir prospecto con ARCA */}
+      {!opportunity.customerId && !isClosed && (
+        <section className="card pad" style={{ marginBottom: 16 }}>
+          <div className="section-head">
+            <div>
+              <span className="eyebrow">CLIENTE PENDIENTE</span>
+              <h2>Vincular o dar de alta el cliente para poder presupuestar</h2>
+            </div>
+            <div className="toolbar">
+              <button
+                type="button"
+                className={linkMode === "existing" ? "btn compact" : "btn ghost compact"}
+                onClick={() => setLinkMode("existing")}
+              >
+                Vincular cliente existente
+              </button>
+              {opportunity.leadId && (
+                <button
+                  type="button"
+                  className={linkMode === "convert" ? "btn compact" : "btn ghost compact"}
+                  onClick={() => setLinkMode("convert")}
+                >
+                  Convertir prospecto (ARCA)
                 </button>
-                <button className="btn" disabled={reverting || !revertReason.trim()}>
-                  {reverting ? "Guardando..." : "Confirmar Cambio de Etapa"}
+              )}
+            </div>
+          </div>
+
+          {linkMode === "existing" ? (
+            <form onSubmit={attachExistingCustomer} className="toolbar" style={{ marginTop: 10 }}>
+              <div style={{ flex: "1 1 320px" }}>
+                <CustomerPicker
+                  options={customerList}
+                  value={selectedCustomerId}
+                  onChange={setSelectedCustomerId}
+                  placeholder="Buscar cliente existente por razón social o CUIT…"
+                />
+              </div>
+              <button className="btn" disabled={busy || !selectedCustomerId}>
+                {busy ? "Vinculando…" : "Vincular cliente"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={convertLeadHere} className="stack" style={{ gap: 12, marginTop: 10 }}>
+              {arcaFeedback && <div className="success-banner">{arcaFeedback}</div>}
+              <div className="grid-3">
+                <label>
+                  CUIT (11 dígitos) *
+                  <div className="row" style={{ gap: 6 }}>
+                    <input
+                      value={convertCuit}
+                      onChange={(e) => setConvertCuit(e.target.value)}
+                      inputMode="numeric"
+                      placeholder="30-12345678-9"
+                      required
+                    />
+                    <button type="button" className="btn btn-outline compact" disabled={lookingUpArca} onClick={() => void consultArcaForLead()}>
+                      {lookingUpArca ? "Consultando…" : "ARCA"}
+                    </button>
+                  </div>
+                </label>
+                <label>
+                  Razón Social *
+                  <input value={convertLegalName} onChange={(e) => setConvertLegalName(e.target.value)} required />
+                </label>
+                <label>
+                  Condición Fiscal *
+                  <select value={convertTaxCondition} onChange={(e) => setConvertTaxCondition(e.target.value)}>
+                    <option value="ResponsableInscripto">Responsable Inscripto</option>
+                    <option value="Monotributo">Monotributo</option>
+                    <option value="Exento">Exento</option>
+                    <option value="ConsumidorFinal">Consumidor Final</option>
+                  </select>
+                </label>
+              </div>
+              <div className="toolbar" style={{ justifyContent: "flex-end" }}>
+                <button className="btn" disabled={busy || !convertLegalName.trim()}>
+                  {busy ? "Creando cliente…" : "Crear cliente y vincular a esta oportunidad"}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+          )}
+        </section>
       )}
 
       <div className="opportunity-layout">

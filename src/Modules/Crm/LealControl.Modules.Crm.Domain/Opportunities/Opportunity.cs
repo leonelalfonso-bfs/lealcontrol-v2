@@ -253,6 +253,37 @@ public sealed class Opportunity : AggregateRoot<OpportunityId>
         UpdatedAtUtc = utcNow;
     }
 
+    public Result UpdateDetails(
+        string title,
+        decimal? amount,
+        string? currency,
+        string? ownerName,
+        Guid? ownerId,
+        OpportunityPriority priority,
+        DateTime? expectedCloseDate,
+        DateTime utcNow)
+    {
+        if (IsClosed)
+        {
+            return Result.Failure(CrmErrors.OpportunityClosed);
+        }
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return Result.Failure(CrmErrors.OpportunityTitleRequired);
+        }
+
+        Title = title.Trim();
+        Amount = amount;
+        Currency = string.IsNullOrWhiteSpace(currency) ? Currency ?? "ARS" : currency.Trim().ToUpperInvariant();
+        OwnerName = NormalizeOwner(ownerName);
+        OwnerId = ownerId;
+        Priority = priority;
+        ExpectedCloseDate = expectedCloseDate;
+        UpdatedAtUtc = utcNow;
+        return Result.Success();
+    }
+
     private static int GetDefaultProbability(OpportunityStage stage) => stage switch
     {
         OpportunityStage.Lead => 10,

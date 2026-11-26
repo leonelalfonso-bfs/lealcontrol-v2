@@ -42,6 +42,7 @@ public static class AiEndpoints
         services.AddSingleton<IAiArcaCuitLookup, ScopedAiArcaCuitLookup>();
         services.AddSingleton<AiMailReader>();
         services.AddSingleton<AiSupervisor>();
+        services.AddScoped<LealControl.Modules.Crm.Application.Leads.ILeadConvertedHook, CommunicationsLeadConvertedHook>();
         services.AddSingleton<LealControl.BuildingBlocks.Notices.INoticeProvider, AiBriefingNotices>();
         services.AddHostedService<AiBackgroundService>();
         return services;
@@ -185,6 +186,40 @@ public sealed class AiBackgroundService(IServiceProvider services, TimeProvider 
             {
                 logger.LogWarning(ex, "IA: falló la lectura de mails de la empresa {TenantId}", tenantId);
             }
+        }
+    }
+}
+
+/// <summary>Al convertir un prospecto en cliente, vincula automáticamente sus conversaciones de la bandeja al nuevo cliente.</summary>
+internal sealed class CommunicationsLeadConvertedHook(
+    ITenantConnectionProvider connections,
+    ILogger<CommunicationsLeadConvertedHook> logger) : LealControl.Modules.Crm.Application.Leads.ILeadConvertedHook
+{
+    public async Task OnLeadConvertedAsync(
+        TenantId tenantId,
+        LealControl.Modules.Crm.Domain.Leads.LeadId leadId,
+        LealControl.Modules.Crm.Domain.Customers.CustomerId customerId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var cs = await connections.GetConnectionStringAsync(tenantId, cancellationToken);
+            await using var comms = new LealControl.Modules.Communications.Infrastructure.Persistence.CommunicationsDbContext(
+                new DbContextOptionsBuilder<LealControl.Modules.Communications.Infrastructure.Persistence.CommunicationsDbContext>().UseNpgsql(cs).Options);
+            var threads = await comms.Conversations
+                .Where(c => c.TenantId == tenantId.Value && c.RelatedLeadId == leadId.Value && c.RelatedCustomerId == null)
+                .ToListAsync(cancellationToken);
+            if (threads.Count == 0) return;
+            foreach (var thread in threads) thread.LinkCustomer(customerId.Value);
+            await comms.SaveChangesAsync(cancellationToken);
+        }
+        catch (Npgsql.PostgresException ex) when (ex.SqlState == Npgsql.PostgresErrorCodes.UndefinedTable)
+        {
+            // La empresa todavía no usa la bandeja de entrada.
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "No se pudieron re-vincular conversaciones al convertir el lead {LeadId}", leadId.Value);
         }
     }
 }

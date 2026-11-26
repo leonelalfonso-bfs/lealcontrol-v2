@@ -10,6 +10,7 @@ export function LeadsPage() {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [contactName, setContactName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [source, setSource] = useState("Manual");
   const [conversionLead, setConversionLead] = useState<Lead | null>(null);
@@ -19,6 +20,8 @@ export function LeadsPage() {
   const [iibbRegime, setIibbRegime] = useState("Local");
   const [openOpportunityAfter, setOpenOpportunityAfter] = useState(true);
   const [converting, setConverting] = useState(false);
+  const [lookingUpArca, setLookingUpArca] = useState(false);
+  const [arcaInfo, setArcaInfo] = useState<string | null>(null);
 
   const load = () => api.listLeads().then(setLeads).catch((e: Error) => setError(e.message));
   useEffect(() => {
@@ -27,21 +30,64 @@ export function LeadsPage() {
 
   const capture = async (e: FormEvent) => {
     e.preventDefault();
-    await api.captureLead({ name, contactName, phone, source });
-    setName("");
-    setContactName("");
-    setPhone("");
-    load();
+    setError(null);
+    try {
+      await api.captureLead({ name, contactName, email: email.trim() || null, phone, source });
+      setName("");
+      setContactName("");
+      setEmail("");
+      setPhone("");
+      load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
   };
 
   const openConversion = (lead: Lead) => {
     setConversionLead(lead);
     setLegalName(lead.companyName || lead.name || "");
-    setCuit("");
+    const cuitMatch = lead.description?.match(/CUIT\s*([0-9-]{11,13})/i);
+    setCuit(cuitMatch ? cuitMatch[1].replace(/\D/g, "") : "");
     setTaxCondition("ResponsableInscripto");
     setIibbRegime("Local");
     setOpenOpportunityAfter(true);
+    setArcaInfo(null);
     setError(null);
+  };
+
+  const consultArca = async () => {
+    const clean = cuit.replace(/\D/g, "");
+    if (clean.length !== 11) {
+      setError("Ingresá un CUIT de 11 dígitos antes de consultar ARCA.");
+      return;
+    }
+    setLookingUpArca(true);
+    setError(null);
+    setArcaInfo(null);
+    try {
+      const res = await api.consultArcaCuit(clean);
+      if (res.legalName) setLegalName(res.legalName);
+      if (res.taxCondition && ["ResponsableInscripto", "Monotributo", "Exento", "ConsumidorFinal"].includes(res.taxCondition)) {
+        setTaxCondition(res.taxCondition);
+      }
+      setArcaInfo(`ARCA confirmó: ${res.legalName} (${label(res.taxCondition)}).`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLookingUpArca(false);
+    }
+  };
+
+  const archiveLead = async (lead: Lead) => {
+    if (!confirm(`¿Archivar el prospecto "${lead.name}"?`)) return;
+    setError(null);
+    try {
+      await api.archiveLead(lead.id);
+      if (conversionLead?.id === lead.id) setConversionLead(null);
+      load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
   };
 
   const convert = async (event: FormEvent) => {
@@ -111,6 +157,7 @@ export function LeadsPage() {
       <form className="card pad toolbar" onSubmit={capture} style={{ marginBottom: 16 }}>
         <input placeholder="Empresa / consulta *" value={name} onChange={(e) => setName(e.target.value)} required />
         <input placeholder="Contacto" value={contactName} onChange={(e) => setContactName(e.target.value)} />
+        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <input placeholder="Teléfono" value={phone} onChange={(e) => setPhone(e.target.value)} />
         <select value={source} onChange={(e) => setSource(e.target.value)} style={{ maxWidth: 160 }}>
           <option value="Manual">Manual</option>
@@ -128,26 +175,32 @@ export function LeadsPage() {
           <div className="page-head" style={{ marginBottom: 16 }}>
             <div>
               <h3 style={{ margin: 0 }}>🏢 Convertir Prospecto en Cliente Formal</h3>
-              <div className="muted">Se dará de alta en el Directorio y se habilitará la gestión de Oportunidades.</div>
+              <div className="muted">Se da de alta en Clientes, se guarda el contacto y se vinculan sus oportunidades y mails.</div>
             </div>
             <button type="button" className="btn ghost" onClick={() => setConversionLead(null)}>
               Cancelar
             </button>
           </div>
+          {arcaInfo && <div className="success-banner" style={{ marginBottom: 12 }}>{arcaInfo}</div>}
           <div className="grid-3">
+            <label>
+              CUIT (11 dígitos) *
+              <div className="row" style={{ gap: 6 }}>
+                <input
+                  value={cuit}
+                  onChange={(event) => setCuit(event.target.value)}
+                  inputMode="numeric"
+                  placeholder="30-12345678-9"
+                  required
+                />
+                <button type="button" className="btn btn-outline compact" disabled={lookingUpArca} onClick={() => void consultArca()}>
+                  {lookingUpArca ? "Consultando…" : "ARCA"}
+                </button>
+              </div>
+            </label>
             <label>
               Razón Social / Nombre *
               <input value={legalName} onChange={(event) => setLegalName(event.target.value)} required />
-            </label>
-            <label>
-              CUIT (11 dígitos) *
-              <input
-                value={cuit}
-                onChange={(event) => setCuit(event.target.value)}
-                inputMode="numeric"
-                placeholder="30-12345678-9"
-                required
-              />
             </label>
             <label>
               Condición Fiscal *
@@ -231,7 +284,10 @@ export function LeadsPage() {
                         🏢 Cargar Cliente
                       </Link>
                       <button type="button" className="btn compact" onClick={() => openConversion(l)}>
-                        Convertir Rápido
+                        Convertir
+                      </button>
+                      <button type="button" className="btn ghost compact" onClick={() => void archiveLead(l)}>
+                        Archivar
                       </button>
                     </div>
                   </td>

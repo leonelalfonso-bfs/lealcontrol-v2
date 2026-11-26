@@ -115,6 +115,11 @@ internal sealed class CaptureLeadCommandHandler : IRequestHandler<CaptureLeadCom
     }
 }
 
+public interface ILeadConvertedHook
+{
+    Task OnLeadConvertedAsync(TenantId tenantId, LeadId leadId, CustomerId customerId, CancellationToken cancellationToken = default);
+}
+
 internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCommand, Result<CustomerDetailDto>>
 {
     private readonly ILeadRepository _leads;
@@ -124,6 +129,7 @@ internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCom
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITenantContext _tenant;
     private readonly IClock _clock;
+    private readonly IEnumerable<ILeadConvertedHook> _hooks;
 
     public ConvertLeadCommandHandler(
         ILeadRepository leads,
@@ -132,7 +138,8 @@ internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCom
         IActivityRepository activities,
         IUnitOfWork unitOfWork,
         ITenantContext tenant,
-        IClock clock)
+        IClock clock,
+        IEnumerable<ILeadConvertedHook>? hooks = null)
     {
         _leads = leads;
         _customers = customers;
@@ -141,6 +148,7 @@ internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCom
         _unitOfWork = unitOfWork;
         _tenant = tenant;
         _clock = clock;
+        _hooks = hooks ?? [];
     }
 
     public async Task<Result<CustomerDetailDto>> Handle(ConvertLeadCommand request, CancellationToken cancellationToken)
@@ -192,10 +200,37 @@ internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCom
             return Result<CustomerDetailDto>.Failure(converted.Error);
         }
 
+        // Guardar el contacto del prospecto dentro del nuevo cliente si tiene nombre y algún canal.
+        if (!string.IsNullOrWhiteSpace(lead.ContactName) && (lead.Email is not null || lead.Phone is not null))
+        {
+            registered.Value.AddContact(
+                lead.ContactName,
+                Domain.Shared.ContactRole.Commercial,
+                locationId: null,
+                lead.Email,
+                lead.Phone,
+                whatsApp: null,
+                isPrimary: true,
+                notes: null,
+                _clock.UtcNow);
+        }
+
         _customers.Add(registered.Value);
 
+        // Re-vincular oportunidades abiertas que ya apuntaban a este prospecto (evita duplicar oportunidades).
+        var existingOpportunities = await _opportunities.ListTrackedByLeadAsync(_tenant.TenantId, lead.Id, cancellationToken);
+        Opportunity? linkedOpportunity = null;
+        foreach (var existing in existingOpportunities)
+        {
+            if (existing.CustomerId is null)
+            {
+                existing.AttachCustomer(registered.Value.Id, _clock.UtcNow);
+            }
+            linkedOpportunity ??= existing;
+        }
+
         Opportunity? createdOpportunity = null;
-        if (request.CreateOpportunity)
+        if (request.CreateOpportunity && existingOpportunities.Count == 0)
         {
             var opportunity = Opportunity.Open(
                 _tenant.TenantId,
@@ -211,7 +246,7 @@ internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCom
                 _clock.UtcNow,
                 customFields: new Dictionary<string, string>
                 {
-                    ["necesidad"] = lead.Description ?? "Pendiente de relevamiento",
+                    ["necesidad"] = lead.Description ?? "Pendiente de cotizar",
                     ["origen"] = lead.Source.ToString(),
                     ["contacto"] = lead.ContactName ?? "Pendiente"
                 });
@@ -225,16 +260,19 @@ internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCom
             _opportunities.Add(createdOpportunity);
         }
 
-        var activityDescription = createdOpportunity is null
-            ? "Prospecto calificado y convertido en cliente."
-            : $"Prospecto calificado y convertido. Se abrió la oportunidad '{createdOpportunity.Title}' en Relevamiento.";
+        var activityOpportunity = createdOpportunity ?? linkedOpportunity;
+        var activityDescription = createdOpportunity is not null
+            ? $"Prospecto convertido en cliente. Se abrió la oportunidad '{createdOpportunity.Title}' en Por cotizar."
+            : linkedOpportunity is not null
+                ? $"Prospecto convertido en cliente y vinculado a la oportunidad '{linkedOpportunity.Title}'."
+                : "Prospecto calificado y convertido en cliente.";
         var conversionActivity = Activity.Log(
             _tenant.TenantId,
             ActivityType.Note,
             activityDescription,
             registered.Value.Id,
             lead.Id,
-            createdOpportunity?.Id,
+            activityOpportunity?.Id,
             lead.AssignedTo,
             null,
             _clock.UtcNow);
@@ -245,6 +283,12 @@ internal sealed class ConvertLeadCommandHandler : IRequestHandler<ConvertLeadCom
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        foreach (var hook in _hooks)
+        {
+            await hook.OnLeadConvertedAsync(_tenant.TenantId, lead.Id, registered.Value.Id, cancellationToken);
+        }
+
         return Result<CustomerDetailDto>.Success(CustomerMappings.ToDetail(registered.Value));
     }
 }

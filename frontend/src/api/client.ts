@@ -421,11 +421,31 @@ export const api = {
   convertLead: (id: string, body: CustomerWrite, createOpportunity = true) =>
     request<CustomerDetail>(`/api/v1/crm/leads/${id}/convert?createOpportunity=${createOpportunity}`,
       { method: "POST", body: JSON.stringify(body) }),
+  archiveLead: (id: string) =>
+    request<Lead>(`/api/v1/crm/leads/${id}/archive`, { method: "POST" }),
   listOpportunities: () => request<Opportunity[]>("/api/v1/crm/opportunities"),
   getKanbanBoard: (ownerName?: string) =>
     request<Record<string, Opportunity[]>>(`/api/v1/crm/opportunities/kanban${ownerName ? `?ownerName=${encodeURIComponent(ownerName)}` : ""}`),
   openOpportunity: (body: object) =>
     request<Opportunity>("/api/v1/crm/opportunities", { method: "POST", body: JSON.stringify(body) }),
+  attachCustomerToOpportunity: (id: string, customerId: string) =>
+    request<Opportunity>(`/api/v1/crm/opportunities/${id}/attach-customer`, {
+      method: "POST",
+      body: JSON.stringify({ customerId })
+    }),
+  updateOpportunity: (id: string, body: {
+    title: string;
+    amount?: number | null;
+    currency?: string | null;
+    ownerName?: string | null;
+    ownerId?: string | null;
+    priority?: string;
+    expectedCloseDate?: string | null;
+  }) =>
+    request<Opportunity>(`/api/v1/crm/opportunities/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
   moveStage: (id: string, stage: string) =>
     request<Opportunity>(`/api/v1/crm/opportunities/${id}/move`, {
       method: "POST",

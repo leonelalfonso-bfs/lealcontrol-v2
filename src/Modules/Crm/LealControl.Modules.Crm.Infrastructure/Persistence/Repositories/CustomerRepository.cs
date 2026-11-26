@@ -171,6 +171,15 @@ internal sealed class OpportunityRepository : IOpportunityRepository
                         && x.CustomerId == new CustomerId(customerGuid))
             .OrderByDescending(x => x.CreatedAtUtc);
 
+    public async Task<IReadOnlyList<Opportunity>> ListTrackedByLeadAsync(
+        TenantId tenantId,
+        LeadId leadId,
+        CancellationToken cancellationToken = default) =>
+        await _db.Opportunities
+            .Where(x => x.TenantId == tenantId && x.LeadId == leadId)
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<Opportunity>> ListAsync(
         TenantId tenantId,
         CancellationToken cancellationToken = default) =>
