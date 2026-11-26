@@ -77,8 +77,9 @@ export function AiSettingsCard() {
           <h2>Inteligencia artificial</h2>
           <p className="muted">
             Lee cada mail nuevo de un contacto: le pone categoría (pedido de cotización, consulta, reclamo, proveedor…), urgencia y
-            un resumen de una línea. Si es un pedido comercial nuevo, abre la oportunidad en el CRM: con el cliente si ya existe
-            (por CUIT o mail), si no con un lead nuevo. Proveedor: {settings.provider}.
+            un resumen de una línea. Vincula el cliente existente cuando hay certeza (CUIT, mail de empresa o contacto, dominio o
+            nombre único), guarda contactos nuevos de personas reales con su puesto y abre oportunidades en los pedidos comerciales.
+            Proveedor: {settings.provider}.
           </p>
         </div>
       </div>

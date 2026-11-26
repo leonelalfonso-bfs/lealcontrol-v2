@@ -171,7 +171,8 @@ public static class CrmEndpoints
                 body.Phone,
                 body.WhatsApp,
                 body.IsPrimary,
-                body.Notes);
+                body.Notes,
+                body.Position);
             var result = await sender.Send(command, cancellationToken);
             return result.ToHttp(StatusCodes.Status201Created);
         });
@@ -193,7 +194,8 @@ public static class CrmEndpoints
                 body.Phone,
                 body.WhatsApp,
                 body.IsPrimary,
-                body.Notes);
+                body.Notes,
+                body.Position);
             var result = await sender.Send(command, cancellationToken);
             return result.ToHttp();
         });
@@ -437,7 +439,8 @@ public sealed record AddCustomerContactRequest(
     string? Phone,
     string? WhatsApp,
     bool IsPrimary,
-    string? Notes)
+    string? Notes,
+    string? Position = null)
 {
     public ContactRole ParseRole()
     {

@@ -133,6 +133,8 @@ internal sealed class CustomerContactConfiguration : IEntityTypeConfiguration<Cu
         builder.Property(x => x.Id).HasConversion(id => id.Value, value => new ContactId(value));
         builder.Property(x => x.Name).HasMaxLength(160).IsRequired();
         builder.Property(x => x.Role).HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.Position).HasColumnName("position").HasMaxLength(120);
+        builder.Property(x => x.AddedAutomatically).HasColumnName("added_automatically").HasDefaultValue(false);
         builder.Property(x => x.Notes).HasMaxLength(2000);
         builder.Property(x => x.LocationId)
             .HasConversion(

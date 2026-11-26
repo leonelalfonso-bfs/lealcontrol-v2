@@ -254,6 +254,8 @@ public sealed class CrmDbContext : DbContext, IUnitOfWork
                     ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""IsLargeCompany"" boolean NOT NULL DEFAULT false;
                     ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""FceThreshold"" numeric(18,2);
                     ALTER TABLE crm.customers ADD COLUMN IF NOT EXISTS ""FceCheckedAtUtc"" timestamp with time zone;
+                    ALTER TABLE crm.customer_contacts ADD COLUMN IF NOT EXISTS position character varying(120);
+                    ALTER TABLE crm.customer_contacts ADD COLUMN IF NOT EXISTS added_automatically boolean NOT NULL DEFAULT false;
                 ", cancellationToken);
 
         // Crítico para GET timeline / opportunities: cada ALTER es independiente

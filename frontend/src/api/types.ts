@@ -31,12 +31,14 @@ export type Contact = {
   id: string;
   name: string;
   role: string;
+  position?: string | null;
   locationId?: string | null;
   email?: string | null;
   phone?: string | null;
   whatsApp?: string | null;
   isPrimary: boolean;
   notes?: string | null;
+  addedAutomatically?: boolean;
 };
 
 export type FiscalRate = {

@@ -70,8 +70,19 @@ export function CrmHelpPage() {
       </section>
 
       <section className="card pad">
-        <h2>Seguimiento automático y avisos</h2>
+        <h2>Seguimiento automático, IA y avisos</h2>
         <ul>
+          <li>
+            <strong>Lectura de mails con IA:</strong> identifica si quien escribe pertenece a un cliente existente (por CUIT,
+            mail del cliente o de un contacto, dominio corporativo único o nombre único sin conflictos). Si hay duda, la bandeja
+            sugiere candidatos para que vincules manualmente sin mezclar cuentas.
+          </li>
+          <li>
+            <strong>Contactos con puesto libre:</strong> en cada cliente podés escribir el puesto exacto de cada persona (por
+            ejemplo, <em>Jefe de Planta</em> o <em>Comprador</em>) además de su área. Cuando escribe una persona nueva de un
+            cliente existente, la IA la guarda con la etiqueta <em>Cargado automáticamente</em> (nunca crea contactos para
+            casillas genéricas como <code>info@</code>, <code>compras@</code> o <code>facturacion@</code>).
+          </li>
           <li>
             <strong>Presupuesto sin respuesta:</strong> pasados 5 días hábiles desde que se envió, si sigue en estado Enviado
             y el cliente no escribió un mail después (en una conversación vinculada a él), el sistema crea un llamado de

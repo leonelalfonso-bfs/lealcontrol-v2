@@ -592,24 +592,33 @@ internal static class CommunicationsMailEndpoints
             var conversation = await db.Conversations.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, ct);
             if (conversation is null) return Results.NotFound();
 
-            var phone = conversation.ParticipantPhone;
-            var email = conversation.ParticipantEmail;
+            var phone = conversation.ParticipantPhone ?? "";
+            var email = (conversation.ParticipantEmail ?? "").Trim().ToLowerInvariant();
+            var domain = ExtractCorporateDomainForSuggestions(email);
+            var companyHint = ExtractCompanyHint(conversation.ParticipantName);
 
-            if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(email))
+            if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(companyHint))
                 return Results.Ok(Array.Empty<object>());
 
             var matches = await db.Database.SqlQueryRaw<CustomerMatchRow>(
                 """
-                SELECT c."Id", c."LegalName", c."TradeName", c.email AS "Email", c.phone AS "Phone", c.whatsapp AS "WhatsApp"
+                SELECT DISTINCT c."Id", c."LegalName", c."TradeName", c.email AS "Email", c.phone AS "Phone", c.whatsapp AS "WhatsApp"
                 FROM crm.customers c
-                WHERE c."TenantId" = {0} AND c."IsCustomer" = true
+                LEFT JOIN crm.customer_contacts cc ON cc.customer_id = c."Id"
+                WHERE c."TenantId" = {0} AND c."IsCustomer" = true AND c.deleted_at_utc IS NULL
                 AND (
-                    ({1} IS NOT NULL AND ({1} <> '' AND (c.phone = {1} OR c.whatsapp = {1} OR c.phone LIKE '%' || RIGHT({1}, 8) OR c.whatsapp LIKE '%' || RIGHT({1}, 8))))
-                    OR ({2} IS NOT NULL AND {2} <> '' AND LOWER(c.email) = LOWER({2}))
+                    ({1} <> '' AND (
+                        c.phone = {1} OR c.whatsapp = {1}
+                        OR (LENGTH({1}) >= 8 AND (c.phone LIKE '%' || RIGHT({1}, 8) OR c.whatsapp LIKE '%' || RIGHT({1}, 8)))
+                        OR cc.phone = {1} OR cc.whatsapp = {1}
+                    ))
+                    OR ({2} <> '' AND (LOWER(c.email) = {2} OR LOWER(cc.email) = {2}))
+                    OR ({3} <> '' AND (LOWER(c.email) LIKE '%@' || {3} OR LOWER(cc.email) LIKE '%@' || {3}))
+                    OR ({4} <> '' AND (LOWER(c."LegalName") LIKE '%' || {4} || '%' OR LOWER(COALESCE(c."TradeName", '')) LIKE '%' || {4} || '%'))
                 )
                 LIMIT 5
                 """,
-                tenantId, phone ?? "", email ?? "").ToListAsync(ct);
+                tenantId, phone, email, domain ?? "", companyHint ?? "").ToListAsync(ct);
 
             return Results.Ok(matches);
         });
@@ -718,5 +727,35 @@ internal static class CommunicationsMailEndpoints
         });
 
         return group;
+    }
+
+    private static readonly HashSet<string> GenericSuggestionDomains = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "gmail.com", "googlemail.com", "hotmail.com", "hotmail.com.ar", "hotmail.es",
+        "outlook.com", "outlook.com.ar", "outlook.es", "live.com", "live.com.ar", "msn.com",
+        "yahoo.com", "yahoo.com.ar", "yahoo.es", "icloud.com", "me.com", "mac.com",
+        "proton.me", "protonmail.com", "aol.com", "gmx.com", "yandex.com", "mail.com", "zoho.com",
+        "fibertel.com.ar", "speedy.com.ar", "arnet.com.ar", "ciudad.com.ar", "infovia.com.ar",
+        "sinectis.com.ar", "telecom.com.ar"
+    };
+
+    private static string? ExtractCorporateDomainForSuggestions(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return null;
+        var at = email.LastIndexOf('@');
+        if (at <= 0 || at >= email.Length - 1) return null;
+        var domain = email[(at + 1)..].Trim().ToLowerInvariant();
+        if (!domain.Contains('.') || GenericSuggestionDomains.Contains(domain)) return null;
+        return domain;
+    }
+
+    private static string? ExtractCompanyHint(string? participantName)
+    {
+        if (string.IsNullOrWhiteSpace(participantName)) return null;
+        var raw = participantName.Contains('·')
+            ? participantName.Split('·').Last().Trim()
+            : participantName.Trim();
+        if (raw.Length < 4 || raw.Contains('@')) return null;
+        return raw.ToLowerInvariant();
     }
 }

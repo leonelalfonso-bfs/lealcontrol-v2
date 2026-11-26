@@ -15,27 +15,33 @@ public sealed class CustomerContact : Entity<ContactId>
         ContactId id,
         string name,
         ContactRole role,
+        string? position,
         LocationId? locationId,
         EmailAddress? email,
         PhoneNumber? phone,
         PhoneNumber? whatsApp,
         bool isPrimary,
-        string? notes)
+        string? notes,
+        bool addedAutomatically)
         : base(id)
     {
         Name = name;
         Role = role;
+        Position = position;
         LocationId = locationId;
         Email = email;
         Phone = phone;
         WhatsApp = whatsApp;
         IsPrimary = isPrimary;
         Notes = notes;
+        AddedAutomatically = addedAutomatically;
     }
 
     public string Name { get; private set; } = string.Empty;
 
     public ContactRole Role { get; private set; }
+
+    public string? Position { get; private set; }
 
     public LocationId? LocationId { get; private set; }
 
@@ -49,6 +55,8 @@ public sealed class CustomerContact : Entity<ContactId>
 
     public string? Notes { get; private set; }
 
+    public bool AddedAutomatically { get; private set; }
+
     internal static Result<CustomerContact> Create(
         string name,
         ContactRole role,
@@ -57,7 +65,9 @@ public sealed class CustomerContact : Entity<ContactId>
         PhoneNumber? phone,
         PhoneNumber? whatsApp,
         bool isPrimary,
-        string? notes)
+        string? notes,
+        string? position = null,
+        bool addedAutomatically = false)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -73,12 +83,14 @@ public sealed class CustomerContact : Entity<ContactId>
             ContactId.New(),
             name.Trim(),
             role,
+            NormalizePosition(position),
             locationId,
             email,
             phone,
             whatsApp,
             isPrimary,
-            string.IsNullOrWhiteSpace(notes) ? null : notes.Trim()));
+            string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
+            addedAutomatically));
     }
 
     internal Result Update(
@@ -89,7 +101,9 @@ public sealed class CustomerContact : Entity<ContactId>
         PhoneNumber? phone,
         PhoneNumber? whatsApp,
         bool isPrimary,
-        string? notes)
+        string? notes,
+        string? position = null,
+        bool addedAutomatically = false)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -103,14 +117,23 @@ public sealed class CustomerContact : Entity<ContactId>
 
         Name = name.Trim();
         Role = role;
+        Position = NormalizePosition(position);
         LocationId = locationId;
         Email = email;
         Phone = phone;
         WhatsApp = whatsApp;
         IsPrimary = isPrimary;
         Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        AddedAutomatically = addedAutomatically;
         return Result.Success();
     }
 
     internal void MarkPrimary(bool isPrimary) => IsPrimary = isPrimary;
+
+    private static string? NormalizePosition(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var trimmed = value.Trim();
+        return trimmed.Length > 120 ? trimmed[..120] : trimmed;
+    }
 }

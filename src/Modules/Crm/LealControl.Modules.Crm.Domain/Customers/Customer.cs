@@ -282,7 +282,9 @@ public sealed class Customer : AggregateRoot<CustomerId>
                 contact.Phone,
                 contact.WhatsApp,
                 contact.IsPrimary,
-                contact.Notes);
+                contact.Notes,
+                contact.Position,
+                contact.AddedAutomatically);
         }
 
         Touch(utcNow);
@@ -298,14 +300,16 @@ public sealed class Customer : AggregateRoot<CustomerId>
         PhoneNumber? whatsApp,
         bool isPrimary,
         string? notes,
-        DateTime utcNow)
+        DateTime utcNow,
+        string? position = null,
+        bool addedAutomatically = false)
     {
         if (locationId is not null && _locations.All(l => l.Id != locationId))
         {
             return Result.Failure(CrmErrors.LocationNotFound);
         }
 
-        var contact = CustomerContact.Create(name, role, locationId, email, phone, whatsApp, isPrimary, notes);
+        var contact = CustomerContact.Create(name, role, locationId, email, phone, whatsApp, isPrimary, notes, position, addedAutomatically);
         if (contact.IsFailure)
         {
             return Result.Failure(contact.Error);
@@ -331,7 +335,8 @@ public sealed class Customer : AggregateRoot<CustomerId>
         PhoneNumber? whatsApp,
         bool isPrimary,
         string? notes,
-        DateTime utcNow)
+        DateTime utcNow,
+        string? position = null)
     {
         var contact = _contacts.SingleOrDefault(x => x.Id == contactId);
         if (contact is null)
@@ -349,7 +354,7 @@ public sealed class Customer : AggregateRoot<CustomerId>
             ClearPrimaryContacts();
         }
 
-        var updated = contact.Update(name, role, locationId, email, phone, whatsApp, isPrimary, notes);
+        var updated = contact.Update(name, role, locationId, email, phone, whatsApp, isPrimary, notes, position, addedAutomatically: false);
         if (updated.IsFailure)
         {
             return updated;
