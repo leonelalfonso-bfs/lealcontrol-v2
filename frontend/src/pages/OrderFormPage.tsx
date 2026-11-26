@@ -237,7 +237,6 @@ export function OrderFormPage() {
                 <button
                   type="button"
                   className="btn ghost"
-                  style={{ padding: "8px 12px" }}
                   onClick={() => setShowCustomerModal(true)}
                 >
                   + Nuevo
@@ -264,7 +263,6 @@ export function OrderFormPage() {
                 <button
                   type="button"
                   className="btn ghost"
-                  style={{ padding: "8px 12px" }}
                   disabled={!selectedCustomer}
                   onClick={() => setShowLocationModal(true)}
                 >
@@ -292,7 +290,6 @@ export function OrderFormPage() {
                 <button
                   type="button"
                   className="btn ghost"
-                  style={{ padding: "8px 12px" }}
                   disabled={!selectedCustomer}
                   onClick={() => setShowContactModal(true)}
                 >
@@ -375,7 +372,7 @@ export function OrderFormPage() {
                     <th style={{ width: "10%" }}>Cant.</th>
                     <th style={{ width: "15%" }}>Precio Unit. ({currency})</th>
                     <th style={{ width: "10%" }}>IVA %</th>
-                    <th style={{ textAlign: "right" }}>Quitar</th>
+                    <th className="t-right">Quitar</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -428,11 +425,10 @@ export function OrderFormPage() {
                           <option value={0}>0%</option>
                         </select>
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         <button
                           type="button"
-                          className="btn danger"
-                          style={{ padding: "4px 8px" }}
+                          className="btn danger compact"
                           onClick={() => removeLine(idx)}
                         >
                           ✕
@@ -626,7 +622,7 @@ function CustomerModal({
       <div className="modal-card card pad">
         <h3>+ Alta Rápida de Cliente</h3>
         {error && <div className="alert">{error}</div>}
-        {successMsg && <div className="alert ok" style={{ background: "var(--lc-ok-bg)", border: "1px solid var(--lc-ok)", color: "var(--lc-ok)", marginBottom: 12 }}>{successMsg}</div>}
+        {successMsg && <div className="alert ok" style={{ marginBottom: 12 }}>{successMsg}</div>}
         <form onSubmit={submit} className="stack" style={{ marginTop: 12 }}>
           <div className="grid-2">
             <label>
@@ -643,7 +639,7 @@ function CustomerModal({
                   className="btn"
                   onClick={consultArca}
                   disabled={consulting}
-                  style={{ background: "linear-gradient(180deg, var(--lc-info), var(--lc-info))", color: "#fff", whiteSpace: "nowrap", padding: "0 12px" }}
+                  style={{ whiteSpace: "nowrap" }}
                 >
                   {consulting ? "🔍 ARCA…" : "🔍 ARCA"}
                 </button>

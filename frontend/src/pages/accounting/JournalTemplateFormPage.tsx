@@ -175,7 +175,7 @@ export function JournalTemplateFormPage() {
 
   if (loading) {
     return (
-      <div className="page-wide" style={{ padding: 40, textAlign: "center" }}>
+      <div className="page-wide t-center" style={{ padding: 40 }}>
         <div className="muted">Cargando datos del asiento modelo y plan de cuentas...</div>
       </div>
     );
@@ -185,26 +185,26 @@ export function JournalTemplateFormPage() {
     <div className="page-wide" style={{ paddingBottom: 60 }}>
       {/* Top Header & Breadcrumb */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
+        <div className="t-small muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <Link to="/contabilidad" style={{ color: "inherit", textDecoration: "none" }}>Contabilidad</Link>
           <span>›</span>
           <Link to="/contabilidad/modelos" style={{ color: "inherit", textDecoration: "none" }}>Asientos Modelos</Link>
           <span>›</span>
-          <span style={{ color: "var(--lc-accent-strong)", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Nuevo Modelo"}</span>
+          <span className="t-accent t-strong">{isEditing ? `Editar [${code}]` : "Nuevo Modelo"}</span>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "var(--lc-ink)" }}>
+            <h1 style={{ margin: "0 0 4px" }}>
               {isEditing ? `✏️ Asiento Modelo: ${name || code}` : "➕ Nuevo Asiento Modelo"}
             </h1>
-            <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+            <p className="muted" style={{ margin: 0 }}>
               Configuración de plantilla para imputación contable automática en base a comprobantes de gestión.
             </p>
           </div>
 
           <div style={{ display: "flex", gap: 10 }}>
-            <Link to="/contabilidad/modelos" className="btn ghost" style={{ padding: "8px 16px", fontWeight: 600 }}>
+            <Link to="/contabilidad/modelos" className="btn ghost">
               ← Cancelar y Volver
             </Link>
             <button
@@ -212,7 +212,7 @@ export function JournalTemplateFormPage() {
               onClick={handleSubmit}
               disabled={saving}
               className="btn"
-              style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "8px 22px", fontSize: "0.92rem", minWidth: 160 }}
+              style={{ minWidth: 160 }}
             >
               {saving ? "Guardando..." : "💾 Guardar Asiento Modelo"}
             </button>
@@ -221,7 +221,7 @@ export function JournalTemplateFormPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ marginBottom: 20, background: "var(--lc-danger-bg)", color: "var(--lc-danger)", border: "1px solid var(--lc-danger-bg)", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
+        <div className="alert" style={{ marginBottom: 20 }}>
           ⚠️ {error}
         </div>
       )}
@@ -229,37 +229,37 @@ export function JournalTemplateFormPage() {
       <form onSubmit={handleSubmit}>
         {/* SECCIÓN 1: CABECERA & DISPARADOR */}
         <div className="card pad" style={{ marginBottom: 24, borderLeft: "5px solid var(--lc-accent)" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-accent-strong)", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="t-strong t-accent" style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
             <span>1. DATOS DE CABECERA & DISPARADOR DEL COMPROBANTE</span>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 18, marginBottom: 16 }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 6 }}>Código Identificador *</label>
-              <input
+              <label>Código Identificador *</label>
+              <input className="t-strong"
                 type="text"
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="ej. AM-VTA-FAC"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div style={{ gridColumn: "span 2" }}>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 6 }}>Nombre / Descripción Legible *</label>
+              <label>Nombre / Descripción Legible *</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="ej. Factura A de Venta - Cuenta Corriente"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 6 }}>Módulo de Origen (Gestión) *</label>
+              <label>Módulo de Origen (Gestión) *</label>
               <select
                 value={sourceModule}
                 onChange={(e) => {
@@ -268,7 +268,7 @@ export function JournalTemplateFormPage() {
                   else if (e.target.value === "Purchases") setEntrySeries("Compras");
                   else if (e.target.value === "Finance") setEntrySeries("Finanzas");
                 }}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="Sales">🛒 Ventas</option>
                 <option value="Purchases">📦 Compras</option>
@@ -279,11 +279,11 @@ export function JournalTemplateFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 6 }}>Tipo de Comprobante *</label>
+              <label>Tipo de Comprobante *</label>
               <select
                 value={documentType}
                 onChange={(e) => setDocumentType(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="InvoiceA">Factura A</option>
                 <option value="InvoiceB">Factura B / C</option>
@@ -299,22 +299,22 @@ export function JournalTemplateFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 6 }}>Serie del Asiento</label>
+              <label>Serie del Asiento</label>
               <input
                 type="text"
                 value={entrySeries}
                 onChange={(e) => setEntrySeries(e.target.value)}
                 placeholder="Ventas / Compras / Finanzas / General"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 6 }}>Estado</label>
+              <label>Estado</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="Active">✓ Activo (Se usa al Contabilizar)</option>
                 <option value="Inactive">Inactivo (Pausado)</option>
@@ -323,13 +323,13 @@ export function JournalTemplateFormPage() {
           </div>
 
           <div>
-            <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 6 }}>Notas / Observaciones del Modelo</label>
+            <label>Notas / Observaciones del Modelo</label>
             <textarea
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Detalle o aclaraciones de imputación para el estudio contable..."
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.9rem" }}
+              style={{ width: "100%" }}
             />
           </div>
         </div>
@@ -338,10 +338,10 @@ export function JournalTemplateFormPage() {
         <div className="card pad" style={{ marginBottom: 30, borderLeft: "5px solid var(--lc-info)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
             <div>
-              <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-info)" }}>
+              <div className="t-strong t-info">
                 2. LÍNEAS CONTABLES (DEBE / HABER & VARIABLES DE IMPORTE)
               </div>
-              <span className="muted" style={{ fontSize: "0.85rem" }}>
+              <span className="muted t-small">
                 Asigne las cuentas del Plan de Cuentas a cada campo del comprobante y defina las condiciones de disparo.
               </span>
             </div>
@@ -350,35 +350,34 @@ export function JournalTemplateFormPage() {
               type="button"
               onClick={handleAddLine}
               className="btn"
-              style={{ background: "var(--lc-accent)", color: "#fff", fontSize: "0.88rem", fontWeight: 800, padding: "8px 18px" }}
             >
               ➕ Agregar Renglón al Asiento
             </button>
           </div>
 
           <div className="table-wrap" style={{ border: "1px solid var(--lc-line-2)", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)" }}>
-            <table style={{ margin: 0, width: "100%", borderCollapse: "collapse" }}>
+            <table style={{ margin: 0 }}>
               <thead>
-                <tr style={{ background: "var(--lc-surface-2)", borderBottom: "2px solid var(--lc-line-2)" }}>
-                  <th style={{ width: 50, textAlign: "center", padding: "12px 8px" }}>#</th>
-                  <th style={{ width: "32%", minWidth: 280, padding: "12px 14px" }}>Cuenta Contable (Plan de Cuentas)</th>
-                  <th style={{ width: 140, minWidth: 130, padding: "12px 10px" }}>Columna</th>
-                  <th style={{ width: "26%", minWidth: 220, padding: "12px 14px" }}>Origen del Importe (Variable del Comprobante)</th>
-                  <th style={{ width: "22%", minWidth: 180, padding: "12px 14px" }}>Condición de Disparo</th>
-                  <th style={{ width: 100, textAlign: "center", padding: "12px 8px" }}>Signo</th>
-                  <th style={{ width: 50, textAlign: "center", padding: "12px 8px" }}></th>
+                <tr>
+                  <th className="t-center" style={{ width: 50 }}>#</th>
+                  <th style={{ width: "32%", minWidth: 280 }}>Cuenta Contable (Plan de Cuentas)</th>
+                  <th style={{ width: 140, minWidth: 130 }}>Columna</th>
+                  <th style={{ width: "26%", minWidth: 220 }}>Origen del Importe (Variable del Comprobante)</th>
+                  <th style={{ width: "22%", minWidth: 180 }}>Condición de Disparo</th>
+                  <th className="t-center" style={{ width: 100 }}>Signo</th>
+                  <th className="t-center" style={{ width: 50 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {lines.map((l, index) => (
-                  <tr key={index} style={{ borderBottom: "1px solid var(--lc-line)", background: index % 2 === 0 ? "var(--lc-surface)" : "var(--lc-surface-2)" }}>
-                    <td style={{ textAlign: "center", fontWeight: 800, color: "var(--lc-ink-3)", padding: "10px 8px" }}>{index + 1}</td>
+                  <tr key={index} style={{ background: index % 2 === 0 ? "var(--lc-surface)" : "var(--lc-surface-2)" }}>
+                    <td className="t-center t-strong muted">{index + 1}</td>
                     
-                    <td style={{ padding: "10px 14px" }}>
-                      <select
+                    <td>
+                      <select className="t-strong"
                         value={l.accountCode}
                         onChange={(e) => handleLineChange(index, "accountCode", e.target.value)}
-                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.88rem", background: "var(--lc-surface)", fontWeight: 600 }}
+                        style={{ width: "100%" }}
                       >
                         {accounts.map((acc) => (
                           <option key={acc.id} value={acc.code}>
@@ -388,31 +387,22 @@ export function JournalTemplateFormPage() {
                       </select>
                     </td>
 
-                    <td style={{ padding: "10px 10px" }}>
-                      <select
+                    <td>
+                      <select className="t-strong"
                         value={l.debitCredit}
                         onChange={(e) => handleLineChange(index, "debitCredit", e.target.value)}
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          borderRadius: 6,
-                          border: "1px solid var(--lc-line-2)",
-                          fontWeight: 800,
-                          fontSize: "0.88rem",
-                          background: l.debitCredit === "Debit" ? "#eff6ff" : "#f0fdf4",
-                          color: l.debitCredit === "Debit" ? "#1d4ed8" : "#15803d"
-                        }}
+                        style={{ width: "100%", background: l.debitCredit === "Debit" ? "#eff6ff" : "#f0fdf4", color: l.debitCredit === "Debit" ? "#1d4ed8" : "#15803d" }}
                       >
                         <option value="Debit">DEBE</option>
                         <option value="Credit">HABER</option>
                       </select>
                     </td>
 
-                    <td style={{ padding: "10px 14px" }}>
+                    <td>
                       <select
                         value={l.amountSource}
                         onChange={(e) => handleLineChange(index, "amountSource", e.target.value)}
-                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.88rem", background: "var(--lc-surface)" }}
+                        style={{ width: "100%" }}
                       >
                         {variables.map((v) => (
                           <option key={v.key} value={v.key}>
@@ -422,11 +412,11 @@ export function JournalTemplateFormPage() {
                       </select>
                     </td>
 
-                    <td style={{ padding: "10px 14px" }}>
+                    <td>
                       <select
                         value={l.condition}
                         onChange={(e) => handleLineChange(index, "condition", e.target.value)}
-                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.88rem", background: "var(--lc-surface)" }}
+                        style={{ width: "100%" }}
                       >
                         <option value="Always">Siempre</option>
                         <option value="IfHasVat21">Si tiene IVA 21% &gt; 0</option>
@@ -438,8 +428,8 @@ export function JournalTemplateFormPage() {
                       </select>
                     </td>
 
-                    <td style={{ textAlign: "center", padding: "10px 8px" }}>
-                      <label style={{ fontSize: "0.82rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 700, color: "var(--lc-ink-2)" }}>
+                    <td className="t-center">
+                      <label style={{ cursor: "pointer", alignItems: "center", gap: 5 }}>
                         <input
                           type="checkbox"
                           checked={l.isInvertedSign}
@@ -450,12 +440,11 @@ export function JournalTemplateFormPage() {
                       </label>
                     </td>
 
-                    <td style={{ textAlign: "center", padding: "10px 8px" }}>
+                    <td className="t-center">
                       <button
                         type="button"
                         onClick={() => handleRemoveLine(index)}
-                        className="btn ghost compact"
-                        style={{ color: "var(--lc-danger)", padding: "6px 10px", borderRadius: 6, fontSize: "0.95rem" }}
+                        className="btn ghost compact btn-outline danger"
                         title="Quitar renglón"
                       >
                         🗑️
@@ -469,25 +458,17 @@ export function JournalTemplateFormPage() {
         </div>
 
         {/* BOTTOM ACTION BAR */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            background: "var(--lc-surface-2)",
-            padding: "16px 24px",
-            borderRadius: 10,
-            border: "1px solid var(--lc-line)"
-          }}
+        <div className="box"
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
         >
-          <Link to="/contabilidad/modelos" className="btn ghost" style={{ padding: "9px 20px" }}>
+          <Link to="/contabilidad/modelos" className="btn ghost">
             ← Cancelar y Volver
           </Link>
           <button
             type="submit"
             disabled={saving}
             className="btn"
-            style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "10px 28px", fontSize: "0.95rem", minWidth: 200 }}
+            style={{ minWidth: 200 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Asiento Modelo"}
           </button>

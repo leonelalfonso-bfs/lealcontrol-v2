@@ -92,11 +92,11 @@ export function OrderDetailPage() {
         <div>
           <div className="row" style={{ gap: 12, alignItems: "center" }}>
             <h1>Pedido de Venta #{order.orderNumber}</h1>
-            <span className="badge ok" style={{ fontSize: "0.9rem", padding: "6px 14px" }}>
+            <span className="badge ok" style={{ padding: "6px 14px" }}>
               {label(order.status)}
             </span>
             {isUsd && (
-              <span className="badge warn" style={{ fontSize: "0.9rem", padding: "6px 14px" }}>
+              <span className="badge warn" style={{ padding: "6px 14px" }}>
                 💵 {currLabel} (TC: ${rate})
               </span>
             )}
@@ -111,7 +111,7 @@ export function OrderDetailPage() {
           <button type="button" className="btn" onClick={() => setShowEmail(true)}>✉ Enviar por email</button>
           {showEmail && <EmailComposer context={{ entityType: "Order", entityId: order.id, to: contact?.email || customer?.email || undefined, subject: `Pedido de venta ${order.orderNumber}`, body: `Hola,\n\nCompartimos la confirmación del pedido de venta ${order.orderNumber}, por un total de ${currLabel} ${order.total.toLocaleString("es-AR")}.\n\nSaludos.\n` }} onClose={() => setShowEmail(false)} />}
           {canRemit === true ? (
-            <Link className="btn" to={"/remitos/nuevo?order_id=" + order.id} style={{ background: "linear-gradient(180deg, var(--lc-info), var(--lc-info))" }}>
+            <Link className="btn" to={"/remitos/nuevo?order_id=" + order.id}>
               🚚 Generar Remito
             </Link>
           ) : (
@@ -120,7 +120,7 @@ export function OrderDetailPage() {
             </span>
           )}
           <Link className="btn" to={hasDeliveredRemito ? "/remitos" : "/facturas/nueva?order_id=" + order.id}
-            style={{ background: "linear-gradient(180deg, var(--lc-ok), var(--lc-ok))" }}>
+           >
             {hasDeliveredRemito ? "📄 Facturar desde remito" : "📄 Emitir Factura"}
           </Link>
           <button
@@ -137,7 +137,7 @@ export function OrderDetailPage() {
       </div>
 
       {/* Progress Stepper Bar */}
-      <div className="card pad" style={{ marginBottom: 24, background: "var(--lc-surface)" }}>
+      <div className="card pad" style={{ marginBottom: 24 }}>
         <h4 style={{ margin: "0 0 12px" }}>Progreso y Estado del Pedido</h4>
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
           {flow.map((st, index) => (
@@ -225,7 +225,7 @@ export function OrderDetailPage() {
                 <th>Precio Unit. ({isUsd ? "U$D" : "ARS $"})</th>
                 <th>Dto %</th>
                 <th>IVA %</th>
-                <th style={{ textAlign: "right" }}>Subtotal ({isUsd ? "U$D" : "ARS $"})</th>
+                <th className="t-right">Subtotal ({isUsd ? "U$D" : "ARS $"})</th>
               </tr>
             </thead>
             <tbody>
@@ -242,7 +242,7 @@ export function OrderDetailPage() {
                   </td>
                   <td>{l.discountPercent}%</td>
                   <td>{l.taxRate}%</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td className="t-right">
                     <strong>
                       {isUsd ? "U$D " : "ARS $"}
                       {l.lineSubtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
@@ -267,7 +267,7 @@ export function OrderDetailPage() {
           {order.notes && <p><strong>Notas Operativas:</strong> {order.notes}</p>}
         </section>
 
-        <section className="card pad" style={{ background: "var(--lc-surface)" }}>
+        <section className="card pad">
           <h3>Resumen de Importes ({currLabel})</h3>
           <div className="stack" style={{ gap: 8, fontSize: "1.05rem", marginTop: 16 }}>
             <div className="row" style={{ justifyContent: "space-between" }}>
@@ -278,7 +278,7 @@ export function OrderDetailPage() {
               </span>
             </div>
             {order.discountPercent > 0 && (
-              <div className="row" style={{ justifyContent: "space-between", color: "var(--lc-warn)" }}>
+              <div className="row t-warn" style={{ justifyContent: "space-between" }}>
                 <span>Descuento Global ({order.discountPercent}%):</span>
                 <span>
                   -{isUsd ? "U$D " : "ARS $"}
@@ -287,15 +287,15 @@ export function OrderDetailPage() {
               </div>
             )}
             <hr style={{ borderColor: "var(--line)", margin: "8px 0" }} />
-            <div className="row" style={{ justifyContent: "space-between", fontSize: "1.3rem", fontWeight: 700 }}>
+            <div className="row t-strong" style={{ justifyContent: "space-between", fontSize: "1.3rem" }}>
               <span>TOTAL PEDIDO:</span>
-              <span style={{ color: "var(--primary)" }}>
+              <span className="t-accent">
                 {isUsd ? "U$D " : "ARS $"}
                 {order.total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
             </div>
             {isUsd && (
-              <div className="muted" style={{ fontSize: "0.85rem", marginTop: 8, background: "var(--lc-surface-2)", padding: 10, borderRadius: 6 }}>
+              <div className="muted box t-small" style={{ marginTop: 8 }}>
                 Equivalente estimado en pesos: <strong>ARS ${totalArsEquivalent.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong> (Tipo de cambio BNA de referencia: ${rate} ARS)
               </div>
             )}

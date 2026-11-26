@@ -118,7 +118,7 @@ export function FixedAssetsPage() {
             <label>Cuenta de gasto<input value={form.expenseAccountCode ?? ""} onChange={(e) => set("expenseAccountCode", e.target.value)} /></label>
           </div>
           <label>Notas<input value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} /></label>
-          <div className="muted" style={{ fontSize: "0.8rem" }}>
+          <div className="muted t-small">
             Amortización mensual: $ {money(form.usefulLifeMonths > 0 ? (form.cost - form.residualValue) / form.usefulLifeMonths : 0)}
           </div>
           <div className="row" style={{ gap: 10 }}>
@@ -132,15 +132,15 @@ export function FixedAssetsPage() {
         {assets.length === 0 ? (
           <p className="muted">Todavía no hay bienes cargados.</p>
         ) : (
-          <table style={{ fontSize: "0.82rem" }}>
+          <table>
             <thead>
               <tr>
                 <th>Bien</th>
                 <th>Alta</th>
-                <th style={{ textAlign: "right" }}>Costo</th>
-                <th style={{ textAlign: "right" }}>Por mes</th>
-                <th style={{ textAlign: "right" }}>Amort. acumulada</th>
-                <th style={{ textAlign: "right" }}>Valor residual contable</th>
+                <th className="t-right">Costo</th>
+                <th className="t-right">Por mes</th>
+                <th className="t-right">Amort. acumulada</th>
+                <th className="t-right">Valor residual contable</th>
                 <th>Estado</th>
                 <th />
               </tr>
@@ -148,14 +148,14 @@ export function FixedAssetsPage() {
             <tbody>
               {assets.map((a) => (
                 <tr key={a.id}>
-                  <td>{a.code} — {a.name}<div className="muted" style={{ fontSize: "0.72rem" }}>{a.assetAccountCode} · {a.usefulLifeMonths} meses</div></td>
+                  <td>{a.code} — {a.name}<div className="muted t-small">{a.assetAccountCode} · {a.usefulLifeMonths} meses</div></td>
                   <td>{day(a.acquisitionDate)}</td>
-                  <td style={{ textAlign: "right" }}>{money(a.cost)}</td>
-                  <td style={{ textAlign: "right" }}>{money(a.monthlyDepreciation)}</td>
-                  <td style={{ textAlign: "right" }}>{money(a.accumulatedDepreciation)}<div className="muted" style={{ fontSize: "0.72rem" }}>hasta {day(a.depreciatedThrough)}</div></td>
-                  <td style={{ textAlign: "right" }}>{money(a.bookValue)}</td>
+                  <td className="t-right">{money(a.cost)}</td>
+                  <td className="t-right">{money(a.monthlyDepreciation)}</td>
+                  <td className="t-right">{money(a.accumulatedDepreciation)}<div className="muted t-small">hasta {day(a.depreciatedThrough)}</div></td>
+                  <td className="t-right">{money(a.bookValue)}</td>
                   <td>{a.status === "Active" ? "Activo" : `Baja ${day(a.disposedAt)}`}</td>
-                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  <td className="t-right" style={{ whiteSpace: "nowrap" }}>
                     <button type="button" className="btn ghost compact" onClick={() => edit(a)}>Editar</button>
                     {a.status === "Active" && <button type="button" className="btn ghost compact" onClick={() => dispose(a)}>Baja</button>}
                   </td>
@@ -185,13 +185,13 @@ export function FixedAssetsPage() {
         {preview && (
           <>
             {preview.existingEntryNumber != null && <div className="alert">Ese mes ya tiene amortización: asiento N° {preview.existingEntryNumber}.</div>}
-            <table style={{ fontSize: "0.8rem" }}>
+            <table>
               <tbody>
                 {preview.rows.filter((r) => r.amount > 0).map((r) => (
-                  <tr key={r.assetId}><td>{r.code} — {r.name}</td><td style={{ textAlign: "right" }}>{money(r.amount)}</td></tr>
+                  <tr key={r.assetId}><td>{r.code} — {r.name}</td><td className="t-right">{money(r.amount)}</td></tr>
                 ))}
               </tbody>
-              <tfoot><tr style={{ fontWeight: 800 }}><td>Total del mes</td><td style={{ textAlign: "right" }}>{money(preview.total)}</td></tr></tfoot>
+              <tfoot><tr className="t-strong"><td>Total del mes</td><td className="t-right">{money(preview.total)}</td></tr></tfoot>
             </table>
           </>
         )}

@@ -91,10 +91,10 @@ export function GeneralLedgerPage() {
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
         <div>
           <div className="row" style={{ gap: 8, alignItems: "center" }}>
-            <Link to="/contabilidad" className="btn ghost" style={{ padding: "4px 8px" }}>← Tablero</Link>
+            <Link to="/contabilidad" className="btn ghost compact">← Tablero</Link>
             <h2>🔍 Libro Mayor por Cuenta Contable</h2>
           </div>
-          <span className="muted" style={{ fontSize: "0.85rem" }}>
+          <span className="muted t-small">
             Detalle cronológico de movimientos, saldos iniciales, débitos, créditos y saldo acumulado.
           </span>
         </div>
@@ -118,7 +118,7 @@ export function GeneralLedgerPage() {
       <div className="card pad">
         <div className="grid-3" style={{ gap: 14, alignItems: "flex-end" }}>
           <div>
-            <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: "13px" }}>
+            <label>
               Seleccionar Cuenta Contable:
             </label>
             <select
@@ -135,7 +135,7 @@ export function GeneralLedgerPage() {
           </div>
 
           <div>
-            <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: "13px" }}>
+            <label>
               Fecha Desde:
             </label>
             <input
@@ -147,7 +147,7 @@ export function GeneralLedgerPage() {
           </div>
 
           <div>
-            <label style={{ display: "block", marginBottom: 6, fontWeight: 600, fontSize: "13px" }}>
+            <label>
               Fecha Hasta:
             </label>
             <input
@@ -173,28 +173,28 @@ export function GeneralLedgerPage() {
         <div className="stats-grid">
           <div className="stat-card">
             <span className="stat-label">Saldo Inicial Anterior</span>
-            <span className="stat-val" style={{ color: "var(--lc-ink-3)" }}>
+            <span className="stat-val muted">
               $ {(ledgerItem.initialBalance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="stat-card">
             <span className="stat-label">Total Débitos (Debe)</span>
-            <span className="stat-val" style={{ color: "var(--lc-ok)" }}>
+            <span className="stat-val t-ok">
               $ {(ledgerItem.totalDebit || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="stat-card">
             <span className="stat-label">Total Créditos (Haber)</span>
-            <span className="stat-val" style={{ color: "var(--lc-info)" }}>
+            <span className="stat-val t-info">
               $ {(ledgerItem.totalCredit || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="stat-card">
             <span className="stat-label">Saldo Final Acumulado</span>
-            <span className="stat-val" style={{ color: "var(--lc-warn)", fontWeight: 700 }}>
+            <span className="stat-val t-warn t-strong">
               $ {(ledgerItem.finalBalance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </span>
           </div>
@@ -207,42 +207,42 @@ export function GeneralLedgerPage() {
           <h3>
             Movimientos de la Cuenta: <code>{accountInfo.code || selectedAccountCode}</code> - {accountInfo.name || ""}
           </h3>
-          <span className="badge primary" style={{ fontSize: "0.75rem" }}>
+          <span className="badge primary t-small">
             {accountInfo.accountType || "Asset"}
           </span>
         </div>
 
         {loading ? (
-          <p style={{ textAlign: "center", padding: 30 }} className="muted">Cargando movimientos del mayor...</p>
+          <p style={{ padding: 30 }} className="muted t-center">Cargando movimientos del mayor...</p>
         ) : movements.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 40 }} className="muted">
+          <div style={{ padding: 40 }} className="muted t-center">
             <p style={{ fontSize: "1.1rem", marginBottom: 6 }}>No hay movimientos registrados para esta cuenta.</p>
-            <span style={{ fontSize: "0.85rem" }}>Probá seleccionando otra cuenta o ampliando el rango de fechas.</span>
+            <span className="t-small">Probá seleccionando otra cuenta o ampliando el rango de fechas.</span>
           </div>
         ) : (
           <div className="table-wrap">
-            <table className="table" style={{ width: "100%", fontSize: "0.85rem" }}>
+            <table className="table">
               <thead>
                 <tr>
                   <th style={{ width: 100 }}>Fecha</th>
-                  <th style={{ width: 90, textAlign: "center" }}>Asiento Nº</th>
+                  <th className="t-center" style={{ width: 90 }}>Asiento Nº</th>
                   <th>Concepto Principal</th>
                   <th style={{ width: 110 }}>Origen</th>
                   <th style={{ width: 140 }}>Centro de Costos</th>
-                  <th style={{ width: 120, textAlign: "right" }}>Debe ($)</th>
-                  <th style={{ width: 120, textAlign: "right" }}>Haber ($)</th>
-                  <th style={{ width: 130, textAlign: "right" }}>Saldo ($)</th>
+                  <th className="t-right" style={{ width: 120 }}>Debe ($)</th>
+                  <th className="t-right" style={{ width: 120 }}>Haber ($)</th>
+                  <th className="t-right" style={{ width: 130 }}>Saldo ($)</th>
                 </tr>
               </thead>
               <tbody>
                 {/* Initial balance row */}
-                <tr style={{ background: "rgba(241, 245, 249, 0.6)", fontWeight: 600 }}>
+                <tr className="t-strong">
                   <td colSpan={5}>
                     <em>Saldo Inicial Anterior al Rango</em>
                   </td>
-                  <td style={{ textAlign: "right" }}>-</td>
-                  <td style={{ textAlign: "right" }}>-</td>
-                  <td style={{ textAlign: "right", color: "var(--lc-ink-3)" }}>
+                  <td className="t-right">-</td>
+                  <td className="t-right">-</td>
+                  <td className="t-right muted">
                     $ {(ledgerItem.initialBalance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
@@ -250,7 +250,7 @@ export function GeneralLedgerPage() {
                 {movements.map((m: any, idx: number) => (
                   <tr key={idx}>
                     <td>{m.date ? new Date(m.date).toLocaleDateString("es-AR") : "-"}</td>
-                    <td style={{ textAlign: "center", fontWeight: 600 }}>
+                    <td className="t-center t-strong">
                       <Link to={`/contabilidad/asientos`} style={{ color: "var(--accent)" }}>
                         #{m.entryNumber}
                       </Link>
@@ -259,10 +259,10 @@ export function GeneralLedgerPage() {
                       <div>
                         <strong>{m.concept}</strong>
                         {m.memo && m.memo !== m.concept && (
-                          <div className="muted" style={{ fontSize: "0.75rem" }}>{m.memo}</div>
+                          <div className="muted t-small">{m.memo}</div>
                         )}
                         {m.currency && m.currency !== "ARS" && m.originalAmount != null && m.originalAmount !== 0 && (
-                          <div className="muted" style={{ fontSize: "0.75rem" }}>
+                          <div className="muted t-small">
                             {m.currency} {Number(m.originalAmount).toLocaleString("es-AR", { minimumFractionDigits: 2 })} a ${" "}
                             {Number(m.exchangeRate).toLocaleString("es-AR")}
                           </div>
@@ -270,18 +270,18 @@ export function GeneralLedgerPage() {
                       </div>
                     </td>
                     <td>
-                      <span className="badge ghost" style={{ fontSize: "0.7rem" }}>
+                      <span className="badge ghost t-small">
                         {m.sourceModule || "Manual"}
                       </span>
                     </td>
                     <td>{m.costCenterName || "-"}</td>
-                    <td style={{ textAlign: "right", color: m.debit > 0 ? "#16a34a" : "inherit", fontWeight: m.debit > 0 ? 600 : 400 }}>
+                    <td className="t-right" style={{ color: m.debit > 0 ? "#16a34a" : "inherit", fontWeight: m.debit > 0 ? 600 : 400 }}>
                       {m.debit > 0 ? `$ ${m.debit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}
                     </td>
-                    <td style={{ textAlign: "right", color: m.credit > 0 ? "#0284c7" : "inherit", fontWeight: m.credit > 0 ? 600 : 400 }}>
+                    <td className="t-right" style={{ color: m.credit > 0 ? "#0284c7" : "inherit", fontWeight: m.credit > 0 ? 600 : 400 }}>
                       {m.credit > 0 ? `$ ${m.credit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}
                     </td>
-                    <td style={{ textAlign: "right", fontWeight: 700 }}>
+                    <td className="t-right t-strong">
                       $ {(m.runningBalance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </td>
                   </tr>

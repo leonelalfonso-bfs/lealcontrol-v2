@@ -78,19 +78,19 @@ export function JournalBookPage() {
         ) : !book || book.entries.length === 0 ? (
           <p className="muted">No hay asientos en el período.</p>
         ) : (
-          <table style={{ fontSize: "0.8rem" }}>
+          <table>
             <thead>
               <tr>
                 <th style={{ width: 70 }}>Orden</th>
                 <th style={{ width: 90 }}>Fecha</th>
                 <th>Cuenta / concepto</th>
-                <th style={{ textAlign: "right", width: 130 }}>Debe</th>
-                <th style={{ textAlign: "right", width: 130 }}>Haber</th>
+                <th className="t-right" style={{ width: 130 }}>Debe</th>
+                <th className="t-right" style={{ width: 130 }}>Haber</th>
               </tr>
             </thead>
             {book.entries.map((e) => (
               <tbody key={e.id} style={{ breakInside: "avoid" }}>
-                <tr style={{ background: "rgba(15, 23, 42, 0.04)" }}>
+                <tr>
                   <td><strong>{e.order}</strong></td>
                   <td>{day(e.date)}</td>
                   <td colSpan={3}>
@@ -104,19 +104,19 @@ export function JournalBookPage() {
                     <td />
                     <td style={{ paddingLeft: l.credit > 0 ? 40 : 18 }}>
                       {l.credit > 0 && "a "}{l.accountCode} {l.accountName}
-                      {l.memo && <div className="muted" style={{ fontSize: "0.72rem" }}>{l.memo}</div>}
+                      {l.memo && <div className="muted t-small">{l.memo}</div>}
                     </td>
-                    <td style={{ textAlign: "right" }}>{money(l.debit)}</td>
-                    <td style={{ textAlign: "right" }}>{money(l.credit)}</td>
+                    <td className="t-right">{money(l.debit)}</td>
+                    <td className="t-right">{money(l.credit)}</td>
                   </tr>
                 ))}
               </tbody>
             ))}
             <tfoot>
-              <tr style={{ fontWeight: 800, borderTop: "2px solid var(--line)" }}>
+              <tr className="t-strong">
                 <td colSpan={3}>Totales del período ({book.entries.length} asientos)</td>
-                <td style={{ textAlign: "right" }}>{money(book.totalDebit)}</td>
-                <td style={{ textAlign: "right" }}>{money(book.totalCredit)}</td>
+                <td className="t-right">{money(book.totalDebit)}</td>
+                <td className="t-right">{money(book.totalCredit)}</td>
               </tr>
             </tfoot>
           </table>

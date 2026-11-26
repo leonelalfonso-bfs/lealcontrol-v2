@@ -472,7 +472,7 @@ export const QuoteFormPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="card pad" style={{ textAlign: "center" }}>Cargando presupuesto...</div>;
+    return <div className="card pad t-center">Cargando presupuesto...</div>;
   }
 
   return (
@@ -503,8 +503,7 @@ export const QuoteFormPage: React.FC = () => {
           {isEditing && id && quoteStatus !== "Cancelled" && (
             <button
               type="button"
-              className="btn ghost"
-              style={{ color: "var(--lc-danger)" }}
+              className="btn ghost btn-outline danger"
               onClick={() => {
                 if (!confirm(`¿Eliminar el presupuesto ${quoteNumber || ""}? No se puede recuperar.`)) return;
                 void api.deleteQuote(id).then(() => navigate("/presupuestos")).catch((err: unknown) => {
@@ -563,8 +562,7 @@ export const QuoteFormPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowQuickCustomerModal(true)}
-              className="btn btn-primary"
-              style={{ padding: "6px 14px", fontSize: "0.82rem", background: "var(--lc-accent)" }}
+              className="btn btn-primary compact"
             >
               + Nuevo Cliente Completo
             </button>
@@ -574,10 +572,10 @@ export const QuoteFormPage: React.FC = () => {
             <label htmlFor="quote-customer">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                 <span>Cliente *</span>
-                <button
+                <button className="t-small t-accent t-strong"
                   type="button"
                   onClick={() => setShowQuickCustomerModal(true)}
-                  style={{ fontSize: "0.76rem", color: "var(--lc-accent-strong)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
+                  style={{ background: "none", border: "none", cursor: "pointer" }}
                 >
                   + Alta Rápida
                 </button>
@@ -596,10 +594,10 @@ export const QuoteFormPage: React.FC = () => {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                 <span>Planta / Destino de Entrega</span>
                 {customerId && (
-                  <button
+                  <button className="t-small t-accent t-strong"
                     type="button"
                     onClick={() => setShowNewLocationModal(true)}
-                    style={{ fontSize: "0.76rem", color: "var(--lc-accent-strong)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
+                    style={{ background: "none", border: "none", cursor: "pointer" }}
                   >
                     + Nueva Planta
                   </button>
@@ -623,10 +621,10 @@ export const QuoteFormPage: React.FC = () => {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                 <span>Contacto Asignado</span>
                 {customerId && (
-                  <button
+                  <button className="t-small t-accent t-strong"
                     type="button"
                     onClick={() => setShowNewContactModal(true)}
-                    style={{ fontSize: "0.76rem", color: "var(--lc-accent-strong)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
+                    style={{ background: "none", border: "none", cursor: "pointer" }}
                   >
                     + Nuevo Contacto
                   </button>
@@ -666,12 +664,12 @@ export const QuoteFormPage: React.FC = () => {
                   {selectedCustomerDetail.creditRating === "A" ? "🟢" : selectedCustomerDetail.creditRating === "B" ? "🟡" : selectedCustomerDetail.creditRating === "C" ? "🟠" : selectedCustomerDetail.creditRating === "D" ? "🔴" : "🏛️"}
                 </span>
                 <div>
-                  <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--lc-ink)" }}>
+                  <div className="t-small t-strong">
                     {selectedCustomerDetail.creditRating
                       ? `Evaluación Crediticia BCRA: Calificación ${selectedCustomerDetail.creditRating} (Sit. ${selectedCustomerDetail.bcraWorstSituation || 1})`
                       : "Sin informe BCRA registrado en ficha"}
                   </div>
-                  <div style={{ fontSize: "0.78rem", color: "var(--lc-ink-2)", marginTop: "2px" }}>
+                  <div className="t-small muted" style={{ marginTop: "2px" }}>
                     {selectedCustomerDetail.creditRecommendation || "Podés consultar su calificación crediticia en la ficha del cliente."}
                   </div>
                 </div>
@@ -685,8 +683,7 @@ export const QuoteFormPage: React.FC = () => {
                       setPaymentTerms("30 días fecha factura");
                       setPaymentMethod("Transferencia Bancaria / eCheq");
                     }}
-                    className="btn"
-                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "var(--lc-ok)", color: "white", fontWeight: 700 }}
+                    className="btn compact"
                   >
                     ✓ Aplicar Cta. Cte. (30d)
                   </button>
@@ -698,8 +695,7 @@ export const QuoteFormPage: React.FC = () => {
                       setPaymentTerms("50% anticipo, saldo contra entrega");
                       setPaymentMethod("Transferencia Bancaria");
                     }}
-                    className="btn"
-                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "var(--lc-warn)", color: "white", fontWeight: 700 }}
+                    className="btn compact"
                   >
                     ✓ Aplicar Anticipo 50%
                   </button>
@@ -711,8 +707,7 @@ export const QuoteFormPage: React.FC = () => {
                       setPaymentTerms("100% Contado Anticipado");
                       setPaymentMethod("Transferencia Anticipada");
                     }}
-                    className="btn"
-                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "var(--lc-danger)", color: "white", fontWeight: 700 }}
+                    className="btn compact danger"
                   >
                     ⚠️ Exigir Pago Contado
                   </button>
@@ -727,7 +722,7 @@ export const QuoteFormPage: React.FC = () => {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h3>Moneda Principal del Presupuesto & Cotizaciones Live DolarApi (BNA)</h3>
             {rates && (
-              <div style={{ display: "flex", gap: "12px", fontSize: "0.8rem" }}>
+              <div className="t-small" style={{ display: "flex", gap: "12px" }}>
                 <span className="badge ok">BNA Billete: <strong>${rates.usdBillete.venta}</strong></span>
                 <span className="badge warn">BNA Divisa: <strong>${rates.usdDivisa.venta}</strong></span>
               </div>
@@ -785,8 +780,7 @@ export const QuoteFormPage: React.FC = () => {
                   setQuickProductLineIndex(null);
                   setShowQuickProductModal(true);
                 }}
-                className="btn btn-outline"
-                style={{ fontSize: "0.82rem", padding: "6px 12px", background: "rgba(13, 148, 136, 0.08)", color: "var(--lc-accent-strong)", borderColor: "var(--lc-accent)", fontWeight: 700 }}
+                className="btn btn-outline compact"
               >
                 + Crear Producto Nuevo
               </button>
@@ -806,12 +800,12 @@ export const QuoteFormPage: React.FC = () => {
                 <tr>
                   <th style={{ width: "28%" }}>Catálogo / Descripción</th>
                   <th style={{ width: "16%" }}>Moneda Nativa / Precio Origen</th>
-                  <th style={{ width: "10%", textAlign: "center" }}>Cant.</th>
-                  <th style={{ width: "14%", textAlign: "right" }}>Precio U. ({currency})</th>
-                  <th style={{ width: "8%", textAlign: "center" }}>Desc. %</th>
-                  <th style={{ width: "8%", textAlign: "center" }}>IVA %</th>
-                  <th style={{ width: "6%", textAlign: "center" }}>Opcional</th>
-                  <th style={{ width: "12%", textAlign: "right" }}>Subtotal</th>
+                  <th className="t-center" style={{ width: "10%" }}>Cant.</th>
+                  <th className="t-right" style={{ width: "14%" }}>Precio U. ({currency})</th>
+                  <th className="t-center" style={{ width: "8%" }}>Desc. %</th>
+                  <th className="t-center" style={{ width: "8%" }}>IVA %</th>
+                  <th className="t-center" style={{ width: "6%" }}>Opcional</th>
+                  <th className="t-right" style={{ width: "12%" }}>Subtotal</th>
                   <th style={{ width: "4%" }}></th>
                 </tr>
               </thead>
@@ -834,23 +828,14 @@ export const QuoteFormPage: React.FC = () => {
                               }}
                             />
                           </div>
-                          <button
+                          <button className="t-strong t-small"
                             type="button"
                             onClick={() => {
                               setQuickProductLineIndex(idx);
                               setShowQuickProductModal(true);
                             }}
                             title="Crear un producto nuevo con foto y asignarlo a este renglón"
-                            style={{
-                              padding: "4px 8px",
-                              borderRadius: "6px",
-                              background: "var(--lc-accent)",
-                              color: "#fff",
-                              border: "none",
-                              fontWeight: 800,
-                              cursor: "pointer",
-                              fontSize: "0.85rem"
-                            }}
+                            style={{ padding: "4px 8px", borderRadius: "6px", background: "var(--lc-accent)", color: "#fff", border: "none", cursor: "pointer" }}
                           >
                             +
                           </button>
@@ -863,22 +848,13 @@ export const QuoteFormPage: React.FC = () => {
                           value={line.description}
                           onChange={(e) => handleLineChange(idx, "description", e.target.value)}
                         />
-                        <button
+                        <button className="t-info t-strong t-small"
                           type="button"
                           onClick={() => {
                             setTechnicalLineIndex(idx);
                             setTechnicalDraft(line.technicalDetail ?? "");
                           }}
-                          style={{
-                            alignSelf: "flex-start",
-                            background: "none",
-                            border: "none",
-                            color: "var(--lc-info)",
-                            fontWeight: 700,
-                            fontSize: "0.78rem",
-                            cursor: "pointer",
-                            padding: 0
-                          }}
+                          style={{ alignSelf: "flex-start", background: "none", border: "none", cursor: "pointer", padding: 0 }}
                         >
                           {line.technicalDetail && !richTextIsEmpty(line.technicalDetail) ? "Editar detalle técnico (cargado)" : "Editar detalle técnico"}
                         </button>
@@ -889,60 +865,55 @@ export const QuoteFormPage: React.FC = () => {
                         <select
                           value={line.nativeCurrency}
                           onChange={(e) => handleLineChange(idx, "nativeCurrency", e.target.value)}
-                          style={{ fontSize: "0.78rem", width: "95px" }}
+                          style={{ width: "95px" }}
                         >
                           <option value="ARS">$ ARS</option>
                           <option value="USD_BILLETE">u$s Billete</option>
                           <option value="USD_DIVISA">u$s Divisa</option>
                         </select>
-                        <input
+                        <input className="t-right"
                           type="number"
                           step="0.01"
                           min="0"
                           value={line.nativeUnitPrice}
                           onChange={(e) => handleLineChange(idx, "nativeUnitPrice", Number(e.target.value))}
-                          style={{ textAlign: "right", fontFamily: "monospace", fontSize: "0.82rem" }}
                         />
                       </div>
                     </td>
-                    <td style={{ textAlign: "center" }}>
-                      <input
+                    <td className="t-center">
+                      <input className="t-center"
                         type="number"
                         step="1"
                         min="1"
                         required
                         value={line.quantity}
                         onChange={(e) => handleLineChange(idx, "quantity", Math.max(1, parseInt(e.target.value, 10) || 1))}
-                        style={{ textAlign: "center" }}
                       />
                     </td>
-                    <td style={{ textAlign: "right" }}>
-                      <input
+                    <td className="t-right">
+                      <input className="t-right t-strong"
                         type="number"
                         step="0.01"
                         min="0"
                         required
                         value={line.unitPrice}
                         onChange={(e) => handleLineChange(idx, "unitPrice", Number(e.target.value))}
-                        style={{ textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}
                       />
                     </td>
-                    <td style={{ textAlign: "center" }}>
-                      <input
+                    <td className="t-center">
+                      <input className="t-center"
                         type="number"
                         step="0.1"
                         min="0"
                         max="100"
                         value={line.discountPercent}
                         onChange={(e) => handleLineChange(idx, "discountPercent", Number(e.target.value))}
-                        style={{ textAlign: "center" }}
                       />
                     </td>
-                    <td style={{ textAlign: "center" }}>
-                      <select
+                    <td className="t-center">
+                      <select className="t-center"
                         value={line.taxRate}
                         onChange={(e) => handleLineChange(idx, "taxRate", Number(e.target.value))}
-                        style={{ textAlign: "center" }}
                       >
                         <option value={21}>21%</option>
                         <option value={10.5}>10.5%</option>
@@ -950,7 +921,7 @@ export const QuoteFormPage: React.FC = () => {
                         <option value={27}>27%</option>
                       </select>
                     </td>
-                    <td style={{ textAlign: "center" }}>
+                    <td className="t-center">
                       <input
                         type="checkbox"
                         checked={line.isOptional}
@@ -959,15 +930,15 @@ export const QuoteFormPage: React.FC = () => {
                         style={{ width: "18px", height: "18px" }}
                       />
                     </td>
-                    <td style={{ textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
+                    <td className="t-right t-mono t-strong">
                       {line.isOptional ? <span className="muted">(Opcional)</span> : `${currency} $${line.lineSubtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}`}
                     </td>
                     <td>
-                      <button
+                      <button className="t-danger"
                         type="button"
                         onClick={() => handleRemoveLine(idx)}
                         disabled={lines.length === 1}
-                        style={{ color: "var(--lc-danger)", background: "none", border: "none", cursor: "pointer", fontSize: "1.1rem" }}
+                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.1rem" }}
                       >
                         ✕
                       </button>
@@ -980,28 +951,28 @@ export const QuoteFormPage: React.FC = () => {
 
           {/* Totals Summary */}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }}>
-            <div className="card pad stack" style={{ width: "340px", background: "var(--surface-muted)" }}>
+            <div className="card pad stack" style={{ width: "340px" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span>Subtotal Renglones:</span>
-                <strong style={{ fontFamily: "monospace" }}>{currency} ${subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
+                <strong className="t-mono">{currency} ${subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span>Descuento General %:</span>
-                <input
+                <input className="t-right"
                   type="number"
                   min="0"
                   max="100"
                   step="0.5"
                   value={discountPercent}
                   onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                  style={{ width: "80px", textAlign: "right" }}
+                  style={{ width: "80px" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--surface-border)", paddingTop: "8px", fontSize: "1.1rem", color: "var(--primary)" }}>
+              <div className="t-accent" style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--surface-border)", paddingTop: "8px", fontSize: "1.1rem" }}>
                 <strong>TOTAL PRESUPUESTO:</strong>
-                <strong style={{ fontFamily: "monospace" }}>{currency} ${total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
+                <strong className="t-mono">{currency} ${total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
               </div>
             </div>
           </div>
@@ -1110,7 +1081,6 @@ export const QuoteFormPage: React.FC = () => {
             disabled={saving || quoteStatus === "Cancelled" || quoteStatus === "Ordered"}
             onClick={(e) => handleSubmit(e, true)}
             className="btn"
-            style={{ background: "linear-gradient(180deg, #1aaa97, #128c7e)" }}
           >
             Guardar y convertir a pedido
           </button>
@@ -1127,7 +1097,7 @@ export const QuoteFormPage: React.FC = () => {
               </div>
               <button type="button" className="icon-button" onClick={() => setTechnicalLineIndex(null)}>×</button>
             </div>
-            <p className="muted" style={{ fontSize: "0.88rem" }}>
+            <p className="muted">
               Este texto sale en la primera hoja, como oferta técnica. La hoja siguiente es la oferta comercial, con precios.
               Podés escribir todo el alcance, las especificaciones y las condiciones técnicas.
             </p>
@@ -1170,8 +1140,8 @@ export const QuoteFormPage: React.FC = () => {
 
       {/* Mini Modal: Nueva Planta para Cliente Seleccionado (el mismo formulario que la ficha del cliente) */}
       {showNewLocationModal && customerId && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div className="card pad stack" style={{ width: "620px", background: "white" }}>
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal-card stack" style={{ width: "min(620px, 100%)", gap: 12 }}>
             <h3 style={{ margin: 0 }}>Nueva Planta / Destino para {selectedCustomerDetail?.tradeName || selectedCustomerDetail?.legalName}</h3>
             <CustomerLocationForm
               customerId={customerId}
@@ -1190,8 +1160,8 @@ export const QuoteFormPage: React.FC = () => {
 
       {/* Mini Modal: Nuevo Contacto para Cliente Seleccionado */}
       {showNewContactModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-          <div className="card pad stack" style={{ width: "520px", background: "white" }}>
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal-card stack" style={{ width: "min(520px, 100%)", gap: 12 }}>
             <h3 style={{ margin: 0 }}>Nuevo Contacto para {selectedCustomerDetail?.tradeName || selectedCustomerDetail?.legalName}</h3>
             <form onSubmit={handleCreateContact} className="stack">
               <div className="grid-2">
@@ -1212,7 +1182,7 @@ export const QuoteFormPage: React.FC = () => {
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
                 <button type="button" onClick={() => setShowNewContactModal(false)} className="btn ghost">Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ background: "var(--lc-accent)" }}>Guardar Contacto</button>
+                <button type="submit" className="btn btn-primary">Guardar Contacto</button>
               </div>
             </form>
           </div>

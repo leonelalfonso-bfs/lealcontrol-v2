@@ -84,20 +84,20 @@ export function InflationAdjustmentPage() {
       <div className="grid-2" style={{ alignItems: "start" }}>
         <div className="card pad stack" style={{ gap: 10 }}>
           <h3 style={{ margin: 0 }}>1. Índices FACPCE</h3>
-          <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
+          <p className="muted t-small" style={{ margin: 0 }}>
             Copiá de la planilla de la FACPCE las columnas de mes y valor (IPC nacional empalmado con IPIM) y pegalas acá, una fila por mes.
             Los meses que ya estaban se actualizan.
           </p>
           <textarea rows={6} value={pasted} placeholder={"2026-01\t9876,54\n2026-02\t10123,45"} onChange={(e) => setPasted(e.target.value)} />
           <button type="button" className="btn" disabled={busy || !pasted.trim()} onClick={() => void saveIndices()}>Guardar índices</button>
           {indices.length > 0 && (
-            <table style={{ fontSize: "0.8rem" }}>
-              <thead><tr><th>Mes</th><th style={{ textAlign: "right" }}>Índice</th></tr></thead>
+            <table>
+              <thead><tr><th>Mes</th><th className="t-right">Índice</th></tr></thead>
               <tbody>
                 {indices.slice(0, 24).map((i) => (
                   <tr key={`${i.year}-${i.month}`}>
                     <td>{String(i.month).padStart(2, "0")}/{i.year}</td>
-                    <td style={{ textAlign: "right" }}>{i.value.toLocaleString("es-AR", { maximumFractionDigits: 6 })}</td>
+                    <td className="t-right">{i.value.toLocaleString("es-AR", { maximumFractionDigits: 6 })}</td>
                   </tr>
                 ))}
               </tbody>
@@ -107,7 +107,7 @@ export function InflationAdjustmentPage() {
 
         <div className="card pad stack" style={{ gap: 10 }}>
           <h3 style={{ margin: 0 }}>2. Cuentas no monetarias</h3>
-          <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
+          <p className="muted t-small" style={{ margin: 0 }}>
             Se ajustan las cuentas marcadas con “Ajusta por inflación” en el <Link to="/contabilidad/plan-cuentas">Plan de Cuentas</Link>.
             La sugerencia marca bienes de cambio, bienes de uso, patrimonio neto y resultados (salvo los financieros). Revisala con el contador.
           </p>
@@ -136,40 +136,40 @@ export function InflationAdjustmentPage() {
         </div>
         {preview && (
           <>
-            <div className="muted" style={{ fontSize: "0.85rem" }}>
+            <div className="muted t-small">
               Ejercicio {preview.fiscalYear} · índice de cierre {preview.closingIndex.toLocaleString("es-AR")} · {preview.markedAccounts} cuenta(s) marcadas
             </div>
             {preview.missingIndices.length > 0 && <div className="alert">Faltan los índices de {preview.missingIndices.join(", ")}.</div>}
             {preview.existingEntryNumber != null && <div className="alert">Ese mes ya tiene ajuste: asiento N° {preview.existingEntryNumber}.</div>}
             {preview.rows.length > 0 && (
-              <table style={{ fontSize: "0.8rem" }}>
+              <table>
                 <thead>
                   <tr>
                     <th>Cuenta</th>
-                    <th style={{ textAlign: "right" }}>Saldo histórico</th>
-                    <th style={{ textAlign: "right" }}>Reexpresado</th>
-                    <th style={{ textAlign: "right" }}>Ajuste a registrar</th>
+                    <th className="t-right">Saldo histórico</th>
+                    <th className="t-right">Reexpresado</th>
+                    <th className="t-right">Ajuste a registrar</th>
                   </tr>
                 </thead>
                 <tbody>
                   {preview.rows.map((r) => (
                     <tr key={r.accountCode}>
                       <td>{r.accountCode} — {r.accountName}</td>
-                      <td style={{ textAlign: "right" }}>{money(r.historical)}</td>
-                      <td style={{ textAlign: "right" }}>{money(r.restated)}</td>
-                      <td style={{ textAlign: "right", fontWeight: 700 }}>{money(r.adjustment)}</td>
+                      <td className="t-right">{money(r.historical)}</td>
+                      <td className="t-right">{money(r.restated)}</td>
+                      <td className="t-right t-strong">{money(r.adjustment)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr style={{ fontWeight: 800 }}>
+                  <tr className="t-strong">
                     <td colSpan={3}>RECPAM ({preview.recpam >= 0 ? "pérdida" : "ganancia"})</td>
-                    <td style={{ textAlign: "right" }}>{money(Math.abs(preview.recpam))}</td>
+                    <td className="t-right">{money(Math.abs(preview.recpam))}</td>
                   </tr>
                 </tfoot>
               </table>
             )}
-            <div className="muted" style={{ fontSize: "0.75rem" }}>Saldos con signo: positivo deudor, negativo acreedor.</div>
+            <div className="muted t-small">Saldos con signo: positivo deudor, negativo acreedor.</div>
           </>
         )}
       </div>

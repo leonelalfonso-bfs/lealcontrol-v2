@@ -126,12 +126,12 @@ export function AccountingStudyPortalPage() {
         <InventoryValuationCard />
 
         {/* Asistente 2: Devengamiento de Sueldos F.931 */}
-        <div className="card pad" style={{ border: "1px solid var(--lc-accent)", background: "rgba(13, 148, 136, 0.02)" }}>
+        <div className="card pad">
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
             <div style={{ fontSize: "28px" }}>👥</div>
             <div>
-              <h3 style={{ margin: 0, color: "var(--lc-accent-strong)" }}>Asiento de Devengamiento de Sueldos</h3>
-              <p className="muted" style={{ margin: 0, fontSize: "12px" }}>
+              <h3 style={{ margin: 0 }}>Asiento de Devengamiento de Sueldos</h3>
+              <p className="muted t-small" style={{ margin: 0 }}>
                 Registra el devengamiento mensual de haberes y aportes patronales F.931.
               </p>
             </div>
@@ -139,36 +139,36 @@ export function AccountingStudyPortalPage() {
 
           <form onSubmit={handleAutoPostPayroll} className="stack" style={{ gap: 10 }}>
             <div className="grid-2" style={{ gap: 10 }}>
-              <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+              <label>
                 Período:
                 <input value={payrollPeriod} onChange={(e) => setPayrollPeriod(e.target.value)} placeholder="Ej. Agosto 2026" required />
               </label>
 
-              <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+              <label>
                 Fecha Contable:
                 <input type="date" value={payrollDate} onChange={(e) => setPayrollDate(e.target.value)} required />
               </label>
             </div>
 
             <div className="grid-2" style={{ gap: 10 }}>
-              <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+              <label>
                 Sueldos Brutos ($):
                 <input type="number" min="0" step="0.01" value={grossSalaries} onChange={(e) => setGrossSalaries(parseFloat(e.target.value) || 0)} required />
               </label>
 
-              <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+              <label>
                 Contribuciones Patronales ($):
                 <input type="number" min="0" step="0.01" value={employerContrib} onChange={(e) => setEmployerContrib(parseFloat(e.target.value) || 0)} required />
               </label>
             </div>
 
             <div className="grid-2" style={{ gap: 10 }}>
-              <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+              <label>
                 Netos a Pagar ($):
                 <input type="number" min="0" step="0.01" value={netSalaries} onChange={(e) => setNetSalaries(parseFloat(e.target.value) || 0)} required />
               </label>
 
-              <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>
+              <label>
                 F.931 a Pagar ($):
                 <input type="number" min="0" step="0.01" value={socialSecurityToPay} onChange={(e) => setSocialSecurityToPay(parseFloat(e.target.value) || 0)} required />
               </label>
@@ -178,7 +178,7 @@ export function AccountingStudyPortalPage() {
               type="submit"
               className="btn"
               disabled={payrollLoading}
-              style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 700, marginTop: 4 }}
+              style={{ marginTop: 4 }}
             >
               {payrollLoading ? "Registrando..." : "📝 Contabilizar Asiento de Sueldos y F.931"}
             </button>
@@ -199,7 +199,7 @@ export function AccountingStudyPortalPage() {
                 })}
               </select>
             </h3>
-            <p className="muted" style={{ margin: 0, fontSize: "13px" }}>
+            <p className="muted t-small" style={{ margin: 0 }}>
               Al bloquear un período, el sistema impide agregar o alterar comprobantes y asientos de dicho mes.
             </p>
           </div>
@@ -213,7 +213,7 @@ export function AccountingStudyPortalPage() {
                 <th>Estado del Período</th>
                 <th>Fecha de Cierre</th>
                 <th>Auditor / Responsable</th>
-                <th style={{ textAlign: "right" }}>Acción de Bloqueo</th>
+                <th className="t-right">Acción de Bloqueo</th>
               </tr>
             </thead>
             <tbody>
@@ -233,7 +233,7 @@ export function AccountingStudyPortalPage() {
                     </td>
                     <td>{p?.lockedAtUtc ? new Date(p.lockedAtUtc).toLocaleString("es-AR") : "-"}</td>
                     <td>{p?.lockedBy || "-"}</td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="t-right">
                       <button
                         type="button"
                         className={`btn ${isLocked ? "ghost" : ""}`}

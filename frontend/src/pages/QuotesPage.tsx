@@ -251,11 +251,11 @@ export function QuotesPage() {
                   <th>Cliente</th>
                   <th>Estado</th>
                   <th>Moneda</th>
-                  <th style={{ textAlign: "right" }}>Subtotal</th>
-                  <th style={{ textAlign: "right" }}>Total</th>
+                  <th className="t-right">Subtotal</th>
+                  <th className="t-right">Total</th>
                   <th>Responsable</th>
                   <th>Fecha</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
+                  <th className="t-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -286,23 +286,22 @@ export function QuotesPage() {
                           {curr.label}
                         </span>
                       </td>
-                      <td style={{ textAlign: "right", fontFamily: "monospace" }}>
+                      <td className="t-right t-mono">
                         {curr.symbol} {q.subtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                       </td>
-                      <td style={{ textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
+                      <td className="t-right t-mono t-strong">
                         {curr.symbol} {q.total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                       </td>
                       <td className="muted">{q.ownerName || "—"}</td>
                       <td className="muted">{new Date(q.createdAtUtc).toLocaleDateString("es-AR")}</td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
                           {(q.status === "Draft" || q.status === "Sent" || q.status === "Accepted" || q.status === "Expired") && (
                             <button
                               type="button"
                               onClick={(e) => void openConvertModal(e, q.id)}
-                              className="btn"
+                              className="btn compact"
                               disabled={converting}
-                              style={{ padding: "4px 10px", fontSize: "0.75rem", background: "linear-gradient(180deg, var(--lc-info), var(--lc-info))" }}
                             >
                               Convertir a Pedido
                             </button>
@@ -311,8 +310,7 @@ export function QuotesPage() {
                             <button
                               type="button"
                               onClick={(e) => handleSendQuote(e, q.id)}
-                              className="btn ghost"
-                              style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                              className="btn ghost compact"
                             >
                               Marcar Enviado
                             </button>
@@ -321,8 +319,7 @@ export function QuotesPage() {
                             <button
                               type="button"
                               onClick={(e) => handleCancelQuote(e, q.id, q.quoteNumber)}
-                              className="btn ghost"
-                              style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                              className="btn ghost compact"
                             >
                               Anular
                             </button>
@@ -331,8 +328,7 @@ export function QuotesPage() {
                             <button
                               type="button"
                               onClick={(e) => handleDeleteQuote(e, q.id, q.quoteNumber)}
-                              className="btn ghost"
-                              style={{ padding: "4px 10px", fontSize: "0.75rem", color: "var(--lc-danger)" }}
+                              className="btn ghost compact btn-outline danger"
                             >
                               Eliminar
                             </button>
@@ -343,8 +339,7 @@ export function QuotesPage() {
                               e.stopPropagation();
                               navigate(`/presupuestos/${q.id}/editar`);
                             }}
-                            className="btn ghost"
-                            style={{ padding: "4px 10px", fontSize: "0.75rem" }}
+                            className="btn ghost compact"
                           >
                             Ver / Editar
                           </button>
@@ -355,7 +350,7 @@ export function QuotesPage() {
                 })}
                 {filteredQuotes.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="muted" style={{ textAlign: "center", padding: "32px" }}>
+                    <td colSpan={10} className="muted t-center">
                       No se encontraron presupuestos comerciales.
                     </td>
                   </tr>
@@ -378,7 +373,7 @@ export function QuotesPage() {
                 ×
               </button>
             </div>
-            <p className="muted" style={{ fontSize: "0.88rem" }}>
+            <p className="muted">
               Los renglones obligatorios se incluyen siempre. Marcá cuáles opcionales querés pasar al pedido.
             </p>
             <div className="stack" style={{ gap: 8, marginTop: 12, maxHeight: 320, overflow: "auto" }}>

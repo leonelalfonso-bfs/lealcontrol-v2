@@ -56,7 +56,7 @@ export function TrialBalancePage() {
 
       <div className="card pad">
         {loading ? (
-          <p style={{ textAlign: "center", padding: 30 }}>Calculando balance de sumas y saldos...</p>
+          <p className="t-center" style={{ padding: 30 }}>Calculando balance de sumas y saldos...</p>
         ) : !balance ? (
           <p className="muted">No se pudieron cargar los datos del balance.</p>
         ) : (
@@ -64,22 +64,22 @@ export function TrialBalancePage() {
             <table>
               <thead>
                 <tr>
-                  <th rowSpan={2} style={{ verticalAlign: "middle" }}>Código</th>
-                  <th rowSpan={2} style={{ verticalAlign: "middle" }}>Cuenta</th>
-                  <th colSpan={2} style={{ textAlign: "center", background: "rgba(37, 99, 235, 0.08)" }}>1. Sumas</th>
-                  <th colSpan={2} style={{ textAlign: "center", background: "rgba(16, 185, 129, 0.08)" }}>2. Saldos</th>
-                  <th colSpan={2} style={{ textAlign: "center", background: "rgba(245, 158, 11, 0.08)" }}>3. Patrimoniales</th>
-                  <th colSpan={2} style={{ textAlign: "center", background: "rgba(168, 85, 247, 0.08)" }}>4. Resultados</th>
+                  <th rowSpan={2}>Código</th>
+                  <th rowSpan={2}>Cuenta</th>
+                  <th className="t-center" colSpan={2} style={{ background: "rgba(37, 99, 235, 0.08)" }}>1. Sumas</th>
+                  <th className="t-center" colSpan={2} style={{ background: "rgba(16, 185, 129, 0.08)" }}>2. Saldos</th>
+                  <th className="t-center" colSpan={2} style={{ background: "rgba(245, 158, 11, 0.08)" }}>3. Patrimoniales</th>
+                  <th className="t-center" colSpan={2} style={{ background: "rgba(168, 85, 247, 0.08)" }}>4. Resultados</th>
                 </tr>
                 <tr>
-                  <th style={{ textAlign: "right", background: "rgba(37, 99, 235, 0.05)" }}>Debe</th>
-                  <th style={{ textAlign: "right", background: "rgba(37, 99, 235, 0.05)" }}>Haber</th>
-                  <th style={{ textAlign: "right", background: "rgba(16, 185, 129, 0.05)" }}>Deudor</th>
-                  <th style={{ textAlign: "right", background: "rgba(16, 185, 129, 0.05)" }}>Acreedor</th>
-                  <th style={{ textAlign: "right", background: "rgba(245, 158, 11, 0.05)" }}>Activo</th>
-                  <th style={{ textAlign: "right", background: "rgba(245, 158, 11, 0.05)" }}>Pasivo/PN</th>
-                  <th style={{ textAlign: "right", background: "rgba(168, 85, 247, 0.05)" }}>Pérdidas</th>
-                  <th style={{ textAlign: "right", background: "rgba(168, 85, 247, 0.05)" }}>Ganancias</th>
+                  <th className="t-right" style={{ background: "rgba(37, 99, 235, 0.05)" }}>Debe</th>
+                  <th className="t-right" style={{ background: "rgba(37, 99, 235, 0.05)" }}>Haber</th>
+                  <th className="t-right" style={{ background: "rgba(16, 185, 129, 0.05)" }}>Deudor</th>
+                  <th className="t-right" style={{ background: "rgba(16, 185, 129, 0.05)" }}>Acreedor</th>
+                  <th className="t-right" style={{ background: "rgba(245, 158, 11, 0.05)" }}>Activo</th>
+                  <th className="t-right" style={{ background: "rgba(245, 158, 11, 0.05)" }}>Pasivo/PN</th>
+                  <th className="t-right" style={{ background: "rgba(168, 85, 247, 0.05)" }}>Pérdidas</th>
+                  <th className="t-right" style={{ background: "rgba(168, 85, 247, 0.05)" }}>Ganancias</th>
                 </tr>
               </thead>
               <tbody>
@@ -99,14 +99,14 @@ export function TrialBalancePage() {
                       <td>
                         <div style={{ paddingLeft: (r.level - 1) * 14 }}>{r.name}</div>
                       </td>
-                      <td style={{ textAlign: "right" }}>{r.sumDebit > 0 ? `$ ${r.sumDebit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
-                      <td style={{ textAlign: "right" }}>{r.sumCredit > 0 ? `$ ${r.sumCredit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
-                      <td style={{ textAlign: "right" }}>{r.debitBalance > 0 ? `$ ${r.debitBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
-                      <td style={{ textAlign: "right" }}>{r.creditBalance > 0 ? `$ ${r.creditBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
-                      <td style={{ textAlign: "right" }}>{r.assetBalance > 0 ? `$ ${r.assetBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
-                      <td style={{ textAlign: "right" }}>{r.liabilityEquityBalance > 0 ? `$ ${r.liabilityEquityBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
-                      <td style={{ textAlign: "right" }}>{r.lossBalance > 0 ? `$ ${r.lossBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
-                      <td style={{ textAlign: "right" }}>{r.gainBalance > 0 ? `$ ${r.gainBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
+                      <td className="t-right">{r.sumDebit > 0 ? `$ ${r.sumDebit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
+                      <td className="t-right">{r.sumCredit > 0 ? `$ ${r.sumCredit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
+                      <td className="t-right">{r.debitBalance > 0 ? `$ ${r.debitBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
+                      <td className="t-right">{r.creditBalance > 0 ? `$ ${r.creditBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
+                      <td className="t-right">{r.assetBalance > 0 ? `$ ${r.assetBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
+                      <td className="t-right">{r.liabilityEquityBalance > 0 ? `$ ${r.liabilityEquityBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
+                      <td className="t-right">{r.lossBalance > 0 ? `$ ${r.lossBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
+                      <td className="t-right">{r.gainBalance > 0 ? `$ ${r.gainBalance.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "-"}</td>
                     </tr>
                   );
                 })}
