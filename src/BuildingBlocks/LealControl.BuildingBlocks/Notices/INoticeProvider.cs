@@ -10,8 +10,11 @@ public enum NoticeSeverity { Info, Warning, Critical }
 /// <summary>Dato sensible que hace falta poder ver para recibir el aviso.</summary>
 public enum NoticeSensitivity { None, Amounts, Costs, Salaries }
 
-/// <summary>Empresa y día (de Argentina) para los que se arma el aviso.</summary>
-public sealed record NoticeContext(Guid TenantId, string ConnectionString, DateOnly Today);
+/// <summary>
+/// Empresa y día (de Argentina) para los que se arma el aviso, y si quien lo recibe ve importes (para los avisos que
+/// tienen una versión con montos y otra sin).
+/// </summary>
+public sealed record NoticeContext(Guid TenantId, string ConnectionString, DateOnly Today, bool SeesAmounts = true);
 
 /// <summary>Un renglón del aviso: qué pasa, detalle y adónde ir a resolverlo.</summary>
 public sealed record NoticeItem(string Title, string? Detail, string? Link, NoticeSeverity Severity);
@@ -33,6 +36,8 @@ public interface INoticeProvider
     string Description { get; }
     /// <summary>Activado para quien todavía no eligió.</summary>
     bool DefaultOn { get; }
+    /// <summary>Los de mayor prioridad van primero en "Mis avisos" y en el resumen diario.</summary>
+    int Priority => 0;
 
     Task<IReadOnlyList<NoticeItem>> GetAsync(NoticeContext context, CancellationToken cancellationToken);
 }

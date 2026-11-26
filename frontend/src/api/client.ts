@@ -561,7 +561,7 @@ export const api = {
   saveCommunicationSettings: (unattendedAfterHours: number) =>
     request<{ unattendedAfterHours: number }>("/api/v1/communications/settings", { method: "PUT", body: JSON.stringify({ unattendedAfterHours }) }),
   getAiSettings: () => request<import("./types").AiSettings>("/api/v1/communications/ai/settings"),
-  saveAiSettings: (body: { apiKey: string | null; monthlyBudgetUsd: number; mailReadingEnabled: boolean; autoOpportunities: boolean; businessDescription: string }) =>
+  saveAiSettings: (body: { apiKey: string | null; monthlyBudgetUsd: number; mailReadingEnabled: boolean; autoOpportunities: boolean; supervisorEnabled: boolean; businessDescription: string }) =>
     request<void>("/api/v1/communications/ai/settings", { method: "PUT", body: JSON.stringify(body) }),
   testAiSettings: () => request<{ ok: boolean; detail: string }>("/api/v1/communications/ai/settings/test", { method: "POST" }),
   listMailAccounts: () => request<import("./types").MailAccount[]>("/api/v1/communications/accounts"),

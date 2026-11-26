@@ -83,9 +83,9 @@ public sealed class NoticeCenter(
 {
     public const string EmailDigestCode = "__email__";
     private static readonly TimeSpan ItemsTtl = TimeSpan.FromMinutes(5);
-    private static readonly ConcurrentDictionary<(Guid Tenant, string Database, string Code), (DateTime Expires, IReadOnlyList<NoticeItem> Items)> ItemsCache = new();
+    private static readonly ConcurrentDictionary<(Guid Tenant, string Database, string Code, bool SeesAmounts), (DateTime Expires, IReadOnlyList<NoticeItem> Items)> ItemsCache = new();
 
-    public IReadOnlyList<INoticeProvider> Providers { get; } = providers.OrderBy(p => p.Module).ThenBy(p => p.Label).ToList();
+    public IReadOnlyList<INoticeProvider> Providers { get; } = providers.OrderByDescending(p => p.Priority).ThenBy(p => p.Module).ThenBy(p => p.Label).ToList();
 
     public DateOnly Today => ArgentinaTime.Today(clock.GetUtcNow());
 
@@ -133,14 +133,16 @@ public sealed class NoticeCenter(
     private IEnumerable<INoticeProvider> Chosen(UserPermissions permissions, Dictionary<string, bool> subscriptions) =>
         Providers.Where(p => Allows(permissions, p) && subscriptions.GetValueOrDefault(p.Code, p.DefaultOn));
 
-    private async Task<IReadOnlyList<NoticeItem>> ItemsAsync(INoticeProvider provider, Guid tenantId, string connectionString, CancellationToken ct)
+    private static bool SeesAmounts(UserPermissions permissions) => permissions.IsSuperAdmin || permissions.Sensitive.Amounts;
+
+    private async Task<IReadOnlyList<NoticeItem>> ItemsAsync(INoticeProvider provider, Guid tenantId, string connectionString, bool seesAmounts, CancellationToken ct)
     {
-        var key = (tenantId, connectionString, provider.Code);
+        var key = (tenantId, connectionString, provider.Code, seesAmounts);
         if (ItemsCache.TryGetValue(key, out var cached) && cached.Expires > DateTime.UtcNow) return cached.Items;
         IReadOnlyList<NoticeItem> items;
         try
         {
-            items = await provider.GetAsync(new NoticeContext(tenantId, connectionString, Today), ct);
+            items = await provider.GetAsync(new NoticeContext(tenantId, connectionString, Today, seesAmounts), ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -162,7 +164,7 @@ public sealed class NoticeCenter(
         var groups = new List<NoticeGroup>();
         foreach (var provider in Chosen(permissions, subscriptions))
         {
-            var items = await ItemsAsync(provider, tenantId, cs, ct);
+            var items = await ItemsAsync(provider, tenantId, cs, SeesAmounts(permissions), ct);
             if (items.Count > 0) groups.Add(new NoticeGroup(provider.Code, provider.Module, provider.Label, items));
         }
         return groups;
@@ -237,7 +239,7 @@ public sealed class NoticeCenter(
         var groups = new List<NoticeGroup>();
         foreach (var provider in Chosen(permissions, subscriptions))
         {
-            var items = await ItemsAsync(provider, tenantId, cs, ct);
+            var items = await ItemsAsync(provider, tenantId, cs, SeesAmounts(permissions), ct);
             if (items.Count > 0) groups.Add(new NoticeGroup(provider.Code, provider.Module, provider.Label, items));
         }
         if (groups.Count == 0) return (false, "Sin novedades para hoy.");

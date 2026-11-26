@@ -12,6 +12,7 @@ export function AiSettingsCard() {
   const [budget, setBudget] = useState("10");
   const [reading, setReading] = useState(false);
   const [autoOpportunities, setAutoOpportunities] = useState(true);
+  const [supervisor, setSupervisor] = useState(false);
   const [business, setBusiness] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -22,6 +23,7 @@ export function AiSettingsCard() {
     setBudget(String(s.monthlyBudgetUsd));
     setReading(s.mailReadingEnabled);
     setAutoOpportunities(s.autoOpportunities);
+    setSupervisor(s.supervisorEnabled);
     setBusiness(s.businessDescription);
   }).catch((err) => setError(err instanceof Error ? err.message : "No se pudo leer la configuración."));
   useEffect(() => { void load(); }, []);
@@ -37,6 +39,7 @@ export function AiSettingsCard() {
         monthlyBudgetUsd: Number(budget.replace(",", ".")) || 0,
         mailReadingEnabled: removeKey ? false : reading,
         autoOpportunities,
+        supervisorEnabled: removeKey ? false : supervisor,
         businessDescription: business,
       });
       setApiKey("");
@@ -111,6 +114,12 @@ export function AiSettingsCard() {
       <label className="check-label">
         <input type="checkbox" checked={autoOpportunities} onChange={(e) => setAutoOpportunities(e.target.checked)} />
         Abrir la oportunidad automáticamente en los pedidos comerciales (etiqueta “IA”)
+      </label>
+
+      <label className="check-label">
+        <input type="checkbox" checked={supervisor} onChange={(e) => setSupervisor(e.target.checked)} disabled={!settings.hasKey && !apiKey.trim()} />
+        Supervisor comercial: cada día hábil a las 6, las 3 a 5 prioridades del día, arriba de “Mis avisos” y del resumen diario
+        (una consulta por día, con el modelo más capaz)
       </label>
 
       <div className="toolbar">

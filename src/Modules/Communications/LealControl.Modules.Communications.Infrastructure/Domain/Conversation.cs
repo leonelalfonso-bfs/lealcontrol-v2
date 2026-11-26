@@ -39,6 +39,15 @@ public sealed class Conversation
     public string? AiSummary { get; private set; }
     public DateTime? AiReadAtUtc { get; private set; }
 
+    /// <summary>El nombre que leyó la IA (contacto · empresa), solo si hoy se muestra una dirección de mail.</summary>
+    public void SetNameFromAi(string name)
+    {
+        name = name.Trim();
+        if (name.Length == 0 || name.Contains('@')) return;
+        if (!string.IsNullOrWhiteSpace(ParticipantName) && !ParticipantName.Contains('@') && !IsGenericName(ParticipantName)) return;
+        ParticipantName = name.Length > 200 ? name[..200] : name;
+    }
+
     public void SetAiReading(string category, int urgency, string summary, DateTime atUtc)
     {
         AiCategory = category;
@@ -85,7 +94,9 @@ public sealed class Conversation
 
     public void RecordMessage(EmailDirection direction, string preview, DateTime occurredAtUtc, string? participantName)
     {
-        if (!string.IsNullOrWhiteSpace(participantName) && !IsGenericName(participantName))
+        // Un nombre real (de la firma o la IA) no se pisa con una dirección de mail.
+        if (!string.IsNullOrWhiteSpace(participantName) && !IsGenericName(participantName)
+            && !(participantName.Contains('@') && !ParticipantName.Contains('@') && !string.IsNullOrWhiteSpace(ParticipantName)))
         {
             ParticipantName = participantName;
         }
