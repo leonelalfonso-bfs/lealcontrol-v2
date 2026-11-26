@@ -20,17 +20,16 @@ interface InvoiceRow {
 function TaxInput({ label, value, onChange, disabled }: { label: string; value: number; onChange: (v: number) => void; disabled: boolean }) {
   return (
     <div style={{ marginBottom: "8px" }}>
-      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "2px" }}>
+      <label>
         {label}
-        <input
+        <input className="t-right t-mono"
           type="number"
           step="0.01"
           value={disabled ? 0 : value === 0 ? "" : value}
           placeholder="0,00"
           disabled={disabled}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "right", fontFamily: "monospace", fontWeight: "normal" }}
-        />
+         style={{ width: "100%", fontWeight: "normal" }}/>
       </label>
     </div>
   );
@@ -398,7 +397,7 @@ export function PurchaseInvoiceFormPage() {
   };
 
   if (loading) {
-    return <div style={{ padding: "40px", textAlign: "center" }}>Cargando formulario de factura...</div>;
+    return <div className="t-center" style={{ padding: "40px" }}>Cargando formulario de factura...</div>;
   }
 
   return (
@@ -416,7 +415,7 @@ export function PurchaseInvoiceFormPage() {
       </div>
 
       {error && (
-        <div style={{ padding: "12px 16px", background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderRadius: "8px", marginBottom: "16px", border: "1px solid var(--lc-danger)" }}>
+        <div className="t-danger alert" style={{ marginBottom: "16px" }}>
           {error}
         </div>
       )}
@@ -425,19 +424,19 @@ export function PurchaseInvoiceFormPage() {
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "20px", alignItems: "start" }}>
           {/* Main Info Card */}
           <div className="card pad">
-            <h3 style={{ marginTop: 0, marginBottom: "16px", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+            <h3 className="t-accent" style={{ marginBottom: "16px" }}>
               1. Cabecera del Comprobante & Datos Fiscales
             </h3>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: "16px", marginBottom: "16px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Tipo de Comprobante *
                 </label>
                 <select
                   value={invoiceType}
                   onChange={(e) => setInvoiceType(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 >
                   <option value="A">Factura A (01)</option>
                   <option value="B">Factura B (06)</option>
@@ -461,10 +460,10 @@ export function PurchaseInvoiceFormPage() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Pto. Venta *
                 </label>
-                <input
+                <input className="t-center t-mono"
                   type="number"
                   min="1"
                   required
@@ -474,15 +473,15 @@ export function PurchaseInvoiceFormPage() {
                     const v = e.target.value;
                     setPointOfSale(v === "" ? "" : parseInt(v, 10) || "");
                   }}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", textAlign: "center", fontFamily: "monospace" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Número de Factura *
                 </label>
-                <input
+                <input className="t-mono"
                   type="number"
                   min="1"
                   required
@@ -492,14 +491,14 @@ export function PurchaseInvoiceFormPage() {
                     const v = e.target.value;
                     setInvoiceNumber(v === "" ? "" : parseInt(v, 10) || "");
                   }}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)", fontFamily: "monospace" }}
+                  style={{ width: "100%" }}
                 />
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "16px", marginBottom: "16px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Proveedor *
                 </label>
                 <CustomerPicker
@@ -511,7 +510,7 @@ export function PurchaseInvoiceFormPage() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Razón Social / Emisor *
                 </label>
                 <input
@@ -519,19 +518,19 @@ export function PurchaseInvoiceFormPage() {
                   required
                   value={supplierName}
                   onChange={(e) => setSupplierName(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </div>
             </div>
 
             <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+              <label>
                 Recepción ya ingresada (evita duplicar stock)
               </label>
               <select
                 value={purchaseReceptionId || ""}
                 onChange={(e) => handleReceptionChange(e.target.value)}
-                style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               >
                 <option value="">— Sin vincular —</option>
                 {receptionsForSupplier.map((r) => (
@@ -542,14 +541,14 @@ export function PurchaseInvoiceFormPage() {
                   </option>
                 ))}
               </select>
-              <p className="muted" style={{ fontSize: "0.8rem", marginTop: "4px", marginBottom: 0 }}>
+              <p className="muted t-small" style={{ marginTop: "4px", marginBottom: 0 }}>
                 Si la mercadería ya entró por remito, vinculá esa recepción. No vuelvas a recibir.
               </p>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "16px", marginBottom: "16px" }}>
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   CUIT Emisor *
                 </label>
                 <input
@@ -558,12 +557,12 @@ export function PurchaseInvoiceFormPage() {
                   value={supplierDocument}
                   onChange={(e) => setSupplierDocument(e.target.value)}
                   placeholder="30xxxxxxxx"
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Fecha de Emisión *
                 </label>
                 <input
@@ -571,12 +570,12 @@ export function PurchaseInvoiceFormPage() {
                   required
                   value={issueDate}
                   onChange={(e) => setIssueDate(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Período de imputación
                 </label>
                 <input
@@ -584,7 +583,7 @@ export function PurchaseInvoiceFormPage() {
                   value={imputationPeriod}
                   min={issueDate.slice(0, 7)}
                   onChange={(e) => setImputationPeriod(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
                 <small className="muted" style={{ display: "block", marginTop: 4 }}>
                   {lockedMonths.includes(issueDate.slice(0, 7))
@@ -596,7 +595,7 @@ export function PurchaseInvoiceFormPage() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Fecha Vencimiento *
                 </label>
                 <input
@@ -604,18 +603,18 @@ export function PurchaseInvoiceFormPage() {
                   required
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "bold", marginBottom: "4px" }}>
+                <label>
                   Moneda
                 </label>
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 >
                   <option value="ARS">Pesos (ARS)</option>
                   <option value="USD">Dólares (USD)</option>
@@ -624,33 +623,33 @@ export function PurchaseInvoiceFormPage() {
             </div>
 
             {/* Items Table */}
-            <h3 style={{ marginTop: "24px", marginBottom: "12px", fontSize: "1.05rem", color: "var(--brand-accent)" }}>
+            <h3 className="t-accent" style={{ marginBottom: "12px" }}>
               2. Detalle de Conceptos Facturados & IVA
             </h3>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", minWidth: 860, borderCollapse: "collapse", marginBottom: "12px" }}>
+              <table style={{ minWidth: 860, marginBottom: "12px" }}>
                 <thead>
-                  <tr style={{ borderBottom: "2px solid rgba(0,0,0,0.06)", fontSize: "0.82rem", color: "var(--ink-soft)", textAlign: "left" }}>
-                    <th style={{ width: "18%", padding: "8px 4px" }}>Catálogo / Insumo</th>
-                    <th style={{ width: "18%", padding: "8px 4px" }}>Descripción / Detalle Factura</th>
-                    <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>Cant.</th>
-                    <th style={{ width: "18%", padding: "8px 4px", textAlign: "right" }}>Precio Neto U.</th>
-                    <th style={{ width: "10%", padding: "8px 4px", textAlign: "center" }}>Alícuota IVA</th>
-                    <th style={{ width: "14%", padding: "8px 4px" }}>
+                  <tr>
+                    <th style={{ width: "18%" }}>Catálogo / Insumo</th>
+                    <th style={{ width: "18%" }}>Descripción / Detalle Factura</th>
+                    <th className="t-center" style={{ width: "10%" }}>Cant.</th>
+                    <th className="t-right" style={{ width: "18%" }}>Precio Neto U.</th>
+                    <th className="t-center" style={{ width: "10%" }}>Alícuota IVA</th>
+                    <th style={{ width: "14%" }}>
                       Rubro{" "}
-                      <button type="button" className="btn ghost" style={{ padding: "0 6px", fontSize: "0.75rem" }} onClick={() => setCategoriesOpen(true)} title="Administrar rubros">
+                      <button type="button" className="btn ghost" onClick={() => setCategoriesOpen(true)} title="Administrar rubros">
                         ⚙
                       </button>
                     </th>
-                    <th style={{ width: "14%", padding: "8px 4px", textAlign: "right" }}>Subtotal</th>
-                    <th style={{ width: "4%", padding: "8px 4px" }}></th>
+                    <th className="t-right" style={{ width: "14%" }}>Subtotal</th>
+                    <th style={{ width: "4%" }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((it, idx) => (
-                    <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                      <td style={{ padding: "8px 4px" }}>
+                    <tr key={idx}>
+                      <td>
                         <ProductPicker
                           aria-label={`Producto del renglón ${idx + 1}`}
                           value={it.productId || ""}
@@ -660,18 +659,17 @@ export function PurchaseInvoiceFormPage() {
                           placeholder="Ítem / Concepto libre"
                         />
                       </td>
-                      <td style={{ padding: "8px 4px" }}>
-                        <input
+                      <td>
+                        <input className="t-small"
                           type="text"
                           required
                           value={it.description}
                           onChange={(e) => handleItemChange(idx, "description", e.target.value)}
                           placeholder="Concepto o descripción..."
-                          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.85rem" }}
-                        />
+                         style={{ width: "100%" }}/>
                       </td>
-                      <td style={{ padding: "8px 4px" }}>
-                        <input
+                      <td>
+                        <input className="t-center t-small"
                           type="number"
                           step="any"
                           min="0"
@@ -680,11 +678,10 @@ export function PurchaseInvoiceFormPage() {
                           // Vacío mientras se escribe (antes volvía solo a 1 y no se podía borrar); admite decimales.
                           value={it.quantity === 0 ? "" : it.quantity}
                           onChange={(e) => handleItemChange(idx, "quantity", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
-                          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "center", fontSize: "0.85rem" }}
-                        />
+                         style={{ width: "100%" }}/>
                       </td>
-                      <td style={{ padding: "8px 4px" }}>
-                        <input
+                      <td>
+                        <input className="t-right t-mono t-small"
                           type="number"
                           step="any"
                           min="0"
@@ -694,28 +691,26 @@ export function PurchaseInvoiceFormPage() {
                           // Vacío mientras se escribe (antes quedaba un 0 adelante del importe).
                           value={it.unitPrice === 0 ? "" : it.unitPrice}
                           onChange={(e) => handleItemChange(idx, "unitPrice", e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
-                          style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", textAlign: "right", fontFamily: "monospace", fontSize: "0.85rem" }}
-                        />
+                         style={{ width: "100%" }}/>
                       </td>
-                      <td style={{ padding: "8px 4px" }}>
-                        <select
+                      <td>
+                        <select className="t-small"
                           value={vatOf(it)}
                           disabled={isX}
                           onChange={(e) => handleItemChange(idx, "vatRate", parseFloat(e.target.value))}
-                          style={{ width: "100%", padding: "6px 4px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
-                        >
+                         style={{ width: "100%" }}>
                           <option value="21">21.0%</option>
                           <option value="10.5">10.5%</option>
                           <option value="27">27.0%</option>
                           <option value="0">0% (Exento)</option>
                         </select>
                       </td>
-                      <td style={{ padding: "8px 4px" }}>
-                        <select
+                      <td>
+                        <select className="t-small"
                           aria-label={`Rubro del renglón ${idx + 1}`}
                           value={it.expenseCategoryId || ""}
                           onChange={(e) => handleItemChange(idx, "expenseCategoryId", e.target.value || undefined)}
-                          style={{ width: "100%", padding: "6px 4px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
+                          style={{ width: "100%" }}
                         >
                           <option value="">—</option>
                           {categories.filter((c) => c.isActive || c.id === it.expenseCategoryId).map((c) => (
@@ -723,16 +718,15 @@ export function PurchaseInvoiceFormPage() {
                           ))}
                         </select>
                       </td>
-                      <td style={{ padding: "8px 4px", textAlign: "right", fontWeight: 600, fontSize: "0.85rem" }}>
+                      <td className="t-right t-strong t-small">
                         {money(it.quantity * it.unitPrice)}
                       </td>
-                      <td style={{ padding: "8px 4px", textAlign: "center" }}>
-                        <button
+                      <td className="t-center">
+                        <button className="t-danger"
                           type="button"
                           onClick={() => removeItemRow(idx)}
-                          style={{ background: "transparent", border: "none", color: "var(--lc-danger)", cursor: "pointer", fontSize: "1.1rem" }}
                           title="Eliminar este concepto"
-                        >
+                         style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "1.1rem" }}>
                           ✕
                         </button>
                       </td>
@@ -742,7 +736,7 @@ export function PurchaseInvoiceFormPage() {
               </table>
             </div>
 
-            <button type="button" onClick={addItemRow} className="btn btn-outline" style={{ fontSize: "0.85rem" }}>
+            <button type="button" onClick={addItemRow} className="btn btn-outline">
               + Agregar Concepto
             </button>
           </div>
@@ -750,37 +744,37 @@ export function PurchaseInvoiceFormPage() {
           {/* Totals & Perceptions Sidebar */}
           <div>
             <div className="card pad" style={{ position: "sticky", top: "80px" }}>
-              <h3 style={{ marginTop: 0, marginBottom: "16px", fontSize: "1.05rem" }}>Totales & Percepciones</h3>
+              <h3 style={{ marginBottom: "16px" }}>Totales & Percepciones</h3>
 
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.88rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                 <span className="muted">Neto Gravado:</span>
-                <span style={{ fontFamily: "monospace", fontWeight: "bold" }}>
+                <span className="t-mono t-strong">
                   $ {subtotalNeto.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
               {iva21 > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.88rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                   <span className="muted">IVA 21%:</span>
-                  <span style={{ fontFamily: "monospace", color: "var(--lc-ok)" }}>
+                  <span className="t-mono t-ok">
                     $ {iva21.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               )}
 
               {iva105 > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.88rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                   <span className="muted">IVA 10.5%:</span>
-                  <span style={{ fontFamily: "monospace", color: "var(--lc-ok)" }}>
+                  <span className="t-mono t-ok">
                     $ {iva105.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               )}
 
               {iva27 > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.88rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                   <span className="muted">IVA 27%:</span>
-                  <span style={{ fontFamily: "monospace", color: "var(--lc-ok)" }}>
+                  <span className="t-mono t-ok">
                     $ {iva27.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -796,49 +790,37 @@ export function PurchaseInvoiceFormPage() {
               </div>
 
               <div style={{ borderTop: "2px solid var(--surface-border)", paddingTop: "10px", display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
-                <span style={{ fontWeight: "bold", fontSize: "1.1rem" }}>Total Factura:</span>
-                <span style={{ fontWeight: "bold", fontSize: "1.2rem", color: "var(--lc-ok)", fontFamily: "monospace" }}>
+                <span className="t-strong" style={{ fontSize: "1.1rem" }}>Total Factura:</span>
+                <span className="t-strong t-ok t-mono" style={{ fontSize: "1.2rem" }}>
                   $ {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
               {purchaseReceptionId && (
-                <div
-                  style={{
-                    marginBottom: "12px",
-                    padding: "10px 12px",
-                    borderRadius: "8px",
-                    background: "rgba(16, 185, 129, 0.12)",
-                    border: "1px solid #6ee7b7",
-                    color: "var(--lc-ok)",
-                    fontSize: "0.85rem",
-                    fontWeight: 600
-                  }}
-                >
+                <div className="t-ok t-small t-strong"
+                 style={{ marginBottom: "12px", padding: "10px 12px", borderRadius: "8px", background: "rgba(16, 185, 129, 0.12)", border: "1px solid #6ee7b7" }}>
                   Stock ya vinculado a recepción — no se pedirá recibir de nuevo
                 </div>
               )}
 
               {/* CAE Field */}
-              {!isX && <div style={{ marginBottom: "12px", background: "var(--lc-surface-2)", padding: "10px", borderRadius: "8px", border: "1px solid var(--lc-line)" }}>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: "bold", marginBottom: "2px" }}>
+              {!isX && <div className="box" style={{ marginBottom: "12px" }}>
+                <label>
                   CAE / CAI Autorización ARCA
                 </label>
-                <input
+                <input className="t-mono t-small"
                   type="text"
                   placeholder="Número de CAE..."
                   value={cae}
                   onChange={(e) => setCae(e.target.value)}
-                  style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontSize: "0.85rem" }}
-                />
+                 style={{ width: "100%" }}/>
               </div>}
 
               <button
                 type="submit"
                 disabled={submitting}
                 className="btn btn-primary"
-                style={{ width: "100%", padding: "12px", fontSize: "1rem", fontWeight: "bold" }}
-              >
+               style={{ width: "100%" }}>
                 {submitting ? "Guardando Factura..." : "💾 Registrar en Cuentas por Pagar"}
               </button>
             </div>

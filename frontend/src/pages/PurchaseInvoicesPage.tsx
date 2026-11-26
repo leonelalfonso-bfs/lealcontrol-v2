@@ -171,7 +171,7 @@ export function PurchaseInvoicesPage() {
 
       {arcaMsg && <div className="alert" style={{ marginBottom: 16 }}>{arcaMsg}</div>}
       {error && (
-        <div className="alert" style={{ background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderColor: "var(--lc-danger)", marginBottom: 16 }}>
+        <div className="alert t-danger" style={{ marginBottom: 16 }}>
           ⚠️ {error}
         </div>
       )}
@@ -181,31 +181,31 @@ export function PurchaseInvoicesPage() {
         <div className="card">
           <span className="muted">Total Facturas de Compra</span>
           <strong>{invoices.length}</strong>
-          <small className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 2 }}>
+          <small className="muted t-small" style={{ display: "block", marginTop: 2 }}>
             Comprobantes de proveedores
           </small>
         </div>
         <div className="card">
           <span className="muted">Total Compras (ARS)</span>
-          <strong style={{ color: "var(--lc-ink)" }}>{money(totalArs, "ARS")}</strong>
-          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingArs > 0 ? "var(--lc-danger)" : "var(--lc-ok)", fontWeight: 600 }}>
+          <strong>{money(totalArs, "ARS")}</strong>
+          <small className="t-small t-strong" style={{ display: "block", marginTop: 2, color: pendingArs > 0 ? "var(--lc-danger)" : "var(--lc-ok)" }}>
             Pendiente de Pago: {money(pendingArs, "ARS")}
           </small>
         </div>
         <div className="card">
           <span className="muted">Total Compras (USD)</span>
-          <strong style={{ color: "var(--lc-info)" }}>{money(totalUsd, "USD")}</strong>
-          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingUsd > 0 ? "var(--lc-danger)" : "var(--lc-ok)", fontWeight: 600 }}>
+          <strong className="t-info">{money(totalUsd, "USD")}</strong>
+          <small className="t-small t-strong" style={{ display: "block", marginTop: 2, color: pendingUsd > 0 ? "var(--lc-danger)" : "var(--lc-ok)" }}>
             Pendiente de Pago: {money(pendingUsd, "USD")}
           </small>
         </div>
         <div className="card">
           <span className="muted">Estado de Pagos</span>
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            <span style={{ color: "var(--lc-ok)", fontWeight: 700, fontSize: "0.9rem" }}>
+            <span className="t-ok t-strong">
               🟢 {enrichedInvoices.filter((i) => i.isPaid).length} Pagadas
             </span>
-            <span style={{ color: "var(--lc-danger)", fontWeight: 700, fontSize: "0.9rem" }}>
+            <span className="t-danger t-strong">
               🔴 {enrichedInvoices.filter((i) => !i.isPaid).length} Pendientes
             </span>
           </div>
@@ -244,11 +244,10 @@ export function PurchaseInvoicesPage() {
           </select>
 
           {/* Payment Status Filter */}
-          <select
+          <select className="t-strong"
             value={paymentFilter}
             onChange={(e) => setPaymentFilter(e.target.value)}
-            style={{ width: 180, fontWeight: 600 }}
-          >
+           style={{ width: 180 }}>
             <option value="All">Todos los Pagos</option>
             <option value="Pending">🔴 Pendientes de Pago</option>
             <option value="Partial">🟡 Pago Parcial</option>
@@ -266,7 +265,7 @@ export function PurchaseInvoicesPage() {
         {loading ? (
           <p className="pad muted">Cargando facturas de compra...</p>
         ) : filteredInvoices.length === 0 ? (
-          <p className="pad muted" style={{ textAlign: "center", padding: 32 }}>
+          <p className="pad muted t-center" style={{ padding: 32 }}>
             No se encontraron facturas de compra para los filtros seleccionados.
           </p>
         ) : (
@@ -274,15 +273,15 @@ export function PurchaseInvoicesPage() {
             <table>
               <thead>
                 <tr>
-                  <th style={{ padding: "10px 8px" }}>Tipo</th>
-                  <th style={{ padding: "10px 8px" }}>N° Comprobante</th>
-                  <th style={{ padding: "10px 8px" }}>Fecha Emisión</th>
-                  <th style={{ padding: "10px 8px" }}>Proveedor</th>
-                  <th style={{ padding: "10px 8px", textAlign: "right" }}>Total</th>
-                  <th style={{ padding: "10px 8px", textAlign: "center" }}>CAE</th>
-                  <th style={{ padding: "10px 8px", textAlign: "center" }}>Estado Pago & Días</th>
-                  <th style={{ padding: "10px 8px", textAlign: "center" }}>Ingreso Stock</th>
-                  <th style={{ padding: "10px 8px", textAlign: "center" }}>Acciones</th>
+                  <th>Tipo</th>
+                  <th>N° Comprobante</th>
+                  <th>Fecha Emisión</th>
+                  <th>Proveedor</th>
+                  <th className="t-right">Total</th>
+                  <th className="t-center">CAE</th>
+                  <th className="t-center">Estado Pago & Días</th>
+                  <th className="t-center">Ingreso Stock</th>
+                  <th className="t-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -304,59 +303,49 @@ export function PurchaseInvoicesPage() {
                   return (
                     <tr
                       key={inv.id}
-                      style={{
-                        borderBottom: "1px solid rgba(0,0,0,0.04)",
-                        background: hasInventoryItems && !isReceived ? "rgba(245, 158, 11, 0.03)" : undefined
-                      }}
-                    >
-                      <td style={{ padding: "12px 8px" }}>
-                        <span style={{ padding: "3px 8px", borderRadius: "6px", fontWeight: "bold", fontSize: "0.82rem", background: "var(--lc-surface-2)", color: "var(--lc-info)" }}>
+                     style={{ background: hasInventoryItems && !isReceived ? "rgba(245, 158, 11, 0.03)" : undefined }}>
+                      <td>
+                        <span className="t-strong t-small t-info" style={{ padding: "3px 8px", borderRadius: "6px", background: "var(--lc-surface-2)" }}>
                           {inv.invoiceType}
                         </span>
                       </td>
-                      <td style={{ padding: "12px 8px" }}>
-                        <Link
+                      <td>
+                        <Link className="t-strong t-mono t-info"
                           to={`/compras/facturas/${inv.id}`}
-                          style={{
-                            fontWeight: "bold",
-                            fontFamily: "monospace",
-                            color: "var(--lc-info)",
-                            textDecoration: "none",
-                            fontSize: "0.92rem"
-                          }}
+                          style={{ textDecoration: "none" }}
                           title="Ver detalle y comprobante completo"
                         >
                           {inv.formattedNumber}
                         </Link>
                       </td>
-                      <td style={{ padding: "12px 8px", fontSize: "0.88rem" }}>
+                      <td>
                         <div>{new Date(inv.issueDate).toLocaleDateString("es-AR")}</div>
                         {inv.imputationPeriod && inv.imputationPeriod.slice(0, 7) !== inv.issueDate.slice(0, 7) && (
-                          <small style={{ display: "block", fontSize: "0.75rem", color: "var(--lc-violet)" }}>
+                          <small className="t-small t-violet" style={{ display: "block" }}>
                             Imputada a {inv.imputationPeriod.slice(5, 7)}/{inv.imputationPeriod.slice(0, 4)}
                           </small>
                         )}
-                        <small className="muted" style={{ fontSize: "0.75rem", color: inv.daysOverdue > 0 ? "#dc2626" : "inherit" }}>
+                        <small className="muted t-small" style={{ color: inv.daysOverdue > 0 ? "#dc2626" : "inherit" }}>
                           Vto: {new Date(inv.dueDate).toLocaleDateString("es-AR")}
                         </small>
                       </td>
-                      <td style={{ padding: "12px 8px" }}>
-                        <div style={{ fontWeight: 600 }}>{inv.supplierName}</div>
-                        <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>CUIT: {inv.supplierDocument}</div>
+                      <td>
+                        <div className="t-strong">{inv.supplierName}</div>
+                        <div className="t-small muted">CUIT: {inv.supplierDocument}</div>
                       </td>
-                      <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: "bold", fontFamily: "monospace", color: "var(--lc-ink)" }}>
+                      <td className="t-right t-strong t-mono">
                         {money(inv.total, inv.currency)}
-                        <div className="muted" style={{ fontSize: "0.75rem", fontWeight: "normal" }}>
+                        <div className="muted t-small" style={{ fontWeight: "normal" }}>
                           Neto: {money(inv.subtotal, inv.currency)}
                         </div>
                       </td>
-                      <td style={{ padding: "12px 8px", textAlign: "center" }}>
+                      <td className="t-center">
                         {inv.cae ? (
-                          <span style={{ fontSize: "0.8rem", fontFamily: "monospace", padding: "2px 6px", background: "var(--lc-ok-bg)", color: "var(--lc-ok)", borderRadius: "4px" }}>
+                          <span className="t-small t-mono t-ok" style={{ padding: "2px 6px", background: "var(--lc-ok-bg)", borderRadius: "4px" }}>
                             {inv.cae}
                           </span>
                         ) : (
-                          <span style={{ color: "var(--lc-ink-3)" }}>—</span>
+                          <span className="muted">—</span>
                         )}
                         {inv.status !== "Cancelled" && (() => {
                           const check = arcaChecks[inv.id];
@@ -365,10 +354,10 @@ export function PurchaseInvoicesPage() {
                             : check?.outcome === "NotCheckable" ? { text: "No se puede constatar", color: "var(--lc-warn)" }
                             : check?.outcome === "Unavailable" ? { text: "No se pudo consultar", color: "var(--lc-ink-3)" } : null;
                           return (
-                            <div style={{ fontSize: "0.72rem", marginTop: 4 }}>
-                              {label && <span title={`${check!.detail} · ${new Date(check!.checkedAt).toLocaleString("es-AR")}`} style={{ color: label.color, fontWeight: 600 }}>{label.text}</span>}
+                            <div className="t-small" style={{ marginTop: 4 }}>
+                              {label && <span className="t-strong" title={`${check!.detail} · ${new Date(check!.checkedAt).toLocaleString("es-AR")}`} style={{ color: label.color }}>{label.text}</span>}
                               {check && check.outcome !== "Approved" && (
-                                <div style={{ color: "var(--lc-ink-3)", maxWidth: 220, margin: "2px auto 0", lineHeight: 1.3 }}>{check.detail}</div>
+                                <div className="muted" style={{ maxWidth: 220, margin: "2px auto 0", lineHeight: 1.3 }}>{check.detail}</div>
                               )}
                               {check?.outcome !== "Approved" && (
                                 <button type="button" className="btn ghost compact" style={{ marginLeft: 4 }} disabled={arcaBusy !== null} onClick={() => void checkOne(inv.id)}>
@@ -381,65 +370,41 @@ export function PurchaseInvoicesPage() {
                       </td>
 
                       {/* Estado de Pago y Días sin pagar */}
-                      <td style={{ padding: "12px 8px", textAlign: "center" }}>
+                      <td className="t-center">
                         {inv.isPaid ? (
                           <div>
                             <span
-                              className="badge ok"
-                              style={{
-                                background: "rgba(16, 185, 129, 0.15)",
-                                color: "var(--lc-ok)",
-                                fontWeight: 700,
-                                padding: "4px 8px"
-                              }}
-                            >
+                              className="badge ok t-ok t-strong"
+                             style={{ background: "rgba(16, 185, 129, 0.15)", padding: "4px 8px" }}>
                               🟢 Pagada
                             </span>
-                            <div className="muted" style={{ fontSize: "0.72rem", marginTop: 2 }}>
+                            <div className="muted t-small" style={{ marginTop: 2 }}>
                               ✓ 100% saldada
                             </div>
                           </div>
                         ) : inv.isPartial ? (
                           <div>
                             <span
-                              className="badge warn"
-                              style={{
-                                background: "rgba(245, 158, 11, 0.18)",
-                                color: "var(--lc-warn)",
-                                fontWeight: 700,
-                                padding: "4px 8px"
-                              }}
-                            >
+                              className="badge warn t-warn t-strong"
+                             style={{ background: "rgba(245, 158, 11, 0.18)", padding: "4px 8px" }}>
                               🟡 Pago Parcial
                             </span>
-                            <div style={{ fontSize: "0.75rem", color: "var(--lc-danger)", fontWeight: 700, marginTop: 2 }}>
+                            <div className="t-small t-danger t-strong" style={{ marginTop: 2 }}>
                               Resta: {money(inv.saldoPendiente, inv.currency)}
                             </div>
-                            <div className="muted" style={{ fontSize: "0.72rem" }}>
+                            <div className="muted t-small">
                               {inv.daysSinceIssue === 0 ? "Emitida hoy" : `${inv.daysSinceIssue}d sin pagar`}
                             </div>
                           </div>
                         ) : (
                           <div>
                             <span
-                              className="badge off"
-                              style={{
-                                background: "rgba(239, 68, 68, 0.12)",
-                                color: "var(--lc-danger)",
-                                fontWeight: 700,
-                                padding: "4px 8px"
-                              }}
-                            >
+                              className="badge off t-danger t-strong"
+                             style={{ background: "rgba(239, 68, 68, 0.12)", padding: "4px 8px" }}>
                               🔴 Pendiente
                             </span>
-                            <div
-                              style={{
-                                fontSize: "0.75rem",
-                                fontWeight: inv.daysOverdue > 0 ? 700 : 500,
-                                color: inv.daysOverdue > 0 ? "#dc2626" : "var(--ink-soft)",
-                                marginTop: 2
-                              }}
-                            >
+                            <div className="t-small"
+                             style={{ fontWeight: inv.daysOverdue > 0 ? 700 : 500, color: inv.daysOverdue > 0 ? "#dc2626" : "var(--ink-soft)", marginTop: 2 }}>
                               {inv.daysOverdue > 0
                                 ? `⚠️ Vencida hace ${inv.daysOverdue}d`
                                 : inv.daysSinceIssue === 0
@@ -451,43 +416,27 @@ export function PurchaseInvoicesPage() {
                       </td>
 
                       {/* Stock Status */}
-                      <td style={{ padding: "12px 8px", textAlign: "center" }}>
+                      <td className="t-center">
                         {inv.status === "Cancelled" ? (
-                          <span className="muted" style={{ fontSize: "0.8rem" }}>—</span>
+                          <span className="muted t-small">—</span>
                         ) : isReceived ? (
                           <span
-                            className="badge ok"
-                            style={{
-                              fontSize: "0.78rem",
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              background: "rgba(16, 185, 129, 0.15)",
-                              color: "var(--lc-ok)",
-                              fontWeight: 700
-                            }}
+                            className="badge ok t-small t-ok t-strong"
                             title="La mercadería ya fue ingresada a stock mediante remito"
-                          >
+                           style={{ padding: "4px 10px", borderRadius: "12px", background: "rgba(16, 185, 129, 0.15)" }}>
                             ✓ Stock Recibido
                           </span>
                         ) : hasInventoryItems ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: "5px", alignItems: "center" }}>
                             <span
-                              className="badge warn"
-                              style={{
-                                fontSize: "0.75rem",
-                                padding: "2px 8px",
-                                borderRadius: "10px",
-                                background: "rgba(245, 158, 11, 0.18)",
-                                color: "var(--lc-warn)",
-                                fontWeight: 700
-                              }}
-                            >
+                              className="badge warn t-small t-warn t-strong"
+                             style={{ padding: "2px 8px", borderRadius: "10px", background: "rgba(245, 158, 11, 0.18)" }}>
                               📥 Recepción Pendiente
                             </span>
                             {openRecsForSupplier.length > 0 && (
-                              <select
+                              <select className="t-small"
                                 defaultValue=""
-                                style={{ fontSize: "0.75rem", maxWidth: 180, padding: "4px 6px" }}
+                                style={{ maxWidth: 180 }}
                                 title="Vincular una recepción ya cargada (sin duplicar stock)"
                                 onChange={(e) => {
                                   const recId = e.target.value;
@@ -514,15 +463,6 @@ export function PurchaseInvoicesPage() {
                             <Link
                               to={`/compras/recepciones/nueva?invoice_id=${inv.id}`}
                               className="btn compact"
-                              style={{
-                                fontSize: "0.75rem",
-                                padding: "4px 8px",
-                                background: openRecsForSupplier.length > 0 ? "var(--lc-ink-3)" : "var(--lc-info)",
-                                color: "#fff",
-                                fontWeight: 700,
-                                borderRadius: "6px",
-                                textDecoration: "none"
-                              }}
                               title={
                                 openRecsForSupplier.length > 0
                                   ? "Solo si todavía no recibiste: crea una recepción nueva"
@@ -533,28 +473,19 @@ export function PurchaseInvoicesPage() {
                             </Link>
                           </div>
                         ) : (
-                          <span className="muted" style={{ fontSize: "0.8rem" }}>
+                          <span className="muted t-small">
                             📋 No inventariable
                           </span>
                         )}
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: "12px 8px", textAlign: "center" }}>
+                      <td className="t-center">
                         <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
                           {inv.status !== "Cancelled" && !inv.isPaid && (
                             <Link
                               to={`/finanzas/pagos/nueva?supplierId=${inv.supplierId}`}
                               className="btn compact"
-                              style={{
-                                fontSize: "0.78rem",
-                                padding: "4px 10px",
-                                background: "var(--lc-info)",
-                                color: "#fff",
-                                fontWeight: 700,
-                                borderRadius: "6px",
-                                textDecoration: "none"
-                              }}
                               title="Emitir orden de pago al proveedor"
                             >
                               💳 Pagar
@@ -563,13 +494,6 @@ export function PurchaseInvoicesPage() {
                           <Link
                             to={`/compras/facturas/${inv.id}`}
                             className="btn btn-outline compact"
-                            style={{
-                              fontSize: "0.78rem",
-                              padding: "4px 10px",
-                              fontWeight: 600,
-                              color: "var(--lc-info)",
-                              borderColor: "var(--lc-line-2)"
-                            }}
                             title="Ver comprobante completo con detalle de renglones y cantidades"
                           >
                             👁️ Ver
@@ -578,7 +502,6 @@ export function PurchaseInvoicesPage() {
                             <button
                               type="button"
                               className="btn btn-outline compact"
-                              style={{ fontSize: "0.78rem", padding: "4px 10px", fontWeight: 600 }}
                               title="Libro IVA Compras y asiento: a qué mes se imputa"
                               onClick={() => {
                                 const current = (inv.imputationPeriod ?? inv.issueDate).slice(0, 7);
@@ -602,7 +525,6 @@ export function PurchaseInvoicesPage() {
                             <button
                               type="button"
                               className="btn btn-outline compact"
-                              style={{ fontSize: "0.78rem", padding: "4px 10px", fontWeight: 600 }}
                               title="Rubro de cada renglón (Producto/Gasto del Libro IVA Compras)"
                               onClick={() => setCategorizing(inv)}
                             >
@@ -612,14 +534,7 @@ export function PurchaseInvoicesPage() {
                           {inv.status !== "Cancelled" && (
                             <button
                               type="button"
-                              className="btn btn-outline compact"
-                              style={{
-                                fontSize: "0.78rem",
-                                padding: "4px 10px",
-                                fontWeight: 600,
-                                color: "var(--lc-danger)",
-                                borderColor: "var(--lc-danger-bg)"
-                              }}
+                              className="btn btn-outline compact danger"
                               title="Anular factura (deja de impactar cuenta corriente)"
                               onClick={() => {
                                 const reason = window.prompt(`¿Anular factura ${inv.formattedNumber}? Motivo (opcional):`, "") ?? undefined;
@@ -638,7 +553,7 @@ export function PurchaseInvoicesPage() {
                             </button>
                           )}
                           {inv.status === "Cancelled" && (
-                            <span className="badge off" style={{ fontSize: "0.75rem", color: "var(--lc-danger)" }}>
+                            <span className="badge off t-small t-danger">
                               Anulada
                             </span>
                           )}
