@@ -49,6 +49,17 @@ function formatThreadDate(dateStr: string): string {
     : { day: "numeric", month: "short", year: "numeric" });
 }
 
+/** Categorías de la lectura con IA ("otro" no se muestra). */
+const AI_CATEGORIES: Record<string, { label: string; tone: string }> = {
+  pedido_cotizacion: { label: "Pide cotización", tone: "ok" },
+  consulta_comercial: { label: "Consulta comercial", tone: "ok" },
+  seguimiento_cliente: { label: "Seguimiento", tone: "info" },
+  reclamo: { label: "Reclamo", tone: "danger" },
+  proveedor: { label: "Proveedor", tone: "off" },
+  administrativo: { label: "Administrativo", tone: "warn" },
+  spam: { label: "Spam", tone: "off" },
+};
+
 function getConversationChannel(c: Conversation): "instagram" | "facebook" | "email" {
   const ct = (c.channelType || "").toLowerCase();
   if (ct === "instagram" || ct === "facebook" || ct === "email") return ct;
@@ -784,8 +795,16 @@ export function InboxPage() {
                     )}
                   </div>
 
-                  <div className="t-small muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {c.lastMessagePreview || `[Mensaje de ${ch}]`}
+                  {c.aiCategory && AI_CATEGORIES[c.aiCategory] && (
+                    <div style={{ marginTop: 2 }}>
+                      <span className={`badge ${c.aiUrgency === 3 ? "danger" : AI_CATEGORIES[c.aiCategory].tone}`} title="Lectura de la IA">
+                        {AI_CATEGORIES[c.aiCategory].label}{c.aiUrgency === 3 ? " · urgente" : ""}
+                      </span>
+                    </div>
+                  )}
+                  <div className="t-small muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                    title={c.aiSummary ? c.lastMessagePreview || undefined : undefined}>
+                    {c.aiSummary || c.lastMessagePreview || `[Mensaje de ${ch}]`}
                   </div>
                   {c.assignedToUserId && (
                     <div className="t-small t-accent t-strong" style={{ marginTop: 2 }}>

@@ -32,6 +32,20 @@ public sealed class Conversation
     public DateTime? LastIncomingAtUtc { get; private set; }
     /// <summary>Última respuesta nuestra (desde Leal Control o leída de la carpeta de enviados).</summary>
     public DateTime? LastOutgoingAtUtc { get; private set; }
+
+    /// <summary>Lectura de la IA del último mail recibido: categoría, urgencia (1 baja a 3 alta) y resumen de una línea.</summary>
+    public string? AiCategory { get; private set; }
+    public int? AiUrgency { get; private set; }
+    public string? AiSummary { get; private set; }
+    public DateTime? AiReadAtUtc { get; private set; }
+
+    public void SetAiReading(string category, int urgency, string summary, DateTime atUtc)
+    {
+        AiCategory = category;
+        AiUrgency = Math.Clamp(urgency, 1, 3);
+        AiSummary = summary.Length > 300 ? summary[..300] : summary;
+        AiReadAtUtc = atUtc;
+    }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime UpdatedAtUtc { get; private set; }
 

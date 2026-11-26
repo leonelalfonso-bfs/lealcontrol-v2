@@ -1389,6 +1389,9 @@ export type Conversation = {
   assignedToUserId?: string | null;
   suggestionDismissed?: boolean;
   lastIncomingAtUtc?: string | null;
+  aiCategory?: string | null;
+  aiUrgency?: number | null;
+  aiSummary?: string | null;
   needsResponse?: boolean;
   hasIncoming?: boolean;
   hasOutgoing?: boolean;
@@ -2738,3 +2741,19 @@ export type VacationRow = {
   leaves: { id: string; startDate: string; endDate: string; days: number; notes: string | null }[];
 };
 export type PayslipDetail = { run: PayrollRun; payslip: Payslip; intact: boolean };
+
+/** Configuración de la IA (lectura de mails). La clave nunca vuelve: solo si hay una y sus últimos 4 caracteres. */
+export type AiSettings = {
+  provider: string;
+  readerModel: string;
+  hasKey: boolean;
+  keyHint?: string | null;
+  monthlyBudgetUsd: number;
+  mailReadingEnabled: boolean;
+  autoOpportunities: boolean;
+  businessDescription: string;
+  enabledAtUtc?: string | null;
+  lastError?: string | null;
+  monthSpentUsd: number;
+  monthCalls: number;
+};

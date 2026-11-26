@@ -108,6 +108,10 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.Property(x => x.SuggestionDismissed).HasDefaultValue(false);
             b.Property(x => x.LastIncomingAtUtc);
             b.Property(x => x.LastOutgoingAtUtc);
+            b.Property(x => x.AiCategory).HasMaxLength(40);
+            b.Property(x => x.AiUrgency);
+            b.Property(x => x.AiSummary).HasMaxLength(300);
+            b.Property(x => x.AiReadAtUtc);
             b.Property(x => x.RelatedOpportunityId);
             b.Property(x => x.IgnoreParticipant).HasDefaultValue(false);
             b.HasIndex(x => new { x.TenantId, x.RelatedOpportunityId });
@@ -284,6 +288,10 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""SuggestionDismissed"" boolean NOT NULL DEFAULT false;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""LastIncomingAtUtc"" timestamp with time zone;
             ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""LastOutgoingAtUtc"" timestamp with time zone;
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AiCategory"" character varying(40);
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AiUrgency"" integer;
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AiSummary"" character varying(300);
+            ALTER TABLE communications.conversations ADD COLUMN IF NOT EXISTS ""AiReadAtUtc"" timestamp with time zone;
             ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""IncomingFolders"" character varying(500) NOT NULL DEFAULT 'INBOX';
             ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""SentFolder"" character varying(200);
             CREATE TABLE IF NOT EXISTS communications.settings (

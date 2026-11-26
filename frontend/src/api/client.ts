@@ -560,6 +560,10 @@ export const api = {
   getCommunicationSettings: () => request<{ unattendedAfterHours: number }>("/api/v1/communications/settings"),
   saveCommunicationSettings: (unattendedAfterHours: number) =>
     request<{ unattendedAfterHours: number }>("/api/v1/communications/settings", { method: "PUT", body: JSON.stringify({ unattendedAfterHours }) }),
+  getAiSettings: () => request<import("./types").AiSettings>("/api/v1/communications/ai/settings"),
+  saveAiSettings: (body: { apiKey: string | null; monthlyBudgetUsd: number; mailReadingEnabled: boolean; autoOpportunities: boolean; businessDescription: string }) =>
+    request<void>("/api/v1/communications/ai/settings", { method: "PUT", body: JSON.stringify(body) }),
+  testAiSettings: () => request<{ ok: boolean; detail: string }>("/api/v1/communications/ai/settings/test", { method: "POST" }),
   listMailAccounts: () => request<import("./types").MailAccount[]>("/api/v1/communications/accounts"),
   saveMailAccount: (body: object) => request<{ id: string }>("/api/v1/communications/accounts", { method: "POST", body: JSON.stringify(body) }),
   testMailAccount: (id: string) => request<{ connected: boolean }>(`/api/v1/communications/accounts/${id}/test`, { method: "POST" }),

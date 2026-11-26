@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { MailAccount, MailOAuthProvider } from "../api/types";
+import { AiSettingsCard } from "../components/communications/AiSettingsCard";
 
 type Provider = "Custom" | "Gmail" | "Microsoft" | "Yahoo";
 const presets: Record<Provider, { imapHost: string; imapPort: number; smtpHost: string; smtpPort: number; authMode: string }> = {
@@ -176,6 +177,7 @@ export function MailSettingsPage({ embedded = false }: { embedded?: boolean }) {
     {!embedded && <div className="page-head"><div><span className="eyebrow">COMUNICACIONES</span><h1>Cuentas de correo</h1><p className="muted">Conectá casillas para enviar propuestas y registrar respuestas en CRM y Ventas.</p></div></div>}
     {message && <div className="success-banner">{message}</div>}{error && <div className="alert">{error}</div>}
     <UnattendedSettings />
+    <AiSettingsCard />
     <div className="mail-layout">
       <section className="card pad"><div className="section-head"><div><h2>Casillas conectadas</h2><p className="muted">Cada empresa puede usar varias cuentas y elegir un remitente principal. La recepción automática es opcional por casilla y se ejecuta cada 5 minutos.</p></div></div>
         <div className="mail-account-list">
