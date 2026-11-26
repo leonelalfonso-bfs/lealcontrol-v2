@@ -25,6 +25,7 @@ public sealed class MailAccount
     public DateTime? OAuthAccessTokenExpiresAtUtc { get; private set; }
     public DateTime? OAuthConnectedAtUtc { get; private set; }
     public string? Signature { get; private set; }
+    public string? SignatureLogoUrl { get; private set; }
     /// <summary>Carpetas IMAP de entrada a leer, separadas por coma (por defecto la bandeja de entrada).</summary>
     public string IncomingFolders { get; private set; } = DefaultIncomingFolder;
     /// <summary>Carpeta de enviados; vacía = se detecta sola. Sirve para saber qué mails ya se respondieron.</summary>
@@ -70,6 +71,7 @@ public sealed class MailAccount
         Username = string.IsNullOrWhiteSpace(settings.Username) ? EmailAddress : settings.Username.Trim();
         if (!string.IsNullOrWhiteSpace(protectedSecret)) ProtectedSecret = protectedSecret;
         Signature = string.IsNullOrWhiteSpace(settings.Signature) ? null : settings.Signature.Trim();
+        SignatureLogoUrl = string.IsNullOrWhiteSpace(settings.SignatureLogoUrl) ? null : settings.SignatureLogoUrl.Trim();
         IncomingFolders = string.IsNullOrWhiteSpace(settings.IncomingFolders) ? DefaultIncomingFolder : settings.IncomingFolders.Trim();
         SentFolder = string.IsNullOrWhiteSpace(settings.SentFolder) ? null : settings.SentFolder.Trim();
         IsActive = settings.IsActive;
@@ -121,4 +123,4 @@ public sealed record MailAccountSettings(
     string ImapHost, int ImapPort, bool ImapUseSsl,
     string SmtpHost, int SmtpPort, bool SmtpUseSsl,
     string? Username, bool IsActive, bool IsDefaultSender, string? Signature = null,
-    string? IncomingFolders = null, string? SentFolder = null);
+    string? IncomingFolders = null, string? SentFolder = null, string? SignatureLogoUrl = null);

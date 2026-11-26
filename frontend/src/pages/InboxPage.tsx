@@ -12,15 +12,39 @@ import {
 } from "../lib/communicationsNotifications";
 import { SearchField } from "../components/ui/SearchField";
 import { ConversationOpportunityModal } from "../components/ConversationOpportunityModal";
+import { wrapIncomingEmailHtml } from "../components/communications/emailSignature";
 
 const emptyLead = "00000000-0000-0000-0000-000000000000";
 
-function normalizeEmailHtml(value: string): string {
-  const trimmed = value.trim();
-  if (!/&lt;|&gt;|&amp;lt;|&amp;gt;/i.test(trimmed)) return trimmed;
-  const holder = document.createElement("textarea");
-  holder.innerHTML = trimmed;
-  return holder.value;
+/** Muestra el HTML del mail ajustando la altura al contenido real (para que no corte firmas ni imágenes) y sin ejecutar scripts. */
+function EmailHtmlFrame({ html }: { html: string }) {
+  const ref = useRef<HTMLIFrameElement>(null);
+  const [height, setHeight] = useState(240);
+  const srcDoc = useMemo(() => wrapIncomingEmailHtml(html), [html]);
+
+  const resize = () => {
+    const doc = ref.current?.contentDocument;
+    if (!doc) return;
+    const measured = Math.max(doc.body?.scrollHeight ?? 0, doc.documentElement?.scrollHeight ?? 0);
+    if (measured > 40) setHeight(Math.min(measured + 16, 4000));
+  };
+
+  return (
+    <iframe
+      ref={ref}
+      className="message-html"
+      title="Contenido del correo"
+      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+      srcDoc={srcDoc}
+      style={{ height }}
+      onLoad={() => {
+        resize();
+        const imgs = ref.current?.contentDocument?.querySelectorAll("img");
+        imgs?.forEach((img) => img.addEventListener("load", resize, { once: true }));
+        window.setTimeout(resize, 200);
+      }}
+    />
+  );
 }
 
 type ChannelType = "all" | "email" | "instagram" | "facebook";
@@ -937,22 +961,20 @@ export function InboxPage() {
 
                   if (ch === "email") {
                     return (
-                      <div key={m.id} className="card pad inbox-email-card">
+                      <div key={m.id} className={`card pad inbox-email-card ${isOutgoing ? "inbox-email-outgoing" : "inbox-email-incoming"}`}>
                         <div className="inbox-email-meta">
-                          <div>
-                            <strong>De:</strong> {m.fromAddress} <br />
-                            <strong>Para:</strong> {m.toAddresses}
+                          <div className="inbox-email-addresses">
+                            <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                              <span className={`badge ${isOutgoing ? "info" : "off"}`}>{isOutgoing ? "Enviado" : "Recibido"}</span>
+                              <strong>{m.fromAddress}</strong>
+                            </div>
+                            <div className="muted t-small">Para: {m.toAddresses}</div>
                           </div>
-                          <span className="muted">{new Date(m.occurredAtUtc).toLocaleString("es-AR")}</span>
+                          <span className="muted t-small">{new Date(m.occurredAtUtc).toLocaleString("es-AR")}</span>
                         </div>
-                        <h3>{m.subject}</h3>
+                        {m.subject && <h3 className="inbox-email-subject">{m.subject}</h3>}
                         {m.bodyHtml ? (
-                          <iframe
-                            className="message-html"
-                            title="Contenido"
-                            sandbox="allow-popups allow-popups-to-escape-sandbox"
-                            srcDoc={normalizeEmailHtml(m.bodyHtml)}
-                          />
+                          <EmailHtmlFrame html={m.bodyHtml} />
                         ) : (
                           <div className="message-body">{m.bodyPreview}</div>
                         )}

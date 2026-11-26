@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using LealControl.Modules.Communications.Infrastructure.Domain;
 using MailKit;
 using MailKit.Net.Imap;
@@ -53,7 +54,7 @@ public sealed class MailTransportService(MailSecretProtector secrets)
         foreach (var address in request.To.Where(x => !string.IsNullOrWhiteSpace(x))) message.To.Add(MailboxAddress.Parse(address));
         message.Subject = request.Subject.Trim();
         if (!string.IsNullOrWhiteSpace(request.InReplyTo)) { message.InReplyTo = request.InReplyTo; message.References.Add(request.InReplyTo); }
-        var builder = new BodyBuilder { HtmlBody = request.HtmlBody, TextBody = request.TextBody };
+        var builder = BuildBody(request.HtmlBody, request.TextBody);
         const long maxAttachmentBytes = 10 * 1024 * 1024;
         long totalBytes = 0;
         foreach (var attachment in request.Attachments ?? Array.Empty<OutgoingEmailAttachment>())
@@ -139,6 +140,39 @@ public sealed class MailTransportService(MailSecretProtector secrets)
         foreach (var name in SentFolderNames)
             if (await TryGetFolderAsync(imap, name, ct) is { } folder) return folder;
         return null;
+    }
+
+    /// <summary>
+    /// Arma el cuerpo MIME y convierte imágenes embebidas como data URI (por ejemplo el logo de la firma)
+    /// en recursos MIME CID para que Gmail, Outlook y Apple Mail las muestren sin bloquearlas.
+    /// </summary>
+    public static BodyBuilder BuildBody(string htmlBody, string? textBody)
+    {
+        var builder = new BodyBuilder { TextBody = textBody };
+        var index = 0;
+        var processed = Regex.Replace(
+            htmlBody ?? string.Empty,
+            @"src\s*=\s*""data:(image/(?:png|jpeg|jpg|gif|webp));base64,([A-Za-z0-9+/=\s]+)""",
+            match =>
+            {
+                var mime = match.Groups[1].Value.ToLowerInvariant();
+                if (mime == "image/jpg") mime = "image/jpeg";
+                var b64 = Regex.Replace(match.Groups[2].Value, @"\s+", "");
+                byte[] bytes;
+                try { bytes = Convert.FromBase64String(b64); }
+                catch (FormatException) { return match.Value; }
+                if (bytes.Length == 0 || bytes.Length > 2 * 1024 * 1024) return match.Value;
+
+                index++;
+                var ext = mime switch { "image/png" => "png", "image/gif" => "gif", "image/webp" => "webp", _ => "jpg" };
+                var contentId = $"sig-logo-{index}@lealcontrol";
+                var resource = builder.LinkedResources.Add($"logo-{index}.{ext}", bytes, ContentType.Parse(mime));
+                resource.ContentId = contentId;
+                return $@"src=""cid:{contentId}""";
+            },
+            RegexOptions.IgnoreCase);
+        builder.HtmlBody = processed;
+        return builder;
     }
 
     public static string ThreadKey(MimeMessage message)

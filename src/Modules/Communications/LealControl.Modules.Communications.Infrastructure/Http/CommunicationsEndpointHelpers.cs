@@ -142,18 +142,39 @@ internal static class CommunicationsEndpointHelpers
 
         if (string.IsNullOrWhiteSpace(html)) return null;
 
-        // Inline images embedded with CID:
+        // Inline images embedded with CID or Content-Location (incluye firmas enviadas como octet-stream con extensión de imagen):
         try
         {
-            foreach (var part in mime.BodyParts.OfType<MimePart>())
+            var parts = mime.BodyParts.OfType<MimePart>().Concat(mime.Attachments.OfType<MimePart>()).Distinct();
+            foreach (var part in parts)
             {
-                if (!string.IsNullOrWhiteSpace(part.ContentId) && part.Content is not null && part.ContentType?.MediaType?.Equals("image", StringComparison.OrdinalIgnoreCase) == true)
+                if (part.Content is null) continue;
+                var mimeType = ResolveImageMimeType(part);
+                if (mimeType is null) continue;
+
+                var hasCid = !string.IsNullOrWhiteSpace(part.ContentId);
+                var hasLoc = part.ContentLocation is not null;
+                if (!hasCid && !hasLoc) continue;
+
+                using var ms = new MemoryStream();
+                part.Content.DecodeTo(ms);
+                if (ms.Length == 0 || ms.Length > 4 * 1024 * 1024) continue;
+                var dataUri = $"data:{mimeType};base64,{Convert.ToBase64String(ms.ToArray())}";
+
+                if (hasCid)
                 {
-                    using var ms = new MemoryStream();
-                    part.Content.DecodeTo(ms);
-                    var b64 = Convert.ToBase64String(ms.ToArray());
-                    var cidClean = part.ContentId.Trim('<', '>');
-                    html = html.Replace($"cid:{cidClean}", $"data:{part.ContentType.MimeType};base64,{b64}", StringComparison.OrdinalIgnoreCase);
+                    var cidClean = part.ContentId!.Trim('<', '>');
+                    html = html.Replace($"cid:{cidClean}", dataUri, StringComparison.OrdinalIgnoreCase);
+                    var unescaped = Uri.UnescapeDataString(cidClean);
+                    if (!string.Equals(unescaped, cidClean, StringComparison.Ordinal))
+                        html = html.Replace($"cid:{unescaped}", dataUri, StringComparison.OrdinalIgnoreCase);
+                }
+
+                if (hasLoc)
+                {
+                    var loc = part.ContentLocation!.ToString();
+                    if (!string.IsNullOrWhiteSpace(loc))
+                        html = html.Replace(loc, dataUri, StringComparison.OrdinalIgnoreCase);
                 }
             }
         }
@@ -163,6 +184,25 @@ internal static class CommunicationsEndpointHelpers
         }
 
         return html;
+    }
+
+    private static string? ResolveImageMimeType(MimePart part)
+    {
+        if (part.ContentType?.MediaType?.Equals("image", StringComparison.OrdinalIgnoreCase) == true)
+            return part.ContentType.MimeType;
+
+        var fileName = part.FileName ?? part.ContentType?.Name ?? part.ContentLocation?.ToString() ?? "";
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        return ext switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".svg" => "image/svg+xml",
+            ".bmp" => "image/bmp",
+            _ => null
+        };
     }
 
     internal static string StripHtml(string html)

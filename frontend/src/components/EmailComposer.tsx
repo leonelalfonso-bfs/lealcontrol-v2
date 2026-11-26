@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { MailAccount } from "../api/types";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
+import { buildEmailHtml, buildSignatureHtml } from "./communications/emailSignature";
 
 export type EmailAttachmentPayload = {
   fileName: string;
@@ -73,6 +74,7 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
 
   const selectedAccount = accounts.find((a) => a.id === accountId);
   const signature = selectedAccount?.signature?.trim() || "";
+  const signatureLogoUrl = selectedAccount?.signatureLogoUrl?.trim() || "";
 
   const withSignature = (text: string) => {
     if (!signature) return text;
@@ -91,12 +93,13 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
       if (attachDocument && context.documentPdf) {
         attachments.push(await buildPdfAttachment(context.documentPdf.elementId, context.documentPdf.fileName));
       }
-      const finalBody = withSignature(body);
+      const finalText = withSignature(body);
+      const htmlBody = buildEmailHtml(body, signature, signatureLogoUrl);
       await api.sendEmail(accountId, {
         to: to.split(/[,;]+/).map((x) => x.trim()).filter(Boolean),
         subject,
-        htmlBody: `<div style="font-family:Arial,sans-serif;white-space:pre-line">${finalBody.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")}</div>`,
-        textBody: finalBody,
+        htmlBody,
+        textBody: finalText,
         relatedEntityType: context.entityType,
         relatedEntityId: context.entityId,
         inReplyTo: context.inReplyTo ?? null,
@@ -129,9 +132,12 @@ export function EmailComposer({ context, onClose, onSent }: { context: EmailCont
         <label>Para<input required type="text" value={to} onChange={(e) => setTo(e.target.value)} placeholder="cliente@empresa.com" /></label>
         <label>Asunto<input required value={subject} onChange={(e) => setSubject(e.target.value)} /></label>
         <label>Mensaje<textarea required rows={10} value={body} onChange={(e) => setBody(e.target.value)} /></label>
-        {signature && (
-          <div className="muted t-small" style={{ marginTop: -4 }}>
-            Al enviar se agregará la firma de {selectedAccount?.displayName} al pie del correo.
+        {(signature || signatureLogoUrl) && (
+          <div className="card pad" style={{ background: "white", marginTop: -4 }}>
+            <div className="muted t-small" style={{ marginBottom: 4 }}>
+              Firma que se agregará al enviar ({selectedAccount?.displayName}):
+            </div>
+            <div dangerouslySetInnerHTML={{ __html: buildSignatureHtml(signature, signatureLogoUrl) }} />
           </div>
         )}
         {context.documentPdf && (

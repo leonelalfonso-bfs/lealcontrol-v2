@@ -71,6 +71,7 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
             b.Property(x => x.ProtectedSecret).HasColumnType("text");
             b.Property(x => x.ProtectedRefreshToken).HasColumnType("text");
             b.Property(x => x.Signature).HasColumnType("text");
+            b.Property(x => x.SignatureLogoUrl).HasColumnType("text");
             b.Property(x => x.AutoSyncEnabled).HasDefaultValue(false);
             b.Property(x => x.IncomingFolders).HasMaxLength(500).HasDefaultValue(MailAccount.DefaultIncomingFolder);
             b.Property(x => x.SentFolder).HasMaxLength(200);
@@ -195,6 +196,7 @@ public sealed class CommunicationsDbContext(DbContextOptions<CommunicationsDbCon
 
             ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""AutoSyncEnabled"" boolean NOT NULL DEFAULT false;
             ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""Signature"" text;
+            ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""SignatureLogoUrl"" text;
             ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""ProtectedRefreshToken"" text;
             ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""OAuthAccessTokenExpiresAtUtc"" timestamp with time zone;
             ALTER TABLE communications.mail_accounts ADD COLUMN IF NOT EXISTS ""OAuthConnectedAtUtc"" timestamp with time zone;

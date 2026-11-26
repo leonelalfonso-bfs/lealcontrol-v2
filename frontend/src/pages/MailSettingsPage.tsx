@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { MailAccount, MailOAuthProvider } from "../api/types";
 import { AiSettingsCard } from "../components/communications/AiSettingsCard";
+import { buildSignatureHtml, readLogoAsDataUrl } from "../components/communications/emailSignature";
 
 type Provider = "Custom" | "Gmail" | "Microsoft" | "Yahoo";
 const presets: Record<Provider, { imapHost: string; imapPort: number; smtpHost: string; smtpPort: number; authMode: string }> = {
@@ -15,7 +16,7 @@ const presets: Record<Provider, { imapHost: string; imapPort: number; smtpHost: 
 const empty = {
   id: "", displayName: "", emailAddress: "", provider: "Custom" as Provider, authMode: "Password",
   imapHost: "", imapPort: 993, imapUseSsl: true, smtpHost: "", smtpPort: 587, smtpUseSsl: true,
-  username: "", secret: "", signature: "", isActive: true, isDefaultSender: false,
+  username: "", secret: "", signature: "", signatureLogoUrl: "", isActive: true, isDefaultSender: false,
   incomingFolders: "INBOX", sentFolder: ""
 };
 
@@ -101,6 +102,7 @@ export function MailSettingsPage({ embedded = false }: { embedded?: boolean }) {
           isActive: form.isActive,
           isDefaultSender: form.isDefaultSender,
           signature: form.signature || null,
+          signatureLogoUrl: form.signatureLogoUrl || null,
           incomingFolders: form.incomingFolders || "INBOX",
           sentFolder: form.sentFolder || null
         },
@@ -164,6 +166,7 @@ export function MailSettingsPage({ embedded = false }: { embedded?: boolean }) {
       smtpHost: account.smtpHost, smtpPort: account.smtpPort, smtpUseSsl: account.smtpUseSsl,
       username: account.username || account.emailAddress, secret: "",
       signature: account.signature || "",
+      signatureLogoUrl: account.signatureLogoUrl || "",
       isActive: account.isActive,
       isDefaultSender: account.isDefaultSender,
       incomingFolders: account.incomingFolders || "INBOX",
@@ -248,10 +251,69 @@ export function MailSettingsPage({ embedded = false }: { embedded?: boolean }) {
             rows={4}
             value={form.signature}
             onChange={(e) => setForm({ ...form, signature: e.target.value })}
-            placeholder={"Equipo Comercial\nLeal Control\n+54 9 11 0000-0000"}
+            placeholder={"Leonel Alfonso\nGerencia Comercial · Mi Empresa\n+54 9 341 000-0000 · www.miempresa.com.ar"}
           />
         </label>
-        <p className="muted t-small" style={{ marginTop: -8 }}>Se agrega al pie de cada correo saliente enviado desde esta casilla.</p>
+        <div className="stack" style={{ gap: 8 }}>
+          <span className="t-small t-strong">Logo de la firma (opcional)</span>
+          <div className="toolbar" style={{ flexWrap: "wrap", gap: 8 }}>
+            <label className="btn btn-outline compact" style={{ cursor: "pointer", margin: 0 }}>
+              Subir imagen de logo
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                style={{ display: "none" }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    const dataUrl = await readLogoAsDataUrl(file);
+                    setForm((prev) => ({ ...prev, signatureLogoUrl: dataUrl }));
+                    setError(null);
+                  } catch (err) {
+                    setError((err as Error).message);
+                  }
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              className="btn ghost compact"
+              onClick={async () => {
+                try {
+                  const company = await api.getCompanySettings();
+                  if (!company.logoUrl) {
+                    setError("Todavía no hay logo cargado en Configuración → Empresa.");
+                    return;
+                  }
+                  setForm((prev) => ({ ...prev, signatureLogoUrl: company.logoUrl || "" }));
+                  setError(null);
+                } catch (err) {
+                  setError((err as Error).message);
+                }
+              }}
+            >
+              Usar logo de la empresa
+            </button>
+            {form.signatureLogoUrl && (
+              <button
+                type="button"
+                className="btn ghost danger compact"
+                onClick={() => setForm((prev) => ({ ...prev, signatureLogoUrl: "" }))}
+              >
+                Quitar logo
+              </button>
+            )}
+          </div>
+          {(form.signature.trim() || form.signatureLogoUrl.trim()) && (
+            <div className="card pad" style={{ background: "white" }}>
+              <div className="muted t-small" style={{ marginBottom: 6 }}>Vista previa de la firma</div>
+              <div dangerouslySetInnerHTML={{ __html: buildSignatureHtml(form.signature, form.signatureLogoUrl) }} />
+            </div>
+          )}
+        </div>
+        <p className="muted t-small" style={{ marginTop: -4 }}>Se agrega al pie de cada correo saliente enviado desde esta casilla (el logo se incrusta en el mail para que se vea en Gmail y Outlook).</p>
         <div className="grid-2"><label>Servidor IMAP<input required value={form.imapHost} onChange={(e) => setForm({...form,imapHost:e.target.value})} /></label><label>Puerto IMAP<input required type="number" value={form.imapPort} onChange={(e) => setForm({...form,imapPort:Number(e.target.value)})} /></label><label>Servidor SMTP<input required value={form.smtpHost} onChange={(e) => setForm({...form,smtpHost:e.target.value})} /></label><label>Puerto SMTP<input required type="number" value={form.smtpPort} onChange={(e) => setForm({...form,smtpPort:Number(e.target.value)})} /></label></div>
         <div className="grid-2">
           <label>Carpetas a leer
