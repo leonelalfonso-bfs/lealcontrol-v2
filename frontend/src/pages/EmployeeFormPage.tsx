@@ -384,7 +384,7 @@ export function EmployeeFormPage() {
 
   if (loading) {
     return (
-      <div className="page-wide" style={{ padding: 40, textAlign: "center" }}>
+      <div className="page-wide t-center" style={{ padding: 40 }}>
         <p className="muted">Cargando ficha del colaborador...</p>
       </div>
     );
@@ -405,16 +405,16 @@ export function EmployeeFormPage() {
       {/* Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
-            <Link to="/rrhh" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
+          <div className="t-small muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <Link className="muted" to="/rrhh" style={{ textDecoration: "none" }}>
               RRHH
             </Link>
             <span>›</span>
-            <Link to="/rrhh/empleados" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
+            <Link className="muted" to="/rrhh/empleados" style={{ textDecoration: "none" }}>
               Colaboradores
             </Link>
             <span>›</span>
-            <span style={{ color: "var(--lc-ink)", fontWeight: 600 }}>{isEditing ? `${lastName}, ${firstName}` : "Nuevo Colaborador"}</span>
+            <span className="t-strong">{isEditing ? `${lastName}, ${firstName}` : "Nuevo Colaborador"}</span>
           </div>
           <h1 style={{ margin: 0 }}>{isEditing ? `👤 ${lastName}, ${firstName} (${fileNumber})` : "👤 Nuevo Colaborador"}</h1>
           <p className="muted" style={{ margin: "4px 0 0 0" }}>
@@ -431,7 +431,6 @@ export function EmployeeFormPage() {
             className="btn"
             onClick={handleSaveEmployee}
             disabled={saving}
-            style={{ background: "linear-gradient(135deg, #ec4899, #db2777)", color: "#fff", fontWeight: 700 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Colaborador"}
           </button>
@@ -482,14 +481,14 @@ export function EmployeeFormPage() {
       {/* TAB 1: DATOS PERSONALES */}
       {activeTab === "general" && (
         <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid #ec4899" }}>
-          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>👤 Identificación & Datos de Contacto</h2>
+          <h2 style={{ margin: 0 }}>👤 Identificación & Datos de Contacto</h2>
 
           <div className="row" style={{ gap: 24, alignItems: "center" }}>
             <div style={{ width: 100, height: 100, borderRadius: "50%", background: "var(--surface-sunken)", border: "2px dashed var(--lc-line-2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
               {photoPath ? (
                 <img src={photoPath} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
-                <span style={{ fontSize: "2rem" }}>👤</span>
+                <span className="t-xl">👤</span>
               )}
             </div>
             <div>
@@ -497,7 +496,7 @@ export function EmployeeFormPage() {
                 📷 Subir Foto de Perfil
                 <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: "none" }} />
               </label>
-              <div className="muted" style={{ fontSize: "0.75rem", marginTop: 4 }}>Formatos PNG, JPG hasta 2MB</div>
+              <div className="muted t-small" style={{ marginTop: 4 }}>Formatos PNG, JPG hasta 2MB</div>
             </div>
           </div>
 
@@ -604,7 +603,7 @@ export function EmployeeFormPage() {
       {/* TAB 2: CONTRATO & CONVENIO */}
       {activeTab === "labor" && (
         <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid var(--lc-info)" }}>
-          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>💼 Relación Laboral & Previsional</h2>
+          <h2 style={{ margin: 0 }}>💼 Relación Laboral & Previsional</h2>
 
           <div className="grid-3">
             <label>
@@ -698,8 +697,8 @@ export function EmployeeFormPage() {
 
           {seesSalaries && (
             <>
-              <h3 style={{ fontSize: "1rem", margin: "8px 0 0" }}>📜 Convenio colectivo</h3>
-              <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+              <h3 style={{ margin: "8px 0 0" }}>📜 Convenio colectivo</h3>
+              <p className="muted t-small" style={{ margin: 0 }}>
                 Con convenio, el básico sale de la escala de la categoría y la zona. Sin convenio, rige el sueldo básico pactado de arriba.
                 Los convenios se cargan en <Link to="/rrhh/convenios">RRHH → Convenios colectivos</Link>.
               </p>
@@ -735,7 +734,7 @@ export function EmployeeFormPage() {
                 const current = (social.agreementFlags ?? "").split(",").filter(Boolean);
                 return flags.length > 0 && (
                   <div className="row" style={{ gap: 16, flexWrap: "wrap" }}>
-                    <span className="muted" style={{ fontSize: "0.82rem" }}>Adicionales que dependen del colaborador:</span>
+                    <span className="muted t-small">Adicionales que dependen del colaborador:</span>
                     {flags.map((f) => (
                       <label key={f} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                         <input type="checkbox" checked={current.includes(f)} onChange={(e) => {
@@ -751,8 +750,8 @@ export function EmployeeFormPage() {
             </>
           )}
 
-          <h3 style={{ fontSize: "1rem", margin: "8px 0 0" }}>🏛️ Seguridad social (ARCA)</h3>
-          <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+          <h3 style={{ margin: "8px 0 0" }}>🏛️ Seguridad social (ARCA)</h3>
+          <p className="muted t-small" style={{ margin: 0 }}>
             Códigos de las tablas de ARCA (SICOSS / Declaración en línea) que se informan en el Libro de Sueldos Digital y el F.931.
           </p>
           <div className="grid-3">
@@ -774,7 +773,7 @@ export function EmployeeFormPage() {
             <label>
               Modalidad de contratación (código)
               <input type="number" min={0} max={999} value={social.contractModalityCode} onChange={(e) => setSs("contractModalityCode", Number(e.target.value))} />
-              <span className="muted" style={{ fontSize: "0.72rem" }}>8 = a tiempo completo indeterminado; 102 = eventual.</span>
+              <span className="muted t-small">8 = a tiempo completo indeterminado; 102 = eventual.</span>
             </label>
             <label>
               Actividad (código)
@@ -829,7 +828,7 @@ export function EmployeeFormPage() {
       {/* TAB 3: DATOS BANCARIOS */}
       {activeTab === "banking" && (
         <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid var(--lc-ok)" }}>
-          <h2 style={{ fontSize: "1.15rem", margin: 0 }}>🏦 Acreditación de Haberes (CBU / Cuenta Sueldo)</h2>
+          <h2 style={{ margin: 0 }}>🏦 Acreditación de Haberes (CBU / Cuenta Sueldo)</h2>
 
           <div className="grid-3">
             <label>
@@ -852,7 +851,7 @@ export function EmployeeFormPage() {
       {activeTab === "documents" && (
         <div className="stack" style={{ gap: 20 }}>
           {!isEditing && (
-            <div className="alert" style={{ background: "rgba(236, 72, 153, 0.1)", borderColor: "#ec4899", color: "#9d174d" }}>
+            <div className="alert">
               💡 Guardá primero los datos principales del colaborador para habilitar la subida directa de archivos PDF al legajo digital.
             </div>
           )}
@@ -861,24 +860,24 @@ export function EmployeeFormPage() {
           <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-violet)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <h2 style={{ fontSize: "1.15rem", margin: 0 }}>📂 Documentación Activa & de Ingreso</h2>
-                <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>
+                <h2 style={{ margin: 0 }}>📂 Documentación Activa & de Ingreso</h2>
+                <p className="muted t-small" style={{ margin: "4px 0 0 0" }}>
                   Checklist obligatorio de legajo digital con adjuntos PDF conforme normativas laborales y de ART
                 </p>
               </div>
-              <span className="badge ok" style={{ fontSize: "0.85rem", padding: "6px 12px" }}>
+              <span className="badge ok t-small" style={{ padding: "6px 12px" }}>
                 Cumplimiento: {ingresoPresented} / {INGRESO_DOC_TYPES.length} ({Math.round((ingresoPresented / INGRESO_DOC_TYPES.length) * 100)}%)
               </span>
             </div>
 
             <div className="table-wrap">
-              <table className="table" style={{ width: "100%", fontSize: "0.88rem" }}>
+              <table className="table">
                 <thead>
-                  <tr style={{ background: "var(--surface-sunken)" }}>
+                  <tr>
                     <th style={{ width: 240 }}>Documento Requerido</th>
                     <th>Detalle & Archivo Adjunto</th>
-                    <th style={{ width: 110, textAlign: "center" }}>Estado</th>
-                    <th style={{ width: 230, textAlign: "right" }}>Gestión Documental</th>
+                    <th className="t-center" style={{ width: 110 }}>Estado</th>
+                    <th className="t-right" style={{ width: 230 }}>Gestión Documental</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -889,36 +888,36 @@ export function EmployeeFormPage() {
                     const isUploading = uploadingDocType === doc.id;
 
                     return (
-                      <tr key={doc.id} style={{ borderBottom: "1px solid var(--lc-line)" }}>
+                      <tr key={doc.id}>
                         <td>
                           <strong>{doc.label}</strong>
-                          <div className="muted" style={{ fontSize: "0.75rem", marginTop: 2 }}>{doc.description}</div>
+                          <div className="muted t-small" style={{ marginTop: 2 }}>{doc.description}</div>
                         </td>
                         <td>
                           {hasFile ? (
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ fontSize: "1rem" }}>📑</span>
+                              <span>📑</span>
                               <div>
-                                <strong style={{ color: "var(--lc-ink)", fontSize: "0.82rem", display: "block" }}>
+                                <strong className="t-small" style={{ display: "block" }}>
                                   {existing?.fileName || `${doc.id}.pdf`}
                                 </strong>
-                                <span className="muted" style={{ fontSize: "0.72rem" }}>
+                                <span className="muted t-small">
                                   Subido: {existing?.uploadedAtUtc ? new Date(existing.uploadedAtUtc).toLocaleDateString("es-AR") : "Reciente"}
                                 </span>
                               </div>
                             </div>
                           ) : (
-                            <span className="muted" style={{ fontSize: "0.8rem", fontStyle: "italic" }}>
+                            <span className="muted t-small" style={{ fontStyle: "italic" }}>
                               Sin archivo PDF adjunto
                             </span>
                           )}
                         </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="t-center">
                           <span className={`badge ${isPresented ? "ok" : "error"}`} style={{ fontSize: "0.72rem" }}>
                             {isPresented ? "✓ Presentado" : "Pendiente"}
                           </span>
                         </td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="t-right">
                           <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                             {hasFile && existing && (
                               <>
@@ -926,7 +925,6 @@ export function EmployeeFormPage() {
                                   type="button"
                                   className="btn ghost compact"
                                   title="Ver documento en nueva pestaña"
-                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "var(--lc-violet)" }}
                                   onClick={() => handleViewDoc(existing)}
                                 >
                                   👁️ Ver
@@ -935,7 +933,6 @@ export function EmployeeFormPage() {
                                   type="button"
                                   className="btn ghost compact"
                                   title="Descargar archivo PDF"
-                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "var(--lc-accent-strong)" }}
                                   onClick={() => handleDownloadDoc(existing)}
                                 >
                                   ⬇️ Descargar
@@ -968,9 +965,8 @@ export function EmployeeFormPage() {
                             {hasFile && existing && (
                               <button
                                 type="button"
-                                className="btn ghost compact"
+                                className="btn ghost compact btn-outline danger"
                                 title="Quitar archivo"
-                                style={{ padding: "4px 6px", fontSize: "0.75rem", color: "var(--lc-danger)" }}
                                 onClick={() => handleDeleteDoc(existing)}
                               >
                                 🗑️
@@ -987,27 +983,27 @@ export function EmployeeFormPage() {
           </div>
 
           {/* Subcategoría: Documentación de Egreso */}
-          <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-danger)", background: status === 2 ? "#fff" : "rgba(241, 245, 249, 0.4)" }}>
+          <div className="card pad stack alert" style={{ gap: 16, borderLeft: "5px solid var(--lc-danger)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <h2 style={{ fontSize: "1.15rem", margin: 0, color: "var(--lc-danger)" }}>🧾 Subcategoría: Documentación de Egreso / Desvinculación</h2>
-                <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>
+                <h2 style={{ margin: 0 }}>🧾 Subcategoría: Documentación de Egreso / Desvinculación</h2>
+                <p className="muted t-small" style={{ margin: "4px 0 0 0" }}>
                   Comprobantes finales firmados, certificados de trabajo (Art. 80 LCT) y constancias de baja
                 </p>
               </div>
-              <span className="badge primary" style={{ fontSize: "0.85rem", padding: "6px 12px" }}>
+              <span className="badge primary t-small" style={{ padding: "6px 12px" }}>
                 {egresoPresented} / {EGRESO_DOC_TYPES.length} PDF Adjuntos
               </span>
             </div>
 
             <div className="table-wrap">
-              <table className="table" style={{ width: "100%", fontSize: "0.88rem" }}>
+              <table className="table">
                 <thead>
-                  <tr style={{ background: "var(--surface-sunken)" }}>
+                  <tr>
                     <th style={{ width: 260 }}>Documento de Desvinculación</th>
                     <th>Detalle Legal & Archivo</th>
-                    <th style={{ width: 110, textAlign: "center" }}>Estado</th>
-                    <th style={{ width: 230, textAlign: "right" }}>Gestión Documental</th>
+                    <th className="t-center" style={{ width: 110 }}>Estado</th>
+                    <th className="t-right" style={{ width: 230 }}>Gestión Documental</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1018,36 +1014,36 @@ export function EmployeeFormPage() {
                     const isUploading = uploadingDocType === doc.id;
 
                     return (
-                      <tr key={doc.id} style={{ borderBottom: "1px solid var(--lc-line)" }}>
+                      <tr key={doc.id}>
                         <td>
-                          <strong style={{ color: "var(--lc-danger)" }}>{doc.label}</strong>
-                          <div className="muted" style={{ fontSize: "0.75rem", marginTop: 2 }}>{doc.description}</div>
+                          <strong className="t-danger">{doc.label}</strong>
+                          <div className="muted t-small" style={{ marginTop: 2 }}>{doc.description}</div>
                         </td>
                         <td>
                           {hasFile ? (
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ fontSize: "1rem" }}>📑</span>
+                              <span>📑</span>
                               <div>
-                                <strong style={{ color: "var(--lc-ink)", fontSize: "0.82rem", display: "block" }}>
+                                <strong className="t-small" style={{ display: "block" }}>
                                   {existing?.fileName || `${doc.id}.pdf`}
                                 </strong>
-                                <span className="muted" style={{ fontSize: "0.72rem" }}>
+                                <span className="muted t-small">
                                   Subido: {existing?.uploadedAtUtc ? new Date(existing.uploadedAtUtc).toLocaleDateString("es-AR") : "Reciente"}
                                 </span>
                               </div>
                             </div>
                           ) : (
-                            <span className="muted" style={{ fontSize: "0.8rem", fontStyle: "italic" }}>
+                            <span className="muted t-small" style={{ fontStyle: "italic" }}>
                               Sin archivo PDF adjunto
                             </span>
                           )}
                         </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="t-center">
                           <span className={`badge ${isPresented ? "ok" : "ghost"}`} style={{ fontSize: "0.72rem" }}>
                             {isPresented ? "✓ Completado" : "Pendiente"}
                           </span>
                         </td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="t-right">
                           <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                             {hasFile && existing && (
                               <>
@@ -1055,7 +1051,6 @@ export function EmployeeFormPage() {
                                   type="button"
                                   className="btn ghost compact"
                                   title="Ver documento en nueva pestaña"
-                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "var(--lc-violet)" }}
                                   onClick={() => handleViewDoc(existing)}
                                 >
                                   👁️ Ver
@@ -1064,7 +1059,6 @@ export function EmployeeFormPage() {
                                   type="button"
                                   className="btn ghost compact"
                                   title="Descargar archivo PDF"
-                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "var(--lc-accent-strong)" }}
                                   onClick={() => handleDownloadDoc(existing)}
                                 >
                                   ⬇️ Descargar
@@ -1097,9 +1091,8 @@ export function EmployeeFormPage() {
                             {hasFile && existing && (
                               <button
                                 type="button"
-                                className="btn ghost compact"
+                                className="btn ghost compact btn-outline danger"
                                 title="Quitar archivo"
-                                style={{ padding: "4px 6px", fontSize: "0.75rem", color: "var(--lc-danger)" }}
                                 onClick={() => handleDeleteDoc(existing)}
                               >
                                 🗑️
@@ -1122,33 +1115,33 @@ export function EmployeeFormPage() {
         <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid var(--lc-accent)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <h2 style={{ fontSize: "1.15rem", margin: 0 }}>🛡️ Elementos de Protección Personal (EPP)</h2>
-              <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>
+              <h2 style={{ margin: 0 }}>🛡️ Elementos de Protección Personal (EPP)</h2>
+              <p className="muted t-small" style={{ margin: "4px 0 0 0" }}>
                 Historial de indumentaria y elementos de seguridad entregados bajo firma
               </p>
             </div>
             {isEditing && (
-              <button type="button" className="btn" onClick={() => setShowAddEppModal(true)} style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff" }}>
+              <button type="button" className="btn" onClick={() => setShowAddEppModal(true)}>
                 + Registrar Entrega de EPP
               </button>
             )}
           </div>
 
           <div className="table-wrap">
-            <table className="table" style={{ width: "100%", fontSize: "0.88rem" }}>
+            <table className="table">
               <thead>
-                <tr style={{ background: "var(--surface-sunken)" }}>
+                <tr>
                   <th>Elemento / Indumentaria</th>
                   <th>Marca / Modelo</th>
                   <th>Certificado IRAM / Sello</th>
-                  <th style={{ width: 80, textAlign: "center" }}>Cantidad</th>
-                  <th style={{ width: 140, textAlign: "center" }}>Fecha Entrega</th>
+                  <th className="t-center" style={{ width: 80 }}>Cantidad</th>
+                  <th className="t-center" style={{ width: 140 }}>Fecha Entrega</th>
                 </tr>
               </thead>
               <tbody>
                 {eppList.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: "center", padding: 24 }} className="muted">
+                    <td colSpan={5} className="muted t-center">
                       No hay registros de entrega de EPP para este colaborador.
                     </td>
                   </tr>
@@ -1158,8 +1151,8 @@ export function EmployeeFormPage() {
                       <td><strong>{epp.itemName}</strong></td>
                       <td>{epp.brandModel || "—"}</td>
                       <td>{epp.certificateNumber || "—"}</td>
-                      <td style={{ textAlign: "center", fontWeight: 700 }}>{epp.quantity}</td>
-                      <td style={{ textAlign: "center" }} className="muted">
+                      <td className="t-center t-strong">{epp.quantity}</td>
+                      <td className="muted t-center">
                         {new Date(epp.deliveryDateUtc).toLocaleDateString("es-AR")}
                       </td>
                     </tr>

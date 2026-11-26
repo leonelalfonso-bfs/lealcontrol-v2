@@ -446,7 +446,7 @@ export function CurrentAccountsPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       {company?.logoUrl && <img src={company.logoUrl} alt="" crossOrigin="anonymous" style={{ maxHeight: 48, maxWidth: 140, objectFit: "contain" }} />}
                       <div>
-                        <div className="t-strong t-accent" style={{ fontSize: 14 }}>{company?.legalName || ""}</div>
+                        <div className="t-strong t-accent">{company?.legalName || ""}</div>
                         {company?.tradeName && <div className="t-strong">{company.tradeName}</div>}
                       </div>
                     </div>
@@ -457,14 +457,14 @@ export function CurrentAccountsPage() {
                     </div>
                   </td>
                   <td className="t-right">
-                    <div className="t-strong" style={{ fontSize: 15 }}>ESTADO DE CUENTA CORRIENTE</div>
+                    <div className="t-strong">ESTADO DE CUENTA CORRIENTE</div>
                     <div>Emitido el {today}</div>
                   </td>
                 </tr>
               </tbody>
             </table>
             <div className="box" style={{ marginBottom: 10 }}>
-              <strong style={{ fontSize: 12 }}>{ledgerEntity.legalName}</strong>
+              <strong className="t-small">{ledgerEntity.legalName}</strong>
               {ledgerEntity.tradeName && ledgerEntity.tradeName !== ledgerEntity.legalName && <> ({ledgerEntity.tradeName})</>}
               <div>CUIT: {ledgerEntity.documentNumber || "—"} · {roles}</div>
             </div>
@@ -489,7 +489,7 @@ export function CurrentAccountsPage() {
                 ))}
               </tbody>
             </table>
-            <div className="t-right t-strong" style={{ marginTop: 10, fontSize: 13 }}>
+            <div className="t-right t-strong t-small" style={{ marginTop: 10 }}>
               Saldo al {today}: {money(ledgerHistory.filter((item) => !item.pending).reduce(
                 (_, item) => item.balance, 0))}
             </div>

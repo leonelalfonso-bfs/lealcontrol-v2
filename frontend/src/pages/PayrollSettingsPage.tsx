@@ -76,7 +76,7 @@ export function PayrollSettingsPage() {
       {employer && (
         <form className="card pad stack" style={{ gap: 12 }} onSubmit={saveEmployer}>
           <h3 style={{ margin: 0 }}>Empleador</h3>
-          <div className="muted" style={{ fontSize: "0.85rem" }}>
+          <div className="muted t-small">
             {company ? <>{company.legalName} · CUIT {company.documentNumber}</> : "Razón social y CUIT: Configuración → Empresa."}
           </div>
           <div className="row" style={{ gap: 20, flexWrap: "wrap" }}>
@@ -89,7 +89,7 @@ export function PayrollSettingsPage() {
               Actividad principal de comercio o servicios
             </label>
           </div>
-          <div className="muted" style={{ fontSize: "0.8rem" }}>
+          <div className="muted t-small">
             Contribución patronal: {employer.isMiPyme || !employer.isCommerceOrServices ? "18 %" : "20,40 %"} (Ley 27.541) · Fondo de Asistencia
             Laboral desde 11/2026: {employer.isMiPyme ? "2,5 %" : "1 %"}.
           </div>
@@ -118,13 +118,13 @@ export function PayrollSettingsPage() {
           </label>
         </div>
         {params && (
-          <table style={{ fontSize: "0.82rem" }}>
-            <thead><tr><th>Parámetro</th><th style={{ textAlign: "right" }}>Valor</th><th>Desde</th><th>Norma</th></tr></thead>
+          <table>
+            <thead><tr><th>Parámetro</th><th className="t-right">Valor</th><th>Desde</th><th>Norma</th></tr></thead>
             <tbody>
               {params.resolved.map((p) => (
                 <tr key={p.key}>
-                  <td>{p.name}{p.warning && <div style={{ color: "var(--lc-warn)", fontSize: "0.75rem" }}>⚠️ {p.warning}</div>}</td>
-                  <td style={{ textAlign: "right" }}>{p.value == null ? "—" : number(p.value)}</td>
+                  <td>{p.name}{p.warning && <div className="t-warn t-small">⚠️ {p.warning}</div>}</td>
+                  <td className="t-right">{p.value == null ? "—" : number(p.value)}</td>
                   <td>{p.validFrom ? month(p.validFrom) : "—"}</td>
                   <td>{p.norm ?? "—"}{p.fromCompany && <span className="muted"> (cargado por la empresa)</span>}</td>
                 </tr>
@@ -134,8 +134,8 @@ export function PayrollSettingsPage() {
         )}
 
         <form className="stack" style={{ gap: 8 }} onSubmit={addParam}>
-          <strong style={{ fontSize: "0.9rem" }}>Cargar un valor nuevo</strong>
-          <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+          <strong>Cargar un valor nuevo</strong>
+          <p className="muted t-small" style={{ margin: 0 }}>
             Por ejemplo, el tope de ANSES de un mes que el sistema todavía no trae. A igual mes, el valor de la empresa reemplaza al del sistema.
           </p>
           <div className="grid-3">
@@ -154,16 +154,16 @@ export function PayrollSettingsPage() {
 
         {params && params.history.some((h) => h.fromCompany) && (
           <>
-            <strong style={{ fontSize: "0.9rem" }}>Valores cargados por la empresa</strong>
-            <table style={{ fontSize: "0.8rem" }}>
+            <strong>Valores cargados por la empresa</strong>
+            <table>
               <tbody>
                 {params.history.filter((h) => h.fromCompany).map((h) => (
                   <tr key={h.id}>
                     <td>{params.resolved.find((r) => r.key === h.key)?.name ?? h.key}</td>
                     <td>{month(h.validFrom)}</td>
-                    <td style={{ textAlign: "right" }}>{number(h.value)}</td>
+                    <td className="t-right">{number(h.value)}</td>
                     <td>{h.norm}</td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="t-right">
                       <button type="button" className="btn ghost compact" disabled={busy} onClick={() => void run(async () => {
                         await api.deletePayrollParameter(h.id);
                         await loadParams(period);

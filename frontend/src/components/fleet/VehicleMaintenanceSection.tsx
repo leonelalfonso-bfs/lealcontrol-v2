@@ -150,7 +150,7 @@ export function VehicleMaintenanceSection({ vehicle, onVehicleChanged }: { vehic
         {message && <div className="alert ok" style={{ margin: 0 }}>{message}</div>}
 
         {planForm && (
-          <form className="card pad stack" style={{ gap: 12, border: "1px solid var(--line)" }} onSubmit={savePlan}>
+          <form className="card pad stack" style={{ gap: 12 }} onSubmit={savePlan}>
             <strong>{editingPlan ? "Editar ítem del plan" : "Nuevo ítem del plan"}</strong>
             <div className="grid-3">
               <label>Qué se hace *
@@ -167,7 +167,7 @@ export function VehicleMaintenanceSection({ vehicle, onVehicleChanged }: { vehic
               {hours && <label>Avisar faltando (horas)<input type="number" min={0} value={planForm.alertHours} onChange={(e) => setPlanForm({ ...planForm, alertHours: e.target.value })} /></label>}
               <label>Avisar faltando (días)<input type="number" min={0} value={planForm.alertDays} onChange={(e) => setPlanForm({ ...planForm, alertDays: e.target.value })} /></label>
             </div>
-            <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+            <p className="muted t-small" style={{ margin: 0 }}>
               Vence por lo que llegue primero. El "último hecho" es el punto de partida: cuando registres un trabajo que cumpla este ítem, la cuenta vuelve a empezar desde ahí.
             </p>
             <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
@@ -182,7 +182,7 @@ export function VehicleMaintenanceSection({ vehicle, onVehicleChanged }: { vehic
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Ítem</th><th>Frecuencia</th><th>Último</th><th>Próximo</th><th>Estado</th><th style={{ textAlign: "right" }}>Acciones</th></tr></thead>
+              <thead><tr><th>Ítem</th><th>Frecuencia</th><th>Último</th><th>Próximo</th><th>Estado</th><th className="t-right">Acciones</th></tr></thead>
               <tbody>
                 {plans.map((p) => (
                   <tr key={p.id}>
@@ -192,16 +192,16 @@ export function VehicleMaintenanceSection({ vehicle, onVehicleChanged }: { vehic
                       {civilDate(p.lastDoneDate)}
                       {p.lastDoneKm != null && <span className="muted"> · {num(p.lastDoneKm)} km</span>}
                       {p.lastDoneHours != null && <span className="muted"> · {num(p.lastDoneHours, 1)} h</span>}
-                      {p.lastDoneFromBaseline && <div className="muted" style={{ fontSize: "0.75rem" }}>punto de partida</div>}
+                      {p.lastDoneFromBaseline && <div className="muted t-small">punto de partida</div>}
                     </td>
                     <td>
                       {[p.nextKm != null && `${num(p.nextKm)} km`, p.nextHours != null && `${num(p.nextHours, 1)} h`, p.nextDate && civilDate(p.nextDate)].filter(Boolean).join(" · ")}
                     </td>
                     <td>
                       <span className={`badge ${stateBadge[p.state]}`}>{serviceStateLabel[p.state]}</span>
-                      <div className="muted" style={{ fontSize: "0.75rem" }}>{p.dueText}</div>
+                      <div className="muted t-small">{p.dueText}</div>
                     </td>
-                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    <td className="t-right" style={{ whiteSpace: "nowrap" }}>
                       <button type="button" className="btn btn-outline compact" onClick={() => newJob([p.id])}>Registrar hecho</button>{" "}
                       <button type="button" className="btn btn-outline compact" onClick={() => editPlan(p)}>Editar</button>{" "}
                       <button type="button" className="btn btn-outline compact" onClick={() => {
@@ -227,7 +227,7 @@ export function VehicleMaintenanceSection({ vehicle, onVehicleChanged }: { vehic
         </div>
 
         {jobForm && (
-          <form className="card pad stack" style={{ gap: 12, border: "1px solid var(--line)" }} onSubmit={saveJob}>
+          <form className="card pad stack" style={{ gap: 12 }} onSubmit={saveJob}>
             <strong>{editingJob ? "Editar trabajo" : "Nuevo trabajo"}</strong>
             <div className="grid-3">
               <label>Tipo
@@ -255,7 +255,7 @@ export function VehicleMaintenanceSection({ vehicle, onVehicleChanged }: { vehic
             </div>
             {plans.length > 0 && (
               <div>
-                <span className="muted" style={{ fontSize: "0.85rem" }}>Ítems del plan que cumple este trabajo:</span>
+                <span className="muted t-small">Ítems del plan que cumple este trabajo:</span>
                 <div className="row" style={{ gap: 14, flexWrap: "wrap", marginTop: 6 }}>
                   {plans.map((p) => (
                     <label key={p.id} className="check-label" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -268,7 +268,7 @@ export function VehicleMaintenanceSection({ vehicle, onVehicleChanged }: { vehic
             <label>Detalle
               <textarea rows={2} value={jobForm.description} onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })} />
             </label>
-            {jobForm.status === "InProgress" && <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>Mientras esté en taller, la unidad figura como no disponible. Cuando termine, tocá "Terminar".</p>}
+            {jobForm.status === "InProgress" && <p className="muted t-small" style={{ margin: 0 }}>Mientras esté en taller, la unidad figura como no disponible. Cuando termine, tocá "Terminar".</p>}
             <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
               <button type="button" className="btn btn-outline" onClick={() => { setJobForm(null); setEditingJob(null); }}>Cancelar</button>
               <button className="btn" disabled={busy}>Guardar</button>
@@ -282,7 +282,7 @@ export function VehicleMaintenanceSection({ vehicle, onVehicleChanged }: { vehic
               <thead>
                 <tr>
                   <th>Fecha</th><th>Trabajo</th><th>{km ? "Km" : hours ? "Horas" : "Lectura"}</th><th>Taller</th>
-                  {seesCosts && <th style={{ textAlign: "right" }}>Costo</th>}<th>Estado</th><th style={{ textAlign: "right" }}>Acciones</th>
+                  {seesCosts && <th className="t-right">Costo</th>}<th>Estado</th><th className="t-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -291,13 +291,13 @@ export function VehicleMaintenanceSection({ vehicle, onVehicleChanged }: { vehic
                     <td>{civilDate(j.date)}</td>
                     <td>
                       <strong>{j.title}</strong>
-                      <div className="muted" style={{ fontSize: "0.75rem" }}>{maintenanceTypeLabel(j.type)}{j.invoiceReference ? ` · ${j.invoiceReference}` : ""}</div>
+                      <div className="muted t-small">{maintenanceTypeLabel(j.type)}{j.invoiceReference ? ` · ${j.invoiceReference}` : ""}</div>
                     </td>
                     <td>{[j.km != null && `${num(j.km)} km`, j.hours != null && `${num(j.hours, 1)} h`].filter(Boolean).join(" · ") || "—"}</td>
                     <td>{j.workshop}</td>
-                    {seesCosts && <td style={{ textAlign: "right" }}>{money(j.totalCost)}</td>}
+                    {seesCosts && <td className="t-right">{money(j.totalCost)}</td>}
                     <td><span className={`badge ${maintenanceStatusBadge[j.status]}`}>{maintenanceStatusLabel(j.status)}</span></td>
-                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    <td className="t-right" style={{ whiteSpace: "nowrap" }}>
                       {(j.status === "InProgress" || j.status === "Scheduled") && (
                         <button type="button" className="btn compact" onClick={() => editJob(j, "Completed")}>Terminar</button>
                       )}{" "}

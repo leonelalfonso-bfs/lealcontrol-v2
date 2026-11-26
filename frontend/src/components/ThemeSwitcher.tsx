@@ -35,12 +35,12 @@ export const ThemeSwitcher: React.FC = () => {
           }}
         />
         <span>{isDark ? "🌙 Modo Oscuro" : "☀️ Modo Claro"}</span>
-        <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>▾</span>
+        <span className="t-small" style={{ opacity: 0.7 }}>▾</span>
       </button>
 
       {open && (
         <div className="theme-dropdown">
-          <div style={{ padding: "6px 8px 4px", fontSize: "0.74rem", fontWeight: 700, color: "var(--sidebar-muted)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          <div className="t-small t-strong t-caps" style={{ padding: "6px 8px 4px", color: "var(--sidebar-muted)", letterSpacing: "0.06em" }}>
             Seleccionar Modo
           </div>
 
@@ -61,21 +61,21 @@ export const ThemeSwitcher: React.FC = () => {
                 <span className="theme-preview-dot" style={{ backgroundColor: m.previewColors.accent }} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>
+                <div className="t-strong">
                   {m.icon} {m.name} ({m.mode === "dark" ? "Oscuro" : "Claro"})
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "var(--sidebar-muted)" }}>{m.inspiration}</div>
+                <div className="t-small" style={{ color: "var(--sidebar-muted)" }}>{m.inspiration}</div>
               </div>
-              {mode === m.mode && <span style={{ color: "var(--primary)", fontWeight: 900 }}>✓</span>}
+              {mode === m.mode && <span className="t-accent" style={{ fontWeight: 900 }}>✓</span>}
             </button>
           ))}
 
           <div style={{ borderTop: "1px solid var(--surface-border)", marginTop: 6, paddingTop: 6 }}>
             <Link
               to="/estilos"
-              className="theme-option-item"
+              className="theme-option-item t-strong t-small"
               onClick={() => setOpen(false)}
-              style={{ justifyContent: "center", fontWeight: 700, fontSize: "0.82rem", color: "var(--accent)" }}
+              style={{ justifyContent: "center", color: "var(--accent)" }}
             >
               <span>✨ Ver Showcase y Comparador</span>
             </Link>

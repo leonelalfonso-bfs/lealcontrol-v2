@@ -28,7 +28,7 @@ function MetaReconnectBanner({
   if (!lastError) return null;
   const expired = isMetaTokenExpired(lastError);
   return (
-    <div style={{ fontSize: "0.78rem", color: "var(--lc-warn)", margin: "6px 0", fontWeight: 600, background: "rgba(251,191,36,0.15)", padding: 8, borderRadius: 6 }}>
+    <div className="t-small t-warn t-strong" style={{ margin: "6px 0", background: "rgba(251,191,36,0.15)", padding: 8, borderRadius: 6 }}>
       <div>⚠️ {lastError}</div>
       {expired && (
         <button
@@ -227,21 +227,14 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
         >
           <div className="channel-card-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span className="channel-icon" style={{ fontSize: "1.8rem", color: "#c24b8d" }}>
+              <span className="channel-icon t-xl" style={{ color: "#c24b8d" }}>
                 📸
               </span>
               <div>
-                <h2 style={{ margin: 0, fontSize: "1.2rem" }}>Instagram Direct</h2>
+                <h2 style={{ margin: 0 }}>Instagram Direct</h2>
                 <span
-                  className="channel-status"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: "0.8rem",
-                    fontWeight: 700,
-                    color: igConnected ? "var(--lc-ok)" : "var(--lc-ink-3)"
-                  }}
+                  className="channel-status t-small t-strong"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, color: igConnected ? "var(--lc-ok)" : "var(--lc-ink-3)" }}
                 >
                   <span
                     style={{
@@ -259,19 +252,19 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             {igConnected && (
-              <span className="badge ok" style={{ fontSize: "0.76rem", padding: "3px 8px" }}>
+              <span className="badge ok t-small" style={{ padding: "3px 8px" }}>
                 ACTIVO
               </span>
             )}
           </div>
 
-          <p className="muted" style={{ fontSize: "0.86rem", marginBottom: 14 }}>
+          <p className="muted" style={{ marginBottom: 14 }}>
             Mensajes directos de Instagram Business. Es un canal independiente de Facebook Messenger: conectalo solo si usás IG Direct.
           </p>
 
           {igConnected ? (
             <div style={{ background: "rgba(0,0,0,0.03)", padding: 12, borderRadius: 8, marginBottom: 12 }}>
-              <div style={{ fontSize: "0.82rem", marginBottom: 6 }}>
+              <div className="t-small" style={{ marginBottom: 6 }}>
                 <strong>Cuenta vinculada:</strong> @{metaStatus?.instagram?.instagramUsername || "Instagram Oficial"}
                 <br />
                 <strong>Página FB:</strong> {metaStatus?.instagram?.pageName || "Página vinculada"}
@@ -290,7 +283,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                 />
               )}
               {metaSyncMsg && (
-                <div style={{ fontSize: "0.78rem", color: "var(--lc-ok)", margin: "6px 0", fontWeight: 600 }}>
+                <div className="t-small t-ok t-strong" style={{ margin: "6px 0" }}>
                   {metaSyncMsg}
                 </div>
               )}
@@ -320,8 +313,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                 </button>
                 <button
                   type="button"
-                  className="btn ghost compact"
-                  style={{ color: "var(--lc-danger)" }}
+                  className="btn ghost compact btn-outline danger"
                   onClick={() => handleDisconnectMeta("instagram")}
                 >
                   Desconectar
@@ -340,7 +332,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
               <button
                 type="button"
                 className="btn btn-primary"
-                style={{ width: "100%", justifyContent: "center", gap: 8, padding: "10px 16px", fontWeight: 700, background: "linear-gradient(135deg, #e1306c, #833ab4)" }}
+                style={{ width: "100%", justifyContent: "center", gap: 8 }}
                 onClick={() => handleOpenMetaConfig("instagram")}
               >
                 <span>📸</span> Conectar Instagram Direct
@@ -352,13 +344,12 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
             <button
               type="button"
               className="btn ghost compact"
-              style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}
               onClick={() => setExpanded(expanded === "Instagram" ? null : "Instagram")}
             >
               {expanded === "Instagram" ? "▲ Ocultar requisitos" : "▼ Requisitos para conectar"}
             </button>
             {expanded === "Instagram" && (
-              <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", marginTop: 6, lineHeight: 1.4 }}>
+              <div className="t-small muted" style={{ marginTop: 6, lineHeight: 1.4 }}>
                 <ul style={{ paddingLeft: 18, margin: 0 }}>
                   <li>Tu cuenta de Instagram debe ser Comercial o Creador.</li>
                   <li>Debe estar vinculada a tu Página de Facebook.</li>
@@ -379,21 +370,14 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
         >
           <div className="channel-card-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span className="channel-icon" style={{ fontSize: "1.8rem", color: "#477cc8" }}>
+              <span className="channel-icon t-xl" style={{ color: "#477cc8" }}>
                 📘
               </span>
               <div>
-                <h2 style={{ margin: 0, fontSize: "1.2rem" }}>Facebook Messenger</h2>
+                <h2 style={{ margin: 0 }}>Facebook Messenger</h2>
                 <span
-                  className="channel-status"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: "0.8rem",
-                    fontWeight: 700,
-                    color: fbConnected ? "var(--lc-ok)" : "var(--lc-ink-3)"
-                  }}
+                  className="channel-status t-small t-strong"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, color: fbConnected ? "var(--lc-ok)" : "var(--lc-ink-3)" }}
                 >
                   <span
                     style={{
@@ -411,19 +395,19 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             {fbConnected && (
-              <span className="badge ok" style={{ fontSize: "0.76rem", padding: "3px 8px" }}>
+              <span className="badge ok t-small" style={{ padding: "3px 8px" }}>
                 ACTIVO
               </span>
             )}
           </div>
 
-          <p className="muted" style={{ fontSize: "0.86rem", marginBottom: 14 }}>
+          <p className="muted" style={{ marginBottom: 14 }}>
             Messenger de tu Página de Facebook. Canal separado de Instagram: conectalo aunque no uses IG Direct.
           </p>
 
           {fbConnected ? (
             <div style={{ background: "rgba(0,0,0,0.03)", padding: 12, borderRadius: 8, marginBottom: 12 }}>
-              <div style={{ fontSize: "0.82rem", marginBottom: 6 }}>
+              <div className="t-small" style={{ marginBottom: 6 }}>
                 <strong>Página vinculada:</strong> {metaStatus?.facebook?.pageName || "Página Oficial"}
                 <br />
                 <strong>Page ID:</strong> {metaStatus?.facebook?.pageId || "-"}
@@ -442,7 +426,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                 />
               )}
               {metaSyncMsg && (
-                <div style={{ fontSize: "0.78rem", color: "var(--lc-ok)", margin: "6px 0", fontWeight: 600 }}>
+                <div className="t-small t-ok t-strong" style={{ margin: "6px 0" }}>
                   {metaSyncMsg}
                 </div>
               )}
@@ -472,8 +456,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                 </button>
                 <button
                   type="button"
-                  className="btn ghost compact"
-                  style={{ color: "var(--lc-danger)" }}
+                  className="btn ghost compact btn-outline danger"
                   onClick={() => handleDisconnectMeta("facebook")}
                 >
                   Desconectar
@@ -492,7 +475,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
               <button
                 type="button"
                 className="btn btn-primary"
-                style={{ width: "100%", justifyContent: "center", gap: 8, padding: "10px 16px", fontWeight: 700, background: "#1877f2" }}
+                style={{ width: "100%", justifyContent: "center", gap: 8 }}
                 onClick={() => handleOpenMetaConfig("facebook")}
               >
                 <span>📘</span> Conectar Facebook Messenger
@@ -504,13 +487,12 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
             <button
               type="button"
               className="btn ghost compact"
-              style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}
               onClick={() => setExpanded(expanded === "Facebook" ? null : "Facebook")}
             >
               {expanded === "Facebook" ? "▲ Ocultar requisitos" : "▼ Requisitos para conectar"}
             </button>
             {expanded === "Facebook" && (
-              <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", marginTop: 6, lineHeight: 1.4 }}>
+              <div className="t-small muted" style={{ marginTop: 6, lineHeight: 1.4 }}>
                 <ul style={{ paddingLeft: 18, margin: 0 }}>
                   <li>Página de Facebook comercial de la empresa.</li>
                   <li>Acceso de administrador a la Página comercial.</li>
@@ -527,7 +509,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
         <div className="modal-backdrop">
           <div className="modal-card card pad" style={{ maxWidth: 480 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h3 style={{ margin: 0, fontSize: "1.15rem", display: "flex", alignItems: "center", gap: 8 }}>
+              <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
                 <span>{metaModalChannel === "instagram" ? "📸" : "📘"}</span> Conectar {metaModalChannel === "instagram" ? "Instagram Direct" : "Facebook Messenger"}
               </h3>
               <button type="button" className="btn ghost compact" onClick={() => setMetaModalChannel(null)}>
@@ -559,7 +541,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                   Pegá el Token de Acceso de tu Página de Facebook (asociada a Instagram). Leal Control detectará automáticamente el nombre de tu Página y tu cuenta de Instagram:
                 </p>
 
-                <label style={{ fontSize: "0.84rem" }}>
+                <label>
                   <strong>Page Access Token (EAA...): *</strong>
                   <textarea
                     rows={3}
@@ -567,12 +549,12 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                     placeholder="Pegá aquí el Token de Acceso de Página..."
                     value={metaTokenInput}
                     onChange={(e) => setMetaTokenInput(e.target.value)}
-                    style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem", marginTop: 4 }}
+                    style={{ width: "100%", marginTop: 4 }}
                   />
                 </label>
 
                 {metaError && (
-                  <div className="alert alert-danger" style={{ fontSize: "0.82rem", padding: "8px 12px" }}>
+                  <div className="alert alert-danger t-small">
                     {metaError}
                   </div>
                 )}
@@ -592,14 +574,14 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                   Ingresá el <strong>App ID</strong> de tu aplicación de Meta Developers para abrir la ventana de autorización:
                 </p>
 
-                <label style={{ fontSize: "0.84rem" }}>
+                <label>
                   <strong>Meta App ID: *</strong>
                   <input
                     type="text"
                     placeholder="Ej: 123456789012345"
                     value={metaAppIdInput}
                     onChange={(e) => setMetaAppIdInput(e.target.value)}
-                    style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.85rem", marginTop: 4 }}
+                    style={{ width: "100%", marginTop: 4 }}
                   />
                 </label>
 
@@ -607,14 +589,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                   type="button"
                   className="btn btn-primary"
                   onClick={handleMetaOAuthLogin}
-                  style={{
-                    width: "100%",
-                    padding: "10px 16px",
-                    fontWeight: 700,
-                    justifyContent: "center",
-                    background: "#1877f2",
-                    color: "#fff"
-                  }}
+                  style={{ width: "100%", justifyContent: "center" }}
                 >
                   🟦 Continuar con Facebook
                 </button>
@@ -635,7 +610,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
         <div className="modal-backdrop">
           <div className="modal-card card pad" style={{ maxWidth: 480 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <h3 style={{ margin: 0, fontSize: "1.15rem", display: "flex", alignItems: "center", gap: 8 }}>
+              <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
                 <span>{testChannel === "instagram" ? "📸" : "📘"}</span> Probar Envío de Mensaje ({testChannel.toUpperCase()})
               </h3>
               <button type="button" className="btn ghost compact" onClick={() => setTestModalOpen(false)}>
@@ -654,7 +629,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                   placeholder="Ej: 1234567890"
                   value={testRecipient}
                   onChange={(e) => setTestRecipient(e.target.value)}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </label>
 
@@ -665,7 +640,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                   required
                   value={testMessage}
                   onChange={(e) => setTestMessage(e.target.value)}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </label>
 

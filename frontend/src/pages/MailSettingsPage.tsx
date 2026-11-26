@@ -243,7 +243,7 @@ export function MailSettingsPage({ embedded = false }: { embedded?: boolean }) {
             placeholder={"Equipo Comercial\nLeal Control\n+54 9 11 0000-0000"}
           />
         </label>
-        <p className="muted" style={{ fontSize: "0.78rem", marginTop: -8 }}>Se agrega al pie de cada correo saliente enviado desde esta casilla.</p>
+        <p className="muted t-small" style={{ marginTop: -8 }}>Se agrega al pie de cada correo saliente enviado desde esta casilla.</p>
         <div className="grid-2"><label>Servidor IMAP<input required value={form.imapHost} onChange={(e) => setForm({...form,imapHost:e.target.value})} /></label><label>Puerto IMAP<input required type="number" value={form.imapPort} onChange={(e) => setForm({...form,imapPort:Number(e.target.value)})} /></label><label>Servidor SMTP<input required value={form.smtpHost} onChange={(e) => setForm({...form,smtpHost:e.target.value})} /></label><label>Puerto SMTP<input required type="number" value={form.smtpPort} onChange={(e) => setForm({...form,smtpPort:Number(e.target.value)})} /></label></div>
         <div className="row"><label className="check-label"><input type="checkbox" checked={form.isDefaultSender} onChange={(e) => setForm({...form,isDefaultSender:e.target.checked})} /> Remitente principal</label><label className="check-label"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({...form,isActive:e.target.checked})} /> Cuenta activa</label></div>
         <div className="toolbar"><button className="btn" disabled={busy}>{form.id ? "Guardar cambios" : "Guardar cuenta cifrada"}</button>{form.id && <button type="button" className="btn btn-outline" onClick={() => setForm(empty)}>Cancelar edición</button>}</div>

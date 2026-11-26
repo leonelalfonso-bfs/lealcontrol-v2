@@ -75,7 +75,7 @@ export function ResetStatementModal({ account, onClose, onDone }: {
       {!summary ? (
         <p className="muted">Calculando…</p>
       ) : (
-        <div className="stack" style={{ gap: 10, fontSize: "0.9rem" }}>
+        <div className="stack" style={{ gap: 10 }}>
           {summary.imported === 0 ? (
             <p className="muted" style={{ margin: 0 }}>La cuenta no tiene movimientos importados: solo se guarda el saldo inicial.</p>
           ) : (<>
@@ -95,14 +95,14 @@ export function ResetStatementModal({ account, onClose, onDone }: {
           </ul>
           <p className="muted" style={{ margin: 0 }}>Se pierden las clasificaciones confirmadas a mano de los movimientos que se borran. No se puede deshacer.</p>
           </>)}
-          <label style={{ fontWeight: 600 }}>
+          <label>
             Saldo inicial de la cuenta
             <input type="number" step="0.01" value={opening} onChange={(e) => setOpening(e.target.value)} style={{ width: "100%" }} />
-            <span className="muted" style={{ fontWeight: 400, fontSize: "0.8rem" }}>
+            <span className="muted t-small" style={{ fontWeight: 400 }}>
               El saldo del banco antes del primer renglón del extracto que vas a cargar: el saldo de ese renglón, más su débito o menos su crédito.
             </span>
           </label>
-          <label style={{ fontWeight: 600 }}>
+          <label>
             Escribí el nombre de la cuenta para confirmar
             <input value={confirmName} onChange={(e) => setConfirmName(e.target.value)} placeholder={account.name} style={{ width: "100%" }} />
           </label>

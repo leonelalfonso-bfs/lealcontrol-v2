@@ -27,13 +27,13 @@ export function GrainFixationsPage() {
     <div className="page" style={{ padding: "24px 32px", display: "flex", flexDirection: "column", gap: "20px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <Link to="/cereales" style={{ textDecoration: "none", color: "var(--ink-soft)", fontSize: "0.9rem" }}>
+          <Link className="muted" to="/cereales" style={{ textDecoration: "none" }}>
             ← Tablero Granario
           </Link>
-          <h1 style={{ margin: "4px 0 0", fontSize: "1.5rem", fontWeight: 800 }}>
+          <h1 style={{ margin: "4px 0 0" }}>
             ⚖️ Pizarra de Cotizaciones & Fijaciones
           </h1>
-          <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: "0.85rem" }}>
+          <p className="muted t-small" style={{ margin: 0 }}>
             Precios de referencia de cámaras arbitrales de Rosario, Buenos Aires y Bahía Blanca
           </p>
         </div>
@@ -51,9 +51,9 @@ export function GrainFixationsPage() {
         boxShadow: "0 4px 16px rgba(0,0,0,0.03)"
       }}>
         {loading ? (
-          <p style={{ textAlign: "center", color: "var(--ink-soft)" }}>Cargando cotizaciones...</p>
+          <p className="t-center muted">Cargando cotizaciones...</p>
         ) : (
-          <table className="table" style={{ width: "100%", fontSize: "0.88rem" }}>
+          <table className="table">
             <thead>
               <tr>
                 <th>Cereal / Cultivo</th>
@@ -83,14 +83,7 @@ export function GrainFixationsPage() {
                         : "-"}
                     </td>
                     <td>
-                      <span style={{
-                        padding: "3px 8px",
-                        borderRadius: "6px",
-                        fontWeight: 800,
-                        fontSize: "0.78rem",
-                        background: isPos ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
-                        color: isPos ? "var(--lc-ok)" : "var(--lc-danger)"
-                      }}>
+                      <span className="alert t-strong t-small">
                         {isPos ? "▲ +" : "▼ "}{p.dailyVariationPercentage}%
                       </span>
                     </td>

@@ -41,14 +41,14 @@ export function GrainContractsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Link to="/cereales" style={{ textDecoration: "none", color: "var(--ink-soft)", fontSize: "0.9rem" }}>
+            <Link className="muted" to="/cereales" style={{ textDecoration: "none" }}>
               ← Tablero Granario
             </Link>
           </div>
-          <h1 style={{ margin: "4px 0 0", fontSize: "1.5rem", fontWeight: 800, color: "var(--ink)" }}>
+          <h1 style={{ margin: "4px 0 0" }}>
             📋 Contratos de Granos
           </h1>
-          <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: "0.85rem" }}>
+          <p className="muted t-small" style={{ margin: 0 }}>
             Gestión de compra/venta a fijar, precio hecho y canje agropecuario
           </p>
         </div>
@@ -56,13 +56,6 @@ export function GrainContractsPage() {
         <Link
           to="/cereales/contratos/nuevo"
           className="btn primary"
-          style={{
-            background: "linear-gradient(135deg, var(--lc-warn) 0%, var(--lc-warn) 100%)",
-            color: "#fff",
-            fontWeight: 700,
-            border: "none",
-            boxShadow: "0 4px 12px rgba(217, 119, 6, 0.3)"
-          }}
         >
           + Nuevo Contrato de Granos
         </Link>
@@ -120,20 +113,20 @@ export function GrainContractsPage() {
         boxShadow: "0 4px 16px rgba(0,0,0,0.03)"
       }}>
         {loading ? (
-          <div style={{ textAlign: "center", padding: "40px" }}>
-            <p style={{ color: "var(--ink-soft)" }}>Cargando contratos...</p>
+          <div className="t-center" style={{ padding: "40px" }}>
+            <p className="muted">Cargando contratos...</p>
           </div>
         ) : contracts.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "40px" }}>
-            <span style={{ fontSize: "2rem" }}>🌾</span>
-            <p style={{ fontWeight: 700, marginTop: "8px" }}>No se encontraron contratos con los filtros aplicados.</p>
+          <div className="t-center" style={{ padding: "40px" }}>
+            <span className="t-xl">🌾</span>
+            <p className="t-strong" style={{ marginTop: "8px" }}>No se encontraron contratos con los filtros aplicados.</p>
             <Link to="/cereales/contratos/nuevo" className="btn primary" style={{ marginTop: "8px" }}>
               Crear primer contrato
             </Link>
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table className="table" style={{ width: "100%", fontSize: "0.86rem" }}>
+            <table className="table">
               <thead>
                 <tr>
                   <th>N° Contrato</th>
@@ -156,34 +149,27 @@ export function GrainContractsPage() {
                   return (
                     <tr key={c.id}>
                       <td>
-                        <Link to={`/cereales/contratos/${c.id}`} style={{ fontWeight: 800, color: "var(--lc-warn)", textDecoration: "none" }}>
+                        <Link className="t-strong t-warn" to={`/cereales/contratos/${c.id}`} style={{ textDecoration: "none" }}>
                           {c.contractNumber}
                         </Link>
-                        <div><small style={{ color: "var(--ink-soft)" }}>{new Date(c.createdAtUtc).toLocaleDateString("es-AR")}</small></div>
+                        <div><small className="muted">{new Date(c.createdAtUtc).toLocaleDateString("es-AR")}</small></div>
                       </td>
                       <td>
                         <strong>{c.grainType}</strong>
-                        <div><small style={{ color: "var(--ink-soft)" }}>{c.harvest}</small></div>
+                        <div><small className="muted">{c.harvest}</small></div>
                       </td>
                       <td>
-                        <span style={{
-                          padding: "3px 8px",
-                          borderRadius: "6px",
-                          fontSize: "0.74rem",
-                          fontWeight: 700,
-                          background: c.pricingMode === "PrecioHecho" ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
-                          color: c.pricingMode === "PrecioHecho" ? "#10b981" : "#d97706"
-                        }}>
+                        <span className="t-small t-strong" style={{ padding: "3px 8px", borderRadius: "6px", background: c.pricingMode === "PrecioHecho" ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)", color: c.pricingMode === "PrecioHecho" ? "#10b981" : "#d97706" }}>
                           {c.pricingMode === "PrecioHecho" ? "Fijo" : "A Fijar"}
                         </span>
-                        <div><small style={{ color: "var(--ink-soft)" }}>{c.currency} {c.pricePerTon}</small></div>
+                        <div><small className="muted">{c.currency} {c.pricePerTon}</small></div>
                       </td>
                       <td>
                         <strong>{c.sellerName}</strong>
                       </td>
                       <td>
                         <div>{c.buyerName}</div>
-                        <small style={{ color: "var(--ink-soft)" }}>Puerto: {c.deliveryPort || "Rosario"}</small>
+                        <small className="muted">Puerto: {c.deliveryPort || "Rosario"}</small>
                       </td>
                       <td>
                         <strong>{c.totalTons.toLocaleString("es-AR")} Tn</strong>
@@ -193,25 +179,25 @@ export function GrainContractsPage() {
                           <div style={{ width: "60px", background: "rgba(0,0,0,0.1)", height: "6px", borderRadius: "3px", overflow: "hidden" }}>
                             <div style={{ width: `${prog}%`, background: "var(--lc-accent)", height: "100%" }} />
                           </div>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>{prog}%</span>
+                          <span className="t-small t-strong">{prog}%</span>
                         </div>
-                        <small style={{ color: "var(--ink-soft)" }}>{c.deliveredTons.toLocaleString("es-AR")} Tn</small>
+                        <small className="muted">{c.deliveredTons.toLocaleString("es-AR")} Tn</small>
                       </td>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                           <div style={{ width: "60px", background: "rgba(0,0,0,0.1)", height: "6px", borderRadius: "3px", overflow: "hidden" }}>
                             <div style={{ width: `${fixProg}%`, background: "var(--lc-info)", height: "100%" }} />
                           </div>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 700 }}>{fixProg}%</span>
+                          <span className="t-small t-strong">{fixProg}%</span>
                         </div>
-                        <small style={{ color: "var(--ink-soft)" }}>{c.fixedTons.toLocaleString("es-AR")} Tn</small>
+                        <small className="muted">{c.fixedTons.toLocaleString("es-AR")} Tn</small>
                       </td>
                       <td>
-                        <strong style={{ color: "var(--lc-ok)" }}>USD {c.brokerCommissionAmount.toLocaleString("es-AR")}</strong>
-                        <div><small style={{ color: "var(--ink-soft)" }}>({c.brokerCommissionPercentage}%)</small></div>
+                        <strong className="t-ok">USD {c.brokerCommissionAmount.toLocaleString("es-AR")}</strong>
+                        <div><small className="muted">({c.brokerCommissionPercentage}%)</small></div>
                       </td>
                       <td>
-                        <Link to={`/cereales/contratos/${c.id}`} className="btn secondary" style={{ fontSize: "0.76rem", padding: "4px 10px" }}>
+                        <Link to={`/cereales/contratos/${c.id}`} className="btn secondary compact">
                           Ver Ficha
                         </Link>
                       </td>

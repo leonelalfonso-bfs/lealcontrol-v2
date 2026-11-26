@@ -172,7 +172,7 @@ export function FleetFuelLogsPage() {
               <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </label>
           </div>
-          {drivers.length === 0 && <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>Para elegir quién cargó, sumá a los choferes en <Link to="/flota/personas">Flota → Personas</Link>.</p>}
+          {drivers.length === 0 && <p className="muted t-small" style={{ margin: 0 }}>Para elegir quién cargó, sumá a los choferes en <Link to="/flota/personas">Flota → Personas</Link>.</p>}
           <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
             <button type="button" className="btn btn-outline" onClick={() => setForm(null)}>Cancelar</button>
             <button className="btn" disabled={busy}>{busy ? "Guardando…" : "Guardar carga"}</button>
@@ -195,17 +195,17 @@ export function FleetFuelLogsPage() {
 
       {summary.length > 0 && (
         <section className="card pad" style={{ marginBottom: 20 }}>
-          <h3 style={{ marginTop: 0 }}>Resumen del período</h3>
+          <h3>Resumen del período</h3>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Unidad</th><th style={{ textAlign: "right" }}>Litros</th>{seesCosts && <th style={{ textAlign: "right" }}>Gasto</th>}<th style={{ textAlign: "right" }}>Consumo promedio</th></tr></thead>
+              <thead><tr><th>Unidad</th><th className="t-right">Litros</th>{seesCosts && <th className="t-right">Gasto</th>}<th className="t-right">Consumo promedio</th></tr></thead>
               <tbody>
                 {summary.map((r) => (
                   <tr key={r.label}>
                     <td><strong>{r.label}</strong></td>
-                    <td style={{ textAlign: "right" }}>{num(r.liters, 2)}</td>
-                    {seesCosts && <td style={{ textAlign: "right" }}>{money(r.cost)}</td>}
-                    <td style={{ textAlign: "right" }}>{r.kmpl != null ? `${num(r.kmpl, 2)} km/l` : r.lph != null ? `${num(r.lph, 2)} l/h` : "—"}</td>
+                    <td className="t-right">{num(r.liters, 2)}</td>
+                    {seesCosts && <td className="t-right">{money(r.cost)}</td>}
+                    <td className="t-right">{r.kmpl != null ? `${num(r.kmpl, 2)} km/l` : r.lph != null ? `${num(r.lph, 2)} l/h` : "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -220,9 +220,9 @@ export function FleetFuelLogsPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Fecha</th><th>Unidad</th><th>Quién</th><th>Lectura</th><th style={{ textAlign: "right" }}>Litros</th>
-                  {seesCosts && <th style={{ textAlign: "right" }}>$/l</th>}{seesCosts && <th style={{ textAlign: "right" }}>Total</th>}
-                  <th style={{ textAlign: "right" }}>Consumo</th><th>Estación</th><th></th>
+                  <th>Fecha</th><th>Unidad</th><th>Quién</th><th>Lectura</th><th className="t-right">Litros</th>
+                  {seesCosts && <th className="t-right">$/l</th>}{seesCosts && <th className="t-right">Total</th>}
+                  <th className="t-right">Consumo</th><th>Estación</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -232,12 +232,12 @@ export function FleetFuelLogsPage() {
                     <td><strong>{l.vehicleLabel}</strong></td>
                     <td>{l.personName ?? "—"}</td>
                     <td>{[l.km != null && `${num(l.km)} km`, l.hours != null && `${num(l.hours, 1)} h`].filter(Boolean).join(" · ") || "—"}</td>
-                    <td style={{ textAlign: "right" }}>{num(l.liters, 2)}</td>
-                    {seesCosts && <td style={{ textAlign: "right" }}>{money(l.pricePerLiter)}</td>}
-                    {seesCosts && <td style={{ textAlign: "right" }}>{money(l.totalCost)}</td>}
-                    <td style={{ textAlign: "right" }}>{l.kmPerLiter != null ? `${num(l.kmPerLiter, 2)} km/l` : l.litersPerHour != null ? `${num(l.litersPerHour, 2)} l/h` : "—"}</td>
+                    <td className="t-right">{num(l.liters, 2)}</td>
+                    {seesCosts && <td className="t-right">{money(l.pricePerLiter)}</td>}
+                    {seesCosts && <td className="t-right">{money(l.totalCost)}</td>}
+                    <td className="t-right">{l.kmPerLiter != null ? `${num(l.kmPerLiter, 2)} km/l` : l.litersPerHour != null ? `${num(l.litersPerHour, 2)} l/h` : "—"}</td>
                     <td className="muted">{[l.station, l.paymentMethod].filter(Boolean).join(" · ") || "—"}</td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="t-right">
                       <button type="button" className="btn btn-outline compact" onClick={() => void remove(l)}>Borrar</button>
                     </td>
                   </tr>

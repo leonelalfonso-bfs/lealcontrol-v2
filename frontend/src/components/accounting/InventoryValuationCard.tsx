@@ -52,23 +52,23 @@ export function InventoryValuationCard() {
   };
 
   return (
-    <div className="card pad" style={{ border: "1px solid var(--lc-warn)", background: "rgba(180, 83, 9, 0.02)" }}>
+    <div className="card pad">
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
         <div style={{ fontSize: "28px" }}>📦</div>
         <div>
-          <h3 style={{ margin: 0, color: "var(--lc-warn)" }}>Existencias y costo de ventas</h3>
-          <p className="muted" style={{ margin: 0, fontSize: "12px" }}>
+          <h3 style={{ margin: 0 }}>Existencias y costo de ventas</h3>
+          <p className="muted t-small" style={{ margin: 0 }}>
             Stock a fin de mes al último costo de compra; la diferencia con Mercaderías va a CMV.
           </p>
         </div>
       </div>
 
       <div className="grid-2" style={{ gap: 10 }}>
-        <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+        <label>
           Stock al:
           <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setPreview(null); }} />
         </label>
-        <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+        <label>
           Dólar (solo si hay costos en USD sin compras):
           <input inputMode="decimal" value={usdRate} placeholder="Opcional" onChange={(e) => { setUsdRate(e.target.value); setPreview(null); }} />
         </label>
@@ -84,31 +84,31 @@ export function InventoryValuationCard() {
               {preview.withoutCost} producto(s) con stock no tienen costo y valen cero: cargá su costo o una compra.
             </div>
           )}
-          <table style={{ fontSize: "0.8rem" }}>
+          <table>
             <thead>
               <tr>
                 <th>Producto</th>
-                <th style={{ textAlign: "right" }}>Cantidad</th>
-                <th style={{ textAlign: "right" }}>Costo unitario</th>
-                <th style={{ textAlign: "right" }}>Valor</th>
+                <th className="t-right">Cantidad</th>
+                <th className="t-right">Costo unitario</th>
+                <th className="t-right">Valor</th>
               </tr>
             </thead>
             <tbody>
               {preview.lines.map((l) => (
                 <tr key={l.productId}>
-                  <td>{l.code} — {l.name}<div className="muted" style={{ fontSize: "0.72rem" }}>{SOURCES[l.costSource]}</div></td>
-                  <td style={{ textAlign: "right" }}>{l.quantity.toLocaleString("es-AR")}</td>
-                  <td style={{ textAlign: "right" }}>{money(l.unitCostArs)}</td>
-                  <td style={{ textAlign: "right" }}>{money(l.valueArs)}</td>
+                  <td>{l.code} — {l.name}<div className="muted t-small">{SOURCES[l.costSource]}</div></td>
+                  <td className="t-right">{l.quantity.toLocaleString("es-AR")}</td>
+                  <td className="t-right">{money(l.unitCostArs)}</td>
+                  <td className="t-right">{money(l.valueArs)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr style={{ fontWeight: 700 }}><td colSpan={3}>Existencias valuadas</td><td style={{ textAlign: "right" }}>{money(preview.inventoryValue)}</td></tr>
-              <tr><td colSpan={3}>Saldo de Mercaderías en libros</td><td style={{ textAlign: "right" }}>{money(preview.bookBalance)}</td></tr>
-              <tr style={{ fontWeight: 800 }}>
+              <tr className="t-strong"><td colSpan={3}>Existencias valuadas</td><td className="t-right">{money(preview.inventoryValue)}</td></tr>
+              <tr><td colSpan={3}>Saldo de Mercaderías en libros</td><td className="t-right">{money(preview.bookBalance)}</td></tr>
+              <tr className="t-strong">
                 <td colSpan={3}>{preview.difference >= 0 ? "Ajuste: Mercaderías aumenta (baja el CMV)" : "Ajuste: Mercaderías baja (sube el CMV)"}</td>
-                <td style={{ textAlign: "right" }}>{money(preview.difference)}</td>
+                <td className="t-right">{money(preview.difference)}</td>
               </tr>
             </tfoot>
           </table>
@@ -122,7 +122,7 @@ export function InventoryValuationCard() {
         <button type="button" className="btn ghost" onClick={load} disabled={busy || !date}>👁️ Valuar existencias</button>
         <button type="button" className="btn" onClick={post}
           disabled={busy || !preview || preview.difference === 0 || preview.existingEntryNumber != null}
-          style={{ background: "var(--lc-warn)", color: "#fff", fontWeight: 700 }}>
+         >
           Registrar ajuste
         </button>
       </div>

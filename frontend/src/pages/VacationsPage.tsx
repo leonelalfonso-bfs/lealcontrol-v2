@@ -83,24 +83,24 @@ export function VacationsPage() {
         <label style={{ maxWidth: 120 }}>Días corridos<input type="number" min={1} value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} required /></label>
         <label style={{ minWidth: 200 }}>Nota<input value={form.notes} placeholder="Acuerdo, fecha de notificación…" onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>
         <button type="submit" className="btn" disabled={busy}>Registrar</button>
-        {selected && <span className="muted" style={{ fontSize: "0.8rem", flexBasis: "100%" }}>{selected.detail}</span>}
+        {selected && <span className="muted t-small" style={{ flexBasis: "100%" }}>{selected.detail}</span>}
       </form>
 
       <div className="card pad" style={{ overflowX: "auto" }}>
         {rows.length === 0 ? (
           <p className="muted" style={{ margin: 0 }}>No hay colaboradores con vacaciones de {year}.</p>
         ) : (
-          <table style={{ fontSize: "0.85rem" }}>
+          <table>
             <thead>
-              <tr><th>Colaborador</th><th style={{ textAlign: "right" }}>Corresponden</th><th style={{ textAlign: "right" }}>Tomados</th><th style={{ textAlign: "right" }}>Quedan</th><th>Tramos</th></tr>
+              <tr><th>Colaborador</th><th className="t-right">Corresponden</th><th className="t-right">Tomados</th><th className="t-right">Quedan</th><th>Tramos</th></tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.employeeId}>
-                  <td>{r.employeeName}<div className="muted" style={{ fontSize: "0.72rem" }}>{r.detail}</div></td>
-                  <td style={{ textAlign: "right" }}>{r.entitled}</td>
-                  <td style={{ textAlign: "right" }}>{r.taken}</td>
-                  <td style={{ textAlign: "right", fontWeight: 700 }}>{r.remaining}</td>
+                  <td>{r.employeeName}<div className="muted t-small">{r.detail}</div></td>
+                  <td className="t-right">{r.entitled}</td>
+                  <td className="t-right">{r.taken}</td>
+                  <td className="t-right t-strong">{r.remaining}</td>
                   <td>
                     {r.leaves.length === 0 ? <span className="muted">—</span> : r.leaves.map((l) => (
                       <div key={l.id} className="row" style={{ gap: 8, alignItems: "center" }}>

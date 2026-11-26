@@ -58,38 +58,21 @@ export const StyleShowcasePage: React.FC = () => {
           <div
             onClick={() => setMode("light")}
             className="card pad"
-            style={{
-              cursor: "pointer",
-              border: !isDark ? "2px solid var(--primary)" : "1px solid var(--surface-border)",
-              transform: !isDark ? "translateY(-3px)" : "none",
-              boxShadow: !isDark ? "0 14px 32px var(--primary-glow)" : "var(--shadow-card)",
-              position: "relative",
-              overflow: "hidden"
-            }}
+            style={{ cursor: "pointer", transform: !isDark ? "translateY(-3px)" : "none", position: "relative", overflow: "hidden" }}
           >
             {!isDark && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 12,
-                  right: 12,
-                  background: "var(--primary)",
-                  color: "#fff",
-                  borderRadius: 999,
-                  padding: "3px 10px",
-                  fontSize: "0.72rem",
-                  fontWeight: 800
-                }}
+              <div className="t-small t-strong"
+                style={{ position: "absolute", top: 12, right: 12, background: "var(--primary)", color: "#fff", borderRadius: 999, padding: "3px 10px" }}
               >
                 ACTIVO AHORA
               </div>
             )}
 
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <span style={{ fontSize: "1.8rem" }}>☀️</span>
+              <span className="t-xl">☀️</span>
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.2rem", color: "var(--ink)" }}>Modo Claro: {LIGHT_THEME.name}</h3>
-                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--accent)" }}>{LIGHT_THEME.inspiration}</div>
+                <h3 style={{ margin: 0 }}>Modo Claro: {LIGHT_THEME.name}</h3>
+                <div className="t-small t-strong" style={{ color: "var(--accent)" }}>{LIGHT_THEME.inspiration}</div>
               </div>
             </div>
 
@@ -100,7 +83,7 @@ export const StyleShowcasePage: React.FC = () => {
               <div style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: LIGHT_THEME.previewColors.accent }} title="Acento (Azul)" />
             </div>
 
-            <p className="muted" style={{ fontSize: "0.86rem", margin: "0 0 16px", lineHeight: 1.45 }}>
+            <p className="muted" style={{ margin: "0 0 16px", lineHeight: 1.45 }}>
               {LIGHT_THEME.tagline}
             </p>
 
@@ -113,38 +96,21 @@ export const StyleShowcasePage: React.FC = () => {
           <div
             onClick={() => setMode("dark")}
             className="card pad"
-            style={{
-              cursor: "pointer",
-              border: isDark ? "2px solid var(--primary)" : "1px solid var(--surface-border)",
-              transform: isDark ? "translateY(-3px)" : "none",
-              boxShadow: isDark ? "0 14px 32px var(--primary-glow)" : "var(--shadow-card)",
-              position: "relative",
-              overflow: "hidden"
-            }}
+            style={{ cursor: "pointer", transform: isDark ? "translateY(-3px)" : "none", position: "relative", overflow: "hidden" }}
           >
             {isDark && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 12,
-                  right: 12,
-                  background: "var(--primary)",
-                  color: "#fff",
-                  borderRadius: 999,
-                  padding: "3px 10px",
-                  fontSize: "0.72rem",
-                  fontWeight: 800
-                }}
+              <div className="t-small t-strong"
+                style={{ position: "absolute", top: 12, right: 12, background: "var(--primary)", color: "#fff", borderRadius: 999, padding: "3px 10px" }}
               >
                 ACTIVO AHORA
               </div>
             )}
 
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <span style={{ fontSize: "1.8rem" }}>🌙</span>
+              <span className="t-xl">🌙</span>
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.2rem", color: "var(--ink)" }}>Modo Oscuro: {DARK_THEME.name}</h3>
-                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--accent)" }}>{DARK_THEME.inspiration}</div>
+                <h3 style={{ margin: 0 }}>Modo Oscuro: {DARK_THEME.name}</h3>
+                <div className="t-small t-strong" style={{ color: "var(--accent)" }}>{DARK_THEME.inspiration}</div>
               </div>
             </div>
 
@@ -155,7 +121,7 @@ export const StyleShowcasePage: React.FC = () => {
               <div style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: DARK_THEME.previewColors.accent }} title="Acento (Oro)" />
             </div>
 
-            <p className="muted" style={{ fontSize: "0.86rem", margin: "0 0 16px", lineHeight: 1.45 }}>
+            <p className="muted" style={{ margin: "0 0 16px", lineHeight: 1.45 }}>
               {DARK_THEME.tagline}
             </p>
 
@@ -260,32 +226,32 @@ export const StyleShowcasePage: React.FC = () => {
                     <th>Cliente / Razón Social</th>
                     <th>CUIT</th>
                     <th>Fecha</th>
-                    <th style={{ textAlign: "right" }}>Total</th>
+                    <th className="t-right">Total</th>
                     <th>Estado</th>
-                    <th style={{ textAlign: "center" }}>Acciones</th>
+                    <th className="t-center">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {mockRows.map((r) => (
                     <tr key={r.id}>
-                      <td style={{ fontWeight: 800, color: "var(--primary)" }}>{r.id}</td>
+                      <td className="t-strong t-accent">{r.id}</td>
                       <td>
                         <strong>{r.cliente}</strong>
                       </td>
                       <td className="muted">{r.cuit}</td>
                       <td>{r.fecha}</td>
-                      <td style={{ textAlign: "right", fontWeight: 800 }}>
+                      <td className="t-right t-strong">
                         {new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(r.monto)}
                       </td>
                       <td>
                         <span className={`badge ${r.estadoTipo}`}>{r.estado}</span>
                       </td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="t-center">
                         <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
-                          <button className="btn btn-outline" style={{ padding: "4px 8px", fontSize: "0.76rem" }}>
+                          <button className="btn btn-outline compact">
                             Ver
                           </button>
-                          <button className="btn ghost" style={{ padding: "4px 8px", fontSize: "0.76rem" }}>
+                          <button className="btn ghost compact">
                             PDF
                           </button>
                         </div>
@@ -380,13 +346,13 @@ export const StyleShowcasePage: React.FC = () => {
 
           <div className="card pad" style={{ display: "grid", gap: 20 }}>
             <div>
-              <h4 style={{ margin: "0 0 10px", color: "var(--ink)" }}>Variantes de Botones</h4>
+              <h4 style={{ margin: "0 0 10px" }}>Variantes de Botones</h4>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                 <button className="btn">Botón Primario</button>
                 <button className="btn btn-outline">Botón Outline</button>
                 <button className="btn ghost">Botón Ghost</button>
                 <button className="btn btn-danger">Botón Peligro</button>
-                <button className="btn" style={{ background: "var(--ok)", borderColor: "var(--ok)" }}>
+                <button className="btn">
                   Botón Éxito
                 </button>
                 <button className="btn" disabled style={{ opacity: 0.5, cursor: "not-allowed" }}>
@@ -396,7 +362,7 @@ export const StyleShowcasePage: React.FC = () => {
             </div>
 
             <div>
-              <h4 style={{ margin: "0 0 10px", color: "var(--ink)" }}>Badges de Estado</h4>
+              <h4 style={{ margin: "0 0 10px" }}>Badges de Estado</h4>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                 <span className="badge ok">✓ Aprobado / Confirmado</span>
                 <span className="badge warn">⏳ Pendiente de Aprobación</span>
@@ -406,7 +372,7 @@ export const StyleShowcasePage: React.FC = () => {
             </div>
 
             <div>
-              <h4 style={{ margin: "0 0 10px", color: "var(--ink)" }}>Banners y Alertas</h4>
+              <h4 style={{ margin: "0 0 10px" }}>Banners y Alertas</h4>
               <div className="alert ok" style={{ margin: 0, marginBottom: 10 }}>
                 ✓ Comprobante ARCA emitido exitosamente. CAE asignado: <strong>74391209381920</strong>
               </div>

@@ -121,7 +121,7 @@ export function ServiceOrderPartsSection({ order, onChanged }: { order: ServiceO
 
       {error && <div className="alert" style={{ margin: 0 }}>{error}</div>}
       {message && <div className="alert ok" style={{ margin: 0 }}>{message}</div>}
-      {order.stockAppliedAt && <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>Ya se generó el remito y se descontó el stock: los repuestos quedan como están.</p>}
+      {order.stockAppliedAt && <p className="muted t-small" style={{ margin: 0 }}>Ya se generó el remito y se descontó el stock: los repuestos quedan como están.</p>}
 
       {rows.length === 0 && locked ? <p className="muted" style={{ margin: 0 }}>Sin repuestos.</p> : (
         <div className="table-wrap">
@@ -142,7 +142,7 @@ export function ServiceOrderPartsSection({ order, onChanged }: { order: ServiceO
                   </td>
                   <td>{locked ? r.serialNumbers || "—" : <input value={r.serialNumbers} maxLength={300} onChange={(e) => update(i, { serialNumbers: e.target.value })} />}</td>
                   {!locked && (
-                    <td style={{ textAlign: "right" }}>
+                    <td className="t-right">
                       <button type="button" className="btn btn-outline compact" onClick={() => { setRows((x) => x.filter((_, k) => k !== i)); setDirty(true); }}>Quitar</button>
                     </td>
                   )}
@@ -160,7 +160,7 @@ export function ServiceOrderPartsSection({ order, onChanged }: { order: ServiceO
             {products.length > 0 && (
               <div className="card" style={{ position: "absolute", zIndex: 5, left: 0, right: 0, marginTop: 4, padding: 4, maxHeight: 240, overflow: "auto" }}>
                 {products.map((p) => (
-                  <button key={p.id} type="button" className="btn btn-outline compact" style={{ display: "block", width: "100%", textAlign: "left", marginBottom: 2 }} onClick={() => addProduct(p)}>
+                  <button key={p.id} type="button" className="btn btn-outline compact" style={{ display: "block", width: "100%", marginBottom: 2 }} onClick={() => addProduct(p)}>
                     {p.name} <span className="muted">· {p.code}{p.trackStock ? ` · stock ${num(p.stock, 2)}` : " · sin control de stock"}</span>
                   </button>
                 ))}
@@ -175,7 +175,7 @@ export function ServiceOrderPartsSection({ order, onChanged }: { order: ServiceO
       )}
 
       {preview && (
-        <div className="card pad stack" style={{ gap: 10, border: "1px solid var(--line)" }}>
+        <div className="card pad stack" style={{ gap: 10 }}>
           <strong>Generar remito{preview.salesOrderNumber ? ` del pedido ${preview.salesOrderNumber}` : ""}</strong>
           {!preview.ready ? <div className="alert" style={{ margin: 0 }}>{preview.problem}</div> : (
             <>
@@ -198,11 +198,11 @@ export function ServiceOrderPartsSection({ order, onChanged }: { order: ServiceO
                 </div>
               ) : <p className="muted" style={{ margin: 0 }}>La orden no tiene pedido: el remito lleva el servicio y todos los repuestos.</p>}
               {preview.items.length > 0 && (
-                <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.85rem" }}>
+                <ul className="t-small" style={{ margin: 0, paddingLeft: 18 }}>
                   {preview.items.map((i) => <li key={i.id}><strong>{i.description}</strong> × {num(i.quantity, 3)}: {DESTINATION[i.destination]}</li>)}
                 </ul>
               )}
-              <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>Al generar el remito se descuenta el stock. Después los repuestos ya no se pueden cambiar.</p>
+              <p className="muted t-small" style={{ margin: 0 }}>Al generar el remito se descuenta el stock. Después los repuestos ya no se pueden cambiar.</p>
               <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
                 <button type="button" className="btn btn-outline" onClick={() => setPreview(null)}>Cancelar</button>
                 <button type="button" className="btn" disabled={busy} onClick={() => void generate()}>{busy ? "Generando…" : "Generar remito y descontar stock"}</button>

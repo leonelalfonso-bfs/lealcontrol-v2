@@ -39,19 +39,19 @@ export function NoticesBell() {
         <div className="ins-bell__panel" style={{
           overflowY: "auto", padding: "12px 14px"
         }}>
-          <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>Mis avisos</div>
-          {total === 0 ? <p className="muted" style={{ margin: "8px 0", fontSize: "0.82rem" }}>No tenés avisos pendientes.</p> : notices!.groups.map((g) => (
+          <div className="t-strong">Mis avisos</div>
+          {total === 0 ? <p className="muted t-small" style={{ margin: "8px 0" }}>No tenés avisos pendientes.</p> : notices!.groups.map((g) => (
             <div key={g.code} style={{ marginTop: 10 }}>
-              <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", color: "var(--ink-soft)" }}>{g.label} ({g.items.length})</div>
+              <div className="t-small t-strong t-caps muted">{g.label} ({g.items.length})</div>
               {g.items.slice(0, 4).map((item, i) => (
-                <div key={i} style={{ fontSize: "0.8rem", marginTop: 4 }}>
+                <div className="t-small" key={i} style={{ marginTop: 4 }}>
                   {item.link ? <Link to={item.link} onClick={() => setOpen(false)}>{item.title}</Link> : item.title}
-                  {item.detail && <div className="muted" style={{ fontSize: "0.72rem" }}>{item.detail}</div>}
+                  {item.detail && <div className="muted t-small">{item.detail}</div>}
                 </div>
               ))}
             </div>
           ))}
-          <div style={{ marginTop: 12, borderTop: "1px solid var(--surface-border)", paddingTop: 8, fontSize: "0.8rem" }}>
+          <div className="t-small" style={{ marginTop: 12, borderTop: "1px solid var(--surface-border)", paddingTop: 8 }}>
             <Link to="/mi-perfil/avisos" onClick={() => setOpen(false)}>Ver todos y elegir qué recibir →</Link>
           </div>
         </div>

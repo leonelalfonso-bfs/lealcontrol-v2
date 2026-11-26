@@ -104,7 +104,7 @@ export function FleetPeoplePage() {
 
       {problems.length > 0 && (
         <section className="card pad" style={{ marginBottom: 20 }}>
-          <h3 style={{ marginTop: 0 }}>Credenciales para atender</h3>
+          <h3>Credenciales para atender</h3>
           <div className="table-wrap">
             <table>
               <thead><tr><th>Persona</th><th>Credencial</th><th>Fecha</th><th>Estado</th></tr></thead>
@@ -137,7 +137,7 @@ export function FleetPeoplePage() {
                     <tr key={p.id} style={{ cursor: "pointer", opacity: p.employeeActive ? 1 : 0.55 }} onClick={() => navigate(`/flota/personas/${p.id}`)}>
                       <td>
                         <strong>{p.fullName}</strong>
-                        <div className="muted" style={{ fontSize: "0.78rem" }}>
+                        <div className="muted t-small">
                           {[p.jobTitle, p.fileNumber && `legajo ${p.fileNumber}`, !p.employeeActive && "no activo en RRHH"].filter(Boolean).join(" · ")}
                         </div>
                       </td>

@@ -221,7 +221,7 @@ export function FleetVehicleFormPage() {
         <label>Notas
           <textarea rows={2} value={form.notes} onChange={(e) => set("notes", e.target.value)} />
         </label>
-        <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+        <p className="muted t-small" style={{ margin: 0 }}>
           Patente o código interno: al menos uno (los autoelevadores suelen no tener patente).
           {!isNew && " Los kilómetros y horas se actualizan con una lectura, abajo."}
         </p>
@@ -252,7 +252,7 @@ export function FleetVehicleFormPage() {
             )}
 
             {docForm && (
-              <form className="card pad stack" style={{ gap: 12, border: "1px solid var(--line)" }} onSubmit={saveDocument}>
+              <form className="card pad stack" style={{ gap: 12 }} onSubmit={saveDocument}>
                 <strong>{editingDocId ? "Editar vencimiento" : "Nuevo vencimiento"}</strong>
                 <div className="grid-3">
                   <label>Tipo *
@@ -287,7 +287,7 @@ export function FleetVehicleFormPage() {
                   )}
                 </div>
                 {!editingDocId && activeTypes.has(docForm.documentType) && docForm.documentType !== "Other" && (
-                  <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+                  <p className="muted t-small" style={{ margin: 0 }}>
                     Es una renovación: el {docTypeLabel(docForm.documentType)} vigente pasa al historial.
                   </p>
                 )}
@@ -304,7 +304,7 @@ export function FleetVehicleFormPage() {
               <div className="table-wrap">
                 <table>
                   <thead>
-                    <tr><th>Tipo</th><th>Vence</th><th>Estado</th><th>Número</th><th>Emisor</th><th>Archivo</th><th style={{ textAlign: "right" }}>Acciones</th></tr>
+                    <tr><th>Tipo</th><th>Vence</th><th>Estado</th><th>Número</th><th>Emisor</th><th>Archivo</th><th className="t-right">Acciones</th></tr>
                   </thead>
                   <tbody>
                     {documents.map((d) => (
@@ -317,7 +317,7 @@ export function FleetVehicleFormPage() {
                         <td>{d.number || "—"}</td>
                         <td>{d.issuer || "—"}</td>
                         <td><FileAttachment path={`/api/v1/fleet/documents/${d.id}/file`} fileName={d.fileName} onChanged={() => id && void load(id)} /></td>
-                        <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                        <td className="t-right" style={{ whiteSpace: "nowrap" }}>
                           {d.isActive && d.documentType !== "Other" && (
                             <button type="button" className="btn btn-outline compact" onClick={() => {
                               setEditingDocId(null);
@@ -369,7 +369,7 @@ export function FleetVehicleFormPage() {
                 )}
                 <button className="btn" disabled={busy || (reading.km === "" && reading.hours === "")}>Registrar lectura</button>
               </form>
-              <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+              <p className="muted t-small" style={{ margin: 0 }}>
                 Los valores no pueden bajar. Si se cargó mal, marcá "corrección" y explicá el motivo: queda registrado.
               </p>
               {readings.length > 0 && (

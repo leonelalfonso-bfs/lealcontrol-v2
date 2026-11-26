@@ -118,14 +118,14 @@ export function PayrollRunPage() {
       {issues && (issues.errors.length > 0 || issues.warnings.length > 0) && (
         <div className="card pad stack" style={{ gap: 6 }}>
           {issues.errors.map((x) => <div key={x} className="alert" style={{ margin: 0 }}>❌ {x}</div>)}
-          {issues.warnings.map((x) => <div key={x} style={{ color: "var(--lc-warn)", fontSize: "0.85rem" }}>⚠️ {x}</div>)}
+          {issues.warnings.map((x) => <div className="t-warn t-small" key={x}>⚠️ {x}</div>)}
         </div>
       )}
 
       {final && (
         <div className="card pad stack" style={{ gap: 10 }}>
           <h3 style={{ margin: 0 }}>Egreso</h3>
-          <div className="muted" style={{ fontSize: "0.85rem" }}>
+          <div className="muted t-small">
             Egreso el {day(people[0]?.terminationDate ?? null)} · {TERMINATION_CAUSES[r.terminationCause ?? ""] ?? r.terminationCause}
             {r.terminationCause === "DismissalWithoutCause" && (r.noticeGiven ? " · con preaviso otorgado" : " · sin preaviso")}
             {r.agreedAmount > 0 && ` · gratificación pactada $ ${money(r.agreedAmount)}`}
@@ -163,20 +163,20 @@ export function PayrollRunPage() {
       <div className="card pad stack" style={{ gap: 12 }}>
         <h3 style={{ margin: 0 }}>{sac ? "Novedades del aguinaldo" : final ? "Novedades de la liquidación final" : "Novedades del mes"}</h3>
         {sac && (
-          <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+          <p className="muted t-small" style={{ margin: 0 }}>
             El aguinaldo toma la mejor remuneración de los meses del semestre cerrados en el sistema. Si algún mes lo liquidó el estudio
             y fue mayor, cargalo como “Mejor remuneración del semestre liquidada fuera del sistema”.
           </p>
         )}
         {detail.novelties.length > 0 && (
-          <table style={{ fontSize: "0.82rem" }}>
+          <table>
             <tbody>
               {detail.novelties.map((n) => (
                 <tr key={n.id}>
                   <td>{name(n.employeeId)}</td>
                   <td>{KINDS[n.kind]?.label ?? n.kind}{n.description && <span className="muted"> · {n.description}</span>}</td>
-                  <td style={{ textAlign: "right" }}>{KINDS[n.kind]?.unit === "$" ? `$ ${money(n.amount)}` : KINDS[n.kind]?.unit ? `${n.quantity} ${KINDS[n.kind].unit}` : ""}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td className="t-right">{KINDS[n.kind]?.unit === "$" ? `$ ${money(n.amount)}` : KINDS[n.kind]?.unit ? `${n.quantity} ${KINDS[n.kind].unit}` : ""}</td>
+                  <td className="t-right">
                     {draft && <button type="button" className="btn ghost compact" disabled={busy} onClick={() => void run(async () => {
                       await api.deletePayrollNovelty(id, n.id); return "✓ Novedad borrada. Recalculá la liquidación.";
                     })}>Borrar</button>}
@@ -219,43 +219,43 @@ export function PayrollRunPage() {
           <p className="muted" style={{ margin: 0 }}>Todavía no se calculó. Cargá las novedades y tocá “🧮 Calcular”.</p>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ fontSize: "0.82rem" }}>
+            <table>
               <thead>
                 <tr>
-                  <th>Colaborador</th><th style={{ textAlign: "right" }}>Días</th><th style={{ textAlign: "right" }}>Remunerativo</th>
-                  <th style={{ textAlign: "right" }}>No remunerativo</th><th style={{ textAlign: "right" }}>Descuentos</th><th style={{ textAlign: "right" }}>Neto</th>
-                  <th style={{ textAlign: "right" }}>Costo empleador</th><th>Firma</th><th />
+                  <th>Colaborador</th><th className="t-right">Días</th><th className="t-right">Remunerativo</th>
+                  <th className="t-right">No remunerativo</th><th className="t-right">Descuentos</th><th className="t-right">Neto</th>
+                  <th className="t-right">Costo empleador</th><th>Firma</th><th />
                 </tr>
               </thead>
               <tbody>
                 {detail.payslips.map((p) => (
                   <tr key={p.id}>
-                    <td>{p.employeeName}<div className="muted" style={{ fontSize: "0.72rem" }}>{p.category}</div>
-                      {p.warnings && <div style={{ color: "var(--lc-warn)", fontSize: "0.72rem" }}>⚠️ {p.warnings.split("\n")[0]}</div>}</td>
-                    <td style={{ textAlign: "right" }}>{p.daysWorked}</td>
-                    <td style={{ textAlign: "right" }}>{money(p.remunerative)}</td>
-                    <td style={{ textAlign: "right" }}>{money(p.nonRemunerative)}</td>
-                    <td style={{ textAlign: "right" }}>{money(p.deductions)}</td>
-                    <td style={{ textAlign: "right", fontWeight: 700 }}>{money(p.net)}</td>
-                    <td style={{ textAlign: "right" }}>{money(p.employerCost)}</td>
+                    <td>{p.employeeName}<div className="muted t-small">{p.category}</div>
+                      {p.warnings && <div className="t-warn t-small">⚠️ {p.warnings.split("\n")[0]}</div>}</td>
+                    <td className="t-right">{p.daysWorked}</td>
+                    <td className="t-right">{money(p.remunerative)}</td>
+                    <td className="t-right">{money(p.nonRemunerative)}</td>
+                    <td className="t-right">{money(p.deductions)}</td>
+                    <td className="t-right t-strong">{money(p.net)}</td>
+                    <td className="t-right">{money(p.employerCost)}</td>
                     <td>{p.signedAtUtc ? `✓ ${day(p.signedAtUtc)}` : draft ? "—" : "Pendiente"}</td>
-                    <td style={{ textAlign: "right" }}><Link to={`/rrhh/liquidaciones/${id}/recibos/${p.id}`} className="btn ghost compact">Recibo</Link></td>
+                    <td className="t-right"><Link to={`/rrhh/liquidaciones/${id}/recibos/${p.id}`} className="btn ghost compact">Recibo</Link></td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr style={{ fontWeight: 800 }}>
+                <tr className="t-strong">
                   <td colSpan={2}>Totales</td>
-                  <td style={{ textAlign: "right" }}>{money(detail.totals.remunerative)}</td>
-                  <td style={{ textAlign: "right" }}>{money(detail.totals.nonRemunerative)}</td>
-                  <td style={{ textAlign: "right" }}>{money(detail.totals.deductions)}</td>
-                  <td style={{ textAlign: "right" }}>{money(detail.totals.net)}</td>
-                  <td style={{ textAlign: "right" }}>{money(detail.totals.employerCost)}</td>
+                  <td className="t-right">{money(detail.totals.remunerative)}</td>
+                  <td className="t-right">{money(detail.totals.nonRemunerative)}</td>
+                  <td className="t-right">{money(detail.totals.deductions)}</td>
+                  <td className="t-right">{money(detail.totals.net)}</td>
+                  <td className="t-right">{money(detail.totals.employerCost)}</td>
                   <td colSpan={2} />
                 </tr>
               </tfoot>
             </table>
-            <div className="muted" style={{ fontSize: "0.8rem", marginTop: 6 }}>
+            <div className="muted t-small" style={{ marginTop: 6 }}>
               A pagar por F.931 (aportes, contribuciones, ART y seguro de vida): $ {money(detail.totals.f931)}
             </div>
           </div>
@@ -265,7 +265,7 @@ export function PayrollRunPage() {
       {!draft && (
         <div className="card pad stack" style={{ gap: 10 }}>
           <h3 style={{ margin: 0 }}>Libro de Sueldos Digital y F.931</h3>
-          <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+          <p className="muted t-small" style={{ margin: 0 }}>
             Archivo para importar en ARCA → Libro de Sueldos Digital → Liquidaciones y DDJJ. Antes, los conceptos tienen que estar cargados
             en el módulo Conceptos (<Link to="/rrhh/sueldos/conceptos">Conceptos ARCA</Link>).
           </p>
@@ -278,9 +278,9 @@ export function PayrollRunPage() {
           {lsd && (
             <>
               {lsd.errors.map((x) => <div key={x} className="alert" style={{ margin: 0 }}>❌ {x}</div>)}
-              {lsd.warnings.map((x) => <div key={x} style={{ color: "var(--lc-warn)", fontSize: "0.85rem" }}>⚠️ {x}</div>)}
-              <table style={{ fontSize: "0.82rem", maxWidth: 520 }}>
-                <caption style={{ textAlign: "left", fontWeight: 700, paddingBottom: 4 }}>
+              {lsd.warnings.map((x) => <div className="t-warn t-small" key={x}>⚠️ {x}</div>)}
+              <table style={{ maxWidth: 520 }}>
+                <caption className="t-strong" style={{ paddingBottom: 4 }}>
                   Para comparar con la DJ F.931 de ARCA ({lsd.summary.workers} trabajadores, liquidaciones {lsd.summary.liquidations.join(" y ")} del período)
                 </caption>
                 <tbody>
@@ -298,7 +298,7 @@ export function PayrollRunPage() {
                     ["Detracción aplicada", lsd.summary.detraction]
                   ] as [string, number][]).map(([label, value]) => (
                     <tr key={label} style={label === "Total F.931" ? { fontWeight: 800 } : undefined}>
-                      <td>{label}</td><td style={{ textAlign: "right" }}>{money(value)}</td>
+                      <td>{label}</td><td className="t-right">{money(value)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -315,14 +315,14 @@ export function PayrollRunPage() {
           void run(async () => { await api.closePayrollRun(id, close); return "✓ Liquidación cerrada."; });
         }}>
           <h3 style={{ margin: 0 }}>Cerrar la liquidación</h3>
-          <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>El recibo informa el último depósito de aportes (art. 140 LCT).</p>
+          <p className="muted t-small" style={{ margin: 0 }}>El recibo informa el último depósito de aportes (art. 140 LCT).</p>
           <div className="grid-3">
             <label>Período depositado<input value={close.lastDepositPeriod} placeholder="09/2026" onChange={(e) => setClose({ ...close, lastDepositPeriod: e.target.value })} required /></label>
             <label>Fecha del depósito<input type="date" value={close.lastDepositDate} onChange={(e) => setClose({ ...close, lastDepositDate: e.target.value })} required /></label>
             <label>Banco<input value={close.lastDepositBank} onChange={(e) => setClose({ ...close, lastDepositBank: e.target.value })} required /></label>
           </div>
           <div><button type="submit" className="btn" disabled={busy || !r.calculatedAtUtc}>Cerrar liquidación</button>
-            {!r.calculatedAtUtc && <span className="muted" style={{ marginLeft: 10, fontSize: "0.8rem" }}>Calculá sin errores primero.</span>}</div>
+            {!r.calculatedAtUtc && <span className="muted t-small" style={{ marginLeft: 10 }}>Calculá sin errores primero.</span>}</div>
         </form>
       )}
     </div>

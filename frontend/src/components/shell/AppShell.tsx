@@ -253,7 +253,7 @@ export function AppShell({
                     if (t.id !== currentTenantId) onSwitchTenant(t.id);
                   }}
                 >
-                  <span className="ins-company__logo" style={{ width: 26, height: 26, fontSize: 11 }}>{initials(tenantTitle(t))}</span>
+                  <span className="ins-company__logo t-small" style={{ width: 26, height: 26 }}>{initials(tenantTitle(t))}</span>
                   <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenantTitle(t)}</span>
                   {t.id === currentTenantId && <Icon name="check" size={16} />}
                 </button>

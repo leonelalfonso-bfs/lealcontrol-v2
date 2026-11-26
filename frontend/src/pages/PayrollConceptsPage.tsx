@@ -53,22 +53,22 @@ export function PayrollConceptsPage() {
       {msg && <div className="alert ok">{msg}</div>}
 
       <div className="card pad" style={{ overflowX: "auto" }}>
-        <table style={{ fontSize: "0.85rem" }}>
+        <table>
           <thead><tr><th>Código</th><th>Concepto</th><th>Tipo</th><th>Concepto ARCA</th><th /></tr></thead>
           <tbody>
             {concepts.map((c) => {
               const value = drafts[c.code] ?? c.arcaCode;
               return (
                 <tr key={c.code}>
-                  <td style={{ fontFamily: "monospace" }}>{c.code}</td>
+                  <td className="t-mono">{c.code}</td>
                   <td>{c.name}</td>
                   <td>{KIND[c.kind]}</td>
                   <td>
-                    <input value={value} maxLength={6} inputMode="numeric" style={{ width: 90, fontFamily: "monospace" }}
+                    <input value={value} maxLength={6} inputMode="numeric" style={{ width: 90 }}
                       onChange={(e) => setDrafts({ ...drafts, [c.code]: e.target.value.replace(/\D/g, "") })} />
-                    {c.arcaCode !== c.defaultArcaCode && <span className="muted" style={{ fontSize: "0.75rem", marginLeft: 6 }}>propuesto {c.defaultArcaCode}</span>}
+                    {c.arcaCode !== c.defaultArcaCode && <span className="muted t-small" style={{ marginLeft: 6 }}>propuesto {c.defaultArcaCode}</span>}
                   </td>
-                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  <td className="t-right" style={{ whiteSpace: "nowrap" }}>
                     {drafts[c.code] !== undefined && drafts[c.code] !== c.arcaCode && (
                       <button type="button" className="btn compact" onClick={() => void save(c.code, value)}>Guardar</button>
                     )}

@@ -263,7 +263,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
                 {settings.logoUrl ? (
                   <img src={settings.logoUrl} alt="Logo Empresa" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
                 ) : (
-                  <span className="muted" style={{ fontSize: "0.8rem" }}>Sin Logo Cargado</span>
+                  <span className="muted t-small">Sin Logo Cargado</span>
                 )}
               </div>
 
@@ -272,7 +272,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
                   Elegir imagen
                   <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: "none" }} />
                 </label>
-                <span className="muted" style={{ fontSize: "0.78rem" }}>
+                <span className="muted t-small">
                   Recomendado: Formato PNG o JPG transparente de 400x200px. Se utilizará en presupuestos y encabezados.
                 </span>
               </div>
@@ -439,7 +439,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
         <div className="stack" style={{ gap: 20 }}>
         <form onSubmit={handleSaveSettings} className="card pad">
           <h3>Punto de venta de este sistema</h3>
-          <p className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
+          <p className="muted t-small" style={{ marginTop: 4 }}>
             Todas las facturas y notas salen por este punto de venta RECE y no se puede usar otro.
             Elegí uno que no use ningún otro sistema de facturación, así la numeración no se mezcla.
           </p>
@@ -460,7 +460,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
             </button>
           </div>
           {!settings.arcaPointOfSale && (
-            <p className="muted" style={{ fontSize: "0.8rem", marginBottom: 0 }}>
+            <p className="muted t-small" style={{ marginBottom: 0 }}>
               Sin punto de venta fijo, la factura deja elegir cualquiera de los habilitados en ARCA.
             </p>
           )}
@@ -469,7 +469,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
         <form onSubmit={handleUploadCertificate} className="stack" style={{ gap: 20 }}>
           <div className="card pad">
             <h3>Certificado digital</h3>
-            <p className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
+            <p className="muted t-small" style={{ marginTop: 4 }}>
               Primero generá el archivo de consulta (.csr) para tramitarlo en ARCA. Después cargá el certificado (.crt)
               que te devolván junto con la clave privada (.key).
             </p>
@@ -504,14 +504,10 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
 
             <div
               className="card pad"
-              style={{
-                marginTop: 20,
-                border: "1px solid rgba(13, 148, 136, 0.35)",
-                background: "rgba(13, 148, 136, 0.06)"
-              }}
+              style={{ marginTop: 20 }}
             >
               <h4 style={{ margin: 0 }}>Paso 1 — Archivo de consulta (.CSR)</h4>
-              <p className="muted" style={{ fontSize: "0.8rem", margin: "8px 0 12px" }}>
+              <p className="muted t-small" style={{ margin: "8px 0 12px" }}>
                 Generá el pedido PKCS#10 con el formato exigido por ARCA
                 (<code>serialNumber=CUIT …</code>). Subí el <strong>.csr</strong> en el portal ARCA
                 (Administrador de Certificados Digitales / WSASS) y descargá el <strong>.crt</strong> firmado.
@@ -532,9 +528,9 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
             </div>
 
             <div className="grid-2" style={{ gap: 16, marginTop: 20 }}>
-              <div className="card pad" style={{ border: "1px dashed var(--line)", background: "rgba(0,0,0,0.02)" }}>
+              <div className="card pad">
                 <h4>Paso 2 — Certificado Digital (.CRT)</h4>
-                <p className="muted" style={{ fontSize: "0.8rem", marginBottom: 12 }}>
+                <p className="muted t-small" style={{ marginBottom: 12 }}>
                   Archivo emitido por AFIP/ARCA tras aprobar tu archivo de consulta.
                 </p>
                 <label className="btn ghost" style={{ cursor: "pointer", width: "fit-content" }}>
@@ -548,9 +544,9 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
                 )}
               </div>
 
-              <div className="card pad" style={{ border: "1px dashed var(--line)", background: "rgba(0,0,0,0.02)" }}>
+              <div className="card pad">
                 <h4>Paso 2b — Clave Privada (.KEY)</h4>
-                <p className="muted" style={{ fontSize: "0.8rem", marginBottom: 12 }}>
+                <p className="muted t-small" style={{ marginBottom: 12 }}>
                   Se genera automáticamente con el archivo de consulta. Solo cargala manualmente si ya la tenías de OpenSSL.
                 </p>
                 <label className="btn ghost" style={{ cursor: "pointer", width: "fit-content" }}>
@@ -566,16 +562,16 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
             </div>
 
             <div style={{ marginTop: 24, padding: "12px 16px", background: "rgba(245, 158, 11, 0.1)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
-              <div style={{ fontWeight: 600, color: "var(--lc-warn)", fontSize: "0.88rem" }}>🔒 Almacenamiento Seguro</div>
-              <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)", marginTop: 4 }}>
+              <div className="t-strong t-warn">🔒 Almacenamiento Seguro</div>
+              <div className="t-small muted" style={{ marginTop: 4 }}>
                 Los certificados y claves privadas se resguardan de forma segura e independiente en la base de datos de tu empresa.
                 Si regenerás el archivo de consulta, la clave anterior deja de valer y deberás tramitar un certificado nuevo en ARCA.
               </div>
             </div>
 
-            <div className="card pad" style={{ marginTop: 20, border: "1px solid var(--line)" }}>
-              <h4 style={{ marginTop: 0 }}>Paso 3 — Probar conexión ARCA</h4>
-              <p className="muted" style={{ fontSize: "0.85rem" }}>
+            <div className="card pad" style={{ marginTop: 20 }}>
+              <h4>Paso 3 — Probar conexión ARCA</h4>
+              <p className="muted t-small">
                 Verifica certificado, clave, vigencia y tickets WSAA para <strong>facturación (wsfe)</strong> y
                 <strong> consulta CUIT / padrón A5</strong>. Corré esto antes de que el cliente empiece a operar.
               </p>
@@ -589,13 +585,13 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
               </button>
               {arcaDiagnostics && (
                 <div style={{ marginTop: 14 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>{arcaDiagnostics.summary}</div>
-                  <div className="muted" style={{ fontSize: "0.8rem", marginBottom: 8 }}>
+                  <div className="t-strong" style={{ marginBottom: 8 }}>{arcaDiagnostics.summary}</div>
+                  <div className="muted t-small" style={{ marginBottom: 8 }}>
                     Ambiente: {arcaDiagnostics.environment}
                     {arcaDiagnostics.signerCuit ? ` · CUIT ${arcaDiagnostics.signerCuit}` : ""}
                     {arcaDiagnostics.certificateThumbprint ? ` · Thumbprint ${arcaDiagnostics.certificateThumbprint}` : ""}
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: 18, fontSize: "0.85rem" }}>
+                  <ul className="t-small" style={{ margin: 0, paddingLeft: 18 }}>
                     {arcaDiagnostics.checks.map((c) => (
                       <li key={c.code} style={{ marginBottom: 6, color: c.ok ? "var(--ok, #15803d)" : "var(--danger, #b91c1c)" }}>
                         {c.ok ? "✓" : "✗"} <strong>{c.label}</strong> — {c.detail}
@@ -603,7 +599,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
                     ))}
                   </ul>
                   {!arcaDiagnostics.readyForCuitLookup && (
-                    <p className="muted" style={{ fontSize: "0.8rem", marginTop: 10 }}>
+                    <p className="muted t-small" style={{ marginTop: 10 }}>
                       Si falla solo la consulta de CUIT: en ARCA → Administrador de Relaciones asociá el certificado a
                       «Constancia de Inscripción» (<code>ws_sr_constancia_inscripcion</code>). Alcance 5 ya no se usa.
                     </p>
@@ -613,9 +609,9 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
             </div>
           </div>
 
-          <div className="card pad" style={{ border: "1px solid var(--line)" }}>
-            <h4 style={{ marginTop: 0 }}>Paso 4 — Consultar numeración oficial</h4>
-            <p className="muted" style={{ fontSize: "0.85rem" }}>
+          <div className="card pad">
+            <h4>Paso 4 — Consultar numeración oficial</h4>
+            <p className="muted t-small">
               Leé en ARCA el último comprobante autorizado para un punto de venta y tipo de factura.
               Esta consulta no emite ni autoriza facturas. La numeración del borrador del ERP puede ser distinta.
             </p>
@@ -657,7 +653,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
         <form onSubmit={handleSaveSettings} className="stack" style={{ gap: 20 }}>
           <div className="card pad">
             <h3>Cuenta para transferencias</h3>
-            <p className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
+            <p className="muted t-small" style={{ marginTop: 4 }}>
               Se cargan solo acá. Si salen o no en la factura, y las instrucciones de pago, se eligen en Documentos → Factura.
             </p>
 
@@ -678,7 +674,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
                   onChange={(e) => setSetting("bankCbu", e.target.value)}
                   placeholder="0070000000000000000000"
                 />
-                <span className="muted" style={{ fontSize: "0.78rem" }}>
+                <span className="muted t-small">
                   Sale en el PDF de la factura y se informa a ARCA en la Factura de Crédito Electrónica.
                 </span>
               </label>
@@ -708,7 +704,7 @@ export function SettingsPage({ section = "general" }: { section?: SettingsSectio
       {tab === "backup" && (
         <div className="card pad" style={{ maxWidth: 760 }}>
           <h3>Descargar copia de la base de datos</h3>
-          <p className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
+          <p className="muted t-small" style={{ marginTop: 4 }}>
             Genera en el momento un archivo <code>.sql.gz</code> (PostgreSQL) con todos los datos de esta empresa:
             clientes, ventas, compras, finanzas, contabilidad, producción, calidad y RRHH. No corta el servicio.
             Solo los administradores pueden descargarlo. Guardalo en un lugar seguro: contiene datos sensibles.

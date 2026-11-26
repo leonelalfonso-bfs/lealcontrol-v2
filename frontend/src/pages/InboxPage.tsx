@@ -608,7 +608,7 @@ export function InboxPage() {
           <p className="muted">Correo, Instagram y Facebook en una sola bandeja, unificados con el CRM.</p>
         </div>
         <div className="toolbar" style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-outline" onClick={() => void handleForceSyncOmni()} disabled={busy} style={{ color: "var(--lc-accent-strong)", borderColor: "var(--lc-accent)", fontWeight: 700 }}>
+          <button className="btn btn-outline" onClick={() => void handleForceSyncOmni()} disabled={busy}>
             💬 📸 🔄 Sincronizar Redes
           </button>
           <button className="btn btn-outline" onClick={() => void syncAll()} disabled={busy}>
@@ -624,7 +624,7 @@ export function InboxPage() {
       </div>
 
       {syncNotification && (
-        <div className="alert" style={{ background: "rgba(16, 185, 129, 0.15)", color: "var(--lc-ok)", borderColor: "var(--lc-ok)", marginBottom: 12 }}>
+        <div className="alert" style={{ marginBottom: 12 }}>
           ✓ {syncNotification}
         </div>
       )}
@@ -692,13 +692,13 @@ export function InboxPage() {
             <strong>{conversations.filter((c) => !c.assignedToUserId).length}</strong>
           </button>
           <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-            <Link to="/configuracion/comunicaciones" style={{ fontSize: "0.8rem", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
+            <Link className="t-small t-accent t-strong" to="/configuracion/comunicaciones">
               ⚙ Cuentas y canales
             </Link>
-            <Link to="/comunicaciones/plantillas" style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
+            <Link className="t-small muted" to="/comunicaciones/plantillas">
               📝 Plantillas de respuesta
             </Link>
-            <Link to="/configuracion/comunicaciones" style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>
+            <Link className="t-small muted" to="/configuracion/comunicaciones">
               ⚙️ Cuentas de correo
             </Link>
           </div>
@@ -706,7 +706,7 @@ export function InboxPage() {
 
         {/* Middle: Conversation Threads List */}
         <section className="message-list" style={{ display: "flex", flexDirection: "column" }}>
-          <div className="message-list-toolbar" style={{ padding: "12px 16px", fontWeight: 700, fontSize: "0.86rem", color: "var(--ink-soft)", borderBottom: "1px solid var(--surface-border)" }}>
+          <div className="message-list-toolbar t-strong muted" style={{ padding: "12px 16px", borderBottom: "1px solid var(--surface-border)" }}>
             CONVERSACIONES ({visibleConversations.length})
           </div>
           <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--surface-border)" }}>
@@ -771,49 +771,41 @@ export function InboxPage() {
                 {/* Content info */}
                 <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        fontSize: "0.92rem",
-                        color: "var(--ink)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        maxWidth: "180px"
-                      }}
+                    <span className="t-strong"
+                      style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "180px" }}
                     >
                       {displayName}
                     </span>
-                    <span style={{ fontSize: "0.74rem", color: "var(--ink-soft)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    <span className="t-small muted" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
                       {formatThreadDate(c.lastMessageAtUtc)}
                     </span>
                     {c.unreadCount > 0 && (
-                      <span style={{ background: "var(--lc-accent)", color: "white", borderRadius: 10, padding: "1px 6px", fontSize: "0.7rem", fontWeight: 700 }}>
+                      <span className="t-small t-strong" style={{ background: "var(--lc-accent)", color: "white", borderRadius: 10, padding: "1px 6px" }}>
                         {c.unreadCount}
                       </span>
                     )}
                   </div>
 
-                  <div style={{ fontSize: "0.82rem", color: "var(--ink-soft)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <div className="t-small muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {c.lastMessagePreview || `[Mensaje de ${ch}]`}
                   </div>
                   {c.assignedToUserId && (
-                    <div style={{ fontSize: "0.72rem", color: "var(--lc-accent-strong)", fontWeight: 600, marginTop: 2 }}>
+                    <div className="t-small t-accent t-strong" style={{ marginTop: 2 }}>
                       👤 {tenantUsers.find((u) => u.id === c.assignedToUserId)?.fullName || "Asignado"}
                     </div>
                   )}
                   {c.relatedLeadId && (
-                    <div style={{ fontSize: "0.72rem", color: "var(--lc-accent-strong)", fontWeight: 600, marginTop: 2 }}>✓ Lead vinculado</div>
+                    <div className="t-small t-accent t-strong" style={{ marginTop: 2 }}>✓ Lead vinculado</div>
                   )}
                   {c.relatedCustomerId && (
-                    <div style={{ fontSize: "0.72rem", color: "var(--lc-info)", fontWeight: 600, marginTop: 2 }}>✓ Cliente vinculado</div>
+                    <div className="t-small t-info t-strong" style={{ marginTop: 2 }}>✓ Cliente vinculado</div>
                   )}
                   {c.needsResponse && (
-                    <div style={{ fontSize: "0.72rem", color: "var(--lc-danger)", fontWeight: 600, marginTop: 2 }}>⏰ Requiere respuesta</div>
+                    <div className="t-small t-danger t-strong" style={{ marginTop: 2 }}>⏰ Requiere respuesta</div>
                   )}
                   {!!c.tags?.length && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
-                      {c.tags.map((tag) => <span key={tag} style={{ background: "var(--lc-info-bg)", color: "#075985", borderRadius: 10, padding: "2px 6px", fontSize: "0.7rem" }}>{tag}</span>)}
+                      {c.tags.map((tag) => <span className="t-small" key={tag} style={{ background: "var(--lc-info-bg)", color: "#075985", borderRadius: 10, padding: "2px 6px" }}>{tag}</span>)}
                     </div>
                   )}
                 </div>
@@ -821,7 +813,7 @@ export function InboxPage() {
             );
           })}
           {visibleConversations.length === 0 && (
-            <div className="empty-state" style={{ padding: 24, textAlign: "center" }}>
+            <div className="empty-state t-center" style={{ padding: 24 }}>
               {folder === "All" && channel === "all" && !searchDebounced ? (
                 <>
                   <strong style={{ display: "block", marginBottom: 8 }}>Todavía no hay conversaciones</strong>
@@ -906,7 +898,7 @@ export function InboxPage() {
                       ? `Estado: ${statusName(activity.previousValue)} → ${statusName(activity.currentValue)}`
                       : `Asignación: ${assigneeName(activity.previousValue)} → ${assigneeName(activity.currentValue)}`;
                     return (
-                      <div key={item.id} style={{ alignSelf: "center", maxWidth: "85%", padding: "6px 12px", borderRadius: 12, background: "var(--surface)", border: "1px solid var(--surface-border)", color: "var(--ink-soft)", fontSize: "0.76rem", textAlign: "center" }}>
+                      <div className="muted t-small t-center" key={item.id} style={{ alignSelf: "center", maxWidth: "85%", padding: "6px 12px", borderRadius: 12, background: "var(--surface)", border: "1px solid var(--surface-border)" }}>
                         {detail} · {actor} · {new Date(item.at).toLocaleString("es-AR")}
                       </div>
                     );
@@ -915,7 +907,7 @@ export function InboxPage() {
                     const author = tenantUsers.find((u) => u.id === item.note.authorUserId)?.fullName || "Operador";
                     return (
                       <div key={item.id} style={{ alignSelf: "center", width: "min(100%, 620px)", padding: "12px 16px", borderRadius: 10, background: "#fff7dd", border: "1px solid #edcd79", color: "#493b17", whiteSpace: "pre-wrap" }}>
-                        <div style={{ fontWeight: 700, fontSize: "0.78rem", marginBottom: 5 }}>
+                        <div className="t-strong t-small" style={{ marginBottom: 5 }}>
                           📝 Nota interna · {author} · {new Date(item.at).toLocaleString("es-AR")}
                         </div>
                         {item.note.body}
@@ -962,32 +954,16 @@ export function InboxPage() {
                       }}
                     >
                       <div
-                        style={{
-                          maxWidth: "75%",
-                          padding: "10px 14px",
-                          borderRadius: isOutgoing ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
-                          background: isOutgoing
+                        style={{ maxWidth: "75%", padding: "10px 14px", borderRadius: isOutgoing ? "14px 14px 2px 14px" : "14px 14px 14px 2px", background: isOutgoing
                             ? ch === "instagram"
                               ? "#fce7f3"
                               : "#dbeafe"
-                            : "#ffffff",
-                          color: "var(--ink)",
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                          border: isOutgoing ? "none" : "1px solid rgba(0,0,0,0.06)",
-                          fontSize: "0.92rem",
-                          lineHeight: 1.45,
-                          whiteSpace: "pre-wrap"
-                        }}
+                            : "#ffffff", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: isOutgoing ? "none" : "1px solid rgba(0,0,0,0.06)", lineHeight: 1.45, whiteSpace: "pre-wrap" }}
                       >
                         <div>{m.bodyPreview}</div>
                         <MessageAttachments messageId={m.id} attachments={m.attachments} bodyPreview={m.bodyPreview} />
-                        <div
-                          style={{
-                            textAlign: "right",
-                            fontSize: "0.7rem",
-                            marginTop: 4,
-                            opacity: 0.7
-                          }}
+                        <div className="t-right t-small"
+                          style={{ marginTop: 4, opacity: 0.7 }}
                         >
                           {new Date(m.occurredAtUtc).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
                           {isOutgoing && " ✓✓"}
@@ -1007,7 +983,7 @@ export function InboxPage() {
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
                   maxLength={4000}
-                  style={{ flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: 8, border: "1px solid #edcd79" }}
+                  style={{ flex: 1, minWidth: 0 }}
                 />
                 <button type="submit" className="btn btn-outline" disabled={savingNote || !noteText.trim()}>
                   {savingNote ? "Guardando..." : "Guardar nota"}
@@ -1027,7 +1003,7 @@ export function InboxPage() {
                   }}
                 >
                   {pendingAudio && (
-                    <div className="muted" style={{ fontSize: "0.8rem" }}>
+                    <div className="muted t-small">
                       🎤 Nota de voz lista para enviar{" "}
                       <button type="button" className="btn ghost compact" onClick={() => setPendingAudio(null)}>Quitar</button>
                     </div>
@@ -1041,7 +1017,7 @@ export function InboxPage() {
                           if (t) setReplyText(t.body);
                           e.target.value = "";
                         }}
-                        style={{ maxWidth: 140, padding: "8px", borderRadius: 8, border: "1px solid var(--surface-border)" }}
+                        style={{ maxWidth: 140 }}
                       >
                         <option value="">Plantilla</option>
                         {templates.map((t) => (
@@ -1058,13 +1034,12 @@ export function InboxPage() {
                       placeholder={`Responder por ${channelLabel(getConversationChannel(activeConversation))}...`}
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
-                      style={{ flex: 1, padding: "10px 14px", borderRadius: 20, border: "1px solid var(--surface-border)", fontSize: "0.9rem" }}
+                      style={{ flex: 1 }}
                     />
                     <button
                       type="submit"
                       className="btn btn-primary"
                       disabled={sendingReply || (!replyText.trim() && !pendingAudio)}
-                      style={{ padding: "10px 20px", borderRadius: 20, fontWeight: 700 }}
                     >
                       {sendingReply ? "Enviando..." : "📤"}
                     </button>
@@ -1094,7 +1069,7 @@ export function InboxPage() {
               )}
             </>
           ) : (
-            <div className="empty-state" style={{ margin: "auto", padding: 40, textAlign: "center" }}>
+            <div className="empty-state t-center" style={{ margin: "auto", padding: 40 }}>
               Seleccioná una conversación de la lista para ver el historial de chat completo.
             </div>
           )}
@@ -1109,61 +1084,60 @@ export function InboxPage() {
               </div>
               <div className="inbox-context-details">
                 <div className="inbox-context-field">
-                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Canal</div>
+                  <div className="muted t-small" style={{ marginBottom: 2 }}>Canal</div>
                   <strong>{channelLabel(getConversationChannel(activeConversation))}</strong>
                 </div>
                 {activeConversation.participantPhone && (
                   <div className="inbox-context-field">
-                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Teléfono</div>
+                    <div className="muted t-small" style={{ marginBottom: 2 }}>Teléfono</div>
                     <strong>{activeConversation.participantPhone}</strong>
                   </div>
                 )}
                 {(activeConversation.participantEmail || getConversationChannel(activeConversation) === "email") && (
                   <div className="inbox-context-field">
-                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Email</div>
+                    <div className="muted t-small" style={{ marginBottom: 2 }}>Email</div>
                     <strong>{activeConversation.participantEmail || activeConversation.participantId}</strong>
                   </div>
                 )}
                 <div className="inbox-context-field">
-                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado CRM</div>
+                  <div className="muted t-small" style={{ marginBottom: 2 }}>Estado CRM</div>
                   {activeConversation.relatedCustomerId ? (
-                    <Link to={`/clientes/${activeConversation.relatedCustomerId}`} style={{ color: "var(--lc-info)", fontWeight: 600 }}>
+                    <Link className="t-info t-strong" to={`/clientes/${activeConversation.relatedCustomerId}`}>
                       Cliente: {linkedCustomerName || "vinculado"}
                     </Link>
                   ) : activeConversation.relatedLeadId ? (
-                    <Link to="/prospectos" style={{ color: "var(--lc-accent-strong)", fontWeight: 600 }}>
+                    <Link className="t-accent t-strong" to="/prospectos">
                       Lead vinculado
                     </Link>
                   ) : (
-                    <span style={{ color: "var(--ink-soft)" }}>Sin vincular</span>
+                    <span className="muted">Sin vincular</span>
                   )}
                 </div>
                 {(activeConversation.relatedQuoteId || activeConversation.relatedOrderId || activeConversation.relatedInvoiceId) && (
                   <div className="inbox-context-field">
-                    <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Documento</div>
+                    <div className="muted t-small" style={{ marginBottom: 2 }}>Documento</div>
                     {activeConversation.relatedQuoteId && (
-                      <Link to={`/presupuestos/${activeConversation.relatedQuoteId}/imprimir`} style={{ color: "var(--lc-info)", fontWeight: 600 }}>
+                      <Link className="t-info t-strong" to={`/presupuestos/${activeConversation.relatedQuoteId}/imprimir`}>
                         Presupuesto
                       </Link>
                     )}
                     {activeConversation.relatedOrderId && (
-                      <Link to={`/pedidos/${activeConversation.relatedOrderId}`} style={{ color: "var(--lc-info)", fontWeight: 600, marginLeft: 8 }}>
+                      <Link className="t-info t-strong" to={`/pedidos/${activeConversation.relatedOrderId}`} style={{ marginLeft: 8 }}>
                         Pedido
                       </Link>
                     )}
                     {activeConversation.relatedInvoiceId && (
-                      <Link to={`/facturas/${activeConversation.relatedInvoiceId}/imprimir`} style={{ color: "var(--lc-info)", fontWeight: 600, marginLeft: 8 }}>
+                      <Link className="t-info t-strong" to={`/facturas/${activeConversation.relatedInvoiceId}/imprimir`} style={{ marginLeft: 8 }}>
                         Factura
                       </Link>
                     )}
                   </div>
                 )}
                 <div className="inbox-context-field">
-                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Estado</div>
+                  <div className="muted t-small" style={{ marginBottom: 2 }}>Estado</div>
                   <select
                     value={activeConversation.status || "open"}
                     onChange={(e) => void changeStatus(activeConversation.id, e.target.value)}
-                    style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem" }}
                   >
                     <option value="open">Abierta</option>
                     <option value="pending">Pendiente</option>
@@ -1172,11 +1146,11 @@ export function InboxPage() {
                   </select>
                 </div>
                 <div className="inbox-context-field">
-                  <div className="muted" style={{ fontSize: "0.72rem", marginBottom: 2 }}>Asignado a</div>
+                  <div className="muted t-small" style={{ marginBottom: 2 }}>Asignado a</div>
                   <select
                     value={activeConversation.assignedToUserId || ""}
                     onChange={(e) => void changeAssignment(activeConversation.id, e.target.value || undefined)}
-                    style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.82rem", width: "100%" }}
+                    style={{ width: "100%" }}
                   >
                     <option value="">Sin asignar</option>
                     {tenantUsers.map((u) => (
@@ -1187,15 +1161,15 @@ export function InboxPage() {
               </div>
 
               <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--surface-border)", background: "var(--surface)", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-                <strong style={{ fontSize: "0.78rem", color: "var(--ink-soft)" }}>Etiquetas</strong>
+                <strong className="t-small muted">Etiquetas</strong>
                 {activeTags.map((tag) => (
-                  <span key={tag.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 8px", borderRadius: 12, background: "var(--lc-info-bg)", color: "#075985", fontSize: "0.78rem", fontWeight: 600 }}>
+                  <span className="t-small t-strong" key={tag.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 8px", borderRadius: 12, background: "var(--lc-info-bg)", color: "#075985" }}>
                     {tag.name}
-                    <button type="button" aria-label={`Quitar etiqueta ${tag.name}`} title="Quitar etiqueta" disabled={tagBusy} onClick={() => void removeTag(tag.id)} style={{ border: 0, background: "transparent", color: "inherit", cursor: "pointer", fontWeight: 700 }}>×</button>
+                    <button className="t-strong" type="button" aria-label={`Quitar etiqueta ${tag.name}`} title="Quitar etiqueta" disabled={tagBusy} onClick={() => void removeTag(tag.id)} style={{ border: 0, background: "transparent", color: "inherit", cursor: "pointer" }}>×</button>
                   </span>
                 ))}
                 <form onSubmit={addTag} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <input aria-label="Nueva etiqueta" placeholder="Nueva etiqueta" value={tagText} onChange={(e) => setTagText(e.target.value)} maxLength={32} style={{ width: "100%", minWidth: 0, padding: "5px 8px", borderRadius: 6, border: "1px solid var(--surface-border)", fontSize: "0.78rem" }} />
+                  <input aria-label="Nueva etiqueta" placeholder="Nueva etiqueta" value={tagText} onChange={(e) => setTagText(e.target.value)} maxLength={32} style={{ width: "100%", minWidth: 0 }} />
                   <button type="submit" className="btn btn-outline compact" disabled={tagBusy || !tagText.trim()}>Agregar</button>
                 </form>
               </div>
@@ -1215,19 +1189,19 @@ export function InboxPage() {
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 200 }}>
-                    <strong style={{ fontSize: "0.88rem" }}>¿Registrar este contacto en el CRM?</strong>
-                    <div className="muted" style={{ fontSize: "0.8rem", marginTop: 2 }}>
+                    <strong>¿Registrar este contacto en el CRM?</strong>
+                    <div className="muted t-small" style={{ marginTop: 2 }}>
                       Este contacto escribió por {channelLabel(getConversationChannel(activeConversation))}. Podés crear un lead o vincular un cliente existente.
                     </div>
                     {suggestedMatches.length > 0 && (
                       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-                        <span className="muted" style={{ fontSize: "0.75rem" }}>¿Es alguno de estos clientes?</span>
+                        <span className="muted t-small">¿Es alguno de estos clientes?</span>
                         {suggestedMatches.map((m) => (
                           <button
                             key={m.id}
                             type="button"
                             className="btn ghost compact"
-                            style={{ justifyContent: "flex-start", padding: "4px 8px" }}
+                            style={{ justifyContent: "flex-start" }}
                             onClick={() => void linkCustomerToThread(m.id)}
                           >
                             🔗 {m.tradeName || m.legalName}
@@ -1272,7 +1246,7 @@ export function InboxPage() {
         <div className="modal-backdrop">
           <div className="modal-card card pad" style={{ maxWidth: 480 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h3 style={{ margin: 0, fontSize: "1.15rem", display: "flex", alignItems: "center", gap: 8 }}>
+              <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
                 <span>💬</span> Nuevo Mensaje Social
               </h3>
               <button type="button" className="btn ghost compact" onClick={() => setNewModalOpen(false)}>
@@ -1286,7 +1260,7 @@ export function InboxPage() {
                 <select
                   value={newChannel}
                   onChange={(e) => setNewChannel(e.target.value as any)}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 >
                   <option value="instagram">📸 Instagram Direct</option>
                   <option value="facebook">📘 Facebook Messenger</option>
@@ -1303,7 +1277,7 @@ export function InboxPage() {
                   placeholder="Ej: 1234567890"
                   value={newRecipient}
                   onChange={(e) => setNewRecipient(e.target.value)}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </label>
 
@@ -1315,7 +1289,7 @@ export function InboxPage() {
                   placeholder="Escribí el mensaje para el cliente..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 />
               </label>
 
@@ -1348,7 +1322,7 @@ export function InboxPage() {
         <div className="modal-backdrop" onClick={() => setDiscardOpen(false)}>
           <div className="modal-card card pad stack" style={{ maxWidth: 460, gap: 12 }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ margin: 0 }}>Descartar conversación</h3>
-            <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
+            <p className="muted" style={{ margin: 0 }}>
               Sale de la bandeja y se borra su contenido de LealControl. <strong>No se borra del teléfono ni del correo.</strong>
               {" "}Si {activeDisplayName} vuelve a escribir, la conversación reaparece.
             </p>
@@ -1370,12 +1344,12 @@ export function InboxPage() {
         <div className="modal-backdrop" onClick={() => setLinkCustomerOpen(false)}>
           <div className="modal-card card pad" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h3 style={{ margin: 0, fontSize: "1.15rem" }}>Vincular cliente existente</h3>
+              <h3 style={{ margin: 0 }}>Vincular cliente existente</h3>
               <button type="button" className="btn ghost compact" onClick={() => setLinkCustomerOpen(false)}>
                 ✕
               </button>
             </div>
-            <p className="muted" style={{ fontSize: "0.85rem", marginTop: 0 }}>
+            <p className="muted t-small" style={{ marginTop: 0 }}>
               Buscá un cliente del CRM para asociarlo a la conversación con {activeDisplayName}.
             </p>
             <SearchField
@@ -1388,9 +1362,9 @@ export function InboxPage() {
               style={{ width: "100%", marginBottom: 12 }}
             />
             <div style={{ maxHeight: 280, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-              {customerSearchBusy && <div className="muted" style={{ padding: 12, textAlign: "center" }}>Buscando...</div>}
+              {customerSearchBusy && <div className="muted t-center" style={{ padding: 12 }}>Buscando...</div>}
               {!customerSearchBusy && customerResults.length === 0 && (
-                <div className="muted" style={{ padding: 12, textAlign: "center" }}>
+                <div className="muted t-center" style={{ padding: 12 }}>
                   {customerSearch.trim() ? "No se encontraron clientes." : "Escribí para buscar clientes."}
                 </div>
               )}
@@ -1401,15 +1375,9 @@ export function InboxPage() {
                   className="btn ghost"
                   disabled={busy}
                   onClick={() => void linkCustomerToThread(c.id)}
-                  style={{
-                    textAlign: "left",
-                    padding: "10px 12px",
-                    border: "1px solid var(--surface-border)",
-                    borderRadius: 6
-                  }}
                 >
-                  <div style={{ fontWeight: 600 }}>{c.tradeName || c.legalName}</div>
-                  {c.documentNumber && <div className="muted" style={{ fontSize: "0.78rem" }}>{c.documentType}: {c.documentNumber}</div>}
+                  <div className="t-strong">{c.tradeName || c.legalName}</div>
+                  {c.documentNumber && <div className="muted t-small">{c.documentType}: {c.documentNumber}</div>}
                 </button>
               ))}
             </div>

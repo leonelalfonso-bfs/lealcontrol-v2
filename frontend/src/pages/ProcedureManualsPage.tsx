@@ -57,7 +57,7 @@ export function ProcedureManualsPage() {
       {/* Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <span className="eyebrow" style={{ color: "var(--lc-violet)", fontWeight: 700 }}>GESTIÓN DE CALIDAD & OPERACIONES</span>
+          <span className="eyebrow t-violet t-strong">GESTIÓN DE CALIDAD & OPERACIONES</span>
           <h1>📖 Manuales de Procedimientos e Instructivos</h1>
           <p className="muted">Repositorio documental de procesos estandarizados, instructivos de trabajo (IT) y normas operativas por área</p>
         </div>
@@ -65,7 +65,6 @@ export function ProcedureManualsPage() {
           <Link
             to="/rrhh/manuales/nuevo"
             className="btn"
-            style={{ background: "linear-gradient(135deg, var(--lc-violet), var(--lc-violet))", color: "#fff", fontWeight: 700 }}
           >
             ➕ Nuevo Procedimiento / Instructivo
           </Link>
@@ -84,7 +83,7 @@ export function ProcedureManualsPage() {
             placeholder="🔍 Buscar por código, título o alcance del procedimiento..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)" }}
+            style={{ width: "100%" }}
           />
         </div>
 
@@ -105,53 +104,53 @@ export function ProcedureManualsPage() {
       {/* Manuals List Table */}
       <div className="card pad">
         {loading ? (
-          <p style={{ textAlign: "center", padding: 30 }} className="muted">
+          <p style={{ padding: 30 }} className="muted t-center">
             Cargando manuales de procedimientos...
           </p>
         ) : filteredManuals.length === 0 ? (
-          <p style={{ textAlign: "center", padding: 30 }} className="muted">
+          <p style={{ padding: 30 }} className="muted t-center">
             No se encontraron procedimientos registrados en el área seleccionada.
           </p>
         ) : (
           <div className="table-wrap">
-            <table className="table" style={{ width: "100%", fontSize: "0.88rem", borderCollapse: "collapse" }}>
+            <table className="table">
               <thead>
-                <tr style={{ background: "var(--surface-sunken)", borderBottom: "2px solid var(--lc-line-2)" }}>
+                <tr>
                   <th style={{ width: 120 }}>Código</th>
                   <th>Título del Procedimiento / Instructivo</th>
                   <th style={{ width: 130 }}>Área</th>
-                  <th style={{ width: 80, textAlign: "center" }}>Versión</th>
-                  <th style={{ width: 100, textAlign: "center" }}>Vigencia</th>
-                  <th style={{ width: 90, textAlign: "center" }}>Estado</th>
-                  <th style={{ width: 130, textAlign: "right" }}>Acciones</th>
+                  <th className="t-center" style={{ width: 80 }}>Versión</th>
+                  <th className="t-center" style={{ width: 100 }}>Vigencia</th>
+                  <th className="t-center" style={{ width: 90 }}>Estado</th>
+                  <th className="t-right" style={{ width: 130 }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredManuals.map((m) => (
-                  <tr key={m.id} style={{ borderBottom: "1px solid var(--lc-line)" }}>
-                    <td style={{ fontFamily: "monospace", fontWeight: 700, color: "var(--lc-violet)" }}>
+                  <tr key={m.id}>
+                    <td className="t-mono t-strong t-violet">
                       {m.code}
                     </td>
                     <td>
                       <div>
                         <strong style={{ color: "var(--text-main)", display: "block" }}>{m.title}</strong>
                         {m.description && (
-                          <span className="muted" style={{ fontSize: "0.78rem" }}>
+                          <span className="muted t-small">
                             {m.description}
                           </span>
                         )}
                       </div>
                     </td>
                     <td>
-                      <span className="badge primary" style={{ fontSize: "0.72rem" }}>
+                      <span className="badge primary t-small">
                         {m.area}
                       </span>
                     </td>
-                    <td style={{ textAlign: "center", fontWeight: 600 }}>{m.version}</td>
-                    <td style={{ textAlign: "center", fontSize: "0.82rem" }} className="muted">
+                    <td className="t-center t-strong">{m.version}</td>
+                    <td className="muted t-center t-small">
                       {m.effectiveDate ? new Date(m.effectiveDate).toLocaleDateString("es-AR") : "—"}
                     </td>
-                    <td style={{ textAlign: "center" }}>
+                    <td className="t-center">
                       <span
                         className={`badge ${m.status === "Vigente" ? "ok" : m.status === "EnRevisión" ? "primary" : "ghost"}`}
                         style={{ fontSize: "0.7rem" }}
@@ -159,7 +158,7 @@ export function ProcedureManualsPage() {
                         {m.status}
                       </span>
                     </td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="t-right">
                       <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                         <FileAttachment path={`/api/v1/hr/manuals/${m.id}/file`} fileName={m.fileName} onChanged={() => void load()} />
                         {m.documentUrl && (
@@ -169,7 +168,6 @@ export function ProcedureManualsPage() {
                             rel="noreferrer"
                             className="btn ghost compact"
                             title="Abrir el enlace externo"
-                            style={{ padding: "3px 8px", fontSize: "0.75rem", color: "var(--lc-violet)" }}
                           >
                             🔗 Enlace
                           </a>
@@ -178,16 +176,14 @@ export function ProcedureManualsPage() {
                           to={`/rrhh/manuales/${m.id}`}
                           className="btn ghost compact"
                           title="Editar manual"
-                          style={{ padding: "3px 8px", fontSize: "0.75rem" }}
                         >
                           ✏️
                         </Link>
                         <button
                           type="button"
-                          className="btn ghost compact"
+                          className="btn ghost compact btn-outline danger"
                           title="Eliminar manual"
                           onClick={() => handleDelete(m)}
-                          style={{ padding: "3px 8px", fontSize: "0.75rem", color: "var(--lc-danger)" }}
                         >
                           🗑️
                         </button>

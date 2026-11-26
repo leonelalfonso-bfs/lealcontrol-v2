@@ -64,18 +64,18 @@ export function InvoiceCategoriesModal({ invoice, onClose, onSaved }: {
       ) : (
         <div className="stack" style={{ gap: 10 }}>
           {invoice.items.length > 1 && (
-            <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+            <label>
               Todos los renglones
               {select("", (v) => setLines(Object.fromEntries(invoice.items.map((i) => [i.id, v]))), "Rubro de todos los renglones")}
             </label>
           )}
           {invoice.items.map((item) => (
-            <label key={item.id} style={{ fontSize: "0.85rem" }}>
+            <label key={item.id}>
               {item.description || item.code} <span className="muted">· neto {item.netSubtotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</span>
               {select(lines[item.id] ?? "", (v) => setLines({ ...lines, [item.id]: v }), `Rubro de ${item.description || item.code}`)}
             </label>
           ))}
-          <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>El rubro no cambia importes ni el asiento: se puede asignar aunque la factura ya esté contabilizada.</p>
+          <p className="muted t-small" style={{ margin: 0 }}>El rubro no cambia importes ni el asiento: se puede asignar aunque la factura ya esté contabilizada.</p>
         </div>
       )}
     </Modal>

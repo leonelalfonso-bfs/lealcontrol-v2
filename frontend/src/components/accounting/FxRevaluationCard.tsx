@@ -50,23 +50,23 @@ export function FxRevaluationCard() {
   const differences = preview?.rows.filter((r) => r.difference !== 0) ?? [];
 
   return (
-    <div className="card pad" style={{ border: "1px solid var(--lc-info)", background: "rgba(37, 99, 235, 0.02)" }}>
+    <div className="card pad">
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
         <div style={{ fontSize: "28px" }}>💱</div>
         <div>
-          <h3 style={{ margin: 0, color: "var(--lc-info)" }}>Revaluación de moneda extranjera</h3>
-          <p className="muted" style={{ margin: 0, fontSize: "12px" }}>
+          <h3 style={{ margin: 0 }}>Revaluación de moneda extranjera</h3>
+          <p className="muted t-small" style={{ margin: 0 }}>
             Valúa a la cotización de cierre la caja y los bancos en dólares (cuentas del plan con moneda USD).
           </p>
         </div>
       </div>
 
       <div className="grid-2" style={{ gap: 10 }}>
-        <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+        <label>
           Fecha de cierre:
           <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setPreview(null); }} />
         </label>
-        <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+        <label>
           Cotización de cierre ($ por USD):
           <input inputMode="decimal" value={rate} placeholder="Ej. 1050,50" onChange={(e) => { setRate(e.target.value); setPreview(null); }} />
         </label>
@@ -80,31 +80,31 @@ export function FxRevaluationCard() {
           {preview.rows.length === 0 ? (
             <p className="muted">No hay cuentas en moneda extranjera en el plan de cuentas.</p>
           ) : (
-            <table style={{ fontSize: "0.8rem" }}>
+            <table>
               <thead>
                 <tr>
                   <th>Cuenta</th>
-                  <th style={{ textAlign: "right" }}>Saldo USD</th>
-                  <th style={{ textAlign: "right" }}>Saldo en libros $</th>
-                  <th style={{ textAlign: "right" }}>Revaluado $</th>
-                  <th style={{ textAlign: "right" }}>Diferencia $</th>
+                  <th className="t-right">Saldo USD</th>
+                  <th className="t-right">Saldo en libros $</th>
+                  <th className="t-right">Revaluado $</th>
+                  <th className="t-right">Diferencia $</th>
                 </tr>
               </thead>
               <tbody>
                 {preview.rows.map((r) => (
                   <tr key={r.accountId}>
                     <td>{r.accountCode} — {r.accountName}</td>
-                    <td style={{ textAlign: "right" }}>{money(r.foreignBalance)}</td>
-                    <td style={{ textAlign: "right" }}>{money(r.bookBalance)}</td>
-                    <td style={{ textAlign: "right" }}>{money(r.revaluedBalance)}</td>
-                    <td style={{ textAlign: "right", fontWeight: 700 }}>{money(r.difference)}</td>
+                    <td className="t-right">{money(r.foreignBalance)}</td>
+                    <td className="t-right">{money(r.bookBalance)}</td>
+                    <td className="t-right">{money(r.revaluedBalance)}</td>
+                    <td className="t-right t-strong">{money(r.difference)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr style={{ fontWeight: 800 }}>
+                <tr className="t-strong">
                   <td colSpan={4}>{preview.netDifference >= 0 ? "Diferencia de cambio positiva" : "Diferencia de cambio negativa"}</td>
-                  <td style={{ textAlign: "right" }}>{money(preview.netDifference)}</td>
+                  <td className="t-right">{money(preview.netDifference)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -124,7 +124,6 @@ export function FxRevaluationCard() {
           className="btn"
           onClick={post}
           disabled={busy || !preview || differences.length === 0 || preview.existingEntryNumber != null}
-          style={{ background: "var(--lc-info)", color: "#fff", fontWeight: 700 }}
         >
           Registrar asiento de revaluación
         </button>

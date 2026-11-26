@@ -197,7 +197,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
               {/* Período */}
               <div className="box" style={{ marginBottom: 18 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <strong className="t-accent" style={{ fontSize: "0.86rem" }}>📅 PERÍODO CONTABLE:</strong>
+                  <strong className="t-accent">📅 PERÍODO CONTABLE:</strong>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button type="button" onClick={() => handleQuickPeriod("today")} className="btn ghost compact">
                       Hoy
@@ -235,7 +235,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
 
               {/* Módulos a Incluir */}
               <div className="box" style={{ marginBottom: 18 }}>
-                <strong className="t-accent" style={{ display: "block", fontSize: "0.86rem", marginBottom: 10 }}>
+                <strong className="t-accent" style={{ display: "block", marginBottom: 10 }}>
                   📦 MÓDULOS A INCLUIR:
                 </strong>
 
@@ -406,7 +406,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
               </div>
 
               <div className="box" style={{ marginBottom: 18 }}>
-                <div className="t-strong t-accent" style={{ fontSize: "0.86rem", marginBottom: 8 }}>
+                <div className="t-strong t-accent" style={{ marginBottom: 8 }}>
                   RESUMEN DE AUDITORÍA:
                 </div>
                 <ul className="t-small" style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
@@ -417,7 +417,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                 </ul>
                 {result.exceptions.length > 0 && (
                   <>
-                    <div className="t-strong t-warn" style={{ fontSize: "0.86rem", margin: "12px 0 4px" }}>
+                    <div className="t-strong t-warn" style={{ margin: "12px 0 4px" }}>
                       QUEDARON PENDIENTES ({result.errorsCount}):
                     </div>
                     <ul className="t-small t-warn" style={{ margin: 0, paddingLeft: 20 }}>

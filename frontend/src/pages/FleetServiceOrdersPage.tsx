@@ -68,11 +68,11 @@ export function FleetServiceOrdersPage() {
                   <tr key={o.id} style={{ cursor: "pointer" }} onClick={() => navigate(`/flota/ordenes/${o.id}`)}>
                     <td>
                       <strong>{o.code}</strong>
-                      {o.salesOrderNumber && <div className="muted" style={{ fontSize: "0.75rem" }}>pedido {o.salesOrderNumber}</div>}
+                      {o.salesOrderNumber && <div className="muted t-small">pedido {o.salesOrderNumber}</div>}
                     </td>
                     <td>
                       {o.customerName}
-                      <div className="muted" style={{ fontSize: "0.75rem" }}>{o.description.length > 70 ? `${o.description.slice(0, 70)}…` : o.description}</div>
+                      <div className="muted t-small">{o.description.length > 70 ? `${o.description.slice(0, 70)}…` : o.description}</div>
                     </td>
                     <td>{rangeText(o.start, o.end)}</td>
                     <td>

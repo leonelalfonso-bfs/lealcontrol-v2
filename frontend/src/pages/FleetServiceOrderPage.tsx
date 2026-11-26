@@ -125,10 +125,10 @@ export function FleetServiceOrderPage() {
   };
 
   const resourceList = (title: string, list: ResourceStatus[] | undefined, key: "employeeIds" | "vehicleIds", empty: ReactNode) => (
-    <div className="card pad stack" style={{ gap: 8, border: "1px solid var(--line)", flex: "1 1 320px" }}>
+    <div className="card pad stack" style={{ gap: 8, flex: "1 1 320px" }}>
       <strong>{title}</strong>
-      {!list ? <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>Elegí inicio y fin para ver quién está disponible.</p>
-        : list.length === 0 ? <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>{empty}</p>
+      {!list ? <p className="muted t-small" style={{ margin: 0 }}>Elegí inicio y fin para ver quién está disponible.</p>
+        : list.length === 0 ? <p className="muted t-small" style={{ margin: 0 }}>{empty}</p>
         : list.map((r) => {
           const selected = form[key].includes(r.id);
           const blocked = r.blockers.length > 0;
@@ -137,8 +137,8 @@ export function FleetServiceOrderPage() {
               <input type="checkbox" checked={selected} disabled={!editable || (blocked && !selected)} onChange={() => toggle(key, r.id)} style={{ marginTop: 3 }} />
               <span>
                 <strong>{r.label}</strong>{r.detail ? <span className="muted"> · {r.detail}</span> : null}
-                {r.blockers.map((b) => <div key={b} style={{ color: "var(--danger, var(--lc-danger))", fontSize: "0.8rem" }}>✕ {b}</div>)}
-                {r.warnings.map((w) => <div key={w} style={{ color: "var(--warn, var(--lc-warn))", fontSize: "0.8rem" }}>⚠ {w}</div>)}
+                {r.blockers.map((b) => <div className="t-small" key={b} style={{ color: "var(--danger, var(--lc-danger))" }}>✕ {b}</div>)}
+                {r.warnings.map((w) => <div className="t-small" key={w} style={{ color: "var(--warn, var(--lc-warn))" }}>⚠ {w}</div>)}
               </span>
             </label>
           );
@@ -197,12 +197,12 @@ export function FleetServiceOrderPage() {
               {customers.length > 0 && !form.customerId && (
                 <div className="card" style={{ marginTop: 4, padding: 4 }}>
                   {customers.map((c) => (
-                    <button key={c.id} type="button" className="btn btn-outline compact" style={{ display: "block", width: "100%", textAlign: "left", marginBottom: 2 }}
+                    <button key={c.id} type="button" className="btn btn-outline compact" style={{ display: "block", width: "100%", marginBottom: 2 }}
                       onClick={() => { setForm({ ...form, customerId: c.id, customerName: c.name }); setCustomers([]); }}>{c.name}</button>
                   ))}
                 </div>
               )}
-              {form.customerId && <span className="muted" style={{ fontSize: "0.75rem" }}>✓ cliente de la base</span>}
+              {form.customerId && <span className="muted t-small">✓ cliente de la base</span>}
             </label>
           </div>
         ) : (
@@ -216,8 +216,8 @@ export function FleetServiceOrderPage() {
               <>
                 <input value={lookup} onChange={(e) => setLookup(e.target.value)} placeholder="Buscar por número o cliente (pedidos confirmados o en preparación)" />
                 <div className="card" style={{ marginTop: 4, padding: 4, maxHeight: 220, overflow: "auto" }}>
-                  {salesOrders.length === 0 ? <span className="muted" style={{ fontSize: "0.85rem" }}>No hay pedidos abiertos que coincidan.</span> : salesOrders.map((s) => (
-                    <button key={s.id} type="button" className="btn btn-outline compact" style={{ display: "block", width: "100%", textAlign: "left", marginBottom: 2 }}
+                  {salesOrders.length === 0 ? <span className="muted t-small">No hay pedidos abiertos que coincidan.</span> : salesOrders.map((s) => (
+                    <button key={s.id} type="button" className="btn btn-outline compact" style={{ display: "block", width: "100%", marginBottom: 2 }}
                       onClick={() => setForm({ ...form, salesOrderId: s.id, salesOrderLabel: `${s.orderNumber} · ${s.customerName}` })}>
                       {s.orderNumber} · {s.customerName} {s.serviceOrders > 0 && <span className="muted">({s.serviceOrders} orden{s.serviceOrders > 1 ? "es" : ""} ya creada{s.serviceOrders > 1 ? "s" : ""})</span>}
                     </button>
@@ -247,7 +247,7 @@ export function FleetServiceOrderPage() {
             )}
           </div>
         </div>
-        {!form.start && <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>Sin fecha, la orden queda "para coordinar" y no se controla la disponibilidad.</p>}
+        {!form.start && <p className="muted t-small" style={{ margin: 0 }}>Sin fecha, la orden queda "para coordinar" y no se controla la disponibilidad.</p>}
 
         <div className="row" style={{ gap: 14, flexWrap: "wrap", alignItems: "stretch" }}>
           {resourceList("Técnicos y choferes", availability?.people ?? (extra("employeeIds").length ? extra("employeeIds").map((r) => ({ ...r, blockers: [], warnings: [] })) : undefined), "employeeIds",
@@ -297,7 +297,7 @@ export function FleetServiceOrderPage() {
                 if (!window.confirm(`¿Cancelar ${order.code}? Libera a las personas y unidades asignadas.`)) return;
                 void run(() => api.cancelServiceOrder(order.id), "Orden cancelada.");
               }}>Cancelar orden</button>
-              {order.status === "Pending" && <span className="muted" style={{ fontSize: "0.85rem", alignSelf: "center" }}>Poné inicio y fin para programarla.</span>}
+              {order.status === "Pending" && <span className="muted t-small" style={{ alignSelf: "center" }}>Poné inicio y fin para programarla.</span>}
             </div>
           )}
         </section>

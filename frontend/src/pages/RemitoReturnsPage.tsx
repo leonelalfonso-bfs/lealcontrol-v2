@@ -206,7 +206,7 @@ export function RemitoReturnsPage() {
         </div>
         <div id="remito-return-document" style={{ width: 720, maxWidth: "100%", padding: 38, background: "var(--lc-surface)", color: "#17243b", borderTop: "8px solid var(--lc-info)", boxSizing: "border-box" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 24 }}>
-            <div><div className="t-strong" style={{ fontSize: 13, letterSpacing: 2, color: "#5277a9" }}>DEVOLUCIÓN DE REMITO</div>
+            <div><div className="t-strong t-small" style={{ letterSpacing: 2, color: "#5277a9" }}>DEVOLUCIÓN DE REMITO</div>
               <h2 style={{ margin: "8px 0" }}>{company?.tradeName || company?.legalName || "LEAL CONTROL"}</h2>
               <p className="muted" style={{ margin: 0 }}>Constancia de recepción de artículos no utilizados</p></div>
             <div className="t-right"><strong>{selected.returnNumber}</strong>
@@ -225,7 +225,7 @@ export function RemitoReturnsPage() {
               <td className="t-right">{formatQty(item.quantity)}</td>
             </tr>)}</tbody>
           </table>
-          <p className="muted" style={{ marginTop: 28, fontSize: 12 }}>Documento vinculado al remito original. Las cantidades recibidas no se incluyen en la facturación del remito.</p>
+          <p className="muted t-small" style={{ marginTop: 28 }}>Documento vinculado al remito original. Las cantidades recibidas no se incluyen en la facturación del remito.</p>
         </div>
       </section>}
     </div>

@@ -56,7 +56,7 @@ export function OrgChartPage() {
       {/* Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <span className="eyebrow" style={{ color: "#ec4899", fontWeight: 700 }}>ESTRUCTURA ORGANIZACIONAL</span>
+          <span className="eyebrow t-strong" style={{ color: "#ec4899" }}>ESTRUCTURA ORGANIZACIONAL</span>
           <h1>🏢 Organigrama & Descripción de Puestos</h1>
           <p className="muted">Estructura jerárquica de la empresa, asignación de colaboradores y perfiles de puesto por área</p>
         </div>
@@ -64,7 +64,6 @@ export function OrgChartPage() {
           <Link
             to="/rrhh/organigrama/puestos/nuevo"
             className="btn"
-            style={{ background: "linear-gradient(135deg, #ec4899, #db2777)", color: "#fff", fontWeight: 700 }}
           >
             ➕ Nuevo Puesto en Organigrama
           </Link>
@@ -80,11 +79,11 @@ export function OrgChartPage() {
       {/* Organigrama Grid by Department */}
       <div className="stack" style={{ gap: 20 }}>
         {loading ? (
-          <div className="card pad" style={{ textAlign: "center", padding: 40 }}>
+          <div className="card pad t-center" style={{ padding: 40 }}>
             <div className="muted">Cargando organigrama...</div>
           </div>
         ) : positions.length === 0 ? (
-          <div className="card pad" style={{ textAlign: "center", padding: 40 }}>
+          <div className="card pad t-center" style={{ padding: 40 }}>
             <h3>No hay puestos definidos en el Organigrama</h3>
             <p className="muted">Comenzá dando de alta los puestos clave de la empresa con sus descripciones y colaboradores asignados.</p>
             <Link to="/rrhh/organigrama/puestos/nuevo" className="btn" style={{ marginTop: 12 }}>
@@ -99,8 +98,8 @@ export function OrgChartPage() {
             return (
               <div key={dept} className="card pad" style={{ borderLeft: "5px solid #ec4899" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                  <h2 style={{ fontSize: "1.15rem", margin: 0 }}>🏢 {dept}</h2>
-                  <span className="badge primary" style={{ fontSize: "0.75rem" }}>
+                  <h2 style={{ margin: 0 }}>🏢 {dept}</h2>
+                  <span className="badge primary t-small">
                     {deptPositions.length} {deptPositions.length === 1 ? "puesto" : "puestos"}
                   </span>
                 </div>
@@ -124,33 +123,25 @@ export function OrgChartPage() {
                       >
                         <div>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                            <strong style={{ fontSize: "0.95rem", color: "var(--text-main)" }}>{pos.title}</strong>
+                            <strong style={{ color: "var(--text-main)" }}>{pos.title}</strong>
                             <span className="badge ok" style={{ fontSize: "0.68rem" }}>
                               Nivel {pos.level}
                             </span>
                           </div>
 
-                          <div style={{ marginTop: 8, fontSize: "0.82rem" }}>
+                          <div className="t-small" style={{ marginTop: 8 }}>
                             <span className="muted">Ocupante: </span>
                             {assignedName ? (
-                              <strong style={{ color: "var(--lc-accent-strong)" }}>👤 {assignedName}</strong>
+                              <strong className="t-accent">👤 {assignedName}</strong>
                             ) : (
-                              <span style={{ color: "var(--lc-warn)", fontStyle: "italic" }}>⚠️ Vacante sin asignar</span>
+                              <span className="t-warn" style={{ fontStyle: "italic" }}>⚠️ Vacante sin asignar</span>
                             )}
                           </div>
 
                           {pos.mission && (
                             <p
-                              className="muted"
-                              style={{
-                                fontSize: "0.78rem",
-                                marginTop: 6,
-                                lineClamp: 2,
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden"
-                              }}
+                              className="muted t-small"
+                              style={{ marginTop: 6, lineClamp: 2, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
                             >
                               {pos.mission}
                             </p>
@@ -161,7 +152,6 @@ export function OrgChartPage() {
                           <Link
                             to={`/rrhh/organigrama/puestos/${pos.id}/descripcion`}
                             className="btn ghost compact"
-                            style={{ fontSize: "0.75rem", padding: "4px 8px" }}
                           >
                             📄 Ver Descripción
                           </Link>
@@ -169,14 +159,12 @@ export function OrgChartPage() {
                             <Link
                               to={`/rrhh/organigrama/puestos/${pos.id}`}
                               className="btn ghost compact"
-                              style={{ fontSize: "0.75rem", padding: "4px 8px" }}
                             >
                               ✏️
                             </Link>
                             <button
                               type="button"
-                              className="btn ghost compact"
-                              style={{ fontSize: "0.75rem", padding: "4px 8px", color: "var(--lc-danger)" }}
+                              className="btn ghost compact btn-outline danger"
                               onClick={() => handleDelete(pos)}
                             >
                               🗑️

@@ -90,7 +90,7 @@ export function FleetPersonPage() {
       {message && <div className="alert ok">{message}</div>}
 
       <section className="card pad" style={{ marginBottom: 20 }}>
-        <h3 style={{ marginTop: 0 }}>Roles en la flota</h3>
+        <h3>Roles en la flota</h3>
         <div className="row" style={{ gap: 16, flexWrap: "wrap" }}>
           {([
             ["isDriver", "Chofer"],
@@ -125,7 +125,7 @@ export function FleetPersonPage() {
         {missing.length > 0 && <div className="alert" style={{ margin: 0 }}>Falta cargar: {missing.map(credentialLabel).join(", ")}.</div>}
 
         {form && (
-          <form className="card pad stack" style={{ gap: 12, border: "1px solid var(--line)" }} onSubmit={save}>
+          <form className="card pad stack" style={{ gap: 12 }} onSubmit={save}>
             <strong>{editingId ? "Editar credencial" : "Nueva credencial"}</strong>
             <div className="grid-3">
               <label>Tipo *
@@ -150,7 +150,7 @@ export function FleetPersonPage() {
               </label>
             </div>
             {!editingId && activeTypes.has(form.type) && form.type !== "Other" && (
-              <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>Es una renovación: la {credentialLabel(form.type).toLowerCase()} vigente pasa al historial.</p>
+              <p className="muted t-small" style={{ margin: 0 }}>Es una renovación: la {credentialLabel(form.type).toLowerCase()} vigente pasa al historial.</p>
             )}
             <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
               <button type="button" className="btn btn-outline" onClick={() => { setForm(null); setEditingId(null); }}>Cancelar</button>
@@ -162,7 +162,7 @@ export function FleetPersonPage() {
         {credentials.length === 0 ? <p className="muted" style={{ margin: 0 }}>No hay credenciales cargadas.</p> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Credencial</th><th>Vence</th><th>Estado</th><th>Número</th><th>Archivo</th><th style={{ textAlign: "right" }}>Acciones</th></tr></thead>
+              <thead><tr><th>Credencial</th><th>Vence</th><th>Estado</th><th>Número</th><th>Archivo</th><th className="t-right">Acciones</th></tr></thead>
               <tbody>
                 {credentials.map((c) => (
                   <tr key={c.id} style={c.isActive ? undefined : { opacity: 0.55 }}>
@@ -171,7 +171,7 @@ export function FleetPersonPage() {
                     <td>{c.isActive ? <span className={`badge ${stateBadge[c.state]}`}>{stateLabel[c.state]}</span> : <span className="badge off">Renovada</span>}</td>
                     <td>{c.number || "—"}</td>
                     <td><FileAttachment path={`/api/v1/fleet/credentials/${c.id}/file`} fileName={c.fileName} onChanged={() => void load()} /></td>
-                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    <td className="t-right" style={{ whiteSpace: "nowrap" }}>
                       {c.isActive && c.type !== "Other" && (
                         <button type="button" className="btn btn-outline compact" onClick={() => {
                           setEditingId(null);

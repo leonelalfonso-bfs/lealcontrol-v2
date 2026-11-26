@@ -102,7 +102,7 @@ export function AgreementDetailPage() {
 
       {error && <div className="alert">{error}</div>}
       {msg && <div className="alert ok">{msg}</div>}
-      {a.notes && <div className="card pad muted" style={{ fontSize: "0.85rem" }}>{a.notes}</div>}
+      {a.notes && <div className="card pad muted t-small">{a.notes}</div>}
 
       {header && (
         <form className="card pad stack" style={{ gap: 10 }} onSubmit={(e) => {
@@ -137,12 +137,12 @@ export function AgreementDetailPage() {
           </label>
         </div>
         {detail.scaleMonths.length > 0 && (
-          <div className="muted" style={{ fontSize: "0.8rem" }}>Meses con escala cargada: {detail.scaleMonths.map(monthLabel).join(", ")}</div>
+          <div className="muted t-small">Meses con escala cargada: {detail.scaleMonths.map(monthLabel).join(", ")}</div>
         )}
         <div style={{ overflowX: "auto" }}>
-          <table style={{ fontSize: "0.8rem" }}>
+          <table>
             <thead>
-              <tr><th>Grupo</th><th>Categoría</th>{zones.map((z) => <th key={z} style={{ textAlign: "right" }}>{z ? `Zona ${z}` : "Básico"}</th>)}</tr>
+              <tr><th>Grupo</th><th>Categoría</th>{zones.map((z) => <th className="t-right" key={z}>{z ? `Zona ${z}` : "Básico"}</th>)}</tr>
             </thead>
             <tbody>
               {detail.categories.map((c) => (
@@ -158,10 +158,10 @@ export function AgreementDetailPage() {
                   {zones.map((z) => {
                     const s = scaleOf(c.id, z);
                     return (
-                      <td key={z} style={{ textAlign: "right" }}>
+                      <td className="t-right" key={z}>
                         {s ? money(s.basic) : "—"}
-                        {s && !s.isCurrentMonth && <div className="muted" style={{ fontSize: "0.7rem" }}>de {monthLabel(s.validFrom)}</div>}
-                        {s && s.nonRemunerative > 0 && <div className="muted" style={{ fontSize: "0.7rem" }}>+ {money(s.nonRemunerative)} no rem.</div>}
+                        {s && !s.isCurrentMonth && <div className="muted t-small">de {monthLabel(s.validFrom)}</div>}
+                        {s && s.nonRemunerative > 0 && <div className="muted t-small">+ {money(s.nonRemunerative)} no rem.</div>}
                       </td>
                     );
                   })}
@@ -170,7 +170,7 @@ export function AgreementDetailPage() {
             </tbody>
           </table>
         </div>
-        {scales[0]?.source && <div className="muted" style={{ fontSize: "0.75rem" }}>Fuente: {scales[0].source}</div>}
+        {scales[0]?.source && <div className="muted t-small">Fuente: {scales[0].source}</div>}
 
         <div className="grid-2" style={{ alignItems: "start" }}>
           <form className="stack" style={{ gap: 8 }} onSubmit={(e) => {
@@ -181,7 +181,7 @@ export function AgreementDetailPage() {
               return `✓ Escala de ${monthLabel(month + "-01")} generada (${r.saved} valores).`;
             });
           }}>
-            <strong style={{ fontSize: "0.9rem" }}>Aplicar un aumento sobre la escala anterior</strong>
+            <strong>Aplicar un aumento sobre la escala anterior</strong>
             <div className="grid-2">
               <label>Aumento % (del mes elegido)<input inputMode="decimal" value={increase.percent} onChange={(e) => setIncrease({ ...increase, percent: e.target.value })} required /></label>
               <label>Fuente<input value={increase.source} placeholder="Acuerdo y fecha" onChange={(e) => setIncrease({ ...increase, source: e.target.value })} required /></label>
@@ -202,8 +202,8 @@ export function AgreementDetailPage() {
               return `✓ ${r.saved} valores cargados para ${monthLabel(month + "-01")}.`;
             });
           }}>
-            <strong style={{ fontSize: "0.9rem" }}>Pegar la escala desde una planilla</strong>
-            <span className="muted" style={{ fontSize: "0.78rem" }}>
+            <strong>Pegar la escala desde una planilla</strong>
+            <span className="muted t-small">
               Una fila por categoría y zona: categoría, zona, básico y, si hay, suma no remunerativa (separados por tabulación o punto y coma).
             </span>
             <textarea rows={4} value={paste.text} onChange={(e) => setPaste({ ...paste, text: e.target.value })} required />
@@ -234,7 +234,7 @@ export function AgreementDetailPage() {
           <button type="button" className="btn ghost" onClick={() => { setRuleId(null); setRule({ ...EMPTY_RULE }); }}>➕ Nueva regla</button>
         </div>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ fontSize: "0.8rem" }}>
+          <table>
             <thead><tr><th>Código</th><th>Concepto</th><th>Tipo</th><th>Cálculo</th><th>Aplica a</th><th>Vigencia</th><th /></tr></thead>
             <tbody>
               {detail.rules.map((r) => (
@@ -242,7 +242,7 @@ export function AgreementDetailPage() {
                   <td>{r.code}</td>
                   <td>
                     {r.name}
-                    <div className="muted" style={{ fontSize: "0.72rem" }}>
+                    <div className="muted t-small">
                       {[r.zones && `zonas ${r.zones}`, r.groups && `grupos ${r.groups}`, r.requiresFlag && `marca "${r.requiresFlag}"`,
                         r.seniorityFromNextMonth && "desde el mes siguiente", r.type === "Addition" && (r.remunerative ? "remunerativo" : "no remunerativo")]
                         .filter(Boolean).join(" · ")}
@@ -252,7 +252,7 @@ export function AgreementDetailPage() {
                   <td>{r.basis.startsWith("Fixed") ? `$ ${money(r.value)}` : `${r.value} %`} {BASES[r.basis].replace("Monto fijo", "")}</td>
                   <td>{APPLIES[r.appliesTo]}</td>
                   <td>{monthLabel(r.validFrom)}{r.validTo ? ` a ${monthLabel(r.validTo)}` : " en adelante"}</td>
-                  <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                  <td className="t-right" style={{ whiteSpace: "nowrap" }}>
                     <button type="button" className="btn ghost compact" onClick={() => editRule(r)}>Editar</button>
                     <button type="button" className="btn ghost compact" disabled={busy} onClick={() => void run(async () => {
                       await api.deleteAgreementRule(id, r.id); await load(); return "✓ Regla borrada.";
@@ -267,7 +267,7 @@ export function AgreementDetailPage() {
         {rule && (
           <form className="stack" style={{ gap: 10 }} onSubmit={saveRule}>
             <strong>{ruleId ? "Editar regla" : "Nueva regla"}</strong>
-            <span className="muted" style={{ fontSize: "0.78rem" }}>
+            <span className="muted t-small">
               Cuando un monto cambia por paritaria, cargá una regla nueva con el mismo código desde el mes del cambio y cerrá la anterior con “hasta”.
             </span>
             <div className="grid-3">
@@ -313,7 +313,7 @@ export function AgreementDetailPage() {
       {/* Simulador */}
       <div className="card pad stack" style={{ gap: 12 }}>
         <h3 style={{ margin: 0 }}>Simulador del convenio</h3>
-        <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+        <p className="muted t-small" style={{ margin: 0 }}>
           Lo que fija el convenio para una categoría en el mes elegido arriba. Los aportes de ley, las novedades del mes y los proporcionales se
           suman en la liquidación.
         </p>
@@ -346,21 +346,21 @@ export function AgreementDetailPage() {
         {simResult && (
           <>
             {simResult.warnings.map((w) => <div key={w} className="alert" style={{ margin: 0 }}>{w}</div>)}
-            <table style={{ fontSize: "0.82rem" }}>
+            <table>
               <tbody>
                 {simResult.lines.map((l, i) => (
                   <tr key={i}>
-                    <td>{l.name}<div className="muted" style={{ fontSize: "0.72rem" }}>{l.detail}</div></td>
+                    <td>{l.name}<div className="muted t-small">{l.detail}</div></td>
                     <td className="muted">{l.type === "Addition" ? (l.remunerative ? "Remunerativo" : "No remunerativo") : TYPES[l.type]}</td>
-                    <td style={{ textAlign: "right" }}>{l.type === "EmployeeDeduction" ? "−" : ""}{money(l.amount)}</td>
+                    <td className="t-right">{l.type === "EmployeeDeduction" ? "−" : ""}{money(l.amount)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr style={{ fontWeight: 700 }}><td colSpan={2}>Remunerativo</td><td style={{ textAlign: "right" }}>{money(simResult.remunerative)}</td></tr>
-                <tr><td colSpan={2}>No remunerativo</td><td style={{ textAlign: "right" }}>{money(simResult.nonRemunerative)}</td></tr>
-                <tr><td colSpan={2}>Descuentos del convenio</td><td style={{ textAlign: "right" }}>− {money(simResult.employeeDeductions)}</td></tr>
-                <tr><td colSpan={2}>Contribuciones del empleador al convenio</td><td style={{ textAlign: "right" }}>{money(simResult.employerContributions)}</td></tr>
+                <tr className="t-strong"><td colSpan={2}>Remunerativo</td><td className="t-right">{money(simResult.remunerative)}</td></tr>
+                <tr><td colSpan={2}>No remunerativo</td><td className="t-right">{money(simResult.nonRemunerative)}</td></tr>
+                <tr><td colSpan={2}>Descuentos del convenio</td><td className="t-right">− {money(simResult.employeeDeductions)}</td></tr>
+                <tr><td colSpan={2}>Contribuciones del empleador al convenio</td><td className="t-right">{money(simResult.employerContributions)}</td></tr>
               </tfoot>
             </table>
           </>
