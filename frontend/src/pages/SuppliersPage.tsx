@@ -179,14 +179,8 @@ export function SuppliersPage() {
 
       {successMsg && (
         <div
-          className="alert"
-          style={{
-            marginBottom: 16,
-            background: "rgba(16, 185, 129, 0.12)",
-            borderColor: "var(--lc-ok)",
-            color: "var(--lc-ok)",
-            fontWeight: 600
-          }}
+          className="alert t-strong"
+          style={{ marginBottom: 16 }}
         >
           ✓ {successMsg}
         </div>
@@ -199,7 +193,7 @@ export function SuppliersPage() {
         </div>
         <div className="card">
           <span className="muted">Clientes y Proveedores</span>
-          <strong style={{ color: "var(--lc-info)" }}>{totalBoth} (Cuenta Corriente)</strong>
+          <strong className="t-info">{totalBoth} (Cuenta Corriente)</strong>
         </div>
         <div className="card">
           <span className="muted">Resp. Inscriptos</span>
@@ -226,7 +220,7 @@ export function SuppliersPage() {
         {loading ? (
           <p className="pad muted">Cargando proveedores…</p>
         ) : items.length === 0 ? (
-          <p className="pad muted" style={{ textAlign: "center", padding: 32 }}>
+          <p className="pad muted t-center" style={{ padding: 32 }}>
             No hay proveedores registrados. Hacé clic en <strong>"+ Nuevo Proveedor"</strong> para dar de alta.
           </p>
         ) : (
@@ -239,7 +233,7 @@ export function SuppliersPage() {
                   <th>Condición IVA</th>
                   <th>Rol / Cuenta Corriente</th>
                   <th>Teléfono / Email</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
+                  <th className="t-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -259,14 +253,14 @@ export function SuppliersPage() {
                     <td>
                       {s.isCustomer && s.isSupplier ? (
                         <span
-                          className="badge ok"
-                          style={{ background: "var(--lc-info-bg)", color: "var(--lc-info)" }}
+                          className="badge ok t-info"
+                          style={{ background: "var(--lc-info-bg)" }}
                           title="Comparte cuenta corriente unificada de cliente y proveedor"
                         >
                           🤝 Cliente y Proveedor
                         </span>
                       ) : (
-                        <span className="badge ok" style={{ background: "var(--lc-warn-bg)", color: "var(--lc-warn)" }}>
+                        <span className="badge ok t-warn" style={{ background: "var(--lc-warn-bg)" }}>
                           🏢 Proveedor Exclusivo
                         </span>
                       )}
@@ -274,25 +268,23 @@ export function SuppliersPage() {
                     <td>
                       {s.phone && <div>📞 {s.phone}</div>}
                       {s.email && (
-                        <div className="muted" style={{ fontSize: "0.8rem" }}>
+                        <div className="muted t-small">
                           ✉️ {s.email}
                         </div>
                       )}
                     </td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="t-right">
                       <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                         <button
                           type="button"
-                          className="btn ghost"
-                          style={{ padding: "4px 10px", fontSize: "0.82rem" }}
+                          className="btn ghost compact"
                           onClick={() => navigate(`/clientes/${s.id}`)}
                         >
                           👁️ Ficha
                         </button>
                         <button
                           type="button"
-                          className="btn ghost"
-                          style={{ padding: "4px 10px", fontSize: "0.82rem" }}
+                          className="btn ghost compact"
                           onClick={() => navigate(`/clientes/${s.id}/editar`)}
                         >
                           ✏️ Editar

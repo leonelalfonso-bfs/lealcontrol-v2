@@ -152,11 +152,11 @@ export function OpportunityDetailPage() {
           <h1>{opportunity.title}</h1>
           <p className="muted">
             {customerName ? (
-              <Link to={`/clientes/${opportunity.customerId}`} style={{ fontWeight: 600, color: "var(--lc-accent-strong)" }}>
+              <Link className="t-strong t-accent" to={`/clientes/${opportunity.customerId}`}>
                 🏢 {customerName}
               </Link>
             ) : (
-              <span style={{ color: "var(--lc-warn)" }}>⚠️ Cliente pendiente de vincular</span>
+              <span className="t-warn">⚠️ Cliente pendiente de vincular</span>
             )}
           </p>
         </div>
@@ -179,7 +179,6 @@ export function OpportunityDetailPage() {
             <button
               type="button"
               className="btn btn-outline"
-              style={{ color: "var(--lc-warn)", borderColor: "var(--lc-warn)" }}
               onClick={() => {
                 setTargetStage("Negotiation");
                 setShowStageModal(true);
@@ -191,7 +190,6 @@ export function OpportunityDetailPage() {
             <button
               type="button"
               className="btn btn-outline"
-              style={{ color: "var(--lc-warn)", borderColor: "var(--lc-warn)" }}
               onClick={() => {
                 setTargetStage("Discovery");
                 setShowStageModal(true);
@@ -212,7 +210,7 @@ export function OpportunityDetailPage() {
       {error && <div className="alert">{error}</div>}
 
       {isClosed && (
-        <div className="hint" style={{ background: "var(--lc-ok-bg)", color: "var(--lc-ok)", border: "1px solid #34d399", marginBottom: 12 }}>
+        <div className="hint t-ok" style={{ background: "var(--lc-ok-bg)", border: "1px solid #34d399", marginBottom: 12 }}>
           Esta oportunidad está <strong>{label(opportunity.stage)}</strong> y quedó bloqueada para edición comercial.
           Podés consultar el historial; para volver a editar usá <strong>Reabrir oportunidad</strong> con un motivo.
         </div>
@@ -254,7 +252,7 @@ export function OpportunityDetailPage() {
                 ×
               </button>
             </div>
-            <p className="muted" style={{ fontSize: "0.85rem" }}>
+            <p className="muted t-small">
               Cualquier retroceso o cambio de estado exige un motivo detallado que quedará registrado en el historial de la oportunidad.
             </p>
 
@@ -307,12 +305,12 @@ export function OpportunityDetailPage() {
               </button>
             </div>
             {isClosed && (
-              <div className="hint" style={{ background: "var(--lc-surface-2)", color: "var(--lc-ink-2)", border: "1px solid var(--lc-line-2)" }}>
+              <div className="hint muted" style={{ background: "var(--lc-surface-2)", border: "1px solid var(--lc-line-2)" }}>
                 No se pueden crear ni editar presupuestos mientras la oportunidad esté cerrada.
               </div>
             )}
             {!opportunity.customerId && !isClosed && (
-              <div className="hint" style={{ background: "var(--lc-warn-bg)", color: "var(--lc-warn)", border: "1px solid var(--lc-warn)" }}>
+              <div className="hint t-warn" style={{ background: "var(--lc-warn-bg)", border: "1px solid var(--lc-warn)" }}>
                 ⚠️ Vinculá un cliente antes de preparar la propuesta formal.
               </div>
             )}
@@ -344,11 +342,11 @@ export function OpportunityDetailPage() {
                     className="row" style={{ justifyContent: "space-between", gap: 12, padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, textDecoration: "none", color: "inherit" }}>
                     <div style={{ minWidth: 0 }}>
                       <strong>{c.channelType === "email" ? "Correo" : c.channelType} · {c.participantName}</strong>
-                      <div className="muted" style={{ fontSize: "0.82rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <div className="muted t-small" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {c.lastMessagePreview || "—"}
                       </div>
                     </div>
-                    <time className="muted" style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}>
+                    <time className="muted t-small" style={{ whiteSpace: "nowrap" }}>
                       {new Date(c.lastMessageAtUtc).toLocaleString("es-AR")}
                     </time>
                   </Link>

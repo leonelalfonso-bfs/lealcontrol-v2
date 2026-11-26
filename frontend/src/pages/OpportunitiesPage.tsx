@@ -193,11 +193,11 @@ export function OpportunitiesPage() {
           </div>
 
           {duplicateWarning && (
-            <div style={{ padding: "12px 16px", borderRadius: 8, background: "var(--lc-warn-bg)", border: "1px solid var(--lc-warn)", color: "var(--lc-warn)", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div className="t-warn" style={{ padding: "12px 16px", borderRadius: 8, background: "var(--lc-warn-bg)", border: "1px solid var(--lc-warn)", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
                 <strong>⚠️ Posible Oportunidad Duplicada:</strong> Ya existe una oportunidad abierta para este cliente: <em>"{duplicateWarning.title}"</em> (en etapa <b>{label(duplicateWarning.stage)}</b>).
               </div>
-              <Link to={`/oportunidades/${duplicateWarning.id}`} className="btn btn-outline compact" style={{ background: "var(--lc-surface)", marginLeft: 12 }}>
+              <Link to={`/oportunidades/${duplicateWarning.id}`} className="btn btn-outline compact" style={{ marginLeft: 12 }}>
                 Abrir Existente
               </Link>
             </div>
@@ -448,7 +448,6 @@ export function OpportunitiesPage() {
                           <button
                             className="btn btn-outline compact"
                             title="Revertir y reabrir oportunidad con motivo obligatorio"
-                            style={{ color: "var(--lc-warn)", borderColor: "var(--lc-warn)" }}
                             onClick={() => requestTransition(opportunity, "Negotiation", true)}
                           >
                             🔄 Reabrir

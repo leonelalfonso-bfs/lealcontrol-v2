@@ -59,19 +59,19 @@ export function CustomerLocationForm({
     <form onSubmit={submit} style={{ marginTop: 16, display: "grid", gap: 12 }}>
       <h4 style={{ margin: 0 }}>{initialData ? "✏️ Editar Planta / Sucursal" : "+ Registrar Nueva Planta / Sucursal"}</h4>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        <label>Nombre de la Planta / Depósito *<input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Ej. Planta San Lorenzo" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
-        <label>Calle y Número *<input value={street} onChange={(e) => setStreet(e.target.value)} required placeholder="Av. Interurbana 4500" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
+        <label>Nombre de la Planta / Depósito *<input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Ej. Planta San Lorenzo" style={{ width: "100%" }} /></label>
+        <label>Calle y Número *<input value={street} onChange={(e) => setStreet(e.target.value)} required placeholder="Av. Interurbana 4500" style={{ width: "100%" }} /></label>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
-        <label>Ciudad *<input value={city} onChange={(e) => setCity(e.target.value)} required style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
+        <label>Ciudad *<input value={city} onChange={(e) => setCity(e.target.value)} required style={{ width: "100%" }} /></label>
         <label>Provincia *
-          <select value={province} onChange={(e) => setProvince(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }}>
+          <select value={province} onChange={(e) => setProvince(e.target.value)} style={{ width: "100%" }}>
             {provinces.map((p) => <option key={p} value={p}>{provinceLabel(p)}</option>)}
           </select>
         </label>
-        <label>Código Postal *<input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} required style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
+        <label>Código Postal *<input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} required style={{ width: "100%" }} /></label>
       </div>
-      <label>Teléfono Directo de Planta<input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="3414123456" style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid var(--surface-border)" }} /></label>
+      <label>Teléfono Directo de Planta<input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="3414123456" style={{ width: "100%" }} /></label>
       
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
         {(initialData || alwaysCancelable) && <button type="button" className="btn btn-outline" onClick={onCancel}>Cancelar</button>}

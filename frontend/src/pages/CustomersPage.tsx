@@ -175,14 +175,8 @@ export function CustomersPage() {
 
       {successMsg && (
         <div
-          className="alert"
-          style={{
-            marginBottom: 16,
-            background: "rgba(16, 185, 129, 0.12)",
-            borderColor: "var(--lc-ok)",
-            color: "var(--lc-ok)",
-            fontWeight: 600
-          }}
+          className="alert t-strong"
+          style={{ marginBottom: 16 }}
         >
           ✓ {successMsg}
         </div>

@@ -620,7 +620,7 @@ export function CustomerFormPage() {
       </div>
 
       {error && <div className="alert">{error}</div>}
-      {arcaSuccessMsg && <div className="alert ok" style={{ background: "var(--lc-ok-bg)", border: "1px solid var(--lc-ok)", color: "var(--lc-ok)", marginBottom: 16 }}>{arcaSuccessMsg}</div>}
+      {arcaSuccessMsg && <div className="alert ok" style={{ marginBottom: 16 }}>{arcaSuccessMsg}</div>}
 
       <form onSubmit={submit} className="stack" style={{ gap: 20 }}>
         <div className="tab-row">
@@ -683,7 +683,7 @@ export function CustomerFormPage() {
                         disabled={consultingArca}
                         onClick={handleConsultArca}
                         title="Consultar padrón impositivo oficial en ARCA / AFIP"
-                        style={{ whiteSpace: "nowrap", padding: "0 12px", background: "linear-gradient(180deg, var(--lc-info), var(--lc-info))", color: "#fff" }}
+                        style={{ whiteSpace: "nowrap" }}
                       >
                         {consultingArca ? "🔍 ARCA…" : "🔍 ARCA"}
                       </button>
@@ -692,14 +692,14 @@ export function CustomerFormPage() {
                         className="btn"
                         onClick={() => setShowBcraModal(true)}
                         title="Consultar Central de Deudores y Calificación Crediticia en BCRA"
-                        style={{ whiteSpace: "nowrap", padding: "0 12px", background: "linear-gradient(180deg, var(--lc-ink), var(--lc-ink-2))", color: "#fff" }}
+                        style={{ whiteSpace: "nowrap" }}
                       >
                         🏛️ BCRA
                       </button>
                     </>
                   )}
                 </div>
-                {cuitHint && <span className="muted" style={{ fontSize: "0.78rem" }}>{cuitHint}</span>}
+                {cuitHint && <span className="muted t-small">{cuitHint}</span>}
               </label>
               <label>Condición IVA
                 <select value={model.taxCondition} onChange={(e) => set("taxCondition", e.target.value)}>
@@ -729,10 +729,10 @@ export function CustomerFormPage() {
                     {model.creditRating === "A" ? "🟢" : model.creditRating === "B" ? "🟡" : model.creditRating === "C" ? "🟠" : "🔴"}
                   </span>
                   <div>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--lc-ink)" }}>
+                    <div className="t-small t-strong">
                       Calificación Crediticia BCRA: {model.creditRating} (Situación {model.bcraWorstSituation || 1})
                     </div>
-                    <div style={{ fontSize: "0.78rem", color: "var(--lc-ink-2)", marginTop: "2px" }}>
+                    <div className="t-small muted" style={{ marginTop: "2px" }}>
                       {model.creditRecommendation || "Sin observaciones adicionales."}
                     </div>
                   </div>
@@ -740,8 +740,7 @@ export function CustomerFormPage() {
                 <button
                   type="button"
                   onClick={() => setShowBcraModal(true)}
-                  className="btn btn-outline"
-                  style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--lc-surface)" }}
+                  className="btn btn-outline compact"
                 >
                   Ver Detalle BCRA
                 </button>
@@ -756,10 +755,10 @@ export function CustomerFormPage() {
                 </select>
               </label>
               <label>Email<input type="email" value={model.email ?? ""} onChange={(e) => set("email", e.target.value)} placeholder="compras@empresa.com" /></label>
-              <label>Teléfono<input value={model.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="3415551234" /><span className="muted" style={{ fontSize: "0.75rem" }}>Solo dígitos; se normaliza al guardar.</span></label>
+              <label>Teléfono<input value={model.phone ?? ""} onChange={(e) => set("phone", e.target.value)} placeholder="3415551234" /><span className="muted t-small">Solo dígitos; se normaliza al guardar.</span></label>
             </div>
             <div className="grid-2">
-              <label>WhatsApp<input value={model.whatsApp ?? ""} onChange={(e) => set("whatsApp", e.target.value)} placeholder="5493415551234 o 3415551234" /><span className="muted" style={{ fontSize: "0.75rem" }}>Con este número vas a poder abrir chat profesional desde la ficha.</span></label>
+              <label>WhatsApp<input value={model.whatsApp ?? ""} onChange={(e) => set("whatsApp", e.target.value)} placeholder="5493415551234 o 3415551234" /><span className="muted t-small">Con este número vas a poder abrir chat profesional desde la ficha.</span></label>
               <label>Calle fiscal<input value={model.fiscalStreet ?? ""} onChange={(e) => set("fiscalStreet", e.target.value)} placeholder="San Martin 1234" /></label>
             </div>
             <div className="grid-3">
@@ -806,7 +805,7 @@ export function CustomerFormPage() {
             </div>
 
             {showLocForm && (
-              <div className="card pad" style={{ background: "var(--lc-surface-2)", border: "1px solid var(--line)" }}>
+              <div className="card pad">
                 <h4>{editingLocTempId ? "Editar Planta" : "Nueva Planta"}</h4>
                 <div className="grid-2" style={{ marginTop: 12 }}>
                   <label>Nombre de Planta *<input required value={newLoc.name} onChange={(e) => setNewLoc({ ...newLoc, name: e.target.value })} placeholder="Ej. Planta Puerto" /></label>
@@ -837,7 +836,7 @@ export function CustomerFormPage() {
                     <th>Nombre Planta</th>
                     <th>Dirección / Ubicación</th>
                     <th>Teléfono</th>
-                    <th style={{ textAlign: "right" }}>Acciones</th>
+                    <th className="t-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -846,17 +845,17 @@ export function CustomerFormPage() {
                       <td><strong>📌 {loc.name}</strong></td>
                       <td>{loc.street}, {loc.city} ({provinceLabel(loc.province)})</td>
                       <td>{loc.phone || "—"}</td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
-                          <button type="button" className="btn ghost" style={{ padding: "4px 8px" }} onClick={() => handleStartEditLocation(loc)}>✏️</button>
-                          <button type="button" className="btn danger" style={{ padding: "4px 8px" }} onClick={() => handleRemoveLocation(loc.tempId)}>✕</button>
+                          <button type="button" className="btn ghost compact" onClick={() => handleStartEditLocation(loc)}>✏️</button>
+                          <button type="button" className="btn danger compact" onClick={() => handleRemoveLocation(loc.tempId)}>✕</button>
                         </div>
                       </td>
                     </tr>
                   ))}
                   {locations.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                      <td colSpan={4} className="muted t-center">
                         No hay plantas registradas.
                       </td>
                     </tr>
@@ -885,7 +884,7 @@ export function CustomerFormPage() {
             </div>
 
             {showContactForm && (
-              <div className="card pad" style={{ background: "var(--lc-surface-2)", border: "1px solid var(--line)" }}>
+              <div className="card pad">
                 <h4>{editingConTempId ? "Editar Contacto" : "Nuevo Contacto"}</h4>
                 <div className="grid-2" style={{ marginTop: 12 }}>
                   <label>Nombre y Apellido *<input required value={newContact.name} onChange={(e) => setNewContact({ ...newContact, name: e.target.value })} placeholder="Juan Pérez" /></label>
@@ -927,7 +926,7 @@ export function CustomerFormPage() {
                     <th>Planta Vinculada</th>
                     <th>Email</th>
                     <th>Teléfono</th>
-                    <th style={{ textAlign: "right" }}>Acciones</th>
+                    <th className="t-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -940,10 +939,10 @@ export function CustomerFormPage() {
                         <td>{loc ? <span className="badge ok">📌 {loc.name}</span> : <span className="muted">General</span>}</td>
                         <td>{c.email || "—"}</td>
                         <td>{c.phone || "—"}</td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="t-right">
                           <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
-                            <button type="button" className="btn ghost" style={{ padding: "4px 8px" }} onClick={() => handleStartEditContact(c)}>✏️</button>
-                            <button type="button" className="btn danger" style={{ padding: "4px 8px" }} onClick={() => handleRemoveContact(c.tempId)}>✕</button>
+                            <button type="button" className="btn ghost compact" onClick={() => handleStartEditContact(c)}>✏️</button>
+                            <button type="button" className="btn danger compact" onClick={() => handleRemoveContact(c.tempId)}>✕</button>
                           </div>
                         </td>
                       </tr>
@@ -951,7 +950,7 @@ export function CustomerFormPage() {
                   })}
                   {contacts.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                      <td colSpan={6} className="muted t-center">
                         No hay contactos registrados.
                       </td>
                     </tr>
@@ -976,7 +975,7 @@ export function CustomerFormPage() {
             </div>
 
             {showEqForm && (
-              <div className="card pad" style={{ background: "var(--lc-surface-2)", border: "1px solid var(--line)" }}>
+              <div className="card pad">
                 <h4>Nuevo Equipo Registrado</h4>
                 <div className="grid-3" style={{ marginTop: 12 }}>
                   <label>Código Interno / TAG *<input required value={newEq.internalCode} onChange={(e) => setNewEq({ ...newEq, internalCode: e.target.value })} placeholder="EQ-001" /></label>
@@ -1011,7 +1010,7 @@ export function CustomerFormPage() {
                     <th>Marca / Modelo</th>
                     <th>Capacidad</th>
                     <th>Planta</th>
-                    <th style={{ textAlign: "right" }}>Quitar</th>
+                    <th className="t-right">Quitar</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1024,15 +1023,15 @@ export function CustomerFormPage() {
                         <td>{eq.brand} {eq.model}</td>
                         <td>{eq.maxCapacity || "—"}</td>
                         <td>{loc ? `📌 ${loc.name}` : "Central"}</td>
-                        <td style={{ textAlign: "right" }}>
-                          <button type="button" className="btn danger" style={{ padding: "4px 8px" }} onClick={() => handleRemoveEquipment(eq.tempId)}>✕</button>
+                        <td className="t-right">
+                          <button type="button" className="btn danger compact" onClick={() => handleRemoveEquipment(eq.tempId)}>✕</button>
                         </td>
                       </tr>
                     );
                   })}
                   {equipments.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                      <td colSpan={6} className="muted t-center">
                         No hay equipos en el parque técnico.
                       </td>
                     </tr>

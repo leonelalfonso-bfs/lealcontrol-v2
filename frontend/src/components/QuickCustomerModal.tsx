@@ -244,36 +244,16 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
 
   return (
     <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.65)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 9999,
-        padding: "16px"
-      }}
+      className="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        style={{
-          background: "var(--lc-surface)",
-          borderRadius: "18px",
-          width: "100%",
-          maxWidth: "760px",
-          maxHeight: "90vh",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          boxShadow: "0 20px 50px rgba(0,0,0,0.3)"
-        }}
+        className="modal-card"
+        style={{ width: "min(760px, 100%)", maxHeight: "90vh", padding: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}
       >
         {/* Modal Header */}
         <div
@@ -287,27 +267,20 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "1.6rem" }}>{isSupplier ? "🏭" : "🏢"}</span>
+            <span className="t-xl">{isSupplier ? "🏭" : "🏢"}</span>
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "var(--lc-ink)" }}>
+              <h2 style={{ margin: 0 }}>
                 {isSupplier ? "Alta Rápida de Proveedor" : "Alta Rápida de Cliente"}
               </h2>
-              <span style={{ fontSize: "0.78rem", color: "var(--lc-ink-3)" }}>
+              <span className="t-small muted">
                 Se creará en el CRM y quedará seleccionado automáticamente en este documento.
               </span>
             </div>
           </div>
-          <button
+          <button className="muted"
             type="button"
             onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              fontSize: "1.4rem",
-              color: "var(--lc-ink-3)",
-              cursor: "pointer",
-              padding: "4px 8px"
-            }}
+            style={{ background: "none", border: "none", fontSize: "1.4rem", cursor: "pointer", padding: "4px 8px" }}
           >
             ✕
           </button>
@@ -323,53 +296,26 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
             borderBottom: "1px solid var(--lc-line)"
           }}
         >
-          <button
+          <button className="t-strong"
             type="button"
             onClick={() => setActiveTab("general")}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "8px",
-              border: "none",
-              background: activeTab === "general" ? "#0d9488" : "transparent",
-              color: activeTab === "general" ? "#ffffff" : "#475569",
-              fontWeight: 700,
-              fontSize: "0.84rem",
-              cursor: "pointer"
-            }}
+            style={{ padding: "8px 16px", borderRadius: "8px", border: "none", background: activeTab === "general" ? "#0d9488" : "transparent", color: activeTab === "general" ? "#ffffff" : "#475569", fontSize: "0.84rem", cursor: "pointer" }}
           >
             🏢 Datos Generales & Fiscales
           </button>
 
-          <button
+          <button className="t-strong"
             type="button"
             onClick={() => setActiveTab("locations")}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "8px",
-              border: "none",
-              background: activeTab === "locations" ? "#0d9488" : "transparent",
-              color: activeTab === "locations" ? "#ffffff" : "#475569",
-              fontWeight: 700,
-              fontSize: "0.84rem",
-              cursor: "pointer"
-            }}
+            style={{ padding: "8px 16px", borderRadius: "8px", border: "none", background: activeTab === "locations" ? "#0d9488" : "transparent", color: activeTab === "locations" ? "#ffffff" : "#475569", fontSize: "0.84rem", cursor: "pointer" }}
           >
             📍 Plantas / Destinos ({locations.length})
           </button>
 
-          <button
+          <button className="t-strong"
             type="button"
             onClick={() => setActiveTab("contacts")}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "8px",
-              border: "none",
-              background: activeTab === "contacts" ? "#0d9488" : "transparent",
-              color: activeTab === "contacts" ? "#ffffff" : "#475569",
-              fontWeight: 700,
-              fontSize: "0.84rem",
-              cursor: "pointer"
-            }}
+            style={{ padding: "8px 16px", borderRadius: "8px", border: "none", background: activeTab === "contacts" ? "#0d9488" : "transparent", color: activeTab === "contacts" ? "#ffffff" : "#475569", fontSize: "0.84rem", cursor: "pointer" }}
           >
             👤 Personas de Contacto ({contacts.length})
           </button>
@@ -379,16 +325,8 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
           <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1 }}>
             {error && (
-              <div
-                style={{
-                  background: "var(--lc-danger-bg)",
-                  border: "1px solid var(--lc-danger)",
-                  color: "var(--lc-danger)",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  fontSize: "0.85rem",
-                  marginBottom: "16px"
-                }}
+              <div className="alert t-small"
+                style={{ marginBottom: "16px" }}
               >
                 ⚠️ {error}
               </div>
@@ -400,30 +338,23 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                 {/* CUIT & ARCA Consultation */}
                 <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "14px", alignItems: "flex-end" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
+                    <label>
                       CUIT / Documento Fiscal
                     </label>
                     <div style={{ display: "flex", gap: "8px" }}>
-                      <input
+                      <input className="t-strong"
                         type="text"
                         value={documentNumber}
                         onChange={(e) => handleCuitChange(e.target.value)}
                         placeholder="30-71234567-9"
-                        style={{
-                          flex: 1,
-                          padding: "9px 12px",
-                          borderRadius: "8px",
-                          border: "1px solid var(--lc-line-2)",
-                          fontFamily: "monospace",
-                          fontWeight: 700
-                        }}
+                        style={{ flex: 1 }}
                       />
                       <button
                         type="button"
                         onClick={handleConsultArca}
                         disabled={consultingArca}
                         className="btn btn-outline"
-                        style={{ padding: "8px 14px", fontSize: "0.8rem", whiteSpace: "nowrap" }}
+                        style={{ whiteSpace: "nowrap" }}
                       >
                         {consultingArca ? "Consultando..." : "🔍 Padrón ARCA"}
                       </button>
@@ -431,13 +362,13 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
+                    <label>
                       Condición frente al IVA *
                     </label>
                     <select
                       value={taxCondition}
                       onChange={(e) => setTaxCondition(e.target.value as CustomerWrite["taxCondition"])}
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+                      style={{ width: "100%" }}
                     >
                       <option value="ResponsableInscripto">IVA Responsable Inscripto</option>
                       <option value="Monotributo">Monotributo</option>
@@ -450,21 +381,21 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                 {/* Names */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
+                    <label>
                       Razón Social / Titular *
                     </label>
-                    <input
+                    <input className="t-strong"
                       type="text"
                       required
                       value={legalName}
                       onChange={(e) => setLegalName(e.target.value)}
                       placeholder="Ej: Acindar Industria Argentina S.A."
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--lc-line-2)", fontWeight: 600 }}
+                      style={{ width: "100%" }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
+                    <label>
                       Nombre de Fantasía (Comercial)
                     </label>
                     <input
@@ -472,7 +403,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={tradeName}
                       onChange={(e) => setTradeName(e.target.value)}
                       placeholder="Ej: Planta Villa Constitución"
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+                      style={{ width: "100%" }}
                     />
                   </div>
                 </div>
@@ -480,7 +411,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                 {/* Contact Channels */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
+                    <label>
                       Email Comercial
                     </label>
                     <input
@@ -488,12 +419,12 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="compras@empresa.com"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+                      style={{ width: "100%" }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
+                    <label>
                       Teléfono Fijo / Central
                     </label>
                     <input
@@ -501,12 +432,12 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="0341-4567890"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+                      style={{ width: "100%" }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
+                    <label>
                       WhatsApp Directo
                     </label>
                     <input
@@ -514,7 +445,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={whatsApp}
                       onChange={(e) => setWhatsApp(e.target.value)}
                       placeholder="+54 9 341 555-1234"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+                      style={{ width: "100%" }}
                     />
                   </div>
                 </div>
@@ -522,7 +453,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                 {/* Fiscal Address */}
                 <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", gap: "14px" }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
+                    <label>
                       Dirección Fiscal (Calle y N°)
                     </label>
                     <input
@@ -530,12 +461,12 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={fiscalStreet}
                       onChange={(e) => setFiscalStreet(e.target.value)}
                       placeholder="Ruta 21 km 247"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+                      style={{ width: "100%" }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
+                    <label>
                       Ciudad
                     </label>
                     <input
@@ -543,18 +474,18 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={fiscalCity}
                       onChange={(e) => setFiscalCity(e.target.value)}
                       placeholder="Villa Constitución"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+                      style={{ width: "100%" }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
+                    <label>
                       Provincia
                     </label>
                     <select
                       value={fiscalProvince}
                       onChange={(e) => setFiscalProvince(e.target.value)}
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
+                      style={{ width: "100%" }}
                     >
                       {provinces.map((p) => (
                         <option key={p} value={p}>
@@ -570,13 +501,13 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
             {/* TAB 2: PLANTS / LOCATIONS */}
             {activeTab === "locations" && (
               <div>
-                <div style={{ background: "var(--lc-surface-2)", padding: "14px", borderRadius: "10px", border: "1px solid var(--lc-line)", marginBottom: "16px" }}>
+                <div className="box" style={{ marginBottom: "16px" }}>
                   <strong style={{ fontSize: "0.86rem", display: "block", marginBottom: "10px" }}>
                     ➕ Agregar Planta / Sucursal / Depósito de Destino:
                   </strong>
                   <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1.5fr 1fr auto", gap: "10px", alignItems: "flex-end" }}>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, marginBottom: "2px" }}>
+                      <label>
                         Nombre Planta *
                       </label>
                       <input
@@ -584,11 +515,11 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newLocName}
                         onChange={(e) => setNewLocName(e.target.value)}
                         placeholder="Ej: Planta Sur, Silo 4"
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
+                        style={{ width: "100%" }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, marginBottom: "2px" }}>
+                      <label>
                         Dirección
                       </label>
                       <input
@@ -596,11 +527,11 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newLocStreet}
                         onChange={(e) => setNewLocStreet(e.target.value)}
                         placeholder="Calle o Ruta..."
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
+                        style={{ width: "100%" }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, marginBottom: "2px" }}>
+                      <label>
                         Ciudad
                       </label>
                       <input
@@ -608,14 +539,13 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newLocCity}
                         onChange={(e) => setNewLocCity(e.target.value)}
                         placeholder="Ciudad..."
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
+                        style={{ width: "100%" }}
                       />
                     </div>
                     <button
                       type="button"
                       onClick={handleAddDraftLocation}
                       className="btn btn-primary"
-                      style={{ padding: "8px 14px", fontSize: "0.8rem", background: "var(--lc-accent)" }}
                     >
                       + Agregar
                     </button>
@@ -623,31 +553,23 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                 </div>
 
                 {locations.length === 0 ? (
-                  <div style={{ padding: "20px", textAlign: "center", color: "var(--lc-ink-3)", fontSize: "0.85rem" }}>
+                  <div className="t-center muted t-small" style={{ padding: "20px" }}>
                     (Opcional) Si la empresa tiene varias plantas de entrega, podés crearlas aquí. Si no agregás ninguna, se usará el domicilio fiscal.
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     {locations.map((loc, idx) => (
-                      <div
+                      <div className="box"
                         key={loc.tempId}
-                        style={{
-                          padding: "10px 14px",
-                          borderRadius: "8px",
-                          background: "var(--lc-surface-2)",
-                          border: "1px solid var(--lc-line-2)",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center"
-                        }}
+                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
                       >
                         <div>
                           <strong>{loc.name}</strong> — {loc.street || "Sin dirección"}, {loc.city} ({loc.province})
                         </div>
-                        <button
+                        <button className="t-danger t-strong"
                           type="button"
                           onClick={() => setLocations(locations.filter((_, i) => i !== idx))}
-                          style={{ color: "var(--lc-danger)", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                          style={{ background: "none", border: "none", cursor: "pointer" }}
                         >
                           ✕
                         </button>
@@ -661,13 +583,13 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
             {/* TAB 3: CONTACTS */}
             {activeTab === "contacts" && (
               <div>
-                <div style={{ background: "var(--lc-surface-2)", padding: "14px", borderRadius: "10px", border: "1px solid var(--lc-line)", marginBottom: "16px" }}>
+                <div className="box" style={{ marginBottom: "16px" }}>
                   <strong style={{ fontSize: "0.86rem", display: "block", marginBottom: "10px" }}>
                     ➕ Agregar Persona de Contacto:
                   </strong>
                   <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1.2fr 1fr auto", gap: "10px", alignItems: "flex-end" }}>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, marginBottom: "2px" }}>
+                      <label>
                         Nombre y Apellido *
                       </label>
                       <input
@@ -675,17 +597,17 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newConName}
                         onChange={(e) => setNewConName(e.target.value)}
                         placeholder="Ing. Carlos Pérez"
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
+                        style={{ width: "100%" }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, marginBottom: "2px" }}>
+                      <label>
                         Cargo
                       </label>
                       <select
                         value={newConRole}
                         onChange={(e) => setNewConRole(e.target.value)}
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
+                        style={{ width: "100%" }}
                       >
                         <option value="Commercial">Compras / Comercial</option>
                         <option value="Technical">Técnico / Mantenimiento</option>
@@ -694,7 +616,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, marginBottom: "2px" }}>
+                      <label>
                         Email
                       </label>
                       <input
@@ -702,11 +624,11 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newConEmail}
                         onChange={(e) => setNewConEmail(e.target.value)}
                         placeholder="cperez@empresa.com"
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
+                        style={{ width: "100%" }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, marginBottom: "2px" }}>
+                      <label>
                         WhatsApp / Cel
                       </label>
                       <input
@@ -714,14 +636,13 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newConWhatsApp}
                         onChange={(e) => setNewConWhatsApp(e.target.value)}
                         placeholder="341-5551234"
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
+                        style={{ width: "100%" }}
                       />
                     </div>
                     <button
                       type="button"
                       onClick={handleAddDraftContact}
                       className="btn btn-primary"
-                      style={{ padding: "8px 14px", fontSize: "0.8rem", background: "var(--lc-accent)" }}
                     >
                       + Agregar
                     </button>
@@ -729,31 +650,23 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                 </div>
 
                 {contacts.length === 0 ? (
-                  <div style={{ padding: "20px", textAlign: "center", color: "var(--lc-ink-3)", fontSize: "0.85rem" }}>
+                  <div className="t-center muted t-small" style={{ padding: "20px" }}>
                     (Opcional) Podés agregar aquí personas específicas de la empresa a quienes dirigir los presupuestos.
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     {contacts.map((con, idx) => (
-                      <div
+                      <div className="box"
                         key={con.tempId}
-                        style={{
-                          padding: "10px 14px",
-                          borderRadius: "8px",
-                          background: "var(--lc-surface-2)",
-                          border: "1px solid var(--lc-line-2)",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center"
-                        }}
+                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
                       >
                         <div>
                           <strong>{con.name}</strong> ({con.role}) — ✉ {con.email || "—"} | 📱 {con.whatsApp || con.phone || "—"}
                         </div>
-                        <button
+                        <button className="t-danger t-strong"
                           type="button"
                           onClick={() => setContacts(contacts.filter((_, i) => i !== idx))}
-                          style={{ color: "var(--lc-danger)", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                          style={{ background: "none", border: "none", cursor: "pointer" }}
                         >
                           ✕
                         </button>
@@ -780,23 +693,13 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
               type="button"
               onClick={onClose}
               className="btn btn-outline"
-              style={{ padding: "9px 18px", borderRadius: "8px" }}
             >
               Cancelar
             </button>
-            <button
+            <button className="t-strong"
               type="submit"
               disabled={saving}
-              style={{
-                padding: "9px 24px",
-                borderRadius: "8px",
-                background: "var(--lc-accent)",
-                color: "#fff",
-                border: "none",
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(13, 148, 136, 0.3)"
-              }}
+              style={{ padding: "9px 24px", borderRadius: "8px", background: "var(--lc-accent)", color: "#fff", border: "none", cursor: "pointer", boxShadow: "0 2px 8px rgba(13, 148, 136, 0.3)" }}
             >
               {saving ? "Guardando..." : `💾 Guardar y Seleccionar ${isSupplier ? "Proveedor" : "Cliente"}`}
             </button>
