@@ -24,18 +24,17 @@ public sealed class MailSyncService
         MailAccount account,
         CancellationToken ct = default)
     {
-        IReadOnlyList<MailTransportService.ReceivedMail> messages;
-        try
-        {
-            messages = await _transport.ReceiveRecentAsync(account, account.LastSyncAtUtc, ct);
-        }
-        catch
-        {
-            throw;
-        }
+        var messages = await _transport.ReceiveRecentAsync(account, account.LastSyncAtUtc, ct);
+
+        var now = DateTime.UtcNow;
+        // En orden cronológico, de todas las carpetas juntas: cada respuesta encuentra ya cargado el mail que cita.
+        var ordered = messages
+            .Select(m => (m.Message, m.Outgoing, At: MailThreading.OccurredAtUtc(m.Message.Date, m.ServerDate, now)))
+            .OrderBy(m => m.At)
+            .ToList();
 
         var added = 0;
-        foreach (var (mime, outgoing) in messages)
+        foreach (var (mime, outgoing, occurredAtUtc) in ordered)
         {
             var messageId = mime.MessageId ?? $"generated-{Guid.NewGuid():N}";
             if (await db.EmailMessages.AnyAsync(x => x.TenantId == account.TenantId && x.InternetMessageId == messageId, ct))
@@ -43,7 +42,10 @@ public sealed class MailSyncService
 
             var cleanPreview = MailSyncHelper.ExtractCleanPreview(mime);
             var htmlBody = MailSyncHelper.ExtractProcessedHtml(mime);
-            var threadKey = MailTransportService.ThreadKey(mime);
+            var contact = outgoing
+                ? mime.To.Mailboxes.FirstOrDefault()?.Address ?? ""
+                : mime.From.Mailboxes.FirstOrDefault()?.Address ?? "";
+            var threadKey = await MailThreading.ResolveThreadKeyAsync(db, account.TenantId, mime, contact, occurredAtUtc, ct);
             var related = await db.EmailMessages.AsNoTracking()
                 .Where(x => x.TenantId == account.TenantId && x.ThreadKey == threadKey && x.RelatedEntityId != null)
                 .OrderByDescending(x => x.OccurredAtUtc)
@@ -61,7 +63,7 @@ public sealed class MailSyncService
                 mime.From.Mailboxes.FirstOrDefault()?.Address ?? (outgoing ? account.EmailAddress : ""),
                 string.Join(",", mime.To.Mailboxes.Select(x => x.Address)),
                 cleanPreview,
-                mime.Date.UtcDateTime,
+                occurredAtUtc,
                 related?.RelatedEntityType,
                 related?.RelatedEntityId,
                 htmlBody,

@@ -77,7 +77,7 @@ public sealed class MailTransportService(MailSecretProtector secrets)
     }
 
     /// <summary>Un mail leído por IMAP y si es nuestro (de la carpeta de enviados) o recibido.</summary>
-    public sealed record ReceivedMail(MimeMessage Message, bool Outgoing);
+    public sealed record ReceivedMail(MimeMessage Message, bool Outgoing, DateTimeOffset? ServerDate);
 
     /// <summary>Nombres habituales de la carpeta de enviados cuando el servidor no la marca (DonWeb usa "INBOX.Sent").</summary>
     internal static readonly string[] SentFolderNames = ["Sent", "INBOX.Sent", "Enviados", "INBOX.Enviados", "Sent Items", "Elementos enviados", "Sent Messages"];
@@ -112,8 +112,12 @@ public sealed class MailTransportService(MailSecretProtector secrets)
     private static async Task ReadAsync(IMailFolder folder, SearchQuery query, bool outgoing, List<ReceivedMail> into, CancellationToken ct)
     {
         await folder.OpenAsync(FolderAccess.ReadOnly, ct);
-        var ids = await folder.SearchAsync(query, ct);
-        foreach (var id in ids.TakeLast(100)) into.Add(new ReceivedMail(await folder.GetMessageAsync(id, ct), outgoing));
+        var ids = (await folder.SearchAsync(query, ct)).TakeLast(100).ToList();
+        if (ids.Count == 0) { await folder.CloseAsync(false, ct); return; }
+        // La fecha en que el servidor recibió cada mail: respaldo cuando el mail no trae fecha o trae una del futuro.
+        var summaries = await folder.FetchAsync(ids, MessageSummaryItems.UniqueId | MessageSummaryItems.InternalDate, ct);
+        foreach (var summary in summaries)
+            into.Add(new ReceivedMail(await folder.GetMessageAsync(summary.UniqueId, ct), outgoing, summary.InternalDate));
         await folder.CloseAsync(false, ct);
     }
 

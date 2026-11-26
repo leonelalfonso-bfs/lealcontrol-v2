@@ -89,7 +89,7 @@ export function ConfigurationHelpPage() {
           <Step title="Marcá “Remitente principal” en la casilla que manda facturas y presupuestos." />
           <Step title="Tocá “Probar”: tiene que decir “Conexión correcta”. “Recibir” trae los correos nuevos a la bandeja de Comunicaciones." />
           <Step title="Carpetas: “Carpetas a leer” (por defecto INBOX; podés sumar otras, como INBOX.CRM) y “Carpeta de enviados”.">
-            La carpeta de enviados se detecta sola; sirve para saber qué mails ya respondiste, aunque los contestes desde Thunderbird.
+            La carpeta de enviados se detecta sola; sirve para saber qué mails ya respondiste, aunque los contestes desde Thunderbird. Cada respuesta se suma a la conversación del mail que cita; si el programa no lo indica, a la del mismo asunto ("RE:", "RV:") y el mismo contacto de los últimos 60 días. La fecha es la del mail; si falta o viene del futuro, la de llegada al servidor.
             Leal Control solo lee: no marca como leído, no mueve ni borra nada.
           </Step>
           <Step title="“Mails sin atender”: elegí a cuántas horas hábiles avisar (por defecto 24).">
