@@ -120,29 +120,19 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
   return (
     <div
       className="modal-backdrop"
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.65)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1100,
-        padding: 16
-      }}
+      role="dialog"
+      aria-modal="true"
     >
       <div
-        className="modal-content"
+        className="modal-card"
         style={{
-          background: "var(--lc-surface)",
-          borderRadius: 14,
-          width: "95vw",
-          maxWidth: "1150px",
+          width: "min(1150px, 95vw)",
+          maxWidth: "none",
           maxHeight: "94vh",
+          padding: 0,
           display: "flex",
           flexDirection: "column",
-          overflow: "hidden",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)"
+          overflow: "hidden"
         }}
       >
         {/* Header */}
@@ -159,13 +149,13 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: "1.4rem" }}>🔴</span>
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800 }}>
+              <h2 style={{ margin: 0 }}>
                 {step === 1 && "Contabilizar Documentos de Gestión"}
                 {step === 2 && "Vista Previa de Asientos a Generar"}
                 {step === 3 && "Generando Asientos Contables..."}
                 {step === 4 && "✓ Contabilización Exitosa"}
               </h2>
-              <span className="muted" style={{ fontSize: "0.78rem" }}>
+              <span className="muted t-small">
                 Módulo Contable — Motor de Asientos Modelos & Partida Doble
               </span>
             </div>
@@ -175,7 +165,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
               type="button"
               onClick={onClose}
               className="btn ghost compact"
-              style={{ fontSize: "1.2rem", lineHeight: 1 }}
+              style={{ lineHeight: 1 }}
             >
               ✕
             </button>
@@ -186,16 +176,8 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
         <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1 }}>
           {error && (
             <div
-              className="alert"
-              style={{
-                marginBottom: 16,
-                background: "var(--lc-danger-bg)",
-                color: "var(--lc-danger)",
-                border: "1px solid var(--lc-danger-bg)",
-                padding: "10px 14px",
-                borderRadius: 6,
-                fontSize: "0.85rem"
-              }}
+              className="alert t-small"
+              style={{ marginBottom: 16 }}
             >
               ⚠️ {error}
             </div>
@@ -206,24 +188,24 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
           {/* ============================================================ */}
           {step === 1 && (
             <div>
-              <p style={{ margin: "0 0 16px", fontSize: "0.88rem", color: "var(--lc-ink-2)" }}>
+              <p className="muted" style={{ margin: "0 0 16px" }}>
                 Elegí el período y los módulos. En la vista previa el sistema trae las facturas de venta autorizadas por ARCA,
                 las facturas de proveedor y los cobros y pagos del período que todavía no se contabilizaron, y muestra los asientos
                 que va a generar. Nada se graba hasta que confirmes.
               </p>
 
               {/* Período */}
-              <div style={{ background: "var(--lc-surface-2)", padding: 16, borderRadius: 8, border: "1px solid var(--lc-line)", marginBottom: 18 }}>
+              <div className="box" style={{ marginBottom: 18 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <strong style={{ fontSize: "0.86rem", color: "var(--lc-accent-strong)" }}>📅 PERÍODO CONTABLE:</strong>
+                  <strong className="t-accent" style={{ fontSize: "0.86rem" }}>📅 PERÍODO CONTABLE:</strong>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button type="button" onClick={() => handleQuickPeriod("today")} className="btn ghost compact" style={{ fontSize: "0.74rem" }}>
+                    <button type="button" onClick={() => handleQuickPeriod("today")} className="btn ghost compact">
                       Hoy
                     </button>
-                    <button type="button" onClick={() => handleQuickPeriod("lastWeek")} className="btn ghost compact" style={{ fontSize: "0.74rem" }}>
+                    <button type="button" onClick={() => handleQuickPeriod("lastWeek")} className="btn ghost compact">
                       Últ. Semana
                     </button>
-                    <button type="button" onClick={() => handleQuickPeriod("thisMonth")} className="btn ghost compact" style={{ fontSize: "0.74rem" }}>
+                    <button type="button" onClick={() => handleQuickPeriod("thisMonth")} className="btn ghost compact">
                       Mes Actual
                     </button>
                   </div>
@@ -231,49 +213,49 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, marginBottom: 4 }}>Desde:</label>
+                    <label>Desde:</label>
                     <input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc" }}
+                      style={{ width: "100%" }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 600, marginBottom: 4 }}>Hasta:</label>
+                    <label>Hasta:</label>
                     <input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc" }}
+                      style={{ width: "100%" }}
                     />
                   </div>
                 </div>
               </div>
 
               {/* Módulos a Incluir */}
-              <div style={{ background: "var(--lc-surface-2)", padding: 16, borderRadius: 8, border: "1px solid var(--lc-line)", marginBottom: 18 }}>
-                <strong style={{ display: "block", fontSize: "0.86rem", color: "var(--lc-accent-strong)", marginBottom: 10 }}>
+              <div className="box" style={{ marginBottom: 18 }}>
+                <strong className="t-accent" style={{ display: "block", fontSize: "0.86rem", marginBottom: 10 }}>
                   📦 MÓDULOS A INCLUIR:
                 </strong>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem" }}>
+                  <label style={{ alignItems: "center", gap: 8, cursor: "pointer" }}>
                     <input type="checkbox" checked={includeSales} onChange={(e) => setIncludeSales(e.target.checked)} />
                     <span>🛒 <strong>Ventas</strong> (facturas y notas)</span>
                   </label>
 
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem" }}>
+                  <label style={{ alignItems: "center", gap: 8, cursor: "pointer" }}>
                     <input type="checkbox" checked={includePurchases} onChange={(e) => setIncludePurchases(e.target.checked)} />
                     <span>📦 <strong>Compras</strong> (facturas de proveedor y notas)</span>
                   </label>
 
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem" }}>
+                  <label style={{ alignItems: "center", gap: 8, cursor: "pointer" }}>
                     <input type="checkbox" checked={includeFinance} onChange={(e) => setIncludeFinance(e.target.checked)} />
                     <span>💳 <strong>Finanzas</strong> (cobros y pagos)</span>
                   </label>
 
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem" }}>
+                  <label style={{ alignItems: "center", gap: 8, cursor: "pointer" }}>
                     <input type="checkbox" checked={includePayroll} onChange={(e) => setIncludePayroll(e.target.checked)} />
                     <span>👥 <strong>Sueldos</strong> (liquidaciones cerradas)</span>
                   </label>
@@ -281,7 +263,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                 </div>
               </div>
 
-              <div className="muted" style={{ fontSize: "0.8rem" }}>
+              <div className="muted t-small">
                 Período: {dayLabel(startDate)} al {dayLabel(endDate)}
               </div>
             </div>
@@ -297,11 +279,11 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                   No hay comprobantes pendientes de contabilizar en el período elegido.
                 </div>
               ) : preview.isBalanced && preview.warnings.length === 0 && preview.unmappedDocuments.length === 0 ? (
-                <div style={{ background: "var(--lc-ok-bg)", border: "1px solid var(--lc-ok-bg)", padding: "10px 14px", borderRadius: 8, marginBottom: 16, fontSize: "0.85rem", color: "var(--lc-ok)" }}>
+                <div className="t-small t-ok" style={{ background: "var(--lc-ok-bg)", border: "1px solid var(--lc-ok-bg)", padding: "10px 14px", borderRadius: 8, marginBottom: 16 }}>
                   <strong>✓ Todos los comprobantes tienen asiento modelo y cada asiento cuadra (Debe = Haber).</strong>
                 </div>
               ) : (
-                <div style={{ background: "var(--lc-warn-bg)", border: "1px solid var(--lc-warn-bg)", padding: "10px 14px", borderRadius: 8, marginBottom: 16, fontSize: "0.85rem", color: "var(--lc-warn)" }}>
+                <div className="t-small t-warn" style={{ background: "var(--lc-warn-bg)", border: "1px solid var(--lc-warn-bg)", padding: "10px 14px", borderRadius: 8, marginBottom: 16 }}>
                   <strong>⚠️ Revisá antes de confirmar:</strong> los comprobantes con problemas quedan pendientes, con el motivo, y el resto se contabiliza.
                   <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
                     {preview.unmappedDocuments.map((d) => <li key={d}>Sin asiento modelo: {d}</li>)}
@@ -312,31 +294,31 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
 
               {/* Métricas Resumen */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 18 }}>
-                <div style={{ background: "var(--lc-surface-2)", padding: 10, borderRadius: 6, border: "1px solid var(--lc-line)", textAlign: "center" }}>
-                  <div style={{ fontSize: "0.75rem", color: "var(--lc-ink-3)" }}>Documentos a Procesar</div>
+                <div className="box t-center">
+                  <div className="t-small muted">Documentos a Procesar</div>
                   <strong style={{ fontSize: "1.25rem" }}>{preview.documentsCount}</strong>
                 </div>
-                <div style={{ background: "var(--lc-surface-2)", padding: 10, borderRadius: 6, border: "1px solid var(--lc-line)", textAlign: "center" }}>
-                  <div style={{ fontSize: "0.75rem", color: "var(--lc-ink-3)" }}>Asientos a Generar</div>
-                  <strong style={{ fontSize: "1.25rem", color: "var(--lc-accent-strong)" }}>{preview.estimatedEntriesCount}</strong>
+                <div className="box t-center">
+                  <div className="t-small muted">Asientos a Generar</div>
+                  <strong className="t-accent" style={{ fontSize: "1.25rem" }}>{preview.estimatedEntriesCount}</strong>
                 </div>
-                <div style={{ background: "var(--lc-surface-2)", padding: 10, borderRadius: 6, border: "1px solid var(--lc-line)", textAlign: "center" }}>
-                  <div style={{ fontSize: "0.75rem", color: "var(--lc-ink-3)" }}>Líneas Contables</div>
+                <div className="box t-center">
+                  <div className="t-small muted">Líneas Contables</div>
                   <strong style={{ fontSize: "1.25rem" }}>{preview.totalLinesCount}</strong>
                 </div>
               </div>
 
               {/* Cuentas Afectadas & Balance */}
               <div style={{ border: "1px solid var(--lc-line)", borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
-                <div style={{ padding: "8px 12px", background: "var(--lc-surface-2)", fontWeight: 700, fontSize: "0.82rem", color: "var(--lc-ink-2)" }}>
+                <div className="t-strong t-small muted" style={{ padding: "8px 12px", background: "var(--lc-surface-2)" }}>
                   📊 CUENTAS AFECTADAS EN EL LOTE:
                 </div>
-                <table style={{ margin: 0, fontSize: "0.8rem" }}>
+                <table style={{ margin: 0 }}>
                   <thead>
-                    <tr style={{ background: "var(--lc-surface-2)" }}>
+                    <tr>
                       <th>Cuenta Contable</th>
-                      <th style={{ textAlign: "right", width: 140 }}>Debe ($)</th>
-                      <th style={{ textAlign: "right", width: 140 }}>Haber ($)</th>
+                      <th className="t-right" style={{ width: 140 }}>Debe ($)</th>
+                      <th className="t-right" style={{ width: 140 }}>Haber ($)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -345,22 +327,22 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                         <td>
                           <strong>{acc.accountCode}</strong> — {acc.accountName}
                         </td>
-                        <td style={{ textAlign: "right", color: acc.totalDebit > 0 ? "#0369a1" : "inherit" }}>
+                        <td className="t-right" style={{ color: acc.totalDebit > 0 ? "#0369a1" : "inherit" }}>
                           {acc.totalDebit > 0 ? `$${acc.totalDebit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "—"}
                         </td>
-                        <td style={{ textAlign: "right", color: acc.totalCredit > 0 ? "#047857" : "inherit" }}>
+                        <td className="t-right" style={{ color: acc.totalCredit > 0 ? "#047857" : "inherit" }}>
                           {acc.totalCredit > 0 ? `$${acc.totalCredit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}` : "—"}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr style={{ background: "var(--lc-ok-bg)", fontWeight: 800, borderTop: "2px solid var(--lc-ok)" }}>
+                    <tr className="t-strong">
                       <td>TOTALES GENERALES DEL LOTE:</td>
-                      <td style={{ textAlign: "right", color: "var(--lc-info)" }}>
+                      <td className="t-right t-info">
                         ${preview.totalDebit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                       </td>
-                      <td style={{ textAlign: "right", color: "var(--lc-ok)" }}>
+                      <td className="t-right t-ok">
                         ${preview.totalCredit.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -370,7 +352,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
 
               {/* Checkbox de Confirmación */}
               <div style={{ background: "var(--lc-warn-bg)", border: "1px solid var(--lc-warn-bg)", padding: "12px 16px", borderRadius: 8 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: "0.85rem", fontWeight: 700, color: "var(--lc-warn)" }}>
+                <label style={{ alignItems: "center", gap: 10, cursor: "pointer" }}>
                   <input
                     type="checkbox"
                     checked={confirmed}
@@ -389,10 +371,10 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
           {/* PASO 3: Ejecución en Progreso */}
           {/* ============================================================ */}
           {step === 3 && (
-            <div style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div className="t-center" style={{ padding: "40px 20px" }}>
               <div style={{ fontSize: "2.5rem", marginBottom: 14 }}>⚙️</div>
-              <h3 style={{ margin: "0 0 8px", fontSize: "1.2rem" }}>Generando Asientos en el Libro Diario...</h3>
-              <p className="muted" style={{ margin: "0 0 20px", fontSize: "0.85rem" }}>
+              <h3 style={{ margin: "0 0 8px" }}>Generando Asientos en el Libro Diario...</h3>
+              <p className="muted t-small" style={{ margin: "0 0 20px" }}>
                 Aplicando plantillas de Asientos Modelos y asignando numeración correlativa.
               </p>
               <div style={{ width: "100%", height: 8, background: "var(--lc-line)", borderRadius: 4, overflow: "hidden" }}>
@@ -413,21 +395,21 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
           {/* ============================================================ */}
           {step === 4 && result && (
             <div>
-              <div style={{ background: "var(--lc-ok-bg)", border: "2px solid var(--lc-ok)", padding: 18, borderRadius: 8, textAlign: "center", marginBottom: 20 }}>
+              <div className="t-center" style={{ background: "var(--lc-ok-bg)", border: "2px solid var(--lc-ok)", padding: 18, borderRadius: 8, marginBottom: 20 }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: 6 }}>🎉</div>
-                <h3 style={{ margin: "0 0 4px", fontSize: "1.3rem", color: "var(--lc-ok)", fontWeight: 800 }}>
+                <h3 style={{ margin: "0 0 4px" }}>
                   {result.errorsCount === 0 ? "Contabilización terminada" : "Contabilización terminada con avisos"}
                 </h3>
-                <div style={{ fontSize: "0.85rem", color: "var(--lc-ok)" }}>
+                <div className="t-small t-ok">
                   Lote Nº: <strong>{result.batchNumber}</strong>
                 </div>
               </div>
 
-              <div style={{ background: "var(--lc-surface-2)", padding: 16, borderRadius: 8, border: "1px solid var(--lc-line)", marginBottom: 18 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.86rem", color: "var(--lc-accent-strong)", marginBottom: 8 }}>
+              <div className="box" style={{ marginBottom: 18 }}>
+                <div className="t-strong t-accent" style={{ fontSize: "0.86rem", marginBottom: 8 }}>
                   RESUMEN DE AUDITORÍA:
                 </div>
-                <ul style={{ margin: 0, paddingLeft: 20, fontSize: "0.85rem", lineHeight: 1.8 }}>
+                <ul className="t-small" style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8 }}>
                   <li>✓ <strong>{result.entriesGenerated}</strong> asientos generados exitosamente en el Libro Diario.</li>
                   <li>✓ <strong>{result.documentsProcessed}</strong> comprobantes marcados como contabilizados.</li>
                   <li>✓ Asientos generados: <strong>{result.entryNumbers.slice(0, 5).join(", ")}{result.entryNumbers.length > 5 ? "..." : ""}</strong></li>
@@ -435,10 +417,10 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                 </ul>
                 {result.exceptions.length > 0 && (
                   <>
-                    <div style={{ fontWeight: 700, fontSize: "0.86rem", color: "var(--lc-warn)", margin: "12px 0 4px" }}>
+                    <div className="t-strong t-warn" style={{ fontSize: "0.86rem", margin: "12px 0 4px" }}>
                       QUEDARON PENDIENTES ({result.errorsCount}):
                     </div>
-                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: "0.82rem", color: "var(--lc-warn)" }}>
+                    <ul className="t-small t-warn" style={{ margin: 0, paddingLeft: 20 }}>
                       {result.exceptions.map((x) => <li key={x}>{x}</li>)}
                     </ul>
                   </>
@@ -469,7 +451,6 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                 onClick={handleFetchPreview}
                 disabled={loadingPreview}
                 className="btn"
-                style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 700 }}
               >
                 {loadingPreview ? "Analizando..." : "👁️ Vista Previa de Asientos →"}
               </button>
@@ -485,8 +466,7 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                 type="button"
                 onClick={handleExecuteBatch}
                 disabled={!confirmed || preview?.estimatedEntriesCount === 0}
-                className="btn"
-                style={{ background: "var(--lc-danger)", color: "#fff", fontWeight: 800 }}
+                className="btn danger"
               >
                 🔴 Contabilizar ahora
               </button>
@@ -509,7 +489,6 @@ export function BatchPostingModal({ isOpen, onClose }: BatchPostingModalProps) {
                 type="button"
                 onClick={onClose}
                 className="btn"
-                style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 700 }}
               >
                 Finalizar
               </button>

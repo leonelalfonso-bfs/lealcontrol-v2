@@ -373,7 +373,7 @@ export function RemitoFormPage() {
           <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div>
               <h3 style={{ margin: 0 }}>2. Ítems a Remitir</h3>
-              <p className="muted" style={{ margin: "4px 0 0", fontSize: "0.85rem" }}>
+              <p className="muted t-small" style={{ margin: "4px 0 0" }}>
                 Ajustá las cantidades a entregar en esta ocasión. Si algún ítem no se despacha hoy, poné la cantidad en 0.
               </p>
             </div>
@@ -388,10 +388,10 @@ export function RemitoFormPage() {
                 <tr>
                   <th style={{ width: "25%" }}>Catálogo / Código</th>
                   <th style={{ width: "35%" }}>Descripción / Detalle Mercadería & Números de Serie</th>
-                  {orderId && <th style={{ width: "10%", textAlign: "center" }}>Pedida / Ya remitida / Pendiente</th>}
-                  <th style={{ width: "14%", textAlign: "center" }}>A Remitir</th>
+                  {orderId && <th className="t-center" style={{ width: "10%" }}>Pedida / Ya remitida / Pendiente</th>}
+                  <th className="t-center" style={{ width: "14%" }}>A Remitir</th>
                   <th style={{ width: "10%" }}>Unidad</th>
-                  <th style={{ width: "6%", textAlign: "right" }}></th>
+                  <th className="t-right" style={{ width: "6%" }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -416,7 +416,6 @@ export function RemitoFormPage() {
                           }}
                           placeholder="Código..."
                           readOnly={Boolean(orderId)}
-                          style={{ fontSize: "0.82rem" }}
                         />
                       </div>
                     </td>
@@ -433,7 +432,7 @@ export function RemitoFormPage() {
                           readOnly={Boolean(orderId)}
                           placeholder="Descripción detallada de la mercadería..."
                         />
-                        <input
+                        <input className="t-info"
                           value={item.serialNumber ?? ""}
                           onChange={(e) => {
                             const next = [...items];
@@ -441,17 +440,16 @@ export function RemitoFormPage() {
                             setItems(next);
                           }}
                           placeholder="Números de serie / lote (opcional, ej: S/N 847291)..."
-                          style={{ fontSize: "0.8rem", color: "var(--lc-info)" }}
                         />
                       </div>
                     </td>
                     {orderId && (
-                      <td style={{ textAlign: "center", fontWeight: "bold", color: "var(--lc-ink-3)" }}>
+                      <td className="t-center t-strong muted">
                         {item.orderedQty ?? item.quantity} / {item.deliveredQty ?? 0} / {item.pendingQty ?? item.quantity}
                       </td>
                     )}
                     <td>
-                      <input
+                      <input className="t-center t-strong"
                         type="number"
                         step="0.0001"
                         min="0"
@@ -463,26 +461,24 @@ export function RemitoFormPage() {
                           next[idx].quantity = Math.max(0, orderId ? Math.min(entered, item.pendingQty ?? 0) : entered);
                           setItems(next);
                         }}
-                        style={{ textAlign: "center", fontWeight: "bold", fontSize: "1rem" }}
+                       
                         required
                       />
                     </td>
                     <td>
-                      <input
+                      <input className="t-center"
                         value={item.unitMeasure}
                         onChange={(e) => {
                           const next = [...items];
                           next[idx].unitMeasure = e.target.value;
                           setItems(next);
                         }}
-                        style={{ textAlign: "center" }}
                       />
                     </td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="t-right">
                       {!orderId && <button
                         type="button"
-                        className="btn danger"
-                        style={{ padding: "4px 8px" }}
+                        className="btn danger compact"
                         onClick={() => handleRemoveItem(idx)}
                       >
                         ✕
@@ -520,7 +516,6 @@ export function RemitoFormPage() {
           <button
             className="btn"
             disabled={saving || orderFullyRemitted}
-            style={{ background: "linear-gradient(180deg, var(--lc-info), var(--lc-info))", padding: "10px 24px", fontSize: "1rem" }}
           >
             {saving ? "Emitiendo Remito…" : "🚚 Generar y Guardar Remito"}
           </button>

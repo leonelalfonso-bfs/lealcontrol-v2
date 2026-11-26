@@ -76,31 +76,23 @@ export function RemitosPage() {
         </div>
         <div className="card">
           <span className="muted">Entregados / Despachados</span>
-          <strong style={{ color: "var(--lc-ok)" }}>{totalDelivered}</strong>
+          <strong className="t-ok">{totalDelivered}</strong>
         </div>
         <div
           className="card"
-          style={{
-            cursor: "pointer",
-            border: invoiceFilter === "Pending" ? "2px solid #f59e0b" : "1px solid var(--surface-border)",
-            background: invoiceFilter === "Pending" ? "rgba(245, 158, 11, 0.05)" : "inherit"
-          }}
+          style={{ cursor: "pointer" }}
           onClick={() => setInvoiceFilter(invoiceFilter === "Pending" ? "All" : "Pending")}
         >
           <span className="muted">⏳ Pendientes de Facturar</span>
-          <strong style={{ color: "var(--lc-warn)" }}>{totalPendingInvoice}</strong>
+          <strong className="t-warn">{totalPendingInvoice}</strong>
         </div>
         <div
           className="card"
-          style={{
-            cursor: "pointer",
-            border: invoiceFilter === "Invoiced" ? "2px solid #0d9488" : "1px solid var(--surface-border)",
-            background: invoiceFilter === "Invoiced" ? "rgba(13, 148, 136, 0.05)" : "inherit"
-          }}
+          style={{ cursor: "pointer" }}
           onClick={() => setInvoiceFilter(invoiceFilter === "Invoiced" ? "All" : "Invoiced")}
         >
           <span className="muted">✓ Facturados</span>
-          <strong style={{ color: "var(--lc-accent-strong)" }}>{totalInvoiced}</strong>
+          <strong className="t-accent">{totalInvoiced}</strong>
         </div>
       </div>
 
@@ -150,7 +142,7 @@ export function RemitosPage() {
         {loading ? (
           <p className="pad muted">Cargando remitos…</p>
         ) : filteredItems.length === 0 ? (
-          <p className="pad muted" style={{ textAlign: "center", padding: 32 }}>
+          <p className="pad muted t-center" style={{ padding: 32 }}>
             No se encontraron remitos con los filtros aplicados. Hacé clic en <strong>"+ Nuevo Remito"</strong> para registrar una entrega.
           </p>
         ) : (
@@ -166,7 +158,7 @@ export function RemitosPage() {
                   <th>Bultos / Cant.</th>
                   <th>Estado Entrega</th>
                   <th>Estado Facturación</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
+                  <th className="t-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,7 +171,7 @@ export function RemitosPage() {
                       <td>
                         <strong>🚚 {r.remitoNumber}</strong>
                         {r.orderId && (
-                          <div className="muted" style={{ fontSize: "0.72rem" }}>
+                          <div className="muted t-small">
                             Desde Pedido
                           </div>
                         )}
@@ -187,13 +179,13 @@ export function RemitosPage() {
                       <td>{new Date(r.issueDate).toLocaleDateString()}</td>
                       <td>
                         <strong>{r.customerName}</strong>
-                        <div className="muted" style={{ fontSize: "0.8rem" }}>{r.customerDocument}</div>
+                        <div className="muted t-small">{r.customerDocument}</div>
                       </td>
                       <td>{r.deliveryAddress || "—"}</td>
                       <td>{r.carrierName || "Propio / En Planta"}</td>
                       <td>
                         <strong>{Math.round(r.items.reduce((s, i) => s + i.quantity, 0))} u.</strong>
-                        <div className="muted" style={{ fontSize: "0.75rem" }}>({r.items.length} artículos)</div>
+                        <div className="muted t-small">({r.items.length} artículos)</div>
                       </td>
                       <td>
                         {r.status === "Delivered" && <span className="badge ok">🟢 Entregado</span>}
@@ -203,33 +195,23 @@ export function RemitosPage() {
                       <td>
                         {isInvoiced ? (
                           <span
-                            className="badge ok"
-                            style={{
-                              background: "rgba(13, 148, 136, 0.12)",
-                              color: "var(--lc-accent-strong)",
-                              fontWeight: 700,
-                              fontSize: "0.78rem"
-                            }}
+                            className="badge ok t-accent t-strong t-small"
+                            style={{ background: "rgba(13, 148, 136, 0.12)" }}
                           >
                             ✓ Factura {r.invoiceNumber || "Emitida"}
                           </span>
                         ) : isDelivered ? (
                           <span
-                            className="badge warn"
-                            style={{
-                              background: "rgba(245, 158, 11, 0.15)",
-                              color: "var(--lc-warn)",
-                              fontWeight: 700,
-                              fontSize: "0.78rem"
-                            }}
+                            className="badge warn t-warn t-strong t-small"
+                            style={{ background: "rgba(245, 158, 11, 0.15)" }}
                           >
                             ⏳ Facturación Pendiente
                           </span>
                         ) : (
-                          <span className="muted" style={{ fontSize: "0.78rem" }}>—</span>
+                          <span className="muted t-small">—</span>
                         )}
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                           {isDelivered && (
                             <button
@@ -245,7 +227,6 @@ export function RemitosPage() {
                             <button
                               type="button"
                               className="btn btn-primary compact"
-                              style={{ padding: "4px 10px", fontSize: "0.8rem", fontWeight: 700 }}
                               onClick={() => navigate(`/facturas/nueva?remito_id=${r.id}`)}
                               title="Emitir Factura de Venta vinculada a este remito"
                             >
@@ -255,7 +236,6 @@ export function RemitosPage() {
                           <button
                             type="button"
                             className="btn ghost compact"
-                            style={{ padding: "4px 10px", fontSize: "0.8rem" }}
                             onClick={() => navigate(`/remitos/${r.id}/imprimir`)}
                           >
                             🖨️ Imprimir

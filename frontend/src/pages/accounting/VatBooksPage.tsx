@@ -145,15 +145,15 @@ export function VatBooksPage() {
         ) : !book || book.rows.length === 0 ? (
           <p className="muted">No hay comprobantes en el mes.</p>
         ) : (
-          <table style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}>
+          <table style={{ whiteSpace: "nowrap" }}>
             <thead>
               <tr>
                 <th>Fecha</th>
                 <th>Comprobante</th>
                 <th>{kind === "sales" ? "Cliente" : "Proveedor"}</th>
                 {kind === "purchases" && <th>Producto/Gasto</th>}
-                {columns.map((c) => <th key={c.key} style={{ textAlign: "right" }}>{c.header}</th>)}
-                <th style={{ textAlign: "right" }}>Total</th>
+                {columns.map((c) => <th className="t-right" key={c.key}>{c.header}</th>)}
+                <th className="t-right">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -176,23 +176,23 @@ export function VatBooksPage() {
                     </div>
                   </td>
                   {kind === "purchases" && <td style={{ whiteSpace: "normal", maxWidth: 220 }}>{r.categories || <span className="muted">—</span>}</td>}
-                  {columns.map((c) => <td key={c.key} style={{ textAlign: "right" }}>{money(r[c.key] as number)}</td>)}
-                  <td style={{ textAlign: "right", fontWeight: 700 }}>{money(r.total)}</td>
+                  {columns.map((c) => <td className="t-right" key={c.key}>{money(r[c.key] as number)}</td>)}
+                  <td className="t-right t-strong">{money(r.total)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr style={{ fontWeight: 800, borderTop: "2px solid var(--surface-border)" }}>
+              <tr className="t-strong">
                 <td colSpan={kind === "purchases" ? 4 : 3}>Totales del mes</td>
-                {columns.map((c) => <td key={c.key} style={{ textAlign: "right" }}>{money(book.totals[c.key] as number)}</td>)}
-                <td style={{ textAlign: "right" }}>{money(book.totals.total)}</td>
+                {columns.map((c) => <td className="t-right" key={c.key}>{money(book.totals[c.key] as number)}</td>)}
+                <td className="t-right">{money(book.totals.total)}</td>
               </tr>
             </tfoot>
           </table>
         )}
       </div>
 
-      <p className="muted" style={{ fontSize: "0.82rem" }}>
+      <p className="muted t-small">
         El archivo para ARCA trae los cuatro registros del Libro IVA Digital (comprobantes y alícuotas de ventas y compras).
         Antes de presentar, importalo en el Libro IVA Digital y revisá que ARCA no marque errores. Paso a paso en la{" "}
         <Link to="/contabilidad/ayuda">Ayuda</Link>.

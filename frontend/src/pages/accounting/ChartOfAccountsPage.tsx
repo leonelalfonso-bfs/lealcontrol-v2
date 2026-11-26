@@ -60,7 +60,6 @@ export function ChartOfAccountsPage() {
           <Link
             to="/contabilidad/plan-cuentas/nuevo"
             className="btn"
-            style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff", fontWeight: 700 }}
           >
             ➕ Nueva Cuenta Contable
           </Link>
@@ -79,7 +78,7 @@ export function ChartOfAccountsPage() {
             placeholder="🔍 Buscar por código o denominación de cuenta..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)" }}
+            style={{ width: "100%" }}
           />
         </div>
 
@@ -107,26 +106,26 @@ export function ChartOfAccountsPage() {
       {/* Accounts Tree Table */}
       <div className="card pad">
         {loading ? (
-          <p style={{ textAlign: "center", padding: 30 }} className="muted">
+          <p style={{ padding: 30 }} className="muted t-center">
             Cargando Plan de Cuentas...
           </p>
         ) : filteredAccounts.length === 0 ? (
-          <p style={{ textAlign: "center", padding: 30 }} className="muted">
+          <p style={{ padding: 30 }} className="muted t-center">
             No se encontraron cuentas contables con los filtros seleccionados.
           </p>
         ) : (
           <div className="table-wrap">
-            <table className="table" style={{ width: "100%", fontSize: "0.88rem", borderCollapse: "collapse" }}>
+            <table className="table">
               <thead>
-                <tr style={{ background: "var(--surface-sunken)", borderBottom: "2px solid var(--lc-line-2)" }}>
+                <tr>
                   <th style={{ width: 140 }}>Código</th>
                   <th>Denominación de la Cuenta</th>
                   <th style={{ width: 110 }}>Capítulo</th>
-                  <th style={{ width: 90, textAlign: "center" }}>Nivel</th>
-                  <th style={{ width: 110, textAlign: "center" }}>Imputable</th>
-                  <th style={{ width: 80, textAlign: "center" }}>Moneda</th>
-                  <th style={{ width: 80, textAlign: "center" }}>Estado</th>
-                  <th style={{ width: 140, textAlign: "right" }}>Acciones</th>
+                  <th className="t-center" style={{ width: 90 }}>Nivel</th>
+                  <th className="t-center" style={{ width: 110 }}>Imputable</th>
+                  <th className="t-center" style={{ width: 80 }}>Moneda</th>
+                  <th className="t-center" style={{ width: 80 }}>Estado</th>
+                  <th className="t-right" style={{ width: 140 }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -135,8 +134,8 @@ export function ChartOfAccountsPage() {
                   const isGroup = !acc.isDirectPosting;
 
                   return (
-                    <tr key={acc.id} style={{ background: isGroup ? "rgba(241, 245, 249, 0.5)" : "transparent", borderBottom: "1px solid var(--lc-line)" }}>
-                      <td style={{ fontFamily: "monospace", fontWeight: isGroup ? 800 : 500, color: isGroup ? "var(--lc-ink)" : "var(--lc-accent-strong)" }}>
+                    <tr key={acc.id} style={{ background: isGroup ? "rgba(241, 245, 249, 0.5)" : "transparent" }}>
+                      <td className="t-mono" style={{ fontWeight: isGroup ? 800 : 500, color: isGroup ? "var(--lc-ink)" : "var(--lc-accent-strong)" }}>
                         {acc.code}
                       </td>
                       <td>
@@ -146,7 +145,7 @@ export function ChartOfAccountsPage() {
                             {acc.name}
                           </span>
                           {acc.adjustsForInflation && (
-                            <span style={{ fontSize: "0.68rem", padding: "2px 6px", background: "var(--lc-warn-bg)", color: "var(--lc-warn)", borderRadius: 4, fontWeight: 700 }}>
+                            <span className="t-warn t-strong" style={{ fontSize: "0.68rem", padding: "2px 6px", background: "var(--lc-warn-bg)", borderRadius: 4 }}>
                               AxI (RT6)
                             </span>
                           )}
@@ -157,30 +156,29 @@ export function ChartOfAccountsPage() {
                           {acc.accountType === "Asset" ? "Activo" : acc.accountType === "Liability" ? "Pasivo" : acc.accountType === "Equity" ? "P. Neto" : acc.accountType === "Income" ? "Ingreso" : "Egreso"}
                         </span>
                       </td>
-                      <td style={{ textAlign: "center" }}>Nivel {acc.level}</td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="t-center">Nivel {acc.level}</td>
+                      <td className="t-center">
                         {acc.isDirectPosting ? (
-                          <span className="badge ok" style={{ fontSize: "0.72rem" }}>Imputable</span>
+                          <span className="badge ok t-small">Imputable</span>
                         ) : (
-                          <span className="badge ghost" style={{ fontSize: "0.72rem" }}>Agrupadora</span>
+                          <span className="badge ghost t-small">Agrupadora</span>
                         )}
                       </td>
-                      <td style={{ textAlign: "center", fontWeight: 700 }}>{acc.currency || "ARS"}</td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="t-center t-strong">{acc.currency || "ARS"}</td>
+                      <td className="t-center">
                         {acc.isActive !== false ? (
                           <span className="badge ok" style={{ fontSize: "0.68rem" }}>Activa</span>
                         ) : (
                           <span className="badge error" style={{ fontSize: "0.68rem" }}>Inactiva</span>
                         )}
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                           {isGroup && (
                             <Link
                               to={`/contabilidad/plan-cuentas/nuevo?parent=${acc.code}`}
                               className="btn ghost compact"
                               title="Agregar subcuenta dependiente"
-                              style={{ padding: "3px 8px", fontSize: "0.75rem" }}
                             >
                               + Sub
                             </Link>
@@ -189,16 +187,14 @@ export function ChartOfAccountsPage() {
                             to={`/contabilidad/plan-cuentas/${acc.id}`}
                             className="btn ghost compact"
                             title="Editar cuenta"
-                            style={{ padding: "3px 8px", fontSize: "0.75rem" }}
                           >
                             ✏️ Editar
                           </Link>
                           <button
                             type="button"
-                            className="btn ghost compact"
+                            className="btn ghost compact btn-outline danger"
                             title="Eliminar cuenta"
                             onClick={() => handleDelete(acc)}
-                            style={{ padding: "3px 8px", fontSize: "0.75rem", color: "var(--lc-danger)" }}
                           >
                             🗑️
                           </button>

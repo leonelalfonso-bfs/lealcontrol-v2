@@ -106,7 +106,7 @@ export function AccountFormPage() {
 
   if (loading) {
     return (
-      <div className="page-wide" style={{ padding: 40, textAlign: "center" }}>
+      <div className="page-wide t-center" style={{ padding: 40 }}>
         <div className="muted">Cargando árbol de cuentas contables...</div>
       </div>
     );
@@ -116,26 +116,26 @@ export function AccountFormPage() {
     <div className="page-wide" style={{ paddingBottom: 60 }}>
       {/* Breadcrumb & Header */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
+        <div className="t-small muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <Link to="/contabilidad" style={{ color: "inherit", textDecoration: "none" }}>Contabilidad</Link>
           <span>›</span>
           <Link to="/contabilidad/plan-cuentas" style={{ color: "inherit", textDecoration: "none" }}>Plan de Cuentas</Link>
           <span>›</span>
-          <span style={{ color: "var(--lc-accent-strong)", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Nueva Cuenta"}</span>
+          <span className="t-accent t-strong">{isEditing ? `Editar [${code}]` : "Nueva Cuenta"}</span>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "var(--lc-ink)" }}>
+            <h1 style={{ margin: "0 0 4px" }}>
               {isEditing ? `🏛️ Cuenta: ${code} - ${name}` : "➕ Nueva Cuenta Contable"}
             </h1>
-            <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+            <p className="muted" style={{ margin: 0 }}>
               Configuración de jerarquía, tipo de saldo, moneda e imputación contable.
             </p>
           </div>
 
           <div style={{ display: "flex", gap: 10 }}>
-            <Link to="/contabilidad/plan-cuentas" className="btn ghost" style={{ padding: "8px 16px", fontWeight: 600 }}>
+            <Link to="/contabilidad/plan-cuentas" className="btn ghost">
               ← Cancelar y Volver
             </Link>
             <button
@@ -143,7 +143,7 @@ export function AccountFormPage() {
               onClick={handleSubmit}
               disabled={saving}
               className="btn"
-              style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "8px 24px", fontSize: "0.92rem", minWidth: 160 }}
+              style={{ minWidth: 160 }}
             >
               {saving ? "Guardando..." : "💾 Guardar Cuenta"}
             </button>
@@ -152,48 +152,48 @@ export function AccountFormPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ marginBottom: 20, background: "var(--lc-danger-bg)", color: "var(--lc-danger)", border: "1px solid var(--lc-danger-bg)", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
+        <div className="alert" style={{ marginBottom: 20 }}>
           ⚠️ {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
         <div className="card pad" style={{ marginBottom: 24, borderLeft: "5px solid var(--lc-accent)" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-accent-strong)", marginBottom: 14 }}>
+          <div className="t-strong t-accent" style={{ marginBottom: 14 }}>
             1. CLASIFICACIÓN JERÁRQUICA & DENOMINACIÓN
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginBottom: 16 }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Código Contable Jerárquico *</label>
-              <input
+              <label>Código Contable Jerárquico *</label>
+              <input className="t-strong"
                 type="text"
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="ej. 1.1.02.001"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.95rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div style={{ gridColumn: "span 2" }}>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Denominación / Nombre de la Cuenta *</label>
+              <label>Denominación / Nombre de la Cuenta *</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="ej. Banco Galicia Cta Cte $ ARS"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Capítulo / Tipo de Cuenta *</label>
+              <label>Capítulo / Tipo de Cuenta *</label>
               <select
                 value={accountType}
                 onChange={(e) => setAccountType(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="Asset">1. ACTIVO (Bienes y Derechos)</option>
                 <option value="Liability">2. PASIVO (Obligaciones y Deudas)</option>
@@ -204,7 +204,7 @@ export function AccountFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Cuenta Padre (Rubro Superior)</label>
+              <label>Cuenta Padre (Rubro Superior)</label>
               <select
                 value={parentCode}
                 onChange={(e) => {
@@ -215,7 +215,7 @@ export function AccountFormPage() {
                     setLevel(p.level + 1);
                   }
                 }}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="">-- Cuenta Raíz / Capítulo Principal --</option>
                 {accounts
@@ -229,7 +229,7 @@ export function AccountFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Nivel de Jerarquía</label>
+              <label>Nivel de Jerarquía</label>
               <input
                 type="number"
                 step="1"
@@ -237,7 +237,7 @@ export function AccountFormPage() {
                 max="8"
                 value={level}
                 onChange={(e) => setLevel(parseInt(e.target.value) || 1)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
           </div>
@@ -245,17 +245,17 @@ export function AccountFormPage() {
 
         {/* SECCIÓN 2: ATRIBUTOS OPERATIVOS */}
         <div className="card pad" style={{ marginBottom: 30, borderLeft: "5px solid var(--lc-info)" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-info)", marginBottom: 14 }}>
+          <div className="t-strong t-info" style={{ marginBottom: 14 }}>
             2. ATRIBUTOS OPERATIVOS & FISCALES
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 18 }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Moneda de la Cuenta</label>
+              <label>Moneda de la Cuenta</label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="ARS">ARS - Pesos Argentinos ($)</option>
                 <option value="USD">USD - Dólares Estadounidenses (U$S)</option>
@@ -264,7 +264,7 @@ export function AccountFormPage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10, justifyContent: "center" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
+              <label style={{ alignItems: "center", gap: 8, cursor: "pointer" }}>
                 <input
                   type="checkbox"
                   checked={isDirectPosting}
@@ -274,7 +274,7 @@ export function AccountFormPage() {
                 <span>Cuenta Imputable (Recibe Asientos Directos)</span>
               </label>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
+              <label style={{ alignItems: "center", gap: 8, cursor: "pointer" }}>
                 <input
                   type="checkbox"
                   checked={adjustsForInflation}
@@ -284,7 +284,7 @@ export function AccountFormPage() {
                 <span>Ajusta por Inflación (Partida No Monetaria - RT 6)</span>
               </label>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
+              <label style={{ alignItems: "center", gap: 8, cursor: "pointer" }}>
                 <input
                   type="checkbox"
                   checked={isActive}
@@ -298,25 +298,17 @@ export function AccountFormPage() {
         </div>
 
         {/* BOTTOM ACTION BAR */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            background: "var(--lc-surface-2)",
-            padding: "16px 24px",
-            borderRadius: 10,
-            border: "1px solid var(--lc-line)"
-          }}
+        <div className="box"
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
         >
-          <Link to="/contabilidad/plan-cuentas" className="btn ghost" style={{ padding: "9px 20px" }}>
+          <Link to="/contabilidad/plan-cuentas" className="btn ghost">
             ← Cancelar y Volver
           </Link>
           <button
             type="submit"
             disabled={saving}
             className="btn"
-            style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "10px 28px", fontSize: "0.95rem", minWidth: 200 }}
+            style={{ minWidth: 200 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Cuenta Contable"}
           </button>

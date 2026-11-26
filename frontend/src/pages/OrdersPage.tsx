@@ -116,11 +116,11 @@ export function OrdersPage() {
         </div>
         <div className="card">
           <span className="muted">En Preparación / Pendientes</span>
-          <strong style={{ color: "var(--lc-warn)" }}>{kpis.pending}</strong>
+          <strong className="t-warn">{kpis.pending}</strong>
         </div>
         <div className="card">
           <span className="muted">Entregados / Cumplidos</span>
-          <strong style={{ color: "var(--lc-ok)" }}>{kpis.delivered}</strong>
+          <strong className="t-ok">{kpis.delivered}</strong>
         </div>
         <div className="card">
           <span className="muted">Monto Total Acumulado</span>
@@ -161,7 +161,7 @@ export function OrdersPage() {
                   <th>Estado</th>
                   <th>Moneda / Total</th>
                   <th>Fecha</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
+                  <th className="t-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -182,8 +182,8 @@ export function OrdersPage() {
                       </strong>
                     </td>
                     <td>{new Date(o.createdAtUtc).toLocaleDateString("es-AR")}</td>
-                    <td style={{ textAlign: "right" }}>
-                      <Link className="btn ghost" to={`/pedidos/${o.id}`} style={{ padding: "4px 10px", fontSize: "0.82rem" }}>
+                    <td className="t-right">
+                      <Link className="btn ghost compact" to={`/pedidos/${o.id}`}>
                         Ver Ficha ➔
                       </Link>
                     </td>
@@ -191,7 +191,7 @@ export function OrdersPage() {
                 ))}
                 {orders.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 32 }}>
+                    <td colSpan={7} className="muted t-center">
                       No se encontraron pedidos de venta cargados.
                     </td>
                   </tr>

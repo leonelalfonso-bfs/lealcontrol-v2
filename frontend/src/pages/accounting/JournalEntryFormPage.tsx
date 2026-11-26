@@ -162,7 +162,7 @@ export function JournalEntryFormPage() {
 
   if (loading) {
     return (
-      <div className="page-wide" style={{ padding: 40, textAlign: "center" }}>
+      <div className="page-wide t-center" style={{ padding: 40 }}>
         <div className="muted">Cargando cuentas contables y centros de costo...</div>
       </div>
     );
@@ -172,26 +172,26 @@ export function JournalEntryFormPage() {
     <div className="page-wide" style={{ paddingBottom: 60 }}>
       {/* Breadcrumb & Header */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
+        <div className="t-small muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <Link to="/contabilidad" style={{ color: "inherit", textDecoration: "none" }}>Contabilidad</Link>
           <span>›</span>
           <Link to="/contabilidad/asientos" style={{ color: "inherit", textDecoration: "none" }}>Libro Diario</Link>
           <span>›</span>
-          <span style={{ color: "var(--lc-accent-strong)", fontWeight: 700 }}>Nuevo Asiento Manual</span>
+          <span className="t-accent t-strong">Nuevo Asiento Manual</span>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "var(--lc-ink)" }}>
+            <h1 style={{ margin: "0 0 4px" }}>
               📝 Registrar Asiento Manual en Libro Diario
             </h1>
-            <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+            <p className="muted" style={{ margin: 0 }}>
               Carga manual con partida doble, validación de balance en tiempo real y asignación por centros de costo.
             </p>
           </div>
 
           <div style={{ display: "flex", gap: 10 }}>
-            <Link to="/contabilidad/asientos" className="btn ghost" style={{ padding: "8px 16px", fontWeight: 600 }}>
+            <Link to="/contabilidad/asientos" className="btn ghost">
               ← Cancelar y Volver
             </Link>
             <button
@@ -199,14 +199,7 @@ export function JournalEntryFormPage() {
               onClick={handleSubmit}
               disabled={saving || !isBalanced}
               className="btn"
-              style={{
-                background: isBalanced ? "var(--lc-accent)" : "var(--lc-ink-3)",
-                color: "#fff",
-                fontWeight: 800,
-                padding: "8px 24px",
-                fontSize: "0.92rem",
-                minWidth: 160
-              }}
+              style={{ minWidth: 160 }}
             >
               {saving ? "Registrando..." : "💾 Registrar Asiento"}
             </button>
@@ -215,7 +208,7 @@ export function JournalEntryFormPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ marginBottom: 20, background: "var(--lc-danger-bg)", color: "var(--lc-danger)", border: "1px solid var(--lc-danger-bg)", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
+        <div className="alert" style={{ marginBottom: 20 }}>
           ⚠️ {error}
         </div>
       )}
@@ -223,28 +216,28 @@ export function JournalEntryFormPage() {
       <form onSubmit={handleSubmit}>
         {/* SECCIÓN 1: CABECERA DEL ASIENTO */}
         <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid var(--lc-accent)" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-accent-strong)", marginBottom: 14 }}>
+          <div className="t-strong t-accent" style={{ marginBottom: 14 }}>
             1. CABECERA & IDENTIFICACIÓN DEL ASIENTO
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Fecha Contable *</label>
-              <input
+              <label>Fecha Contable *</label>
+              <input className="t-strong"
                 type="date"
                 required
                 value={entryDate}
                 onChange={(e) => setEntryDate(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 700, fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Tipo de Asiento</label>
+              <label>Tipo de Asiento</label>
               <select
                 value={entryType}
                 onChange={(e) => setEntryType(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               >
                 <option value="Standard">Operativo / Estándar</option>
                 <option value="Opening">Asiento de Apertura</option>
@@ -253,25 +246,25 @@ export function JournalEntryFormPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Serie / Diario</label>
+              <label>Serie / Diario</label>
               <input
                 type="text"
                 value={series}
                 onChange={(e) => setSeries(e.target.value)}
                 placeholder="General, Ajustes, Bancos..."
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
 
             <div style={{ gridColumn: "span 3" }}>
-              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Concepto General / Glosa del Asiento *</label>
+              <label>Concepto General / Glosa del Asiento *</label>
               <input
                 type="text"
                 required
                 value={concept}
                 onChange={(e) => setConcept(e.target.value)}
                 placeholder="ej. Devengamiento de alquileres e impuestos mensuales período corriente"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
+                style={{ width: "100%" }}
               />
             </div>
           </div>
@@ -281,10 +274,10 @@ export function JournalEntryFormPage() {
         <div className="card pad" style={{ marginBottom: 24, borderLeft: "5px solid var(--lc-info)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
             <div>
-              <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-info)" }}>
+              <div className="t-strong t-info">
                 2. RENGLONES DEL ASIENTO (DEBE / HABER)
               </div>
-              <span className="muted" style={{ fontSize: "0.85rem" }}>
+              <span className="muted t-small">
                 Imputación de cuentas contables imputables con balanceo obligatorio.
               </span>
             </div>
@@ -293,35 +286,34 @@ export function JournalEntryFormPage() {
               type="button"
               onClick={addLine}
               className="btn"
-              style={{ background: "var(--lc-accent)", color: "#fff", fontSize: "0.88rem", fontWeight: 800, padding: "8px 18px" }}
             >
               ➕ Agregar Renglón
             </button>
           </div>
 
           <div className="table-wrap" style={{ border: "1px solid var(--lc-line-2)", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)" }}>
-            <table style={{ margin: 0, width: "100%", borderCollapse: "collapse" }}>
+            <table style={{ margin: 0 }}>
               <thead>
-                <tr style={{ background: "var(--lc-surface-2)", borderBottom: "2px solid var(--lc-line-2)" }}>
-                  <th style={{ width: 45, textAlign: "center", padding: "12px 6px" }}>#</th>
-                  <th style={{ width: "35%", minWidth: 280, padding: "12px 14px" }}>Cuenta Contable (Plan de Cuentas)</th>
-                  <th style={{ width: "20%", minWidth: 160, padding: "12px 10px" }}>Centro de Costo (Opcional)</th>
-                  <th style={{ width: "20%", minWidth: 160, padding: "12px 10px" }}>Glosa / Leyenda Específica</th>
-                  <th style={{ width: 140, textAlign: "right", padding: "12px 12px" }}>DEBE ($)</th>
-                  <th style={{ width: 140, textAlign: "right", padding: "12px 12px" }}>HABER ($)</th>
-                  <th style={{ width: 45, textAlign: "center", padding: "12px 6px" }}></th>
+                <tr>
+                  <th className="t-center" style={{ width: 45 }}>#</th>
+                  <th style={{ width: "35%", minWidth: 280 }}>Cuenta Contable (Plan de Cuentas)</th>
+                  <th style={{ width: "20%", minWidth: 160 }}>Centro de Costo (Opcional)</th>
+                  <th style={{ width: "20%", minWidth: 160 }}>Glosa / Leyenda Específica</th>
+                  <th className="t-right" style={{ width: 140 }}>DEBE ($)</th>
+                  <th className="t-right" style={{ width: 140 }}>HABER ($)</th>
+                  <th className="t-center" style={{ width: 45 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {lines.map((l, index) => (
-                  <tr key={index} style={{ borderBottom: "1px solid var(--lc-line)", background: index % 2 === 0 ? "var(--lc-surface)" : "var(--lc-surface-2)" }}>
-                    <td style={{ textAlign: "center", fontWeight: 800, color: "var(--lc-ink-3)", padding: "10px 6px" }}>{index + 1}</td>
+                  <tr key={index} style={{ background: index % 2 === 0 ? "var(--lc-surface)" : "var(--lc-surface-2)" }}>
+                    <td className="t-center t-strong muted">{index + 1}</td>
                     
-                    <td style={{ padding: "10px 14px" }}>
-                      <select
+                    <td>
+                      <select className="t-strong"
                         value={l.accountCode}
                         onChange={(e) => handleAccountSelect(index, e.target.value)}
-                        style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.88rem", background: "var(--lc-surface)", fontWeight: 600 }}
+                        style={{ width: "100%" }}
                       >
                         <option value="">-- Seleccionar Cuenta Imputable --</option>
                         {accounts.map((acc) => (
@@ -332,7 +324,7 @@ export function JournalEntryFormPage() {
                       </select>
                     </td>
 
-                    <td style={{ padding: "10px 10px" }}>
+                    <td>
                       <select
                         value={l.costCenterId || ""}
                         onChange={(e) => {
@@ -342,7 +334,7 @@ export function JournalEntryFormPage() {
                           updated[index].costCenterCode = cc ? cc.code : undefined;
                           setLines(updated);
                         }}
-                        style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.85rem", background: "var(--lc-surface)" }}
+                        style={{ width: "100%" }}
                       >
                         <option value="">-- Ninguno / Central --</option>
                         {costCenters.map((cc) => (
@@ -353,18 +345,18 @@ export function JournalEntryFormPage() {
                       </select>
                     </td>
 
-                    <td style={{ padding: "10px 10px" }}>
+                    <td>
                       <input
                         type="text"
                         value={l.memo || ""}
                         onChange={(e) => handleLineChange(index, "memo", e.target.value)}
                         placeholder="Glosa del renglón..."
-                        style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.85rem" }}
+                        style={{ width: "100%" }}
                       />
                     </td>
 
-                    <td style={{ padding: "10px 12px" }}>
-                      <input
+                    <td>
+                      <input className="t-right t-strong"
                         type="number"
                         step="0.01"
                         min="0"
@@ -375,22 +367,12 @@ export function JournalEntryFormPage() {
                           if (val > 0) handleLineChange(index, "credit", 0);
                         }}
                         placeholder="0.00"
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          borderRadius: 6,
-                          border: "1px solid var(--lc-line-2)",
-                          textAlign: "right",
-                          fontWeight: 800,
-                          fontSize: "0.95rem",
-                          color: l.debit > 0 ? "#1d4ed8" : "inherit",
-                          background: l.debit > 0 ? "var(--lc-info-bg)" : "var(--lc-surface)"
-                        }}
+                        style={{ width: "100%", color: l.debit > 0 ? "#1d4ed8" : "inherit", background: l.debit > 0 ? "var(--lc-info-bg)" : "var(--lc-surface)" }}
                       />
                     </td>
 
-                    <td style={{ padding: "10px 12px" }}>
-                      <input
+                    <td>
+                      <input className="t-right t-strong"
                         type="number"
                         step="0.01"
                         min="0"
@@ -401,27 +383,16 @@ export function JournalEntryFormPage() {
                           if (val > 0) handleLineChange(index, "debit", 0);
                         }}
                         placeholder="0.00"
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          borderRadius: 6,
-                          border: "1px solid var(--lc-line-2)",
-                          textAlign: "right",
-                          fontWeight: 800,
-                          fontSize: "0.95rem",
-                          color: l.credit > 0 ? "#15803d" : "inherit",
-                          background: l.credit > 0 ? "var(--lc-ok-bg)" : "var(--lc-surface)"
-                        }}
+                        style={{ width: "100%", color: l.credit > 0 ? "#15803d" : "inherit", background: l.credit > 0 ? "var(--lc-ok-bg)" : "var(--lc-surface)" }}
                       />
                     </td>
 
-                    <td style={{ textAlign: "center", padding: "10px 6px" }}>
+                    <td className="t-center">
                       <button
                         type="button"
                         disabled={lines.length <= 2}
                         onClick={() => removeLine(index)}
-                        className="btn ghost compact"
-                        style={{ color: lines.length <= 2 ? "var(--lc-line-2)" : "var(--lc-danger)", padding: "6px 10px", borderRadius: 6, fontSize: "0.95rem" }}
+                        className="btn ghost compact btn-outline danger"
                         title="Quitar renglón"
                       >
                         🗑️
@@ -449,12 +420,12 @@ export function JournalEntryFormPage() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: "1.8rem" }}>{isBalanced ? "⚖️" : "⚠️"}</span>
+            <span className="t-xl">{isBalanced ? "⚖️" : "⚠️"}</span>
             <div>
               <strong style={{ fontSize: "1.05rem", color: isBalanced ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                 {isBalanced ? "Asiento Balanceado Correctamente (Partida Doble)" : "Asiento Desbalanceado"}
               </strong>
-              <div style={{ fontSize: "0.85rem", color: isBalanced ? "var(--lc-ok)" : "var(--lc-danger)" }}>
+              <div className="t-small" style={{ color: isBalanced ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                 {isBalanced
                   ? "El total del Debe coincide exactamente con el total del Haber."
                   : `Diferencia a balancear: $ ${diff.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
@@ -462,16 +433,16 @@ export function JournalEntryFormPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 24, textAlign: "right" }}>
+          <div className="t-right" style={{ display: "flex", gap: 24 }}>
             <div>
-              <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", fontWeight: 700 }}>Total DEBE</div>
-              <strong style={{ fontSize: "1.3rem", color: "var(--lc-info)" }}>
+              <div className="muted t-small t-caps t-strong">Total DEBE</div>
+              <strong className="t-info" style={{ fontSize: "1.3rem" }}>
                 $ {totalDebit.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </strong>
             </div>
             <div>
-              <div className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", fontWeight: 700 }}>Total HABER</div>
-              <strong style={{ fontSize: "1.3rem", color: "var(--lc-ok)" }}>
+              <div className="muted t-small t-caps t-strong">Total HABER</div>
+              <strong className="t-ok" style={{ fontSize: "1.3rem" }}>
                 $ {totalCredit.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </strong>
             </div>
@@ -479,33 +450,17 @@ export function JournalEntryFormPage() {
         </div>
 
         {/* BOTTOM ACTION BAR */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            background: "var(--lc-surface-2)",
-            padding: "16px 24px",
-            borderRadius: 10,
-            border: "1px solid var(--lc-line)"
-          }}
+        <div className="box"
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
         >
-          <Link to="/contabilidad/asientos" className="btn ghost" style={{ padding: "9px 20px" }}>
+          <Link to="/contabilidad/asientos" className="btn ghost">
             ← Cancelar y Volver
           </Link>
           <button
             type="submit"
             disabled={saving || !isBalanced}
             className="btn"
-            style={{
-              background: isBalanced ? "var(--lc-accent)" : "var(--lc-ink-3)",
-              color: "#fff",
-              fontWeight: 800,
-              padding: "10px 28px",
-              fontSize: "0.95rem",
-              minWidth: 200,
-              cursor: isBalanced ? "pointer" : "not-allowed"
-            }}
+            style={{ minWidth: 200, cursor: isBalanced ? "pointer" : "not-allowed" }}
           >
             {saving ? "Registrando..." : "💾 Registrar Asiento Contable"}
           </button>

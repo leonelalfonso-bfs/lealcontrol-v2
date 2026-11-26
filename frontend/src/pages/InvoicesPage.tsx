@@ -174,31 +174,31 @@ export function InvoicesPage() {
         <div className="card">
           <span className="muted">Total Comprobantes</span>
           <strong>{items.length}</strong>
-          <small className="muted" style={{ fontSize: "0.75rem", display: "block", marginTop: 2 }}>
+          <small className="muted t-small" style={{ display: "block", marginTop: 2 }}>
             {totalAuthorized} marcadas autorizadas · verificar CAE en ARCA
           </small>
         </div>
         <div className="card">
           <span className="muted">Total Facturado (ARS)</span>
           <strong>{money(totalArs, "ARS")}</strong>
-          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingArs > 0 ? "var(--lc-danger)" : "var(--lc-ok)", fontWeight: 600 }}>
+          <small className="t-small t-strong" style={{ display: "block", marginTop: 2, color: pendingArs > 0 ? "var(--lc-danger)" : "var(--lc-ok)" }}>
             Pendiente de Cobro: {money(pendingArs, "ARS")}
           </small>
         </div>
         <div className="card">
           <span className="muted">Total Facturado (USD)</span>
-          <strong style={{ color: "var(--lc-info)" }}>{money(totalUsd, "USD")}</strong>
-          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingUsd > 0 ? "var(--lc-danger)" : "var(--lc-ok)", fontWeight: 600 }}>
+          <strong className="t-info">{money(totalUsd, "USD")}</strong>
+          <small className="t-small t-strong" style={{ display: "block", marginTop: 2, color: pendingUsd > 0 ? "var(--lc-danger)" : "var(--lc-ok)" }}>
             Pendiente de Cobro: {money(pendingUsd, "USD")}
           </small>
         </div>
         <div className="card">
           <span className="muted">Estado de Cobranzas</span>
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            <span style={{ color: "var(--lc-ok)", fontWeight: 700, fontSize: "0.9rem" }}>
+            <span className="t-ok t-strong">
               🟢 {enrichedInvoices.filter((i) => i.isPaid).length} Cobradas
             </span>
-            <span style={{ color: "var(--lc-danger)", fontWeight: 700, fontSize: "0.9rem" }}>
+            <span className="t-danger t-strong">
               🔴 {enrichedInvoices.filter((i) => !i.isPaid).length} Pendientes
             </span>
           </div>
@@ -239,10 +239,10 @@ export function InvoicesPage() {
           </select>
 
           {/* Payment Status Filter */}
-          <select
+          <select className="t-strong"
             value={paymentFilter}
             onChange={(e) => setPaymentFilter(e.target.value)}
-            style={{ width: 180, fontWeight: 600 }}
+            style={{ width: 180 }}
           >
             <option value="All">Todos los Cobros</option>
             <option value="Pending">🔴 Pendientes de Cobro</option>
@@ -256,7 +256,7 @@ export function InvoicesPage() {
         {loading ? (
           <p className="pad muted">Cargando comprobantes…</p>
         ) : filteredInvoices.length === 0 ? (
-          <p className="pad muted" style={{ textAlign: "center", padding: 32 }}>
+          <p className="pad muted t-center" style={{ padding: 32 }}>
             No se encontraron facturas para los filtros seleccionados.
           </p>
         ) : (
@@ -268,10 +268,10 @@ export function InvoicesPage() {
                   <th>Fecha Emisión</th>
                   <th>Cliente / Receptor</th>
                   <th>Moneda</th>
-                  <th style={{ textAlign: "right" }}>Total Facturado</th>
-                  <th style={{ textAlign: "center" }}>Estado ARCA</th>
-                  <th style={{ textAlign: "center" }}>Estado Cobro & Días</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
+                  <th className="t-right">Total Facturado</th>
+                  <th className="t-center">Estado ARCA</th>
+                  <th className="t-center">Estado Cobro & Días</th>
+                  <th className="t-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -279,55 +279,55 @@ export function InvoicesPage() {
                   <tr key={inv.id}>
                     <td>
                       <strong>{documentLabel(inv.invoiceType)}</strong>
-                      <div className="muted" style={{ fontFamily: "monospace", fontWeight: 700 }}>
+                      <div className="muted t-mono t-strong">
                         {inv.formattedNumber}
                       </div>
                       {inv.remitoId ? (
-                        <div style={{ fontSize: "0.72rem", color: "var(--lc-accent-strong)", fontWeight: 600, marginTop: 2 }}>
+                        <div className="t-small t-accent t-strong" style={{ marginTop: 2 }}>
                           🚚 Desde Remito
                         </div>
                       ) : inv.orderId ? (
-                        <div style={{ fontSize: "0.72rem", color: "#4338ca", fontWeight: 600, marginTop: 2 }}>
+                        <div className="t-small t-strong" style={{ color: "#4338ca", marginTop: 2 }}>
                           📦 Desde Pedido
                         </div>
                       ) : (
-                        <div style={{ fontSize: "0.72rem", color: "var(--lc-info)", fontWeight: 600, marginTop: 2 }}>
+                        <div className="t-small t-info t-strong" style={{ marginTop: 2 }}>
                           ⚡ Venta Directa
                         </div>
                       )}
                     </td>
                     <td>
                       <div>{civilDate(inv.issueDate)}</div>
-                      <small className="muted" style={{ fontSize: "0.75rem" }}>
+                      <small className="muted t-small">
                         Vto: {civilDate(inv.dueDate)}
                       </small>
                     </td>
                     <td>
                       <strong>{inv.customerName}</strong>
-                      <div className="muted" style={{ fontSize: "0.8rem" }}>{!inv.customerDocument || inv.customerDocument === "0" ? "Sin identificar" : inv.customerDocument}</div>
+                      <div className="muted t-small">{!inv.customerDocument || inv.customerDocument === "0" ? "Sin identificar" : inv.customerDocument}</div>
                     </td>
                     <td>
                       <span className={`badge ${inv.currency === "USD" ? "prio-high" : "ok"}`}>
                         {inv.currency}
                       </span>
                       {inv.currency === "USD" && (
-                        <div className="muted" style={{ fontSize: "0.75rem" }}>TC: ${inv.exchangeRate}</div>
+                        <div className="muted t-small">TC: ${inv.exchangeRate}</div>
                       )}
                     </td>
-                    <td style={{ textAlign: "right" }}>
-                      <strong style={{ fontSize: "0.95rem" }}>
+                    <td className="t-right">
+                      <strong>
                         {money(inv.total, inv.currency)}
                       </strong>
-                      <div className="muted" style={{ fontSize: "0.75rem" }}>
+                      <div className="muted t-small">
                         Neto: {money(inv.subtotal, inv.currency)}
                       </div>
                     </td>
-                    <td style={{ textAlign: "center" }}>
+                    <td className="t-center">
                       {inv.status === "Authorized" ? (
                         <div>
                           <span className="badge">CAE registrado: {inv.cae} · verificar en ARCA</span>
                           {inv.caeDueDate && (
-                            <div className="muted" style={{ fontSize: "0.72rem" }}>
+                            <div className="muted t-small">
                               Vto: {civilDate(inv.caeDueDate)}
                             </div>
                           )}
@@ -336,14 +336,14 @@ export function InvoicesPage() {
                         <div>
                           <span className="badge warn">🟡 Borrador</span>
                           {fiscalAttempts[inv.id] && (
-                            <div className="muted" style={{ fontSize: "0.75rem" }}>
+                            <div className="muted t-small">
                               {fiscalAttempts[inv.id].status === "Reserved" ? "Reserva sin enviar" :
                                 fiscalAttempts[inv.id].status === "Rejected" ? "Solicitud rechazada · requiere revisión" :
                                   ["Pending", "Unknown"].includes(fiscalAttempts[inv.id].status)
                                     ? "Envío sin confirmar · consultar ARCA" : "Reserva fiscal · requiere revisión"}
                               {" · N° "}{fiscalAttempts[inv.id].voucherNumber}
                               {fiscalAttempts[inv.id].status === "Rejected" && fiscalAttempts[inv.id].rejectionDetail && (
-                                <span style={{ display: "block", color: "var(--lc-danger)", maxWidth: 360, whiteSpace: "normal" }}>
+                                <span className="t-danger" style={{ display: "block", maxWidth: 360, whiteSpace: "normal" }}>
                                   {fiscalAttempts[inv.id].rejectionDetail}
                                 </span>
                               )}
@@ -356,64 +356,44 @@ export function InvoicesPage() {
                     </td>
 
                     {/* Estado de Cobro y Días sin cobrar */}
-                    <td style={{ textAlign: "center" }}>
+                    <td className="t-center">
                       {inv.isPaid ? (
                         <div>
                           <span
-                            className="badge ok"
-                            style={{
-                              background: "rgba(16, 185, 129, 0.15)",
-                              color: "var(--lc-ok)",
-                              fontWeight: 700,
-                              padding: "4px 8px"
-                            }}
+                            className="badge ok t-ok t-strong"
+                            style={{ background: "rgba(16, 185, 129, 0.15)", padding: "4px 8px" }}
                           >
                             🟢 Cobrada
                           </span>
-                          <div className="muted" style={{ fontSize: "0.72rem", marginTop: 2 }}>
+                          <div className="muted t-small" style={{ marginTop: 2 }}>
                             ✓ 100% saldada
                           </div>
                         </div>
                       ) : inv.isPartial ? (
                         <div>
                           <span
-                            className="badge warn"
-                            style={{
-                              background: "rgba(245, 158, 11, 0.18)",
-                              color: "var(--lc-warn)",
-                              fontWeight: 700,
-                              padding: "4px 8px"
-                            }}
+                            className="badge warn t-warn t-strong"
+                            style={{ background: "rgba(245, 158, 11, 0.18)", padding: "4px 8px" }}
                           >
                             🟡 Cobro Parcial
                           </span>
-                          <div style={{ fontSize: "0.75rem", color: "var(--lc-danger)", fontWeight: 700, marginTop: 2 }}>
+                          <div className="t-small t-danger t-strong" style={{ marginTop: 2 }}>
                             Resta: {money(inv.saldoPendiente, inv.currency)}
                           </div>
-                          <div className="muted" style={{ fontSize: "0.72rem" }}>
+                          <div className="muted t-small">
                             {inv.daysSinceIssue === 0 ? "Emitida hoy" : `${inv.daysSinceIssue}d sin cobrar`}
                           </div>
                         </div>
                       ) : (
                         <div>
                           <span
-                            className="badge off"
-                            style={{
-                              background: "rgba(239, 68, 68, 0.12)",
-                              color: "var(--lc-danger)",
-                              fontWeight: 700,
-                              padding: "4px 8px"
-                            }}
+                            className="badge off t-danger t-strong"
+                            style={{ background: "rgba(239, 68, 68, 0.12)", padding: "4px 8px" }}
                           >
                             🔴 Pendiente
                           </span>
-                          <div
-                            style={{
-                              fontSize: "0.75rem",
-                              fontWeight: inv.daysOverdue > 0 ? 700 : 500,
-                              color: inv.daysOverdue > 0 ? "#dc2626" : "var(--ink-soft)",
-                              marginTop: 2
-                            }}
+                          <div className="t-small"
+                            style={{ fontWeight: inv.daysOverdue > 0 ? 700 : 500, color: inv.daysOverdue > 0 ? "#dc2626" : "var(--ink-soft)", marginTop: 2 }}
                           >
                             {inv.daysOverdue > 0
                               ? `⚠️ Vencida hace ${inv.daysOverdue}d`
@@ -425,21 +405,12 @@ export function InvoicesPage() {
                       )}
                     </td>
 
-                    <td style={{ textAlign: "right" }}>
+                    <td className="t-right">
                       <div className="row" style={{ justifyContent: "flex-end", gap: 6 }}>
                         {canCollect && !inv.isPaid && !inv.invoiceType.startsWith("NC") && (
                           <Link
                             to={`/finanzas/cobranzas?customerId=${inv.customerId}`}
                             className="btn compact"
-                            style={{
-                              padding: "4px 8px",
-                              fontSize: "0.8rem",
-                              background: "var(--lc-accent)",
-                              color: "#fff",
-                              fontWeight: 700,
-                              borderRadius: "6px",
-                              textDecoration: "none"
-                            }}
                             title="Registrar cobro e imputar factura"
                           >
                             💵 Cobrar
@@ -477,8 +448,7 @@ export function InvoicesPage() {
                         )}
                         <button
                           type="button"
-                          className="btn ghost"
-                          style={{ padding: "4px 8px", fontSize: "0.82rem" }}
+                          className="btn ghost compact"
                           onClick={() => navigate(`/facturas/${inv.id}/imprimir`)}
                         >
                           🖨️ PDF / QR

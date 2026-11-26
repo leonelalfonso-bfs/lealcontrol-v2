@@ -61,7 +61,7 @@ export function JournalEntriesPage() {
           <button type="button" className="btn ghost" onClick={() => window.print()}>
             🖨️ Imprimir / PDF
           </button>
-          <Link to="/contabilidad/asientos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff", fontWeight: 700 }}>
+          <Link to="/contabilidad/asientos/nuevo" className="btn">
             ➕ Nuevo Asiento Manual
           </Link>
         </div>
@@ -73,24 +73,24 @@ export function JournalEntriesPage() {
 
       <div className="card pad">
         {loading ? (
-          <p style={{ textAlign: "center", padding: 30 }}>Cargando asientos del libro diario...</p>
+          <p className="t-center" style={{ padding: 30 }}>Cargando asientos del libro diario...</p>
         ) : entries.length === 0 ? (
-          <p className="muted" style={{ textAlign: "center", padding: 30 }}>
+          <p className="muted t-center" style={{ padding: 30 }}>
             No hay asientos registrados aún en este período.
           </p>
         ) : (
           <div className="table-wrap">
-            <table className="table" style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="table">
               <thead>
-                <tr style={{ background: "var(--surface-sunken)" }}>
+                <tr>
                   <th style={{ width: 40 }}></th>
                   <th style={{ width: 100 }}>Nº Asiento</th>
                   <th style={{ width: 110 }}>Fecha</th>
                   <th>Concepto / Glosa</th>
                   <th style={{ width: 130 }}>Módulo Origen</th>
-                  <th style={{ width: 140, textAlign: "right" }}>Total Debe</th>
-                  <th style={{ width: 140, textAlign: "right" }}>Total Haber</th>
-                  <th style={{ width: 110, textAlign: "center" }}>Balance</th>
+                  <th className="t-right" style={{ width: 140 }}>Total Debe</th>
+                  <th className="t-right" style={{ width: 140 }}>Total Haber</th>
+                  <th className="t-center" style={{ width: 110 }}>Balance</th>
                 </tr>
               </thead>
               <tbody>
@@ -108,13 +108,13 @@ export function JournalEntriesPage() {
                           borderBottom: isExp ? "none" : "1px solid var(--surface-border)"
                         }}
                       >
-                        <td style={{ textAlign: "center" }}>
-                          <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                        <td className="t-center">
+                          <span className="t-small" style={{ color: "var(--text-muted)" }}>
                             {isExp ? "▼" : "▶"}
                           </span>
                         </td>
                         <td>
-                          <span className="tag primary" style={{ fontWeight: 700 }}>
+                          <span className="tag primary t-strong">
                             #{String(entry.entryNumber).padStart(6, "0")}
                           </span>
                         </td>
@@ -122,23 +122,23 @@ export function JournalEntriesPage() {
                         <td>
                           <strong>{entry.concept}</strong>
                           {entry.sourceDocumentNumber && (
-                            <div className="muted" style={{ fontSize: "0.8rem" }}>
+                            <div className="muted t-small">
                               Ref: {entry.sourceDocumentNumber}
                             </div>
                           )}
                         </td>
                         <td>
-                          <span className="tag" style={{ fontSize: "0.78rem" }}>
+                          <span className="tag t-small">
                             {entry.sourceModule === "Sales" ? "🛒 Ventas" : entry.sourceModule === "Purchases" ? "📦 Compras" : entry.sourceModule === "Finance" ? "💳 Finanzas" : entry.sourceModule || "Manual"}
                           </span>
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 700 }}>
+                        <td className="t-right t-strong">
                           $ {entry.totalDebit?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 700 }}>
+                        <td className="t-right t-strong">
                           $ {entry.totalCredit?.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="t-center">
                           <span className={`badge ${isBalanced ? "ok" : "prio-high"}`}>
                             {isBalanced ? "✓ Cuadrado" : "⚠️ Desbalanceado"}
                           </span>
@@ -146,33 +146,33 @@ export function JournalEntriesPage() {
                       </tr>
 
                       {isExp && entry.lines && entry.lines.length > 0 && (
-                        <tr style={{ background: "rgba(13, 148, 136, 0.03)", borderBottom: "1px solid var(--surface-border)" }}>
-                          <td colSpan={8} style={{ padding: "12px 24px 18px 48px" }}>
-                            <div style={{ fontWeight: 700, fontSize: "0.85rem", marginBottom: 8, color: "var(--lc-accent-strong)" }}>
+                        <tr>
+                          <td colSpan={8}>
+                            <div className="t-strong t-small t-accent" style={{ marginBottom: 8 }}>
                               Detalle de Renglones Imputados:
                             </div>
-                            <table style={{ width: "100%", fontSize: "0.86rem", background: "var(--lc-surface)", borderRadius: 6, border: "1px solid var(--lc-line)" }}>
+                            <table style={{ background: "var(--lc-surface)", borderRadius: 6, border: "1px solid var(--lc-line)" }}>
                               <thead>
-                                <tr style={{ background: "var(--lc-surface-2)", borderBottom: "1px solid var(--lc-line)" }}>
+                                <tr>
                                   <th style={{ width: 120 }}>Cuenta</th>
                                   <th>Denominación</th>
                                   <th style={{ width: 160 }}>Centro Costo</th>
                                   <th>Leyenda / Glosa</th>
-                                  <th style={{ width: 130, textAlign: "right" }}>Debe ($)</th>
-                                  <th style={{ width: 130, textAlign: "right" }}>Haber ($)</th>
+                                  <th className="t-right" style={{ width: 130 }}>Debe ($)</th>
+                                  <th className="t-right" style={{ width: 130 }}>Haber ($)</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {entry.lines.map((l: any, idx: number) => (
-                                  <tr key={idx} style={{ borderBottom: "1px solid var(--lc-surface-2)" }}>
-                                    <td><span style={{ fontWeight: 700 }}>{l.accountCode}</span></td>
+                                  <tr key={idx}>
+                                    <td><span className="t-strong">{l.accountCode}</span></td>
                                     <td>{l.accountName}</td>
                                     <td><span className="muted">{l.costCenterCode || "—"}</span></td>
                                     <td><span className="muted">{l.memo || "—"}</span></td>
-                                    <td style={{ textAlign: "right", fontWeight: l.debit > 0 ? 700 : 400, color: l.debit > 0 ? "#0369a1" : "inherit" }}>
+                                    <td className="t-right" style={{ fontWeight: l.debit > 0 ? 700 : 400, color: l.debit > 0 ? "#0369a1" : "inherit" }}>
                                       {l.debit > 0 ? `$ ${l.debit.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
                                     </td>
-                                    <td style={{ textAlign: "right", fontWeight: l.credit > 0 ? 700 : 400, color: l.credit > 0 ? "#047857" : "inherit" }}>
+                                    <td className="t-right" style={{ fontWeight: l.credit > 0 ? 700 : 400, color: l.credit > 0 ? "#047857" : "inherit" }}>
                                       {l.credit > 0 ? `$ ${l.credit.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
                                     </td>
                                   </tr>
