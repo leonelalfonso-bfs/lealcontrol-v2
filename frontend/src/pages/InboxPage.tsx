@@ -691,16 +691,9 @@ export function InboxPage() {
             <span>👤 Sin asignar</span>
             <strong>{conversations.filter((c) => !c.assignedToUserId).length}</strong>
           </button>
-          <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-            <Link className="t-small t-accent t-strong" to="/configuracion/comunicaciones">
-              ⚙ Cuentas y canales
-            </Link>
-            <Link className="t-small muted" to="/comunicaciones/plantillas">
-              📝 Plantillas de respuesta
-            </Link>
-            <Link className="t-small muted" to="/configuracion/comunicaciones">
-              ⚙️ Cuentas de correo
-            </Link>
+          <div className="inbox-folders__links">
+            <Link className="t-accent t-strong" to="/configuracion/comunicaciones">⚙ Cuentas y canales</Link>
+            <Link className="muted" to="/comunicaciones/plantillas">📝 Plantillas de respuesta</Link>
           </div>
         </aside>
 

@@ -41,27 +41,9 @@
 @media (max-width: 900px) {
   .mail-layout {grid-template-columns: 1fr;}
 }
-.inbox-shell {display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(210px, 260px);
-  height: clamp(640px, calc(100vh - 170px), 980px);
-  min-height: 640px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, .62);
-  backdrop-filter: blur(18px) saturate(135%);}
-.inbox-list-column {display: grid;
-  grid-template-columns: 128px minmax(0, 1fr);
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  border-right: 1px solid var(--lc-line);}
-.inbox-folders {display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 12px;
-  border-right: 1px solid var(--lc-line);
-  background: rgba(239, 243, 252, .58);
-  min-height: 0;
-  overflow-y: auto;}
+
+
+
 .inbox-context {display: flex;
   flex-direction: column;
   gap: 0;
@@ -92,39 +74,12 @@
   min-width: 0;}
 .inbox-context-empty {margin: auto;
   padding: 24px 16px;}
-.inbox-folders button, .inbox-folders a {display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 43px;
-  padding: 10px 12px;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: transparent;
-  color: var(--lc-ink-2);
-  font: inherit;
-  font-size: .86rem;
-  font-weight: 750;
-  text-decoration: none;
-  cursor: pointer;
-  transition: .18s ease;}
-.inbox-folders button:hover, .inbox-folders a:hover {border-color: rgba(93, 103, 206, .15);
-  background: rgba(255, 255, 255, .72);
-  color: var(--lc-accent);
-  transform: translateX(2px);}
-.inbox-folders button.active {border-color: rgba(93, 103, 206, .2);
-  background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(229,233,255,.9));
-  color: var(--lc-accent);
-  box-shadow: 0 8px 22px rgba(71, 85, 170, .1);}
-.inbox-folders button strong {min-width: 25px;
-  padding: 3px 7px;
-  border-radius: 999px;
-  background: rgba(101, 116, 139, .1);
-  color: inherit;
-  text-align: center;
-  font-size: .72rem;}
-.inbox-folders a {margin-top: auto; justify-content: flex-start; border-color: var(--lc-line); background: rgba(255,255,255,.62);}
-.inbox-folders a::before {content: "⚙";}
+
+
+
+
+
+
 .message-list {min-width: 0; min-height: 0; overflow: hidden;}
 .message-list > button {width: 100%; display: grid; grid-template-columns: 10px minmax(0,1fr) auto; gap: 10px;
   padding: 16px; border: 0; border-bottom: 1px solid var(--lc-line);
@@ -153,26 +108,8 @@
 .message-body {white-space: pre-wrap; line-height: 1.7;}
 .inbox-shell .empty-state {min-height: 150px; display: grid; place-items: center; padding: 24px; color: var(--lc-ink-2); text-align: center;}
 .inbox-page {overflow-x: hidden; max-width: 100%;}
-@media (max-width: 1366px) {
-  .inbox-shell {grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) minmax(190px, 220px);
-    height: clamp(560px, calc(100vh - 150px), 820px);
-    min-height: 560px;}
-  .inbox-list-column {grid-template-columns: 112px minmax(0, 1fr);}
-  .inbox-folders {padding: 10px; gap: 5px;}
-  .inbox-folders button, .inbox-folders a {min-height: 36px; padding: 8px 9px; font-size: .78rem;}
-  .inbox-thread-header {padding: 12px 14px;}
-  .inbox-context-details, .inbox-context-head {padding: 12px 14px;}
-}
-@media (max-width: 1180px) {
-  .inbox-shell {grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(180px, 210px);}
-  .inbox-list-column {grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr);}
-  .inbox-folders {flex-direction: row;
-    flex-wrap: wrap;
-    border-right: 0;
-    border-bottom: 1px solid var(--lc-line);
-    overflow-x: auto;
-    overflow-y: hidden;}
-}
+
+
 @media (max-width: 980px) {
   .inbox-shell {grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(360px, 1fr) auto;
@@ -180,9 +117,7 @@
     min-height: 0;
     overflow: visible;}
   .inbox-list-column {border-right: 0; border-bottom: 1px solid var(--lc-line); max-height: 340px;}
-  .inbox-folders {flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--lc-line);}
-  .inbox-folders a {margin: 0;}
-  .message-list {max-height: 260px;}
+    .message-list {max-height: 260px;}
   .message-reader {height: clamp(420px, 55vh, 720px);}
   .inbox-context {border-left: 0; border-top: 1px solid var(--lc-line); max-height: none;}
   .inbox-shell-email .message-reader {height: auto;}
@@ -251,4 +186,48 @@
 }
 @media (max-width: 620px) {
   .account-cards {grid-template-columns: 1fr;}
+}
+
+/* ---------- Bandeja: distribución ----------
+ * Tres columnas: lista (carpetas arriba como pastillas + conversaciones), mensaje y contexto.
+ * El mensaje se lleva el espacio libre; la lista y el contexto tienen un ancho que deja leer remitente y asunto.
+ */
+.inbox-shell {
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr) minmax(240px, 300px);
+  height: clamp(600px, calc(100vh - 190px), 1000px);
+  min-height: 600px;
+  overflow: hidden;
+  background: var(--lc-surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.inbox-list-column { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; min-height: 0; overflow: hidden; border-right: 1px solid var(--lc-line); }
+.inbox-folders { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--lc-line); background: var(--lc-surface-2); }
+.inbox-folders button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--lc-radius-pill);
+  background: transparent;
+  color: var(--lc-ink-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.inbox-folders button:hover { background: var(--lc-surface); color: var(--lc-ink); }
+.inbox-folders button.active { background: var(--lc-key-fill); box-shadow: var(--lc-key-relief); color: var(--lc-accent-strong); font-weight: 800; }
+.inbox-folders button strong { min-width: 22px; padding: 1px 7px; border-radius: var(--lc-radius-pill); background: var(--lc-surface-sunken); color: inherit; font-size: 11.5px; text-align: center; }
+.inbox-folders__links { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 2px 4px 0; font-size: 12.5px; }
+
+/* Pantallas medianas: el contexto pasa abajo del mensaje en lugar de apretarlo. */
+@media (max-width: 1280px) {
+  .inbox-shell { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; height: auto; min-height: 0; overflow: visible; }
+  .inbox-list-column { height: clamp(560px, calc(100vh - 190px), 900px); }
+  .message-reader { height: clamp(560px, calc(100vh - 190px), 900px); }
+  .inbox-context { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--lc-line); }
 }
