@@ -281,7 +281,7 @@ export function PurchaseOrderFormPage() {
       </div>
 
       {error && (
-        <div style={{ padding: "12px 16px", background: "#fef2f2", color: "#b91c1c", borderRadius: "8px", marginBottom: "16px", border: "1px solid #f87171" }}>
+        <div style={{ padding: "12px 16px", background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderRadius: "8px", marginBottom: "16px", border: "1px solid var(--lc-danger)" }}>
           {error}
         </div>
       )}
@@ -298,7 +298,7 @@ export function PurchaseOrderFormPage() {
                 type="button"
                 onClick={() => setShowQuickSupplierModal(true)}
                 className="btn btn-primary"
-                style={{ padding: "6px 14px", fontSize: "0.82rem", background: "#0d9488" }}
+                style={{ padding: "6px 14px", fontSize: "0.82rem", background: "var(--lc-accent)" }}
               >
                 + Nuevo Proveedor Completo
               </button>
@@ -313,7 +313,7 @@ export function PurchaseOrderFormPage() {
                   <button
                     type="button"
                     onClick={() => setShowQuickSupplierModal(true)}
-                    style={{ fontSize: "0.76rem", color: "#0d9488", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
+                    style={{ fontSize: "0.76rem", color: "var(--lc-accent-strong)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
                   >
                     + Alta Rápida
                   </button>
@@ -420,7 +420,7 @@ export function PurchaseOrderFormPage() {
                   setShowQuickProductModal(true);
                 }}
                 className="btn btn-outline"
-                style={{ fontSize: "0.82rem", padding: "4px 10px", color: "#0d9488", borderColor: "#0d9488", fontWeight: 700 }}
+                style={{ fontSize: "0.82rem", padding: "4px 10px", color: "var(--lc-accent-strong)", borderColor: "var(--lc-accent)", fontWeight: 700 }}
               >
                 + Crear Insumo / Producto
               </button>
@@ -461,8 +461,8 @@ export function PurchaseOrderFormPage() {
                             style={{
                               padding: "4px 8px",
                               borderRadius: "6px",
-                              background: "#0d9488",
-                              color: "#ffffff",
+                              background: "var(--lc-accent)",
+                              color: "#fff",
                               border: "none",
                               fontWeight: 800,
                               cursor: "pointer",
@@ -521,7 +521,7 @@ export function PurchaseOrderFormPage() {
                         <button
                           type="button"
                           onClick={() => removeItemRow(idx)}
-                          style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "1.1rem" }}
+                          style={{ background: "transparent", border: "none", color: "var(--lc-danger)", cursor: "pointer", fontSize: "1.1rem" }}
                           title="Eliminar fila"
                         >
                           ✕
@@ -561,7 +561,7 @@ export function PurchaseOrderFormPage() {
 
             <div style={{ borderTop: "2px solid rgba(0,0,0,0.08)", paddingTop: "12px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
               <span style={{ fontSize: "1rem", fontWeight: "bold" }}>Total OC:</span>
-              <span style={{ fontSize: "1.3rem", fontWeight: "900", color: "#047857" }}>
+              <span style={{ fontSize: "1.3rem", fontWeight: "900", color: "var(--lc-ok)" }}>
                 {currency} {grandTotal.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
               </span>
             </div>

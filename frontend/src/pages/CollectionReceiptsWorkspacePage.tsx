@@ -778,7 +778,7 @@ export function CollectionReceiptsWorkspacePage() {
                           </small>
                         )}
                       </td>
-                      <td style={{ textAlign: "right", fontWeight: 700, color: "#065f46" }}>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "var(--lc-ok)" }}>
                         {money(r.amount, r.currency)}
                       </td>
                       <td style={{ textAlign: "center" }}>
@@ -823,7 +823,7 @@ export function CollectionReceiptsWorkspacePage() {
               maxWidth: 720,
               maxHeight: "90vh",
               overflowY: "auto",
-              backgroundColor: "var(--surface, #ffffff)",
+              backgroundColor: "var(--surface, var(--lc-surface))",
               boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
               borderRadius: 8
             }}
@@ -862,7 +862,7 @@ export function CollectionReceiptsWorkspacePage() {
                       <tr key={imp.id}>
                         <td><strong>{imp.invoiceNumber}</strong></td>
                         <td style={{ textAlign: "right" }}>{money(imp.invoiceTotal, selectedReceiptDetail.currency)}</td>
-                        <td style={{ textAlign: "right", fontWeight: 700, color: "#065f46" }}>{money(imp.amountImputed, selectedReceiptDetail.currency)}</td>
+                        <td style={{ textAlign: "right", fontWeight: 700, color: "var(--lc-ok)" }}>{money(imp.amountImputed, selectedReceiptDetail.currency)}</td>
                       </tr>
                     ))
                   )}
@@ -903,7 +903,7 @@ export function CollectionReceiptsWorkspacePage() {
               <div className="toolbar" style={{ marginTop: 16, justifyContent: "flex-end" }}>
                 <button
                   className="btn btn-outline"
-                  style={{ color: "#dc2626", borderColor: "#dc2626" }}
+                  style={{ color: "var(--lc-danger)", borderColor: "var(--lc-danger)" }}
                   onClick={async () => {
                     const reason = window.prompt("Motivo de anulación del recibo:");
                     if (!reason?.trim()) return;

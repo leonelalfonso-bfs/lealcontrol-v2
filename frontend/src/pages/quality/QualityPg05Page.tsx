@@ -409,7 +409,7 @@ export function QualityPg05Page() {
             ← Plantilla {plantillaCode}
           </Link>
           <h1 style={{ margin: "4px 0 0" }}>PG05 · Compras (evaluación y desempeño de proveedores)</h1>
-          <p style={{ marginTop: 6, color: "#64748b", maxWidth: 680 }}>
+          <p style={{ marginTop: 6, color: "var(--lc-ink-3)", maxWidth: 680 }}>
             Evaluación inicial, listado de proveedores habilitados y seguimiento de desempeño periódico.
           </p>
         </div>
@@ -425,8 +425,8 @@ export function QualityPg05Page() {
         </div>
       </div>
 
-      {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
-      {msg && <p style={{ color: "#15803d" }}>{msg}</p>}
+      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
+      {msg && <p style={{ color: "var(--lc-ok)" }}>{msg}</p>}
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "12px 0", fontSize: 13 }}>
         <span className="card pad" style={{ padding: "6px 10px" }}>
@@ -567,7 +567,7 @@ export function QualityPg05Page() {
                         onClick={() => setSelectedId(r.id)}
                         style={{
                           cursor: "pointer",
-                          background: selectedId === r.id ? "#e0f2fe" : r.isExpired ? "#fef2f2" : undefined
+                          background: selectedId === r.id ? "var(--lc-info-bg)" : r.isExpired ? "var(--lc-danger-bg)" : undefined
                         }}
                       >
                         <td>{r.number}</td>
@@ -665,7 +665,7 @@ export function QualityPg05Page() {
               ) : (
                 <>
                   <h3 style={{ marginTop: 0 }}>{selectedEval.number}</h3>
-                  <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
+                  <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
                     {EVAL_STATUS[selectedEval.status] ?? selectedEval.status}
                     {selectedEval.isExpired ? " · vencida" : ""} · {selectedEval.supplierName}
                   </p>
@@ -842,7 +842,7 @@ export function QualityPg05Page() {
                         </button>
                       </div>
                       {selectedEval.approvedBy ? (
-                        <p style={{ fontSize: 12, color: "#64748b", marginTop: 12 }}>
+                        <p style={{ fontSize: 12, color: "var(--lc-ink-3)", marginTop: 12 }}>
                           Aprobada por {selectedEval.approvedBy}
                           {selectedEval.approvedAt ? ` · ${fmtDate(selectedEval.approvedAt)}` : ""}
                         </p>
@@ -858,7 +858,7 @@ export function QualityPg05Page() {
               ) : (
                 <>
                   <h3 style={{ marginTop: 0 }}>{selectedPerf.number}</h3>
-                  <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
+                  <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
                     {PERF_STATUS[selectedPerf.status] ?? selectedPerf.status} · {selectedPerf.supplierName}
                     {selectedPerf.period ? ` · ${selectedPerf.period}` : ""}
                   </p>
@@ -968,7 +968,7 @@ export function QualityPg05Page() {
                     </>
                   )}
                   {selectedPerf.status !== "Draft" && (
-                    <div style={{ fontSize: 13, color: "#64748b" }}>
+                    <div style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
                       <div>
                         <strong>Revisó:</strong> {selectedPerf.reviewedBy || "—"}
                       </div>

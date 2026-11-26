@@ -45,10 +45,10 @@ export function EmployeesListPage() {
           <p className="muted">Legajos digitales 360°, control de puestos, CCT y asignaciones</p>
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
-          <Link to="/rrhh/liquidaciones" className="btn btn-outline" style={{ background: "#ffffff" }}>
+          <Link to="/rrhh/liquidaciones" className="btn btn-outline" style={{ background: "var(--lc-surface)" }}>
             💰 Liquidación de Sueldos
           </Link>
-          <Link to="/rrhh/empleados/nuevo" className="btn btn-primary" style={{ background: "#0d9488" }}>
+          <Link to="/rrhh/empleados/nuevo" className="btn btn-primary" style={{ background: "var(--lc-accent)" }}>
             + Nuevo Colaborador
           </Link>
         </div>
@@ -59,23 +59,23 @@ export function EmployeesListPage() {
       {/* KPI Cards Header */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "20px" }}>
         <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(255,255,255,1))" }}>
-          <div style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 700 }}>TOTAL COLABORADORES</div>
-          <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#0f172a", marginTop: 4 }}>{employees.length}</div>
-          <div style={{ fontSize: "0.75rem", color: "#047857" }}>{employees.filter((e) => e.status === 0).length} Activos en nómina</div>
+          <div style={{ fontSize: "0.8rem", color: "var(--lc-ink-3)", fontWeight: 700 }}>TOTAL COLABORADORES</div>
+          <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "var(--lc-ink)", marginTop: 4 }}>{employees.length}</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--lc-ok)" }}>{employees.filter((e) => e.status === 0).length} Activos en nómina</div>
         </div>
 
         <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(255,255,255,1))" }}>
-          <div style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 700 }}>DEPARTAMENTOS</div>
-          <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#1e40af", marginTop: 4 }}>{departments.length || 1}</div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Técnica, Operaciones, Ventas</div>
+          <div style={{ fontSize: "0.8rem", color: "var(--lc-ink-3)", fontWeight: 700 }}>DEPARTAMENTOS</div>
+          <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "var(--lc-info)", marginTop: 4 }}>{departments.length || 1}</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--lc-ink-3)" }}>Técnica, Operaciones, Ventas</div>
         </div>
 
         <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(255,255,255,1))" }}>
-          <div style={{ fontSize: "0.8rem", color: "#64748b", fontWeight: 700 }}>CONVENIOS (CCT)</div>
-          <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#b45309", marginTop: 4 }}>
+          <div style={{ fontSize: "0.8rem", color: "var(--lc-ink-3)", fontWeight: 700 }}>CONVENIOS (CCT)</div>
+          <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "var(--lc-warn)", marginTop: 4 }}>
             {new Set(employees.map((e) => e.unionCct).filter(Boolean)).size || 1}
           </div>
-          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>Comercio, UOM, UOCRA, etc.</div>
+          <div style={{ fontSize: "0.75rem", color: "var(--lc-ink-3)" }}>Comercio, UOM, UOCRA, etc.</div>
         </div>
       </div>
 
@@ -95,7 +95,7 @@ export function EmployeesListPage() {
             <select
               value={departmentFilter}
               onChange={(e) => setDepartmentFilter(e.target.value)}
-              style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
             >
               <option value="ALL">Todos los Departamentos</option>
               {departments.map((d) => (
@@ -116,7 +116,7 @@ export function EmployeesListPage() {
           <span style={{ fontSize: "2.5rem", display: "block", marginBottom: "8px" }}>👥</span>
           <h3>No se encontraron colaboradores</h3>
           <p className="muted">Registrá a los miembros de tu equipo para gestionar sus legajos, EPP y sueldos.</p>
-          <Link to="/rrhh/empleados/nuevo" className="btn btn-primary" style={{ background: "#0d9488", marginTop: "12px" }}>
+          <Link to="/rrhh/empleados/nuevo" className="btn btn-primary" style={{ background: "var(--lc-accent)", marginTop: "12px" }}>
             + Cargar Primer Colaborador
           </Link>
         </div>
@@ -144,13 +144,13 @@ export function EmployeesListPage() {
                       width: 54,
                       height: 54,
                       borderRadius: "50%",
-                      background: "#e2e8f0",
+                      background: "var(--lc-line)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: "1.2rem",
                       fontWeight: 800,
-                      color: "#475569",
+                      color: "var(--lc-ink-2)",
                       overflow: "hidden",
                       flexShrink: 0
                     }}
@@ -164,14 +164,14 @@ export function EmployeesListPage() {
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748b" }}>LEGAJO #{emp.fileNumber}</span>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--lc-ink-3)" }}>LEGAJO #{emp.fileNumber}</span>
                       <span
                         style={{
                           fontSize: "0.7rem",
                           padding: "2px 8px",
                           borderRadius: "12px",
                           background: emp.status === 0 ? "rgba(16, 185, 129, 0.15)" : "rgba(100, 116, 139, 0.15)",
-                          color: emp.status === 0 ? "#047857" : "#475569",
+                          color: emp.status === 0 ? "var(--lc-ok)" : "var(--lc-ink-2)",
                           fontWeight: 700
                         }}
                       >
@@ -179,14 +179,14 @@ export function EmployeesListPage() {
                       </span>
                     </div>
 
-                    <h3 style={{ margin: "2px 0 0 0", fontSize: "1.05rem", color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <h3 style={{ margin: "2px 0 0 0", fontSize: "1.05rem", color: "var(--lc-ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {emp.lastName}, {emp.firstName}
                     </h3>
-                    <div style={{ fontSize: "0.82rem", color: "#0d9488", fontWeight: 600 }}>{emp.jobTitle || "Puesto no definido"}</div>
+                    <div style={{ fontSize: "0.82rem", color: "var(--lc-accent-strong)", fontWeight: 600 }}>{emp.jobTitle || "Puesto no definido"}</div>
                   </div>
                 </div>
 
-                <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "grid", gap: "6px", fontSize: "0.8rem", color: "#475569" }}>
+                <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--lc-surface-2)", display: "grid", gap: "6px", fontSize: "0.8rem", color: "var(--lc-ink-2)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>CUIL / DNI:</span>
                     <strong style={{ fontFamily: "monospace" }}>{emp.cuil || emp.documentNumber}</strong>
@@ -202,7 +202,7 @@ export function EmployeesListPage() {
                   {emp.baseSalary != null && (
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span>Básico Mensual:</span>
-                      <strong style={{ color: "#047857", fontFamily: "monospace" }}>${emp.baseSalary.toLocaleString("es-AR")}</strong>
+                      <strong style={{ color: "var(--lc-ok)", fontFamily: "monospace" }}>${emp.baseSalary.toLocaleString("es-AR")}</strong>
                     </div>
                   )}
                 </div>

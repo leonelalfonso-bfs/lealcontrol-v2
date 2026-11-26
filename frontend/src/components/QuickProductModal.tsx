@@ -132,7 +132,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
     >
       <div
         style={{
-          background: "#ffffff",
+          background: "var(--lc-surface)",
           borderRadius: "18px",
           width: "100%",
           maxWidth: "760px",
@@ -147,7 +147,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
         <div
           style={{
             padding: "18px 24px",
-            borderBottom: "1px solid #e2e8f0",
+            borderBottom: "1px solid var(--lc-line)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -157,10 +157,10 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <span style={{ fontSize: "1.6rem" }}>📦</span>
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0f172a" }}>
+              <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "var(--lc-ink)" }}>
                 Alta Rápida de Producto / Servicio
               </h2>
-              <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
+              <span style={{ fontSize: "0.78rem", color: "var(--lc-ink-3)" }}>
                 Se agregará al catálogo maestro y se insertará directamente en este documento.
               </span>
             </div>
@@ -172,7 +172,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
               background: "none",
               border: "none",
               fontSize: "1.4rem",
-              color: "#64748b",
+              color: "var(--lc-ink-3)",
               cursor: "pointer",
               padding: "4px 8px"
             }}
@@ -187,9 +187,9 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
             {error && (
               <div
                 style={{
-                  background: "#fee2e2",
-                  border: "1px solid #ef4444",
-                  color: "#991b1b",
+                  background: "var(--lc-danger-bg)",
+                  border: "1px solid var(--lc-danger)",
+                  color: "var(--lc-danger)",
                   padding: "10px 14px",
                   borderRadius: "8px",
                   fontSize: "0.85rem"
@@ -207,7 +207,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                 gap: "18px",
                 alignItems: "flex-start",
                 paddingBottom: "14px",
-                borderBottom: "1px solid #e2e8f0"
+                borderBottom: "1px solid var(--lc-line)"
               }}
             >
               {/* Photo Box */}
@@ -217,8 +217,8 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                     width: 120,
                     height: 120,
                     borderRadius: 12,
-                    border: "2px dashed #cbd5e1",
-                    background: "#f8fafc",
+                    border: "2px dashed var(--lc-line-2)",
+                    background: "var(--lc-surface-2)",
                     display: "grid",
                     placeItems: "center",
                     overflow: "hidden",
@@ -232,7 +232,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                       style={{ width: "100%", height: "100%", objectFit: "contain" }}
                     />
                   ) : (
-                    <div style={{ color: "#94a3b8", fontSize: "0.75rem", padding: "6px", textAlign: "center" }}>
+                    <div style={{ color: "var(--lc-ink-3)", fontSize: "0.75rem", padding: "6px", textAlign: "center" }}>
                       <span style={{ fontSize: "2rem", display: "block", marginBottom: 2 }}>📷</span>
                       Subir Foto
                     </div>
@@ -258,7 +258,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setImagePath(null)}
-                      style={{ background: "none", border: "none", color: "#dc2626", fontSize: "0.7rem", cursor: "pointer", textDecoration: "underline" }}
+                      style={{ background: "none", border: "none", color: "var(--lc-danger)", fontSize: "0.7rem", cursor: "pointer", textDecoration: "underline" }}
                     >
                       Quitar
                     </button>
@@ -279,7 +279,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                       value={code}
                       onChange={(e) => setCode(e.target.value)}
                       placeholder="BAL-500"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontFamily: "monospace", fontWeight: 700 }}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)", fontFamily: "monospace", fontWeight: 700 }}
                     />
                   </div>
 
@@ -293,7 +293,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Balanza de Plataforma 500kg"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontWeight: 600 }}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)", fontWeight: 600 }}
                     />
                   </div>
                 </div>
@@ -306,7 +306,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                     <select
                       value={type}
                       onChange={(e) => setType(e.target.value as ProductWrite["type"])}
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
                     >
                       <option value="DirectSale">📦 Venta Directa (Reventa)</option>
                       <option value="Service">🛠️ Servicio Intangible</option>
@@ -324,7 +324,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                     <select
                       value={categoryId}
                       onChange={(e) => setCategoryId(e.target.value)}
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
                     >
                       <option value="">(Sin Categoría)</option>
                       {categories.map((c) => (
@@ -342,7 +342,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                     <select
                       value={baseUnit}
                       onChange={(e) => setBaseUnit(e.target.value)}
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
                     >
                       <option value="UN">Unidad (UN)</option>
                       <option value="KG">Kilogramo (KG)</option>
@@ -374,7 +374,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                     onChange={(e) => setShowInCatalog(e.target.checked)}
                     style={{ width: 15, height: 15, cursor: "pointer" }}
                   />
-                  <label htmlFor="quickShowInCatalog" style={{ cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, color: showInCatalog ? "#047857" : "#475569" }}>
+                  <label htmlFor="quickShowInCatalog" style={{ cursor: "pointer", fontSize: "0.78rem", fontWeight: 700, color: showInCatalog ? "var(--lc-ok)" : "var(--lc-ink-2)" }}>
                     🌐 Publicar en Catálogo Web & Carrito de Clientes (Portal B2B)
                   </label>
                 </div>
@@ -382,16 +382,16 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
             </div>
 
             {/* Prices Matrix */}
-            <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+            <div style={{ background: "var(--lc-surface-2)", padding: "14px", borderRadius: "10px", border: "1px solid var(--lc-line)" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: "3px", color: "#047857" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: "3px", color: "var(--lc-ok)" }}>
                     🟢 Moneda de Venta *
                   </label>
                   <select
                     value={saleCurrency}
                     onChange={(e) => setSaleCurrency(e.target.value as ProductWrite["saleCurrency"])}
-                    style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                    style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
                   >
                     <option value="ARS">ARS ($ Pesos)</option>
                     <option value="USD_BILLETE">USD (Dólar Billete)</option>
@@ -400,7 +400,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: "3px", color: "#047857" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: "3px", color: "var(--lc-ok)" }}>
                     Precio de Venta Base *
                   </label>
                   <input
@@ -409,7 +409,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                     min="0"
                     value={basePrice}
                     onChange={(e) => setBasePrice(parseFloat(e.target.value) || 0)}
-                    style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1", fontFamily: "monospace", fontWeight: 700 }}
+                    style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)", fontFamily: "monospace", fontWeight: 700 }}
                   />
                 </div>
 
@@ -420,7 +420,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                   <select
                     value={taxRate}
                     onChange={(e) => setTaxRate(parseFloat(e.target.value) || 21)}
-                    style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                    style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
                   >
                     <option value={21}>21.0% (General)</option>
                     <option value={10.5}>10.5% (Bienes de Capital)</option>
@@ -430,15 +430,15 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "12px", marginTop: "10px", paddingTop: "10px", borderTop: "1px dashed #cbd5e1" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "12px", marginTop: "10px", paddingTop: "10px", borderTop: "1px dashed var(--lc-line-2)" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, marginBottom: "3px", color: "#64748b" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, marginBottom: "3px", color: "var(--lc-ink-3)" }}>
                     Moneda de Costo
                   </label>
                   <select
                     value={purchaseCurrency}
                     onChange={(e) => setPurchaseCurrency(e.target.value as ProductWrite["purchaseCurrency"])}
-                    style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.82rem" }}
+                    style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--lc-line-2)", fontSize: "0.82rem" }}
                   >
                     <option value="ARS">ARS ($)</option>
                     <option value="USD_BILLETE">USD (Billete)</option>
@@ -447,7 +447,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, marginBottom: "3px", color: "#64748b" }}>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, marginBottom: "3px", color: "var(--lc-ink-3)" }}>
                     Costo de Compra / Reposición
                   </label>
                   <input
@@ -456,7 +456,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                     min="0"
                     value={costPrice}
                     onChange={(e) => setCostPrice(parseFloat(e.target.value) || 0)}
-                    style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.82rem", fontFamily: "monospace" }}
+                    style={{ width: "100%", padding: "6px 8px", borderRadius: "6px", border: "1px solid var(--lc-line-2)", fontSize: "0.82rem", fontFamily: "monospace" }}
                   />
                 </div>
               </div>
@@ -472,7 +472,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Resumen del producto o servicio..."
-                style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)", fontSize: "0.85rem" }}
               />
             </div>
 
@@ -485,7 +485,7 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
                 value={detailedDescription}
                 onChange={(e) => setDetailedDescription(e.target.value)}
                 placeholder="Dimensiones, capacidad, tolerancias, certificaciones..."
-                style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+                style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)", fontSize: "0.85rem" }}
               />
             </div>
           </div>
@@ -494,11 +494,11 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
           <div
             style={{
               padding: "16px 24px",
-              borderTop: "1px solid #e2e8f0",
+              borderTop: "1px solid var(--lc-line)",
               display: "flex",
               justifyContent: "flex-end",
               gap: "12px",
-              background: "#f8fafc"
+              background: "var(--lc-surface-2)"
             }}
           >
             <button
@@ -515,8 +515,8 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
               style={{
                 padding: "9px 24px",
                 borderRadius: "8px",
-                background: "#0d9488",
-                color: "#ffffff",
+                background: "var(--lc-accent)",
+                color: "#fff",
                 border: "none",
                 fontWeight: 700,
                 cursor: "pointer",

@@ -262,12 +262,12 @@ export function PurchaseReceptionFormPage() {
           style={{
             marginBottom: "20px",
             background: "linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(59, 130, 246, 0.04))",
-            borderLeft: "4px solid #0284c7"
+            borderLeft: "4px solid var(--lc-info)"
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <span style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", color: "#0369a1" }}>
+              <span style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", color: "var(--lc-info)" }}>
                 📥 Ingreso Vinculado a Factura de Compra
               </span>
               <h3 style={{ margin: "4px 0 0 0", color: "#0c4a6e" }}>
@@ -346,7 +346,7 @@ export function PurchaseReceptionFormPage() {
               </label>
 
               {!hasSupplierRemito && (
-                <span className="badge" style={{ background: "rgba(59, 130, 246, 0.1)", color: "#1d4ed8", fontWeight: 600, padding: "4px 10px", borderRadius: 8 }}>
+                <span className="badge" style={{ background: "rgba(59, 130, 246, 0.1)", color: "var(--lc-info)", fontWeight: 600, padding: "4px 10px", borderRadius: 8 }}>
                   ℹ️ Recepción Directa (Sin remito de proveedor — se asignará número interno de recepción automáticamente)
                 </span>
               )}
@@ -530,7 +530,7 @@ export function PurchaseReceptionFormPage() {
                           type="button"
                           className="btn ghost compact"
                           onClick={() => removeItemRow(index)}
-                          style={{ color: "#ef4444", padding: "4px 8px" }}
+                          style={{ color: "var(--lc-danger)", padding: "4px 8px" }}
                           title="Eliminar renglón"
                         >
                           ✕

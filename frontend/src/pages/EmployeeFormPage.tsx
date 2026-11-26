@@ -405,16 +405,16 @@ export function EmployeeFormPage() {
       {/* Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b", marginBottom: 6 }}>
-            <Link to="/rrhh" style={{ color: "#64748b", textDecoration: "none" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
+            <Link to="/rrhh" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
               RRHH
             </Link>
             <span>›</span>
-            <Link to="/rrhh/empleados" style={{ color: "#64748b", textDecoration: "none" }}>
+            <Link to="/rrhh/empleados" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
               Colaboradores
             </Link>
             <span>›</span>
-            <span style={{ color: "#0f172a", fontWeight: 600 }}>{isEditing ? `${lastName}, ${firstName}` : "Nuevo Colaborador"}</span>
+            <span style={{ color: "var(--lc-ink)", fontWeight: 600 }}>{isEditing ? `${lastName}, ${firstName}` : "Nuevo Colaborador"}</span>
           </div>
           <h1 style={{ margin: 0 }}>{isEditing ? `👤 ${lastName}, ${firstName} (${fileNumber})` : "👤 Nuevo Colaborador"}</h1>
           <p className="muted" style={{ margin: "4px 0 0 0" }}>
@@ -485,7 +485,7 @@ export function EmployeeFormPage() {
           <h2 style={{ fontSize: "1.15rem", margin: 0 }}>👤 Identificación & Datos de Contacto</h2>
 
           <div className="row" style={{ gap: 24, alignItems: "center" }}>
-            <div style={{ width: 100, height: 100, borderRadius: "50%", background: "var(--surface-sunken)", border: "2px dashed #cbd5e1", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
+            <div style={{ width: 100, height: 100, borderRadius: "50%", background: "var(--surface-sunken)", border: "2px dashed var(--lc-line-2)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
               {photoPath ? (
                 <img src={photoPath} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
@@ -603,7 +603,7 @@ export function EmployeeFormPage() {
 
       {/* TAB 2: CONTRATO & CONVENIO */}
       {activeTab === "labor" && (
-        <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid #3b82f6" }}>
+        <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid var(--lc-info)" }}>
           <h2 style={{ fontSize: "1.15rem", margin: 0 }}>💼 Relación Laboral & Previsional</h2>
 
           <div className="grid-3">
@@ -828,7 +828,7 @@ export function EmployeeFormPage() {
 
       {/* TAB 3: DATOS BANCARIOS */}
       {activeTab === "banking" && (
-        <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid #10b981" }}>
+        <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid var(--lc-ok)" }}>
           <h2 style={{ fontSize: "1.15rem", margin: 0 }}>🏦 Acreditación de Haberes (CBU / Cuenta Sueldo)</h2>
 
           <div className="grid-3">
@@ -858,7 +858,7 @@ export function EmployeeFormPage() {
           )}
 
           {/* Documentación Activa & Ingreso */}
-          <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid #8b5cf6" }}>
+          <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-violet)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h2 style={{ fontSize: "1.15rem", margin: 0 }}>📂 Documentación Activa & de Ingreso</h2>
@@ -889,7 +889,7 @@ export function EmployeeFormPage() {
                     const isUploading = uploadingDocType === doc.id;
 
                     return (
-                      <tr key={doc.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <tr key={doc.id} style={{ borderBottom: "1px solid var(--lc-line)" }}>
                         <td>
                           <strong>{doc.label}</strong>
                           <div className="muted" style={{ fontSize: "0.75rem", marginTop: 2 }}>{doc.description}</div>
@@ -899,7 +899,7 @@ export function EmployeeFormPage() {
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <span style={{ fontSize: "1rem" }}>📑</span>
                               <div>
-                                <strong style={{ color: "#0f172a", fontSize: "0.82rem", display: "block" }}>
+                                <strong style={{ color: "var(--lc-ink)", fontSize: "0.82rem", display: "block" }}>
                                   {existing?.fileName || `${doc.id}.pdf`}
                                 </strong>
                                 <span className="muted" style={{ fontSize: "0.72rem" }}>
@@ -926,7 +926,7 @@ export function EmployeeFormPage() {
                                   type="button"
                                   className="btn ghost compact"
                                   title="Ver documento en nueva pestaña"
-                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "#8b5cf6" }}
+                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "var(--lc-violet)" }}
                                   onClick={() => handleViewDoc(existing)}
                                 >
                                   👁️ Ver
@@ -935,7 +935,7 @@ export function EmployeeFormPage() {
                                   type="button"
                                   className="btn ghost compact"
                                   title="Descargar archivo PDF"
-                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "#0d9488" }}
+                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "var(--lc-accent-strong)" }}
                                   onClick={() => handleDownloadDoc(existing)}
                                 >
                                   ⬇️ Descargar
@@ -950,8 +950,8 @@ export function EmployeeFormPage() {
                                   fontSize: "0.75rem",
                                   padding: "4px 10px",
                                   cursor: "pointer",
-                                  background: hasFile ? undefined : "linear-gradient(135deg, #8b5cf6, #7c3aed)",
-                                  color: hasFile ? undefined : "#fff"
+                                  background: hasFile ? undefined: "linear-gradient(135deg, var(--lc-violet), var(--lc-violet))",
+                                  color: hasFile ? undefined: "var(--lc-surface)"
                                 }}
                               >
                                 {isUploading ? "Subiendo..." : hasFile ? "🔄 Reemplazar" : "📤 Subir PDF"}
@@ -970,7 +970,7 @@ export function EmployeeFormPage() {
                                 type="button"
                                 className="btn ghost compact"
                                 title="Quitar archivo"
-                                style={{ padding: "4px 6px", fontSize: "0.75rem", color: "#ef4444" }}
+                                style={{ padding: "4px 6px", fontSize: "0.75rem", color: "var(--lc-danger)" }}
                                 onClick={() => handleDeleteDoc(existing)}
                               >
                                 🗑️
@@ -987,10 +987,10 @@ export function EmployeeFormPage() {
           </div>
 
           {/* Subcategoría: Documentación de Egreso */}
-          <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid #ef4444", background: status === 2 ? "#fff" : "rgba(241, 245, 249, 0.4)" }}>
+          <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-danger)", background: status === 2 ? "#fff" : "rgba(241, 245, 249, 0.4)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <h2 style={{ fontSize: "1.15rem", margin: 0, color: "#991b1b" }}>🧾 Subcategoría: Documentación de Egreso / Desvinculación</h2>
+                <h2 style={{ fontSize: "1.15rem", margin: 0, color: "var(--lc-danger)" }}>🧾 Subcategoría: Documentación de Egreso / Desvinculación</h2>
                 <p className="muted" style={{ margin: "4px 0 0 0", fontSize: "0.85rem" }}>
                   Comprobantes finales firmados, certificados de trabajo (Art. 80 LCT) y constancias de baja
                 </p>
@@ -1018,9 +1018,9 @@ export function EmployeeFormPage() {
                     const isUploading = uploadingDocType === doc.id;
 
                     return (
-                      <tr key={doc.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <tr key={doc.id} style={{ borderBottom: "1px solid var(--lc-line)" }}>
                         <td>
-                          <strong style={{ color: "#991b1b" }}>{doc.label}</strong>
+                          <strong style={{ color: "var(--lc-danger)" }}>{doc.label}</strong>
                           <div className="muted" style={{ fontSize: "0.75rem", marginTop: 2 }}>{doc.description}</div>
                         </td>
                         <td>
@@ -1028,7 +1028,7 @@ export function EmployeeFormPage() {
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                               <span style={{ fontSize: "1rem" }}>📑</span>
                               <div>
-                                <strong style={{ color: "#0f172a", fontSize: "0.82rem", display: "block" }}>
+                                <strong style={{ color: "var(--lc-ink)", fontSize: "0.82rem", display: "block" }}>
                                   {existing?.fileName || `${doc.id}.pdf`}
                                 </strong>
                                 <span className="muted" style={{ fontSize: "0.72rem" }}>
@@ -1055,7 +1055,7 @@ export function EmployeeFormPage() {
                                   type="button"
                                   className="btn ghost compact"
                                   title="Ver documento en nueva pestaña"
-                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "#8b5cf6" }}
+                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "var(--lc-violet)" }}
                                   onClick={() => handleViewDoc(existing)}
                                 >
                                   👁️ Ver
@@ -1064,7 +1064,7 @@ export function EmployeeFormPage() {
                                   type="button"
                                   className="btn ghost compact"
                                   title="Descargar archivo PDF"
-                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "#0d9488" }}
+                                  style={{ padding: "4px 8px", fontSize: "0.75rem", color: "var(--lc-accent-strong)" }}
                                   onClick={() => handleDownloadDoc(existing)}
                                 >
                                   ⬇️ Descargar
@@ -1079,8 +1079,8 @@ export function EmployeeFormPage() {
                                   fontSize: "0.75rem",
                                   padding: "4px 10px",
                                   cursor: "pointer",
-                                  background: hasFile ? undefined : "linear-gradient(135deg, #ef4444, #dc2626)",
-                                  color: hasFile ? undefined : "#fff"
+                                  background: hasFile ? undefined: "linear-gradient(135deg, var(--lc-danger), var(--lc-danger))",
+                                  color: hasFile ? undefined: "var(--lc-surface)"
                                 }}
                               >
                                 {isUploading ? "Subiendo..." : hasFile ? "🔄 Reemplazar" : "📤 Subir PDF"}
@@ -1099,7 +1099,7 @@ export function EmployeeFormPage() {
                                 type="button"
                                 className="btn ghost compact"
                                 title="Quitar archivo"
-                                style={{ padding: "4px 6px", fontSize: "0.75rem", color: "#ef4444" }}
+                                style={{ padding: "4px 6px", fontSize: "0.75rem", color: "var(--lc-danger)" }}
                                 onClick={() => handleDeleteDoc(existing)}
                               >
                                 🗑️
@@ -1119,7 +1119,7 @@ export function EmployeeFormPage() {
 
       {/* TAB 5: EPP */}
       {activeTab === "epp" && (
-        <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid #0d9488" }}>
+        <div className="card pad stack" style={{ gap: 20, borderLeft: "5px solid var(--lc-accent)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <h2 style={{ fontSize: "1.15rem", margin: 0 }}>🛡️ Elementos de Protección Personal (EPP)</h2>
@@ -1128,7 +1128,7 @@ export function EmployeeFormPage() {
               </p>
             </div>
             {isEditing && (
-              <button type="button" className="btn" onClick={() => setShowAddEppModal(true)} style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+              <button type="button" className="btn" onClick={() => setShowAddEppModal(true)} style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff" }}>
                 + Registrar Entrega de EPP
               </button>
             )}

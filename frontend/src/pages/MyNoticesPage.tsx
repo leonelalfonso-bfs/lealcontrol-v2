@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { MyNotices, NoticeSettings } from "../api/types";
 
-const SEVERITY_COLOR = { Critical: "#b91c1c", Warning: "#b45309", Info: "var(--ink)" } as const;
+const SEVERITY_COLOR = { Critical: "var(--lc-danger)", Warning: "var(--lc-warn)", Info: "var(--ink)" } as const;
 
 /** Mi perfil → Mis avisos: lo que tengo hoy y qué avisos quiero recibir. */
 export function MyNoticesPage() {

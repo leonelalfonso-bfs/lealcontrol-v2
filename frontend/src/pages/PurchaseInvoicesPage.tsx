@@ -171,7 +171,7 @@ export function PurchaseInvoicesPage() {
 
       {arcaMsg && <div className="alert" style={{ marginBottom: 16 }}>{arcaMsg}</div>}
       {error && (
-        <div className="alert" style={{ background: "#fee2e2", color: "#991b1b", borderColor: "#f87171", marginBottom: 16 }}>
+        <div className="alert" style={{ background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderColor: "var(--lc-danger)", marginBottom: 16 }}>
           ⚠️ {error}
         </div>
       )}
@@ -187,25 +187,25 @@ export function PurchaseInvoicesPage() {
         </div>
         <div className="card">
           <span className="muted">Total Compras (ARS)</span>
-          <strong style={{ color: "#0f172a" }}>{money(totalArs, "ARS")}</strong>
-          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingArs > 0 ? "#dc2626" : "#059669", fontWeight: 600 }}>
+          <strong style={{ color: "var(--lc-ink)" }}>{money(totalArs, "ARS")}</strong>
+          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingArs > 0 ? "var(--lc-danger)" : "var(--lc-ok)", fontWeight: 600 }}>
             Pendiente de Pago: {money(pendingArs, "ARS")}
           </small>
         </div>
         <div className="card">
           <span className="muted">Total Compras (USD)</span>
-          <strong style={{ color: "#2563eb" }}>{money(totalUsd, "USD")}</strong>
-          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingUsd > 0 ? "#dc2626" : "#059669", fontWeight: 600 }}>
+          <strong style={{ color: "var(--lc-info)" }}>{money(totalUsd, "USD")}</strong>
+          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingUsd > 0 ? "var(--lc-danger)" : "var(--lc-ok)", fontWeight: 600 }}>
             Pendiente de Pago: {money(pendingUsd, "USD")}
           </small>
         </div>
         <div className="card">
           <span className="muted">Estado de Pagos</span>
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.9rem" }}>
+            <span style={{ color: "var(--lc-ok)", fontWeight: 700, fontSize: "0.9rem" }}>
               🟢 {enrichedInvoices.filter((i) => i.isPaid).length} Pagadas
             </span>
-            <span style={{ color: "#dc2626", fontWeight: 700, fontSize: "0.9rem" }}>
+            <span style={{ color: "var(--lc-danger)", fontWeight: 700, fontSize: "0.9rem" }}>
               🔴 {enrichedInvoices.filter((i) => !i.isPaid).length} Pendientes
             </span>
           </div>
@@ -310,7 +310,7 @@ export function PurchaseInvoicesPage() {
                       }}
                     >
                       <td style={{ padding: "12px 8px" }}>
-                        <span style={{ padding: "3px 8px", borderRadius: "6px", fontWeight: "bold", fontSize: "0.82rem", background: "#f1f5f9", color: "#0284c7" }}>
+                        <span style={{ padding: "3px 8px", borderRadius: "6px", fontWeight: "bold", fontSize: "0.82rem", background: "var(--lc-surface-2)", color: "var(--lc-info)" }}>
                           {inv.invoiceType}
                         </span>
                       </td>
@@ -320,7 +320,7 @@ export function PurchaseInvoicesPage() {
                           style={{
                             fontWeight: "bold",
                             fontFamily: "monospace",
-                            color: "#0284c7",
+                            color: "var(--lc-info)",
                             textDecoration: "none",
                             fontSize: "0.92rem"
                           }}
@@ -332,7 +332,7 @@ export function PurchaseInvoicesPage() {
                       <td style={{ padding: "12px 8px", fontSize: "0.88rem" }}>
                         <div>{new Date(inv.issueDate).toLocaleDateString("es-AR")}</div>
                         {inv.imputationPeriod && inv.imputationPeriod.slice(0, 7) !== inv.issueDate.slice(0, 7) && (
-                          <small style={{ display: "block", fontSize: "0.75rem", color: "#7c3aed" }}>
+                          <small style={{ display: "block", fontSize: "0.75rem", color: "var(--lc-violet)" }}>
                             Imputada a {inv.imputationPeriod.slice(5, 7)}/{inv.imputationPeriod.slice(0, 4)}
                           </small>
                         )}
@@ -344,7 +344,7 @@ export function PurchaseInvoicesPage() {
                         <div style={{ fontWeight: 600 }}>{inv.supplierName}</div>
                         <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>CUIT: {inv.supplierDocument}</div>
                       </td>
-                      <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: "bold", fontFamily: "monospace", color: "#0f172a" }}>
+                      <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: "bold", fontFamily: "monospace", color: "var(--lc-ink)" }}>
                         {money(inv.total, inv.currency)}
                         <div className="muted" style={{ fontSize: "0.75rem", fontWeight: "normal" }}>
                           Neto: {money(inv.subtotal, inv.currency)}
@@ -352,23 +352,23 @@ export function PurchaseInvoicesPage() {
                       </td>
                       <td style={{ padding: "12px 8px", textAlign: "center" }}>
                         {inv.cae ? (
-                          <span style={{ fontSize: "0.8rem", fontFamily: "monospace", padding: "2px 6px", background: "#ecfdf5", color: "#047857", borderRadius: "4px" }}>
+                          <span style={{ fontSize: "0.8rem", fontFamily: "monospace", padding: "2px 6px", background: "var(--lc-ok-bg)", color: "var(--lc-ok)", borderRadius: "4px" }}>
                             {inv.cae}
                           </span>
                         ) : (
-                          <span style={{ color: "#94a3b8" }}>—</span>
+                          <span style={{ color: "var(--lc-ink-3)" }}>—</span>
                         )}
                         {inv.status !== "Cancelled" && (() => {
                           const check = arcaChecks[inv.id];
-                          const label = check?.outcome === "Approved" ? { text: "✓ Constatada en ARCA", color: "#047857" }
-                            : check?.outcome === "Rejected" ? { text: "✗ ARCA no la reconoce", color: "#b91c1c" }
-                            : check?.outcome === "NotCheckable" ? { text: "No se puede constatar", color: "#92400e" }
-                            : check?.outcome === "Unavailable" ? { text: "No se pudo consultar", color: "#64748b" } : null;
+                          const label = check?.outcome === "Approved" ? { text: "✓ Constatada en ARCA", color: "var(--lc-ok)" }
+                            : check?.outcome === "Rejected" ? { text: "✗ ARCA no la reconoce", color: "var(--lc-danger)" }
+                            : check?.outcome === "NotCheckable" ? { text: "No se puede constatar", color: "var(--lc-warn)" }
+                            : check?.outcome === "Unavailable" ? { text: "No se pudo consultar", color: "var(--lc-ink-3)" } : null;
                           return (
                             <div style={{ fontSize: "0.72rem", marginTop: 4 }}>
                               {label && <span title={`${check!.detail} · ${new Date(check!.checkedAt).toLocaleString("es-AR")}`} style={{ color: label.color, fontWeight: 600 }}>{label.text}</span>}
                               {check && check.outcome !== "Approved" && (
-                                <div style={{ color: "#64748b", maxWidth: 220, margin: "2px auto 0", lineHeight: 1.3 }}>{check.detail}</div>
+                                <div style={{ color: "var(--lc-ink-3)", maxWidth: 220, margin: "2px auto 0", lineHeight: 1.3 }}>{check.detail}</div>
                               )}
                               {check?.outcome !== "Approved" && (
                                 <button type="button" className="btn ghost compact" style={{ marginLeft: 4 }} disabled={arcaBusy !== null} onClick={() => void checkOne(inv.id)}>
@@ -388,7 +388,7 @@ export function PurchaseInvoicesPage() {
                               className="badge ok"
                               style={{
                                 background: "rgba(16, 185, 129, 0.15)",
-                                color: "#065f46",
+                                color: "var(--lc-ok)",
                                 fontWeight: 700,
                                 padding: "4px 8px"
                               }}
@@ -405,14 +405,14 @@ export function PurchaseInvoicesPage() {
                               className="badge warn"
                               style={{
                                 background: "rgba(245, 158, 11, 0.18)",
-                                color: "#92400e",
+                                color: "var(--lc-warn)",
                                 fontWeight: 700,
                                 padding: "4px 8px"
                               }}
                             >
                               🟡 Pago Parcial
                             </span>
-                            <div style={{ fontSize: "0.75rem", color: "#dc2626", fontWeight: 700, marginTop: 2 }}>
+                            <div style={{ fontSize: "0.75rem", color: "var(--lc-danger)", fontWeight: 700, marginTop: 2 }}>
                               Resta: {money(inv.saldoPendiente, inv.currency)}
                             </div>
                             <div className="muted" style={{ fontSize: "0.72rem" }}>
@@ -425,7 +425,7 @@ export function PurchaseInvoicesPage() {
                               className="badge off"
                               style={{
                                 background: "rgba(239, 68, 68, 0.12)",
-                                color: "#991b1b",
+                                color: "var(--lc-danger)",
                                 fontWeight: 700,
                                 padding: "4px 8px"
                               }}
@@ -462,7 +462,7 @@ export function PurchaseInvoicesPage() {
                               padding: "4px 10px",
                               borderRadius: "12px",
                               background: "rgba(16, 185, 129, 0.15)",
-                              color: "#065f46",
+                              color: "var(--lc-ok)",
                               fontWeight: 700
                             }}
                             title="La mercadería ya fue ingresada a stock mediante remito"
@@ -478,7 +478,7 @@ export function PurchaseInvoicesPage() {
                                 padding: "2px 8px",
                                 borderRadius: "10px",
                                 background: "rgba(245, 158, 11, 0.18)",
-                                color: "#92400e",
+                                color: "var(--lc-warn)",
                                 fontWeight: 700
                               }}
                             >
@@ -517,8 +517,8 @@ export function PurchaseInvoicesPage() {
                               style={{
                                 fontSize: "0.75rem",
                                 padding: "4px 8px",
-                                background: openRecsForSupplier.length > 0 ? "#64748b" : "#0284c7",
-                                color: "#ffffff",
+                                background: openRecsForSupplier.length > 0 ? "var(--lc-ink-3)" : "var(--lc-info)",
+                                color: "#fff",
                                 fontWeight: 700,
                                 borderRadius: "6px",
                                 textDecoration: "none"
@@ -549,8 +549,8 @@ export function PurchaseInvoicesPage() {
                               style={{
                                 fontSize: "0.78rem",
                                 padding: "4px 10px",
-                                background: "#0284c7",
-                                color: "#ffffff",
+                                background: "var(--lc-info)",
+                                color: "#fff",
                                 fontWeight: 700,
                                 borderRadius: "6px",
                                 textDecoration: "none"
@@ -567,8 +567,8 @@ export function PurchaseInvoicesPage() {
                               fontSize: "0.78rem",
                               padding: "4px 10px",
                               fontWeight: 600,
-                              color: "#0284c7",
-                              borderColor: "#cbd5e1"
+                              color: "var(--lc-info)",
+                              borderColor: "var(--lc-line-2)"
                             }}
                             title="Ver comprobante completo con detalle de renglones y cantidades"
                           >
@@ -617,8 +617,8 @@ export function PurchaseInvoicesPage() {
                                 fontSize: "0.78rem",
                                 padding: "4px 10px",
                                 fontWeight: 600,
-                                color: "#991b1b",
-                                borderColor: "#fecaca"
+                                color: "var(--lc-danger)",
+                                borderColor: "var(--lc-danger-bg)"
                               }}
                               title="Anular factura (deja de impactar cuenta corriente)"
                               onClick={() => {
@@ -638,7 +638,7 @@ export function PurchaseInvoicesPage() {
                             </button>
                           )}
                           {inv.status === "Cancelled" && (
-                            <span className="badge off" style={{ fontSize: "0.75rem", color: "#991b1b" }}>
+                            <span className="badge off" style={{ fontSize: "0.75rem", color: "var(--lc-danger)" }}>
                               Anulada
                             </span>
                           )}

@@ -148,7 +148,7 @@ export function QualityLinkedItPage() {
   if (!itCode || !meta) {
     return (
       <div className="workspace-page pad">
-        <p style={{ color: "#b91c1c" }}>Instructivo o registro no válido. Usá IT01–IT04 y r1/r2/r3.</p>
+        <p style={{ color: "var(--lc-danger)" }}>Instructivo o registro no válido. Usá IT01–IT04 y r1/r2/r3.</p>
         <Link to="/calidad/registros">← Registros operativos</Link>
       </div>
     );
@@ -166,7 +166,7 @@ export function QualityLinkedItPage() {
           </Link>
         </div>
         <h1 style={{ margin: "8px 0 0" }}>{pageTitle}</h1>
-        <p style={{ color: "#64748b", marginTop: 6, maxWidth: 760 }}>{subtitle}</p>
+        <p style={{ color: "var(--lc-ink-3)", marginTop: 6, maxWidth: 760 }}>{subtitle}</p>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
@@ -185,7 +185,7 @@ export function QualityLinkedItPage() {
         )}
       </div>
 
-      {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
+      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
       {loading && <p>Cargando…</p>}
 
       {!loading && meta.focus === "equipment" && (
@@ -257,7 +257,7 @@ export function QualityLinkedItPage() {
               {reports.map((r) => (
                 <tr key={r.id}>
                   <td>
-                    <strong style={{ color: "#0d9488" }}>{certOf(r)}</strong>
+                    <strong style={{ color: "var(--lc-accent-strong)" }}>{certOf(r)}</strong>
                   </td>
                   <td>{fmtDate(r.calibrationDate)}</td>
                   <td>
@@ -306,7 +306,7 @@ export function QualityLinkedItPage() {
               {reports.map((r) => (
                 <tr key={r.id}>
                   <td>
-                    <strong style={{ color: "#0d9488" }}>{certOf(r)}</strong>
+                    <strong style={{ color: "var(--lc-accent-strong)" }}>{certOf(r)}</strong>
                   </td>
                   <td>{fmtDate(r.calibrationDate)}</td>
                   <td>{r.equipmentCode}</td>

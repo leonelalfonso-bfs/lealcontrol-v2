@@ -48,7 +48,7 @@ export function PurchaseOrdersPage() {
             { header: "Fecha", key: "issueDate" }, { header: "Estado", key: "status" },
             { header: "Moneda", key: "currency" }, { header: "Total", key: "total" },
           ]} />
-          <Link to="/compras/arca" className="btn" style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", color: "white" }}>
+          <Link to="/compras/arca" className="btn" style={{ background: "linear-gradient(135deg, var(--lc-info), var(--lc-info))", color: "white" }}>
             📥 Importar de ARCA
           </Link>
           <Link to="/compras/ordenes/nueva" className="btn btn-primary">
@@ -60,7 +60,7 @@ export function PurchaseOrdersPage() {
       {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "20px" }}>
         <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(2, 132, 199, 0.05))" }}>
-          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "#0369a1", textTransform: "uppercase" }}>
+          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "var(--lc-info)", textTransform: "uppercase" }}>
             Total Compras Emitidas
           </div>
           <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px" }}>
@@ -69,16 +69,16 @@ export function PurchaseOrdersPage() {
         </div>
 
         <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.05))" }}>
-          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "#b45309", textTransform: "uppercase" }}>
+          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "var(--lc-warn)", textTransform: "uppercase" }}>
             Órdenes Pendientes / En Tránsito
           </div>
-          <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px", color: "#b45309" }}>
+          <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px", color: "var(--lc-warn)" }}>
             {pendingCount}
           </div>
         </div>
 
         <div className="card pad" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.05))" }}>
-          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "#047857", textTransform: "uppercase" }}>
+          <div style={{ fontSize: "0.82rem", fontWeight: "bold", color: "var(--lc-ok)", textTransform: "uppercase" }}>
             Total Registradas
           </div>
           <div style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "4px" }}>
@@ -135,14 +135,14 @@ export function PurchaseOrdersPage() {
               {orders.map((o) => {
                 const badgeColor =
                   o.status === "Received"
-                    ? { bg: "#ecfdf5", text: "#047857" }
+                    ? { bg: "var(--lc-ok-bg)", text: "var(--lc-ok)" }
                     : o.status === "Sent"
-                    ? { bg: "#eff6ff", text: "#1d4ed8" }
+                    ? { bg: "var(--lc-info-bg)", text: "var(--lc-info)" }
                     : o.status === "PartiallyReceived"
-                    ? { bg: "#fffbeb", text: "#b45309" }
+                    ? { bg: "var(--lc-warn-bg)", text: "var(--lc-warn)" }
                     : o.status === "Cancelled"
-                    ? { bg: "#fef2f2", text: "#b91c1c" }
-                    : { bg: "#f1f5f9", text: "#475569" };
+                    ? { bg: "var(--lc-danger-bg)", text: "var(--lc-danger)" }
+                    : { bg: "var(--lc-surface-2)", text: "var(--lc-ink-2)" };
 
                 return (
                   <tr key={o.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
@@ -187,7 +187,7 @@ export function PurchaseOrdersPage() {
                               padding: "4px 8px",
                               borderRadius: "6px",
                               background: "rgba(16, 185, 129, 0.15)",
-                              color: "#065f46",
+                              color: "var(--lc-ok)",
                               fontWeight: 700
                             }}
                             title="Mercadería 100% recibida en almacén"
@@ -213,7 +213,7 @@ export function PurchaseOrdersPage() {
                           <Link
                             to={`/compras/facturas/nueva?order_id=${o.id}`}
                             className="btn"
-                            style={{ padding: "4px 8px", fontSize: "0.82rem", background: "#3b82f6", color: "white" }}
+                            style={{ padding: "4px 8px", fontSize: "0.82rem", background: "var(--lc-info)", color: "white" }}
                             title="Cargar Factura Proveedor"
                           >
                             🧾 Facturar
@@ -223,7 +223,7 @@ export function PurchaseOrdersPage() {
                           <button
                             type="button"
                             className="btn btn-outline"
-                            style={{ padding: "4px 8px", fontSize: "0.82rem", color: "#991b1b", borderColor: "#fecaca" }}
+                            style={{ padding: "4px 8px", fontSize: "0.82rem", color: "var(--lc-danger)", borderColor: "var(--lc-danger-bg)" }}
                             title="Anular orden de compra"
                             onClick={() => {
                               if (!window.confirm(`¿Anular la orden ${o.orderNumber}?`)) return;

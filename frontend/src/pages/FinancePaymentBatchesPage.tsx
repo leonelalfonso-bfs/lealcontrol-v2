@@ -109,7 +109,7 @@ export function FinancePaymentBatchesPage() {
                       <button type="submit" className="btn ghost compact">Guardar</button>
                     </form>
                   ) : null}
-                  {c.problem && <div className="muted" style={{ fontSize: "0.75rem", color: "var(--danger, #b42318)" }}>{c.problem}</div>}
+                  {c.problem && <div className="muted" style={{ fontSize: "0.75rem", color: "var(--danger, var(--lc-danger))" }}>{c.problem}</div>}
                 </td>
                 <td style={{ textAlign: "right" }}>$ {money(c.amount)}</td>
               </tr>

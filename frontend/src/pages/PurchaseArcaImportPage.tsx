@@ -100,7 +100,7 @@ export function PurchaseArcaImportPage() {
       <div
         className="card pad"
         style={{
-          border: "2px dashed #0284c7",
+          border: "2px dashed var(--lc-info)",
           background: "linear-gradient(135deg, rgba(2, 132, 199, 0.04), rgba(14, 165, 233, 0.08))",
           marginBottom: "20px",
           textAlign: "center",
@@ -108,7 +108,7 @@ export function PurchaseArcaImportPage() {
         }}
       >
         <div style={{ fontSize: "2rem", marginBottom: "8px" }}>📥</div>
-        <h3 style={{ margin: "0 0 6px 0", color: "#0369a1" }}>
+        <h3 style={{ margin: "0 0 6px 0", color: "var(--lc-info)" }}>
           Subir archivo CSV de "Mis Comprobantes Recibidos"
         </h3>
         <p style={{ margin: "0 0 16px 0", fontSize: "0.9rem", color: "var(--ink-soft)" }}>
@@ -118,7 +118,7 @@ export function PurchaseArcaImportPage() {
         <label
           className="btn"
           style={{
-            background: "linear-gradient(135deg, #0284c7, #0369a1)",
+            background: "linear-gradient(135deg, var(--lc-info), var(--lc-info))",
             color: "white",
             padding: "10px 24px",
             fontSize: "0.95rem",
@@ -139,13 +139,13 @@ export function PurchaseArcaImportPage() {
       </div>
 
       {importResult && (
-        <div style={{ padding: "14px 18px", background: "#ecfdf5", color: "#065f46", borderRadius: "8px", marginBottom: "20px", border: "1px solid #6ee7b7" }}>
+        <div style={{ padding: "14px 18px", background: "var(--lc-ok-bg)", color: "var(--lc-ok)", borderRadius: "8px", marginBottom: "20px", border: "1px solid #6ee7b7" }}>
           <strong>✓ Resultado de Importación:</strong> {importResult.message}
         </div>
       )}
 
       {error && (
-        <div style={{ padding: "14px 18px", background: "#fef2f2", color: "#b91c1c", borderRadius: "8px", marginBottom: "20px", border: "1px solid #f87171" }}>
+        <div style={{ padding: "14px 18px", background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderRadius: "8px", marginBottom: "20px", border: "1px solid var(--lc-danger)" }}>
           <strong>Error:</strong> {error}
         </div>
       )}
@@ -222,10 +222,10 @@ export function PurchaseArcaImportPage() {
               {vouchers.map((v) => {
                 const badge =
                   v.status === "Registered"
-                    ? { bg: "#ecfdf5", text: "#047857", label: "Registrado" }
+                    ? { bg: "var(--lc-ok-bg)", text: "var(--lc-ok)", label: "Registrado" }
                     : v.status === "Ignored"
-                    ? { bg: "#f1f5f9", text: "#64748b", label: "Ignorado" }
-                    : { bg: "#fffbeb", text: "#b45309", label: "Pendiente" };
+                    ? { bg: "var(--lc-surface-2)", text: "var(--lc-ink-3)", label: "Ignorado" }
+                    : { bg: "var(--lc-warn-bg)", text: "var(--lc-warn)", label: "Pendiente" };
 
                 return (
                   <tr key={v.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
@@ -233,7 +233,7 @@ export function PurchaseArcaImportPage() {
                       {new Date(v.issueDate).toLocaleDateString("es-AR")}
                     </td>
                     <td style={{ padding: "10px 8px" }}>
-                      <span style={{ padding: "2px 6px", borderRadius: "4px", background: "#f1f5f9", fontWeight: "bold", fontSize: "0.8rem", color: "#0284c7" }}>
+                      <span style={{ padding: "2px 6px", borderRadius: "4px", background: "var(--lc-surface-2)", fontWeight: "bold", fontSize: "0.8rem", color: "var(--lc-info)" }}>
                         {v.voucherType}
                       </span>
                     </td>
@@ -247,7 +247,7 @@ export function PurchaseArcaImportPage() {
                     <td style={{ padding: "10px 8px", textAlign: "right", fontFamily: "monospace" }}>
                       $ {v.netAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </td>
-                    <td style={{ padding: "10px 8px", textAlign: "right", fontFamily: "monospace", color: "#047857" }}>
+                    <td style={{ padding: "10px 8px", textAlign: "right", fontFamily: "monospace", color: "var(--lc-ok)" }}>
                       $ {v.vatAmount.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                     </td>
                     <td style={{ padding: "10px 8px", textAlign: "right", fontFamily: "monospace", fontWeight: "bold" }}>
@@ -265,7 +265,7 @@ export function PurchaseArcaImportPage() {
                             <Link
                               to={`/compras/facturas/nueva?arca_id=${v.id}`}
                               className="btn"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", background: "#059669", color: "white", textDecoration: "none" }}
+                              style={{ padding: "4px 8px", fontSize: "0.8rem", background: "var(--lc-ok)", color: "white", textDecoration: "none" }}
                               title="Registrar factura con 1 clic"
                             >
                               ⚡ Registrar Factura
@@ -274,7 +274,7 @@ export function PurchaseArcaImportPage() {
                             <Link
                               to={`/clientes/nuevo?type=supplier&cuit=${v.issuerCuit}&name=${encodeURIComponent(v.issuerName)}&returnUrl=/compras/arca`}
                               className="btn btn-outline"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", textDecoration: "none", color: "#334155" }}
+                              style={{ padding: "4px 8px", fontSize: "0.8rem", textDecoration: "none", color: "var(--lc-ink-2)" }}
                               title="Abrir ficha oficial para registrar proveedor"
                             >
                               👥 Registrar Proveedor
@@ -284,7 +284,7 @@ export function PurchaseArcaImportPage() {
                               type="button"
                               onClick={() => handleIgnore(v.id)}
                               className="btn btn-outline"
-                              style={{ padding: "4px 8px", fontSize: "0.8rem", color: "#64748b" }}
+                              style={{ padding: "4px 8px", fontSize: "0.8rem", color: "var(--lc-ink-3)" }}
                               title="Ignorar comprobante"
                             >
                               ✕
@@ -293,7 +293,7 @@ export function PurchaseArcaImportPage() {
                         )}
 
                         {v.status === "Registered" && (
-                          <span style={{ fontSize: "0.82rem", color: "#047857", fontWeight: "bold" }}>
+                          <span style={{ fontSize: "0.82rem", color: "var(--lc-ok)", fontWeight: "bold" }}>
                             ✓ En Cuentas por Pagar
                           </span>
                         )}

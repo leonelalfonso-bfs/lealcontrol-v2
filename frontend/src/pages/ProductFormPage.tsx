@@ -232,7 +232,7 @@ export const ProductFormPage: React.FC = () => {
       </div>
 
       {error && (
-        <div style={{ padding: "12px 16px", background: "#fef2f2", color: "#b91c1c", borderRadius: "8px", marginBottom: "16px", border: "1px solid #f87171" }}>
+        <div style={{ padding: "12px 16px", background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderRadius: "8px", marginBottom: "16px", border: "1px solid var(--lc-danger)" }}>
           {error}
         </div>
       )}
@@ -324,7 +324,7 @@ export const ProductFormPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setImagePath(null)}
-                      style={{ background: "none", border: "none", color: "#dc2626", fontSize: "0.72rem", cursor: "pointer", textDecoration: "underline" }}
+                      style={{ background: "none", border: "none", color: "var(--lc-danger)", fontSize: "0.72rem", cursor: "pointer", textDecoration: "underline" }}
                     >
                       Quitar Foto
                     </button>
@@ -473,7 +473,7 @@ export const ProductFormPage: React.FC = () => {
             </div>
 
             {/* Precios 3-Monedas */}
-            <div style={{ background: "#f8fafc", padding: "18px", borderRadius: "12px", border: "1px solid var(--surface-border)" }}>
+            <div style={{ background: "var(--lc-surface-2)", padding: "18px", borderRadius: "12px", border: "1px solid var(--surface-border)" }}>
               <h3 style={{ marginTop: 0, marginBottom: "14px", fontSize: "1rem", color: "var(--brand-accent)", display: "flex", alignItems: "center", gap: "8px" }}>
                 <span>💰 Estructura de Precios & 3 Monedas Nativas Leal Control</span>
               </h3>
@@ -481,7 +481,7 @@ export const ProductFormPage: React.FC = () => {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                 {/* Sale Price Card */}
                 <div style={{ background: "white", padding: "14px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}>
-                  <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#047857", textTransform: "uppercase", marginBottom: "10px" }}>
+                  <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--lc-ok)", textTransform: "uppercase", marginBottom: "10px" }}>
                     🟢 PRECIO DE VENTA AL PÚBLICO
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px" }}>
@@ -511,7 +511,7 @@ export const ProductFormPage: React.FC = () => {
                         placeholder="0.00"
                         value={basePrice === 0 && !isEditing ? "" : basePrice}
                         onChange={(e) => setBasePrice(e.target.value === "" ? 0 : Number(e.target.value))}
-                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold", fontSize: "1rem", color: "#047857" }}
+                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold", fontSize: "1rem", color: "var(--lc-ok)" }}
                       />
                     </div>
                   </div>
@@ -519,7 +519,7 @@ export const ProductFormPage: React.FC = () => {
 
                 {/* Purchase Cost Card */}
                 <div style={{ background: "white", padding: "14px", borderRadius: "8px", border: "1px solid var(--surface-border)" }}>
-                  <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#b45309", textTransform: "uppercase", marginBottom: "10px" }}>
+                  <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "var(--lc-warn)", textTransform: "uppercase", marginBottom: "10px" }}>
                     🟠 COSTO DE REPOSICIÓN / COMPRA
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "10px" }}>
@@ -549,7 +549,7 @@ export const ProductFormPage: React.FC = () => {
                         placeholder="0.00"
                         value={costPrice === 0 && !isEditing ? "" : costPrice}
                         onChange={(e) => setCostPrice(e.target.value === "" ? 0 : Number(e.target.value))}
-                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold", fontSize: "1rem", color: "#b45309" }}
+                        style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid var(--surface-border)", fontFamily: "monospace", fontWeight: "bold", fontSize: "1rem", color: "var(--lc-warn)" }}
                       />
                     </div>}
                   </div>
@@ -755,7 +755,7 @@ export const ProductFormPage: React.FC = () => {
             </div>
 
             {customAttributesList.length === 0 ? (
-              <div style={{ padding: "32px", textAlign: "center", background: "#f8fafc", borderRadius: "8px", border: "1px dashed var(--surface-border)" }}>
+              <div style={{ padding: "32px", textAlign: "center", background: "var(--lc-surface-2)", borderRadius: "8px", border: "1px dashed var(--surface-border)" }}>
                 <p className="muted" style={{ margin: "0 0 10px 0", fontSize: "0.88rem" }}>
                   No hay atributos personalizados cargados para este artículo.
                 </p>
@@ -789,7 +789,7 @@ export const ProductFormPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleRemoveCustomAttr(idx)}
-                      style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "1.1rem", padding: "0 8px" }}
+                      style={{ background: "transparent", border: "none", color: "var(--lc-danger)", cursor: "pointer", fontSize: "1.1rem", padding: "0 8px" }}
                       title="Eliminar atributo"
                     >
                       ✕

@@ -260,14 +260,14 @@ export function StandardWeightsPage() {
       ═══════════════════════════════════════════ */}
       {currentScreen === "history" && (
         <div style={{ marginBottom: 25 }}>
-          <div className="card pad" style={{ borderLeft: "5px solid #0d9488" }}>
+          <div className="card pad" style={{ borderLeft: "5px solid var(--lc-accent)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div>
-                <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem" }}>
+                <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem" }}>
                   Trazabilidad & Estabilidad Metrológica
                 </span>
-                <h2 style={{ margin: "2px 0 0", fontSize: "1.5rem", fontWeight: 800, color: "#0f172a" }}>
-                  🕒 Historial de Calibración & Deriva: <span style={{ color: "#0d9488" }}>{historyWeightCode}</span>
+                <h2 style={{ margin: "2px 0 0", fontSize: "1.5rem", fontWeight: 800, color: "var(--lc-ink)" }}>
+                  🕒 Historial de Calibración & Deriva: <span style={{ color: "var(--lc-accent-strong)" }}>{historyWeightCode}</span>
                 </h2>
               </div>
               <button onClick={() => setCurrentScreen("list")} className="btn ghost">
@@ -287,7 +287,7 @@ export function StandardWeightsPage() {
               <div className="table-wrap">
                 <table style={{ width: "100%", fontSize: "0.88rem" }}>
                   <thead>
-                    <tr style={{ background: "#f8fafc" }}>
+                    <tr style={{ background: "var(--lc-surface-2)" }}>
                       <th>Fecha Cal.</th>
                       <th>Nº Certificado</th>
                       <th>Error As Found (Inicial)</th>
@@ -332,7 +332,7 @@ export function StandardWeightsPage() {
                           <td><strong>{calDate}</strong></td>
                           <td>{rec.certificateNumber || "—"}</td>
                           <td>{formatError(eaf, unit)}</td>
-                          <td style={{ fontWeight: 700, color: (ec ?? 0) >= 0 ? "#16a34a" : "#dc2626" }}>
+                          <td style={{ fontWeight: 700, color: (ec ?? 0) >= 0 ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                             {formatError(ec, unit)}
                           </td>
                           <td>±{rec.uncertainty?.toFixed(3) || "0.000"} {unit} (k={rec.factorK || 2})</td>
@@ -360,7 +360,7 @@ export function StandardWeightsPage() {
       ═══════════════════════════════════════════ */}
       {currentScreen === "import" && (
         <div style={{ marginBottom: 25 }}>
-          <div className="card pad" style={{ borderLeft: "5px solid #16a34a" }}>
+          <div className="card pad" style={{ borderLeft: "5px solid var(--lc-ok)" }}>
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -375,7 +375,7 @@ export function StandardWeightsPage() {
                 >
                   ← Volver al Inventario
                 </button>
-                <h2 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 800, color: "#15803d" }}>
+                <h2 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 800, color: "var(--lc-ok)" }}>
                   📄 Importar Patrones desde Certificado de Calibración PDF
                 </h2>
               </div>
@@ -386,12 +386,12 @@ export function StandardWeightsPage() {
               <div>
                 <div
                   style={{
-                    border: "2px dashed #86efac",
+                    border: "2px dashed var(--lc-ok-bg)",
                     borderRadius: 12,
                     padding: "40px 20px",
                     textAlign: "center",
                     cursor: "pointer",
-                    background: "#f0fdf4",
+                    background: "var(--lc-ok-bg)",
                     transition: "all 0.2s"
                   }}
                   onClick={() => fileInputRef.current?.click()}
@@ -403,7 +403,7 @@ export function StandardWeightsPage() {
                   }}
                 >
                   <div style={{ fontSize: "3rem", marginBottom: 12 }}>📄</div>
-                  <h3 style={{ margin: "0 0 6px", fontSize: "1.2rem", fontWeight: 700, color: "#166534" }}>
+                  <h3 style={{ margin: "0 0 6px", fontSize: "1.2rem", fontWeight: 700, color: "var(--lc-ok)" }}>
                     Arrastrá el certificado de calibración PDF aquí
                   </h3>
                   <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
@@ -421,7 +421,7 @@ export function StandardWeightsPage() {
                 </div>
 
                 {importProgressMsg && (
-                  <div style={{ marginTop: 20, textAlign: "center", padding: 20, background: "#f8fafc", borderRadius: 8 }}>
+                  <div style={{ marginTop: 20, textAlign: "center", padding: 20, background: "var(--lc-surface-2)", borderRadius: 8 }}>
                     <div className="muted" style={{ fontWeight: 600 }}>⏳ {importProgressMsg}</div>
                   </div>
                 )}
@@ -434,8 +434,8 @@ export function StandardWeightsPage() {
                 {/* Cert Info Banner */}
                 <div
                   style={{
-                    background: "#f0fdf4",
-                    border: "1px solid #bbf7d0",
+                    background: "var(--lc-ok-bg)",
+                    border: "1px solid var(--lc-ok-bg)",
                     borderRadius: 10,
                     padding: "16px 20px",
                     marginBottom: 20
@@ -444,7 +444,7 @@ export function StandardWeightsPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16, fontSize: "0.88rem" }}>
                     <div>
                       <div className="muted" style={{ fontSize: "0.76rem" }}>N° Certificado</div>
-                      <strong style={{ color: "#166534", fontSize: "1.05rem" }}>{importResult.certInfo.certificateNumber || "—"}</strong>
+                      <strong style={{ color: "var(--lc-ok)", fontSize: "1.05rem" }}>{importResult.certInfo.certificateNumber || "—"}</strong>
                     </div>
                     <div>
                       <div className="muted" style={{ fontSize: "0.76rem" }}>Fecha Calibración</div>
@@ -460,13 +460,13 @@ export function StandardWeightsPage() {
                     </div>
                     <div>
                       <div className="muted" style={{ fontSize: "0.76rem" }}>Formato Detectado</div>
-                      <span className="tag" style={{ background: "#dcfce7", color: "#15803d", fontWeight: 700 }}>
+                      <span className="tag" style={{ background: "var(--lc-ok-bg)", color: "var(--lc-ok)", fontWeight: 700 }}>
                         {importResult.certInfo.formatDetected}
                       </span>
                     </div>
                     <div>
                       <div className="muted" style={{ fontSize: "0.76rem" }}>Pesas Detectadas</div>
-                      <strong style={{ color: "#15803d", fontSize: "1.1rem" }}>{importResult.count} masas</strong>
+                      <strong style={{ color: "var(--lc-ok)", fontSize: "1.1rem" }}>{importResult.count} masas</strong>
                     </div>
                   </div>
                 </div>
@@ -474,8 +474,8 @@ export function StandardWeightsPage() {
                 {/* Batch Lot Name Input */}
                 <div
                   style={{
-                    background: "#eff6ff",
-                    border: "1px solid #bfdbfe",
+                    background: "var(--lc-info-bg)",
+                    border: "1px solid var(--lc-info-bg)",
                     borderRadius: 10,
                     padding: "14px 18px",
                     marginBottom: 20,
@@ -486,7 +486,7 @@ export function StandardWeightsPage() {
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 260 }}>
-                    <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#1e40af", marginBottom: 4 }}>
+                    <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "var(--lc-info)", marginBottom: 4 }}>
                       🏷️ Asignar Lote / Conjunto a todas estas pesas:
                     </label>
                     <input
@@ -494,7 +494,7 @@ export function StandardWeightsPage() {
                       value={importLotName}
                       onChange={(e) => setImportLotName(e.target.value)}
                       placeholder="ej. Camión 1, Lote 22x1t Sipel, Pesas de Control..."
-                      style={{ width: "100%", maxWidth: 450, padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
+                      style={{ width: "100%", maxWidth: 450, padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.9rem" }}
                     />
                   </div>
                   <div className="muted" style={{ fontSize: "0.8rem", maxWidth: 400 }}>
@@ -506,7 +506,7 @@ export function StandardWeightsPage() {
                 <div className="table-wrap" style={{ marginBottom: 20, overflowX: "auto" }}>
                   <table style={{ width: "100%", fontSize: "0.88rem", borderCollapse: "separate", borderSpacing: "0 4px" }}>
                     <thead>
-                      <tr style={{ background: "#f8fafc" }}>
+                      <tr style={{ background: "var(--lc-surface-2)" }}>
                         <th style={{ width: 44, textAlign: "center", padding: "10px 8px" }}>
                           <input
                             type="checkbox"
@@ -531,7 +531,7 @@ export function StandardWeightsPage() {
                     </thead>
                     <tbody>
                       {importRows.map((row, idx) => (
-                        <tr key={idx} style={{ background: row.selected ? "#f0fdf4" : "#fff" }}>
+                        <tr key={idx} style={{ background: row.selected ? "var(--lc-ok-bg)" : "var(--lc-surface)" }}>
                           <td style={{ textAlign: "center", verticalAlign: "middle", padding: "6px 8px" }}>
                             <input
                               type="checkbox"
@@ -555,7 +555,7 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, identification: v } : r))
                                 );
                               }}
-                              style={{ width: "100%", minWidth: 110, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 700, borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                              style={{ width: "100%", minWidth: 110, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 700, borderRadius: 6, border: "1px solid var(--lc-line-2)", boxSizing: "border-box" }}
                             />
                           </td>
                           <td style={{ padding: "6px 6px" }}>
@@ -568,7 +568,7 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, manufacturer: v } : r))
                                 );
                               }}
-                              style={{ width: "100%", minWidth: 130, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                              style={{ width: "100%", minWidth: 130, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid var(--lc-line-2)", boxSizing: "border-box" }}
                             />
                           </td>
                           <td style={{ padding: "6px 6px" }}>
@@ -581,7 +581,7 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, serialNumber: v } : r))
                                 );
                               }}
-                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid var(--lc-line-2)", boxSizing: "border-box" }}
                             />
                           </td>
                           <td style={{ padding: "6px 6px" }}>
@@ -594,7 +594,7 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, accuracyClass: v } : r))
                                 );
                               }}
-                              style={{ width: "100%", minWidth: 65, padding: "7px 8px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box", textAlign: "center" }}
+                              style={{ width: "100%", minWidth: 65, padding: "7px 8px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid var(--lc-line-2)", boxSizing: "border-box", textAlign: "center" }}
                             />
                           </td>
                           <td style={{ padding: "6px 6px" }}>
@@ -608,7 +608,7 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, nominalValue: v } : r))
                                 );
                               }}
-                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 700, borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 700, borderRadius: 6, border: "1px solid var(--lc-line-2)", boxSizing: "border-box" }}
                             />
                           </td>
                           <td style={{ padding: "6px 6px" }}>
@@ -623,7 +623,7 @@ export function StandardWeightsPage() {
                                 );
                               }}
                               placeholder="—"
-                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid var(--lc-line-2)", boxSizing: "border-box" }}
                             />
                           </td>
                           <td style={{ padding: "6px 6px" }}>
@@ -637,7 +637,7 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, conventionalMassCorrection: v } : r))
                                 );
                               }}
-                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 700, borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                              style={{ width: "100%", minWidth: 100, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 700, borderRadius: 6, border: "1px solid var(--lc-line-2)", boxSizing: "border-box" }}
                             />
                           </td>
                           <td style={{ padding: "6px 6px" }}>
@@ -651,7 +651,7 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, uncertainty: v } : r))
                                 );
                               }}
-                              style={{ width: "100%", minWidth: 95, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                              style={{ width: "100%", minWidth: 95, padding: "7px 10px", fontSize: "0.88rem", borderRadius: 6, border: "1px solid var(--lc-line-2)", boxSizing: "border-box" }}
                             />
                           </td>
                           <td style={{ padding: "6px 6px" }}>
@@ -663,7 +663,7 @@ export function StandardWeightsPage() {
                                   prev.map((r, i) => (i === idx ? { ...r, unitEc: v } : r))
                                 );
                               }}
-                              style={{ width: "100%", minWidth: 80, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 600, borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", boxSizing: "border-box" }}
+                              style={{ width: "100%", minWidth: 80, padding: "7px 10px", fontSize: "0.88rem", fontWeight: 600, borderRadius: 6, border: "1px solid var(--lc-line-2)", background: "var(--lc-surface)", cursor: "pointer", boxSizing: "border-box" }}
                             >
                               <option value="g">g (gramos)</option>
                               <option value="kg">kg (kilos)</option>
@@ -698,7 +698,7 @@ export function StandardWeightsPage() {
                       disabled={importing}
                       onClick={handleConfirmImport}
                       className="btn"
-                      style={{ background: "#16a34a", color: "#fff", fontWeight: 800, padding: "10px 24px" }}
+                      style={{ background: "var(--lc-ok)", color: "#fff", fontWeight: 800, padding: "10px 24px" }}
                     >
                       {importing ? "Importando al Sistema..." : "☁️ Importar Seleccionadas al Inventario"}
                     </button>
@@ -718,10 +718,10 @@ export function StandardWeightsPage() {
           {/* Top Bar Actions & Stats */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 18 }}>
             <div>
-              <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+              <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
                 Metrología Legal & Calibración
               </span>
-              <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800, color: "#0f172a" }}>
+              <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800, color: "var(--lc-ink)" }}>
                 ⚖️ Gestión de Pesas Patrón
               </h1>
               <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
@@ -734,7 +734,7 @@ export function StandardWeightsPage() {
                 to="/metrologia/patrones/imprimir"
                 target="_blank"
                 className="btn"
-                style={{ background: "#fff", border: "1px solid #ea580c", color: "#ea580c", fontWeight: 700 }}
+                style={{ background: "var(--lc-surface)", border: "1px solid #ea580c", color: "#ea580c", fontWeight: 700 }}
               >
                 📄 Imprimir Inventario
               </Link>
@@ -746,14 +746,14 @@ export function StandardWeightsPage() {
                   setCurrentScreen("import");
                 }}
                 className="btn"
-                style={{ background: "#fff", border: "1px solid #16a34a", color: "#16a34a", fontWeight: 700 }}
+                style={{ background: "var(--lc-surface)", border: "1px solid var(--lc-ok)", color: "var(--lc-ok)", fontWeight: 700 }}
               >
                 📥 Importar desde Certificado PDF
               </button>
               <Link
                 to="/metrologia/patrones/nuevo"
                 className="btn"
-                style={{ background: "#0d9488", color: "#fff", fontWeight: 800 }}
+                style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800 }}
               >
                 ➕ Cargar Nuevo Patrón
               </Link>
@@ -761,7 +761,7 @@ export function StandardWeightsPage() {
                 type="button"
                 onClick={handleClearAll}
                 className="btn ghost"
-                style={{ color: "#dc2626", border: "1px solid #fecaca" }}
+                style={{ color: "var(--lc-danger)", border: "1px solid var(--lc-danger-bg)" }}
                 title="Vaciar todo el inventario de pesas"
               >
                 🗑️ Vaciar Inventario
@@ -773,7 +773,7 @@ export function StandardWeightsPage() {
           {selectedIds.length > 0 && (
             <div
               style={{
-                background: "#eff6ff",
+                background: "var(--lc-info-bg)",
                 border: "1px solid #93c5fd",
                 borderRadius: 10,
                 padding: "14px 20px",
@@ -786,15 +786,15 @@ export function StandardWeightsPage() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ background: "#3b82f6", color: "#fff", width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>
+                <div style={{ background: "var(--lc-info)", color: "#fff", width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>
                   🏷️
                 </div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#1e40af", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  <h4 style={{ margin: 0, fontSize: "0.95rem", color: "var(--lc-info)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                     Gestión de Lotes
                   </h4>
                   <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
-                    <strong style={{ color: "#2563eb" }}>{selectedIds.length}</strong> patrón/es seleccionado/s.
+                    <strong style={{ color: "var(--lc-info)" }}>{selectedIds.length}</strong> patrón/es seleccionado/s.
                   </p>
                 </div>
               </div>
@@ -805,14 +805,14 @@ export function StandardWeightsPage() {
                   value={bulkLotInput}
                   onChange={(e) => setBulkLotInput(e.target.value)}
                   placeholder="Nombre del lote (ej. Camión 1, Lote Dolz)"
-                  style={{ padding: "7px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.88rem", width: 260 }}
+                  style={{ padding: "7px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.88rem", width: 260 }}
                 />
                 <button
                   type="button"
                   disabled={bulkLoading}
                   onClick={() => handleApplyBulkLot(false)}
                   className="btn"
-                  style={{ background: "#2563eb", color: "#fff", fontWeight: 700, padding: "7px 16px" }}
+                  style={{ background: "var(--lc-info)", color: "#fff", fontWeight: 700, padding: "7px 16px" }}
                 >
                   🏷️ Asignar Lote
                 </button>
@@ -821,7 +821,7 @@ export function StandardWeightsPage() {
                   disabled={bulkLoading}
                   onClick={() => handleApplyBulkLot(true)}
                   className="btn ghost"
-                  style={{ color: "#dc2626", border: "1px solid #fca5a5", padding: "7px 16px" }}
+                  style={{ color: "var(--lc-danger)", border: "1px solid var(--lc-danger-bg)", padding: "7px 16px" }}
                 >
                   Quitar Lote
                 </button>
@@ -837,13 +837,13 @@ export function StandardWeightsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && loadWeights()}
-              style={{ flex: 1, minWidth: 260, padding: "8px 14px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
+              style={{ flex: 1, minWidth: 260, padding: "8px 14px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.9rem" }}
             />
             {uniqueLots.length > 0 && (
               <select
                 value={lotFilter}
                 onChange={(e) => setLotFilter(e.target.value)}
-                style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.88rem" }}
               >
                 <option value="">Todos los Lotes</option>
                 {uniqueLots.map((l) => (
@@ -854,7 +854,7 @@ export function StandardWeightsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+              style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.88rem" }}
             >
               <option value="">Todos los Estados</option>
               <option value="Valid">Vigente</option>
@@ -879,7 +879,7 @@ export function StandardWeightsPage() {
               <div className="table-wrap">
                 <table style={{ width: "100%", fontSize: "0.88rem" }}>
                   <thead>
-                    <tr style={{ background: "#f8fafc" }}>
+                    <tr style={{ background: "var(--lc-surface-2)" }}>
                       <th style={{ width: 40, textAlign: "center" }}>
                         <input
                           type="checkbox"
@@ -918,12 +918,12 @@ export function StandardWeightsPage() {
                               onChange={() => handleToggleRow(w.id)}
                             />
                           </td>
-                          <td><strong style={{ color: "#0f172a" }}>{w.internalCode || "—"}</strong></td>
+                          <td><strong style={{ color: "var(--lc-ink)" }}>{w.internalCode || "—"}</strong></td>
                           <td>
-                            <strong style={{ color: "#0f172a", fontSize: "0.95rem" }}>{w.code}</strong>
+                            <strong style={{ color: "var(--lc-ink)", fontSize: "0.95rem" }}>{w.code}</strong>
                             {w.lotName && (
                               <div style={{ marginTop: 2 }}>
-                                <span className="tag" style={{ fontSize: "0.72rem", background: "#f1f5f9", color: "#475569" }}>
+                                <span className="tag" style={{ fontSize: "0.72rem", background: "var(--lc-surface-2)", color: "var(--lc-ink-2)" }}>
                                   🏷️ {w.lotName}
                                 </span>
                               </div>
@@ -956,7 +956,7 @@ export function StandardWeightsPage() {
                           </td>
                           <td>
                             {ec !== null && ec !== undefined ? (
-                              <span style={{ fontWeight: 700, color: ec >= 0 ? "#16a34a" : "#dc2626" }}>
+                              <span style={{ fontWeight: 700, color: ec >= 0 ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                                 {formatError(ec, unit)}
                               </span>
                             ) : (
@@ -985,7 +985,7 @@ export function StandardWeightsPage() {
                           </td>
                           <td style={{ fontSize: "0.82rem" }}>
                             <div>{w.calibrationDate ? new Date(w.calibrationDate).toLocaleDateString("es-AR") : "—"}</div>
-                            <div style={{ color: isExpired ? "#dc2626" : "#64748b", fontWeight: isExpired ? 700 : 400 }}>
+                            <div style={{ color: isExpired ? "var(--lc-danger)" : "var(--lc-ink-3)", fontWeight: isExpired ? 700 : 400 }}>
                               Vto: {w.expirationDate ? new Date(w.expirationDate).toLocaleDateString("es-AR") : "—"}
                             </div>
                           </td>
@@ -1000,7 +1000,7 @@ export function StandardWeightsPage() {
                               onClick={() => handleOpenHistory(w.code)}
                               className="btn-icon"
                               title="Historial de Calibraciones & Deriva Metrológica"
-                              style={{ color: "#0d9488", marginRight: 4 }}
+                              style={{ color: "var(--lc-accent-strong)", marginRight: 4 }}
                             >
                               🕒
                             </button>
@@ -1008,7 +1008,7 @@ export function StandardWeightsPage() {
                               to={`/metrologia/patrones/${w.id}`}
                               className="btn-icon"
                               title="Editar Patrón"
-                              style={{ color: "#3b82f6", marginRight: 4 }}
+                              style={{ color: "var(--lc-info)", marginRight: 4 }}
                             >
                               ✏️
                             </Link>
@@ -1017,7 +1017,7 @@ export function StandardWeightsPage() {
                               onClick={() => handleDeleteWeight(w.id, w.code)}
                               className="btn-icon"
                               title="Eliminar"
-                              style={{ color: "#dc2626" }}
+                              style={{ color: "var(--lc-danger)" }}
                             >
                               🗑️
                             </button>

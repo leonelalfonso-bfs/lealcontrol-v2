@@ -103,7 +103,7 @@ export function RemitoReturnsPage() {
         margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: "Devolucion_" + selected.returnNumber + ".pdf",
         image: { type: "jpeg" as const, quality: 0.94 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff", windowWidth: 794 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "var(--lc-surface)", windowWidth: 794 },
         jsPDF: { unit: "mm" as const, format: "a4", orientation: "portrait" as const },
         pagebreak: { mode: ["css", "legacy"] }
       }).from(element).save();
@@ -204,28 +204,28 @@ export function RemitoReturnsPage() {
             {downloading ? "Generando PDF…" : "Descargar PDF"}
           </button>
         </div>
-        <div id="remito-return-document" style={{ width: 720, maxWidth: "100%", padding: 38, background: "#fff", color: "#17243b", borderTop: "8px solid #2563eb", boxSizing: "border-box" }}>
+        <div id="remito-return-document" style={{ width: 720, maxWidth: "100%", padding: 38, background: "var(--lc-surface)", color: "#17243b", borderTop: "8px solid var(--lc-info)", boxSizing: "border-box" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 24 }}>
             <div><div style={{ fontSize: 13, letterSpacing: 2, color: "#5277a9", fontWeight: 700 }}>DEVOLUCIÓN DE REMITO</div>
               <h2 style={{ margin: "8px 0" }}>{company?.tradeName || company?.legalName || "LEAL CONTROL"}</h2>
-              <p style={{ margin: 0, color: "#64748b" }}>Constancia de recepción de artículos no utilizados</p></div>
+              <p style={{ margin: 0, color: "var(--lc-ink-3)" }}>Constancia de recepción de artículos no utilizados</p></div>
             <div style={{ textAlign: "right" }}><strong>{selected.returnNumber}</strong>
               <div>{new Date(selected.receivedAtUtc).toLocaleString("es-AR")}</div>
               <div>Remito {remito.remitoNumber}</div></div>
           </div>
-          <hr style={{ border: "0", borderTop: "1px solid #cbd5e1", margin: "24px 0" }} />
+          <hr style={{ border: "0", borderTop: "1px solid var(--lc-line-2)", margin: "24px 0" }} />
           <p><strong>Cliente:</strong> {remito.customerName} · {remito.customerDocument}</p>
           <p><strong>Motivo:</strong> {selected.reason}</p>
           <p><strong>Depósito de ingreso:</strong> {selected.warehouseName}</p>
           {selected.notes && <p><strong>Observaciones:</strong> {selected.notes}</p>}
           <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 24 }}>
-            <thead><tr style={{ background: "#eff6ff" }}><th style={{ padding: 10, textAlign: "left" }}>Código / Ítem</th><th style={{ padding: 10, textAlign: "right" }}>Cantidad recibida</th></tr></thead>
+            <thead><tr style={{ background: "var(--lc-info-bg)" }}><th style={{ padding: 10, textAlign: "left" }}>Código / Ítem</th><th style={{ padding: 10, textAlign: "right" }}>Cantidad recibida</th></tr></thead>
             <tbody>{selected.items.map((item) => <tr key={item.id} style={{ borderBottom: "1px solid #dbe4ef" }}>
               <td style={{ padding: 10 }}><strong>{item.code}</strong><div>{item.description}</div></td>
               <td style={{ padding: 10, textAlign: "right" }}>{formatQty(item.quantity)}</td>
             </tr>)}</tbody>
           </table>
-          <p style={{ marginTop: 28, fontSize: 12, color: "#64748b" }}>Documento vinculado al remito original. Las cantidades recibidas no se incluyen en la facturación del remito.</p>
+          <p style={{ marginTop: 28, fontSize: 12, color: "var(--lc-ink-3)" }}>Documento vinculado al remito original. Las cantidades recibidas no se incluyen en la facturación del remito.</p>
         </div>
       </section>}
     </div>

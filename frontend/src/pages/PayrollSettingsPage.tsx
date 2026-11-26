@@ -123,7 +123,7 @@ export function PayrollSettingsPage() {
             <tbody>
               {params.resolved.map((p) => (
                 <tr key={p.key}>
-                  <td>{p.name}{p.warning && <div style={{ color: "#b45309", fontSize: "0.75rem" }}>⚠️ {p.warning}</div>}</td>
+                  <td>{p.name}{p.warning && <div style={{ color: "var(--lc-warn)", fontSize: "0.75rem" }}>⚠️ {p.warning}</div>}</td>
                   <td style={{ textAlign: "right" }}>{p.value == null ? "—" : number(p.value)}</td>
                   <td>{p.validFrom ? month(p.validFrom) : "—"}</td>
                   <td>{p.norm ?? "—"}{p.fromCompany && <span className="muted"> (cargado por la empresa)</span>}</td>

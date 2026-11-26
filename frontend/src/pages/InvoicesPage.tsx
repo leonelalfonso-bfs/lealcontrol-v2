@@ -181,24 +181,24 @@ export function InvoicesPage() {
         <div className="card">
           <span className="muted">Total Facturado (ARS)</span>
           <strong>{money(totalArs, "ARS")}</strong>
-          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingArs > 0 ? "#dc2626" : "#059669", fontWeight: 600 }}>
+          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingArs > 0 ? "var(--lc-danger)" : "var(--lc-ok)", fontWeight: 600 }}>
             Pendiente de Cobro: {money(pendingArs, "ARS")}
           </small>
         </div>
         <div className="card">
           <span className="muted">Total Facturado (USD)</span>
-          <strong style={{ color: "#2563eb" }}>{money(totalUsd, "USD")}</strong>
-          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingUsd > 0 ? "#dc2626" : "#059669", fontWeight: 600 }}>
+          <strong style={{ color: "var(--lc-info)" }}>{money(totalUsd, "USD")}</strong>
+          <small style={{ fontSize: "0.75rem", display: "block", marginTop: 2, color: pendingUsd > 0 ? "var(--lc-danger)" : "var(--lc-ok)", fontWeight: 600 }}>
             Pendiente de Cobro: {money(pendingUsd, "USD")}
           </small>
         </div>
         <div className="card">
           <span className="muted">Estado de Cobranzas</span>
           <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-            <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.9rem" }}>
+            <span style={{ color: "var(--lc-ok)", fontWeight: 700, fontSize: "0.9rem" }}>
               🟢 {enrichedInvoices.filter((i) => i.isPaid).length} Cobradas
             </span>
-            <span style={{ color: "#dc2626", fontWeight: 700, fontSize: "0.9rem" }}>
+            <span style={{ color: "var(--lc-danger)", fontWeight: 700, fontSize: "0.9rem" }}>
               🔴 {enrichedInvoices.filter((i) => !i.isPaid).length} Pendientes
             </span>
           </div>
@@ -283,7 +283,7 @@ export function InvoicesPage() {
                         {inv.formattedNumber}
                       </div>
                       {inv.remitoId ? (
-                        <div style={{ fontSize: "0.72rem", color: "#0f766e", fontWeight: 600, marginTop: 2 }}>
+                        <div style={{ fontSize: "0.72rem", color: "var(--lc-accent-strong)", fontWeight: 600, marginTop: 2 }}>
                           🚚 Desde Remito
                         </div>
                       ) : inv.orderId ? (
@@ -291,7 +291,7 @@ export function InvoicesPage() {
                           📦 Desde Pedido
                         </div>
                       ) : (
-                        <div style={{ fontSize: "0.72rem", color: "#0284c7", fontWeight: 600, marginTop: 2 }}>
+                        <div style={{ fontSize: "0.72rem", color: "var(--lc-info)", fontWeight: 600, marginTop: 2 }}>
                           ⚡ Venta Directa
                         </div>
                       )}
@@ -343,7 +343,7 @@ export function InvoicesPage() {
                                     ? "Envío sin confirmar · consultar ARCA" : "Reserva fiscal · requiere revisión"}
                               {" · N° "}{fiscalAttempts[inv.id].voucherNumber}
                               {fiscalAttempts[inv.id].status === "Rejected" && fiscalAttempts[inv.id].rejectionDetail && (
-                                <span style={{ display: "block", color: "#b91c1c", maxWidth: 360, whiteSpace: "normal" }}>
+                                <span style={{ display: "block", color: "var(--lc-danger)", maxWidth: 360, whiteSpace: "normal" }}>
                                   {fiscalAttempts[inv.id].rejectionDetail}
                                 </span>
                               )}
@@ -363,7 +363,7 @@ export function InvoicesPage() {
                             className="badge ok"
                             style={{
                               background: "rgba(16, 185, 129, 0.15)",
-                              color: "#065f46",
+                              color: "var(--lc-ok)",
                               fontWeight: 700,
                               padding: "4px 8px"
                             }}
@@ -380,14 +380,14 @@ export function InvoicesPage() {
                             className="badge warn"
                             style={{
                               background: "rgba(245, 158, 11, 0.18)",
-                              color: "#92400e",
+                              color: "var(--lc-warn)",
                               fontWeight: 700,
                               padding: "4px 8px"
                             }}
                           >
                             🟡 Cobro Parcial
                           </span>
-                          <div style={{ fontSize: "0.75rem", color: "#dc2626", fontWeight: 700, marginTop: 2 }}>
+                          <div style={{ fontSize: "0.75rem", color: "var(--lc-danger)", fontWeight: 700, marginTop: 2 }}>
                             Resta: {money(inv.saldoPendiente, inv.currency)}
                           </div>
                           <div className="muted" style={{ fontSize: "0.72rem" }}>
@@ -400,7 +400,7 @@ export function InvoicesPage() {
                             className="badge off"
                             style={{
                               background: "rgba(239, 68, 68, 0.12)",
-                              color: "#991b1b",
+                              color: "var(--lc-danger)",
                               fontWeight: 700,
                               padding: "4px 8px"
                             }}
@@ -434,8 +434,8 @@ export function InvoicesPage() {
                             style={{
                               padding: "4px 8px",
                               fontSize: "0.8rem",
-                              background: "#0d9488",
-                              color: "#ffffff",
+                              background: "var(--lc-accent)",
+                              color: "#fff",
                               fontWeight: 700,
                               borderRadius: "6px",
                               textDecoration: "none"

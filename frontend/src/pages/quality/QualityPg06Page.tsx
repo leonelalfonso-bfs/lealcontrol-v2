@@ -451,7 +451,7 @@ export function QualityPg06Page() {
             ← Plantilla {plantillaCode}
           </Link>
           <h1 style={{ margin: "4px 0 0" }}>PG06 · Personal (capacitaciones, autorizaciones, competencias y roles)</h1>
-          <p style={{ marginTop: 6, color: "#64748b", maxWidth: 680 }}>
+          <p style={{ marginTop: 6, color: "var(--lc-ink-3)", maxWidth: 680 }}>
             Registros estructurados del procedimiento de personal. La pestaña R02 (autorizaciones por método) requiere firma del
             Director Técnico.
           </p>
@@ -466,8 +466,8 @@ export function QualityPg06Page() {
         </div>
       </div>
 
-      {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
-      {msg && <p style={{ color: "#15803d" }}>{msg}</p>}
+      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
+      {msg && <p style={{ color: "var(--lc-ok)" }}>{msg}</p>}
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "12px 0", fontSize: 13 }}>
         <span className="card pad" style={{ padding: "6px 10px" }}>
@@ -730,7 +730,7 @@ export function QualityPg06Page() {
                         onClick={() => setSelectedId(r.id)}
                         style={{
                           cursor: "pointer",
-                          background: selectedId === r.id ? "#e0f2fe" : r.isExpired ? "#fef2f2" : undefined
+                          background: selectedId === r.id ? "var(--lc-info-bg)" : r.isExpired ? "var(--lc-danger-bg)" : undefined
                         }}
                       >
                         <td>{r.number}</td>
@@ -827,7 +827,7 @@ export function QualityPg06Page() {
             ) : (
               <>
                 <h3 style={{ marginTop: 0 }}>{selectedTraining.number}</h3>
-                <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
+                <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
                   {TRAINING_STATUS[selectedTraining.status] ?? selectedTraining.status} · {selectedTraining.programYear}
                 </p>
                 <p style={{ fontSize: 13 }}>{selectedTraining.topic}</p>
@@ -920,7 +920,7 @@ export function QualityPg06Page() {
                   </>
                 )}
                 {(selectedTraining.status === "Done" || selectedTraining.status === "Cancelled") && (
-                  <div style={{ fontSize: 13, color: "#64748b" }}>
+                  <div style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
                     <div>
                       <strong>Realizada:</strong> {fmtDate(selectedTraining.doneDate)}
                     </div>
@@ -935,7 +935,7 @@ export function QualityPg06Page() {
             ) : (
               <>
                 <h3 style={{ marginTop: 0 }}>{selectedAuth.number}</h3>
-                <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
+                <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
                   {AUTH_STATUS[selectedAuth.status] ?? selectedAuth.status}
                   {selectedAuth.isExpired ? " · vencida" : ""} · {selectedAuth.personName}
                 </p>
@@ -1084,7 +1084,7 @@ export function QualityPg06Page() {
                       </button>
                     </div>
                     {selectedAuth.authorizedByName ? (
-                      <p style={{ fontSize: 12, color: "#64748b", marginTop: 12 }}>
+                      <p style={{ fontSize: 12, color: "var(--lc-ink-3)", marginTop: 12 }}>
                         Firmada por {selectedAuth.authorizedByName}
                         {selectedAuth.authorizedAt ? ` · ${fmtDate(selectedAuth.authorizedAt)}` : ""}
                       </p>
@@ -1100,7 +1100,7 @@ export function QualityPg06Page() {
             ) : (
               <>
                 <h3 style={{ marginTop: 0 }}>{selectedComp.number}</h3>
-                <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
+                <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
                   {COMP_STATUS[selectedComp.status] ?? selectedComp.status} · {selectedComp.personName} ·{" "}
                   {selectedComp.reviewYear}
                 </p>
@@ -1210,7 +1210,7 @@ export function QualityPg06Page() {
                   </>
                 )}
                 {selectedComp.status !== "Draft" && (
-                  <div style={{ fontSize: 13, color: "#64748b" }}>
+                  <div style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
                     <div>
                       <strong>Evaluador:</strong> {selectedComp.evaluator || "—"}
                     </div>
@@ -1232,7 +1232,7 @@ export function QualityPg06Page() {
             ) : (
               <>
                 <h3 style={{ marginTop: 0 }}>{selectedRole.number}</h3>
-                <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
+                <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
                   {ROLE_STATUS[selectedRole.status] ?? selectedRole.status} · {selectedRole.role}
                 </p>
                 <p style={{ fontSize: 13 }}>

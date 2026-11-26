@@ -179,12 +179,12 @@ export function CommunicationsNotificationBell() {
                   </div>
                   <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
                     {item.unreadCount > 0 && (
-                      <span style={{ fontSize: "0.7rem", color: "#0d9488", fontWeight: 700 }}>
+                      <span style={{ fontSize: "0.7rem", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
                         {item.unreadCount} nuevo(s)
                       </span>
                     )}
                     {item.needsResponse && (
-                      <span style={{ fontSize: "0.7rem", color: "#dc2626", fontWeight: 700 }}>
+                      <span style={{ fontSize: "0.7rem", color: "var(--lc-danger)", fontWeight: 700 }}>
                         ⏰ SLA
                       </span>
                     )}
@@ -203,7 +203,7 @@ export function CommunicationsNotificationBell() {
                 textAlign: "center",
                 fontSize: "0.82rem",
                 fontWeight: 700,
-                color: "#0d9488",
+                color: "var(--lc-accent-strong)",
                 textDecoration: "none"
               }}
             >

@@ -45,10 +45,10 @@ export function QualityDashboardPage() {
     <div className="workspace-page pad">
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <span className="eyebrow" style={{ color: "#0f766e", fontWeight: 800 }}>CALIDAD · ISO/IEC 17025</span>
+          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800 }}>CALIDAD · ISO/IEC 17025</span>
           <h1 style={{ margin: "4px 0 0" }}>Tablero del SGC</h1>
           {presentation && (
-            <p style={{ margin: "6px 0 0", color: "#b45309", fontWeight: 700, fontSize: 13 }}>
+            <p style={{ margin: "6px 0 0", color: "var(--lc-warn)", fontWeight: 700, fontSize: 13 }}>
               Modo presentación activo · solo lectura
             </p>
           )}
@@ -59,7 +59,7 @@ export function QualityDashboardPage() {
         </div>
       </div>
 
-      {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
+      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
 
       {data && (
         <>
@@ -74,7 +74,7 @@ export function QualityDashboardPage() {
           >
             {kpi.map((k) => (
               <div className={`card pad quality-kpi ${"tone" in k ? `quality-kpi--${k.tone}` : ""}`} key={k.label}>
-                <div style={{ fontSize: 12, color: "#64748b" }}>{k.label}</div>
+                <div style={{ fontSize: 12, color: "var(--lc-ink-3)" }}>{k.label}</div>
                 <strong style={{ fontSize: 26, color: k.danger ? "#b91c1c" : undefined }}>{k.value}</strong>
               </div>
             ))}

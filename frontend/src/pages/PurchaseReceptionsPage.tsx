@@ -87,7 +87,7 @@ export function PurchaseReceptionsPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ background: "#fee2e2", color: "#991b1b", marginBottom: 12 }}>
+        <div className="alert" style={{ background: "var(--lc-danger-bg)", color: "var(--lc-danger)", marginBottom: 12 }}>
           {error}
         </div>
       )}
@@ -148,17 +148,17 @@ export function PurchaseReceptionsPage() {
                     </td>
                     <td style={{ padding: "12px 8px" }}>
                       {hasRemito ? (
-                        <strong style={{ fontFamily: "monospace", color: "#0f766e" }}>
+                        <strong style={{ fontFamily: "monospace", color: "var(--lc-accent-strong)" }}>
                           🚚 {r.supplierRemitoNumber}
                         </strong>
                       ) : (
-                        <span className="badge" style={{ background: "rgba(59, 130, 246, 0.1)", color: "#1d4ed8", fontSize: "0.78rem" }}>
+                        <span className="badge" style={{ background: "rgba(59, 130, 246, 0.1)", color: "var(--lc-info)", fontSize: "0.78rem" }}>
                           ⚡ Recepción Directa
                         </span>
                       )}
                     </td>
                     <td style={{ padding: "12px 8px" }}>
-                      <span style={{ padding: "2px 8px", borderRadius: "6px", background: "#f1f5f9", fontSize: "0.82rem", color: "#334155" }}>
+                      <span style={{ padding: "2px 8px", borderRadius: "6px", background: "var(--lc-surface-2)", fontSize: "0.82rem", color: "var(--lc-ink-2)" }}>
                         📍 {r.warehouseLocation}
                       </span>
                     </td>
@@ -170,11 +170,11 @@ export function PurchaseReceptionsPage() {
                     </td>
                     <td style={{ padding: "12px 8px", textAlign: "center" }}>
                       {cancelled ? (
-                        <span className="badge off" style={{ color: "#991b1b", background: "rgba(239,68,68,0.12)" }}>Anulada</span>
+                        <span className="badge off" style={{ color: "var(--lc-danger)", background: "rgba(239,68,68,0.12)" }}>Anulada</span>
                       ) : alreadyInvoiced ? (
-                        <span className="badge ok" style={{ color: "#065f46", background: "rgba(16,185,129,0.12)" }}>Facturada</span>
+                        <span className="badge ok" style={{ color: "var(--lc-ok)", background: "rgba(16,185,129,0.12)" }}>Facturada</span>
                       ) : (
-                        <span className="badge warn" style={{ color: "#92400e", background: "rgba(245,158,11,0.15)" }}>Sin factura</span>
+                        <span className="badge warn" style={{ color: "var(--lc-warn)", background: "rgba(245,158,11,0.15)" }}>Sin factura</span>
                       )}
                     </td>
                     <td style={{ padding: "12px 8px", textAlign: "center" }}>
@@ -186,7 +186,7 @@ export function PurchaseReceptionsPage() {
                             style={{
                               fontSize: "0.78rem",
                               padding: "4px 10px",
-                              background: "#0284c7",
+                              background: "var(--lc-info)",
                               color: "#fff",
                               fontWeight: 700,
                               textDecoration: "none",
@@ -202,7 +202,7 @@ export function PurchaseReceptionsPage() {
                             type="button"
                             className="btn btn-outline compact"
                             disabled={busyId === r.id}
-                            style={{ fontSize: "0.78rem", color: "#991b1b", borderColor: "#fecaca" }}
+                            style={{ fontSize: "0.78rem", color: "var(--lc-danger)", borderColor: "var(--lc-danger-bg)" }}
                             onClick={() => void cancelReception(r)}
                           >
                             Anular

@@ -84,7 +84,7 @@ export function GrainDeliveriesPage() {
                   <td>
                     <div>Bruto: {(del.grossWeightKg / 1000).toFixed(2)} Tn</div>
                     <div>Tara: {(del.tareWeightKg / 1000).toFixed(2)} Tn</div>
-                    <div><strong style={{ color: "#0d9488" }}>Neto: {(del.netWeightKg / 1000).toFixed(2)} Tn</strong></div>
+                    <div><strong style={{ color: "var(--lc-accent-strong)" }}>Neto: {(del.netWeightKg / 1000).toFixed(2)} Tn</strong></div>
                   </td>
                   <td>
                     <span style={{ color: del.humidityPercentage > 14.0 ? "#ef4444" : "var(--ink)", fontWeight: 700 }}>
@@ -92,7 +92,7 @@ export function GrainDeliveriesPage() {
                     </span>
                   </td>
                   <td>
-                    <strong style={{ fontSize: "1rem", color: "#0d9488" }}>
+                    <strong style={{ fontSize: "1rem", color: "var(--lc-accent-strong)" }}>
                       {del.commercialNetWeightTons.toLocaleString("es-AR")} Tn
                     </strong>
                   </td>
@@ -105,7 +105,7 @@ export function GrainDeliveriesPage() {
                       fontSize: "0.72rem",
                       fontWeight: 700,
                       background: "rgba(16, 185, 129, 0.12)",
-                      color: "#10b981"
+                      color: "var(--lc-ok)"
                     }}>
                       {del.status}
                     </span>

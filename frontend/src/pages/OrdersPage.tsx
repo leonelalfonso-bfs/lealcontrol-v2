@@ -23,11 +23,11 @@ function getStatusBadge(status: OrderStatus) {
     case "InPreparation":
       return <span className="badge warn">🟡 En Preparación</span>;
     case "Dispatched":
-      return <span className="badge" style={{ backgroundColor: "#3b82f6", color: "#fff" }}>🚚 Despachado</span>;
+      return <span className="badge" style={{ backgroundColor: "var(--lc-info)", color: "#fff" }}>🚚 Despachado</span>;
     case "Delivered":
-      return <span className="badge" style={{ backgroundColor: "#10b981", color: "#fff" }}>✅ Entregado</span>;
+      return <span className="badge" style={{ backgroundColor: "var(--lc-ok)", color: "#fff" }}>✅ Entregado</span>;
     case "Invoiced":
-      return <span className="badge" style={{ backgroundColor: "#8b5cf6", color: "#fff" }}>📄 Facturado</span>;
+      return <span className="badge" style={{ backgroundColor: "var(--lc-violet)", color: "#fff" }}>📄 Facturado</span>;
     case "Cancelled":
       return <span className="badge off">🔴 Cancelado</span>;
     case "Draft":
@@ -116,11 +116,11 @@ export function OrdersPage() {
         </div>
         <div className="card">
           <span className="muted">En Preparación / Pendientes</span>
-          <strong style={{ color: "#d97706" }}>{kpis.pending}</strong>
+          <strong style={{ color: "var(--lc-warn)" }}>{kpis.pending}</strong>
         </div>
         <div className="card">
           <span className="muted">Entregados / Cumplidos</span>
-          <strong style={{ color: "#059669" }}>{kpis.delivered}</strong>
+          <strong style={{ color: "var(--lc-ok)" }}>{kpis.delivered}</strong>
         </div>
         <div className="card">
           <span className="muted">Monto Total Acumulado</span>

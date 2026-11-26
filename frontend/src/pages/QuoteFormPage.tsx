@@ -504,7 +504,7 @@ export const QuoteFormPage: React.FC = () => {
             <button
               type="button"
               className="btn ghost"
-              style={{ color: "#b91c1c" }}
+              style={{ color: "var(--lc-danger)" }}
               onClick={() => {
                 if (!confirm(`¿Eliminar el presupuesto ${quoteNumber || ""}? No se puede recuperar.`)) return;
                 void api.deleteQuote(id).then(() => navigate("/presupuestos")).catch((err: unknown) => {
@@ -564,7 +564,7 @@ export const QuoteFormPage: React.FC = () => {
               type="button"
               onClick={() => setShowQuickCustomerModal(true)}
               className="btn btn-primary"
-              style={{ padding: "6px 14px", fontSize: "0.82rem", background: "#0d9488" }}
+              style={{ padding: "6px 14px", fontSize: "0.82rem", background: "var(--lc-accent)" }}
             >
               + Nuevo Cliente Completo
             </button>
@@ -577,7 +577,7 @@ export const QuoteFormPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowQuickCustomerModal(true)}
-                  style={{ fontSize: "0.76rem", color: "#0d9488", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
+                  style={{ fontSize: "0.76rem", color: "var(--lc-accent-strong)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
                 >
                   + Alta Rápida
                 </button>
@@ -599,7 +599,7 @@ export const QuoteFormPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowNewLocationModal(true)}
-                    style={{ fontSize: "0.76rem", color: "#0d9488", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
+                    style={{ fontSize: "0.76rem", color: "var(--lc-accent-strong)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
                   >
                     + Nueva Planta
                   </button>
@@ -626,7 +626,7 @@ export const QuoteFormPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowNewContactModal(true)}
-                    style={{ fontSize: "0.76rem", color: "#0d9488", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
+                    style={{ fontSize: "0.76rem", color: "var(--lc-accent-strong)", background: "none", border: "none", cursor: "pointer", fontWeight: 700 }}
                   >
                     + Nuevo Contacto
                   </button>
@@ -666,12 +666,12 @@ export const QuoteFormPage: React.FC = () => {
                   {selectedCustomerDetail.creditRating === "A" ? "🟢" : selectedCustomerDetail.creditRating === "B" ? "🟡" : selectedCustomerDetail.creditRating === "C" ? "🟠" : selectedCustomerDetail.creditRating === "D" ? "🔴" : "🏛️"}
                 </span>
                 <div>
-                  <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#0f172a" }}>
+                  <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--lc-ink)" }}>
                     {selectedCustomerDetail.creditRating
                       ? `Evaluación Crediticia BCRA: Calificación ${selectedCustomerDetail.creditRating} (Sit. ${selectedCustomerDetail.bcraWorstSituation || 1})`
                       : "Sin informe BCRA registrado en ficha"}
                   </div>
-                  <div style={{ fontSize: "0.78rem", color: "#475569", marginTop: "2px" }}>
+                  <div style={{ fontSize: "0.78rem", color: "var(--lc-ink-2)", marginTop: "2px" }}>
                     {selectedCustomerDetail.creditRecommendation || "Podés consultar su calificación crediticia en la ficha del cliente."}
                   </div>
                 </div>
@@ -686,7 +686,7 @@ export const QuoteFormPage: React.FC = () => {
                       setPaymentMethod("Transferencia Bancaria / eCheq");
                     }}
                     className="btn"
-                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "#059669", color: "white", fontWeight: 700 }}
+                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "var(--lc-ok)", color: "white", fontWeight: 700 }}
                   >
                     ✓ Aplicar Cta. Cte. (30d)
                   </button>
@@ -699,7 +699,7 @@ export const QuoteFormPage: React.FC = () => {
                       setPaymentMethod("Transferencia Bancaria");
                     }}
                     className="btn"
-                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "#d97706", color: "white", fontWeight: 700 }}
+                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "var(--lc-warn)", color: "white", fontWeight: 700 }}
                   >
                     ✓ Aplicar Anticipo 50%
                   </button>
@@ -712,7 +712,7 @@ export const QuoteFormPage: React.FC = () => {
                       setPaymentMethod("Transferencia Anticipada");
                     }}
                     className="btn"
-                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "#dc2626", color: "white", fontWeight: 700 }}
+                    style={{ fontSize: "0.75rem", padding: "5px 10px", background: "var(--lc-danger)", color: "white", fontWeight: 700 }}
                   >
                     ⚠️ Exigir Pago Contado
                   </button>
@@ -786,7 +786,7 @@ export const QuoteFormPage: React.FC = () => {
                   setShowQuickProductModal(true);
                 }}
                 className="btn btn-outline"
-                style={{ fontSize: "0.82rem", padding: "6px 12px", background: "rgba(13, 148, 136, 0.08)", color: "#0d9488", borderColor: "#0d9488", fontWeight: 700 }}
+                style={{ fontSize: "0.82rem", padding: "6px 12px", background: "rgba(13, 148, 136, 0.08)", color: "var(--lc-accent-strong)", borderColor: "var(--lc-accent)", fontWeight: 700 }}
               >
                 + Crear Producto Nuevo
               </button>
@@ -844,8 +844,8 @@ export const QuoteFormPage: React.FC = () => {
                             style={{
                               padding: "4px 8px",
                               borderRadius: "6px",
-                              background: "#0d9488",
-                              color: "#ffffff",
+                              background: "var(--lc-accent)",
+                              color: "#fff",
                               border: "none",
                               fontWeight: 800,
                               cursor: "pointer",
@@ -873,7 +873,7 @@ export const QuoteFormPage: React.FC = () => {
                             alignSelf: "flex-start",
                             background: "none",
                             border: "none",
-                            color: "#2563eb",
+                            color: "var(--lc-info)",
                             fontWeight: 700,
                             fontSize: "0.78rem",
                             cursor: "pointer",
@@ -967,7 +967,7 @@ export const QuoteFormPage: React.FC = () => {
                         type="button"
                         onClick={() => handleRemoveLine(idx)}
                         disabled={lines.length === 1}
-                        style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "1.1rem" }}
+                        style={{ color: "var(--lc-danger)", background: "none", border: "none", cursor: "pointer", fontSize: "1.1rem" }}
                       >
                         ✕
                       </button>
@@ -1212,7 +1212,7 @@ export const QuoteFormPage: React.FC = () => {
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
                 <button type="button" onClick={() => setShowNewContactModal(false)} className="btn ghost">Cancelar</button>
-                <button type="submit" className="btn btn-primary" style={{ background: "#0d9488" }}>Guardar Contacto</button>
+                <button type="submit" className="btn btn-primary" style={{ background: "var(--lc-accent)" }}>Guardar Contacto</button>
               </div>
             </form>
           </div>

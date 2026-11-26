@@ -8,7 +8,7 @@ const CATEGORIES: Record<string, string> = {
   WorkProcedure: "Procedimiento de trabajo", Training: "Capacitación", SafetyProgram: "Programa de seguridad / higiene", Other: "Otro"
 };
 const STATE: Record<CompanyDocument["state"], { text: string; color: string }> = {
-  Ok: { text: "Vigente", color: "#2E6B1F" }, DueSoon: { text: "Por vencer", color: "#9A5B00" }, Expired: { text: "Vencido", color: "#A1271B" }
+  Ok: { text: "Vigente", color: "#2E6B1F" }, DueSoon: { text: "Por vencer", color: "#9A5B00" }, Expired: { text: "Vencido", color: "var(--lc-danger)" }
 };
 const day = (iso?: string | null) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "Sin vencimiento");
 const EMPTY: CompanyDocumentWrite = { category: "Art", title: "", number: "", issuer: "", issueDate: "", expirationDate: "", alertDaysBefore: 30 };

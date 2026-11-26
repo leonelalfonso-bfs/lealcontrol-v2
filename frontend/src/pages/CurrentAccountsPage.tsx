@@ -314,7 +314,7 @@ export function CurrentAccountsPage() {
     return (
       <div className="page-wide" style={{ paddingBottom: 60 }}>
         <div className="card pad">
-          <div className="toolbar" style={{ justifyContent: "space-between", borderBottom: "1px solid var(--border, #e2e8f0)", paddingBottom: 12, flexWrap: "wrap", gap: 10 }}>
+          <div className="toolbar" style={{ justifyContent: "space-between", borderBottom: "1px solid var(--border, var(--lc-line))", paddingBottom: 12, flexWrap: "wrap", gap: 10 }}>
             <div>
               <span className="eyebrow">CUENTA CORRIENTE</span>
               <h2 style={{ margin: 0 }}>{name}</h2>
@@ -390,7 +390,7 @@ export function CurrentAccountsPage() {
                     <td>
                       {item.description}
                       {item.originalAmount && (
-                        <span style={{ display: "block", color: "#2563eb", fontSize: "0.75rem", fontWeight: 700 }}>
+                        <span style={{ display: "block", color: "var(--lc-info)", fontSize: "0.75rem", fontWeight: 700 }}>
                           Original: {item.originalAmount}
                         </span>
                       )}
@@ -403,7 +403,7 @@ export function CurrentAccountsPage() {
                     </td>
                     <td style={{ textAlign: "right" }}>{item.debit > 0 ? money(item.debit) : "—"}</td>
                     <td style={{ textAlign: "right" }}>{item.credit > 0 ? money(item.credit) : "—"}</td>
-                    <td style={{ textAlign: "right", fontWeight: 700, color: item.balance > 0.01 ? "#b91c1c" : item.balance < -0.01 ? "#047857" : "inherit" }}>
+                    <td style={{ textAlign: "right", fontWeight: 700, color: item.balance > 0.01 ? "var(--lc-danger)" : item.balance < -0.01 ? "var(--lc-ok)" : "inherit" }}>
                       {money(item.balance)}
                     </td>
                     <td style={{ textAlign: "right", color: item.documentBalance === "Cancelado" ? "#047857" : "inherit" }}>
@@ -438,19 +438,19 @@ export function CurrentAccountsPage() {
 
         {/* Hoja del estado de cuenta para el PDF (fuera de pantalla). */}
         <div style={{ position: "absolute", left: -10000, top: 0 }} aria-hidden="true">
-          <div id="account-statement-sheet" style={{ width: "190mm", padding: "6mm", background: "#fff", color: "#1e293b", fontFamily: "Helvetica, Arial, sans-serif", fontSize: "10px" }}>
-            <table style={{ width: "100%", borderBottom: "2px solid #0f766e", paddingBottom: 8, marginBottom: 10 }}>
+          <div id="account-statement-sheet" style={{ width: "190mm", padding: "6mm", background: "var(--lc-surface)", color: "var(--lc-ink)", fontFamily: "Helvetica, Arial, sans-serif", fontSize: "10px" }}>
+            <table style={{ width: "100%", borderBottom: "2px solid var(--lc-accent)", paddingBottom: 8, marginBottom: 10 }}>
               <tbody>
                 <tr>
                   <td style={{ verticalAlign: "top" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       {company?.logoUrl && <img src={company.logoUrl} alt="" crossOrigin="anonymous" style={{ maxHeight: 48, maxWidth: 140, objectFit: "contain" }} />}
                       <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#0f766e" }}>{company?.legalName || ""}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--lc-accent-strong)" }}>{company?.legalName || ""}</div>
                         {company?.tradeName && <div style={{ fontWeight: 600 }}>{company.tradeName}</div>}
                       </div>
                     </div>
-                    <div style={{ marginTop: 4, color: "#475569" }}>
+                    <div style={{ marginTop: 4, color: "var(--lc-ink-2)" }}>
                       {company?.documentNumber && <>CUIT {company.documentNumber} · </>}
                       {companyAddress}
                       {company?.email && <> · {company.email}</>}
@@ -463,14 +463,14 @@ export function CurrentAccountsPage() {
                 </tr>
               </tbody>
             </table>
-            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 4, padding: "6px 8px", marginBottom: 10 }}>
+            <div style={{ background: "var(--lc-surface-2)", border: "1px solid var(--lc-line)", borderRadius: 4, padding: "6px 8px", marginBottom: 10 }}>
               <strong style={{ fontSize: 12 }}>{ledgerEntity.legalName}</strong>
               {ledgerEntity.tradeName && ledgerEntity.tradeName !== ledgerEntity.legalName && <> ({ledgerEntity.tradeName})</>}
               <div>CUIT: {ledgerEntity.documentNumber || "—"} · {roles}</div>
             </div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#0f766e", color: "#fff" }}>
+                <tr style={{ background: "var(--lc-accent)", color: "#fff" }}>
                   {["Fecha", "Comprobante", "Número", "Debe", "Haber", "Saldo"].map((h, i) => (
                     <th key={h} style={{ padding: "4px 6px", textAlign: i >= 3 ? "right" : "left" }}>{h}</th>
                   ))}
@@ -478,7 +478,7 @@ export function CurrentAccountsPage() {
               </thead>
               <tbody>
                 {ledgerHistory.filter((item) => !item.pending).map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0", color: item.muted ? "#94a3b8" : undefined }}>
+                  <tr key={idx} style={{ borderBottom: "1px solid var(--lc-line)", color: item.muted ? "#94a3b8" : undefined }}>
                     <td style={{ padding: "3px 6px" }}>{civilDate(item.date)}</td>
                     <td style={{ padding: "3px 6px" }}>{item.type}{item.originalAmount ? ` · ${item.originalAmount}` : ""}</td>
                     <td style={{ padding: "3px 6px", fontFamily: "monospace" }}>{item.number}</td>
@@ -494,12 +494,12 @@ export function CurrentAccountsPage() {
                 (_, item) => item.balance, 0))}
             </div>
             {ledgerEntity.isCustomer && row && row.receivableBalanceUsd > 0.01 && (
-              <div style={{ marginTop: 4, textAlign: "right", color: "#475569" }}>
+              <div style={{ marginTop: 4, textAlign: "right", color: "var(--lc-ink-2)" }}>
                 Incluye facturas en dólares por {money(row.receivableBalanceUsd, "USD")}, valuadas a la cotización de emisión.
                 Se cancelan en pesos a la cotización pactada del día de pago.
               </div>
             )}
-            <div style={{ marginTop: 18, color: "#94a3b8", fontSize: 8.5, textAlign: "center" }}>
+            <div style={{ marginTop: 18, color: "var(--lc-ink-3)", fontSize: 8.5, textAlign: "center" }}>
               Estado de cuenta informativo emitido por {company?.legalName || "la empresa"}. Ante cualquier diferencia, por favor comunicarse.
             </div>
           </div>
@@ -530,7 +530,7 @@ export function CurrentAccountsPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ background: "#fee2e2", color: "#991b1b", borderColor: "#f87171", marginBottom: 16 }}>
+        <div className="alert" style={{ background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderColor: "var(--lc-danger)", marginBottom: 16 }}>
           ⚠️ {error}
         </div>
       )}
@@ -539,18 +539,18 @@ export function CurrentAccountsPage() {
       <div className="kpi kpi-4" style={{ marginBottom: 24 }}>
         <div className="card">
           <span className="muted">Total a Cobrar Clientes (ARS)</span>
-          <strong style={{ fontSize: "1.4rem", color: "#059669" }}>{money(totalReceivablesArs)}</strong>
+          <strong style={{ fontSize: "1.4rem", color: "var(--lc-ok)" }}>{money(totalReceivablesArs)}</strong>
           {totalReceivablesUsd > 0.01 && (
-            <small style={{ display: "block", color: "#2563eb", fontWeight: 700, marginTop: 2 }}>
+            <small style={{ display: "block", color: "var(--lc-info)", fontWeight: 700, marginTop: 2 }}>
               + {money(totalReceivablesUsd, "USD")}
             </small>
           )}
         </div>
         <div className="card">
           <span className="muted">Total a Pagar Proveedores (ARS)</span>
-          <strong style={{ fontSize: "1.4rem", color: "#dc2626" }}>{money(totalPayablesArs)}</strong>
+          <strong style={{ fontSize: "1.4rem", color: "var(--lc-danger)" }}>{money(totalPayablesArs)}</strong>
           {totalPayablesUsd > 0.01 && (
-            <small style={{ display: "block", color: "#2563eb", fontWeight: 700, marginTop: 2 }}>
+            <small style={{ display: "block", color: "var(--lc-info)", fontWeight: 700, marginTop: 2 }}>
               + {money(totalPayablesUsd, "USD")}
             </small>
           )}
@@ -560,7 +560,7 @@ export function CurrentAccountsPage() {
           <strong
             style={{
               fontSize: "1.4rem",
-              color: netGlobalBalance >= 0 ? "#059669" : "#dc2626"
+              color: netGlobalBalance >= 0 ? "var(--lc-ok)" : "var(--lc-danger)"
             }}
           >
             {netGlobalBalance >= 0 ? `+${money(netGlobalBalance)}` : money(netGlobalBalance)}
@@ -680,7 +680,7 @@ export function CurrentAccountsPage() {
                       <td style={{ textAlign: "right" }}>
                         {money(row.billedSalesArs)}
                         {row.billedSalesUsd > 0.01 && (
-                          <small className="muted" style={{ display: "block", fontSize: "0.72rem", color: "#2563eb" }}>
+                          <small className="muted" style={{ display: "block", fontSize: "0.72rem", color: "var(--lc-info)" }}>
                             ({money(row.billedSalesUsd, "USD")})
                           </small>
                         )}
@@ -692,7 +692,7 @@ export function CurrentAccountsPage() {
                         <strong
                           style={{
                             fontSize: "0.95rem",
-                            color: row.receivableBalance > 0.01 || row.receivableBalanceUsd > 0.01 ? "#dc2626" : "#059669"
+                            color: row.receivableBalance > 0.01 || row.receivableBalanceUsd > 0.01 ? "var(--lc-danger)" : "var(--lc-ok)"
                           }}
                         >
                           {money(row.receivableBalance)}
@@ -704,8 +704,8 @@ export function CurrentAccountsPage() {
                               marginLeft: 6,
                               padding: "1px 6px",
                               borderRadius: 4,
-                              background: "#dbeafe",
-                              color: "#1e40af",
+                              background: "var(--lc-info-bg)",
+                              color: "var(--lc-info)",
                               fontSize: "0.75rem",
                               fontWeight: 700
                             }}
@@ -716,11 +716,11 @@ export function CurrentAccountsPage() {
                       </td>
                       <td style={{ textAlign: "center" }}>
                         {row.receivableBalance > 0.01 || row.receivableBalanceUsd > 0.01 ? (
-                          <span className="badge" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#991b1b" }}>
+                          <span className="badge" style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--lc-danger)" }}>
                             🔴 Con Saldo Deudor
                           </span>
                         ) : (
-                          <span className="badge ok" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#065f46" }}>
+                          <span className="badge ok" style={{ background: "rgba(16, 185, 129, 0.15)", color: "var(--lc-ok)" }}>
                             🟢 Al Día
                           </span>
                         )}
@@ -786,7 +786,7 @@ export function CurrentAccountsPage() {
                       <td style={{ textAlign: "right" }}>
                         {money(row.billedPurchasesArs)}
                         {row.billedPurchasesUsd > 0.01 && (
-                          <small className="muted" style={{ display: "block", fontSize: "0.72rem", color: "#2563eb" }}>
+                          <small className="muted" style={{ display: "block", fontSize: "0.72rem", color: "var(--lc-info)" }}>
                             ({money(row.billedPurchasesUsd, "USD")})
                           </small>
                         )}
@@ -798,7 +798,7 @@ export function CurrentAccountsPage() {
                         <strong
                           style={{
                             fontSize: "0.95rem",
-                            color: row.payableBalance > 0.01 || row.payableBalanceUsd > 0.01 ? "#dc2626" : "#059669"
+                            color: row.payableBalance > 0.01 || row.payableBalanceUsd > 0.01 ? "var(--lc-danger)" : "var(--lc-ok)"
                           }}
                         >
                           {money(row.payableBalance)}
@@ -810,8 +810,8 @@ export function CurrentAccountsPage() {
                               marginLeft: 6,
                               padding: "1px 6px",
                               borderRadius: 4,
-                              background: "#dbeafe",
-                              color: "#1e40af",
+                              background: "var(--lc-info-bg)",
+                              color: "var(--lc-info)",
                               fontSize: "0.75rem",
                               fontWeight: 700
                             }}
@@ -822,11 +822,11 @@ export function CurrentAccountsPage() {
                       </td>
                       <td style={{ textAlign: "center" }}>
                         {row.payableBalance > 0.01 || row.payableBalanceUsd > 0.01 ? (
-                          <span className="badge" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#991b1b" }}>
+                          <span className="badge" style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--lc-danger)" }}>
                             🔴 Pendiente de Pago
                           </span>
                         ) : (
-                          <span className="badge ok" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#065f46" }}>
+                          <span className="badge ok" style={{ background: "rgba(16, 185, 129, 0.15)", color: "var(--lc-ok)" }}>
                             🟢 Saldado
                           </span>
                         )}
@@ -891,17 +891,17 @@ export function CurrentAccountsPage() {
                         <td>
                           <code>{row.entity.documentNumber || "Sin CUIT"}</code>
                         </td>
-                        <td style={{ textAlign: "right", color: "#059669", fontWeight: 600 }}>
+                        <td style={{ textAlign: "right", color: "var(--lc-ok)", fontWeight: 600 }}>
                           {money(row.receivableBalance)}
                         </td>
-                        <td style={{ textAlign: "right", color: "#dc2626", fontWeight: 600 }}>
+                        <td style={{ textAlign: "right", color: "var(--lc-danger)", fontWeight: 600 }}>
                           {money(row.payableBalance)}
                         </td>
                         <td style={{ textAlign: "right" }}>
                           <strong
                             style={{
                               fontSize: "1rem",
-                              color: net > 0.01 ? "#059669" : net < -0.01 ? "#dc2626" : "#64748b"
+                              color: net > 0.01 ? "var(--lc-ok)" : net < -0.01 ? "var(--lc-danger)" : "var(--lc-ink-3)"
                             }}
                           >
                             {net > 0 ? `+${money(net)}` : money(net)}
@@ -909,11 +909,11 @@ export function CurrentAccountsPage() {
                         </td>
                         <td style={{ textAlign: "center" }}>
                           {net > 0.01 ? (
-                            <span className="badge ok" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#065f46" }}>
+                            <span className="badge ok" style={{ background: "rgba(16, 185, 129, 0.15)", color: "var(--lc-ok)" }}>
                               🟢 A cobrar neto
                             </span>
                           ) : net < -0.01 ? (
-                            <span className="badge" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#991b1b" }}>
+                            <span className="badge" style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--lc-danger)" }}>
                               🔴 A pagar neto
                             </span>
                           ) : (

@@ -6,7 +6,7 @@ import { useDocumentTemplate } from "../context/DocumentTemplateContext";
 import { num, rangeText, serviceOrderStatusLabel } from "../lib/fleet";
 import { loadHtml2Pdf } from "../utils/loadHtml2Pdf";
 
-const cell: React.CSSProperties = { padding: "6px 8px", borderBottom: "1px solid #e2e8f0", textAlign: "left", verticalAlign: "top" };
+const cell: React.CSSProperties = { padding: "6px 8px", borderBottom: "1px solid var(--lc-line)", textAlign: "left", verticalAlign: "top" };
 
 /** Informe de servicio imprimible: qué se pidió, qué se hizo, con qué y quiénes; con lugar para las firmas. */
 export function FleetServiceOrderReportPage() {
@@ -35,7 +35,7 @@ export function FleetServiceOrderReportPage() {
         margin: [10, 10, 10, 10] as [number, number, number, number],
         filename: `Informe_${order.code}.pdf`,
         image: { type: "jpeg" as const, quality: 0.92 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff", windowWidth: 794 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "var(--lc-surface)", windowWidth: 794 },
         jsPDF: { unit: "mm" as const, format: "a4", orientation: "portrait" as const },
         pagebreak: { mode: ["css", "legacy"] }
       }).from(element).save();
@@ -52,7 +52,7 @@ export function FleetServiceOrderReportPage() {
   const address = [company?.fiscalStreet, company?.fiscalCity, company?.fiscalProvince].filter(Boolean).join(", ");
 
   return (
-    <div style={{ background: "#f1f5f9", minHeight: "100vh", padding: 20 }}>
+    <div style={{ background: "var(--lc-surface-2)", minHeight: "100vh", padding: 20 }}>
       <div className="no-print" style={{ maxWidth: "210mm", margin: "0 auto 16px", display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
         <Link to={`/flota/ordenes/${order.id}`} className="btn btn-outline">← Volver a la orden</Link>
         <div style={{ display: "flex", gap: 8 }}>
@@ -61,7 +61,7 @@ export function FleetServiceOrderReportPage() {
         </div>
       </div>
 
-      <div id="service-report-sheet" style={{ maxWidth: "210mm", margin: "0 auto", background: "#fff", color: "#1e293b", padding: "12mm", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 11 }}>
+      <div id="service-report-sheet" style={{ maxWidth: "210mm", margin: "0 auto", background: "var(--lc-surface)", color: "var(--lc-ink)", padding: "12mm", fontFamily: "Helvetica, Arial, sans-serif", fontSize: 11 }}>
         <table style={{ width: "100%", borderBottom: `2px solid ${primary}`, paddingBottom: 8, marginBottom: 12 }}>
           <tbody>
             <tr>
@@ -111,7 +111,7 @@ export function FleetServiceOrderReportPage() {
             <h4 style={{ margin: "12px 0 4px", color: primary }}>Repuestos y materiales</h4>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8fafc" }}>
+                <tr style={{ background: "var(--lc-surface-2)" }}>
                   <th style={cell}>Código</th><th style={cell}>Descripción</th><th style={{ ...cell, textAlign: "right" }}>Cantidad</th><th style={cell}>N° de serie</th>
                 </tr>
               </thead>
@@ -132,9 +132,9 @@ export function FleetServiceOrderReportPage() {
         <table style={{ width: "100%", marginTop: 48, pageBreakInside: "avoid" }}>
           <tbody>
             <tr>
-              <td style={{ width: "45%", borderTop: "1px solid #94a3b8", paddingTop: 4, textAlign: "center" }}>Firma del técnico</td>
+              <td style={{ width: "45%", borderTop: "1px solid var(--lc-ink-3)", paddingTop: 4, textAlign: "center" }}>Firma del técnico</td>
               <td style={{ width: "10%" }}></td>
-              <td style={{ width: "45%", borderTop: "1px solid #94a3b8", paddingTop: 4, textAlign: "center" }}>Firma, aclaración y DNI del cliente</td>
+              <td style={{ width: "45%", borderTop: "1px solid var(--lc-ink-3)", paddingTop: 4, textAlign: "center" }}>Firma, aclaración y DNI del cliente</td>
             </tr>
           </tbody>
         </table>

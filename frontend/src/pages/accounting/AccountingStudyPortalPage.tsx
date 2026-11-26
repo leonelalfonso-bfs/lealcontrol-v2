@@ -126,11 +126,11 @@ export function AccountingStudyPortalPage() {
         <InventoryValuationCard />
 
         {/* Asistente 2: Devengamiento de Sueldos F.931 */}
-        <div className="card pad" style={{ border: "1px solid #0d9488", background: "rgba(13, 148, 136, 0.02)" }}>
+        <div className="card pad" style={{ border: "1px solid var(--lc-accent)", background: "rgba(13, 148, 136, 0.02)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
             <div style={{ fontSize: "28px" }}>👥</div>
             <div>
-              <h3 style={{ margin: 0, color: "#0f766e" }}>Asiento de Devengamiento de Sueldos</h3>
+              <h3 style={{ margin: 0, color: "var(--lc-accent-strong)" }}>Asiento de Devengamiento de Sueldos</h3>
               <p className="muted" style={{ margin: 0, fontSize: "12px" }}>
                 Registra el devengamiento mensual de haberes y aportes patronales F.931.
               </p>
@@ -178,7 +178,7 @@ export function AccountingStudyPortalPage() {
               type="submit"
               className="btn"
               disabled={payrollLoading}
-              style={{ background: "#0d9488", color: "#fff", fontWeight: 700, marginTop: 4 }}
+              style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 700, marginTop: 4 }}
             >
               {payrollLoading ? "Registrando..." : "📝 Contabilizar Asiento de Sueldos y F.931"}
             </button>

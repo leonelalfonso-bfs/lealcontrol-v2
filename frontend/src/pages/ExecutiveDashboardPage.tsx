@@ -506,7 +506,7 @@ export const ExecutiveDashboardPage: React.FC = () => {
                               style={{
                                 width: "38%",
                                 height: collectedHeight,
-                                background: "linear-gradient(180deg, var(--accent), #0369a1)",
+                                background: "linear-gradient(180deg, var(--accent), var(--lc-info))",
                                 borderRadius: "6px 6px 0 0",
                                 transition: "height 0.3s ease",
                                 boxShadow: "0 2px 8px rgba(2, 132, 199, 0.25)"
@@ -535,7 +535,7 @@ export const ExecutiveDashboardPage: React.FC = () => {
                         { label: "Venta Directa (Reventa)", count: products.filter((p) => p.type === "DirectSale" || p.type === "Product").length, icon: "🛍️", color: "var(--primary)" },
                         { label: "Servicios Intangibles", count: products.filter((p) => p.type === "Service").length, icon: "🛠️", color: "var(--accent)" },
                         { label: "Repuestos Técnicos", count: products.filter((p) => p.type === "SparePart").length, icon: "🔧", color: "var(--warn)" },
-                        { label: "Productos Fabricados", count: products.filter((p) => p.type === "Manufactured" || p.type === "Consumable").length, icon: "🏭", color: "#8b5cf6" },
+                        { label: "Productos Fabricados", count: products.filter((p) => p.type === "Manufactured" || p.type === "Consumable").length, icon: "🏭", color: "var(--lc-violet)" },
                         { label: "Productos Ensamblados", count: products.filter((p) => p.type === "Kit").length, icon: "🧩", color: "#ec4899" }
                       ].map((cat) => (
                         <div key={cat.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 10, background: "var(--surface-muted)" }}>

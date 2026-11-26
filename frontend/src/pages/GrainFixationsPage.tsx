@@ -89,7 +89,7 @@ export function GrainFixationsPage() {
                         fontWeight: 800,
                         fontSize: "0.78rem",
                         background: isPos ? "rgba(16, 185, 129, 0.12)" : "rgba(239, 68, 68, 0.12)",
-                        color: isPos ? "#10b981" : "#ef4444"
+                        color: isPos ? "var(--lc-ok)" : "var(--lc-danger)"
                       }}>
                         {isPos ? "▲ +" : "▼ "}{p.dailyVariationPercentage}%
                       </span>

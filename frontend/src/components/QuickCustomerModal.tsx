@@ -264,7 +264,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
     >
       <div
         style={{
-          background: "#ffffff",
+          background: "var(--lc-surface)",
           borderRadius: "18px",
           width: "100%",
           maxWidth: "760px",
@@ -279,7 +279,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
         <div
           style={{
             padding: "18px 24px",
-            borderBottom: "1px solid var(--surface-border, #e2e8f0)",
+            borderBottom: "1px solid var(--surface-border, var(--lc-line))",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -289,10 +289,10 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <span style={{ fontSize: "1.6rem" }}>{isSupplier ? "🏭" : "🏢"}</span>
             <div>
-              <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0f172a" }}>
+              <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "var(--lc-ink)" }}>
                 {isSupplier ? "Alta Rápida de Proveedor" : "Alta Rápida de Cliente"}
               </h2>
-              <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
+              <span style={{ fontSize: "0.78rem", color: "var(--lc-ink-3)" }}>
                 Se creará en el CRM y quedará seleccionado automáticamente en este documento.
               </span>
             </div>
@@ -304,7 +304,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
               background: "none",
               border: "none",
               fontSize: "1.4rem",
-              color: "#64748b",
+              color: "var(--lc-ink-3)",
               cursor: "pointer",
               padding: "4px 8px"
             }}
@@ -319,8 +319,8 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
             display: "flex",
             gap: "8px",
             padding: "10px 24px",
-            background: "#f8fafc",
-            borderBottom: "1px solid #e2e8f0"
+            background: "var(--lc-surface-2)",
+            borderBottom: "1px solid var(--lc-line)"
           }}
         >
           <button
@@ -381,9 +381,9 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
             {error && (
               <div
                 style={{
-                  background: "#fee2e2",
-                  border: "1px solid #ef4444",
-                  color: "#991b1b",
+                  background: "var(--lc-danger-bg)",
+                  border: "1px solid var(--lc-danger)",
+                  color: "var(--lc-danger)",
                   padding: "10px 14px",
                   borderRadius: "8px",
                   fontSize: "0.85rem",
@@ -413,7 +413,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                           flex: 1,
                           padding: "9px 12px",
                           borderRadius: "8px",
-                          border: "1px solid #cbd5e1",
+                          border: "1px solid var(--lc-line-2)",
                           fontFamily: "monospace",
                           fontWeight: 700
                         }}
@@ -437,7 +437,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                     <select
                       value={taxCondition}
                       onChange={(e) => setTaxCondition(e.target.value as CustomerWrite["taxCondition"])}
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
                     >
                       <option value="ResponsableInscripto">IVA Responsable Inscripto</option>
                       <option value="Monotributo">Monotributo</option>
@@ -459,7 +459,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={legalName}
                       onChange={(e) => setLegalName(e.target.value)}
                       placeholder="Ej: Acindar Industria Argentina S.A."
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontWeight: 600 }}
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--lc-line-2)", fontWeight: 600 }}
                     />
                   </div>
 
@@ -472,7 +472,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={tradeName}
                       onChange={(e) => setTradeName(e.target.value)}
                       placeholder="Ej: Planta Villa Constitución"
-                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
                     />
                   </div>
                 </div>
@@ -488,7 +488,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="compras@empresa.com"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
                     />
                   </div>
 
@@ -501,7 +501,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="0341-4567890"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
                     />
                   </div>
 
@@ -514,7 +514,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={whatsApp}
                       onChange={(e) => setWhatsApp(e.target.value)}
                       placeholder="+54 9 341 555-1234"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
                     />
                   </div>
                 </div>
@@ -530,7 +530,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={fiscalStreet}
                       onChange={(e) => setFiscalStreet(e.target.value)}
                       placeholder="Ruta 21 km 247"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
                     />
                   </div>
 
@@ -543,7 +543,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       value={fiscalCity}
                       onChange={(e) => setFiscalCity(e.target.value)}
                       placeholder="Villa Constitución"
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
                     />
                   </div>
 
@@ -554,7 +554,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                     <select
                       value={fiscalProvince}
                       onChange={(e) => setFiscalProvince(e.target.value)}
-                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--lc-line-2)" }}
                     >
                       {provinces.map((p) => (
                         <option key={p} value={p}>
@@ -570,7 +570,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
             {/* TAB 2: PLANTS / LOCATIONS */}
             {activeTab === "locations" && (
               <div>
-                <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0", marginBottom: "16px" }}>
+                <div style={{ background: "var(--lc-surface-2)", padding: "14px", borderRadius: "10px", border: "1px solid var(--lc-line)", marginBottom: "16px" }}>
                   <strong style={{ fontSize: "0.86rem", display: "block", marginBottom: "10px" }}>
                     ➕ Agregar Planta / Sucursal / Depósito de Destino:
                   </strong>
@@ -584,7 +584,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newLocName}
                         onChange={(e) => setNewLocName(e.target.value)}
                         placeholder="Ej: Planta Sur, Silo 4"
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
                       />
                     </div>
                     <div>
@@ -596,7 +596,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newLocStreet}
                         onChange={(e) => setNewLocStreet(e.target.value)}
                         placeholder="Calle o Ruta..."
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
                       />
                     </div>
                     <div>
@@ -608,14 +608,14 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newLocCity}
                         onChange={(e) => setNewLocCity(e.target.value)}
                         placeholder="Ciudad..."
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
                       />
                     </div>
                     <button
                       type="button"
                       onClick={handleAddDraftLocation}
                       className="btn btn-primary"
-                      style={{ padding: "8px 14px", fontSize: "0.8rem", background: "#0d9488" }}
+                      style={{ padding: "8px 14px", fontSize: "0.8rem", background: "var(--lc-accent)" }}
                     >
                       + Agregar
                     </button>
@@ -623,7 +623,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                 </div>
 
                 {locations.length === 0 ? (
-                  <div style={{ padding: "20px", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
+                  <div style={{ padding: "20px", textAlign: "center", color: "var(--lc-ink-3)", fontSize: "0.85rem" }}>
                     (Opcional) Si la empresa tiene varias plantas de entrega, podés crearlas aquí. Si no agregás ninguna, se usará el domicilio fiscal.
                   </div>
                 ) : (
@@ -634,8 +634,8 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         style={{
                           padding: "10px 14px",
                           borderRadius: "8px",
-                          background: "#f1f5f9",
-                          border: "1px solid #cbd5e1",
+                          background: "var(--lc-surface-2)",
+                          border: "1px solid var(--lc-line-2)",
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center"
@@ -647,7 +647,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         <button
                           type="button"
                           onClick={() => setLocations(locations.filter((_, i) => i !== idx))}
-                          style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                          style={{ color: "var(--lc-danger)", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
                         >
                           ✕
                         </button>
@@ -661,7 +661,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
             {/* TAB 3: CONTACTS */}
             {activeTab === "contacts" && (
               <div>
-                <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "10px", border: "1px solid #e2e8f0", marginBottom: "16px" }}>
+                <div style={{ background: "var(--lc-surface-2)", padding: "14px", borderRadius: "10px", border: "1px solid var(--lc-line)", marginBottom: "16px" }}>
                   <strong style={{ fontSize: "0.86rem", display: "block", marginBottom: "10px" }}>
                     ➕ Agregar Persona de Contacto:
                   </strong>
@@ -675,7 +675,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newConName}
                         onChange={(e) => setNewConName(e.target.value)}
                         placeholder="Ing. Carlos Pérez"
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
                       />
                     </div>
                     <div>
@@ -685,7 +685,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                       <select
                         value={newConRole}
                         onChange={(e) => setNewConRole(e.target.value)}
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
                       >
                         <option value="Commercial">Compras / Comercial</option>
                         <option value="Technical">Técnico / Mantenimiento</option>
@@ -702,7 +702,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newConEmail}
                         onChange={(e) => setNewConEmail(e.target.value)}
                         placeholder="cperez@empresa.com"
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
                       />
                     </div>
                     <div>
@@ -714,14 +714,14 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         value={newConWhatsApp}
                         onChange={(e) => setNewConWhatsApp(e.target.value)}
                         placeholder="341-5551234"
-                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: "6px", border: "1px solid var(--lc-line-2)" }}
                       />
                     </div>
                     <button
                       type="button"
                       onClick={handleAddDraftContact}
                       className="btn btn-primary"
-                      style={{ padding: "8px 14px", fontSize: "0.8rem", background: "#0d9488" }}
+                      style={{ padding: "8px 14px", fontSize: "0.8rem", background: "var(--lc-accent)" }}
                     >
                       + Agregar
                     </button>
@@ -729,7 +729,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                 </div>
 
                 {contacts.length === 0 ? (
-                  <div style={{ padding: "20px", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
+                  <div style={{ padding: "20px", textAlign: "center", color: "var(--lc-ink-3)", fontSize: "0.85rem" }}>
                     (Opcional) Podés agregar aquí personas específicas de la empresa a quienes dirigir los presupuestos.
                   </div>
                 ) : (
@@ -740,8 +740,8 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         style={{
                           padding: "10px 14px",
                           borderRadius: "8px",
-                          background: "#f1f5f9",
-                          border: "1px solid #cbd5e1",
+                          background: "var(--lc-surface-2)",
+                          border: "1px solid var(--lc-line-2)",
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center"
@@ -753,7 +753,7 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
                         <button
                           type="button"
                           onClick={() => setContacts(contacts.filter((_, i) => i !== idx))}
-                          style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                          style={{ color: "var(--lc-danger)", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
                         >
                           ✕
                         </button>
@@ -769,11 +769,11 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
           <div
             style={{
               padding: "16px 24px",
-              borderTop: "1px solid #e2e8f0",
+              borderTop: "1px solid var(--lc-line)",
               display: "flex",
               justifyContent: "flex-end",
               gap: "12px",
-              background: "#f8fafc"
+              background: "var(--lc-surface-2)"
             }}
           >
             <button
@@ -790,8 +790,8 @@ export const QuickCustomerModal: React.FC<QuickCustomerModalProps> = ({
               style={{
                 padding: "9px 24px",
                 borderRadius: "8px",
-                background: "#0d9488",
-                color: "#ffffff",
+                background: "var(--lc-accent)",
+                color: "#fff",
                 border: "none",
                 fontWeight: 700,
                 cursor: "pointer",

@@ -38,9 +38,9 @@ export function HumanResourcesDashboardPage() {
 
       {/* Metric Cards */}
       <div className="grid-4" style={{ gap: 16 }}>
-        <div className="card pad" style={{ borderLeft: "5px solid #10b981" }}>
+        <div className="card pad" style={{ borderLeft: "5px solid var(--lc-ok)" }}>
           <div className="muted" style={{ fontSize: "0.85rem", fontWeight: 600 }}>COLABORADORES ACTIVOS</div>
-          <div style={{ fontSize: "2rem", fontWeight: 800, color: "#10b981", marginTop: 6 }}>
+          <div style={{ fontSize: "2rem", fontWeight: 800, color: "var(--lc-ok)", marginTop: 6 }}>
             {loading ? "..." : summary?.activeEmployees ?? 0}
           </div>
           <div className="muted" style={{ fontSize: "0.78rem", marginTop: 4 }}>
@@ -48,9 +48,9 @@ export function HumanResourcesDashboardPage() {
           </div>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "5px solid #3b82f6" }}>
+        <div className="card pad" style={{ borderLeft: "5px solid var(--lc-info)" }}>
           <div className="muted" style={{ fontSize: "0.85rem", fontWeight: 600 }}>PUESTOS ORGANIZACIONALES</div>
-          <div style={{ fontSize: "2rem", fontWeight: 800, color: "#3b82f6", marginTop: 6 }}>
+          <div style={{ fontSize: "2rem", fontWeight: 800, color: "var(--lc-info)", marginTop: 6 }}>
             {loading ? "..." : `${summary?.coveredPositions ?? 0} / ${summary?.positionsCount ?? 0}`}
           </div>
           <div className="muted" style={{ fontSize: "0.78rem", marginTop: 4 }}>
@@ -58,9 +58,9 @@ export function HumanResourcesDashboardPage() {
           </div>
         </div>
 
-        <div className="card pad" style={{ borderLeft: "5px solid #8b5cf6" }}>
+        <div className="card pad" style={{ borderLeft: "5px solid var(--lc-violet)" }}>
           <div className="muted" style={{ fontSize: "0.85rem", fontWeight: 600 }}>MANUALES & INSTRUCTIVOS</div>
-          <div style={{ fontSize: "2rem", fontWeight: 800, color: "#8b5cf6", marginTop: 6 }}>
+          <div style={{ fontSize: "2rem", fontWeight: 800, color: "var(--lc-violet)", marginTop: 6 }}>
             {loading ? "..." : summary?.manualsCount ?? 0}
           </div>
           <div className="muted" style={{ fontSize: "0.78rem", marginTop: 4 }}>
@@ -70,7 +70,7 @@ export function HumanResourcesDashboardPage() {
 
         <div className="card pad" style={{ borderLeft: `5px solid ${(summary?.expiringDocsCount ?? 0) > 0 ? "#f59e0b" : "#10b981"}` }}>
           <div className="muted" style={{ fontSize: "0.85rem", fontWeight: 600 }}>VENCIMIENTOS DOCUMENTALES</div>
-          <div style={{ fontSize: "2rem", fontWeight: 800, color: (summary?.expiringDocsCount ?? 0) > 0 ? "#f59e0b" : "#10b981", marginTop: 6 }}>
+          <div style={{ fontSize: "2rem", fontWeight: 800, color: (summary?.expiringDocsCount ?? 0) > 0 ? "var(--lc-warn)" : "var(--lc-ok)", marginTop: 6 }}>
             {loading ? "..." : summary?.expiringDocsCount ?? 0}
           </div>
           <div className="muted" style={{ fontSize: "0.78rem", marginTop: 4 }}>
@@ -95,7 +95,7 @@ export function HumanResourcesDashboardPage() {
                       <span className="muted">{d.count} colaboradores ({pct}%)</span>
                     </div>
                     <div style={{ height: 8, background: "var(--surface-sunken)", borderRadius: 4, overflow: "hidden" }}>
-                      <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg, #ec4899, #8b5cf6)", borderRadius: 4 }} />
+                      <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg, #ec4899, var(--lc-violet))", borderRadius: 4 }} />
                     </div>
                   </div>
                 );

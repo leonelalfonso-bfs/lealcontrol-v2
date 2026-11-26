@@ -17,7 +17,7 @@ const STATUS_COLORS: Record<string, string> = {
   Pending: "#fbbf24",
   Contacted: "#60a5fa",
   Provisioned: "#34d399",
-  Dismissed: "#94a3b8"
+  Dismissed: "var(--lc-ink-3)"
 };
 
 export function SuperAdminDemoRequestsPage() {
@@ -130,15 +130,15 @@ export function SuperAdminDemoRequestsPage() {
   const pendingCount = requests.filter((r) => r.status === "Pending").length;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#090d16", color: "#f1f5f9", fontFamily: "system-ui, sans-serif" }}>
-      <header style={{ borderBottom: "1px solid #1e293b", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ minHeight: "100vh", background: "#090d16", color: "var(--lc-surface-2)", fontFamily: "system-ui, sans-serif" }}>
+      <header style={{ borderBottom: "1px solid var(--lc-ink)", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h2 style={{ margin: 0, fontSize: "18px" }}>Solicitudes de Demo</h2>
-          <span style={{ color: "#94a3b8", fontSize: "13px" }}>{pendingCount} pendientes</span>
+          <span style={{ color: "var(--lc-ink-3)", fontSize: "13px" }}>{pendingCount} pendientes</span>
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
-          <Link to="/superadmin" style={{ color: "#cbd5e1", textDecoration: "none", padding: "8px 14px", border: "1px solid #334155", borderRadius: "8px" }}>← Panel</Link>
-          <Link to="/superadmin/tenants" style={{ color: "#cbd5e1", textDecoration: "none", padding: "8px 14px", border: "1px solid #334155", borderRadius: "8px" }}>Clientes</Link>
+          <Link to="/superadmin" style={{ color: "var(--lc-line-2)", textDecoration: "none", padding: "8px 14px", border: "1px solid var(--lc-ink-2)", borderRadius: "8px" }}>← Panel</Link>
+          <Link to="/superadmin/tenants" style={{ color: "var(--lc-line-2)", textDecoration: "none", padding: "8px 14px", border: "1px solid var(--lc-ink-2)", borderRadius: "8px" }}>Clientes</Link>
         </div>
       </header>
 
@@ -154,7 +154,7 @@ export function SuperAdminDemoRequestsPage() {
                 borderRadius: "8px",
                 border: filter === s ? "1px solid #eab308" : "1px solid #334155",
                 background: filter === s ? "rgba(234,179,8,0.15)" : "#1e293b",
-                color: "#f8fafc",
+                color: "var(--lc-surface-2)",
                 cursor: "pointer"
               }}
             >
@@ -164,25 +164,25 @@ export function SuperAdminDemoRequestsPage() {
         </div>
 
         {loading ? (
-          <p style={{ color: "#94a3b8" }}>Cargando solicitudes...</p>
+          <p style={{ color: "var(--lc-ink-3)" }}>Cargando solicitudes...</p>
         ) : filtered.length === 0 ? (
-          <p style={{ color: "#94a3b8" }}>No hay solicitudes en este filtro.</p>
+          <p style={{ color: "var(--lc-ink-3)" }}>No hay solicitudes en este filtro.</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {filtered.map((req) => (
-              <div key={req.id} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: "12px", padding: "16px" }}>
+              <div key={req.id} style={{ background: "var(--lc-ink)", border: "1px solid var(--lc-ink)", borderRadius: "12px", padding: "16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
                   <div>
                     <strong style={{ fontSize: "16px" }}>{req.companyName}</strong>
                     <span style={{ marginLeft: "10px", fontSize: "12px", color: STATUS_COLORS[req.status] || "#94a3b8" }}>{req.status}</span>
-                    <div style={{ color: "#94a3b8", fontSize: "13px", marginTop: "6px" }}>
+                    <div style={{ color: "var(--lc-ink-3)", fontSize: "13px", marginTop: "6px" }}>
                       {req.contactFullName} · {req.email} · {req.phone}
                       {req.cuit ? ` · CUIT ${req.cuit}` : ""}
                     </div>
-                    <div style={{ color: "#64748b", fontSize: "12px", marginTop: "4px" }}>
+                    <div style={{ color: "var(--lc-ink-3)", fontSize: "12px", marginTop: "4px" }}>
                       {new Date(req.createdAtUtc).toLocaleString("es-AR")} · Usuarios: {req.estimatedUsers}
                     </div>
-                    {req.message && <p style={{ marginTop: "8px", fontSize: "13px", color: "#cbd5e1" }}>{req.message}</p>}
+                    {req.message && <p style={{ marginTop: "8px", fontSize: "13px", color: "var(--lc-line-2)" }}>{req.message}</p>}
                   </div>
                   <div style={{ display: "flex", gap: "8px", alignItems: "flex-start", flexWrap: "wrap" }}>
                     {req.status === "Pending" && (
@@ -204,7 +204,7 @@ export function SuperAdminDemoRequestsPage() {
 
       {selected && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", zIndex: 50 }}>
-          <div style={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "14px", padding: "24px", width: "100%", maxWidth: "520px", maxHeight: "90vh", overflow: "auto" }}>
+          <div style={{ background: "var(--lc-ink)", border: "1px solid var(--lc-ink-2)", borderRadius: "14px", padding: "24px", width: "100%", maxWidth: "520px", maxHeight: "90vh", overflow: "auto" }}>
             <h3 style={{ marginTop: 0 }}>Aprovisionar: {selected.companyName}</h3>
             {provisionResult ? (
               <div>
@@ -232,7 +232,7 @@ export function SuperAdminDemoRequestsPage() {
                 <label style={labelStyle}>Precio ARS/mes
                   <input type="number" value={monthlyPriceArs} onChange={(e) => setMonthlyPriceArs(Number(e.target.value))} style={inputStyle} />
                 </label>
-                {error && <p style={{ color: "#f87171", margin: 0, fontSize: "13px" }}>{error}</p>}
+                {error && <p style={{ color: "var(--lc-danger)", margin: 0, fontSize: "13px" }}>{error}</p>}
                 <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
                   <button type="submit" disabled={provisioning} style={btnPrimary}>{provisioning ? "Creando BD..." : "Aprovisionar empresa + BD"}</button>
                   <button type="button" onClick={() => setSelected(null)} style={btnSecondary}>Cancelar</button>
@@ -246,7 +246,7 @@ export function SuperAdminDemoRequestsPage() {
   );
 }
 
-const labelStyle: React.CSSProperties = { fontSize: "13px", color: "#cbd5e1", display: "flex", flexDirection: "column", gap: "6px" };
-const inputStyle: React.CSSProperties = { padding: "10px", borderRadius: "8px", border: "1px solid #334155", background: "#1e293b", color: "#fff" };
-const btnPrimary: React.CSSProperties = { background: "linear-gradient(135deg, #eab308, #ca8a04)", border: "none", color: "#000", fontWeight: 700, padding: "10px 16px", borderRadius: "8px", cursor: "pointer" };
-const btnSecondary: React.CSSProperties = { background: "#1e293b", border: "1px solid #334155", color: "#e2e8f0", padding: "10px 16px", borderRadius: "8px", cursor: "pointer" };
+const labelStyle: React.CSSProperties = { fontSize: "13px", color: "var(--lc-line-2)", display: "flex", flexDirection: "column", gap: "6px" };
+const inputStyle: React.CSSProperties = { padding: "10px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)", background: "var(--lc-ink)", color: "#fff" };
+const btnPrimary: React.CSSProperties = { background: "linear-gradient(135deg, var(--lc-warn), var(--lc-warn))", border: "none", color: "#000", fontWeight: 700, padding: "10px 16px", borderRadius: "8px", cursor: "pointer" };
+const btnSecondary: React.CSSProperties = { background: "var(--lc-ink)", border: "1px solid var(--lc-ink-2)", color: "var(--lc-line)", padding: "10px 16px", borderRadius: "8px", cursor: "pointer" };

@@ -114,7 +114,7 @@ export function QualityPg04Page() {
           {showForm ? "Cerrar alta" : "Programar auditoría"}</button>
       </div>
     </div>
-    {(error || message) && <div className="card pad" style={{ marginTop: 12, color: error ? "#991b1b" : "#166534", background: error ? "#fef2f2" : "#f0fdf4" }}>{error || message}</div>}
+    {(error || message) && <div className="card pad" style={{ marginTop: 12, color: error ? "var(--lc-danger)" : "var(--lc-ok)", background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)" }}>{error || message}</div>}
     {showForm && <form className="card pad" style={{ marginTop: 16 }} onSubmit={(event) => void create(event)}>
       <h2 style={{ marginTop: 0 }}>Nueva programación · PG04-R01</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>

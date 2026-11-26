@@ -620,7 +620,7 @@ export function CustomerFormPage() {
       </div>
 
       {error && <div className="alert">{error}</div>}
-      {arcaSuccessMsg && <div className="alert ok" style={{ background: "#ecfdf5", border: "1px solid #10b981", color: "#065f46", marginBottom: 16 }}>{arcaSuccessMsg}</div>}
+      {arcaSuccessMsg && <div className="alert ok" style={{ background: "var(--lc-ok-bg)", border: "1px solid var(--lc-ok)", color: "var(--lc-ok)", marginBottom: 16 }}>{arcaSuccessMsg}</div>}
 
       <form onSubmit={submit} className="stack" style={{ gap: 20 }}>
         <div className="tab-row">
@@ -683,7 +683,7 @@ export function CustomerFormPage() {
                         disabled={consultingArca}
                         onClick={handleConsultArca}
                         title="Consultar padrón impositivo oficial en ARCA / AFIP"
-                        style={{ whiteSpace: "nowrap", padding: "0 12px", background: "linear-gradient(180deg, #2563eb, #1d4ed8)", color: "#fff" }}
+                        style={{ whiteSpace: "nowrap", padding: "0 12px", background: "linear-gradient(180deg, var(--lc-info), var(--lc-info))", color: "#fff" }}
                       >
                         {consultingArca ? "🔍 ARCA…" : "🔍 ARCA"}
                       </button>
@@ -692,7 +692,7 @@ export function CustomerFormPage() {
                         className="btn"
                         onClick={() => setShowBcraModal(true)}
                         title="Consultar Central de Deudores y Calificación Crediticia en BCRA"
-                        style={{ whiteSpace: "nowrap", padding: "0 12px", background: "linear-gradient(180deg, #0f172a, #334155)", color: "#fff" }}
+                        style={{ whiteSpace: "nowrap", padding: "0 12px", background: "linear-gradient(180deg, var(--lc-ink), var(--lc-ink-2))", color: "#fff" }}
                       >
                         🏛️ BCRA
                       </button>
@@ -729,10 +729,10 @@ export function CustomerFormPage() {
                     {model.creditRating === "A" ? "🟢" : model.creditRating === "B" ? "🟡" : model.creditRating === "C" ? "🟠" : "🔴"}
                   </span>
                   <div>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#0f172a" }}>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--lc-ink)" }}>
                       Calificación Crediticia BCRA: {model.creditRating} (Situación {model.bcraWorstSituation || 1})
                     </div>
-                    <div style={{ fontSize: "0.78rem", color: "#475569", marginTop: "2px" }}>
+                    <div style={{ fontSize: "0.78rem", color: "var(--lc-ink-2)", marginTop: "2px" }}>
                       {model.creditRecommendation || "Sin observaciones adicionales."}
                     </div>
                   </div>
@@ -741,7 +741,7 @@ export function CustomerFormPage() {
                   type="button"
                   onClick={() => setShowBcraModal(true)}
                   className="btn btn-outline"
-                  style={{ fontSize: "0.75rem", padding: "4px 10px", background: "#ffffff" }}
+                  style={{ fontSize: "0.75rem", padding: "4px 10px", background: "var(--lc-surface)" }}
                 >
                   Ver Detalle BCRA
                 </button>
@@ -806,7 +806,7 @@ export function CustomerFormPage() {
             </div>
 
             {showLocForm && (
-              <div className="card pad" style={{ background: "#f8fafc", border: "1px solid var(--line)" }}>
+              <div className="card pad" style={{ background: "var(--lc-surface-2)", border: "1px solid var(--line)" }}>
                 <h4>{editingLocTempId ? "Editar Planta" : "Nueva Planta"}</h4>
                 <div className="grid-2" style={{ marginTop: 12 }}>
                   <label>Nombre de Planta *<input required value={newLoc.name} onChange={(e) => setNewLoc({ ...newLoc, name: e.target.value })} placeholder="Ej. Planta Puerto" /></label>
@@ -885,7 +885,7 @@ export function CustomerFormPage() {
             </div>
 
             {showContactForm && (
-              <div className="card pad" style={{ background: "#f8fafc", border: "1px solid var(--line)" }}>
+              <div className="card pad" style={{ background: "var(--lc-surface-2)", border: "1px solid var(--line)" }}>
                 <h4>{editingConTempId ? "Editar Contacto" : "Nuevo Contacto"}</h4>
                 <div className="grid-2" style={{ marginTop: 12 }}>
                   <label>Nombre y Apellido *<input required value={newContact.name} onChange={(e) => setNewContact({ ...newContact, name: e.target.value })} placeholder="Juan Pérez" /></label>
@@ -976,7 +976,7 @@ export function CustomerFormPage() {
             </div>
 
             {showEqForm && (
-              <div className="card pad" style={{ background: "#f8fafc", border: "1px solid var(--line)" }}>
+              <div className="card pad" style={{ background: "var(--lc-surface-2)", border: "1px solid var(--line)" }}>
                 <h4>Nuevo Equipo Registrado</h4>
                 <div className="grid-3" style={{ marginTop: 12 }}>
                   <label>Código Interno / TAG *<input required value={newEq.internalCode} onChange={(e) => setNewEq({ ...newEq, internalCode: e.target.value })} placeholder="EQ-001" /></label>

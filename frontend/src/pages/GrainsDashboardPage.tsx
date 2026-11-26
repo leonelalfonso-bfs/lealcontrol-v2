@@ -40,7 +40,7 @@ export function GrainsDashboardPage() {
     return (
       <div className="page" style={{ padding: "32px" }}>
         <div className="card" style={{ padding: "24px", textAlign: "center", border: "1px solid rgba(239, 68, 68, 0.3)" }}>
-          <p style={{ color: "#ef4444", fontWeight: 700 }}>⚠️ {error || "No se pudieron cargar los datos."}</p>
+          <p style={{ color: "var(--lc-danger)", fontWeight: 700 }}>⚠️ {error || "No se pudieron cargar los datos."}</p>
           <button className="btn primary" onClick={loadDashboard} style={{ marginTop: "12px" }}>Reintentar</button>
         </div>
       </div>
@@ -77,8 +77,8 @@ export function GrainsDashboardPage() {
               Tablero Granario & Corretaje
             </h1>
             <span style={{
-              background: "linear-gradient(135deg, #d97706, #b45309)",
-              color: "#ffffff",
+              background: "linear-gradient(135deg, var(--lc-warn), var(--lc-warn))",
+              color: "#fff",
               padding: "3px 10px",
               borderRadius: "12px",
               fontSize: "0.75rem",
@@ -94,8 +94,8 @@ export function GrainsDashboardPage() {
 
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           <Link to="/cereales/contratos/nuevo" className="btn primary" style={{
-            background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)",
-            color: "#ffffff",
+            background: "linear-gradient(135deg, var(--lc-warn) 0%, var(--lc-warn) 100%)",
+            color: "#fff",
             fontWeight: 700,
             border: "none",
             boxShadow: "0 4px 12px rgba(217, 119, 6, 0.3)"
@@ -149,7 +149,7 @@ export function GrainsDashboardPage() {
                   <div style={{
                     fontSize: "0.75rem",
                     fontWeight: 800,
-                    color: isPositive ? "#10b981" : "#ef4444"
+                    color: isPositive ? "var(--lc-ok)" : "var(--lc-danger)"
                   }}>
                     {isPositive ? "▲ +" : "▼ "}
                     {p.dailyVariationPercentage}%
@@ -203,11 +203,11 @@ export function GrainsDashboardPage() {
             </span>
             <span style={{ fontSize: "1.3rem" }}>🚚</span>
           </div>
-          <div style={{ fontSize: "1.85rem", fontWeight: 900, color: "#0d9488" }}>
+          <div style={{ fontSize: "1.85rem", fontWeight: 900, color: "var(--lc-accent-strong)" }}>
             {data.totalDeliveredTons.toLocaleString("es-AR")} <span style={{ fontSize: "1rem", color: "var(--ink-soft)" }}>Tn</span>
           </div>
           <div style={{ marginTop: "8px", width: "100%", background: "rgba(0,0,0,0.1)", height: "6px", borderRadius: "3px", overflow: "hidden" }}>
-            <div style={{ width: `${deliveryProgress}%`, background: "#0d9488", height: "100%" }} />
+            <div style={{ width: `${deliveryProgress}%`, background: "var(--lc-accent)", height: "100%" }} />
           </div>
           <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", marginTop: "6px", display: "flex", justifyContent: "space-between" }}>
             <span>{deliveryProgress}% cumplido</span>
@@ -229,11 +229,11 @@ export function GrainsDashboardPage() {
             </span>
             <span style={{ fontSize: "1.3rem" }}>⚖️</span>
           </div>
-          <div style={{ fontSize: "1.85rem", fontWeight: 900, color: "#2563eb" }}>
+          <div style={{ fontSize: "1.85rem", fontWeight: 900, color: "var(--lc-info)" }}>
             {data.totalFixedTons.toLocaleString("es-AR")} <span style={{ fontSize: "1rem", color: "var(--ink-soft)" }}>Tn</span>
           </div>
           <div style={{ marginTop: "8px", width: "100%", background: "rgba(0,0,0,0.1)", height: "6px", borderRadius: "3px", overflow: "hidden" }}>
-            <div style={{ width: `${fixationProgress}%`, background: "#2563eb", height: "100%" }} />
+            <div style={{ width: `${fixationProgress}%`, background: "var(--lc-info)", height: "100%" }} />
           </div>
           <div style={{ fontSize: "0.78rem", color: "var(--ink-soft)", marginTop: "6px", display: "flex", justifyContent: "space-between" }}>
             <span>{fixationProgress}% con precio cerrado</span>
@@ -255,7 +255,7 @@ export function GrainsDashboardPage() {
             </span>
             <span style={{ fontSize: "1.3rem" }}>💰</span>
           </div>
-          <div style={{ fontSize: "1.85rem", fontWeight: 900, color: "#10b981" }}>
+          <div style={{ fontSize: "1.85rem", fontWeight: 900, color: "var(--lc-ok)" }}>
             USD {data.totalBrokerageEarnedUsd.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
           </div>
           <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)", marginTop: "6px" }}>
@@ -280,7 +280,7 @@ export function GrainsDashboardPage() {
               <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800 }}>🌾 Posición Granaria & Stock</h2>
               <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--ink-soft)" }}>Distribución física y comercial por cultivo</p>
             </div>
-            <Link to="/cereales/posicion" style={{ fontSize: "0.82rem", fontWeight: 700, color: "#d97706", textDecoration: "none" }}>
+            <Link to="/cereales/posicion" style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--lc-warn)", textDecoration: "none" }}>
               Ver desglose completo →
             </Link>
           </div>
@@ -319,10 +319,10 @@ export function GrainsDashboardPage() {
                       <span>Entregado:</span> <strong style={{ color: "var(--ink)" }}>{pos.deliveredTons.toLocaleString("es-AR")} Tn</strong>
                     </div>
                     <div>
-                      <span>A Fijar:</span> <strong style={{ color: "#d97706" }}>{pos.openFixationTons.toLocaleString("es-AR")} Tn</strong>
+                      <span>A Fijar:</span> <strong style={{ color: "var(--lc-warn)" }}>{pos.openFixationTons.toLocaleString("es-AR")} Tn</strong>
                     </div>
                     <div>
-                      <span>Posición Neta:</span> <strong style={{ color: pos.netPositionTons >= 0 ? "#10b981" : "#ef4444" }}>
+                      <span>Posición Neta:</span> <strong style={{ color: pos.netPositionTons >= 0 ? "var(--lc-ok)" : "var(--lc-danger)" }}>
                         {pos.netPositionTons > 0 ? "+" : ""}{pos.netPositionTons.toLocaleString("es-AR")} Tn
                       </strong>
                     </div>
@@ -346,7 +346,7 @@ export function GrainsDashboardPage() {
               <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800 }}>📋 Contratos en Ejecución</h2>
               <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--ink-soft)" }}>Últimos compromisos pactados</p>
             </div>
-            <Link to="/cereales/contratos" style={{ fontSize: "0.82rem", fontWeight: 700, color: "#d97706", textDecoration: "none" }}>
+            <Link to="/cereales/contratos" style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--lc-warn)", textDecoration: "none" }}>
               Ver todos ({data.recentContracts.length}) →
             </Link>
           </div>
@@ -372,7 +372,7 @@ export function GrainsDashboardPage() {
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontWeight: 800, fontSize: "0.85rem", color: "#d97706" }}>
+                    <span style={{ fontWeight: 800, fontSize: "0.85rem", color: "var(--lc-warn)" }}>
                       {c.contractNumber}
                     </span>
                     <span style={{
@@ -419,7 +419,7 @@ export function GrainsDashboardPage() {
               <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800 }}>🚚 Últimas Descargas de Camiones (CPE & Balanza)</h2>
               <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--ink-soft)" }}>Pesaje bruto, tara, mermas y calidad de entrega</p>
             </div>
-            <Link to="/cereales/entregas" style={{ fontSize: "0.82rem", fontWeight: 700, color: "#d97706", textDecoration: "none" }}>
+            <Link to="/cereales/entregas" style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--lc-warn)", textDecoration: "none" }}>
               Ver todas las entregas →
             </Link>
           </div>
@@ -463,7 +463,7 @@ export function GrainsDashboardPage() {
                       </span>
                     </td>
                     <td>
-                      <strong style={{ color: "#0d9488" }}>
+                      <strong style={{ color: "var(--lc-accent-strong)" }}>
                         {del.commercialNetWeightTons.toLocaleString("es-AR")} Tn
                       </strong>
                     </td>
@@ -475,7 +475,7 @@ export function GrainsDashboardPage() {
                         fontSize: "0.72rem",
                         fontWeight: 700,
                         background: "rgba(16, 185, 129, 0.12)",
-                        color: "#10b981"
+                        color: "var(--lc-ok)"
                       }}>
                         {del.status}
                       </span>

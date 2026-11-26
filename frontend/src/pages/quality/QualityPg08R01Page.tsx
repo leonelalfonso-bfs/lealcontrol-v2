@@ -46,7 +46,7 @@ function parseSnapshot(raw: unknown): SnapshotCounts | null {
 
 function SnapshotSummary({ snapshot }: { snapshot: SnapshotCounts | null }) {
   if (!snapshot) {
-    return <p style={{ fontSize: 13, color: "#64748b" }}>Sin snapshot de inputs.</p>;
+    return <p style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>Sin snapshot de inputs.</p>;
   }
 
   const kindEntries = snapshot.nonConformities?.byKind
@@ -60,7 +60,7 @@ function SnapshotSummary({ snapshot }: { snapshot: SnapshotCounts | null }) {
       style={{
         margin: 0,
         fontSize: 13,
-        color: "#64748b",
+        color: "var(--lc-ink-3)",
         display: "grid",
         gridTemplateColumns: "auto 1fr",
         gap: "4px 12px"
@@ -314,7 +314,7 @@ export function QualityPg08R01Page() {
             ← Plantilla PG08-R01
           </Link>
           <h1 style={{ margin: "4px 0 0" }}>PG08-R01 · Revisión por la dirección</h1>
-          <p style={{ marginTop: 6, color: "#64748b", maxWidth: 640 }}>
+          <p style={{ marginTop: 6, color: "var(--lc-ink-3)", maxWidth: 640 }}>
             Cada revisión se <strong>genera en el sistema</strong> (REV-AAAA-NNNN). Los inputs del año
             (quejas, NC, auditorías, indicadores, personal, proveedores) se arman solos al crear o al
             refrescar.
@@ -330,9 +330,9 @@ export function QualityPg08R01Page() {
         </div>
       </div>
 
-      {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
-      {msg && <p style={{ color: "#15803d" }}>{msg}</p>}
-      <p style={{ fontSize: 13, color: "#64748b" }}>
+      {error && <p style={{ color: "var(--lc-danger)" }}>{error}</p>}
+      {msg && <p style={{ color: "var(--lc-ok)" }}>{msg}</p>}
+      <p style={{ fontSize: 13, color: "var(--lc-ink-3)" }}>
         Borradores: <strong>{draftCount}</strong> · Completadas: <strong>{completedCount}</strong> · Total:{" "}
         {rows.length}
       </p>
@@ -450,7 +450,7 @@ export function QualityPg08R01Page() {
           ) : (
             <>
               <h3 style={{ marginTop: 0 }}>{selected.number}</h3>
-              <p style={{ marginTop: 0, color: "#64748b", fontSize: 13 }}>
+              <p style={{ marginTop: 0, color: "var(--lc-ink-3)", fontSize: 13 }}>
                 {statusLabel(selected.status)} · Año {selected.programYear}
               </p>
               <p style={{ marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -573,7 +573,7 @@ export function QualityPg08R01Page() {
               )}
 
               {!editable && (
-                <div style={{ fontSize: 13, color: "#64748b", marginTop: 12 }}>
+                <div style={{ fontSize: 13, color: "var(--lc-ink-3)", marginTop: 12 }}>
                   <div>
                     <strong>Participantes:</strong> {selected.attendees || "—"}
                   </div>

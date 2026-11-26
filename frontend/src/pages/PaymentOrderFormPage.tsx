@@ -612,7 +612,7 @@ export function PaymentOrderFormPage() {
                 style={{
                   marginTop: 12,
                   padding: 10,
-                  background: "var(--surface-soft, #f8fafc)",
+                  background: "var(--surface-soft, var(--lc-surface-2))",
                   borderRadius: 6,
                   fontSize: "0.84rem",
                   display: "flex",
@@ -725,7 +725,7 @@ export function PaymentOrderFormPage() {
                       <th colSpan={4} style={{ textAlign: "right" }}>
                         Total Facturas Imputadas:
                       </th>
-                      <th style={{ textAlign: "right", color: "#059669", fontSize: "1rem" }}>
+                      <th style={{ textAlign: "right", color: "var(--lc-ok)", fontSize: "1rem" }}>
                         {money(totalImputed)}
                       </th>
                     </tr>
@@ -801,7 +801,7 @@ export function PaymentOrderFormPage() {
                             <button
                               type="button"
                               className="btn ghost btn-sm"
-                              style={{ color: "#ef4444" }}
+                              style={{ color: "var(--lc-danger)" }}
                               onClick={() => removeLine(line.id)}
                               title="Eliminar"
                             >
@@ -817,7 +817,7 @@ export function PaymentOrderFormPage() {
                       <th colSpan={2} style={{ textAlign: "right" }}>
                         Total medios:
                       </th>
-                      <th style={{ textAlign: "right", color: "#059669" }}>{money(totalPaymentLines)}</th>
+                      <th style={{ textAlign: "right", color: "var(--lc-ok)" }}>{money(totalPaymentLines)}</th>
                       <th />
                     </tr>
                   </tfoot>
@@ -830,8 +830,8 @@ export function PaymentOrderFormPage() {
           <section
             className="card pad"
             style={{
-              borderTop: "4px solid #3b82f6",
-              background: "var(--surface, #ffffff)"
+              borderTop: "4px solid var(--lc-info)",
+              background: "var(--surface, var(--lc-surface))"
             }}
           >
             <h2 style={{ margin: "0 0 14px 0", fontSize: "1.1rem" }}>4. Resumen de la Orden de Pago</h2>
@@ -847,11 +847,11 @@ export function PaymentOrderFormPage() {
                 <strong>{money(totalPaymentLines)}</strong>
               </div>
 
-              <hr style={{ border: "none", borderTop: "1px solid var(--border, #e2e8f0)", margin: "4px 0" }} />
+              <hr style={{ border: "none", borderTop: "1px solid var(--border, var(--lc-line))", margin: "4px 0" }} />
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "1.05rem", fontWeight: 700 }}>Total Orden de Pago:</span>
-                <span style={{ fontSize: "1.3rem", fontWeight: 800, color: "#059669" }}>
+                <span style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--lc-ok)" }}>
                   {money(totalOrderAmount)}
                 </span>
               </div>
@@ -866,7 +866,7 @@ export function PaymentOrderFormPage() {
                         textAlign: "center",
                         padding: "8px 12px",
                         background: "rgba(16, 185, 129, 0.15)",
-                        color: "#065f46",
+                        color: "var(--lc-ok)",
                         fontWeight: 700,
                         fontSize: "0.88rem"
                       }}
@@ -881,7 +881,7 @@ export function PaymentOrderFormPage() {
                         textAlign: "center",
                         padding: "8px 12px",
                         background: "rgba(239, 68, 68, 0.12)",
-                        color: "#991b1b",
+                        color: "var(--lc-danger)",
                         fontWeight: 700,
                         fontSize: "0.88rem"
                       }}
@@ -1023,10 +1023,10 @@ export function PaymentOrderFormPage() {
               <div
                 style={{
                   gridColumn: "span 2",
-                  background: "#f8fafc",
+                  background: "var(--lc-surface-2)",
                   padding: 12,
                   borderRadius: 6,
-                  border: "1px solid #e2e8f0"
+                  border: "1px solid var(--lc-line)"
                 }}
               >
                 <div
@@ -1039,11 +1039,11 @@ export function PaymentOrderFormPage() {
                     gap: 8
                   }}
                 >
-                  <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f766e" }}>
+                  <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--lc-accent-strong)" }}>
                     Vincular transferencia del extracto (opcional)
                   </span>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <label style={{ fontSize: "0.75rem", color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
+                    <label style={{ fontSize: "0.75rem", color: "var(--lc-ink-3)", display: "flex", alignItems: "center", gap: 4 }}>
                       Cartera
                       <select
                         value={movementConceptFilter}
@@ -1052,7 +1052,7 @@ export function PaymentOrderFormPage() {
                           setMovementConceptFilter(conceptId);
                           patchDraft({ bankMovementId: undefined, conceptId: conceptId || undefined });
                         }}
-                        style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
+                        style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid var(--lc-line-2)" }}
                       >
                         {expenseConcepts.map((c) => (
                           <option key={c.id} value={c.id}>
@@ -1061,7 +1061,7 @@ export function PaymentOrderFormPage() {
                         ))}
                       </select>
                     </label>
-                    <label style={{ fontSize: "0.75rem", color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
+                    <label style={{ fontSize: "0.75rem", color: "var(--lc-ink-3)", display: "flex", alignItems: "center", gap: 4 }}>
                       Cuenta
                       <select
                         value={movementAccountFilter}
@@ -1072,7 +1072,7 @@ export function PaymentOrderFormPage() {
                             accountId: e.target.value || draftLine.accountId
                           });
                         }}
-                        style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid #cbd5e1" }}
+                        style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid var(--lc-line-2)" }}
                       >
                         <option value="">Todas las cuentas</option>
                         {accounts
@@ -1105,7 +1105,7 @@ export function PaymentOrderFormPage() {
                     width: "100%",
                     padding: "8px 10px",
                     borderRadius: 6,
-                    border: "1px solid #cbd5e1",
+                    border: "1px solid var(--lc-line-2)",
                     fontSize: "0.85rem"
                   }}
                 >

@@ -115,7 +115,7 @@ export function OrgChartPage() {
                           background: "var(--surface-sunken)",
                           padding: "14px 16px",
                           borderRadius: 8,
-                          border: "1px solid #cbd5e1",
+                          border: "1px solid var(--lc-line-2)",
                           display: "flex",
                           flexDirection: "column",
                           justifyContent: "space-between",
@@ -133,9 +133,9 @@ export function OrgChartPage() {
                           <div style={{ marginTop: 8, fontSize: "0.82rem" }}>
                             <span className="muted">Ocupante: </span>
                             {assignedName ? (
-                              <strong style={{ color: "#0d9488" }}>👤 {assignedName}</strong>
+                              <strong style={{ color: "var(--lc-accent-strong)" }}>👤 {assignedName}</strong>
                             ) : (
-                              <span style={{ color: "#f59e0b", fontStyle: "italic" }}>⚠️ Vacante sin asignar</span>
+                              <span style={{ color: "var(--lc-warn)", fontStyle: "italic" }}>⚠️ Vacante sin asignar</span>
                             )}
                           </div>
 
@@ -157,7 +157,7 @@ export function OrgChartPage() {
                           )}
                         </div>
 
-                        <div className="row" style={{ justifyContent: "space-between", borderTop: "1px solid #e2e8f0", paddingTop: 8 }}>
+                        <div className="row" style={{ justifyContent: "space-between", borderTop: "1px solid var(--lc-line)", paddingTop: 8 }}>
                           <Link
                             to={`/rrhh/organigrama/puestos/${pos.id}/descripcion`}
                             className="btn ghost compact"
@@ -176,7 +176,7 @@ export function OrgChartPage() {
                             <button
                               type="button"
                               className="btn ghost compact"
-                              style={{ fontSize: "0.75rem", padding: "4px 8px", color: "#ef4444" }}
+                              style={{ fontSize: "0.75rem", padding: "4px 8px", color: "var(--lc-danger)" }}
                               onClick={() => handleDelete(pos)}
                             >
                               🗑️

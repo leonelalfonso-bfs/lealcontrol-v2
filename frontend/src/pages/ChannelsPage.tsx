@@ -28,7 +28,7 @@ function MetaReconnectBanner({
   if (!lastError) return null;
   const expired = isMetaTokenExpired(lastError);
   return (
-    <div style={{ fontSize: "0.78rem", color: "#b45309", margin: "6px 0", fontWeight: 600, background: "rgba(251,191,36,0.15)", padding: 8, borderRadius: 6 }}>
+    <div style={{ fontSize: "0.78rem", color: "var(--lc-warn)", margin: "6px 0", fontWeight: 600, background: "rgba(251,191,36,0.15)", padding: 8, borderRadius: 6 }}>
       <div>⚠️ {lastError}</div>
       {expired && (
         <button
@@ -240,7 +240,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                     gap: 6,
                     fontSize: "0.8rem",
                     fontWeight: 700,
-                    color: igConnected ? "#047857" : "#64748b"
+                    color: igConnected ? "var(--lc-ok)" : "var(--lc-ink-3)"
                   }}
                 >
                   <span
@@ -248,7 +248,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: igConnected ? "#10b981" : "#94a3b8"
+                      background: igConnected ? "var(--lc-ok)" : "var(--lc-ink-3)"
                     }}
                   />
                   {igConnected
@@ -290,7 +290,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                 />
               )}
               {metaSyncMsg && (
-                <div style={{ fontSize: "0.78rem", color: "#065f46", margin: "6px 0", fontWeight: 600 }}>
+                <div style={{ fontSize: "0.78rem", color: "var(--lc-ok)", margin: "6px 0", fontWeight: 600 }}>
                   {metaSyncMsg}
                 </div>
               )}
@@ -321,7 +321,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                 <button
                   type="button"
                   className="btn ghost compact"
-                  style={{ color: "#dc2626" }}
+                  style={{ color: "var(--lc-danger)" }}
                   onClick={() => handleDisconnectMeta("instagram")}
                 >
                   Desconectar
@@ -392,7 +392,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                     gap: 6,
                     fontSize: "0.8rem",
                     fontWeight: 700,
-                    color: fbConnected ? "#047857" : "#64748b"
+                    color: fbConnected ? "var(--lc-ok)" : "var(--lc-ink-3)"
                   }}
                 >
                   <span
@@ -400,7 +400,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: fbConnected ? "#10b981" : "#94a3b8"
+                      background: fbConnected ? "var(--lc-ok)" : "var(--lc-ink-3)"
                     }}
                   />
                   {fbConnected
@@ -442,7 +442,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                 />
               )}
               {metaSyncMsg && (
-                <div style={{ fontSize: "0.78rem", color: "#065f46", margin: "6px 0", fontWeight: 600 }}>
+                <div style={{ fontSize: "0.78rem", color: "var(--lc-ok)", margin: "6px 0", fontWeight: 600 }}>
                   {metaSyncMsg}
                 </div>
               )}
@@ -473,7 +473,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                 <button
                   type="button"
                   className="btn ghost compact"
-                  style={{ color: "#dc2626" }}
+                  style={{ color: "var(--lc-danger)" }}
                   onClick={() => handleDisconnectMeta("facebook")}
                 >
                   Desconectar
@@ -613,7 +613,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                     fontWeight: 700,
                     justifyContent: "center",
                     background: "#1877f2",
-                    color: "#ffffff"
+                    color: "#fff"
                   }}
                 >
                   🟦 Continuar con Facebook
@@ -674,7 +674,7 @@ export function ChannelsPage({ embedded = false }: { embedded?: boolean }) {
                   className={`alert ${testResult.ok ? "" : "alert-danger"}`}
                   style={{
                     background: testResult.ok ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-                    color: testResult.ok ? "#065f46" : "#b91c1c",
+                    color: testResult.ok ? "var(--lc-ok)" : "var(--lc-danger)",
                     padding: "8px 12px",
                     borderRadius: 6,
                     fontSize: "0.85rem"

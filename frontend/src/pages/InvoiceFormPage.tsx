@@ -734,7 +734,7 @@ export function InvoiceFormPage() {
 
       {error && <div className="alert">{error}</div>}
       {pricingWarning && <div className="alert">{pricingWarning}</div>}
-      {remitoId && returnedItemCount > 0 && <div className="card pad" style={{ background: "#eff6ff" }}>
+      {remitoId && returnedItemCount > 0 && <div className="card pad" style={{ background: "var(--lc-info-bg)" }}>
         ↩ {returnedItemCount} ítem(s) tienen devoluciones confirmadas. Se facturan solo las cantidades efectivamente utilizadas.
       </div>}
 
@@ -743,7 +743,7 @@ export function InvoiceFormPage() {
           {/* Main Column */}
           <div className="stack" style={{ gap: 20 }}>
             {replacing && (
-              <div className="card pad" style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
+              <div className="card pad" style={{ background: "var(--lc-danger-bg)", border: "1px solid var(--lc-danger-bg)" }}>
                 <strong>Corrigiendo {replacing.formattedNumber}, rechazado por ARCA.</strong>
                 <div style={{ fontSize: "0.88rem", marginTop: 4 }}>
                   Ajustá lo que haga falta y guardá: se crea un borrador nuevo y el rechazado queda anulado. El stock no se mueve de nuevo.
@@ -752,7 +752,7 @@ export function InvoiceFormPage() {
             )}
             {fceCheck && (
               <div className="card pad" role="status" style={{
-                background: fceCheck.required ? "#fffbeb" : "#f8fafc",
+                background: fceCheck.required ? "var(--lc-warn-bg)" : "var(--lc-surface-2)",
                 border: `1px solid ${fceCheck.required ? "#f59e0b" : "#e2e8f0"}`
               }}>
                 {!fceCheck.ok ? (
@@ -772,7 +772,7 @@ export function InvoiceFormPage() {
                   </>
                 ) : isFceType(invoiceType) && !invoiceType.startsWith("NC_") && !invoiceType.startsWith("ND_") ? (
                   <>
-                    <strong style={{ color: "#92400e" }}>
+                    <strong style={{ color: "var(--lc-warn)" }}>
                       {fceCheck.obligated
                         ? `Por este importe corresponde factura común: este cliente recibe FCE desde ${fceCheck.minimumAmount.toLocaleString("es-AR", { style: "currency", currency: "ARS" })}.`
                         : "Este cliente no está obligado a recibir Factura de Crédito Electrónica: corresponde factura común."}
@@ -794,15 +794,15 @@ export function InvoiceFormPage() {
               </div>
             )}
             {associatedInvoice ? (
-              <div className="card pad" style={{ background: "#f8fafc", border: "1px solid #cbd5e1" }}>
+              <div className="card pad" style={{ background: "var(--lc-surface-2)", border: "1px solid var(--lc-line-2)" }}>
                 <strong>
                   {invoiceType.startsWith("ND_") ? "Nota de débito" : "Nota de crédito"} sobre{" "}
                   {documentLabel(associatedInvoice.invoiceType)} {associatedInvoice.formattedNumber}
                 </strong>
                 {differenceInfo && (
-                  <div style={{ fontSize: "0.85rem", color: "#0f766e", marginTop: 4, fontWeight: 600 }}>{differenceInfo}</div>
+                  <div style={{ fontSize: "0.85rem", color: "var(--lc-accent-strong)", marginTop: 4, fontWeight: 600 }}>{differenceInfo}</div>
                 )}
-                <div style={{ fontSize: "0.85rem", color: "#475569", marginTop: 4 }}>
+                <div style={{ fontSize: "0.85rem", color: "var(--lc-ink-2)", marginTop: 4 }}>
                   {associatedInvoice.customerName} · Total original {associatedInvoice.currency === "USD" ? "USD" : "$"}{" "}
                   {associatedInvoice.total.toLocaleString("es-AR", { minimumFractionDigits: 2 })}.{" "}
                   {noteKind === "NC"
@@ -830,10 +830,10 @@ export function InvoiceFormPage() {
               >
                 <span style={{ fontSize: "1.5rem" }}>🚚</span>
                 <div>
-                  <strong style={{ color: "#0f766e", fontSize: "0.95rem" }}>
+                  <strong style={{ color: "var(--lc-accent-strong)", fontSize: "0.95rem" }}>
                     Facturando Remito de Entrega N° {sourceRemitoNumber}
                   </strong>
-                  <div style={{ fontSize: "0.82rem", color: "#475569", marginTop: 2 }}>
+                  <div style={{ fontSize: "0.82rem", color: "var(--lc-ink-2)", marginTop: 2 }}>
                     La mercadería ya fue egresada del inventario mediante este remito. Esta factura generará el comprobante fiscal oficial y la cuenta corriente sin duplicar el egreso de stock.
                   </div>
                 </div>
@@ -846,7 +846,7 @@ export function InvoiceFormPage() {
                   borderRadius: 8,
                   padding: "10px 14px",
                   fontSize: "0.82rem",
-                  color: "#1e40af",
+                  color: "var(--lc-info)",
                   display: "flex",
                   alignItems: "center",
                   gap: 10
@@ -1052,9 +1052,9 @@ export function InvoiceFormPage() {
 
               {/* Multicurrency & Exchange Rates Bar */}
               {currency === "USD" && (
-                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: 14, borderRadius: 8, marginTop: 16 }}>
+                <div style={{ background: "var(--lc-ok-bg)", border: "1px solid var(--lc-ok-bg)", padding: 14, borderRadius: 8, marginTop: 16 }}>
                   <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <strong style={{ color: "#166534", fontSize: "0.9rem" }}>
+                    <strong style={{ color: "var(--lc-ok)", fontSize: "0.9rem" }}>
                       💵 Cotización Aplicable (USD / ARS)
                     </strong>
                     <button
@@ -1127,9 +1127,9 @@ export function InvoiceFormPage() {
               )}
 
               {/* Advance / Percentage Tool */}
-              <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: 12, borderRadius: 8, marginTop: 14, display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ background: "var(--lc-info-bg)", border: "1px solid var(--lc-info-bg)", padding: 12, borderRadius: 8, marginTop: 14, display: "flex", alignItems: "center", gap: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: "0.85rem", fontWeight: "bold", color: "#1e40af" }}>
+                  <span style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--lc-info)" }}>
                     ⚡ Facturación Parcial / Anticipo %:
                   </span>
                   <input
@@ -1143,7 +1143,7 @@ export function InvoiceFormPage() {
                   <button
                     type="button"
                     className="btn ghost"
-                    style={{ fontSize: "0.8rem", padding: "6px 12px", background: "#fff" }}
+                    style={{ fontSize: "0.8rem", padding: "6px 12px", background: "var(--lc-surface)" }}
                     onClick={handleApplyAdvancePercentage}
                   >
                     Aplicar %
@@ -1353,14 +1353,14 @@ export function InvoiceFormPage() {
 
               <div className="row" style={{ justifyContent: "space-between", fontSize: "1.25rem", fontWeight: "bold" }}>
                 <span>TOTAL:</span>
-                <span style={{ color: "#047857" }}>
+                <span style={{ color: "var(--lc-ok)" }}>
                   {currency === "USD" ? "USD " : "$ "}
                   {totalFactura.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
               {currency === "USD" && (
-                <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: 6, marginTop: 4 }}>
+                <div style={{ background: "var(--lc-surface-2)", padding: "8px 12px", borderRadius: 6, marginTop: 4 }}>
                   <div className="row" style={{ justifyContent: "space-between", fontSize: "0.85rem" }}>
                     <span className="muted">Equiv. ARS (TC ${exchangeRate}):</span>
                     <strong>$ {equivArs.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong>
@@ -1388,7 +1388,7 @@ export function InvoiceFormPage() {
               </Link>
             </div>
 
-            <div style={{ marginTop: 16, fontSize: "0.78rem", color: "#64748b", lineHeight: 1.4 }}>
+            <div style={{ marginTop: 16, fontSize: "0.78rem", color: "var(--lc-ink-3)", lineHeight: 1.4 }}>
               Este botón guarda un borrador interno. Todavía no solicita CAE ni autoriza el comprobante en ARCA.
             </div>
           </div>

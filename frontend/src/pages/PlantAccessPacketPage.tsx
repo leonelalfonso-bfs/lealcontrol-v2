@@ -4,7 +4,7 @@ import { api, type PlantPacketItem } from "../api/client";
 import type { Employee, Vehicle } from "../api/types";
 
 const day = (iso?: string | null) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
-const STATE_COLOR: Record<PlantPacketItem["state"], string> = { Vigente: "#2E6B1F", "Por vencer": "#9A5B00", Vencido: "#A1271B" };
+const STATE_COLOR: Record<PlantPacketItem["state"], string> = { Vigente: "#2E6B1F", "Por vencer": "#9A5B00", Vencido: "var(--lc-danger)" };
 const key = (i: { source: string; id: string }) => `${i.source}:${i.id}`;
 
 /** Legajo para ingreso a planta: documentos de las personas (RRHH y Flota) y de las unidades elegidas, en un ZIP para enviar al cliente. */
@@ -103,7 +103,7 @@ export function PlantAccessPacketPage() {
                       <td>{i.label}{i.number ? <span className="muted"> · N° {i.number}</span> : null}<span className="muted" style={{ fontSize: "0.75rem" }}> · {i.source === "HrDocument" ? "legajo RRHH" : i.source === "CompanyDocument" ? "empresa" : "Flota"}</span></td>
                       <td>{i.expirationDate ? `vence ${day(i.expirationDate)}` : "—"}</td>
                       <td style={{ color: STATE_COLOR[i.state], fontWeight: 700 }}>{i.state}</td>
-                      <td>{i.hasFile ? "📎" : <span style={{ color: "#A1271B" }}>sin archivo</span>}</td>
+                      <td>{i.hasFile ? "📎" : <span style={{ color: "var(--lc-danger)" }}>sin archivo</span>}</td>
                     </tr>
                   ))}
                 </tbody>

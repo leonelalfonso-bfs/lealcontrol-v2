@@ -52,7 +52,7 @@ export function MetrologyScopePage() {
   return (
     <div className="page-wide">
       <div className="page-head" style={{ marginBottom: 20 }}>
-        <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+        <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
           Metrología Legal
         </span>
         <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>Alcance</h1>
@@ -101,15 +101,15 @@ export function MetrologyScopePage() {
             {visible.map((a) => a.label).join(" · ")}
           </div>
           <div style={{ marginTop: 14 }}>
-            <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+            <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff" }}>
               Nuevo ensayo
             </Link>
           </div>
         </div>
       )}
 
-      {message && <p style={{ color: "#0f766e", marginTop: 12 }}>{message}</p>}
-      {error && <p style={{ color: "#dc2626", marginTop: 12 }}>{error}</p>}
+      {message && <p style={{ color: "var(--lc-accent-strong)", marginTop: 12 }}>{message}</p>}
+      {error && <p style={{ color: "var(--lc-danger)", marginTop: 12 }}>{error}</p>}
     </div>
   );
 }

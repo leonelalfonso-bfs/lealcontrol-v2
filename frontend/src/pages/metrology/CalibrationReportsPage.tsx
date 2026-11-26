@@ -102,7 +102,7 @@ export function CalibrationReportsPage() {
     <div className="page-wide">
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
+          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.08em" }}>
             Laboratorio de Ensayos
           </span>
           <h1 style={{ margin: "2px 0 0", fontSize: "1.75rem", fontWeight: 800 }}>
@@ -115,14 +115,14 @@ export function CalibrationReportsPage() {
 
         <div className="toolbar">
           <Link to="/metrologia/informes/camionera/nuevo" className="btn">🚛 Informe de camionera</Link>
-          <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+          <Link to="/metrologia/ensayos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff" }}>
             Nuevo Ensayo
           </Link>
         </div>
       </div>
 
       {error && (
-        <div className="card pad" style={{ marginBottom: 12, background: "#fef2f2", color: "#991b1b" }}>{error}</div>
+        <div className="card pad" style={{ marginBottom: 12, background: "var(--lc-danger-bg)", color: "var(--lc-danger)" }}>{error}</div>
       )}
 
       <div className="card pad">
@@ -160,7 +160,7 @@ export function CalibrationReportsPage() {
                   return (
                     <tr key={r.id}>
                       <td>
-                        <strong style={{ color: "#0d9488" }}>{certNumberOf(r)}</strong>
+                        <strong style={{ color: "var(--lc-accent-strong)" }}>{certNumberOf(r)}</strong>
                         {(r as { instructionCode?: string }).instructionCode && (
                           <div className="muted" style={{ fontSize: "0.74rem" }}>
                             {(r as { instructionCode?: string }).instructionCode}

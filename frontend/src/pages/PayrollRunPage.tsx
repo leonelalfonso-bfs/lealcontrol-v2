@@ -118,7 +118,7 @@ export function PayrollRunPage() {
       {issues && (issues.errors.length > 0 || issues.warnings.length > 0) && (
         <div className="card pad stack" style={{ gap: 6 }}>
           {issues.errors.map((x) => <div key={x} className="alert" style={{ margin: 0 }}>❌ {x}</div>)}
-          {issues.warnings.map((x) => <div key={x} style={{ color: "#b45309", fontSize: "0.85rem" }}>⚠️ {x}</div>)}
+          {issues.warnings.map((x) => <div key={x} style={{ color: "var(--lc-warn)", fontSize: "0.85rem" }}>⚠️ {x}</div>)}
         </div>
       )}
 
@@ -231,7 +231,7 @@ export function PayrollRunPage() {
                 {detail.payslips.map((p) => (
                   <tr key={p.id}>
                     <td>{p.employeeName}<div className="muted" style={{ fontSize: "0.72rem" }}>{p.category}</div>
-                      {p.warnings && <div style={{ color: "#b45309", fontSize: "0.72rem" }}>⚠️ {p.warnings.split("\n")[0]}</div>}</td>
+                      {p.warnings && <div style={{ color: "var(--lc-warn)", fontSize: "0.72rem" }}>⚠️ {p.warnings.split("\n")[0]}</div>}</td>
                     <td style={{ textAlign: "right" }}>{p.daysWorked}</td>
                     <td style={{ textAlign: "right" }}>{money(p.remunerative)}</td>
                     <td style={{ textAlign: "right" }}>{money(p.nonRemunerative)}</td>
@@ -278,7 +278,7 @@ export function PayrollRunPage() {
           {lsd && (
             <>
               {lsd.errors.map((x) => <div key={x} className="alert" style={{ margin: 0 }}>❌ {x}</div>)}
-              {lsd.warnings.map((x) => <div key={x} style={{ color: "#b45309", fontSize: "0.85rem" }}>⚠️ {x}</div>)}
+              {lsd.warnings.map((x) => <div key={x} style={{ color: "var(--lc-warn)", fontSize: "0.85rem" }}>⚠️ {x}</div>)}
               <table style={{ fontSize: "0.82rem", maxWidth: 520 }}>
                 <caption style={{ textAlign: "left", fontWeight: 700, paddingBottom: 4 }}>
                   Para comparar con la DJ F.931 de ARCA ({lsd.summary.workers} trabajadores, liquidaciones {lsd.summary.liquidations.join(" y ")} del período)

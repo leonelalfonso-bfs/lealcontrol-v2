@@ -11,7 +11,7 @@ export function QualityRecordsHubPage() {
       <div className="page-head">
         <Link to="/calidad" style={{ fontSize: 13 }}>← Tablero SGC</Link>
         <h1 style={{ margin: "8px 0 0" }}>Registros operativos</h1>
-        <p style={{ color: "#64748b", marginTop: 6, maxWidth: 720 }}>
+        <p style={{ color: "var(--lc-ink-3)", marginTop: 6, maxWidth: 720 }}>
           Acceso a las pantallas de carga y seguimiento. Las plantillas PDF/Excel siguen en el árbol documental;
           desde cada código podés abrir su registro cuando esté disponible.
         </p>
@@ -29,7 +29,7 @@ export function QualityRecordsHubPage() {
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                 <div>
-                  <div style={{ fontSize: 12, color: "#0f766e", fontWeight: 800 }}>{r.code}</div>
+                  <div style={{ fontSize: 12, color: "var(--lc-accent-strong)", fontWeight: 800 }}>{r.code}</div>
                   <strong>{r.title}</strong>
                   <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{r.blurb}</div>
                 </div>
@@ -48,7 +48,7 @@ export function QualityRecordsHubPage() {
               <div key={r.code} className="card pad" style={{ opacity: 0.75 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                   <div>
-                    <div style={{ fontSize: 12, color: "#64748b", fontWeight: 800 }}>{r.code}</div>
+                    <div style={{ fontSize: 12, color: "var(--lc-ink-3)", fontWeight: 800 }}>{r.code}</div>
                     <strong>{r.title}</strong>
                     <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{r.blurb}</div>
                   </div>

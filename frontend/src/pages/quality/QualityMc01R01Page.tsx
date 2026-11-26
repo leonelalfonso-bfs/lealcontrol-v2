@@ -129,7 +129,7 @@ export function QualityConfidentialityRecordPage({ variant }: Props) {
         <div>
           <Link to={meta.templatePath} style={{ fontSize: 13 }}>← Plantilla {meta.code}</Link>
           <h1 style={{ margin: "8px 0 0" }}>{meta.code} · {meta.title}</h1>
-          <p style={{ color: "#64748b", marginTop: 6 }}>{meta.blurb}</p>
+          <p style={{ color: "var(--lc-ink-3)", marginTop: 6 }}>{meta.blurb}</p>
         </div>
         <button type="button" className="btn btn-primary" disabled={busy} onClick={() => setShowForm((v) => !v)}>
           {showForm ? "Cerrar alta" : "Nuevo compromiso"}
@@ -139,7 +139,7 @@ export function QualityConfidentialityRecordPage({ variant }: Props) {
       {(error || msg) && (
         <div
           className="card pad"
-          style={{ marginTop: 12, background: error ? "#fef2f2" : "#f0fdf4", color: error ? "#991b1b" : "#166534" }}
+          style={{ marginTop: 12, background: error ? "var(--lc-danger-bg)" : "var(--lc-ok-bg)", color: error ? "var(--lc-danger)" : "var(--lc-ok)" }}
         >
           {error || msg}
         </div>

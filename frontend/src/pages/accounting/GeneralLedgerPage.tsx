@@ -173,28 +173,28 @@ export function GeneralLedgerPage() {
         <div className="stats-grid">
           <div className="stat-card">
             <span className="stat-label">Saldo Inicial Anterior</span>
-            <span className="stat-val" style={{ color: "#64748b" }}>
+            <span className="stat-val" style={{ color: "var(--lc-ink-3)" }}>
               $ {(ledgerItem.initialBalance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="stat-card">
             <span className="stat-label">Total Débitos (Debe)</span>
-            <span className="stat-val" style={{ color: "#22c55e" }}>
+            <span className="stat-val" style={{ color: "var(--lc-ok)" }}>
               $ {(ledgerItem.totalDebit || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="stat-card">
             <span className="stat-label">Total Créditos (Haber)</span>
-            <span className="stat-val" style={{ color: "#38bdf8" }}>
+            <span className="stat-val" style={{ color: "var(--lc-info)" }}>
               $ {(ledgerItem.totalCredit || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="stat-card">
             <span className="stat-label">Saldo Final Acumulado</span>
-            <span className="stat-val" style={{ color: "#f59e0b", fontWeight: 700 }}>
+            <span className="stat-val" style={{ color: "var(--lc-warn)", fontWeight: 700 }}>
               $ {(ledgerItem.finalBalance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </span>
           </div>
@@ -242,7 +242,7 @@ export function GeneralLedgerPage() {
                   </td>
                   <td style={{ textAlign: "right" }}>-</td>
                   <td style={{ textAlign: "right" }}>-</td>
-                  <td style={{ textAlign: "right", color: "#64748b" }}>
+                  <td style={{ textAlign: "right", color: "var(--lc-ink-3)" }}>
                     $ {(ledgerItem.initialBalance || 0).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                   </td>
                 </tr>

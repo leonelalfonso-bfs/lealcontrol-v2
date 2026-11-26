@@ -48,8 +48,8 @@ export const LealLogo: React.FC<LealLogoProps> = ({
                 fontWeight: 800,
                 padding: "2px 6px",
                 borderRadius: 6,
-                background: "linear-gradient(135deg, #10b981, #059669)",
-                color: "#ffffff",
+                background: "linear-gradient(135deg, var(--lc-ok), var(--lc-ok))",
+                color: "#fff",
                 boxShadow: "0 2px 8px rgba(16, 185, 129, 0.35)",
                 letterSpacing: "0.04em"
               }}

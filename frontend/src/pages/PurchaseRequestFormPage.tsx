@@ -137,7 +137,7 @@ export function PurchaseRequestFormPage() {
       </div>
 
       {error && (
-        <div style={{ padding: "12px 16px", background: "#fef2f2", color: "#b91c1c", borderRadius: "8px", marginBottom: "16px", border: "1px solid #f87171" }}>
+        <div style={{ padding: "12px 16px", background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderRadius: "8px", marginBottom: "16px", border: "1px solid var(--lc-danger)" }}>
           {error}
         </div>
       )}
@@ -297,7 +297,7 @@ export function PurchaseRequestFormPage() {
                     <button
                       type="button"
                       onClick={() => removeItemRow(idx)}
-                      style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "1.1rem" }}
+                      style={{ background: "transparent", border: "none", color: "var(--lc-danger)", cursor: "pointer", fontSize: "1.1rem" }}
                     >
                       ✕
                     </button>

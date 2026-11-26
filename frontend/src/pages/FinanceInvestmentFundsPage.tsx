@@ -122,7 +122,7 @@ export function FinanceInvestmentFundsPage() {
                     <td style={{ textAlign: "right" }}>{units(o.units)}</td>
                     <td style={{ textAlign: "right" }}>{o.unitValue != null ? units(o.unitValue) : "—"}</td>
                     <td>{STATUS[o.status] ?? o.status}</td>
-                    <td>{o.inBank === true ? "✓ en el banco" : o.inBank === false ? <span style={{ color: "var(--danger, #b42318)" }}>no figura</span> : <span className="muted">—</span>}</td>
+                    <td>{o.inBank === true ? "✓ en el banco" : o.inBank === false ? <span style={{ color: "var(--danger, var(--lc-danger))" }}>no figura</span> : <span className="muted">—</span>}</td>
                   </tr>
                 ))}
               </tbody>

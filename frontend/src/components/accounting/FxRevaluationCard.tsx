@@ -50,11 +50,11 @@ export function FxRevaluationCard() {
   const differences = preview?.rows.filter((r) => r.difference !== 0) ?? [];
 
   return (
-    <div className="card pad" style={{ border: "1px solid #2563eb", background: "rgba(37, 99, 235, 0.02)" }}>
+    <div className="card pad" style={{ border: "1px solid var(--lc-info)", background: "rgba(37, 99, 235, 0.02)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
         <div style={{ fontSize: "28px" }}>💱</div>
         <div>
-          <h3 style={{ margin: 0, color: "#1d4ed8" }}>Revaluación de moneda extranjera</h3>
+          <h3 style={{ margin: 0, color: "var(--lc-info)" }}>Revaluación de moneda extranjera</h3>
           <p className="muted" style={{ margin: 0, fontSize: "12px" }}>
             Valúa a la cotización de cierre la caja y los bancos en dólares (cuentas del plan con moneda USD).
           </p>
@@ -124,7 +124,7 @@ export function FxRevaluationCard() {
           className="btn"
           onClick={post}
           disabled={busy || !preview || differences.length === 0 || preview.existingEntryNumber != null}
-          style={{ background: "#1d4ed8", color: "#fff", fontWeight: 700 }}
+          style={{ background: "var(--lc-info)", color: "#fff", fontWeight: 700 }}
         >
           Registrar asiento de revaluación
         </button>

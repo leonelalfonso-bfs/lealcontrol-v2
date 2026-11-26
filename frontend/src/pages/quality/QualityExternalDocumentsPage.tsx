@@ -108,8 +108,8 @@ export function QualityPg01R02Page() {
           <button type="button" className="btn btn-outline" disabled={busy || !data?.rows.length} onClick={() => void exportExcel()}>Exportar Excel</button>
         </div>
       </div>
-      {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
-      {message && <p role="status" style={{ color: "#166534" }}>{message}</p>}
+      {error && <p role="alert" style={{ color: "var(--lc-danger)" }}>{error}</p>}
+      {message && <p role="status" style={{ color: "var(--lc-ok)" }}>{message}</p>}
       {showForm && (
         <form className="card pad" onSubmit={event => void create(event)} style={{ marginTop: 12 }}>
           <h2>Nuevo documento externo</h2>

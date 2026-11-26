@@ -71,7 +71,7 @@ export function GrainContractFormPage() {
       </div>
 
       {error && (
-        <div className="card" style={{ padding: "12px 16px", marginBottom: "16px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "#ef4444", fontWeight: 700 }}>
+        <div className="card" style={{ padding: "12px 16px", marginBottom: "16px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", color: "var(--lc-danger)", fontWeight: 700 }}>
           ⚠️ {error}
         </div>
       )}
@@ -229,7 +229,7 @@ export function GrainContractFormPage() {
           gap: "16px"
         }}>
           <div>
-            <label className="label" style={{ fontWeight: 700, color: "#10b981" }}>% Comisión Corretaje</label>
+            <label className="label" style={{ fontWeight: 700, color: "var(--lc-ok)" }}>% Comisión Corretaje</label>
             <input
               type="number"
               step="0.01"
@@ -244,7 +244,7 @@ export function GrainContractFormPage() {
 
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: "0.8rem", color: "var(--ink-soft)" }}>Honorarios de Corretaje Estimados</div>
-            <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "#10b981" }}>
+            <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "var(--lc-ok)" }}>
               {form.currency} {calculatedCommission.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
             </div>
           </div>
@@ -270,8 +270,8 @@ export function GrainContractFormPage() {
             className="btn primary"
             disabled={saving}
             style={{
-              background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)",
-              color: "#ffffff",
+              background: "linear-gradient(135deg, var(--lc-warn) 0%, var(--lc-warn) 100%)",
+              color: "#fff",
               fontWeight: 700,
               border: "none",
               padding: "10px 24px"

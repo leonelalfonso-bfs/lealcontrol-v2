@@ -121,26 +121,26 @@ export function SuperAdminTenantsPage() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#090d16", color: "#f1f5f9", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <header style={{ borderBottom: "1px solid #1e293b", background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ minHeight: "100vh", background: "#090d16", color: "var(--lc-surface-2)", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+      <header style={{ borderBottom: "1px solid var(--lc-ink)", background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "linear-gradient(135deg, #eab308, #ca8a04)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "900", color: "#000", fontSize: "20px" }}>
+          <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "linear-gradient(135deg, var(--lc-warn), var(--lc-warn))", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "900", color: "#000", fontSize: "20px" }}>
             ⚡
           </div>
           <div>
             <h2 style={{ fontSize: "18px", fontWeight: "800", margin: 0 }}>LEAL SuperAdmin</h2>
-            <span style={{ fontSize: "12px", color: "#94a3b8" }}>Directorio de Empresas, Módulos & Cobranzas</span>
+            <span style={{ fontSize: "12px", color: "var(--lc-ink-3)" }}>Directorio de Empresas, Módulos & Cobranzas</span>
           </div>
         </div>
 
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <Link to="/superadmin" style={{ color: "#cbd5e1", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid #334155" }}>
+          <Link to="/superadmin" style={{ color: "var(--lc-line-2)", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
             ← Volver al Dashboard
           </Link>
-          <Link to="/superadmin/planes" style={{ color: "#cbd5e1", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid #334155" }}>
+          <Link to="/superadmin/planes" style={{ color: "var(--lc-line-2)", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
             💎 Planes & Tarifas
           </Link>
-          <Link to="/superadmin/configuracion" style={{ color: "#cbd5e1", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid #334155" }}>
+          <Link to="/superadmin/configuracion" style={{ color: "var(--lc-line-2)", textDecoration: "none", fontSize: "14px", fontWeight: "600", padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--lc-ink-2)" }}>
             ⚙️ Configuración
           </Link>
         </div>
@@ -149,25 +149,25 @@ export function SuperAdminTenantsPage() {
       <main style={{ maxWidth: "1400px", margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
           <div>
-            <h1 style={{ fontSize: "26px", fontWeight: "800", margin: "0 0 6px", color: "#f8fafc" }}>🏢 Empresas, Módulos & Pasarela MercadoPago</h1>
-            <p style={{ color: "#94a3b8", margin: 0, fontSize: "14px" }}>Gestión directa de bases aisladas, módulos activos y links de pago para suscripciones.</p>
+            <h1 style={{ fontSize: "26px", fontWeight: "800", margin: "0 0 6px", color: "var(--lc-surface-2)" }}>🏢 Empresas, Módulos & Pasarela MercadoPago</h1>
+            <p style={{ color: "var(--lc-ink-3)", margin: 0, fontSize: "14px" }}>Gestión directa de bases aisladas, módulos activos y links de pago para suscripciones.</p>
           </div>
           <input
             type="text"
             placeholder="🔍 Buscar por nombre, slug, base o email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: "340px", padding: "10px 16px", background: "#131c2e", border: "1px solid #334155", borderRadius: "10px", color: "#fff", outline: "none", fontSize: "14px" }}
+            style={{ width: "340px", padding: "10px 16px", background: "#131c2e", border: "1px solid var(--lc-ink-2)", borderRadius: "10px", color: "#fff", outline: "none", fontSize: "14px" }}
           />
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "60px", color: "#94a3b8" }}>Cargando directorio...</div>
+          <div style={{ textAlign: "center", padding: "60px", color: "var(--lc-ink-3)" }}>Cargando directorio...</div>
         ) : (
-          <div style={{ background: "#131c2e", border: "1px solid #1e293b", borderRadius: "14px", padding: "20px", overflowX: "auto" }}>
+          <div style={{ background: "#131c2e", border: "1px solid var(--lc-ink)", borderRadius: "14px", padding: "20px", overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "14px" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid #1e293b", color: "#94a3b8" }}>
+                <tr style={{ borderBottom: "1px solid var(--lc-ink)", color: "var(--lc-ink-3)" }}>
                   <th style={{ padding: "12px 16px" }}>Empresa</th>
                   <th style={{ padding: "12px 16px" }}>Base PostgreSQL</th>
                   <th style={{ padding: "12px 16px" }}>Plan & Módulos</th>
@@ -188,38 +188,38 @@ export function SuperAdminTenantsPage() {
 
                   return (
                     <tr key={t.id} style={{ borderBottom: "1px solid rgba(30, 41, 59, 0.5)" }}>
-                      <td style={{ padding: "16px", fontWeight: "600", color: "#f8fafc" }}>
+                      <td style={{ padding: "16px", fontWeight: "600", color: "var(--lc-surface-2)" }}>
                         {t.name}
-                        <div style={{ fontSize: "12px", color: "#64748b" }}>ID: {t.id}</div>
+                        <div style={{ fontSize: "12px", color: "var(--lc-ink-3)" }}>ID: {t.id}</div>
                       </td>
                       <td style={{ padding: "16px" }}>
                         <code style={{ background: "#0b1120", padding: "4px 8px", borderRadius: "6px", color: "#a855f7", fontSize: "12px", fontWeight: "700" }}>{t.dbName}</code>
                       </td>
                       <td style={{ padding: "16px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                          <span style={{ textTransform: "uppercase", fontWeight: "700", color: "#eab308", fontSize: "12px" }}>{t.planCode}</span>
+                          <span style={{ textTransform: "uppercase", fontWeight: "700", color: "var(--lc-warn)", fontSize: "12px" }}>{t.planCode}</span>
                           <button
                             type="button"
                             onClick={() => openModulesModal(t)}
-                            style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontWeight: "700" }}
+                            style={{ background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "var(--lc-info)", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", cursor: "pointer", fontWeight: "700" }}
                           >
                             ✏️ Editar módulos ({mods.length})
                           </button>
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
                           {mods.slice(0, 8).map((m: string) => (
-                            <span key={m} style={{ fontSize: "10px", background: "#0b1120", border: "1px solid #334155", borderRadius: "4px", padding: "1px 6px", color: "#94a3b8" }}>
+                            <span key={m} style={{ fontSize: "10px", background: "#0b1120", border: "1px solid var(--lc-ink-2)", borderRadius: "4px", padding: "1px 6px", color: "var(--lc-ink-3)" }}>
                               {m}
                             </span>
                           ))}
-                          {mods.length > 8 && <span style={{ fontSize: "10px", color: "#64748b" }}>+{mods.length - 8}</span>}
+                          {mods.length > 8 && <span style={{ fontSize: "10px", color: "var(--lc-ink-3)" }}>+{mods.length - 8}</span>}
                         </div>
                       </td>
                       <td style={{ padding: "16px" }}>
                         <div>{t.adminFullName}</div>
-                        <div style={{ fontSize: "12px", color: "#64748b" }}>{t.adminEmail}</div>
+                        <div style={{ fontSize: "12px", color: "var(--lc-ink-3)" }}>{t.adminEmail}</div>
                       </td>
-                      <td style={{ padding: "16px", fontWeight: "700", color: "#38bdf8" }}>
+                      <td style={{ padding: "16px", fontWeight: "700", color: "var(--lc-info)" }}>
                         $ {(t.monthlyPriceArs || 0).toLocaleString("es-AR")}
                       </td>
                       <td style={{ padding: "16px" }}>
@@ -233,7 +233,7 @@ export function SuperAdminTenantsPage() {
                             type="button"
                             onClick={() => openModulesModal(t)}
                             title="Agregar o quitar módulos contratados"
-                            style={{ background: "#1d4ed8", border: "none", color: "#fff", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "700" }}
+                            style={{ background: "var(--lc-info)", border: "none", color: "#fff", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "700" }}
                           >
                             ✏️ Módulos
                           </button>
@@ -247,13 +247,13 @@ export function SuperAdminTenantsPage() {
                           <button
                             onClick={() => handleDownloadBackup(t.id, t.slug)}
                             title="Descargar Dump SQL de esta empresa"
-                            style={{ background: "#0b1120", border: "1px solid #334155", color: "#38bdf8", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
+                            style={{ background: "#0b1120", border: "1px solid var(--lc-ink-2)", color: "var(--lc-info)", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
                           >
                             📥 Backup
                           </button>
                           <button
                             onClick={() => handleToggleStatus(t)}
-                            style={{ background: "#0b1120", border: "1px solid #334155", color: t.status === "Active" ? "#f87171" : "#4ade80", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
+                            style={{ background: "#0b1120", border: "1px solid var(--lc-ink-2)", color: t.status === "Active" ? "#f87171" : "#4ade80", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}
                           >
                             {t.status === "Active" ? "Suspender" : "Activar"}
                           </button>
@@ -270,22 +270,22 @@ export function SuperAdminTenantsPage() {
         {/* Modal Modificar Módulos de Tenant */}
         {editTenant && (
           <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0, 0, 0, 0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "20px" }}>
-            <div style={{ background: "#131c2e", border: "1px solid #334155", borderRadius: "16px", padding: "28px", maxWidth: "600px", width: "100%" }}>
+            <div style={{ background: "#131c2e", border: "1px solid var(--lc-ink-2)", borderRadius: "16px", padding: "28px", maxWidth: "600px", width: "100%" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                 <div>
-                  <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#f8fafc", margin: 0 }}>⚙️ Módulos de {editTenant.name}</h2>
-                  <span style={{ fontSize: "12px", color: "#94a3b8" }}>Base de datos: {editTenant.dbName}</span>
+                  <h2 style={{ fontSize: "20px", fontWeight: "800", color: "var(--lc-surface-2)", margin: 0 }}>⚙️ Módulos de {editTenant.name}</h2>
+                  <span style={{ fontSize: "12px", color: "var(--lc-ink-3)" }}>Base de datos: {editTenant.dbName}</span>
                 </div>
-                <button onClick={() => setEditTenant(null)} style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "20px", cursor: "pointer" }}>✕</button>
+                <button onClick={() => setEditTenant(null)} style={{ background: "transparent", border: "none", color: "var(--lc-ink-3)", fontSize: "20px", cursor: "pointer" }}>✕</button>
               </div>
 
-              <p style={{ fontSize: "13px", color: "#cbd5e1", marginBottom: "16px" }}>
+              <p style={{ fontSize: "13px", color: "var(--lc-line-2)", marginBottom: "16px" }}>
                 Seleccioná qué módulos tiene contratados esta empresa. Al guardar se sincroniza con los usuarios activos.
                 <strong style={{ color: "#fbbf24" }}> Deben volver a iniciar sesión</strong> para ver el menú actualizado.
               </p>
 
               {communicationsEnabled === false && (
-                <p role="status" style={{ padding: "10px 12px", borderRadius: 8, background: "#422f13", color: "#fde68a", fontSize: 13 }}>
+                <p role="status" style={{ padding: "10px 12px", borderRadius: 8, background: "#422f13", color: "var(--lc-warn)", fontSize: 13 }}>
                   Comunicaciones está desactivado para todo el sistema. Podés asignarlo a esta empresa, pero aparecerá en su menú cuando lo actives en <Link to="/superadmin/configuracion" style={{ color: "#fff", fontWeight: 700 }}>Configuración de SuperAdmin</Link>.
                 </p>
               )}
@@ -309,7 +309,7 @@ export function SuperAdminTenantsPage() {
                       }}
                     >
                       <input type="checkbox" checked={isChecked} onChange={() => {}} style={{ cursor: "pointer" }} />
-                      <span style={{ fontSize: "13px", fontWeight: "700", color: isChecked ? "#fff" : "#94a3b8" }}>
+                      <span style={{ fontSize: "13px", fontWeight: "700", color: isChecked ? "#fff" : "var(--lc-ink-3)" }}>
                         {m.icon} {m.name}
                       </span>
                     </div>
@@ -318,10 +318,10 @@ export function SuperAdminTenantsPage() {
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
-                <button onClick={() => setEditTenant(null)} style={{ background: "#334155", border: "none", color: "#cbd5e1", padding: "10px 18px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}>
+                <button onClick={() => setEditTenant(null)} style={{ background: "var(--lc-ink-2)", border: "none", color: "var(--lc-line-2)", padding: "10px 18px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}>
                   Cancelar
                 </button>
-                <button onClick={saveTenantModules} disabled={savingModules} style={{ background: "#2563eb", border: "none", color: "#fff", padding: "10px 24px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>
+                <button onClick={saveTenantModules} disabled={savingModules} style={{ background: "var(--lc-info)", border: "none", color: "#fff", padding: "10px 24px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}>
                   {savingModules ? "Guardando..." : "💾 Guardar Módulos"}
                 </button>
               </div>
@@ -332,44 +332,44 @@ export function SuperAdminTenantsPage() {
         {/* Modal Link de Pago MercadoPago */}
         {paymentInfo && (
           <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0, 0, 0, 0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "20px" }}>
-            <div style={{ background: "#131c2e", border: "1px solid #334155", borderRadius: "16px", padding: "28px", maxWidth: "560px", width: "100%" }}>
+            <div style={{ background: "#131c2e", border: "1px solid var(--lc-ink-2)", borderRadius: "16px", padding: "28px", maxWidth: "560px", width: "100%" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#009ee3", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "900" }}>
                     💳
                   </div>
                   <div>
-                    <h2 style={{ fontSize: "18px", fontWeight: "800", color: "#f8fafc", margin: 0 }}>Link de Pago MercadoPago</h2>
-                    <span style={{ fontSize: "12px", color: "#94a3b8" }}>{paymentInfo.tenantName}</span>
+                    <h2 style={{ fontSize: "18px", fontWeight: "800", color: "var(--lc-surface-2)", margin: 0 }}>Link de Pago MercadoPago</h2>
+                    <span style={{ fontSize: "12px", color: "var(--lc-ink-3)" }}>{paymentInfo.tenantName}</span>
                   </div>
                 </div>
-                <button onClick={() => setPaymentInfo(null)} style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "20px", cursor: "pointer" }}>✕</button>
+                <button onClick={() => setPaymentInfo(null)} style={{ background: "transparent", border: "none", color: "var(--lc-ink-3)", fontSize: "20px", cursor: "pointer" }}>✕</button>
               </div>
 
-              <div style={{ background: "#090d16", border: "1px solid #334155", borderRadius: "10px", padding: "16px", marginBottom: "20px" }}>
-                <div style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "4px" }}>Importe a Cobrar:</div>
-                <div style={{ fontSize: "24px", fontWeight: "900", color: "#38bdf8", marginBottom: "12px" }}>
+              <div style={{ background: "#090d16", border: "1px solid var(--lc-ink-2)", borderRadius: "10px", padding: "16px", marginBottom: "20px" }}>
+                <div style={{ fontSize: "12px", color: "var(--lc-ink-3)", marginBottom: "4px" }}>Importe a Cobrar:</div>
+                <div style={{ fontSize: "24px", fontWeight: "900", color: "var(--lc-info)", marginBottom: "12px" }}>
                   $ {paymentInfo.amount.toLocaleString("es-AR")} ARS
                 </div>
-                <div style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "4px" }}>URL de Pago Checkout:</div>
+                <div style={{ fontSize: "12px", color: "var(--lc-ink-3)", marginBottom: "4px" }}>URL de Pago Checkout:</div>
                 <input
                   type="text"
                   readOnly
                   value={paymentInfo.paymentUrl}
-                  style={{ width: "100%", padding: "8px", background: "#131c2e", border: "1px solid #334155", borderRadius: "6px", color: "#38bdf8", fontSize: "12px", boxSizing: "border-box" }}
+                  style={{ width: "100%", padding: "8px", background: "#131c2e", border: "1px solid var(--lc-ink-2)", borderRadius: "6px", color: "var(--lc-info)", fontSize: "12px", boxSizing: "border-box" }}
                 />
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
                 <button
                   onClick={() => setPaymentInfo(null)}
-                  style={{ background: "#334155", border: "none", color: "#cbd5e1", padding: "10px 16px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}
+                  style={{ background: "var(--lc-ink-2)", border: "none", color: "var(--lc-line-2)", padding: "10px 16px", borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}
                 >
                   Cerrar
                 </button>
                 <button
                   onClick={() => window.open(paymentInfo.paymentUrl, "_blank")}
-                  style={{ background: "#1e293b", border: "1px solid #009ee3", color: "#009ee3", padding: "10px 16px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
+                  style={{ background: "var(--lc-ink)", border: "1px solid #009ee3", color: "#009ee3", padding: "10px 16px", borderRadius: "8px", fontWeight: "700", cursor: "pointer" }}
                 >
                   🌐 Abrir Pasarela
                 </button>

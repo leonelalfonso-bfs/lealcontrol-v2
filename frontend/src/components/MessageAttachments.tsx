@@ -73,7 +73,7 @@ function AuthenticatedMedia({ messageId, att }: { messageId: string; att: EmailA
   }
 
   return (
-    <a href={src} download={att.fileName} style={{ fontSize: "0.82rem", color: "#2563eb" }}>
+    <a href={src} download={att.fileName} style={{ fontSize: "0.82rem", color: "var(--lc-info)" }}>
       📎 {att.fileName}
     </a>
   );

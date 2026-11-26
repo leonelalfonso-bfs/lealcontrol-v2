@@ -626,7 +626,7 @@ function CustomerModal({
       <div className="modal-card card pad">
         <h3>+ Alta Rápida de Cliente</h3>
         {error && <div className="alert">{error}</div>}
-        {successMsg && <div className="alert ok" style={{ background: "#ecfdf5", border: "1px solid #10b981", color: "#065f46", marginBottom: 12 }}>{successMsg}</div>}
+        {successMsg && <div className="alert ok" style={{ background: "var(--lc-ok-bg)", border: "1px solid var(--lc-ok)", color: "var(--lc-ok)", marginBottom: 12 }}>{successMsg}</div>}
         <form onSubmit={submit} className="stack" style={{ marginTop: 12 }}>
           <div className="grid-2">
             <label>
@@ -643,7 +643,7 @@ function CustomerModal({
                   className="btn"
                   onClick={consultArca}
                   disabled={consulting}
-                  style={{ background: "linear-gradient(180deg, #2563eb, #1d4ed8)", color: "#fff", whiteSpace: "nowrap", padding: "0 12px" }}
+                  style={{ background: "linear-gradient(180deg, var(--lc-info), var(--lc-info))", color: "#fff", whiteSpace: "nowrap", padding: "0 12px" }}
                 >
                   {consulting ? "🔍 ARCA…" : "🔍 ARCA"}
                 </button>

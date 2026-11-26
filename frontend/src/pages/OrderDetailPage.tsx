@@ -111,7 +111,7 @@ export function OrderDetailPage() {
           <button type="button" className="btn" onClick={() => setShowEmail(true)}>✉ Enviar por email</button>
           {showEmail && <EmailComposer context={{ entityType: "Order", entityId: order.id, to: contact?.email || customer?.email || undefined, subject: `Pedido de venta ${order.orderNumber}`, body: `Hola,\n\nCompartimos la confirmación del pedido de venta ${order.orderNumber}, por un total de ${currLabel} ${order.total.toLocaleString("es-AR")}.\n\nSaludos.\n` }} onClose={() => setShowEmail(false)} />}
           {canRemit === true ? (
-            <Link className="btn" to={"/remitos/nuevo?order_id=" + order.id} style={{ background: "linear-gradient(180deg, #2563eb, #1d4ed8)" }}>
+            <Link className="btn" to={"/remitos/nuevo?order_id=" + order.id} style={{ background: "linear-gradient(180deg, var(--lc-info), var(--lc-info))" }}>
               🚚 Generar Remito
             </Link>
           ) : (
@@ -120,7 +120,7 @@ export function OrderDetailPage() {
             </span>
           )}
           <Link className="btn" to={hasDeliveredRemito ? "/remitos" : "/facturas/nueva?order_id=" + order.id}
-            style={{ background: "linear-gradient(180deg, #059669, #047857)" }}>
+            style={{ background: "linear-gradient(180deg, var(--lc-ok), var(--lc-ok))" }}>
             {hasDeliveredRemito ? "📄 Facturar desde remito" : "📄 Emitir Factura"}
           </Link>
           <button
@@ -137,7 +137,7 @@ export function OrderDetailPage() {
       </div>
 
       {/* Progress Stepper Bar */}
-      <div className="card pad" style={{ marginBottom: 24, background: "#ffffff" }}>
+      <div className="card pad" style={{ marginBottom: 24, background: "var(--lc-surface)" }}>
         <h4 style={{ margin: "0 0 12px" }}>Progreso y Estado del Pedido</h4>
         <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
           {flow.map((st, index) => (
@@ -267,7 +267,7 @@ export function OrderDetailPage() {
           {order.notes && <p><strong>Notas Operativas:</strong> {order.notes}</p>}
         </section>
 
-        <section className="card pad" style={{ background: "#ffffff" }}>
+        <section className="card pad" style={{ background: "var(--lc-surface)" }}>
           <h3>Resumen de Importes ({currLabel})</h3>
           <div className="stack" style={{ gap: 8, fontSize: "1.05rem", marginTop: 16 }}>
             <div className="row" style={{ justifyContent: "space-between" }}>
@@ -278,7 +278,7 @@ export function OrderDetailPage() {
               </span>
             </div>
             {order.discountPercent > 0 && (
-              <div className="row" style={{ justifyContent: "space-between", color: "#d97706" }}>
+              <div className="row" style={{ justifyContent: "space-between", color: "var(--lc-warn)" }}>
                 <span>Descuento Global ({order.discountPercent}%):</span>
                 <span>
                   -{isUsd ? "U$D " : "ARS $"}
@@ -295,7 +295,7 @@ export function OrderDetailPage() {
               </span>
             </div>
             {isUsd && (
-              <div className="muted" style={{ fontSize: "0.85rem", marginTop: 8, background: "#f8fafc", padding: 10, borderRadius: 6 }}>
+              <div className="muted" style={{ fontSize: "0.85rem", marginTop: 8, background: "var(--lc-surface-2)", padding: 10, borderRadius: 6 }}>
                 Equivalente estimado en pesos: <strong>ARS ${totalArsEquivalent.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</strong> (Tipo de cambio BNA de referencia: ${rate} ARS)
               </div>
             )}

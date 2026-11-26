@@ -320,17 +320,17 @@ export function MetrologyEquipmentFormPage() {
     <div className="page-wide" style={{ paddingBottom: 60 }}>
       {/* Breadcrumb & Header */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
           <Link to="/metrologia" style={{ color: "inherit", textDecoration: "none" }}>Metrología Legal</Link>
           <span>›</span>
           <Link to="/metrologia/equipos" style={{ color: "inherit", textDecoration: "none" }}>Gestión de Equipos</Link>
           <span>›</span>
-          <span style={{ color: "#0d9488", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Alta de Instrumento"}</span>
+          <span style={{ color: "var(--lc-accent-strong)", fontWeight: 700 }}>{isEditing ? `Editar [${code}]` : "Alta de Instrumento"}</span>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "#0f172a" }}>
+            <h1 style={{ margin: "0 0 4px", fontSize: "1.75rem", fontWeight: 800, color: "var(--lc-ink)" }}>
               {isEditing ? `⚖️ Ficha Técnica: ${description || code}` : "➕ Alta de Instrumento de Pesar"}
             </h1>
             <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
@@ -347,7 +347,7 @@ export function MetrologyEquipmentFormPage() {
               onClick={handleSubmit}
               disabled={saving}
               className="btn"
-              style={{ background: "#0d9488", color: "#fff", fontWeight: 800, padding: "8px 24px", fontSize: "0.92rem", minWidth: 160 }}
+              style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "8px 24px", fontSize: "0.92rem", minWidth: 160 }}
             >
               {saving ? "Guardando..." : "💾 Guardar Instrumento"}
             </button>
@@ -356,7 +356,7 @@ export function MetrologyEquipmentFormPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ marginBottom: 20, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
+        <div className="alert" style={{ marginBottom: 20, background: "var(--lc-danger-bg)", color: "var(--lc-danger)", border: "1px solid var(--lc-danger-bg)", padding: "14px 18px", borderRadius: 8, fontSize: "0.92rem" }}>
           ⚠️ {error}
         </div>
       )}
@@ -367,12 +367,12 @@ export function MetrologyEquipmentFormPage() {
           className="card pad"
           style={{
             marginBottom: 20,
-            borderLeft: "5px solid #0d9488",
+            borderLeft: "5px solid var(--lc-accent)",
             position: "relative",
             zIndex: showCustomerDropdown ? 9999 : 5
           }}
         >
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#0f766e", marginBottom: 14 }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-accent-strong)", marginBottom: 14 }}>
             1. IDENTIFICACIÓN GENERAL & UBICACIÓN
           </div>
 
@@ -385,7 +385,7 @@ export function MetrologyEquipmentFormPage() {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="ej. BAL-CAM-01"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 800, fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.92rem" }}
               />
             </div>
 
@@ -397,7 +397,7 @@ export function MetrologyEquipmentFormPage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="ej. Balanza para Camiones 80t - Planta Silos Norte"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -413,15 +413,15 @@ export function MetrologyEquipmentFormPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    background: "#f0fdf4",
-                    border: "1px solid #86efac",
+                    background: "var(--lc-ok-bg)",
+                    border: "1px solid var(--lc-ok-bg)",
                     borderRadius: 8,
                     padding: "10px 16px",
                     boxSizing: "border-box"
                   }}
                 >
                   <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    <strong style={{ color: "#166534", fontSize: "0.98rem" }}>🏢 {customerName}</strong>
+                    <strong style={{ color: "var(--lc-ok)", fontSize: "0.98rem" }}>🏢 {customerName}</strong>
                     {selectedCustomerDoc && (
                       <span className="muted" style={{ fontSize: "0.86rem", marginLeft: 10 }}>
                         (CUIT: {selectedCustomerDoc})
@@ -436,7 +436,7 @@ export function MetrologyEquipmentFormPage() {
                         setCustomerSearchQuery("");
                       }}
                       className="btn ghost compact"
-                      style={{ fontSize: "0.82rem", padding: "5px 12px", background: "#fff", border: "1px solid #cbd5e1" }}
+                      style={{ fontSize: "0.82rem", padding: "5px 12px", background: "var(--lc-surface)", border: "1px solid var(--lc-line-2)" }}
                     >
                       🔍 Cambiar
                     </button>
@@ -450,7 +450,7 @@ export function MetrologyEquipmentFormPage() {
                         setLocation("");
                       }}
                       className="btn ghost compact"
-                      style={{ fontSize: "0.82rem", color: "#dc2626", padding: "5px 12px", background: "#fff", border: "1px solid #fca5a5" }}
+                      style={{ fontSize: "0.82rem", color: "var(--lc-danger)", padding: "5px 12px", background: "var(--lc-surface)", border: "1px solid var(--lc-danger-bg)" }}
                       title="Asignar como Uso Interno / Propio"
                     >
                       ✕ Quitar
@@ -458,7 +458,7 @@ export function MetrologyEquipmentFormPage() {
                   </div>
                 </div>
               ) : (
-                <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, padding: 14 }}>
+                <div style={{ background: "var(--lc-surface-2)", border: "1px solid var(--lc-line-2)", borderRadius: 8, padding: 14 }}>
                   <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
                     <input
                       type="text"
@@ -469,9 +469,9 @@ export function MetrologyEquipmentFormPage() {
                         flex: 1,
                         padding: "10px 14px",
                         borderRadius: 6,
-                        border: "2px solid #0d9488",
+                        border: "2px solid var(--lc-accent)",
                         fontSize: "0.92rem",
-                        background: "#fff"
+                        background: "var(--lc-surface)"
                       }}
                     />
                     {customerId && (
@@ -491,8 +491,8 @@ export function MetrologyEquipmentFormPage() {
                     style={{
                       maxHeight: 220,
                       overflowY: "auto",
-                      background: "#ffffff",
-                      border: "1px solid #e2e8f0",
+                      background: "var(--lc-surface)",
+                      border: "1px solid var(--lc-line)",
                       borderRadius: 6
                     }}
                   >
@@ -509,17 +509,17 @@ export function MetrologyEquipmentFormPage() {
                       style={{
                         padding: "11px 16px",
                         cursor: "pointer",
-                        borderBottom: "1px solid #e2e8f0",
-                        background: !customerId ? "#f0fdf4" : "#fff",
+                        borderBottom: "1px solid var(--lc-line)",
+                        background: !customerId ? "var(--lc-ok-bg)" : "var(--lc-surface)",
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center"
                       }}
                     >
-                      <span style={{ fontWeight: 700, color: "#475569", fontSize: "0.88rem" }}>
+                      <span style={{ fontWeight: 700, color: "var(--lc-ink-2)", fontSize: "0.88rem" }}>
                         🏢 -- Uso Interno / Propio (Sin Cliente Externo) --
                       </span>
-                      <span className="tag" style={{ fontSize: "0.72rem", background: "#e2e8f0" }}>Propio</span>
+                      <span className="tag" style={{ fontSize: "0.72rem", background: "var(--lc-line)" }}>Propio</span>
                     </div>
 
                     {filteredSuggestions.length === 0 ? (
@@ -543,16 +543,16 @@ export function MetrologyEquipmentFormPage() {
                             style={{
                               padding: "10px 16px",
                               cursor: "pointer",
-                              borderBottom: "1px solid #f1f5f9",
+                              borderBottom: "1px solid var(--lc-surface-2)",
                               transition: "background 0.15s"
                             }}
                             onMouseEnter={(e) => (e.currentTarget.style.background = "#f0fdf4")}
                             onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
                           >
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <strong style={{ color: "#0f172a", fontSize: "0.92rem" }}>{displayName}</strong>
+                              <strong style={{ color: "var(--lc-ink)", fontSize: "0.92rem" }}>{displayName}</strong>
                               {c.documentNumber && (
-                                <span style={{ fontFamily: "monospace", fontSize: "0.84rem", color: "#0d9488", fontWeight: 700 }}>
+                                <span style={{ fontFamily: "monospace", fontSize: "0.84rem", color: "var(--lc-accent-strong)", fontWeight: 700 }}>
                                   CUIT: {c.documentNumber}
                                 </span>
                               )}
@@ -588,7 +588,7 @@ export function MetrologyEquipmentFormPage() {
                         setLocation(e.target.value);
                       }
                     }}
-                    style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem", fontWeight: 600 }}
+                    style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem", fontWeight: 600 }}
                   >
                     <option value="">-- Seleccionar Planta o Sucursal del Cliente --</option>
                     {customerLocations.map((loc) => (
@@ -615,7 +615,7 @@ export function MetrologyEquipmentFormPage() {
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       placeholder="ej. Planta Silos Norte, Báscula Entrada, Molino Central"
-                      style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                      style={{ flex: 1, padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
                     />
                     {customerLocations.length > 0 && (
                       <button
@@ -647,7 +647,7 @@ export function MetrologyEquipmentFormPage() {
               <select
                 value={applicableStandard}
                 onChange={(e) => setApplicableStandard(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="Res25_2025">Resolución 25/2025 (Vigente)</option>
                 <option value="Res2307_1980">Resolución 2307/1980 (Histórica)</option>
@@ -657,8 +657,8 @@ export function MetrologyEquipmentFormPage() {
         </div>
 
         {/* SECCIÓN 2: PLATAFORMA */}
-        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid #3b82f6" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#1d4ed8", marginBottom: 14 }}>
+        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid var(--lc-info)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-info)", marginBottom: 14 }}>
             2. PLATAFORMA DE PESAJES / RECEPTOR DE CARGA
           </div>
 
@@ -668,7 +668,7 @@ export function MetrologyEquipmentFormPage() {
               <select
                 value={platformType}
                 onChange={(e) => setPlatformType(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="TruckScale">Báscula para Camiones</option>
                 <option value="IndustrialPlatform">Plataforma Industrial de Piso</option>
@@ -685,7 +685,7 @@ export function MetrologyEquipmentFormPage() {
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
                 placeholder="ej. Toledo, Systel, Básculas Sur"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -696,7 +696,7 @@ export function MetrologyEquipmentFormPage() {
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 placeholder="ej. BF-30 / 80t"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -707,7 +707,7 @@ export function MetrologyEquipmentFormPage() {
                 value={serialNumber}
                 onChange={(e) => setSerialNumber(e.target.value)}
                 placeholder="S/N de receptor / plataforma"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -718,7 +718,7 @@ export function MetrologyEquipmentFormPage() {
                 value={platformApprovalCode}
                 onChange={(e) => setPlatformApprovalCode(e.target.value)}
                 placeholder="ej. CAM-082"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -729,7 +729,7 @@ export function MetrologyEquipmentFormPage() {
                 value={platformApprovalNumber}
                 onChange={(e) => setPlatformApprovalNumber(e.target.value)}
                 placeholder="ej. Disp. DNCI 142/2018"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -739,7 +739,7 @@ export function MetrologyEquipmentFormPage() {
                 type="date"
                 value={platformApprovalDate}
                 onChange={(e) => setPlatformApprovalDate(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -750,15 +750,15 @@ export function MetrologyEquipmentFormPage() {
                 value={platformDimensions}
                 onChange={(e) => setPlatformDimensions(e.target.value)}
                 placeholder="ej. 20.00m x 3.00m"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
           </div>
         </div>
 
         {/* SECCIÓN 3: INDICADOR PRINCIPAL (1) */}
-        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid #8b5cf6" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#6d28d9", marginBottom: 14 }}>
+        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid var(--lc-violet)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-violet)", marginBottom: 14 }}>
             3. INDICADOR METROLÓGICO PRINCIPAL (INDICADOR 1)
           </div>
 
@@ -770,7 +770,7 @@ export function MetrologyEquipmentFormPage() {
                 value={indicator1Brand}
                 onChange={(e) => setIndicator1Brand(e.target.value)}
                 placeholder="ej. Systel, Toledo, Kretz"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -781,7 +781,7 @@ export function MetrologyEquipmentFormPage() {
                 value={indicator1Model}
                 onChange={(e) => setIndicator1Model(e.target.value)}
                 placeholder="ej. Matrix II / IND560"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -792,7 +792,7 @@ export function MetrologyEquipmentFormPage() {
                 value={indicator1SerialNumber}
                 onChange={(e) => setIndicator1SerialNumber(e.target.value)}
                 placeholder="ej. SN-883492"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -803,7 +803,7 @@ export function MetrologyEquipmentFormPage() {
                 value={indicator1ApprovalCode}
                 onChange={(e) => setIndicator1ApprovalCode(e.target.value)}
                 placeholder="ej. IND-044"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -814,7 +814,7 @@ export function MetrologyEquipmentFormPage() {
                 value={indicator1ApprovalNumber}
                 onChange={(e) => setIndicator1ApprovalNumber(e.target.value)}
                 placeholder="ej. Disp. DNCI 88/2019"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -824,7 +824,7 @@ export function MetrologyEquipmentFormPage() {
                 type="date"
                 value={indicator1ApprovalDate}
                 onChange={(e) => setIndicator1ApprovalDate(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -833,7 +833,7 @@ export function MetrologyEquipmentFormPage() {
               <select
                 value={indicator1Type}
                 onChange={(e) => setIndicator1Type(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="Digital">Digital Electrónico</option>
                 <option value="MechanicalDial">Mecánico Cuadrante / Aguja</option>
@@ -844,9 +844,9 @@ export function MetrologyEquipmentFormPage() {
         </div>
 
         {/* SECCIÓN 4: SEGUNDO INDICADOR (OPCIONAL) */}
-        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid #f59e0b" }}>
+        <div className="card pad" style={{ marginBottom: 20, borderLeft: "5px solid var(--lc-warn)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <div style={{ fontWeight: 800, fontSize: "1rem", color: "#b45309" }}>
+            <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-warn)" }}>
               4. SEGUNDO INDICADOR (BALANZAS HÍBRIDAS / CABEZAL SECUNDARIO)
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 700, fontSize: "0.88rem" }}>
@@ -861,7 +861,7 @@ export function MetrologyEquipmentFormPage() {
           </div>
 
           {hasSecondaryIndicator && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, background: "#fffbeb", padding: 16, borderRadius: 8, border: "1px solid #fef3c7" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, background: "var(--lc-warn-bg)", padding: 16, borderRadius: 8, border: "1px solid var(--lc-warn-bg)" }}>
               <div>
                 <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: 5 }}>Marca Indicador 2</label>
                 <input
@@ -869,7 +869,7 @@ export function MetrologyEquipmentFormPage() {
                   value={indicator2Brand}
                   onChange={(e) => setIndicator2Brand(e.target.value)}
                   placeholder="ej. Bianchetti"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
                 />
               </div>
 
@@ -880,7 +880,7 @@ export function MetrologyEquipmentFormPage() {
                   value={indicator2Model}
                   onChange={(e) => setIndicator2Model(e.target.value)}
                   placeholder="ej. Mecánico Cuadrante"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
                 />
               </div>
 
@@ -891,7 +891,7 @@ export function MetrologyEquipmentFormPage() {
                   value={indicator2SerialNumber}
                   onChange={(e) => setIndicator2SerialNumber(e.target.value)}
                   placeholder="ej. MEC-9912"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
                 />
               </div>
 
@@ -902,7 +902,7 @@ export function MetrologyEquipmentFormPage() {
                   value={indicator2ApprovalCode}
                   onChange={(e) => setIndicator2ApprovalCode(e.target.value)}
                   placeholder="ej. IND-012"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
                 />
               </div>
 
@@ -913,7 +913,7 @@ export function MetrologyEquipmentFormPage() {
                   value={indicator2ApprovalNumber}
                   onChange={(e) => setIndicator2ApprovalNumber(e.target.value)}
                   placeholder="ej. Disp. DNCI 05/1998"
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
                 />
               </div>
 
@@ -923,7 +923,7 @@ export function MetrologyEquipmentFormPage() {
                   type="date"
                   value={indicator2ApprovalDate}
                   onChange={(e) => setIndicator2ApprovalDate(e.target.value)}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
                 />
               </div>
 
@@ -932,7 +932,7 @@ export function MetrologyEquipmentFormPage() {
                 <select
                   value={indicator2Type}
                   onChange={(e) => setIndicator2Type(e.target.value)}
-                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
                 >
                   <option value="MechanicalDial">Mecánico Cuadrante / Aguja</option>
                   <option value="MechanicalSteelyard">Mecánico Romano / Pilón</option>
@@ -944,8 +944,8 @@ export function MetrologyEquipmentFormPage() {
         </div>
 
         {/* SECCIÓN 5: ESPECIFICACIONES METROLÓGICAS & RANGOS */}
-        <div className="card pad" style={{ marginBottom: 30, borderLeft: "5px solid #059669" }}>
-          <div style={{ fontWeight: 800, fontSize: "1rem", color: "#047857", marginBottom: 14 }}>
+        <div className="card pad" style={{ marginBottom: 30, borderLeft: "5px solid var(--lc-ok)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", color: "var(--lc-ok)", marginBottom: 14 }}>
             5. ESPECIFICACIONES METROLÓGICAS & RANGOS DE ENSAYO
           </div>
 
@@ -958,7 +958,7 @@ export function MetrologyEquipmentFormPage() {
                 required
                 value={maxCapacity}
                 onChange={(e) => setMaxCapacity(Number(e.target.value))}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 800, fontSize: "0.95rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.95rem" }}
               />
             </div>
 
@@ -970,9 +970,9 @@ export function MetrologyEquipmentFormPage() {
                 min="0"
                 value={maximumOperationalLoad}
                 onChange={(e) => setMaximumOperationalLoad(Number(e.target.value))}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 800, fontSize: "0.95rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.95rem" }}
               />
-              <small style={{ display: "block", marginTop: 5, color: "#64748b", lineHeight: 1.35 }}>No modifica el Max metrológico. Se usa para sugerir 50 % y 100 % de fidelidad y siempre puede ajustarse por servicio.</small>
+              <small style={{ display: "block", marginTop: 5, color: "var(--lc-ink-3)", lineHeight: 1.35 }}>No modifica el Max metrológico. Se usa para sugerir 50 % y 100 % de fidelidad y siempre puede ajustarse por servicio.</small>
             </div>
 
             <div>
@@ -983,7 +983,7 @@ export function MetrologyEquipmentFormPage() {
                 required
                 value={minCapacity}
                 onChange={(e) => setMinCapacity(Number(e.target.value))}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontWeight: 800, fontSize: "0.95rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontWeight: 800, fontSize: "0.95rem" }}
               />
             </div>
 
@@ -995,7 +995,7 @@ export function MetrologyEquipmentFormPage() {
                 required
                 value={divisionD}
                 onChange={(e) => setDivisionD(Number(e.target.value))}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.95rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.95rem" }}
               />
             </div>
 
@@ -1007,7 +1007,7 @@ export function MetrologyEquipmentFormPage() {
                 required
                 value={verificationIntervalE}
                 onChange={(e) => setVerificationIntervalE(Number(e.target.value))}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.95rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.95rem" }}
               />
             </div>
 
@@ -1016,7 +1016,7 @@ export function MetrologyEquipmentFormPage() {
               <select
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="kg">kg (Kilogramos)</option>
                 <option value="t">t (Toneladas)</option>
@@ -1030,7 +1030,7 @@ export function MetrologyEquipmentFormPage() {
               <select
                 value={accuracyClass}
                 onChange={(e) => setAccuracyClass(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="I">Clase I (Especial / Analítica)</option>
                 <option value="II">Clase II (Fina / Precisión)</option>
@@ -1047,7 +1047,7 @@ export function MetrologyEquipmentFormPage() {
                 min="0"
                 value={loadCellsCount}
                 onChange={(e) => setLoadCellsCount(parseInt(e.target.value) || 0)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               />
             </div>
 
@@ -1056,7 +1056,7 @@ export function MetrologyEquipmentFormPage() {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.92rem" }}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.92rem" }}
               >
                 <option value="Active">✓ Activo / Operativo</option>
                 <option value="UnderMaintenance">En Mantenimiento</option>
@@ -1072,7 +1072,7 @@ export function MetrologyEquipmentFormPage() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Historial de reparaciones, precintos, marcas de verificación..."
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: "0.9rem" }}
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: "1px solid var(--lc-line-2)", fontSize: "0.9rem" }}
             />
           </div>
         </div>
@@ -1083,10 +1083,10 @@ export function MetrologyEquipmentFormPage() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            background: "#f8fafc",
+            background: "var(--lc-surface-2)",
             padding: "16px 24px",
             borderRadius: 10,
-            border: "1px solid #e2e8f0"
+            border: "1px solid var(--lc-line)"
           }}
         >
           <Link to="/metrologia/equipos" className="btn ghost" style={{ padding: "9px 20px" }}>
@@ -1096,7 +1096,7 @@ export function MetrologyEquipmentFormPage() {
             type="submit"
             disabled={saving}
             className="btn"
-            style={{ background: "#0d9488", color: "#fff", fontWeight: 800, padding: "10px 28px", fontSize: "0.95rem", minWidth: 200 }}
+            style={{ background: "var(--lc-accent)", color: "#fff", fontWeight: 800, padding: "10px 28px", fontSize: "0.95rem", minWidth: 200 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Instrumento"}
           </button>

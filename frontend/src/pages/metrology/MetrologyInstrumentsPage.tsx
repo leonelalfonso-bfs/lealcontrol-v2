@@ -52,16 +52,16 @@ export function MetrologyInstrumentsPage() {
     <div className="page-wide">
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <span className="eyebrow" style={{ color: "#0d9488", fontWeight: 800, fontSize: "0.75rem" }}>METROLOGÍA</span>
+          <span className="eyebrow" style={{ color: "var(--lc-accent-strong)", fontWeight: 800, fontSize: "0.75rem" }}>METROLOGÍA</span>
           <h1 style={{ margin: "4px 0 0" }}>Instrumentos auxiliares</h1>
           <p className="muted" style={{ margin: 0 }}>Termómetros y otros instrumentos de medición (PG14 / PG16)</p>
         </div>
-        <Link to="/metrologia/instrumentos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)", color: "#fff" }}>
+        <Link to="/metrologia/instrumentos/nuevo" className="btn" style={{ background: "linear-gradient(135deg, var(--lc-accent), var(--lc-accent))", color: "#fff" }}>
           Nuevo termómetro
         </Link>
       </div>
 
-      {error && <div className="card pad" style={{ marginTop: 12, background: "#fef2f2", color: "#991b1b" }}>{error}</div>}
+      {error && <div className="card pad" style={{ marginTop: 12, background: "var(--lc-danger-bg)", color: "var(--lc-danger)" }}>{error}</div>}
 
       <div className="card pad" style={{ marginTop: 16 }}>
         {loading ? (
@@ -182,7 +182,7 @@ export function MetrologyInstrumentFormPage() {
     <div className="page-wide">
       <Link to="/metrologia/instrumentos" style={{ fontSize: 13 }}>← Instrumentos</Link>
       <h1 style={{ marginTop: 8 }}>{isNew ? "Nuevo termómetro" : `Editar ${form.code}`}</h1>
-      {error && <div className="card pad" style={{ background: "#fef2f2", color: "#991b1b", marginTop: 12 }}>{error}</div>}
+      {error && <div className="card pad" style={{ background: "var(--lc-danger-bg)", color: "var(--lc-danger)", marginTop: 12 }}>{error}</div>}
       <form className="card pad" style={{ marginTop: 16 }} onSubmit={(e) => void onSubmit(e)}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
           <label>N.º interno (PG14)<input value={form.internalCode} onChange={(e) => set("internalCode", e.target.value)} placeholder="Se asigna solo: EQ-0001" /></label>
@@ -217,7 +217,7 @@ export function MetrologyInstrumentFormPage() {
         </label>
         <div style={{ marginTop: 16, justifyContent: "flex-end", display: "flex", gap: 8 }}>
           <button type="button" className="btn ghost" onClick={() => navigate("/metrologia/instrumentos")}>Cancelar</button>
-          <button type="submit" className="btn" disabled={saving} style={{ background: "#0d9488", color: "#fff" }}>
+          <button type="submit" className="btn" disabled={saving} style={{ background: "var(--lc-accent)", color: "#fff" }}>
             {saving ? "Guardando…" : "Guardar"}
           </button>
         </div>

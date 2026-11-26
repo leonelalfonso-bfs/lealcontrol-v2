@@ -109,16 +109,16 @@ export function ProcedureManualFormPage() {
       {/* Header */}
       <div className="page-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "#64748b", marginBottom: 6 }}>
-            <Link to="/rrhh" style={{ color: "#64748b", textDecoration: "none" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.85rem", color: "var(--lc-ink-3)", marginBottom: 6 }}>
+            <Link to="/rrhh" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
               RRHH
             </Link>
             <span>›</span>
-            <Link to="/rrhh/manuales" style={{ color: "#64748b", textDecoration: "none" }}>
+            <Link to="/rrhh/manuales" style={{ color: "var(--lc-ink-3)", textDecoration: "none" }}>
               Manuales de Procedimientos
             </Link>
             <span>›</span>
-            <span style={{ color: "#0f172a", fontWeight: 600 }}>{isEditing ? `Editar: ${code}` : "Nuevo Procedimiento"}</span>
+            <span style={{ color: "var(--lc-ink)", fontWeight: 600 }}>{isEditing ? `Editar: ${code}` : "Nuevo Procedimiento"}</span>
           </div>
           <h1 style={{ margin: 0 }}>{isEditing ? `✏️ Editar Procedimiento: ${code} - ${title}` : "➕ Nuevo Procedimiento / Instructivo"}</h1>
           <p className="muted" style={{ margin: "4px 0 0 0" }}>
@@ -135,7 +135,7 @@ export function ProcedureManualFormPage() {
             className="btn"
             onClick={handleSubmit}
             disabled={saving}
-            style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", color: "#fff", fontWeight: 700 }}
+            style={{ background: "linear-gradient(135deg, var(--lc-violet), var(--lc-violet))", color: "#fff", fontWeight: 700 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Procedimiento"}
           </button>
@@ -146,7 +146,7 @@ export function ProcedureManualFormPage() {
 
       <form onSubmit={handleSubmit} className="stack" style={{ gap: 20 }}>
         {/* Card 1: Identificación */}
-        <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid #8b5cf6" }}>
+        <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-violet)" }}>
           <h2 style={{ fontSize: "1.15rem", margin: 0 }}>1. Identificación y Alcance del Procedimiento</h2>
 
           <div className="grid-3">
@@ -217,7 +217,7 @@ export function ProcedureManualFormPage() {
         </div>
 
         {/* Card 2: Contenido & Enlaces */}
-        <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid #3b82f6" }}>
+        <div className="card pad stack" style={{ gap: 16, borderLeft: "5px solid var(--lc-info)" }}>
           <h2 style={{ fontSize: "1.15rem", margin: 0 }}>2. Descripción del Contenido y Documento Adjunto</h2>
 
           <label>
@@ -258,7 +258,7 @@ export function ProcedureManualFormPage() {
             type="submit"
             className="btn"
             disabled={saving}
-            style={{ background: "linear-gradient(135deg, #8b5cf6, #7c3aed)", color: "#fff", fontWeight: 700 }}
+            style={{ background: "linear-gradient(135deg, var(--lc-violet), var(--lc-violet))", color: "#fff", fontWeight: 700 }}
           >
             {saving ? "Guardando..." : "💾 Guardar Procedimiento"}
           </button>
