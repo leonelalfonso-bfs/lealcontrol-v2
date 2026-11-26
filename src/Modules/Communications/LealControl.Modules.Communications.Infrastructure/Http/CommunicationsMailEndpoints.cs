@@ -35,7 +35,7 @@ internal static class CommunicationsMailEndpoints
                     Provider = x.Provider.ToString(), AuthMode = x.AuthMode.ToString(),
                     x.ImapHost, x.ImapPort, x.ImapUseSsl, x.SmtpHost, x.SmtpPort, x.SmtpUseSsl, x.Username,
                     x.IsActive, x.AutoSyncEnabled, GlobalAutoSyncEnabled = globalAutoSyncEnabled,
-                    x.IsDefaultSender, x.LastSyncAtUtc, x.LastError, x.Signature, x.IncomingFolders, x.SentFolder,
+                    x.IsDefaultSender, x.LastSyncAtUtc, x.LastError, x.Signature, x.SignatureLogoUrl, x.IncomingFolders, x.SentFolder,
                     HasSecret = x.ProtectedSecret != "",
                     OAuthConnected = x.AuthMode == MailAuthMode.OAuth2 && x.OAuthConnectedAtUtc != null && x.ProtectedSecret != "",
                     x.OAuthConnectedAtUtc

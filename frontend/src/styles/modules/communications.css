@@ -93,7 +93,11 @@
 .inbox-shell-email .inbox-list-column, .inbox-shell-email .message-list, .inbox-shell-email .message-reader, .inbox-shell-email .inbox-context {min-height: 0; height: 100%;}
 .inbox-shell-email .inbox-thread-messages {flex: 1; min-height: 0; overflow-y: auto;}
 .inbox-shell-email .inbox-email-card {flex-shrink: 0;}
-.inbox-shell-email .message-html {height: clamp(280px, 42vh, 520px);}
+.inbox-shell-email .message-html {min-height: 160px;}
+.inbox-email-outgoing {border-left: 3px solid var(--lc-accent);}
+.inbox-email-incoming {border-left: 3px solid var(--lc-line-2);}
+.inbox-email-addresses {display: grid; gap: 3px; min-width: 0;}
+.inbox-email-subject {margin: 0 0 12px; font-size: 1rem; line-height: 1.35;}
 .inbox-thread-header {display: grid; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--lc-line); background: var(--lc-surface);}
 .inbox-thread-identity {min-width: 0;}
 .inbox-thread-title {display: flex; align-items: flex-start; gap: 10px; min-width: 0;}
@@ -136,11 +140,10 @@
 @media (max-width: 850px) {
   .channel-grid {grid-template-columns: 1fr;}
 }
-.message-html {display: block; min-height: 620px;}
+.message-html {display: block; width: 100%; min-height: 160px; border: 1px solid var(--lc-line); border-radius: 10px; background: white;}
 .channel-filter {display: flex; gap: 8px; margin-bottom: 14px; padding: 8px; overflow-x: auto; background: rgba(255,255,255,.58);}
 .channel-filter button {display: flex; align-items: center; gap: 8px; min-width: 120px; padding: 10px 13px; border: 1px solid transparent; border-radius: 11px; background: transparent; color: var(--lc-ink-2); font: inherit; cursor: pointer;}
 .channel-filter button:hover, .channel-filter button.selected {border-color: rgba(93,103,206,.18); background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(231,235,255,.86)); color: var(--lc-accent);}
-.message-html {width: 100%; min-height: 520px; border: 1px solid var(--lc-line); border-radius: 10px; background: white;}
 .account-cards {display: grid;
   grid-template-columns: repeat(3, minmax(260px, 1fr));
   gap: 18px;}

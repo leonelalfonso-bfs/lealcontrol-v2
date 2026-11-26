@@ -1353,6 +1353,7 @@ export type MailAccount = {
   username: string; isActive: boolean; autoSyncEnabled: boolean; globalAutoSyncEnabled: boolean; isDefaultSender: boolean;
   lastSyncAtUtc?: string | null; lastError?: string | null; hasSecret: boolean;
   signature?: string | null;
+  signatureLogoUrl?: string | null;
   incomingFolders?: string;
   sentFolder?: string | null;
   oauthConnected?: boolean;
