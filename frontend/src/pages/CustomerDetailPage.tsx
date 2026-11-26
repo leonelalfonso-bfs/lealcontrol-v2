@@ -445,11 +445,13 @@ export function CustomerDetailPage() {
                 return (
                   <div key={c.id} style={{ marginBottom: 12, paddingBottom: 10, borderBottom: "1px solid var(--lc-line)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
+                      <div className="row" style={{ gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                         <strong>{c.name}</strong>
-                        <span className="muted t-small" style={{ marginLeft: "6px" }}>({label(c.role)})</span>
-                        {c.isPrimary && <span className="t-small t-ok t-strong" style={{ marginLeft: "6px", padding: "2px 6px", borderRadius: "8px", background: "var(--lc-ok-bg)" }}>Principal</span>}
-                        {locName && <span className="t-small muted" style={{ marginLeft: "6px", padding: "2px 6px", borderRadius: "8px", background: "var(--lc-surface-2)" }}>📌 {locName}</span>}
+                        {c.position && <span className="t-small">{c.position}</span>}
+                        <span className="muted t-small">({label(c.role)})</span>
+                        {c.isPrimary && <span className="badge ok">Principal</span>}
+                        {c.addedAutomatically && <span className="badge off">Cargado automáticamente</span>}
+                        {locName && <span className="badge off">📌 {locName}</span>}
                       </div>
                       {(c.whatsApp || c.phone) && (
                         <button
@@ -539,8 +541,14 @@ export function CustomerDetailPage() {
               <div key={c.id} style={{ marginBottom: 12, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--lc-line)", background: "white" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <strong>{c.name}</strong> ({label(c.role)}) {c.isPrimary && <span className="t-small t-ok t-strong" style={{ marginLeft: 6, padding: "2px 6px", borderRadius: 6, background: "var(--lc-ok-bg)" }}>Principal</span>}
-                    {locName && <span className="t-small muted" style={{ marginLeft: 8, padding: "2px 6px", borderRadius: 6, background: "var(--lc-surface-2)" }}>📌 Planta: {locName}</span>}
+                    <div className="row" style={{ gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                      <strong>{c.name}</strong>
+                      {c.position && <span className="t-small">{c.position}</span>}
+                      <span className="muted t-small">({label(c.role)})</span>
+                      {c.isPrimary && <span className="badge ok">Principal</span>}
+                      {c.addedAutomatically && <span className="badge off">Cargado automáticamente</span>}
+                      {locName && <span className="badge off">📌 Planta: {locName}</span>}
+                    </div>
                     <div className="muted t-small" style={{ marginTop: 4 }}>
                       {c.email && `✉️ Email: ${c.email} `}
                       {c.phone && `| 📞 Tel: ${c.phone} `}
@@ -740,6 +748,7 @@ function ContactForm({
   onSaved: () => void;
 }) {
   const [name, setName] = useState(initialData?.name ?? "");
+  const [position, setPosition] = useState(initialData?.position ?? "");
   const [role, setRole] = useState(initialData?.role ?? "Commercial");
   const [locationId, setLocationId] = useState(initialData?.locationId ?? "");
   const [email, setEmail] = useState(initialData?.email ?? "");
@@ -750,6 +759,7 @@ function ContactForm({
   useEffect(() => {
     if (initialData) {
       setName(initialData.name);
+      setPosition(initialData.position ?? "");
       setRole(initialData.role);
       setLocationId(initialData.locationId ?? "");
       setEmail(initialData.email ?? "");
@@ -758,6 +768,7 @@ function ContactForm({
       setIsPrimary(initialData.isPrimary);
     } else {
       setName("");
+      setPosition("");
       setRole("Commercial");
       setLocationId("");
       setEmail("");
@@ -771,6 +782,7 @@ function ContactForm({
     e.preventDefault();
     const body = {
       name,
+      position: position.trim() || null,
       role,
       locationId: locationId || null,
       email: email || undefined,
@@ -790,9 +802,10 @@ function ContactForm({
   return (
     <form onSubmit={submit} style={{ marginTop: 16, display: "grid", gap: 12 }}>
       <h4 style={{ margin: 0 }}>{initialData ? "✏️ Editar Contacto" : "+ Registrar Nuevo Contacto"}</h4>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
         <label>Nombre y Apellido *<input value={name} onChange={(e) => setName(e.target.value)} required placeholder="Ej: Ing. Carlos Gómez" style={{ width: "100%" }} /></label>
-        <label>Rol / Función
+        <label>Puesto / Cargo<input value={position} onChange={(e) => setPosition(e.target.value)} maxLength={120} placeholder="Ej: Jefe de Planta, Comprador" style={{ width: "100%" }} /></label>
+        <label>Área
           <select value={role} onChange={(e) => setRole(e.target.value)} style={{ width: "100%" }}>
             <option value="Commercial">Comercial / Compras</option>
             <option value="Technical">Técnico / Mantenimiento</option>

@@ -86,7 +86,9 @@ public sealed record ContactDto(
     string? Phone,
     string? WhatsApp,
     bool IsPrimary,
-    string? Notes);
+    string? Notes,
+    string? Position = null,
+    bool AddedAutomatically = false);
 
 public sealed record EquipmentDto(
     Guid Id,
@@ -181,7 +183,9 @@ public static class CustomerMappings
             c.Phone?.Value,
             c.WhatsApp?.Value,
             c.IsPrimary,
-            c.Notes)).ToList(),
+            c.Notes,
+            c.Position,
+            c.AddedAutomatically)).ToList(),
         customer.Equipments.Select(e => new EquipmentDto(
             e.Id.Value,
             e.InternalCode,

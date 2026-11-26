@@ -44,7 +44,8 @@ public sealed record AddCustomerContactCommand(
     string? Phone,
     string? WhatsApp,
     bool IsPrimary,
-    string? Notes) : IRequest<Result<CustomerDetailDto>>;
+    string? Notes,
+    string? Position = null) : IRequest<Result<CustomerDetailDto>>;
 
 public sealed record UpdateCustomerContactCommand(
     Guid CustomerId,
@@ -56,7 +57,8 @@ public sealed record UpdateCustomerContactCommand(
     string? Phone,
     string? WhatsApp,
     bool IsPrimary,
-    string? Notes) : IRequest<Result<CustomerDetailDto>>;
+    string? Notes,
+    string? Position = null) : IRequest<Result<CustomerDetailDto>>;
 
 public sealed record RemoveCustomerContactCommand(Guid CustomerId, Guid ContactId)
     : IRequest<Result<CustomerDetailDto>>;
@@ -189,7 +191,8 @@ internal sealed class CustomerChildCommandHandler :
                     channels.Value.WhatsApp,
                     request.IsPrimary,
                     request.Notes,
-                    _clock.UtcNow);
+                    _clock.UtcNow,
+                    request.Position);
         });
 
     public Task<Result<CustomerDetailDto>> Handle(UpdateCustomerContactCommand request, CancellationToken cancellationToken)
@@ -208,7 +211,8 @@ internal sealed class CustomerChildCommandHandler :
                     channels.Value.WhatsApp,
                     request.IsPrimary,
                     request.Notes,
-                    _clock.UtcNow);
+                    _clock.UtcNow,
+                    request.Position);
         });
 
     public Task<Result<CustomerDetailDto>> Handle(RemoveCustomerContactCommand request, CancellationToken cancellationToken)

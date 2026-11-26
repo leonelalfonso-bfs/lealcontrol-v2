@@ -1241,6 +1241,27 @@ export function InboxPage() {
                 </div>
               )}
 
+              {/* Sugerencia de cliente existente cuando el hilo todavía no tiene cliente vinculado */}
+              {!showLeadSuggestion && !activeConversation.relatedCustomerId && suggestedMatches.length > 0 && (
+                <div className="card pad" style={{ margin: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <strong className="t-small">¿Es de alguno de estos clientes?</strong>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {suggestedMatches.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className="btn ghost compact"
+                        style={{ justifyContent: "flex-start" }}
+                        disabled={busy}
+                        onClick={() => void linkCustomerToThread(m.id)}
+                      >
+                        🔗 {m.tradeName || m.legalName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
 
             </>
           ) : (
