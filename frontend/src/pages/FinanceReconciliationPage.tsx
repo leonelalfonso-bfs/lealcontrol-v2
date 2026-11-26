@@ -179,13 +179,13 @@ export function FinanceReconciliationPage() {
             </button>
           </div>
           {tray.pendingSystem > 0 && (
-            <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+            <p className="muted t-small" style={{ margin: 0 }}>
               Hay {tray.pendingSystem} cobro(s) o pago(s) del sistema que todavía no aparecieron en el extracto.
             </p>
           )}
           <div className="card pad table-wrap">
-            <table style={{ fontSize: "0.86rem" }}>
-              <thead><tr><th /><th>Fecha</th><th>Movimiento del banco</th><th style={{ textAlign: "right" }}>Débito</th><th style={{ textAlign: "right" }}>Crédito</th><th>Acción sugerida</th></tr></thead>
+            <table>
+              <thead><tr><th /><th>Fecha</th><th>Movimiento del banco</th><th className="t-right">Débito</th><th className="t-right">Crédito</th><th>Acción sugerida</th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
@@ -201,14 +201,14 @@ export function FinanceReconciliationPage() {
                     <td>{day(r.operationDateUtc)}</td>
                     <td>
                       {r.description}
-                      {r.counterpartyTaxId && <div className="muted" style={{ fontSize: "0.75rem" }}>CUIT {r.counterpartyTaxId}</div>}
+                      {r.counterpartyTaxId && <div className="muted t-small">CUIT {r.counterpartyTaxId}</div>}
                     </td>
-                    <td style={{ textAlign: "right" }}>{isDebit(r) ? money(r.amount) : ""}</td>
-                    <td style={{ textAlign: "right" }}>{isDebit(r) ? "" : money(r.amount)}</td>
+                    <td className="t-right">{isDebit(r) ? money(r.amount) : ""}</td>
+                    <td className="t-right">{isDebit(r) ? "" : money(r.amount)}</td>
                     <td><div className="row" style={{ gap: 6, flexWrap: "wrap" }}>{action(r)}{chequePicker(r)}{transferPicker(r)}</div></td>
                   </tr>
                 ))}
-                {rows.length === 0 && <tr><td colSpan={6} className="muted" style={{ padding: 16 }}>No hay movimientos pendientes.</td></tr>}
+                {rows.length === 0 && <tr><td colSpan={6} className="muted">No hay movimientos pendientes.</td></tr>}
               </tbody>
             </table>
           </div>

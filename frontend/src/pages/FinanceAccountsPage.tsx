@@ -756,7 +756,6 @@ export function FinanceAccountsPage() {
                 type="button"
                 className="btn btn-primary"
                 onClick={() => setShowManualMovement(true)}
-                style={{ fontWeight: 700 }}
               >
                 + Cargar movimiento
               </button>
@@ -782,7 +781,6 @@ export function FinanceAccountsPage() {
                     setImportSummary(null);
                     setImportRequiresMapping(false);
                   }}
-                  style={{ fontWeight: 700 }}
                 >
                   Importar extracto CSV
                 </button>
@@ -818,7 +816,7 @@ export function FinanceAccountsPage() {
         </div>
 
         {error && (
-          <div className="alert" style={{ background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderColor: "var(--lc-danger)", marginBottom: 16 }}>
+          <div className="alert" style={{ marginBottom: 16 }}>
             ⚠️ {error}
           </div>
         )}
@@ -826,12 +824,7 @@ export function FinanceAccountsPage() {
         {successMsg && (
           <div
             className="alert"
-            style={{
-              background: "var(--lc-ok-bg)",
-              color: "var(--lc-ok)",
-              borderColor: "var(--lc-ok-bg)",
-              marginBottom: 16
-            }}
+            style={{ marginBottom: 16 }}
           >
             ✓ {successMsg}
           </div>
@@ -841,29 +834,29 @@ export function FinanceAccountsPage() {
         <div className="kpi kpi-4" style={{ marginBottom: 20 }}>
           <div className="card">
             <span className="muted">Saldo Actual en Sistema</span>
-            <h3 style={{ margin: "4px 0 0 0", color: selectedAccount.balance < 0 ? "var(--lc-danger)" : "var(--lc-ink)", fontSize: "1.35rem", fontWeight: 800 }}>
+            <h3 style={{ margin: "4px 0 0 0", color: selectedAccount.balance < 0 ? "var(--lc-danger)" : "var(--lc-ink)" }}>
               {money(selectedAccount.balance, selectedAccount.currency)}
             </h3>
           </div>
           <div className="card">
             <span className="muted">Total Ingresos (Filtro)</span>
-            <h3 style={{ margin: "4px 0 0 0", color: "var(--lc-ok)", fontSize: "1.35rem", fontWeight: 800 }}>
+            <h3 style={{ margin: "4px 0 0 0" }}>
               +{money(filteredCredits, selectedAccount.currency)}
             </h3>
           </div>
           <div className="card">
             <span className="muted">Total Egresos (Filtro)</span>
-            <h3 style={{ margin: "4px 0 0 0", color: "var(--lc-danger)", fontSize: "1.35rem", fontWeight: 800 }}>
+            <h3 style={{ margin: "4px 0 0 0" }}>
               −{money(filteredDebits, selectedAccount.currency)}
             </h3>
           </div>
           <div className="card">
             <span className="muted">Clasificación de Tesorería</span>
             <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-              <span style={{ color: "var(--lc-ok)", fontWeight: 700, fontSize: "0.88rem" }}>
+              <span className="t-ok t-strong">
                 ✓ {totalConfirmed} confirmados
               </span>
-              <span style={{ color: "var(--lc-warn)", fontWeight: 700, fontSize: "0.88rem" }}>
+              <span className="t-warn t-strong">
                 ⏳ {totalPending + totalSuggested} pendientes
               </span>
             </div>
@@ -880,7 +873,7 @@ export function FinanceAccountsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Ej.: CONSORCIO, 30716480107, KRAFT, IIBB..."
-                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               />
             </label>
 
@@ -890,7 +883,7 @@ export function FinanceAccountsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               >
                 <option value="all">🔍 Todos ({movements.length})</option>
                 <option value="Pending">⏳ Pendientes ({totalPending})</option>
@@ -906,7 +899,7 @@ export function FinanceAccountsPage() {
                 <select
                   value={conceptFilter}
                   onChange={(e) => setConceptFilter(e.target.value)}
-                  style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                  style={{ width: "100%" }}
                 >
                   <option value="all">🏷️ Todos los conceptos</option>
                   {uniqueConcepts.map((c) => (
@@ -925,7 +918,7 @@ export function FinanceAccountsPage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               />
             </label>
 
@@ -936,7 +929,7 @@ export function FinanceAccountsPage() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                style={{ width: "100%" }}
               />
             </label>
 
@@ -975,7 +968,7 @@ export function FinanceAccountsPage() {
           <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 14 }}>
             <div>
               <h2 style={{ margin: 0 }}>Movimientos Bancarios</h2>
-              <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+              <p className="muted t-small" style={{ margin: 0 }}>
                 Mostrando {filteredMovements.length} de {movements.length} movimientos.
               </p>
             </div>
@@ -985,7 +978,6 @@ export function FinanceAccountsPage() {
                 className="btn btn-outline compact"
                 onClick={handleExportExcel}
                 disabled={filteredMovements.length === 0}
-                style={{ fontWeight: 600 }}
               >
                 📥 Descargar Excel
               </button>
@@ -1002,22 +994,22 @@ export function FinanceAccountsPage() {
                   <th>Concepto Tesorería</th>
                   <th>Estado</th>
                   <th>Tipo</th>
-                  <th style={{ textAlign: "right" }}>Importe</th>
-                  <th style={{ textAlign: "right" }}>Saldo sistema</th>
-                  <th style={{ textAlign: "right" }} title="Saldo que informa el extracto del banco en ese renglón">Saldo extracto</th>
-                  <th style={{ textAlign: "center", width: "160px" }}>Acción Clasificar</th>
+                  <th className="t-right">Importe</th>
+                  <th className="t-right">Saldo sistema</th>
+                  <th className="t-right" title="Saldo que informa el extracto del banco en ese renglón">Saldo extracto</th>
+                  <th className="t-center" style={{ width: "160px" }}>Acción Clasificar</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingMovements ? (
                   <tr>
-                    <td colSpan={10} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={10} className="muted t-center">
                       Cargando movimientos...
                     </td>
                   </tr>
                 ) : filteredMovements.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={10} className="muted t-center">
                       No hay movimientos que coincidan con los filtros aplicados.
                     </td>
                   </tr>
@@ -1048,29 +1040,29 @@ export function FinanceAccountsPage() {
                         <td>{businessDate(x.operationDateUtc)}</td>
                         <td>
                           <strong>{mainDesc}</strong>
-                          <small className="muted" style={{ display: "block", fontSize: "0.76rem" }}>
+                          <small className="muted t-small" style={{ display: "block" }}>
                             {x.externalReference ? `Comprobante N° ${x.externalReference}` : extra || "Sin comprobante"}
                           </small>
                         </td>
                         <td>
                           {titular ? (
                             <div>
-                              <strong style={{ color: "var(--lc-ink)", fontSize: "0.86rem", display: "block" }}>
+                              <strong style={{ fontSize: "0.86rem", display: "block" }}>
                                 {titular}
                               </strong>
                               {cuit && (
-                                <small style={{ color: "var(--lc-info)", fontSize: "0.75rem", fontFamily: "monospace", fontWeight: 600 }}>
+                                <small className="t-info t-small t-mono t-strong">
                                   CUIT: {cuit}
                                 </small>
                               )}
                             </div>
                           ) : (
-                            <span className="muted" style={{ fontSize: "0.8rem" }}>—</span>
+                            <span className="muted t-small">—</span>
                           )}
                         </td>
                         <td>
                           {isDone ? (
-                            <span style={{ fontWeight: 600, color: "var(--lc-ok)" }}>
+                            <span className="t-strong t-ok">
                               🏷️ {x.conceptName || "Identificado"}
                             </span>
                           ) : (
@@ -1080,14 +1072,7 @@ export function FinanceAccountsPage() {
                                 onChange={(e) =>
                                   setInlineConcepts({ ...inlineConcepts, [x.id]: e.target.value })
                                 }
-                                style={{
-                                  fontSize: "0.82rem",
-                                  padding: "4px 6px",
-                                  borderRadius: "6px",
-                                  border: isSuggested ? "1px solid #f59e0b" : "1px solid var(--surface-border)",
-                                  background: isSuggested ? "#fffbeb" : "white",
-                                  maxWidth: "180px"
-                                }}
+                                style={{ border: isSuggested ? "1px solid #f59e0b" : "1px solid var(--surface-border)", background: isSuggested ? "#fffbeb" : "white", maxWidth: "180px" }}
                               >
                                 <option value="">⏳ Sin identificar</option>
                                 {concepts.map((c) => (
@@ -1102,122 +1087,71 @@ export function FinanceAccountsPage() {
                         <td>
                           {isReconciled ? (
                             <span
-                              className="badge ok"
-                              style={{
-                                background: "rgba(14, 165, 233, 0.15)",
-                                color: "var(--lc-info)",
-                                fontWeight: 700,
-                                padding: "2px 8px",
-                                borderRadius: 12,
-                                fontSize: "0.78rem"
-                              }}
+                              className="badge ok t-info t-strong t-small"
+                              style={{ background: "rgba(14, 165, 233, 0.15)", padding: "2px 8px", borderRadius: 12 }}
                             >
                               🔗 Conciliado
                             </span>
                           ) : isExcluded || (isConfirmed && (usable === "MovementOnly" || usable === "Transfer")) ? (
                             <span
-                              className="badge ok"
-                              style={{
-                                background: "rgba(16, 185, 129, 0.15)",
-                                color: "var(--lc-ok)",
-                                fontWeight: 700,
-                                padding: "2px 8px",
-                                borderRadius: 12,
-                                fontSize: "0.78rem"
-                              }}
+                              className="badge ok t-ok t-strong t-small"
+                              style={{ background: "rgba(16, 185, 129, 0.15)", padding: "2px 8px", borderRadius: 12 }}
                             >
                               ✓ Confirmado
                             </span>
                           ) : isConfirmed ? (
                             <span
-                              className="badge ok"
-                              style={{
-                                background: "rgba(16, 185, 129, 0.15)",
-                                color: "var(--lc-ok)",
-                                fontWeight: 700,
-                                padding: "2px 8px",
-                                borderRadius: 12,
-                                fontSize: "0.78rem"
-                              }}
+                              className="badge ok t-ok t-strong t-small"
+                              style={{ background: "rgba(16, 185, 129, 0.15)", padding: "2px 8px", borderRadius: 12 }}
                             >
                               ✓ Confirmado
                             </span>
                           ) : isSuggested ? (
                             <span
-                              className="badge warn"
-                              style={{
-                                background: "rgba(245, 158, 11, 0.15)",
-                                color: "var(--lc-warn)",
-                                fontWeight: 600,
-                                padding: "2px 8px",
-                                borderRadius: 12,
-                                fontSize: "0.78rem"
-                              }}
+                              className="badge warn t-warn t-strong t-small"
+                              style={{ background: "rgba(245, 158, 11, 0.15)", padding: "2px 8px", borderRadius: 12 }}
                             >
                               🟡 Sugerido
                             </span>
                           ) : (
                             <span
-                              className="badge off"
-                              style={{
-                                background: "rgba(100, 116, 139, 0.12)",
-                                color: "var(--lc-ink-2)",
-                                fontWeight: 500,
-                                padding: "2px 8px",
-                                borderRadius: 12,
-                                fontSize: "0.78rem"
-                              }}
+                              className="badge off muted t-small"
+                              style={{ background: "rgba(100, 116, 139, 0.12)", fontWeight: 500, padding: "2px 8px", borderRadius: 12 }}
                             >
                               ⏳ Pendiente
                             </span>
                           )}
                         </td>
                         <td>
-                          <span
-                            style={{
-                              color: x.kind === "Credit" ? "#059669" : "#dc2626",
-                              fontWeight: 600,
-                              fontSize: "0.85rem"
-                            }}
+                          <span className="t-strong t-small"
+                            style={{ color: x.kind === "Credit" ? "#059669" : "#dc2626" }}
                           >
                             {x.kind === "Credit" ? "Ingreso" : "Egreso"}
                           </span>
                         </td>
-                        <td
-                          style={{
-                            textAlign: "right",
-                            fontFamily: "monospace",
-                            fontWeight: 700,
-                            color: x.kind === "Credit" ? "#059669" : "#dc2626"
-                          }}
+                        <td className="t-right t-mono t-strong"
+                          style={{ color: x.kind === "Credit" ? "#059669" : "#dc2626" }}
                         >
                           {x.kind === "Credit" ? "+" : "−"}
                           {money(x.amount, x.currency)}
                         </td>
-                        <td
-                          style={{
-                            textAlign: "right",
-                            fontFamily: "monospace",
-                            fontWeight: 600,
-                            color: "var(--lc-ink)"
-                          }}
+                        <td className="t-right t-mono t-strong"
                         >
                           {money(x.systemBalance, x.currency)}
                         </td>
-                        <td
-                          style={{ textAlign: "right", fontFamily: "monospace" }}
+                        <td className="t-right t-mono"
                           title={x.reportedBalance != null && Math.abs(x.systemBalance - x.reportedBalance) > 0.01
                             ? `Diferencia con el sistema: ${money(x.systemBalance - x.reportedBalance, x.currency)}` : undefined}
                         >
                           {x.reportedBalance == null ? (
                             <span className="muted">—</span>
                           ) : (
-                            <span style={{ color: Math.abs(x.systemBalance - x.reportedBalance) > 0.01 ? "var(--lc-danger)" : "var(--lc-ok)", fontWeight: 600 }}>
+                            <span className="t-strong" style={{ color: Math.abs(x.systemBalance - x.reportedBalance) > 0.01 ? "var(--lc-danger)" : "var(--lc-ok)" }}>
                               {money(x.reportedBalance, x.currency)}
                             </span>
                           )}
                         </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="t-center">
                           {isPending ? (
                             <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
                               <button
@@ -1225,15 +1159,6 @@ export function FinanceAccountsPage() {
                                 className="btn compact"
                                 disabled={actionBusy === x.id || !(inlineConcepts[x.id] || x.conceptId)}
                                 onClick={() => handleClassifyInline(x.id)}
-                                style={{
-                                  fontSize: "0.75rem",
-                                  padding: "3px 8px",
-                                  background: "var(--lc-ok)",
-                                  borderColor: "var(--lc-ok)",
-                                  color: "white",
-                                  fontWeight: 700,
-                                  borderRadius: "6px"
-                                }}
                                 title="Confirmar clasificación de este movimiento"
                               >
                                 {actionBusy === x.id ? "..." : "✓ Confirmar"}
@@ -1242,30 +1167,18 @@ export function FinanceAccountsPage() {
                                 type="button"
                                 className="btn ghost compact"
                                 onClick={() => openClassifyModal(x)}
-                                style={{
-                                  fontSize: "0.75rem",
-                                  padding: "3px 6px",
-                                  borderRadius: "6px"
-                                }}
                                 title="Abrir opciones avanzadas o crear regla automática"
                               >
                                 ⚙
                               </button>
                             </div>
                           ) : isReconciled ? (
-                            <span style={{ fontSize: "0.75rem", color: "var(--lc-ok)", fontWeight: 700, background: "rgba(16, 185, 129, 0.1)", padding: "3px 8px", borderRadius: "6px" }}>
+                            <span className="t-small t-ok t-strong" style={{ background: "rgba(16, 185, 129, 0.1)", padding: "3px 8px", borderRadius: "6px" }}>
                               ✓ Conciliado
                             </span>
                           ) : isExcluded || usable === "MovementOnly" || usable === "Transfer" ? (
-                            <span
-                              style={{
-                                fontSize: "0.75rem",
-                                color: "var(--lc-ok)",
-                                fontWeight: 700,
-                                background: "rgba(16, 185, 129, 0.1)",
-                                padding: "3px 8px",
-                                borderRadius: "6px"
-                              }}
+                            <span className="t-small t-ok t-strong"
+                              style={{ background: "rgba(16, 185, 129, 0.1)", padding: "3px 8px", borderRadius: "6px" }}
                               title="Concepto de solo movimiento: no genera recibo ni orden de pago"
                             >
                               ✓ Cerrado
@@ -1276,18 +1189,7 @@ export function FinanceAccountsPage() {
                                 <Link
                                   to={`/finanzas/cobranzas?movementId=${x.id}&accountId=${selectedAccount.id}&amount=${x.amount}`}
                                   className="btn compact"
-                                  style={{
-                                    fontSize: "0.75rem",
-                                    padding: "2px 8px",
-                                    background: "var(--lc-info)",
-                                    borderColor: "var(--lc-info)",
-                                    color: "white",
-                                    fontWeight: 700,
-                                    borderRadius: "6px",
-                                    textDecoration: "none",
-                                    display: "inline-flex",
-                                    alignItems: "center"
-                                  }}
+                                  style={{ display: "inline-flex", alignItems: "center" }}
                                   title="Registrar cobro imputando esta transferencia"
                                 >
                                   💳 Cobrar
@@ -1296,18 +1198,7 @@ export function FinanceAccountsPage() {
                                 <Link
                                   to={`/finanzas/pagos/nueva?movementId=${x.id}&accountId=${selectedAccount.id}&amount=${x.amount}`}
                                   className="btn compact"
-                                  style={{
-                                    fontSize: "0.75rem",
-                                    padding: "2px 8px",
-                                    background: "var(--lc-warn)",
-                                    borderColor: "var(--lc-warn)",
-                                    color: "white",
-                                    fontWeight: 700,
-                                    borderRadius: "6px",
-                                    textDecoration: "none",
-                                    display: "inline-flex",
-                                    alignItems: "center"
-                                  }}
+                                  style={{ display: "inline-flex", alignItems: "center" }}
                                   title="Registrar orden de pago imputando este egreso"
                                 >
                                   💸 Pagar
@@ -1317,11 +1208,6 @@ export function FinanceAccountsPage() {
                                 type="button"
                                 className="btn ghost compact"
                                 onClick={() => openClassifyModal(x)}
-                                style={{
-                                  fontSize: "0.75rem",
-                                  padding: "2px 6px",
-                                  color: "var(--lc-ink-3)"
-                                }}
                                 title="Cambiar concepto o crear regla"
                               >
                                 ✏️
@@ -1359,14 +1245,13 @@ export function FinanceAccountsPage() {
                 className="btn btn-primary"
                 disabled={importLoading || (!importBase64 && !importCsv.trim()) || importRequiresMapping}
                 onClick={handleConfirmImport}
-                style={{ fontWeight: 700 }}
               >
                 {importLoading ? "Procesando…" : "Confirmar importación"}
               </button>
             </>
           )}
         >
-              <p className="muted" style={{ fontSize: "0.85rem", marginTop: 0 }}>
+              <p className="muted t-small" style={{ marginTop: 0 }}>
                 Subí el CSV del banco. Si el formato no se reconoce, mapeás las columnas una sola vez.
                 También podés descargar la <strong>plantilla LealControl</strong> (Fecha;Tipo;Importe;Descripcion;Referencia;Saldo).
               </p>
@@ -1412,7 +1297,7 @@ export function FinanceAccountsPage() {
                       }
                     }}
                     placeholder="Pegar filas del CSV aquí..."
-                    style={{ width: "100%", padding: "8px", fontFamily: "monospace", fontSize: "0.8rem", borderRadius: 6, border: "1px solid var(--surface-border)" }}
+                    style={{ width: "100%" }}
                   />
                 </label>
               </div>
@@ -1420,7 +1305,7 @@ export function FinanceAccountsPage() {
               {importRequiresMapping && (
                 <div style={{ marginBottom: 16, padding: 12, border: "1px solid var(--lc-warn-bg)", background: "var(--lc-warn-bg)", borderRadius: 8 }}>
                   <h4 style={{ margin: "0 0 8px 0" }}>Mapear columnas (se guarda para esta cuenta)</h4>
-                  <p className="muted" style={{ marginTop: 0, fontSize: "0.82rem" }}>
+                  <p className="muted t-small" style={{ marginTop: 0 }}>
                     Encabezados detectados: {(importHeaders || []).join(" · ") || "—"}
                   </p>
                   <div className="grid-2" style={{ gap: 10 }}>
@@ -1466,15 +1351,15 @@ export function FinanceAccountsPage() {
               )}
 
               {importSummary && !importRequiresMapping && (
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12, fontSize: "0.85rem" }}>
+                <div className="t-small" style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
                   <span>Nuevas: <strong>{(importSummary.valid || 0) - (importSummary.duplicates || 0) - (importSummary.systemMatches || 0) - (importSummary.ambiguousMatches || 0)}</strong></span>
                   <span>Duplicadas: <strong>{importSummary.duplicates || 0}</strong></span>
                   <span>Match sistema: <strong>{importSummary.systemMatches || 0}</strong></span>
                   {(importSummary.ambiguousMatches || 0) > 0 && (
-                    <span style={{ color: "var(--lc-warn)" }}>Ambiguas: <strong>{importSummary.ambiguousMatches}</strong></span>
+                    <span className="t-warn">Ambiguas: <strong>{importSummary.ambiguousMatches}</strong></span>
                   )}
                   {(importSummary.rejected || 0) > 0 && (
-                    <span style={{ color: "var(--lc-danger)" }}>Rechazadas: <strong>{importSummary.rejected}</strong></span>
+                    <span className="t-danger">Rechazadas: <strong>{importSummary.rejected}</strong></span>
                   )}
                 </div>
               )}
@@ -1490,7 +1375,7 @@ export function FinanceAccountsPage() {
                           <th>Movimiento</th>
                           <th>Estado</th>
                           <th>Tipo</th>
-                          <th style={{ textAlign: "right" }}>Importe</th>
+                          <th className="t-right">Importe</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1500,32 +1385,28 @@ export function FinanceAccountsPage() {
                             <td>
                               <strong>{row.description}</strong>
                               {row.externalReference && (
-                                <small className="muted" style={{ display: "block", fontSize: "0.72rem" }}>
+                                <small className="muted t-small" style={{ display: "block" }}>
                                   Ref: {row.externalReference}
                                 </small>
                               )}
                               {row.status === "match" && row.matchedSystemDateUtc && (
-                                <small style={{ display: "block", fontSize: "0.72rem", color: "var(--lc-info)", marginTop: 2 }}>
+                                <small className="t-small t-info" style={{ display: "block", marginTop: 2 }}>
                                   Matchea con movimiento del sistema del{" "}
                                   {businessDate(row.matchedSystemDateUtc)}
                                   {row.matchedSystemDescription ? ` · ${row.matchedSystemDescription}` : ""}
                                 </small>
                               )}
                               {row.error && (
-                                <small style={{ display: "block", color: "var(--lc-danger)" }}>{row.error}</small>
+                                <small className="t-danger" style={{ display: "block" }}>{row.error}</small>
                               )}
                             </td>
                             <td>
-                              <span style={{
-                                fontSize: "0.72rem",
-                                fontWeight: 700,
-                                color:
+                              <span className="t-small t-strong" style={{ color:
                                   row.status === "match" ? "#0369a1"
                                     : row.status === "duplicate" ? "#64748b"
                                       : row.status === "ambiguous" ? "#b45309"
                                         : row.status === "error" ? "#dc2626"
-                                          : "#059669"
-                              }}>
+                                          : "#059669" }}>
                                 {row.status === "match" ? "Match sistema"
                                   : row.status === "duplicate" ? "Duplicada"
                                     : row.status === "ambiguous" ? "Ambiguo"
@@ -1534,7 +1415,7 @@ export function FinanceAccountsPage() {
                               </span>
                             </td>
                             <td>{row.kind === 0 || row.kind === "Credit" ? "Ingreso" : "Egreso"}</td>
-                            <td style={{ textAlign: "right", fontWeight: 700, color: row.kind === 0 || row.kind === "Credit" ? "#059669" : "#dc2626" }}>
+                            <td className="t-right t-strong" style={{ color: row.kind === 0 || row.kind === "Credit" ? "#059669" : "#dc2626" }}>
                               {money(row.amount || 0, selectedAccount.currency)}
                             </td>
                           </tr>
@@ -1567,7 +1448,6 @@ export function FinanceAccountsPage() {
                 className="btn btn-primary"
                 disabled={actionBusy !== null || !modalConceptId}
                 onClick={handleSaveModalClassification}
-                style={{ fontWeight: 700 }}
               >
                 {actionBusy === modalMovement.id ? "Guardando..." : "✓ Confirmar Clasificación"}
               </button>
@@ -1576,24 +1456,24 @@ export function FinanceAccountsPage() {
         >
               {modalMovement ? (
               <>
-              <div style={{ background: "var(--lc-surface-2)", padding: "10px 12px", borderRadius: "6px", marginBottom: "16px", fontSize: "0.85rem" }}>
+              <div className="box t-small" style={{ marginBottom: "16px" }}>
                 <div><strong>Fecha:</strong> {businessDate(modalMovement.operationDateUtc)}</div>
                 <div><strong>Leyenda extracto:</strong> {modalMovement.description}</div>
                 <div>
                   <strong>Importe:</strong>{" "}
-                  <span style={{ color: modalMovement.kind === "Credit" ? "#059669" : "#dc2626", fontWeight: 700 }}>
+                  <span className="t-strong" style={{ color: modalMovement.kind === "Credit" ? "#059669" : "#dc2626" }}>
                     {modalMovement.kind === "Credit" ? "+" : "−"}{money(modalMovement.amount, modalMovement.currency)}
                   </span>
                 </div>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <label style={{ display: "block" }}>
+                <label>
                   <strong>Concepto de Tesorería *</strong>
                   <select
                     value={modalConceptId}
                     onChange={(e) => setModalConceptId(e.target.value)}
-                    style={{ width: "100%", marginTop: "4px", padding: "8px 10px", borderRadius: "6px", border: "1px solid var(--surface-border)" }}
+                    style={{ width: "100%", marginTop: "4px" }}
                   >
                     <option value="">-- Seleccionar concepto --</option>
                     {concepts.map((c) => (
@@ -1604,7 +1484,7 @@ export function FinanceAccountsPage() {
                   </select>
                 </label>
 
-                <label style={{ display: "flex", gap: "8px", alignItems: "center", fontSize: "0.88rem", marginTop: 4 }}>
+                <label style={{ gap: "8px", alignItems: "center", marginTop: 4 }}>
                   <input
                     type="checkbox"
                     checked={modalCreateRule}
@@ -1614,14 +1494,14 @@ export function FinanceAccountsPage() {
                 </label>
 
                 {modalCreateRule && (
-                  <div style={{ padding: "10px", background: "var(--lc-warn-bg)", borderRadius: "6px", border: "1px solid var(--lc-warn-bg)", fontSize: "0.82rem" }}>
-                    <label style={{ display: "block" }}>
+                  <div className="t-small" style={{ padding: "10px", background: "var(--lc-warn-bg)", borderRadius: "6px", border: "1px solid var(--lc-warn-bg)" }}>
+                    <label>
                       <strong>Texto a reconocer en futuros extractos:</strong>
                       <input
                         type="text"
                         value={modalPattern}
                         onChange={(e) => setModalPattern(e.target.value.toUpperCase())}
-                        style={{ width: "100%", marginTop: "4px", padding: "6px 8px", borderRadius: "4px", border: "1px solid var(--lc-line-2)" }}
+                        style={{ width: "100%", marginTop: "4px" }}
                       />
                     </label>
                     <small className="muted" style={{ display: "block", marginTop: "4px" }}>
@@ -1741,10 +1621,10 @@ export function FinanceAccountsPage() {
         onDone={() => { setSuccessMsg("Compras y Finanzas reiniciadas: corregí el saldo inicial de cada cuenta e importá los extractos."); void reloadAccounts(); }}
       />
       {error && <div className="alert">{error}</div>}
-      {successMsg && <div className="alert" style={{ background: "rgba(16,185,129,0.12)", color: "var(--lc-ok)" }}>{successMsg}</div>}
+      {successMsg && <div className="alert">{successMsg}</div>}
       {showAccountForm && (
         <section className="card pad" style={{ marginBottom: 22 }}>
-          <h2 style={{ marginTop: 0 }}>Nueva cuenta financiera</h2>
+          <h2>Nueva cuenta financiera</h2>
           <div className="grid-2">
             <label>
               Nombre
@@ -1801,7 +1681,7 @@ export function FinanceAccountsPage() {
               </select>
             </label>
           </div>
-          <p className="muted" style={{ marginTop: 10, fontSize: "0.85rem" }}>
+          <p className="muted t-small" style={{ marginTop: 10 }}>
             {accountForm.bookingMode === "Manual"
               ? "No podrás importar extractos. Solo carga manual de movimientos."
               : "Importás extractos CSV. También podés cargar expectativas manuales que se matchean al importar."}

@@ -575,7 +575,7 @@ export function PaymentOrderFormPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {/* Supplier Selector Card */}
           <section className="card pad">
-            <h2 style={{ margin: "0 0 12px 0", fontSize: "1.1rem" }}>1. Proveedor y Fecha</h2>
+            <h2 style={{ margin: "0 0 12px 0" }}>1. Proveedor y Fecha</h2>
             <div className="grid-2">
               <label>
                 Proveedor
@@ -637,8 +637,8 @@ export function PaymentOrderFormPage() {
           <section className="card pad">
             <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 12 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: "1.1rem" }}>2. Facturas de Compra a Cancelar</h2>
-                <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+                <h2 style={{ margin: 0 }}>2. Facturas de Compra a Cancelar</h2>
+                <p className="muted t-small" style={{ margin: 0 }}>
                   Seleccione las facturas que se cancelan total o parcialmente con este pago.
                 </p>
               </div>
@@ -654,11 +654,11 @@ export function PaymentOrderFormPage() {
             </div>
 
             {!selectedSupplierId ? (
-              <p className="muted" style={{ textAlign: "center", padding: 20 }}>
+              <p className="muted t-center" style={{ padding: 20 }}>
                 Seleccione un proveedor para visualizar sus facturas de compra pendientes.
               </p>
             ) : imputations.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 20 }}>
+              <div className="t-center" style={{ padding: 20 }}>
                 <p className="muted">
                   Este proveedor no tiene facturas de compra pendientes de pago.
                 </p>
@@ -674,8 +674,8 @@ export function PaymentOrderFormPage() {
                       <th style={{ width: 40 }}></th>
                       <th>Comprobante</th>
                       <th>Fecha</th>
-                      <th style={{ textAlign: "right" }}>Total Factura</th>
-                      <th style={{ textAlign: "right", width: 140 }}>Monto a Imputar</th>
+                      <th className="t-right">Total Factura</th>
+                      <th className="t-right" style={{ width: 140 }}>Monto a Imputar</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -699,18 +699,17 @@ export function PaymentOrderFormPage() {
                           </strong>
                         </td>
                         <td>{new Date(row.invoice.issueDate).toLocaleDateString("es-AR")}</td>
-                        <td style={{ textAlign: "right", fontWeight: 600 }}>
+                        <td className="t-right t-strong">
                           {money(row.invoice.total || 0)}
                           {row.invoice.pending < row.invoice.total - 0.01 && (
-                            <div className="muted" style={{ fontWeight: 400, fontSize: "0.8rem" }}>Saldo {money(row.invoice.pending)}</div>
+                            <div className="muted t-small" style={{ fontWeight: 400 }}>Saldo {money(row.invoice.pending)}</div>
                           )}
                         </td>
-                        <td style={{ textAlign: "right" }}>
-                          <input
+                        <td className="t-right">
+                          <input className="t-right"
                             type="number"
                             step="0.01"
                             min="0"
-                            style={{ textAlign: "right", padding: "4px 8px" }}
                             value={row.amountImputed}
                             onChange={(e) =>
                               handleImputedAmountChange(idx, parseFloat(e.target.value) || 0)
@@ -722,10 +721,10 @@ export function PaymentOrderFormPage() {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <th colSpan={4} style={{ textAlign: "right" }}>
+                      <th className="t-right" colSpan={4}>
                         Total Facturas Imputadas:
                       </th>
-                      <th style={{ textAlign: "right", color: "var(--lc-ok)", fontSize: "1rem" }}>
+                      <th className="t-right t-ok">
                         {money(totalImputed)}
                       </th>
                     </tr>
@@ -742,8 +741,8 @@ export function PaymentOrderFormPage() {
           <section className="card pad">
             <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: "1.1rem" }}>3. Medios de Pago y Valores</h2>
-                <p className="muted" style={{ margin: 0, fontSize: "0.8rem" }}>
+                <h2 style={{ margin: 0 }}>3. Medios de Pago y Valores</h2>
+                <p className="muted t-small" style={{ margin: 0 }}>
                   Lista de lo cargado. Cada medio se edita en el mismo modal.
                 </p>
               </div>
@@ -767,7 +766,7 @@ export function PaymentOrderFormPage() {
             </div>
 
             {lines.length === 0 ? (
-              <p className="muted" style={{ textAlign: "center", padding: 20 }}>
+              <p className="muted t-center" style={{ padding: 20 }}>
                 Todavía no hay medios de pago. Usá los botones de arriba para agregar el primero.
               </p>
             ) : (
@@ -777,7 +776,7 @@ export function PaymentOrderFormPage() {
                     <tr>
                       <th>Medio</th>
                       <th>Detalle</th>
-                      <th style={{ textAlign: "right" }}>Importe</th>
+                      <th className="t-right">Importe</th>
                       <th style={{ width: 120 }}></th>
                     </tr>
                   </thead>
@@ -788,7 +787,7 @@ export function PaymentOrderFormPage() {
                           <strong>{METHOD_LABELS[line.method]}</strong>
                         </td>
                         <td style={{ fontSize: "0.86rem" }}>{lineDetail(line)}</td>
-                        <td style={{ textAlign: "right", fontWeight: 700 }}>{money(line.amount, line.currency)}</td>
+                        <td className="t-right t-strong">{money(line.amount, line.currency)}</td>
                         <td>
                           <div className="toolbar" style={{ gap: 4, justifyContent: "flex-end" }}>
                             <button
@@ -800,8 +799,7 @@ export function PaymentOrderFormPage() {
                             </button>
                             <button
                               type="button"
-                              className="btn ghost btn-sm"
-                              style={{ color: "var(--lc-danger)" }}
+                              className="btn ghost btn-sm btn-outline danger"
                               onClick={() => removeLine(line.id)}
                               title="Eliminar"
                             >
@@ -814,10 +812,10 @@ export function PaymentOrderFormPage() {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <th colSpan={2} style={{ textAlign: "right" }}>
+                      <th className="t-right" colSpan={2}>
                         Total medios:
                       </th>
-                      <th style={{ textAlign: "right", color: "var(--lc-ok)" }}>{money(totalPaymentLines)}</th>
+                      <th className="t-right t-ok">{money(totalPaymentLines)}</th>
                       <th />
                     </tr>
                   </tfoot>
@@ -829,12 +827,9 @@ export function PaymentOrderFormPage() {
           {/* Balance & Summary Card */}
           <section
             className="card pad"
-            style={{
-              borderTop: "4px solid var(--lc-info)",
-              background: "var(--surface, var(--lc-surface))"
-            }}
+            style={{ borderTop: "4px solid var(--lc-info)" }}
           >
-            <h2 style={{ margin: "0 0 14px 0", fontSize: "1.1rem" }}>4. Resumen de la Orden de Pago</h2>
+            <h2 style={{ margin: "0 0 14px 0" }}>4. Resumen de la Orden de Pago</h2>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -850,8 +845,8 @@ export function PaymentOrderFormPage() {
               <hr style={{ border: "none", borderTop: "1px solid var(--border, var(--lc-line))", margin: "4px 0" }} />
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "1.05rem", fontWeight: 700 }}>Total Orden de Pago:</span>
-                <span style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--lc-ok)" }}>
+                <span className="t-strong" style={{ fontSize: "1.05rem" }}>Total Orden de Pago:</span>
+                <span className="t-strong t-ok" style={{ fontSize: "1.3rem" }}>
                   {money(totalOrderAmount)}
                 </span>
               </div>
@@ -860,31 +855,15 @@ export function PaymentOrderFormPage() {
                 <div style={{ marginTop: 8 }}>
                   {Math.abs(difference) <= 0.01 ? (
                     <div
-                      className="badge ok"
-                      style={{
-                        display: "block",
-                        textAlign: "center",
-                        padding: "8px 12px",
-                        background: "rgba(16, 185, 129, 0.15)",
-                        color: "var(--lc-ok)",
-                        fontWeight: 700,
-                        fontSize: "0.88rem"
-                      }}
+                      className="badge ok t-center t-ok t-strong"
+                      style={{ display: "block", padding: "8px 12px", background: "rgba(16, 185, 129, 0.15)" }}
                     >
                       ✓ Orden Balanceada: Imputación y Medios de Pago coinciden al 100%
                     </div>
                   ) : (
                     <div
-                      className="badge warn"
-                      style={{
-                        display: "block",
-                        textAlign: "center",
-                        padding: "8px 12px",
-                        background: "rgba(239, 68, 68, 0.12)",
-                        color: "var(--lc-danger)",
-                        fontWeight: 700,
-                        fontSize: "0.88rem"
-                      }}
+                      className="badge warn t-center t-danger t-strong"
+                      style={{ display: "block", padding: "8px 12px", background: "rgba(239, 68, 68, 0.12)" }}
                     >
                       ⚠️ Desbalance: {difference > 0 ? "Sobran" : "Faltan"} {money(Math.abs(difference))} en medios de pago
                     </div>
@@ -897,7 +876,7 @@ export function PaymentOrderFormPage() {
               <button
                 type="button"
                 className="btn"
-                style={{ width: "100%", padding: 12, fontSize: "1rem" }}
+                style={{ width: "100%" }}
                 disabled={saving || loading || !selectedSupplierId}
                 onClick={() => void handleSave()}
               >
@@ -1020,14 +999,8 @@ export function PaymentOrderFormPage() {
             )}
 
             {draftLine.method === "BankTransfer" && (
-              <div
-                style={{
-                  gridColumn: "span 2",
-                  background: "var(--lc-surface-2)",
-                  padding: 12,
-                  borderRadius: 6,
-                  border: "1px solid var(--lc-line)"
-                }}
+              <div className="box"
+                style={{ gridColumn: "span 2" }}
               >
                 <div
                   style={{
@@ -1039,11 +1012,11 @@ export function PaymentOrderFormPage() {
                     gap: 8
                   }}
                 >
-                  <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--lc-accent-strong)" }}>
+                  <span className="t-small t-strong t-accent">
                     Vincular transferencia del extracto (opcional)
                   </span>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <label style={{ fontSize: "0.75rem", color: "var(--lc-ink-3)", display: "flex", alignItems: "center", gap: 4 }}>
+                    <label style={{ alignItems: "center", gap: 4 }}>
                       Cartera
                       <select
                         value={movementConceptFilter}
@@ -1052,7 +1025,6 @@ export function PaymentOrderFormPage() {
                           setMovementConceptFilter(conceptId);
                           patchDraft({ bankMovementId: undefined, conceptId: conceptId || undefined });
                         }}
-                        style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid var(--lc-line-2)" }}
                       >
                         {expenseConcepts.map((c) => (
                           <option key={c.id} value={c.id}>
@@ -1061,7 +1033,7 @@ export function PaymentOrderFormPage() {
                         ))}
                       </select>
                     </label>
-                    <label style={{ fontSize: "0.75rem", color: "var(--lc-ink-3)", display: "flex", alignItems: "center", gap: 4 }}>
+                    <label style={{ alignItems: "center", gap: 4 }}>
                       Cuenta
                       <select
                         value={movementAccountFilter}
@@ -1072,7 +1044,6 @@ export function PaymentOrderFormPage() {
                             accountId: e.target.value || draftLine.accountId
                           });
                         }}
-                        style={{ fontSize: "0.75rem", padding: "2px 6px", borderRadius: 4, border: "1px solid var(--lc-line-2)" }}
                       >
                         <option value="">Todas las cuentas</option>
                         {accounts
@@ -1101,13 +1072,7 @@ export function PaymentOrderFormPage() {
                     });
                     if (mov) setDraftAmountText(String(Number(mov.amount)));
                   }}
-                  style={{
-                    width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: 6,
-                    border: "1px solid var(--lc-line-2)",
-                    fontSize: "0.85rem"
-                  }}
+                  style={{ width: "100%" }}
                 >
                   <option value="">
                     {loadingMovements

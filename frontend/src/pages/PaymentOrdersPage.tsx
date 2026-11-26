@@ -74,31 +74,31 @@ export function PaymentOrdersPage() {
       {/* Summary KPI Cards */}
       <div className="grid-3" style={{ marginBottom: 20 }}>
         <div className="card pad" style={{ borderLeft: "4px solid var(--lc-ok)" }}>
-          <span className="muted" style={{ fontSize: "0.82rem", textTransform: "uppercase", fontWeight: 700 }}>
+          <span className="muted t-small t-caps t-strong">
             Total Pagos Emitidos
           </span>
-          <h2 style={{ margin: "6px 0 0 0", color: "var(--lc-ok)", fontSize: "1.6rem" }}>
+          <h2 style={{ margin: "6px 0 0 0" }}>
             {money(totalPaid)}
           </h2>
           <small className="muted">{orders.length} órdenes registradas</small>
         </div>
 
         <div className="card pad" style={{ borderLeft: "4px solid var(--lc-info)" }}>
-          <span className="muted" style={{ fontSize: "0.82rem", textTransform: "uppercase", fontWeight: 700 }}>
+          <span className="muted t-small t-caps t-strong">
             Proveedores Abonados
           </span>
-          <h2 style={{ margin: "6px 0 0 0", color: "var(--lc-info)", fontSize: "1.6rem" }}>
+          <h2 style={{ margin: "6px 0 0 0" }}>
             {new Set(orders.map((o) => o.supplierName)).size}
           </h2>
           <small className="muted">Destinatarios únicos de pagos</small>
         </div>
 
         <div className="card pad" style={{ borderLeft: "4px solid var(--lc-warn)" }}>
-          <span className="muted" style={{ fontSize: "0.82rem", textTransform: "uppercase", fontWeight: 700 }}>
+          <span className="muted t-small t-caps t-strong">
             Acceso Rápido
           </span>
           <div style={{ marginTop: 8 }}>
-            <Link className="btn btn-sm" to="/finanzas/pagos/nueva" style={{ width: "100%", textAlign: "center" }}>
+            <Link className="btn btn-sm t-center" to="/finanzas/pagos/nueva" style={{ width: "100%" }}>
               + Cargar Pago a Proveedor
             </Link>
           </div>
@@ -127,15 +127,15 @@ export function PaymentOrdersPage() {
                 <th>Proveedor</th>
                 <th>CUIT</th>
                 <th>Facturas Imputadas</th>
-                <th style={{ textAlign: "right" }}>Importe Total</th>
+                <th className="t-right">Importe Total</th>
                 <th>Estado</th>
-                <th style={{ textAlign: "center" }}>Acciones</th>
+                <th className="t-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                  <td colSpan={8} className="muted t-center">
                     {loading
                       ? "Cargando órdenes de pago..."
                       : "No se encontraron órdenes de pago registradas."}
@@ -145,13 +145,13 @@ export function PaymentOrdersPage() {
                 filteredOrders.map((o) => (
                   <tr key={o.id}>
                     <td>
-                      <strong style={{ color: "var(--lc-info)" }}>{o.orderNumber}</strong>
+                      <strong className="t-info">{o.orderNumber}</strong>
                     </td>
                     <td>{businessDate(o.paymentDateUtc)}</td>
                     <td>
                       <strong>{o.supplierName}</strong>
                       {o.notes && (
-                        <small className="muted" style={{ display: "block", fontSize: "0.76rem" }}>
+                        <small className="muted t-small" style={{ display: "block" }}>
                           {o.notes}
                         </small>
                       )}
@@ -165,30 +165,23 @@ export function PaymentOrdersPage() {
                           📄 {o.invoicesCount} {o.invoicesCount === 1 ? "factura" : "facturas"}
                         </span>
                       ) : (
-                        <span className="muted" style={{ fontSize: "0.8rem" }}>
+                        <span className="muted t-small">
                           Pago a cuenta
                         </span>
                       )}
                     </td>
-                    <td style={{ textAlign: "right", fontWeight: 700, color: "var(--lc-ok)" }}>
+                    <td className="t-right t-strong t-ok">
                       {money(o.amount, o.currency)}
                     </td>
                     <td>
                       <span
-                        className="badge ok"
-                        style={{
-                          background: "rgba(16, 185, 129, 0.15)",
-                          color: "var(--lc-ok)",
-                          fontWeight: 700,
-                          padding: "3px 8px",
-                          borderRadius: 12,
-                          fontSize: "0.78rem"
-                        }}
+                        className="badge ok t-ok t-strong t-small"
+                        style={{ background: "rgba(16, 185, 129, 0.15)", padding: "3px 8px", borderRadius: 12 }}
                       >
                         ✓ {o.status === "Confirmed" ? "Confirmada" : o.status}
                       </span>
                     </td>
-                    <td style={{ textAlign: "center" }}>
+                    <td className="t-center">
                       <div className="toolbar" style={{ justifyContent: "center", gap: 6 }}>
                         <Link
                           className="btn btn-outline btn-sm"
@@ -199,8 +192,7 @@ export function PaymentOrdersPage() {
                         </Link>
                         {canVoid && o.status !== "Voided" && (
                           <button
-                            className="btn btn-sm btn-outline"
-                            style={{ color: "var(--lc-danger)" }}
+                            className="btn btn-sm btn-outline danger"
                             onClick={async () => {
                               const reason = window.prompt("Motivo de anulación de la OP:");
                               if (!reason?.trim()) return;

@@ -369,16 +369,16 @@ export function CurrentAccountsPage() {
                   <th>Comprobante</th>
                   <th>Número</th>
                   <th>Descripción</th>
-                  <th style={{ textAlign: "right" }}>Debe</th>
-                  <th style={{ textAlign: "right" }}>Haber</th>
-                  <th style={{ textAlign: "right" }}>Saldo de la cuenta</th>
-                  <th style={{ textAlign: "right" }}>Pendiente del comprobante</th>
+                  <th className="t-right">Debe</th>
+                  <th className="t-right">Haber</th>
+                  <th className="t-right">Saldo de la cuenta</th>
+                  <th className="t-right">Pendiente del comprobante</th>
                 </tr>
               </thead>
               <tbody>
                 {ledgerHistory.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={8} className="muted t-center">
                       Todavía no hay movimientos en esta cuenta.
                     </td>
                   </tr>
@@ -390,7 +390,7 @@ export function CurrentAccountsPage() {
                     <td>
                       {item.description}
                       {item.originalAmount && (
-                        <span style={{ display: "block", color: "var(--lc-info)", fontSize: "0.75rem", fontWeight: 700 }}>
+                        <span className="t-info t-small t-strong" style={{ display: "block" }}>
                           Original: {item.originalAmount}
                         </span>
                       )}
@@ -401,12 +401,12 @@ export function CurrentAccountsPage() {
                         </Link>
                       )}
                     </td>
-                    <td style={{ textAlign: "right" }}>{item.debit > 0 ? money(item.debit) : "—"}</td>
-                    <td style={{ textAlign: "right" }}>{item.credit > 0 ? money(item.credit) : "—"}</td>
-                    <td style={{ textAlign: "right", fontWeight: 700, color: item.balance > 0.01 ? "var(--lc-danger)" : item.balance < -0.01 ? "var(--lc-ok)" : "inherit" }}>
+                    <td className="t-right">{item.debit > 0 ? money(item.debit) : "—"}</td>
+                    <td className="t-right">{item.credit > 0 ? money(item.credit) : "—"}</td>
+                    <td className="t-right t-strong" style={{ color: item.balance > 0.01 ? "var(--lc-danger)" : item.balance < -0.01 ? "var(--lc-ok)" : "inherit" }}>
                       {money(item.balance)}
                     </td>
-                    <td style={{ textAlign: "right", color: item.documentBalance === "Cancelado" ? "#047857" : "inherit" }}>
+                    <td className="t-right" style={{ color: item.documentBalance === "Cancelado" ? "#047857" : "inherit" }}>
                       {item.documentBalance ?? "—"}
                     </td>
                   </tr>
@@ -438,68 +438,68 @@ export function CurrentAccountsPage() {
 
         {/* Hoja del estado de cuenta para el PDF (fuera de pantalla). */}
         <div style={{ position: "absolute", left: -10000, top: 0 }} aria-hidden="true">
-          <div id="account-statement-sheet" style={{ width: "190mm", padding: "6mm", background: "var(--lc-surface)", color: "var(--lc-ink)", fontFamily: "Helvetica, Arial, sans-serif", fontSize: "10px" }}>
-            <table style={{ width: "100%", borderBottom: "2px solid var(--lc-accent)", paddingBottom: 8, marginBottom: 10 }}>
+          <div id="account-statement-sheet" style={{ width: "190mm", padding: "6mm", background: "var(--lc-surface)", fontFamily: "Helvetica, Arial, sans-serif", fontSize: "10px" }}>
+            <table style={{ borderBottom: "2px solid var(--lc-accent)", paddingBottom: 8, marginBottom: 10 }}>
               <tbody>
                 <tr>
-                  <td style={{ verticalAlign: "top" }}>
+                  <td>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       {company?.logoUrl && <img src={company.logoUrl} alt="" crossOrigin="anonymous" style={{ maxHeight: 48, maxWidth: 140, objectFit: "contain" }} />}
                       <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--lc-accent-strong)" }}>{company?.legalName || ""}</div>
-                        {company?.tradeName && <div style={{ fontWeight: 600 }}>{company.tradeName}</div>}
+                        <div className="t-strong t-accent" style={{ fontSize: 14 }}>{company?.legalName || ""}</div>
+                        {company?.tradeName && <div className="t-strong">{company.tradeName}</div>}
                       </div>
                     </div>
-                    <div style={{ marginTop: 4, color: "var(--lc-ink-2)" }}>
+                    <div className="muted" style={{ marginTop: 4 }}>
                       {company?.documentNumber && <>CUIT {company.documentNumber} · </>}
                       {companyAddress}
                       {company?.email && <> · {company.email}</>}
                     </div>
                   </td>
-                  <td style={{ textAlign: "right", verticalAlign: "top" }}>
-                    <div style={{ fontSize: 15, fontWeight: 700 }}>ESTADO DE CUENTA CORRIENTE</div>
+                  <td className="t-right">
+                    <div className="t-strong" style={{ fontSize: 15 }}>ESTADO DE CUENTA CORRIENTE</div>
                     <div>Emitido el {today}</div>
                   </td>
                 </tr>
               </tbody>
             </table>
-            <div style={{ background: "var(--lc-surface-2)", border: "1px solid var(--lc-line)", borderRadius: 4, padding: "6px 8px", marginBottom: 10 }}>
+            <div className="box" style={{ marginBottom: 10 }}>
               <strong style={{ fontSize: 12 }}>{ledgerEntity.legalName}</strong>
               {ledgerEntity.tradeName && ledgerEntity.tradeName !== ledgerEntity.legalName && <> ({ledgerEntity.tradeName})</>}
               <div>CUIT: {ledgerEntity.documentNumber || "—"} · {roles}</div>
             </div>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table>
               <thead>
-                <tr style={{ background: "var(--lc-accent)", color: "#fff" }}>
+                <tr>
                   {["Fecha", "Comprobante", "Número", "Debe", "Haber", "Saldo"].map((h, i) => (
-                    <th key={h} style={{ padding: "4px 6px", textAlign: i >= 3 ? "right" : "left" }}>{h}</th>
+                    <th key={h} style={{ textAlign: i >= 3 ? "right" : "left" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {ledgerHistory.filter((item) => !item.pending).map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: "1px solid var(--lc-line)", color: item.muted ? "#94a3b8" : undefined }}>
-                    <td style={{ padding: "3px 6px" }}>{civilDate(item.date)}</td>
-                    <td style={{ padding: "3px 6px" }}>{item.type}{item.originalAmount ? ` · ${item.originalAmount}` : ""}</td>
-                    <td style={{ padding: "3px 6px", fontFamily: "monospace" }}>{item.number}</td>
-                    <td style={{ padding: "3px 6px", textAlign: "right" }}>{item.debit > 0 ? money(item.debit) : ""}</td>
-                    <td style={{ padding: "3px 6px", textAlign: "right" }}>{item.credit > 0 ? money(item.credit) : ""}</td>
-                    <td style={{ padding: "3px 6px", textAlign: "right", fontWeight: 700 }}>{money(item.balance)}</td>
+                  <tr key={idx} style={{ color: item.muted ? "#94a3b8" : undefined }}>
+                    <td>{civilDate(item.date)}</td>
+                    <td>{item.type}{item.originalAmount ? ` · ${item.originalAmount}` : ""}</td>
+                    <td className="t-mono">{item.number}</td>
+                    <td className="t-right">{item.debit > 0 ? money(item.debit) : ""}</td>
+                    <td className="t-right">{item.credit > 0 ? money(item.credit) : ""}</td>
+                    <td className="t-right t-strong">{money(item.balance)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div style={{ marginTop: 10, textAlign: "right", fontSize: 13, fontWeight: 700 }}>
+            <div className="t-right t-strong" style={{ marginTop: 10, fontSize: 13 }}>
               Saldo al {today}: {money(ledgerHistory.filter((item) => !item.pending).reduce(
                 (_, item) => item.balance, 0))}
             </div>
             {ledgerEntity.isCustomer && row && row.receivableBalanceUsd > 0.01 && (
-              <div style={{ marginTop: 4, textAlign: "right", color: "var(--lc-ink-2)" }}>
+              <div className="t-right muted" style={{ marginTop: 4 }}>
                 Incluye facturas en dólares por {money(row.receivableBalanceUsd, "USD")}, valuadas a la cotización de emisión.
                 Se cancelan en pesos a la cotización pactada del día de pago.
               </div>
             )}
-            <div style={{ marginTop: 18, color: "var(--lc-ink-3)", fontSize: 8.5, textAlign: "center" }}>
+            <div className="muted t-center" style={{ marginTop: 18, fontSize: 8.5 }}>
               Estado de cuenta informativo emitido por {company?.legalName || "la empresa"}. Ante cualquier diferencia, por favor comunicarse.
             </div>
           </div>
@@ -530,7 +530,7 @@ export function CurrentAccountsPage() {
       </div>
 
       {error && (
-        <div className="alert" style={{ background: "var(--lc-danger-bg)", color: "var(--lc-danger)", borderColor: "var(--lc-danger)", marginBottom: 16 }}>
+        <div className="alert" style={{ marginBottom: 16 }}>
           ⚠️ {error}
         </div>
       )}
@@ -539,18 +539,18 @@ export function CurrentAccountsPage() {
       <div className="kpi kpi-4" style={{ marginBottom: 24 }}>
         <div className="card">
           <span className="muted">Total a Cobrar Clientes (ARS)</span>
-          <strong style={{ fontSize: "1.4rem", color: "var(--lc-ok)" }}>{money(totalReceivablesArs)}</strong>
+          <strong className="t-ok" style={{ fontSize: "1.4rem" }}>{money(totalReceivablesArs)}</strong>
           {totalReceivablesUsd > 0.01 && (
-            <small style={{ display: "block", color: "var(--lc-info)", fontWeight: 700, marginTop: 2 }}>
+            <small className="t-info t-strong" style={{ display: "block", marginTop: 2 }}>
               + {money(totalReceivablesUsd, "USD")}
             </small>
           )}
         </div>
         <div className="card">
           <span className="muted">Total a Pagar Proveedores (ARS)</span>
-          <strong style={{ fontSize: "1.4rem", color: "var(--lc-danger)" }}>{money(totalPayablesArs)}</strong>
+          <strong className="t-danger" style={{ fontSize: "1.4rem" }}>{money(totalPayablesArs)}</strong>
           {totalPayablesUsd > 0.01 && (
-            <small style={{ display: "block", color: "var(--lc-info)", fontWeight: 700, marginTop: 2 }}>
+            <small className="t-info t-strong" style={{ display: "block", marginTop: 2 }}>
               + {money(totalPayablesUsd, "USD")}
             </small>
           )}
@@ -565,14 +565,14 @@ export function CurrentAccountsPage() {
           >
             {netGlobalBalance >= 0 ? `+${money(netGlobalBalance)}` : money(netGlobalBalance)}
           </strong>
-          <small className="muted" style={{ display: "block", marginTop: 2, fontSize: "0.75rem" }}>
+          <small className="muted t-small" style={{ display: "block", marginTop: 2 }}>
             {netGlobalBalance >= 0 ? "Superávit a favor" : "Déficit / Deuda neta"}
           </small>
         </div>
         <div className="card">
           <span className="muted">Cuentas Mixtas (Dual)</span>
           <strong style={{ fontSize: "1.4rem" }}>{dualCount}</strong>
-          <small className="muted" style={{ display: "block", marginTop: 2, fontSize: "0.75rem" }}>
+          <small className="muted t-small" style={{ display: "block", marginTop: 2 }}>
             Clientes que son proveedores
           </small>
         </div>
@@ -614,7 +614,7 @@ export function CurrentAccountsPage() {
               placeholder="Buscar por razón social, nombre de fantasía o CUIT"
               style={{ width: "100%", maxWidth: 520 }}
             />
-            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.85rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+            <label style={{ alignItems: "center", gap: 6, cursor: "pointer", whiteSpace: "nowrap" }}>
               <input
                 type="checkbox"
                 checked={onlyWithBalance}
@@ -640,7 +640,7 @@ export function CurrentAccountsPage() {
       {/* Tabla Principal */}
       <section className="card pad">
         {loading ? (
-          <div style={{ textAlign: "center", padding: 30 }} className="muted">
+          <div style={{ padding: 30 }} className="muted t-center">
             Cargando cuentas corrientes y saldos...
           </div>
         ) : tab === "customers" ? (
@@ -651,17 +651,17 @@ export function CurrentAccountsPage() {
                 <tr>
                   <th>Cliente / Razón Social</th>
                   <th>CUIT</th>
-                  <th style={{ textAlign: "right" }}>Facturado (ARS)</th>
-                  <th style={{ textAlign: "right" }}>Cobrado (ARS)</th>
-                  <th style={{ textAlign: "right" }}>Saldo Pendiente</th>
-                  <th style={{ textAlign: "center" }}>Estado</th>
-                  <th style={{ textAlign: "center" }}>Acciones</th>
+                  <th className="t-right">Facturado (ARS)</th>
+                  <th className="t-right">Cobrado (ARS)</th>
+                  <th className="t-right">Saldo Pendiente</th>
+                  <th className="t-center">Estado</th>
+                  <th className="t-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={7} className="muted t-center">
                       No se encontraron clientes con los filtros aplicados.
                     </td>
                   </tr>
@@ -670,62 +670,50 @@ export function CurrentAccountsPage() {
                     <tr key={row.entity.id} className="row-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) setLedgerEntity(row.entity); }}>
                       <td>
                         <strong>{row.entity.tradeName || row.entity.legalName}</strong>
-                        <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
+                        <small className="muted t-small" style={{ display: "block" }}>
                           {row.entity.legalName}
                         </small>
                       </td>
                       <td>
                         <code>{row.entity.documentNumber || "Sin CUIT"}</code>
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         {money(row.billedSalesArs)}
                         {row.billedSalesUsd > 0.01 && (
-                          <small className="muted" style={{ display: "block", fontSize: "0.72rem", color: "var(--lc-info)" }}>
+                          <small className="muted t-small t-info" style={{ display: "block" }}>
                             ({money(row.billedSalesUsd, "USD")})
                           </small>
                         )}
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         {money(row.collectedSalesArs)}
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         <strong
-                          style={{
-                            fontSize: "0.95rem",
-                            color: row.receivableBalance > 0.01 || row.receivableBalanceUsd > 0.01 ? "var(--lc-danger)" : "var(--lc-ok)"
-                          }}
+                          style={{ color: row.receivableBalance > 0.01 || row.receivableBalanceUsd > 0.01 ? "var(--lc-danger)" : "var(--lc-ok)" }}
                         >
                           {money(row.receivableBalance)}
                         </strong>
                         {row.receivableBalanceUsd > 0.01 && (
-                          <span
-                            style={{
-                              display: "inline-block",
-                              marginLeft: 6,
-                              padding: "1px 6px",
-                              borderRadius: 4,
-                              background: "var(--lc-info-bg)",
-                              color: "var(--lc-info)",
-                              fontSize: "0.75rem",
-                              fontWeight: 700
-                            }}
+                          <span className="t-info t-small t-strong"
+                            style={{ display: "inline-block", marginLeft: 6, padding: "1px 6px", borderRadius: 4, background: "var(--lc-info-bg)" }}
                           >
                             {money(row.receivableBalanceUsd, "USD")}
                           </span>
                         )}
                       </td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="t-center">
                         {row.receivableBalance > 0.01 || row.receivableBalanceUsd > 0.01 ? (
-                          <span className="badge" style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--lc-danger)" }}>
+                          <span className="badge t-danger" style={{ background: "rgba(239, 68, 68, 0.15)" }}>
                             🔴 Con Saldo Deudor
                           </span>
                         ) : (
-                          <span className="badge ok" style={{ background: "rgba(16, 185, 129, 0.15)", color: "var(--lc-ok)" }}>
+                          <span className="badge ok t-ok" style={{ background: "rgba(16, 185, 129, 0.15)" }}>
                             🟢 Al Día
                           </span>
                         )}
                       </td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="t-center">
                         <div className="toolbar" style={{ justifyContent: "center", gap: 6 }}>
                           <button
                             className="btn btn-outline compact"
@@ -757,17 +745,17 @@ export function CurrentAccountsPage() {
                 <tr>
                   <th>Proveedor / Razón Social</th>
                   <th>CUIT</th>
-                  <th style={{ textAlign: "right" }}>Facturado (ARS)</th>
-                  <th style={{ textAlign: "right" }}>Pagado (ARS)</th>
-                  <th style={{ textAlign: "right" }}>Saldo a Pagar</th>
-                  <th style={{ textAlign: "center" }}>Estado</th>
-                  <th style={{ textAlign: "center" }}>Acciones</th>
+                  <th className="t-right">Facturado (ARS)</th>
+                  <th className="t-right">Pagado (ARS)</th>
+                  <th className="t-right">Saldo a Pagar</th>
+                  <th className="t-center">Estado</th>
+                  <th className="t-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={7} className="muted t-center">
                       No se encontraron proveedores con los filtros aplicados.
                     </td>
                   </tr>
@@ -776,62 +764,50 @@ export function CurrentAccountsPage() {
                     <tr key={row.entity.id} className="row-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) setLedgerEntity(row.entity); }}>
                       <td>
                         <strong>{row.entity.tradeName || row.entity.legalName}</strong>
-                        <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
+                        <small className="muted t-small" style={{ display: "block" }}>
                           {row.entity.legalName}
                         </small>
                       </td>
                       <td>
                         <code>{row.entity.documentNumber || "Sin CUIT"}</code>
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         {money(row.billedPurchasesArs)}
                         {row.billedPurchasesUsd > 0.01 && (
-                          <small className="muted" style={{ display: "block", fontSize: "0.72rem", color: "var(--lc-info)" }}>
+                          <small className="muted t-small t-info" style={{ display: "block" }}>
                             ({money(row.billedPurchasesUsd, "USD")})
                           </small>
                         )}
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         {money(row.paidPurchasesArs)}
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="t-right">
                         <strong
-                          style={{
-                            fontSize: "0.95rem",
-                            color: row.payableBalance > 0.01 || row.payableBalanceUsd > 0.01 ? "var(--lc-danger)" : "var(--lc-ok)"
-                          }}
+                          style={{ color: row.payableBalance > 0.01 || row.payableBalanceUsd > 0.01 ? "var(--lc-danger)" : "var(--lc-ok)" }}
                         >
                           {money(row.payableBalance)}
                         </strong>
                         {row.payableBalanceUsd > 0.01 && (
-                          <span
-                            style={{
-                              display: "inline-block",
-                              marginLeft: 6,
-                              padding: "1px 6px",
-                              borderRadius: 4,
-                              background: "var(--lc-info-bg)",
-                              color: "var(--lc-info)",
-                              fontSize: "0.75rem",
-                              fontWeight: 700
-                            }}
+                          <span className="t-info t-small t-strong"
+                            style={{ display: "inline-block", marginLeft: 6, padding: "1px 6px", borderRadius: 4, background: "var(--lc-info-bg)" }}
                           >
                             {money(row.payableBalanceUsd, "USD")}
                           </span>
                         )}
                       </td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="t-center">
                         {row.payableBalance > 0.01 || row.payableBalanceUsd > 0.01 ? (
-                          <span className="badge" style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--lc-danger)" }}>
+                          <span className="badge t-danger" style={{ background: "rgba(239, 68, 68, 0.15)" }}>
                             🔴 Pendiente de Pago
                           </span>
                         ) : (
-                          <span className="badge ok" style={{ background: "rgba(16, 185, 129, 0.15)", color: "var(--lc-ok)" }}>
+                          <span className="badge ok t-ok" style={{ background: "rgba(16, 185, 129, 0.15)" }}>
                             🟢 Saldado
                           </span>
                         )}
                       </td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="t-center">
                         <div className="toolbar" style={{ justifyContent: "center", gap: 6 }}>
                           <button
                             className="btn btn-outline compact"
@@ -863,17 +839,17 @@ export function CurrentAccountsPage() {
                 <tr>
                   <th>Entidad Mixta (Cliente / Proveedor)</th>
                   <th>CUIT</th>
-                  <th style={{ textAlign: "right" }}>Crédito (A Cobrar)</th>
-                  <th style={{ textAlign: "right" }}>Débito (A Pagar)</th>
-                  <th style={{ textAlign: "right" }}>Posición Neta</th>
-                  <th style={{ textAlign: "center" }}>Situación</th>
-                  <th style={{ textAlign: "center" }}>Acciones</th>
+                  <th className="t-right">Crédito (A Cobrar)</th>
+                  <th className="t-right">Débito (A Pagar)</th>
+                  <th className="t-right">Posición Neta</th>
+                  <th className="t-center">Situación</th>
+                  <th className="t-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                    <td colSpan={7} className="muted t-center">
                       No se encontraron entidades mixtas con los filtros aplicados.
                     </td>
                   </tr>
@@ -884,43 +860,40 @@ export function CurrentAccountsPage() {
                       <tr key={row.entity.id} className="row-link" onClick={(e) => { if (!(e.target as HTMLElement).closest("a,button")) setLedgerEntity(row.entity); }}>
                         <td>
                           <strong>{row.entity.tradeName || row.entity.legalName}</strong>
-                          <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
+                          <small className="muted t-small" style={{ display: "block" }}>
                             {row.entity.legalName}
                           </small>
                         </td>
                         <td>
                           <code>{row.entity.documentNumber || "Sin CUIT"}</code>
                         </td>
-                        <td style={{ textAlign: "right", color: "var(--lc-ok)", fontWeight: 600 }}>
+                        <td className="t-right t-ok t-strong">
                           {money(row.receivableBalance)}
                         </td>
-                        <td style={{ textAlign: "right", color: "var(--lc-danger)", fontWeight: 600 }}>
+                        <td className="t-right t-danger t-strong">
                           {money(row.payableBalance)}
                         </td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="t-right">
                           <strong
-                            style={{
-                              fontSize: "1rem",
-                              color: net > 0.01 ? "var(--lc-ok)" : net < -0.01 ? "var(--lc-danger)" : "var(--lc-ink-3)"
-                            }}
+                            style={{ color: net > 0.01 ? "var(--lc-ok)" : net < -0.01 ? "var(--lc-danger)" : "var(--lc-ink-3)" }}
                           >
                             {net > 0 ? `+${money(net)}` : money(net)}
                           </strong>
                         </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="t-center">
                           {net > 0.01 ? (
-                            <span className="badge ok" style={{ background: "rgba(16, 185, 129, 0.15)", color: "var(--lc-ok)" }}>
+                            <span className="badge ok t-ok" style={{ background: "rgba(16, 185, 129, 0.15)" }}>
                               🟢 A cobrar neto
                             </span>
                           ) : net < -0.01 ? (
-                            <span className="badge" style={{ background: "rgba(239, 68, 68, 0.15)", color: "var(--lc-danger)" }}>
+                            <span className="badge t-danger" style={{ background: "rgba(239, 68, 68, 0.15)" }}>
                               🔴 A pagar neto
                             </span>
                           ) : (
                             <span className="badge">⚖️ Saldada / Equilibrada</span>
                           )}
                         </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="t-center">
                           <div className="toolbar" style={{ justifyContent: "center", gap: 6 }}>
                             <button
                               className="btn btn-outline compact"

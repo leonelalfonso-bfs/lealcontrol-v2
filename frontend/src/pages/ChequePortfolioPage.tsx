@@ -260,7 +260,7 @@ export function ChequePortfolioPage() {
       {error && <div className="alert">{error}</div>}
       {showCreate && (
         <section className="card pad" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0 }}>Alta manual — cheque {tab === "Received" ? "recibido" : "emitido"}</h3>
+          <h3>Alta manual — cheque {tab === "Received" ? "recibido" : "emitido"}</h3>
           <div className="toolbar" style={{ flexWrap: "wrap", gap: 10, alignItems: "flex-end" }}>
             <label>
               Número
@@ -352,7 +352,7 @@ export function ChequePortfolioPage() {
           </div>
         )}
       </Modal>
-      {overdueCount > 0 && <div className="alert" style={{ background: "rgba(245,158,11,0.15)" }}>⚠ {overdueCount} cheque(s) vencido(s) en cartera.</div>}
+      {overdueCount > 0 && <div className="alert">⚠ {overdueCount} cheque(s) vencido(s) en cartera.</div>}
       <section className="card pad">
         <div className="toolbar" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
           <div className="toolbar">

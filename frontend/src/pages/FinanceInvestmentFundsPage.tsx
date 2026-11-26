@@ -65,7 +65,7 @@ export function FinanceInvestmentFundsPage() {
           📥 Importar movimientos de fondos (Excel)
           <input type="file" accept=".xlsx,.xls" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) importFile(f); }} />
         </label>
-        <span className="muted" style={{ fontSize: "0.82rem" }}>Galicia: Inversiones → Fondos → Movimientos → descargar. Se puede importar las veces que haga falta: no duplica.</span>
+        <span className="muted t-small">Galicia: Inversiones → Fondos → Movimientos → descargar. Se puede importar las veces que haga falta: no duplica.</span>
       </div>
 
       {funds.length === 0 && <div className="card pad muted">Todavía no hay fondos: importá el primer listado de movimientos.</div>}
@@ -78,10 +78,10 @@ export function FinanceInvestmentFundsPage() {
             <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
               <h3 style={{ margin: 0 }}>{f.name} · {f.currency}</h3>
               <div className="row" style={{ gap: 18, flexWrap: "wrap" }}>
-                <div><div className="muted" style={{ fontSize: "0.75rem" }}>Cuotapartes</div><b>{units(f.units)}</b></div>
-                <div><div className="muted" style={{ fontSize: "0.75rem" }}>Valuación al {day(f.lastUnitValueDate)}</div><b>{f.valuation != null ? `${f.currency} ${money(f.valuation)}` : "—"}</b></div>
-                <div><div className="muted" style={{ fontSize: "0.75rem" }}>Aportado neto</div><b>{f.currency} {money(f.contributed)}</b></div>
-                <div><div className="muted" style={{ fontSize: "0.75rem" }}>Rendimiento</div><b>{f.result != null ? `${f.currency} ${money(f.result)}` : "—"}</b></div>
+                <div><div className="muted t-small">Cuotapartes</div><b>{units(f.units)}</b></div>
+                <div><div className="muted t-small">Valuación al {day(f.lastUnitValueDate)}</div><b>{f.valuation != null ? `${f.currency} ${money(f.valuation)}` : "—"}</b></div>
+                <div><div className="muted t-small">Aportado neto</div><b>{f.currency} {money(f.contributed)}</b></div>
+                <div><div className="muted t-small">Rendimiento</div><b>{f.result != null ? `${f.currency} ${money(f.result)}` : "—"}</b></div>
               </div>
             </div>
             {f.units < 0 && <div className="alert">La tenencia da negativa: cargá la tenencia inicial (las cuotapartes que había antes de la primera operación importada).</div>}
@@ -110,17 +110,17 @@ export function FinanceInvestmentFundsPage() {
                 <button type="submit" className="btn">Guardar</button>
               </form>
             )}
-            <table style={{ fontSize: "0.85rem" }}>
-              <thead><tr><th>Liquidación</th><th>Operación</th><th>N.º</th><th style={{ textAlign: "right" }}>Importe</th><th style={{ textAlign: "right" }}>Cuotapartes</th><th style={{ textAlign: "right" }}>Valor cp</th><th>Estado</th><th>Extracto</th></tr></thead>
+            <table>
+              <thead><tr><th>Liquidación</th><th>Operación</th><th>N.º</th><th className="t-right">Importe</th><th className="t-right">Cuotapartes</th><th className="t-right">Valor cp</th><th>Estado</th><th>Extracto</th></tr></thead>
               <tbody>
                 {f.operations.map((o) => (
                   <tr key={o.id}>
                     <td>{day(o.settlementDate)}</td>
                     <td>{o.kind === "Subscription" ? "Suscripción" : "Rescate"}</td>
                     <td>{o.externalId}</td>
-                    <td style={{ textAlign: "right" }}>{money(o.amount)}</td>
-                    <td style={{ textAlign: "right" }}>{units(o.units)}</td>
-                    <td style={{ textAlign: "right" }}>{o.unitValue != null ? units(o.unitValue) : "—"}</td>
+                    <td className="t-right">{money(o.amount)}</td>
+                    <td className="t-right">{units(o.units)}</td>
+                    <td className="t-right">{o.unitValue != null ? units(o.unitValue) : "—"}</td>
                     <td>{STATUS[o.status] ?? o.status}</td>
                     <td>{o.inBank === true ? "✓ en el banco" : o.inBank === false ? <span style={{ color: "var(--danger, var(--lc-danger))" }}>no figura</span> : <span className="muted">—</span>}</td>
                   </tr>

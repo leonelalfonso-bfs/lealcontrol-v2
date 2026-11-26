@@ -733,7 +733,7 @@ export function CollectionReceiptsWorkspacePage() {
 
       {/* RECENT RECEIPTS TABLE */}
       <section className="card pad" style={{ marginTop: 30 }}>
-        <h2 style={{ margin: "0 0 14px 0", fontSize: "1.1rem" }}>Últimos recibos</h2>
+        <h2 style={{ margin: "0 0 14px 0" }}>Últimos recibos</h2>
         <div className="table-wrap">
           <table>
             <thead>
@@ -743,14 +743,14 @@ export function CollectionReceiptsWorkspacePage() {
                 <th>Cliente / Detalle</th>
                 <th>Comprobantes Imputados</th>
                 <th>Moneda / TC</th>
-                <th style={{ textAlign: "right" }}>Importe Total</th>
-                <th style={{ textAlign: "center" }}>Acciones</th>
+                <th className="t-right">Importe Total</th>
+                <th className="t-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {receipts.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="muted" style={{ textAlign: "center", padding: 24 }}>
+                  <td colSpan={7} className="muted t-center">
                     No hay recibos registrados aún.
                   </td>
                 </tr>
@@ -765,23 +765,23 @@ export function CollectionReceiptsWorkspacePage() {
                       <td>{shortDate(r.receiptDateUtc)}</td>
                       <td>
                         <strong>{cust?.tradeName || cust?.legalName || "Cliente"}</strong>
-                        <small className="muted" style={{ display: "block", fontSize: "0.75rem" }}>
+                        <small className="muted t-small" style={{ display: "block" }}>
                           {r.description}
                         </small>
                       </td>
                       <td>{r.invoicesSummary || (r.invoiceId ? "1 factura" : "Anticipo a cuenta")}</td>
                       <td>
-                        <span style={{ fontWeight: 600 }}>{r.currency}</span>
+                        <span className="t-strong">{r.currency}</span>
                         {r.paymentExchangeRate && r.paymentExchangeRate > 1 && (
-                          <small className="muted" style={{ display: "block", fontSize: "0.72rem" }}>
+                          <small className="muted t-small" style={{ display: "block" }}>
                             TC: ${r.paymentExchangeRate.toLocaleString("es-AR")}
                           </small>
                         )}
                       </td>
-                      <td style={{ textAlign: "right", fontWeight: 700, color: "var(--lc-ok)" }}>
+                      <td className="t-right t-strong t-ok">
                         {money(r.amount, r.currency)}
                       </td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="t-center">
                         <button
                           type="button"
                           className="btn btn-outline compact"
@@ -818,21 +818,13 @@ export function CollectionReceiptsWorkspacePage() {
         >
           <div
             className="card pad"
-            style={{
-              width: "100%",
-              maxWidth: 720,
-              maxHeight: "90vh",
-              overflowY: "auto",
-              backgroundColor: "var(--surface, var(--lc-surface))",
-              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
-              borderRadius: 8
-            }}
+            style={{ width: "100%", maxWidth: 720, maxHeight: "90vh", overflowY: "auto", backgroundColor: "var(--surface, var(--lc-surface))" }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--surface-border)", paddingBottom: 12, marginBottom: 16 }}>
               <div>
                 <span className="eyebrow">RECIBO OFICIAL DE COBRANZA</span>
                 <h2 style={{ margin: 0 }}>{selectedReceiptDetail.receiptNumber}</h2>
-                <span className="muted" style={{ fontSize: "0.82rem" }}>
+                <span className="muted t-small">
                   Fecha: {businessDate(selectedReceiptDetail.receiptDateUtc)} · {selectedReceiptDetail.description}
                 </span>
               </div>
@@ -842,14 +834,14 @@ export function CollectionReceiptsWorkspacePage() {
             </div>
 
             {/* Imputations */}
-            <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>📄 Comprobantes Imputados</h3>
+            <h3 style={{ marginBottom: 8 }}>📄 Comprobantes Imputados</h3>
             <div className="table-wrap" style={{ marginBottom: 16 }}>
               <table>
                 <thead>
                   <tr>
                     <th>Comprobante</th>
-                    <th style={{ textAlign: "right" }}>Total Factura</th>
-                    <th style={{ textAlign: "right" }}>Monto Imputado</th>
+                    <th className="t-right">Total Factura</th>
+                    <th className="t-right">Monto Imputado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -861,8 +853,8 @@ export function CollectionReceiptsWorkspacePage() {
                     selectedReceiptDetail.imputations.map((imp: any) => (
                       <tr key={imp.id}>
                         <td><strong>{imp.invoiceNumber}</strong></td>
-                        <td style={{ textAlign: "right" }}>{money(imp.invoiceTotal, selectedReceiptDetail.currency)}</td>
-                        <td style={{ textAlign: "right", fontWeight: 700, color: "var(--lc-ok)" }}>{money(imp.amountImputed, selectedReceiptDetail.currency)}</td>
+                        <td className="t-right">{money(imp.invoiceTotal, selectedReceiptDetail.currency)}</td>
+                        <td className="t-right t-strong t-ok">{money(imp.amountImputed, selectedReceiptDetail.currency)}</td>
                       </tr>
                     ))
                   )}
@@ -871,14 +863,14 @@ export function CollectionReceiptsWorkspacePage() {
             </div>
 
             {/* Payment lines */}
-            <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>💳 Medios de Cobro</h3>
+            <h3 style={{ marginBottom: 8 }}>💳 Medios de Cobro</h3>
             <div className="table-wrap" style={{ marginBottom: 16 }}>
               <table>
                 <thead>
                   <tr>
                     <th>Medio</th>
                     <th>Detalle / Cuenta / Certificado</th>
-                    <th style={{ textAlign: "right" }}>Importe</th>
+                    <th className="t-right">Importe</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -886,7 +878,7 @@ export function CollectionReceiptsWorkspacePage() {
                     <tr key={l.id}>
                       <td><strong>{l.method}</strong></td>
                       <td>{l.retentionCertificate ? `Cert. ${l.retentionCertificate} (${l.retentionType})` : l.notes || "-"}</td>
-                      <td style={{ textAlign: "right", fontWeight: 700 }}>{money(l.amount, l.currency)}</td>
+                      <td className="t-right t-strong">{money(l.amount, l.currency)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -902,8 +894,7 @@ export function CollectionReceiptsWorkspacePage() {
             {canVoid && selectedReceiptDetail.status !== "Voided" && (
               <div className="toolbar" style={{ marginTop: 16, justifyContent: "flex-end" }}>
                 <button
-                  className="btn btn-outline"
-                  style={{ color: "var(--lc-danger)", borderColor: "var(--lc-danger)" }}
+                  className="btn btn-outline danger"
                   onClick={async () => {
                     const reason = window.prompt("Motivo de anulación del recibo:");
                     if (!reason?.trim()) return;

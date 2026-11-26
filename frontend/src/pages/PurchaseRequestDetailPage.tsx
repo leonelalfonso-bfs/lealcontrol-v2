@@ -515,8 +515,8 @@ export function PurchaseRequestDetailPage() {
 
       {/* Modal for Adding Supplier Quotation */}
       {showQuoteModal && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
-          <div className="card pad" style={{ width: "700px", maxWidth: "95%", maxHeight: "90vh", overflowY: "auto" }}>
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal-card" style={{ width: "min(700px, 100%)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 className="t-accent" style={{ margin: 0 }}>
                 📑 Cargar Presupuesto de Proveedor
@@ -524,7 +524,8 @@ export function PurchaseRequestDetailPage() {
               <button
                 type="button"
                 onClick={() => setShowQuoteModal(false)}
-                style={{ background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer" }}
+                className="icon-button"
+                aria-label="Cerrar"
               >
                 ✕
               </button>
